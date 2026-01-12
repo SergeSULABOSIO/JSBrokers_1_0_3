@@ -1421,8 +1421,7 @@ class CalculationProvider
                         $montant += $revenu->getMontantFlatExceptionel();
                     } elseif ($typeRevenu->getPourcentage() != 0) {
                         $montant += $montantChargementPrime * ($typeRevenu->getPourcentage() / 100);
-                    } elseif ($typeRevenu->getMontantflat() != 0) {
-                        // CORRECTION : Un montant "flat" (forfaitaire) ne doit pas être multiplié par une base, mais ajouté directement.
+                    } elseif ($typeRevenu->getMontantflat() != 0) { // CORRECTION: Un montant "flat" (forfaitaire) ne doit pas être multiplié.
                         $montant += $typeRevenu->getMontantflat();
                     }
                 }

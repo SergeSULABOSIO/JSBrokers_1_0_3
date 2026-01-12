@@ -117,13 +117,9 @@ class NumericCanvasProvider
 
     private function getFranchiseForNotificationSinistre(NotificationSinistre $sinistre): float
     {
-        $montant = 0;
-        if ($sinistre != null) {
-            foreach ($sinistre->getOffreIndemnisationSinistres() as $offre_indemnisation) {
-                $montant += $offre_indemnisation->getFranchiseAppliquee();
-            }
-        }
-        return $montant;
+        return array_reduce($sinistre->getOffreIndemnisationSinistres()->toArray(), function ($carry, $offre) {
+            return $carry + ($offre->getFranchiseAppliquee() ?? 0);
+        }, 0.0);
     }
 
     public function getAttributesAndValuesForCollection($data): array
