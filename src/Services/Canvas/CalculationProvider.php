@@ -10,6 +10,7 @@ use DateTimeImmutable;
 use App\Entity\Contact;
 use App\Entity\Tranche;
 use App\Entity\Cotation;
+use App\Entity\Avenant;
 use App\Entity\Document;
 use App\Entity\Paiement;
 use App\Entity\Chargement;
@@ -92,6 +93,15 @@ class CalculationProvider
                     'delaiDepuisCreation' => $this->calculateDelaiDepuisCreation($entity),
                     'nombreTranches' => $this->calculateNombreTranches($entity),
                     'montantMoyenTranche' => $this->calculateMontantMoyenTranche($entity),
+                ];
+                break;
+            case Avenant::class:
+                /** @var Avenant $entity */
+                $indicateurs = [
+                    'dureeCouverture' => $this->calculateDureeCouvertureAvenant($entity),
+                    'joursRestants' => $this->calculateJoursRestantsAvenant($entity),
+                    'ageAvenant' => $this->calculateAgeAvenant($entity),
+                    'statutRenouvellement' => $this->getAvenantStatutRenouvellementString($entity),
                 ];
                 break;
                 // D'autres entités pourraient être ajoutées ici avec 'case AutreEntite::class:'
@@ -1524,5 +1534,65 @@ class CalculationProvider
         }
 
         return "Non-associé";
+    }
+
+    /**
+     * Calcule la durée de couverture d'un avenant en jours.
+     */
+    private function calculateDureeCouvertureAvenant(Avenant $avenant): string
+    {
+        if (!$avenant->getStartingAt() || !$avenant->getEndingAt()) {
+            return 'N/A';
+        }
+        $jours = $this->serviceDates->daysEntre($avenant->getStartingAt(), $avenant->getEndingAt()) ?? 0;
+        return $jours . ' jour(s)';
+    }
+
+    /**
+     * Calcule le nombre de jours restants avant l'échéance d'un avenant.
+     */
+    private function calculateJoursRestantsAvenant(Avenant $avenant): string
+    {
+        if (!$avenant->getEndingAt()) {
+            return 'N/A';
+        }
+        if ($avenant->getEndingAt() < new DateTimeImmutable()) {
+            return 'Expiré';
+        }
+        $jours = $this->serviceDates->daysEntre(new DateTimeImmutable(), $avenant->getEndingAt()) ?? 0;
+        return $jours . ' jour(s)';
+    }
+
+    /**
+     * Calcule l'âge d'un avenant depuis sa date de création.
+     */
+    private function calculateAgeAvenant(Avenant $avenant): string
+    {
+        if (!$avenant->getCreatedAt()) {
+            return 'N/A';
+        }
+        $jours = $this->serviceDates->daysEntre($avenant->getCreatedAt(), new DateTimeImmutable()) ?? 0;
+        return $jours . ' jour(s)';
+    }
+
+    /**
+     * Retourne la chaîne de caractères correspondant au statut de renouvellement de l'avenant.
+     */
+    public function getAvenantStatutRenouvellementString(?Avenant $avenant): ?string
+    {
+        if ($avenant === null || $avenant->getRenewalStatus() === null) {
+            return $this->translator->trans('renewal_status_undefined', [], 'messages');
+        }
+
+        return match ($avenant->getRenewalStatus()) {
+            Avenant::RENEWAL_STATUS_LOST => $this->translator->trans('renewal_status_lost', [], 'messages'),
+            Avenant::RENEWAL_STATUS_ONCE_OFF => $this->translator->trans('renewal_status_once_off', [], 'messages'),
+            Avenant::RENEWAL_STATUS_RENEWED => $this->translator->trans('renewal_status_renewed', [], 'messages'),
+            Avenant::RENEWAL_STATUS_EXTENDED => $this->translator->trans('renewal_status_extended', [], 'messages'),
+            Avenant::RENEWAL_STATUS_RUNNING => $this->translator->trans('renewal_status_running', [], 'messages'),
+            Avenant::RENEWAL_STATUS_RENEWING => $this->translator->trans('renewal_status_renewing', [], 'messages'),
+            Avenant::RENEWAL_STATUS_CANCELLED => $this->translator->trans('renewal_status_cancelled', [], 'messages'),
+            default => $this->translator->trans('renewal_status_unknown', [], 'messages'),
+        };
     }
 }
