@@ -231,6 +231,26 @@ class EntityCanvasProvider
                     ],
                 ];
                 break;
+            case Avenant::class:
+                $canvas = [
+                    [
+                        "code" => "dureeCouverture", "intitule" => "Durée de couverture", "type" => "Texte", "format" => "Texte",
+                        "description" => "Durée totale de la couverture de l'avenant en jours."
+                    ],
+                    [
+                        "code" => "joursRestants", "intitule" => "Jours restants", "type" => "Texte", "format" => "Texte",
+                        "description" => "Nombre de jours restants avant l'échéance de l'avenant."
+                    ],
+                    [
+                        "code" => "ageAvenant", "intitule" => "Âge de l'avenant", "type" => "Texte", "format" => "Texte",
+                        "description" => "Nombre de jours écoulés depuis la création de l'avenant."
+                    ],
+                    [
+                        "code" => "statutRenouvellement", "intitule" => "Statut", "type" => "Texte", "format" => "Texte",
+                        "description" => "Statut actuel du renouvellement de l'avenant."
+                    ],
+                ];
+                break;
         }
         return $canvas;
     }
@@ -349,6 +369,9 @@ class EntityCanvasProvider
                         ["code" => "cotation", "intitule" => "Cotation", "type" => "Relation", "targetEntity" => Cotation::class, "displayField" => "nom"],
                         ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
                     ], $this->getGlobalIndicatorsCanvas("Avenant"))
+                    ], 
+                    $this->getSpecificIndicatorsCanvas(Avenant::class),
+                    $this->getGlobalIndicatorsCanvas("Avenant"))
                 ];
             case Assureur::class:
                 return [
