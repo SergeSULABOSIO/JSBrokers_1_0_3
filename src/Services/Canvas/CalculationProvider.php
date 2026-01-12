@@ -390,7 +390,7 @@ class CalculationProvider
     /**
      * Calcule le délai en jours entre la survenance et la notification d'un sinistre.
      */
-    private function getNotificationSinistreDelaiDeclaration(NotificationSinistre $sinistre): string
+    private function calculateDelaiDeclaration(NotificationSinistre $sinistre): string
     {
         if (!$sinistre->getOccuredAt() || !$sinistre->getNotifiedAt()) {
             return 'N/A';
@@ -563,14 +563,17 @@ class CalculationProvider
 
     private function getCotationPartenaire(?Cotation $cotation)
     {
-        if ($cotation != null) {
-            if ($cotation->getPiste() != null) {
-                if (count($cotation->getPiste()->getPartenaires()) != 0) {
-                    // dd($cotation->getPiste()->getPartenaires()[0]);
-                    return $cotation->getPiste()->getPartenaires()[0];
-                } else if (count($cotation->getPiste()->getClient()->getPartenaires()) != 0) {
-                    return $cotation->getPiste()->getClient()->getPartenaires()[0];
-                }
+        // Utilisation de l'opérateur null-safe pour plus de sécurité
+        if ($cotation?->getPiste()) {
+            // Priorité 1 : Partenaire directement lié à la piste.
+            if (!$cotation->getPiste()->getPartenaires()->isEmpty()) {
+                return $cotation->getPiste()->getPartenaires()->first();
+            }
+
+            // Priorité 2 : Partenaire lié au client de la piste (avec vérification de nullité).
+            $client = $cotation->getPiste()->getClient();
+            if ($client && !$client->getPartenaires()->isEmpty()) {
+                return $client->getPartenaires()->first();
             }
         }
         return null;
@@ -592,11 +595,10 @@ class CalculationProvider
 
     private function getRevenuMontantRetrocommissionsPayableParCourtier(?RevenuPourCourtier $revenu, ?Partenaire $partenaireCible, $addressedTo): float
     {
-        // 1. Gardes de protection pour la robustesse et la lisibilité
-        if (!$revenu || !$partenaireCible || !$revenu->getTypeRevenu() || !$revenu->getTypeRevenu()->isShared()) {
+        // 1. Gardes de protection
+        if (!$revenu || !$revenu->getTypeRevenu() || !$revenu->getTypeRevenu()->isShared()) {
             return 0.0;
         }
-
         $cotation = $revenu->getCotation();
         if (!$cotation || !$cotation->getPiste()) {
             return 0.0;
