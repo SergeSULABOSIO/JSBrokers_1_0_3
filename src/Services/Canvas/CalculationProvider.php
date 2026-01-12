@@ -17,6 +17,7 @@ use App\Repository\CotationRepository;
 use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
 use App\Entity\ConditionPartage;
+use App\Repository\NotificationSinistreRepository;
 use App\Entity\RevenuPourCourtier;
 use App\Entity\OffreIndemnisationSinistre;
 use App\Entity\NotificationSinistre;
@@ -30,7 +31,8 @@ class CalculationProvider
         private ServiceDates $serviceDates,
         private Security $security,
         private ServiceTaxes $serviceTaxes,
-        private CotationRepository $cotationRepository
+        private CotationRepository $cotationRepository,
+        private NotificationSinistreRepository $notificationSinistreRepository
     ) {}
 
     /**
@@ -211,25 +213,31 @@ class CalculationProvider
         // 3. Exécuter la requête pour obtenir les cotations filtrées
         $cotationsAcalculer = $qb->getQuery()->getResult();
 
-        // Récupérer et filtrer les sinistres (logique non optimisée pour l'instant)
-        $sinistresAcalculer = [];
-        foreach ($entreprise->getInvites() as $invite) {
-            foreach ($invite->getNotificationSinistres() as $sinistre) {
-                $sinistresAcalculer[] = $sinistre;
-            }
-        }
+        // Récupérer et filtrer les sinistres de manière optimisée
+        $sinistresQb = $this->notificationSinistreRepository->createQueryBuilder('ns')
+            ->join('ns.invite', 'i')
+            ->where('i.entreprise = :entreprise')
+            ->setParameter('entreprise', $entreprise);
+
         if ($notificationSinistreCible) {
-            $sinistresAcalculer = array_filter($sinistresAcalculer, fn($s) => $s === $notificationSinistreCible);
+            $sinistresQb->andWhere('ns = :notificationSinistreCible')
+                ->setParameter('notificationSinistreCible', $notificationSinistreCible);
         }
+
         if ($paiementCible) {
             if ($offre = $paiementCible->getOffreIndemnisationSinistre()) {
                 if ($sinistreDuPaiement = $offre->getNotificationSinistre()) {
-                    $sinistresAcalculer = array_filter($sinistresAcalculer, fn($s) => $s === $sinistreDuPaiement);
+                    $sinistresQb->andWhere('ns = :sinistreDuPaiement')
+                        ->setParameter('sinistreDuPaiement', $sinistreDuPaiement);
+                } else {
+                    $sinistresQb->andWhere('1=0');
                 }
             } else {
-                $sinistresAcalculer = [];
+                $sinistresQb->andWhere('1=0');
             }
         }
+
+        $sinistresAcalculer = $sinistresQb->getQuery()->getResult();
 
         // 4. Calculate totals from the filtered list
         foreach ($cotationsAcalculer as $cotation) {
@@ -731,7 +739,7 @@ class CalculationProvider
         // Priorité 3 : Taux par défaut du partenaire
         if ($partenaireAffaire->getPart() > 0) {
             $assiette = $this->getRevenuMontantPure($revenu, $addressedTo, true);
-            return $assiette * $partenaireAffaire->getPart();
+            return $assiette * ($partenaireAffaire->getPart() / 100);
         }
 
         return 0.0;
@@ -809,18 +817,18 @@ class CalculationProvider
         switch ($conditionPartage->getCritereRisque()) {
             case ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES:
                 if (!$produitsCible->contains($risque)) {
-                    return $assiette * $taux;
+                    return $assiette * ($taux / 100);
                 }
                 return 0.0;
 
             case ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES:
                 if ($produitsCible->contains($risque)) {
-                    return $assiette * $taux;
+                    return $assiette * ($taux / 100);
                 }
                 return 0.0;
 
             case ConditionPartage::CRITERE_PAS_RISQUES_CIBLES:
-                return $assiette * $taux;
+                return $assiette * ($taux / 100);
         }
         return 0.0;
     }
@@ -876,111 +884,6 @@ class CalculationProvider
         return $this->getTotalNet($cotation, $onlySharable, false);
     }
 
-    private function getTotalNet(?Cotation $cotation, bool $onlySharable, bool $isTaxAssureur): float
-    {
-        if (!$cotation) return 0.0;
-        $isIARD = $this->isIARD($cotation);
-        $net_payable_par_assureur = $this->getCotationMontantCommissionHt($cotation, TypeRevenu::REDEVABLE_ASSUREUR, $onlySharable);
-        $net_payable_par_client = $this->getCotationMontantCommissionHt($cotation, TypeRevenu::REDEVABLE_CLIENT, $onlySharable);
-        $net_total = $net_payable_par_assureur + $net_payable_par_client;
-        return $this->serviceTaxes->getMontantTaxe($net_total, $isIARD, $isTaxAssureur);
-    }
-
-    private function getCotationSommeCommissionPureRisque(?Cotation $cotation, $addressedTo, bool $onlySharable): float
-    {
-        $somme = 0;
-        if (!$cotation || !$cotation->getPiste()) {
-            return 0.0;
-        }
-
-        /** @var Entreprise $entreprise */
-        $entreprise = $cotation->getPiste()->getInvite()->getEntreprise();
-        $exerciceCible = $cotation->getPiste()->getExercice();
-        $risqueCible = $cotation->getPiste()->getRisque();
-        $partenaireCible = $this->getCotationPartenaire($cotation);
-
-        $cotationsDuPartenaire = [];
-        foreach ($entreprise->getInvites() as $invite) {
-            foreach ($invite->getPistes() as $piste) {
-                if ($piste->getExercice() === $exerciceCible && $piste->getRisque() === $risqueCible) {
-                    foreach ($piste->getCotations() as $c) {
-                        if ($this->getCotationPartenaire($c) === $partenaireCible) {
-                            $cotationsDuPartenaire[] = $c;
-                        }
-                    }
-                }
-            }
-        }
-
-        foreach ($cotationsDuPartenaire as $proposition) {
-            $somme += $this->getCotationMontantCommissionPure($proposition, $addressedTo, $onlySharable);
-        }
-        return $somme;
-    }
-
-    private function getCotationSommeCommissionPureClient(?Cotation $cotation, $addressedTo, bool $onlySharable): float
-    {
-        $somme = 0;
-        if (!$cotation || !$cotation->getPiste()) {
-            return 0.0;
-        }
-
-        /** @var Entreprise $entreprise */
-        $entreprise = $cotation->getPiste()->getInvite()->getEntreprise();
-        $exerciceCible = $cotation->getPiste()->getExercice();
-        $clientCible = $cotation->getPiste()->getClient();
-        $partenaireCible = $this->getCotationPartenaire($cotation);
-
-        $cotationsDuPartenaire = [];
-        foreach ($entreprise->getInvites() as $invite) {
-            foreach ($invite->getPistes() as $piste) {
-                if ($piste->getExercice() === $exerciceCible && $piste->getClient() === $clientCible) {
-                    foreach ($piste->getCotations() as $c) {
-                        if ($this->getCotationPartenaire($c) === $partenaireCible) {
-                            $cotationsDuPartenaire[] = $c;
-                        }
-                    }
-                }
-            }
-        }
-
-        foreach ($cotationsDuPartenaire as $proposition) {
-            $somme += $this->getCotationMontantCommissionPure($proposition, $addressedTo, $onlySharable);
-        }
-        return $somme;
-    }
-
-    private function getCotationSommeCommissionPurePartenaire(?Cotation $cotation, $addressedTo, bool $onlySharable): float
-    {
-        $somme = 0;
-        if (!$cotation || !$cotation->getPiste()) {
-            return 0.0;
-        }
-
-        /** @var Entreprise $entreprise */
-        $entreprise = $cotation->getPiste()->getInvite()->getEntreprise();
-        $exerciceCible = $cotation->getPiste()->getExercice();
-        $partenaireCible = $this->getCotationPartenaire($cotation);
-
-        $cotationsDuPartenaire = [];
-        foreach ($entreprise->getInvites() as $invite) {
-            foreach ($invite->getPistes() as $piste) {
-                if ($piste->getExercice() === $exerciceCible) {
-                    foreach ($piste->getCotations() as $c) {
-                        if ($this->getCotationPartenaire($c) === $partenaireCible) {
-                            $cotationsDuPartenaire[] = $c;
-                        }
-                    }
-                }
-            }
-        }
-
-        foreach ($cotationsDuPartenaire as $proposition) {
-            $somme += $this->getCotationMontantCommissionPure($proposition, $addressedTo, $onlySharable);
-        }
-        return $somme;
-    }
-
     private function applyRevenuConditionsSpeciales(?ConditionPartage $conditionPartage, RevenuPourCourtier $revenu, $addressedTo): float
     {
         $montant = 0;
@@ -990,9 +893,9 @@ class CalculationProvider
 
         //Application de l'unité de mésure
         $uniteMesure = match ($conditionPartage->getUniteMesure()) {
-            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_RISQUE => $this->getCotationSommeCommissionPureRisque($revenu->getCotation(), $addressedTo, true),
-            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_CLIENT => $this->getCotationSommeCommissionPureClient($revenu->getCotation(), $addressedTo, true),
-            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE => $this->getCotationSommeCommissionPurePartenaire($revenu->getCotation(), $addressedTo, true),
+            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_RISQUE => $this->getSommeCommissionPureForScope($revenu->getCotation(), $addressedTo, true, 'RISQUE'),
+            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_CLIENT => $this->getSommeCommissionPureForScope($revenu->getCotation(), $addressedTo, true, 'CLIENT'),
+            ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE => $this->getSommeCommissionPureForScope($revenu->getCotation(), $addressedTo, true, 'PARTENAIRE'),
         };
 
         $formule = $conditionPartage->getFormule();
@@ -1318,10 +1221,26 @@ class CalculationProvider
      */
     private function getTrancheMontantTaxePayee(?Tranche $tranche, bool $isTaxeAssureur): float
     {
-        // Cette logique est une simplification et suppose que les notes de taxe sont bien identifiées.
-        // La logique complète dans Constante.php est plus complexe et dépend des repositories.
-        // Pour une implémentation complète, il faudrait répliquer cette logique ici.
-        return 0.0; // Placeholder
+        $montant = 0.0;
+        if (!$tranche) {
+            return $montant;
+        }
+
+        // Détermine à qui la note de taxe doit être adressée.
+        $targetAddressedTo = $isTaxeAssureur ? Note::TO_TAXE_ASSUREUR : Note::TO_TAXE_COURTIER;
+
+        foreach ($tranche->getArticles() as $article) {
+            $note = $article->getNote();
+            // On ne traite que les articles liés à une note du bon type (taxe courtier ou assureur).
+            if ($note && $note->getAddressedTo() === $targetAddressedTo) {
+                $montantPayableNote = $this->getNoteMontantPayable($note);
+                if ($montantPayableNote > 0) {
+                    $proportionPaiement = $this->getNoteMontantPaye($note) / $montantPayableNote;
+                    $montant += $proportionPaiement * $article->getMontant();
+                }
+            }
+        }
+        return $montant;
     }
 
     /**
@@ -1342,17 +1261,18 @@ class CalculationProvider
                 if ($typeRevenu->isAppliquerPourcentageDuRisque()) {
                     $risque = $this->getCotationRisque($cotation);
                     if ($risque) {
-                        $montant += $montantChargementPrime * $risque->getPourcentageCommissionSpecifiqueHT();
+                        $montant += $montantChargementPrime * ($risque->getPourcentageCommissionSpecifiqueHT() / 100);
                     }
                 } else {
                     if ($revenu->getTauxExceptionel() != 0) {
-                        $montant += $montantChargementPrime * $revenu->getTauxExceptionel();
+                        $montant += $montantChargementPrime * ($revenu->getTauxExceptionel() / 100);
                     } elseif ($revenu->getMontantFlatExceptionel() != 0) {
                         $montant += $revenu->getMontantFlatExceptionel();
                     } elseif ($typeRevenu->getPourcentage() != 0) {
-                        $montant += $montantChargementPrime * $typeRevenu->getPourcentage();
+                        $montant += $montantChargementPrime * ($typeRevenu->getPourcentage() / 100);
                     } elseif ($typeRevenu->getMontantflat() != 0) {
-                        $montant += $montantChargementPrime * $typeRevenu->getMontantflat();
+                        // CORRECTION : Un montant "flat" (forfaitaire) ne doit pas être multiplié par une base, mais ajouté directement.
+                        $montant += $typeRevenu->getMontantflat();
                     }
                 }
             }
@@ -1377,5 +1297,60 @@ class CalculationProvider
             }
         }
         return $montant;
+    }
+
+    private function getTotalNet(?Cotation $cotation, bool $onlySharable, bool $isTaxAssureur): float
+    {
+        if (!$cotation) return 0.0;
+        $isIARD = $this->isIARD($cotation);
+        $net_payable_par_assureur = $this->getCotationMontantCommissionHt($cotation, TypeRevenu::REDEVABLE_ASSUREUR, $onlySharable);
+        $net_payable_par_client = $this->getCotationMontantCommissionHt($cotation, TypeRevenu::REDEVABLE_CLIENT, $onlySharable);
+        $net_total = $net_payable_par_assureur + $net_payable_par_client;
+        return $this->serviceTaxes->getMontantTaxe($net_total, $isIARD, $isTaxAssureur);
+    }
+
+    /**
+     * Méthode refactorisée pour calculer la somme de la commission pure selon une portée.
+     * ATTENTION : Cette méthode souffre toujours d'un problème de performance N+1 car elle
+     * itère sur toutes les pistes de l'entreprise. Une refonte plus profonde serait nécessaire
+     * pour pré-calculer ces sommes avant la boucle principale de getIndicateursGlobaux.
+     */
+    private function getSommeCommissionPureForScope(?Cotation $cotation, $addressedTo, bool $onlySharable, string $scope): float
+    {
+        if (!$cotation || !$cotation->getPiste()) {
+            return 0.0;
+        }
+
+        $somme = 0.0;
+        $entreprise = $cotation->getPiste()->getInvite()->getEntreprise();
+        $exerciceCible = $cotation->getPiste()->getExercice();
+        $partenaireCible = $this->getCotationPartenaire($cotation);
+        $clientCible = $cotation->getPiste()->getClient();
+        $risqueCible = $cotation->getPiste()->getRisque();
+
+        $cotationsToSum = [];
+        foreach ($entreprise->getInvites() as $invite) {
+            foreach ($invite->getPistes() as $piste) {
+                if ($piste->getExercice() !== $exerciceCible) continue;
+
+                $match = match ($scope) {
+                    'RISQUE' => $piste->getRisque() === $risqueCible,
+                    'CLIENT' => $piste->getClient() === $clientCible,
+                    'PARTENAIRE' => true,
+                    default => false,
+                };
+
+                if ($match) {
+                    foreach ($piste->getCotations() as $c) {
+                        if ($this->getCotationPartenaire($c) === $partenaireCible) $cotationsToSum[] = $c;
+                    }
+                }
+            }
+        }
+
+        foreach (array_unique($cotationsToSum, SORT_REGULAR) as $proposition) {
+            $somme += $this->getCotationMontantCommissionPure($proposition, $addressedTo, $onlySharable);
+        }
+        return $somme;
     }
 }
