@@ -1027,27 +1027,34 @@ class CalculationProvider
     private function getTrancheMontantRetrocommissionsPayableParCourtierPayee(?Tranche $tranche, ?Partenaire $partenaireCible = null): float
     {
         $montant = 0;
-        if (count($tranche->getArticles())) {
-            //On doit d'abord s'assurer que nous parlons du même partenaire
-            // if ($this->isSamePartenaire($tranche->getCotation()->getPiste()->getPartenaires()[0], $partenaireCible)) {
-            if ($this->isSamePartenaire($this->getTranchePartenaire($tranche), $partenaireCible)) {
-                /** @var Article $article */
-                foreach ($tranche->getArticles() as $articleTranche) {
+        // Sécurité : on vérifie que la tranche existe.
+        // Performance : on utilise isEmpty() qui ne charge pas toute la collection si elle n'est pas initialisée.
+        if (!$tranche || $tranche->getArticles()->isEmpty()) {
+            return 0.0;
+        }
 
-                    /** @var Article $article */
-                    $article = $articleTranche;
+        //On doit d'abord s'assurer que nous parlons du même partenaire
+        if ($this->isSamePartenaire($this->getTranchePartenaire($tranche), $partenaireCible)) {
+            foreach ($tranche->getArticles() as $article) {
+                /** @var Note|null $note */
+                $note = $article->getNote();
 
-                    /** @var Note $note */
-                    $note = $article->getNote();
+                // Sécurité : on s'assure que l'article est bien lié à une note
+                if (!$note) {
+                    continue;
+                }
 
-                    //Quelle proportion de la note a-t-elle été payée (100%?)
-                    $proportionPaiement = $this->getNoteMontantPaye($note) / $this->getNoteMontantPayable($note);
-                    // dd("Ici");
+                //Quelle proportion de la note a-t-elle été payée (100%?)
+                $montantPayableNote = $this->getNoteMontantPayable($note);
+                $proportionPaiement = 0;
+                // Sécurité : on évite la division par zéro
+                if ($montantPayableNote > 0) {
+                    $proportionPaiement = $this->getNoteMontantPaye($note) / $montantPayableNote;
+                }
 
-                    //Qu'est-ce qu'on a facturé?
-                    if ($note->getAddressedTo() == Note::TO_PARTENAIRE) {
-                        $montant += $proportionPaiement * $article->getMontant();
-                    }
+                //Qu'est-ce qu'on a facturé?
+                if ($note->getAddressedTo() == Note::TO_PARTENAIRE) {
+                    $montant += $proportionPaiement * ($article->getMontant() ?? 0);
                 }
             }
         }
