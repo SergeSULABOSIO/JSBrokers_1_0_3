@@ -12,6 +12,7 @@ use App\Entity\Invite;
 use App\Entity\Risque;
 use App\Entity\Avenant;
 use App\Entity\Contact;
+use App\Entity\Monnaie;
 use App\Entity\Tranche;
 use App\Entity\Assureur;
 use App\Entity\Classeur;
@@ -23,17 +24,17 @@ use App\Entity\Bordereau;
 use App\Entity\Chargement;
 use App\Entity\Entreprise;
 use App\Entity\Partenaire;
-use App\Entity\Monnaie;
 use App\Entity\TypeRevenu;
 use App\Entity\Utilisateur;
 use App\Entity\PieceSinistre;
 use App\Entity\CompteBancaire;
 use App\Entity\AutoriteFiscale;
 use App\Entity\ConditionPartage;
+use App\Services\ServiceMonnaies;
+use App\Entity\RevenuPourCourtier;
 use App\Entity\ChargementPourPrime;
 use App\Entity\NotificationSinistre;
 use App\Entity\OffreIndemnisationSinistre;
-use App\Services\ServiceMonnaies;
 
 class EntityCanvasProvider
 {
@@ -387,6 +388,70 @@ class EntityCanvasProvider
                     ],
                 ];
                 break;
+            case Document::class:
+                $canvas = [
+                    [
+                        "code" => "ageDocument", "intitule" => "Âge du document", "type" => "Texte", "format" => "Texte",
+                        "description" => "Nombre de jours écoulés depuis la création du document."
+                    ],
+                    [
+                        "code" => "typeFichier", "intitule" => "Type de fichier", "type" => "Texte", "format" => "Texte",
+                        "description" => "Extension (type) du fichier stocké."
+                    ],
+                ];
+                break;
+            case Groupe::class:
+                $canvas = [
+                    [
+                        "code" => "nombreClients", "intitule" => "Nb. Clients", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre total de clients dans ce groupe."
+                    ],
+                    [
+                        "code" => "nombrePolices", "intitule" => "Nb. Polices", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre total de polices actives pour tous les clients du groupe."
+                    ],
+                    [
+                        "code" => "nombreSinistres", "intitule" => "Nb. Sinistres", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre total de sinistres déclarés par les clients de ce groupe."
+                    ],
+                ];
+                break;
+            case RevenuPourCourtier::class:
+                $canvas = [
+                    [
+                        "code" => "montantCalculeHT", "intitule" => "Montant HT", "type" => "Nombre", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                        "description" => "Montant calculé du revenu avant taxes."
+                    ],
+                    [
+                        "code" => "montantCalculeTTC", "intitule" => "Montant TTC", "type" => "Nombre", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                        "description" => "Montant calculé du revenu toutes taxes comprises."
+                    ],
+                    [
+                        "code" => "descriptionCalcul", "intitule" => "Logique de Calcul", "type" => "Texte", "format" => "Texte",
+                        "description" => "Explication de la manière dont le montant du revenu est calculé."
+                    ],
+                ];
+                break;
+            case TypeRevenu::class:
+                $canvas = [
+                    [
+                        "code" => "descriptionModeCalcul", "intitule" => "Mode de Calcul", "type" => "Texte", "format" => "Texte",
+                        "description" => "Description lisible du mode de calcul (pourcentage ou montant fixe)."
+                    ],
+                    [
+                        "code" => "redevableString", "intitule" => "Redevable", "type" => "Texte", "format" => "Texte",
+                        "description" => "L'entité qui doit payer ce revenu (Client, Assureur, etc.)."
+                    ],
+                    [
+                        "code" => "sharedString", "intitule" => "Partagé", "type" => "Texte", "format" => "Texte",
+                        "description" => "Indique si ce revenu est partageable avec des partenaires."
+                    ],
+                    [
+                        "code" => "nombreUtilisations", "intitule" => "Nb. Utilisations", "type" => "Entier", "format" => "Nombre",
+                        "description" => "Nombre de fois où ce type de revenu est utilisé dans les cotations."
+                    ],
+                ];
+                break;
         }
         return $canvas;
     }
@@ -703,7 +768,27 @@ class EntityCanvasProvider
                         ["code" => "clients", "intitule" => "Clients", "type" => "Collection", "targetEntity" => Client::class],
                     ], $this->getGlobalIndicatorsCanvas("Groupe"))
                 ];
-
+            case Groupe::class:
+                return [
+                    "parametres" => [
+                        "description" => "Groupe de clients",
+                        "icone" => "mdi:account-multiple",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Groupe de clients: [[*nom]].",
+                            " Description: <em>« [[description]] »</em>."
+                        ]
+                    ],
+                    "liste" => array_merge([
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom du groupe", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
+                            ["attribut_code" => "description"]
+                        ]],
+                        ["code" => "clients", "intitule" => "Clients", "type" => "Collection", "targetEntity" => Client::class],
+                    ],
+                    $this->getSpecificIndicatorsCanvas(Groupe::class),
+                    $this->getGlobalIndicatorsCanvas("Groupe"))
+                ];
             case Partenaire::class:
                 return [
                     "parametres" => [
@@ -1020,7 +1105,9 @@ class EntityCanvasProvider
                         ["code" => "pourcentage", "intitule" => "Pourcentage", "type" => "Nombre", "unite" => "%"],
                         ["code" => "montantflat", "intitule" => "Montant", "type" => "Nombre", "unite" => "$"],
                         ["code" => "shared", "intitule" => "Partagé", "type" => "Booleen"],
-                    ], $this->getGlobalIndicatorsCanvas("TypeRevenu"))
+                    ],
+                    $this->getSpecificIndicatorsCanvas(TypeRevenu::class),
+                    $this->getGlobalIndicatorsCanvas("TypeRevenu"))
                 ];
             case Classeur::class:
                 return [
@@ -1064,7 +1151,9 @@ class EntityCanvasProvider
                             "description" => "L'entité parente à laquelle ce document est attaché."
                         ],
                         ["code" => "createdAt", "intitule" => "Créé le", "type" => "Date"],
-                    ], $this->getGlobalIndicatorsCanvas("Document"))
+                    ],
+                    $this->getSpecificIndicatorsCanvas(Document::class),
+                    $this->getGlobalIndicatorsCanvas("Document"))
                 ];
             case Entreprise::class:
                 return [
@@ -1118,6 +1207,27 @@ class EntityCanvasProvider
                         ["code" => "email", "intitule" => "Email", "type" => "Texte"],
                         ["code" => "isVerified", "intitule" => "Vérifié", "type" => "Booleen"],
                     ]
+                ];
+            case RevenuPourCourtier::class:
+                return [
+                    "parametres" => [
+                        "description" => "Revenu pour Courtier",
+                        "icone" => "mdi:cash-sync",
+                        'background_image' => '/images/fitures/default.jpg',
+                        'description_template' => [
+                            "Revenu '[[*nom]]' pour la cotation [[cotation]]."
+                        ]
+                    ],
+                    "liste" => array_merge([
+                        ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                        ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
+                        ["code" => "cotation", "intitule" => "Cotation", "type" => "Relation", "targetEntity" => Cotation::class, "displayField" => "nom"],
+                        ["code" => "typeRevenu", "intitule" => "Type de Revenu", "type" => "Relation", "targetEntity" => TypeRevenu::class, "displayField" => "nom"],
+                        ["code" => "montantFlatExceptionel", "intitule" => "Montant Fixe (Except.)", "type" => "Nombre", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
+                        ["code" => "tauxExceptionel", "intitule" => "Taux (Except.)", "type" => "Nombre", "unite" => "%"],
+                    ],
+                    $this->getSpecificIndicatorsCanvas(RevenuPourCourtier::class),
+                    $this->getGlobalIndicatorsCanvas("RevenuPourCourtier"))
                 ];
             default:
                 return [];
