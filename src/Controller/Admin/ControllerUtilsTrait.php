@@ -607,37 +607,12 @@ trait ControllerUtilsTrait
 
     public function loadCalculatedValues($entityCanvas, $entity)
     {
-        // --- MODIFICATION : AJOUT DES VALEURS CALCULÉES ---
-        foreach ($entityCanvas['liste'] as $field) {
-            if ($field['type'] === 'Calcul') {
-                $functionName = $field['fonction'];
-                $args = []; // Initialiser le tableau d'arguments
-
-                // On vérifie si la clé "params" existe et n'est pas vide
-                if (!empty($field['params'])) {
-                    // CAS 1 : Des paramètres spécifiques sont listés (logique existante)
-                    $paramNames = $field['params'];
-                    $args = array_map(function ($paramName) use ($entity) {
-                        $getter = 'get' . ucfirst($paramName);
-                        if (method_exists($entity, $getter)) {
-                            return $entity->$getter();
-                        }
-                        return null;
-                    }, $paramNames);
-                } else {
-                    // CAS 2 : La clé "params" est absente, on passe l'entité entière
-                    $args[] = $entity;
-                }
-
-                // On appelle la fonction du service avec les arguments préparés
-                if (method_exists($this->calculationProvider, $functionName)) {
-                    $calculatedValue = $this->calculationProvider->$functionName(...$args);
-                    // On ajoute le résultat à l'objet entité pour la sérialisation
-                    $entity->{$field['code']} = $calculatedValue;
-                }
-            }
+        // La logique est maintenant entièrement déléguée au CanvasBuilder.
+        // Le paramètre $entityCanvas est conservé pour la compatibilité avec les appels existants,
+        // mais la nouvelle méthode du builder n'en a plus besoin car elle le récupère elle-même.
+        if (method_exists($this->canvasBuilder, 'loadAllCalculatedValues')) {
+            $this->canvasBuilder->loadAllCalculatedValues($entity);
         }
-        // --- FIN DE LA MODIFICATION ---
     }
 
     /**
@@ -685,13 +660,9 @@ trait ControllerUtilsTrait
         }
 
         $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
+        // Cet appel unique charge maintenant TOUTES les valeurs calculées,
+        // y compris les indicateurs spécifiques.
         $this->loadCalculatedValues($entityCanvas, $entity);
-        
-        // NOUVEAU : On charge également les indicateurs spécifiques (ex: Âge de la cotation, etc.)
-        $specificIndicators = $this->calculationProvider->getIndicateursSpecifics($entity);
-        foreach ($specificIndicators as $key => $value) {
-            $entity->{$key} = $value;
-        }
 
         // On retourne le tableau de données prêt à être sérialisé.
         return ['entity' => $entity, 'entityType' => $entityType, 'entityCanvas' => $entityCanvas];
