@@ -15,12 +15,15 @@ use App\Services\Canvas\SearchCanvasProvider;
 
 class CanvasBuilder
 {
+    // Le constructeur injecte maintenant les "résolveurs" principaux,
+    // et non plus les fournisseurs monolithiques.
     public function __construct(
         private EntityCanvasProvider $entityCanvasProvider,
         private SearchCanvasProvider $searchCanvasProvider,
         private ListCanvasProvider $listCanvasProvider,
         private FormCanvasProvider $formCanvasProvider,
         private NumericCanvasProvider $numericCanvasProvider,
+        private CalculationProvider $calculationProvider // Ajout du CalculationProvider
     ) {
     }
 
