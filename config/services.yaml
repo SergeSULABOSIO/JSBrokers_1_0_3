@@ -28,3 +28,15 @@ services:
     App\Controller\EspaceDeTravailComponentController:
         arguments:
             $menuData: '%app.menu_data%'
+
+    # ... (votre configuration existante)
+
+    # Taggage automatique pour les fournisseurs de canevas
+    _instanceof:
+        # Pour les canevas de LISTE
+        App\Services\Canvas\Provider\List\ListCanvasProviderInterface:
+            tags: ['app.list_canvas_provider']
+
+        # Vous ajouterez des sections similaires ici lorsque vous refactoriserez
+        # les autres fournisseurs (Form, Entity, etc.).
+
