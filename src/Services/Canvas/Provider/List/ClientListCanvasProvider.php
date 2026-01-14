@@ -3,9 +3,14 @@
 namespace App\Services\Canvas\Provider\List;
 
 use App\Entity\Client;
+use App\Services\ServiceMonnaies;
 
 class ClientListCanvasProvider implements ListCanvasProviderInterface
 {
+    public function __construct(private ServiceMonnaies $serviceMonnaies)
+    {
+    }
+
     public function supports(string $entityClassName): bool
     {
         return $entityClassName === Client::class;
@@ -23,6 +28,9 @@ class ClientListCanvasProvider implements ListCanvasProviderInterface
                     ["attribut_code" => "telephone"],
                 ],
             ],
+            // La méthode getSharedNumericColumns sera gérée par le résolveur principal
+            // pour éviter la duplication.
+            "colonnes_numeriques" => [],
         ];
     }
 }
