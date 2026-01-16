@@ -41,6 +41,10 @@ services:
         App\Services\Canvas\Provider\Entity\EntityCanvasProviderInterface:
             tags: ['app.entity_canvas_provider']
 
+        # Pour les canevas de FORM
+        App\Services\Canvas\Provider\Entity\FormCanvasProviderInterface:
+            tags: ['app.form_canvas_provider']
+
         # Vous ajouterez des sections similaires ici lorsque vous refactoriserez
         # les autres fournisseurs (Form, Entity, etc.).
 
