@@ -2,22 +2,14 @@
 
 namespace App\Services\Canvas;
 
-use App\Entity\Avenant;
 use App\Entity\Bordereau;
 use App\Entity\Chargement;
 use App\Entity\Classeur;
 use App\Entity\AutoriteFiscale;
-use App\Entity\CompteBancaire;
-use App\Entity\ConditionPartage;
-use App\Entity\Cotation;
 use App\Entity\Document;
 use App\Entity\Entreprise;
-use App\Entity\Groupe;
 use App\Entity\Invite;
-use App\Entity\ModelePieceSinistre;
 use App\Entity\Paiement;
-use App\Entity\Partenaire;
-use App\Entity\Risque;
 use App\Entity\TypeRevenu;
 use App\Services\Canvas\Provider\Form\FormCanvasProviderInterface;
 use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
@@ -50,32 +42,6 @@ class FormCanvasProvider
         $parametres = [];
 
         switch ($entityClassName) {
-            case Assureur::class:
-                $assureurId = $object->getId() ?? 0;
-                $parametres = [
-                    "titre_creation" => "Nouvel Assureur",
-                    "titre_modification" => "Modification de l'Assureur #%id%",
-                    "endpoint_submit_url" => "/admin/assureur/api/submit",
-                    "endpoint_delete_url" => "/admin/assureur/api/delete",
-                    "endpoint_form_url" => "/admin/assureur/api/get-form",
-                    "isCreationMode" => $isParentNew
-                ];
-                $layout = $this->buildAssureurLayout($assureurId, $isParentNew);
-                break;
-
-            case Cotation::class:
-                $cotationId = $object->getId() ?? 0;
-                $parametres = [
-                    "titre_creation" => "Nouvelle Cotation",
-                    "titre_modification" => "Modification de la Cotation #%id%",
-                    "endpoint_submit_url" => "/admin/cotation/api/submit",
-                    "endpoint_delete_url" => "/admin/cotation/api/delete",
-                    "endpoint_form_url" => "/admin/cotation/api/get-form",
-                    "isCreationMode" => $isParentNew
-                ];
-                $layout = $this->buildCotationLayout($cotationId, $isParentNew);
-                break;
-
             case Avenant::class:
                 $avenantId = $object->getId() ?? 0;
                 $parametres = [
@@ -115,45 +81,6 @@ class FormCanvasProvider
                 $layout = $this->buildPaiementLayout($paiementId, $isParentNew);
                 break;
 
-            case Groupe::class:
-                $groupeId = $object->getId() ?? 0;
-                $parametres = [
-                    "titre_creation" => "Nouveau Groupe",
-                    "titre_modification" => "Modification du Groupe #%id%",
-                    "endpoint_submit_url" => "/admin/groupe/api/submit",
-                    "endpoint_delete_url" => "/admin/groupe/api/delete",
-                    "endpoint_form_url" => "/admin/groupe/api/get-form",
-                    "isCreationMode" => $isParentNew
-                ];
-                $layout = $this->buildGroupeLayout($groupeId, $isParentNew);
-                break;
-
-            case Partenaire::class:
-                $partenaireId = $object->getId() ?? 0;
-                $parametres = [
-                    "titre_creation" => "Nouveau Partenaire",
-                    "titre_modification" => "Modification du Partenaire #%id%",
-                    "endpoint_submit_url" => "/admin/partenaire/api/submit",
-                    "endpoint_delete_url" => "/admin/partenaire/api/delete",
-                    "endpoint_form_url" => "/admin/partenaire/api/get-form",
-                    "isCreationMode" => $isParentNew
-                ];
-                $layout = $this->buildPartenaireLayout($partenaireId, $isParentNew);
-                break;
-
-            case Risque::class:
-                $risqueId = $object->getId() ?? 0;
-                $parametres = [
-                    "titre_creation" => "Nouveau Risque",
-                    "titre_modification" => "Modification du Risque #%id%",
-                    "endpoint_submit_url" => "/admin/risque/api/submit",
-                    "endpoint_delete_url" => "/admin/risque/api/delete",
-                    "endpoint_form_url" => "/admin/risque/api/get-form",
-                    "isCreationMode" => $isParentNew
-                ];
-                $layout = $this->buildRisqueLayout($risqueId, $isParentNew);
-                break;
-
             case Bordereau::class:
                 $bordereauId = $object->getId() ?? 0;
                 $parametres = [
@@ -191,19 +118,6 @@ class FormCanvasProvider
                     "isCreationMode" => $isParentNew
                 ];
                 $layout = $this->buildAutoriteFiscaleLayout($autoriteId, $isParentNew);
-                break;
-
-            case CompteBancaire::class:
-                $compteId = $object->getId() ?? 0;
-                $parametres = [
-                    "titre_creation" => "Nouveau Compte Bancaire",
-                    "titre_modification" => "Modification du Compte Bancaire #%id%",
-                    "endpoint_submit_url" => "/admin/comptebancaire/api/submit",
-                    "endpoint_delete_url" => "/admin/comptebancaire/api/delete",
-                    "endpoint_form_url" => "/admin/comptebancaire/api/get-form",
-                    "isCreationMode" => $isParentNew
-                ];
-                $layout = $this->buildCompteBancaireLayout($compteId, $isParentNew);
                 break;
 
             case TypeRevenu::class:
@@ -258,19 +172,6 @@ class FormCanvasProvider
                 $layout = $this->buildInviteLayout($inviteId, $isParentNew);
                 break;
 
-            case ConditionPartage::class:
-                $conditionId = $object->getId() ?? 0;
-                $parametres = [
-                    "titre_creation" => "Nouvelle Condition de Partage",
-                    "titre_modification" => "Modification de la Condition #%id%",
-                    "endpoint_submit_url" => "/admin/conditionpartage/api/submit",
-                    "endpoint_delete_url" => "/admin/conditionpartage/api/delete",
-                    "endpoint_form_url" => "/admin/conditionpartage/api/get-form",
-                    "isCreationMode" => $isParentNew
-                ];
-                $layout = $this->buildConditionPartageLayout($conditionId, $isParentNew);
-                break;
-
             default:
                 return [];
         }
@@ -285,43 +186,6 @@ class FormCanvasProvider
             "form_layout" => $layout,
             "fields_map" => $this->buildFieldsMap($layout) // Ajout de la carte des champs pour un accès optimisé
         ];
-    }
-
-    private function buildAssureurLayout(int $assureurId, bool $isParentNew): array
-    {
-        $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["email"]], ["champs" => ["telephone"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["adressePhysique"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["numimpot"]], ["champs" => ["idnat"]], ["champs" => ["rccm"]]]],
-        ];
-
-        $collections = [
-            ['fieldName' => 'cotations', 'entityRouteName' => 'cotation', 'formTitle' => 'Cotation', 'parentFieldName' => 'assureur'],
-            ['fieldName' => 'bordereaus', 'entityRouteName' => 'bordereau', 'formTitle' => 'Bordereau', 'parentFieldName' => 'assureur'],
-            ['fieldName' => 'notificationSinistres', 'entityRouteName' => 'notificationsinistre', 'formTitle' => 'Sinistre', 'parentFieldName' => 'assureur'],
-        ];
-
-        $this->addCollectionWidgetsToLayout($layout, $assureurId, $isParentNew, $collections);
-        return $layout;
-    }
-
-    private function buildCotationLayout(int $cotationId, bool $isParentNew): array
-    {
-        $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["piste"]], ["champs" => ["assureur"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["duree"]]]],
-        ];
-
-        $collections = [
-            ['fieldName' => 'avenants', 'entityRouteName' => 'avenant', 'formTitle' => 'Avenant', 'parentFieldName' => 'cotation'],
-            ['fieldName' => 'taches', 'entityRouteName' => 'tache', 'formTitle' => 'Tâche', 'parentFieldName' => 'cotation'],
-            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'cotation'],
-        ];
-
-        $this->addCollectionWidgetsToLayout($layout, $cotationId, $isParentNew, $collections);
-        return $layout;
     }
 
     private function buildAvenantLayout(int $avenantId, bool $isParentNew): array
@@ -367,46 +231,6 @@ class FormCanvasProvider
         return $layout;
     }
 
-    private function buildGroupeLayout(int $groupeId, bool $isParentNew): array
-    {
-        $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
-        ];
-        $collections = [['fieldName' => 'clients', 'entityRouteName' => 'client', 'formTitle' => 'Client', 'parentFieldName' => 'groupe']];
-        $this->addCollectionWidgetsToLayout($layout, $groupeId, $isParentNew, $collections);
-        return $layout;
-    }
-
-    private function buildPartenaireLayout(int $partenaireId, bool $isParentNew): array
-    {
-        $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["email"]], ["champs" => ["telephone"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["part"]]]],
-        ];
-        $collections = [
-            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'partenaire'],
-            ['fieldName' => 'clients', 'entityRouteName' => 'client', 'formTitle' => 'Client', 'parentFieldName' => 'partenaires'],
-        ];
-        $this->addCollectionWidgetsToLayout($layout, $partenaireId, $isParentNew, $collections);
-        return $layout;
-    }
-
-    private function buildRisqueLayout(int $risqueId, bool $isParentNew): array
-    {
-        $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nomComplet"]], ["champs" => ["code"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["branche"]], ["champs" => ["imposable"]]]],
-        ];
-        $collections = [
-            ['fieldName' => 'pistes', 'entityRouteName' => 'piste', 'formTitle' => 'Piste', 'parentFieldName' => 'risque'],
-            ['fieldName' => 'notificationSinistres', 'entityRouteName' => 'notificationsinistre', 'formTitle' => 'Sinistre', 'parentFieldName' => 'risque'],
-        ];
-        $this->addCollectionWidgetsToLayout($layout, $risqueId, $isParentNew, $collections);
-        return $layout;
-    }
-
     private function buildBordereauLayout(int $bordereauId, bool $isParentNew): array
     {
         $layout = [
@@ -436,20 +260,6 @@ class FormCanvasProvider
         return $layout;
     }
 
-    private function buildCompteBancaireLayout(int $compteId, bool $isParentNew): array
-    {
-        $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["banque"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["intitule"]], ["champs" => ["numero"]], ["champs" => ["codeSwift"]]]],
-        ];
-        $collections = [
-            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'compteBancaire'],
-            ['fieldName' => 'paiements', 'entityRouteName' => 'paiement', 'formTitle' => 'Paiement', 'parentFieldName' => 'compteBancaire'],
-        ];
-        $this->addCollectionWidgetsToLayout($layout, $compteId, $isParentNew, $collections);
-        return $layout;
-    }
-
     private function buildClasseurLayout(int $classeurId, bool $isParentNew): array
     {
         $layout = [
@@ -476,18 +286,6 @@ class FormCanvasProvider
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["email"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["isVerified"]]]],
         ];
-        return $layout;
-    }
-
-    private function buildConditionPartageLayout(int $conditionId, bool $isParentNew): array
-    {
-        $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["partenaire"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["taux"]], ["champs" => ["seuil"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["formule"]], ["champs" => ["uniteMesure"]], ["champs" => ["critereRisque"]]]],
-        ];
-        $collections = [['fieldName' => 'produits', 'entityRouteName' => 'risque', 'formTitle' => 'Risque', 'parentFieldName' => 'conditionPartage']];
-        $this->addCollectionWidgetsToLayout($layout, $conditionId, $isParentNew, $collections);
         return $layout;
     }
 
