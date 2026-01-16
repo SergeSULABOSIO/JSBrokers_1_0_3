@@ -3,6 +3,8 @@
 namespace App\Services\Canvas\Provider\Entity;
 
 use App\Entity\AutoriteFiscale;
+use App\Entity\Note;
+use App\Entity\Taxe;
 use App\Services\Canvas\CanvasHelper;
 use App\Services\ServiceMonnaies;
 
@@ -32,9 +34,10 @@ class AutoriteFiscaleEntityCanvasProvider implements EntityCanvasProviderInterfa
             ],
             "liste" => array_merge([
                 ["code" => "id", "intitule" => "ID", "type" => "Entier"],
-                ["code" => "nom", "intitule" => "Nom", "type" => "Texte", "col_principale" => true, "textes_secondaires" => [
-                    ["attribut_code" => "description"]
-                ]],
+                ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
+                ["code" => "abreviation", "intitule" => "Abréviation", "type" => "Texte"],
+                ["code" => "taxe", "intitule" => "Taxe Associée", "type" => "Relation", "targetEntity" => Taxe::class, "displayField" => "nom"],
+                ["code" => "notes", "intitule" => "Notes de débit/crédit", "type" => "Collection", "targetEntity" => Note::class, "displayField" => "reference"],
             ], $this->canvasHelper->getGlobalIndicatorsCanvas("AutoriteFiscale"))
         ];
     }
