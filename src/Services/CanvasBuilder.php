@@ -1,11 +1,6 @@
 <?php
 
 namespace App\Services;
-
-use DateTimeImmutable;
-use App\Constantes\Constante;
-use App\Entity\NotificationSinistre;
-use App\Entity\OffreIndemnisationSinistre;
 use App\Services\Canvas\CalculationProvider;
 use App\Services\Canvas\EntityCanvasProvider;
 use App\Services\Canvas\FormCanvasProvider;
