@@ -155,9 +155,9 @@ class Cotation
         return $this->createdAt;
     }
 
-    public function setCreatedAt(\DateTimeImmutable $createAt): static
+    public function setCreatedAt(\DateTimeImmutable $createdAt): static
     {
-        $this->createdAt = $createAt;
+        $this->createdAt = $createdAt;
 
         return $this;
     }
@@ -194,22 +194,22 @@ class Cotation
         return $this->taches;
     }
 
-    public function addTach(Tache $tach): static
+    public function addTache(Tache $tache): static
     {
-        if (!$this->taches->contains($tach)) {
-            $this->taches->add($tach);
-            $tach->setCotation($this);
+        if (!$this->taches->contains($tache)) {
+            $this->taches->add($tache);
+            $tache->setCotation($this);
         }
 
         return $this;
     }
 
-    public function removeTach(Tache $tach): static
+    public function removeTache(Tache $tache): static
     {
-        if ($this->taches->removeElement($tach)) {
+        if ($this->taches->removeElement($tache)) {
             // set the owning side to null (unless already changed)
-            if ($tach->getCotation() === $this) {
-                $tach->setCotation(null);
+            if ($tache->getCotation() === $this) {
+                $tache->setCotation(null);
             }
         }
 
@@ -284,22 +284,22 @@ class Cotation
         return $this->tranches;
     }
 
-    public function addTranch(Tranche $tranch): static
+    public function addTranche(Tranche $tranche): static
     {
-        if (!$this->tranches->contains($tranch)) {
-            $this->tranches->add($tranch);
-            $tranch->setCotation($this);
+        if (!$this->tranches->contains($tranche)) {
+            $this->tranches->add($tranche);
+            $tranche->setCotation($this);
         }
 
         return $this;
     }
 
-    public function removeTranch(Tranche $tranch): static
+    public function removeTranche(Tranche $tranche): static
     {
-        if ($this->tranches->removeElement($tranch)) {
+        if ($this->tranches->removeElement($tranche)) {
             // set the owning side to null (unless already changed)
-            if ($tranch->getCotation() === $this) {
-                $tranch->setCotation(null);
+            if ($tranche->getCotation() === $this) {
+                $tranche->setCotation(null);
             }
         }
 

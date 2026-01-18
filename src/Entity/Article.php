@@ -28,6 +28,12 @@ class Article
     #[ORM\Column]
     private ?int $idPoste = null;
 
+    #[ORM\ManyToOne(inversedBy: 'articles')]
+    private ?RevenuPourCourtier $revenuFacture = null;
+
+    #[ORM\ManyToOne(inversedBy: 'articles')]
+    private ?Taxe $taxeFacturee = null;
+
     public function __construct()
     {
 
@@ -94,6 +100,30 @@ class Article
     public function setIdPoste(int $idPoste): static
     {
         $this->idPoste = $idPoste;
+
+        return $this;
+    }
+
+    public function getRevenuFacture(): ?RevenuPourCourtier
+    {
+        return $this->revenuFacture;
+    }
+
+    public function setRevenuFacture(?RevenuPourCourtier $revenuFacture): static
+    {
+        $this->revenuFacture = $revenuFacture;
+
+        return $this;
+    }
+
+    public function getTaxeFacturee(): ?Taxe
+    {
+        return $this->taxeFacturee;
+    }
+
+    public function setTaxeFacturee(?Taxe $taxeFacturee): static
+    {
+        $this->taxeFacturee = $taxeFacturee;
 
         return $this;
     }
