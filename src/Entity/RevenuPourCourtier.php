@@ -147,25 +147,25 @@ class RevenuPourCourtier
         return $this->articles;
     }
 
-    // public function addArticle(Article $article): static
-    // {
-    //     if (!$this->articles->contains($article)) {
-    //         $this->articles->add($article);
-    //         $article->setRevenuFacture($this);
-    //     }
+    public function addArticle(Article $article): static
+    {
+        if (!$this->articles->contains($article)) {
+            $this->articles->add($article);
+            $article->setRevenuFacture($this);
+        }
 
-    //     return $this;
-    // }
+        return $this;
+    }
 
-    // public function removeArticle(Article $article): static
-    // {
-    //     if ($this->articles->removeElement($article)) {
-    //         // set the owning side to null (unless already changed)
-    //         if ($article->getRevenuFacture() === $this) {
-    //             $article->setRevenuFacture(null);
-    //         }
-    //     }
+    public function removeArticle(Article $article): static
+    {
+        if ($this->articles->removeElement($article)) {
+            // set the owning side to null (unless already changed)
+            if ($article->getRevenuFacture() === $this) {
+                $article->setRevenuFacture(null);
+            }
+        }
 
-    //     return $this;
-    // }
+        return $this;
+    }
 }
