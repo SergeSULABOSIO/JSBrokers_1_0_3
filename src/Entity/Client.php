@@ -65,7 +65,7 @@ class Client
      * @var Collection<int, NotificationSinistre>
      */
     #[ORM\OneToMany(targetEntity: NotificationSinistre::class, mappedBy: 'assure')]
-    #[Groups(['list:read'])] // POUR NE TOMBER DANS LA BOUCLE INFINIE QUAND IL FERA LA SERIALISATION DES ENTITES
+    // #[Groups(['list:read'])] // POUR NE TOMBER DANS LA BOUCLE INFINIE QUAND IL FERA LA SERIALISATION DES ENTITES
     private Collection $notificationSinistres;
 
     /**
