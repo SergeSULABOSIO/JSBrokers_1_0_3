@@ -3,23 +3,20 @@
 namespace App\Controller\Admin;
 
 use App\Entity\ConditionPartage;
-use App\Entity\Invite;
 use App\Form\ConditionPartageType;
-use App\Constantes\Constante;
 use App\Repository\ConditionPartageRepository;
+use App\Constantes\Constante;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Mailer\MailerInterface;
 use App\Controller\Admin\ControllerUtilsTrait;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Entity\Traits\HandleChildAssociationTrait;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
-use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
@@ -31,16 +28,15 @@ class ConditionPartageController extends AbstractController
     use ControllerUtilsTrait;
 
     public function __construct(
-        private MailerInterface $mailer,
-        private TranslatorInterface $translator,
         private EntityManagerInterface $em,
-        private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
-        private ConditionPartageRepository $conditionPartageRepository,
-        private Constante $constante,
+        private EntrepriseRepository $entrepriseRepository,
         private JSBDynamicSearchService $searchService,
-        private SerializerInterface $serializer
-    ) {}
+        private SerializerInterface $serializer,
+        private Constante $constante,
+        private ConditionPartageRepository $conditionPartageRepository
+    ) {
+    }
 
     protected function getCollectionMap(): array
     {
@@ -85,13 +81,26 @@ class ConditionPartageController extends AbstractController
         return $this->handleDeleteApi($conditionPartage);
     }
 
-    #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
-    public function query(Request $request)
+    #[Route(
+        '/api/dynamic-query/{idInvite}/{idEntreprise}',
+        name: 'app_dynamic_query',
+        requirements: [
+            'idEntreprise' => Requirement::DIGITS,
+            'idInvite' => Requirement::DIGITS
+        ],
+        methods: ['POST']
+    )]
+    public function query(Request $request): Response
     {
         return $this->renderViewOrListComponent(ConditionPartage::class, $request, true);
     }
 
-    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]
+    #[Route(
+        '/api/{id}/{collectionName}/{usage}',
+        name: 'api.get_collection',
+        requirements: ['id' => Requirement::DIGITS],
+        methods: ['GET']
+    )]
     public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
     {
         return $this->handleCollectionApiRequest($id, $collectionName, ConditionPartage::class, $usage);

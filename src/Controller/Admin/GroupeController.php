@@ -2,31 +2,25 @@
 
 namespace App\Controller\Admin;
 
-use App\Entity\Piste;
-use App\Entity\Tache;
 use App\Entity\Groupe;
 use App\Entity\Invite;
-use App\Entity\Avenant;
-use App\Form\PisteType;
-use App\Form\TacheType;
 use App\Form\GroupeType;
-use App\Entity\Entreprise;
 use App\Constantes\Constante;
-use App\Services\ServiceTaxes;
-use App\Constantes\MenuActivator;
-use App\Services\ServiceMonnaies;
-use App\Repository\PisteRepository;
-use App\Repository\TacheRepository;
 use App\Repository\GroupeRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
+use App\Services\Canvas\CalculationProvider;
+use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Controller\Admin\ControllerUtilsTrait;
+use App\Entity\Traits\HandleChildAssociationTrait;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
-use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
@@ -35,144 +29,79 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 #[IsGranted('ROLE_USER')]
 class GroupeController extends AbstractController
 {
-    public MenuActivator $activator;
+    use HandleChildAssociationTrait;
+    use ControllerUtilsTrait;
 
     public function __construct(
-        private MailerInterface $mailer,
-        private TranslatorInterface $translator,
-        private EntityManagerInterface $manager,
+        private EntityManagerInterface $em,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
         private GroupeRepository $groupeRepository,
         private Constante $constante,
-        private ServiceMonnaies $serviceMonnaies,
-        private ServiceTaxes $serviceTaxes,
+        private JSBDynamicSearchService $searchService,
+        private SerializerInterface $serializer,
+        private CanvasBuilder $canvasBuilder,
+        private CalculationProvider $calculationProvider
     ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_PRODUCTION);
     }
 
-
-    #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function index($idEntreprise, Request $request)
+    protected function getCollectionMap(): array
     {
-        $page = $request->query->getInt("page", 1);
-
-        return $this->render('admin/groupe/index.html.twig', [
-            'pageName' => $this->translator->trans("groupe_page_name_new"),
-            'utilisateur' => $this->getUser(),
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'groupes' => $this->groupeRepository->paginateForEntreprise($idEntreprise, $page),
-            'page' => $page,
-            'constante' => $this->constante,
-            'activator' => $this->activator,
-            'serviceMonnaie' => $this->serviceMonnaies,
-            'serviceTaxe' => $this->serviceTaxes,
-        ]);
+        return $this->buildCollectionMapFromEntity(Groupe::class);
     }
 
-
-    #[Route('/create/{idEntreprise}', name: 'create')]
-    public function create($idEntreprise, Request $request)
+    protected function getParentAssociationMap(): array
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        return $this->buildParentAssociationMapFromEntity(Groupe::class);
+    }
 
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
+    #[Route('/index/{idInvite}/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function index(Request $request)
+    {
+        return $this->renderViewOrListComponent(Groupe::class, $request);
+    }
 
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
-
-        /** @var Groupe $groupe */
-        $groupe = new Groupe();
-        //Paramètres par défaut
-        $groupe->setEntreprise($entreprise);
-
-        $form = $this->createForm(GroupeType::class, $groupe);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            //on défini le groupe et l'entreprise au cas où ils ne sont pas défini par l'utilisateur dans le formulaire
-            foreach ($groupe->getClients() as $client) {
-                $client->setGroupe($groupe);
-                $client->setEntreprise($entreprise);
+    #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
+    public function getFormApi(?Groupe $groupe, Request $request): Response
+    {
+        return $this->renderFormCanvas(
+            $request,
+            Groupe::class,
+            GroupeType::class,
+            $groupe,
+            function (Groupe $groupe, Invite $invite) {
+                $groupe->setEntreprise($invite->getEntreprise());
             }
-            $this->manager->persist($groupe);
-            $this->manager->flush();
-
-            return new Response(
-                "Ok" . "__1986__" .
-                count($groupe->getClients())
-            );
-        }
-        return $this->render('admin/groupe/create.html.twig', [
-            'pageName' => $this->translator->trans("groupe_page_name_new"),
-            'utilisateur' => $user,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'groupe' => $groupe,
-            'form' => $form,
-        ]);
+        );
     }
 
-
-    #[Route('/edit/{idEntreprise}/{idGroupe}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idGroupe, Request $request)
+    #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
+    public function submitApi(Request $request): JsonResponse
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Groupe $groupe */
-        $groupe = $this->groupeRepository->find($idGroupe);
-
-        $form = $this->createForm(GroupeType::class, $groupe);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            //on défini le groupe et l'entreprise au cas où ils ne sont pas défini par l'utilisateur dans le formulaire
-            foreach ($groupe->getClients() as $client) {
-                $client->setGroupe($groupe);
-                $client->setEntreprise($entreprise);
-            }
-            $this->manager->persist($groupe);
-            $this->manager->flush();
-            
-            return new Response(
-                "Ok" . "__1986__" .
-                count($groupe->getClients())
-            );
-        }
-        return $this->render('admin/groupe/edit.html.twig', [
-            'pageName' => $this->translator->trans("groupe_page_name_update", [
-                ":groupe" => $groupe->getNom(),
-            ]),
-            'utilisateur' => $user,
-            'groupe' => $groupe,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
+        // The logic to associate clients is now handled by Doctrine's cascade persist
+        // and the `by_reference => false` option in the form's collection type.
+        return $this->handleFormSubmission(
+            $request,
+            Groupe::class,
+            GroupeType::class
+        );
     }
 
-    #[Route('/remove/{idEntreprise}/{idGroupe}', name: 'remove', requirements: ['idGroupe' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove($idEntreprise, $idGroupe, Request $request)
+    #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
+    public function deleteApi(Groupe $groupe): Response
     {
-        /** @var Groupe $groupe */
-        $groupe = $this->groupeRepository->find($idGroupe);
+        return $this->handleDeleteApi($groupe);
+    }
 
-        $message = $this->translator->trans("groupe_deletion_ok", [
-            ":groupe" => $groupe->getNom(),
-        ]);;
+    #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
+    public function query(Request $request): Response
+    {
+        return $this->renderViewOrListComponent(Groupe::class, $request, true);
+    }
 
-        $this->manager->remove($groupe);
-        $this->manager->flush();
-
-        $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.groupe.index", [
-            'idEntreprise' => $idEntreprise,
-        ]);
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
+    {
+        return $this->handleCollectionApiRequest($id, $collectionName, Groupe::class, $usage);
     }
 }

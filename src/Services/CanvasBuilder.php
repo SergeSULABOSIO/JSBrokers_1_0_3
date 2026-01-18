@@ -57,17 +57,11 @@ class CanvasBuilder
      * Cette méthode centralise la logique qui était auparavant dans ControllerUtilsTrait.
      *
      * @param object $entity L'entité à enrichir avec les valeurs calculées.
-     * @param array|null $entityCanvas Le canevas d'entité pré-chargé (optimisation).
      */
-    public function loadAllCalculatedValues(object $entity, ?array $entityCanvas = null): void
+    public function loadAllCalculatedValues(object $entity): void
     {
-        // Si aucun canevas n'est fourni, on le récupère.
-        // Cela maintient la facilité d'utilisation pour les appels simples tout en permettant une optimisation.
-        if ($entityCanvas === null) {
-            $entityCanvas = $this->entityCanvasProvider->getCanvas(get_class($entity));
-        }
-
         // 1. Charge les valeurs basées sur la définition du canevas (champs de type 'Calcul')
+        $entityCanvas = $this->entityCanvasProvider->getCanvas(get_class($entity));
         if (isset($entityCanvas['liste'])) {
             foreach ($entityCanvas['liste'] as $field) {
                 if (($field['type'] ?? null) === 'Calcul') {

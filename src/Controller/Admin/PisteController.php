@@ -3,38 +3,25 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Piste;
-use App\Entity\Tache;
 use App\Entity\Invite;
 use DateTimeImmutable;
-use Twig\Node\SetNode;
-use App\Entity\Avenant;
-use App\Entity\Tranche;
 use App\Form\PisteType;
-use App\Form\TacheType;
-use App\Entity\Cotation;
-use App\Entity\Chargement;
-use App\Entity\Entreprise;
-use App\Entity\Utilisateur;
 use App\Constantes\Constante;
-use App\Services\ServiceDates;
-use App\Services\ServiceTaxes;
-use App\Constantes\MenuActivator;
-use App\Services\ServiceMonnaies;
-use App\Entity\RevenuPourCourtier;
-use App\Entity\ChargementPourPrime;
 use App\Repository\PisteRepository;
-use App\Repository\TacheRepository;
 use App\Repository\InviteRepository;
-use App\Repository\AvenantRepository;
-use Proxies\__CG__\App\Entity\Revenu;
 use App\Repository\EntrepriseRepository;
+use App\Services\Canvas\CalculationProvider;
+use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Controller\Admin\ControllerUtilsTrait;
+use App\Entity\Traits\HandleChildAssociationTrait;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
-use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
@@ -42,274 +29,79 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 #[IsGranted('ROLE_USER')]
 class PisteController extends AbstractController
 {
-    public MenuActivator $activator;
+    use HandleChildAssociationTrait;
+    use ControllerUtilsTrait;
 
     public function __construct(
-        private MailerInterface $mailer,
-        private TranslatorInterface $translator,
-        private EntityManagerInterface $manager,
+        private EntityManagerInterface $em,
         private EntrepriseRepository $entrepriseRepository,
-        private AvenantRepository $avenantRepository,
         private InviteRepository $inviteRepository,
         private PisteRepository $pisteRepository,
         private Constante $constante,
-        private ServiceMonnaies $serviceMonnaies,
-        private ServiceTaxes $serviceTaxes,
-        private ServiceDates $serviceDates,
+        private JSBDynamicSearchService $searchService,
+        private SerializerInterface $serializer,
+        private CanvasBuilder $canvasBuilder,
+        private CalculationProvider $calculationProvider
     ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_MARKETING);
     }
 
-
-    #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function index($idEntreprise, Request $request)
+    protected function getCollectionMap(): array
     {
-        $page = $request->query->getInt("page", 1);
-
-        return $this->render('admin/piste/index.html.twig', [
-            'pageName' => $this->translator->trans("piste_page_name_new"),
-            'utilisateur' => $this->getUser(),
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'pistes' => $this->pisteRepository->paginateForEntreprise($idEntreprise, $page),
-            'page' => $page,
-            'constante' => $this->constante,
-            'activator' => $this->activator,
-            'serviceMonnaie' => $this->serviceMonnaies,
-            'serviceTaxe' => $this->serviceTaxes,
-        ]);
+        return $this->buildCollectionMapFromEntity(Piste::class);
     }
 
-
-    #[Route('/create/{idEntreprise}', name: 'create')]
-    public function create($idEntreprise, Request $request)
+    protected function getParentAssociationMap(): array
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
-
-        /** @var Piste $piste */
-        $piste = new Piste();
-        //Paramètres par défaut
-        $piste->setTypeAvenant(Piste::AVENANT_SOUSCRIPTION);
-        $piste->setInvite($invite);
-        $piste->setExercice((new DateTimeImmutable("now"))->format('Y'));
-
-        $form = $this->createForm(PisteType::class, $piste);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($piste); //On peut ignorer cette instruction car la fonction flush suffit.
-            $this->manager->flush();
-
-            return new Response(
-                count($piste->getCotations()) . "__1986__" . 
-                count($piste->getTaches()) . "__1986__" . 
-                count($piste->getDocuments()) . "__1986__" . 
-                count($piste->getConditionsPartageExceptionnelles())
-            );
-        }
-        return $this->render('admin/piste/create.html.twig', [
-            'pageName' => $this->translator->trans("piste_page_name_new"),
-            'utilisateur' => $user,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'piste' => $piste,
-            'form' => $form,
-        ]);
+        return $this->buildParentAssociationMapFromEntity(Piste::class);
     }
 
-
-    #[Route('/edit/{idEntreprise}/{idPiste}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idPiste, Request $request)
+    #[Route('/index/{idInvite}/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function index(Request $request)
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Piste $piste */
-        $piste = $this->pisteRepository->find($idPiste);
-
-        $form = $this->createForm(PisteType::class, $piste);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($piste); //On peut ignorer cette instruction car la fonction flush suffit.
-            $this->manager->flush();
-            // return new Response("Ok");
-            return new Response(
-                count($piste->getCotations()) . "__1986__" . 
-                count($piste->getTaches()) . "__1986__" . 
-                count($piste->getDocuments()) . "__1986__" . 
-                count($piste->getConditionsPartageExceptionnelles())
-            );
-        }
-        return $this->render('admin/piste/edit.html.twig', [
-            'pageName' => $this->translator->trans("piste_page_name_update", [
-                ":piste" => $piste->getNom(),
-            ]),
-            'utilisateur' => $user,
-            'piste' => $piste,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
+        return $this->renderViewOrListComponent(Piste::class, $request);
     }
 
-    #[Route('/remove/{idEntreprise}/{idPiste}', name: 'remove', requirements: ['idPiste' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove($idEntreprise, $idPiste, Request $request)
+    #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
+    public function getFormApi(?Piste $piste, Request $request): Response
     {
-        /** @var Piste $piste */
-        $piste = $this->pisteRepository->find($idPiste);
-
-        $message = $this->translator->trans("piste_deletion_ok", [
-            ":piste" => $piste->getNom(),
-        ]);;
-
-        $this->manager->remove($piste);
-        $this->manager->flush();
-
-        $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.piste.index", [
-            'idEntreprise' => $idEntreprise,
-        ]);
-    }
-
-    #[Route('/endorse/{idEntreprise}/{idAvenant}/{mouvement}', name: 'endorse', requirements: ['idAvenant' => Requirement::DIGITS, 'mouvement' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function endorse($idEntreprise, $idAvenant, $mouvement, Request $request)
-    {
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Avenant $avenant */
-        $avenantDeBase = $this->avenantRepository->find($idAvenant);
-        // dd($avenantDeBase);
-
-        if ($avenantDeBase != null) {
-
-            $newPiste = $this->buildNewPisteFromAvenant($user, $avenantDeBase, $mouvement);
-
-            $form = $this->createForm(PisteType::class, $newPiste);
-            $form->handleRequest($request);
-
-            if ($form->isSubmitted() && $form->isValid()) {
-                $this->manager->persist($newPiste); //On peut ignorer cette instruction car la fonction flush suffit.
-                $this->manager->flush();
-                return new Response("Ok");
+        return $this->renderFormCanvas(
+            $request,
+            Piste::class,
+            PisteType::class,
+            $piste,
+            function (Piste $piste, Invite $invite) {
+                $piste->setTypeAvenant(Piste::AVENANT_SOUSCRIPTION);
+                $piste->setInvite($invite);
+                $piste->setExercice((new DateTimeImmutable("now"))->format('Y'));
             }
-            return $this->render('admin/piste/create.html.twig', [
-                'pageName' => $this->translator->trans("piste_page_name_new"),
-                'utilisateur' => $user,
-                'entreprise' => $user->getConnectedTo(),
-                'activator' => $this->activator,
-                'form' => $form,
-            ]);
-        } else {
-            return $this->redirectToRoute("admin.avenant.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
-        }
+        );
     }
 
-    private function buildNewPisteFromAvenant(Utilisateur $user, Avenant $avenantDeBase, $mouvement): Piste
+    #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
+    public function submitApi(Request $request): JsonResponse
     {
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
-
-        /** @var Cotation $cotation */
-        $cotationAvenantDeBase = $avenantDeBase->getCotation();
-
-        /** @var Piste $piste */
-        $pisteAvenant = $cotationAvenantDeBase->getPiste();
-
-        $referencePolice = $avenantDeBase->getReferencePolice();
-
-        $newCalculatedPeriod = $this->constante->calculerPeriodeCouverture($mouvement, $avenantDeBase);
-
-        $nomPiste = "Avenant n°" . $newCalculatedPeriod['New Numero Avenant'] . " • " . $this->constante->getTypeAvenant($mouvement) . " • Pol.:" . $referencePolice . " • " . $pisteAvenant->getClient() . " • " . $pisteAvenant->getRisque()->getCode();
-
-        /** @var Piste $piste */
-        $piste = new Piste();
-        //Paramètres par défaut
-        $piste->setAvenantDeBase($avenantDeBase);
-        $piste->setRenewalCondition($avenantDeBase->getCotation()->getPiste()->getRenewalCondition());
-        $piste->setNom($nomPiste);
-        $piste->setDescriptionDuRisque($this->constante->getTypeAvenant($mouvement) . " • " . $avenantDeBase->getDescription());
-        $piste->setPrimePotentielle($pisteAvenant->getPrimePotentielle());
-        $piste->setCommissionPotentielle($pisteAvenant->getCommissionPotentielle());
-        $piste->setClient($pisteAvenant->getClient());
-        $piste->setRisque($pisteAvenant->getRisque());
-        //Chargements des partenaires éventuels
-        foreach ($pisteAvenant->getPartenaires() as $partenaire) {
-            $piste->addPartenaire($partenaire);
-        }
-        //Chargements des conditions de partage éventuelles
-        foreach ($pisteAvenant->getConditionsPartageExceptionnelles() as $condition) {
-            $piste->addConditionsPartageExceptionnelle($condition);
-        }
-        $piste->setTypeAvenant($mouvement);
-        $piste->setInvite($invite);
-        $piste->setExercice((new DateTimeImmutable("now"))->format('Y'));
-
-        /** @var Cotation $newCotation */
-        $newCotation = new Cotation();
-        $newCotation->setDuree($cotationAvenantDeBase->getDuree());
-        $newCotation->setAssureur($cotationAvenantDeBase->getAssureur());
-        $newCotation->setNom("Proposition • " . $cotationAvenantDeBase->getAssureur()->getNom() . " • " . $this->constante->getTypeAvenant($mouvement) . " • Av. n°" . $newCalculatedPeriod['New Numero Avenant'] . " • " . $pisteAvenant->getRisque()->getCode() . " • " . $pisteAvenant->getClient()->getNom());
-        //On défini les chargements par défaut
-        foreach ($cotationAvenantDeBase->getChargements() as $chargement) {
-            $newCotation->addChargement(
-                (new ChargementPourPrime())
-                    ->setNom($chargement->getNom())
-                    ->setCreatedAt(new DateTimeImmutable("now"))
-                    ->setUpdatedAt(new DateTimeImmutable("now"))
-                    ->setType($chargement->getType())
-                    ->setMontantFlatExceptionel($chargement->getMontantFlatExceptionel())
-            );
-        }
-        //On défini les tranches par défaut
-        foreach ($cotationAvenantDeBase->getTranches() as $tranche) {
-            $newCotation->addTranch(
-                (new Tranche())
-                    ->setNom($tranche->getNom())
-                    ->setPayableAt($newCalculatedPeriod['Effect Date'])
-                    ->setEcheanceAt($newCalculatedPeriod['Expiry Date'])
-                    ->setMontantFlat($tranche->getMontantFlat())
-                    ->setCreatedAt($tranche->getCreatedAt())
-                    ->setUpdatedAt($tranche->getUpdatedAt())
-                    ->setPourcentage($tranche->getPourcentage())
-            );
-        }
-        //On défini les revenus par défaut
-        foreach ($cotationAvenantDeBase->getRevenus() as $revenu) {
-            $newCotation->addRevenu(
-                (new RevenuPourCourtier)
-                    ->setNom($revenu->getNom())
-                    ->setTypeRevenu($revenu->getTypeRevenu())
-                    ->setCreatedAt(new DateTimeImmutable("now"))
-                    ->setUpdatedAt(new DateTimeImmutable("now"))
-                    ->setMontantFlatExceptionel($revenu->getMontantFlatExceptionel())
-            );
-        }
-
-        //On ne charge pas encore l'avenant car à ce stade on n'est pas encore sur que c'est cofirmé.
-        $newCotation->addAvenant(
-            (new Avenant())
-                ->setNumero($newCalculatedPeriod['New Numero Avenant'])
-                ->setStartingAt($newCalculatedPeriod['Effect Date'])
-                ->setEndingAt($newCalculatedPeriod['Expiry Date'])
-                ->setReferencePolice($referencePolice)
-                ->setDescription($this->constante->getTypeAvenant($mouvement) . " • Av. n°" . $newCalculatedPeriod['New Numero Avenant'] . " • " . $pisteAvenant->getRisque()->getCode() . " • " . $pisteAvenant->getClient()->getNom())
+        return $this->handleFormSubmission(
+            $request,
+            Piste::class,
+            PisteType::class
         );
+    }
 
-        //Défini la cotation
-        $piste->addCotation($newCotation);
-        return $piste;
+    #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
+    public function deleteApi(Piste $piste): Response
+    {
+        return $this->handleDeleteApi($piste);
+    }
+
+    #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
+    public function query(Request $request): Response
+    {
+        return $this->renderViewOrListComponent(Piste::class, $request, true);
+    }
+
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
+    {
+        return $this->handleCollectionApiRequest($id, $collectionName, Piste::class, $usage);
     }
 }
