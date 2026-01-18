@@ -55,8 +55,15 @@ class CompteBancaireController extends AbstractController
         return $this->buildParentAssociationMapFromEntity(CompteBancaire::class);
     }
 
-    #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function index($idEntreprise, Request $request)
+    #[Route(
+        '/index/{idInvite}/{idEntreprise}',
+        name: 'index',
+        requirements: [
+            'idEntreprise' => Requirement::DIGITS,
+            'idInvite' => Requirement::DIGITS
+        ],
+        methods: ['GET', 'POST'])]
+    public function index(Request $request)
     {
         return $this->renderViewOrListComponent(CompteBancaire::class, $request);
     }

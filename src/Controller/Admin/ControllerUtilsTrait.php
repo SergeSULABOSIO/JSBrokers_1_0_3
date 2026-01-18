@@ -605,12 +605,13 @@ trait ControllerUtilsTrait
         return $this->forward($controllerAction, $request->attributes->all());
     }
 
-    public function loadCalculatedValues(?array $entityCanvas, object $entity)
+    public function loadCalculatedValues($entityCanvas, $entity)
     {
-        // La logique est déléguée au CanvasBuilder.
-        // On passe le canevas s'il est disponible pour optimiser les performances.
+        // La logique est maintenant entièrement déléguée au CanvasBuilder.
+        // Le paramètre $entityCanvas est conservé pour la compatibilité avec les appels existants,
+        // mais la nouvelle méthode du builder n'en a plus besoin car elle le récupère elle-même.
         if (method_exists($this->canvasBuilder, 'loadAllCalculatedValues')) {
-            $this->canvasBuilder->loadAllCalculatedValues($entity, $entityCanvas);
+            $this->canvasBuilder->loadAllCalculatedValues($entity);
         }
     }
 

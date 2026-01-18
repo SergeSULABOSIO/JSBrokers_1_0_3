@@ -2,29 +2,25 @@
 
 namespace App\Controller\Admin;
 
-use App\Entity\Revenu;
-use App\Form\RevenuType;
-use App\Entity\Entreprise;
+use App\Entity\Invite;
 use App\Entity\TypeRevenu;
 use App\Form\TypeRevenuType;
 use App\Constantes\Constante;
-use App\Entity\CompteBancaire;
-use App\Services\ServiceTaxes;
-use App\Form\CompteBancaireType;
-use App\Constantes\MenuActivator;
-use App\Services\ServiceMonnaies;
 use App\Repository\InviteRepository;
-use App\Repository\RevenuRepository;
 use App\Repository\EntrepriseRepository;
 use App\Repository\TypeRevenuRepository;
+use App\Services\Canvas\CalculationProvider;
+use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
-use App\Repository\CompteBancaireRepository;
+use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Controller\Admin\ControllerUtilsTrait;
+use App\Entity\Traits\HandleChildAssociationTrait;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
-use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
@@ -33,140 +29,84 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 #[IsGranted('ROLE_USER')]
 class TypeRevenuController extends AbstractController
 {
-    public MenuActivator $activator;
+    use HandleChildAssociationTrait;
+    use ControllerUtilsTrait;
 
     public function __construct(
-        private MailerInterface $mailer,
-        private TranslatorInterface $translator,
-        private EntityManagerInterface $manager,
+        private EntityManagerInterface $em,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
         private TypeRevenuRepository $typerevenuRepository,
         private Constante $constante,
-        private ServiceMonnaies $serviceMonnaies,
-        private ServiceTaxes $serviceTaxes,
+        private JSBDynamicSearchService $searchService,
+        private SerializerInterface $serializer,
+        private CanvasBuilder $canvasBuilder,
+        private CalculationProvider $calculationProvider
     ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_FINANCE);
     }
 
-
-    #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function index($idEntreprise, Request $request)
+    protected function getCollectionMap(): array
     {
-        $page = $request->query->getInt("page", 1);
-
-        return $this->render('admin/typerevenu/index.html.twig', [
-            'pageName' => $this->translator->trans("typerevenu_page_name_new"),
-            'utilisateur' => $this->getUser(),
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'typerevenus' => $this->typerevenuRepository->paginateForEntreprise($idEntreprise, $page),
-            'page' => $page,
-            'constante' => $this->constante,
-            'activator' => $this->activator,
-            'serviceMonnaie' => $this->serviceMonnaies,
-            'serviceTaxe' => $this->serviceTaxes,
-        ]);
+        return $this->buildCollectionMapFromEntity(TypeRevenu::class);
     }
 
-
-    #[Route('/create/{idEntreprise}', name: 'create')]
-    public function create($idEntreprise, Request $request)
+    protected function getParentAssociationMap(): array
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var TypeRevenu $typerevenu */
-        $typerevenu = new TypeRevenu();
-        //Paramètres par défaut
-        $typerevenu->setNom("REVENUE" . (rand(2000, 3000)));
-        $typerevenu->setEntreprise($entreprise);
-        // $typerevenu->setFormule(TypeRevenu::FORMULE_POURCENTAGE_PRIME_NETTE);
-        $typerevenu->setPourcentage(0.1);
-        $typerevenu->setAppliquerPourcentageDuRisque(true);
-        $typerevenu->setMontantflat(0);
-        $typerevenu->setMultipayments(true);
-        $typerevenu->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR);
-        $typerevenu->setShared(false);
-        
-
-        $form = $this->createForm(TypeRevenuType::class, $typerevenu);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($typerevenu);
-            $this->manager->flush();
-            // $this->addFlash("success", $this->translator->trans("typerevenu_creation_ok", [
-            //     ":typerevenu" => $typerevenu->getNom(),
-            // ]));
-            // return $this->redirectToRoute("admin.typerevenu.index", [
-            //     'idEntreprise' => $idEntreprise,
-            // ]);
-            return new Response("Ok");
-
-        }
-        return $this->render('admin/typerevenu/create.html.twig', [
-            'pageName' => $this->translator->trans("typerevenu_page_name_new"),
-            'typerevenu' => $typerevenu,
-            'utilisateur' => $user,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
+        return $this->buildParentAssociationMapFromEntity(TypeRevenu::class);
     }
 
-
-    #[Route('/edit/{idEntreprise}/{idTypeRevenu}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idTypeRevenu, Request $request)
+    #[Route('/index/{idInvite}/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function index(Request $request)
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var TypeRevenu $typerevenu */
-        $typerevenu = $this->typerevenuRepository->find($idTypeRevenu);
-
-        $form = $this->createForm(TypeRevenuType::class, $typerevenu);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($typerevenu); //On peut ignorer cette instruction car la fonction flush suffit.
-            $this->manager->flush();
-            return new Response("Ok");
-
-        }
-        return $this->render('admin/typerevenu/edit.html.twig', [
-            'pageName' => $this->translator->trans("typerevenu_page_name_update", [
-                ":typerevenu" => $typerevenu->getNom(),
-            ]),
-            'utilisateur' => $user,
-            'typerevenu' => $typerevenu,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
+        return $this->renderViewOrListComponent(TypeRevenu::class, $request);
     }
 
-    #[Route('/remove/{idEntreprise}/{idTypeRevenu}', name: 'remove', requirements: ['idTypeRevenu' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove($idEntreprise, $idTypeRevenu, Request $request)
+    #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
+    public function getFormApi(?TypeRevenu $typeRevenu, Request $request): Response
     {
-        /** @var TypeRevenu $typerevenu */
-        $typerevenu = $this->typerevenuRepository->find($idTypeRevenu);
+        return $this->renderFormCanvas(
+            $request,
+            TypeRevenu::class,
+            TypeRevenuType::class,
+            $typeRevenu,
+            function (TypeRevenu $typeRevenu, Invite $invite) {
+                $typeRevenu->setNom("REVENUE" . (rand(2000, 3000)));
+                $typeRevenu->setEntreprise($invite->getEntreprise());
+                $typeRevenu->setPourcentage(0.1);
+                $typeRevenu->setAppliquerPourcentageDuRisque(true);
+                $typeRevenu->setMontantflat(0);
+                $typeRevenu->setMultipayments(true);
+                $typeRevenu->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR);
+                $typeRevenu->setShared(false);
+            }
+        );
+    }
 
-        $message = $this->translator->trans("typerevenu_deletion_ok", [
-            ":typerevenu" => $typerevenu->getNom(),
-        ]);;
-        
-        $this->manager->remove($typerevenu);
-        $this->manager->flush();
+    #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
+    public function submitApi(Request $request): JsonResponse
+    {
+        return $this->handleFormSubmission(
+            $request,
+            TypeRevenu::class,
+            TypeRevenuType::class
+        );
+    }
 
-        $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.typerevenu.index", [
-            'idEntreprise' => $idEntreprise,
-        ]);
+    #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
+    public function deleteApi(TypeRevenu $typeRevenu): Response
+    {
+        return $this->handleDeleteApi($typeRevenu);
+    }
+
+    #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
+    public function query(Request $request): Response
+    {
+        return $this->renderViewOrListComponent(TypeRevenu::class, $request, true);
+    }
+
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
+    {
+        return $this->handleCollectionApiRequest($id, $collectionName, TypeRevenu::class, $usage);
     }
 }
