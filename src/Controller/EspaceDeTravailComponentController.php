@@ -13,41 +13,13 @@
 
 namespace App\Controller;
 
-use App\Entity\Note;
-use App\Entity\Taxe;
-use ReflectionClass;
-use App\Entity\Piste;
-use App\Entity\Tache;
 use Twig\Environment;
-use App\Entity\Client;
-use App\Entity\Groupe;
-use App\Entity\Invite;
-use App\Entity\Risque;
-use App\Entity\Avenant;
-use App\Entity\Contact;
-use App\Entity\Monnaie;
-use App\Entity\Tranche;
-use App\Entity\Assureur;
-use App\Entity\Classeur;
-use App\Entity\Cotation;
-use App\Entity\Document;
-use App\Entity\Feedback;
-use App\Entity\Paiement;
-use App\Entity\Bordereau;
-use App\Entity\Chargement;
-use App\Entity\Partenaire;
-use App\Entity\TypeRevenu;
 use Psr\Log\LoggerInterface;
 use App\Constantes\Constante;
-use App\Entity\CompteBancaire;
-use App\Entity\RevenuPourCourtier;
-use App\Entity\ModelePieceSinistre;
-use App\Entity\NotificationSinistre;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
-use App\Entity\OffreIndemnisationSinistre;
 use Symfony\Component\HttpFoundation\Request;
 use App\Controller\Admin\ControllerUtilsTrait;
 use Symfony\Component\HttpFoundation\Response;
@@ -56,8 +28,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
-use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 #[Route('/espacedetravail', name: 'app_espace_de_travail_component.')]
 #[IsGranted('ROLE_USER')]
