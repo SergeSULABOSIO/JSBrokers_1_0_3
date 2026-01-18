@@ -53,7 +53,7 @@ class Avenant
     #[Groups(['list:read'])]
     private Collection $documents;
 
-    #[ORM\ManyToOne(inversedBy: 'avenant', cascade: ['persist', 'remove'])]
+    #[ORM\ManyToOne(inversedBy: 'avenants', cascade: ['persist', 'remove'])]
     #[Groups(['list:read'])]
     private ?Cotation $cotation = null;
 
