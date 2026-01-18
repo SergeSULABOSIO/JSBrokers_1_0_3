@@ -83,7 +83,7 @@ class Cotation
      * @var Collection<int, Avenant>
      */
     #[ORM\OneToMany(targetEntity: Avenant::class, mappedBy: 'cotation', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
+    // #[Groups(['list:read'])]
     private Collection $avenants;
 
     //Attributs calculés
