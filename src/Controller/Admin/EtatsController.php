@@ -129,7 +129,7 @@ class EtatsController extends AbstractController
         $pdf = $serviceTcpdf->getTcpdf($typeOutPut == self::TYPE_OUTPUT_NOTE ? "P" : "L", $note->getNom(), $withHeader, $withFooter);
         $pdf->writeHTML($html, true, false, true, false, '');
 
-        $fileName = $typeOutPut == self::TYPE_OUTPUT_NOTE ? "Note-" : "Bordereau-" . $note->getId() . ".pdf";
+        $fileName = ($typeOutPut == self::TYPE_OUTPUT_NOTE ? "Note-" : "Bordereau-") . $note->getId() . ".pdf";
 
         $pdfData = $pdf->Output($fileName, 'S'); // 'S' pour récupérer le contenu du PDF
 

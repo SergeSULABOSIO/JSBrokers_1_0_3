@@ -134,7 +134,7 @@ class ModelePieceSinistreController extends AbstractController
     public function remove($idEntreprise, $idModelepiecesinistre, Request $request)
     {
         /** @var ModelePieceSinistre $modele */
-        $modele = $this->modelePieceSinistreRepository->find($modele);
+        $modele = $this->modelePieceSinistreRepository->find($idModelepiecesinistre);
 
         $message = $this->translator->trans("modelepiecesinistre_deletion_ok", [
             ":modelepiecesinistre" => $modele->getNom(),
