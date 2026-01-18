@@ -129,6 +129,11 @@ class Client
         $this->partenaires = new ArrayCollection();
     }
 
+    public function getNom(): ?string
+    {
+        return $this->nom;
+    }
+
     public function setNom(string $nom): static
     {
         $this->nom = $nom;
