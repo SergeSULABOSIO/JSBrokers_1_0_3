@@ -169,6 +169,6 @@ class NotificationSinistreController extends AbstractController
         // Le trait a déjà fait tout le travail, il ne reste qu'à renvoyer la réponse JSON.
         // Le groupe de sérialisation 'default' est utilisé pour correspondre à ce que le
         // reste de l'application utilise, assurant la cohérence des données.
-        return $this->json($details, 200, [], ['groups' => 'default']);
+        return $this->json($details, 200, [], ['groups' => 'list:read']);
     }
 }
