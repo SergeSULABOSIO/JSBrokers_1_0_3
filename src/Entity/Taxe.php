@@ -94,18 +94,17 @@ class Taxe
 
     public function __toString()
     {
-        // $txt = " (" . $this->tauxIARD * 100 . "%@IARD & " . $this->tauxVIE * 100 . "%@VIE)";
-        // if ($this->tauxIARD == $this->tauxVIE) {
-        //     $txt = " (" . $this->tauxIARD * 100 . "%)";
-        // }
-        // return $this->code . $txt;
-        return $this->code;
+        $txt = " (" . (float)$this->tauxIARD * 100 . "%@IARD & " . (float)$this->tauxVIE * 100 . "%@VIE)";
+        if ($this->tauxIARD == $this->tauxVIE) {
+            $txt = " (" . (float)$this->tauxIARD * 100 . "%)";
+        }
+        return ($this->code ?? '') . $txt;
     }
     
     /**
      * Get the value of tauxIARD
      */
-    public function getTauxIARD()
+    public function getTauxIARD(): ?string
     {
         return $this->tauxIARD;
     }
@@ -115,18 +114,16 @@ class Taxe
      *
      * @return  self
      */
-    public function setTauxIARD($tauxIARD)
+    public function setTauxIARD(?string $tauxIARD): self
     {
-        
         $this->tauxIARD = $tauxIARD;
-        
         return $this;
     }
 
     /**
      * Get the value of tauxVIE
      */
-    public function getTauxVIE()
+    public function getTauxVIE(): ?string
     {
         return $this->tauxVIE;
     }
@@ -136,11 +133,9 @@ class Taxe
      *
      * @return  self
      */
-    public function setTauxVIE($tauxVIE)
+    public function setTauxVIE(?string $tauxVIE): self
     {
-        
         $this->tauxVIE = $tauxVIE;
-        
         return $this;
     }
 
