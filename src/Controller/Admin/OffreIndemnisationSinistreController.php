@@ -113,7 +113,7 @@ class OffreIndemnisationSinistreController extends AbstractController
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
     public function deleteApi(OffreIndemnisationSinistre $offreIndemnisationSinistre): Response
     {
-        return $this->handleDeleteApi($offreIndemnisationSinistre, $this->em);
+        return $this->handleDeleteApi($offreIndemnisationSinistre);
     }
 
     #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
