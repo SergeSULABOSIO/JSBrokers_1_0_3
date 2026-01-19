@@ -2,150 +2,107 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\Invite;
 use App\Entity\Entreprise;
 use App\Constantes\Constante;
-use App\Constantes\MenuActivator;
 use App\Entity\ModelePieceSinistre;
 use App\Form\ModelePieceSinistreType;
+use App\Services\Canvas\CalculationProvider;
+use App\Services\CanvasBuilder;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
-use App\Repository\ModelePieceSinistreRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Services\JSBDynamicSearchService;
+use App\Repository\ModelePieceSinistreRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
+use App\Controller\Admin\ControllerUtilsTrait;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use App\Entity\Traits\HandleChildAssociationTrait;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
-
 #[Route("/admin/modelepiecesinistre", name: 'admin.modelepiecesinistre.')]
 #[IsGranted('ROLE_USER')]
 class ModelePieceSinistreController extends AbstractController
 {
-    public MenuActivator $activator;
+    use HandleChildAssociationTrait;
+    use ControllerUtilsTrait;
 
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
-        private EntityManagerInterface $manager,
+        private EntityManagerInterface $em,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
         private ModelePieceSinistreRepository $modelePieceSinistreRepository,
         private Constante $constante,
-    ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_CLAIMS);
+        private JSBDynamicSearchService $searchService,
+        private SerializerInterface $serializer,
+        private CanvasBuilder $canvasBuilder,
+        private CalculationProvider $calculationProvider
+    ) {}
+
+    protected function getCollectionMap(): array
+    {
+        return $this->buildCollectionMapFromEntity(ModelePieceSinistre::class);
     }
 
-
-    #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function index($idEntreprise, Request $request)
+    protected function getParentAssociationMap(): array
     {
-        $page = $request->query->getInt("page", 1);
-
-        return $this->render('admin/modelepiecesinistre/index.html.twig', [
-            'pageName' => $this->translator->trans("modelepiecesinistre_page_name_new"),
-            'utilisateur' => $this->getUser(),
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'modelepiecesinistres' => $this->modelePieceSinistreRepository->paginate($idEntreprise, $page),
-            'page' => $page,
-            'constante' => $this->constante,
-            'activator' => $this->activator,
-        ]);
+        return $this->buildParentAssociationMapFromEntity(ModelePieceSinistre::class);
     }
 
-
-    #[Route('/create/{idEntreprise}', name: 'create')]
-    public function create($idEntreprise, Request $request)
+    #[Route('/index/{idInvite}/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function index(Request $request)
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var ModelePieceSinistre $modele */
-        $modele = new ModelePieceSinistre();
-        //Paramètres par défaut
-        $modele->setEntreprise($entreprise);
-
-        $form = $this->createForm(ModelePieceSinistreType::class, $modele);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($modele);
-            $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("modelepiecesinistre_creation_ok", [
-                ":modelepiecesinistre" => $modele->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.modelepiecesinistre.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
-        }
-        return $this->render('admin/modelepiecesinistre/create.html.twig', [
-            'pageName' => $this->translator->trans("modelepiecesinistre_page_name_new"),
-            'utilisateur' => $user,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
+        return $this->renderViewOrListComponent(ModelePieceSinistre::class, $request);
     }
 
-
-    #[Route('/edit/{idEntreprise}/{idModelepiecesinistre}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idModelepiecesinistre, Request $request)
+    #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
+    public function getFormApi(?ModelePieceSinistre $modele, Request $request): Response
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var ModelePieceSinistre $modele */
-        $modele = $this->modelePieceSinistreRepository->find($idModelepiecesinistre);
-
-        $form = $this->createForm(ModelePieceSinistreType::class, $modele);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($modele); //On peut ignorer cette instruction car la fonction flush suffit.
-            $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("modelepiecesinistre_edition_ok", [
-                ":modelepiecesinistre" => $modele->getNom(),
-            ]));
-            return $this->redirectToRoute("admin.modelepiecesinistre.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
-        }
-        return $this->render('admin/modelepiecesinistre/edit.html.twig', [
-            'pageName' => $this->translator->trans("modelepiecesinistre_page_name_update", [
-                ":modelepiecesinistre" => $modele->getNom(),
-            ]),
-            'utilisateur' => $user,
-            'modelepiecesinistre' => $modele,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
+        return $this->renderFormCanvas(
+            $request,
+            ModelePieceSinistre::class,
+            ModelePieceSinistreType::class,
+            $modele,
+            function (ModelePieceSinistre $modele, Invite $invite) {
+                $modele->setEntreprise($invite->getEntreprise());
+            }
+        );
     }
 
-    #[Route('/remove/{idEntreprise}/{idModelepiecesinistre}', name: 'remove', requirements: ['idModelepiecesinistre' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove($idEntreprise, $idModelepiecesinistre, Request $request)
+    #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
+    public function submitApi(Request $request): JsonResponse
     {
-        /** @var ModelePieceSinistre $modele */
-        $modele = $this->modelePieceSinistreRepository->find($idModelepiecesinistre);
+        return $this->handleFormSubmission(
+            $request,
+            ModelePieceSinistre::class,
+            ModelePieceSinistreType::class
+        );
+    }
 
-        $message = $this->translator->trans("modelepiecesinistre_deletion_ok", [
-            ":modelepiecesinistre" => $modele->getNom(),
-        ]);;
-        
-        $this->manager->remove($modele);
-        $this->manager->flush();
+    #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
+    public function deleteApi(ModelePieceSinistre $modele): Response
+    {
+        return $this->handleDeleteApi($modele);
+    }
 
-        $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.modelepiecesinistre.index", [
-            'idEntreprise' => $idEntreprise,
-        ]);
+    #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
+    public function query(Request $request): Response
+    {
+        return $this->renderViewOrListComponent(ModelePieceSinistre::class, $request, true);
+    }
+
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
+    {
+        return $this->handleCollectionApiRequest($id, $collectionName, ModelePieceSinistre::class, $usage);
     }
 }
