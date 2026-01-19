@@ -269,9 +269,17 @@ trait ControllerUtilsTrait
             $template = 'components/_view_manager.html.twig';
         }
 
+        // S'assurer que le canevas de l'entité est chargé.
         $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
         foreach ($data as $item) {
             $this->loadCalculatedValues($entityCanvas, $item);
+        }
+
+        // CORRECTION : Forcer un objet vide si les attributs numériques sont un tableau vide.
+        // Cela évite une erreur JS dans Stimulus qui attend un objet `{}` et non un tableau `[]`.
+        $numericAttributesAndValues = $this->canvasBuilder->getNumericAttributesAndValuesForCollection($data);
+        if (empty($numericAttributesAndValues)) {
+            $numericAttributesAndValues = new \stdClass();
         }
 
         // NOUVEAU : Construire l'URL de la liste principale pour la persistance de l'état.
@@ -286,8 +294,8 @@ trait ControllerUtilsTrait
             'listeCanvas' => $this->canvasBuilder->getListeCanvas($entityClass),
             'entityCanvas' => $entityCanvas,
             'entityFormCanvas' => $this->canvasBuilder->getEntityFormCanvas(new $entityClass(), (int)$idEntreprise),
-            'searchCanvas' => $this->canvasBuilder->getSearchCanvas($entityClass),
-            'numericAttributesAndValues' => $this->canvasBuilder->getNumericAttributesAndValuesForCollection($data), // Pass for dynamic queries
+            'searchCanvas' => $this->canvasBuilder->getSearchCanvas($entityClass), // Pass for dynamic queries
+            'numericAttributesAndValues' => $numericAttributesAndValues,
             'idInvite' => $idInvite,
             'idEntreprise' => $idEntreprise,
             'mainListUrl' => $mainListUrl, // On passe l'URL au template
