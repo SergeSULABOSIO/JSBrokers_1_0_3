@@ -376,6 +376,23 @@ trait ControllerUtilsTrait
         $form->submit($submittedData, false);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // NOUVEAU : Logique pour associer l'entreprise et/ou l'invité si les IDs sont fournis
+            // et que l'entité est nouvelle.
+            if (!$entity->getId()) {
+                if (isset($data['idEntreprise']) && method_exists($entity, 'setEntreprise')) {
+                    $entreprise = $this->entrepriseRepository->find($data['idEntreprise']);
+                    if ($entreprise) {
+                        $entity->setEntreprise($entreprise);
+                    }
+                }
+                if (isset($data['idInvite']) && method_exists($entity, 'setInvite')) {
+                    $invite = $this->inviteRepository->find($data['idInvite']);
+                    if ($invite) {
+                        $entity->setInvite($invite);
+                    }
+                }
+            }
+
             if (method_exists($this, 'associateParent')) {
                 $this->associateParent($entity, $data, $this->em);
             }
