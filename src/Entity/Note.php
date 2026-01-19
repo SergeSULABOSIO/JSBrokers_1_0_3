@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Repository\NoteRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: NoteRepository::class)]
@@ -12,25 +13,29 @@ class Note implements OwnerAwareInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
-
+    
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $nom = null;
 
     /**
      * @var Collection<int, Article>
      */
     #[ORM\OneToMany(targetEntity: Article::class, mappedBy: 'note', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $articles;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $type = null;
     public const TYPE_NULL = -1;
     public const TYPE_NOTE_DE_DEBIT = 0;
     public const TYPE_NOTE_DE_CREDIT = 1;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $addressedTo = null;
     public const TO_NULL = -1;
     public const TO_CLIENT = 0;
@@ -39,51 +44,64 @@ class Note implements OwnerAwareInterface
     public const TO_AUTORITE_FISCALE = 3;
 
     #[ORM\ManyToOne(inversedBy: 'notes')]
+    #[Groups(['list:read'])]
     private ?Invite $invite = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $description = null;
 
     #[ORM\ManyToOne(inversedBy: 'notes')]
+    #[Groups(['list:read'])]
     private ?Client $client = null;
 
     #[ORM\ManyToOne(inversedBy: 'notes')]
+    #[Groups(['list:read'])]
     private ?Partenaire $partenaire = null;
 
     #[ORM\ManyToOne(inversedBy: 'notes')]
+    #[Groups(['list:read'])]
     private ?Assureur $assureur = null;
 
     /**
      * @var Collection<int, CompteBancaire>
      */
     #[ORM\ManyToMany(targetEntity: CompteBancaire::class, inversedBy: 'notes')]
+    #[Groups(['list:read'])]
     private Collection $comptes;
 
     /**
      * @var Collection<int, Paiement>
      */
     #[ORM\OneToMany(targetEntity: Paiement::class, mappedBy: 'note', cascade: ['detach', 'refresh', 'persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $paiements;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $reference = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?bool $validated = null;
 
     #[ORM\ManyToOne(inversedBy: 'notes')]
+    #[Groups(['list:read'])]
     private ?AutoriteFiscale $autoritefiscale = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $signature = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $signedBy = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $titleSignedBy = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $sentAt = null;
 
     public function __construct()

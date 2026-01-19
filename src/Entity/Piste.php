@@ -6,6 +6,7 @@ use Doctrine\ORM\Mapping as ORM;
 use App\Repository\PisteRepository;
 use Doctrine\Common\Collections\Collection;
 use App\Entity\Traits\CalculatedIndicatorsTrait;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Doctrine\Common\Collections\ArrayCollection;
 
 #[ORM\Entity(repositoryClass: PisteRepository::class)]
@@ -29,75 +30,94 @@ class Piste implements OwnerAwareInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $nom = null;
     
     #[ORM\ManyToOne(inversedBy: 'pistes')]
+    #[Groups(['list:read'])]
     private ?Risque $risque = null;
 
     #[ORM\ManyToOne(inversedBy: 'pistes')]
+    #[Groups(['list:read'])]
     private ?Client $client = null;
 
     #[ORM\ManyToOne(inversedBy: 'pistes')]
+    #[Groups(['list:read'])]
     private ?Invite $invite = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
     private ?float $primePotentielle = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
     private ?float $commissionPotentielle = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $typeAvenant = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $descriptionDuRisque = null;
 
     /**
      * @var Collection<int, Cotation>
      */
     #[ORM\OneToMany(targetEntity: Cotation::class, mappedBy: 'piste', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $cotations;
 
     /**
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'piste', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $documents;
 
     /**
      * @var Collection<int, Tache>
      */
     #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'piste', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $taches;
 
     /**
      * @var Collection<int, Partenaire>
      */
     #[ORM\ManyToMany(targetEntity: Partenaire::class, inversedBy: 'pistes')]
+    #[Groups(['list:read'])]
     private Collection $partenaires;
 
     /**
      * @var Collection<int, ConditionPartage>
      */
     #[ORM\OneToMany(targetEntity: ConditionPartage::class, mappedBy: 'piste', cascade: ['persist', 'remove'])]
+    #[Groups(['list:read'])]
     private Collection $conditionsPartageExceptionnelles;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $exercice = null;
 
     #[ORM\OneToOne(cascade: ['persist', 'remove'])]
+    #[Groups(['list:read'])]
     private ?Avenant $avenantDeBase = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
     private ?int $renewalCondition = null;
 
     public function __construct()

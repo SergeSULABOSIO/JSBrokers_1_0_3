@@ -23,15 +23,18 @@ class ChargementPourPrime
     private ?Chargement $type = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
     private ?float $montantFlatExceptionel = null;
 
     // #[ORM\Column(nullable: true)]
     // private ?float $tauxExceptionel = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'chargements')]

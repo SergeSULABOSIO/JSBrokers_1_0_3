@@ -43,6 +43,7 @@ class Contact
     private ?NotificationSinistre $notificationSinistre = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $type = null;
     public const TYPE_CONTACT_PRODUCTION = 0;
     public const TYPE_CONTACT_SINISTRE = 1;

@@ -109,12 +109,6 @@ class RolesEnSinistreType extends AbstractType
             //     'class' => Invite::class,
             //     'choice_label' => 'id',
             // ])
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
         ;
     }
 
@@ -123,6 +117,13 @@ class RolesEnSinistreType extends AbstractType
         $resolver->setDefaults([
             'data_class' => RolesEnSinistre::class,
             'parent_object' => null, // l'objet parent
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }
