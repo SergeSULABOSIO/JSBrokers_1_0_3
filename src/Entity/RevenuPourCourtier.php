@@ -6,6 +6,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\Collection;
 use App\Entity\Traits\CalculatedIndicatorsTrait;
 use App\Repository\RevenuPourCourtierRepository;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Doctrine\Common\Collections\ArrayCollection;
 
 #[ORM\Entity(repositoryClass: RevenuPourCourtierRepository::class)]
@@ -16,33 +17,42 @@ class RevenuPourCourtier
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[ORM\ManyToOne(inversedBy: 'revenuPourCourtiers')]
+    #[Groups(['list:read'])]
     private ?TypeRevenu $typeRevenu = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
     private ?float $montantFlatExceptionel = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
     private ?float $tauxExceptionel = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'revenus')]
+    #[Groups(['list:read'])]
     private ?Cotation $cotation = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $nom = null;
 
     /**
      * @var Collection<int, Article>
      */
     #[ORM\OneToMany(targetEntity: Article::class, mappedBy: 'revenuFacture')]
+    #[Groups(['list:read'])]
     private Collection $articles;
 
     public function __construct()

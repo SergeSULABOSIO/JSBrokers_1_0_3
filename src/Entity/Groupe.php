@@ -7,6 +7,7 @@ use App\Repository\GroupeRepository;
 use Doctrine\Common\Collections\Collection;
 use App\Entity\Traits\CalculatedIndicatorsTrait;
 use Doctrine\Common\Collections\ArrayCollection;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: GroupeRepository::class)]
 class Groupe
@@ -16,21 +17,26 @@ class Groupe
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $nom = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $description = null;
 
     #[ORM\ManyToOne(inversedBy: 'groupes')]
+    #[Groups(['list:read'])]
     private ?Entreprise $entreprise = null;
 
     /**
      * @var Collection<int, Client>
      */
     #[ORM\OneToMany(targetEntity: Client::class, mappedBy: 'groupe', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $clients;
 
     public function __construct()

@@ -6,6 +6,7 @@ use Doctrine\ORM\Mapping as ORM;
 use App\Repository\TypeRevenuRepository;
 use Doctrine\Common\Collections\Collection;
 use App\Entity\Traits\CalculatedIndicatorsTrait;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Doctrine\Common\Collections\ArrayCollection;
 
 #[ORM\Entity(repositoryClass: TypeRevenuRepository::class)]
@@ -16,9 +17,11 @@ class TypeRevenu
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $nom = null;
 
     // #[ORM\Column(nullable: true)]
@@ -28,15 +31,19 @@ class TypeRevenu
     public const MODE_CALCUL_MONTANT_FLAT = 1;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
     private ?float $montantflat = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?bool $shared = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?bool $multipayments = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $redevable = null;
 
     public const REDEVABLE_CLIENT = 0;
@@ -45,27 +52,34 @@ class TypeRevenu
     public const REDEVABLE_PARTENAIRE = 3;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
     private ?float $pourcentage = null;
 
     #[ORM\ManyToOne(inversedBy: 'typerevenus')]
+    #[Groups(['list:read'])]
     private ?Entreprise $entreprise = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
     private ?bool $appliquerPourcentageDuRisque = null;
 
     /**
      * @var Collection<int, RevenuPourCourtier>
      */
     #[ORM\OneToMany(targetEntity: RevenuPourCourtier::class, mappedBy: 'typeRevenu')]
+    #[Groups(['list:read'])]
     private Collection $revenuPourCourtiers;
 
     #[ORM\ManyToOne(inversedBy: 'typeRevenus')]
+    #[Groups(['list:read'])]
     private ?Chargement $typeChargement = null;
 
     #[ORM\ManyToOne(inversedBy: 'revenus')]
+    #[Groups(['list:read'])]
     private ?Note $note = null;
 
     #[ORM\ManyToOne(inversedBy: 'typeRevenu')]
+    #[Groups(['list:read'])]
     private ?Article $article = null;
 
     // /**
@@ -75,6 +89,7 @@ class TypeRevenu
     // private Collection $articles;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
     private ?int $modeCalcul = null;
 
     public function __construct()

@@ -188,13 +188,6 @@ class RolesEnProductionType extends AbstractType
             //     'class' => Invite::class,
             //     'choice_label' => 'id',
             // ])
-            //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
         ;
     }
 
@@ -203,6 +196,13 @@ class RolesEnProductionType extends AbstractType
         $resolver->setDefaults([
             'data_class' => RolesEnProduction::class,
             'parent_object' => null, // l'objet parent
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }

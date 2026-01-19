@@ -6,6 +6,7 @@ use Doctrine\ORM\Mapping as ORM;
 use App\Repository\PartenaireRepository;
 use Doctrine\Common\Collections\Collection;
 use App\Entity\Traits\CalculatedIndicatorsTrait;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Doctrine\Common\Collections\ArrayCollection;
 
 #[ORM\Entity(repositoryClass: PartenaireRepository::class)]
@@ -16,63 +17,78 @@ class Partenaire
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $nom = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $adressePhysique = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $telephone = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $email = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?float $part = null;
 
     #[ORM\ManyToOne(inversedBy: 'partenaires')]
+    #[Groups(['list:read'])]
     private ?Entreprise $entreprise = null;
 
     /**
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'partenaire', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $documents;
 
     /**
      * @var Collection<int, ConditionPartage>
      */
     #[ORM\OneToMany(targetEntity: ConditionPartage::class, mappedBy: 'partenaire', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $conditionPartages;
 
     /**
      * @var Collection<int, Piste>
      */
     #[ORM\ManyToMany(targetEntity: Piste::class, mappedBy: 'partenaires')]
+    #[Groups(['list:read'])]
     private Collection $pistes;
 
     /**
      * @var Collection<int, Note>
      */
     #[ORM\OneToMany(targetEntity: Note::class, mappedBy: 'partenaire')]
+    #[Groups(['list:read'])]
     private Collection $notes;
 
     /**
      * @var Collection<int, Client>
      */
     #[ORM\ManyToMany(targetEntity: Client::class, mappedBy: 'partenaires')]
+    #[Groups(['list:read'])]
     private Collection $clients;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $idnat = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $numimpot = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $rccm = null;
 
     public function __construct()

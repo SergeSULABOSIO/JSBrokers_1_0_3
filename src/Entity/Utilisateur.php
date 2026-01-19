@@ -6,6 +6,7 @@ use App\Repository\UtilisateurRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -18,9 +19,11 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 180)]
+    #[Groups(['list:read'])]
     private ?string $email = null;
 
     /**
@@ -36,9 +39,11 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     private ?string $password = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $nom = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private bool $isVerified = false;
 
     #[ORM\Column(nullable: true)]
@@ -54,9 +59,11 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     private Collection $entreprises;
 
     #[ORM\Column(length: 255, options:['default' => "fr"])]
+    #[Groups(['list:read'])]
     private string $locale = "fr";
 
     #[ORM\ManyToOne(inversedBy: 'connectedUsers')]
+    #[Groups(['list:read'])]
     private ?Entreprise $connectedTo = null;
 
     public function __construct()

@@ -58,12 +58,6 @@ class RevenuPourCourtierType extends AbstractType
                 'class' => TypeRevenu::class,
                 'choice_label' => 'nom',
             ])
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
             // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
 
@@ -74,7 +68,14 @@ class RevenuPourCourtierType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => RevenuPourCourtier::class,
-            'parent_object' => null, // l'objet parent
+            'parent_object' => null, // l'objet parent,
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }
