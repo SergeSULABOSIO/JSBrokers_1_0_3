@@ -36,8 +36,17 @@ class Groupe
      * @var Collection<int, Client>
      */
     #[ORM\OneToMany(targetEntity: Client::class, mappedBy: 'groupe', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $clients;
+
+    // Attributs calculés
+    #[Groups(['list:read'])]
+    public ?int $nombreClients;
+
+    #[Groups(['list:read'])]
+    public ?int $nombrePolices;
+
+    #[Groups(['list:read'])]
+    public ?int $nombreSinistres;
 
     public function __construct()
     {
