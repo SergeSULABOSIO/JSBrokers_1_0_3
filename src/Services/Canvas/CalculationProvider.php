@@ -223,13 +223,6 @@ class CalculationProvider
                     'nombreAssureurs' => $this->countEntrepriseAssureurs($entity),
                 ];
                 break;
-            case ModelePieceSinistre::class:
-                /** @var ModelePieceSinistre $entity */
-                $indicateurs = [
-                    'nombreUtilisations' => $this->countModelePieceSinistreUtilisations($entity),
-                    'statutObligation' => $this->getModelePieceSinistreStatutObligationString($entity),
-                ];
-                break;
                 // D'autres entités pourraient être ajoutées ici avec 'case AutreEntite::class:'
         }
 
