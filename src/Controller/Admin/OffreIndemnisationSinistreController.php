@@ -19,6 +19,8 @@ use App\Entity\Document;
 use App\Entity\Paiement;
 use App\Constantes\Constante;
 use App\Services\ServiceMonnaies;
+use App\Services\Canvas\CalculationProvider;
+use App\Services\CanvasBuilder;
 use App\Entity\NotificationSinistre;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
@@ -57,6 +59,8 @@ class OffreIndemnisationSinistreController extends AbstractController
         private ServiceMonnaies $serviceMonnaies,
         private JSBDynamicSearchService $searchService,
         private SerializerInterface $serializer,
+        private CanvasBuilder $canvasBuilder,
+        private CalculationProvider $calculationProvider
     ) {}
 
     protected function getCollectionMap(): array
