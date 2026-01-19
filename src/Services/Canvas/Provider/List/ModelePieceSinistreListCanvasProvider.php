@@ -3,6 +3,7 @@
 namespace App\Services\Canvas\Provider\List;
 
 use App\Entity\ModelePieceSinistre;
+use App\Services\Canvas\Provider\List\ListCanvasProviderInterface;
 
 class ModelePieceSinistreListCanvasProvider implements ListCanvasProviderInterface
 {
