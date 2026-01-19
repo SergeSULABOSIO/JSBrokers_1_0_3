@@ -63,6 +63,7 @@ parameters:
                     description: "Gestion des sinistres et de leurs compensations."
                     rubriques:
                         "Types pièces": { icone: 'codex:file', composant_twig: '_view_manager_sinistre.html.twig', entity_name: 'App\Entity\ModelePieceSinistre' }
+                        "Pièces Sinistre": { icone: 'ic:round-document-scanner', composant_twig: '_view_manager_sinistre.html.twig', entity_name: 'App\Entity\PieceSinistre' }
                         "Notifications": { icone: 'emojione-monotone:fire', composant_twig: '_view_manager_sinistre.html.twig', entity_name: 'App\Entity\NotificationSinistre' }
                         "Règlements": { icone: 'icon-park-outline:funds', composant_twig: '_view_manager_sinistre.html.twig', entity_name: 'App\Entity\OffreIndemnisationSinistre' }
 
