@@ -41,7 +41,7 @@ class ModelePieceSinistreEntityCanvasProvider implements EntityCanvasProviderInt
                 ["code" => "obligatoire", "intitule" => "Obligatoire", "type" => "Booleen"],
                 ["code" => "entreprise", "intitule" => "Entreprise", "type" => "Relation", "targetEntity" => Entreprise::class, "displayField" => "nom"],
                 ["code" => "pieceSinistres", "intitule" => "Pièces fournies", "type" => "Collection", "targetEntity" => PieceSinistre::class, "displayField" => "description"],
-            ], $this->getSpecificIndicators(), $this->canvasHelper->getGlobalIndicatorsCanvas("ModelePieceSinistre"))
+            ], $this->getSpecificIndicators())
         ];
     }
 
