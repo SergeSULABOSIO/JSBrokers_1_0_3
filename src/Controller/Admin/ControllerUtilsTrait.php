@@ -399,6 +399,11 @@ trait ControllerUtilsTrait
             $this->em->persist($entity);
             $this->em->flush();
 
+            // NOUVEAU : Charger les valeurs calculées après la persistance
+            // pour que la réponse JSON contienne une entité complète, y compris
+            // les champs qui ne sont pas directement en base de données.
+            $this->loadCalculatedValues(null, $entity);
+
             $jsonEntity = $this->serializer->serialize($entity, 'json', ['groups' => 'list:read']);
             return $this->json(['message' => 'Enregistrée avec succès!', 'entity' => json_decode($jsonEntity)]);
         }
