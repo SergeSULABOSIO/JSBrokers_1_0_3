@@ -2,15 +2,12 @@
 
 namespace App\Form;
 
-use App\Entity\Entreprise;
 use App\Entity\ModelePieceSinistre;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
-use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 
 class ModelePieceSinistreType extends AbstractType
@@ -37,12 +34,6 @@ class ModelePieceSinistreType extends AbstractType
                 'choices'  => [
                     "Oui" => true,
                     "Non" => false,
-                ],
-            ])
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
                 ],
             ])
         ;
