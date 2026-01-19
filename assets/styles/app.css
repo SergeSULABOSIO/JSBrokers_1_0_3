@@ -202,6 +202,11 @@ a:active {
     border-bottom: none;
 }
 
+/* NOUVEAU : Alignement pour les en-têtes de colonnes numériques */
+.table-enhanced .th-numeric {
+    text-align: right;
+}
+
 /* STYLE POUR LES LIGNES DE FORMULAIRE COLORÉES */
 .form-row-colored {
     padding-top: 1rem;
