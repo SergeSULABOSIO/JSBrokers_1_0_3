@@ -41,8 +41,8 @@
                             </th>
                         {% endif %}
                         {% for colonne in listeCanvas.colonnes_numeriques | default([]) %}
-                            <th scope="col" style="width:150px">
-                                <div class='d-flex justify-content-end text-secondary m-2'>{{ colonne.titre_colonne | default('Valeur') }}</div>
+                            <th scope="col" style="width:150px" class="th-numeric">
+                                <div class='text-secondary m-2'>{{ colonne.titre_colonne | default('Valeur') }}</div>
                             </th>
                         {% endfor %}
                         {# NOUVEAU : Colonne d'actions pour les collections dans un dialogue #}
