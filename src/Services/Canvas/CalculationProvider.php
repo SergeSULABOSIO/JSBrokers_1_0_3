@@ -2315,11 +2315,17 @@ class CalculationProvider
         return ['by_risque' => [], 'by_client' => [], 'by_partenaire' => []];
     }    
     
-    private function countModelePieceSinistreUtilisations(ModelePieceSinistre $modele): int
+    /**
+     * NOUVEAU : Compte le nombre de fois qu'un modèle de pièce est utilisé.
+     */
+    public function countModelePieceSinistreUtilisations(ModelePieceSinistre $modele): int
     {
         return $modele->getPieceSinistres()->count();
     }
 
+    /**
+     * NOUVEAU : Retourne le statut d'obligation d'un modèle de pièce sous forme de chaîne.
+     */
     public function getModelePieceSinistreStatutObligationString(ModelePieceSinistre $modele): string
     {
         return $modele->isObligatoire() ? 'Obligatoire' : 'Facultative';
