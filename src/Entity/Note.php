@@ -13,6 +13,7 @@ class Note implements OwnerAwareInterface
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
+    #[ORM\Column]
     #[Groups(['list:read'])]
     private ?int $id = null;
     
@@ -48,6 +49,7 @@ class Note implements OwnerAwareInterface
     private ?Invite $invite = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $description = null;
 
     #[ORM\ManyToOne(inversedBy: 'notes')]
