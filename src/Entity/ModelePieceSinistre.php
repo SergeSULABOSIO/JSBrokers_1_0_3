@@ -2,39 +2,39 @@
 
 namespace App\Entity;
 
-use Doctrine\ORM\Mapping as ORM;
-use Doctrine\Common\Collections\Collection;
-use App\Entity\Traits\CalculatedIndicatorsTrait;
-use Doctrine\Common\Collections\ArrayCollection;
 use App\Repository\ModelePieceSinistreRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ModelePieceSinistreRepository::class)]
 class ModelePieceSinistre
 {
-    use CalculatedIndicatorsTrait;
-
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
 
+    #[Assert\NotBlank]
     #[ORM\Column(length: 255)]
     private ?string $nom = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, nullable: true)]
     private ?string $description = null;
 
-    #[ORM\ManyToOne(inversedBy: 'modelePieceSinistres')]
-    private ?Entreprise $entreprise = null;
+    #[ORM\Column]
+    private ?bool $obligatoire = false;
 
     /**
      * @var Collection<int, PieceSinistre>
      */
-    #[ORM\OneToMany(targetEntity: PieceSinistre::class, mappedBy: 'type')]
+    #[ORM\OneToMany(mappedBy: 'type', targetEntity: PieceSinistre::class)]
     private Collection $pieceSinistres;
 
-    #[ORM\Column(nullable: true)]
-    private ?bool $obligatoire = null;
+    #[ORM\ManyToOne(inversedBy: 'modelePieceSinistres')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Entreprise $entreprise = null;
 
     public function __construct()
     {
@@ -54,7 +54,6 @@ class ModelePieceSinistre
     public function setNom(string $nom): static
     {
         $this->nom = $nom;
-
         return $this;
     }
 
@@ -63,10 +62,20 @@ class ModelePieceSinistre
         return $this->description;
     }
 
-    public function setDescription(string $description): static
+    public function setDescription(?string $description): static
     {
         $this->description = $description;
+        return $this;
+    }
 
+    public function isObligatoire(): ?bool
+    {
+        return $this->obligatoire;
+    }
+
+    public function setObligatoire(bool $obligatoire): static
+    {
+        $this->obligatoire = $obligatoire;
         return $this;
     }
 
@@ -78,7 +87,6 @@ class ModelePieceSinistre
     public function setEntreprise(?Entreprise $entreprise): static
     {
         $this->entreprise = $entreprise;
-
         return $this;
     }
 
@@ -96,7 +104,6 @@ class ModelePieceSinistre
             $this->pieceSinistres->add($pieceSinistre);
             $pieceSinistre->setType($this);
         }
-
         return $this;
     }
 
@@ -108,19 +115,11 @@ class ModelePieceSinistre
                 $pieceSinistre->setType(null);
             }
         }
-
         return $this;
     }
 
-    public function isObligatoire(): ?bool
+    public function __toString(): string
     {
-        return $this->obligatoire;
-    }
-
-    public function setObligatoire(?bool $obligatoire): static
-    {
-        $this->obligatoire = $obligatoire;
-
-        return $this;
+        return $this->nom ?? 'Nouveau Modèle';
     }
 }

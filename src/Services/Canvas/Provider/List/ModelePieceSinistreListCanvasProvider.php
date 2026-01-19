@@ -22,6 +22,7 @@ class ModelePieceSinistreListCanvasProvider implements ListCanvasProviderInterfa
                     ["attribut_code" => "description", "attribut_taille_max" => 50],
                 ],
             ],
+            "colonnes_numeriques" => [],
         ];
     }
 }

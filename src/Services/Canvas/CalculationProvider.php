@@ -13,7 +13,6 @@ use App\Entity\Assureur;
 use App\Entity\Contact;
 use App\Entity\Invite;
 use App\Entity\Tranche;
-use App\Entity\ModelePieceSinistre;
 use App\Entity\Feedback;
 use App\Entity\Cotation;
 use App\Entity\Avenant;
@@ -221,13 +220,6 @@ class CalculationProvider
                     'nombreClients' => $this->countEntrepriseClients($entity),
                     'nombrePartenaires' => $this->countEntreprisePartenaires($entity),
                     'nombreAssureurs' => $this->countEntrepriseAssureurs($entity),
-                ];
-                break;
-            case ModelePieceSinistre::class:
-                /** @var ModelePieceSinistre $entity */
-                $indicateurs = [
-                    'nombreUtilisations' => $this->countModelePieceSinistreUtilisations($entity),
-                    'statutObligation' => $this->getModelePieceSinistreStatutObligationString($entity),
                 ];
                 break;
                 // D'autres entités pourraient être ajoutées ici avec 'case AutreEntite::class:'
@@ -2313,15 +2305,5 @@ class CalculationProvider
         // Pour l'instant, nous retournons un tableau vide, mais la logique de `applyRevenuConditionsSpeciales`
         // a été modifiée pour utiliser ce tableau, ce qui montre la direction à prendre.
         return ['by_risque' => [], 'by_client' => [], 'by_partenaire' => []];
-    }    
-    
-    private function countModelePieceSinistreUtilisations(ModelePieceSinistre $modele): int
-    {
-        return $modele->getPieceSinistres()->count();
-    }
-
-    public function getModelePieceSinistreStatutObligationString(ModelePieceSinistre $modele): string
-    {
-        return $modele->isObligatoire() ? 'Obligatoire' : 'Facultative';
     }
 }
