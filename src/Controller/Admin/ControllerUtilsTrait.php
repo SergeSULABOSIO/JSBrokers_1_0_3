@@ -238,6 +238,13 @@ trait ControllerUtilsTrait
             $searchResult = $this->searchService->search($entityClass, $criteria, $entreprise, $parentContext);
             $data = $searchResult['data'];
 
+            // CORRECTION : Charger les valeurs calculées pour chaque entité de la liste.
+            // C'est le chaînon manquant qui empêchait les attributs comme 'compensation' d'être calculés.
+            $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
+            foreach ($data as $item) {
+                $this->loadCalculatedValues($entityCanvas, $item);
+            }
+
             // Extraction des données numériques et rendu du HTML partiel de la liste
             $numericData = $this->canvasBuilder->getNumericAttributesAndValuesForCollection($data);
             // OPTIMISATION : On ne passe au template que les variables strictement nécessaires.
