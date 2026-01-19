@@ -86,42 +86,6 @@ class ModelePieceSinistreController extends AbstractController
             ModelePieceSinistre::class,
             ModelePieceSinistreType::class
         );
-        $data = $request->request->all();
-        $files = $request->files->all();
-        $submittedData = array_merge($data, $files);
-
-        $idEntreprise = $data['idEntreprise'] ?? null;
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-        if (!$entreprise) {
-            return $this->json(['message' => 'Contexte de l\'entreprise non trouvé.'], Response::HTTP_BAD_REQUEST);
-        }
-
-        $entity = isset($data['id']) && $data['id']
-            ? $this->modelePieceSinistreRepository->find($data['id'])
-            : new ModelePieceSinistre();
-
-        // Association de l'entreprise AVANT la création du formulaire pour les nouvelles entités
-        if (!$entity->getId()) {
-            $entity->setEntreprise($entreprise);
-        }
-
-        $form = $this->createForm(ModelePieceSinistreType::class, $entity);
-        $form->submit($submittedData, false);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->em->persist($entity);
-            $this->em->flush();
-
-            $jsonEntity = $this->serializer->serialize($entity, 'json', ['groups' => 'list:read']);
-            return $this->json(['message' => 'Enregistrée avec succès!', 'entity' => json_decode($jsonEntity)]);
-        }
-
-        $errors = [];
-        foreach ($form->getErrors(true) as $error) {
-            $errors[$error->getOrigin()->getName()][] = $error->getMessage();
-        }
-
-        return $this->json(['message' => 'Veuillez corriger les erreurs ci-dessous.', 'errors' => $errors], 422);
     }
 
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
