@@ -76,6 +76,7 @@ class ListCanvasProvider
             Feedback::class, 
             Groupe::class, 
             Invite::class,
+            OffreIndemnisationSinistre::class, 
             Paiement::class,
             Partenaire::class, 
             Piste::class, 
