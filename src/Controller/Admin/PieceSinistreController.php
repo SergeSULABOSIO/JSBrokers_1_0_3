@@ -34,6 +34,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use App\Entity\Traits\HandleChildAssociationTrait;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
+use App\Services\Canvas\CalculationProvider;
+use App\Services\CanvasBuilder;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use App\Repository\NotificationSinistreRepository;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -57,6 +59,8 @@ class PieceSinistreController extends AbstractController
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
         private SerializerInterface $serializer,
         private NotificationSinistreRepository $notificationSinistreRepository,
+        private CanvasBuilder $canvasBuilder,
+        private CalculationProvider $calculationProvider
     ) {}
 
     protected function getCollectionMap(): array
