@@ -33,19 +33,19 @@ class NotificationSinistreListCanvasProvider implements ListCanvasProviderInterf
                 [
                     "titre_colonne" => "Dommage (av. éval.)",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    "attribut_code" => "dommageAvantEvaluation",
+                    "attribut_code" => "dommage",
                     "attribut_type" => "nombre",
                 ],
                 [
                     "titre_colonne" => "Dommage (ap. éval.)",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    "attribut_code" => "dommageApresEvaluation",
+                    "attribut_code" => "evaluationChiffree",
                     "attribut_type" => "nombre",
                 ],
                 [
                     "titre_colonne" => "Compensation Due",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    "attribut_code" => "compensationDue",
+                    "attribut_code" => "compensation",
                     "attribut_type" => "nombre",
                 ],
             ],
