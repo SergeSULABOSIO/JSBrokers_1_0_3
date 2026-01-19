@@ -48,8 +48,8 @@ class ModelePieceSinistreEntityCanvasProvider implements EntityCanvasProviderInt
     private function getSpecificIndicators(): array
     {
         return [
-            ["code" => "nombreUtilisations", "intitule" => "Nb. Utilisations", "type" => "Entier", "format" => "Nombre", "description" => "Nombre de fois que cette pièce a été fournie dans des dossiers sinistre."],
-            ["code" => "statutObligation", "intitule" => "Statut Obligation", "type" => "Texte", "format" => "Texte", "description" => "Indique si la pièce est obligatoire ou facultative."],
+            ["code" => "nombreUtilisations", "intitule" => "Nb. Utilisations", "type" => "Calcul", "format" => "Nombre", "fonction" => "countModelePieceSinistreUtilisations", "description" => "Nombre de fois que cette pièce a été fournie dans des dossiers sinistre."],
+            ["code" => "statutObligation", "intitule" => "Statut Obligation", "type" => "Calcul", "format" => "Texte", "fonction" => "getModelePieceSinistreStatutObligationString", "description" => "Indique si la pièce est obligatoire ou facultative."],
         ];
     }
 }
