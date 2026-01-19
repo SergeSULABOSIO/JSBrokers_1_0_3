@@ -60,8 +60,8 @@
                 'serverRootName': serverRootName,
                 'entityCanvas': entityCanvas,
                 'listeCanvas': listeCanvas,
-                'entityFormCanvas': entityFormCanvas,
-                'numericAttributesAndValues': numericAttributesAndValues|json_encode(constant('JSON_FORCE_OBJECT'))|e('html_attr'),
+                'entityFormCanvas': entityFormCanvas, 
+                'numericAttributesAndValues': numericAttributesAndValues|json_encode|e('html_attr'),
                 'idEntreprise': idEntreprise,
                 'idInvite': idInvite,
                 'listUrl': mainListUrl
