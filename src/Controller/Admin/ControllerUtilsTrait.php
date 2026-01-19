@@ -572,6 +572,7 @@ trait ControllerUtilsTrait
             // SINISTRE
             '_view_manager_sinistre.html.twig' => [
                 \App\Entity\ModelePieceSinistre::class => 'App\Controller\Admin\ModelePieceSinistreController::index',
+                \App\Entity\PieceSinistre::class => 'App\Controller\Admin\PieceSinistreController::index',
                 \App\Entity\NotificationSinistre::class => 'App\Controller\Admin\NotificationSinistreController::index',
                 \App\Entity\OffreIndemnisationSinistre::class => 'App\Controller\Admin\OffreIndemnisationSinistreController::index',
             ],
