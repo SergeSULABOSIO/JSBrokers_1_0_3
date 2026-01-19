@@ -2,28 +2,36 @@
 
 namespace App\Entity;
 
-use App\Repository\ModelePieceSinistreRepository;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use App\Repository\ModelePieceSinistreRepository;
+use Doctrine\Common\Collections\Collection;
+use App\Entity\Traits\CalculatedIndicatorsTrait;
+use Doctrine\Common\Collections\ArrayCollection;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ModelePieceSinistreRepository::class)]
 class ModelePieceSinistre
 {
+    use CalculatedIndicatorsTrait;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[Assert\NotBlank]
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $nom = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $description = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?bool $obligatoire = false;
 
     /**
@@ -35,6 +43,13 @@ class ModelePieceSinistre
     #[ORM\ManyToOne(inversedBy: 'modelePieceSinistres')]
     #[ORM\JoinColumn(nullable: false)]
     private ?Entreprise $entreprise = null;
+
+    // Attributs calculés
+    #[Groups(['list:read'])]
+    public ?int $nombreUtilisations;
+
+    #[Groups(['list:read'])]
+    public ?string $statutObligation;
 
     public function __construct()
     {
