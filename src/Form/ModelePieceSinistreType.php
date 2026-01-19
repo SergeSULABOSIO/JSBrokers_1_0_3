@@ -43,6 +43,13 @@ class ModelePieceSinistreType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => ModelePieceSinistre::class,
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }
