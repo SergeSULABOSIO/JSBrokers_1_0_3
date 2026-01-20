@@ -55,28 +55,24 @@ class Partenaire
      * @var Collection<int, ConditionPartage>
      */
     #[ORM\OneToMany(targetEntity: ConditionPartage::class, mappedBy: 'partenaire', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $conditionPartages;
 
     /**
      * @var Collection<int, Piste>
      */
     #[ORM\ManyToMany(targetEntity: Piste::class, mappedBy: 'partenaires')]
-    #[Groups(['list:read'])]
     private Collection $pistes;
 
     /**
      * @var Collection<int, Note>
      */
     #[ORM\OneToMany(targetEntity: Note::class, mappedBy: 'partenaire')]
-    #[Groups(['list:read'])]
     private Collection $notes;
 
     /**
      * @var Collection<int, Client>
      */
     #[ORM\ManyToMany(targetEntity: Client::class, mappedBy: 'partenaires')]
-    #[Groups(['list:read'])]
     private Collection $clients;
 
     #[ORM\Column(length: 255, nullable: true)]
@@ -90,6 +86,19 @@ class Partenaire
     #[ORM\Column(length: 255, nullable: true)]
     #[Groups(['list:read'])]
     private ?string $rccm = null;
+
+    // Attributs calculés
+    #[Groups(['list:read'])]
+    public ?int $nombrePistesApportees;
+
+    #[Groups(['list:read'])]
+    public ?int $nombreClientsAssocies;
+
+    #[Groups(['list:read'])]
+    public ?int $nombrePolicesGenerees;
+
+    #[Groups(['list:read'])]
+    public ?int $nombreConditionsPartage;
 
     public function __construct()
     {
