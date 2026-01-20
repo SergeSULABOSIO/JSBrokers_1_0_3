@@ -52,7 +52,6 @@ class RevenuPourCourtier
      * @var Collection<int, Article>
      */
     #[ORM\OneToMany(targetEntity: Article::class, mappedBy: 'revenuFacture')]
-    #[Groups(['list:read'])]
     private Collection $articles;
 
     public function __construct()

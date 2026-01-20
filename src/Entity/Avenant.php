@@ -50,7 +50,6 @@ class Avenant
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'avenant', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $documents;
 
     #[ORM\ManyToOne(inversedBy: 'avenants', cascade: ['persist', 'remove'])]

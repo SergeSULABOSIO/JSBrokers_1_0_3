@@ -67,7 +67,6 @@ class TypeRevenu
      * @var Collection<int, RevenuPourCourtier>
      */
     #[ORM\OneToMany(targetEntity: RevenuPourCourtier::class, mappedBy: 'typeRevenu')]
-    #[Groups(['list:read'])]
     private Collection $revenuPourCourtiers;
 
     #[ORM\ManyToOne(inversedBy: 'typeRevenus')]

@@ -77,35 +77,30 @@ class Piste implements OwnerAwareInterface
      * @var Collection<int, Cotation>
      */
     #[ORM\OneToMany(targetEntity: Cotation::class, mappedBy: 'piste', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $cotations;
 
     /**
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'piste', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $documents;
 
     /**
      * @var Collection<int, Tache>
      */
     #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'piste', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $taches;
 
     /**
      * @var Collection<int, Partenaire>
      */
     #[ORM\ManyToMany(targetEntity: Partenaire::class, inversedBy: 'pistes')]
-    #[Groups(['list:read'])]
     private Collection $partenaires;
 
     /**
      * @var Collection<int, ConditionPartage>
      */
     #[ORM\OneToMany(targetEntity: ConditionPartage::class, mappedBy: 'piste', cascade: ['persist', 'remove'])]
-    #[Groups(['list:read'])]
     private Collection $conditionsPartageExceptionnelles;
 
     #[ORM\Column]

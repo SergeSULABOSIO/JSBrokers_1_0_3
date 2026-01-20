@@ -40,7 +40,6 @@ class Feedback implements OwnerAwareInterface
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'feedback')]
-    #[Groups(['list:read'])]
     private Collection $documents;
 
     #[ORM\Column]

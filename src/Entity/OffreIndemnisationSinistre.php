@@ -44,14 +44,12 @@ class OffreIndemnisationSinistre
      * @var Collection<int, Paiement>
      */
     #[ORM\OneToMany(targetEntity: Paiement::class, mappedBy: 'offreIndemnisationSinistre', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $paiements;
 
     /**
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'offreIndemnisationSinistre', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $documents;
 
     #[ORM\ManyToOne(inversedBy: 'offreIndemnisationSinistres')]
@@ -61,7 +59,6 @@ class OffreIndemnisationSinistre
      * @var Collection<int, Tache>
      */
     #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'offreIndemnisationSinistre', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $taches;
 
 
