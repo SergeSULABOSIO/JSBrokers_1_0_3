@@ -25,7 +25,6 @@ class Note implements OwnerAwareInterface
      * @var Collection<int, Article>
      */
     #[ORM\OneToMany(targetEntity: Article::class, mappedBy: 'note', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $articles;
 
     #[ORM\Column]
@@ -68,14 +67,12 @@ class Note implements OwnerAwareInterface
      * @var Collection<int, CompteBancaire>
      */
     #[ORM\ManyToMany(targetEntity: CompteBancaire::class, inversedBy: 'notes')]
-    #[Groups(['list:read'])]
     private Collection $comptes;
 
     /**
      * @var Collection<int, Paiement>
      */
     #[ORM\OneToMany(targetEntity: Paiement::class, mappedBy: 'note', cascade: ['detach', 'refresh', 'persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $paiements;
 
     #[ORM\Column(length: 255)]

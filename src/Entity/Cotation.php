@@ -44,28 +44,24 @@ class Cotation
      * @var Collection<int, Tache>
      */
     #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'cotation', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $taches;
 
     /**
      * @var Collection<int, ChargementPourPrime>
      */
     #[ORM\OneToMany(targetEntity: ChargementPourPrime::class, mappedBy: 'cotation', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $chargements;
 
     /**
      * @var Collection<int, RevenuPourCourtier>
      */
     #[ORM\OneToMany(targetEntity: RevenuPourCourtier::class, mappedBy: 'cotation', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $revenus;
 
     /**
      * @var Collection<int, Tranche>
      */
     #[ORM\OneToMany(targetEntity: Tranche::class, mappedBy: 'cotation', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $tranches;
 
     #[ORM\ManyToOne(inversedBy: 'cotations', cascade: ['persist', 'remove'])]
@@ -76,7 +72,6 @@ class Cotation
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'cotation', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $documents;
 
     /**

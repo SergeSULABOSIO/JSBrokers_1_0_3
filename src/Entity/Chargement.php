@@ -45,14 +45,12 @@ class Chargement
      * @var Collection<int, ChargementPourPrime>
      */
     #[ORM\OneToMany(targetEntity: ChargementPourPrime::class, mappedBy: 'type')]
-    #[Groups(['list:read'])]
     private Collection $chargementPourPrimes;
 
     /**
      * @var Collection<int, TypeRevenu>
      */
     #[ORM\OneToMany(targetEntity: TypeRevenu::class, mappedBy: 'typeChargement')]
-    #[Groups(['list:read'])]
     private Collection $typeRevenus;
 
     #[ORM\Column(nullable: true)]

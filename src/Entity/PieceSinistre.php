@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use App\Entity\Traits\CalculatedIndicatorsTrait;
 use App\Repository\PieceSinistreRepository;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -11,6 +12,7 @@ use Symfony\Component\Serializer\Annotation\Groups;
 #[ORM\Entity(repositoryClass: PieceSinistreRepository::class)]
 class PieceSinistre implements OwnerAwareInterface
 {
+    use CalculatedIndicatorsTrait;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -43,7 +45,6 @@ class PieceSinistre implements OwnerAwareInterface
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'pieceSinistre')]
-    #[Groups(['list:read'])]
     private Collection $documents;
 
     public function __construct()

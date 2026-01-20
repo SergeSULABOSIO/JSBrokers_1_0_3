@@ -44,21 +44,18 @@ class CompteBancaire
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'compteBancaire', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $documents;
 
     /**
      * @var Collection<int, Note>
      */
     #[ORM\ManyToMany(targetEntity: Note::class, mappedBy: 'comptes')]
-    #[Groups(['list:read'])]
     private Collection $notes;
 
     /**
      * @var Collection<int, Paiement>
      */
     #[ORM\OneToMany(targetEntity: Paiement::class, mappedBy: 'CompteBancaire')]
-    #[Groups(['list:read'])]
     private Collection $paiements;
 
     #[ORM\Column(length: 255, nullable: true)]

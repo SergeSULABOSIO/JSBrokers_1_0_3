@@ -34,7 +34,6 @@ class Classeur
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'classeur')]
-    #[Groups(['list:read'])]
     private Collection $documents;
 
     public function __construct()

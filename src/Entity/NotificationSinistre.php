@@ -69,28 +69,24 @@ class NotificationSinistre implements OwnerAwareInterface
      * @var Collection<int, OffreIndemnisationSinistre>
      */
     #[ORM\OneToMany(targetEntity: OffreIndemnisationSinistre::class, mappedBy: 'notificationSinistre', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $offreIndemnisationSinistres;
     
     /**
      * @var Collection<int, PieceSinistre>
      */
     #[ORM\OneToMany(targetEntity: PieceSinistre::class, mappedBy: 'notificationSinistre', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $pieces;
 
     /**
      * @var Collection<int, Contact>
      */
     #[ORM\OneToMany(targetEntity: Contact::class, mappedBy: 'notificationSinistre', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $contacts;
 
     /**
      * @var Collection<int, Tache>
      */
     #[ORM\OneToMany(targetEntity: Tache::class, mappedBy: 'notificationSinistre', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $taches;
 
     #[ORM\Column(nullable: true)]

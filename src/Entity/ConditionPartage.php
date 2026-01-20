@@ -47,7 +47,6 @@ class ConditionPartage
      * @var Collection<int, Risque>
      */
     #[ORM\OneToMany(targetEntity: Risque::class, mappedBy: 'conditionPartage')]
-    #[Groups(['list:read'])]
     private Collection $produits;
 
     #[ORM\Column]

@@ -53,7 +53,6 @@ class Paiement
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'paiement', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $preuves;
 
     #[ORM\ManyToOne(inversedBy: 'paiements')]

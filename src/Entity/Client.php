@@ -51,7 +51,6 @@ class Client
      * @var Collection<int, Contact>
      */
     #[ORM\OneToMany(targetEntity: Contact::class, mappedBy: 'client', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $contacts;
 
     /**
@@ -72,7 +71,6 @@ class Client
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'client', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
     private Collection $documents;
 
     #[ORM\ManyToOne(inversedBy: 'clients')]
@@ -83,14 +81,12 @@ class Client
      * @var Collection<int, Note>
      */
     #[ORM\OneToMany(targetEntity: Note::class, mappedBy: 'client')]
-    #[Groups(['list:read'])]
     private Collection $notes;
 
     /**
      * @var Collection<int, Partenaire>
      */
     #[ORM\ManyToMany(targetEntity: Partenaire::class, inversedBy: 'clients')]
-    #[Groups(['list:read'])]
     private Collection $partenaires;
 
     #[ORM\Column(length: 255, nullable: true)]
