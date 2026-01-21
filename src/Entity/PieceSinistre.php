@@ -47,6 +47,16 @@ class PieceSinistre implements OwnerAwareInterface
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'pieceSinistre')]
     private Collection $documents;
 
+    // Attributs calculés spécifiques à PieceSinistre
+    #[Groups(['list:read'])]
+    public ?string $agePiece;
+
+    #[Groups(['list:read'])]
+    public ?string $typePieceNom;
+
+    #[Groups(['list:read'])]
+    public ?string $estObligatoire;
+
     public function __construct()
     {
         $this->documents = new ArrayCollection();
