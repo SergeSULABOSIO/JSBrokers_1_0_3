@@ -2321,7 +2321,7 @@ class CalculationProvider
     /**
      * Calcule l'âge de la pièce sinistre depuis sa date de réception.
      */
-    private function calculatePieceSinistreAge(PieceSinistre $piece): string
+    public function calculatePieceSinistreAge(PieceSinistre $piece): string
     {
         if (!$piece->getReceivedAt()) {
             return 'N/A';
@@ -2333,7 +2333,7 @@ class CalculationProvider
     /**
      * Retourne le nom du type de pièce sinistre associé.
      */
-    private function getPieceSinistreTypeName(PieceSinistre $piece): string
+    public function getPieceSinistreTypeName(PieceSinistre $piece): string
     {
         return $piece->getType() ? $piece->getType()->getNom() : 'Non défini';
     }
@@ -2341,7 +2341,7 @@ class CalculationProvider
     /**
      * Indique si le type de pièce sinistre associé est obligatoire.
      */
-    private function getPieceSinistreEstObligatoire(PieceSinistre $piece): string
+    public function getPieceSinistreEstObligatoire(PieceSinistre $piece): string
     {
         return $piece->getType() ? ($piece->getType()->isObligatoire() ? 'Oui' : 'Non') : 'N/A';
     }
