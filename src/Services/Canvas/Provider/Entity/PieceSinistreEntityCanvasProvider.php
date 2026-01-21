@@ -2,14 +2,16 @@
 
 namespace App\Services\Canvas\Provider\Entity;
 
-use App\Entity\Document;
 use App\Entity\Invite;
+use App\Entity\Document;
+use App\Entity\PieceSinistre;
+use App\Services\ServiceMonnaies;
 use App\Entity\ModelePieceSinistre;
 use App\Entity\NotificationSinistre;
-use App\Entity\PieceSinistre;
 use App\Services\Canvas\CanvasHelper;
-use App\Services\ServiceMonnaies;
+use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
+#[AutoconfigureTag('app.entity_canvas_provider')]
 class PieceSinistreEntityCanvasProvider implements EntityCanvasProviderInterface
 {
     public function __construct(
@@ -27,24 +29,20 @@ class PieceSinistreEntityCanvasProvider implements EntityCanvasProviderInterface
     {
         return [
             "parametres" => [
-                "description" => "Pièce de Sinistre",
-                "icone" => "mdi:file-document",
+                "description" => "Pièce Sinistre",
+                "icone" => "mdi:file-document-outline",
                 'background_image' => '/images/fitures/default.jpg',
-                'description_template' => [
-                    "Pièce: [[*description]].",
-                    " Reçue le [[receivedAt]] de [[fourniPar]].",
-                    " Type: [[type]]."
-                ]
+                'description_template' => ["Pièce: [[description]]. Reçue le [[receivedAt|date('d/m/Y')]]. Fournie par [[fourniPar]]."]
             ],
             "liste" => array_merge([
                 ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                 ["code" => "description", "intitule" => "Description", "type" => "Texte"],
-                ["code" => "type", "intitule" => "Type de Pièce", "type" => "Relation", "targetEntity" => ModelePieceSinistre::class, "displayField" => "nom"],
+                ["code" => "type", "intitule" => "Type de pièce", "type" => "Relation", "targetEntity" => ModelePieceSinistre::class, "displayField" => "nom"],
                 ["code" => "receivedAt", "intitule" => "Reçue le", "type" => "Date"],
-                ["code" => "fourniPar", "intitule" => "Fourni par", "type" => "Texte"],
-                ["code" => "invite", "intitule" => "Enregistré par", "type" => "Relation", "targetEntity" => Invite::class, "displayField" => "email"],
-                ["code" => "notificationSinistre", "intitule" => "Sinistre", "type" => "Relation", "targetEntity" => NotificationSinistre::class, "displayField" => "referenceSinistre"],
-                ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
+                ["code" => "fourniPar", "intitule" => "Fournie par", "type" => "Texte"],
+                ["code" => "invite", "intitule" => "Invité", "type" => "Relation", "targetEntity" => Invite::class, "displayField" => "nom"],
+                ["code" => "notificationSinistre", "intitule" => "Notification Sinistre", "type" => "Relation", "targetEntity" => NotificationSinistre::class, "displayField" => "referenceSinistre"],
+                ["code" => "documents", "intitule" => "Documents liés", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
             ], $this->getSpecificIndicators(), $this->canvasHelper->getGlobalIndicatorsCanvas("PieceSinistre"))
         ];
     }
@@ -52,8 +50,9 @@ class PieceSinistreEntityCanvasProvider implements EntityCanvasProviderInterface
     private function getSpecificIndicators(): array
     {
         return [
-            ["code" => "agePiece", "intitule" => "Âge", "type" => "Texte", "format" => "Texte", "description" => "Nombre de jours depuis la réception de la pièce."],
-            ["code" => "nombreDocuments", "intitule" => "Nb. Documents", "type" => "Entier", "format" => "Nombre", "description" => "Nombre de documents joints à cette pièce."],
+            ["code" => "agePiece", "intitule" => "Âge de la pièce", "type" => "Calcul", "format" => "Texte", "fonction" => "calculatePieceSinistreAge", "description" => "Âge de la pièce depuis sa date de réception."],
+            ["code" => "typePieceNom", "intitule" => "Nom du type", "type" => "Calcul", "format" => "Texte", "fonction" => "getPieceSinistreTypeName", "description" => "Nom du modèle de pièce associé."],
+            ["code" => "estObligatoire", "intitule" => "Obligatoire", "type" => "Calcul", "format" => "Texte", "fonction" => "getPieceSinistreEstObligatoire", "description" => "Indique si le modèle de pièce est obligatoire."],
         ];
     }
 }

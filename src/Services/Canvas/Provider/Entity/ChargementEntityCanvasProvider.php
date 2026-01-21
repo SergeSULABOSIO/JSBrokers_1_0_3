@@ -37,7 +37,7 @@ class ChargementEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                 ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
                 ["code" => "description", "intitule" => "Description", "type" => "Texte"],
-                ["code" => "fonction", "intitule" => "Fonction", "type" => "Texte"], // Maybe a calculated field to get the text? For now, it's just the int.
+                ["code" => "fonctionString", "intitule" => "Fonction", "type" => "Calcul", "format" => "Texte", "fonction" => "Chargement_getFonctionString", "description" => "Fonction du chargement."],
                 ["code" => "chargementPourPrimes", "intitule" => "Utilisations (Primes)", "type" => "Collection", "targetEntity" => ChargementPourPrime::class, "displayField" => "nom"],
                 ["code" => "typeRevenus", "intitule" => "Utilisations (Revenus)", "type" => "Collection", "targetEntity" => TypeRevenu::class, "displayField" => "nom"],
             ], $this->canvasHelper->getGlobalIndicatorsCanvas("Chargement"))

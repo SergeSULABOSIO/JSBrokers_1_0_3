@@ -31,6 +31,7 @@ use App\Entity\RevenuPourCourtier;
 use App\Repository\TaxeRepository;
 use App\Entity\NotificationSinistre;
 use App\Repository\CotationRepository;
+use App\Entity\PieceSinistre;
 use App\Entity\OffreIndemnisationSinistre;
 
 use App\Repository\NotificationSinistreRepository;
@@ -222,6 +223,15 @@ class CalculationProvider
                     'nombrePartenaires' => $this->countEntreprisePartenaires($entity),
                     'nombreAssureurs' => $this->countEntrepriseAssureurs($entity),
                 ];
+                break;
+            case PieceSinistre::class:
+                /** @var PieceSinistre $entity */
+                $indicateurs = [
+                    'agePiece' => $this->calculatePieceSinistreAge($entity),
+                    'typePieceNom' => $this->getPieceSinistreTypeName($entity),
+                    'estObligatoire' => $this->getPieceSinistreEstObligatoire($entity),
+                ];
+
                 break;
                 // D'autres entités pourraient être ajoutées ici avec 'case AutreEntite::class:'
         }
@@ -2307,7 +2317,35 @@ class CalculationProvider
         // a été modifiée pour utiliser ce tableau, ce qui montre la direction à prendre.
         return ['by_risque' => [], 'by_client' => [], 'by_partenaire' => []];
     }    
-    
+
+    /**
+     * Calcule l'âge de la pièce sinistre depuis sa date de réception.
+     */
+    private function calculatePieceSinistreAge(PieceSinistre $piece): string
+    {
+        if (!$piece->getReceivedAt()) {
+            return 'N/A';
+        }
+        $jours = $this->serviceDates->daysEntre($piece->getReceivedAt(), new DateTimeImmutable()) ?? 0;
+        return $jours . ' jour(s)';
+    }
+
+    /**
+     * Retourne le nom du type de pièce sinistre associé.
+     */
+    private function getPieceSinistreTypeName(PieceSinistre $piece): string
+    {
+        return $piece->getType() ? $piece->getType()->getNom() : 'Non défini';
+    }
+
+    /**
+     * Indique si le type de pièce sinistre associé est obligatoire.
+     */
+    private function getPieceSinistreEstObligatoire(PieceSinistre $piece): string
+    {
+        return $piece->getType() ? ($piece->getType()->isObligatoire() ? 'Oui' : 'Non') : 'N/A';
+    }
+
     /**
      * NOUVEAU : Compte le nombre de fois qu'un modèle de pièce est utilisé.
      */

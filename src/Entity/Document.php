@@ -81,6 +81,12 @@ class Document
     #[Groups(['list:read'])]
     public ?string $parent_string;
 
+    #[Groups(['list:read'])]
+    public ?string $ageDocument;
+
+    #[Groups(['list:read'])]
+    public ?string $typeFichier;
+
     public function setFichier(?File $fichier = null): void
     {
         $this->fichier = $fichier;
