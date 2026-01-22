@@ -23,6 +23,7 @@ use App\Repository\ContactRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
+use App\Services\CanvasBuilder;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use App\Controller\Admin\ControllerUtilsTrait;
@@ -51,7 +52,8 @@ class ContactController extends AbstractController
         private ContactRepository $contactRepository,
         private Constante $constante,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
-        private SerializerInterface $serializer,
+        private SerializerInterface $serializer, // Ajout de SerializerInterface
+        private CanvasBuilder $canvasBuilder, // Ajout de CanvasBuilder
     ) {}
 
     protected function getParentAssociationMap(): array

@@ -44,8 +44,8 @@ class ModelePieceSinistreController extends AbstractController
         private Constante $constante,
         private JSBDynamicSearchService $searchService,
         private SerializerInterface $serializer,
-        private CanvasBuilder $canvasBuilder,
-        private CalculationProvider $calculationProvider
+        private CanvasBuilder $canvasBuilder, // Ajout de CanvasBuilder
+        private CalculationProvider $calculationProvider // Ajout de CalculationProvider
     ) {}
 
     protected function getCollectionMap(): array

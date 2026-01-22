@@ -11,6 +11,7 @@ use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Repository\CompteBancaireRepository;
+use App\Services\CanvasBuilder;
 use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -41,7 +42,8 @@ class CompteBancaireController extends AbstractController
         private CompteBancaireRepository $compteBancaireRepository,
         private Constante $constante,
         private JSBDynamicSearchService $searchService,
-        private SerializerInterface $serializer
+        private SerializerInterface $serializer,
+        private CanvasBuilder $canvasBuilder, // Ajout de CanvasBuilder
     ) {
     }
 

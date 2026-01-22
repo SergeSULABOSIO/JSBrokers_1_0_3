@@ -10,6 +10,7 @@ use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use App\Services\JSBDynamicSearchService;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Services\CanvasBuilder;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use App\Controller\Admin\ControllerUtilsTrait;
@@ -38,7 +39,8 @@ class CotationController extends AbstractController
         private CotationRepository $cotationRepository,
         private Constante $constante,
         private JSBDynamicSearchService $searchService,
-        private SerializerInterface $serializer
+        private SerializerInterface $serializer,
+        private CanvasBuilder $canvasBuilder, // Ajout de CanvasBuilder
     ) {}
 
     protected function getCollectionMap(): array

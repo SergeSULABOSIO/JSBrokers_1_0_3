@@ -27,6 +27,7 @@ use App\Repository\PaiementRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
+use App\Services\CanvasBuilder;
 use App\Entity\OffreIndemnisationSinistre;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -60,7 +61,8 @@ class PaiementController extends AbstractController
         private ServiceMonnaies $serviceMonnaies,
         private Constante $constante,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
-        private SerializerInterface $serializer,
+        private SerializerInterface $serializer, // Ajout de SerializerInterface
+        private CanvasBuilder $canvasBuilder, // Ajout de CanvasBuilder
     ) {}
 
     protected function getCollectionMap(): array
