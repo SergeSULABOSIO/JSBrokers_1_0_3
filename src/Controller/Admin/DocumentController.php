@@ -73,8 +73,11 @@ class DocumentController extends AbstractController
         private Constante $constante,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
         private SerializerInterface $serializer,
-        private CanvasBuilder $canvasBuilder,
-    ) {}
+        CanvasBuilder $canvasBuilder // Inject CanvasBuilder without property promotion
+    ) {
+        // Assign the injected CanvasBuilder to the property declared in the trait
+        $this->canvasBuilder = $canvasBuilder;
+    }
 
     /**
      * 3. IMPLÉMENTER LA "NOTICE D'INSTRUCTIONS" REQUISE PAR LE TRAIT

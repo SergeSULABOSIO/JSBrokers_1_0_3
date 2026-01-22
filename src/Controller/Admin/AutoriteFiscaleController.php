@@ -40,8 +40,11 @@ class AutoriteFiscaleController extends AbstractController
         private Constante $constante,
         private JSBDynamicSearchService $searchService,
         private SerializerInterface $serializer,
-        private CanvasBuilder $canvasBuilder, // Ajout de CanvasBuilder
-    ) {}
+        CanvasBuilder $canvasBuilder // Inject CanvasBuilder without property promotion
+    ) {
+        // Assign the injected CanvasBuilder to the property declared in the trait
+        $this->canvasBuilder = $canvasBuilder;
+    }
 
     protected function getCollectionMap(): array
     {
