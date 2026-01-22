@@ -33,6 +33,7 @@ use App\Repository\DocumentRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
+use App\Services\CanvasBuilder;
 use App\Entity\OffreIndemnisationSinistre;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -72,6 +73,7 @@ class DocumentController extends AbstractController
         private Constante $constante,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
         private SerializerInterface $serializer,
+        private CanvasBuilder $canvasBuilder,
     ) {}
 
     /**
