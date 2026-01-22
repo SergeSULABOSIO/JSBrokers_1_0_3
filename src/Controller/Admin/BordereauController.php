@@ -11,6 +11,7 @@ use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Services\CanvasBuilder;
 use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -40,7 +41,8 @@ class BordereauController extends AbstractController
         private BordereauRepository $bordereauRepository,
         private Constante $constante,
         private JSBDynamicSearchService $searchService,
-        private SerializerInterface $serializer
+        private SerializerInterface $serializer,
+        private CanvasBuilder $canvasBuilder, // Ajout de CanvasBuilder
     ) {}
 
     protected function getCollectionMap(): array

@@ -19,6 +19,7 @@ use App\Entity\Invite;
 use DateTimeImmutable;
 use App\Form\TacheType;
 use App\Constantes\Constante;
+use App\Services\CanvasBuilder;
 use App\Repository\TacheRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
@@ -30,10 +31,10 @@ use App\Controller\Admin\ControllerUtilsTrait;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Entity\Traits\HandleChildAssociationTrait;
+use App\Repository\NotificationSinistreRepository;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
-use App\Repository\NotificationSinistreRepository;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
@@ -56,6 +57,7 @@ class TacheController extends AbstractController
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
         private SerializerInterface $serializer,
         private NotificationSinistreRepository $notificationSinistreRepository,
+        private CanvasBuilder $canvasBuilder, // Ajout de CanvasBuilder
     ) {}
 
     protected function getCollectionMap(): array

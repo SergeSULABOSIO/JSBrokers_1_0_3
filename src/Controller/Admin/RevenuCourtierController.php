@@ -38,9 +38,9 @@ class RevenuCourtierController extends AbstractController
         private RevenuPourCourtierRepository $revenuCourtierRepository,
         private Constante $constante,
         private JSBDynamicSearchService $searchService,
-        private SerializerInterface $serializer,
-        private CanvasBuilder $canvasBuilder,
-        private CalculationProvider $calculationProvider
+        private SerializerInterface $serializer, // Ajout de SerializerInterface
+        private CanvasBuilder $canvasBuilder, // Ajout de CanvasBuilder
+        private CalculationProvider $calculationProvider // Ajout de CalculationProvider
     ) {
     }
 

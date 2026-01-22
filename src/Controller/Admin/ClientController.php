@@ -13,6 +13,7 @@ use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
+use App\Services\CanvasBuilder;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use App\Controller\Admin\ControllerUtilsTrait;
@@ -43,7 +44,8 @@ class ClientController extends AbstractController
         private ServiceMonnaies $serviceMonnaies,
         private ServiceTaxes $serviceTaxes,
         private JSBDynamicSearchService $searchService,
-        private SerializerInterface $serializer
+        private SerializerInterface $serializer,
+        private CanvasBuilder $canvasBuilder, // Ajout de CanvasBuilder
     ) {
     }
 

@@ -39,9 +39,9 @@ class PisteController extends AbstractController
         private PisteRepository $pisteRepository,
         private Constante $constante,
         private JSBDynamicSearchService $searchService,
-        private SerializerInterface $serializer,
-        private CanvasBuilder $canvasBuilder,
-        private CalculationProvider $calculationProvider
+        private SerializerInterface $serializer, // Ajout de SerializerInterface
+        private CanvasBuilder $canvasBuilder, // Ajout de CanvasBuilder
+        private CalculationProvider $calculationProvider // Ajout de CalculationProvider
     ) {
     }
 

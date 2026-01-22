@@ -10,6 +10,7 @@ use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
+use App\Services\CanvasBuilder;
 use Symfony\Component\HttpFoundation\Request;
 use App\Controller\Admin\ControllerUtilsTrait;
 use Symfony\Component\HttpFoundation\Response;
@@ -34,7 +35,8 @@ class ConditionPartageController extends AbstractController
         private JSBDynamicSearchService $searchService,
         private SerializerInterface $serializer,
         private Constante $constante,
-        private ConditionPartageRepository $conditionPartageRepository
+        private ConditionPartageRepository $conditionPartageRepository,
+        private CanvasBuilder $canvasBuilder, // Ajout de CanvasBuilder
     ) {
     }
 

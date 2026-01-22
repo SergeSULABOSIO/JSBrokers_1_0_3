@@ -66,8 +66,8 @@ class NotificationSinistreController extends AbstractController
         private ServiceMonnaies $serviceMonnaies,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
         private SerializerInterface $serializer,
-        private CanvasBuilder $canvasBuilder,
-        private CalculationProvider $calculationProvider
+        private CanvasBuilder $canvasBuilder, // Ajout de CanvasBuilder
+        private CalculationProvider $calculationProvider // Ajout de CalculationProvider
     ) {}
 
     protected function getCollectionMap(): array
