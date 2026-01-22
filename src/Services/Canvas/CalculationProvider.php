@@ -179,6 +179,7 @@ class CalculationProvider
                 $indicateurs = [
                     'ageDocument' => $this->calculateDocumentAge($entity),
                     'typeFichier' => $this->getDocumentTypeFichier($entity),
+                    'parent_string' => $this->Document_getParentAsString($entity),
                 ];
                 break;
             case Groupe::class:
