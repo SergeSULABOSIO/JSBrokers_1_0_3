@@ -49,11 +49,12 @@ class ListCanvasProvider
             if ($provider->supports($entityClassName)) {
                 $canvas = $provider->getCanvas();
 
-                $sharedColumns = $this->getSharedNumericColumnsForEntity($entityClassName);
-                if (!empty($sharedColumns)) {
-                    $canvas['colonnes_numeriques'] = array_merge($canvas['colonnes_numeriques'] ?? [], $sharedColumns);
-                }
-                
+                // S'assurer que 'colonnes_numeriques' existe toujours, même vide, avant d'ajouter les colonnes partagées.
+                $canvas['colonnes_numeriques'] = $canvas['colonnes_numeriques'] ?? [];
+
+                // Ajouter les colonnes numériques partagées si elles existent.
+                $canvas['colonnes_numeriques'] = array_merge($canvas['colonnes_numeriques'], $this->getSharedNumericColumnsForEntity($entityClassName));
+
                 return $canvas;
             }
         }
