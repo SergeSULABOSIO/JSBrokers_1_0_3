@@ -4,6 +4,7 @@ namespace App\Controller\Admin;
 use App\Entity\Invite;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
+use App\Services\CanvasBuilder;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
@@ -20,6 +21,7 @@ use Symfony\Component\Security\Core\Exception\AccessDeniedException;
  */
 trait ControllerUtilsTrait
 {
+    protected CanvasBuilder $canvasBuilder;
     /**
      * Valide l'accès à un espace de travail en se basant sur idEntreprise et idInvite.
      *
