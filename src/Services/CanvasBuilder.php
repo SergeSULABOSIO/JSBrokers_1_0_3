@@ -60,32 +60,11 @@ class CanvasBuilder
      */
     public function loadAllCalculatedValues(object $entity): void
     {
-        // 1. Charge les valeurs basées sur la définition du canevas (champs de type 'Calcul')
-        $entityCanvas = $this->entityCanvasProvider->getCanvas(get_class($entity));
-        if (isset($entityCanvas['liste'])) {
-            foreach ($entityCanvas['liste'] as $field) {
-                if (($field['type'] ?? null) === 'Calcul') {
-                    $functionName = $field['fonction'];
-                    $args = [];
-
-                    if (!empty($field['params'])) {
-                        $paramNames = $field['params'];
-                        $args = array_map(function ($paramName) use ($entity) {
-                            $getter = 'get' . ucfirst($paramName);
-                            return method_exists($entity, $getter) ? $entity->$getter() : null;
-                        }, $paramNames);
-                    } else {
-                        $args[] = $entity;
-                    }
-
-                    if (method_exists($this->calculationProvider, $functionName)) {
-                        $entity->{$field['code']} = $this->calculationProvider->$functionName(...$args);
-                    }
-                }
-            }
-        }
-
-        // 2. Charge les indicateurs spécifiques (ex: Âge du dossier, Taux de transfo., etc.)
+        // La seule responsabilité de cette méthode est de demander au CalculationProvider
+        // de faire son travail. Le CalculationProvider est maintenant le seul à savoir
+        // COMMENT les calculs sont effectués, ce qui respecte le principe de responsabilité unique.
+        // L'ancienne logique d'appel dynamique basée sur la configuration du canvas a été supprimée
+        // au profit de cette approche plus robuste et mieux encapsulée.
         $specificIndicators = $this->calculationProvider->getIndicateursSpecifics($entity);
         foreach ($specificIndicators as $key => $value) {
             $entity->{$key} = $value;
