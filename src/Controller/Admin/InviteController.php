@@ -7,7 +7,6 @@ use App\Form\InviteType;
 use App\Entity\Utilisateur;
 use App\Constantes\Constante;
 use App\Event\InvitationEvent;
-use App\Constantes\MenuActivator;
 use App\Entity\Entreprise;
 use App\Entity\RolesEnAdministration;
 use App\Entity\RolesEnFinance;
@@ -16,10 +15,15 @@ use App\Entity\RolesEnProduction;
 use App\Entity\RolesEnSinistre;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
+use App\Services\CanvasBuilder;
+use App\Services\JSBDynamicSearchService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -30,96 +34,95 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 #[IsGranted('ROLE_USER')]
 class InviteController extends AbstractController
 {
-    public MenuActivator $activator;
+    use ControllerUtilsTrait;
 
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
-        private EntityManagerInterface $manager,
+        private EntityManagerInterface $em,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
         private Constante $constante,
+        private JSBDynamicSearchService $searchService,
+        private SerializerInterface $serializer,
+        private EventDispatcherInterface $dispatcher,
+        CanvasBuilder $canvasBuilder
     ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_ADMINISTRATION);
+        $this->canvasBuilder = $canvasBuilder;
     }
 
-    #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function index($idEntreprise, Request $request)
+    protected function getCollectionMap(): array
     {
-        $page = $request->query->getInt("page", 1);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        // dd($this->constante->Invite_getInviteByUtilisateur($idEntreprise, $user));
-
-        return $this->render('admin/invite/index.html.twig', [
-            'pageName' => $this->translator->trans('invite_page_name_list'),
-            'utilisateur' => $this->getUser(),
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'invites' => $this->inviteRepository->paginateForEntreprise($idEntreprise, $page),
-            'page' => $page,
-            'constante' => $this->constante,
-            'activator' => $this->activator,
-        ]);
+        return $this->buildCollectionMapFromEntity(Invite::class);
     }
 
-
-    #[Route('/create/{idEntreprise}', name: 'create')]
-    public function create($idEntreprise, Request $request, EventDispatcherInterface $dispatcher)
+    protected function getParentAssociationMap(): array
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        return $this->buildParentAssociationMapFromEntity(Invite::class);
+    }
 
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
+    #[Route('/index/{idInvite}/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function index(Request $request): Response
+    {
+        return $this->renderViewOrListComponent(Invite::class, $request);
+    }
 
-        /** @var Invite */
-        $invite = new Invite();
-        //Paramètres par défaut
-        $invite->setEntreprise($entreprise);
-        $invite->setProprietaire(false);
-        //On charge automatiquement les rôles par défaut
-        $this->chargerRoles($invite);
+    #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
+    public function query(Request $request): Response
+    {
+        return $this->renderViewOrListComponent(Invite::class, $request, true);
+    }
 
-        $form = $this->createForm(InviteType::class, $invite);
-        $form->handleRequest($request);
-
-        if ($this->entrepriseRepository->getNBMyProperEntreprises() != 0) {
-            if ($form->isSubmitted() && $form->isValid()) {
-                $this->manager->persist($invite);
-                $this->manager->flush();
-                try {
-                    //Envoie de l'email de notification
-                    //Lancer un évènement
-                    $dispatcher->dispatch(new InvitationEvent($invite));
-                    $this->addFlash("success", $this->translator->trans("invite_create_ok", [
-                        ':email' => $invite->getEmail()
-                    ]));
-                } catch (\Throwable $th) {
-                    // dd($th);
-                    //throw $th;
-                    $this->addFlash("danger", $this->translator->trans("invite_email_sending_error"));
-                }
-                return $this->redirectToRoute("admin.invite.index", [
-                    'idEntreprise' => $idEntreprise,
-                ]);
+    #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
+    public function getFormApi(?Invite $invite, Request $request): Response
+    {
+        return $this->renderFormCanvas(
+            $request,
+            Invite::class,
+            InviteType::class,
+            $invite,
+            function (Invite $invite, \App\Entity\Invite $userInvite) {
+                $invite->setEntreprise($userInvite->getEntreprise());
+                $invite->setProprietaire(false);
+                $this->chargerRoles($invite);
             }
-        } else {
-            $this->addFlash("danger", $this->translator->trans("invite_sending_invite_not_granted", [
-                ':user' => $user->getNom()
-            ]));
-            return $this->redirectToRoute("admin.invite.index", [
-                'idEntreprise' => $idEntreprise,
-            ]);
+        );
+    }
+
+    #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
+    public function submitApi(Request $request): JsonResponse
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        if ($this->entrepriseRepository->getNBMyProperEntreprises() == 0) {
+            return $this->json(['message' => $this->translator->trans("invite_sending_invite_not_granted", [':user' => $user->getNom()])], 403);
         }
-        return $this->render('admin/invite/create.html.twig', [
-            'pageName' => $this->translator->trans("invite_page_name_new"),
-            'utilisateur' => $user,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
+
+        $data = $request->request->all();
+        $isNew = !isset($data['id']) || empty($data['id']);
+
+        $response = $this->handleFormSubmission(
+            $request,
+            Invite::class,
+            InviteType::class
+        );
+
+        if ($response->getStatusCode() === 200 && $isNew) {
+            $responseData = json_decode($response->getContent(), true);
+            if (isset($responseData['entity']['id'])) {
+                $newInvite = $this->inviteRepository->find($responseData['entity']['id']);
+                if ($newInvite) {
+                    try {
+                        $this->dispatcher->dispatch(new InvitationEvent($newInvite));
+                    } catch (\Throwable $th) {
+                        $responseData['warning'] = $this->translator->trans("invite_email_sending_error");
+                        return new JsonResponse($responseData);
+                    }
+                }
+            }
+        }
+
+        return $response;
     }
 
     private function chargerRoles(Invite $invite)
@@ -178,74 +181,9 @@ class InviteController extends AbstractController
         }
     }
 
-
-    #[Route('/edit/{idEntreprise}/{idInvite}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idInvite, Request $request)
+    #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
+    public function deleteApi(Invite $invite): Response
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->find($idInvite);
-
-        $form = $this->createForm(InviteType::class, $invite, [
-            'parent_object' => $invite,
-        ]);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            // dd($invite);
-            $this->manager->persist($invite); //On peut ignorer cette instruction car la fonction flush suffit.
-            $this->manager->flush();
-            $this->addFlash("success", $this->translator->trans("invite_edition_ok", [
-                ":invite" => $invite->getNom(),
-            ]));
-            // $this->addFlash("success", $invite->getEmail() . " a été modifié avec succès.");
-            // return $this->redirectToRoute("admin.invite.index", [
-            //     'idEntreprise' => $idEntreprise,
-            // ]);
-        }
-        return $this->render('admin/invite/edit.html.twig', [
-            'pageName' => $this->translator->trans("invite_page_name_update", [
-                ":invite" => $invite->getNom(),
-            ]),
-            // 'pageName' => $this->translator->trans("invite_page_name_edit"),
-            'utilisateur' => $user,
-            'invite' => $invite,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
-    }
-
-
-    #[Route('/remove/{idEntreprise}/{idInvite}', name: 'remove', requirements: ['idInvite' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove($idEntreprise, $idInvite, Request $request)
-    {
-        /** @var Invite $invite */
-        $invite = $this->inviteRepository->find($idInvite);
-
-        $message = $this->translator->trans("invite_deletion_ok", [
-            ':email' => $invite->getEmail()
-        ]);
-
-        $this->manager->remove($invite);
-        $this->manager->flush();
-
-        // if ($request->getPreferredFormat() == TurboBundle::STREAM_FORMAT) {
-        //     $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
-        //     return $this->render("admin/invite/delete.html.twig", [
-        //         'inviteId' => $inviteId,
-        //         'messages' => $message,
-        //         'type' => "success",
-        //     ]);
-        // }
-        $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.invite.index", [
-            'idEntreprise' => $idEntreprise,
-        ]);
+        return $this->handleDeleteApi($invite);
     }
 }
