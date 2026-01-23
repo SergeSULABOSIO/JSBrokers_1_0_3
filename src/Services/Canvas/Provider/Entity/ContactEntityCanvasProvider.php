@@ -49,7 +49,7 @@ class ContactEntityCanvasProvider implements EntityCanvasProviderInterface
                     "fonction" => "Contact_getTypeString",
                     "description" => "Le type de contact (Production, Sinistre, etc.)."
                 ],
-            ], $this->canvasHelper->getGlobalIndicatorsCanvas("Contact"))
+            ], $this->getSpecificIndicators())
         ];
     }
 }

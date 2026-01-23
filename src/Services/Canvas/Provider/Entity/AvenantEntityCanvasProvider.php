@@ -42,7 +42,7 @@ class AvenantEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "endingAt", "intitule" => "Date d'échéance", "type" => "Date"],
                 ["code" => "cotation", "intitule" => "Cotation", "type" => "Relation", "targetEntity" => Cotation::class, "displayField" => "nom"],
                 ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
-            ], $this->getSpecificIndicators(), $this->canvasHelper->getGlobalIndicatorsCanvas("Avenant"))
+            ], $this->getSpecificIndicators())
         ];
     }
 

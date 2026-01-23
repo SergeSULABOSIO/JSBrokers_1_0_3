@@ -40,7 +40,7 @@ class ChargementEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "fonctionString", "intitule" => "Fonction", "type" => "Calcul", "format" => "Texte", "fonction" => "Chargement_getFonctionString", "description" => "Fonction du chargement."],
                 ["code" => "chargementPourPrimes", "intitule" => "Utilisations (Primes)", "type" => "Collection", "targetEntity" => ChargementPourPrime::class, "displayField" => "nom"],
                 ["code" => "typeRevenus", "intitule" => "Utilisations (Revenus)", "type" => "Collection", "targetEntity" => TypeRevenu::class, "displayField" => "nom"],
-            ], $this->getSpecificIndicators())
+            ], $this->getSpecificIndicators()) // Note: This collection is not directly related to global indicators.
         ];
     }
 
