@@ -605,7 +605,7 @@ trait ControllerUtilsTrait
                 \App\Entity\Document::class => 'App\Controller\Admin\DocumentController::index',
                 \App\Entity\Classeur::class => 'App\Controller\Admin\ClasseurController::index',
                 \App\Entity\Invite::class => 'App\Controller\Admin\InviteController::index',
-            ],
+          ],
             //PARAMETRES
             '_mon_compte_component.html.twig' => 'App\Controller\RegistrationController::register',
             '_licence_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index', // TODO: A remplacer par le bon contrôleur
