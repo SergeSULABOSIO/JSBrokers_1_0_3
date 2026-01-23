@@ -77,6 +77,7 @@ class InviteEntityCanvasProvider implements EntityCanvasProviderInterface
             ["code" => "tachesEnCours", "intitule" => "Tâches en cours", "type" => "Entier", "format" => "Nombre", "description" => "Nombre de tâches non clôturées assignées à ce collaborateur."],
             ["code" => "rolePrincipal", "intitule" => "Rôle Principal", "type" => "Texte", "format" => "Texte", "description" => "Le ou les départements principaux dans lesquels le collaborateur a des rôles."],
             ["code" => "proprietaireString", "intitule" => "Est Propriétaire", "type" => "Texte", "format" => "Texte", "description" => "Indique si le collaborateur est propriétaire de l'entreprise."],
+            ["code" => "status_string", "intitule" => "Statut", "type" => "Texte", "format" => "Texte", "description" => "Indique si le collaborateur a activé son compte."],
         ];
     }
 }

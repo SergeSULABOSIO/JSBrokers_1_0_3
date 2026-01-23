@@ -31,6 +31,7 @@ use App\Entity\RevenuPourCourtier;
 use App\Repository\TaxeRepository;
 use App\Entity\NotificationSinistre;
 use App\Repository\CotationRepository;
+use App\Repository\UtilisateurRepository;
 use App\Entity\PieceSinistre;
 use App\Entity\OffreIndemnisationSinistre;
 
@@ -49,7 +50,8 @@ class CalculationProvider
         private CotationRepository $cotationRepository,
         private NotificationSinistreRepository $notificationSinistreRepository,
         private TaxeRepository $taxeRepository,
-        private TranslatorInterface $translator
+        private TranslatorInterface $translator,
+        private UtilisateurRepository $utilisateurRepository
     ) {}
 
     /**
@@ -201,6 +203,7 @@ class CalculationProvider
                     'tachesEnCours' => $this->countInviteTachesEnCours($entity),
                     'rolePrincipal' => $this->getInviteRolePrincipal($entity),
                     'proprietaireString' => $this->getInviteProprietaireString($entity), // Ajout de l'indicateur manquant
+                    'status_string' => $this->getInviteStatusString($entity),
                 ];
                 break;
             case Note::class:
@@ -240,14 +243,6 @@ class CalculationProvider
                     'redevableString' => $this->getTypeRevenuRedevableString($entity),
                     'sharedString' => $this->getTypeRevenuSharedString($entity),
                     'nombreUtilisations' => $this->countTypeRevenuUtilisations($entity),
-                ];
-                break;
-            case Invite::class:
-                /** @var Invite $entity */
-                $indicateurs = [
-                    'ageInvitation' => $this->calculateInviteAge($entity),
-                    'tachesEnCours' => $this->countInviteTachesEnCours($entity),
-                    'rolePrincipal' => $this->getInviteRolePrincipal($entity),
                 ];
                 break;
             case Entreprise::class:
@@ -2447,6 +2442,28 @@ class CalculationProvider
     private function getInviteProprietaireString(Invite $invite): string
     {
         return $invite->isProprietaire() ? 'Oui' : 'Non';
+    }
+
+    /**
+     * NOUVEAU : Retourne le statut de l'invitation sous forme de chaîne.
+     */
+    private function getInviteStatusString(Invite $invite): string
+    {
+        // On cherche si un utilisateur correspondant à l'email de l'invitation existe.
+        $user = $this->utilisateurRepository->findOneBy(['email' => $invite->getEmail()]);
+
+        if (!$user) {
+            // Si aucun utilisateur n'existe, l'invitation est envoyée mais pas encore acceptée.
+            return $this->translator->trans('invite_status_sent', [], 'messages');
+        }
+
+        if ($user->isVerified()) {
+            // Si l'utilisateur existe et a vérifié son email, il est actif.
+            return $this->translator->trans('invite_status_active', [], 'messages');
+        }
+
+        // Si l'utilisateur existe mais n'a pas vérifié son email.
+        return $this->translator->trans('invite_status_pending_verification', [], 'messages');
     }
 
     // --- Indicateurs pour Note ---
