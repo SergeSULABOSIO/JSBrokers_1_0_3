@@ -63,10 +63,10 @@ class InviteEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "notes", "intitule" => "Notes", "type" => "Collection", "targetEntity" => Note::class, "displayField" => "reference"],
                 ["code" => "rolesEnFinance", "intitule" => "Rôles Finance", "type" => "Collection", "targetEntity" => RolesEnFinance::class, "displayField" => "nom"],
                 ["code" => "rolesEnMarketing", "intitule" => "Rôles Marketing", "type" => "Collection", "targetEntity" => RolesEnMarketing::class, "displayField" => "nom"],
-                ["code" => "rolesEnProduction", "intitule" => "Rôles Production", "type" => "Collection", "targetEntity" => RolesEnProduction::class, "displayField" => "nom"],
-                ["code" => "rolesEnSinistre", "intitule" => "Rôles Sinistre", "type" => "Collection", "targetEntity" => RolesEnSinistre::class, "displayField" => "nom"],
-                ["code" => "rolesEnAdministration", "intitule" => "Rôles Admin", "type" => "Collection", "targetEntity" => RolesEnAdministration::class, "displayField" => "nom"],
-            ], $this->getSpecificIndicators(), $this->canvasHelper->getGlobalIndicatorsCanvas("Invite"))
+                ["code" => "rolesEnProduction", "intitule" => "Rôles Production", "type" => "Collection", "targetEntity" => RolesEnProduction::class, "displayField" => "nom"], // Note: This collection is not directly related to global indicators.
+                ["code" => "rolesEnSinistre", "intitule" => "Rôles Sinistre", "type" => "Collection", "targetEntity" => RolesEnSinistre::class, "displayField" => "nom"], // Note: This collection is not directly related to global indicators.
+                ["code" => "rolesEnAdministration", "intitule" => "Rôles Admin", "type" => "Collection", "targetEntity" => RolesEnAdministration::class, "displayField" => "nom"], // Note: This collection is not directly related to global indicators.
+            ], $this->getSpecificIndicators())
         ];
     }
 

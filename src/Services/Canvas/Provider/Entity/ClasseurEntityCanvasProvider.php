@@ -37,7 +37,12 @@ class ClasseurEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
                 ["code" => "description", "intitule" => "Description", "type" => "Texte"],
                 ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
-            ], $this->canvasHelper->getGlobalIndicatorsCanvas("Classeur"))
+            ], $this->getSpecificIndicators()) // Note: This collection is not directly related to global indicators.
         ];
+    }
+
+    private function getSpecificIndicators(): array
+    {
+        return [];
     }
 }

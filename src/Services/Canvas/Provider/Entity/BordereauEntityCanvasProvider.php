@@ -40,8 +40,13 @@ class BordereauEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "assureur", "intitule" => "Assureur", "type" => "Relation", "targetEntity" => Assureur::class, "displayField" => "nom"],
                 ["code" => "montantTTC", "intitule" => "Montant TTC", "type" => "Nombre", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
                 ["code" => "receivedAt", "intitule" => "Reçu le", "type" => "Date"],
-                ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
-            ], $this->canvasHelper->getGlobalIndicatorsCanvas("Bordereau"))
+                ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"], // Note: This collection is not directly related to global indicators.
+            ], $this->getSpecificIndicators())
         ];
+    }
+
+    private function getSpecificIndicators(): array
+    {
+        return [];
     }
 }

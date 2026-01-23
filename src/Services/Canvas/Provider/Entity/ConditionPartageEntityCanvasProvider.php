@@ -63,8 +63,8 @@ class ConditionPartageEntityCanvasProvider implements EntityCanvasProviderInterf
                     "format" => "Texte",
                     "fonction" => "ConditionPartage_getCritereRisqueString",
                 ],
-                ["code" => "produits", "intitule" => "Risques Ciblés", "type" => "Collection", "targetEntity" => Risque::class, "displayField" => "nomComplet"],
-            ], $this->getSpecificIndicators(), $this->canvasHelper->getGlobalIndicatorsCanvas("ConditionPartage"))
+                ["code" => "produits", "intitule" => "Risques Ciblés", "type" => "Collection", "targetEntity" => Risque::class, "displayField" => "nomComplet"], // Note: This collection is not directly related to global indicators.
+            ], $this->getSpecificIndicators())
         ];
     }
 

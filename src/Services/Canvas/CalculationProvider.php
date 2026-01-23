@@ -182,6 +182,38 @@ class CalculationProvider
                     'parent_string' => $this->Document_getParentAsString($entity),
                 ];
                 break;
+            case Chargement::class:
+                /** @var Chargement $entity */
+                $indicateurs = [
+                    'fonction_string' => $this->Chargement_getFonctionString($entity),
+                ];
+                break;
+            case Contact::class:
+                /** @var Contact $entity */
+                $indicateurs = [
+                    'type_string' => $this->Contact_getTypeString($entity),
+                ];
+                break;
+            case Invite::class:
+                /** @var Invite $entity */
+                $indicateurs = [
+                    'ageInvitation' => $this->calculateInviteAge($entity),
+                    'tachesEnCours' => $this->countInviteTachesEnCours($entity),
+                    'rolePrincipal' => $this->getInviteRolePrincipal($entity),
+                    'proprietaireString' => $this->getInviteProprietaireString($entity), // Ajout de l'indicateur manquant
+                ];
+                break;
+            case Note::class:
+                /** @var Note $entity */
+                $indicateurs = [
+                    'typeString' => $this->getNoteTypeString($entity),
+                    'addressedToString' => $this->getNoteAddressedToString($entity),
+                    'montantTotal' => $this->getNoteMontantPayable($entity),
+                    'montantPaye' => $this->getNoteMontantPaye($entity),
+                    'solde' => $this->getNoteSolde($entity),
+                    'statutPaiement' => $this->getNoteStatutPaiementString($entity),
+                ];
+                break;
             case Groupe::class:
                 /** @var Groupe $entity */
                 $indicateurs = [
@@ -2407,5 +2439,75 @@ class CalculationProvider
     public function getModelePieceSinistreStatutObligationString(ModelePieceSinistre $modele): string
     {
         return $modele->isObligatoire() ? 'Obligatoire' : 'Facultative';
+    }
+
+    /**
+     * NOUVEAU : Retourne la chaîne de caractères pour la propriété propriétaire de l'invité.
+     */
+    private function getInviteProprietaireString(Invite $invite): string
+    {
+        return $invite->isProprietaire() ? 'Oui' : 'Non';
+    }
+
+    // --- Indicateurs pour Note ---
+
+    /**
+     * Retourne le type de note sous forme de chaîne.
+     */
+    public function getNoteTypeString(?Note $note): ?string
+    {
+        if ($note === null) return null;
+
+        return match ($note->getType()) {
+            Note::TYPE_NOTE_DE_DEBIT => $this->translator->trans('note_type_debit', [], 'messages'),
+            Note::TYPE_NOTE_DE_CREDIT => $this->translator->trans('note_type_credit', [], 'messages'),
+            default => $this->translator->trans('note_type_unknown', [], 'messages'),
+        };
+    }
+
+    /**
+     * Retourne le destinataire de la note sous forme de chaîne.
+     */
+    public function getNoteAddressedToString(?Note $note): ?string
+    {
+        if ($note === null) return null;
+
+        return match ($note->getAddressedTo()) {
+            Note::TO_CLIENT => $this->translator->trans('addressed_to_client', [], 'messages'),
+            Note::TO_ASSUREUR => $this->translator->trans('addressed_to_insurer', [], 'messages'),
+            Note::TO_PARTENAIRE => $this->translator->trans('addressed_to_partner', [], 'messages'),
+            Note::TO_AUTORITE_FISCALE => $this->translator->trans('addressed_to_fiscal_authority', [], 'messages'),
+            default => $this->translator->trans('addressed_to_unknown', [], 'messages'),
+        };
+    }
+
+    /**
+     * Calcule le solde d'une note.
+     */
+    private function getNoteSolde(Note $note): float
+    {
+        return $this->getNoteMontantPayable($note) - $this->getNoteMontantPaye($note);
+    }
+
+    /**
+     * Retourne le statut de paiement d'une note sous forme de chaîne.
+     */
+    public function getNoteStatutPaiementString(?Note $note): ?string
+    {
+        if ($note === null) return null;
+
+        $montantDu = $this->getNoteMontantPayable($note);
+        $montantPaye = $this->getNoteMontantPaye($note);
+
+        if ($montantDu == 0) {
+            return $this->translator->trans('payment_status_not_applicable', [], 'messages');
+        }
+        if ($montantPaye >= $montantDu) {
+            return $this->translator->trans('payment_status_paid', [], 'messages');
+        }
+        if ($montantPaye > 0 && $montantPaye < $montantDu) {
+            return $this->translator->trans('payment_status_partial', [], 'messages');
+        }
+        return $this->translator->trans('payment_status_unpaid', [], 'messages');
     }
 }
