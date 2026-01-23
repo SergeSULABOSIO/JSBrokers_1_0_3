@@ -43,7 +43,7 @@ class PieceSinistreEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "invite", "intitule" => "Invité", "type" => "Relation", "targetEntity" => Invite::class, "displayField" => "nom"],
                 ["code" => "notificationSinistre", "intitule" => "Notification Sinistre", "type" => "Relation", "targetEntity" => NotificationSinistre::class, "displayField" => "referenceSinistre"],
                 ["code" => "documents", "intitule" => "Documents liés", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
-            ], $this->getSpecificIndicators(), $this->canvasHelper->getGlobalIndicatorsCanvas("PieceSinistre"))
+            ], $this->getSpecificIndicators())
         ];
     }
 

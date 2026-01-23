@@ -4,10 +4,9 @@ namespace App\Entity;
 
 use Symfony\Component\Serializer\Annotation\Groups;
 use Doctrine\ORM\Mapping as ORM;
-use App\Repository\TacheRepository;
 use App\Entity\Traits\TimestampableTrait;
-use Doctrine\Common\Collections\Collection;
-use Doctrine\Common\Collections\ArrayCollection;
+use App\Repository\TacheRepository;
+use Doctrine\Common\Collections\{ArrayCollection, Collection};
 
 #[ORM\Entity(repositoryClass: TacheRepository::class)]
 #[ORM\HasLifecycleCallbacks]

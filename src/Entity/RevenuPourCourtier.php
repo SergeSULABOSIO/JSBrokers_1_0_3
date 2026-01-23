@@ -3,17 +3,13 @@
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
-use Doctrine\Common\Collections\Collection;
-use App\Entity\Traits\CalculatedIndicatorsTrait;
 use App\Repository\RevenuPourCourtierRepository;
+use Doctrine\Common\Collections\{ArrayCollection, Collection};
 use Symfony\Component\Serializer\Annotation\Groups;
-use Doctrine\Common\Collections\ArrayCollection;
 
 #[ORM\Entity(repositoryClass: RevenuPourCourtierRepository::class)]
 class RevenuPourCourtier
 {
-    use CalculatedIndicatorsTrait;
-
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

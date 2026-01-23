@@ -40,7 +40,12 @@ class ChargementPourPrimeEntityCanvasProvider implements EntityCanvasProviderInt
                 ["code" => "cotation", "intitule" => "Cotation", "type" => "Relation", "targetEntity" => Cotation::class, "displayField" => "nom"],
                 ["code" => "montantFlatExceptionel", "intitule" => "Montant", "type" => "Nombre", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
                 ["code" => "createdAt", "intitule" => "Créé le", "type" => "Date"],
-            ], $this->canvasHelper->getGlobalIndicatorsCanvas("ChargementPourPrime"))
+            ], $this->getSpecificIndicators())
         ];
+    }
+
+    private function getSpecificIndicators(): array
+    {
+        return [];
     }
 }

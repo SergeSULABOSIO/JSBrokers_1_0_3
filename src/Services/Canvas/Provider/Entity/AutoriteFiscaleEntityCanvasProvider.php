@@ -38,7 +38,12 @@ class AutoriteFiscaleEntityCanvasProvider implements EntityCanvasProviderInterfa
                 ["code" => "abreviation", "intitule" => "Abréviation", "type" => "Texte"],
                 ["code" => "taxe", "intitule" => "Taxe Associée", "type" => "Relation", "targetEntity" => Taxe::class, "displayField" => "nom"],
                 ["code" => "notes", "intitule" => "Notes de débit/crédit", "type" => "Collection", "targetEntity" => Note::class, "displayField" => "reference"],
-            ], $this->canvasHelper->getGlobalIndicatorsCanvas("AutoriteFiscale"))
+            ], $this->getSpecificIndicators())
         ];
+    }
+
+    private function getSpecificIndicators(): array
+    {
+        return [];
     }
 }

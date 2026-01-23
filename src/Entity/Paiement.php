@@ -3,11 +3,9 @@
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
-use App\Repository\PaiementRepository;
 use App\Entity\Traits\TimestampableTrait;
-use Doctrine\Common\Collections\Collection;
-use App\Entity\Traits\CalculatedIndicatorsTrait;
-use Doctrine\Common\Collections\ArrayCollection;
+use App\Repository\PaiementRepository;
+use Doctrine\Common\Collections\{ArrayCollection, Collection};
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: PaiementRepository::class)]
@@ -15,7 +13,6 @@ use Symfony\Component\Serializer\Annotation\Groups;
 class Paiement
 {
     use TimestampableTrait;
-    use CalculatedIndicatorsTrait;
 
 
     #[ORM\Id]

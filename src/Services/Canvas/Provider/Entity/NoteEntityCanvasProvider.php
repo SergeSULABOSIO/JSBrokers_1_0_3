@@ -55,7 +55,7 @@ class NoteEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "articles", "intitule" => "Articles", "type" => "Collection", "targetEntity" => Article::class, "displayField" => "nom"],
                 ["code" => "paiements", "intitule" => "Paiements", "type" => "Collection", "targetEntity" => Paiement::class, "displayField" => "reference"],
                 ["code" => "comptes", "intitule" => "Comptes Bancaires", "type" => "Collection", "targetEntity" => CompteBancaire::class, "displayField" => "nom"],
-            ], $this->getSpecificIndicators(), $this->canvasHelper->getGlobalIndicatorsCanvas("Note"))
+            ], $this->getSpecificIndicators())
         ];
     }
 
