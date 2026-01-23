@@ -49,7 +49,7 @@ class DocumentEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "nomFichierStocke", "intitule" => "Nom Fichier", "type" => "Texte"],
                 ["code" => "createdAt", "intitule" => "Créé le", "type" => "Date"],
                 ["code" => "updatedAt", "intitule" => "Modifié le", "type" => "Date"],
-            ], $this->getSpecificIndicators(), $this->canvasHelper->getGlobalIndicatorsCanvas("Document"))
+            ], $this->getSpecificIndicators())
         ];
     }
 
