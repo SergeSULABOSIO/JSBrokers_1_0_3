@@ -51,7 +51,7 @@ class TacheEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "offreIndemnisationSinistre", "intitule" => "Offre d'indemnisation", "type" => "Relation", "targetEntity" => OffreIndemnisationSinistre::class, "displayField" => "nom"],
                 ["code" => "feedbacks", "intitule" => "Feedbacks", "type" => "Collection", "targetEntity" => Feedback::class, "displayField" => "description"],
                 ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
-            ], $this->getSpecificIndicators(), $this->canvasHelper->getGlobalIndicatorsCanvas("Tache"))
+            ], $this->getSpecificIndicators())
         ];
     }
 

@@ -43,8 +43,8 @@ class RevenuPourCourtierEntityCanvasProvider implements EntityCanvasProviderInte
                 ["code" => "montantFlatExceptionel", "intitule" => "Montant Fixe (Except.)", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
                 ["code" => "tauxExceptionel", "intitule" => "Taux (Except.)", "type" => "Nombre", "unite" => "%"],
                 ["code" => "createdAt", "intitule" => "Créé le", "type" => "Date"],
-                ["code" => "articles", "intitule" => "Articles de note", "type" => "Collection", "targetEntity" => Article::class, "displayField" => "nom"],
-            ], $this->getSpecificIndicators(), $this->canvasHelper->getGlobalIndicatorsCanvas("RevenuPourCourtier"))
+                ["code" => "articles", "intitule" => "Articles de note", "type" => "Collection", "targetEntity" => Article::class, "displayField" => "nom"], // Note: This collection is not directly related to global indicators.
+            ], $this->getSpecificIndicators())
         ];
     }
 

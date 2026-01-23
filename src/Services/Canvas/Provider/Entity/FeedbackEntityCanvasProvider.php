@@ -45,7 +45,7 @@ class FeedbackEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "nextAction", "intitule" => "Détail Action", "type" => "Texte"],
                 ["code" => "nextActionAt", "intitule" => "Date Action", "type" => "Date"],
                 ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
-            ], $this->getSpecificIndicators(), $this->canvasHelper->getGlobalIndicatorsCanvas("Feedback"))
+            ], $this->getSpecificIndicators())
         ];
     }
 

@@ -5,8 +5,7 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\FeedbackRepository;
 use App\Entity\Traits\TimestampableTrait;
-use Doctrine\Common\Collections\Collection;
-use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\{ArrayCollection, Collection};
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: FeedbackRepository::class)]
@@ -14,7 +13,6 @@ use Symfony\Component\Serializer\Annotation\Groups;
 class Feedback implements OwnerAwareInterface
 {
     use TimestampableTrait;
-
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

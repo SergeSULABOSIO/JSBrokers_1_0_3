@@ -42,7 +42,12 @@ class CompteBancaireEntityCanvasProvider implements EntityCanvasProviderInterfac
                 ["code" => "codeSwift", "intitule" => "Code Swift", "type" => "Texte"],
                 ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
                 ["code" => "paiements", "intitule" => "Paiements", "type" => "Collection", "targetEntity" => Paiement::class, "displayField" => "reference"],
-            ], $this->canvasHelper->getGlobalIndicatorsCanvas("CompteBancaire"))
+            ], $this->getSpecificIndicators())
         ];
+    }
+
+    private function getSpecificIndicators(): array
+    {
+        return [];
     }
 }
