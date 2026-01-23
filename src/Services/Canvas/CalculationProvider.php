@@ -196,6 +196,9 @@ class CalculationProvider
                     'montantCalculeHT' => $this->getRevenuMontantHt($entity),
                     'montantCalculeTTC' => $this->getRevenuPourCourtierMontantTTC($entity),
                     'descriptionCalcul' => $this->getRevenuPourCourtierDescriptionCalcul($entity),
+                    'montant_du' => $this->getRevenuPourCourtierMontantDu($entity),
+                    'montant_paye' => $this->getRevenuPourCourtierMontantPaye($entity),
+                    'solde_restant_du' => $this->getRevenuPourCourtierSoldeRestantDu($entity),
                 ];
                 break;
             case TypeRevenu::class:
@@ -2111,6 +2114,49 @@ class CalculationProvider
         // La taxe s'applique sur la commission, qui est un revenu. On considère que la taxe assureur s'applique.
         $taxe = $this->serviceTaxes->getMontantTaxe($montantHT, $this->isIARD($revenu->getCotation()), true);
         return $montantHT + $taxe;
+    }
+
+    /**
+     * Calcule le montant total dû pour un revenu pour courtier (TTC).
+     */
+    private function getRevenuPourCourtierMontantDu(RevenuPourCourtier $revenu): float
+    {
+        return $this->getRevenuPourCourtierMontantTTC($revenu);
+    }
+
+    /**
+     * Calcule le montant payé pour un revenu pour courtier.
+     */
+    private function getRevenuPourCourtierMontantPaye(RevenuPourCourtier $revenu): float
+    {
+        $montantPaye = 0.0;
+        if (!$revenu) {
+            return $montantPaye;
+        }
+
+        foreach ($revenu->getArticles() as $article) {
+            $note = $article->getNote();
+            if ($note) {
+                // L'article est déjà lié à ce revenu via `revenuFacture`.
+                // Nous calculons la proportion du paiement de la note qui correspond à cet article.
+                $montantPayableNote = $this->getNoteMontantPayable($note);
+                if ($montantPayableNote > 0) {
+                    $proportionPaiement = $this->getNoteMontantPaye($note) / $montantPayableNote;
+                    $montantPaye += $proportionPaiement * ($article->getMontant() ?? 0);
+                }
+            }
+        }
+        return round($montantPaye, 2);
+    }
+
+    /**
+     * Calcule le solde restant dû pour un revenu pour courtier.
+     */
+    private function getRevenuPourCourtierSoldeRestantDu(RevenuPourCourtier $revenu): float
+    {
+        $montantDu = $this->getRevenuPourCourtierMontantDu($revenu);
+        $montantPaye = $this->getRevenuPourCourtierMontantPaye($revenu);
+        return round($montantDu - $montantPaye, 2);
     }
 
     private function getRevenuPourCourtierDescriptionCalcul(RevenuPourCourtier $revenu): string

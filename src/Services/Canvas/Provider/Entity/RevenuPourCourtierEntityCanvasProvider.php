@@ -54,6 +54,9 @@ class RevenuPourCourtierEntityCanvasProvider implements EntityCanvasProviderInte
             ["code" => "montantCalculeHT", "intitule" => "Montant HT", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant du revenu calculé avant taxes."],
             ["code" => "montantCalculeTTC", "intitule" => "Montant TTC", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant du revenu calculé toutes taxes comprises."],
             ["code" => "descriptionCalcul", "intitule" => "Détail du Calcul", "type" => "Texte", "format" => "Texte", "description" => "Description de la méthode de calcul appliquée pour ce revenu."],
+            ["code" => "montant_du", "intitule" => "Montant Dû", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant total du revenu dû au courtier."],
+            ["code" => "montant_paye", "intitule" => "Montant Payé", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant du revenu déjà payé au courtier."],
+            ["code" => "solde_restant_du", "intitule" => "Solde Restant Dû", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant du revenu restant à payer au courtier."],
         ];
     }
 }
