@@ -50,6 +50,15 @@ class RevenuPourCourtier
     #[ORM\OneToMany(targetEntity: Article::class, mappedBy: 'revenuFacture')]
     private Collection $articles;
 
+    // Attributs calculés
+    #[Groups(['list:read'])]
+    public ?float $montant_du = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_paye = null;
+
+    #[Groups(['list:read'])]
+    public ?float $solde_restant_du = null;
     public function __construct()
     {
         $this->articles = new ArrayCollection();
