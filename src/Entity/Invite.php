@@ -128,6 +128,23 @@ class Invite implements OwnerAwareInterface
     #[ORM\OneToMany(targetEntity: RolesEnAdministration::class, mappedBy: 'invite', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $rolesEnAdministration;
 
+    // Attributs calculés
+    #[Groups(['list:read'])]
+    public ?string $ageInvitation = null;
+
+    #[Groups(['list:read'])]
+    public ?int $tachesEnCours = null;
+
+    #[Groups(['list:read'])]
+    public ?string $rolePrincipal = null;
+
+    #[Groups(['list:read'])]
+    public ?string $proprietaireString = null;
+
+    #[Groups(['list:read'])]
+    public ?string $status_string = null;
+
+
     public function __construct()
     {
         // $this->entreprises = new ArrayCollection();
