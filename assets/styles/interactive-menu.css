@@ -264,6 +264,7 @@ html {
   display: flex;
   flex-shrink: 0;
   overflow-x: auto;
+  white-space: nowrap; /* Empêche les onglets de passer à la ligne pour activer le défilement. */
   border-bottom: 2px solid #ccc;
 }
 
@@ -271,8 +272,6 @@ html {
   flex-grow: 1;
   position: relative;
   overflow-y: auto; /* [cite: 38] */
-   /* NOUVEAU : Empêche les onglets de passer à la ligne, forçant le débordement horizontal. */
-  white-space: nowrap;
 }
 
 /* --- Styles pour un onglet individuel --- */
