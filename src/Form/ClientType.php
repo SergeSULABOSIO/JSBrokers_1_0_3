@@ -18,6 +18,17 @@ class ClientType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
+            ->add('civilite', ChoiceType::class, [
+                'label' => "Civilité",
+                'choices' => [
+                    'Monsieur' => Client::CIVILITE_Mr,
+                    'Madame' => Client::CIVILITE_Mme,
+                    'Entreprise' => Client::CIVILITE_ENTREPRISE,
+                    'ASBL' => Client::CIVILITE_ASBL,
+                ],
+                'expanded' => true,
+                'required' => false,
+            ])
             ->add('nom', TextType::class, [
                 'label' => "Nom",
                 'attr' => ['placeholder' => "Nom du client"]
@@ -36,6 +47,21 @@ class ClientType extends AbstractType
                 'label' => "Adresse",
                 'required' => false,
                 'attr' => ['placeholder' => "Adresse physique"]
+            ])
+            ->add('numimpot', TextType::class, [
+                'label' => "N° Impôt",
+                'required' => false,
+                'attr' => ['placeholder' => "Numéro d'identification fiscale"]
+            ])
+            ->add('rccm', TextType::class, [
+                'label' => "RCCM",
+                'required' => false,
+                'attr' => ['placeholder' => "Registre de Commerce"]
+            ])
+            ->add('idnat', TextType::class, [
+                'label' => "ID.NAT",
+                'required' => false,
+                'attr' => ['placeholder' => "Numéro d'identification nationale"]
             ])
             ->add('groupe', EntityType::class, [
                 'class' => Groupe::class,
