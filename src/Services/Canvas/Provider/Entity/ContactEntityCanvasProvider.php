@@ -41,15 +41,21 @@ class ContactEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "fonction", "intitule" => "Fonction", "type" => "Texte"],
                 ["code" => "client", "intitule" => "Client", "type" => "Relation", "targetEntity" => Client::class, "displayField" => "nom"],
                 ["code" => "notificationSinistre", "intitule" => "Sinistre", "type" => "Relation", "targetEntity" => NotificationSinistre::class, "displayField" => "referenceSinistre"],
-                [
-                    "code" => "type_string",
-                    "intitule" => "Type",
-                    "type" => "Calcul",
-                    "format" => "Texte",
-                    "fonction" => "Contact_getTypeString",
-                    "description" => "Le type de contact (Production, Sinistre, etc.)."
-                ],
             ], $this->getSpecificIndicators())
+        ];
+    }
+
+    private function getSpecificIndicators(): array
+    {
+        return [
+            [
+                "code" => "type_string",
+                "intitule" => "Type",
+                "type" => "Calcul",
+                "format" => "Texte",
+                "fonction" => "Contact_getTypeString",
+                "description" => "Le type de contact (Production, Sinistre, etc.)."
+            ]
         ];
     }
 }

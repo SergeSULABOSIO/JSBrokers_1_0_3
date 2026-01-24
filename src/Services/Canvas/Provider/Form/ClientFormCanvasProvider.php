@@ -39,10 +39,12 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
     private function buildClientLayout(int $clientId, bool $isParentNew): array
     {
         $layout = [
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["civilite"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["email"]], ["champs" => ["telephone"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["adresse"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["groupe"]]]],
+            ["couleur_fond" => "#f8f9fa", "colonnes" => [["champs" => ["numimpot"]], ["champs" => ["rccm"]], ["champs" => ["idnat"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["groupe"]], ["champs" => ["exonere"]]]],
         ];
 
         $collections = [
