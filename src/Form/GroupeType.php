@@ -2,25 +2,17 @@
 
 namespace App\Form;
 
+use App\Entity\Client;
 use App\Entity\Groupe;
-use App\Services\FormListenerFactory;
-use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
-use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
-use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
-use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 class GroupeType extends AbstractType
 {
-    public function __construct(
-        private FormListenerFactory $ecouteurFormulaire,
-        private TranslatorInterface $translatorInterface
-    ) {}
-    
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -36,41 +28,32 @@ class GroupeType extends AbstractType
                     'placeholder' => "Description",
                 ],
             ])
-            ->add('clients', CollectionType::class, [
-                'label' => "Liste des clients membres du groupe",
-                'entry_type' => ClientType::class,
+            ->add('clients', EntityType::class, [
+                'class' => Client::class,
+                'choice_label' => 'nom',
+                'multiple' => true,
+                'expanded' => false, // 'false' pour un select multiple, 'true' pour des checkboxes
                 'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'entry_options' => [
-                    'label' => false,
-                ],
+                'label' => "Clients membres du groupe",
+                'required' => false,
                 'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "client",
-                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 1000,
-                    ]),
+                    // Vous pouvez ajouter un contrôleur Stimulus pour améliorer l'UX de ce champ
+                    // ex: 'data-controller' => 'tom-select'
                 ],
-            ])
-            //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
-        ;
+            ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
             'data_class' => Groupe::class,
-            'parent_object' => null, // l'objet parent
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }
