@@ -10,6 +10,7 @@ use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 class GroupeType extends AbstractType
 {
@@ -28,18 +29,17 @@ class GroupeType extends AbstractType
                     'placeholder' => "Description",
                 ],
             ])
-            ->add('clients', EntityType::class, [
-                'class' => Client::class,
-                'choice_label' => 'nom',
-                'multiple' => true,
-                'expanded' => false, // 'false' pour un select multiple, 'true' pour des checkboxes
+            ->add('clients', CollectionType::class, [
+                'label' => "Liste des clients", // Sera surchargé par le widget mais bon à garder
+                'help' => "Clients membres du groupe",
+                'entry_type' => ContactType::class,
                 'by_reference' => false,
-                'label' => "Clients membres du groupe",
-                'required' => false,
-                'attr' => [
-                    // Vous pouvez ajouter un contrôleur Stimulus pour améliorer l'UX de ce champ
-                    // ex: 'data-controller' => 'tom-select'
-                ],
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => ['label' => false],
+                // On indique que ce champ ne doit pas être mappé directement
+                // car on le gère entièrement en AJAX.
+                'mapped' => false,
             ]);
     }
 
