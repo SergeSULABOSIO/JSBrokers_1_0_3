@@ -567,6 +567,9 @@ export default class extends Controller {
         if (activeContent) {
             activeContent.classList.add('active');
         }
+
+        // NOUVEAU : Fait défiler l'onglet actif pour qu'il soit centré et visible, améliorant l'UX avec de nombreux onglets.
+        clickedTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }
 
 
