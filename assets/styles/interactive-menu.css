@@ -271,6 +271,8 @@ html {
   flex-grow: 1;
   position: relative;
   overflow-y: auto; /* [cite: 38] */
+   /* NOUVEAU : Empêche les onglets de passer à la ligne, forçant le débordement horizontal. */
+  white-space: nowrap;
 }
 
 /* --- Styles pour un onglet individuel --- */

@@ -928,6 +928,26 @@ textarea:hover,
     display: flex;
     /* border-bottom: 1px solid #dee2e6; */
     margin-top: 3px;
+    /* NOUVEAU : Permet le défilement horizontal quand les onglets dépassent */
+    overflow-x: auto;
+    white-space: nowrap;
+    /* NOUVEAU : Ajoute un padding en bas pour la barre de défilement et le compense avec une marge négative pour ne pas décaler le layout */
+    padding-bottom: 8px;
+    margin-bottom: -8px;
+}
+
+.list-tabs-container::-webkit-scrollbar {
+    height: 6px;
+}
+.list-tabs-container::-webkit-scrollbar-track {
+    background: transparent; /* La piste est invisible */
+}
+.list-tabs-container::-webkit-scrollbar-thumb {
+    background-color: #ced4da; /* Un gris standard de Bootstrap */
+    border-radius: 3px;
+}
+.list-tabs-container::-webkit-scrollbar-thumb:hover {
+    background-color: #adb5bd; /* Un gris plus foncé au survol */
 }
 
 .list-tab {
