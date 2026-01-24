@@ -28,7 +28,8 @@
                     data-view-manager-target="rubriqueIcon"
                 />
             </div>
-            <div class="flex-grow-1">
+            {# NOUVEAU : Ajout de min-width: 0 pour résoudre un bug de dépassement de flexbox qui empêchait le défilement des onglets. #}
+            <div class="flex-grow-1" style="min-width: 0;">
                 <div class="rubrique-title" data-view-manager-target="rubriqueName">{{ entityCanvas.parametres.description | default('Rubrique') }}</div>
                 <div class="list-tabs-container" data-view-manager-target="tabsContainer">
                     <button class="list-tab active" data-tab-id="principal" data-action="click->view-manager#switchTab">Principal</button>
