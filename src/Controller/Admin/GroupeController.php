@@ -78,10 +78,8 @@ class GroupeController extends AbstractController
     }
 
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
-    public function submitApi(Request $request): JsonResponse
+    public function submitApi(Request $request): Response
     {
-        // The logic to associate clients is now handled by Doctrine's cascade persist
-        // and the `by_reference => false` option in the form's collection type.
         return $this->handleFormSubmission(
             $request,
             Groupe::class,
