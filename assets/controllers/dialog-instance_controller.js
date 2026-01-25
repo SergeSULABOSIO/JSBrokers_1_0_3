@@ -175,6 +175,9 @@ export default class extends Controller {
             this.showFeedback(this.feedbackOnNextLoad.type, this.feedbackOnNextLoad.message);
             this.feedbackOnNextLoad = null; // On le réinitialise pour la prochaine fois.
         }
+
+        // NOUVEAU : On s'assure que les boutons sont réactivés après un rechargement.
+        this.toggleLoading(false);
     }
 
     /**
@@ -215,6 +218,8 @@ export default class extends Controller {
         // NOUVEAU : Affiche un message de feedback pendant la soumission.
         this.showFeedback('warning', 'Enregistrement en cours, veuillez patienter...');
  
+        let isReloading = false; // NOUVEAU : Drapeau pour gérer le rechargement.
+
         // 1. On récupère les données du formulaire directement dans un objet FormData.
         const formData = new FormData(event.target);
  
@@ -258,11 +263,12 @@ export default class extends Controller {
  
             // Cas 1 : C'était une CRÉATION. On reste dans la modale et on la recharge en mode ÉDITION.
             if (this.isCreateMode && result.entity) {
+                isReloading = true; // NOUVEAU : On active le drapeau.
                 this.entity = result.entity; // On stocke la nouvelle entité avec son ID
                 this.isCreateMode = false;
                 // NOUVEAU : On stocke le message de succès pour l'afficher APRÈS le rechargement.
                 this.feedbackOnNextLoad = { type: 'success', message: result.message };
-                await this.reloadView(); // On recharge le contenu de la modale (formulaire, etc.)
+                this.reloadView(); // On recharge le contenu de la modale (formulaire, etc.)
             } else {
                 // Cas 2 : C'était une ÉDITION. On ferme simplement la modale.
                 // CORRECTION : Ajout de l'appel manquant pour afficher le feedback de succès en mode édition.
@@ -285,9 +291,11 @@ export default class extends Controller {
                 this.displayErrors(error.errors);
             }
         } finally {
-            // S'assure que la barre disparaît dans tous les cas
-            this.toggleLoading(false);
-            this.toggleProgressBar(false);
+            // NOUVEAU : On ne désactive le chargement que si on ne recharge pas la vue.
+            if (!isReloading) {
+                this.toggleLoading(false);
+                this.toggleProgressBar(false);
+            }
         }
     }
 
