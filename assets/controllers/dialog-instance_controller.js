@@ -343,7 +343,7 @@ export default class extends Controller {
         let sourceValue;
         if (field instanceof RadioNodeList) {
             // Cas d'un groupe de boutons radio (expanded: true)
-            const checkedRadio = form.querySelector(`[name=""]:checked`);
+            const checkedRadio = form.querySelector(`[name="${fieldName}"]:checked`);
             if (!checkedRadio) return false;
             sourceValue = checkedRadio.value;
         } else {
@@ -430,9 +430,9 @@ export default class extends Controller {
 
         // On crée le message HTML et on l'ajoute au conteneur
         feedbackContainer.innerHTML = `
-            <div class="feedback-message ">
-                <span class="timestamp"></span>
-                <span></span>
+            <div class="feedback-message ${feedbackClass}">
+                <span class="timestamp">${timestamp}</span>
+                <span>${message}</span>
             </div>
         `;
     }
@@ -453,12 +453,12 @@ export default class extends Controller {
                 if (this.feedbackContainer) {
                     const globalErrors = messages.join('<br>');
                     // On ajoute l'erreur globale au conteneur de feedback général
-                    this.feedbackContainer.innerHTML += `<div class="mt-2"></div>`;
+                    this.feedbackContainer.innerHTML += `<div class="mt-2">${globalErrors}</div>`;
                 }
                 continue; // On passe au champ suivant
             }
 
-            const input = form.querySelector(`[name=""]`);
+            const input = form.querySelector(`[name="${fieldName}"]`);
             if (input) {
                 // Ajoute la classe Bootstrap pour le style d'erreur
                 input.classList.add('is-invalid');

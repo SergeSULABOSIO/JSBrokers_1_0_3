@@ -370,6 +370,8 @@ a:active {
 .form-control,
 .form-select,
 .editeur-riche,
+/* NOUVEAU : Cible tous les types d'input pertinents */
+input[type="text"], input[type="date"], input[type="password"], input[type="number"], input[type="email"], input[type="file"],
 input[type=text],
 input[type=date],
 input[type=password],
@@ -384,6 +386,18 @@ textarea,
     background-color: transparent !important;
     box-shadow: none !important;
     transition: border-color 0.2s ease-in-out; 
+    /* NOUVEAU : Style pour le contenu des champs */
+    color: #000000; /* Noir */
+    font-weight: bold;
+}
+
+/* NOUVEAU : Style pour les titres des champs (labels) */
+.form-label {
+    color: #adb5bd; /* Gris clair */
+    font-weight: normal;
+    font-style: italic;
+    /* Assure que le label ne soit pas affecté par le style bold des inputs */
+    display: block; 
 }
 
 /* --- Style au survol de la souris --- */
@@ -747,12 +761,14 @@ textarea:hover,
     flex-shrink: 0;
     background-color: #212529;
     color: #e9ecef;
-    overflow: hidden; /* Cache le contenu pendant la transition */
+    overflow: hidden; /* Cache le contenu pendant la transition */ 
     transition: width 0.4s ease, padding 0.4s ease; /* L'animation ! */
     white-space: nowrap; /* Empêche le texte de passer à la ligne pendant l'animation */
+    /* NOUVEAU : Contraint la hauteur pour activer le défilement */
+    height: 100%;
 }
 
-/* On affiche la colonne quand le dialogue est en mode édition */
+/* On affiche la colonne quand le dialogue est en mode édition */ 
 .app-dialog.is-edit-mode .calculated-attributes-column {
     display: block;
 }
@@ -803,6 +819,8 @@ textarea:hover,
 .form-column {
     flex-grow: 1;
     padding: 1.5rem;
+    /* NOUVEAU : Contraint la hauteur pour activer le défilement */
+    height: 100%;
     overflow-y: auto;
 }
 
