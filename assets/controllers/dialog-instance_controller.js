@@ -249,6 +249,8 @@ export default class extends Controller {
                 await this.reloadView(); // On recharge le contenu de la modale (formulaire, etc.)
             } else {
                 // Cas 2 : C'était une ÉDITION. On ferme simplement la modale.
+                // CORRECTION : Ajout de l'appel manquant pour afficher le feedback de succès en mode édition.
+                this.showFeedback('success', result.message);
                 // Le rafraîchissement de la collection est déjà géré par l'événement 'app:entity.saved'.
                 // this.close();
             }
