@@ -29,6 +29,12 @@ export default class extends Controller {
      */
     connect() {
         this.nomControleur = "Dialog-Instance";
+
+        /**
+         * @property {object|null} feedbackOnNextLoad - Stocke un message de feedback à afficher après le prochain rechargement de contenu.
+         * @private
+         */
+        this.feedbackOnNextLoad = null;
         const detail = this.element.dialogDetail;
         console.log(`[${++window.logSequence}] - [${this.nomControleur}] - [connect] - Code: 1986 - Début - Données:`, detail, this.element, this.contentTarget);
         this.cetteApplication = this.application;
@@ -163,6 +169,12 @@ export default class extends Controller {
         if (!this.isCreateMode) {
             mainDialogElement.classList.add('is-edit-mode');
         }
+
+        // NOUVEAU : Affiche un message de feedback en attente s'il y en a un.
+        if (this.feedbackOnNextLoad) {
+            this.showFeedback(this.feedbackOnNextLoad.type, this.feedbackOnNextLoad.message);
+            this.feedbackOnNextLoad = null; // On le réinitialise pour la prochaine fois.
+        }
     }
 
     /**
@@ -199,6 +211,9 @@ export default class extends Controller {
         if (this.feedbackContainer) {
             this.feedbackContainer.innerHTML = '';
         }
+
+        // NOUVEAU : Affiche un message de feedback pendant la soumission.
+        this.showFeedback('warning', 'Enregistrement en cours, veuillez patienter...');
  
         // 1. On récupère les données du formulaire directement dans un objet FormData.
         const formData = new FormData(event.target);
@@ -245,7 +260,8 @@ export default class extends Controller {
             if (this.isCreateMode && result.entity) {
                 this.entity = result.entity; // On stocke la nouvelle entité avec son ID
                 this.isCreateMode = false;
-                this.showFeedback('success', result.message); // On affiche le message de succès
+                // NOUVEAU : On stocke le message de succès pour l'afficher APRÈS le rechargement.
+                this.feedbackOnNextLoad = { type: 'success', message: result.message };
                 await this.reloadView(); // On recharge le contenu de la modale (formulaire, etc.)
             } else {
                 // Cas 2 : C'était une ÉDITION. On ferme simplement la modale.
