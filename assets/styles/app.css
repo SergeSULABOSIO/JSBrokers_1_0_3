@@ -431,6 +431,17 @@ textarea:hover,
 ===================================================================
 */
 
+/* NOUVEAU : Contraint la hauteur des boîtes de dialogue pour permettre le défilement interne */
+.app-dialog .modal-dialog {
+    /* On prend presque toute la hauteur, moins les marges standards de Bootstrap (1.75rem * 2) */
+    height: calc(100% - 3.5rem);
+}
+
+.app-dialog .modal-content {
+    /* On force le contenu à prendre 100% de la hauteur de son parent (.modal-dialog) */
+    height: 100%;
+}
+
 .app-dialog .modal-header {
     border-bottom: none;
     padding: 1.2rem 1.5rem;
@@ -724,6 +735,8 @@ textarea:hover,
     display: flex;
     flex-grow: 1;
     background-color: #f0f0f0;
+    /* TRÈS IMPORTANT : Empêche ce conteneur de déborder. Le défilement est géré par ses enfants. */
+    overflow: hidden;
 }
 
 /* --- Colonne de gauche (Attributs Calculés) --- */
