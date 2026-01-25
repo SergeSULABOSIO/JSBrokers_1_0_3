@@ -31,6 +31,12 @@ export default class extends Controller {
         this.nomControleur = "Dialog-Instance";
 
         /**
+         * @property {boolean} isReloading - Drapeau pour gérer l'état de rechargement de la vue.
+         * @private
+         */
+        this.isReloading = false;
+
+        /**
          * @property {object|null} feedbackOnNextLoad - Stocke un message de feedback à afficher après le prochain rechargement de contenu.
          * @private
          */
@@ -177,7 +183,7 @@ export default class extends Controller {
         }
 
         // NOUVEAU : On s'assure que les boutons sont réactivés après un rechargement.
-        this.toggleLoading(false);
+        this.toggleLoading(false); //
     }
 
     /**
@@ -225,12 +231,20 @@ export default class extends Controller {
         // NOUVEAU : Affiche un message de feedback pendant la soumission.
         this.showFeedback('warning', 'Enregistrement en cours, veuillez patienter...');
  
-        let isReloading = false; // NOUVEAU : Drapeau pour gérer le rechargement.
+        this.isReloading = false; // NOUVEAU : On réinitialise le drapeau de rechargement.
+
+        // NOUVEAU : On remplace le corps de la modale par un squelette de chargement
+        // tout en conservant l'ancien contenu en cas d'erreur.
+        const bodyContainer = this.contentTarget.querySelector('.modal-body-split');
+        let originalBodyHtml = '';
+        if (bodyContainer) {
+            originalBodyHtml = bodyContainer.innerHTML;
+            bodyContainer.innerHTML = this._getBodySkeletonHtml();
+        }
 
         // 1. On récupère les données du formulaire directement dans un objet FormData.
         const formData = new FormData(event.target);
  
-        // 2. On AJOUTE nos données de contexte (ID, parent, etc.) à cet objet.
         if (this.entity && this.entity.id) {
             formData.append('id', this.entity.id);
         }
@@ -268,23 +282,17 @@ export default class extends Controller {
                 originatorId: this.userContext.originatorId // On passe l'ID de la collection qui a initié l'action.
             });
  
-            // REFACTORING: En cas de succès (création ou édition), on recharge systématiquement la vue
-            // pour afficher les données à jour et pour montrer le squelette de chargement pendant la transition.
-            isReloading = true; // On active le drapeau pour empêcher le `finally` de cacher le chargement trop tôt.
-
-            // On stocke le message de succès pour l'afficher APRÈS le rechargement.
-            this.feedbackOnNextLoad = { type: 'success', message: result.message };
-
-            if (this.isCreateMode && result.entity) {
-                // Si c'est une création, on met à jour l'état interne pour passer en mode édition.
-                this.entity = result.entity; // On stocke la nouvelle entité avec son ID
-                this.isCreateMode = false;
-            }
-            // On recharge la vue dans tous les cas de succès.
-            this.reloadView();
+            // On délègue la gestion du succès à une méthode dédiée.
+            this.handleSuccessfulSubmit(result);
  
         } catch (error) {
             console.error(error);
+
+            // NOUVEAU : En cas d'erreur, on restaure le formulaire original pour afficher les erreurs.
+            if (bodyContainer && originalBodyHtml) {
+                bodyContainer.innerHTML = originalBodyHtml;
+            }
+
             // NOUVEAU : Notifier le cerveau de l'échec de validation
             this.notifyCerveau('app:form.validation-error', {
                 message: error.message || 'Erreur de validation',
@@ -297,12 +305,39 @@ export default class extends Controller {
                 this.displayErrors(error.errors);
             }
         } finally {
-            // NOUVEAU : On ne désactive le chargement que si on ne recharge pas la vue.
-            if (!isReloading) {
+            // NOUVEAU : La gestion du spinner est maintenant plus fine.
+            // Si une erreur s'est produite (pas de rechargement), on arrête le spinner.
+            // Si un rechargement est en cours, on le laisse tourner, il sera arrêté par `handleContentReady`.
+            if (!this.isReloading) {
                 this.toggleLoading(false);
                 this.toggleProgressBar(false);
             }
         }
+    }
+
+    /**
+     * NOUVEAU : Centralise la logique de traitement après une soumission réussie.
+     * @param {object} result - Le résultat JSON de la requête fetch.
+     * @private
+     */
+    handleSuccessfulSubmit(result) {
+        // On indique qu'un rechargement est en cours.
+        // Le `finally` de `submitForm` ne masquera pas les indicateurs de chargement.
+        this.isReloading = true;
+
+        // On stocke le message de succès pour l'afficher APRÈS le rechargement de la vue.
+        this.feedbackOnNextLoad = { type: 'success', message: result.message };
+
+        // Si c'était une création, on met à jour l'état interne pour passer en mode édition.
+        if (this.isCreateMode && result.entity) {
+            this.entity = result.entity;
+            this.isCreateMode = false;
+        }
+
+        // On recharge la vue dans tous les cas de succès (création ou édition).
+        // `reloadView` va appeler `loadContent`, qui affichera le squelette complet
+        // avant de recevoir le contenu final.
+        this.reloadView();
     }
 
     /**
@@ -427,6 +462,33 @@ export default class extends Controller {
             <div class="modal-footer">
                 <div class="skeleton-line" style="width: 120px; height: 38px; border-radius: var(--bs-border-radius);"></div>
                 <div class="skeleton-line" style="width: 120px; height: 38px; border-radius: var(--bs-border-radius);"></div>
+            </div>
+        `;
+    }
+
+    /**
+     * NOUVEAU : Génère le HTML pour un squelette de chargement du corps de la modale (utilisé pendant la soumission).
+     * @returns {string} Le HTML du squelette.
+     * @private
+     */
+    _getBodySkeletonHtml() {
+        return `
+            <div class="calculated-attributes-column">
+                <div class="skeleton-line mb-4" style="width: 70%; height: 20px;"></div>
+                <div class="skeleton-line mb-3" style="width: 90%;"></div>
+                <div class="skeleton-line mb-3" style="width: 80%;"></div>
+                <div class="skeleton-line" style="width: 85%;"></div>
+            </div>
+            <div class="form-column p-4">
+                <div class="text-center text-muted mb-4">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                    <span class="ms-2">Enregistrement des données...</span>
+                </div>
+                <div class="skeleton-line mb-4" style="width: 40%; height: 14px;"></div>
+                <div class="skeleton-line mb-4" style="height: 38px;"></div>
+                <div class="skeleton-line mb-4" style="width: 50%; height: 14px;"></div>
+                <div class="skeleton-line mb-4" style="height: 38px;"></div>
+                <div class="skeleton-line" style="height: 80px;"></div>
             </div>
         `;
     }
