@@ -782,6 +782,7 @@ textarea:hover,
     width: 400px; /* On définit sa largeur finale */
     padding: 1.5rem; /* On restaure le padding */
     overflow-y: auto; /* On réactive le défilement */
+    white-space: normal; /* On autorise le retour à la ligne du contenu */
 }
 
 .calculated-attributes-column .column-title {
