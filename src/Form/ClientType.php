@@ -86,6 +86,14 @@ class ClientType extends AbstractType
                 'label' => 'Contacts',
                 'entry_options' => ['label' => false],
             ])
+            ->add('partenaires', CollectionType::class, [
+                'entry_type' => PartenaireType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'label' => 'Partenaire',
+                'entry_options' => ['label' => false],
+            ])
             ->add('documents', CollectionType::class, [
                 'entry_type' => DocumentType::class,
                 'by_reference' => false,
