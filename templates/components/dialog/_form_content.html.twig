@@ -25,8 +25,9 @@
             {# Pour chaque ligne définie dans la configuration du layout... #}
             {% for row in formCanvas.form_layout %}
                 <div class="row gx-3 {{ (row.couleur_fond is defined and row.couleur_fond) ? 'form-row-colored' : '' }}" style="{{ (row.couleur_fond is defined and row.couleur_fond) ? 'background-color: ' ~ row.couleur_fond ~ ';' : '' }}">
-                    {% set col_class = 'col-md-' ~ (12 / row.colonnes|length)|round(0, 'floor') %}
                     {% for col in row.colonnes %}
+                        {# On utilise la largeur définie dans le canvas, sinon on divise équitablement #}
+                        {% set col_class = col.width is defined ? 'col-md-' ~ col.width : 'col-md-' ~ (12 / row.colonnes|length)|round(0, 'floor') %}
                         <div class="{{ col_class }}">
                             {% set champs_list = col.champs is defined ? col.champs : [col] %}
                             {% for field in champs_list %}

@@ -39,20 +39,23 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
     private function buildClientLayout(int $clientId, bool $isParentNew): array
     {
         $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["civilite"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["email"]], ["champs" => ["telephone"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["adresse"]]]],
+            // Ligne 1: "civilité" (1/3), "nom" (2/3)
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["civilite"], "width" => 4], ["champs" => ["nom"], "width" => 8]]],
+            // Ligne 2: "email", "telephone", "groupe"
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["email"]], ["champs" => ["telephone"]], ["champs" => ["groupe"]]]],
+            // Ligne 3: "adresse" (2/3), "exonere" (1/3)
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["adresse"], "width" => 8], ["champs" => ["exonere"], "width" => 4]]],
+            // Ligne 4: "numimpot", "rccm", "idnat"
             ["couleur_fond" => "#f8f9fa", "colonnes" => [["champs" => ["numimpot"]], ["champs" => ["rccm"]], ["champs" => ["idnat"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["groupe"]], ["champs" => ["exonere"]]]],
         ];
 
         $collections = [
+            // Ligne 5: "Contacts"
             ['fieldName' => 'contacts', 'entityRouteName' => 'contact', 'formTitle' => 'Contact', 'parentFieldName' => 'client'],
-            ['fieldName' => 'pistes', 'entityRouteName' => 'piste', 'formTitle' => 'Piste', 'parentFieldName' => 'client'],
-            ['fieldName' => 'notificationSinistres', 'entityRouteName' => 'notificationsinistre', 'formTitle' => 'Sinistre', 'parentFieldName' => 'assure'],
-            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'client'],
+            // Ligne 6: "Partenaires"
             ['fieldName' => 'partenaires', 'entityRouteName' => 'partenaire', 'formTitle' => 'Partenaire', 'parentFieldName' => 'client'],
+            // Ligne 7: "Documents"
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'client'],
         ];
 
         $this->addCollectionWidgetsToLayout($layout, $clientId, $isParentNew, $collections);
