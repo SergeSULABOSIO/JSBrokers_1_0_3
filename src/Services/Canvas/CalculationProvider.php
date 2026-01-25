@@ -1897,12 +1897,14 @@ class CalculationProvider
             return null;
         }
 
+        // CORRECTION TEMPORAIRE : Les clés de traduction n'étaient pas résolues.
+        // On utilise des chaînes en dur en attendant la correction des fichiers de traduction.
         return match ($client->getCivilite()) {
-            Client::CIVILITE_Mr => $this->translator->trans('client_civility_mr', [], 'messages'),
-            Client::CIVILITE_Mme => $this->translator->trans('client_civility_mrs', [], 'messages'),
-            Client::CIVILITE_ENTREPRISE => $this->translator->trans('client_civility_company', [], 'messages'),
-            Client::CIVILITE_ASBL => $this->translator->trans('client_civility_ngo', [], 'messages'),
-            default => $this->translator->trans('client_civility_unknown', [], 'messages'),
+            Client::CIVILITE_Mr => "Monsieur",
+            Client::CIVILITE_Mme => "Madame",
+            Client::CIVILITE_ENTREPRISE => "Entreprise",
+            Client::CIVILITE_ASBL => "ASBL",
+            default => "Inconnue",
         };
     }
 
