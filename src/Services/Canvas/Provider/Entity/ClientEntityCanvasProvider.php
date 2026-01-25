@@ -50,7 +50,7 @@ class ClientEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "notificationSinistres", "intitule" => "Sinistres", "type" => "Collection", "targetEntity" => NotificationSinistre::class, "displayField" => "referenceSinistre"],
                 ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
                 ["code" => "partenaires", "intitule" => "Partenaires", "type" => "Collection", "targetEntity" => Partenaire::class, "displayField" => "nom"], // Note: This collection is not directly related to global indicators.
-            ], $this->getSpecificIndicators())
+            ], $this->getSpecificIndicators(), $this->canvasHelper->getGlobalIndicatorsCanvas("Client"))
         ];
     }
 
