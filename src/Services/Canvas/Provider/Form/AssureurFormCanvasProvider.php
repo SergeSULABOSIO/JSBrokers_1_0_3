@@ -39,19 +39,17 @@ class AssureurFormCanvasProvider implements FormCanvasProviderInterface
     private function buildAssureurLayout(int $assureurId, bool $isParentNew): array
     {
         $layout = [
+            // Ligne 1: le nom
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["email"]], ["champs" => ["telephone"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["adressePhysique"]]]],
+            // Ligne 2: l'email (1/2 de la largeur) et l'adresse (1/2)
+            ["couleur_fond" => "white", "colonnes" => [
+                ["champs" => ["email"], "width" => 6],
+                ["champs" => ["adressePhysique"], "width" => 6]
+            ]],
+            // ligne n 3: le num impot, l'id nationale et le rccm.
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["numimpot"]], ["champs" => ["idnat"]], ["champs" => ["rccm"]]]],
         ];
 
-        $collections = [
-            ['fieldName' => 'cotations', 'entityRouteName' => 'cotation', 'formTitle' => 'Cotation', 'parentFieldName' => 'assureur'],
-            ['fieldName' => 'bordereaus', 'entityRouteName' => 'bordereau', 'formTitle' => 'Bordereau', 'parentFieldName' => 'assureur'],
-            ['fieldName' => 'notificationSinistres', 'entityRouteName' => 'notificationsinistre', 'formTitle' => 'Sinistre', 'parentFieldName' => 'assureur'],
-        ];
-
-        $this->addCollectionWidgetsToLayout($layout, $assureurId, $isParentNew, $collections);
         return $layout;
     }
 }
