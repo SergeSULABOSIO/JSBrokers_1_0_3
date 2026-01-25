@@ -123,10 +123,10 @@ export default class extends Controller {
 
         if (error) {
             const errorMessage = error.message || "Une erreur inconnue est survenue.";
-            this.contentTarget.innerHTML = `<div class="modal-body"><div class="alert alert-danger"></div></div>`;
+            this.contentTarget.innerHTML = `<div class="modal-body"><div class="alert alert-danger">${errorMessage}</div></div>`;
             // Notifier le cerveau de l'échec de chargement
             this.notifyCerveau('app:error.api', {
-                error: `Échec du chargement du formulaire: `
+                error: `Échec du chargement du formulaire: ${errorMessage}`
             });
             return;
         }
@@ -412,7 +412,7 @@ export default class extends Controller {
         const now = new Date();
         const date = now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
         const time = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const timestamp = `Dernière mise à jour le  à  ::`;
+        const timestamp = `Dernière mise à jour le ${date} à ${time} ::`;
 
         // On détermine la classe CSS à utiliser en fonction du type
         let feedbackClass = '';
@@ -565,7 +565,7 @@ export default class extends Controller {
                     isCreateMode = false;
                 }
             }
-            console.groupCollapsed(`${this.nomControleur} - () - Code:`);
+            console.groupCollapsed(`${this.nomControleur} - ${callingFunction}() - Code:${code}`);
             console.log(`| Mode:`, (isCreateMode) ? 'Création' : 'Édition');
             console.log(`| Entité:`, detail.entity);
             console.log(`| Contexte:`, detail.context);

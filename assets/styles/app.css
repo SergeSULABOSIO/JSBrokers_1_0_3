@@ -395,7 +395,6 @@ textarea,
 .form-label {
     color: #adb5bd; /* Gris clair */
     font-weight: normal;
-    font-style: italic;
     /* Assure que le label ne soit pas affecté par le style bold des inputs */
     display: block; 
 }
@@ -453,6 +452,11 @@ textarea:hover,
 
 .app-dialog .modal-content {
     /* On force le contenu à prendre 100% de la hauteur de son parent (.modal-dialog) */
+    height: 100%;
+}
+
+/* NOUVEAU : S'assure que le conteneur de l'instance de dialogue remplit le modal-content */
+.app-dialog .modal-content > [data-controller="dialog-instance"] {
     height: 100%;
 }
 
