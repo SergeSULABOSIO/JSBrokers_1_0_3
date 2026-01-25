@@ -186,7 +186,14 @@ export default class extends Controller {
      * @private
      */
     reloadView() {
-        this.modalOutlet.element.classList.add('is-edit-mode'); // Affiche la colonne de gauche
+        const mainDialogElement = this.modalOutlet.element;
+        mainDialogElement.classList.add('is-edit-mode');
+
+        // CORRECTION : On force l'ajout de la classe pour que le squelette de la colonne des attributs
+        // soit visible pendant la transition. Cette classe sera réévaluée correctement
+        // dans `handleContentReady` une fois le nouveau contenu chargé.
+        mainDialogElement.classList.add('has-attributes-column');
+
         this.loadContent(); // Redemande le contenu au Cerveau
     }
 
