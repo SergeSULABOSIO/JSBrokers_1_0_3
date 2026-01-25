@@ -26,7 +26,7 @@ class ClientType extends AbstractType
                     'Entreprise' => Client::CIVILITE_ENTREPRISE,
                     'ASBL' => Client::CIVILITE_ASBL,
                 ],
-                'expanded' => true,
+                'expanded' => false,
                 'required' => false,
             ])
             ->add('nom', TextType::class, [
@@ -76,7 +76,7 @@ class ClientType extends AbstractType
                     'Non' => false,
                     'Oui' => true,
                 ],
-                'expanded' => true,
+                'expanded' => false,
             ])
             ->add('contacts', CollectionType::class, [
                 'entry_type' => ContactType::class,

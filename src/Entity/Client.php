@@ -110,6 +110,20 @@ class Client
     public const CIVILITE_ENTREPRISE = 2;
     public const CIVILITE_ASBL = 3;
 
+    // Attributs calculés
+    #[Groups(['list:read'])]
+    public ?string $civiliteString = null;
+
+    #[Groups(['list:read'])]
+    public ?int $nombrePistes = null;
+
+    #[Groups(['list:read'])]
+    public ?int $nombreSinistres = null;
+
+    #[Groups(['list:read'])]
+    public ?int $nombrePolices = null;
+
+
     public function getId(): ?int
     {
         return $this->id;

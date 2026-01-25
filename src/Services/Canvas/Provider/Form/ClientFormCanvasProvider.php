@@ -58,9 +58,9 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["adresse"], "width" => 8], ["champs" => ["exonere"], "width" => 4]]],
             // Ligne 4: "numimpot", "rccm", "idnat" - MAINTENANT DYNAMIQUES
             ["couleur_fond" => "white", "colonnes" => [
-                ["champs" => [['field_code' => 'numimpot'] + $visibilityConditionForLegalFields]],
-                ["champs" => [['field_code' => 'rccm'] + $visibilityConditionForLegalFields]],
-                ["champs" => [['field_code' => 'idnat'] + $visibilityConditionForLegalFields]]
+                ["champs" => [array_merge(['field_code' => 'numimpot'], $visibilityConditionForLegalFields)]],
+                ["champs" => [array_merge(['field_code' => 'rccm'], $visibilityConditionForLegalFields)]],
+                ["champs" => [array_merge(['field_code' => 'idnat'], $visibilityConditionForLegalFields)]]
             ]],
         ];
 
