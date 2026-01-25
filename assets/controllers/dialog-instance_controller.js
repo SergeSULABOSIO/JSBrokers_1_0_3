@@ -123,10 +123,10 @@ export default class extends Controller {
 
         if (error) {
             const errorMessage = error.message || "Une erreur inconnue est survenue.";
-            this.contentTarget.innerHTML = `<div class="modal-body"><div class="alert alert-danger">${errorMessage}</div></div>`;
+            this.contentTarget.innerHTML = `<div class="modal-body"><div class="alert alert-danger"></div></div>`;
             // Notifier le cerveau de l'échec de chargement
             this.notifyCerveau('app:error.api', {
-                error: `Échec du chargement du formulaire: ${errorMessage}`
+                error: `Échec du chargement du formulaire: `
             });
             return;
         }
@@ -274,6 +274,92 @@ export default class extends Controller {
     }
 
     /**
+     * NOUVEAU : Initialise les écouteurs pour les champs dynamiques du formulaire.
+     * Cette méthode est appelée une fois que le contenu du formulaire est chargé.
+     */
+    initializeFormVisibility() {
+        if (!this.hasDynamicFieldContainerTarget) return;
+
+        this.sourceFields = new Map();
+        this.dynamicFieldContainerTargets.forEach(container => {
+            const conditions = JSON.parse(container.dataset.visibilityConditionsValue);
+            conditions.forEach(condition => {
+                if (!this.sourceFields.has(condition.field)) {
+                    this.sourceFields.set(condition.field, []);
+                }
+                const form = this.contentTarget.querySelector('form');
+                // Trouve le ou les champs source (peut être une collection de radios)
+                const sourceInputs = form.querySelectorAll(`[name="${condition.field}"], [name="${condition.field}[]"]`);
+                if (sourceInputs.length > 0) {
+                    sourceInputs.forEach(sourceInput => {
+                        const listeners = this.sourceFields.get(condition.field);
+                        // On s'assure de n'ajouter l'écouteur qu'une seule fois par champ source
+                        if (!listeners.find(el => el === sourceInput)) {
+                            sourceInput.addEventListener('change', this.checkFormVisibility.bind(this));
+                            listeners.push(sourceInput);
+                        }
+                    });
+                }
+            });
+        });
+        // Exécute une première vérification à l'initialisation
+        this.checkFormVisibility();
+    }
+
+    /**
+     * NOUVEAU : Vérifie la visibilité de tous les champs et lignes dynamiques.
+     */
+    checkFormVisibility() {
+        if (!this.hasDynamicFieldContainerTarget) return;
+
+        this.dynamicFieldContainerTargets.forEach(container => {
+            const conditions = JSON.parse(container.dataset.visibilityConditionsValue);
+            // Le conteneur est visible si TOUTES ses conditions sont remplies
+            const isVisible = conditions.every(condition => this.evaluateCondition(condition));
+            container.classList.toggle('d-none', !isVisible);
+        });
+
+        // Vérifie la visibilité des lignes après avoir masqué/affiché les champs
+        this.formRowTargets.forEach(row => {
+            // Une ligne est masquée si TOUTES ses colonnes enfants sont masquées
+            const columns = Array.from(row.children);
+            const visibleColumns = columns.filter(col => !col.classList.contains('d-none'));
+            row.classList.toggle('d-none', visibleColumns.length === 0);
+        });
+    }
+
+    /**
+     * NOUVEAU : Évalue une condition de visibilité unique.
+     * @param {object} condition - L'objet condition à évaluer.
+     * @returns {boolean} - `true` si la condition est remplie, sinon `false`.
+     */
+    evaluateCondition(condition) {
+        const form = this.contentTarget.querySelector('form');
+        const fieldName = condition.field;
+        const field = form.elements[fieldName]; // Manière robuste de récupérer un champ de formulaire
+
+        if (!field) return false;
+
+        let sourceValue;
+        if (field instanceof RadioNodeList) {
+            // Cas d'un groupe de boutons radio (expanded: true)
+            const checkedRadio = form.querySelector(`[name=""]:checked`);
+            if (!checkedRadio) return false;
+            sourceValue = checkedRadio.value;
+        } else {
+            // Cas d'un <select>, <input>, etc. (expanded: false)
+            sourceValue = field.value;
+        }
+
+        if (sourceValue === null || sourceValue === undefined) return false;
+
+        if (condition.operator === 'in') {
+            return condition.value.map(String).includes(String(sourceValue));
+        }
+        return false;
+    }
+
+    /**
      * NOUVEAU : Génère le HTML pour un squelette de chargement du formulaire.
      * @returns {string} Le HTML du squelette.
      * @private
@@ -326,7 +412,7 @@ export default class extends Controller {
         const now = new Date();
         const date = now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
         const time = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const timestamp = `Dernière mise à jour le ${date} à ${time} ::`;
+        const timestamp = `Dernière mise à jour le  à  ::`;
 
         // On détermine la classe CSS à utiliser en fonction du type
         let feedbackClass = '';
@@ -344,9 +430,9 @@ export default class extends Controller {
 
         // On crée le message HTML et on l'ajoute au conteneur
         feedbackContainer.innerHTML = `
-            <div class="feedback-message ${feedbackClass}">
-                <span class="timestamp">${timestamp}</span>
-                <span>${message}</span>
+            <div class="feedback-message ">
+                <span class="timestamp"></span>
+                <span></span>
             </div>
         `;
     }
@@ -367,12 +453,12 @@ export default class extends Controller {
                 if (this.feedbackContainer) {
                     const globalErrors = messages.join('<br>');
                     // On ajoute l'erreur globale au conteneur de feedback général
-                    this.feedbackContainer.innerHTML += `<div class="mt-2">${globalErrors}</div>`;
+                    this.feedbackContainer.innerHTML += `<div class="mt-2"></div>`;
                 }
                 continue; // On passe au champ suivant
             }
 
-            const input = form.querySelector(`[name="${fieldName}"]`);
+            const input = form.querySelector(`[name=""]`);
             if (input) {
                 // Ajoute la classe Bootstrap pour le style d'erreur
                 input.classList.add('is-invalid');
@@ -479,7 +565,7 @@ export default class extends Controller {
                     isCreateMode = false;
                 }
             }
-            console.groupCollapsed(`${this.nomControleur} - ${callingFunction}() - Code:${code}`);
+            console.groupCollapsed(`${this.nomControleur} - () - Code:`);
             console.log(`| Mode:`, (isCreateMode) ? 'Création' : 'Édition');
             console.log(`| Entité:`, detail.entity);
             console.log(`| Contexte:`, detail.context);
