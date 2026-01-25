@@ -268,21 +268,20 @@ export default class extends Controller {
                 originatorId: this.userContext.originatorId // On passe l'ID de la collection qui a initié l'action.
             });
  
-            // Cas 1 : C'était une CRÉATION. On reste dans la modale et on la recharge en mode ÉDITION.
+            // REFACTORING: En cas de succès (création ou édition), on recharge systématiquement la vue
+            // pour afficher les données à jour et pour montrer le squelette de chargement pendant la transition.
+            isReloading = true; // On active le drapeau pour empêcher le `finally` de cacher le chargement trop tôt.
+
+            // On stocke le message de succès pour l'afficher APRÈS le rechargement.
+            this.feedbackOnNextLoad = { type: 'success', message: result.message };
+
             if (this.isCreateMode && result.entity) {
-                isReloading = true; // NOUVEAU : On active le drapeau.
+                // Si c'est une création, on met à jour l'état interne pour passer en mode édition.
                 this.entity = result.entity; // On stocke la nouvelle entité avec son ID
                 this.isCreateMode = false;
-                // NOUVEAU : On stocke le message de succès pour l'afficher APRÈS le rechargement.
-                this.feedbackOnNextLoad = { type: 'success', message: result.message };
-                this.reloadView(); // On recharge le contenu de la modale (formulaire, etc.)
-            } else {
-                // Cas 2 : C'était une ÉDITION. On ferme simplement la modale.
-                // CORRECTION : Ajout de l'appel manquant pour afficher le feedback de succès en mode édition.
-                this.showFeedback('success', result.message);
-                // Le rafraîchissement de la collection est déjà géré par l'événement 'app:entity.saved'.
-                // this.close();
             }
+            // On recharge la vue dans tous les cas de succès.
+            this.reloadView();
  
         } catch (error) {
             console.error(error);
