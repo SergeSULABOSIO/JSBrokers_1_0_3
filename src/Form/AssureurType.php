@@ -22,19 +22,19 @@ class AssureurType extends AbstractType
                 ],
             ])
             ->add('numimpot', TextType::class, [
-                'label' => "Nunméro Impôt (Nif)",
+                'label' => "Nunméro Impôt",
                 'attr' => [
                     'placeholder' => "NIF",
                 ],
             ])
             ->add('rccm', TextType::class, [
-                'label' => "Nunméro RCCM (Rccm)",
+                'label' => "Nunméro RCCM",
                 'attr' => [
                     'placeholder' => "RCCM",
                 ],
             ])
             ->add('idnat', TextType::class, [
-                'label' => "Nunméro d'Id. nationale (Idnat)",
+                'label' => "Id. nationale",
                 'attr' => [
                     'placeholder' => "Idnat",
                 ],
