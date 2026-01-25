@@ -24,11 +24,21 @@
         {% if formCanvas.form_layout is defined and formCanvas.form_layout is not empty %}
             {# Pour chaque ligne définie dans la configuration du layout... #}
             {% for row in formCanvas.form_layout %}
-                <div class="row gx-3 {{ (row.couleur_fond is defined and row.couleur_fond) ? 'form-row-colored' : '' }}" style="{{ (row.couleur_fond is defined and row.couleur_fond) ? 'background-color: ' ~ row.couleur_fond ~ ';' : '' }}">
+                <div class="row gx-3 {{ (row.couleur_fond is defined and row.couleur_fond) ? 'form-row-colored' : '' }}" style="{{ (row.couleur_fond is defined and row.couleur_fond) ? 'background-color: ' ~ row.couleur_fond ~ ';' : '' }}" data-dialog-instance-target="formRow">
                     {% for col in row.colonnes %}
                         {# On utilise la largeur définie dans le canvas, sinon on divise équitablement #}
                         {% set col_class = col.width is defined ? 'col-md-' ~ col.width : 'col-md-' ~ (12 / row.colonnes|length)|round(0, 'floor') %}
-                        <div class="{{ col_class }}">
+
+                        {# NOUVEAU : Préparation des attributs pour la visibilité dynamique #}
+                        {% set first_field_in_col = col.champs[0] ?? null %}
+                        {% set visibility_conditions = (first_field_in_col is mapping and first_field_in_col.visibility_conditions is defined) ? first_field_in_col.visibility_conditions|json_encode : null %}
+
+                        <div class="{{ col_class }}"
+                            {% if visibility_conditions %}
+                                data-dialog-instance-target="dynamicFieldContainer"
+                                data-visibility-conditions-value="{{ visibility_conditions }}"
+                            {% endif %}
+                        >
                             {% set champs_list = col.champs is defined ? col.champs : [col] %}
                             {% for field in champs_list %}
                                 {% if field is mapping and field.widget is defined and field.widget == 'collection' %}

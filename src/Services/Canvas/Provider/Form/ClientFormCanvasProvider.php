@@ -38,6 +38,17 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
 
     private function buildClientLayout(int $clientId, bool $isParentNew): array
     {
+        // NOUVEAU : On définit la condition de visibilité une seule fois pour la réutiliser.
+        $visibilityConditionForLegalFields = [
+            'visibility_conditions' => [
+                [
+                    'field' => 'civilite', // Le champ à écouter
+                    'operator' => 'in',    // L'opérateur de comparaison
+                    'value' => [Client::CIVILITE_ENTREPRISE, Client::CIVILITE_ASBL] // Les valeurs qui déclenchent la visibilité
+                ]
+            ]
+        ];
+
         $layout = [
             // Ligne 1: "civilité" (1/3), "nom" (2/3)
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["civilite"], "width" => 4], ["champs" => ["nom"], "width" => 8]]],
@@ -45,8 +56,12 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["email"]], ["champs" => ["telephone"]], ["champs" => ["groupe"]]]],
             // Ligne 3: "adresse" (2/3), "exonere" (1/3)
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["adresse"], "width" => 8], ["champs" => ["exonere"], "width" => 4]]],
-            // Ligne 4: "numimpot", "rccm", "idnat"
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["numimpot"]], ["champs" => ["rccm"]], ["champs" => ["idnat"]]]],
+            // Ligne 4: "numimpot", "rccm", "idnat" - MAINTENANT DYNAMIQUES
+            ["couleur_fond" => "#f8f9fa", "colonnes" => [
+                ["champs" => [['field_code' => 'numimpot'] + $visibilityConditionForLegalFields]],
+                ["champs" => [['field_code' => 'rccm'] + $visibilityConditionForLegalFields]],
+                ["champs" => [['field_code' => 'idnat'] + $visibilityConditionForLegalFields]]
+            ]],
         ];
 
         $collections = [

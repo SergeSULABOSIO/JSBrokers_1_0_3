@@ -57,10 +57,10 @@ class ClientEntityCanvasProvider implements EntityCanvasProviderInterface
     private function getSpecificIndicators(): array
     {
         return [
-            ["code" => "civiliteString", "intitule" => "Civilité", "type" => "Texte", "format" => "Texte", "description" => "Forme juridique ou civilité du client."],
-            ["code" => "nombrePistes", "intitule" => "Nb. Pistes", "type" => "Entier", "format" => "Nombre", "description" => "Nombre total de pistes commerciales ouvertes pour ce client."],
-            ["code" => "nombreSinistres", "intitule" => "Nb. Sinistres", "type" => "Entier", "format" => "Nombre", "description" => "Nombre total de sinistres déclarés par ce client."],
-            ["code" => "nombrePolices", "intitule" => "Nb. Polices", "type" => "Entier", "format" => "Nombre", "description" => "Nombre de polices d'assurance actives (cotations transformées) pour ce client."],
+            ["code" => "civiliteString", "intitule" => "Civilité", "type" => "Calcul", "format" => "Texte", "description" => "Forme juridique ou civilité du client."],
+            ["code" => "nombrePistes", "intitule" => "Nb. Pistes", "type" => "Calcul", "format" => "Nombre", "description" => "Nombre total de pistes commerciales ouvertes pour ce client."],
+            ["code" => "nombreSinistres", "intitule" => "Nb. Sinistres", "type" => "Calcul", "format" => "Nombre", "description" => "Nombre total de sinistres déclarés par ce client."],
+            ["code" => "nombrePolices", "intitule" => "Nb. Polices", "type" => "Calcul", "format" => "Nombre", "description" => "Nombre de polices d'assurance actives (cotations transformées) pour ce client."],
         ];
     }
 }

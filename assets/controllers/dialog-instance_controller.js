@@ -16,8 +16,8 @@ import { Controller } from '@hotwired/stimulus';
 export default class extends Controller {
     // On déclare un "outlet" pour le contrôleur 'modal' qui gère le cadre.
     static outlets = ['modal'];
-    static targets = [
-        'content'
+    static targets = [ // NOUVEAU : Ajout des cibles pour la visibilité dynamique
+        'content', 'formRow', 'dynamicFieldContainer'
     ];
     
 
@@ -139,6 +139,9 @@ export default class extends Controller {
         if (form) {
             form.setAttribute('data-action', 'submit->dialog-instance#submitForm');
         }
+
+        // NOUVEAU : Initialiser la logique de visibilité dynamique du formulaire
+        this.initializeFormVisibility();
 
         const mainDialogElement = this.modalOutlet.element;
 
