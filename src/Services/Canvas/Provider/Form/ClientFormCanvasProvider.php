@@ -46,7 +46,7 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
             // Ligne 3: "adresse" (2/3), "exonere" (1/3)
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["adresse"], "width" => 8], ["champs" => ["exonere"], "width" => 4]]],
             // Ligne 4: "numimpot", "rccm", "idnat"
-            ["couleur_fond" => "#f8f9fa", "colonnes" => [["champs" => ["numimpot"]], ["champs" => ["rccm"]], ["champs" => ["idnat"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["numimpot"]], ["champs" => ["rccm"]], ["champs" => ["idnat"]]]],
         ];
 
         $collections = [
