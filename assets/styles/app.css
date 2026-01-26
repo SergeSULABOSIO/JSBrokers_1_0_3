@@ -800,7 +800,7 @@ textarea:hover,
 }
 
 .calculated-attributes-content-scrollable {
-    max-height: 550px; /* On limite la hauteur maximale */
+    /* max-height est défini dynamiquement par JavaScript */
     overflow-y: auto; /* Active le défilement vertical si nécessaire */
     /* Correction pour le défilement dans les conteneurs flex sur certains navigateurs */
     min-height: 0;
@@ -837,7 +837,7 @@ textarea:hover,
 .form-column {
     flex-grow: 1;
     padding: 1.5rem;
-    max-height: 650px; /* NOUVEAU : On limite la hauteur maximale */
+    /* max-height est défini dynamiquement par JavaScript */
     overflow-y: auto;
 }
 
