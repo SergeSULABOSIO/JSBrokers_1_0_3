@@ -3,8 +3,8 @@
 <div class="calculated-attributes-column">
     {# On vérifie si le canvas et la liste des attributs existent #}
     {% if canvas is defined and canvas.liste is defined and canvas.liste is not empty %}
-        <h5 class="column-title">Attributs calculés</h5>
-        <div class="calculated-attributes-content-scrollable">
+        <h5 class="column-title" data-dialog-instance-target="calculatedAttributesColumnTitle">Attributs calculés</h5>
+        <div class="calculated-attributes-content-scrollable" data-dialog-instance-target="calculatedAttributesContentScrollable">
             {# Le contrôleur 'tooltip' gère l'affichage des descriptions au survol #}
             <ul class="calculated-attributes-list" data-controller="tooltip">
                 {# On boucle sur tous les champs définis dans le canvas de l'entité #}

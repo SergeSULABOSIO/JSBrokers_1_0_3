@@ -16,7 +16,7 @@ import { Controller } from '@hotwired/stimulus';
 export default class extends Controller {
     // On déclare un "outlet" pour le contrôleur 'modal' qui gère le cadre.
     static outlets = ['modal'];
-    static targets = [ // NOUVEAU : Ajout des cibles pour la visibilité dynamique
+    static targets = [ // Ajout des cibles pour la visibilité dynamique et la gestion des hauteurs
         'content', 'formRow', 'dynamicFieldContainer'
     ];
     
@@ -50,6 +50,10 @@ export default class extends Controller {
         // NOUVEAU : Écouteur pour la demande de fermeture ciblée venant du cerveau.
         this.boundDoClose = this.doClose.bind(this);
         document.addEventListener('app:dialog.do-close', this.boundDoClose);
+        // NOUVEAU : Écouteur de redimensionnement de la fenêtre pour ajuster les hauteurs dynamiquement
+        this.debouncedAdjustHeights = this.debounce(this._adjustHeights.bind(this), 100);
+        window.addEventListener('resize', this.debouncedAdjustHeights);
+
 
         if (detail) {
             // On encapsule l'appel asynchrone pour gérer les erreurs d'initialisation.
@@ -71,6 +75,7 @@ export default class extends Controller {
     disconnect() {
         document.removeEventListener('ui:dialog.content-ready', this.boundHandleContentReady);
         document.removeEventListener('app:dialog.do-close', this.boundDoClose);
+        window.removeEventListener('resize', this.debouncedAdjustHeights);
     }
 
     /**
@@ -156,6 +161,9 @@ export default class extends Controller {
 
         // On remplace tout le contenu de la modale par le HTML reçu.
         this.contentTarget.innerHTML = html;
+
+        // NOUVEAU : Ajuste les hauteurs après le chargement du contenu réel
+        this._adjustHeights();
 
         // On attache l'action de soumission au nouveau formulaire qui vient d'être injecté.
         const form = this.contentTarget.querySelector('form');
@@ -455,6 +463,7 @@ export default class extends Controller {
                 <div class="calculated-attributes-column" style="width: 400px; padding: 1.5rem; white-space: normal;">
                     <h5 class="column-title">
                         <div class="skeleton-line" style="width: 180px; height: 20px;"></div>
+                        <span data-dialog-instance-target="calculatedAttributesColumnTitle" style="display: none;"></span>
                     </h5>
                     <div class="calculated-attributes-content-scrollable" style="min-height: 150px;">
                         <div class="skeleton-line mb-3" style="width: 90%; height: 20px;"></div>
@@ -472,7 +481,7 @@ export default class extends Controller {
                     <div class="skeleton-line mb-4" style="height: 38px;"></div>
                     <div class="skeleton-line mb-4" style="width: 50%; height: 14px;"></div>
                     <div class="skeleton-line mb-4" style="height: 38px;"></div>
-                    <div class="skeleton-line" style="height: 80px;"></div>
+                    <div class="skeleton-line" style="height: 80px;" data-dialog-instance-target="formColumn"></div>
                 </div>
             </div>
         `;
@@ -488,6 +497,7 @@ export default class extends Controller {
             <div class="calculated-attributes-column" style="width: 400px; padding: 1.5rem; white-space: normal;">
                 <h5 class="column-title">
                     <div class="skeleton-line" style="width: 180px; height: 20px;"></div>
+                    <span data-dialog-instance-target="calculatedAttributesColumnTitle" style="display: none;"></span>
                 </h5>
                 <div class="calculated-attributes-content-scrollable" style="min-height: 150px;">
                     <div class="skeleton-line mb-3" style="width: 90%; height: 20px;"></div>
@@ -684,5 +694,88 @@ export default class extends Controller {
             console.groupEnd();
         }
 
+    }
+
+    /**
+     * NOUVEAU : Cibles pour les éléments à ajuster dynamiquement.
+     * Note: 'content' est déjà défini.
+     */
+    static targets = [
+        'content', 'formRow', 'dynamicFieldContainer',
+        'formColumn', 'calculatedAttributesColumnTitle', 'calculatedAttributesContentScrollable'
+    ];
+
+    /**
+     * NOUVEAU : Calcule les hauteurs maximales dynamiques pour les zones de défilement.
+     * @returns {{formColumnMaxHeight: number, calculatedAttributesContentMaxHeight: number}}
+     * @private
+     */
+    _getDynamicMaxHeights() {
+        const modalContent = this.contentTarget; // C'est le .modal-content
+        const modalHeader = modalContent.querySelector('.modal-header');
+        const modalFooter = modalContent.querySelector('.modal-footer');
+
+        // Valeurs par défaut/de secours si les éléments ne sont pas encore disponibles
+        let modalHeaderHeight = 0;
+        let modalFooterHeight = 0;
+        let calculatedAttributesTitleHeight = 0;
+        const additionalMargin = 20; // La marge fixe de 20px demandée par l'utilisateur
+
+        if (modalHeader) {
+            modalHeaderHeight = modalHeader.offsetHeight;
+        }
+        if (modalFooter) {
+            modalFooterHeight = modalFooter.offsetHeight;
+        }
+        // On cherche le titre réel, pas le squelette, pour le calcul de hauteur
+        const actualCalculatedAttributesTitle = modalContent.querySelector('.calculated-attributes-column .column-title');
+        if (actualCalculatedAttributesTitle) {
+            calculatedAttributesTitleHeight = actualCalculatedAttributesTitle.offsetHeight;
+        }
+
+        // La hauteur du .modal-content est déjà ajustée par CSS (calc(100% - 3.5rem) sur .modal-dialog).
+        // La hauteur disponible pour le .modal-body-split (qui contient form-column et calculated-attributes-column)
+        // est la hauteur totale du modal-content moins la hauteur de l'en-tête et du pied de page.
+        const availableBodyHeight = modalContent.offsetHeight - modalHeaderHeight - modalFooterHeight;
+
+        // Appliquer la marge additionnelle aux zones de défilement
+        const formColumnMaxHeight = availableBodyHeight - additionalMargin;
+        const calculatedAttributesContentMaxHeight = availableBodyHeight - calculatedAttributesTitleHeight - additionalMargin;
+
+        // S'assurer que les hauteurs ne sont pas négatives
+        return {
+            formColumnMaxHeight: Math.max(0, formColumnMaxHeight),
+            calculatedAttributesContentMaxHeight: Math.max(0, calculatedAttributesContentMaxHeight)
+        };
+    }
+
+    /**
+     * NOUVEAU : Applique les hauteurs maximales calculées aux éléments ciblés.
+     * @private
+     */
+    _adjustHeights() {
+        const { formColumnMaxHeight, calculatedAttributesContentMaxHeight } = this._getDynamicMaxHeights();
+
+        if (this.hasFormColumnTarget) {
+            this.formColumnTarget.style.maxHeight = `${formColumnMaxHeight}px`;
+        }
+        if (this.hasCalculatedAttributesContentScrollableTarget) {
+            this.calculatedAttributesContentScrollableTarget.style.maxHeight = `${calculatedAttributesContentMaxHeight}px`;
+        }
+    }
+
+    /**
+     * NOUVEAU : Fonction utilitaire pour débouncer les événements.
+     * @param {Function} func - La fonction à débouncer.
+     * @param {number} delay - Le délai en millisecondes.
+     * @returns {Function} - La fonction débouncée.
+     */
+    debounce(func, delay) {
+        let timeout;
+        return function(...args) {
+            const context = this;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(context, args), delay);
+        };
     }
 }

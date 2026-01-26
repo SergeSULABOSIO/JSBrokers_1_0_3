@@ -17,7 +17,7 @@
 <div class="modal-body-split">
     {% include 'components/dialog/_calculated_attributes.html.twig' with { entity: entity, canvas: entityCanvas } %}
 
-    <div class="form-column">
+    <div class="form-column" data-dialog-instance-target="formColumn">
         {{ form_start(form) }}
         {% if formCanvas.form_layout is defined and formCanvas.form_layout is not empty %}
             {# Pour chaque ligne définie dans la configuration du layout... #}
