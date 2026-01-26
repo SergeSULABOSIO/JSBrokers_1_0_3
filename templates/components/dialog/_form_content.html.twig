@@ -15,9 +15,7 @@
 </div>
 
 <div class="modal-body-split">
-    <div class="calculated-attributes-column">
-        {% include 'components/dialog/_calculated_attributes.html.twig' with { entity: entity, canvas: entityCanvas } %}
-    </div>
+    {% include 'components/dialog/_calculated_attributes.html.twig' with { entity: entity, canvas: entityCanvas } %}
 
     <div class="form-column">
         {{ form_start(form) }}
