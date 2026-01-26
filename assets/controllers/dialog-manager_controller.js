@@ -29,9 +29,9 @@ export default class extends Controller {
             data-bs-backdrop="static"
             data-bs-keyboard="false"
         >
-            <div class="modal-dialog modal-xl modal-dialog-scrollable">
-                <div class="modal-content">
-                    <div data-controller="dialog-instance" data-dialog-instance-modal-outlet=".modal" class="d-flex flex-column flex-grow-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content d-flex flex-column">
+                    <div data-controller="dialog-instance" data-dialog-instance-modal-outlet=".modal" class="d-flex flex-column flex-grow-1 flex-shrink-0">
                         <div data-dialog-instance-target="content" class="d-flex flex-column flex-grow-1">
                             <div class="modal-body text-center p-5 d-flex align-items-center justify-content-center" style="min-height: 100px;">
                                 <div class="spinner-border" role="status">
