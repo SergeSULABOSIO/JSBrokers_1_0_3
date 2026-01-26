@@ -779,8 +779,8 @@ textarea:hover,
 }
 
 /* On affiche la colonne quand le dialogue est en mode édition */ 
-.app-dialog.is-edit-mode .calculated-attributes-column {
-    display: block;
+.app-dialog.is-edit-mode .calculated-attributes-column { /* NOUVEAU : Conserve le display flex pour la mise en page interne */
+    display: flex;
 }
 
 /* On affiche la colonne SEULEMENT si on est en mode édition ET qu'elle a du contenu */

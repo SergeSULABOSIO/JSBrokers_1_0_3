@@ -452,7 +452,7 @@ export default class extends Controller {
                 <div class="dialog-progress-bar" role="progressbar"></div>
             </div>
             <div class="modal-body-split">
-                <div class="calculated-attributes-column">
+                <div class="calculated-attributes-column" style="width: 400px; padding: 1.5rem; white-space: normal;">
                     <h5 class="column-title">
                         <div class="skeleton-line" style="width: 180px; height: 20px;"></div>
                     </h5>
@@ -485,7 +485,7 @@ export default class extends Controller {
      */
     _getBodySkeletonHtml() {
         return `
-            <div class="calculated-attributes-column">
+            <div class="calculated-attributes-column" style="width: 400px; padding: 1.5rem; white-space: normal;">
                 <h5 class="column-title">
                     <div class="skeleton-line" style="width: 180px; height: 20px;"></div>
                 </h5>
