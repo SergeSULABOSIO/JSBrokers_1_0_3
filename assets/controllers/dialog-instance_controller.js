@@ -456,11 +456,11 @@ export default class extends Controller {
                     <h5 class="column-title">
                         <div class="skeleton-line" style="width: 180px; height: 20px;"></div>
                     </h5>
-                    <div class="calculated-attributes-content-scrollable">
-                        <div class="skeleton-line mb-3" style="width: 90%;"></div>
-                        <div class="skeleton-line mb-3" style="width: 80%;"></div>
-                        <div class="skeleton-line mb-3" style="width: 85%;"></div>
-                        <div class="skeleton-line" style="width: 75%;"></div>
+                    <div class="calculated-attributes-content-scrollable" style="min-height: 150px;">
+                        <div class="skeleton-line mb-3" style="width: 90%; height: 20px;"></div>
+                        <div class="skeleton-line mb-3" style="width: 80%; height: 20px;"></div>
+                        <div class="skeleton-line mb-3" style="width: 85%; height: 20px;"></div>
+                        <div class="skeleton-line" style="width: 75%; height: 20px;"></div>
                     </div>
                 </div>
                 <div class="form-column p-4">
@@ -489,11 +489,11 @@ export default class extends Controller {
                 <h5 class="column-title">
                     <div class="skeleton-line" style="width: 180px; height: 20px;"></div>
                 </h5>
-                <div class="calculated-attributes-content-scrollable">
-                    <div class="skeleton-line mb-3" style="width: 90%;"></div>
-                    <div class="skeleton-line mb-3" style="width: 80%;"></div>
-                    <div class="skeleton-line mb-3" style="width: 85%;"></div>
-                    <div class="skeleton-line" style="width: 75%;"></div>
+                <div class="calculated-attributes-content-scrollable" style="min-height: 150px;">
+                    <div class="skeleton-line mb-3" style="width: 90%; height: 20px;"></div>
+                    <div class="skeleton-line mb-3" style="width: 80%; height: 20px;"></div>
+                    <div class="skeleton-line mb-3" style="width: 85%; height: 20px;"></div>
+                    <div class="skeleton-line" style="width: 75%; height: 20px;"></div>
                 </div>
             </div>
             <div class="form-column p-4">
