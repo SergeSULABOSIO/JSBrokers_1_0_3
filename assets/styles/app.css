@@ -828,6 +828,7 @@ textarea:hover,
 .form-column {
     flex-grow: 1;
     padding: 1.5rem;
+    max-height: 650px; /* NOUVEAU : On limite la hauteur maximale */
     overflow-y: auto;
 }
 
