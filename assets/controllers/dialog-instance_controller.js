@@ -104,8 +104,19 @@ export default class extends Controller {
     loadContent() {
         this._logState("loadContent", "1986", this.detail);
         console.log(`${this.nomControleur} - loadContent() - Demande de contenu pour ${this.dialogId}`);
-        // NOUVEAU : On affiche le squelette de chargement pour une meilleure UX.
-        this.contentTarget.innerHTML = this._getSkeletonHtml();
+
+        // CORRECTION : On préserve le footer existant pendant le rechargement pour que les messages
+        // et les boutons restent visibles.
+        const footer = this.contentTarget.querySelector('.modal-footer');
+        const footerHtml = footer ? footer.outerHTML : `
+            <div class="modal-footer">
+                <div class="skeleton-line" style="width: 120px; height: 38px; border-radius: var(--bs-border-radius);"></div>
+                <div class="skeleton-line" style="width: 120px; height: 38px; border-radius: var(--bs-border-radius);"></div>
+            </div>
+        `;
+
+        // On remplace le contenu par le squelette (sans le footer) et on rajoute le footer (existant ou squelette).
+        this.contentTarget.innerHTML = this._getSkeletonHtml() + footerHtml;
 
         // Prépare les informations pour la requête que le Cerveau va exécuter
         const payload = {
@@ -458,10 +469,6 @@ export default class extends Controller {
                     <div class="skeleton-line mb-4" style="height: 38px;"></div>
                     <div class="skeleton-line" style="height: 80px;"></div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <div class="skeleton-line" style="width: 120px; height: 38px; border-radius: var(--bs-border-radius);"></div>
-                <div class="skeleton-line" style="width: 120px; height: 38px; border-radius: var(--bs-border-radius);"></div>
             </div>
         `;
     }
