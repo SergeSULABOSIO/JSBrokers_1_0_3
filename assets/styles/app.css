@@ -444,33 +444,19 @@ textarea:hover,
 ===================================================================
 */
 
-/* NOUVEAU : Contraint la hauteur des boîtes de dialogue pour permettre le défilement interne */
-.app-dialog .modal-dialog {
-    /* On prend presque toute la hauteur, moins les marges standards de Bootstrap (1.75rem * 2) */
-    height: calc(100% - 3.5rem);
-}
-
-.app-dialog .modal-content {
-    /* On force le contenu à prendre 100% de la hauteur de son parent (.modal-dialog) */
-    height: 100%;
-}
-
 .app-dialog .modal-header {
     border-bottom: none;
-    padding: 1.2rem 1.5rem;
-    flex-shrink: 0;
 }
 
 #confirmation-dialog-modal .modal-header {
     background-color: #dc3545; /* Rouge pour la confirmation */
 }
 
+/* On garde un fond blanc pour le footer pour la cohérence */
 .app-dialog .modal-footer,
 #confirmation-dialog-modal .modal-footer {
     background-color: #ffffff;
     border-top: 1px solid #dee2e6;
-    padding: 1rem 1.5rem;
-    flex-shrink: 0;
 }
 
 /* 3. BARRE DE PROGRESSION (AVEC NOMS UNIQUES) */
@@ -496,26 +482,11 @@ textarea:hover,
 
 /* 4. CORPS ET DÉFILEMENT */
 .app-dialog .modal-body {
-    background-color: #f0f0f0; /* Votre gris clair */
-    padding: 1.5rem;
-    flex-grow: 1;
-    overflow-y: auto;
+    background-color: #f0f0f0; /* On garde le fond gris clair pour le corps */
 }
+
 #confirmation-dialog-modal .modal-body {
     background-color: #ffffff; /* Fond blanc pour la confirmation */
-}
-.app-dialog .modal-body::-webkit-scrollbar {
-    width: 8px;
-}
-.app-dialog .modal-body::-webkit-scrollbar-track {
-    background: #e9ecef;
-}
-.app-dialog .modal-body::-webkit-scrollbar-thumb {
-    background: #adb5bd;
-    border-radius: 4px;
-}
-.app-dialog .modal-body::-webkit-scrollbar-thumb:hover {
-    background: #495057;
 }
 
 /* 5. ÉLÉMENTS DANS LES BOUTONS */
@@ -753,41 +724,21 @@ textarea:hover,
 ===================================================================
 */
 
-.modal-body-split {
-    display: flex;
-    flex-grow: 1;
-    background-color: #f0f0f0;
-    /* TRÈS IMPORTANT : Empêche ce conteneur de déborder. Le défilement est géré par ses enfants. */
-    overflow: hidden;
-}
-
 /* --- Colonne de gauche (Attributs Calculés) --- */
 .calculated-attributes-column {
-    width: 0; /* Largeur de 0 par défaut (cachée) */
-    padding-left: 0;
-    padding-right: 0;
-    flex-shrink: 0;
+    /* Styles de base pour la colonne sombre */
     background-color: #212529;
     color: #e9ecef;
-    overflow: hidden; /* Cache le contenu pendant la transition */ 
-    transition: width 0.4s ease, padding 0.4s ease; /* L'animation ! */
-    white-space: nowrap; /* Empêche le texte de passer à la ligne pendant l'animation */
-    /* NOUVEAU : On utilise flexbox pour que le titre soit fixe et le contenu défilable.
-       La hauteur est gérée par le conteneur flex parent (.modal-body-split) via align-items: stretch. */
-    display: flex;
-    flex-direction: column;
-}
+    padding: 1.5rem;
+    border-radius: var(--bs-border-radius);
 
-/* On affiche la colonne quand le dialogue est en mode édition */ 
-.app-dialog.is-edit-mode .calculated-attributes-column { /* NOUVEAU : Conserve le display flex pour la mise en page interne */
-    display: flex;
+    /* Par défaut, la colonne est cachée */
+    display: none;
 }
 
 /* On affiche la colonne SEULEMENT si on est en mode édition ET qu'elle a du contenu */
 .app-dialog.is-edit-mode.has-attributes-column .calculated-attributes-column {
-    width: 400px; /* On définit sa largeur finale */
-    padding: 1.5rem; /* On restaure le padding */
-    white-space: normal; /* On autorise le retour à la ligne du contenu */
+    display: block; /* On la rend visible */
 }
 
 .calculated-attributes-column .column-title {
@@ -799,14 +750,8 @@ textarea:hover,
     border-bottom: 1px solid #495057;
 }
 
-.calculated-attributes-content-scrollable {
-    /* max-height est défini dynamiquement par JavaScript */
-    overflow-y: auto; /* Active le défilement vertical si nécessaire */
-    /* Correction pour le défilement dans les conteneurs flex sur certains navigateurs */
-    min-height: 0;
-    margin-right: -10px; /* Compense le padding pour que la scrollbar soit bien placée */
-    padding-right: 10px;
-}
+/* Le contenu n'est plus défilant individuellement */
+.calculated-attributes-content {}
 .calculated-attributes-list {
     list-style: none;
     padding: 0;
@@ -835,10 +780,7 @@ textarea:hover,
 
 /* --- Colonne de droite (Formulaire) --- */
 .form-column {
-    flex-grow: 1;
     padding: 1.5rem;
-    /* max-height est défini dynamiquement par JavaScript */
-    overflow-y: auto;
 }
 
 /*
@@ -846,43 +788,6 @@ textarea:hover,
  SECTION: STYLE POUR LES BARRES DE DÉFILEMENT DES COLONNES DE DIALOGUE
 ===================================================================
 */
-
-/* --- Pour Firefox --- */
-.form-column {
-    scrollbar-width: thin;
-    scrollbar-color: #adb5bd #f0f0f0; /* thumb track */
-}
-.calculated-attributes-content-scrollable {
-    scrollbar-color: #6c757d #212529; /* thumb track */
-}
-
-/* --- Pour les navigateurs Webkit (Chrome, Safari, Edge) --- */
-.form-column::-webkit-scrollbar,
-.calculated-attributes-content-scrollable::-webkit-scrollbar {
-    width: 8px;
-}
-
-.form-column::-webkit-scrollbar-track,
-.calculated-attributes-content-scrollable::-webkit-scrollbar-track {
-    background: transparent; /* Le fond de la piste est transparent pour se fondre */
-}
-
-.form-column::-webkit-scrollbar-thumb {
-    background-color: #adb5bd; /* Couleur du curseur, gris moyen */
-    border-radius: 4px;
-    border: 2px solid #f0f0f0; /* Crée un effet de "flottement" avec la couleur de fond de la colonne */
-}
-
-.calculated-attributes-content-scrollable::-webkit-scrollbar-thumb {
-    background-color: #6c757d; /* Un gris plus visible sur le fond sombre */
-    border-radius: 4px;
-    border: 2px solid #212529; /* Couleur de fond de la colonne de gauche */
-}
-
-.form-column::-webkit-scrollbar-thumb:hover,
-.calculated-attributes-content-scrollable::-webkit-scrollbar-thumb:hover {
-    background-color: #495057; /* Plus foncé au survol pour les deux */
-}
 
 /*
 ===================================================================

@@ -7,17 +7,20 @@
 
 <div class="modal-header">
     <h5 class="modal-title">{{ title }}</h5>
-    <button type="button" class="btn-close btn-close-gray" data-action="click->dialog-instance#close"></button>
+    <button type="button" class="btn-close" data-action="click->dialog-instance#close"></button>
 </div>
 
 <div class="dialog-progress-container">
     <div class="dialog-progress-bar" role="progressbar"></div>
 </div>
 
-<div class="modal-body-split">
-    {% include 'components/dialog/_calculated_attributes.html.twig' with { entity: entity, canvas: entityCanvas } %}
+<div class="modal-body">
+    <div class="row gx-0">
+        {# La colonne des attributs est incluse ici et gère sa propre classe de colonne (ex: col-auto) #}
+        {% include 'components/dialog/_calculated_attributes.html.twig' with { entity: entity, canvas: entityCanvas } %}
 
-    <div class="form-column" data-dialog-instance-target="formColumn">
+        {# La colonne du formulaire prend l'espace restant #}
+        <div class="col form-column">
         {{ form_start(form) }}
         {% if formCanvas.form_layout is defined and formCanvas.form_layout is not empty %}
             {# Pour chaque ligne définie dans la configuration du layout... #}
@@ -55,6 +58,7 @@
             {{ form_widget(form) }}
         {% endif %}
         {{ form_end(form, {'render_rest': false}) }}
+    </div>
     </div>
 </div>
 
