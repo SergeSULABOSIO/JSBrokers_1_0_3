@@ -455,11 +455,6 @@ textarea:hover,
     height: 100%;
 }
 
-/* NOUVEAU : S'assure que le conteneur de l'instance de dialogue remplit le modal-content */
-.app-dialog .modal-content > [data-controller="dialog-instance"] {
-    height: 100%;
-}
-
 .app-dialog .modal-header {
     border-bottom: none;
     padding: 1.2rem 1.5rem;
@@ -768,8 +763,10 @@ textarea:hover,
     overflow: hidden; /* Cache le contenu pendant la transition */ 
     transition: width 0.4s ease, padding 0.4s ease; /* L'animation ! */
     white-space: nowrap; /* Empêche le texte de passer à la ligne pendant l'animation */
-    /* NOUVEAU : Contraint la hauteur pour activer le défilement */
-    height: 100%;
+    /* NOUVEAU : On utilise flexbox pour que le titre soit fixe et le contenu défilable.
+       La hauteur est gérée par le conteneur flex parent (.modal-body-split) via align-items: stretch. */
+    display: flex;
+    flex-direction: column;
 }
 
 /* On affiche la colonne quand le dialogue est en mode édition */ 
@@ -781,7 +778,6 @@ textarea:hover,
 .app-dialog.is-edit-mode.has-attributes-column .calculated-attributes-column {
     width: 400px; /* On définit sa largeur finale */
     padding: 1.5rem; /* On restaure le padding */
-    overflow-y: auto; /* On réactive le défilement */
     white-space: normal; /* On autorise le retour à la ligne du contenu */
 }
 
@@ -794,6 +790,14 @@ textarea:hover,
     border-bottom: 1px solid #495057;
 }
 
+.calculated-attributes-content-scrollable {
+    max-height: 550px; /* On limite la hauteur maximale */
+    overflow-y: auto; /* Active le défilement vertical si nécessaire */
+    /* Correction pour le défilement dans les conteneurs flex sur certains navigateurs */
+    min-height: 0;
+    margin-right: -10px; /* Compense le padding pour que la scrollbar soit bien placée */
+    padding-right: 10px;
+}
 .calculated-attributes-list {
     list-style: none;
     padding: 0;
@@ -824,8 +828,6 @@ textarea:hover,
 .form-column {
     flex-grow: 1;
     padding: 1.5rem;
-    /* NOUVEAU : Contraint la hauteur pour activer le défilement */
-    height: 100%;
     overflow-y: auto;
 }
 
@@ -840,18 +842,18 @@ textarea:hover,
     scrollbar-width: thin;
     scrollbar-color: #adb5bd #f0f0f0; /* thumb track */
 }
-.calculated-attributes-column {
+.calculated-attributes-content-scrollable {
     scrollbar-color: #6c757d #212529; /* thumb track */
 }
 
 /* --- Pour les navigateurs Webkit (Chrome, Safari, Edge) --- */
 .form-column::-webkit-scrollbar,
-.calculated-attributes-column::-webkit-scrollbar {
+.calculated-attributes-content-scrollable::-webkit-scrollbar {
     width: 8px;
 }
 
 .form-column::-webkit-scrollbar-track,
-.calculated-attributes-column::-webkit-scrollbar-track {
+.calculated-attributes-content-scrollable::-webkit-scrollbar-track {
     background: transparent; /* Le fond de la piste est transparent pour se fondre */
 }
 
@@ -861,14 +863,14 @@ textarea:hover,
     border: 2px solid #f0f0f0; /* Crée un effet de "flottement" avec la couleur de fond de la colonne */
 }
 
-.calculated-attributes-column::-webkit-scrollbar-thumb {
+.calculated-attributes-content-scrollable::-webkit-scrollbar-thumb {
     background-color: #6c757d; /* Un gris plus visible sur le fond sombre */
     border-radius: 4px;
     border: 2px solid #212529; /* Couleur de fond de la colonne de gauche */
 }
 
 .form-column::-webkit-scrollbar-thumb:hover,
-.calculated-attributes-column::-webkit-scrollbar-thumb:hover {
+.calculated-attributes-content-scrollable::-webkit-scrollbar-thumb:hover {
     background-color: #495057; /* Plus foncé au survol pour les deux */
 }
 
