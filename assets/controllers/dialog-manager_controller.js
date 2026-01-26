@@ -29,16 +29,25 @@ export default class extends Controller {
             data-bs-backdrop="static"
             data-bs-keyboard="false"
         >
-            <div class="modal-dialog modal-xl">
-                <div class="modal-content d-flex flex-column">
-                    <div data-controller="dialog-instance" data-dialog-instance-modal-outlet=".modal" class="d-flex flex-column flex-grow-1 flex-shrink-0">
-                        <div data-dialog-instance-target="content" class="d-flex flex-column flex-grow-1">
-                            <div class="modal-body text-center p-5 d-flex align-items-center justify-content-center" style="min-height: 100px;">
-                                <div class="spinner-border" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                            </div>
+            <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                <div class="modal-content" data-controller="dialog-instance" data-dialog-instance-modal-outlet=".modal">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><div class="skeleton-line" style="width: 250px; height: 24px;"></div></h5>
+                        <button type="button" class="btn-close" disabled></button>
+                    </div>
+                    <!-- The dialog-progress-container is now a direct child of modal-content -->
+                    <div class="dialog-progress-container is-loading">
+                        <div class="dialog-progress-bar" role="progressbar"></div>
+                    </div>
+                    <!-- The modal-body is the target for content injection -->
+                    <div data-dialog-instance-target="content" class="modal-body text-center p-5 d-flex align-items-center justify-content-center" style="min-height: 100px;">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
                         </div>
+                    </div>
+                    <div class="modal-footer">
+                        <div class="skeleton-line" style="width: 120px; height: 38px; border-radius: var(--bs-border-radius);"></div>
+                        <div class="skeleton-line" style="width: 120px; height: 38px; border-radius: var(--bs-border-radius);"></div>
                     </div>
                 </div>
             </div>
