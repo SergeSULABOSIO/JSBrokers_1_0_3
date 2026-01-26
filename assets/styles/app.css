@@ -482,6 +482,8 @@ textarea:hover,
 
 /* 4. CORPS ET DÉFILEMENT */
 .app-dialog .modal-body {
+    flex-grow: 1; /* Prend tout l'espace vertical restant */
+    overflow-y: auto; /* Active le défilement vertical si nécessaire */
     background-color: #f0f0f0; /* On garde le fond gris clair pour le corps */
 }
 
