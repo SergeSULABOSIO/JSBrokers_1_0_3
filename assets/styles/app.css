@@ -679,14 +679,14 @@ textarea:hover,
 /* NOUVEAU : Fond sombre pour le squelette de la colonne des attributs */
 .calculated-attributes-column-skeleton {
     background-color: #212529; /* Couleur de fond de la colonne des attributs */
+    border-radius: var(--bs-border-radius); /* NOUVEAU: Assurer le même border-radius que la colonne réelle */
     padding: 1.5rem; /* Assurer le même padding que la colonne réelle */
 }
 
-/*
-===================================================================
- SECTION: STYLE POUR LES MESSAGES DE FEEDBACK DANS LES DIALOGUES
-===================================================================
-*/
+/* NOUVEAU : Assurer que l'icône du bouton Enregistrer est blanche */
+.btn-primary .button-icon svg {
+    fill: white !important; /* Utiliser !important pour éviter les problèmes de spécificité */
+}
 
 .feedback-container .feedback-message {
     padding: 10px 15px;
