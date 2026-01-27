@@ -676,6 +676,11 @@ textarea:hover,
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent); /* Un balayage blanc très subtil */
 }
 
+/* NOUVEAU : Fond sombre pour le squelette de la colonne des attributs */
+.calculated-attributes-column-skeleton {
+    background-color: #212529; /* Couleur de fond de la colonne des attributs */
+    padding: 1.5rem; /* Assurer le même padding que la colonne réelle */
+}
 
 /*
 ===================================================================
@@ -734,6 +739,11 @@ textarea:hover,
     color: #e9ecef;
     padding: 1.5rem;
     border-radius: var(--bs-border-radius);
+
+    /* NOUVEAU : Assurer que l'icône du bouton Enregistrer est blanche */
+    .btn-primary .button-icon svg {
+        fill: white;
+    }
 
     /* Par défaut, la colonne est cachée */
     display: none;
