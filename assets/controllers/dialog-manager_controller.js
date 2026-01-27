@@ -56,7 +56,7 @@ export default class extends Controller {
                         </button>
                         <button type="button" class="btn btn-primary" data-action="click->dialog-instance#triggerSubmit" data-dialog-instance-target="submitButton"> 
                             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
-                            <span class="button-icon"><svg xmlns="http://www.w3.org/2000/svg" width="23px" height="23px" viewBox="0 0 24 24" fill="currentColor"><path d="M15.004 3h-10a2 0 0 0-2 2v14a2 0 0 0 2 2h14a2 0 0 0 2-2v-10L15.004 3zm-9 16V6h8v4h4v9h-12z"></path></svg></span>
+                            <svg class="button-icon" xmlns="http://www.w3.org/2000/svg" width="23px" height="23px" viewBox="0 0 24 24" fill="currentColor"><path d="M15.004 3h-10a2 0 0 0-2 2v14a2 0 0 0 2 2h14a2 0 0 0 2-2v-10L15.004 3zm-9 16V6h8v4h4v9h-12z"></path></svg>
                             <span class="button-text">Enregistrer</span>
                         </button>
                     </div>

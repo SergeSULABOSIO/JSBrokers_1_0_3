@@ -683,9 +683,9 @@ textarea:hover,
     padding: 1.5rem; /* Assurer le même padding que la colonne réelle */
 }
 
-/* NOUVEAU : Assurer que l'icône du bouton Enregistrer est blanche */
-.btn-primary .button-icon svg {
-    fill: white !important; /* Utiliser !important pour éviter les problèmes de spécificité */
+/* NOUVEAU : Cible directement l'icône SVG du bouton Enregistrer */
+.btn-primary .button-icon { /* La classe .button-icon est maintenant sur le SVG */
+    fill: white !important; /* On force la couleur de remplissage en blanc pour garantir la visibilité */
 }
 
 .feedback-container .feedback-message {

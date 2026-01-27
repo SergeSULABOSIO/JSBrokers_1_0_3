@@ -169,7 +169,7 @@ export default class extends Controller {
         // NOUVEAU : Mettre à jour l'icône du titre
         if (this.hasTitleIconTarget && icon) {
             const iconClass = icon.replace(':', ' mdi-');
-            this.titleIconTarget.innerHTML = `<span class="mdi ${iconClass}" style="font-size: 1.5rem; color: #343a40;"></span>`; // Changed color for better contrast
+            this.titleIconTarget.innerHTML = `<span class="mdi ${iconClass}" style="font-size: 1.5rem; color: #212529;"></span>`; // Adjusted color for better visibility
         }
 
         // On remplace tout le contenu de la modale par le HTML reçu.
@@ -471,7 +471,7 @@ export default class extends Controller {
         // CORRECTION : Ne retourne que le contenu du corps, pas la balise .modal-body elle-même.
         return `
             <div class="row">
-                <div class="col-md-5 calculated-attributes-column-skeleton">
+                <div class="col-auto calculated-attributes-column-skeleton" style="width: 400px;">
                     <h5 class="column-title">
                         <div class="skeleton-line" style="width: 180px; height: 20px;"></div>
                     </h5>
@@ -480,7 +480,7 @@ export default class extends Controller {
                     <div class="skeleton-line mb-3" style="width: 85%; height: 20px;"></div>
                     <div class="skeleton-line" style="width: 75%; height: 20px;"></div>
                 </div>
-                <div class="col-md-7 form-column-skeleton">
+                <div class="col form-column-skeleton">
                     <div class="text-center text-muted mb-4">
                         <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
                         <span class="ms-2">Chargement du formulaire, veuillez patienter...</span>
@@ -498,7 +498,7 @@ export default class extends Controller {
     _getBodySkeletonHtml() { // Used for submission, so it's just the body content
         return `
             <div class="row">
-                <div class="col-md-5 calculated-attributes-column-skeleton">
+                <div class="col-auto calculated-attributes-column-skeleton" style="width: 400px;">
                     <h5 class="column-title">
                         <div class="skeleton-line" style="width: 180px; height: 20px;"></div>
                     </h5>
@@ -507,7 +507,7 @@ export default class extends Controller {
                     <div class="skeleton-line mb-3" style="width: 85%; height: 20px;"></div>
                     <div class="skeleton-line" style="width: 75%; height: 20px;"></div>
                 </div>
-                <div class="col-md-7 form-column-skeleton">
+                <div class="col form-column-skeleton">
                     <div class="text-center text-muted mb-4">
                         <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
                         <span class="ms-2">Enregistrement des données...</span>
