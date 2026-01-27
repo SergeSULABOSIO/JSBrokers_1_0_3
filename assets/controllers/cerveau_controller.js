@@ -870,7 +870,11 @@ export default class extends Controller {
             const html = await response.text();
 
             // On renvoie le contenu à l'instance de dialogue qui l'a demandé
-            this.broadcast('ui:dialog.content-ready', { dialogId, html });
+            this.broadcast('ui:dialog.content-ready', {
+                dialogId,
+                html,
+                title: detail.payload.entityFormCanvas.parametres.titre_creation || detail.payload.entityFormCanvas.parametres.titre_modification
+            });
 
         } catch (error) {
             console.error(`[Cerveau] Erreur lors de la récupération du contenu pour ${dialogId}:`, error);

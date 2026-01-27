@@ -16,7 +16,10 @@ import { Controller } from '@hotwired/stimulus';
 export default class extends Controller {
     // On déclare un "outlet" pour le contrôleur 'modal' qui gère le cadre.
     static outlets = ['modal'];
-    static targets = ['content', 'formRow', 'dynamicFieldContainer']; // 'content' is now the modal-body
+    static targets = [
+        'content', 'formRow', 'dynamicFieldContainer', // 'content' is now the modal-body
+        'header', 'title', 'closeButton', 'progressBarContainer', 'footer', 'feedbackContainer', 'submitButton', 'closeFooterButton'
+    ];
     
 
     /**
@@ -103,18 +106,24 @@ export default class extends Controller {
         this._logState("loadContent", "1986", this.detail);
         console.log(`${this.nomControleur} - loadContent() - Demande de contenu pour ${this.dialogId}`);
 
-        // CORRECTION : On préserve le footer existant pendant le rechargement pour que les messages
-        // et les boutons restent visibles.
-        const footer = this.element.querySelector('.modal-footer'); // Footer is a direct child of this.element (modal-content)
-        const footerHtml = footer ? footer.outerHTML : `
-            <div class="modal-footer">
-                <div class="skeleton-line" style="width: 120px; height: 38px; border-radius: var(--bs-border-radius);"></div>
-                <div class="skeleton-line" style="width: 120px; height: 38px; border-radius: var(--bs-border-radius);"></div>
-            </div>
-        `;
+        // Afficher les squelettes dans l'en-tête et le pied de page
+        this.titleTarget.innerHTML = '<div class="skeleton-line" style="width: 250px; height: 24px;"></div>';
+        this.closeButtonTarget.disabled = true;
+        this.feedbackContainerTarget.innerHTML = ''; // Nettoyer tout feedback précédent
+        this.submitButtonTarget.disabled = true;
+        this.closeFooterButtonTarget.disabled = true;
 
-        // On remplace le contenu du modal-body (this.contentTarget) par le squelette.
+        // Afficher la barre de progression
+        this.progressBarContainerTarget.classList.add('is-loading');
+
+        // Afficher le squelette dans le corps de la modale
         this.contentTarget.innerHTML = this._getSkeletonHtml();
+        // S'assurer que le corps est visible et centré avec le spinner initial
+        this.contentTarget.classList.add('text-center', 'p-5', 'd-flex', 'align-items-center', 'justify-content-center');
+        this.contentTarget.style.minHeight = '100px';
+        this.contentTarget.innerHTML = `
+            <div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>
+        `;
 
         // Prépare les informations pour la requête que le Cerveau va exécuter
         const payload = {
@@ -143,14 +152,19 @@ export default class extends Controller {
         console.log(`${this.nomControleur} - handleContentReady() - Contenu reçu pour ${this.dialogId}`);
 
         if (error) {
-            const errorMessage = error.message || "Une erreur inconnue est survenue.";
-            this.contentTarget.innerHTML = `<div class="alert alert-danger">${errorMessage}</div>`; // Replace content of modal-body
+            const errorMessage = error.message || "Une erreur inconnue est survenue.";            
+            this.titleTarget.textContent = "Erreur"; // Mettre à jour le titre avec l'erreur
+            this.contentTarget.innerHTML = `<div class="alert alert-danger">${errorMessage}</div>`;
+            this.contentTarget.classList.remove('text-center', 'p-5', 'd-flex', 'align-items-center', 'justify-content-center');
+            this.contentTarget.style.minHeight = ''; // Réinitialiser la hauteur minimale
             // Notifier le cerveau de l'échec de chargement
             this.notifyCerveau('app:error.api', {
                 error: `Échec du chargement du formulaire: ${errorMessage}`
             });
             return;
         }
+        // Mettre à jour le titre de la modale
+        this.titleTarget.textContent = event.detail.title;
 
         // On remplace tout le contenu de la modale par le HTML reçu.
         this.contentTarget.innerHTML = html; 
@@ -160,6 +174,10 @@ export default class extends Controller {
         if (form) {
             form.setAttribute('data-action', 'submit->dialog-instance#submitForm');
         }
+        // Réinitialiser les styles du corps de la modale après le chargement du contenu réel
+        this.contentTarget.classList.remove('text-center', 'p-5', 'd-flex', 'align-items-center', 'justify-content-center');
+        this.contentTarget.style.minHeight = '';
+
 
         // NOUVEAU : Initialiser la logique de visibilité dynamique du formulaire
         this.initializeFormVisibility();
@@ -193,6 +211,7 @@ export default class extends Controller {
 
         // NOUVEAU : On s'assure que les boutons sont réactivés après un rechargement.
         this.toggleLoading(false); //
+        this.toggleProgressBar(false); // Cacher la barre de progression
     }
 
     /**
@@ -232,10 +251,10 @@ export default class extends Controller {
         this.toggleLoading(true);
         this.toggleProgressBar(true);
  
-        this.feedbackContainer = this.element.querySelector('.modal-footer .feedback-container'); // Search within modal-footer
-        if (this.feedbackContainer) {
-            this.feedbackContainer.innerHTML = '';
-        }
+        // Nettoyer le conteneur de feedback
+        this.feedbackContainerTarget.innerHTML = '';
+        // Désactiver les boutons
+        this.toggleLoading(true);
  
         // NOUVEAU : Affiche un message de feedback pendant la soumission.
         this.showFeedback('warning', 'Enregistrement en cours, veuillez patienter...');
@@ -410,7 +429,7 @@ export default class extends Controller {
      * @returns {boolean} - `true` si la condition est remplie, sinon `false`.
      */
     evaluateCondition(condition) {
-        const form = this.element.querySelector('form'); // Search within modal-content
+        const form = this.contentTarget.querySelector('form'); // Search within modal-body
         const fieldName = condition.field;
         const field = form.elements[fieldName]; // Manière robuste de récupérer un champ de formulaire
 
@@ -442,10 +461,6 @@ export default class extends Controller {
      */
     _getSkeletonHtml() {
         return `
-            <!-- The dialog-progress-container is now part of the modal-body content -->
-            <div class="dialog-progress-container is-loading">
-                <div class="dialog-progress-bar" role="progressbar"></div>
-            </div>
             <div class="modal-body">
                 <div class="row">
                     <div class="col-md-5 calculated-attributes-column-skeleton">
@@ -470,15 +485,10 @@ export default class extends Controller {
                     </div>
                 </div>
             </div>
-        `;
+            `;
     }
 
-    /**
-     * Génère le HTML pour un squelette de chargement du corps de la modale (utilisé pendant la soumission).
-     * @returns {string} Le HTML du squelette.
-     * @private
-     */
-    _getBodySkeletonHtml() {
+    _getBodySkeletonHtml() { // Used for submission, so it's just the body content
         return `
             <div class="row">
                 <div class="col-md-5 calculated-attributes-column-skeleton">
@@ -511,7 +521,7 @@ export default class extends Controller {
      * @param {string} message - Le message à afficher.
      */
     showFeedback(type, message) {
-        const feedbackContainer = this.element.querySelector('.modal-footer .feedback-container'); // Search within modal-footer
+        const feedbackContainer = this.feedbackContainerTarget;
         if (!feedbackContainer) return;
 
         // On formate la date et l'heure actuelles [cite: 7, 8]
@@ -550,9 +560,9 @@ export default class extends Controller {
      */
     displayErrors(errors) {
         // --- CORRECTION : S'assurer que la cible du feedback est définie ---
-        this.feedbackContainer = this.contentTarget.querySelector('.feedback-container');
+        this.feedbackContainer = this.feedbackContainerTarget;
 
-        const form = this.contentTarget.querySelector('form');
+        const form = this.contentTarget.querySelector('form'); // Search within modal-body
         for (const [fieldName, messages] of Object.entries(errors)) {
             // NOUVELLE GESTION : Si le nom du champ est vide, c'est une erreur globale.
             if (fieldName === '') {
@@ -608,7 +618,7 @@ export default class extends Controller {
      */
     toggleLoading(isLoading) {
         // On cherche le bouton manuellement juste quand on en a besoin
-        const button = this.element.querySelector('[data-action*="#triggerSubmit"]'); // Search within modal-content
+        const button = this.submitButtonTarget;
 
         if (!button) return;
         button.disabled = isLoading;
@@ -628,7 +638,8 @@ export default class extends Controller {
             text.textContent = 'Enregistrer';
         }
         // --- AJOUT : Gère les autres boutons (Fermer, X) ---
-        const closeButtons = this.element.querySelectorAll('[data-action*="#close"]'); // Search within modal-content
+        const closeButtons = [this.closeButtonTarget, this.closeFooterButtonTarget];
+
         closeButtons.forEach(btn => {
             btn.disabled = isLoading;
         });
@@ -640,7 +651,7 @@ export default class extends Controller {
      */
     toggleProgressBar(isLoading) {
         // On cherche le conteneur de la barre manuellement
-        const progressBarContainer = this.element.querySelector('.dialog-progress-container'); // Search within modal-content
+        const progressBarContainer = this.progressBarContainerTarget;
         if (progressBarContainer) {
             progressBarContainer.classList.toggle('is-loading', isLoading);
         }
@@ -650,7 +661,7 @@ export default class extends Controller {
      * Déclenche manuellement la soumission du formulaire interne.
      */
     triggerSubmit() {
-        const form = this.contentTarget.querySelector('form');
+        const form = this.contentTarget.querySelector('form'); // Form is inside modal-body
         if (form) { // Search within modal-content
             form.requestSubmit();
         }

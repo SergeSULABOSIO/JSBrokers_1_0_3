@@ -29,25 +29,33 @@ export default class extends Controller {
             data-bs-backdrop="static"
             data-bs-keyboard="false"
         >
-            <div class="modal-dialog modal-xl modal-dialog-scrollable">
-                <div class="modal-content" data-controller="dialog-instance" data-dialog-instance-modal-outlet=".modal">
-                    <div class="modal-header">
-                        <h5 class="modal-title"><div class="skeleton-line" style="width: 250px; height: 24px;"></div></h5>
-                        <button type="button" class="btn-close" disabled></button>
+            <div class="modal-dialog modal-xl modal-dialog-scrollable"> 
+                <div class="modal-content" data-controller="dialog-instance" data-dialog-instance-modal-outlet=".modal"> 
+                    <div class="modal-header" data-dialog-instance-target="header"> 
+                        <h5 class="modal-title" data-dialog-instance-target="title"><div class="skeleton-line" style="width: 250px; height: 24px;"></div></h5> 
+                        <button type="button" class="btn-close" data-dialog-instance-target="closeButton" disabled></button> 
                     </div>
-                    <!-- The dialog-progress-container is now a direct child of modal-content -->
-                    <div class="dialog-progress-container is-loading">
+                    <div class="dialog-progress-container is-loading" data-dialog-instance-target="progressBarContainer"> 
                         <div class="dialog-progress-bar" role="progressbar"></div>
                     </div>
-                    <!-- The modal-body is the target for content injection -->
-                    <div data-dialog-instance-target="content" class="modal-body text-center p-5 d-flex align-items-center justify-content-center" style="min-height: 100px;">
+                    <div data-dialog-instance-target="content" class="modal-body text-center p-5 d-flex align-items-center justify-content-center" style="min-height: 100px;"> 
                         <div class="spinner-border" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <div class="skeleton-line" style="width: 120px; height: 38px; border-radius: var(--bs-border-radius);"></div>
-                        <div class="skeleton-line" style="width: 120px; height: 38px; border-radius: var(--bs-border-radius);"></div>
+                    <div class="modal-footer" data-dialog-instance-target="footer"> 
+                        <div class="feedback-container me-auto" data-dialog-instance-target="feedbackContainer"> 
+                            <!-- Feedback message will be injected here -->
+                        </div>
+                        <button type="button" class="btn btn-secondary" data-action="click->dialog-instance#close" data-dialog-instance-target="closeFooterButton"> 
+                            <svg xmlns="http://www.w3.org/2000/svg" width="25px" height="25px" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8zm3.59-13L12 10.59L8.41 7L7 8.41L10.59 12L7 15.59L8.41 17L12 13.41L15.59 17L17 15.59L13.41 12L17 8.41z"></path></svg>
+                            <span>Fermer</span>
+                        </button>
+                        <button type="button" class="btn btn-primary" data-action="click->dialog-instance#triggerSubmit" data-dialog-instance-target="submitButton"> 
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
+                            <span class="button-icon"><svg xmlns="http://www.w3.org/2000/svg" width="23px" height="23px" viewBox="0 0 24 24" fill="currentColor"><path d="M15.004 3h-10a2 0 0 0-2 2v14a2 0 0 0 2 2h14a2 0 0 0 2-2v-10L15.004 3zm-9 16V6h8v4h4v9h-12z"></path></svg></span>
+                            <span class="button-text">Enregistrer</span>
+                        </button>
                     </div>
                 </div>
             </div>
