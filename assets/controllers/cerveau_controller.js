@@ -831,7 +831,7 @@ export default class extends Controller {
      * @param {object} detail - Les détails de l'événement.
      */
     async handleDialogContentRequest(detail) {
-        const { dialogId, endpoint, entity, context } = detail.payload;
+        const { dialogId, endpoint, entity, context, entityFormCanvas } = detail.payload;
 
         try {
             // 1. On commence avec l'URL de base
@@ -869,11 +869,21 @@ export default class extends Controller {
 
             const html = await response.text();
 
+            // NOUVEAU : Déterminer le titre correct en fonction du mode (création/édition)
+            const isCreationMode = !(entity && entity.id);
+            let title = isCreationMode
+                ? (entityFormCanvas.parametres.titre_creation || "Création")
+                : (entityFormCanvas.parametres.titre_modification || "Modification de l'élément #%id%").replace('%id%', entity.id);
+
+            // NOUVEAU : Extraire l'icône du canvas
+            const icon = entityFormCanvas.parametres.icone || null;
+
             // On renvoie le contenu à l'instance de dialogue qui l'a demandé
             this.broadcast('ui:dialog.content-ready', {
                 dialogId,
                 html,
-                title: detail.payload.entityFormCanvas.parametres.titre_creation || detail.payload.entityFormCanvas.parametres.titre_modification
+                title: title,
+                icon: icon // On passe l'icône
             });
 
         } catch (error) {

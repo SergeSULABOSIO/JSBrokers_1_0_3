@@ -667,12 +667,12 @@ textarea:hover,
     }
 }
 
-/* NOUVEAU : Style pour les squelettes sur fond sombre (colonne des attributs) */
-.calculated-attributes-column .skeleton-line {
+/* NOUVEAU : Style pour le squelette sur fond sombre (colonne des attributs) */
+.calculated-attributes-column-skeleton .skeleton-line {
     background-color: #343a40; /* Un gris plus clair que le fond #212529 */
 }
 
-.calculated-attributes-column .skeleton-line::after {
+.calculated-attributes-column-skeleton .skeleton-line::after {
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent); /* Un balayage blanc très subtil */
 }
 
