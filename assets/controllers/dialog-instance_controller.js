@@ -256,8 +256,8 @@ export default class extends Controller {
         this.toggleLoading(true);
         this.toggleProgressBar(true);
  
-        // Nettoyer le conteneur de feedback
-        this.feedbackContainerTarget.innerHTML = '';
+        // NOUVEAU : Ne pas nettoyer le conteneur de feedback ici pour assurer la persistance du message "Enregistrement en cours..."
+        // Le message sera mis à jour par showFeedback() juste après.
         // Désactiver les boutons
         this.toggleLoading(true);
  
