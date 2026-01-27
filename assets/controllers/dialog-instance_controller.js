@@ -111,16 +111,16 @@ export default class extends Controller {
         if (this.hasTitleIconTarget) {
             this.titleIconTarget.innerHTML = ''; // Vider l'icône précédente
         }
-        this.closeButtonTarget.disabled = true;
-        this.feedbackContainerTarget.innerHTML = ''; // Nettoyer tout feedback précédent
-        this.submitButtonTarget.disabled = true;
-        this.closeFooterButtonTarget.disabled = true;
+        this.closeButtonTarget.disabled = true; // Disable header close button
+        // this.feedbackContainerTarget.innerHTML = ''; // REMOVED: Feedback should persist during reload
+        this.submitButtonTarget.disabled = true; // Disable submit button
+        this.closeFooterButtonTarget.disabled = true; // Disable footer close button
 
-        // Afficher la barre de progression
-        this.progressBarContainerTarget.classList.add('is-loading');
+        this.progressBarContainerTarget.classList.add('is-loading'); // Show progress bar
 
         // CORRECTION : On affiche le squelette du corps sans le remplacer par un spinner.
         this.contentTarget.innerHTML = this._getSkeletonHtml();
+
         // On retire les classes qui centrent le spinner, car on affiche un squelette complet.
         this.contentTarget.classList.remove('text-center', 'p-5', 'd-flex', 'align-items-center', 'justify-content-center');
         this.contentTarget.style.minHeight = ''; // On retire la hauteur min du spinner
@@ -332,7 +332,9 @@ export default class extends Controller {
                 errors: error.errors || {}
             });
  
+            // NOUVEAU : Affiche le message d'erreur après la restauration du formulaire.
             this.showFeedback('error', error.message || 'Une erreur est survenue.');
+            this.feedbackOnNextLoad = null; // S'assurer qu'aucun message de succès ne remplace l'erreur.
  
             if (error.errors) {
                 this.displayErrors(error.errors);
@@ -357,6 +359,9 @@ export default class extends Controller {
         // On indique qu'un rechargement est en cours.
         // Le `finally` de `submitForm` ne masquera pas les indicateurs de chargement.
         this.isReloading = true;
+
+        // NOUVEAU : Nettoyer le feedback existant avant d'en afficher un nouveau après le rechargement.
+        this.feedbackContainerTarget.innerHTML = '';
 
         // On stocke le message de succès pour l'afficher APRÈS le rechargement de la vue.
         this.feedbackOnNextLoad = { type: 'success', message: result.message };
