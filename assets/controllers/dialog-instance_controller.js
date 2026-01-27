@@ -17,8 +17,8 @@ export default class extends Controller {
     // On déclare un "outlet" pour le contrôleur 'modal' qui gère le cadre.
     static outlets = ['modal'];
     static targets = [
-        'content', 'formRow', 'dynamicFieldContainer', // 'content' is now the modal-body
-        'header', 'title', 'closeButton', 'progressBarContainer', 'footer', 'feedbackContainer', 'submitButton', 'closeFooterButton'
+        'content', 'formRow', 'dynamicFieldContainer',
+        'header', 'title', 'titleIcon', 'closeButton', 'progressBarContainer', 'footer', 'feedbackContainer', 'submitButton', 'closeFooterButton'
     ];
     
 
@@ -108,6 +108,9 @@ export default class extends Controller {
 
         // Afficher les squelettes dans l'en-tête et le pied de page
         this.titleTarget.innerHTML = '<div class="skeleton-line" style="width: 250px; height: 24px;"></div>';
+        if (this.hasTitleIconTarget) {
+            this.titleIconTarget.innerHTML = ''; // Vider l'icône précédente
+        }
         this.closeButtonTarget.disabled = true;
         this.feedbackContainerTarget.innerHTML = ''; // Nettoyer tout feedback précédent
         this.submitButtonTarget.disabled = true;
@@ -116,14 +119,11 @@ export default class extends Controller {
         // Afficher la barre de progression
         this.progressBarContainerTarget.classList.add('is-loading');
 
-        // Afficher le squelette dans le corps de la modale
+        // CORRECTION : On affiche le squelette du corps sans le remplacer par un spinner.
         this.contentTarget.innerHTML = this._getSkeletonHtml();
-        // S'assurer que le corps est visible et centré avec le spinner initial
-        this.contentTarget.classList.add('text-center', 'p-5', 'd-flex', 'align-items-center', 'justify-content-center');
-        this.contentTarget.style.minHeight = '100px';
-        this.contentTarget.innerHTML = `
-            <div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>
-        `;
+        // On retire les classes qui centrent le spinner, car on affiche un squelette complet.
+        this.contentTarget.classList.remove('text-center', 'p-5', 'd-flex', 'align-items-center', 'justify-content-center');
+        this.contentTarget.style.minHeight = ''; // On retire la hauteur min du spinner
 
         // Prépare les informations pour la requête que le Cerveau va exécuter
         const payload = {
@@ -143,7 +143,7 @@ export default class extends Controller {
      * @param {CustomEvent} event 
      */
     handleContentReady(event) {
-        const { dialogId, html, error } = event.detail;
+        const { dialogId, html, error, icon } = event.detail;
 
         // On s'assure que cet événement nous est bien destiné
         if (dialogId !== this.dialogId) {
@@ -167,6 +167,12 @@ export default class extends Controller {
         // Mettre à jour le titre de la modale
         this.titleTarget.textContent = event.detail.title;
 
+        // NOUVEAU : Mettre à jour l'icône du titre
+        if (this.hasTitleIconTarget && icon) {
+            const iconClass = icon.replace(':', ' mdi-');
+            this.titleIconTarget.innerHTML = `<span class="mdi ${iconClass}" style="font-size: 1.5rem; color: #6c757d;"></span>`;
+        }
+
         // On remplace tout le contenu de la modale par le HTML reçu.
         this.contentTarget.innerHTML = html; 
 
@@ -176,8 +182,6 @@ export default class extends Controller {
             form.setAttribute('data-action', 'submit->dialog-instance#submitForm');
         }
         // Réinitialiser les styles du corps de la modale après le chargement du contenu réel
-        this.contentTarget.classList.remove('text-center', 'p-5', 'd-flex', 'align-items-center', 'justify-content-center');
-        this.contentTarget.style.minHeight = '';
 
 
         // NOUVEAU : Initialiser la logique de visibilité dynamique du formulaire
@@ -461,29 +465,28 @@ export default class extends Controller {
      * @private
      */
     _getSkeletonHtml() {
+        // CORRECTION : Ne retourne que le contenu du corps, pas la balise .modal-body elle-même.
         return `
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-5 calculated-attributes-column-skeleton">
-                        <h5 class="column-title">
-                            <div class="skeleton-line" style="width: 180px; height: 20px;"></div>
-                        </h5>
-                        <div class="skeleton-line mb-3" style="width: 90%; height: 20px;"></div>
-                        <div class="skeleton-line mb-3" style="width: 80%; height: 20px;"></div>
-                        <div class="skeleton-line mb-3" style="width: 85%; height: 20px;"></div>
-                        <div class="skeleton-line" style="width: 75%; height: 20px;"></div>
+            <div class="row">
+                <div class="col-md-5 calculated-attributes-column-skeleton">
+                    <h5 class="column-title">
+                        <div class="skeleton-line" style="width: 180px; height: 20px;"></div>
+                    </h5>
+                    <div class="skeleton-line mb-3" style="width: 90%; height: 20px;"></div>
+                    <div class="skeleton-line mb-3" style="width: 80%; height: 20px;"></div>
+                    <div class="skeleton-line mb-3" style="width: 85%; height: 20px;"></div>
+                    <div class="skeleton-line" style="width: 75%; height: 20px;"></div>
+                </div>
+                <div class="col-md-7 form-column-skeleton">
+                    <div class="text-center text-muted mb-4">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                        <span class="ms-2">Chargement du formulaire, veuillez patienter...</span>
                     </div>
-                    <div class="col-md-7 form-column-skeleton">
-                        <div class="text-center text-muted mb-4">
-                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                            <span class="ms-2">Chargement du formulaire, veuillez patienter...</span>
-                        </div>
-                        <div class="skeleton-line mb-4" style="width: 40%; height: 14px;"></div>
-                        <div class="skeleton-line mb-4" style="height: 38px;"></div>
-                        <div class="skeleton-line mb-4" style="width: 50%; height: 14px;"></div>
-                        <div class="skeleton-line mb-4" style="height: 38px;"></div>
-                        <div class="skeleton-line" style="height: 80px;"></div>
-                    </div>
+                    <div class="skeleton-line mb-4" style="width: 40%; height: 14px;"></div>
+                    <div class="skeleton-line mb-4" style="height: 38px;"></div>
+                    <div class="skeleton-line mb-4" style="width: 50%; height: 14px;"></div>
+                    <div class="skeleton-line mb-4" style="height: 38px;"></div>
+                    <div class="skeleton-line" style="height: 80px;"></div>
                 </div>
             </div>
             `;
@@ -639,7 +642,8 @@ export default class extends Controller {
             text.textContent = 'Enregistrer';
         }
         // --- AJOUT : Gère les autres boutons (Fermer, X) ---
-        const closeButtons = [this.closeButtonTarget, this.closeFooterButtonTarget];
+        // CORRECTION : S'assurer que les cibles existent avant de les utiliser
+        const closeButtons = [this.hasCloseButtonTarget && this.closeButtonTarget, this.hasCloseFooterButtonTarget && this.closeFooterButtonTarget].filter(Boolean);
 
         closeButtons.forEach(btn => {
             btn.disabled = isLoading;
