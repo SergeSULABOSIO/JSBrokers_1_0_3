@@ -468,6 +468,8 @@ textarea:hover,
     height: 10px;
 }
 .dialog-progress-container { flex-shrink: 0; } /* NOUVEAU : Empêche la barre de progression de se contracter */
+.dialog-progress-container { flex-shrink: 0; }
+.dialog-progress-container.is-loading { flex-shrink: 0; } /* Assure qu'il ne se contracte pas quand il est visible */
 .dialog-progress-bar {
     width: 100%;
     height: 100%;
