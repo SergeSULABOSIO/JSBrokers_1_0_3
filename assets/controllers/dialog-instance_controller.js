@@ -130,7 +130,8 @@ export default class extends Controller {
             dialogId: this.dialogId,
             endpoint: this.entityFormCanvas.parametres.endpoint_form_url,
             entity: this.entity,
-            context: this.context
+            context: this.context,
+            entityFormCanvas: this.entityFormCanvas // NOUVEAU : Ajout de l'objet entityFormCanvas
         };
 
         // Notifie le cerveau pour qu'il charge le contenu
