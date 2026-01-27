@@ -112,7 +112,6 @@ export default class extends Controller {
             this.titleIconTarget.innerHTML = ''; // Vider l'icône précédente
         }
         this.closeButtonTarget.disabled = true; // Disable header close button
-        // this.feedbackContainerTarget.innerHTML = ''; // REMOVED: Feedback should persist during reload
         this.submitButtonTarget.disabled = true; // Disable submit button
         this.closeFooterButtonTarget.disabled = true; // Disable footer close button
 
@@ -170,7 +169,7 @@ export default class extends Controller {
         // NOUVEAU : Mettre à jour l'icône du titre
         if (this.hasTitleIconTarget && icon) {
             const iconClass = icon.replace(':', ' mdi-');
-            this.titleIconTarget.innerHTML = `<span class="mdi ${iconClass}" style="font-size: 1.5rem; color: #6c757d;"></span>`;
+            this.titleIconTarget.innerHTML = `<span class="mdi ${iconClass}" style="font-size: 1.5rem; color: #343a40;"></span>`; // Changed color for better contrast
         }
 
         // On remplace tout le contenu de la modale par le HTML reçu.
@@ -361,7 +360,6 @@ export default class extends Controller {
         this.isReloading = true;
 
         // NOUVEAU : Nettoyer le feedback existant avant d'en afficher un nouveau après le rechargement.
-        this.feedbackContainerTarget.innerHTML = '';
 
         // On stocke le message de succès pour l'afficher APRÈS le rechargement de la vue.
         this.feedbackOnNextLoad = { type: 'success', message: result.message };
