@@ -27,7 +27,7 @@ class AssureurEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Assureur",
-                "icone" => "mdi:shield-check",
+                "icone" => "assureur",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "L'assureur [[*nom]] est une entité clé de notre portefeuille.",
