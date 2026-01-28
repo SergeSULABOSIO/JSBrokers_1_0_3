@@ -50,6 +50,9 @@ export default class extends Controller {
         document.addEventListener('ui:dialog.content-ready', this.boundHandleContentReady);
         // NOUVEAU : Écouteur pour la demande de fermeture ciblée venant du cerveau.
         this.boundDoClose = this.doClose.bind(this);
+        // NOUVEAU : Écouteur pour la réception du HTML de l'icône.
+        this.boundHandleIconLoaded = this.handleIconLoaded.bind(this);
+        document.addEventListener('app:icon.loaded', this.boundHandleIconLoaded);
         document.addEventListener('app:dialog.do-close', this.boundDoClose);
 
         if (detail) {
@@ -71,6 +74,7 @@ export default class extends Controller {
      */
     disconnect() {
         document.removeEventListener('ui:dialog.content-ready', this.boundHandleContentReady);
+        document.removeEventListener('app:icon.loaded', this.boundHandleIconLoaded);
         document.removeEventListener('app:dialog.do-close', this.boundDoClose);
     }
 
@@ -168,8 +172,12 @@ export default class extends Controller {
 
         // NOUVEAU : Mettre à jour l'icône du titre
         if (this.hasTitleIconTarget && icon) {
-            const iconClass = icon.replace(':', ' mdi-');
-            this.titleIconTarget.innerHTML = `<span class="mdi ${iconClass}" style="font-size: 1.5rem; color: #212529;"></span>`; // Adjusted color for better visibility
+            // On ne construit plus l'icône ici. On demande au cerveau de la fournir.
+            this.notifyCerveau('ui:icon.request', {
+                iconName: icon,
+                iconSize: 28, // Taille adaptée pour un titre de dialogue
+                requesterId: this.dialogId // Pour que la réponse nous soit bien destinée
+            });
         }
 
         // On remplace tout le contenu de la modale par le HTML reçu.
@@ -216,6 +224,19 @@ export default class extends Controller {
         // NOUVEAU : On s'assure que les boutons sont réactivés après un rechargement.
         this.toggleLoading(false); //
         this.toggleProgressBar(false); // Cacher la barre de progression
+    }
+
+    /**
+     * NOUVEAU: Gère la réception du HTML de l'icône et l'injecte.
+     * @param {CustomEvent} event
+     */
+    handleIconLoaded(event) {
+        const { html, requesterId } = event.detail;
+
+        // On s'assure que l'icône est bien pour cette instance de dialogue
+        if (requesterId === this.dialogId && this.hasTitleIconTarget) {
+            this.titleIconTarget.innerHTML = html;
+        }
     }
 
     /**

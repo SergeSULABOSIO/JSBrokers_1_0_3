@@ -33,7 +33,7 @@ export default class extends Controller {
                 <div class="modal-content" data-controller="dialog-instance" data-dialog-instance-modal-outlet=".modal"> 
                     <div class="modal-header" data-dialog-instance-target="header">
                         <h5 class="modal-title d-flex align-items-center">
-                            <span class="me-2" data-dialog-instance-target="titleIcon"></span>
+                            <span data-dialog-instance-target="titleIcon" class="me-2"></span>
                             <span data-dialog-instance-target="title"><div class="skeleton-line" style="width: 250px; height: 24px;"></div></span>
                         </h5>
                         <button type="button" class="btn-close" data-dialog-instance-target="closeButton" disabled></button> 

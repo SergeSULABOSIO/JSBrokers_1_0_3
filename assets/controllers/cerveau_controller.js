@@ -332,6 +332,9 @@ export default class extends Controller {
             case 'ui:dialog.close-request':
                 this.broadcast('app:dialog.do-close', { dialogId: payload.dialogId });
                 break;
+            case 'ui:icon.request':
+                this.handleIconRequest(payload);
+                break;
             case 'ui:dialog.closed':
                 break;
             default:
@@ -896,4 +899,34 @@ export default class extends Controller {
         }
     }
 
+    /**
+     * NOUVEAU : Gère une demande de récupération d'icône depuis le serveur.
+     * @param {object} payload 
+     */
+    async handleIconRequest(payload) {
+        const { iconName, iconSize = 24, requesterId } = payload;
+        if (!iconName) return;
+    
+        const url = `/api/icon/${iconName}/${iconSize}`;
+    
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Icon fetch failed with status ${response.status}`);
+            }
+            const html = await response.text();
+            this.broadcast('app:icon.loaded', {
+                iconName,
+                html,
+                requesterId // Pour que seule l'instance concernée réagisse
+            });
+        } catch (error) {
+            console.error(`[Cerveau] Failed to fetch icon '${iconName}':`, error);
+            this.broadcast('app:icon.loaded', {
+                iconName,
+                html: `<!-- error loading icon ${iconName} -->`,
+                requesterId
+            });
+        }
+    }
 }
