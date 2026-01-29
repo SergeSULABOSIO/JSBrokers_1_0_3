@@ -40,7 +40,7 @@ class IconCanvasProvider
         'taxe'            => 'hugeicons:percentage-01',
         'tranche'         => 'hugeicons:pie-chart-03',
         'type-revenu'     => 'hugeicons:money-bag-01',
-        'utilisateur'     => 'raphael:user',
+        'utilisateur'     => 'hugeicons:user-01',
         'default'         => 'hugeicons:file-05', // Icône par défaut
 
         // --- Icônes d'Actions ---
