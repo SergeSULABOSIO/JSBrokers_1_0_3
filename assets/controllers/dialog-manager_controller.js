@@ -51,12 +51,12 @@ export default class extends Controller {
                             <!-- Feedback message will be injected here -->
                         </div>
                         <button type="button" class="btn btn-secondary" data-action="click->dialog-instance#close" data-dialog-instance-target="closeFooterButton"> 
-                            <svg xmlns="http://www.w3.org/2000/svg" width="25px" height="25px" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8zm3.59-13L12 10.59L8.41 7L7 8.41L10.59 12L7 15.59L8.41 17L12 13.41L15.59 17L17 15.59L13.41 12L17 8.41z"></path></svg>
+                            <span class="button-icon" data-dialog-instance-target="closeIcon"></span>
                             <span>Fermer</span>
                         </button>
                         <button type="button" class="btn btn-primary" data-action="click->dialog-instance#triggerSubmit" data-dialog-instance-target="submitButton"> 
                             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
-                            <svg class="button-icon" xmlns="http://www.w3.org/2000/svg" width="23px" height="23px" viewBox="0 0 24 24" fill="currentColor"><path d="M15.004 3h-10a2 0 0 0-2 2v14a2 0 0 0 2 2h14a2 0 0 0 2-2v-10L15.004 3zm-9 16V6h8v4h4v9h-12z"></path></svg>
+                            <span class="button-icon" data-dialog-instance-target="saveIcon"></span>
                             <span class="button-text">Enregistrer</span>
                         </button>
                     </div>
