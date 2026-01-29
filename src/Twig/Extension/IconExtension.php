@@ -20,10 +20,16 @@ class IconExtension extends AbstractExtension
         ];
     }
 
+    /**
+     * Résout un nom d'alias d'icône en son vrai nom.
+     * Si le nom fourni est un alias connu (ex: 'assureur'), il retourne le vrai nom (ex: 'wpf:security-checked').
+     * Sinon, il retourne le nom original tel quel (ex: 'lucide:file-text').
+     *
+     * @param string $iconName Le nom de l'icône ou son alias.
+     * @return string Le nom résolu de l'icône.
+     */
     public function resolveIconName(string $iconName): string
     {
-        // Si c'est un alias personnalisé (ex: 'assureur'), on le résout.
-        // Sinon (ex: 'lucide:file-text'), on retourne le nom tel quel pour ne pas casser les icônes existantes.
         return $this->iconCanvasProvider->resolveIconName($iconName) ?? $iconName;
     }
 }
