@@ -27,10 +27,10 @@
                                     title="Modifier" 
                                     data-action="click->collection#editItem"
                                 >
-                                    {{ ux_icon('tabler:edit', {width: "19px"}) }}
+                                    {{ ux_icon(resolve_icon_name('action:edit'), {width: "19px"}) }}
                                 </button>
                                 <button class="btn btn-sm btn-icon btn-icon-danger" title="Supprimer" data-action="click->collection#deleteItem">
-                                    {{ ux_icon('fluent:delete-20-filled', {width: "19px"}) }}
+                                    {{ ux_icon(resolve_icon_name('action:delete'), {width: "19px"}) }}
                                 </button>
                             </div>
 
@@ -39,7 +39,7 @@
                             <div style="font-weight: bold; color: #0047AB;"> {# Bleu cobalt #}
                                 {# Icône #}
                                 {% if col_principale.texte_principal.icone is defined %}
-                                    <twig:UX:Icon name="{{ col_principale.texte_principal.icone }}" style="width: {{ col_principale.texte_principal.icone_taille }}; height: {{ col_principale.texte_principal.icone_taille }};" />
+                                    <twig:UX:Icon name="{{ resolve_icon_name(col_principale.texte_principal.icone) }}" style="width: {{ col_principale.texte_principal.icone_taille }}; height: {{ col_principale.texte_principal.icone_taille }};" />
                                 {% endif %}
 
                                 {# Préfixe et Texte#}
@@ -62,7 +62,7 @@
                                     <span class="d-inline-flex align-items-center">
                                         {# Icône #}
                                         {% if texte.icone is defined %}
-                                            <twig:UX:Icon name="{{ texte.icone }}" style="width: {{ texte.icone_taille }}; height: {{ texte.icone_taille }}; margin-right: 4px;" />
+                                            <twig:UX:Icon name="{{ resolve_icon_name(texte.icone) }}" style="width: {{ texte.icone_taille }}; height: {{ texte.icone_taille }}; margin-right: 4px;" />
                                         {% endif %}
 
                                         {# Préfixe #}

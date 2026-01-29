@@ -10,7 +10,7 @@
     data-id="{{ item.id }}"
 >
     <div class="item-icon">
-        <twig:ux:icon name="famicons:document" style="width: 35px;" />
+        <twig:ux:icon name="{{ resolve_icon_name('document') }}" style="width: 35px;" />
     </div>
     <div class="item-text">
         <div class="text-main">{{ item.nom }}</div>
@@ -23,13 +23,13 @@
     <div class="item-actions">
         {# BOUTON TÉLÉCHARGER : un simple lien vers notre nouvelle route #}
         <a href="{{ path('admin.document.api.download', {'id': item.id}) }}" class="btn btn-sm btn-edit" title="Télécharger">
-            <twig:ux:icon name="bi:download" style="width: 20px;" />
+            <twig:ux:icon name="{{ resolve_icon_name('action:download') }}" style="width: 20px;" />
         </a>
         <button type="button" class="btn btn-sm btn-edit" data-action="click->collection#editItem" title="Modifier">
-            <twig:ux:icon name="tabler:edit" style="width: 20px;" />
+            <twig:ux:icon name="{{ resolve_icon_name('action:edit') }}" style="width: 20px;" />
         </button>
         <button type="button" class="btn btn-sm btn-delete" data-action="click->collection#deleteItem" title="Supprimer">
-            <twig:ux:icon name="fluent:delete-20-filled" style="width: 20px;" />
+            <twig:ux:icon name="{{ resolve_icon_name('action:delete') }}" style="width: 20px;" />
         </button>
     </div>
 </div>

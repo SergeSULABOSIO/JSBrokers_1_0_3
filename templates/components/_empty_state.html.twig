@@ -12,7 +12,7 @@
     <div class="empty-state-content">
         {% if icon_name is defined and icon_name %}
             <div class="empty-state-icon">
-                <twig:UX:Icon name="{{ icon_name }}" />
+                <twig:UX:Icon name="{{ resolve_icon_name(icon_name) }}" />
             </div>
         {% endif %}
 
@@ -27,7 +27,7 @@
             {% if button_2_text is defined and button_2_text and button_2_action is defined and button_2_action %}
                 <button type="button" class="btn btn-secondary empty-state-button-secondary" data-action="{{ button_2_action }}">
                     {% if button_2_icon is defined and button_2_icon %}
-                        <twig:UX:Icon name="{{ button_2_icon }}" class="me-2" />
+                        <twig:UX:Icon name="{{ resolve_icon_name(button_2_icon) }}" class="me-2" />
                     {% endif %}
                     {{ button_2_text }}
                 </button>
@@ -37,7 +37,7 @@
             {% if button_text is defined and button_text and button_action is defined and button_action %}
                 <button type="button" class="btn btn-primary empty-state-button" data-action="{{ button_action }}">
                     {% if button_icon is defined and button_icon %}
-                        <twig:UX:Icon name="{{ button_icon }}" class="me-2" />
+                        <twig:UX:Icon name="{{ resolve_icon_name(button_icon) }}" class="me-2" />
                     {% else %}
                         <twig:UX:Icon name="bi:plus-circle-fill" class="me-2" />
                     {% endif %}
