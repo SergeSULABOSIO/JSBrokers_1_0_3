@@ -22,8 +22,9 @@
     <div class="sticky-header bg-white shadow-sm">
         <div class="d-flex align-items-center p-2">
             <div class="me-2">
+                {# NOUVEAU : On utilise la fonction `resolve_icon_name` pour gérer les alias d'icônes #}
                 <twig:UX:Icon 
-                    name="{{ entityCanvas.parametres.icone | default('lucide:file-text') }}" 
+                    name="{{ resolve_icon_name(entityCanvas.parametres.icone | default('lucide:file-text')) }}" 
                     style="width: 40px; height: 40px; color: #343a40;"
                     data-view-manager-target="rubriqueIcon"
                 />
