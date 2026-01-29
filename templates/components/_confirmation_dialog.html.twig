@@ -23,7 +23,7 @@
             {# NOUVEAU: Avertissement sur l'action irréversible #}
             <div class="modal-body pt-1">
                 <div class="alert alert-warning d-flex align-items-center p-2" role="alert">
-                    <twig:UX:Icon name="bi:exclamation-triangle-fill" class="me-2 flex-shrink-0" style="width: 20px; height: 20px;" />
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:alert') }}" class="me-2 flex-shrink-0" style="width: 20px; height: 20px;" />
                     <div>
                         <strong>Attention :</strong> Cette action est irréversible.
                     </div>
@@ -35,13 +35,13 @@
 
                 <button type="button" class="btn btn-secondary" data-action="click->confirmation-dialog#close">
                     {# AJOUT DE L'ICÔNE "ANNULER" #}
-                    <twig:UX:Icon name="bi:x-circle" style="width: 20px;" />
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:cancel') }}" style="width: 20px;" />
                     <span>Annuler</span>    
                 </button>
                  {# MODIFICATION: Ajout du target et du spinner #}
                 <button type="button" class="btn btn-danger" data-action="click->confirmation-dialog#confirm" data-confirmation-dialog-target="confirmButton">
                     <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
-                    <twig:UX:Icon name="bi:check-circle-fill" class="button-icon" style="width: 20px;" />
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:check') }}" class="button-icon" style="width: 20px;" />
                     <span class="button-text">Confirmer</span>
                 </button>
             </div>
