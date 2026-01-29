@@ -17,8 +17,9 @@ export default class extends Controller {
     // On déclare un "outlet" pour le contrôleur 'modal' qui gère le cadre.
     static outlets = ['modal'];
     static targets = [
-        'content', 'formRow', 'dynamicFieldContainer',
-        'header', 'title', 'titleIcon', 'closeButton', 'progressBarContainer', 'footer', 'feedbackContainer', 'submitButton', 'closeFooterButton'
+        'content', 'formRow', 'dynamicFieldContainer', 'header', 'title', 'titleIcon', 
+        'closeButton', 'progressBarContainer', 'footer', 'feedbackContainer', 'submitButton', 
+        'closeFooterButton', 'saveIcon', 'closeIcon'
     ];
     
 
@@ -54,6 +55,7 @@ export default class extends Controller {
         this.boundHandleIconLoaded = this.handleIconLoaded.bind(this);
         document.addEventListener('app:icon.loaded', this.boundHandleIconLoaded);
         document.addEventListener('app:dialog.do-close', this.boundDoClose);
+        this.requestButtonIcons();
 
         if (detail) {
             // On encapsule l'appel asynchrone pour gérer les erreurs d'initialisation.
@@ -227,6 +229,26 @@ export default class extends Controller {
     }
 
     /**
+     * NOUVEAU: Demande au cerveau de charger les icônes pour les boutons du footer.
+     */
+    requestButtonIcons() {
+        if (this.hasSaveIconTarget) {
+            this.notifyCerveau('ui:icon.request', {
+                iconName: 'action:save',
+                iconSize: 20,
+                requesterId: this.dialogId + '-save' // ID unique pour cette requête d'icône
+            });
+        }
+        if (this.hasCloseIconTarget) {
+            this.notifyCerveau('ui:icon.request', {
+                iconName: 'action:close',
+                iconSize: 20,
+                requesterId: this.dialogId + '-close' // ID unique
+            });
+        }
+    }
+
+    /**
      * NOUVEAU: Gère la réception du HTML de l'icône et l'injecte.
      * @param {CustomEvent} event
      */
@@ -236,6 +258,14 @@ export default class extends Controller {
         // On s'assure que l'icône est bien pour cette instance de dialogue
         if (requesterId === this.dialogId && this.hasTitleIconTarget) {
             this.titleIconTarget.innerHTML = html;
+        }
+
+        // NOUVEAU : Gère les icônes des boutons
+        if (requesterId === this.dialogId + '-save' && this.hasSaveIconTarget) {
+            this.saveIconTarget.innerHTML = html;
+        }
+        if (requesterId === this.dialogId + '-close' && this.hasCloseIconTarget) {
+            this.closeIconTarget.innerHTML = html;
         }
     }
 
