@@ -27,7 +27,7 @@ class RisqueEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Risque",
-                "icone" => "mdi:shield-alert-outline",
+                "icone" => "risque",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Risque [[*nomComplet]] (Code: [[code]]).",

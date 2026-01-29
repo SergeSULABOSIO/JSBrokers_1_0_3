@@ -39,7 +39,7 @@ class DocumentEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Document",
-                "icone" => "mdi:file-document-outline",
+                "icone" => "document",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => ["Document: [[*nom]]. Parent: [[parent_string]]. Fichier: [[nomFichierStocke]]."]
             ],

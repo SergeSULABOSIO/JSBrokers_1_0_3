@@ -26,7 +26,7 @@ class TrancheEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Tranche de Paiement",
-                "icone" => "mdi:chart-pie-outline",
+                "icone" => "tranche",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Tranche [[*nom]] pour la cotation [[cotation]].",

@@ -38,7 +38,7 @@ class EntrepriseEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Entreprise",
-                "icone" => "mdi:office-building-outline",
+                "icone" => "entreprise",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Entreprise [[*nom]].",

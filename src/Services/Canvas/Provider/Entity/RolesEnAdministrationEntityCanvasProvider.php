@@ -44,7 +44,7 @@ class RolesEnAdministrationEntityCanvasProvider implements EntityCanvasProviderI
         return [
             "parametres" => [
                 "description" => "Rôle en Administration",
-                "icone" => "mdi:account-cog-outline",
+                "icone" => "action:role",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Rôle Administration: [[*nom]].",

@@ -28,7 +28,7 @@ class OffreIndemnisationSinistreEntityCanvasProvider implements EntityCanvasProv
         return [
             "parametres" => [
                 "description" => "Offre d'indemnisation",
-                "icone" => "mdi:cash-check",
+                "icone" => "offre",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Offre [[*nom]] pour le sinistre [[notificationSinistre]].",

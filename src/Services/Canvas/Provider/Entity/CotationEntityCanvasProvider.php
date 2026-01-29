@@ -32,7 +32,7 @@ class CotationEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Cotation",
-                "icone" => "mdi:file-document-outline",
+                "icone" => "cotation",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Cotation [[*nom]] pour la piste [[piste]].",

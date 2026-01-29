@@ -27,7 +27,7 @@ class ConditionPartageEntityCanvasProvider implements EntityCanvasProviderInterf
         return [
             "parametres" => [
                 "description" => "Condition de Partage",
-                "icone" => "mdi:share-variant",
+                "icone" => "condition",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Condition de partage: [[*nom]] pour le partenaire [[partenaire]].",

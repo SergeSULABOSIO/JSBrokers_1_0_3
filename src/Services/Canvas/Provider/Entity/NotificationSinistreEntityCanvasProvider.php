@@ -32,7 +32,7 @@ class NotificationSinistreEntityCanvasProvider implements EntityCanvasProviderIn
         return [
             "parametres" => [
                 "description" => "Déclaration de Sinistre",
-                "icone" => "mdi:alert-decagram-outline",
+                "icone" => "sinistre",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Sinistre [[*referenceSinistre]] pour l'assuré [[assure]].",

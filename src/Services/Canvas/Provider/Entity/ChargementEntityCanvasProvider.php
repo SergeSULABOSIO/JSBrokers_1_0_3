@@ -26,7 +26,7 @@ class ChargementEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Type de chargement",
-                "icone" => "mdi:cog-transfer",
+                "icone" => "chargement",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Type de chargement : [[*nom]].",

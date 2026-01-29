@@ -26,7 +26,7 @@ class ContactEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Contact",
-                "icone" => "mdi:account-box-outline",
+                "icone" => "contact",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Contact [[*nom]] ([[fonction]]).",

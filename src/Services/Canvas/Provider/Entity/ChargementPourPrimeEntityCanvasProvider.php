@@ -26,7 +26,7 @@ class ChargementPourPrimeEntityCanvasProvider implements EntityCanvasProviderInt
         return [
             "parametres" => [
                 "description" => "Chargement sur Prime",
-                "icone" => "mdi:cash-plus",
+                "icone" => "chargement",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Chargement [[*nom]] d'un montant de [[montantFlatExceptionel]]",

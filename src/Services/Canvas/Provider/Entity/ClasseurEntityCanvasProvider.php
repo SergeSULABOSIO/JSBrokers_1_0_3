@@ -25,7 +25,7 @@ class ClasseurEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Classeur",
-                "icone" => "mdi:folder-multiple",
+                "icone" => "classeur",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Classeur: [[*nom]].",

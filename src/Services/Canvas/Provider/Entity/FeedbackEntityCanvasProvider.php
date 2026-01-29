@@ -27,7 +27,7 @@ class FeedbackEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Feedback",
-                "icone" => "mdi:message-reply-text-outline",
+                "icone" => "feedback",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Feedback du [[createdAt]] par [[invite]].",

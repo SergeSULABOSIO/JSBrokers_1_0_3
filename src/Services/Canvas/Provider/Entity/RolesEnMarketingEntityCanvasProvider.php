@@ -44,7 +44,7 @@ class RolesEnMarketingEntityCanvasProvider implements EntityCanvasProviderInterf
         return [
             "parametres" => [
                 "description" => "Rôle en Marketing",
-                "icone" => "mdi:bullhorn-outline",
+                "icone" => "action:role",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Rôle Marketing: [[*nom]].",
