@@ -26,7 +26,7 @@ class AutoriteFiscaleEntityCanvasProvider implements EntityCanvasProviderInterfa
         return [
             "parametres" => [
                 "description" => "Autorité Fiscale",
-                "icone" => "mdi:bank",
+                "icone" => "autorite-fiscale",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "L'autorité fiscale [[*nom]] ([[abreviation]]) est responsable de la collecte des taxes."

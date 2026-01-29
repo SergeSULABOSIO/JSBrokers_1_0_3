@@ -26,7 +26,7 @@ class AvenantEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Avenant",
-                "icone" => "mdi:file-document-edit",
+                "icone" => "avenant",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Avenant n°[[*numero]] de la police [[referencePolice]].",

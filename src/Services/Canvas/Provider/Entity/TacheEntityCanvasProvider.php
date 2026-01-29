@@ -31,7 +31,7 @@ class TacheEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Tâche",
-                "icone" => "mdi:checkbox-marked-circle-outline",
+                "icone" => "tache",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Tâche: [[*description]].",

@@ -38,6 +38,7 @@ class IconCanvasProvider
         'sinistre'        => 'hugeicons:accident',
         'tache'           => 'hugeicons:task-02',
         'taxe'            => 'hugeicons:percentage-01',
+        'tranche'         => 'hugeicons:pie-chart-03',
         'type-revenu'     => 'hugeicons:money-bag-01',
         'utilisateur'     => 'raphael:user',
         'default'         => 'hugeicons:file-05', // Icône par défaut

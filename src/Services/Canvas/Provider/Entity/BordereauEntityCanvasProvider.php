@@ -26,7 +26,7 @@ class BordereauEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Bordereau",
-                "icone" => "mdi:file-table-box-multiple",
+                "icone" => "bordereau",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Bordereau [[*nom]] de l'assureur [[assureur]]",

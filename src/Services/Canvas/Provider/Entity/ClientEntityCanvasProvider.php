@@ -30,7 +30,7 @@ class ClientEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Client",
-                "icone" => "mdi:account-group",
+                "icone" => "client",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Client [[*nom]].",

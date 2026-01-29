@@ -26,7 +26,7 @@ class ModelePieceSinistreEntityCanvasProvider implements EntityCanvasProviderInt
         return [
             "parametres" => [
                 "description" => "Modèle de Pièce Sinistre",
-                "icone" => "mdi:file-document-outline",
+                "icone" => "modele-piece",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Modèle de pièce: [[*nom]].",

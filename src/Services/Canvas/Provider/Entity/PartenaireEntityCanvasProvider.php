@@ -29,7 +29,7 @@ class PartenaireEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Partenaire",
-                "icone" => "mdi:account-multiple-outline",
+                "icone" => "partenaire",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Partenaire [[*nom]].",

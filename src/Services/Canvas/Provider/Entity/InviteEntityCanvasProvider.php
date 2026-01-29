@@ -37,7 +37,7 @@ class InviteEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Collaborateur (Invité)",
-                "icone" => "mdi:account-key-outline",
+                "icone" => "invite",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Collaborateur [[*nom]] ([[email]]).",

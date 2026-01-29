@@ -26,7 +26,7 @@ class CompteBancaireEntityCanvasProvider implements EntityCanvasProviderInterfac
         return [
             "parametres" => [
                 "description" => "Compte Bancaire",
-                "icone" => "mdi:bank",
+                "icone" => "compte-bancaire",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Compte [[*nom]] - [[banque]].",

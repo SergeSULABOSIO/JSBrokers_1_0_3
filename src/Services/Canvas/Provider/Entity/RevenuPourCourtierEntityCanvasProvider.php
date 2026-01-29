@@ -27,7 +27,7 @@ class RevenuPourCourtierEntityCanvasProvider implements EntityCanvasProviderInte
         return [
             "parametres" => [
                 "description" => "Revenu pour Courtier",
-                "icone" => "mdi:cash-register",
+                "icone" => "revenu",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Revenu [[*nom]] sur la cotation [[cotation]].",

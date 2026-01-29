@@ -30,7 +30,7 @@ class PieceSinistreEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Pièce Sinistre",
-                "icone" => "mdi:file-document-outline",
+                "icone" => "piece-sinistre",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => ["Pièce: [[description]]. Reçue le [[receivedAt|date('d/m/Y')]]. Fournie par [[fourniPar]]."]
             ],

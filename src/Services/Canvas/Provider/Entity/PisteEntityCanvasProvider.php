@@ -33,7 +33,7 @@ class PisteEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Piste Commerciale",
-                "icone" => "mdi:chart-timeline-variant",
+                "icone" => "piste",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Piste [[*nom]] pour le client [[client]].",

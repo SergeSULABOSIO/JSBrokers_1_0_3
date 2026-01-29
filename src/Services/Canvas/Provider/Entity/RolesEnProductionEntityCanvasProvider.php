@@ -49,7 +49,7 @@ class RolesEnProductionEntityCanvasProvider implements EntityCanvasProviderInter
         return [
             "parametres" => [
                 "description" => "Rôle en Production",
-                "icone" => "mdi:account-hard-hat-outline",
+                "icone" => "action:role",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Rôle Production: [[*nom]].",

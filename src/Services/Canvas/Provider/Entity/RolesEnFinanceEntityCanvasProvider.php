@@ -51,7 +51,7 @@ class RolesEnFinanceEntityCanvasProvider implements EntityCanvasProviderInterfac
         return [
             "parametres" => [
                 "description" => "Rôle en Finance",
-                "icone" => "mdi:cash-multiple",
+                "icone" => "action:role",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Rôle Finance: [[*nom]].",

@@ -18,7 +18,7 @@ class GroupeEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Groupe de clients",
-                "icone" => "mdi:account-group-outline",
+                "icone" => "groupe",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Groupe [[nom]].",

@@ -32,7 +32,7 @@ class NoteEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Note de Débit/Crédit",
-                "icone" => "mdi:file-document-multiple-outline",
+                "icone" => "note",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Note [[*reference]] - [[nom]].",
