@@ -907,10 +907,10 @@ export default class extends Controller {
         const { iconName, iconSize = 24, requesterId } = payload;
         if (!iconName) return;
 
-        // Pour éviter les problèmes de routage avec le caractère ':', on le remplace par un tiret.
-        // Le contrôleur PHP se chargera de faire la transformation inverse.
-        const safeIconName = iconName.replace(/:/g, '-');
-        const url = `/api/icon/${safeIconName}/${iconSize}`;
+        // NOUVELLE APPROCHE : On passe les paramètres dans la query string pour une robustesse maximale.
+        // `encodeURIComponent` s'assure que les caractères spéciaux comme ':' sont correctement formatés
+        // pour être passés dans une URL.
+        const url = `/api/icon?name=${encodeURIComponent(iconName)}&size=${iconSize}`;
     
         try {
             const response = await fetch(url);
