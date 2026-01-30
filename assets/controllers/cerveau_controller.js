@@ -906,8 +906,10 @@ export default class extends Controller {
     async handleIconRequest(payload) {
         const { iconName, iconSize = 24, requesterId } = payload;
         if (!iconName) return;
-    
-        const url = `/api/icon/${iconName}/${iconSize}`;
+
+        // On encode le nom de l'icône pour s'assurer que les caractères spéciaux comme ':' sont correctement gérés dans l'URL.
+        const encodedIconName = encodeURIComponent(iconName);
+        const url = `/api/icon/${encodedIconName}/${iconSize}`;
     
         try {
             const response = await fetch(url);
