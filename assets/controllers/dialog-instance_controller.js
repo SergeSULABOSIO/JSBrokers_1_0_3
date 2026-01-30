@@ -675,33 +675,42 @@ export default class extends Controller {
      * @param {boolean} isLoading - `true` pour afficher l'état de chargement, `false` sinon.
      */
     toggleLoading(isLoading) {
-        // On cherche le bouton manuellement juste quand on en a besoin
-        const button = this.submitButtonTarget;
+        // Gère le bouton de soumission
+        if (this.hasSubmitButtonTarget) {
+            const submitButton = this.submitButtonTarget;
+            const submitSpinner = submitButton.querySelector('.spinner-border');
+            const submitIcon = submitButton.querySelector('.button-icon');
+            const submitText = submitButton.querySelector('.button-text');
 
-        if (!button) return;
-        button.disabled = isLoading;
-        const spinner = button.querySelector('.spinner-border');
-        const icon = button.querySelector('.button-icon');
-        const text = button.querySelector('.button-text');
-
-        if (isLoading) {
-            button.disabled = true;
-            spinner.style.display = 'inline-block';
-            icon.style.display = 'none';
-            text.textContent = 'Enregistrement...';
-        } else {
-            button.disabled = false;
-            spinner.style.display = 'none';
-            icon.style.display = 'inline-block';
-            text.textContent = 'Enregistrer';
+            submitButton.disabled = isLoading;
+            if (submitSpinner) {
+                submitSpinner.style.display = isLoading ? 'inline-block' : 'none';
+            }
+            if (submitIcon) {
+                submitIcon.style.display = isLoading ? 'none' : 'inline-block';
+            }
+            if (submitText) {
+                submitText.textContent = isLoading ? 'Enregistrement...' : 'Enregistrer';
+            }
         }
-        // --- AJOUT : Gère les autres boutons (Fermer, X) ---
-        // CORRECTION : S'assurer que les cibles existent avant de les utiliser
-        const closeButtons = [this.hasCloseButtonTarget && this.closeButtonTarget, this.hasCloseFooterButtonTarget && this.closeFooterButtonTarget].filter(Boolean);
 
-        closeButtons.forEach(btn => {
-            btn.disabled = isLoading;
-        });
+        // Gère les boutons de fermeture (en-tête et pied de page)
+        if (this.hasCloseButtonTarget) {
+            this.closeButtonTarget.disabled = isLoading;
+        }
+        if (this.hasCloseFooterButtonTarget) {
+            const closeFooterButton = this.closeFooterButtonTarget;
+            const closeIcon = closeFooterButton.querySelector('.button-icon');
+            const closeText = closeFooterButton.querySelector('span:not(.button-icon)'); // Assuming the text is the other span
+            
+            closeFooterButton.disabled = isLoading;
+            if (closeIcon) {
+                closeIcon.style.display = isLoading ? 'none' : 'inline-block';
+            }
+            if (closeText) {
+                closeText.textContent = isLoading ? 'Fermeture...' : 'Fermer';
+            }
+        }
     }
 
     /**
