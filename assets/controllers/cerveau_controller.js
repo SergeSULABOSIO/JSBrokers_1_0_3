@@ -836,6 +836,9 @@ export default class extends Controller {
     async handleDialogContentRequest(detail) {
         const { dialogId, endpoint, entity, context, entityFormCanvas } = detail.payload;
 
+        // DIAGNOSTIC : On affiche la structure de l'objet pour vérifier la présence de la clé 'icone'.
+        console.log(`[Cerveau - DIAGNOSTIC] Structure de 'entityFormCanvas' pour le dialogue '${dialogId}':`, entityFormCanvas);
+
         try {
             // 1. On commence avec l'URL de base
             let urlString = endpoint;
