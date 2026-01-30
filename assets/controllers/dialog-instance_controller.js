@@ -701,14 +701,14 @@ export default class extends Controller {
         if (this.hasCloseFooterButtonTarget) {
             const closeFooterButton = this.closeFooterButtonTarget;
             const closeIcon = closeFooterButton.querySelector('.button-icon');
-            const closeText = closeFooterButton.querySelector('span:not(.button-icon)'); // Assuming the text is the other span
+            const closeText = closeFooterButton.querySelector('.button-text');
             
             closeFooterButton.disabled = isLoading;
             if (closeIcon) {
                 closeIcon.style.display = isLoading ? 'none' : 'inline-block';
             }
             if (closeText) {
-                closeText.textContent = isLoading ? 'Fermeture...' : 'Fermer';
+                closeText.textContent = isLoading ? 'Patientez...' : 'Fermer';
             }
         }
     }
