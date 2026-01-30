@@ -8,14 +8,13 @@ use Symfony\Component\Routing\Annotation\Route;
 use App\Services\Canvas\Provider\Icon\IconCanvasProvider;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
-#[Route('/api')]
 class IconController extends AbstractController
 {
     public function __construct(private IconCanvasProvider $iconCanvasProvider)
     {
     }
 
-    #[Route('/icon', name: 'api_get_icon', methods: ['GET'])]
+    #[Route('/api/icon', name: 'api_get_icon', methods: ['GET'])]
     public function getIcon(Request $request): Response
     {
         $alias = $request->query->get('name');
