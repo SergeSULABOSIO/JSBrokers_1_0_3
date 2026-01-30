@@ -36,7 +36,7 @@ export default class extends Controller {
                             <span data-dialog-instance-target="titleIcon" class="me-2"></span>
                             <span data-dialog-instance-target="title"><div class="skeleton-line" style="width: 250px; height: 24px;"></div></span>
                         </h5>
-                        <button type="button" class="btn-close" data-dialog-instance-target="closeButton" disabled></button> 
+                        <button type="button" class="btn-close" data-action="click->dialog-instance#close" data-dialog-instance-target="closeButton" disabled></button> 
                     </div>
                     <div class="dialog-progress-container is-loading" data-dialog-instance-target="progressBarContainer"> 
                         <div class="dialog-progress-bar" role="progressbar"></div>
@@ -52,7 +52,7 @@ export default class extends Controller {
                         </div>
                         <button type="button" class="btn btn-secondary" data-action="click->dialog-instance#close" data-dialog-instance-target="closeFooterButton"> 
                             <span class="button-icon" data-dialog-instance-target="closeIcon"></span>
-                            <span>Fermer</span>
+                            <span class="button-text">Fermer</span>
                         </button>
                         <button type="button" class="btn btn-primary" data-action="click->dialog-instance#triggerSubmit" data-dialog-instance-target="submitButton"> 
                             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
