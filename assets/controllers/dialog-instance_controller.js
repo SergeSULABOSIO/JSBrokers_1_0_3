@@ -253,19 +253,36 @@ export default class extends Controller {
      * @param {CustomEvent} event
      */
     handleIconLoaded(event) {
-        const { html, requesterId } = event.detail;
-
-        // On s'assure que l'icône est bien pour cette instance de dialogue
-        if (requesterId === this.dialogId && this.hasTitleIconTarget) {
-            this.titleIconTarget.innerHTML = html;
+        const { html, requesterId, iconName } = event.detail;
+    
+        // Si le HTML est vide ou n'est qu'un commentaire d'erreur, on ne fait rien.
+        if (!html || html.trim().startsWith('<!--')) {
+            console.warn(`[Dialog-Instance] HTML vide ou d'erreur reçu pour l'icône '${iconName}' (requester: ${requesterId}).`);
+            return;
         }
-
-        // NOUVEAU : Gère les icônes des boutons
-        if (requesterId === this.dialogId + '-save' && this.hasSaveIconTarget) {
-            this.saveIconTarget.innerHTML = html;
+    
+        let targetElement = null;
+    
+        // On détermine la cible en fonction de l'ID de la requête
+        if (requesterId === this.dialogId) {
+            targetElement = this.hasTitleIconTarget ? this.titleIconTarget : null;
+        } else if (requesterId === this.dialogId + '-save') {
+            targetElement = this.hasSaveIconTarget ? this.saveIconTarget : null;
+        } else if (requesterId === this.dialogId + '-close') {
+            targetElement = this.hasCloseIconTarget ? this.closeIconTarget : null;
         }
-        if (requesterId === this.dialogId + '-close' && this.hasCloseIconTarget) {
-            this.closeIconTarget.innerHTML = html;
+    
+        // Si une cible a été trouvée, on injecte l'icône de manière robuste.
+        if (targetElement) {
+            // On vide la cible pour éviter les doublons.
+            targetElement.innerHTML = '';
+            // On utilise un <template> pour parser le HTML de manière sûre.
+            const template = document.createElement('template');
+            template.innerHTML = html.trim();
+            // On ajoute le premier élément parsé (le <svg>) à la cible.
+            if (template.content.firstChild) {
+                targetElement.appendChild(template.content.firstChild);
+            }
         }
     }
 
@@ -679,7 +696,7 @@ export default class extends Controller {
         if (this.hasSubmitButtonTarget) {
             const submitButton = this.submitButtonTarget;
             const submitSpinner = submitButton.querySelector('.spinner-border');
-            const submitIcon = submitButton.querySelector('.button-icon');
+            const submitIcon = this.hasSaveIconTarget ? this.saveIconTarget : null;
             const submitText = submitButton.querySelector('.button-text');
 
             submitButton.disabled = isLoading;
@@ -687,7 +704,7 @@ export default class extends Controller {
                 submitSpinner.style.display = isLoading ? 'inline-block' : 'none';
             }
             if (submitIcon) {
-                submitIcon.style.display = isLoading ? 'none' : 'inline-block';
+                submitIcon.style.display = isLoading ? 'none' : ''; // On utilise '' pour revenir au style par défaut du navigateur/CSS
             }
             if (submitText) {
                 submitText.textContent = isLoading ? 'Enregistrement...' : 'Enregistrer';
@@ -700,12 +717,12 @@ export default class extends Controller {
         }
         if (this.hasCloseFooterButtonTarget) {
             const closeFooterButton = this.closeFooterButtonTarget;
-            const closeIcon = closeFooterButton.querySelector('.button-icon');
+            const closeIcon = this.hasCloseIconTarget ? this.closeIconTarget : null;
             const closeText = closeFooterButton.querySelector('.button-text');
             
             closeFooterButton.disabled = isLoading;
             if (closeIcon) {
-                closeIcon.style.display = isLoading ? 'none' : 'inline-block';
+                closeIcon.style.display = isLoading ? 'none' : ''; // On utilise '' pour revenir au style par défaut du navigateur/CSS
             }
             if (closeText) {
                 closeText.textContent = isLoading ? 'Patientez...' : 'Fermer';
