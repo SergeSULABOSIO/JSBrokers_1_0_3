@@ -42,7 +42,7 @@
         "symfony/twig-bundle": "7.1.*",
         "symfony/ux-autocomplete": "^2.29",
         "symfony/ux-chartjs": "^2.21",
-        "symfony/ux-icons": "^2.22",
+        "symfony/ux-icons": "^2.32",
         "symfony/ux-toggle-password": "^2.20",
         "symfony/ux-twig-component": "^2.27",
         "symfony/validator": "7.1.*",
