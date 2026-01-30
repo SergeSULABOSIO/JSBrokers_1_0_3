@@ -8,7 +8,7 @@ use Symfony\Component\Routing\Annotation\Route;
 use App\Services\Canvas\Provider\Icon\IconCanvasProvider;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
-#[Route("/icon", name: 'icon.')]
+#[Route("/api/icon", name: 'icon.')]
 class IconController extends AbstractController
 {
     public function __construct(private IconCanvasProvider $iconCanvasProvider)
