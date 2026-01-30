@@ -2,6 +2,7 @@
 
 namespace App\Controller\Api;
 
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use App\Services\Canvas\Provider\Icon\IconCanvasProvider;
@@ -14,29 +15,30 @@ class IconController extends AbstractController
     {
     }
 
-    #[Route('/icon/{name}/{size}', name: 'api_get_icon', methods: ['GET'])]
-    public function getIcon(string $name, int $size = 24): Response
+    #[Route('/icon', name: 'api_get_icon', methods: ['GET'])]
+    public function getIcon(Request $request): Response
     {
-        $alias = $name;
-        // On ne reconstruit l'alias que pour les actions, qui sont les seules à utiliser le format 'prefix:value'.
-        // Par exemple, 'action-save' devient 'action:save'.
-        // Les autres alias comme 'client' ou 'compte-bancaire' ne sont pas affectés.
-        if (str_starts_with($name, 'action-')) {
-            $alias = str_replace('-', ':', $name);
+        $alias = $request->query->get('name');
+        $size = $request->query->get('size', 24);
+
+        // Sécurité : si le nom de l'icône est manquant, on retourne une erreur.
+        if (!$alias) {
+            return new Response('<!-- Icon name missing -->', Response::HTTP_BAD_REQUEST);
         }
 
         // Résout l'alias (ex: 'assureur') en son vrai nom (ex: 'wpf:security-checked')
         $realIconName = $this->iconCanvasProvider->resolveIconName($alias);
 
         // Si aucun alias n'a été trouvé, on suppose que le nom fourni est déjà le vrai nom.
+        // Cela permet de gérer à la fois les alias ('action:save') et les noms directs ('bi:trash').
         if (!$realIconName) {
-            $realIconName = $name; // On utilise le nom d'origine (ex: 'compte-bancaire')
+            $realIconName = $alias;
         }
 
         // On rend un template générique qui utilise ux_icon avec le nom résolu.
         return $this->render('segments/icones/_generic_icon.html.twig', [
             'icon_name' => $realIconName, 
-            'size' => $size . 'px'
+            'size' => (int)$size . 'px'
         ]);
     }
 }
