@@ -542,7 +542,7 @@ export default class extends Controller {
      */
     _getSkeletonHtml(message) {
         return `
-            <div class="row">
+            <div class="row gx-0">
                 <div class="col-auto calculated-attributes-column-skeleton" style="width: 400px;">
                     <h5 class="column-title">
                         <div class="skeleton-line" style="width: 180px; height: 20px;"></div>
