@@ -500,7 +500,7 @@ textarea:hover,
 /* 4. CORPS ET DÉFILEMENT */
 .app-dialog .modal-body {
     /* CORRECTION : On empêche le corps lui-même de défiler pour permettre aux colonnes internes de le faire. */
-    overflow: hidden;
+    overflow: scroll;
     padding: 1rem; /* Crée une gouttière grise autour des colonnes. */
     background-color: #f0f0f0;
     display: flex; /* Pour que l'enfant .row puisse prendre 100% de la hauteur. */
@@ -850,7 +850,7 @@ textarea:hover,
 
 /* NOUVEAU : Ajoute une délimitation visuelle pour chaque champ dans un formulaire de dialogue. */
 .form-column .mb-3 {
-    margin-bottom: 0.5rem !important; /* CORRECTION : Gouttière verticale encore réduite pour un look plus aéré. */
+    margin-bottom: 0rem !important; /* CORRECTION : Gouttière verticale encore réduite pour un look plus aéré. */
     padding: 0.75rem;
     border-radius: var(--bs-border-radius-sm);
     background-color: #ffffff; /* Assure un fond blanc propre */
