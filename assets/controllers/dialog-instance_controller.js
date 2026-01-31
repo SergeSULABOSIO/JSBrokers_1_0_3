@@ -568,7 +568,7 @@ export default class extends Controller {
                         </ul>
                     </div>
                 </div>
-                <div class="col form-column-skeleton" style="padding: 1.5rem;">
+                <div class="col form-column-skeleton">
                     <div class="text-center text-muted mb-4">
                         <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
                         <span class="ms-2">${message}</span>
