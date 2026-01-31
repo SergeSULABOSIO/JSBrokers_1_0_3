@@ -484,9 +484,9 @@ textarea:hover,
 
 /* 4. CORPS ET DÉFILEMENT */
 .app-dialog .modal-body {
-    /* CORRECTION : On transforme le corps en conteneur flex pour découpler le scroll des colonnes. */
+    /* CORRECTION : On transforme le corps en conteneur flex pour découpler le défilement des colonnes. */
     display: flex;
-    padding: 0; /* Le padding est maintenant géré par les colonnes internes. */
+    padding: 0; /* Nécessaire pour le layout flex. Les gouttières sont gérées par les marges des colonnes. */
     background-color: #f0f0f0;
 }
 
@@ -752,6 +752,9 @@ textarea:hover,
 
     /* Rendre la colonne un conteneur flex vertical pour gérer le défilement interne */
     flex-direction: column;
+    /* NOUVEAU : On utilise les marges pour créer les gouttières externes et l'espacement. */
+    margin: 1rem;
+    margin-right: 0.5rem; /* Demi-espace entre les colonnes. */
 }
 
 /* On affiche la colonne SEULEMENT si on est en mode édition ET qu'elle a du contenu */
@@ -775,11 +778,8 @@ textarea:hover,
 .calculated-attributes-content {
     flex-grow: 1;
     overflow-y: auto;
-    /* NOUVEAU : Ajout pour éviter les problèmes de dépassement de flexbox. */
     min-height: 0;
-    /* NOUVEAU : Ajout d'un léger padding à droite pour ne pas que la barre de défilement colle au texte */
     padding-right: 10px;
-    /* NOUVEAU : Marge négative pour compenser le padding et maintenir l'alignement visuel */
     margin-right: -10px;
 }
 .calculated-attributes-list {
@@ -810,9 +810,16 @@ textarea:hover,
 
 /* --- Colonne de droite (Formulaire) --- */
 .form-column {
+    /* La colonne de formulaire est maintenant un item flex qui grandit. */
+    flex: 1;
+    min-width: 0; /* Fix pour les dépassements de contenu flex. */
     padding: 1.5rem;
-    /* NOUVEAU : La colonne de formulaire doit aussi pouvoir défiler indépendamment. */
     overflow-y: auto;
+    /* NOUVEAU : On utilise les marges pour créer les gouttières et l'espacement. */
+    margin: 1rem;
+    margin-left: 0.5rem; /* Demi-espace entre les colonnes. */
+    background-color: #ffffff; /* Fond blanc pour délimiter la zone. */
+    border-radius: var(--bs-border-radius);
 }
 
 /*
