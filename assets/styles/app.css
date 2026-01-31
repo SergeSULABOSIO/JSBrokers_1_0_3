@@ -448,9 +448,7 @@ textarea:hover,
     /* NOUVEAU : On force le contenu à être un conteneur flex vertical. */
     /* Cela permet au .modal-body de grandir pour remplir l'espace et de contenir des colonnes défilantes. */
     display: flex;
-    flex-direction: column;
-    /* La hauteur est déjà gérée par .modal-dialog-scrollable, mais on s'assure qu'elle est bien définie. */
-    height: 100%;
+    flex-direction: column; /* La hauteur est gérée par .modal-dialog-scrollable */
 }
 
 .app-dialog .modal-header {
@@ -505,8 +503,8 @@ textarea:hover,
     padding: 1rem; /* Crée une gouttière grise autour des colonnes. */
     background-color: #f0f0f0;
     display: flex; /* Pour que l'enfant .row puisse prendre 100% de la hauteur. */
-    flex-grow: 1; /* NOUVEAU : Permet au corps de s'étirer pour remplir l'espace vertical. */
-    min-height: 0; /* NOUVEAU : Correctif flex crucial pour permettre le défilement interne. */
+    flex: 1; /* CORRECTION : Utiliser flex: 1 pour que le corps remplisse l'espace vertical disponible. */
+    min-height: 0; /* Correctif flex crucial pour permettre le défilement interne. */
 }
 
 #confirmation-dialog-modal .modal-body {
@@ -862,6 +860,12 @@ textarea:hover,
 /* NOUVEAU : Améliore l'UX en surlignant le bloc entier lorsque l'un de ses champs a le focus. */
 .form-column .mb-3:focus-within {
     box-shadow: 0 0 0 1px var(--bs-primary), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* NOUVEAU : Réduction des gouttières horizontales dans les formulaires de dialogue. */
+.form-column .row,
+.form-column-skeleton .row {
+    --bs-gutter-x: 0.5rem; /* Réduit la gouttière par défaut de 1rem (gx-3) à 0.5rem. */
 }
 
 
