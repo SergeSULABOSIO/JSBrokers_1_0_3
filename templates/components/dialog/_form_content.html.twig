@@ -4,7 +4,7 @@
     ? formCanvas.parametres.titre_creation
     : formCanvas.parametres.titre_modification|replace({'%id%': entity.id})
 %}
-    <div class="row gx-0">
+    <div class="row gx-0" data-icon-name="{{ entityCanvas.parametres.icone|default('') }}">
         {# La colonne des attributs est incluse ici et gère sa propre classe de colonne (ex: col-auto) #}
         {% include 'components/dialog/_calculated_attributes.html.twig' with { entity: entity, canvas: entityCanvas } %}
 

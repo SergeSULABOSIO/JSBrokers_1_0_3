@@ -875,14 +875,18 @@ export default class extends Controller {
 
             const html = await response.text();
 
+            // On crée un conteneur temporaire pour pouvoir interroger le HTML sans l'ajouter au DOM.
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+            const contentRoot = tempDiv.querySelector('[data-icon-name]');
+            const icon = contentRoot ? contentRoot.dataset.iconName : null; // Extraction de l'alias !
+
+
             // NOUVEAU : Déterminer le titre correct en fonction du mode (création/édition)
             const isCreationMode = !(entity && entity.id);
             let title = isCreationMode
                 ? (entityFormCanvas.parametres.titre_creation || "Création")
                 : (entityFormCanvas.parametres.titre_modification || "Modification de l'élément #%id%").replace('%id%', entity.id);
-
-            // NOUVEAU : Extraire l'icône du canvas
-            const icon = entityFormCanvas.parametres.icone || null;
 
             // On renvoie le contenu à l'instance de dialogue qui l'a demandé
             this.broadcast('ui:dialog.content-ready', {

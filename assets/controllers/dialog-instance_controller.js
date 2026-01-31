@@ -177,7 +177,7 @@ export default class extends Controller {
             // On ne construit plus l'icône ici. On demande au cerveau de la fournir.
             this.notifyCerveau('ui:icon.request', {
                 iconName: icon,
-                iconSize: 28, // Taille adaptée pour un titre de dialogue
+                iconSize: 25, // Taille adaptée pour un titre de dialogue
                 requesterId: this.dialogId // Pour que la réponse nous soit bien destinée
             });
         }
