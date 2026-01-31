@@ -104,7 +104,7 @@ export default class extends Controller {
         this._logState('start', '1986', detail);
         console.log(`[${++window.logSequence}] - [${this.nomControleur}] - [start] - Code: 1986 - Start - Context:`, detail.context, this.context);
         // Charge le contenu complet depuis le serveur
-        this.loadContent();
+        this.loadContent(true);
     }
 
 
@@ -114,14 +114,17 @@ export default class extends Controller {
      * Notifie le cerveau une fois le chargement terminé.
      * @private
      */
-    loadContent() {
+    loadContent(isInitialLoad = false) {
         this._logState("loadContent", "1986", this.detail);
         console.log(`${this.nomControleur} - loadContent() - Demande de contenu pour ${this.dialogId}`);
 
-        // Afficher les squelettes dans l'en-tête et le pied de page
-        this.titleTarget.innerHTML = '<div class="skeleton-line" style="width: 250px; height: 24px;"></div>';
-        if (this.hasTitleIconTarget) {
-            this.titleIconTarget.innerHTML = ''; // Vider l'icône précédente
+        // NOUVEAU : On ne met à jour le squelette du titre et de l'icône que lors du chargement initial.
+        if (isInitialLoad) {
+            // Afficher les squelettes dans l'en-tête et le pied de page
+            this.titleTarget.innerHTML = '<div class="skeleton-line" style="width: 250px; height: 24px;"></div>';
+            if (this.hasTitleIconTarget) {
+                this.titleIconTarget.innerHTML = ''; // Vider l'icône précédente
+            }
         }
         this.closeButtonTarget.disabled = true; // Disable header close button
         this.submitButtonTarget.disabled = true; // Disable submit button
@@ -279,8 +282,10 @@ export default class extends Controller {
             // On ajoute le premier élément parsé (le <svg>) à la cible.
             if (template.content.firstChild) {
                 targetElement.appendChild(template.content.firstChild);
-                // On met le drapeau à jour pour ne plus redemander l'icône.
-                this.isTitleIconLoaded = true;
+                // CORRECTION : On ne met le drapeau à jour que si c'est l'icône du titre.
+                if (requesterId === this.dialogId) {
+                    this.isTitleIconLoaded = true;
+                }
             }
         }
     }
@@ -299,7 +304,7 @@ export default class extends Controller {
         // dans `handleContentReady` une fois le nouveau contenu chargé.
         mainDialogElement.classList.add('has-attributes-column');
 
-        this.loadContent(); // Redemande le contenu au Cerveau
+        this.loadContent();
     }
 
     /**
