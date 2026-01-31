@@ -484,10 +484,11 @@ textarea:hover,
 
 /* 4. CORPS ET DÉFILEMENT */
 .app-dialog .modal-body {
-    /* CORRECTION : On transforme le corps en conteneur flex pour découpler le défilement des colonnes. */
-    display: flex;
-    padding: 0; /* Nécessaire pour le layout flex. Les gouttières sont gérées par les marges des colonnes. */
+    /* NOUVEAU : On prépare le corps pour un layout flex enfant, avec un padding externe. */
+    overflow: hidden; /* On empêche le corps lui-même de défiler. */
+    padding: 1rem; /* Crée une gouttière grise autour des colonnes. */
     background-color: #f0f0f0;
+    display: flex; /* Pour que l'enfant .row puisse prendre 100% de la hauteur. */
 }
 
 #confirmation-dialog-modal .modal-body {
@@ -750,11 +751,9 @@ textarea:hover,
     /* Par défaut, la colonne est cachée */
     display: none;
 
-    /* Rendre la colonne un conteneur flex vertical pour gérer le défilement interne */
+    /* NOUVEAU : Comportement flex pour gérer le titre fixe et le contenu défilant. */
     flex-direction: column;
-    /* NOUVEAU : On utilise les marges pour créer les gouttières externes et l'espacement. */
-    margin: 1rem;
-    margin-right: 0.5rem; /* Demi-espace entre les colonnes. */
+    min-height: 0; /* Correctif crucial pour le dépassement de contenu dans un conteneur flex. */
 }
 
 /* On affiche la colonne SEULEMENT si on est en mode édition ET qu'elle a du contenu */
@@ -778,9 +777,7 @@ textarea:hover,
 .calculated-attributes-content {
     flex-grow: 1;
     overflow-y: auto;
-    min-height: 0;
-    padding-right: 10px;
-    margin-right: -10px;
+    min-height: 0; /* Autre correctif flex pour le défilement. */
 }
 .calculated-attributes-list {
     list-style: none;
@@ -810,16 +807,22 @@ textarea:hover,
 
 /* --- Colonne de droite (Formulaire) --- */
 .form-column {
-    /* La colonne de formulaire est maintenant un item flex qui grandit. */
+    /* NOUVEAU : La colonne de formulaire est un item flex qui grandit et défile. */
     flex: 1;
-    min-width: 0; /* Fix pour les dépassements de contenu flex. */
+    min-width: 0; /* Correctif flex pour empêcher le dépassement horizontal. */
     padding: 1.5rem;
     overflow-y: auto;
-    /* NOUVEAU : On utilise les marges pour créer les gouttières et l'espacement. */
-    margin: 1rem;
-    margin-left: 0.5rem; /* Demi-espace entre les colonnes. */
-    background-color: #ffffff; /* Fond blanc pour délimiter la zone. */
+    /* NOUVEAU : Fond blanc et coins arrondis pour un aspect "carte" dans le corps gris. */
+    background-color: #ffffff;
     border-radius: var(--bs-border-radius);
+}
+
+/* NOUVEAU : Cible la rangée (.row) à l'intérieur du corps de la modale pour en faire le conteneur flex principal. */
+.app-dialog .modal-body > .row {
+    flex: 1; /* La rangée prend toute la place dans le corps de la modale. */
+    display: flex;
+    gap: 1rem; /* Crée l'espacement entre les deux colonnes. */
+    min-height: 0; /* Correctif flex. */
 }
 
 /*
