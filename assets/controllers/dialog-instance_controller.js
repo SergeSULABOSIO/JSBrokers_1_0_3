@@ -43,6 +43,12 @@ export default class extends Controller {
          * @private
          */
         this.feedbackOnNextLoad = null;
+
+        /**
+         * @property {boolean} isTitleIconLoaded - Drapeau pour savoir si l'icône du titre a déjà été chargée.
+         * @private
+         */
+        this.isTitleIconLoaded = false;
         const detail = this.element.dialogDetail;
         console.log(`[${++window.logSequence}] - [${this.nomControleur}] - [connect] - Code: 1986 - Début - Données:`, detail, this.element, this.contentTarget);
         this.cetteApplication = this.application; 
@@ -123,8 +129,19 @@ export default class extends Controller {
 
         this.progressBarContainerTarget.classList.add('is-loading'); // Show progress bar
 
-        // CORRECTION : On affiche le squelette du corps sans le remplacer par un spinner.
-        this.contentTarget.innerHTML = this._getSkeletonHtml();
+        // NOUVEAU : On vérifie si un squelette est déjà présent pour éviter le "flash"
+        // visuel lors du rechargement après une sauvegarde.
+        const isSkeletonAlreadyPresent = this.contentTarget.querySelector('.form-column-skeleton');
+
+        if (!isSkeletonAlreadyPresent) {
+            this.contentTarget.innerHTML = this._getSkeletonHtml();
+        } else {
+            // Si le squelette est déjà là, on met juste à jour le message.
+            const loadingTextSpan = this.contentTarget.querySelector('.form-column-skeleton .ms-2');
+            if (loadingTextSpan) {
+                loadingTextSpan.textContent = 'Mise à jour du formulaire, veuillez patienter...';
+            }
+        }
 
         // On retire les classes qui centrent le spinner, car on affiche un squelette complet.
         this.contentTarget.classList.remove('text-center', 'p-5', 'd-flex', 'align-items-center', 'justify-content-center');
@@ -173,8 +190,8 @@ export default class extends Controller {
         this.titleTarget.textContent = event.detail.title;
 
         // NOUVEAU : Mettre à jour l'icône du titre
-        if (this.hasTitleIconTarget && icon) {
-            // On ne construit plus l'icône ici. On demande au cerveau de la fournir.
+        // On ne demande l'icône qu'une seule fois au premier chargement.
+        if (this.hasTitleIconTarget && icon && !this.isTitleIconLoaded) {
             this.notifyCerveau('ui:icon.request', {
                 iconName: icon,
                 iconSize: 25, // Taille adaptée pour un titre de dialogue
@@ -262,6 +279,8 @@ export default class extends Controller {
             // On ajoute le premier élément parsé (le <svg>) à la cible.
             if (template.content.firstChild) {
                 targetElement.appendChild(template.content.firstChild);
+                // On met le drapeau à jour pour ne plus redemander l'icône.
+                this.isTitleIconLoaded = true;
             }
         }
     }
@@ -523,10 +542,26 @@ export default class extends Controller {
                     <h5 class="column-title">
                         <div class="skeleton-line" style="width: 180px; height: 20px;"></div>
                     </h5>
-                    <div class="skeleton-line mb-3" style="width: 90%; height: 20px;"></div>
-                    <div class="skeleton-line mb-3" style="width: 80%; height: 20px;"></div>
-                    <div class="skeleton-line mb-3" style="width: 85%; height: 20px;"></div>
-                    <div class="skeleton-line" style="width: 75%; height: 20px;"></div>
+                    <div class="calculated-attributes-content">
+                        <ul class="calculated-attributes-list">
+                            <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem;">
+                                <div class="skeleton-line" style="width: 100px; height: 16px;"></div>
+                                <div class="skeleton-line" style="width: 80px; height: 16px;"></div>
+                            </li>
+                            <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem;">
+                                <div class="skeleton-line" style="width: 120px; height: 16px;"></div>
+                                <div class="skeleton-line" style="width: 60px; height: 16px;"></div>
+                            </li>
+                            <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem;">
+                                <div class="skeleton-line" style="width: 120px; height: 16px;"></div>
+                                <div class="skeleton-line" style="width: 60px; height: 16px;"></div>
+                            </li>
+                            <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem;">
+                                <div class="skeleton-line" style="width: 110px; height: 16px;"></div>
+                                <div class="skeleton-line" style="width: 70px; height: 16px;"></div>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
                 <div class="col form-column-skeleton">
                     <div class="text-center text-muted mb-4">
@@ -550,10 +585,26 @@ export default class extends Controller {
                     <h5 class="column-title">
                         <div class="skeleton-line" style="width: 180px; height: 20px;"></div>
                     </h5>
-                    <div class="skeleton-line mb-3" style="width: 90%; height: 20px;"></div>
-                    <div class="skeleton-line mb-3" style="width: 80%; height: 20px;"></div>
-                    <div class="skeleton-line mb-3" style="width: 85%; height: 20px;"></div>
-                    <div class="skeleton-line" style="width: 75%; height: 20px;"></div>
+                    <div class="calculated-attributes-content">
+                        <ul class="calculated-attributes-list">
+                            <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem;">
+                                <div class="skeleton-line" style="width: 100px; height: 16px;"></div>
+                                <div class="skeleton-line" style="width: 80px; height: 16px;"></div>
+                            </li>
+                            <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem;">
+                                <div class="skeleton-line" style="width: 120px; height: 16px;"></div>
+                                <div class="skeleton-line" style="width: 60px; height: 16px;"></div>
+                            </li>
+                            <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem;">
+                                <div class="skeleton-line" style="width: 90px; height: 16px;"></div>
+                                <div class="skeleton-line" style="width: 150px; height: 16px;"></div>
+                            </li>
+                            <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem;">
+                                <div class="skeleton-line" style="width: 110px; height: 16px;"></div>
+                                <div class="skeleton-line" style="width: 70px; height: 16px;"></div>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
                 <div class="col form-column-skeleton">
                     <div class="text-center text-muted mb-4">
