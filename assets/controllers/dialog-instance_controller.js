@@ -137,7 +137,7 @@ export default class extends Controller {
         const isSkeletonAlreadyPresent = this.contentTarget.querySelector('.form-column-skeleton');
 
         if (!isSkeletonAlreadyPresent) {
-            this.contentTarget.innerHTML = this._getSkeletonHtml();
+            this.contentTarget.innerHTML = this._getSkeletonHtml('Chargement du formulaire, veuillez patienter...');
         } else {
             // Si le squelette est déjà là, on met juste à jour le message.
             const loadingTextSpan = this.contentTarget.querySelector('.form-column-skeleton .ms-2');
@@ -343,7 +343,7 @@ export default class extends Controller {
         let originalBodyHtml = '';
         if (bodyContainer) {
             originalBodyHtml = bodyContainer.innerHTML;
-            bodyContainer.innerHTML = this._getBodySkeletonHtml();
+            bodyContainer.innerHTML = this._getSkeletonHtml('Enregistrement des données...');
         }
 
         // 1. On récupère les données du formulaire directement dans un objet FormData.
@@ -535,55 +535,12 @@ export default class extends Controller {
     }
 
     /**
-     * NOUVEAU : Génère le HTML pour un squelette de chargement du formulaire.
+     * NOUVEAU : Génère le HTML pour un squelette de chargement avec un message personnalisable.
+     * @param {string} message - Le message à afficher à côté du spinner.
      * @returns {string} Le HTML du squelette.
      * @private
      */
-    _getSkeletonHtml() {
-        // CORRECTION : Ne retourne que le contenu du corps, pas la balise .modal-body elle-même.
-        return `
-            <div class="row">
-                <div class="col-auto calculated-attributes-column-skeleton" style="width: 400px;">
-                    <h5 class="column-title">
-                        <div class="skeleton-line" style="width: 180px; height: 20px;"></div>
-                    </h5>
-                    <div class="calculated-attributes-content">
-                        <ul class="calculated-attributes-list">
-                            <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem;">
-                                <div class="skeleton-line" style="width: 100px; height: 16px;"></div>
-                                <div class="skeleton-line" style="width: 80px; height: 16px;"></div>
-                            </li>
-                            <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem;">
-                                <div class="skeleton-line" style="width: 120px; height: 16px;"></div>
-                                <div class="skeleton-line" style="width: 60px; height: 16px;"></div>
-                            </li>
-                            <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem;">
-                                <div class="skeleton-line" style="width: 120px; height: 16px;"></div>
-                                <div class="skeleton-line" style="width: 60px; height: 16px;"></div>
-                            </li>
-                            <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem;">
-                                <div class="skeleton-line" style="width: 110px; height: 16px;"></div>
-                                <div class="skeleton-line" style="width: 70px; height: 16px;"></div>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="col form-column-skeleton">
-                    <div class="text-center text-muted mb-4">
-                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                        <span class="ms-2">Chargement du formulaire, veuillez patienter...</span>
-                    </div>
-                    <div class="skeleton-line mb-4" style="width: 40%; height: 14px;"></div>
-                    <div class="skeleton-line mb-4" style="height: 38px;"></div>
-                    <div class="skeleton-line mb-4" style="width: 50%; height: 14px;"></div>
-                    <div class="skeleton-line mb-4" style="height: 38px;"></div>
-                    <div class="skeleton-line" style="height: 80px;"></div>
-                </div>
-            </div>
-            `;
-    }
-
-    _getBodySkeletonHtml() { // Used for submission, so it's just the body content
+    _getSkeletonHtml(message) {
         return `
             <div class="row">
                 <div class="col-auto calculated-attributes-column-skeleton" style="width: 400px;">
@@ -614,7 +571,7 @@ export default class extends Controller {
                 <div class="col form-column-skeleton">
                     <div class="text-center text-muted mb-4">
                         <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                        <span class="ms-2">Enregistrement des données...</span>
+                        <span class="ms-2">${message}</span>
                     </div>
                     <div class="skeleton-line mb-4" style="width: 40%; height: 14px;"></div>
                     <div class="skeleton-line mb-4" style="height: 38px;"></div>
@@ -623,7 +580,7 @@ export default class extends Controller {
                     <div class="skeleton-line" style="height: 80px;"></div>
                 </div>
             </div>
-        `;
+            `;
     }
 
     /**
