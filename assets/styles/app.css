@@ -489,6 +489,8 @@ textarea:hover,
     padding: 1rem; /* Crée une gouttière grise autour des colonnes. */
     background-color: #f0f0f0;
     display: flex; /* Pour que l'enfant .row puisse prendre 100% de la hauteur. */
+    flex-grow: 1; /* NOUVEAU : Permet au corps de s'étirer pour remplir l'espace vertical. */
+    min-height: 0; /* NOUVEAU : Correctif flex crucial pour permettre le défilement interne. */
 }
 
 #confirmation-dialog-modal .modal-body {
@@ -824,6 +826,27 @@ textarea:hover,
     gap: 1rem; /* Crée l'espacement entre les deux colonnes. */
     min-height: 0; /* Correctif flex. */
 }
+
+/*
+===================================================================
+ SECTION: STYLE POUR LES BLOCS DE CHAMPS DE FORMULAIRE DANS LES DIALOGUES
+===================================================================
+*/
+
+/* NOUVEAU : Ajoute une délimitation visuelle pour chaque champ dans un formulaire de dialogue. */
+.form-column .mb-3 {
+    padding: 0.75rem;
+    border-radius: var(--bs-border-radius-sm);
+    background-color: #ffffff; /* Assure un fond blanc propre */
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.08);
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+/* NOUVEAU : Améliore l'UX en surlignant le bloc entier lorsque l'un de ses champs a le focus. */
+.form-column .mb-3:focus-within {
+    box-shadow: 0 0 0 1px var(--bs-primary), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
 
 /*
 ===================================================================
