@@ -448,6 +448,7 @@ textarea:hover,
     /* NOUVEAU : On force le contenu à être un conteneur flex vertical. */
     /* Cela permet au .modal-body de grandir pour remplir l'espace et de contenir des colonnes défilantes. */
     display: flex;
+    height: 100%;
     flex-direction: column; /* La hauteur est gérée par .modal-dialog-scrollable */
 }
 
@@ -498,8 +499,8 @@ textarea:hover,
 
 /* 4. CORPS ET DÉFILEMENT */
 .app-dialog .modal-body {
-    /* NOUVEAU : On prépare le corps pour un layout flex enfant, avec un padding externe. */
-    overflow: hidden; /* On empêche le corps lui-même de défiler. */
+    /* CORRECTION : On empêche le corps lui-même de défiler pour permettre aux colonnes internes de le faire. */
+    overflow: hidden;
     padding: 1rem; /* Crée une gouttière grise autour des colonnes. */
     background-color: #f0f0f0;
     display: flex; /* Pour que l'enfant .row puisse prendre 100% de la hauteur. */
@@ -849,7 +850,7 @@ textarea:hover,
 
 /* NOUVEAU : Ajoute une délimitation visuelle pour chaque champ dans un formulaire de dialogue. */
 .form-column .mb-3 {
-    margin-bottom: 0.75rem !important; /* CORRECTION : Gouttière verticale réduite pour un look plus compact. */
+    margin-bottom: 0.5rem !important; /* CORRECTION : Gouttière verticale encore réduite pour un look plus aéré. */
     padding: 0.75rem;
     border-radius: var(--bs-border-radius-sm);
     background-color: #ffffff; /* Assure un fond blanc propre */
