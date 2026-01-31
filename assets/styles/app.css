@@ -484,8 +484,10 @@ textarea:hover,
 
 /* 4. CORPS ET DÉFILEMENT */
 .app-dialog .modal-body {
-    /* Le défilement est maintenant géré par Bootstrap via .modal-dialog-scrollable */
-    background-color: #f0f0f0; /* On garde le fond gris clair pour le corps */
+    /* CORRECTION : On transforme le corps en conteneur flex pour découpler le scroll des colonnes. */
+    display: flex;
+    padding: 0; /* Le padding est maintenant géré par les colonnes internes. */
+    background-color: #f0f0f0;
 }
 
 #confirmation-dialog-modal .modal-body {
@@ -748,10 +750,8 @@ textarea:hover,
     /* Par défaut, la colonne est cachée */
     display: none;
 
-    /* NOUVEAU : Rendre la colonne un conteneur flex vertical pour gérer le défilement interne */
+    /* Rendre la colonne un conteneur flex vertical pour gérer le défilement interne */
     flex-direction: column;
-    /* NOUVEAU : Empêche la colonne de dépasser la hauteur de son conteneur (la ligne du modal-body) */
-    max-height: 100%;
 }
 
 /* On affiche la colonne SEULEMENT si on est en mode édition ET qu'elle a du contenu */
@@ -775,6 +775,8 @@ textarea:hover,
 .calculated-attributes-content {
     flex-grow: 1;
     overflow-y: auto;
+    /* NOUVEAU : Ajout pour éviter les problèmes de dépassement de flexbox. */
+    min-height: 0;
     /* NOUVEAU : Ajout d'un léger padding à droite pour ne pas que la barre de défilement colle au texte */
     padding-right: 10px;
     /* NOUVEAU : Marge négative pour compenser le padding et maintenir l'alignement visuel */
@@ -809,6 +811,8 @@ textarea:hover,
 /* --- Colonne de droite (Formulaire) --- */
 .form-column {
     padding: 1.5rem;
+    /* NOUVEAU : La colonne de formulaire doit aussi pouvoir défiler indépendamment. */
+    overflow-y: auto;
 }
 
 /*
