@@ -747,11 +747,16 @@ textarea:hover,
 
     /* Par défaut, la colonne est cachée */
     display: none;
+
+    /* NOUVEAU : Rendre la colonne un conteneur flex vertical pour gérer le défilement interne */
+    flex-direction: column;
+    /* NOUVEAU : Empêche la colonne de dépasser la hauteur de son conteneur (la ligne du modal-body) */
+    max-height: 100%;
 }
 
 /* On affiche la colonne SEULEMENT si on est en mode édition ET qu'elle a du contenu */
 .app-dialog.is-edit-mode.has-attributes-column .calculated-attributes-column {
-    display: block; /* On la rend visible */
+    display: flex; /* On la rend visible en tant que conteneur flex */
 }
 
 .calculated-attributes-column .column-title {
@@ -761,10 +766,20 @@ textarea:hover,
     margin-bottom: 1.5rem;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid #495057;
+    /* NOUVEAU : Empêche le titre de rétrécir lorsque le contenu défile */
+    flex-shrink: 0;
 }
 
 /* Le contenu n'est plus défilant individuellement */
-.calculated-attributes-content {}
+/* NOUVEAU : Le conteneur du contenu prend l'espace restant et devient défilant si nécessaire */
+.calculated-attributes-content {
+    flex-grow: 1;
+    overflow-y: auto;
+    /* NOUVEAU : Ajout d'un léger padding à droite pour ne pas que la barre de défilement colle au texte */
+    padding-right: 10px;
+    /* NOUVEAU : Marge négative pour compenser le padding et maintenir l'alignement visuel */
+    margin-right: -10px;
+}
 .calculated-attributes-list {
     list-style: none;
     padding: 0;
@@ -801,6 +816,22 @@ textarea:hover,
  SECTION: STYLE POUR LES BARRES DE DÉFILEMENT DES COLONNES DE DIALOGUE
 ===================================================================
 */
+
+/* NOUVEAU : Style de la barre de défilement pour la colonne des attributs (mode sombre) */
+.calculated-attributes-content::-webkit-scrollbar {
+    width: 8px;
+}
+.calculated-attributes-content::-webkit-scrollbar-track {
+    background: transparent; /* La piste est invisible sur le fond sombre */
+}
+.calculated-attributes-content::-webkit-scrollbar-thumb {
+    background-color: #495057; /* Un gris foncé, visible sur le fond #212529 */
+    border-radius: 4px;
+    border: 2px solid #212529; /* Crée un effet de "flottement" avec la couleur de fond */
+}
+.calculated-attributes-content::-webkit-scrollbar-thumb:hover {
+    background-color: #6c757d; /* Plus clair au survol */
+}
 
 /*
 ===================================================================
