@@ -568,16 +568,27 @@ export default class extends Controller {
                         </ul>
                     </div>
                 </div>
-                <div class="col form-column-skeleton">
+                <div class="col form-column-skeleton" style="padding: 1.5rem;">
                     <div class="text-center text-muted mb-4">
                         <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
                         <span class="ms-2">${message}</span>
                     </div>
-                    <div class="skeleton-line mb-4" style="width: 40%; height: 14px;"></div>
-                    <div class="skeleton-line mb-4" style="height: 38px;"></div>
-                    <div class="skeleton-line mb-4" style="width: 50%; height: 14px;"></div>
-                    <div class="skeleton-line mb-4" style="height: 38px;"></div>
-                    <div class="skeleton-line" style="height: 80px;"></div>
+                    <div class="row gx-3">
+                        <div class="col">
+                            <div class="skeleton-line mb-4" style="width: 80%; height: 14px;"></div>
+                            <div class="skeleton-line mb-4" style="height: 38px;"></div>
+                        </div>
+                        <div class="col">
+                            <div class="skeleton-line mb-4" style="width: 60%; height: 14px;"></div>
+                            <div class="skeleton-line mb-4" style="height: 38px;"></div>
+                        </div>
+                    </div>
+                    <div class="row gx-3">
+                        <div class="col">
+                            <div class="skeleton-line mb-4" style="width: 40%; height: 14px;"></div>
+                            <div class="skeleton-line" style="height: 80px;"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
             `;
