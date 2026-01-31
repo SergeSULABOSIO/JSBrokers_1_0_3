@@ -55,7 +55,6 @@ export default class extends Controller {
         this.boundHandleIconLoaded = this.handleIconLoaded.bind(this);
         document.addEventListener('app:icon.loaded', this.boundHandleIconLoaded);
         document.addEventListener('app:dialog.do-close', this.boundDoClose);
-        this.requestButtonIcons();
 
         if (detail) {
             // On encapsule l'appel asynchrone pour gérer les erreurs d'initialisation.
@@ -95,6 +94,9 @@ export default class extends Controller {
         this.isCreateMode = !(this.entity && this.entity.id);
         this.parentContext = detail.parentContext || null;
         this.formTemplateHTML = detail.formTemplateHTML || null;
+        // On demande les icônes des boutons ici, maintenant que `this.dialogId` est défini.
+        this.requestButtonIcons();
+
         this._logState('start', '1986', detail);
         console.log(`[${++window.logSequence}] - [${this.nomControleur}] - [start] - Code: 1986 - Start - Context:`, detail.context, this.context);
         // Charge le contenu complet depuis le serveur
