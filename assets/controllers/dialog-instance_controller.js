@@ -575,20 +575,24 @@ export default class extends Controller {
                     </div>
                     <div class="row gx-3">
                         <div class="col">
-                            <div class="skeleton-line mb-4" style="height: 38px;"></div>
+                            <div class="skeleton-field-block mb-3">
+                                <div class="skeleton-line mb-2" style="width: 80%; height: 14px;"></div>
+                                <div class="skeleton-line" style="height: 38px;"></div>
+                            </div>
                         </div>
                         <div class="col">
-                            <div class="skeleton-line mb-4" style="height: 38px;"></div>
+                            <div class="skeleton-field-block mb-3">
+                                <div class="skeleton-line mb-2" style="width: 60%; height: 14px;"></div>
+                                <div class="skeleton-line" style="height: 38px;"></div>
+                            </div>
                         </div>
                     </div>
                     <div class="row gx-3">
                         <div class="col">
-                            <div class="skeleton-line" style="height: 80px;"></div>
-                        </div>
-                    </div>
-                    <div class="row gx-3">
-                        <div class="col">
-                            <div class="skeleton-line" style="height: 80px;"></div>
+                            <div class="skeleton-field-block">
+                                <div class="skeleton-line mb-2" style="width: 40%; height: 14px;"></div>
+                                <div class="skeleton-line" style="height: 80px;"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
