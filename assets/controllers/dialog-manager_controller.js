@@ -72,7 +72,6 @@ export default class extends Controller {
     connect() {
         this.nomControleur = "Dialogue-Manager";
         this.boundOpen = this.open.bind(this);
-        // Écoute l'événement générique pour ouvrir N'IMPORTE QUEL dialogue
         document.addEventListener('app:boite-dialogue:init-request', this.boundOpen);
     }
 
@@ -125,9 +124,33 @@ export default class extends Controller {
 
         instanceElement.dialogDetail = event.detail; // On attache les données ici
 
+        // NOUVEAU : On demande les icônes des boutons en amont, dès la création de la modale.
+        this.requestButtonIcons(detail.dialogId);
+
         // On ajoute l'élément au body. Stimulus va maintenant le détecter et connecter le contrôleur.
         document.body.appendChild(modalElement);
         console.log(`[${++window.logSequence}] - [${this.nomControleur}] - [open] - Code: 99 - Fin - Données:`, event.detail);
+    }
+
+    /**
+     * NOUVEAU : Demande les icônes pour les boutons du dialogue au Cerveau.
+     * Ces requêtes sont faites en parallèle du chargement du contenu du dialogue.
+     * @param {string} dialogId - L'ID unique du dialogue.
+     */
+    requestButtonIcons(dialogId) {
+        // On utilise le même format de 'requesterId' que 'dialog-instance' utilisait,
+        // pour que son écouteur 'handleIconLoaded' puisse intercepter la réponse.
+        this.notifyCerveau('ui:icon.request', {
+            iconName: 'action:save',
+            iconSize: 20,
+            requesterId: `${dialogId}-save`
+        });
+
+        this.notifyCerveau('ui:icon.request', {
+            iconName: 'action:close',
+            iconSize: 20,
+            requesterId: `${dialogId}-close`
+        });
     }
 
     /**
@@ -138,5 +161,17 @@ export default class extends Controller {
         const parser = new DOMParser();
         const doc = parser.parseFromString(this.modalTemplate, 'text/html');
         return doc.body.firstChild;
+    }
+
+    /**
+     * NOUVEAU : Méthode utilitaire pour notifier le Cerveau.
+     * @param {string} type 
+     * @param {object} payload 
+     */
+    notifyCerveau(type, payload = {}) {
+        const event = new CustomEvent('cerveau:event', {
+            bubbles: true, detail: { type, source: this.nomControleur, payload, timestamp: Date.now() }
+        });
+        this.element.dispatchEvent(event);
     }
 }

@@ -94,8 +94,6 @@ export default class extends Controller {
         this.isCreateMode = !(this.entity && this.entity.id);
         this.parentContext = detail.parentContext || null;
         this.formTemplateHTML = detail.formTemplateHTML || null;
-        // On demande les icônes des boutons ici, maintenant que `this.dialogId` est défini.
-        this.requestButtonIcons();
 
         this._logState('start', '1986', detail);
         console.log(`[${++window.logSequence}] - [${this.nomControleur}] - [start] - Code: 1986 - Start - Context:`, detail.context, this.context);
@@ -228,26 +226,6 @@ export default class extends Controller {
         // NOUVEAU : On s'assure que les boutons sont réactivés après un rechargement.
         this.toggleLoading(false); //
         this.toggleProgressBar(false); // Cacher la barre de progression
-    }
-
-    /**
-     * NOUVEAU: Demande au cerveau de charger les icônes pour les boutons du footer.
-     */
-    requestButtonIcons() {
-        if (this.hasSaveIconTarget) {
-            this.notifyCerveau('ui:icon.request', {
-                iconName: 'action:save',
-                iconSize: 20,
-                requesterId: this.dialogId + '-save' // ID unique pour cette requête d'icône
-            });
-        }
-        if (this.hasCloseIconTarget) {
-            this.notifyCerveau('ui:icon.request', {
-                iconName: 'action:close',
-                iconSize: 20,
-                requesterId: this.dialogId + '-close' // ID unique
-            });
-        }
     }
 
     /**
