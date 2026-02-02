@@ -874,6 +874,18 @@ textarea:hover,
     text-align: right;
 }
 
+/* --- Colonne de droite (Formulaire) --- */
+.form-column {
+    /* NOUVEAU : La colonne de formulaire est un item flex qui grandit et défile. */
+    flex: 1;
+    min-width: 0; /* Correctif flex pour empêcher le dépassement horizontal. */
+    padding: 0.5rem; /* HARMONISATION : Padding externe réduit pour un design plus compact. */
+    overflow-y: auto;
+    /* NOUVEAU : Fond blanc et coins arrondis pour un aspect "carte" dans le corps gris. */
+    background-color: #ffffff;
+    border-radius: var(--bs-border-radius);
+}
+
 /* NOUVEAU : Cible la rangée (.row) à l'intérieur du corps de la modale pour en faire le conteneur flex principal. */
 .app-dialog .modal-body > .row {
     flex: 1; /* La rangée prend toute la place dans le corps de la modale. */
@@ -934,8 +946,8 @@ textarea:hover,
 
 /* NOUVEAU : Ajoute une délimitation visuelle pour chaque champ dans un formulaire de dialogue. */
 .form-column .mb-3 {
-    margin-bottom: 0rem !important; /* CORRECTION : Gouttière verticale encore réduite pour un look plus aéré. */
-    padding: 0.75rem;
+    margin-bottom: 0rem !important; /* La gouttière verticale est maintenant gérée par la classe .mb-2 sur la ligne (.row). */
+    padding: 0.5rem; /* HARMONISATION : Padding interne des blocs de champ réduit. */
     border-radius: var(--bs-border-radius-sm);
     background-color: #ffffff; /* Assure un fond blanc propre */
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -945,12 +957,6 @@ textarea:hover,
 /* NOUVEAU : Améliore l'UX en surlignant le bloc entier lorsque l'un de ses champs a le focus. */
 .form-column .mb-3:focus-within {
     box-shadow: 0 0 0 1px var(--bs-primary), 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-
-/* NOUVEAU : Réduction des gouttières horizontales dans les formulaires de dialogue. */
-.form-column .row,
-.form-column-skeleton .row {
-    --bs-gutter-x: 0.5rem; /* Réduit la gouttière par défaut de 1rem (gx-3) à 0.5rem. */
 }
 
 /* STYLE POUR LES LIGNES DE FORMULAIRE COLORÉES */
