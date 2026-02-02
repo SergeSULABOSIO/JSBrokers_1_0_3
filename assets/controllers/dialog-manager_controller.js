@@ -30,18 +30,18 @@ export default class extends Controller {
             data-bs-keyboard="false"
         >
             <div class="modal-dialog modal-xl modal-dialog-scrollable"> 
-                <div class="modal-content" data-controller="dialog-instance" data-dialog-instance-modal-outlet=".modal"> 
+                <div class="modal-content" data-controller="dialog-instance" data-dialog-instance-modal-outlet=".modal">
                     <div class="modal-header" data-dialog-instance-target="header">
-                        <h5 class="modal-title d-flex align-items-center">
+                        <div class="d-flex align-items-center">
                             <span data-dialog-instance-target="titleIcon" class="me-2"></span>
-                            <span data-dialog-instance-target="title"><div class="skeleton-line" style="width: 250px; height: 24px;"></div></span>
-                        </h5>
+                            <h5 class="modal-title mb-0" data-dialog-instance-target="title"><div class="skeleton-line" style="width: 250px; height: 24px;"></div></h5>
+                        </div>
                         <button type="button" class="btn-close" data-action="click->dialog-instance#close" data-dialog-instance-target="closeButton" disabled></button> 
                     </div>
                     <div class="dialog-progress-container is-loading" data-dialog-instance-target="progressBarContainer"> 
                         <div class="dialog-progress-bar" role="progressbar"></div>
                     </div>
-                    <div data-dialog-instance-target="content" class="modal-body text-center p-5 d-flex align-items-center justify-content-center" style="min-height: 100px;"> 
+                    <div data-dialog-instance-target="content" class="modal-body"> 
                         <div class="spinner-border" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
