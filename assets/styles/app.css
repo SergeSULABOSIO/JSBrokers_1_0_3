@@ -817,14 +817,13 @@ textarea:hover,
     /* Par défaut, la colonne est cachée */
     display: none;
 
-    /* NOUVEAU : Comportement flex pour gérer le titre fixe et le contenu défilant. */
-    flex-direction: column;
-    min-height: 0; /* Correctif crucial pour le dépassement de contenu dans un conteneur flex. */
+    /* REFACTORING : On active le défilement sur toute la colonne pour se conformer au modèle. */
+    overflow-y: auto;
 }
 
 /* On affiche la colonne SEULEMENT si on est en mode édition ET qu'elle a du contenu */
 .app-dialog.is-edit-mode.has-attributes-column .calculated-attributes-column {
-    display: flex; /* On la rend visible en tant que conteneur flex */
+    display: block; /* On la rend visible en tant que bloc pour un défilement vertical simple. */
 }
 
 .calculated-attributes-column .column-title {
@@ -834,16 +833,11 @@ textarea:hover,
     margin-bottom: 1.5rem;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid #495057;
-    /* NOUVEAU : Empêche le titre de rétrécir lorsque le contenu défile */
-    flex-shrink: 0;
 }
 
-/* Le contenu n'est plus défilant individuellement */
-/* NOUVEAU : Le conteneur du contenu prend l'espace restant et devient défilant si nécessaire */
+/* REFACTORING : Le défilement est maintenant géré par le parent '.calculated-attributes-column'. */
 .calculated-attributes-content {
-    flex-grow: 1;
-    overflow-y: auto;
-    min-height: 0; /* Autre correctif flex pour le défilement. */
+    /* Les propriétés de défilement et de flex-grow sont retirées. */
 }
 .calculated-attributes-list {
     list-style: none;
