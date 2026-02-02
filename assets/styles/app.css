@@ -883,12 +883,12 @@ textarea:hover,
     border-radius: var(--bs-border-radius);
 }
 
-/* NOUVEAU : Cible la rangée (.row) à l'intérieur du corps de la modale pour en faire le conteneur flex principal. */
-.app-dialog .modal-body > .row {
-    flex: 1; /* La rangée prend toute la place dans le corps de la modale. */
+/* 3. On force la rangée principale à prendre 100% de la hauteur du body */
+.custom-modal-scroll .modal-body > .row {
+    height: 100%;
     display: flex;
     gap: 1rem; /* Crée l'espacement entre les deux colonnes. */
-    min-height: 0; /* Correctif flex. */
+    min-height: 0; /* Correctif flex pour le défilement des enfants */
 }
 
 /*
