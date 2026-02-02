@@ -569,11 +569,11 @@ export default class extends Controller {
                     </div>
                 </div>
                 <div class="col form-column-skeleton">
-                    <div class="text-center text-muted mb-4">
-                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                        <span class="ms-2">${message}</span>
-                    </div>
                     <div>
+                        <div class="text-center text-muted mb-4">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            <span class="ms-2">${message}</span>
+                        </div>
                         <div class="row gx-2 mb-2">
                             <div class="col">
                                 <div class="skeleton-field-block">
