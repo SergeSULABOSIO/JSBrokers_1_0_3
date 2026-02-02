@@ -739,12 +739,10 @@ textarea:hover,
 /* ================================================================== */
 
 /* --- 4.1 Structure générale et layout --- */
-.app-dialog .modal-content {
-    /* NOUVEAU : On force le contenu à être un conteneur flex vertical. */
-    /* Cela permet au .modal-body de grandir pour remplir l'espace et de contenir des colonnes défilantes. */
+.custom-modal-scroll {
+    height: 85vh; /* La modale prend 85% de la hauteur de la fenêtre */
     display: flex;
-    height: 100%;
-    flex-direction: column; /* La hauteur est gérée par .modal-dialog-scrollable */
+    flex-direction: column;
 }
 
 .app-dialog .modal-header {
