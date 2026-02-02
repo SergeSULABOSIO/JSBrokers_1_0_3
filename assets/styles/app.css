@@ -1,3 +1,8 @@
+/* ================================================================== */
+/* SECTION 1: STYLES GLOBAUX ET UTILITAIRES DE BASE                   */
+/* ================================================================== */
+
+/* --- 1.1 Styles de base (body, liens) --- */
 body {
     background-color: #f3f3f3;
 }
@@ -19,6 +24,24 @@ a:active {
     text-decoration: underline;
 }
 
+/* --- 1.2 Styles globaux pour les barres de défilement --- */
+/* Style de la barre de défilement par défaut pour toute l'application */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px; /* Ajout pour les barres horizontales */
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* --- 1.3 Classes utilitaires génériques --- */
 .sensible:hover {
     background-color: #ececec;
     border: 4px solid darkgray;
@@ -62,6 +85,134 @@ a:active {
     display: block;
 }
 
+.shadow-bottom {
+    box-shadow: 0 8px 6px -6px rgba(0, 0, 0, 0.1);
+}
+
+/* NOUVEAU : Classe utilitaire pour un alignement vertical parfait dans un conteneur flex */
+.align-middle-flex-item {
+    vertical-align: middle;
+}
+
+/*
+================================================================== */
+/* SECTION 2: STYLES GLOBAUX POUR LES ÉLÉMENTS DE FORMULAIRE          */
+/* ================================================================== */
+
+/* --- 2.1 Style "flat" pour les champs (input, select, textarea) --- */
+/*
+===================================================================
+ SECTION: STYLE GLOBAL POUR LES CHAMPS DE FORMULAIRE ("FLAT" AVEC SURVOL)
+===================================================================
+*/
+
+/* --- Style par défaut pour tous les champs --- */
+.form-control,
+.form-select,
+.editeur-riche,
+/* NOUVEAU : Cible tous les types d'input pertinents */
+input[type="text"], input[type="date"], input[type="password"], input[type="number"], input[type="email"], input[type="file"],
+input[type=text],
+input[type=date],
+input[type=password],
+input[type=number],
+input[type=email],
+input[type=file],
+select,
+textarea,
+.tom-select-control {
+    border: 3px solid transparent; 
+    border-radius: 10px;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    transition: border-color 0.2s ease-in-out; 
+    /* NOUVEAU : Style pour le contenu des champs */
+    color: #000000; /* Noir */
+    font-weight: bold;
+}
+
+/* --- Style au survol de la souris --- */
+.form-control:hover,
+.form-select:hover,
+.editeur-riche:hover,
+input[type=text]:hover,
+input[type=date]:hover,
+input[type=password]:hover,
+input[type=number]:hover,
+input[type=email]:hover,
+input[type=file]:hover,
+select:hover,
+textarea:hover,
+.tom-select-control:hover {
+    border-color: #6c757d;
+}
+
+/* --- Style au focus (quand on clique dedans) --- */
+.form-control:focus,
+.form-select:focus,
+.editeur-riche:focus,
+.tom-select-control.focus {
+    border-color: #0d6efd !important;
+    box-shadow: none !important;
+}
+.input-group span {
+    border: none;
+    background-color: transparent;
+}
+
+/* --- 2.2 Labels de formulaire --- */
+/* NOUVEAU : Style pour les titres des champs (labels) */
+.form-label {
+    color: #adb5bd; /* Gris clair */
+    font-weight: normal;
+    /* Assure que le label ne soit pas affecté par le style bold des inputs */
+    display: block; 
+}
+
+/* --- 2.3 Messages d'aide --- */
+/*
+===================================================================
+ SECTION: STYLE POUR LES MESSAGES D'AIDE DES FORMULAIRES
+===================================================================
+*/
+
+.form-text {
+    color: #0d6efd !important;
+}
+
+/* --- 2.4 Composant VichUploader (champ fichier) --- */
+/*
+===================================================================
+ SECTION: STYLE POUR LE LIEN DE TÉLÉCHARGEMENT VICHUPLOADER
+===================================================================
+*/
+
+/* Conteneur pour le champ de fichier */
+.vich-file {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Style du lien de téléchargement */
+.vich-file a {
+    font-style: italic;
+    color: #0d6efd; /* Bleu cobalt */
+    font-weight: bold;
+    text-decoration: none;
+    padding: 8px;
+    border-radius: 4px;
+    background-color: rgba(13, 110, 253, 0.1);
+    border: 1px dashed rgba(13, 110, 253, 0.4);
+    display: inline-block;
+    max-width: fit-content;
+}
+.vich-file a:hover {
+    background-color: rgba(13, 110, 253, 0.2);
+    text-decoration: underline;
+}
+
+/* --- 2.5 Éditeur de texte riche --- */
 .editeur-riche {
     height: 150px;
     padding: 10px;
@@ -75,11 +226,212 @@ a:active {
     resize: vertical;
 }
 
-.shadow-bottom {
-    box-shadow: 0 8px 6px -6px rgba(0, 0, 0, 0.1);
+/* ================================================================== */
+/* SECTION 3: STYLES POUR LES COMPOSANTS DE L'INTERFACE PRINCIPALE    */
+/* ================================================================== */
+
+/* --- 3.1 Interface à onglets (listes principales) --- */
+/* ================================================================== */
+/* SECTION : NOUVELLE INTERFACE À ONGLETS                             */
+/* ================================================================== */
+
+/* Structure de la page et header fixe */
+.sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+    border-bottom: 1px solid #dee2e6;
 }
 
+.rubrique-title {
+    font-weight: bold;
+    color: #000;
+    font-size: 1.1rem;
+    margin-bottom: 7px;
+}
 
+/* Barre d'onglets */
+.list-tabs-container {
+    display: flex;
+    /* border-bottom: 1px solid #dee2e6; */
+    margin-top: 3px;
+    /* NOUVEAU : Permet le défilement horizontal quand les onglets dépassent */
+    overflow-x: auto;
+    white-space: nowrap;
+    /* NOUVEAU : Ajoute un padding en bas pour la barre de défilement et le compense avec une marge négative pour ne pas décaler le layout */
+    padding-bottom: 0px; /* Réduit pour rapprocher la barre de défilement */
+    margin-bottom: -5px; /* Ajusté pour compenser le nouveau padding */
+}
+
+.list-tabs-container::-webkit-scrollbar {
+    height: 3px; /* Epaisseur réduite de moitié */
+}
+.list-tabs-container::-webkit-scrollbar-track {
+    background: transparent; /* La piste est invisible */
+}
+.list-tabs-container::-webkit-scrollbar-thumb {
+    background-color: #0d6efd; /* NOUVEAU : Bleu cobalt */
+    border-radius: 1.5px; /* Ajusté pour la nouvelle épaisseur */
+}
+.list-tabs-container::-webkit-scrollbar-thumb:hover {
+    background-color: #0a58ca; /* NOUVEAU : Bleu cobalt plus foncé au survol */
+}
+
+.list-tab {
+    padding: 8px 16px;
+    cursor: pointer;
+    background-color: transparent;
+    border: none;
+    border-bottom: 6px solid transparent;
+    color: #6c757d;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+}
+
+.list-tab:hover {
+    border-bottom-color: #c6c6c8;
+    color: #000;
+}
+
+.list-tab.active {
+    font-weight: bold;
+    color: #212529;
+    border-bottom-color: #000;
+}
+
+/* --- 3.2 Barre d'outils contextuelle --- */
+/* ================================================================== */
+/* SECTION : NOUVEAU STYLE DE LA BARRE D'OUTILS                       */
+/* ================================================================== */
+
+.context-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem; /* Espacement légèrement augmenté pour plus de clarté */
+    padding: 0.25rem;
+    width: fit-content;
+    /* Le fond est maintenant transparent, on se fie aux boutons */
+}
+
+.context-toolbar .btn {
+    /* On supprime les dimensions fixes pour laisser Bootstrap gérer la taille */
+    border-radius: 8px; /* Coins légèrement arrondis pour un look moderne */
+    border: none;
+    padding: 0.5rem; /* Padding uniforme */
+    line-height: 1; /* Assure un bon alignement vertical de l'icône */
+    transition: all 0.2s ease-in-out; /* Animation douce pour toutes les propriétés */
+}
+
+.context-toolbar .btn:hover { 
+    transform: translateY(-1px); /* Léger effet de soulèvement */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Ombre douce */
+}
+
+.context-toolbar .btn:disabled { color: #adb5bd; }
+
+.toolbar-separator {
+    width: 1px;
+    height: 20px;
+    background-color: #ced4da;
+    margin: 0 0.25rem; /* Marge réduite pour un look plus compact */
+}
+
+.toolbar-icon {
+    width: 24px;
+    height: 24px;
+    color: #6c757d; /* Gris par défaut pour les icônes */
+    transition: color 0.2s ease-in-out; /* Animation douce pour la couleur */
+}
+
+/* NOUVEAU : Au survol du bouton, l'icône devient noire */
+.context-toolbar .btn:hover .toolbar-icon {
+    /* On ne change pas la couleur pour les boutons de danger */
+    color: black;
+}
+
+/* --- 3.3 Menu contextuel (clic droit) --- */
+/* ================================================================== */
+/* SECTION : ADAPTATION DU MENU CONTEXTUEL (MODE SOMBRE)              */
+/* ================================================================== */
+/* On surcharge les styles existants de votre fichier interactive-menu.css */
+.context-target {
+    cursor: context-menu;
+    user-select: none;
+}
+
+.context-menu {
+    position: fixed;
+    background-color: #212529;
+    color: #f8f9fa;
+    border: 1px solid #495057;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    min-width: 180px;
+    z-index: 1000;
+    border-radius: 4px;
+    padding: 5px 0;
+}
+
+.context-menu ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.context-menu li {
+    padding: 8px 15px;
+    cursor: pointer;
+    align-items: center;
+}
+
+.context-menu li:hover {
+    background-color: #f0f0f0;
+    color: black;
+}
+
+.context-menu li.separator {
+    border-top: 1px solid #eee;
+    margin: 5px 0;
+    padding: 0;
+}
+
+.context-menu .menu-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 10px; /* Remplace la propriété 'gap' pour un meilleur contrôle */
+}
+
+.context-menu ul li {
+    color: #f8f9fa;
+}
+
+.context-menu ul li:hover {
+    background-color: #495057; /* Fond de survol plus clair */
+    color: #f8f9fa;
+}
+
+/* CORRECTION : Assure la visibilité du texte des raccourcis en mode sombre */
+.context-menu ul li .text-muted {
+    color: rgba(248, 249, 250, 0.65); /* Texte clair mais moins prononcé que l'option principale */
+}
+.context-menu ul li.separator {
+    border-top: 1px solid #495057;
+}
+
+.context-menu-icon {
+    width: 20px; /* Largeur fixe pour l'alignement des icônes */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.context-menu-shortcut {
+    width: 20px; /* Largeur fixe pour l'alignement des raccourcis */
+    text-align: right;
+    color: #6c757d; /* text-muted */
+    font-size: 0.875em; /* small */
+}
+
+/* --- 3.4 Barre de recherche principale --- */
 /* STYLES POUR LA BARRE DE RECHERCHE */
 .search-bar-input {
     font-size: 1.1rem;
@@ -108,11 +460,7 @@ a:active {
     height: 1.1em;
 }
 
-/* NOUVEAU : Classe utilitaire pour un alignement vertical parfait dans un conteneur flex */
-.align-middle-flex-item {
-    vertical-align: middle;
-}
-
+/* --- 3.5 Barre des totaux (sous les onglets) --- */
 /*
 ===================================================================
  SECTION: STYLE POUR LA BARRE DES TOTAUX
@@ -132,29 +480,7 @@ a:active {
     cursor: not-allowed;
 }
 
-/* STYLES POUR LE DÉFILEMENT DE FORMULAIRES (utilisé par le dialogue de recherche avancée) */
-.form-scrollable-content {
-    max-height: 45vh; /* Hauteur augmentée pour plus de confort */
-    overflow-y: auto;
-    padding-right: 10px; /* Padding ajusté */
-    scrollbar-width: thin;
-    scrollbar-color: #adb5bd #f8f9fa; /* Couleurs pour Firefox, assorties au thème */
-}
-.form-scrollable-content::-webkit-scrollbar {
-    width: 8px;
-}
-.form-scrollable-content::-webkit-scrollbar-track {
-    background: transparent; /* Le fond de la piste est transparent */
-}
-.form-scrollable-content::-webkit-scrollbar-thumb {
-    background-color: #adb5bd; /* Couleur du curseur, gris moyen */
-    border-radius: 4px;
-    border: 2px solid #f8f9fa; /* Crée un effet de "flottement" avec la couleur de fond */
-}
-.form-scrollable-content::-webkit-scrollbar-thumb:hover {
-    background-color: #495057; /* Plus foncé au survol */
-}
-
+/* --- 3.6 Tableaux de données --- */
 /* STYLES POUR LES TABLEAUX */
 .h-100 {
     height: 100%;
@@ -207,6 +533,426 @@ a:active {
     text-align: right;
 }
 
+/* --- 3.7 États de chargement et vides --- */
+/*
+===================================================================
+ SECTION: SQUELETTE DE CHARGEMENT GÉNÉRIQUE POUR L'ESPACE DE TRAVAIL
+===================================================================
+*/
+
+.workspace-skeleton {
+    padding: 1.5rem;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.workspace-skeleton .skeleton-header {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.workspace-skeleton .skeleton-icon {
+    width: 40px;
+    height: 40px;
+    background-color: #dee2e6; /* Fond gris un peu plus foncé */
+    border-radius: 8px;
+}
+
+.workspace-skeleton .skeleton-line {
+    height: 20px;
+    background-color: #dee2e6; /* Fond gris un peu plus foncé */
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+/* --- NOUVEAU : Style pour le conteneur du spinner --- */
+.spinner-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 4rem 2rem; /* Un peu d'espace pour que ça respire */
+    min-height: 200px; /* Hauteur minimale pour être visible même si la liste est vide */
+    width: 100%;
+}
+
+/* --- NOUVEAU : Le spinner lui-même --- */
+.custom-spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(0, 123, 255, 0.2); /* Couleur de fond de la bordure (bleu clair transparent) */
+    border-top-color: #0d6efd; /* Couleur de la partie qui tourne (bleu primaire de Bootstrap) */
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* --- NOUVEAU : L'animation de rotation --- */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* --- Styles pour le composant Empty State --- */
+.empty-state-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  height: 100%;
+  min-height: 250px; /* Hauteur minimale pour un bon rendu visuel */
+  animation: fadeIn 0.3s ease-in-out; /* Animation d'apparition douce */
+}
+
+.empty-state-content {
+  max-width: 450px;
+}
+
+.empty-state-icon {
+  /* font-size: 3rem; Taille de l'icône */
+  color: #6c757d; /* --dark-gray-color ou équivalent */
+  margin-bottom: 1rem;
+  width: 100px;
+  height: 100px;
+  display: block; /* Assure que l'icône est un bloc pour le centrage */
+  margin-left: auto; /* Centre l'icône horizontalement */
+  margin-right: auto; /* Centre l'icône horizontalement */
+}
+
+.empty-state-title {
+  font-size: 1.4em; /* Police légèrement plus grande */
+  color: #343a40; /* --dark-gray-color ou équivalent */
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state-description {
+  font-size: 1.1em;
+  color: #6c757d; /* --dark-gray-color ou équivalent */
+  margin-bottom: 1.5rem;
+}
+
+/* Le bouton utilise déjà les styles .btn-primary de Bootstrap, qui correspondent à votre --primary-cobalt-blue */
+/* CORRECTION : Style pour les boutons avec icône et texte */
+.empty-state-button, .empty-state-button-secondary {
+  display: inline-flex; /* Permet d'aligner l'icône et le texte */
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.25rem; /* Padding pour un aspect rectangulaire */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); /* Ombre discrète */
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; /* Animation douce */
+  border-radius: 8px !important; /* Forme rectangulaire avec coins arrondis */
+}
+
+.empty-state-button:hover {
+  transform: translateY(-2px); /* Léger mouvement vers le haut au survol */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Ombre plus prononcée */
+}
+
+.empty-state-button-secondary:hover {
+    transform: translateY(-2px); /* Léger mouvement vers le haut au survol */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Ombre plus prononcée */
+    background-color: #5a6268; /* Gris plus foncé au survol */
+    border-color: #545b62;
+}
+
+/* Cible l'icône SVG à l'intérieur du bouton */
+/* CORRECTION : Assure que les icônes font exactement 24px */
+.empty-state-button .me-2,
+.empty-state-button-secondary .me-2 {
+    width: 24px !important;
+    height: 24px !important;
+}
+
+/* --- 3.8 Panneau de description (volet de visualisation) --- */
+/* ================================================================== */
+/* SECTION : PANNEAU DE DESCRIPTION DANS LE VOLET DE VISUALISATION    */
+/* ================================================================== */
+
+.description-panel {
+    --description-panel-top-gap: 300px; /* Espace supérieur sans transparence */
+    --description-panel-side-gap: 10px;   /* NOUVEAU : Espace latéral sans transparence */
+    --description-panel-bottom-gap: 10px; /* NOUVEAU : Espace inférieur sans transparence */
+    position: relative; /* Requis pour positionner l'overlay */
+    color: #ffffff; /* Texte en blanc pour contraster avec l'overlay */
+    font-size: 0.95rem;
+    line-height: 1.6;
+    border-radius: .375rem;
+    padding: var(--description-panel-top-gap) var(--description-panel-side-gap) var(--description-panel-bottom-gap);
+    margin-bottom: 1rem;
+    overflow: hidden; /* Assure que l'overlay respecte les coins arrondis */
+    display: flex; /* Permet de centrer le contenu verticalement */
+    min-height: 150px; /* Hauteur minimale pour que l'image soit visible */
+
+    /* --- Définition de l'image de fond --- */
+    background-size: cover; /* L'image couvre tout le panneau */
+    background-position: center; /* L'image est centrée */
+}
+
+/* --- NOUVEAU : Overlay sombre pour la lisibilité --- */
+.description-panel::before {
+    content: '';
+    position: absolute;
+    top: var(--description-panel-top-gap);
+    left: var(--description-panel-side-gap);
+    right: var(--description-panel-side-gap);
+    bottom: var(--description-panel-bottom-gap);
+    background-color: rgba(0, 0, 0, 0.65); /* Fond noir avec 65% d'opacité */
+    z-index: 1; /* Se place entre le fond et le texte */
+    transition: background-color 0.3s ease-in-out; /* NOUVEAU : Transition douce pour l'overlay */
+}
+
+.description-panel p {
+    margin-bottom: 0;
+    position: relative; /* Assure que le texte est au-dessus de l'overlay */
+    z-index: 2;
+    /* NOUVEAU : Ajoute un espacement interne pour que le texte ne colle pas aux bords de la zone transparente. */
+    padding: 10px;
+    transition: color 0.3s ease-in-out; /* NOUVEAU : Transition douce pour la couleur du texte */
+}
+
+.description-panel strong {
+    color: #ffffff; /* Texte important en blanc pur */
+    transition: color 0.3s ease-in-out; /* NOUVEAU : Transition douce */
+}
+
+.description-panel em {
+    color: #e9ecef; /* Un gris très clair pour le texte moins important */
+    font-style: normal;
+    transition: color 0.3s ease-in-out; /* NOUVEAU : Transition douce */
+}
+
+/* --- NOUVEAU : Styles au survol de la souris --- */
+.description-panel:hover::before {
+    background-color: rgba(248, 249, 250, 0.85); /* Fond gris clair semi-transparent */
+}
+
+.description-panel:hover p,
+.description-panel:hover strong,
+.description-panel:hover em {
+    color: #212529; /* Texte noir pour une lisibilité maximale sur fond clair */
+}
+
+/* ================================================================== */
+/* SECTION 4: STYLES POUR LES BOÎTES DE DIALOGUE (MODALES)            */
+/* ================================================================== */
+
+/* --- 4.1 Structure générale et layout --- */
+.app-dialog .modal-content {
+    /* NOUVEAU : On force le contenu à être un conteneur flex vertical. */
+    /* Cela permet au .modal-body de grandir pour remplir l'espace et de contenir des colonnes défilantes. */
+    display: flex;
+    height: 100%;
+    flex-direction: column; /* La hauteur est gérée par .modal-dialog-scrollable */
+}
+
+.app-dialog .modal-header {
+    border-bottom: none;
+    flex-shrink: 0; /* Empêche l'en-tête de se réduire. */
+}
+
+/* On garde un fond blanc pour le footer pour la cohérence */
+.app-dialog .modal-footer,
+#confirmation-dialog-modal .modal-footer {
+    background-color: #ffffff;
+    border-top: 1px solid #dee2e6;
+    flex-shrink: 0; /* Empêche le pied de page de se réduire. */
+}
+
+.app-dialog .modal-body {
+    /* CORRECTION : On empêche le corps lui-même de défiler pour permettre aux colonnes internes de le faire. */
+    overflow: scroll;
+    padding: 1rem; /* Crée une gouttière grise autour des colonnes. */
+    background-color: #f0f0f0;
+    display: flex; /* Pour que l'enfant .row puisse prendre 100% de la hauteur. */
+    flex: 1; /* CORRECTION : Utiliser flex: 1 pour que le corps remplisse l'espace vertical disponible. */
+    min-height: 0; /* Correctif flex crucial pour permettre le défilement interne. */
+}
+
+.modal-backdrop.show ~ .modal-backdrop.show {
+    z-index: 1069;
+}
+
+/* --- 4.2 Barre de progression --- */
+.dialog-progress-container {
+    height: 0;
+    transition: height 0.3s ease;
+}
+.dialog-progress-container.is-loading {
+    height: 10px;
+}
+.dialog-progress-container { flex-shrink: 0; }
+.dialog-progress-container.is-loading { flex-shrink: 0; } /* Assure qu'il ne se contracte pas quand il est visible */
+.dialog-progress-bar {
+    width: 100%;
+    height: 100%;
+    background-color: #0d6efd;
+    background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
+    background-size: 1rem 1rem;
+    animation: dialog-progress-stripes 1s linear infinite;
+}
+@keyframes dialog-progress-stripes {
+    from { background-position: 1rem 0; }
+    to { background-position: 0 0; }
+}
+
+/* --- 4.3 Layout à deux colonnes --- */
+/*
+===================================================================
+ SECTION: MISE EN PAGE À DEUX COLONNES POUR LES DIALOGUES
+===================================================================
+*/
+
+/* --- Colonne de gauche (Attributs Calculés) --- */
+.calculated-attributes-column {
+    /* Styles de base pour la colonne sombre */
+    background-color: #212529;
+    color: #e9ecef;
+    padding: 1.5rem;
+    border-radius: var(--bs-border-radius);
+
+    /* NOUVEAU : Assurer que l'icône du bouton Enregistrer est blanche */
+    .btn-primary .button-icon svg {
+        fill: white;
+    }
+
+    /* Par défaut, la colonne est cachée */
+    display: none;
+
+    /* NOUVEAU : Comportement flex pour gérer le titre fixe et le contenu défilant. */
+    flex-direction: column;
+    min-height: 0; /* Correctif crucial pour le dépassement de contenu dans un conteneur flex. */
+}
+
+/* On affiche la colonne SEULEMENT si on est en mode édition ET qu'elle a du contenu */
+.app-dialog.is-edit-mode.has-attributes-column .calculated-attributes-column {
+    display: flex; /* On la rend visible en tant que conteneur flex */
+}
+
+.calculated-attributes-column .column-title {
+    font-weight: bold;
+    color: white;
+    font-size: 1.2rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #495057;
+    /* NOUVEAU : Empêche le titre de rétrécir lorsque le contenu défile */
+    flex-shrink: 0;
+}
+
+/* Le contenu n'est plus défilant individuellement */
+/* NOUVEAU : Le conteneur du contenu prend l'espace restant et devient défilant si nécessaire */
+.calculated-attributes-content {
+    flex-grow: 1;
+    overflow-y: auto;
+    min-height: 0; /* Autre correctif flex pour le défilement. */
+}
+.calculated-attributes-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.calculated-attributes-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0.5rem;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.calculated-attributes-list li:hover {
+    background-color: #343a40;
+}
+
+.calculated-attributes-list .attr-label {
+    opacity: 0.8;
+}
+.calculated-attributes-list .attr-value {
+    font-weight: bold;
+    text-align: right;
+}
+
+/* NOUVEAU : Cible la rangée (.row) à l'intérieur du corps de la modale pour en faire le conteneur flex principal. */
+.app-dialog .modal-body > .row {
+    flex: 1; /* La rangée prend toute la place dans le corps de la modale. */
+    display: flex;
+    gap: 1rem; /* Crée l'espacement entre les deux colonnes. */
+    min-height: 0; /* Correctif flex. */
+}
+
+/*
+===================================================================
+ SECTION: STYLE POUR LES TABLEAUX CLÉ-VALEUR DANS LES ATTRIBUTS
+===================================================================
+*/
+
+/* Conteneur principal du tableau */
+.attr-table {
+    width: 100%;
+    border-collapse: collapse; /* Fusionne les bordures pour un look plus net */
+    margin-top: 5px;
+    font-size: 0.9em;
+}
+
+/* Style de chaque ligne du tableau */
+.attr-table tr {
+    border-bottom: 1px solid #495057; /* Ligne de séparation gris foncé */
+}
+
+/* On enlève la bordure de la dernière ligne */
+.attr-table tr:last-child {
+    border-bottom: none;
+}
+
+/* Style des cellules (clé et valeur) */
+.attr-table td {
+    padding: 8px 5px;
+    vertical-align: top;
+}
+
+/* Style de la cellule de gauche (la clé, ex: "Attendus") */
+.attr-table .attr-table-key {
+    text-align: left;
+    color: #adb5bd; /* Gris plus clair pour la clé */
+}
+
+/* Style de la cellule de droite (la valeur, ex: "5 pc(s)") */
+.attr-table .attr-table-value {
+    text-align: right;
+    font-weight: bold;
+    color: #ffffff; /* Blanc pour la valeur */
+}
+
+/* --- 4.4 Styles de formulaire spécifiques aux dialogues --- */
+/*
+===================================================================
+ SECTION: STYLE POUR LES BLOCS DE CHAMPS DE FORMULAIRE DANS LES DIALOGUES
+===================================================================
+*/
+
+/* NOUVEAU : Ajoute une délimitation visuelle pour chaque champ dans un formulaire de dialogue. */
+.form-column .mb-3 {
+    margin-bottom: 0rem !important; /* CORRECTION : Gouttière verticale encore réduite pour un look plus aéré. */
+    padding: 0.75rem;
+    border-radius: var(--bs-border-radius-sm);
+    background-color: #ffffff; /* Assure un fond blanc propre */
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.08);
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+/* NOUVEAU : Améliore l'UX en surlignant le bloc entier lorsque l'un de ses champs a le focus. */
+.form-column .mb-3:focus-within {
+    box-shadow: 0 0 0 1px var(--bs-primary), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* NOUVEAU : Réduction des gouttières horizontales dans les formulaires de dialogue. */
+.form-column .row,
+.form-column-skeleton .row {
+    --bs-gutter-x: 0.5rem; /* Réduit la gouttière par défaut de 1rem (gx-3) à 0.5rem. */
+}
+
 /* STYLE POUR LES LIGNES DE FORMULAIRE COLORÉES */
 .form-row-colored {
     padding-top: 0.75rem;
@@ -218,6 +964,214 @@ a:active {
     border-radius: 8px;
 }
 
+/* STYLES POUR LE DÉFILEMENT DE FORMULAIRES (utilisé par le dialogue de recherche avancée) */
+.form-scrollable-content {
+    max-height: 45vh; /* Hauteur augmentée pour plus de confort */
+    overflow-y: auto;
+    padding-right: 10px; /* Padding ajusté */
+    scrollbar-width: thin;
+    scrollbar-color: #adb5bd #f8f9fa; /* Couleurs pour Firefox, assorties au thème */
+}
+.form-scrollable-content::-webkit-scrollbar {
+    width: 8px;
+}
+.form-scrollable-content::-webkit-scrollbar-track {
+    background: transparent; /* Le fond de la piste est transparent */
+}
+.form-scrollable-content::-webkit-scrollbar-thumb {
+    background-color: #adb5bd; /* Couleur du curseur, gris moyen */
+    border-radius: 4px;
+    border: 2px solid #f8f9fa; /* Crée un effet de "flottement" avec la couleur de fond */
+}
+.form-scrollable-content::-webkit-scrollbar-thumb:hover {
+    background-color: #495057; /* Plus foncé au survol */
+}
+
+
+/* --- 4.5 Squelettes de chargement --- */
+/*
+===================================================================
+ SECTION: SQUELETTE DE CHARGEMENT POUR LES LISTES
+===================================================================
+*/
+ 
+/* --- NOUVEAU : Style de base pour tous les éléments squelette --- */
+.skeleton-row,
+.skeleton-line {
+    background-color: #dee2e6; /* Fond gris un peu plus foncé */
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden; /* Important pour l'animation */
+}
+
+.skeleton-row {
+    height: 50px; /* Hauteur approximative d'une ligne */
+}
+
+/* --- NOUVEAU : Animation de balayage appliquée à tous les squelettes --- */
+.skeleton-row::after,
+.skeleton-line::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 150%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+    animation: skeleton-sweep-transform 1.5s infinite;
+}
+
+/* NOUVELLE animation qui utilise transform */
+@keyframes skeleton-sweep-transform {
+    0% {
+        transform: translateX(-100%); /* Commence complètement à gauche de la ligne */
+    }
+    100% {
+        transform: translateX(100%); /* Termine complètement à droite de la ligne */
+    }
+}
+
+/* NOUVEAU : Style pour le squelette sur fond sombre (colonne des attributs) */
+.calculated-attributes-column-skeleton .skeleton-line {
+    background-color: #343a40; /* Un gris plus clair que le fond #212529 */
+}
+
+.calculated-attributes-column-skeleton .skeleton-line::after {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent); /* Un balayage blanc très subtil */
+}
+
+/* NOUVEAU : Fond sombre pour le squelette de la colonne des attributs */
+.calculated-attributes-column-skeleton {
+    background-color: #212529; /* Couleur de fond de la colonne des attributs */
+    border-radius: var(--bs-border-radius); /* NOUVEAU: Assurer le même border-radius que la colonne réelle */
+    padding: 1.5rem; /* Assurer le même padding que la colonne réelle */
+}
+
+/* --- 4.6 Messages de feedback --- */
+.feedback-container .feedback-message {
+    padding: 10px 15px;
+    border-radius: 5px;
+    margin-bottom: 5px; /* Espace si plusieurs messages s'affichent */
+    font-size: 0.9em;
+    display: block; /* S'assure que le message prend toute la largeur */
+}
+
+/* Style pour les messages de succès (vert) */
+.feedback-message.feedback-success {
+    background-color: #d1e7dd;
+    border-left: 5px solid #0f5132;
+    color: #0f5132;
+    font-weight: normal; /* Texte normal, pas gras [cite: 5] */
+}
+
+/* Style pour les messages d'erreur (rouge) */
+.feedback-message.feedback-error {
+    background-color: #f8d7da;
+    border-left: 5px solid #842029;
+    color: #842029;
+    font-weight: bold; /* Texte en gras [cite: 4] */
+}
+
+/* Style pour les messages d'avertissement (jaune) */
+.feedback-message.feedback-warning {
+    background-color: #fff3cd;
+    border-left: 5px solid #664d03;
+    color: #664d03;
+    font-weight: bold; /* Texte en gras [cite: 6] */
+}
+
+/* Style pour la partie "timestamp" du message */
+.feedback-message .timestamp {
+    font-weight: bold;
+    margin-right: 8px;
+}
+
+/* --- 4.7 Barres de défilement spécifiques --- */
+/*
+===================================================================
+ SECTION: STYLE POUR LES BARRES DE DÉFILEMENT DES COLONNES DE DIALOGUE
+===================================================================
+*/
+
+/* NOUVEAU : Style de la barre de défilement pour la colonne des attributs (mode sombre) */
+.calculated-attributes-content::-webkit-scrollbar {
+    width: 8px;
+}
+.calculated-attributes-content::-webkit-scrollbar-track {
+    background: transparent; /* La piste est invisible sur le fond sombre */
+}
+.calculated-attributes-content::-webkit-scrollbar-thumb {
+    background-color: #495057; /* Un gris foncé, visible sur le fond #212529 */
+    border-radius: 4px;
+    border: 2px solid #212529; /* Crée un effet de "flottement" avec la couleur de fond */
+}
+.calculated-attributes-content::-webkit-scrollbar-thumb:hover {
+    background-color: #6c757d; /* Plus clair au survol */
+}
+
+/* --- 4.8 Cas spécifique : Modale de confirmation --- */
+#confirmation-dialog-modal .modal-header {
+    background-color: #dc3545; /* Rouge pour la confirmation */
+}
+
+/* On s'assure que le header de la modale de confirmation n'est pas flex */
+#confirmation-dialog-modal .modal-content {
+    display: block;
+}
+
+#confirmation-dialog-modal .modal-body {
+    background-color: #ffffff; /* Fond blanc pour la confirmation */
+}
+
+/* 6. SUPERPOSITION */
+#confirmation-dialog-modal {
+    z-index: 1070;
+}
+
+/* --- 4.9 Éléments divers (boutons, infobulles) --- */
+/* 5. ÉLÉMENTS DANS LES BOUTONS */
+.app-dialog .modal-footer .btn,
+#confirmation-dialog-modal .modal-footer .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Cible l'icône SVG à l'intérieur du conteneur .button-icon pour le bouton primaire */
+.btn-primary .button-icon svg {
+    fill: white; /* On s'assure que l'icône est blanche sur le bouton bleu */
+}
+
+/* Fichier : assets/styles/app.css (ou un fichier importé) */
+
+/* Styles pour l'infobulle (tooltip) */
+.canvas-tooltip {
+    position: absolute;
+    background-color: #0d6efd; /* Couleur à adapter */
+    color: white;
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    max-width: 250px;
+    z-index: 1090; /* Au-dessus de tout */
+    pointer-events: none;
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.canvas-tooltip.is-visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* ================================================================== */
+/* SECTION 5: STYLES POUR LES COMPOSANTS RÉUTILISABLES                */
+/* ================================================================== */
+
+/* --- 5.1 Gestionnaire de collection (Accordéon) --- */
 /*
 ===================================================================
  SECTION: COMPOSANT ACCORDÉON (Gestionnaire de Collection)
@@ -362,205 +1316,6 @@ a:active {
 
 /*
 ===================================================================
- SECTION: STYLE GLOBAL POUR LES CHAMPS DE FORMULAIRE ("FLAT" AVEC SURVOL)
-===================================================================
-*/
-
-/* --- Style par défaut pour tous les champs --- */
-.form-control,
-.form-select,
-.editeur-riche,
-/* NOUVEAU : Cible tous les types d'input pertinents */
-input[type="text"], input[type="date"], input[type="password"], input[type="number"], input[type="email"], input[type="file"],
-input[type=text],
-input[type=date],
-input[type=password],
-input[type=number],
-input[type=email],
-input[type=file],
-select,
-textarea,
-.tom-select-control {
-    border: 3px solid transparent; 
-    border-radius: 10px;
-    background-color: transparent !important;
-    box-shadow: none !important;
-    transition: border-color 0.2s ease-in-out; 
-    /* NOUVEAU : Style pour le contenu des champs */
-    color: #000000; /* Noir */
-    font-weight: bold;
-}
-
-/* NOUVEAU : Style pour les titres des champs (labels) */
-.form-label {
-    color: #adb5bd; /* Gris clair */
-    font-weight: normal;
-    /* Assure que le label ne soit pas affecté par le style bold des inputs */
-    display: block; 
-}
-
-/* --- Style au survol de la souris --- */
-.form-control:hover,
-.form-select:hover,
-.editeur-riche:hover,
-input[type=text]:hover,
-input[type=date]:hover,
-input[type=password]:hover,
-input[type=number]:hover,
-input[type=email]:hover,
-input[type=file]:hover,
-select:hover,
-textarea:hover,
-.tom-select-control:hover {
-    border-color: #6c757d;
-}
-
-/* --- Style au focus (quand on clique dedans) --- */
-.form-control:focus,
-.form-select:focus,
-.editeur-riche:focus,
-.tom-select-control.focus {
-    border-color: #0d6efd !important;
-    box-shadow: none !important;
-}
-.input-group span {
-    border: none;
-    background-color: transparent;
-}
-
-/*
-===================================================================
- SECTION: STYLE POUR LES MESSAGES D'AIDE DES FORMULAIRES
-===================================================================
-*/
-
-.form-text {
-    color: #0d6efd !important;
-}
-
-/*
-===================================================================
- SECTION: STYLE UNIFIÉ ET FINAL POUR TOUTES LES BOÎTES DE DIALOGUE
-===================================================================
-*/
-
-.app-dialog .modal-content {
-    /* NOUVEAU : On force le contenu à être un conteneur flex vertical. */
-    /* Cela permet au .modal-body de grandir pour remplir l'espace et de contenir des colonnes défilantes. */
-    display: flex;
-    height: 100%;
-    flex-direction: column; /* La hauteur est gérée par .modal-dialog-scrollable */
-}
-
-.app-dialog .modal-header {
-    border-bottom: none;
-    flex-shrink: 0; /* Empêche l'en-tête de se réduire. */
-}
-
-#confirmation-dialog-modal .modal-header {
-    background-color: #dc3545; /* Rouge pour la confirmation */
-}
-
-/* On s'assure que le header de la modale de confirmation n'est pas flex */
-#confirmation-dialog-modal .modal-content {
-    display: block;
-}
-
-/* On garde un fond blanc pour le footer pour la cohérence */
-.app-dialog .modal-footer,
-#confirmation-dialog-modal .modal-footer {
-    background-color: #ffffff;
-    border-top: 1px solid #dee2e6;
-    flex-shrink: 0; /* Empêche le pied de page de se réduire. */
-}
-
-/* 3. BARRE DE PROGRESSION (AVEC NOMS UNIQUES) */
-.dialog-progress-container {
-    height: 0;
-    transition: height 0.3s ease;
-}
-.dialog-progress-container.is-loading {
-    height: 10px;
-}
-.dialog-progress-container { flex-shrink: 0; }
-.dialog-progress-container.is-loading { flex-shrink: 0; } /* Assure qu'il ne se contracte pas quand il est visible */
-.dialog-progress-bar {
-    width: 100%;
-    height: 100%;
-    background-color: #0d6efd;
-    background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
-    background-size: 1rem 1rem;
-    animation: dialog-progress-stripes 1s linear infinite;
-}
-@keyframes dialog-progress-stripes {
-    from { background-position: 1rem 0; }
-    to { background-position: 0 0; }
-}
-
-/* 4. CORPS ET DÉFILEMENT */
-.app-dialog .modal-body {
-    /* CORRECTION : On empêche le corps lui-même de défiler pour permettre aux colonnes internes de le faire. */
-    overflow: scroll;
-    padding: 1rem; /* Crée une gouttière grise autour des colonnes. */
-    background-color: #f0f0f0;
-    display: flex; /* Pour que l'enfant .row puisse prendre 100% de la hauteur. */
-    flex: 1; /* CORRECTION : Utiliser flex: 1 pour que le corps remplisse l'espace vertical disponible. */
-    min-height: 0; /* Correctif flex crucial pour permettre le défilement interne. */
-}
-
-#confirmation-dialog-modal .modal-body {
-    background-color: #ffffff; /* Fond blanc pour la confirmation */
-}
-
-/* 5. ÉLÉMENTS DANS LES BOUTONS */
-.app-dialog .modal-footer .btn,
-#confirmation-dialog-modal .modal-footer .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-/* 6. SUPERPOSITION */
-#confirmation-dialog-modal {
-    z-index: 1070;
-}
-.modal-backdrop.show ~ .modal-backdrop.show {
-    z-index: 1069;
-}
-
-/*
-===================================================================
- SECTION: STYLE POUR LE LIEN DE TÉLÉCHARGEMENT VICHUPLOADER
-===================================================================
-*/
-
-/* Conteneur pour le champ de fichier */
-.vich-file {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-/* Style du lien de téléchargement */
-.vich-file a {
-    font-style: italic;
-    color: #0d6efd; /* Bleu cobalt */
-    font-weight: bold;
-    text-decoration: none;
-    padding: 8px;
-    border-radius: 4px;
-    background-color: rgba(13, 110, 253, 0.1);
-    border: 1px dashed rgba(13, 110, 253, 0.4);
-    display: inline-block;
-    max-width: fit-content;
-}
-.vich-file a:hover {
-    background-color: rgba(13, 110, 253, 0.2);
-    text-decoration: underline;
-}
-
-/*
-===================================================================
  SECTION: STYLE POUR ACCORDÉON DE COLLECTION DÉSACTIVÉ
 ===================================================================
 */
@@ -577,742 +1332,33 @@ textarea:hover,
     cursor: not-allowed;
 }
 
+/* --- 5.2 Critères de recherche avancée --- */
 /* ================================================================== */
-/* SECTION : PANNEAU DE DESCRIPTION DANS LE VOLET DE VISUALISATION    */
+/* NOUVEAU : Style pour le formulaire de recherche avancée          */
 /* ================================================================== */
 
-.description-panel {
-    --description-panel-top-gap: 300px; /* Espace supérieur sans transparence */
-    --description-panel-side-gap: 10px;   /* NOUVEAU : Espace latéral sans transparence */
-    --description-panel-bottom-gap: 10px; /* NOUVEAU : Espace inférieur sans transparence */
-    position: relative; /* Requis pour positionner l'overlay */
-    color: #ffffff; /* Texte en blanc pour contraster avec l'overlay */
-    font-size: 0.95rem;
-    line-height: 1.6;
-    border-radius: .375rem;
-    padding: var(--description-panel-top-gap) var(--description-panel-side-gap) var(--description-panel-bottom-gap);
+.criterion-block {
+    border: 1px solid #e9ecef;
+    border-radius: 0.375rem;
     margin-bottom: 1rem;
-    overflow: hidden; /* Assure que l'overlay respecte les coins arrondis */
-    display: flex; /* Permet de centrer le contenu verticalement */
-    min-height: 150px; /* Hauteur minimale pour que l'image soit visible */
-
-    /* --- Définition de l'image de fond --- */
-    background-size: cover; /* L'image couvre tout le panneau */
-    background-position: center; /* L'image est centrée */
+    background-color: #f8f9fa;
+    /* NOUVEAU : Bordure gauche par défaut (inactive) */
+    border-left: 6px solid #adb5bd; /* Gris moyen */
+    transition: border-left-color 0.3s ease-in-out; /* Transition douce */
 }
 
-/* --- NOUVEAU : Overlay sombre pour la lisibilité --- */
-.description-panel::before {
-    content: '';
-    position: absolute;
-    top: var(--description-panel-top-gap);
-    left: var(--description-panel-side-gap);
-    right: var(--description-panel-side-gap);
-    bottom: var(--description-panel-bottom-gap);
-    background-color: rgba(0, 0, 0, 0.65); /* Fond noir avec 65% d'opacité */
-    z-index: 1; /* Se place entre le fond et le texte */
-    transition: background-color 0.3s ease-in-out; /* NOUVEAU : Transition douce pour l'overlay */
+/* NOUVEAU : Style pour un critère actif */
+.criterion-block.is-active {
+    border-left-color: #198754; /* Vert "success" de Bootstrap */
 }
-
-.description-panel p {
-    margin-bottom: 0;
-    position: relative; /* Assure que le texte est au-dessus de l'overlay */
-    z-index: 2;
-    /* NOUVEAU : Ajoute un espacement interne pour que le texte ne colle pas aux bords de la zone transparente. */
-    padding: 10px;
-    transition: color 0.3s ease-in-out; /* NOUVEAU : Transition douce pour la couleur du texte */
-}
-
-.description-panel strong {
-    color: #ffffff; /* Texte important en blanc pur */
-    transition: color 0.3s ease-in-out; /* NOUVEAU : Transition douce */
-}
-
-.description-panel em {
-    color: #e9ecef; /* Un gris très clair pour le texte moins important */
-    font-style: normal;
-    transition: color 0.3s ease-in-out; /* NOUVEAU : Transition douce */
-}
-
-/* --- NOUVEAU : Styles au survol de la souris --- */
-.description-panel:hover::before {
-    background-color: rgba(248, 249, 250, 0.85); /* Fond gris clair semi-transparent */
-}
-
-.description-panel:hover p,
-.description-panel:hover strong,
-.description-panel:hover em {
-    color: #212529; /* Texte noir pour une lisibilité maximale sur fond clair */
-}
-
-/*
-===================================================================
- SECTION: SQUELETTE DE CHARGEMENT POUR LES LISTES
-===================================================================
-*/
- 
-/* --- NOUVEAU : Style de base pour tous les éléments squelette --- */
-.skeleton-row,
-.skeleton-line {
-    background-color: #dee2e6; /* Fond gris un peu plus foncé */
-    border-radius: 4px;
-    position: relative;
-    overflow: hidden; /* Important pour l'animation */
-}
-
-.skeleton-row {
-    height: 50px; /* Hauteur approximative d'une ligne */
-}
-
-/* --- NOUVEAU : Animation de balayage appliquée à tous les squelettes --- */
-.skeleton-row::after,
-.skeleton-line::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 150%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
-    animation: skeleton-sweep-transform 1.5s infinite;
-}
-
-/* NOUVELLE animation qui utilise transform */
-@keyframes skeleton-sweep-transform {
-    0% {
-        transform: translateX(-100%); /* Commence complètement à gauche de la ligne */
-    }
-    100% {
-        transform: translateX(100%); /* Termine complètement à droite de la ligne */
-    }
-}
-
-/* NOUVEAU : Style pour le squelette sur fond sombre (colonne des attributs) */
-.calculated-attributes-column-skeleton .skeleton-line {
-    background-color: #343a40; /* Un gris plus clair que le fond #212529 */
-}
-
-.calculated-attributes-column-skeleton .skeleton-line::after {
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent); /* Un balayage blanc très subtil */
-}
-
-/* NOUVEAU : Fond sombre pour le squelette de la colonne des attributs */
-.calculated-attributes-column-skeleton {
-    background-color: #212529; /* Couleur de fond de la colonne des attributs */
-    border-radius: var(--bs-border-radius); /* NOUVEAU: Assurer le même border-radius que la colonne réelle */
-    padding: 1.5rem; /* Assurer le même padding que la colonne réelle */
-}
-
-/* Cible l'icône SVG à l'intérieur du conteneur .button-icon pour le bouton primaire */
-.btn-primary .button-icon svg {
-    fill: white; /* On s'assure que l'icône est blanche sur le bouton bleu */
-}
-
-.feedback-container .feedback-message {
-    padding: 10px 15px;
-    border-radius: 5px;
-    margin-bottom: 5px; /* Espace si plusieurs messages s'affichent */
-    font-size: 0.9em;
-    display: block; /* S'assure que le message prend toute la largeur */
-}
-
-/* Style pour les messages de succès (vert) */
-.feedback-message.feedback-success {
-    background-color: #d1e7dd;
-    border-left: 5px solid #0f5132;
-    color: #0f5132;
-    font-weight: normal; /* Texte normal, pas gras [cite: 5] */
-}
-
-/* Style pour les messages d'erreur (rouge) */
-.feedback-message.feedback-error {
-    background-color: #f8d7da;
-    border-left: 5px solid #842029;
-    color: #842029;
-    font-weight: bold; /* Texte en gras [cite: 4] */
-}
-
-/* Style pour les messages d'avertissement (jaune) */
-.feedback-message.feedback-warning {
-    background-color: #fff3cd;
-    border-left: 5px solid #664d03;
-    color: #664d03;
-    font-weight: bold; /* Texte en gras [cite: 6] */
-}
-
-/* Style pour la partie "timestamp" du message */
-.feedback-message .timestamp {
-    font-weight: bold;
-    margin-right: 8px;
-}
-
-/*
-===================================================================
- SECTION: MISE EN PAGE À DEUX COLONNES POUR LES DIALOGUES
-===================================================================
-*/
-
-/* --- Colonne de gauche (Attributs Calculés) --- */
-.calculated-attributes-column {
-    /* Styles de base pour la colonne sombre */
-    background-color: #212529;
-    color: #e9ecef;
-    padding: 1.5rem;
-    border-radius: var(--bs-border-radius);
-
-    /* NOUVEAU : Assurer que l'icône du bouton Enregistrer est blanche */
-    .btn-primary .button-icon svg {
-        fill: white;
-    }
-
-    /* Par défaut, la colonne est cachée */
-    display: none;
-
-    /* NOUVEAU : Comportement flex pour gérer le titre fixe et le contenu défilant. */
-    flex-direction: column;
-    min-height: 0; /* Correctif crucial pour le dépassement de contenu dans un conteneur flex. */
-}
-
-/* On affiche la colonne SEULEMENT si on est en mode édition ET qu'elle a du contenu */
-.app-dialog.is-edit-mode.has-attributes-column .calculated-attributes-column {
-    display: flex; /* On la rend visible en tant que conteneur flex */
-}
-
-.calculated-attributes-column .column-title {
-    font-weight: bold;
-    color: white;
-    font-size: 1.2rem;
-    margin-bottom: 1.5rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #495057;
-    /* NOUVEAU : Empêche le titre de rétrécir lorsque le contenu défile */
-    flex-shrink: 0;
-}
-
-/* Le contenu n'est plus défilant individuellement */
-/* NOUVEAU : Le conteneur du contenu prend l'espace restant et devient défilant si nécessaire */
-.calculated-attributes-content {
-    flex-grow: 1;
-    overflow-y: auto;
-    min-height: 0; /* Autre correctif flex pour le défilement. */
-}
-.calculated-attributes-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.calculated-attributes-list li {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.75rem 0.5rem;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
-}
-
-.calculated-attributes-list li:hover {
-    background-color: #343a40;
-}
-
-.calculated-attributes-list .attr-label {
-    opacity: 0.8;
-}
-.calculated-attributes-list .attr-value {
-    font-weight: bold;
-    text-align: right;
-}
-
-/* --- Colonne de droite (Formulaire) --- */
-.form-column {
-    /* NOUVEAU : La colonne de formulaire est un item flex qui grandit et défile. */
-    flex: 1;
-    min-width: 0; /* Correctif flex pour empêcher le dépassement horizontal. */
-    padding: 0.75rem;
-    overflow-y: auto;
-    /* NOUVEAU : Fond blanc et coins arrondis pour un aspect "carte" dans le corps gris. */
-    background-color: #ffffff;
-    border-radius: var(--bs-border-radius);
-}
-
-/* NOUVEAU : Cible la rangée (.row) à l'intérieur du corps de la modale pour en faire le conteneur flex principal. */
-.app-dialog .modal-body > .row {
-    flex: 1; /* La rangée prend toute la place dans le corps de la modale. */
-    display: flex;
-    gap: 1rem; /* Crée l'espacement entre les deux colonnes. */
-    min-height: 0; /* Correctif flex. */
-}
-
-/*
-===================================================================
- SECTION: STYLE POUR LES BLOCS DE CHAMPS DE FORMULAIRE DANS LES DIALOGUES
-===================================================================
-*/
-
-/* NOUVEAU : Ajoute une délimitation visuelle pour chaque champ dans un formulaire de dialogue. */
-.form-column .mb-3 {
-    margin-bottom: 0rem !important; /* CORRECTION : Gouttière verticale encore réduite pour un look plus aéré. */
-    padding: 0.75rem;
-    border-radius: var(--bs-border-radius-sm);
-    background-color: #ffffff; /* Assure un fond blanc propre */
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.08);
-    transition: box-shadow 0.2s ease-in-out;
-}
-
-/* NOUVEAU : Améliore l'UX en surlignant le bloc entier lorsque l'un de ses champs a le focus. */
-.form-column .mb-3:focus-within {
-    box-shadow: 0 0 0 1px var(--bs-primary), 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-
-/* NOUVEAU : Réduction des gouttières horizontales dans les formulaires de dialogue. */
-.form-column .row,
-.form-column-skeleton .row {
-    --bs-gutter-x: 0.5rem; /* Réduit la gouttière par défaut de 1rem (gx-3) à 0.5rem. */
-}
-
-
-/*
-===================================================================
- SECTION: STYLE GLOBAL POUR LES BARRES DE DÉFILEMENT
-===================================================================
-*/
-
-/* Style de la barre de défilement par défaut pour toute l'application */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px; /* Ajout pour les barres horizontales */
-}
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-}
-::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #555;
-}
-
-
-/*
-===================================================================
- SECTION: STYLE POUR LES BARRES DE DÉFILEMENT DES COLONNES DE DIALOGUE
-===================================================================
-*/
-
-/* NOUVEAU : Style de la barre de défilement pour la colonne des attributs (mode sombre) */
-.calculated-attributes-content::-webkit-scrollbar {
-    width: 8px;
-}
-.calculated-attributes-content::-webkit-scrollbar-track {
-    background: transparent; /* La piste est invisible sur le fond sombre */
-}
-.calculated-attributes-content::-webkit-scrollbar-thumb {
-    background-color: #495057; /* Un gris foncé, visible sur le fond #212529 */
-    border-radius: 4px;
-    border: 2px solid #212529; /* Crée un effet de "flottement" avec la couleur de fond */
-}
-.calculated-attributes-content::-webkit-scrollbar-thumb:hover {
-    background-color: #6c757d; /* Plus clair au survol */
-}
-
-/*
-===================================================================
- SECTION: STYLE POUR LES TABLEAUX CLÉ-VALEUR DANS LES ATTRIBUTS
-===================================================================
-*/
-
-/* Conteneur principal du tableau */
-.attr-table {
-    width: 100%;
-    border-collapse: collapse; /* Fusionne les bordures pour un look plus net */
-    margin-top: 5px;
-    font-size: 0.9em;
-}
-
-/* Style de chaque ligne du tableau */
-.attr-table tr {
-    border-bottom: 1px solid #495057; /* Ligne de séparation gris foncé */
-}
-
-/* On enlève la bordure de la dernière ligne */
-.attr-table tr:last-child {
-    border-bottom: none;
-}
-
-/* Style des cellules (clé et valeur) */
-.attr-table td {
-    padding: 8px 5px;
-    vertical-align: top;
-}
-
-/* Style de la cellule de gauche (la clé, ex: "Attendus") */
-.attr-table .attr-table-key {
-    text-align: left;
-    color: #adb5bd; /* Gris plus clair pour la clé */
-}
-
-/* Style de la cellule de droite (la valeur, ex: "5 pc(s)") */
-.attr-table .attr-table-value {
-    text-align: right;
-    font-weight: bold;
-    color: #ffffff; /* Blanc pour la valeur */
-}
-
-/* Fichier : assets/styles/app.css (ou un fichier importé) */
-
-/* Styles pour l'infobulle (tooltip) */
-.canvas-tooltip {
-    position: absolute;
-    background-color: #0d6efd; /* Couleur à adapter */
-    color: white;
-    padding: 0.8rem 1rem;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    line-height: 1.4;
-    max-width: 250px;
-    z-index: 1090; /* Au-dessus de tout */
-    pointer-events: none;
-    opacity: 0;
-    transform: translateX(-10px);
-    transition: opacity 0.2s ease, transform 0.2s ease;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-}
-
-.canvas-tooltip.is-visible {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-/* ================================================================== */
-/* SECTION : NOUVELLE INTERFACE À ONGLETS                             */
-/* ================================================================== */
-
-/* Structure de la page et header fixe */
-.sticky-header {
-    position: sticky;
-    top: 0;
-    z-index: 1020;
+.criterion-block .criterion-header {
+    padding: 0.5rem 1rem;
+    background-color: #e9ecef; /* Fond de l'en-tête un peu plus foncé */
     border-bottom: 1px solid #dee2e6;
+    font-weight: 600; /* Police semi-bold pour le titre */
 }
 
-.rubrique-title {
-    font-weight: bold;
-    color: #000;
-    font-size: 1.1rem;
-    margin-bottom: 7px;
-}
-
-/* Barre d'onglets */
-.list-tabs-container {
-    display: flex;
-    /* border-bottom: 1px solid #dee2e6; */
-    margin-top: 3px;
-    /* NOUVEAU : Permet le défilement horizontal quand les onglets dépassent */
-    overflow-x: auto;
-    white-space: nowrap;
-    /* NOUVEAU : Ajoute un padding en bas pour la barre de défilement et le compense avec une marge négative pour ne pas décaler le layout */
-    padding-bottom: 0px; /* Réduit pour rapprocher la barre de défilement */
-    margin-bottom: -5px; /* Ajusté pour compenser le nouveau padding */
-}
-
-.list-tabs-container::-webkit-scrollbar {
-    height: 3px; /* Epaisseur réduite de moitié */
-}
-.list-tabs-container::-webkit-scrollbar-track {
-    background: transparent; /* La piste est invisible */
-}
-.list-tabs-container::-webkit-scrollbar-thumb {
-    background-color: #0d6efd; /* NOUVEAU : Bleu cobalt */
-    border-radius: 1.5px; /* Ajusté pour la nouvelle épaisseur */
-}
-.list-tabs-container::-webkit-scrollbar-thumb:hover {
-    background-color: #0a58ca; /* NOUVEAU : Bleu cobalt plus foncé au survol */
-}
-
-.list-tab {
-    padding: 8px 16px;
-    cursor: pointer;
-    background-color: transparent;
-    border: none;
-    border-bottom: 6px solid transparent;
-    color: #6c757d;
-    font-weight: 500;
-    transition: all 0.2s ease-in-out;
-}
-
-.list-tab:hover {
-    border-bottom-color: #c6c6c8;
-    color: #000;
-}
-
-.list-tab.active {
-    font-weight: bold;
-    color: #212529;
-    border-bottom-color: #000;
-}
-
-/* ================================================================== */
-/* SECTION : NOUVEAU STYLE DE LA BARRE D'OUTILS                       */
-/* ================================================================== */
-
-.context-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem; /* Espacement légèrement augmenté pour plus de clarté */
-    padding: 0.25rem;
-    width: fit-content;
-    /* Le fond est maintenant transparent, on se fie aux boutons */
-}
-
-.context-toolbar .btn {
-    /* On supprime les dimensions fixes pour laisser Bootstrap gérer la taille */
-    border-radius: 8px; /* Coins légèrement arrondis pour un look moderne */
-    border: none;
-    padding: 0.5rem; /* Padding uniforme */
-    line-height: 1; /* Assure un bon alignement vertical de l'icône */
-    transition: all 0.2s ease-in-out; /* Animation douce pour toutes les propriétés */
-}
-
-.context-toolbar .btn:hover { 
-    transform: translateY(-1px); /* Léger effet de soulèvement */
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Ombre douce */
-}
-
-.context-toolbar .btn:disabled { color: #adb5bd; }
-
-.toolbar-separator {
-    width: 1px;
-    height: 20px;
-    background-color: #ced4da;
-    margin: 0 0.25rem; /* Marge réduite pour un look plus compact */
-}
-
-.toolbar-icon {
-    width: 24px;
-    height: 24px;
-    color: #6c757d; /* Gris par défaut pour les icônes */
-    transition: color 0.2s ease-in-out; /* Animation douce pour la couleur */
-}
-
-/* NOUVEAU : Au survol du bouton, l'icône devient noire */
-.context-toolbar .btn:hover .toolbar-icon {
-    /* On ne change pas la couleur pour les boutons de danger */
-    color: black;
-}
-
-
-/* ================================================================== */
-/* SECTION : ADAPTATION DU MENU CONTEXTUEL (MODE SOMBRE)              */
-/* ================================================================== */
-/* On surcharge les styles existants de votre fichier interactive-menu.css */
-.context-target {
-    cursor: context-menu;
-    user-select: none;
-}
-
-.context-menu {
-    position: fixed;
-    background-color: #212529;
-    color: #f8f9fa;
-    border: 1px solid #495057;
-    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
-    min-width: 180px;
-    z-index: 1000;
-    border-radius: 4px;
-    padding: 5px 0;
-}
-
-.context-menu ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.context-menu li {
-    padding: 8px 15px;
-    cursor: pointer;
-    align-items: center;
-}
-
-.context-menu li:hover {
-    background-color: #f0f0f0;
-    color: black;
-}
-
-.context-menu li.separator {
-    border-top: 1px solid #eee;
-    margin: 5px 0;
-    padding: 0;
-}
-
-.context-menu .menu-icon {
-    width: 18px;
-    height: 18px;
-    margin-right: 10px; /* Remplace la propriété 'gap' pour un meilleur contrôle */
-}
-
-.context-menu ul li {
-    color: #f8f9fa;
-}
-
-.context-menu ul li:hover {
-    background-color: #495057; /* Fond de survol plus clair */
-    color: #f8f9fa;
-}
-
-/* CORRECTION : Assure la visibilité du texte des raccourcis en mode sombre */
-.context-menu ul li .text-muted {
-    color: rgba(248, 249, 250, 0.65); /* Texte clair mais moins prononcé que l'option principale */
-}
-.context-menu ul li.separator {
-    border-top: 1px solid #495057;
-}
-
-.context-menu-icon {
-    width: 20px; /* Largeur fixe pour l'alignement des icônes */
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.context-menu-shortcut {
-    width: 20px; /* Largeur fixe pour l'alignement des raccourcis */
-    text-align: right;
-    color: #6c757d; /* text-muted */
-    font-size: 0.875em; /* small */
-}
-
-/* --- NOUVEAU : Style pour le conteneur du spinner --- */
-.spinner-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 4rem 2rem; /* Un peu d'espace pour que ça respire */
-    min-height: 200px; /* Hauteur minimale pour être visible même si la liste est vide */
-    width: 100%;
-}
-
-/* --- NOUVEAU : Le spinner lui-même --- */
-.custom-spinner {
-    width: 50px;
-    height: 50px;
-    border: 5px solid rgba(0, 123, 255, 0.2); /* Couleur de fond de la bordure (bleu clair transparent) */
-    border-top-color: #0d6efd; /* Couleur de la partie qui tourne (bleu primaire de Bootstrap) */
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-/* --- NOUVEAU : L'animation de rotation --- */
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-/* --- Styles pour le composant Empty State --- */
-.empty-state-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 2rem;
-  height: 100%;
-  min-height: 250px; /* Hauteur minimale pour un bon rendu visuel */
-  animation: fadeIn 0.3s ease-in-out; /* Animation d'apparition douce */
-}
-
-.empty-state-content {
-  max-width: 450px;
-}
-
-.empty-state-icon {
-  /* font-size: 3rem; Taille de l'icône */
-  color: #6c757d; /* --dark-gray-color ou équivalent */
-  margin-bottom: 1rem;
-  width: 100px;
-  height: 100px;
-  display: block; /* Assure que l'icône est un bloc pour le centrage */
-  margin-left: auto; /* Centre l'icône horizontalement */
-  margin-right: auto; /* Centre l'icône horizontalement */
-}
-
-.empty-state-title {
-  font-size: 1.4em; /* Police légèrement plus grande */
-  color: #343a40; /* --dark-gray-color ou équivalent */
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-.empty-state-description {
-  font-size: 1.1em;
-  color: #6c757d; /* --dark-gray-color ou équivalent */
-  margin-bottom: 1.5rem;
-}
-
-/* Le bouton utilise déjà les styles .btn-primary de Bootstrap, qui correspondent à votre --primary-cobalt-blue */
-/* CORRECTION : Style pour les boutons avec icône et texte */
-.empty-state-button, .empty-state-button-secondary {
-  display: inline-flex; /* Permet d'aligner l'icône et le texte */
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1.25rem; /* Padding pour un aspect rectangulaire */
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); /* Ombre discrète */
-  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; /* Animation douce */
-  border-radius: 8px !important; /* Forme rectangulaire avec coins arrondis */
-}
-
-.empty-state-button:hover {
-  transform: translateY(-2px); /* Léger mouvement vers le haut au survol */
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Ombre plus prononcée */
-}
-
-.empty-state-button-secondary:hover {
-    transform: translateY(-2px); /* Léger mouvement vers le haut au survol */
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Ombre plus prononcée */
-    background-color: #5a6268; /* Gris plus foncé au survol */
-    border-color: #545b62;
-}
-
-/*
-===================================================================
- SECTION: SQUELETTE DE CHARGEMENT GÉNÉRIQUE POUR L'ESPACE DE TRAVAIL
-===================================================================
-*/
-
-.workspace-skeleton {
-    padding: 1.5rem;
-    animation: fadeIn 0.3s ease-in-out;
-}
-
-.workspace-skeleton .skeleton-header {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-    margin-bottom: 1.5rem;
-}
-
-.workspace-skeleton .skeleton-icon {
-    width: 40px;
-    height: 40px;
-    background-color: #dee2e6; /* Fond gris un peu plus foncé */
-    border-radius: 8px;
-}
-
-.workspace-skeleton .skeleton-line {
-    height: 20px;
-    background-color: #dee2e6; /* Fond gris un peu plus foncé */
-    border-radius: 4px;
-    margin-bottom: 10px;
-}
-
-/* Cible l'icône SVG à l'intérieur du bouton */
-/* CORRECTION : Assure que les icônes font exactement 24px */
-.empty-state-button .me-2,
-.empty-state-button-secondary .me-2 {
-    width: 24px !important;
-    height: 24px !important;
-}
-
+/* --- 5.3 Boutons d'action contextuels (sur les lignes) --- */
 /*
 ===================================================================
  SECTION: BOUTONS D'ACTION CONTEXTUELS POUR LES LIGNES DE LISTE
@@ -1371,29 +1417,4 @@ textarea:hover,
 
 .list-row-actions-container .btn:hover .ux-icon {
     stroke-width: 2.5; /* Trait plus épais pour un effet "gras" au survol */
-}
-
-/* ================================================================== */
-/* NOUVEAU : Style pour le formulaire de recherche avancée          */
-/* ================================================================== */
-
-.criterion-block {
-    border: 1px solid #e9ecef;
-    border-radius: 0.375rem;
-    margin-bottom: 1rem;
-    background-color: #f8f9fa;
-    /* NOUVEAU : Bordure gauche par défaut (inactive) */
-    border-left: 6px solid #adb5bd; /* Gris moyen */
-    transition: border-left-color 0.3s ease-in-out; /* Transition douce */
-}
-
-/* NOUVEAU : Style pour un critère actif */
-.criterion-block.is-active {
-    border-left-color: #198754; /* Vert "success" de Bootstrap */
-}
-.criterion-block .criterion-header {
-    padding: 0.5rem 1rem;
-    background-color: #e9ecef; /* Fond de l'en-tête un peu plus foncé */
-    border-bottom: 1px solid #dee2e6;
-    font-weight: 600; /* Police semi-bold pour le titre */
 }
