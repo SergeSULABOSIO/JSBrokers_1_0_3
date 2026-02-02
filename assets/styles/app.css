@@ -762,9 +762,9 @@ textarea:hover,
 .custom-modal-scroll .modal-body {
     flex: 1;
     overflow-y: hidden; /* On empêche le scroll sur le corps parent */
-    background-color: #f0f0f0;
-    display: flex;
-    min-height: 0; /* Correctif flexbox pour le défilement des enfants */
+    background-color: #f0f0f0; /* Le fond gris est sur le corps */
+    min-height: 0; /* Correctif flexbox pour le parent .custom-modal-scroll */
+    padding: 1rem; /* NOUVEAU : Crée une gouttière grise uniforme autour des colonnes. */
 }
 
 .modal-backdrop.show ~ .modal-backdrop.show {
@@ -870,7 +870,7 @@ textarea:hover,
     /* NOUVEAU : La colonne de formulaire est un item flex qui grandit et défile. */
     flex: 1;
     min-width: 0; /* Correctif flex pour empêcher le dépassement horizontal. */
-    padding: 0.5rem; /* HARMONISATION : Padding externe réduit pour un design plus compact. */
+    padding: 1.5rem; /* Padding interne pour le contenu du formulaire. */
     overflow-y: auto;
     /* NOUVEAU : Fond blanc et coins arrondis pour un aspect "carte" dans le corps gris. */
     background-color: #ffffff;
