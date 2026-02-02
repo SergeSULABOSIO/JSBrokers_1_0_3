@@ -758,14 +758,13 @@ textarea:hover,
     flex-shrink: 0; /* Empêche le pied de page de se réduire. */
 }
 
-.app-dialog .modal-body {
-    /* CORRECTION : On empêche le corps lui-même de défiler pour permettre aux colonnes internes de le faire. */
-    overflow: scroll;
-    padding: 1rem; /* Crée une gouttière grise autour des colonnes. */
+/* 2. On dit au corps de prendre tout l'espace restant sans dépasser */
+.custom-modal-scroll .modal-body {
+    flex: 1;
+    overflow-y: hidden; /* On empêche le scroll sur le corps parent */
     background-color: #f0f0f0;
-    display: flex; /* Pour que l'enfant .row puisse prendre 100% de la hauteur. */
-    flex: 1; /* CORRECTION : Utiliser flex: 1 pour que le corps remplisse l'espace vertical disponible. */
-    min-height: 0; /* Correctif flex crucial pour permettre le défilement interne. */
+    display: flex;
+    min-height: 0; /* Correctif flexbox pour le défilement des enfants */
 }
 
 .modal-backdrop.show ~ .modal-backdrop.show {
