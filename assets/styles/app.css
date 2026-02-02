@@ -758,40 +758,19 @@ textarea:hover,
     flex-shrink: 0; /* Empêche le pied de page de se réduire. */
 }
 
-/* 2. On dit au corps de prendre tout l'espace restant sans dépasser */
+/* 2. On dit au corps de prendre tout l'espace restant et d'organiser les colonnes */
 .custom-modal-scroll .modal-body {
     flex: 1;
     overflow-y: hidden; /* On empêche le scroll sur le corps parent */
-    background-color: #f0f0f0; /* Le fond gris est sur le corps */
-    min-height: 0; /* Correctif flexbox pour le parent .custom-modal-scroll */
-    padding: 1rem; /* NOUVEAU : Crée une gouttière grise uniforme autour des colonnes. */
+    background-color: #f0f0f0;
+    min-height: 0;
+    padding: 1rem; /* Gouttière extérieure */
+    display: flex; /* Le corps devient le conteneur flex */
+    gap: 1rem; /* Gouttière entre les colonnes */
 }
 
 .modal-backdrop.show ~ .modal-backdrop.show {
     z-index: 1069;
-}
-
-/* --- 4.2 Barre de progression --- */
-.dialog-progress-container {
-    height: 0;
-    transition: height 0.3s ease;
-}
-.dialog-progress-container.is-loading {
-    height: 10px;
-}
-.dialog-progress-container { flex-shrink: 0; }
-.dialog-progress-container.is-loading { flex-shrink: 0; } /* Assure qu'il ne se contracte pas quand il est visible */
-.dialog-progress-bar {
-    width: 100%;
-    height: 100%;
-    background-color: #0d6efd;
-    background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
-    background-size: 1rem 1rem;
-    animation: dialog-progress-stripes 1s linear infinite;
-}
-@keyframes dialog-progress-stripes {
-    from { background-position: 1rem 0; }
-    to { background-position: 0 0; }
 }
 
 /* --- 4.3 Layout à deux colonnes --- */
@@ -877,12 +856,9 @@ textarea:hover,
     border-radius: var(--bs-border-radius);
 }
 
-/* 3. On force la rangée principale à prendre 100% de la hauteur du body */
+/* 3. On fait "disparaître" la rangée intermédiaire pour que les colonnes deviennent les enfants flex directs du modal-body */
 .custom-modal-scroll .modal-body > .row {
-    height: 100%;
-    display: flex;
-    gap: 1rem; /* Crée l'espacement entre les deux colonnes. */
-    min-height: 0; /* Correctif flex pour le défilement des enfants */
+    display: contents;
 }
 
 /*
@@ -938,7 +914,7 @@ textarea:hover,
 /* NOUVEAU : Ajoute une délimitation visuelle pour chaque champ dans un formulaire de dialogue. */
 .form-column .mb-3 {
     margin-bottom: 0rem !important; /* La gouttière verticale est maintenant gérée par la classe .mb-2 sur la ligne (.row). */
-    padding: 0.5rem; /* HARMONISATION : Padding interne des blocs de champ réduit. */
+    padding: 0.5rem;
     border-radius: var(--bs-border-radius-sm);
     background-color: #ffffff; /* Assure un fond blanc propre */
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.08);

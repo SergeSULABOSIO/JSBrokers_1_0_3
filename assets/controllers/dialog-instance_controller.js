@@ -573,21 +573,21 @@ export default class extends Controller {
                         <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
                         <span class="ms-2">${message}</span>
                     </div>
-                    <div class="row gx-3">
+                    <div class="row gx-2 mb-2">
                         <div class="col">
-                            <div class="skeleton-field-block mb-3">
+                            <div class="skeleton-field-block">
                                 <div class="skeleton-line mb-2" style="width: 80%; height: 14px;"></div>
                                 <div class="skeleton-line" style="height: 38px;"></div>
                             </div>
                         </div>
                         <div class="col">
-                            <div class="skeleton-field-block mb-3">
+                            <div class="skeleton-field-block">
                                 <div class="skeleton-line mb-2" style="width: 60%; height: 14px;"></div>
                                 <div class="skeleton-line" style="height: 38px;"></div>
                             </div>
                         </div>
                     </div>
-                    <div class="row gx-3">
+                    <div class="row gx-2 mb-2">
                         <div class="col">
                             <div class="skeleton-field-block">
                                 <div class="skeleton-line mb-2" style="width: 40%; height: 14px;"></div>
