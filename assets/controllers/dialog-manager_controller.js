@@ -29,8 +29,8 @@ export default class extends Controller {
             data-bs-backdrop="static"
             data-bs-keyboard="false"
         >
-            <div class="modal-dialog modal-xl modal-dialog-scrollable"> 
-                <div class="modal-content" data-controller="dialog-instance" data-dialog-instance-modal-outlet=".modal">
+            <div class="modal-dialog modal-xl modal-dialog-centered"> 
+                <div class="modal-content custom-modal-scroll" data-controller="dialog-instance" data-dialog-instance-modal-outlet=".modal">
                     <div class="modal-header" data-dialog-instance-target="header">
                         <div class="d-flex align-items-center">
                             <span data-dialog-instance-target="titleIcon" class="me-2"></span>
@@ -41,9 +41,11 @@ export default class extends Controller {
                     <div class="dialog-progress-container is-loading" data-dialog-instance-target="progressBarContainer"> 
                         <div class="dialog-progress-bar" role="progressbar"></div>
                     </div>
-                    <div data-dialog-instance-target="content" class="modal-body"> 
-                        <div class="spinner-border" role="status">
-                            <span class="visually-hidden">Loading...</span>
+                    <div data-dialog-instance-target="content" class="modal-body p-0"> 
+                        <div class="d-flex justify-content-center align-items-center h-100" style="min-height: 200px;">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer" data-dialog-instance-target="footer"> 
