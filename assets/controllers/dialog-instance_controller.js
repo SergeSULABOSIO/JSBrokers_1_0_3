@@ -571,7 +571,7 @@ export default class extends Controller {
                 <div class="col form-column-skeleton">
                     <div> <!-- Ce div imite la balise <form> -->
                         <div class="row gx-2 mb-2">
-                            <div class="col">
+                            <div class="col-12">
                                 <div class="text-center text-muted">
                                     <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
                                     <span class="ms-2">${message}</span>
@@ -579,13 +579,13 @@ export default class extends Controller {
                             </div>
                         </div>
                         <div class="row gx-2 mb-2">
-                            <div class="col">
+                            <div class="col-6">
                                 <div class="skeleton-field-block">
                                     <div class="skeleton-line mb-2" style="width: 80%; height: 14px;"></div>
                                     <div class="skeleton-line" style="height: 38px;"></div>
                                 </div>
                             </div>
-                            <div class="col">
+                            <div class="col-6">
                                 <div class="skeleton-field-block">
                                     <div class="skeleton-line mb-2" style="width: 60%; height: 14px;"></div>
                                     <div class="skeleton-line" style="height: 38px;"></div>
@@ -593,7 +593,7 @@ export default class extends Controller {
                             </div>
                         </div>
                         <div class="row gx-2 mb-2">
-                            <div class="col">
+                            <div class="col-12">
                                 <div class="skeleton-field-block">
                                     <div class="skeleton-line mb-2" style="width: 40%; height: 14px;"></div>
                                     <div class="skeleton-line" style="height: 80px;"></div>
