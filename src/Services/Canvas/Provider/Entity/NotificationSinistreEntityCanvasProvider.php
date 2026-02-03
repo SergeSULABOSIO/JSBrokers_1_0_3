@@ -35,7 +35,8 @@ class NotificationSinistreEntityCanvasProvider implements EntityCanvasProviderIn
                 "icone" => "sinistre",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
-                    "Sinistre [[*referenceSinistre]] pour l'assuré [[assure]].",
+                    // On utilise la propriété calculée 'assureNom' pour un affichage sécurisé.
+                    "Sinistre [[*referenceSinistre]] pour l'assuré [[assureNom]].",
                     " Police n°[[referencePolice]]."
                 ]
             ],
@@ -44,7 +45,7 @@ class NotificationSinistreEntityCanvasProvider implements EntityCanvasProviderIn
                 ["code" => "referencePolice", "intitule" => "Réf. Police", "type" => "Texte"],
                 ["code" => "referenceSinistre", "intitule" => "Réf. Sinistre", "type" => "Texte"],
                 ["code" => "descriptionDeFait", "intitule" => "Description", "type" => "Texte"],
-                ["code" => "assure", "intitule" => "Assuré", "type" => "Relation", "targetEntity" => Client::class, "displayField" => "nom"],
+                ["code" => "assureNom", "intitule" => "Assuré", "type" => "Texte"], // Remplacé par la propriété calculée
                 ["code" => "occuredAt", "intitule" => "Date de survenance", "type" => "Date"],
                 ["code" => "lieu", "intitule" => "Lieu", "type" => "Texte"],
                 ["code" => "risque", "intitule" => "Risque", "type" => "Relation", "targetEntity" => Risque::class, "displayField" => "nomComplet"],

@@ -5,36 +5,37 @@ namespace App\Services\Canvas;
 
 use App\Entity\Note;
 use App\Entity\Taxe;
-use App\Entity\Risque;
 use App\Entity\Tache;
-use DateTimeImmutable;
 use App\Entity\Client;
-use App\Entity\Assureur;
-use App\Entity\Contact;
+use App\Entity\Groupe;
 use App\Entity\Invite;
-use App\Entity\Tranche;
-use App\Entity\ModelePieceSinistre;
-use App\Entity\Feedback;
-use App\Entity\Cotation;
+use App\Entity\Risque;
+use DateTimeImmutable;
 use App\Entity\Avenant;
+use App\Entity\Contact;
+use App\Entity\Tranche;
+use App\Entity\Assureur;
+use App\Entity\Cotation;
 use App\Entity\Document;
+use App\Entity\Feedback;
 use App\Entity\Paiement;
 use App\Entity\Chargement;
 use App\Entity\Entreprise;
-use App\Entity\Groupe;
 use App\Entity\Partenaire;
 use App\Entity\TypeRevenu;
+use App\Entity\PieceSinistre;
 use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
 use App\Entity\ConditionPartage;
 use App\Entity\RevenuPourCourtier;
 use App\Repository\TaxeRepository;
+use App\Entity\ModelePieceSinistre;
 use App\Entity\NotificationSinistre;
 use App\Repository\CotationRepository;
 use App\Repository\UtilisateurRepository;
-use App\Entity\PieceSinistre;
-use App\Entity\OffreIndemnisationSinistre;
+use Doctrine\ORM\EntityNotFoundException;
 
+use App\Entity\OffreIndemnisationSinistre;
 use App\Repository\NotificationSinistreRepository;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Bundle\SecurityBundle\Security; // Correction: S'assurer que cette ligne est bien présente
@@ -67,7 +68,17 @@ class CalculationProvider
         switch (get_class($entity)) {
             case NotificationSinistre::class:
                 /** @var NotificationSinistre $entity */
+
+                // NOUVEAU : Logique de calcul sécurisée pour le nom de l'assuré.
+                // Ceci prévient un crash si le client lié au sinistre a été supprimé.
+                try {
+                    $assureNom = $entity->getAssure() ? $entity->getAssure()->getNom() : 'N/A';
+                } catch (EntityNotFoundException $e) {
+                    $assureNom = '[Client supprimé]';
+                }
+
                 $indicateurs = [
+                    'assureNom' => $assureNom,
                     'delaiDeclaration' => $this->calculateDelaiDeclaration($entity),
                     'ageDossier' => $this->calculateAgeDossier($entity),
                     'compensationFranchise' => $this->calculateFranchise($entity),

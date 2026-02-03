@@ -108,6 +108,9 @@ class NotificationSinistre implements OwnerAwareInterface
 
     //Attributs calculés
     #[Groups(['list:read'])]
+    public ?string $assureNom = null;
+
+    #[Groups(['list:read'])]
     public ?int $attributTest;
 
     #[Groups(['list:read'])]
