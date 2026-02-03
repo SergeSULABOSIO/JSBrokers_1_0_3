@@ -7,7 +7,7 @@
     <div class="search-bar-row-1 p-2 d-flex align-items-center bg-white rounded-top shadow">
         <div class="input-group flex-grow-1">
             <span class="input-group-text bg-transparent border-0 pe-2">
-                <twig:ux:icon name="lucide:search" class="text-secondary search-summary-icon" />
+                <twig:ux:icon name="{{ resolve_icon_name('lucide:search') }}" class="text-secondary search-summary-icon" />
             </span>
             <input type="text"
                    class="form-control border-0 search-bar-input"
@@ -24,16 +24,16 @@
 
         <div class="ms-3 d-flex align-items-center">
             <button class="btn btn-sm btn-light" title="Recherche avancée" data-action="click->search-bar#openAdvancedSearch">
-                <twig:ux:icon name="lucide:sliders-horizontal" class="search-summary-icon"/>
+                <twig:ux:icon name="{{ resolve_icon_name('lucide:sliders-horizontal') }}" class="search-summary-icon"/>
             </button>
             <button class="btn btn-sm btn-light ms-1" title="Réinitialiser la recherche" data-action="click->search-bar#handleAdvancedSearchReset">
-                <twig:ux:icon name="lucide:rotate-cw" class="search-summary-icon"/>
+                <twig:ux:icon name="{{ resolve_icon_name('lucide:rotate-cw') }}" class="search-summary-icon"/>
             </button>
         </div>
     </div>
 
     <div class="search-bar-row-2 d-flex align-items-center p-2 bg-light rounded-bottom small text-muted" data-search-bar-target="summaryContainer">
-        <twig:ux:icon name="lucide:info" class="me-2 flex-shrink-0 search-summary-icon align-middle-flex-item" style="width: 20px; height: 20px;" />
+        <twig:ux:icon name="{{ resolve_icon_name('lucide:info') }}" class="me-2 flex-shrink-0 search-summary-icon align-middle-flex-item" style="width: 20px; height: 20px;" />
         <div data-search-bar-target="summary" class="flex-grow-1">
             <span>Recherche simple activée.</span>
         </div>

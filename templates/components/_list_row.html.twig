@@ -63,7 +63,7 @@
         <div style="font-weight: bold; color: #0047AB;"> {# Bleu cobalt #}
             {# Icône #}
             {% if col_principale.texte_principal.icone is defined %}
-                <twig:UX:Icon name="{{ col_principale.texte_principal.icone }}" style="width: {{ col_principale.texte_principal.icone_taille | default('1.3em') }}; height: {{ col_principale.texte_principal.icone_taille | default('1.3em') }};" />
+                <twig:UX:Icon name="{{ resolve_icon_name(col_principale.texte_principal.icone) }}" style="width: {{ col_principale.texte_principal.icone_taille | default('1.3em') }}; height: {{ col_principale.texte_principal.icone_taille | default('1.3em') }};" />
             {% endif %}
 
             {# Préfixe et Texte#}
@@ -89,7 +89,7 @@
                     {% set valeur = attribute(entity, texte.attribut_code) %}
                     {% if not first_secondary_displayed and valeur is not null and valeur is not empty %}
                         <span class="d-inline-flex align-items-center">
-                            {% if texte.icone is defined %}<twig:UX:Icon name="{{ texte.icone }}" style="width: {{ texte.icone_taille | default('1.1em') }}; height: {{ texte.icone_taille | default('1.1em') }}; margin-right: 4px;" />{% endif %}
+                            {% if texte.icone is defined %}<twig:UX:Icon name="{{ resolve_icon_name(texte.icone) }}" style="width: {{ texte.icone_taille | default('1.1em') }}; height: {{ texte.icone_taille | default('1.1em') }}; margin-right: 4px;" />{% endif %}
                             {{ texte.attribut_prefixe | default('') }}
                             {% if texte.attribut_type|default('') == 'date' and valeur is not null %}{{ valeur|date('d/m/Y') }}{% else %}{{ valeur }}{% endif %}
                         </span>
@@ -100,7 +100,7 @@
                 {# AFFICHAGE COMPLET : Comportement normal pour les listes principales. #}
                 {% for texte in col_principale.textes_secondaires %}
                     <span class="d-inline-flex align-items-center">
-                        {% if texte.icone is defined %}<twig:UX:Icon name="{{ texte.icone }}" style="width: {{ texte.icone_taille | default('1.1em') }}; height: {{ texte.icone_taille | default('1.1em') }}; margin-right: 4px;" />{% endif %}
+                        {% if texte.icone is defined %}<twig:UX:Icon name="{{ resolve_icon_name(texte.icone) }}" style="width: {{ texte.icone_taille | default('1.1em') }}; height: {{ texte.icone_taille | default('1.1em') }}; margin-right: 4px;" />{% endif %}
                         {{ texte.attribut_prefixe | default('') }}
                         {% set valeur = attribute(entity, texte.attribut_code) %}
                         {% if texte.attribut_type|default('') == 'date' and valeur is not null %}{{ valeur|date('d/m/Y') }}{% elseif texte.attribut_type|default('') == 'text' and texte.attribut_taille_max is defined and texte.attribut_taille_max is not null and valeur is not null and valeur|length > texte.attribut_taille_max %}{{ valeur|slice(0, texte.attribut_taille_max) ~ '...' }}{% else %}{{ valeur }}{% endif %}
@@ -126,10 +126,10 @@
         <td class="text-end pe-3">
             <div class="list-row-actions-container" data-collection-target="rowActions">
                 <button type="button" class="btn btn-sm btn-light btn-icon shadow-sm border-0" title="Modifier" data-action="click->collection#editItem" style="width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
-                    <twig:UX:Icon name="lucide:edit" style="width: 20px; height: 20px;" class="text-primary"/>
+                    <twig:UX:Icon name="{{ resolve_icon_name('lucide:edit') }}" style="width: 20px; height: 20px;" class="text-primary"/>
                 </button>
-                <button type="button" class="btn btn-sm btn-light btn-icon shadow-sm border-0" title="Supprimer" data-action="click->collection#deleteItem" style="width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
-                    <twig:UX:Icon name="lucide:trash-2" style="width: 20px; height: 20px;" class="text-danger" />
+                <button type="button" class="btn btn-sm btn-light btn-icon shadow-sm border-0" title="Supprimer" data-action="click->collection#deleteItem" style="width: 30px; height: 30px; padding: 0; display: inline-flex; align-items-center; justify-content: center;">
+                    <twig:UX:Icon name="{{ resolve_icon_name('lucide:trash-2') }}" style="width: 20px; height: 20px;" class="text-danger" />
                 </button>
             </div>
         </td>
