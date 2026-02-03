@@ -17,6 +17,7 @@ class ContactListCanvasProvider implements ListCanvasProviderInterface
             "colonne_principale" => [
                 "titre_colonne" => "Contacts",
                 "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:account-box"],
+                "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_code" => "fonction"],
                     ["attribut_code" => "email"]
