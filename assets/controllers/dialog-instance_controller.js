@@ -542,62 +542,59 @@ export default class extends Controller {
      */
     _getSkeletonHtml(message) {
         return `
-            <div class="row gx-0">
-                <div class="col-auto calculated-attributes-column-skeleton" style="width: 400px;">
+            <div class="row gx-0 align-items-start">
+                <div class="col-auto calculated-attributes-column-skeleton" style="width: 400px; flex-shrink: 0;">
                     <h5 class="column-title">
                         <div class="skeleton-line" style="width: 180px; height: 20px;"></div>
                     </h5>
                     <div class="calculated-attributes-content">
-                        <ul class="calculated-attributes-list">
-                            <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem;">
+                        <ul class="list-unstyled">
+                            <li class="d-flex justify-content-between py-2 px-1">
                                 <div class="skeleton-line" style="width: 100px; height: 16px;"></div>
                                 <div class="skeleton-line" style="width: 80px; height: 16px;"></div>
                             </li>
-                            <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem;">
+                             <li class="d-flex justify-content-between py-2 px-1">
                                 <div class="skeleton-line" style="width: 120px; height: 16px;"></div>
                                 <div class="skeleton-line" style="width: 60px; height: 16px;"></div>
                             </li>
-                            <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem;">
+                             <li class="d-flex justify-content-between py-2 px-1">
                                 <div class="skeleton-line" style="width: 90px; height: 16px;"></div>
                                 <div class="skeleton-line" style="width: 150px; height: 16px;"></div>
-                            </li>
-                            <li style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0.5rem;">
-                                <div class="skeleton-line" style="width: 110px; height: 16px;"></div>
-                                <div class="skeleton-line" style="width: 70px; height: 16px;"></div>
                             </li>
                         </ul>
                     </div>
                 </div>
-                <div class="col form-column-skeleton">
-                    <!-- Les .row sont maintenant des enfants directs du .form-column-skeleton, qui a du padding. -->
-                    <div class="row gx-2 mb-2">
-                        <div class="col-12">
-                            <div class="text-center text-muted">
-                                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                                <span class="ms-2">${message}</span>
-                            </div>
+
+                <div class="col form-column-skeleton ps-4">
+                    
+                    <div class="row mb-3">
+                        <div class="col-12 text-center">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            <span class="ms-2 text-muted small">${message}</span>
                         </div>
                     </div>
-                    <div class="row gx-2 mb-2">
-                        <div class="col-6">
-                            <div class="skeleton-field-block">
-                                <div class="skeleton-line mb-2" style="width: 80%; height: 14px;"></div>
-                                <div class="skeleton-line" style="height: 38px;"></div>
-                            </div>
+
+                    <div class="row gx-2 mb-3">
+                        <div class="col-md-6">
+                            <div class="skeleton-label mb-2"><div class="skeleton-line" style="width: 40%; height: 14px;"></div></div>
+                            <div class="skeleton-line w-100" style="height: 38px;"></div>
                         </div>
-                        <div class="col-6">
-                            <div class="skeleton-field-block">
-                                <div class="skeleton-line mb-2" style="width: 60%; height: 14px;"></div>
-                                <div class="skeleton-line" style="height: 38px;"></div>
-                            </div>
+                        <div class="col-md-6">
+                            <div class="skeleton-label mb-2"><div class="skeleton-line" style="width: 30%; height: 14px;"></div></div>
+                            <div class="skeleton-line w-100" style="height: 38px;"></div>
                         </div>
                     </div>
-                    <div class="row gx-2 mb-2">
+
+                    <div class="row gx-2 mb-3">
                         <div class="col-12">
-                            <div class="skeleton-field-block">
-                                <div class="skeleton-line mb-2" style="width: 40%; height: 14px;"></div>
-                                <div class="skeleton-line" style="height: 80px;"></div>
-                            </div>
+                            <div class="skeleton-label mb-2"><div class="skeleton-line" style="width: 20%; height: 14px;"></div></div>
+                            <div class="skeleton-line w-100" style="height: 80px;"></div>
+                        </div>
+                    </div>
+
+                    <div class="row gx-2 mt-4">
+                        <div class="col-md-4 ms-auto">
+                            <div class="skeleton-line w-100" style="height: 40px; background: #ddd;"></div>
                         </div>
                     </div>
                 </div>
