@@ -972,11 +972,22 @@ textarea:hover,
  SECTION: SQUELETTE DE CHARGEMENT (Shimmer Effect)
 ===================================================================
 */
+
+:root {
+  --sk-bg: #e9ecef;        /* Gris de base (Bootstrap-like) */
+  --sk-soft: #f2f2f2;      /* Couleur de transition douce */
+  --sk-light: #ffffff;     /* Le cœur du reflet (très brillant) */
+
+  /* Couleurs pour le mode sombre */
+  --sk-dark-bg: #343a40;
+  --sk-dark-soft: #495057;
+  --sk-dark-light: #6c757d;
+}
  
 /* Styles de base communs à tous les squelettes */
 .skeleton-line,
 .skeleton-row {
-    background: #e9ecef;
+    background-color: var(--sk-bg);
     border-radius: 4px;
     position: relative;
     overflow: hidden; /* Important pour l'animation */
@@ -999,20 +1010,38 @@ textarea:hover,
     content: "";
     position: absolute;
     top: 0; right: 0; bottom: 0; left: 0;
-    transform: translateX(-100%);
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
-    animation: shimmer 1.5s infinite;
+    background: linear-gradient(
+        90deg,
+        var(--sk-bg) 0%,
+        var(--sk-soft) 20%,
+        var(--sk-light) 50%,
+        var(--sk-soft) 80%,
+        var(--sk-bg) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer-advanced 1.8s infinite linear;
 }
 
-@keyframes shimmer { 100% { transform: translateX(100%); } }
+@keyframes shimmer-advanced {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
 
 /* NOUVEAU : Style pour le squelette sur fond sombre (colonne des attributs) */
 .calculated-attributes-column-skeleton .skeleton-line {
-    background-color: #343a40; /* Un gris plus clair que le fond #212529 */
+    background-color: var(--sk-dark-bg); /* Un gris plus clair que le fond #212529 */
 }
 
 .calculated-attributes-column-skeleton .skeleton-line::after {
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent); /* Un balayage blanc très subtil */
+    background: linear-gradient(
+        90deg,
+        var(--sk-dark-bg) 0%,
+        var(--sk-dark-soft) 20%,
+        var(--sk-dark-light) 50%,
+        var(--sk-dark-soft) 80%,
+        var(--sk-dark-bg) 100%
+    );
+    background-size: 200% 100%;
 }
 
 /* NOUVEAU : Fond sombre pour le squelette de la colonne des attributs */
