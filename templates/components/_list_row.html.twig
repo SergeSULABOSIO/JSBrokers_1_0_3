@@ -105,7 +105,7 @@
                         {% set valeur = attribute(entity, texte.attribut_code) %}
                         {% if texte.attribut_type|default('') == 'date' and valeur is not null %}{{ valeur|date('d/m/Y') }}{% elseif texte.attribut_type|default('') == 'text' and texte.attribut_taille_max is defined and texte.attribut_taille_max is not null and valeur is not null and valeur|length > texte.attribut_taille_max %}{{ valeur|slice(0, texte.attribut_taille_max) ~ '...' }}{% else %}{{ valeur }}{% endif %}
                     </span>
-                    {% if not loop.last %}<span class="mx-2">{{ col_principale.textes_secondaires_separateurs | raw }}</span>{% endif %}
+                    {% if not loop.last %}<span class="mx-2">{{ col_principale.textes_secondaires_separateurs|default(' &bull; ')|raw }}</span>{% endif %}
                 {% endfor %}
             {% endif %}
         </small>
