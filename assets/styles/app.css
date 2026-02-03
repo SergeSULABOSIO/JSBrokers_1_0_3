@@ -973,17 +973,29 @@ textarea:hover,
 ===================================================================
 */
  
-/* Le squelette doit imiter exactement les inputs Bootstrap */
-.skeleton-line {
+/* Styles de base communs à tous les squelettes */
+.skeleton-line,
+.skeleton-row {
     background: #e9ecef;
     border-radius: 4px;
     position: relative;
     overflow: hidden; /* Important pour l'animation */
-    display: block; /* CORRECTION : Utiliser 'block' pour que la hauteur soit toujours respectée, notamment dans les tableaux. */
+}
+
+/* Squelette pour une ligne de texte ou un champ (utilisé dans les dialogues et collections) */
+.skeleton-line {
+    display: block; /* Assure que la hauteur est respectée */
+}
+
+/* Squelette pour une ligne complète de tableau (utilisé dans les listes principales) */
+.skeleton-row {
+    height: 50px; /* Hauteur d'une ligne de tableau */
+    width: 100%;
 }
 
 /* Animation Shimmer */
-.skeleton-line::after {
+.skeleton-line::after,
+.skeleton-row::after {
     content: "";
     position: absolute;
     top: 0; right: 0; bottom: 0; left: 0;
