@@ -696,8 +696,6 @@ export default class extends Controller {
 
         if (templateContent) {
             this.contentZoneTarget.innerHTML = templateContent.outerHTML;
-            // NOUVEAU : On charge les icônes après avoir injecté le HTML.
-            this.loadRubriqueIcons();
         } else {
             this.contentZoneTarget.innerHTML = '';
         }
@@ -743,28 +741,6 @@ export default class extends Controller {
             // S'il n'y a aucun élément actif, on vide la zone.
             this.contentZoneTarget.innerHTML = '';
         }
-    }
-
-    /**
-     * NOUVEAU: Trouve tous les conteneurs d'icônes de rubriques et demande leur chargement.
-     */
-    loadRubriqueIcons() {
-        const iconContainers = this.contentZoneTarget.querySelectorAll('[data-icon-name]');
-        iconContainers.forEach((container, index) => {
-            const iconName = container.dataset.iconName;
-            if (iconName) {
-                // On a besoin d'un ID unique pour chaque requête pour que `handleIconLoaded` sache où injecter le HTML.
-                const groupElement = container.closest('[id^="rubriques-"]');
-                const groupName = groupElement ? groupElement.id.replace('rubriques-','') : 'unknown';
-                const requesterId = `rubrique-icon-${groupName}-${index}`;
-                container.id = requesterId;
-                this.notifyCerveau('ui:icon.request', {
-                    iconName: iconName,
-                    requesterId: requesterId,
-                    iconSize: 18 // Taille de l'icône de rubrique
-                });
-            }
-        });
     }
 
     /**
