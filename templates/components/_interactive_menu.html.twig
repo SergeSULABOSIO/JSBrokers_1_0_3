@@ -33,7 +33,7 @@
                     data-workspace-manager-description-param="{{ menu.colonne_1.tableau_de_bord.description }}"
                     data-workspace-manager-target="dashboardItem"  {# AJOUTEZ CETTE LIGNE #}
                 >
-                    {{ component('ux:icon', { name: resolve_icon_name(menu.colonne_1.tableau_de_bord.icone), class: 'nav-icon' }) }}
+                    <twig:UX:Icon name="{{ resolve_icon_name(menu.colonne_1.tableau_de_bord.icone) }}" class="nav-icon" />
                     <span class="nav-text">{{ menu.colonne_1.tableau_de_bord.nom }}</span>
                 </div>
             </div>
@@ -46,7 +46,7 @@
                         data-workspace-manager-group-name-param="{{ group_name }}"
                         data-workspace-manager-description-param="{{ group_data.description }}"
                     >
-                        {{ component('ux:icon', { name: resolve_icon_name(group_data.icone), class: 'nav-icon' }) }}
+                        <twig:UX:Icon name="{{ resolve_icon_name(group_data.icone) }}" class="nav-icon" />
                         <span class="nav-text">{{ group_name }}</span>
                     </div>
                 {% endfor %}
@@ -60,7 +60,7 @@
                         data-workspace-manager-component-name-param="{{ param_data.composant_twig }}"
                         data-workspace-manager-description-param="{{ param_data.description }}"
                     >
-                        {{ component('ux:icon', { name: resolve_icon_name(param_data.icone), class: 'nav-icon' }) }}
+                        <twig:UX:Icon name="{{ resolve_icon_name(param_data.icone) }}" class="nav-icon" />
                         <span class="nav-text">{{ param_name }}</span>
                     </div>
                 {% endfor %}
@@ -127,7 +127,7 @@
                             data-workspace-manager-entity-name-param="{{ rubrique_data.entity_name|default('') }}"
                             data-workspace-manager-description-param=""
                         >
-                            {{ component('ux:icon', { name: resolve_icon_name(rubrique_data.icone), class: 'rubrique-icon' }) }}
+                            <twig:UX:Icon name="{{ resolve_icon_name(rubrique_data.icone) }}" class="rubrique-icon" />
                             <span class="rubrique-text">{{ rubrique_name }}</span>
                         </div>
                     {% endfor %}
@@ -139,10 +139,10 @@
     {# Template pour un seul onglet (le titre cliquable) #}
     <template data-workspace-manager-target="tabTemplate">
         <div class="tab-item" data-action="click->workspace-manager#activateTab">
-            <span class="tab-item-icon">{{ ux_icon(resolve_icon_name('document')) }}</span>
+            <span class="tab-item-icon"><twig:UX:Icon name="{{ resolve_icon_name('document') }}" /></span>
             <span class="tab-item-title" data-role="tab-title"></span>
             <button class="tab-item-close" data-action="click->workspace-manager#closeTab">
-                {{ ux_icon(resolve_icon_name('action:close')) }}
+                <twig:UX:Icon name="{{ resolve_icon_name('action:close') }}" />
             </button>
         </div>
     </template>
@@ -151,7 +151,7 @@
     <template data-workspace-manager-target="tabContentTemplate">
         <div class="tab-content">
             <div class="accordion-search-bar" data-action="click->workspace-manager#focusSearch">
-                {{ ux_icon(resolve_icon_name('action:search'), { class: 'search-icon' }) }}
+                <twig:UX:Icon name="{{ resolve_icon_name('action:search') }}" class="search-icon" />
                 <input type="text" 
                     class="accordion-search-input"
                     placeholder="Filtrer Ici"
@@ -159,11 +159,11 @@
                     data-workspace-manager-target="searchInput"
                 >
                 <button type="button" class="icon-button" data-action="click->workspace-manager#resetFilter" title="Réinitialiser">
-                    {{ ux_icon(resolve_icon_name('action:reset')) }}
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:reset') }}" />
                 </button>
                 <span class="separator"></span>
                 <button type="button" class="icon-button" data-action="click->workspace-manager#closeTab" title="Fermer l'onglet">
-                    {{ ux_icon(resolve_icon_name('action:exit')) }}
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:exit') }}" />
                 </button>
             </div>
             <div class="accordion"> {# Le contrôleur workspace-manager gère déjà cet élément #}
