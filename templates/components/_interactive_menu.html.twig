@@ -127,7 +127,8 @@
                             data-workspace-manager-entity-name-param="{{ rubrique_data.entity_name|default('') }}"
                             data-workspace-manager-description-param=""
                         >
-                            <twig:UX:Icon name="{{ resolve_icon_name(rubrique_data.icone) }}" class="rubrique-icon" />
+                            {# NOUVEAU : Conteneur pour l'icône qui sera chargée dynamiquement par le workspace-manager #}
+                            <span class="rubrique-icon" data-icon-name="{{ rubrique_data.icone }}"></span>
                             <span class="rubrique-text">{{ rubrique_name }}</span>
                         </div>
                     {% endfor %}
@@ -139,7 +140,7 @@
     {# Template pour un seul onglet (le titre cliquable) #}
     <template data-workspace-manager-target="tabTemplate">
         <div class="tab-item" data-action="click->workspace-manager#activateTab">
-            <span class="tab-item-icon"><twig:UX:Icon name="{{ resolve_icon_name('document') }}" /></span>
+            <span class="tab-item-icon"></span>
             <span class="tab-item-title" data-role="tab-title"></span>
             <button class="tab-item-close" data-action="click->workspace-manager#closeTab">
                 <twig:UX:Icon name="{{ resolve_icon_name('action:close') }}" />

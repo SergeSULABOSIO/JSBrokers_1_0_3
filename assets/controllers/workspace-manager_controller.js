@@ -36,6 +36,10 @@ export default class extends Controller {
         this.boundOpenTabInVisualization = this.openTabInVisualization.bind(this);
         document.addEventListener('app:liste-element:openned', this.boundOpenTabInVisualization);
 
+        // NOUVEAU : Écoute la réponse du Cerveau pour afficher une icône chargée dynamiquement.
+        this.boundHandleIconLoaded = this.handleIconLoaded.bind(this);
+        document.addEventListener('app:icon.loaded', this.boundHandleIconLoaded);
+
         // NOUVEAU : Écoute la réponse du Cerveau pour afficher le composant chargé.
         this.boundHandleComponentLoaded = this.handleComponentLoaded.bind(this);
         document.addEventListener('workspace:component.loaded', this.boundHandleComponentLoaded);
@@ -117,6 +121,7 @@ export default class extends Controller {
 
     disconnect() {
         document.removeEventListener('app:liste-element:openned', this.boundOpenTabInVisualization);
+        document.removeEventListener('app:icon.loaded', this.boundHandleIconLoaded);
         document.removeEventListener('workspace:component.loaded', this.boundHandleComponentLoaded);
         document.removeEventListener('app:workspace.load-default', this.boundLoadDefault);
         document.removeEventListener('app:loading.start', this.boundHandleLoadingStart);
@@ -195,6 +200,18 @@ export default class extends Controller {
         const params = entityCanvas.parametres;
         tabElement.title = params.description;
 
+        // NOUVEAU : Logique pour charger l'icône dynamiquement
+        const iconContainer = tabElement.querySelector('.tab-item-icon');
+        const iconName = params.icone; // ex: 'risque', 'contact'
+        if (iconContainer && iconName) {
+            // On donne au conteneur un ID unique pour que `handleIconLoaded` puisse le retrouver.
+            const requesterId = `tab-icon-${entityType}-${entity.id}`;
+            iconContainer.id = requesterId;
+            // On demande au Cerveau de nous fournir le HTML de l'icône.
+            // La taille de 18px est choisie pour correspondre à la taille des autres icônes d'onglet.
+            this.notifyCerveau('ui:icon.request', { iconName: iconName, requesterId: requesterId, iconSize: 18 });
+        }
+
         tabElement.querySelector('[data-role="tab-title"]').textContent = `#${entity.id}`;
 
         // --- Création du contenu de l'onglet ---
@@ -247,6 +264,20 @@ export default class extends Controller {
         this.activateTab({ currentTarget: tabElement });
 
         console.log(this.nomControleur + " - Onglet ouvert:", entity);
+    }
+
+    /**
+     * NOUVEAU : Gère la réception du HTML d'une icône demandée et l'injecte dans le bon conteneur.
+     * @param {CustomEvent} event
+     */
+    handleIconLoaded(event) {
+        const { html, requesterId } = event.detail;
+        // On cherche un élément avec l'ID du demandeur dans le périmètre de ce contrôleur.
+        // Cela garantit que ce contrôleur ne met à jour que les icônes qu'il a lui-même demandées.
+        const iconContainer = this.element.querySelector(`#${requesterId}`);
+        if (iconContainer) {
+            iconContainer.innerHTML = html;
+        }
     }
 
     /**
@@ -665,6 +696,8 @@ export default class extends Controller {
 
         if (templateContent) {
             this.contentZoneTarget.innerHTML = templateContent.outerHTML;
+            // NOUVEAU : On charge les icônes après avoir injecté le HTML.
+            this.loadRubriqueIcons();
         } else {
             this.contentZoneTarget.innerHTML = '';
         }
@@ -710,6 +743,28 @@ export default class extends Controller {
             // S'il n'y a aucun élément actif, on vide la zone.
             this.contentZoneTarget.innerHTML = '';
         }
+    }
+
+    /**
+     * NOUVEAU: Trouve tous les conteneurs d'icônes de rubriques et demande leur chargement.
+     */
+    loadRubriqueIcons() {
+        const iconContainers = this.contentZoneTarget.querySelectorAll('[data-icon-name]');
+        iconContainers.forEach((container, index) => {
+            const iconName = container.dataset.iconName;
+            if (iconName) {
+                // On a besoin d'un ID unique pour chaque requête pour que `handleIconLoaded` sache où injecter le HTML.
+                const groupElement = container.closest('[id^="rubriques-"]');
+                const groupName = groupElement ? groupElement.id.replace('rubriques-','') : 'unknown';
+                const requesterId = `rubrique-icon-${groupName}-${index}`;
+                container.id = requesterId;
+                this.notifyCerveau('ui:icon.request', {
+                    iconName: iconName,
+                    requesterId: requesterId,
+                    iconSize: 18 // Taille de l'icône de rubrique
+                });
+            }
+        });
     }
 
     /**
