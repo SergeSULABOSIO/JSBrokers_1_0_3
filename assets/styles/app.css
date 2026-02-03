@@ -856,6 +856,11 @@ textarea:hover,
     border-radius: var(--bs-border-radius);
 }
 
+/* Stabilité des colonnes */
+.form-column-skeleton, .form-column {
+    min-height: 400px; /* Évite le collapse vertical */
+}
+
 /* 3. On fait "disparaître" la rangée intermédiaire pour que les colonnes deviennent les enfants flex directs du modal-body */
 .custom-modal-scroll .modal-body > .row {
     display: contents;
@@ -964,45 +969,30 @@ textarea:hover,
 /* --- 4.5 Squelettes de chargement --- */
 /*
 ===================================================================
- SECTION: SQUELETTE DE CHARGEMENT POUR LES LISTES
+ SECTION: SQUELETTE DE CHARGEMENT (Shimmer Effect)
 ===================================================================
 */
  
-/* --- NOUVEAU : Style de base pour tous les éléments squelette --- */
-.skeleton-row,
+/* Le squelette doit imiter exactement les inputs Bootstrap */
 .skeleton-line {
-    background-color: #dee2e6; /* Fond gris un peu plus foncé */
+    background: #e9ecef;
     border-radius: 4px;
     position: relative;
     overflow: hidden; /* Important pour l'animation */
+    display: inline-block;
 }
 
-.skeleton-row {
-    height: 50px; /* Hauteur approximative d'une ligne */
-}
-
-/* --- NOUVEAU : Animation de balayage appliquée à tous les squelettes --- */
-.skeleton-row::after,
+/* Animation Shimmer */
 .skeleton-line::after {
-    content: '';
+    content: "";
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 150%;
-    height: 100%;
+    top: 0; right: 0; bottom: 0; left: 0;
+    transform: translateX(-100%);
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
-    animation: skeleton-sweep-transform 1.5s infinite;
+    animation: shimmer 1.5s infinite;
 }
 
-/* NOUVELLE animation qui utilise transform */
-@keyframes skeleton-sweep-transform {
-    0% {
-        transform: translateX(-100%); /* Commence complètement à gauche de la ligne */
-    }
-    100% {
-        transform: translateX(100%); /* Termine complètement à droite de la ligne */
-    }
-}
+@keyframes shimmer { 100% { transform: translateX(100%); } }
 
 /* NOUVEAU : Style pour le squelette sur fond sombre (colonne des attributs) */
 .calculated-attributes-column-skeleton .skeleton-line {
