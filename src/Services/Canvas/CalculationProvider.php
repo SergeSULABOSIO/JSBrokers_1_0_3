@@ -1615,18 +1615,20 @@ class CalculationProvider
         return 0.0;
     }
 
-    public function Contact_getTypeString(?Contact $contact): ?string
+    public function Contact_getTypeString(?Contact $contact): string
     {
         if ($contact === null) {
-            return null;
+            return 'Non défini';
         }
 
+        // CORRECTION TEMPORAIRE : Les clés de traduction n'étaient pas résolues.
+        // On utilise des chaînes en dur en attendant la correction des fichiers de traduction.
         return match ($contact->getType()) {
-            Contact::TYPE_CONTACT_PRODUCTION => $this->translator->trans("contact_type_production"),
-            Contact::TYPE_CONTACT_SINISTRE => $this->translator->trans("contact_type_sinistre"),
-            Contact::TYPE_CONTACT_ADMINISTRATION => $this->translator->trans("contact_type_administration"),
-            Contact::TYPE_CONTACT_AUTRES => $this->translator->trans("contact_type_autres"),
-            default => null,
+            Contact::TYPE_CONTACT_PRODUCTION => "Production",
+            Contact::TYPE_CONTACT_SINISTRE => "Sinistre",
+            Contact::TYPE_CONTACT_ADMINISTRATION => "Administration",
+            Contact::TYPE_CONTACT_AUTRES => "Autres",
+            default => "Non défini",
         };
     }
 
