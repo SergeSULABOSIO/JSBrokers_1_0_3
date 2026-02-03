@@ -127,8 +127,7 @@
                             data-workspace-manager-entity-name-param="{{ rubrique_data.entity_name|default('') }}"
                             data-workspace-manager-description-param=""
                         >
-                            {# NOUVEAU : Conteneur pour l'icône qui sera chargée dynamiquement par le workspace-manager #}
-                            <span class="rubrique-icon" data-icon-name="{{ rubrique_data.icone }}"></span>
+                            <twig:UX:Icon name="{{ resolve_icon_name(rubrique_data.icone) }}" class="rubrique-icon" />
                             <span class="rubrique-text">{{ rubrique_name }}</span>
                         </div>
                     {% endfor %}
