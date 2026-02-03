@@ -979,7 +979,7 @@ textarea:hover,
     border-radius: 4px;
     position: relative;
     overflow: hidden; /* Important pour l'animation */
-    display: inline-block;
+    display: block; /* CORRECTION : Utiliser 'block' pour que la hauteur soit toujours respectée, notamment dans les tableaux. */
 }
 
 /* Animation Shimmer */
