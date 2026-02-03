@@ -569,10 +569,14 @@ export default class extends Controller {
                     </div>
                 </div>
                 <div class="col form-column-skeleton">
-                    <div>
-                        <div class="text-center text-muted mb-4">
-                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                            <span class="ms-2">${message}</span>
+                    <div> <!-- Ce div imite la balise <form> -->
+                        <div class="row gx-2 mb-2">
+                            <div class="col">
+                                <div class="text-center text-muted">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                    <span class="ms-2">${message}</span>
+                                </div>
+                            </div>
                         </div>
                         <div class="row gx-2 mb-2">
                             <div class="col">
