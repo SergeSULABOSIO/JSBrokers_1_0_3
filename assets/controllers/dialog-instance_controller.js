@@ -543,7 +543,7 @@ export default class extends Controller {
     _getSkeletonHtml(message) {
         return `
             <div class="row gx-0 align-items-start">
-                <div class="col-auto calculated-attributes-column-skeleton" style="width: 400px; flex-shrink: 0;">
+                <div class="col-auto calculated-attributes-column-skeleton" style="width: 380px; flex-shrink: 0;">
                     <h5 class="column-title">
                         <div class="skeleton-line" style="width: 180px; height: 20px;"></div>
                     </h5>
@@ -565,7 +565,7 @@ export default class extends Controller {
                     </div>
                 </div>
 
-                <div class="col form-column-skeleton ps-4">
+                <div class="col form-column-skeleton">
                     
                     <div class="row mb-3">
                         <div class="col-12 text-center">
@@ -589,12 +589,6 @@ export default class extends Controller {
                         <div class="col-12">
                             <div class="skeleton-label mb-2"><div class="skeleton-line" style="width: 20%; height: 14px;"></div></div>
                             <div class="skeleton-line w-100" style="height: 80px;"></div>
-                        </div>
-                    </div>
-
-                    <div class="row gx-2 mt-4">
-                        <div class="col-md-4 ms-auto">
-                            <div class="skeleton-line w-100" style="height: 40px; background: #ddd;"></div>
                         </div>
                     </div>
                 </div>

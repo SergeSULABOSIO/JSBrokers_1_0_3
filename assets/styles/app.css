@@ -1010,6 +1010,16 @@ textarea:hover,
     padding: 1.5rem; /* Assurer le même padding que la colonne réelle */
 }
 
+/* NOUVEAU : Squelette pour la colonne de formulaire, imitant parfaitement .form-column */
+.form-column-skeleton {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden; /* Le squelette ne doit pas défiler */
+    padding: 1.5rem; /* Imitation du padding de .form-column */
+    background-color: #ffffff; /* Imitation du fond de .form-column */
+    border-radius: var(--bs-border-radius); /* Imitation du radius de .form-column */
+}
+
 /* --- 4.6 Messages de feedback --- */
 .feedback-container .feedback-message {
     padding: 10px 15px;
