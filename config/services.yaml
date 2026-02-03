@@ -49,10 +49,10 @@ services:
         App\Services\Canvas\Provider\Numeric\NumericCanvasProviderInterface:
             tags: ['app.numeric_canvas_provider']
 
-    # Enregistre notre normaliseur personnalisé.
-    # Il sera automatiquement utilisé par le service 'serializer' de Symfony.
-    App\Serializer\SafeObjectNormalizer:
-        tags:
-            # La priorité est légèrement supérieure à celle de l'ObjectNormalizer par défaut (-900)
-            # pour s'assurer que notre normaliseur est appelé en premier pour les objets.
-            - { name: serializer.normalizer, priority: -890 }
+    # NOUVEAU : Décorateur pour le PropertyAccessor du Sérialiseur.
+    # Cela permet d'intercepter les exceptions Doctrine (EntityNotFoundException)
+    # lors de la sérialisation de relations rompues, sans faire planter l'application.
+    App\Serializer\SafePropertyAccessor:
+        decorates: 'serializer.property_accessor'
+        arguments: ['@App\Serializer\SafePropertyAccessor.inner']
+        public: false
