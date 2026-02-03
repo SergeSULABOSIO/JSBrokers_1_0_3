@@ -53,6 +53,8 @@ services:
     # Cela permet d'intercepter les exceptions Doctrine (EntityNotFoundException)
     # lors de la sérialisation de relations rompues, sans faire planter l'application.
     App\Serializer\SafePropertyAccessor:
-        decorates: 'serializer.property_accessor'
+        # On décore le service principal 'property_accessor' pour que la correction
+        # s'applique à la fois au Sérialiseur ET au composant Formulaire.
+        decorates: 'property_accessor'
         arguments: ['@App\Serializer\SafePropertyAccessor.inner']
         public: false
