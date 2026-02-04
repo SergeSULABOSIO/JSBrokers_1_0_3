@@ -1754,18 +1754,20 @@ class CalculationProvider
     public function getAvenantStatutRenouvellementString(?Avenant $avenant): ?string
     {
         if ($avenant === null || $avenant->getRenewalStatus() === null) {
-            return $this->translator->trans('renewal_status_undefined', [], 'messages');
+            return "Non défini";
         }
 
+        // CORRECTION TEMPORAIRE : Remplacement des clés de traduction par des chaînes en dur
+        // pour résoudre le problème d'affichage "renewal_status_undefined".
         return match ($avenant->getRenewalStatus()) {
-            Avenant::RENEWAL_STATUS_LOST => $this->translator->trans('renewal_status_lost', [], 'messages'),
-            Avenant::RENEWAL_STATUS_ONCE_OFF => $this->translator->trans('renewal_status_once_off', [], 'messages'),
-            Avenant::RENEWAL_STATUS_RENEWED => $this->translator->trans('renewal_status_renewed', [], 'messages'),
-            Avenant::RENEWAL_STATUS_EXTENDED => $this->translator->trans('renewal_status_extended', [], 'messages'),
-            Avenant::RENEWAL_STATUS_RUNNING => $this->translator->trans('renewal_status_running', [], 'messages'),
-            Avenant::RENEWAL_STATUS_RENEWING => $this->translator->trans('renewal_status_renewing', [], 'messages'),
-            Avenant::RENEWAL_STATUS_CANCELLED => $this->translator->trans('renewal_status_cancelled', [], 'messages'),
-            default => $this->translator->trans('renewal_status_unknown', [], 'messages'),
+            Avenant::RENEWAL_STATUS_LOST => "Perdu",
+            Avenant::RENEWAL_STATUS_ONCE_OFF => "Unique (sans renouvellement)",
+            Avenant::RENEWAL_STATUS_RENEWED => "Renouvelé",
+            Avenant::RENEWAL_STATUS_EXTENDED => "Prorogé",
+            Avenant::RENEWAL_STATUS_RUNNING => "En cours",
+            Avenant::RENEWAL_STATUS_RENEWING => "En renouvellement",
+            Avenant::RENEWAL_STATUS_CANCELLED => "Annulé",
+            default => "Inconnu",
         };
     }
 
