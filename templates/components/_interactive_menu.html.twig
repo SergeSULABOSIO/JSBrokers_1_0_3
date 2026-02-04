@@ -77,8 +77,9 @@
                 <span class="company-version">Version {{ menu.colonne_2.version }}</span>
             </div>
             {# Ligne 2: Zone dynamique pour descriptions et rubriques #}
-            <div class="menu-col-2-row-2" data-workspace-manager-target="contentZone">
-                {# Contenu injecté par Stimulus #}
+            <div class="menu-col-2-row-2">
+                <div data-workspace-manager-target="rubriquesContainer"></div>
+                <div data-workspace-manager-target="descriptionContainer" style="display: none;"></div>
             </div>
         </div>
 
