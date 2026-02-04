@@ -46,7 +46,6 @@ class NotificationSinistre implements OwnerAwareInterface
     private ?string $lieu = null;
 
     #[ORM\ManyToOne(inversedBy: 'notificationSinistres')]
-    #[Groups(['list:read'])]
     private ?Risque $risque = null;
 
     #[ORM\Column]
