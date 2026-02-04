@@ -41,6 +41,7 @@ class IconCanvasProvider
         'tranche'         => 'hugeicons:pie-chart-03',
         'type-revenu'     => 'hugeicons:money-bag-01',
         'utilisateur'     => 'mdi:user-circle',
+        'dashboard'       => 'ant-design:dashboard-twotone',
         'default'         => 'mdi:file-outline', // Icône par défaut
 
         // --- Icônes d'Actions ---
