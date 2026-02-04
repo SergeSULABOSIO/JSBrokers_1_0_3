@@ -66,9 +66,8 @@ html {
 }
 
 .menu-col-1-row-3 {
-  height: 200px; /* [cite_start] NOTE: 600px comme demandé [cite: 206] est très grand. J'utilise 200px pour un design plus pratique. */
+  /* Cet espace n'a plus besoin de hauteur fixe. Il peut être utilisé pour des éléments futurs comme un bouton de déconnexion. */
   flex-shrink: 0;
-  padding: 20px 0;
 }
 
 .nav-item {
