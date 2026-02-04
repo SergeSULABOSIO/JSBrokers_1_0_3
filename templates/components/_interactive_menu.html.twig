@@ -28,7 +28,7 @@
             {# Ligne 1: Tableau de bord #}
             <div class="menu-col-1-row-1">
                 <div class="nav-item"
-                    data-action="click->workspace-manager#loadComponent"
+                    data-action="mouseenter->workspace-manager#showItemDescription mouseleave->workspace-manager#clearDescription click->workspace-manager#loadComponent"
                     data-workspace-manager-component-name-param="{{ menu.colonne_1.tableau_de_bord.composant_twig }}"
                     data-workspace-manager-description-param="{{ menu.colonne_1.tableau_de_bord.description }}"
                     data-workspace-manager-target="dashboardItem"  {# AJOUTEZ CETTE LIGNE #}
@@ -42,7 +42,7 @@
             <div class="menu-col-1-row-2">
                 {% for group_name, group_data in menu.colonne_1.groupes %}
                     <div class="nav-item"
-                        data-action="mouseenter->workspace-manager#showGroupDescription mouseleave->workspace-manager#clearDescription click->workspace-manager#showGroupRubriques"
+                        data-action="mouseenter->workspace-manager#showItemDescription mouseleave->workspace-manager#clearDescription click->workspace-manager#showGroupRubriques"
                         data-workspace-manager-group-name-param="{{ group_name }}"
                         data-workspace-manager-description-param="{{ group_data.description }}"
                     >
@@ -50,10 +50,21 @@
                         <span class="nav-text">{{ group_name }}</span>
                     </div>
                 {% endfor %}
+
+                {# NOUVEAU : Le groupe Paramètres est ajouté à la fin avec une classe spéciale pour le positionnement CSS. #}
+                {% set parametres = menu.colonne_1.parametres_group %}
+                <div class="nav-item nav-item-bottom"
+                    data-action="mouseenter->workspace-manager#showItemDescription mouseleave->workspace-manager#clearDescription click->workspace-manager#showGroupRubriques"
+                    data-workspace-manager-group-name-param="{{ parametres.nom }}"
+                    data-workspace-manager-description-param="{{ parametres.description }}"
+                >
+                    <twig:UX:Icon name="{{ resolve_icon_name(parametres.icone) }}" class="nav-icon" />
+                    <span class="nav-text">{{ parametres.nom }}</span>
+                </div>
             </div>
 
             {# Ligne 3: Espace réservé pour de futurs éléments de menu (ex: Déconnexion) #}
-            <div class="menu-col-1-row-3"></div>
+            <div class="menu-col-1-row-3"></div> {# Cet espace est maintenant vide et peut être conservé pour un usage futur. #}
         </div>
 
         {# COLONNE 2 : Rubriques & Descriptions #}
@@ -106,8 +117,10 @@
 
     {# Template caché pour générer la liste des rubriques (utilisé par Stimulus) #}
     <template data-workspace-manager-target="rubriquesTemplate">
+        {# On fusionne les groupes normaux et le groupe de paramètres pour que la logique de chargement des rubriques fonctionne pour tous. #}
+        {% set all_groups = menu.colonne_1.groupes|merge({(menu.colonne_1.parametres_group.nom): menu.colonne_1.parametres_group}) %}
         <div class="rubriques-list">
-            {% for group_name, group_data in menu.colonne_1.groupes %}
+            {% for group_name, group_data in all_groups %}
                 <div id="rubriques-{{ group_name|replace({' ': '_'}) }}">
                     {% for rubrique_name, rubrique_data in group_data.rubriques %}
                         <div class="rubrique-item"
