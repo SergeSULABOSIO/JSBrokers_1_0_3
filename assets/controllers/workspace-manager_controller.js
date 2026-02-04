@@ -28,6 +28,8 @@ export default class extends Controller {
 
     // Cible pour l'élément de menu actuellement actif
     activeNavItem = null;
+    // NOUVEAU : Cible pour le groupe de menu qui contient la rubrique active
+    activeGroupNavItem = null;
     activeRubriqueItem = null;
 
     connect() {
@@ -70,6 +72,9 @@ export default class extends Controller {
 
         const savedState = JSON.parse(savedStateJSON);
 
+        // NOUVEAU : Appeler la méthode pour définir le style du groupe actif dès la restauration.
+        this.updateActiveGroupState(savedState.group);
+        
         // Cas 1 : C'est une rubrique (elle a un groupe parent)
         if (savedState.group) {
             const groupElement = this.element.querySelector(`[data-workspace-manager-group-name-param='${savedState.group}']`);
@@ -820,6 +825,9 @@ export default class extends Controller {
             idInvite: this.idInviteValue
         });
         this.updateActiveState(clickedElement);
+
+        // NOUVEAU : Mettre à jour l'état du groupe actif en fonction de l'élément chargé.
+        this.updateActiveGroupState(groupName);
     }
 
     /**
@@ -947,6 +955,27 @@ export default class extends Controller {
         this.element.dispatchEvent(event);
     }
 
+    /**
+     * NOUVEAU : Gère la classe 'group-active' pour le groupe de navigation principal.
+     * Cette classe applique un style persistant au groupe contenant la rubrique actuellement ouverte.
+     * @param {string|null} groupName - Le nom du groupe à activer. Si null, désactive tous les groupes.
+     */
+    updateActiveGroupState(groupName) {
+        // 1. Retire la classe de l'ancien groupe actif, s'il existe.
+        if (this.activeGroupNavItem) {
+            this.activeGroupNavItem.classList.remove('group-active');
+            this.activeGroupNavItem = null;
+        }
+
+        // 2. Si un nom de groupe est fourni, trouve l'élément et lui ajoute la classe.
+        if (groupName) {
+            const groupElement = this.element.querySelector(`[data-workspace-manager-group-name-param='${groupName}']`);
+            if (groupElement) {
+                groupElement.classList.add('group-active');
+                this.activeGroupNavItem = groupElement; // Mémorise le nouvel élément de groupe actif.
+            }
+        }
+    }
 
     /**
      * Filtre les éléments de l'accordéon en fonction de la saisie de l'utilisateur.

@@ -116,6 +116,22 @@ html {
   /* text-decoration: underline; Texte souligné */
 }
 
+/* NOUVEAU : Style pour le groupe qui contient la rubrique active.
+   Ce style est persistant et doit prévaloir sur les autres états. */
+.nav-item.group-active {
+    border-left-color: #0052ff; /* Bleu cobalt */
+}
+
+.nav-item.group-active .nav-icon,
+.nav-item.group-active .nav-text {
+    color: white;
+    font-weight: bold;
+}
+
+.nav-item.group-active:hover {
+    border-left-color: #0052ff; /* Reste bleu cobalt au survol */
+}
+
 
 /* Colonne 2 : Info & Rubriques */
 .menu-col-2 {
