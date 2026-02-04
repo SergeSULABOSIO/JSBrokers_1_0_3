@@ -8,8 +8,9 @@ import { Controller } from '@hotwired/stimulus';
 export default class extends Controller {
     static targets = [
         "progressBar",
-        "contentZone",
         "workspace",
+        "rubriquesContainer",
+        "descriptionContainer",
         "rubriquesTemplate",
         "dashboardItem",
         "visualizationColumn",
@@ -79,7 +80,7 @@ export default class extends Controller {
                 requestAnimationFrame(() => {
                     // On cherche la rubrique en utilisant à la fois le composant ET le nom de l'entité.
                     const selector = `[data-workspace-manager-component-name-param='${savedState.component}'][data-workspace-manager-entity-name-param='${savedState.entity}']`;
-                    const rubriqueElement = this.contentZoneTarget.querySelector(selector);
+                    const rubriqueElement = this.rubriquesContainerTarget.querySelector(selector);
 
                     if (rubriqueElement) {
                         this.loadComponent({ currentTarget: rubriqueElement }, { isRestoration: true });
@@ -688,19 +689,18 @@ export default class extends Controller {
      */
     displayRubriquesForGroup(groupElement) {
         if (!groupElement || !groupElement.dataset.workspaceManagerGroupNameParam) {
-            this.contentZoneTarget.innerHTML = '';
+            this.rubriquesContainerTarget.innerHTML = '';
             return;
         }
         const groupName = groupElement.dataset.workspaceManagerGroupNameParam.replace(/ /g, '_');
         const templateContent = this.rubriquesTemplateTarget.content.querySelector(`#rubriques-${groupName}`);
 
         if (templateContent) {
-            this.contentZoneTarget.innerHTML = templateContent.outerHTML;
+            this.rubriquesContainerTarget.innerHTML = templateContent.outerHTML;
         } else {
-            this.contentZoneTarget.innerHTML = '';
+            this.rubriquesContainerTarget.innerHTML = '';
         }
     }
-
 
     /**
      * Affiche la description d'un groupe au survol.
@@ -708,7 +708,9 @@ export default class extends Controller {
      */
     showGroupDescription(event) {
         const description = event.currentTarget.dataset.workspaceManagerDescriptionParam;
-        this.contentZoneTarget.innerHTML = `<div class="description-wrapper">${description}</div>`;
+        this.descriptionContainerTarget.innerHTML = `<div class="description-wrapper">${description}</div>`;
+        this.rubriquesContainerTarget.style.display = 'none';
+        this.descriptionContainerTarget.style.display = 'block';
     }
 
     /**
@@ -719,27 +721,31 @@ export default class extends Controller {
         const clickedElement = event.currentTarget;
         this.updateActiveState(clickedElement);
         this.displayRubriquesForGroup(clickedElement);
+        this.descriptionContainerTarget.style.display = 'none';
+        this.rubriquesContainerTarget.style.display = 'block';
     }
 
     /**
-     * Restaure l'état de la zone de contenu lorsque la souris quitte un élément de navigation.
-     * Déclenché lorsque la souris quitte un groupe.
+     * Restaure l'état de la zone de contenu lorsque la souris quitte un élément de navigation de groupe.
      * @param {MouseEvent} event 
      */
     clearDescription(event) {
-        if (this.activeNavItem) {
-            // Si l'élément actif est un groupe, on réaffiche ses rubriques
-            if (this.activeNavItem.dataset.workspaceManagerGroupNameParam) {
-                this.displayRubriquesForGroup(this.activeNavItem);
-            }
-            // Si c'est un autre type d'élément (Tableau de bord, Paramètres), on réaffiche sa description
-            else if (this.activeNavItem.dataset.workspaceManagerDescriptionParam) {
-                const description = this.activeNavItem.dataset.workspaceManagerDescriptionParam;
-                this.contentZoneTarget.innerHTML = `<div class="description-wrapper">${description}</div>`;
-            }
+        if (this.activeNavItem && this.activeNavItem.dataset.workspaceManagerGroupNameParam) {
+            // Un groupe est actif, on s'assure que ses rubriques sont visibles.
+            this.descriptionContainerTarget.style.display = 'none';
+            this.rubriquesContainerTarget.style.display = 'block';
+        } else if (this.activeNavItem && this.activeNavItem.dataset.workspaceManagerDescriptionParam) {
+            // Un élément de premier niveau (ex: Tableau de bord) est actif, on réaffiche sa description.
+            const description = this.activeNavItem.dataset.workspaceManagerDescriptionParam;
+            this.descriptionContainerTarget.innerHTML = `<div class="description-wrapper">${description}</div>`;
+            this.rubriquesContainerTarget.style.display = 'none';
+            this.descriptionContainerTarget.style.display = 'block';
         } else {
-            // S'il n'y a aucun élément actif, on vide la zone.
-            this.contentZoneTarget.innerHTML = '';
+            // Rien n'est actif, on vide et cache tout.
+            this.rubriquesContainerTarget.innerHTML = '';
+            this.descriptionContainerTarget.innerHTML = '';
+            this.descriptionContainerTarget.style.display = 'none';
+            this.rubriquesContainerTarget.style.display = 'none';
         }
     }
 
@@ -788,7 +794,9 @@ export default class extends Controller {
 
         // On met à jour la colonne 2 (description) SEULEMENT si ce n'est PAS une rubrique.
         if (!isRubrique) {
-            this.contentZoneTarget.innerHTML = `<div class="description-wrapper">${description}</div>`;
+            this.descriptionContainerTarget.innerHTML = `<div class="description-wrapper">${description}</div>`;
+            this.rubriquesContainerTarget.style.display = 'none';
+            this.descriptionContainerTarget.style.display = 'block';
         }
 
         this.progressBarTarget.style.display = 'block';
