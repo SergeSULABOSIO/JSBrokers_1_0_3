@@ -42,17 +42,17 @@ class AvenantEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "endingAt", "intitule" => "Date d'échéance", "type" => "Date"],
                 ["code" => "cotation", "intitule" => "Cotation", "type" => "Relation", "targetEntity" => Cotation::class, "displayField" => "nom"],
                 ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
-            ], $this->getSpecificIndicators())
+            ], $this->getSpecificIndicators(), $this->canvasHelper->getGlobalIndicatorsCanvas("Avenant"))
         ];
     }
 
     private function getSpecificIndicators(): array
     {
         return [
-            ["code" => "dureeCouverture", "intitule" => "Durée de couverture", "type" => "Texte", "format" => "Texte", "description" => "Durée totale de la couverture de l'avenant en jours."],
-            ["code" => "joursRestants", "intitule" => "Jours restants", "type" => "Texte", "format" => "Texte", "description" => "Nombre de jours restants avant l'échéance de l'avenant."],
-            ["code" => "ageAvenant", "intitule" => "Âge de l'avenant", "type" => "Texte", "format" => "Texte", "description" => "Nombre de jours écoulés depuis la création de l'avenant."],
-            ["code" => "statutRenouvellement", "intitule" => "Statut", "type" => "Texte", "format" => "Texte", "description" => "Statut actuel du renouvellement de l'avenant."],
+            ["code" => "dureeCouverture", "intitule" => "Durée de couverture", "type" => "Calcul", "format" => "Texte", "description" => "Durée totale de la couverture de l'avenant en jours."],
+            ["code" => "joursRestants", "intitule" => "Jours restants", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours restants avant l'échéance de l'avenant."],
+            ["code" => "ageAvenant", "intitule" => "Âge de l'avenant", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours écoulés depuis la création de l'avenant."],
+            ["code" => "statutRenouvellement", "intitule" => "Statut", "type" => "Calcul", "format" => "Texte", "description" => "Statut actuel du renouvellement de l'avenant."],
         ];
     }
 }
