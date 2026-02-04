@@ -16,7 +16,7 @@ class CotationListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Cotations",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:file-chart"],
+                "texte_principal" => ["attribut_code" => "nom", "icone" => "cotation"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_code" => "assureur"],
