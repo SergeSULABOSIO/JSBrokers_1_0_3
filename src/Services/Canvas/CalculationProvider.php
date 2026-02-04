@@ -68,14 +68,9 @@ class CalculationProvider
         switch (get_class($entity)) {
             case NotificationSinistre::class:
                 /** @var NotificationSinistre $entity */
-
-                // NOUVEAU : Logique de calcul sécurisée pour le nom de l'assuré.
-                // Ceci prévient un crash si le client lié au sinistre a été supprimé.
-                try {
-                    $assureNom = $entity->getAssure() ? $entity->getAssure()->getNom() : 'N/A';
-                } catch (EntityNotFoundException $e) {
-                    $assureNom = '[Client supprimé]';
-                }
+                // La protection contre les entités supprimées est maintenant gérée dans NotificationSinistre::getAssure().
+                $assure = $entity->getAssure();
+                $assureNom = $assure ? $assure->getNom() : 'N/A';
 
                 $indicateurs = [
                     'assureNom' => $assureNom,
