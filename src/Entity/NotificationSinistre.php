@@ -277,13 +277,12 @@ class NotificationSinistre implements OwnerAwareInterface
     public function getAssure(): ?Client
     {
         try {
-            // Déclenche le chargement du proxy. Si l'entité n'existe pas, une exception sera levée.
-            if ($this->assure && $this->assure->getId() !== null) {
-                // L'entité existe, on ne fait rien de plus.
+            // Force le chargement du proxy en accédant à une propriété.
+            // Si l'entité liée n'existe pas, une EntityNotFoundException sera levée.
+            if ($this->assure) {
+                $this->assure->getNom(); // Cet appel force le chargement.
             }
-        } catch (EntityNotFoundException $e) {
-            // L'entité Client (assuré) liée n'a pas été trouvée (probablement supprimée).
-            // On met la relation à null pour éviter des erreurs futures.
+        } catch (\Doctrine\ORM\EntityNotFoundException $e) {
             $this->assure = null;
         }
         return $this->assure;
