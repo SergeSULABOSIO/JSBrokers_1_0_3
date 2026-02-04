@@ -52,19 +52,8 @@
                 {% endfor %}
             </div>
 
-            {# Ligne 3: Paramètres #}
-            <div class="menu-col-1-row-3">
-                {% for param_name, param_data in menu.colonne_1.parametres %}
-                    <div class="nav-item"
-                        data-action="click->workspace-manager#loadComponent"
-                        data-workspace-manager-component-name-param="{{ param_data.composant_twig }}"
-                        data-workspace-manager-description-param="{{ param_data.description }}"
-                    >
-                        <twig:UX:Icon name="{{ resolve_icon_name(param_data.icone) }}" class="nav-icon" />
-                        <span class="nav-text">{{ param_name }}</span>
-                    </div>
-                {% endfor %}
-            </div>
+            {# Ligne 3: Espace réservé pour de futurs éléments de menu (ex: Déconnexion) #}
+            <div class="menu-col-1-row-3"></div>
         </div>
 
         {# COLONNE 2 : Rubriques & Descriptions #}
