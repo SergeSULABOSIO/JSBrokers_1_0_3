@@ -23,65 +23,65 @@ parameters:
 
             groupes:
                 Finances:
-                    icone: 'mdi:finance'
+                    icone: 'monnaie'
                     description: "Gestion des paramètres financiers de votre société de courtage."
                     rubriques:
-                        "Monnaies": { icone: 'tdesign:money-filled', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Monnaie' }
-                        "Comptes bancaires": { icone: 'clarity:piggy-bank-solid', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\CompteBancaire' }
-                        "Taxes": { icone: 'emojione-monotone:police-car-light', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Taxe' }
-                        "Types Revenus": { icone: 'hugeicons:award-01', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\TypeRevenu' }
-                        "Tranches": { icone: 'icon-park-solid:chart-proportion', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Tranche' }
-                        "Types Chargements": { icone: 'tabler:truck-loading', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Chargement' }
-                        "Notes": { icone: 'hugeicons:invoice-04', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Note' }
-                        "Paiements": { icone: 'streamline:payment-10-solid', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Paiement' }
-                        "Bordereaux": { icone: 'gg:list', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Bordereau' }
-                        "Revenus": { icone: 'hugeicons:money-bag-02', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\RevenuPourCourtier' }
+                        "Monnaies": { icone: 'monnaie', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Monnaie' }
+                        "Comptes bancaires": { icone: 'compte-bancaire', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\CompteBancaire' }
+                        "Taxes": { icone: 'taxe', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Taxe' }
+                        "Types Revenus": { icone: 'type-revenu', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\TypeRevenu' }
+                        "Tranches": { icone: 'tranche', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Tranche' }
+                        "Types Chargements": { icone: 'chargement', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Chargement' }
+                        "Notes": { icone: 'note', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Note' }
+                        "Paiements": { icone: 'paiement', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Paiement' }
+                        "Bordereaux": { icone: 'bordereau', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Bordereau' }
+                        "Revenus": { icone: 'revenu', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\RevenuPourCourtier' }
 
                 Marketing:
-                    icone: 'hugeicons:marketing'
+                    icone: 'piste'
                     description: "Gestion des interactions clients, des tâches et des feedbacks."
                     rubriques:
-                        "Pistes": { icone: 'fa-solid:road', composant_twig: '_view_manager_marketing.html.twig', entity_name: 'App\Entity\Piste' }
-                        "Tâches": { icone: 'mingcute:task-2-fill', composant_twig: '_view_manager_marketing.html.twig', entity_name: 'App\Entity\Tache' }
-                        "Feedbacks": { icone: 'fluent-mdl2:feedback', composant_twig: '_view_manager_marketing.html.twig', entity_name: 'App\Entity\Feedback' }
+                        "Pistes": { icone: 'piste', composant_twig: '_view_manager_marketing.html.twig', entity_name: 'App\Entity\Piste' }
+                        "Tâches": { icone: 'tache', composant_twig: '_view_manager_marketing.html.twig', entity_name: 'App\Entity\Tache' }
+                        "Feedbacks": { icone: 'feedback', composant_twig: '_view_manager_marketing.html.twig', entity_name: 'App\Entity\Feedback' }
 
                 Production:
-                    icone: 'streamline-flex:production-belt-time'
+                    icone: 'cotation'
                     description: "Gestion de vos activités génératrices de revenus."
                     rubriques:
-                        "Groupes": { icone: 'clarity:group-solid', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Groupe' }
-                        "Clients": { icone: 'fa-solid:house-user', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Client' }
-                        'Assureurs': { icone: 'wpf:security-checked', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Assureur' }
-                        "Contacts": { icone: 'hugeicons:contact-01', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Contact' }
-                        "Risques": { icone: 'ep:goods', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Risque' }
-                        "Avenants": { icone: 'iconamoon:edit-fill', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Avenant' }
-                        "Intermédiaires": { icone: 'carbon:partnership', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Partenaire' }
-                        "Propositions": { icone: 'streamline:store-computer-solid', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Cotation' }
+                        "Groupes": { icone: 'groupe', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Groupe' }
+                        "Clients": { icone: 'client', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Client' }
+                        'Assureurs': { icone: 'assureur', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Assureur' }
+                        "Contacts": { icone: 'contact', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Contact' }
+                        "Risques": { icone: 'risque', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Risque' }
+                        "Avenants": { icone: 'avenant', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Avenant' }
+                        "Intermédiaires": { icone: 'partenaire', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Partenaire' }
+                        "Propositions": { icone: 'cotation', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Cotation' }
 
                 Sinistre:
-                    icone: 'game-icons:mine-explosion'
+                    icone: 'sinistre'
                     description: "Gestion des sinistres et de leurs compensations."
                     rubriques:
-                        "Types pièces": { icone: 'codex:file', composant_twig: '_view_manager_sinistre.html.twig', entity_name: 'App\Entity\ModelePieceSinistre' }
-                        "Pièces Sinistre": { icone: 'ic:round-document-scanner', composant_twig: '_view_manager_sinistre.html.twig', entity_name: 'App\Entity\PieceSinistre' }
-                        "Notifications": { icone: 'emojione-monotone:fire', composant_twig: '_view_manager_sinistre.html.twig', entity_name: 'App\Entity\NotificationSinistre' }
-                        "Règlements": { icone: 'icon-park-outline:funds', composant_twig: '_view_manager_sinistre.html.twig', entity_name: 'App\Entity\OffreIndemnisationSinistre' }
+                        "Types pièces": { icone: 'modele-piece', composant_twig: '_view_manager_sinistre.html.twig', entity_name: 'App\Entity\ModelePieceSinistre' }
+                        "Pièces Sinistre": { icone: 'piece-sinistre', composant_twig: '_view_manager_sinistre.html.twig', entity_name: 'App\Entity\PieceSinistre' }
+                        "Notifications": { icone: 'sinistre', composant_twig: '_view_manager_sinistre.html.twig', entity_name: 'App\Entity\NotificationSinistre' }
+                        "Règlements": { icone: 'offre', composant_twig: '_view_manager_sinistre.html.twig', entity_name: 'App\Entity\OffreIndemnisationSinistre' }
 
                 Administration:
-                    icone: 'clarity:administrator-solid'
+                    icone: 'document'
                     description: "Gestion des documents et des utilisateurs invités."
                     rubriques:
-                        Documents: { icone: 'famicons:document', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\Document' }
-                        Classeurs: { icone: 'ic:baseline-folder', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\Classeur' }
-                        Invités: { icone: 'raphael:user', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\Invite' }
+                        Documents: { icone: 'document', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\Document' }
+                        Classeurs: { icone: 'classeur', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\Classeur' }
+                        Invités: { icone: 'invite', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\Invite' }
 
             parametres:
                 'Mon Compte':
-                    icone: 'material-symbols:settings'
+                    icone: 'action:settings'
                     composant_twig: '_mon_compte_component.html.twig'
                     description: "Ici la description sur la fonction Mon Compte"
                 Licence:
-                    icone: 'ci:arrows-reload-01'
+                    icone: 'action:cart'
                     composant_twig: '_licence_component.html.twig'
                     description: "Ici la description de la fonction de paiement de la licence / Version Premium ou Payante."
 
