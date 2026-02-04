@@ -74,13 +74,15 @@ parameters:
                         Documents: { icone: 'document', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\Document' }
                         Classeurs: { icone: 'classeur', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\Classeur' }
                         Invités: { icone: 'invite', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\Invite' }
-                Paramètres:
-                    icone: 'action:settings'
-                    description: "<p>Configurez les aspects fondamentaux de votre espace de travail. Personnalisez votre compte, gérez votre abonnement et adaptez l'application à vos besoins.</p><p>Assurez-vous que votre profil est à jour et que votre licence est active pour bénéficier de toutes les fonctionnalités. Une configuration correcte est la clé d'une expérience utilisateur optimale.</p><p><strong>Les paramètres sont le centre névralgique de votre application. Prenez le temps de les ajuster pour une efficacité maximale.</strong></p>"
-                    rubriques:
-                        "Mon Compte": { icone: 'action:settings', composant_twig: '_mon_compte_component.html.twig' }
-                        "Licence": { icone: 'action:cart', composant_twig: '_licence_component.html.twig' }
 
+            # NOUVEAU : Le groupe Paramètres est extrait pour un positionnement spécial.
+            parametres_group:
+                nom: 'Paramètres'
+                icone: 'action:settings'
+                description: "<p>Configurez les aspects fondamentaux de votre espace de travail. Personnalisez votre compte, gérez votre abonnement et adaptez l'application à vos besoins.</p><p>Assurez-vous que votre profil est à jour et que votre licence est active pour bénéficier de toutes les fonctionnalités. Une configuration correcte est la clé d'une expérience utilisateur optimale.</p><p><strong>Les paramètres sont le centre névralgique de votre application. Prenez le temps de les ajuster pour une efficacité maximale.</strong></p>"
+                rubriques:
+                    "Mon Compte": { icone: 'action:settings', composant_twig: '_mon_compte_component.html.twig' }
+                    "Licence": { icone: 'action:cart', composant_twig: '_licence_component.html.twig' }
         colonne_2:
             logo: 'images/entreprises/logofav.png'
             titre: 'JS Brokers'

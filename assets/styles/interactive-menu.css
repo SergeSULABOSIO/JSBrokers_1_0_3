@@ -56,7 +56,11 @@ html {
 }
 
 .menu-col-1-row-2 {
-  flex-grow: 1; /* [cite_start] [cite: 201] */
+  /* NOUVEAU : On transforme ce conteneur en colonne flex pour pouvoir y positionner des éléments. */
+  display: flex;
+  flex-direction: column;
+
+  flex-grow: 1; /* On conserve cette propriété pour que la zone s'étende. [cite: 201] */
   overflow-y: auto; /* [cite_start] [cite: 201] */
   padding: 20px 0;
 }
@@ -114,6 +118,11 @@ html {
 .nav-item.active {
   border-left-color: white; /* Bordure blanche */
   /* text-decoration: underline; Texte souligné */
+}
+
+/* NOUVEAU : Style pour l'élément de menu qui doit être aligné en bas. */
+.nav-item-bottom {
+    margin-top: auto; /* La magie opère ici : pousse l'élément vers le bas de son conteneur flex. */
 }
 
 /* NOUVEAU : Style pour le groupe qui contient la rubrique active.

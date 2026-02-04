@@ -724,10 +724,10 @@ export default class extends Controller {
     }
 
     /**
-     * Affiche la description d'un groupe au survol.
+     * Affiche la description d'un élément de menu au survol.
      * @param {MouseEvent} event
      */
-    showGroupDescription(event) {
+    showItemDescription(event) {
         const description = event.currentTarget.dataset.workspaceManagerDescriptionParam;
         this.descriptionContainerTarget.innerHTML = `<div class="description-wrapper">${description}</div>`;
         this.rubriquesContainerTarget.style.display = 'none';
