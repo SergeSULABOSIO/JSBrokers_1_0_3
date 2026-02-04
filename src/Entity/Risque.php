@@ -6,6 +6,8 @@ use Doctrine\ORM\Mapping as ORM;
 use App\Repository\RisqueRepository;
 use Doctrine\Common\Collections\Collection;
 use App\Entity\Traits\CalculatedIndicatorsTrait;
+use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Serializer\Annotation\MaxDepth;
 use Doctrine\Common\Collections\ArrayCollection;
 
 #[ORM\Entity(repositoryClass: RisqueRepository::class)]
@@ -16,44 +18,59 @@ class Risque
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 6)]
+    #[Groups(['list:read'])]
     private ?string $code = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $description = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
     private ?float $pourcentageCommissionSpecifiqueHT = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $branche = null;
     public const BRANCHE_IARD_OU_NON_VIE = 0;
     public const BRANCHE_VIE = 1;
 
     #[ORM\ManyToOne(inversedBy: 'risques')]
+    #[Groups(['list:read'])]
+    #[MaxDepth(1)]
     private ?Entreprise $entreprise = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $nomComplet = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?bool $imposable = null;
 
     /**
      * @var Collection<int, Piste>
      */
     #[ORM\OneToMany(targetEntity: Piste::class, mappedBy: 'risque', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
+    #[MaxDepth(1)]
     private Collection $pistes;
 
     /**
      * @var Collection<int, NotificationSinistre>
      */
     #[ORM\OneToMany(targetEntity: NotificationSinistre::class, mappedBy: 'risque')]
+    #[Groups(['list:read'])]
+    #[MaxDepth(1)]
     private Collection $notificationSinistres;
 
     #[ORM\ManyToOne(inversedBy: 'produits')]
+    #[Groups(['list:read'])]
+    #[MaxDepth(1)]
     private ?ConditionPartage $conditionPartage = null;
 
 

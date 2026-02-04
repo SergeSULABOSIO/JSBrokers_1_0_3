@@ -150,12 +150,19 @@ class JSBDynamicSearchService
     {
         $rootAlias = $qb->getRootAliases()[0];
         $entityClass = $qb->getRootEntities()[0];
+        $metadata = $this->em->getClassMetadata($entityClass);
         $joinedEntities = [];
         $parameterIndex = 0;
 
         // SÉCURITÉ : On s'assure que la recherche est bien limitée à l'entreprise courante.
-        if ($this->em->getClassMetadata($entityClass)->hasAssociation('entreprise')) {
+        if ($metadata->hasAssociation('entreprise')) {
             $qb->andWhere("{$rootAlias}.entreprise = :entrepriseId{$suffix}")
+               ->setParameter("entrepriseId{$suffix}", $entreprise->getId());
+        } elseif ($metadata->hasAssociation('invite')) {
+            // NOUVEAU : Gérer les entités liées à l'entreprise via un Invité (ex: NotificationSinistre, Piste).
+            $inviteAlias = 'search_invite' . $suffix;
+            $qb->join("{$rootAlias}.invite", $inviteAlias);
+            $qb->andWhere("{$inviteAlias}.entreprise = :entrepriseId{$suffix}")
                ->setParameter("entrepriseId{$suffix}", $entreprise->getId());
         }
 
