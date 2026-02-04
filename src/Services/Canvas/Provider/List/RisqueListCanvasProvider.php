@@ -16,11 +16,11 @@ class RisqueListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Risques",
-                "texte_principal" => ["attribut_code" => "nomComplet", "icone" => "mdi:hazard-lights"],
+                "texte_principal" => ["attribut_code" => "nomComplet", "icone" => "risque"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Code: ", "attribut_code" => "code"],
-                    ["attribut_prefixe" => "Branche: ", "attribut_code" => "branche_string"],
+                    ["attribut_prefixe" => "Branche: ", "attribut_code" => "brancheString"],
                 ],
             ],
         ];
