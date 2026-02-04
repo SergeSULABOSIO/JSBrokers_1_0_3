@@ -31,9 +31,12 @@ export default class extends Controller {
     // NOUVEAU : Cible pour le groupe de menu qui contient la rubrique active
     activeGroupNavItem = null;
     activeRubriqueItem = null;
+    // NOUVEAU : Mémorise l'état de la rubrique active (au-delà de l'élément DOM)
+    activeRubriqueState = null;
 
     connect() {
         this.nomControleur = "WorkspaceManager";
+        this.activeRubriqueState = null; // Initialisation
         this.restoreLastState();
 
         this.boundOpenTabInVisualization = this.openTabInVisualization.bind(this);
@@ -71,6 +74,7 @@ export default class extends Controller {
         }
 
         const savedState = JSON.parse(savedStateJSON);
+        this.activeRubriqueState = savedState; // Mémoriser l'état au chargement
 
         // NOUVEAU : Appeler la méthode pour définir le style du groupe actif dès la restauration.
         this.updateActiveGroupState(savedState.group);
@@ -697,11 +701,23 @@ export default class extends Controller {
             this.rubriquesContainerTarget.innerHTML = '';
             return;
         }
-        const groupName = groupElement.dataset.workspaceManagerGroupNameParam.replace(/ /g, '_');
-        const templateContent = this.rubriquesTemplateTarget.content.querySelector(`#rubriques-${groupName}`);
+        const groupName = groupElement.dataset.workspaceManagerGroupNameParam; // Garder le nom original
+        const groupNameForId = groupName.replace(/ /g, '_');
+        const templateContent = this.rubriquesTemplateTarget.content.querySelector(`#rubriques-${groupNameForId}`);
 
         if (templateContent) {
             this.rubriquesContainerTarget.innerHTML = templateContent.outerHTML;
+
+            // NOUVEAU : Logique pour restaurer l'état actif de la rubrique si elle appartient à ce groupe.
+            if (this.activeRubriqueState && this.activeRubriqueState.group === groupName) {
+                const selector = `[data-workspace-manager-component-name-param='${this.activeRubriqueState.component}'][data-workspace-manager-entity-name-param='${this.activeRubriqueState.entity}']`;
+                const rubriqueElement = this.rubriquesContainerTarget.querySelector(selector);
+                if (rubriqueElement) {
+                    rubriqueElement.classList.add('active');
+                    // On met à jour la référence vers le nouvel élément DOM actif.
+                    this.activeRubriqueItem = rubriqueElement;
+                }
+            }
         } else {
             this.rubriquesContainerTarget.innerHTML = '';
         }
@@ -809,12 +825,12 @@ export default class extends Controller {
         // La sauvegarde de l'état est faite immédiatement après le clic.
         // Le chargement effectif du contenu sera géré par handleComponentLoaded.
         if (componentName) {
-            const stateToSave = {
+            this.activeRubriqueState = {
                 component: componentName,
                 group: groupName || null,
                 entity: entityName || null // CORRECTION : Ajouter l'entityName à l'état sauvegardé
             };
-            sessionStorage.setItem(`lastActiveState_${this.idEntrepriseValue}`, JSON.stringify(stateToSave));
+            sessionStorage.setItem(`lastActiveState_${this.idEntrepriseValue}`, JSON.stringify(this.activeRubriqueState));
         }
 
         // Cet événement est spécifiquement destiné au Cerveau pour charger le composant
