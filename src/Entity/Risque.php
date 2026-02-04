@@ -7,7 +7,6 @@ use App\Repository\RisqueRepository;
 use Doctrine\Common\Collections\Collection;
 use App\Entity\Traits\CalculatedIndicatorsTrait;
 use Symfony\Component\Serializer\Annotation\Groups;
-use Symfony\Component\Serializer\Annotation\MaxDepth;
 use Doctrine\Common\Collections\ArrayCollection;
 
 #[ORM\Entity(repositoryClass: RisqueRepository::class)]
@@ -41,7 +40,6 @@ class Risque
 
     #[ORM\ManyToOne(inversedBy: 'risques')]
     #[Groups(['list:read'])]
-    #[MaxDepth(1)]
     private ?Entreprise $entreprise = null;
 
     #[ORM\Column(length: 255)]
@@ -57,7 +55,6 @@ class Risque
      */
     #[ORM\OneToMany(targetEntity: Piste::class, mappedBy: 'risque', cascade: ['persist', 'remove'], orphanRemoval: true)]
     #[Groups(['list:read'])]
-    #[MaxDepth(1)]
     private Collection $pistes;
 
     /**
@@ -65,12 +62,10 @@ class Risque
      */
     #[ORM\OneToMany(targetEntity: NotificationSinistre::class, mappedBy: 'risque')]
     #[Groups(['list:read'])]
-    #[MaxDepth(1)]
     private Collection $notificationSinistres;
 
     #[ORM\ManyToOne(inversedBy: 'produits')]
     #[Groups(['list:read'])]
-    #[MaxDepth(1)]
     private ?ConditionPartage $conditionPartage = null;
 
 

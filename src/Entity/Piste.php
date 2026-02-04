@@ -38,7 +38,6 @@ class Piste implements OwnerAwareInterface
     private ?string $nom = null;
     
     #[ORM\ManyToOne(inversedBy: 'pistes')]
-    #[Groups(['list:read'])]
     private ?Risque $risque = null;
 
     #[ORM\ManyToOne(inversedBy: 'pistes')]
