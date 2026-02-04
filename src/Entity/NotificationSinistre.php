@@ -2,13 +2,14 @@
 
 namespace App\Entity;
 
-use App\Entity\Traits\CalculatedIndicatorsTrait;
-use Symfony\Component\Serializer\Annotation\Groups;
-use App\Repository\NotificationSinistreRepository;
 use DateTimeImmutable;
-use Doctrine\Common\Collections\ArrayCollection;
-use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\EntityNotFoundException;
+use Doctrine\Common\Collections\Collection;
+use App\Entity\Traits\CalculatedIndicatorsTrait;
+use Doctrine\Common\Collections\ArrayCollection;
+use App\Repository\NotificationSinistreRepository;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: NotificationSinistreRepository::class)]
 class NotificationSinistre implements OwnerAwareInterface
@@ -280,7 +281,7 @@ class NotificationSinistre implements OwnerAwareInterface
             if ($this->assure && $this->assure->getId() !== null) {
                 // L'entité existe, on ne fait rien de plus.
             }
-        } catch (\Doctrine\ORM\EntityNotFoundException $e) {
+        } catch (EntityNotFoundException $e) {
             // L'entité Client (assuré) liée n'a pas été trouvée (probablement supprimée).
             // On met la relation à null pour éviter des erreurs futures.
             $this->assure = null;
