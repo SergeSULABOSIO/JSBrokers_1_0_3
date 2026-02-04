@@ -16,7 +16,7 @@ parameters:
     app.menu_data:
         colonne_1:
             tableau_de_bord:
-                icone: 'ant-design:dashboard-twotone'
+                icone: 'dashboard'
                 nom: 'Tableau de bord'
                 description: "Le tableau de bord vous présente la santé de votre société en un seul coup d'oeil."
                 composant_twig: '_tableau_de_bord_component.html.twig'
