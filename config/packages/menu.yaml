@@ -24,7 +24,7 @@ parameters:
             groupes:
                 Finances:
                     icone: 'monnaie'
-                    description: "Gestion des paramètres financiers de votre société de courtage."
+                    description: "<p>Gérez vos flux financiers, des primes aux commissions. Suivez chaque transaction avec une précision et une facilité inégalées.</p><p>Obtenez une vision claire de votre rentabilité. Prenez des décisions éclairées basées sur des données financières fiables et à jour.</p><p><strong>Maîtriser vos finances est le pilier de votre croissance. C'est la garantie de votre pérennité et de votre succès.</strong></p>"
                     rubriques:
                         "Monnaies": { icone: 'monnaie', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Monnaie' }
                         "Comptes bancaires": { icone: 'compte-bancaire', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\CompteBancaire' }
@@ -39,7 +39,7 @@ parameters:
 
                 Marketing:
                     icone: 'piste'
-                    description: "Gestion des interactions clients, des tâches et des feedbacks."
+                    description: "<p>Transformez vos prospects en clients fidèles. Pilotez vos campagnes, suivez vos pistes et organisez vos tâches commerciales efficacement.</p><p>Gagnez en productivité et ne manquez plus aucune opportunité. Votre pipeline commercial est clair, optimisé et sous contrôle.</p><p><strong>Un marketing structuré est votre meilleur atout pour acquérir de nouveaux marchés et vous démarquer de la concurrence.</strong></p>"
                     rubriques:
                         "Pistes": { icone: 'piste', composant_twig: '_view_manager_marketing.html.twig', entity_name: 'App\Entity\Piste' }
                         "Tâches": { icone: 'tache', composant_twig: '_view_manager_marketing.html.twig', entity_name: 'App\Entity\Tache' }
@@ -47,7 +47,7 @@ parameters:
 
                 Production:
                     icone: 'cotation'
-                    description: "Gestion de vos activités génératrices de revenus."
+                    description: "<p>Centralisez la gestion de vos polices, clients et partenaires. De la cotation à l'avenant, tout est à portée de clic.</p><p>Simplifiez vos opérations quotidiennes et offrez un service client réactif. Votre production devient fluide, rapide et sans erreur.</p><p><strong>L'excellence opérationnelle en production est le cœur de votre métier. Elle fidélise vos clients et renforce votre réputation.</strong></p>"
                     rubriques:
                         "Groupes": { icone: 'groupe', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Groupe' }
                         "Clients": { icone: 'client', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Client' }
@@ -60,7 +60,7 @@ parameters:
 
                 Sinistre:
                     icone: 'sinistre'
-                    description: "Gestion des sinistres et de leurs compensations."
+                    description: "<p>Suivez chaque dossier sinistre, de la notification au règlement. Gérez les pièces, les offres et les paiements simplement.</p><p>Accélérez le traitement des sinistres et améliorez la satisfaction de vos assurés. Votre gestion est transparente et efficace.</p><p><strong>Une gestion des sinistres performante est cruciale. Elle prouve votre valeur ajoutée et la fiabilité de votre service.</strong></p>"
                     rubriques:
                         "Types pièces": { icone: 'modele-piece', composant_twig: '_view_manager_sinistre.html.twig', entity_name: 'App\Entity\ModelePieceSinistre' }
                         "Pièces Sinistre": { icone: 'piece-sinistre', composant_twig: '_view_manager_sinistre.html.twig', entity_name: 'App\Entity\PieceSinistre' }
@@ -69,7 +69,7 @@ parameters:
 
                 Administration:
                     icone: 'document'
-                    description: "Gestion des documents et des utilisateurs invités."
+                    description: "<p>Organisez vos documents, gérez les accès de vos collaborateurs et sécurisez vos données. Votre cabinet est parfaitement structuré.</p><p>Collaborez en toute sérénité et retrouvez n'importe quelle information en un instant. Votre administration est simplifiée et sécurisée.</p><p><strong>Une administration rigoureuse est le socle de votre conformité et de votre efficacité. Elle protège votre activité.</strong></p>"
                     rubriques:
                         Documents: { icone: 'document', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\Document' }
                         Classeurs: { icone: 'classeur', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\Classeur' }

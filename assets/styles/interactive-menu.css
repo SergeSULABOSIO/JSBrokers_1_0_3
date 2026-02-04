@@ -237,8 +237,37 @@ html {
   color: #444; /* Couleur de texte plus douce */
   font-size: 0.95rem;
   line-height: 1.6; /* Hauteur de ligne pour une meilleure lisibilité */
-  font-style: italic; /* Style italique pour marquer que c'est une description */
   border-radius: 0 8px 8px 0; /* Coins arrondis */
+
+  /* NOUVEAU : Animation d'apparition pour un effet de chargement subtil */
+  animation: fadeInDescription 0.4s ease-in-out;
+}
+
+/* NOUVEAU : Keyframes pour l'animation d'apparition de la description */
+@keyframes fadeInDescription {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* NOUVEAU : Style pour les paragraphes dans la description pour une meilleure structure */
+.description-wrapper p {
+    margin-bottom: 1rem; /* Espace entre les paragraphes */
+}
+
+.description-wrapper p:last-child {
+    margin-bottom: 0; /* Pas de marge pour le dernier paragraphe */
+}
+
+/* NOUVEAU : Style pour le texte en gras (la partie "indispensable") pour plus d'impact */
+.description-wrapper strong {
+    color: #000; /* Texte en noir pour un meilleur contraste */
+    font-weight: 700; /* Police plus grasse */
 }
 
 /* Colonne de visualisation  */
