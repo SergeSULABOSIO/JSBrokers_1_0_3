@@ -220,6 +220,16 @@ class Piste implements OwnerAwareInterface
 
     public function getClient(): ?Client
     {
+        try {
+            // Déclenche le chargement du proxy. Si l'entité n'existe pas, une exception sera levée.
+            if ($this->client && $this->client->getId() !== null) {
+                // L'entité existe, on ne fait rien de plus.
+            }
+        } catch (\Doctrine\ORM\EntityNotFoundException $e) {
+            // L'entité Client liée n'a pas été trouvée (probablement supprimée).
+            // On met la relation à null pour éviter des erreurs futures.
+            $this->client = null;
+        }
         return $this->client;
     }
 
