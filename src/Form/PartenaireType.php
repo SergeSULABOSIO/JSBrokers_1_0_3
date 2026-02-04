@@ -122,13 +122,6 @@ class PartenaireType extends AbstractType
                     ]),
                 ],
             ])
-            //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
         ;
     }
 
@@ -136,7 +129,21 @@ class PartenaireType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Partenaire::class,
-            'parent_object' => null, // l'objet parent
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    /**
+     * En retournant une chaîne vide, on dit à Symfony de ne pas
+     * préfixer les champs du formulaire. Le formulaire n'aura pas de nom racine.
+     * Cela est essentiel pour les formulaires soumis via API/AJAX qui envoient
+     * des données "plates" plutôt que des données imbriquées sous le nom du formulaire.
+     *
+     * @return string
+     */
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }

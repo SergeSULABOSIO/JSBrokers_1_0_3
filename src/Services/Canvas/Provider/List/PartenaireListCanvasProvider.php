@@ -16,7 +16,7 @@ class PartenaireListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Partenaires",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:handshake"],
+                "texte_principal" => ["attribut_code" => "nom", "icone" => "partenaire"],
                 "textes_secondaires" => [
                     ["attribut_code" => "email"],
                 ],
