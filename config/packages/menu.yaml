@@ -18,7 +18,7 @@ parameters:
             tableau_de_bord:
                 icone: 'dashboard'
                 nom: 'Tableau de bord'
-                description: "Le tableau de bord vous présente la santé de votre société en un seul coup d'oeil."
+                description: "<p>Visualisez les indicateurs clés de performance de votre cabinet en temps réel. Le tableau de bord centralise les données essentielles pour un pilotage stratégique et immédiat.</p><p>Suivez l'évolution de vos primes, commissions, et sinistres grâce à des graphiques intuitifs. Anticipez les tendances et réagissez rapidement aux opportunités ou aux risques.</p><p><strong>Le tableau de bord est votre tour de contrôle. Il transforme les données brutes en intelligence décisionnelle pour une croissance maîtrisée.</strong></p>"
                 composant_twig: '_tableau_de_bord_component.html.twig'
 
             groupes:
@@ -74,16 +74,12 @@ parameters:
                         Documents: { icone: 'document', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\Document' }
                         Classeurs: { icone: 'classeur', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\Classeur' }
                         Invités: { icone: 'invite', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\Invite' }
-
-            parametres:
-                'Mon Compte':
+                Paramètres:
                     icone: 'action:settings'
-                    composant_twig: '_mon_compte_component.html.twig'
-                    description: "Ici la description sur la fonction Mon Compte"
-                Licence:
-                    icone: 'action:cart'
-                    composant_twig: '_licence_component.html.twig'
-                    description: "Ici la description de la fonction de paiement de la licence / Version Premium ou Payante."
+                    description: "<p>Configurez les aspects fondamentaux de votre espace de travail. Personnalisez votre compte, gérez votre abonnement et adaptez l'application à vos besoins.</p><p>Assurez-vous que votre profil est à jour et que votre licence est active pour bénéficier de toutes les fonctionnalités. Une configuration correcte est la clé d'une expérience utilisateur optimale.</p><p><strong>Les paramètres sont le centre névralgique de votre application. Prenez le temps de les ajuster pour une efficacité maximale.</strong></p>"
+                    rubriques:
+                        "Mon Compte": { icone: 'action:settings', composant_twig: '_mon_compte_component.html.twig' }
+                        "Licence": { icone: 'action:cart', composant_twig: '_licence_component.html.twig' }
 
         colonne_2:
             logo: 'images/entreprises/logofav.png'
