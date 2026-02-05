@@ -931,17 +931,6 @@ textarea:hover,
     box-shadow: 0 0 0 1px var(--bs-primary), 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
-/* STYLE POUR LES LIGNES DE FORMULAIRE COLORÉES */
-.form-row-colored {
-    padding-top: 0.75rem;
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
-    margin-left: 0;
-    margin-right: 0;
-    margin-bottom: 0rem;
-    border-radius: 8px;
-}
-
 /* STYLES POUR LE DÉFILEMENT DE FORMULAIRES (utilisé par le dialogue de recherche avancée) */
 .form-scrollable-content {
     max-height: 45vh; /* Hauteur augmentée pour plus de confort */
@@ -1197,17 +1186,13 @@ textarea:hover,
     border-radius: var(--bs-border-radius-sm);
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.08);
     transition: box-shadow 0.2s ease-in-out;
-
-    /* On applique la même gouttière verticale que les champs simples (mb-3) */
     overflow: hidden;
 }
 .accordion-title {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    /* CORRECTION : On applique un padding identique à celui d'un champ de formulaire standard pour une hauteur et largeur parfaites. */
-    padding: 0.375rem 0.75rem;
-    /* CORRECTION : On applique un padding identique à celui d'un champ de formulaire standard pour une hauteur parfaite. */
+    padding: 0.375rem 0.5rem; /* CORRECTION : Gouttière horizontale réduite pour correspondre au padding de 0.5rem des autres champs. */
     cursor: pointer;
     border-bottom: 1px solid #e0e0e0;
 }
@@ -1251,8 +1236,7 @@ textarea:hover,
     padding: 1px;
 }
 .collection-item {
-    /* CORRECTION : On harmonise le padding avec le titre de l'accordéon. */
-    padding: 0.5rem 0.75rem;
+    padding: 0.5rem 0.5rem; /* CORRECTION : Gouttière horizontale réduite pour correspondre au padding de 0.5rem des autres champs. */
     display: flex;
     align-items: center;
     border-bottom: 1px solid #f0f0f0;
