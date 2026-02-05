@@ -1206,20 +1206,20 @@ textarea:hover,
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.375rem 0.5rem; /* CORRECTION FINALE: Gouttière verticale réduite pour correspondre aux champs standards. */
+    /* CORRECTION : On applique un padding identique à celui d'un champ de formulaire standard pour une hauteur parfaite. */
+    padding: 0.375rem 0.75rem;
     cursor: pointer;
     border-bottom: 1px solid #e0e0e0;
 }
 .title-left-block {
     flex-grow: 1;
-}
-.title-line-1 {
+    /* NOUVEAU : On transforme le conteneur en flex pour aligner tous les éléments sur une seule ligne. */
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 0.5rem;
 }
 .toggle-icon {
-    font-size: 1.5em;
+    font-size: 1.2em; /* CORRECTION : Taille réduite pour ne pas augmenter la hauteur de la ligne. */
     font-weight: bold;
     color: #6c757d;
     width: 20px;
@@ -1233,16 +1233,8 @@ textarea:hover,
 .badge {
     font-style: italic;
     font-weight: bold;
-    transform: translateY(-5px);
+    /* transform: translateY(-5px); */ /* N'est plus nécessaire avec l'alignement flex */
     background-color: #0d6efd !important;
-}
-.title-line-2 {
-    padding-left: 30px;
-    font-size: 0.8em;
-    font-style: italic;
-    font-weight: normal;
-    color: #212529;
-    margin-top: 0; 
 }
 .title-right-block {
     transition: opacity 0.3s ease; /* On ne garde que la transition sur l'opacité */
@@ -1262,7 +1254,7 @@ textarea:hover,
 .collection-item {
     display: flex;
     align-items: center;
-    padding: 0.375rem 0.5rem; /* CORRECTION FINALE: Gouttière verticale réduite pour correspondre aux champs standards. */
+    padding: 0.5rem 0.75rem; /* CORRECTION : On harmonise avec le padding des champs standards. */
     border-bottom: 1px solid #f0f0f0;
     position: relative;
     cursor: pointer;
