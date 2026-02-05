@@ -45,15 +45,11 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
                     ['width' => 6, 'champs' => ['nom', 'duree']],
                     ['width' => 6, 'champs' => ['assureur']]
                 ]
-            ],
-            [
-                'colonnes' => [
-                    ['width' => 12, 'champs' => ['chargements']]
-                ]
             ]
         ];
 
         $collections = [
+            ['fieldName' => 'chargements', 'entityRouteName' => 'chargementpourprime', 'formTitle' => 'Chargement', 'parentFieldName' => 'cotation'],
             ['fieldName' => 'revenus', 'entityRouteName' => 'revenucourtier', 'formTitle' => 'Revenu', 'parentFieldName' => 'cotation'],
             ['fieldName' => 'tranches', 'entityRouteName' => 'tranche', 'formTitle' => 'Tranche', 'parentFieldName' => 'cotation'],
             ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'cotation'],

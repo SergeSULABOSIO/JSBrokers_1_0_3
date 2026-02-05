@@ -49,16 +49,7 @@ class CotationType extends AbstractType
                 'entry_options' => [
                     'label' => false,
                 ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "cotation",
-                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 10,
-                    ]),
-                ],
+                'mapped' => false,
             ]);
 
         $builder
@@ -71,16 +62,7 @@ class CotationType extends AbstractType
                 'entry_options' => [
                     'label' => false,
                 ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "revenu",
-                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 10,
-                    ]),
-                ],
+                'mapped' => false,
             ]);
 
         $builder
@@ -93,16 +75,7 @@ class CotationType extends AbstractType
                 'entry_options' => [
                     'label' => false,
                 ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "tranche",
-                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 12,
-                    ]),
-                ],
+                'mapped' => false,
             ])
             ->add('documents', CollectionType::class, [
                 'label' => "Documents",
@@ -113,16 +86,7 @@ class CotationType extends AbstractType
                 'entry_options' => [
                     'label' => false,
                 ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "document",
-                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 10,
-                    ]),
-                ],
+                'mapped' => false,
             ])
 
             ->add('taches', CollectionType::class, [
@@ -134,16 +98,7 @@ class CotationType extends AbstractType
                 'entry_options' => [
                     'label' => false,
                 ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "tache",
-                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 100,
-                    ]),
-                ],
+                'mapped' => false,
             ])
 
             ->add('avenants', CollectionType::class, [
@@ -155,16 +110,7 @@ class CotationType extends AbstractType
                 'entry_options' => [
                     'label' => false,
                 ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "avenant",
-                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 1,
-                    ]),
-                ],
+                'mapped' => false,
             ])
 
             // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
