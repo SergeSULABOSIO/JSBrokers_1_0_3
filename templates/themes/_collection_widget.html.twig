@@ -31,16 +31,10 @@
 
             {# Conteneur pour le titre normal, qui sera caché pendant le chargement #}
             <div class="title-left-block" data-collection-target="titleContent">
-                {# Ligne 1 #}
-                <div class="title-line-1">
-                    <span class="toggle-icon">+</span>
-                    <strong class="field-label">{{ form.vars.label|default(form.vars.name) }}</strong>
-                    <span class="badge bg-primary" data-collection-target="countBadge" style="display: none;">0</span>
-                </div>
-                {# Ligne 2 (Help text) #}
-                {% if form.vars.help %}
-                    <div class="title-line-2 form-text">{{ form.vars.help }}</div>
-                {% endif %}
+                <span class="toggle-icon">+</span>
+                <strong class="field-label">{{ form.vars.label|default(form.vars.name) }}</strong>
+                {% if form.vars.help %}<span class="form-text text-muted ms-2">({{ form.vars.help }})</span>{% endif %}
+                <span class="badge bg-primary ms-auto" data-collection-target="countBadge" style="display: none;">0</span>
             </div>
 
             {# --- CORRECTION : On rend toujours le bouton, mais on le cache avec une classe si désactivé --- #}
