@@ -47,8 +47,8 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
             ],
             [ // Ligne 2 : Durée et Assureur (côte à côte)
                 'colonnes' => [
-                    ['width' => 6, 'champs' => ['duree']],
-                    ['width' => 6, 'champs' => ['assureur']]
+                    ['width' => 4, 'champs' => ['duree']],
+                    ['width' => 8, 'champs' => ['assureur']]
                 ]
             ]
         ];
