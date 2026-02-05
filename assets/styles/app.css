@@ -1192,11 +1192,13 @@ textarea:hover,
 ===================================================================
 */
 .collection-manager-accordion {
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    background-color: #f9f9f9;
-    margin-bottom: 1.5rem;
+    /* CORRECTION : Alignement sur le style de .form-column .mb-3 pour la cohérence visuelle et des gouttières. */
+    margin-bottom: 0 !important; /* On supprime la marge verticale pour s'aligner sur les autres champs. */
+    border-radius: var(--bs-border-radius-sm);
+    background-color: #ffffff;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.08);
     overflow: hidden;
+    transition: box-shadow 0.2s ease-in-out;
 }
 .accordion-title {
     display: flex;
