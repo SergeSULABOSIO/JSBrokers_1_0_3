@@ -1206,7 +1206,7 @@ textarea:hover,
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 15px;
+    padding: 12px 0.5rem; /* CORRECTION: Gouttière horizontale réduite pour s'aligner sur les autres champs. */
     cursor: pointer;
     border-bottom: 1px solid #e0e0e0;
 }
@@ -1223,7 +1223,6 @@ textarea:hover,
     font-weight: bold;
     color: #6c757d;
     width: 20px;
-    padding-left: 10px;
     text-align: center;
 }
 .field-label {
@@ -1248,7 +1247,7 @@ textarea:hover,
 .title-right-block {
     transition: opacity 0.3s ease; /* On ne garde que la transition sur l'opacité */
     opacity: 0;
-    padding-right: 10px;
+    /* La gouttière est maintenant gérée par le padding du .accordion-title parent. */
 }
 .accordion-content {
     max-height: 0;
@@ -1263,7 +1262,7 @@ textarea:hover,
 .collection-item {
     display: flex;
     align-items: center;
-    padding: 10px;
+    padding: 10px 0.5rem; /* CORRECTION: Gouttière horizontale réduite pour s'aligner sur les autres champs. */
     border-bottom: 1px solid #f0f0f0;
     position: relative;
     cursor: pointer;
