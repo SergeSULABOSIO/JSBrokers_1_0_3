@@ -918,7 +918,7 @@ textarea:hover,
 
 /* NOUVEAU : Ajoute une délimitation visuelle pour chaque champ dans un formulaire de dialogue. */
 .form-column .mb-3 {
-    margin-bottom: 0rem !important; /* La gouttière verticale est maintenant gérée par la classe .mb-2 sur la ligne (.row). */
+    /* La gouttière verticale est gérée par la marge standard de Bootstrap (mb-3 = 1rem) */
     padding: 0.5rem;
     border-radius: var(--bs-border-radius-sm);
     background-color: #ffffff; /* Assure un fond blanc propre */
@@ -1192,13 +1192,15 @@ textarea:hover,
 ===================================================================
 */
 .collection-manager-accordion {
-    /* CORRECTION : Alignement sur le style de .form-column .mb-3 pour la cohérence visuelle et des gouttières. */
-    margin-bottom: 0 !important; /* On supprime la marge verticale pour s'aligner sur les autres champs. */
-    border-radius: var(--bs-border-radius-sm);
+    /* On applique le même style de carte que les champs simples */
     background-color: #ffffff;
+    border-radius: var(--bs-border-radius-sm);
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.08);
-    overflow: hidden;
     transition: box-shadow 0.2s ease-in-out;
+
+    /* On applique la même gouttière verticale que les champs simples (mb-3) */
+    margin-bottom: 1rem;
+    overflow: hidden;
 }
 .accordion-title {
     display: flex;
