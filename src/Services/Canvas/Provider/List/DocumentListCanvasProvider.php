@@ -21,7 +21,7 @@ class DocumentListCanvasProvider implements ListCanvasProviderInterface
                     "attribut_code" => "nom",
                     "attribut_type" => "text",
                     "attribut_taille_max" => 50,
-                    "icone" => "mdi:file-document",
+                    "icone" => "document",
                     "icone_taille" => "19px",
                 ],
                 "textes_secondaires_separateurs" => " • ",

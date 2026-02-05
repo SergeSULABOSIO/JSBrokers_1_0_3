@@ -16,7 +16,7 @@ class ClasseurListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Classeurs",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:folder-multiple"],
+                "texte_principal" => ["attribut_code" => "nom", "icone" => "classeur"],
                 "textes_secondaires" => [["attribut_code" => "description", "attribut_taille_max" => 50]],
             ],
         ];
