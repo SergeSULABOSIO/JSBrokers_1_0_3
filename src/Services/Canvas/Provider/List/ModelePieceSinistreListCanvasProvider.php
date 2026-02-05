@@ -17,7 +17,7 @@ class ModelePieceSinistreListCanvasProvider implements ListCanvasProviderInterfa
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Modèles de Pièces Sinistre",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:file-settings-outline"],
+                "texte_principal" => ["attribut_code" => "nom", "icone" => "modele-piece"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_code" => "description", "attribut_taille_max" => 50],
