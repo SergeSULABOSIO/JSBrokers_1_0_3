@@ -16,41 +16,53 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
     public function getCanvas(object $object, ?int $idEntreprise): array
     {
         /** @var Cotation $object */
-        $isParentNew = ($object->getId() === null);
+        $isCreateMode = $object->getId() === null;
         $cotationId = $object->getId() ?? 0;
 
         $parametres = [
-            "titre_creation" => "Nouvelle Cotation",
-            "titre_modification" => "Modification de la Cotation #%id%",
-            "endpoint_submit_url" => "/admin/cotation/api/submit",
-            "endpoint_delete_url" => "/admin/cotation/api/delete",
-            "endpoint_form_url" => "/admin/cotation/api/get-form",
-            "isCreationMode" => $isParentNew
+            'titre_creation' => "Création d'une nouvelle cotation",
+            'titre_modification' => "Modification de la cotation n°%id%",
+            'endpoint_form_url' => '/admin/cotation/api/get-form',
+            'endpoint_submit_url' => '/admin/cotation/api/submit',
+            'endpoint_delete_url' => '/admin/cotation/api/delete',
+            'isCreationMode' => $isCreateMode
         ];
-        $layout = $this->buildCotationLayout($cotationId, $isParentNew);
+
+        $layout = $this->buildCotationLayout($cotationId, $isCreateMode);
 
         return [
-            "parametres" => $parametres,
-            "form_layout" => $layout,
-            "fields_map" => $this->buildFieldsMap($layout)
+            'parametres' => $parametres,
+            'form_layout' => $layout,
+            'fields_map' => $this->buildFieldsMap($layout)
         ];
     }
 
-    private function buildCotationLayout(int $cotationId, bool $isParentNew): array
+    private function buildCotationLayout(int $cotationId, bool $isCreateMode): array
     {
         $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["piste"]], ["champs" => ["assureur"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["duree"]]]],
+            [
+                'colonnes' => [
+                    ['width' => 6, 'champs' => ['nom', 'duree']],
+                    ['width' => 6, 'champs' => ['assureur']]
+                ]
+            ],
+            [
+                'colonnes' => [
+                    ['width' => 12, 'champs' => ['chargements']]
+                ]
+            ]
         ];
 
         $collections = [
-            ['fieldName' => 'avenants', 'entityRouteName' => 'avenant', 'formTitle' => 'Avenant', 'parentFieldName' => 'cotation'],
-            ['fieldName' => 'taches', 'entityRouteName' => 'tache', 'formTitle' => 'Tâche', 'parentFieldName' => 'cotation'],
+            ['fieldName' => 'revenus', 'entityRouteName' => 'revenucourtier', 'formTitle' => 'Revenu', 'parentFieldName' => 'cotation'],
+            ['fieldName' => 'tranches', 'entityRouteName' => 'tranche', 'formTitle' => 'Tranche', 'parentFieldName' => 'cotation'],
             ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'cotation'],
+            ['fieldName' => 'taches', 'entityRouteName' => 'tache', 'formTitle' => 'Tâche', 'parentFieldName' => 'cotation'],
+            ['fieldName' => 'avenants', 'entityRouteName' => 'avenant', 'formTitle' => 'Avenant', 'parentFieldName' => 'cotation'],
         ];
 
-        $this->addCollectionWidgetsToLayout($layout, $cotationId, $isParentNew, $collections);
+        $this->addCollectionWidgetsToLayout($layout, $cotationId, $isCreateMode, $collections);
+
         return $layout;
     }
 }
