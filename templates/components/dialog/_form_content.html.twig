@@ -14,7 +14,7 @@
             {% if formCanvas.form_layout is defined and formCanvas.form_layout is not empty %}
                 {# Pour chaque ligne définie dans la configuration du layout... #}
                 {% for row in formCanvas.form_layout %}
-                    <div class="row gx-2 {{ (row.couleur_fond is defined and row.couleur_fond) ? 'form-row-colored' : '' }}" style="{{ (row.couleur_fond is defined and row.couleur_fond) ? 'background-color: ' ~ row.couleur_fond ~ ';' : '' }}" data-dialog-instance-target="formRow">
+                    <div class="row {{ (row.couleur_fond is defined and row.couleur_fond) ? 'form-row-colored' : '' }}" style="{{ (row.couleur_fond is defined and row.couleur_fond) ? 'background-color: ' ~ row.couleur_fond ~ ';' : '' }}" data-dialog-instance-target="formRow">
                         {% for col in row.colonnes %}
                             {# On utilise la largeur définie dans le canvas, sinon on divise équitablement #}
                             {% set col_class = col.width is defined ? 'col-md-' ~ col.width : 'col-md-' ~ (12 / row.colonnes|length)|round(0, 'floor') %}
