@@ -40,9 +40,14 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
     private function buildCotationLayout(int $cotationId, bool $isCreateMode): array
     {
         $layout = [
-            [
+            [ // Ligne 1 : Nom (pleine largeur)
                 'colonnes' => [
-                    ['width' => 6, 'champs' => ['nom', 'duree']],
+                    ['width' => 12, 'champs' => ['nom']]
+                ]
+            ],
+            [ // Ligne 2 : Durée et Assureur (côte à côte)
+                'colonnes' => [
+                    ['width' => 6, 'champs' => ['duree']],
                     ['width' => 6, 'champs' => ['assureur']]
                 ]
             ]
