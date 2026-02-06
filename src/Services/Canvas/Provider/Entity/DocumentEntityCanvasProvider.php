@@ -40,7 +40,7 @@ class DocumentEntityCanvasProvider implements EntityCanvasProviderInterface
             "parametres" => [
                 "description" => "Document",
                 "icone" => "document",
-                'background_image' => '/images/fitures/default.jpg',
+                'background_image' => '/images/fitures/document.png',
                 'description_template' => ["Document: [[*nom]]. Parent: [[parent_string]]. Fichier: [[nomFichierStocke]]."]
             ],
             "liste" => array_merge([
