@@ -53,11 +53,11 @@ class OffreIndemnisationSinistreEntityCanvasProvider implements EntityCanvasProv
     private function getSpecificIndicators(): array
     {
         return [
-            ["code" => "compensationVersee", "intitule" => "Montant Versé", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant total déjà versé pour cette offre."],
-            ["code" => "soldeAVerser", "intitule" => "Solde à Verser", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant restant à payer pour cette offre."],
-            ["code" => "pourcentagePaye", "intitule" => "% Payé", "type" => "Nombre", "unite" => "%", "description" => "Pourcentage du montant payable qui a été versé."],
-            ["code" => "nombrePaiements", "intitule" => "Nb. Paiements", "type" => "Entier", "format" => "Nombre", "description" => "Nombre de paiements effectués pour cette offre."],
-            ["code" => "montantMoyenParPaiement", "intitule" => "Moy. par Paiement", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant moyen de chaque paiement."],
+            ["code" => "compensationVersee", "intitule" => "Montant Versé", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant total déjà versé pour cette offre."],
+            ["code" => "soldeAVerser", "intitule" => "Solde à Verser", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant restant à payer pour cette offre."],
+            ["code" => "pourcentagePaye", "intitule" => "% Payé", "type" => "Calcul", "format" => "Pourcentage", "unite" => "%", "description" => "Pourcentage du montant payable qui a été versé."],
+            ["code" => "nombrePaiements", "intitule" => "Nb. Paiements", "type" => "Calcul", "format" => "Nombre", "description" => "Nombre de paiements effectués pour cette offre."],
+            ["code" => "montantMoyenParPaiement", "intitule" => "Moy. par Paiement", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant moyen de chaque paiement."],
         ];
     }
 }
