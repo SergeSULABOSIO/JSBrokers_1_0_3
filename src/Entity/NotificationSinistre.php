@@ -114,13 +114,13 @@ class NotificationSinistre implements OwnerAwareInterface
     public ?int $attributTest;
 
     #[Groups(['list:read'])]
-    public ?DateTimeImmutable $dateDernierReglement;
+    public ?\DateTimeInterface $dateDernierReglement;
 
     #[Groups(['list:read'])]
-    public ?int $dureeReglement;
+    public ?string $dureeReglement;
 
     #[Groups(['list:read'])]
-    public ?array $statusDocumentsAttendus;
+    public ?string $statusDocumentsAttendus;
 
     #[Groups(['list:read'])]
     public ?float $compensationFranchise;
