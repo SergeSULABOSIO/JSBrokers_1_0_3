@@ -20,7 +20,10 @@ final class Version20260118230407 extends AbstractMigration
     public function up(Schema $schema): void
     {
         // this up() migration is auto-generated, please modify it to your needs
-        $this->addSql('ALTER TABLE document ADD CONSTRAINT FK_D8698A76DFB9960E FOREIGN KEY (piece_sinistre_id) REFERENCES piece_sinistre (id)');
+        // Ajout : Désactiver la vérification des clés étrangères
+        $this->addSql('SET FOREIGN_KEY_CHECKS=0');
+
+        // $this->addSql('ALTER TABLE document ADD CONSTRAINT FK_D8698A76DFB9960E FOREIGN KEY (piece_sinistre_id) REFERENCES piece_sinistre (id)');
         $this->addSql('ALTER TABLE document ADD CONSTRAINT FK_D8698A7672DDD90D FOREIGN KEY (offre_indemnisation_sinistre_id) REFERENCES offre_indemnisation_sinistre (id)');
         $this->addSql('ALTER TABLE document ADD CONSTRAINT FK_D8698A765D14FAF0 FOREIGN KEY (cotation_id) REFERENCES cotation (id)');
         $this->addSql('ALTER TABLE document ADD CONSTRAINT FK_D8698A7685631A3A FOREIGN KEY (avenant_id) REFERENCES avenant (id)');
@@ -85,6 +88,8 @@ final class Version20260118230407 extends AbstractMigration
         $this->addSql('ALTER TABLE type_revenu ADD CONSTRAINT FK_5E74AB7D26ED0855 FOREIGN KEY (note_id) REFERENCES note (id)');
         $this->addSql('ALTER TABLE type_revenu ADD CONSTRAINT FK_5E74AB7D7294869C FOREIGN KEY (article_id) REFERENCES article (id)');
         $this->addSql('ALTER TABLE utilisateur ADD CONSTRAINT FK_1D1C63B3318EA8F9 FOREIGN KEY (connected_to_id) REFERENCES entreprise (id)');
+        // Ajout : Réactiver la vérification des clés étrangères
+        $this->addSql('SET FOREIGN_KEY_CHECKS=1');
     }
 
     public function down(Schema $schema): void

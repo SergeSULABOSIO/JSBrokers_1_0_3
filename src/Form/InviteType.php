@@ -189,7 +189,18 @@ class InviteType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Invite::class,
-            'parent_object' => null, // l'objet parent
+            'parent_object' => null, // l'objet parent,
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    /**
+     * En retournant une chaîne vide, on dit à Symfony de ne pas
+     * préfixer les champs du formulaire. Le formulaire n'aura pas de nom racine.
+     */
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }
