@@ -31,34 +31,35 @@ class NotificationSinistreEntityCanvasProvider implements EntityCanvasProviderIn
     {
         return [
             "parametres" => [
-                "description" => "Notification de Sinistre",
+                "description" => "Déclaration de Sinistre",
                 "icone" => "sinistre",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
-                    "Sinistre [[referenceSinistre]] pour [[assureNom]].",
-                    " Police n° [[referencePolice]].",
+                    // On utilise la propriété calculée 'assureNom' pour un affichage sécurisé.
+                    "Sinistre [[*referenceSinistre]] pour l'assuré [[assureNom]].",
+                    " Police n°[[referencePolice]].",
                     " Évaluation: [[evaluationChiffree]] [[currency_symbol]].",
                     " Compensation due: [[compensation]] [[currency_symbol]]."
                 ]
             ],
             "liste" => array_merge([
                 ["code" => "id", "intitule" => "ID", "type" => "Entier"],
-                ["code" => "referenceSinistre", "intitule" => "Référence Sinistre", "type" => "Texte"],
-                ["code" => "referencePolice", "intitule" => "Référence Police", "type" => "Texte"],
-                ["code" => "descriptionDeFait", "intitule" => "Description des faits", "type" => "Texte"],
-                ["code" => "occuredAt", "intitule" => "Date de survenance", "type" => "Date"],
-                ["code" => "notifiedAt", "intitule" => "Date de notification", "type" => "Date"],
-                ["code" => "lieu", "intitule" => "Lieu", "type" => "Texte"],
-                ["code" => "descriptionVictimes", "intitule" => "Description des victimes", "type" => "Texte"],
-                ["code" => "dommage", "intitule" => "Dommage (avant éval.)", "type" => "Nombre"],
-                ["code" => "evaluationChiffree", "intitule" => "Évaluation chiffrée", "type" => "Nombre"],
+                ["code" => "referencePolice", "intitule" => "Réf. Police", "type" => "Texte"],
+                ["code" => "referenceSinistre", "intitule" => "Réf. Sinistre", "type" => "Texte"],
+                ["code" => "descriptionDeFait", "intitule" => "Description", "type" => "Texte"],
                 ["code" => "assure", "intitule" => "Assuré", "type" => "Relation", "targetEntity" => Client::class, "displayField" => "nom"],
-                ["code" => "assureur", "intitule" => "Assureur", "type" => "Relation", "targetEntity" => Assureur::class, "displayField" => "nom"],
+                ["code" => "occuredAt", "intitule" => "Date de survenance", "type" => "Date"],
+                ["code" => "lieu", "intitule" => "Lieu", "type" => "Texte"],
                 ["code" => "risque", "intitule" => "Risque", "type" => "Relation", "targetEntity" => Risque::class, "displayField" => "nomComplet"],
-                ["code" => "invite", "intitule" => "Gestionnaire", "type" => "Relation", "targetEntity" => Invite::class, "displayField" => "nom"],
-                ["code" => "contacts", "intitule" => "Contacts", "type" => "Collection", "targetEntity" => Contact::class, "displayField" => "nom"],
+                ["code" => "invite", "intitule" => "Gestionnaire", "type" => "Relation", "targetEntity" => Invite::class, "displayField" => "email"],
+                ["code" => "dommage", "intitule" => "Dommage estimé", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
+                ["code" => "evaluationChiffree", "intitule" => "Évaluation chiffrée", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
+                ["code" => "notifiedAt", "intitule" => "Date de déclaration", "type" => "Date"],
+                ["code" => "assureur", "intitule" => "Assureur", "type" => "Relation", "targetEntity" => Assureur::class, "displayField" => "nom"],
+                ["code" => "descriptionVictimes", "intitule" => "Victimes", "type" => "Texte"],
+                ["code" => "offreIndemnisationSinistres", "intitule" => "Offres", "type" => "Collection", "targetEntity" => OffreIndemnisationSinistre::class, "displayField" => "nom"],
                 ["code" => "pieces", "intitule" => "Pièces", "type" => "Collection", "targetEntity" => PieceSinistre::class, "displayField" => "description"],
-                ["code" => "offreIndemnisationSinistres", "intitule" => "Offres d'indemnisation", "type" => "Collection", "targetEntity" => OffreIndemnisationSinistre::class, "displayField" => "nom"],
+                ["code" => "contacts", "intitule" => "Contacts", "type" => "Collection", "targetEntity" => Contact::class, "displayField" => "nom"],
                 ["code" => "taches", "intitule" => "Tâches", "type" => "Collection", "targetEntity" => Tache::class, "displayField" => "description"],
             ], $this->getSpecificIndicators())
         ];
@@ -67,23 +68,23 @@ class NotificationSinistreEntityCanvasProvider implements EntityCanvasProviderIn
     private function getSpecificIndicators(): array
     {
         return [
-            ["code" => "assureNom", "intitule" => "Nom de l'assuré", "type" => "Calcul", "format" => "Texte", "fonction" => "getAssureNom", "description" => "Nom du client assuré."],
-            ["code" => "delaiDeclaration", "intitule" => "Délai de déclaration", "type" => "Calcul", "format" => "Texte", "fonction" => "calculateDelaiDeclaration", "description" => "Délai en jours entre la survenance et la notification du sinistre."],
-            ["code" => "ageDossier", "intitule" => "Âge du dossier", "type" => "Calcul", "format" => "Texte", "fonction" => "calculateAgeDossier", "description" => "Âge du dossier depuis sa création."],
-            ["code" => "compensationFranchise", "intitule" => "Franchise appliquée", "type" => "Calcul", "format" => "Monnaie", "fonction" => "calculateFranchise", "description" => "Montant de la franchise appliquée."],
-            ["code" => "tauxIndemnisation", "intitule" => "Taux d'indemnisation", "type" => "Calcul", "format" => "Pourcentage", "fonction" => "getNotificationSinistreTauxIndemnisation", "description" => "Rapport entre les offres et l'évaluation chiffrée."],
-            ["code" => "nombreOffres", "intitule" => "Nombre d'offres", "type" => "Calcul", "format" => "Nombre", "fonction" => "getNotificationSinistreNombreOffres", "description" => "Nombre total d'offres d'indemnisation."],
-            ["code" => "nombrePaiements", "intitule" => "Nombre de paiements", "type" => "Calcul", "format" => "Nombre", "fonction" => "getNotificationSinistreNombrePaiements", "description" => "Nombre total de paiements effectués."],
-            ["code" => "montantMoyenParPaiement", "intitule" => "Paiement moyen", "type" => "Calcul", "format" => "Monnaie", "fonction" => "getNotificationSinistreMontantMoyenParPaiement", "description" => "Montant moyen par paiement."],
-            ["code" => "delaiTraitementInitial", "intitule" => "Délai traitement initial", "type" => "Calcul", "format" => "Texte", "fonction" => "getNotificationSinistreDelaiTraitementInitial", "description" => "Délai entre la création du dossier et la notification."],
-            ["code" => "ratioPaiementsEvaluation", "intitule" => "Ratio Paiements/Éval.", "type" => "Calcul", "format" => "Pourcentage", "fonction" => "getNotificationSinistreRatioPaiementsEvaluation", "description" => "Ratio des paiements par rapport à l'évaluation chiffrée."],
-            ["code" => "compensation", "intitule" => "Compensation Due", "type" => "Calcul", "format" => "Monnaie", "fonction" => "getNotificationSinistreCompensation", "description" => "Montant total de l'indemnisation convenue."],
-            ["code" => "compensationVersee", "intitule" => "Compensation Versée", "type" => "Calcul", "format" => "Monnaie", "fonction" => "getNotificationSinistreCompensationVersee", "description" => "Montant total déjà versé."],
-            ["code" => "compensationSoldeAverser", "intitule" => "Solde à verser", "type" => "Calcul", "format" => "Monnaie", "fonction" => "getNotificationSinistreSoldeAVerser", "description" => "Montant restant à verser pour solder l'indemnisation."],
-            ["code" => "indiceCompletude", "intitule" => "Indice de complétude", "type" => "Calcul", "format" => "Pourcentage", "fonction" => "getNotificationSinistreIndiceCompletude", "description" => "Pourcentage de pièces fournies par rapport aux pièces attendues."],
-            ["code" => "dateDernierReglement", "intitule" => "Date du dernier règlement", "type" => "Calcul", "format" => "Date", "fonction" => "getNotificationSinistreDateDernierReglement", "description" => "Date du tout dernier paiement effectué pour ce sinistre."],
-            ["code" => "dureeReglement", "intitule" => "Durée de règlement", "type" => "Calcul", "format" => "Texte", "fonction" => "getNotificationSinistreDureeReglement", "description" => "Durée totale en jours entre la notification et le dernier règlement."],
-            ["code" => "statusDocumentsAttendus", "intitule" => "Statut des documents", "type" => "Calcul", "format" => "Tableau", "fonction" => "getNotificationSinistreStatusDocumentsAttendus", "description" => "Statut des documents attendus, fournis et manquants."],
+            ["code" => "assureNom", "intitule" => "Nom de l'assuré", "type" => "Calcul", "format" => "Texte", "description" => "Nom du client assuré."],
+            ["code" => "delaiDeclaration", "intitule" => "Délai Déclaration", "type" => "Calcul", "format" => "Texte", "description" => "Délai entre la survenance et la déclaration du sinistre."],
+            ["code" => "ageDossier", "intitule" => "Âge du Dossier", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours depuis la création du dossier."],
+            ["code" => "compensation", "intitule" => "Indemnité Totale", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant total des offres d'indemnisation."],
+            ["code" => "compensationVersee", "intitule" => "Indemnité Versée", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant total déjà versé pour ce sinistre."],
+            ["code" => "compensationSoldeAverser", "intitule" => "Solde à Verser", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant restant à payer pour ce sinistre."],
+            ["code" => "compensationFranchise", "intitule" => "Franchise Appliquée", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant total de la franchise appliquée."],
+            ["code" => "tauxIndemnisation", "intitule" => "Taux Indemnisation", "type" => "Calcul", "format" => "Pourcentage", "description" => "Ratio entre l'indemnité totale offerte et l'évaluation chiffrée."],
+            ["code" => "nombreOffres", "intitule" => "Nb. Offres", "type" => "Calcul", "format" => "Nombre", "description" => "Nombre total d'offres d'indemnisation."],
+            ["code" => "nombrePaiements", "intitule" => "Nb. Paiements", "type" => "Calcul", "format" => "Nombre", "description" => "Nombre total de paiements effectués."],
+            ["code" => "montantMoyenParPaiement", "intitule" => "Moy. par Paiement", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant moyen par paiement."],
+            ["code" => "delaiTraitementInitial", "intitule" => "Délai Trait. Initial", "type" => "Calcul", "format" => "Texte", "description" => "Délai entre la création du dossier et la déclaration à l'assureur."],
+            ["code" => "ratioPaiementsEvaluation", "intitule" => "Ratio Paiement/Éval.", "type" => "Calcul", "format" => "Pourcentage", "description" => "Ratio entre le montant versé et l'évaluation chiffrée."],
+            ["code" => "indiceCompletude", "intitule" => "Complétude Dossier", "type" => "Calcul", "format" => "Pourcentage", "description" => "Pourcentage des pièces requises qui ont été fournies."],
+            ["code" => "dateDernierReglement", "intitule" => "Date Dernier Règlement", "type" => "Calcul", "format" => "Date", "description" => "Date du dernier paiement effectué pour ce sinistre."],
+            ["code" => "dureeReglement", "intitule" => "Durée Règlement", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours entre la déclaration et le dernier règlement."],
+            ["code" => "statusDocumentsAttendus", "intitule" => "Statut Documents", "type" => "Calcul", "format" => "Tableau", "description" => "Résumé des documents attendus, fournis et manquants."],
         ];
     }
 }
