@@ -29,13 +29,6 @@ class InviteType extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        /** @var Invite|null $invite */
-        $invite = null;
-        if (isset($options['data'])) {
-            $invite = $options['data'];
-        }
-        // dd($invite);
-
         $builder
             ->add('email', EmailType::class, [
                 // 'label' => false,
@@ -75,18 +68,8 @@ class InviteType extends AbstractType
                 'allow_delete' => true,
                 'entry_options' => [
                     'label' => false,
-                    'parent_object' => $invite,
                 ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "role",
-                        'dossieractions' => 1,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 1,
-                    ]),
-                ],
+                'mapped' => false,
             ])
             ->add('rolesEnMarketing', CollectionType::class, [
                 'label' => "Droits d'accès dans le module Marketing",
@@ -96,18 +79,8 @@ class InviteType extends AbstractType
                 'allow_delete' => true,
                 'entry_options' => [
                     'label' => false,
-                    'parent_object' => $invite,
                 ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "role",
-                        'dossieractions' => 1,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 1,
-                    ]),
-                ],
+                'mapped' => false,
             ])
             ->add('rolesEnProduction', CollectionType::class, [
                 'label' => "Droits d'accès dans le module Production",
@@ -117,18 +90,8 @@ class InviteType extends AbstractType
                 'allow_delete' => true,
                 'entry_options' => [
                     'label' => false,
-                    'parent_object' => $invite,
                 ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "role",
-                        'dossieractions' => 1,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 1,
-                    ]),
-                ],
+                'mapped' => false,
             ])
             ->add('rolesEnSinistre', CollectionType::class, [
                 'label' => "Droits d'accès dans le module Sinistre",
@@ -138,18 +101,8 @@ class InviteType extends AbstractType
                 'allow_delete' => true,
                 'entry_options' => [
                     'label' => false,
-                    'parent_object' => $invite,
                 ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "role",
-                        'dossieractions' => 1,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 1,
-                    ]),
-                ],
+                'mapped' => false,
             ])
             ->add('rolesEnAdministration', CollectionType::class, [
                 'label' => "Droits d'accès dans le module Administration",
@@ -159,27 +112,10 @@ class InviteType extends AbstractType
                 'allow_delete' => true,
                 'entry_options' => [
                     'label' => false,
-                    'parent_object' => $invite,
                 ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "role",
-                        'dossieractions' => 1,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 1,
-                    ]),
-                ],
+                'mapped' => false,
             ])
 
-            //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
             // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;
@@ -189,7 +125,6 @@ class InviteType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Invite::class,
-            'parent_object' => null, // l'objet parent,
             'csrf_protection' => false,
             'allow_extra_fields' => true,
         ]);
