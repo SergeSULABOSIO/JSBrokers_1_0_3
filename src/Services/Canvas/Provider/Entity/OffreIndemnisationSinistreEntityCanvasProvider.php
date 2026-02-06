@@ -29,7 +29,7 @@ class OffreIndemnisationSinistreEntityCanvasProvider implements EntityCanvasProv
             "parametres" => [
                 "description" => "Offre d'indemnisation",
                 "icone" => "offre",
-                'background_image' => '/images/fitures/default.jpg',
+                'background_image' => '/images/fitures/offreindemnisationsinistre.png',
                 'description_template' => [
                     "Offre [[*nom]] pour le sinistre [[notificationSinistre]].",
                     " Montant payable: [[montantPayable]]."
