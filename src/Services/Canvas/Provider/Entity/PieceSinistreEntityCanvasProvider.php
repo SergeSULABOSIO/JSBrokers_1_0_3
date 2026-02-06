@@ -31,7 +31,7 @@ class PieceSinistreEntityCanvasProvider implements EntityCanvasProviderInterface
             "parametres" => [
                 "description" => "Pièce Sinistre",
                 "icone" => "piece-sinistre",
-                'background_image' => '/images/fitures/default.jpg',
+                'background_image' => '/images/fitures/piecesinistre.png',
                 'description_template' => ["Pièce: [[description]]. Reçue le [[receivedAt|date('d/m/Y')]]. Fournie par [[fourniPar]]."]
             ],
             "liste" => array_merge([
