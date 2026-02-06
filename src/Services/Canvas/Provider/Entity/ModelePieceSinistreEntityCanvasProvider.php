@@ -27,7 +27,7 @@ class ModelePieceSinistreEntityCanvasProvider implements EntityCanvasProviderInt
             "parametres" => [
                 "description" => "Modèle de Pièce Sinistre",
                 "icone" => "modele-piece",
-                'background_image' => '/images/fitures/default.jpg',
+                'background_image' => '/images/fitures/modelepiecesinistre.png',
                 'description_template' => [
                     "Modèle de pièce: [[*nom]].",
                     " Obligatoire: [[statutObligation]].",
