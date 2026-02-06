@@ -14,6 +14,7 @@ use DateTimeImmutable;
 use App\Entity\Avenant;
 use App\Entity\Contact;
 use App\Entity\Tranche;
+use App\Entity\Classeur;
 use App\Entity\Assureur;
 use App\Entity\Cotation;
 use App\Entity\Document;
@@ -275,6 +276,16 @@ class CalculationProvider
                 $indicateurs = [
                     'nombreUtilisations' => $this->countModelePieceSinistreUtilisations($entity),
                     'statutObligation' => $this->getModelePieceSinistreStatutObligationString($entity),
+                ];
+                break;
+            case Classeur::class:
+                /** @var Classeur $entity */
+                $indicateurs = [
+                    'nombreDocuments' => $this->countClasseurDocuments($entity),
+                    'ageClasseur' => $this->calculateClasseurAge($entity),
+                    'dateDernierAjout' => $this->getClasseurDateDernierAjout($entity),
+                    'apercuTypesFichiers' => $this->getClasseurApercuTypesFichiers($entity),
+                    'estVide' => $this->getClasseurEstVideString($entity),
                 ];
                 break;
                 // D'autres entités pourraient être ajoutées ici avec 'case AutreEntite::class:'
@@ -2447,6 +2458,76 @@ class CalculationProvider
     public function getModelePieceSinistreStatutObligationString(ModelePieceSinistre $modele): string
     {
         return $modele->isObligatoire() ? 'Obligatoire' : 'Facultative';
+    }
+
+    // --- Indicateurs pour Classeur ---
+
+    /**
+     * Compte le nombre de documents dans un classeur.
+     */
+    private function countClasseurDocuments(Classeur $classeur): int
+    {
+        return $classeur->getDocuments()->count();
+    }
+
+    /**
+     * Calcule l'âge du classeur depuis sa création.
+     */
+    private function calculateClasseurAge(Classeur $classeur): string
+    {
+        if (!$classeur->getCreatedAt()) {
+            return 'N/A';
+        }
+        $jours = $this->serviceDates->daysEntre($classeur->getCreatedAt(), new DateTimeImmutable()) ?? 0;
+        return $jours . ' jour(s)';
+    }
+
+    /**
+     * Récupère la date du dernier document ajouté au classeur.
+     */
+    private function getClasseurDateDernierAjout(Classeur $classeur): ?\DateTimeInterface
+    {
+        $dateDernierAjout = null;
+        foreach ($classeur->getDocuments() as $document) {
+            if ($document->getCreatedAt() && (!$dateDernierAjout || $document->getCreatedAt() > $dateDernierAjout)) {
+                $dateDernierAjout = $document->getCreatedAt();
+            }
+        }
+        return $dateDernierAjout;
+    }
+
+    /**
+     * Fournit un aperçu des types de fichiers et leur nombre dans le classeur.
+     */
+    private function getClasseurApercuTypesFichiers(Classeur $classeur): array
+    {
+        if ($classeur->getDocuments()->isEmpty()) {
+            return ['Info' => 'Ce classeur est vide'];
+        }
+
+        $typesCount = [];
+        foreach ($classeur->getDocuments() as $document) {
+            $type = strtoupper($this->getDocumentTypeFichier($document));
+            if ($type === 'INCONNU' || $type === '') {
+                $type = 'Autre';
+            }
+            $typesCount[$type] = ($typesCount[$type] ?? 0) + 1;
+        }
+
+        $formattedCounts = [];
+        foreach ($typesCount as $type => $count) {
+            $formattedCounts[$type] = $count . ' fichier(s)';
+        }
+
+        return $formattedCounts;
+    }
+
+    /**
+     * Retourne "Oui" ou "Non" si le classeur est vide.
+     */
+    private function getClasseurEstVideString(Classeur $classeur): string
+    {
+        return $classeur->getDocuments()->isEmpty() ? 'Oui' : 'Non';
     }
 
     /**

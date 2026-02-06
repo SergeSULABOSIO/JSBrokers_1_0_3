@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Repository\ClasseurRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 
@@ -30,15 +31,38 @@ class Classeur
     #[Groups(['list:read'])]
     private ?Entreprise $entreprise = null;
 
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    #[Groups(['list:read'])]
+    private ?\DateTimeImmutable $createdAt = null;
+
     /**
      * @var Collection<int, Document>
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'classeur')]
     private Collection $documents;
 
+    //Attributs calculés
+    #[Groups(['list:read'])]
+    public ?int $nombreDocuments = null;
+
+    #[Groups(['list:read'])]
+    public ?string $ageClasseur = null;
+
+    #[Groups(['list:read'])]
+    public ?\DateTimeInterface $dateDernierAjout = null;
+
+    #[Groups(['list:read'])]
+    public ?array $apercuTypesFichiers = null;
+
+    #[Groups(['list:read'])]
+    public ?string $estVide = null;
+
     public function __construct()
     {
         $this->documents = new ArrayCollection();
+        if ($this->createdAt === null) {
+            $this->createdAt = new \DateTimeImmutable();
+        }
     }
 
     public function getId(): ?int
@@ -115,5 +139,10 @@ class Classeur
         }
 
         return $this;
+    }
+
+    public function getCreatedAt(): ?\DateTimeImmutable
+    {
+        return $this->createdAt;
     }
 }
