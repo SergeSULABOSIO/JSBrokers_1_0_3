@@ -84,7 +84,7 @@ class NotificationSinistreEntityCanvasProvider implements EntityCanvasProviderIn
             ["code" => "indiceCompletude", "intitule" => "Complétude Dossier", "type" => "Calcul", "format" => "Pourcentage", "description" => "Pourcentage des pièces requises qui ont été fournies."],
             ["code" => "dateDernierReglement", "intitule" => "Date Dernier Règlement", "type" => "Calcul", "format" => "Date", "description" => "Date du dernier paiement effectué pour ce sinistre."],
             ["code" => "dureeReglement", "intitule" => "Durée Règlement", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours entre la déclaration et le dernier règlement."],
-            ["code" => "statusDocumentsAttendus", "intitule" => "Statut Documents", "type" => "Calcul", "format" => "Tableau", "description" => "Résumé des documents attendus, fournis et manquants."],
+            ["code" => "statusDocumentsAttendus", "intitule" => "Statut Documents", "type" => "Calcul", "format" => "Texte", "description" => "Résumé des documents attendus, fournis et manquants."],
         ];
     }
 }

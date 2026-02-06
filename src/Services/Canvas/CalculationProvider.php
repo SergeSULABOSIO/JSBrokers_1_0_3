@@ -645,7 +645,7 @@ class CalculationProvider
     /**
      * Calcule la durée totale de règlement d'un sinistre en jours.
      */
-    private function getNotificationSinistreDureeReglement(NotificationSinistre $sinistre): ?int
+    private function getNotificationSinistreDureeReglement(NotificationSinistre $sinistre): ?string
     {
         $dateDernierReglement = $this->getNotificationSinistreDateDernierReglement($sinistre);
         $dateNotification = $sinistre->getNotifiedAt();
@@ -654,24 +654,17 @@ class CalculationProvider
             return null;
         }
 
-        return $this->serviceDates->daysEntre($dateNotification, $dateDernierReglement);
+        $jours = $this->serviceDates->daysEntre($dateNotification, $dateDernierReglement);
+        return $jours !== null ? $jours . ' jour(s)' : null;
     }
 
     /**
      * Calcule le statut des documents attendus pour un sinistre.
      */
-    private function getNotificationSinistreStatusDocumentsAttendus(NotificationSinistre $sinistre): array
+    private function getNotificationSinistreStatusDocumentsAttendus(NotificationSinistre $sinistre): string
     {
         $modelesAttendus = $this->getEntreprise()->getModelePieceSinistres();
         $nombreAttendus = $modelesAttendus->count();
-
-        if ($nombreAttendus === 0) {
-            return [
-                "Attendus" => "0 pc(s)",
-                "Fournis" => "0 pc(s)",
-                "Manquants" => "0 pc(s)",
-            ];
-        }
 
         $typesFournis = [];
         foreach ($sinistre->getPieces() as $piece) {
@@ -688,11 +681,12 @@ class CalculationProvider
             }
         }
 
-        return [
-            "Attendus" => $nombreAttendus . " pc(s)",
-            "Fournis" => $nombreFournis . " pc(s)",
-            "Manquants" => $nombreManquants . " pc(s)",
-        ];
+        return sprintf(
+            "Attendus: %d pc(s) • Fournis: %d pc(s) • Manquants: %d pc(s)",
+            $nombreAttendus,
+            $nombreFournis,
+            $nombreManquants
+        );
     }
 
     /**
