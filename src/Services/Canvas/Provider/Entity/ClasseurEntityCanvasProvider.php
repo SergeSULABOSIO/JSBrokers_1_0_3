@@ -26,7 +26,7 @@ class ClasseurEntityCanvasProvider implements EntityCanvasProviderInterface
             "parametres" => [
                 "description" => "Classeur",
                 "icone" => "classeur",
-                'background_image' => '/images/fitures/default.jpg',
+                'background_image' => '/images/fitures/classeur.png',
                 'description_template' => [
                     "Classeur: [[*nom]].",
                     " <em>« [[description]] »</em>"
