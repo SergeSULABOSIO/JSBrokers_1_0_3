@@ -71,10 +71,10 @@ class RolesEnSinistreType extends AbstractType
                     "Suppression" => Invite::ACCESS_SUPPRESSION,
                 ],
             ])
-            // ->add('invite', EntityType::class, [
-            //     'class' => Invite::class,
-            //     'choice_label' => 'id',
-            // ])
+            ->add('invite', InviteAutocompleteField::class, [
+                'label' => "Collaborateur",
+                'required' => true,
+            ])
         ;
     }
 
@@ -82,7 +82,6 @@ class RolesEnSinistreType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => RolesEnSinistre::class,
-            'parent_object' => null, // l'objet parent
             'csrf_protection' => false,
             'allow_extra_fields' => true,
         ]);

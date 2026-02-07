@@ -5,15 +5,9 @@ namespace App\Controller\Admin;
 use App\Entity\Invite;
 use App\Form\InviteType;
 use App\Entity\Utilisateur;
-use App\Constantes\Constante;
 use App\Event\InvitationEvent;
-use App\Entity\Entreprise;
-use App\Entity\RolesEnAdministration;
-use App\Entity\RolesEnFinance;
-use App\Entity\RolesEnMarketing;
-use App\Entity\RolesEnProduction;
-use App\Entity\RolesEnSinistre;
 use App\Repository\InviteRepository;
+use App\Entity\Traits\HandleChildAssociationTrait;
 use App\Repository\EntrepriseRepository;
 use App\Services\CanvasBuilder;
 use App\Services\JSBDynamicSearchService;
@@ -35,6 +29,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 class InviteController extends AbstractController
 {
     use ControllerUtilsTrait;
+    use HandleChildAssociationTrait;
 
     public function __construct(
         private MailerInterface $mailer,
@@ -42,7 +37,6 @@ class InviteController extends AbstractController
         private EntityManagerInterface $em,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
-        private Constante $constante,
         private JSBDynamicSearchService $searchService,
         private SerializerInterface $serializer,
         private EventDispatcherInterface $dispatcher,
@@ -84,7 +78,6 @@ class InviteController extends AbstractController
             function (Invite $invite, \App\Entity\Invite $userInvite) {
                 $invite->setEntreprise($userInvite->getEntreprise());
                 $invite->setProprietaire(false);
-                $this->chargerRoles($invite);
             }
         );
     }
@@ -125,65 +118,22 @@ class InviteController extends AbstractController
         return $response;
     }
 
-    private function chargerRoles(Invite $invite)
-    {
-        if ($invite->getId() == null) {
-            //On ne fait ceci que pour tout invité nouveau
-            $invite
-                ->addRolesEnFinance(
-                    (new RolesEnFinance)
-                        ->setNom("Droits d'accès dans le module Finance")
-                        ->setAccessMonnaie([Invite::ACCESS_LECTURE])
-                        ->setAccessCompteBancaire([Invite::ACCESS_LECTURE])
-                        ->setAccessTaxe([Invite::ACCESS_LECTURE])
-                        ->setAccessTypeRevenu([Invite::ACCESS_LECTURE])
-                        ->setAccessTranche([Invite::ACCESS_LECTURE])
-                        ->setAccessTypeChargement([Invite::ACCESS_LECTURE])
-                        ->setAccessNote([Invite::ACCESS_LECTURE])
-                        ->setAccessPaiement([Invite::ACCESS_LECTURE])
-                        ->setAccessBordereau([Invite::ACCESS_LECTURE])
-                        ->setAccessRevenu([Invite::ACCESS_LECTURE])
-                )
-                ->addRolesEnMarketing(
-                    (new RolesEnMarketing)
-                        ->setNom("Droits d'accès dans le module Marketing")
-                        ->setAccessPiste([Invite::ACCESS_LECTURE])
-                        ->setAccessTache([Invite::ACCESS_LECTURE])
-                        ->setAccessFeedback([Invite::ACCESS_LECTURE])
-                )
-                ->addRolesEnProduction(
-                    (new RolesEnProduction)
-                        ->setNom("Droits d'accès dans le module Production")
-                        ->setAccessGroupe([Invite::ACCESS_LECTURE])
-                        ->setAccessClient([Invite::ACCESS_LECTURE])
-                        ->setAccessAssureur([Invite::ACCESS_LECTURE])
-                        ->setAccessContact([Invite::ACCESS_LECTURE])
-                        ->setAccessRisque([Invite::ACCESS_LECTURE])
-                        ->setAccessAvenant([Invite::ACCESS_LECTURE])
-                        ->setAccessPartenaire([Invite::ACCESS_LECTURE])
-                        ->setAccessCotation([Invite::ACCESS_LECTURE])
-                )
-                ->addRolesEnSinistre(
-                    (new RolesEnSinistre)
-                        ->setNom("Droits d'accès dans le module Sinistre")
-                        ->setAccessNotification([Invite::ACCESS_LECTURE])
-                        ->setAccessReglement([Invite::ACCESS_LECTURE])
-                        ->setAccessTypePiece([Invite::ACCESS_LECTURE])
-                )
-                ->addRolesEnAdministration(
-                    (new RolesEnAdministration)
-                        ->setNom("Droits d'accès dans le module Administration")
-                        ->setAccessDocument([Invite::ACCESS_LECTURE])
-                        ->setAccessClasseur([Invite::ACCESS_LECTURE])
-                        ->setAccessInvite([Invite::ACCESS_LECTURE])
-                )
-            ;
-        }
-    }
-
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
     public function deleteApi(Invite $invite): Response
     {
         return $this->handleDeleteApi($invite);
+    }
+
+    #[Route('/api/{id}/{collectionName}/{usage?}', name: 'api.get_collection', requirements: ['id' => Requirement::DIGITS], defaults: ['usage' => 'generic'], methods: ['GET'])]
+    public function getCollectionListApi(int $id, string $collectionName, string $usage): Response
+    {
+        return $this->handleCollectionApiRequest($id, $collectionName, Invite::class, $usage);
+    }
+
+    #[Route('/api/get-entity-details/{entityType}/{id}', name: 'api.get_entity_details', methods: ['GET'], requirements: ['id' => Requirement::DIGITS])]
+    public function getEntityDetailsApi(string $entityType, int $id): JsonResponse
+    {
+        $details = $this->getEntityDetailsForType($entityType, $id);
+        return $this->json($details, 200, [], ['groups' => 'list:read']);
     }
 }
