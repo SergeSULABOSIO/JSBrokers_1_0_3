@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 use App\Entity\Invite;
 use App\Form\InviteType;
 use App\Entity\Utilisateur;
+use App\Constantes\Constante;
 use App\Event\InvitationEvent;
 use App\Repository\InviteRepository;
 use App\Entity\Traits\HandleChildAssociationTrait;
@@ -37,6 +38,7 @@ class InviteController extends AbstractController
         private EntityManagerInterface $em,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
+        private Constante $constante,
         private JSBDynamicSearchService $searchService,
         private SerializerInterface $serializer,
         private EventDispatcherInterface $dispatcher,
