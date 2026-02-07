@@ -29,6 +29,16 @@ class RolesEnAdministrationController extends AbstractController
         $this->canvasBuilder = $canvasBuilder;
     }
 
+    protected function getCollectionMap(): array
+    {
+        return [];
+    }
+
+    protected function getParentAssociationMap(): array
+    {
+        return [];
+    }
+
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
     public function getFormApi(?RolesEnAdministration $role, Request $request): Response
     {
