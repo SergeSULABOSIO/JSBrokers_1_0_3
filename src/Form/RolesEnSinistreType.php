@@ -27,46 +27,16 @@ class RolesEnSinistreType extends AbstractType
     
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        /** @var Invite $parent_object */
-        $parent_object = $options['parent_object'];
-        // dd($invite);
-        $dataNom = "Droits d'accès dans le module Sinistre";
-        $dataTypePiece = [Invite::ACCESS_LECTURE];
-        $dataNotification = [Invite::ACCESS_LECTURE];
-        $dataReglement = [Invite::ACCESS_LECTURE];
-        $prefixeHelp = "Ce que peut faire l'invité";
-        // dd($parent_object);
-
-        if ($parent_object != null) {
-            if ($parent_object->getId() != null) {
-                /** @var RolesEnSinistre|[] $tabRolesSin */
-                $tabRolesSin = $parent_object->getRolesEnSinistre();
-                // dd($parent_object);
-                if (count($tabRolesSin) != 0) {
-                    // dd($parent_object);
-                    $dataNom = $tabRolesSin[0]->getNom();
-                    $dataTypePiece = $tabRolesSin[0]->getAccessTypePiece();
-                    $dataNotification = $tabRolesSin[0]->getAccessNotification();
-                    $dataReglement = $tabRolesSin[0]->getAccessReglement();
-                }
-                $prefixeHelp = "Ce que peut faire " . $parent_object->getNom();
-            }
-        }
-
         $builder
             ->add('nom', TextType::class, [
-                'data' => $dataNom,
                 'label' => "Nom du rôle",
                 'required' => false,
                 'attr' => [
-                    'readonly' => true,
                     'placeholder' => "Nom",
                 ],
             ])
             ->add('accessTypePiece', ChoiceType::class, [
-                'data' => $dataTypePiece,
                 'label' => "Droit d'accès sur les types des pièces",
-                'help' => $prefixeHelp . " dans les types des pièces",
                 'multiple' => true,
                 'expanded' => true,
                 'required' => true,
@@ -78,9 +48,7 @@ class RolesEnSinistreType extends AbstractType
                 ],
             ])
             ->add('accessNotification', ChoiceType::class, [
-                'data' => $dataNotification,
                 'label' => "Droit d'accès sur les notification ou déclarations des sinistres",
-                'help' => $prefixeHelp . " dans les notifications des sinistres",
                 'multiple' => true,
                 'expanded' => true,
                 'required' => true,
@@ -92,9 +60,7 @@ class RolesEnSinistreType extends AbstractType
                 ],
             ])
             ->add('accessReglement', ChoiceType::class, [
-                'data' => $dataReglement,
                 'label' => "Droit d'accès sur les règlements des sinistres",
-                'help' => $prefixeHelp . " dans les règlements des sinistres",
                 'multiple' => true,
                 'expanded' => true,
                 'required' => true,

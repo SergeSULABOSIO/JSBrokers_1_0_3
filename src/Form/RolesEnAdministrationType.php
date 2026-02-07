@@ -27,46 +27,16 @@ class RolesEnAdministrationType extends AbstractType
     
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        /** @var Invite $parent_object */
-        $parent_object = $options['parent_object'];
-        // dd($invite);
-        $dataNom = "Droits d'accès dans le module Administration";
-        $dataDocument = [Invite::ACCESS_LECTURE];
-        $dataClasseur = [Invite::ACCESS_LECTURE];
-        $dataInvite = [Invite::ACCESS_LECTURE];
-        $prefixeHelp = "Ce que peut faire l'invité";
-        // dd($parent_object);
-
-        if ($parent_object != null) {
-            if ($parent_object->getId() != null) {
-                /** @var RolesEnAdministration|[] $tabRolesAdmin */
-                $tabRolesAdmin = $parent_object->getRolesEnAdministration();
-                // dd($parent_object);
-                if (count($tabRolesAdmin) != 0) {
-                    // dd($parent_object);
-                    $dataNom = $tabRolesAdmin[0]->getNom();
-                    $dataDocument = $tabRolesAdmin[0]->getAccessDocument();
-                    $dataClasseur = $tabRolesAdmin[0]->getAccessClasseur();
-                    $dataInvite = $tabRolesAdmin[0]->getAccessInvite();
-                }
-                $prefixeHelp = "Ce que peut faire " . $parent_object->getNom();
-            }
-        }
-
         $builder
             ->add('nom', TextType::class, [
-                'data' => $dataNom,
                 'label' => "Nom du rôle",
                 'required' => false,
                 'attr' => [
-                    'readonly' => true,
                     'placeholder' => "Nom",
                 ],
             ])
             ->add('accessDocument', ChoiceType::class, [
-                'data' => $dataDocument,
                 'label' => "Droit d'accès sur les documents",
-                'help' => $prefixeHelp . " dans les documents",
                 'multiple' => true,
                 'expanded' => true,
                 'required' => true,
@@ -78,9 +48,7 @@ class RolesEnAdministrationType extends AbstractType
                 ],
             ])
             ->add('accessClasseur', ChoiceType::class, [
-                'data' => $dataClasseur,
                 'label' => "Droit d'accès sur les classeurs",
-                'help' => $prefixeHelp . " dans les classeurs",
                 'multiple' => true,
                 'expanded' => true,
                 'required' => true,
@@ -92,9 +60,7 @@ class RolesEnAdministrationType extends AbstractType
                 ],
             ])
             ->add('accessInvite', ChoiceType::class, [
-                'data' => $dataInvite,
                 'label' => "Droit d'accès sur les invités",
-                'help' => $prefixeHelp . " dans les invités",
                 'multiple' => true,
                 'expanded' => true,
                 'required' => true,
@@ -105,15 +71,9 @@ class RolesEnAdministrationType extends AbstractType
                     "Suppression" => Invite::ACCESS_SUPPRESSION,
                 ],
             ])
-            // ->add('invite', EntityType::class, [
-            //     'class' => Invite::class,
-            //     'choice_label' => 'id',
-            // ])
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
+            ->add('invite', InviteAutocompleteField::class, [
+                'label' => "Collaborateur",
+                'required' => true,
             ])
         ;
     }
@@ -122,7 +82,13 @@ class RolesEnAdministrationType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => RolesEnAdministration::class,
-            'parent_object' => null, // l'objet parent
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }
