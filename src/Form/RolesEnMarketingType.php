@@ -26,46 +26,16 @@ class RolesEnMarketingType extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        /** @var Invite $parent_object */
-        $parent_object = $options['parent_object'];
-        // dd($invite);
-        $dataNom = "Droits d'accès dans le module Marketing";
-        $dataPiste = [Invite::ACCESS_LECTURE];
-        $dataTache = [Invite::ACCESS_LECTURE];
-        $dataFeedback = [Invite::ACCESS_LECTURE];
-        $prefixeHelp = "Ce que peut faire l'invité";
-
-        
-        if ($parent_object != null) {
-            if ($parent_object->getId() != null) {
-                /** @var RolesEnMarketing|[] $tabRolesMark */
-                $tabRolesMark = $parent_object->getRolesEnMarketing();
-                // dd($parent_object);
-                if (count($tabRolesMark) != 0) {
-                    // dd($parent_object);
-                    $dataNom = $tabRolesMark[0]->getNom();
-                    $dataPiste = $tabRolesMark[0]->getAccessPiste();
-                    $dataTache = $tabRolesMark[0]->getAccessTache();
-                    $dataFeedback = $tabRolesMark[0]->getAccessFeedback();
-                }
-                $prefixeHelp = "Ce que peut faire " . $parent_object->getNom();
-            }
-        }
-
         $builder
             ->add('nom', TextType::class, [
-                'data' => $dataNom,
                 'label' => "Nom du rôle",
                 'required' => false,
                 'attr' => [
-                    'readonly' => true,
                     'placeholder' => "Nom",
                 ],
             ])
             ->add('accessPiste', ChoiceType::class, [
-                'data' => $dataPiste,
                 'label' => "Droit d'accès sur les pistes",
-                'help' => $prefixeHelp . " dans les pistes",
                 'multiple' => true,
                 'expanded' => true,
                 'required' => true,
@@ -77,9 +47,7 @@ class RolesEnMarketingType extends AbstractType
                 ],
             ])
             ->add('accessTache', ChoiceType::class, [
-                'data' => $dataTache,
                 'label' => "Droit d'accès sur les tâches",
-                'help' => $prefixeHelp . " dans les tâches",
                 'multiple' => true,
                 'expanded' => true,
                 'required' => true,
@@ -91,9 +59,7 @@ class RolesEnMarketingType extends AbstractType
                 ],
             ])
             ->add('accessFeedback', ChoiceType::class, [
-                'data' => $dataFeedback,
                 'label' => "Droit d'accès sur les comptes-rendus",
-                'help' => $prefixeHelp . " dans les comptes-rendus",
                 'multiple' => true,
                 'expanded' => true,
                 'required' => true,
@@ -105,12 +71,9 @@ class RolesEnMarketingType extends AbstractType
                 ],
             ])
 
-            //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
+            ->add('invite', InviteAutocompleteField::class, [
+                'label' => "Collaborateur",
+                'required' => true,
             ])
         ;
     }
@@ -119,7 +82,13 @@ class RolesEnMarketingType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => RolesEnMarketing::class,
-            'parent_object' => null, // l'objet parent
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }

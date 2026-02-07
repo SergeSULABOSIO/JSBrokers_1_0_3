@@ -58,29 +58,30 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
         // Les collections de rôles ne sont affichées qu'en mode édition,
         // car elles nécessitent un ID parent pour fonctionner.
         if (!$isParentNew) {
-            $roleCollections = [
-                'rolesEnFinance' => \App\Entity\RolesEnFinance::class,
-                'rolesEnMarketing' => \App\Entity\RolesEnMarketing::class,
-                'rolesEnProduction' => \App\Entity\RolesEnProduction::class,
-                'rolesEnSinistre' => \App\Entity\RolesEnSinistre::class,
-                'rolesEnAdministration' => \App\Entity\RolesEnAdministration::class,
+            $collectionsConfig = [
+                [
+                    'fieldName' => 'rolesEnFinance', 'entityRouteName' => 'rolesenfinance',
+                    'formTitle' => 'Rôle en Finance', 'parentFieldName' => 'invite'
+                ],
+                [
+                    'fieldName' => 'rolesEnMarketing', 'entityRouteName' => 'rolesenmarketing',
+                    'formTitle' => 'Rôle en Marketing', 'parentFieldName' => 'invite'
+                ],
+                [
+                    'fieldName' => 'rolesEnProduction', 'entityRouteName' => 'rolesenproduction',
+                    'formTitle' => 'Rôle en Production', 'parentFieldName' => 'invite'
+                ],
+                [
+                    'fieldName' => 'rolesEnSinistre', 'entityRouteName' => 'rolesensinistre',
+                    'formTitle' => 'Rôle en Sinistre', 'parentFieldName' => 'invite'
+                ],
+                [
+                    'fieldName' => 'rolesEnAdministration', 'entityRouteName' => 'rolesenadministration',
+                    'formTitle' => 'Rôle en Administration', 'parentFieldName' => 'invite'
+                ],
             ];
 
-            foreach ($roleCollections as $collectionName => $childEntityClass) {
-                $layout[] = [
-                    "couleur_fond" => "white",
-                    "colonnes" => [
-                        ["champs" => [[
-                            "widget" => "collection",
-                            "field_code" => $collectionName,
-                            "options" => [
-                                "parentEntityId" => $inviteId,
-                                "collectionName" => $collectionName,
-                            ]
-                        ]]]
-                    ]
-                ];
-            }
+            $this->addCollectionWidgetsToLayout($layout, $inviteId, $isParentNew, $collectionsConfig);
         }
 
         return $layout;
