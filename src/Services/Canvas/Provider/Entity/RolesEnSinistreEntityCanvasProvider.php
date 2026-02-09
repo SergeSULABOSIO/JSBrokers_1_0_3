@@ -5,12 +5,10 @@ namespace App\Services\Canvas\Provider\Entity;
 use App\Entity\Invite;
 use App\Entity\RolesEnSinistre;
 use App\Services\Canvas\CanvasHelper;
-use App\Services\ServiceMonnaies;
 
 class RolesEnSinistreEntityCanvasProvider implements EntityCanvasProviderInterface
 {
     public function __construct(
-        private ServiceMonnaies $serviceMonnaies,
         private CanvasHelper $canvasHelper
     ) {
     }
@@ -22,6 +20,25 @@ class RolesEnSinistreEntityCanvasProvider implements EntityCanvasProviderInterfa
 
     public function getCanvas(): array
     {
+        $accessFields = [
+            'accessTypePiece' => 'Pièces',
+            'accessNotification' => 'Sinistres',
+            'accessReglement' => 'Règlements',
+        ];
+
+        $calculatedIndicators = [];
+        foreach ($accessFields as $fieldCode => $label) {
+            $calculatedIndicators[] = [
+                "code" => $fieldCode . "String",
+                "intitule" => "Accès " . $label,
+                "type" => "Calcul",
+                "format" => "Texte",
+                "fonction" => "Role_getAccessString",
+                "params" => [$fieldCode],
+                "description" => "Permissions sur les " . strtolower($label) . "."
+            ];
+        }
+
         return [
             "parametres" => [
                 "description" => "Rôle en Sinistre",
@@ -42,35 +59,8 @@ class RolesEnSinistreEntityCanvasProvider implements EntityCanvasProviderInterfa
                     "type" => "Calcul",
                     "format" => "Texte",
                     "description" => "Nom du collaborateur assigné à ce rôle."
-                ],
-                [
-                    "code" => "accessTypePieceString",
-                    "intitule" => "Accès Pièces",
-                    "type" => "Calcul",
-                    "format" => "Texte",
-                    "fonction" => "Role_getAccessString",
-                    "params" => ["accessTypePiece"],
-                    "description" => "Permissions sur les types de pièces."
-                ],
-                [
-                    "code" => "accessNotificationString",
-                    "intitule" => "Accès Sinistres",
-                    "type" => "Calcul",
-                    "format" => "Texte",
-                    "fonction" => "Role_getAccessString",
-                    "params" => ["accessNotification"],
-                    "description" => "Permissions sur les déclarations de sinistre."
-                ],
-                [
-                    "code" => "accessReglementString",
-                    "intitule" => "Accès Règlements",
-                    "type" => "Calcul",
-                    "format" => "Texte",
-                    "fonction" => "Role_getAccessString",
-                    "params" => ["accessReglement"],
-                    "description" => "Permissions sur les règlements de sinistre."
-                ],
-            ], $this->canvasHelper->getGlobalIndicatorsCanvas("RolesEnSinistre"))
+                ]
+            ], $calculatedIndicators, $this->canvasHelper->getGlobalIndicatorsCanvas("RolesEnSinistre"))
         ];
     }
 }

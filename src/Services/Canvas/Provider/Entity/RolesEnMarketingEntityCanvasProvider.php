@@ -5,12 +5,10 @@ namespace App\Services\Canvas\Provider\Entity;
 use App\Entity\Invite;
 use App\Entity\RolesEnMarketing;
 use App\Services\Canvas\CanvasHelper;
-use App\Services\ServiceMonnaies;
 
 class RolesEnMarketingEntityCanvasProvider implements EntityCanvasProviderInterface
 {
     public function __construct(
-        private ServiceMonnaies $serviceMonnaies,
         private CanvasHelper $canvasHelper
     ) {
     }

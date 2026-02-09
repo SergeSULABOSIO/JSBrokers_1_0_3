@@ -17,7 +17,6 @@ class RolesEnSinistreFormCanvasProvider implements FormCanvasProviderInterface
     {
         /** @var RolesEnSinistre $object */
         $isParentNew = ($object->getId() === null);
-        $roleId = $object->getId() ?? 0;
 
         $parametres = [
             "titre_creation" => "Nouveau Rôle en Sinistre",
@@ -27,7 +26,7 @@ class RolesEnSinistreFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/rolesensinistre/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildRolesEnSinistreLayout($roleId, $isParentNew);
+        $layout = $this->buildLayout();
 
         return [
             "parametres" => $parametres,
@@ -36,17 +35,16 @@ class RolesEnSinistreFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildRolesEnSinistreLayout(int $roleId, bool $isParentNew): array
+    private function buildLayout(): array
     {
-        $layout = [
+        return [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["invite"]]]],
             ["couleur_fond" => "white", "colonnes" => [
-                ["champs" => ["accessTypePiece"]], 
-                ["champs" => ["accessNotification"]], 
-                ["champs" => ["accessReglement"]]
+                ["champs" => ["accessTypePiece"]],
+                ["champs" => ["accessNotification"]],
+                ["champs" => ["accessReglement"]],
             ]],
         ];
-        return $layout;
     }
 }

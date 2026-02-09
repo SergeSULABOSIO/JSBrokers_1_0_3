@@ -17,7 +17,6 @@ class RolesEnFinanceFormCanvasProvider implements FormCanvasProviderInterface
     {
         /** @var RolesEnFinance $object */
         $isParentNew = ($object->getId() === null);
-        $roleId = $object->getId() ?? 0;
 
         $parametres = [
             "titre_creation" => "Nouveau Rôle en Finance",
@@ -27,7 +26,7 @@ class RolesEnFinanceFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/rolesenfinance/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildRolesEnFinanceLayout($roleId, $isParentNew);
+        $layout = $this->buildRolesEnFinanceLayout();
 
         return [
             "parametres" => $parametres,
@@ -36,9 +35,9 @@ class RolesEnFinanceFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildRolesEnFinanceLayout(int $roleId, bool $isParentNew): array
+    private function buildRolesEnFinanceLayout(): array
     {
-        $layout = [
+        return [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["invite"]]]],
             ["couleur_fond" => "white", "colonnes" => [
@@ -58,6 +57,5 @@ class RolesEnFinanceFormCanvasProvider implements FormCanvasProviderInterface
             ]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["accessRevenu"]]]],
         ];
-        return $layout;
     }
 }

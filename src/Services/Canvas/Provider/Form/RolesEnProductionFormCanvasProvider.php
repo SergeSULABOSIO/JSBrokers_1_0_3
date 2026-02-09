@@ -17,7 +17,6 @@ class RolesEnProductionFormCanvasProvider implements FormCanvasProviderInterface
     {
         /** @var RolesEnProduction $object */
         $isParentNew = ($object->getId() === null);
-        $roleId = $object->getId() ?? 0;
 
         $parametres = [
             "titre_creation" => "Nouveau Rôle en Production",
@@ -27,7 +26,7 @@ class RolesEnProductionFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/rolesenproduction/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildRolesEnProductionLayout($roleId, $isParentNew);
+        $layout = $this->buildRolesEnProductionLayout();
 
         return [
             "parametres" => $parametres,
@@ -36,9 +35,9 @@ class RolesEnProductionFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildRolesEnProductionLayout(int $roleId, bool $isParentNew): array
+    private function buildRolesEnProductionLayout(): array
     {
-        $layout = [
+        return [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["invite"]]]],
             ["couleur_fond" => "white", "colonnes" => [
@@ -53,6 +52,5 @@ class RolesEnProductionFormCanvasProvider implements FormCanvasProviderInterface
             ]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["accessPartenaire"]], ["champs" => ["accessCotation"]]]],
         ];
-        return $layout;
     }
 }
