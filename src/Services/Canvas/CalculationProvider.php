@@ -2628,18 +2628,20 @@ class CalculationProvider
         // On cherche si un utilisateur correspondant à l'email de l'invitation existe.
         $user = $this->utilisateurRepository->findOneBy(['email' => $invite->getEmail()]);
 
+        // CORRECTION : Remplacement des clés de traduction par du texte en clair
+        // pour assurer un affichage correct pour l'utilisateur.
         if (!$user) {
             // Si aucun utilisateur n'existe, l'invitation est envoyée mais pas encore acceptée.
-            return $this->translator->trans('invite_status_sent', [], 'messages');
+            return "Invitation envoyée";
         }
 
         if ($user->isVerified()) {
             // Si l'utilisateur existe et a vérifié son email, il est actif.
-            return $this->translator->trans('invite_status_active', [], 'messages');
+            return "Actif";
         }
 
         // Si l'utilisateur existe mais n'a pas vérifié son email.
-        return $this->translator->trans('invite_status_pending_verification', [], 'messages');
+        return "En attente de vérification";
     }
 
     // --- Indicateurs pour Note ---
@@ -2731,6 +2733,14 @@ class CalculationProvider
             return 'Aucun accès défini';
         }
 
+        // CORRECTION: Gère le cas où les permissions sont stockées comme des entiers
+        // (ex: 1 pour 'read') au lieu de chaînes, ce qui causait une incohérence d'affichage.
+        $permissionMap = [
+            0 => 'create', 'create' => 'create',
+            1 => 'read',   'read'   => 'read',
+            2 => 'update', 'update' => 'update',
+            3 => 'delete', 'delete' => 'delete',
+        ];
         // Mapping des permissions techniques vers des libellés en français.
         $permissionLabels = [
             'create' => 'Créer',
@@ -2741,9 +2751,10 @@ class CalculationProvider
 
         $labels = [];
         foreach ($accessArray as $permission) {
-            // S'assurer que seules les chaînes de caractères sont traitées pour éviter les erreurs
-            if (is_string($permission)) {
-                $labels[] = $permissionLabels[$permission] ?? ucfirst($permission);
+            // On normalise la permission (int ou string) en une clé textuelle standard.
+            $permissionKey = $permissionMap[$permission] ?? null;
+            if ($permissionKey && isset($permissionLabels[$permissionKey])) {
+                $labels[] = $permissionLabels[$permissionKey];
             }
         }
 
