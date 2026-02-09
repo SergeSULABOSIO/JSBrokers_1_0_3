@@ -29,8 +29,8 @@ class RolesEnFinance implements OwnerAwareInterface
     #[ORM\ManyToOne(inversedBy: 'rolesEnFinance')]
     private ?Invite $invite = null;
 
-    #[ORM\Column(type: Types::ARRAY, nullable: true)]
-    private ?array $accessTypeRevenu = null;
+    #[ORM\Column(type: Types::ARRAY)]
+    private array $accessTypeRevenu = [];
 
     #[ORM\Column(type: Types::ARRAY)]
     private array $accessTranche = [];
@@ -115,12 +115,12 @@ class RolesEnFinance implements OwnerAwareInterface
         return $this;
     }
 
-    public function getAccessTypeRevenu(): ?array
+    public function getAccessTypeRevenu(): array
     {
         return $this->accessTypeRevenu;
     }
 
-    public function setAccessTypeRevenu(?array $accessTypeRevenu): static
+    public function setAccessTypeRevenu(array $accessTypeRevenu): static
     {
         $this->accessTypeRevenu = $accessTypeRevenu;
 

@@ -17,14 +17,14 @@ class RolesEnMarketing implements OwnerAwareInterface
     #[ORM\Column(length: 255)]
     private ?string $nom = null;
 
-    #[ORM\Column(type: Types::ARRAY, nullable: true)]
-    private ?array $accessPiste = null;
+    #[ORM\Column(type: Types::ARRAY)]
+    private array $accessPiste = [];
 
-    #[ORM\Column(type: Types::ARRAY, nullable: true)]
-    private ?array $accessTache = null;
+    #[ORM\Column(type: Types::ARRAY)]
+    private array $accessTache = [];
 
-    #[ORM\Column(type: Types::ARRAY, nullable: true)]
-    private ?array $accessFeedback = null;
+    #[ORM\Column(type: Types::ARRAY)]
+    private array $accessFeedback = [];
 
     #[ORM\ManyToOne(inversedBy: 'rolesEnMarketing')]
     private ?Invite $invite = null;
@@ -46,36 +46,36 @@ class RolesEnMarketing implements OwnerAwareInterface
         return $this;
     }
 
-    public function getAccessPiste(): ?array
+    public function getAccessPiste(): array
     {
         return $this->accessPiste;
     }
 
-    public function setAccessPiste(?array $accessPiste): static
+    public function setAccessPiste(array $accessPiste): static
     {
         $this->accessPiste = $accessPiste;
 
         return $this;
     }
 
-    public function getAccessTache(): ?array
+    public function getAccessTache(): array
     {
         return $this->accessTache;
     }
 
-    public function setAccessTache(?array $accessTache): static
+    public function setAccessTache(array $accessTache): static
     {
         $this->accessTache = $accessTache;
 
         return $this;
     }
 
-    public function getAccessFeedback(): ?array
+    public function getAccessFeedback(): array
     {
         return $this->accessFeedback;
     }
 
-    public function setAccessFeedback(?array $accessFeedback): static
+    public function setAccessFeedback(array $accessFeedback): static
     {
         $this->accessFeedback = $accessFeedback;
 

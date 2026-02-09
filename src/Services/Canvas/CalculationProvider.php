@@ -2712,12 +2712,12 @@ class CalculationProvider
      * @param array $params Le tableau de paramètres du canvas, contenant le nom du champ d'accès (ex: ['accessMonnaie']).
      * @return string|null
      */
-    public function Role_getAccessString(object $entity, array $params): ?string
+    public function Role_getAccessString(object $entity, array $params): string
     {
         if (empty($params[0])) {
             return 'Paramètre manquant';
         }
-
+ 
         $fieldCode = $params[0];
         $getter = 'get' . ucfirst($fieldCode);
 
@@ -2726,8 +2726,8 @@ class CalculationProvider
         }
 
         $accessArray = $entity->{$getter}();
-
-        if (!is_array($accessArray) || empty($accessArray)) {
+ 
+        if (!is_array($accessArray) || empty($accessArray)) { // Gère les cas où la propriété est null ou un tableau vide
             return 'Aucun accès défini';
         }
 
@@ -2739,8 +2739,14 @@ class CalculationProvider
             'delete' => 'Supprimer',
         ];
 
-        $labels = array_map(fn ($p) => $permissionLabels[$p] ?? ucfirst($p), $accessArray);
+        $labels = [];
+        foreach ($accessArray as $permission) {
+            // S'assurer que seules les chaînes de caractères sont traitées pour éviter les erreurs
+            if (is_string($permission)) {
+                $labels[] = $permissionLabels[$permission] ?? ucfirst($permission);
+            }
+        }
 
-        return implode(', ', $labels);
+        return empty($labels) ? 'Aucun accès valide' : implode(', ', $labels);
     }
 }
