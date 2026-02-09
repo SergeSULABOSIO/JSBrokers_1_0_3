@@ -33,8 +33,6 @@ class RolesEnMarketingEntityCanvasProvider implements EntityCanvasProviderInterf
                 "intitule" => "Accès " . $label,
                 "type" => "Calcul",
                 "format" => "Texte",
-                "fonction" => "Role_getAccessString",
-                "params" => [$fieldCode],
                 "description" => "Permissions sur les " . strtolower($label) . "."
             ];
         }

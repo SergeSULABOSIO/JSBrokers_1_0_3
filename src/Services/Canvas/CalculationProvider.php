@@ -293,17 +293,82 @@ class CalculationProvider
                     'estVide' => $this->getClasseurEstVideString($entity),
                 ];
                 break;
-            case RolesEnAdministration::class:
             case RolesEnFinance::class:
-            case RolesEnMarketing::class:
-            case RolesEnProduction::class:
-            case RolesEnSinistre::class:
-                /** @var RolesEnAdministration|RolesEnFinance|RolesEnMarketing|RolesEnProduction|RolesEnSinistre $entity */
+                /** @var RolesEnFinance $entity */
                 $invite = $entity->getInvite();
                 $inviteNom = $invite ? $invite->getNom() : 'N/A';
                 $indicateurs = [
                     'inviteNom' => $inviteNom,
                 ];
+                $accessFields = [
+                    'accessMonnaie', 'accessCompteBancaire', 'accessTaxe', 'accessTypeRevenu',
+                    'accessTranche', 'accessTypeChargement', 'accessNote', 'accessPaiement',
+                    'accessBordereau', 'accessRevenu'
+                ];
+                foreach ($accessFields as $field) {
+                    if (method_exists($entity, 'get' . ucfirst($field))) {
+                        $indicateurs[$field . 'String'] = $this->Role_getAccessString($entity, [$field]);
+                    }
+                }
+                break;
+            case RolesEnMarketing::class:
+                /** @var RolesEnMarketing $entity */
+                $invite = $entity->getInvite();
+                $inviteNom = $invite ? $invite->getNom() : 'N/A';
+                $indicateurs = [
+                    'inviteNom' => $inviteNom,
+                ];
+                $accessFields = ['accessPiste', 'accessTache', 'accessFeedback'];
+                foreach ($accessFields as $field) {
+                    if (method_exists($entity, 'get' . ucfirst($field))) {
+                        $indicateurs[$field . 'String'] = $this->Role_getAccessString($entity, [$field]);
+                    }
+                }
+                break;
+            case RolesEnProduction::class:
+                /** @var RolesEnProduction $entity */
+                $invite = $entity->getInvite();
+                $inviteNom = $invite ? $invite->getNom() : 'N/A';
+                $indicateurs = [
+                    'inviteNom' => $inviteNom,
+                ];
+                $accessFields = [
+                    'accessGroupe', 'accessClient', 'accessAssureur', 'accessContact',
+                    'accessRisque', 'accessAvenant', 'accessPartenaire', 'accessCotation'
+                ];
+                foreach ($accessFields as $field) {
+                    if (method_exists($entity, 'get' . ucfirst($field))) {
+                        $indicateurs[$field . 'String'] = $this->Role_getAccessString($entity, [$field]);
+                    }
+                }
+                break;
+            case RolesEnSinistre::class:
+                /** @var RolesEnSinistre $entity */
+                $invite = $entity->getInvite();
+                $inviteNom = $invite ? $invite->getNom() : 'N/A';
+                $indicateurs = [
+                    'inviteNom' => $inviteNom,
+                ];
+                $accessFields = ['accessTypePiece', 'accessNotification', 'accessReglement'];
+                foreach ($accessFields as $field) {
+                    if (method_exists($entity, 'get' . ucfirst($field))) {
+                        $indicateurs[$field . 'String'] = $this->Role_getAccessString($entity, [$field]);
+                    }
+                }
+                break;
+            case RolesEnAdministration::class:
+                /** @var RolesEnAdministration $entity */
+                $invite = $entity->getInvite();
+                $inviteNom = $invite ? $invite->getNom() : 'N/A';
+                $indicateurs = [
+                    'inviteNom' => $inviteNom,
+                ];
+                $accessFields = ['accessDocument', 'accessClasseur', 'accessInvite'];
+                foreach ($accessFields as $field) {
+                    if (method_exists($entity, 'get' . ucfirst($field))) {
+                        $indicateurs[$field . 'String'] = $this->Role_getAccessString($entity, [$field]);
+                    }
+                }
                 break;
                 // D'autres entités pourraient être ajoutées ici avec 'case AutreEntite::class:'
         }
