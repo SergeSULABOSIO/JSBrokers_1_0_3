@@ -4,15 +4,9 @@ namespace App\Services\Canvas\Provider\Entity;
 
 use App\Entity\Invite;
 use App\Entity\RolesEnAdministration;
-use App\Services\Canvas\CanvasHelper;
 
 class RolesEnAdministrationEntityCanvasProvider implements EntityCanvasProviderInterface
 {
-    public function __construct(
-        private CanvasHelper $canvasHelper
-    ) {
-    }
-
     public function supports(string $entityClassName): bool
     {
         return $entityClassName === RolesEnAdministration::class;
@@ -59,7 +53,7 @@ class RolesEnAdministrationEntityCanvasProvider implements EntityCanvasProviderI
                 ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                 ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
                 ["code" => "invite", "intitule" => "Collaborateur", "type" => "Relation", "targetEntity" => Invite::class, "displayField" => "email"],
-            ], $calculatedIndicators, $this->canvasHelper->getGlobalIndicatorsCanvas("RolesEnAdministration"))
+            ], $calculatedIndicators)
         ];
     }
 }
