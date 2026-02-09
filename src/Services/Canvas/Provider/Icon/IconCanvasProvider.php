@@ -35,6 +35,7 @@ class IconCanvasProvider
         'piste'           => 'material-symbols:footprint',
         'revenu'          => 'hugeicons:money-bag-02',
         'risque'          => 'ant-design:product-filled',
+        'role'            => 'famicons:hand-right-outline',
         'sinistre'        => 'hugeicons:accident',
         'tache'           => 'hugeicons:task-02',
         'taxe'            => 'tabler:tax',
