@@ -4,15 +4,9 @@ namespace App\Services\Canvas\Provider\Entity;
 
 use App\Entity\Invite;
 use App\Entity\RolesEnSinistre;
-use App\Services\Canvas\CanvasHelper;
 
 class RolesEnSinistreEntityCanvasProvider implements EntityCanvasProviderInterface
 {
-    public function __construct(
-        private CanvasHelper $canvasHelper
-    ) {
-    }
-
     public function supports(string $entityClassName): bool
     {
         return $entityClassName === RolesEnSinistre::class;
@@ -57,8 +51,8 @@ class RolesEnSinistreEntityCanvasProvider implements EntityCanvasProviderInterfa
                     "type" => "Calcul",
                     "format" => "Texte",
                     "description" => "Nom du collaborateur assigné à ce rôle."
-                ]
-            ], $calculatedIndicators, $this->canvasHelper->getGlobalIndicatorsCanvas("RolesEnSinistre"))
+                ],
+            ], $calculatedIndicators)
         ];
     }
 }
