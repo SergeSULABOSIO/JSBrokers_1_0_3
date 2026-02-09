@@ -2638,4 +2638,44 @@ class CalculationProvider
         }
         return $this->translator->trans('payment_status_unpaid', [], 'messages');
     }
+
+    /**
+     * Génère une chaîne de caractères lisible pour les permissions d'accès.
+     * Cette fonction est appelée dynamiquement pour les entités de Rôles.
+     *
+     * @param object $entity L'entité de rôle (RolesEnFinance, RolesEnMarketing, etc.).
+     * @param array $params Le tableau de paramètres du canvas, contenant le nom du champ d'accès (ex: ['accessMonnaie']).
+     * @return string|null
+     */
+    public function Role_getAccessString(object $entity, array $params): ?string
+    {
+        if (empty($params[0])) {
+            return 'Paramètre manquant';
+        }
+
+        $fieldCode = $params[0];
+        $getter = 'get' . ucfirst($fieldCode);
+
+        if (!method_exists($entity, $getter)) {
+            return 'Champ d\'accès invalide';
+        }
+
+        $accessArray = $entity->{$getter}();
+
+        if (!is_array($accessArray) || empty($accessArray)) {
+            return 'Aucun accès défini';
+        }
+
+        // Mapping des permissions techniques vers des libellés en français.
+        $permissionLabels = [
+            'create' => 'Créer',
+            'read' => 'Lire',
+            'update' => 'Modifier',
+            'delete' => 'Supprimer',
+        ];
+
+        $labels = array_map(fn ($p) => $permissionLabels[$p] ?? ucfirst($p), $accessArray);
+
+        return implode(', ', $labels);
+    }
 }

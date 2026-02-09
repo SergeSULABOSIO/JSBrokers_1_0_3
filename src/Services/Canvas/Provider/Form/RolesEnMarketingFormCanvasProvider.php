@@ -17,7 +17,6 @@ class RolesEnMarketingFormCanvasProvider implements FormCanvasProviderInterface
     {
         /** @var RolesEnMarketing $object */
         $isParentNew = ($object->getId() === null);
-        $roleId = $object->getId() ?? 0;
 
         $parametres = [
             "titre_creation" => "Nouveau Rôle en Marketing",
@@ -27,7 +26,7 @@ class RolesEnMarketingFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/rolesenmarketing/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildRolesEnMarketingLayout($roleId, $isParentNew);
+        $layout = $this->buildRolesEnMarketingLayout();
 
         return [
             "parametres" => $parametres,
@@ -36,9 +35,9 @@ class RolesEnMarketingFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildRolesEnMarketingLayout(int $roleId, bool $isParentNew): array
+    private function buildRolesEnMarketingLayout(): array
     {
-        $layout = [
+        return [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["invite"]]]],
             ["couleur_fond" => "white", "colonnes" => [
@@ -47,6 +46,5 @@ class RolesEnMarketingFormCanvasProvider implements FormCanvasProviderInterface
                 ["champs" => ["accessFeedback"]]
             ]],
         ];
-        return $layout;
     }
 }

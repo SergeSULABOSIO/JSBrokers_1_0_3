@@ -17,7 +17,6 @@ class RolesEnAdministrationFormCanvasProvider implements FormCanvasProviderInter
     {
         /** @var RolesEnAdministration $object */
         $isParentNew = ($object->getId() === null);
-        $roleId = $object->getId() ?? 0;
 
         $parametres = [
             "titre_creation" => "Nouveau Rôle en Administration",
@@ -27,7 +26,7 @@ class RolesEnAdministrationFormCanvasProvider implements FormCanvasProviderInter
             "endpoint_form_url" => "/admin/rolesenadministration/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildRolesEnAdministrationLayout($roleId, $isParentNew);
+        $layout = $this->buildRolesEnAdministrationLayout();
 
         return [
             "parametres" => $parametres,
@@ -36,9 +35,9 @@ class RolesEnAdministrationFormCanvasProvider implements FormCanvasProviderInter
         ];
     }
 
-    private function buildRolesEnAdministrationLayout(int $roleId, bool $isParentNew): array
+    private function buildRolesEnAdministrationLayout(): array
     {
-        $layout = [
+        return [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["invite"]]]],
             ["couleur_fond" => "white", "colonnes" => [
@@ -47,6 +46,5 @@ class RolesEnAdministrationFormCanvasProvider implements FormCanvasProviderInter
                 ["champs" => ["accessInvite"]]
             ]],
         ];
-        return $layout;
     }
 }
