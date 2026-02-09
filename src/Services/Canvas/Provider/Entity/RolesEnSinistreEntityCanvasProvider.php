@@ -37,6 +37,13 @@ class RolesEnSinistreEntityCanvasProvider implements EntityCanvasProviderInterfa
                 ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
                 ["code" => "invite", "intitule" => "Collaborateur", "type" => "Relation", "targetEntity" => Invite::class, "displayField" => "email"],
                 [
+                    "code" => "inviteNom",
+                    "intitule" => "Nom Collaborateur",
+                    "type" => "Calcul",
+                    "format" => "Texte",
+                    "description" => "Nom du collaborateur assigné à ce rôle."
+                ],
+                [
                     "code" => "accessTypePieceString",
                     "intitule" => "Accès Pièces",
                     "type" => "Calcul",

@@ -23,6 +23,11 @@ use App\Entity\Paiement;
 use App\Entity\Chargement;
 use App\Entity\Entreprise;
 use App\Entity\Partenaire;
+use App\Entity\RolesEnAdministration;
+use App\Entity\RolesEnFinance;
+use App\Entity\RolesEnMarketing;
+use App\Entity\RolesEnProduction;
+use App\Entity\RolesEnSinistre;
 use App\Entity\TypeRevenu;
 use App\Entity\PieceSinistre;
 use App\Services\ServiceDates;
@@ -286,6 +291,18 @@ class CalculationProvider
                     'dateDernierAjout' => $this->getClasseurDateDernierAjout($entity),
                     'apercuTypesFichiers' => $this->getClasseurApercuTypesFichiers($entity),
                     'estVide' => $this->getClasseurEstVideString($entity),
+                ];
+                break;
+            case RolesEnAdministration::class:
+            case RolesEnFinance::class:
+            case RolesEnMarketing::class:
+            case RolesEnProduction::class:
+            case RolesEnSinistre::class:
+                /** @var RolesEnAdministration|RolesEnFinance|RolesEnMarketing|RolesEnProduction|RolesEnSinistre $entity */
+                $invite = $entity->getInvite();
+                $inviteNom = $invite ? $invite->getNom() : 'N/A';
+                $indicateurs = [
+                    'inviteNom' => $inviteNom,
                 ];
                 break;
                 // D'autres entités pourraient être ajoutées ici avec 'case AutreEntite::class:'

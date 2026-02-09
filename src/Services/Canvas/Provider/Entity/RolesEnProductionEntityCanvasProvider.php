@@ -46,6 +46,14 @@ class RolesEnProductionEntityCanvasProvider implements EntityCanvasProviderInter
             ];
         }
 
+        $calculatedIndicators[] = [
+            "code" => "inviteNom",
+            "intitule" => "Nom Collaborateur",
+            "type" => "Calcul",
+            "format" => "Texte",
+            "description" => "Nom du collaborateur assigné à ce rôle."
+        ];
+
         return [
             "parametres" => [
                 "description" => "Rôle en Production",
