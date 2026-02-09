@@ -13,6 +13,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route("/admin/rolesenmarketing", name: 'admin.rolesenmarketing.')]
@@ -24,7 +25,8 @@ class RolesEnMarketingController extends AbstractController
     public function __construct(
         private EntityManagerInterface $em,
         private InviteRepository $inviteRepository,
-        CanvasBuilder $canvasBuilder
+        CanvasBuilder $canvasBuilder,
+        private SerializerInterface $serializer
     ) {
         $this->canvasBuilder = $canvasBuilder;
     }
