@@ -2735,18 +2735,20 @@ class CalculationProvider
 
         // CORRECTION: Gère le cas où les permissions sont stockées comme des entiers
         // (ex: 1 pour 'read') au lieu de chaînes, ce qui causait une incohérence d'affichage.
+        // La correspondance a été inversée pour 'create' et 'read' pour correspondre aux constantes de l'entité Invite.
         $permissionMap = [
-            0 => 'create', 'create' => 'create',
-            1 => 'read',   'read'   => 'read',
+            0 => 'read',   'read'   => 'read',   // 0 = Lecture
+            1 => 'create', 'create' => 'create', // 1 = Ecriture
             2 => 'update', 'update' => 'update',
             3 => 'delete', 'delete' => 'delete',
         ];
         // Mapping des permissions techniques vers des libellés en français.
+        // Les libellés ont été ajustés pour correspondre à ceux du formulaire ("Ecriture", "Lecture").
         $permissionLabels = [
-            'create' => 'Créer',
-            'read' => 'Lire',
-            'update' => 'Modifier',
-            'delete' => 'Supprimer',
+            'create' => 'Ecriture',
+            'read'   => 'Lecture',
+            'update' => 'Modification',
+            'delete' => 'Suppression',
         ];
 
         $labels = [];
