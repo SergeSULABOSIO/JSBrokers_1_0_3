@@ -399,12 +399,15 @@ trait ControllerUtilsTrait
                         $entity->setEntreprise($entreprise);
                     }
                 }
-                if (isset($data['idInvite']) && method_exists($entity, 'setInvite')) {
-                    $invite = $this->inviteRepository->find($data['idInvite']);
-                    if ($invite) {
-                        $entity->setInvite($invite);
-                    }
-                }
+                // REMOVED: This block was incorrectly setting the invite from userContext.idInvite
+                // The form's 'invite' field should handle the association for new roles,
+                // which is correctly initialized by the `renderFormCanvas` initializer.
+                // if (isset($data['idInvite']) && method_exists($entity, 'setInvite')) {
+                //     $invite = $this->inviteRepository->find($data['idInvite']);
+                //     if ($invite) {
+                //         $entity->setInvite($invite);
+                //     }
+                // }
             }
 
             if (method_exists($this, 'associateParent')) {

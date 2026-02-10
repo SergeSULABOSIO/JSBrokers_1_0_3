@@ -49,8 +49,18 @@ class RolesEnAdministrationController extends AbstractController
             RolesEnAdministration::class,
             RolesEnAdministrationType::class,
             $role,
-            function (RolesEnAdministration $role, Invite $invite) {
-                $role->setInvite($invite);
+            function (RolesEnAdministration $role, Invite $connectedInvite) use ($request) {
+                // Prioritize the invite ID from the request query parameters if available
+                $targetInviteId = $request->query->get('idInvite');
+                $targetInvite = null;
+
+                if ($targetInviteId) {
+                    $targetInvite = $this->inviteRepository->find($targetInviteId);
+                }
+
+                // Set the invite for the new role, prioritizing the target invite if found
+                // Otherwise, default to the connected user's invite
+                $role->setInvite($targetInvite ?? $connectedInvite);
                 $role->setNom("Droits d'accès dans le module Administration");
             }
         );

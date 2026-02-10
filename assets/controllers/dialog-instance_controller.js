@@ -150,10 +150,20 @@ export default class extends Controller {
         this.contentTarget.classList.remove('text-center', 'p-5', 'd-flex', 'align-items-center', 'justify-content-center');
         this.contentTarget.style.minHeight = ''; // On retire la hauteur min du spinner
 
+        let endpointUrl = this.entityFormCanvas.parametres.endpoint_form_url;
+        // NOUVEAU : Si c'est un nouveau rôle et qu'il y a un parent de type 'invite',
+        // on ajoute l'ID de l'invité parent aux paramètres de la requête GET du formulaire.
+        // Cela permet au serveur d'initialiser le rôle avec le bon invité.
+        if (this.isCreateMode && this.parentContext && this.parentContext.id && this.parentContext.fieldName === 'invite') {
+            const url = new URL(endpointUrl, window.location.origin);
+            url.searchParams.append('idInvite', this.parentContext.id);
+            endpointUrl = url.toString();
+        }
+
         // Prépare les informations pour la requête que le Cerveau va exécuter
         const payload = {
             dialogId: this.dialogId,
-            endpoint: this.entityFormCanvas.parametres.endpoint_form_url,
+            endpoint: endpointUrl, // Utiliser l'endpoint potentiellement modifié
             entity: this.entity,
             context: this.context,
             entityFormCanvas: this.entityFormCanvas // NOUVEAU : Ajout de l'objet entityFormCanvas
