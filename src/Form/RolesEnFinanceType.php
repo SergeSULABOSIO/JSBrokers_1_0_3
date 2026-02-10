@@ -39,7 +39,7 @@ class RolesEnFinanceType extends AbstractType
                 'label' => "Droit d'accès sur les monnaies",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
@@ -51,7 +51,7 @@ class RolesEnFinanceType extends AbstractType
                 'label' => "Droit d'accès sur les comptes bancaires",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
@@ -64,7 +64,7 @@ class RolesEnFinanceType extends AbstractType
                 'label' => "Droit d'accès sur les taxes",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
@@ -76,7 +76,7 @@ class RolesEnFinanceType extends AbstractType
                 'label' => "Droit d'accès sur les types de revenu",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
@@ -88,7 +88,7 @@ class RolesEnFinanceType extends AbstractType
                 'label' => "Droit d'accès sur les revenus",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
@@ -100,7 +100,7 @@ class RolesEnFinanceType extends AbstractType
                 'label' => "Droit d'accès sur les tranches",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
@@ -112,7 +112,7 @@ class RolesEnFinanceType extends AbstractType
                 'label' => "Droit d'accès sur les types de chargement",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
@@ -124,7 +124,7 @@ class RolesEnFinanceType extends AbstractType
                 'label' => "Droit d'accès sur les notes",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
@@ -136,7 +136,7 @@ class RolesEnFinanceType extends AbstractType
                 'label' => "Droit d'accès sur les paiements",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
@@ -148,7 +148,7 @@ class RolesEnFinanceType extends AbstractType
                 'label' => "Droit d'accès sur les bordereaux",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
