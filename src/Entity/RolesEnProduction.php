@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Repository\RolesEnProductionRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: RolesEnProductionRepository::class)]
 class RolesEnProduction implements OwnerAwareInterface
@@ -12,36 +13,47 @@ class RolesEnProduction implements OwnerAwareInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $nom = null;
 
     #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
     private array $accessGroupe = [];
 
     #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
     private array $accessClient = [];
 
     #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
     private array $accessAssureur = [];
 
     #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
     private array $accessContact = [];
 
     #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
     private array $accessRisque = [];
 
     #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
     private array $accessAvenant = [];
 
     #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
     private array $accessPartenaire = [];
 
     #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
     private array $accessCotation = [];
 
     #[ORM\ManyToOne(inversedBy: 'rolesEnProduction')]
+    #[Groups(['list:read'])]
     private ?Invite $invite = null;
 
     public function getId(): ?int

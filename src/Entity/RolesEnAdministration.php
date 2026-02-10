@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Repository\RolesEnAdministrationRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: RolesEnAdministrationRepository::class)]
 class RolesEnAdministration implements OwnerAwareInterface
@@ -12,21 +13,27 @@ class RolesEnAdministration implements OwnerAwareInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $nom = null;
 
     #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
     private array $accessDocument = [];
 
     #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
     private array $accessClasseur = [];
 
     #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
     private array $accessInvite = [];
 
     #[ORM\ManyToOne(inversedBy: 'rolesEnAdministration')]
+    #[Groups(['list:read'])]
     private ?Invite $invite = null;
 
     public function getId(): ?int
