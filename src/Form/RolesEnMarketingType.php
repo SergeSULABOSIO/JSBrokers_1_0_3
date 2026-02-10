@@ -38,7 +38,7 @@ class RolesEnMarketingType extends AbstractType
                 'label' => "Droit d'accès sur les pistes",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
@@ -50,7 +50,7 @@ class RolesEnMarketingType extends AbstractType
                 'label' => "Droit d'accès sur les tâches",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
@@ -62,7 +62,7 @@ class RolesEnMarketingType extends AbstractType
                 'label' => "Droit d'accès sur les comptes-rendus",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,

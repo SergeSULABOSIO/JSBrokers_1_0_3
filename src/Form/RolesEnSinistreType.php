@@ -39,7 +39,7 @@ class RolesEnSinistreType extends AbstractType
                 'label' => "Droit d'accès sur les types des pièces",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
@@ -51,7 +51,7 @@ class RolesEnSinistreType extends AbstractType
                 'label' => "Droit d'accès sur les notification ou déclarations des sinistres",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
@@ -63,7 +63,7 @@ class RolesEnSinistreType extends AbstractType
                 'label' => "Droit d'accès sur les règlements des sinistres",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,

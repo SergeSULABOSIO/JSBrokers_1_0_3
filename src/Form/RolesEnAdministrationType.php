@@ -39,7 +39,7 @@ class RolesEnAdministrationType extends AbstractType
                 'label' => "Droit d'accès sur les documents",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
@@ -51,7 +51,7 @@ class RolesEnAdministrationType extends AbstractType
                 'label' => "Droit d'accès sur les classeurs",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
@@ -63,7 +63,7 @@ class RolesEnAdministrationType extends AbstractType
                 'label' => "Droit d'accès sur les invités",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,

@@ -39,7 +39,7 @@ class RolesEnProductionType extends AbstractType
                 'label' => "Droit d'accès sur les groupes des clients",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
@@ -51,7 +51,7 @@ class RolesEnProductionType extends AbstractType
                 'label' => "Droit d'accès sur les clients",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
@@ -63,7 +63,7 @@ class RolesEnProductionType extends AbstractType
                 'label' => "Droit d'accès sur les assureurs",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
@@ -75,7 +75,7 @@ class RolesEnProductionType extends AbstractType
                 'label' => "Droit d'accès sur les contacts",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
@@ -87,7 +87,7 @@ class RolesEnProductionType extends AbstractType
                 'label' => "Droit d'accès sur les risques",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
@@ -99,7 +99,7 @@ class RolesEnProductionType extends AbstractType
                 'label' => "Droit d'accès sur les avenants",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
@@ -111,7 +111,7 @@ class RolesEnProductionType extends AbstractType
                 'label' => "Droit d'accès sur les intermédiaires",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
@@ -123,7 +123,7 @@ class RolesEnProductionType extends AbstractType
                 'label' => "Droit d'accès sur les propositions",
                 'multiple' => true,
                 'expanded' => true,
-                'required' => true,
+                'required' => false,
                 'choices'  => [
                     "Lecture" => Invite::ACCESS_LECTURE,
                     "Ecriture" => Invite::ACCESS_ECRITURE,
