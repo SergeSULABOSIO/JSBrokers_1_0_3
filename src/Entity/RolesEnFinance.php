@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Repository\RolesEnFinanceRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: RolesEnFinanceRepository::class)]
 class RolesEnFinance implements OwnerAwareInterface
@@ -12,42 +13,55 @@ class RolesEnFinance implements OwnerAwareInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $nom = null;
 
     #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
     private array $accessMonnaie = [];
 
     #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
     private array $accessCompteBancaire = [];
 
     #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
     private array $accessTaxe = [];
 
     #[ORM\ManyToOne(inversedBy: 'rolesEnFinance')]
+    #[Groups(['list:read'])]
     private ?Invite $invite = null;
 
     #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
     private array $accessTypeRevenu = [];
 
     #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
     private array $accessTranche = [];
 
     #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
     private array $accessTypeChargement = [];
 
     #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
     private array $accessNote = [];
 
     #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
     private array $accessPaiement = [];
 
     #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
     private array $accessBordereau = [];
 
     #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
     private array $accessRevenu = [];
 
     public function getId(): ?int
