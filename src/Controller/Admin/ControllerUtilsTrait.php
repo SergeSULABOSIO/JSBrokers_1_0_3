@@ -375,7 +375,19 @@ trait ControllerUtilsTrait
             : new $entityClass();
 
         $form = $this->createForm($formTypeClass, $entity);
-        $form->submit($submittedData, false);
+
+    // CORRECTION : S'assure que les champs à choix multiples (checkboxes) sont bien vidés.
+    // Quand un champ 'multiple' est soumis sans aucune option cochée, sa clé est absente des données POST.
+    // Le paramètre `clearMissing=false` dans `submit()` empêchait alors la mise à jour, conservant l'ancienne valeur.
+    // En ajoutant manuellement une clé avec un tableau vide pour les champs multiples absents,
+    // on force le formulaire à enregistrer la sélection vide.
+    foreach ($form->all() as $child) {
+        $config = $child->getConfig();
+        if ($config->getOption('multiple') === true && !array_key_exists($child->getName(), $submittedData)) {
+            $submittedData[$child->getName()] = [];
+        }
+    }
+    $form->submit($submittedData, false); // Le paramètre `false` est maintenant sûr.
 
         if ($form->isSubmitted() && $form->isValid()) {
             // NOUVEAU : Logique pour associer l'entreprise et/ou l'invité si les IDs sont fournis
