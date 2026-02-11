@@ -154,9 +154,14 @@ export default class extends Controller {
         // NOUVEAU : Si c'est un nouveau rôle et qu'il y a un parent de type 'invite',
         // on ajoute l'ID de l'invité parent aux paramètres de la requête GET du formulaire.
         // Cela permet au serveur d'initialiser le rôle avec le bon invité.
-        if (this.isCreateMode && this.parentContext && this.parentContext.id && this.parentContext.fieldName === 'invite') {
+        // MODIFICATION : Généralisation du passage du contexte parent.
+        // Si on crée une nouvelle entité depuis une collection, on passe l'ID du parent et le nom du champ
+        // de la relation en paramètres GET. Le serveur pourra ainsi injecter dynamiquement le champ
+        // de relation (ex: 'cotation', 'piste') dans le formulaire de l'enfant.
+        if (this.isCreateMode && this.parentContext && this.parentContext.id && this.parentContext.fieldName) {
             const url = new URL(endpointUrl, window.location.origin);
-            url.searchParams.append('idInvite', this.parentContext.id);
+            url.searchParams.append('parent_id', this.parentContext.id);
+            url.searchParams.append('parent_field_name', this.parentContext.fieldName);
             endpointUrl = url.toString();
         }
 
