@@ -40,7 +40,14 @@ class TacheFormCanvasProvider implements FormCanvasProviderInterface
     {
         $layout = [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["toBeEndedAt"]], ["champs" => ["executor"]], ["champs" => ["closed"]]]],
+            // On ajoute le champ 'cotation' pour permettre l'association automatique lors de l'ajout
+            // depuis le formulaire de Cotation.
+            ["couleur_fond" => "white", "colonnes" => [
+                ["champs" => ["cotation"]],
+                ["champs" => ["executor"]],
+                ["champs" => ["toBeEndedAt"]],
+                ["champs" => ["closed"]]
+            ]],
         ];
 
         $collections = [
