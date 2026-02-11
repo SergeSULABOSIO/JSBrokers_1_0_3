@@ -326,23 +326,58 @@ trait ControllerUtilsTrait
         ?callable $initializer = null
     ): Response {
         ['entreprise' => $entreprise, 'invite' => $invite] = $this->validateWorkspaceAccess($request);
+        $isCreationMode = ($entity === null);
 
         if (!$entity) {
             $entity = new $entityClass();
-            if (is_callable($initializer)) {
+            // L'initialiseur est appelé uniquement si on ne reçoit pas de contexte parent,
+            // pour ne pas écraser la liaison qui sera établie juste après.
+            if (is_callable($initializer) && !$request->query->get('parent_field_name')) {
                 // Call the initializer function with the new entity and the invite
                 $initializer($entity, $invite);
+            }
+        }
+
+        $formCanvas = $this->canvasBuilder->getEntityFormCanvas($entity, $entreprise->getId());
+
+        // NOUVEAU : Injection dynamique du champ parent pour les collections polymorphes.
+        // Si on est en mode création et que l'URL contient les infos du parent (fournies par dialog-instance.js),
+        // on injecte un champ masqué dans le formulaire de l'enfant et on pré-remplit l'entité.
+        $parentFieldName = $request->query->get('parent_field_name');
+        $parentId = $request->query->get('parent_id');
+
+        if ($isCreationMode && $parentFieldName && $parentId) {
+            // 1. On pré-remplit l'entité enfant avec son parent.
+            $setter = 'set' . ucfirst($parentFieldName);
+            $parentMap = $this->buildParentAssociationMapFromEntity($entityClass);
+            if (method_exists($entity, $setter) && isset($parentMap[$parentFieldName])) {
+                $parentClass = $parentMap[$parentFieldName];
+                $parentEntity = $this->em->getRepository($parentClass)->find($parentId);
+                if ($parentEntity) {
+                    $entity->$setter($parentEntity);
+                }
+            }
+
+            // 2. On ajoute le champ au layout du formulaire pour qu'il soit rendu, mais masqué.
+            if (isset($formCanvas['form_layout']) && is_array($formCanvas['form_layout'])) {
+                $parentFieldConfig = [
+                    'field_code' => $parentFieldName,
+                    'options' => ['row_attr' => ['class' => 'd-none']] // Masque la ligne du formulaire.
+                ];
+                // On ajoute ce champ au début du layout.
+                array_unshift($formCanvas['form_layout'], [
+                    "colonnes" => [["champs" => [$parentFieldConfig]]]
+                ]);
             }
         }
 
         $form = $this->createForm($formTypeClass, $entity);
         $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
         $this->loadCalculatedValues($entityCanvas, $entity);
-        $isCreationMode = ($entity->getId() === null);
 
         return $this->render('components/dialog/_form_content.html.twig', [
             'form' => $form->createView(),
-            'formCanvas' => $this->canvasBuilder->getEntityFormCanvas($entity, $entreprise->getId()),
+            'formCanvas' => $formCanvas, // On passe le canvas potentiellement modifié.
             'entityCanvas' => $entityCanvas,
             'entity' => $entity,
             'isCreationMode' => $isCreationMode,
