@@ -39,7 +39,11 @@ class DocumentFormCanvasProvider implements FormCanvasProviderInterface
     private function buildDocumentLayout(int $documentId, bool $isParentNew): array
     {
         $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["classeur"]]]],
+            // En ajoutant le champ 'cotation', on s'assure que la liaison avec l'entité parente
+            // est gérée automatiquement par le formulaire, suivant le même modèle que pour Tranche.php.
+            // Le champ 'classeur' est conservé pour les cas où un document est ajouté depuis un classeur.
+            // Le système gérera correctement l'association car un seul des deux champs (cotation ou classeur) sera rempli.
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["cotation"]], ["champs" => ["classeur"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["fichier"]]]],
         ];
 
