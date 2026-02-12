@@ -445,9 +445,27 @@ trait ControllerUtilsTrait
                 // }
             }
 
-            if (method_exists($this, 'associateParent')) {
-                $this->associateParent($entity, $data, $this->em);
+            // CORRECTION & ROBUSTESSE : Remplacement de la méthode 'associateParent' ambiguë.
+            // Cette nouvelle logique garantit l'association correcte pour les entités polymorphes
+            // comme Document ou Tache, en lisant directement les données brutes de la requête.
+            // Elle est appelée après la validation du formulaire mais avant la persistance,
+            // ce qui est le moment idéal pour établir la liaison parente.
+            $parentMap = $this->buildParentAssociationMapFromEntity($entityClass);
+            foreach ($parentMap as $parentField => $parentClass) {
+                // On vérifie si un champ correspondant à une relation parente (ex: 'cotation', 'piste')
+                // est présent et non vide dans les données soumises.
+                if (isset($data[$parentField]) && !empty($data[$parentField])) {
+                    $parentEntity = $this->em->getRepository($parentClass)->find($data[$parentField]);
+                    if ($parentEntity) {
+                        $setter = 'set' . ucfirst($parentField);
+                        if (method_exists($entity, $setter)) {
+                            // On appelle le setter (ex: setCotation()) sur l'entité enfant.
+                            $entity->$setter($parentEntity);
+                        }
+                    }
+                }
             }
+
             $this->em->persist($entity);
             $this->em->flush();
 
