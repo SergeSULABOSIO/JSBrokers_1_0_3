@@ -194,6 +194,7 @@ class CalculationProvider
                     'ageDocument' => $this->calculateDocumentAge($entity),
                     'typeFichier' => $this->getDocumentTypeFichier($entity),
                     'parent_string' => $this->Document_getParentAsString($entity),
+                    'classeur_string' => $this->Document_getClasseurAsString($entity),
                 ];
                 break;
             case Chargement::class:
