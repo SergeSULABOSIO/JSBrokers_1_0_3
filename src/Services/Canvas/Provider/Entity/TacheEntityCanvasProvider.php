@@ -62,7 +62,7 @@ class TacheEntityCanvasProvider implements EntityCanvasProviderInterface
             ["code" => "delaiRestant", "intitule" => "Délai Restant", "type" => "Texte", "format" => "Texte", "description" => "Temps restant avant l'échéance de la tâche."],
             ["code" => "ageTache", "intitule" => "Âge", "type" => "Texte", "format" => "Texte", "description" => "Nombre de jours depuis la création de la tâche."],
             ["code" => "nombreFeedbacks", "intitule" => "Nb. Feedbacks", "type" => "Entier", "format" => "Nombre", "description" => "Nombre de feedbacks enregistrés pour cette tâche."],
-            ["code" => "contexteTache", "intitule" => "Contexte", "type" => "Texte", "format" => "Texte", "description" => "Entité parente à laquelle la tâche est rattachée (Piste, Cotation, etc.)."],
+            ["code" => "contexteTache", "intitule" => "Contexte", "type" => "Calcul", "format" => "Texte", "fonction" => "getTacheContexteString", "description" => "Entité parente à laquelle la tâche est rattachée (Piste, Cotation, etc.)."],
         ];
     }
 }
