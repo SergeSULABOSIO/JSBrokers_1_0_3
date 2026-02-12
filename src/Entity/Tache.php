@@ -70,6 +70,10 @@ class Tache
     // #[Groups(['list:read'])]
     private ?OffreIndemnisationSinistre $offreIndemnisationSinistre = null;
 
+    // Attribut calculé pour afficher le contexte dans l'UI.
+    #[Groups(['list:read'])]
+    public ?string $contexteTache = null;
+
     public function __construct()
     {
         $this->feedbacks = new ArrayCollection();
