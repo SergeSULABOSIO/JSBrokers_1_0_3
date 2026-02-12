@@ -31,6 +31,7 @@ class DocumentListCanvasProvider implements ListCanvasProviderInterface
                         "attribut_code" => "createdAt",
                         "attribut_type" => "date",
                     ],
+                    ["attribut_code" => "parent_string"],
                 ],
             ],
         ];

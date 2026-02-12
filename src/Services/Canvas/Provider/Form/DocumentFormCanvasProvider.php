@@ -39,8 +39,8 @@ class DocumentFormCanvasProvider implements FormCanvasProviderInterface
     private function buildDocumentLayout(int $documentId, bool $isParentNew): array
     {
         $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["classeur"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["fichier"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["fichier"]], ["champs" => ["classeur"]]]],
         ];
 
         return $layout;

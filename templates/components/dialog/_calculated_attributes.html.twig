@@ -15,7 +15,7 @@
                             data-action="mouseenter->tooltip#show mouseleave->tooltip#hide"
                             data-tooltip-content="{{ attr.description|default('Aucune description disponible.') }}"
                         >
-                            <span class="attr-label">{{ attr.intitule }} :</span>
+                            <span class="attr-label">{{ attr.intitule }}:</span>
                             <span class="attr-value">
                                 {# On récupère dynamiquement la valeur depuis l'objet 'entity' #}
                                 {% set value = attribute(entity, attr.code) %}

@@ -20,6 +20,7 @@ class TacheListCanvasProvider implements ListCanvasProviderInterface
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Pour: ", "attribut_code" => "executor"],
                     ["attribut_prefixe" => "Échéance: ", "attribut_code" => "toBeEndedAt", "attribut_type" => "date"],
+                    ["attribut_code" => "contexteTache"],
                 ],
             ],
         ];
