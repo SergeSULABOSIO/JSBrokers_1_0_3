@@ -82,6 +82,9 @@ class Document
     public ?string $parent_string;
 
     #[Groups(['list:read'])]
+    public ?string $classeur_string;
+
+    #[Groups(['list:read'])]
     public ?string $ageDocument;
 
     #[Groups(['list:read'])]

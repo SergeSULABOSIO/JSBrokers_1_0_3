@@ -56,7 +56,8 @@ class DocumentEntityCanvasProvider implements EntityCanvasProviderInterface
     private function getSpecificIndicators(): array
     {
         return [
-            ["code" => "parent_string", "intitule" => "Parent", "type" => "Calcul", "format" => "Texte", "fonction" => "Document_getParentAsString", "description" => "Entité parente à laquelle le document est rattaché."],
+            ["code" => "parent_string", "intitule" => "Contexte", "type" => "Calcul", "format" => "Texte", "fonction" => "Document_getParentAsString", "description" => "Entité parente à laquelle le document est rattaché."],
+            ["code" => "classeur_string", "intitule" => "Classement", "type" => "Calcul", "format" => "Texte", "fonction" => "Document_getClasseurAsString", "description" => "Classeur dans lequel le document est archivé."],
             ["code" => "ageDocument", "intitule" => "Âge du document", "type" => "Calcul", "format" => "Texte", "fonction" => "calculateDocumentAge", "description" => "Âge du document depuis sa création."],
             ["code" => "typeFichier", "intitule" => "Type de fichier", "type" => "Calcul", "format" => "Texte", "fonction" => "getDocumentTypeFichier", "description" => "Extension du fichier."],
         ];

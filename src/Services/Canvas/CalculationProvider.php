@@ -1769,29 +1769,28 @@ class CalculationProvider
         };
     }
 
-    public function Document_getParentAsString(?Document $document): ?string
+    public function Document_getParentAsString(?Document $document): string
     {
         if ($document === null) {
-            return null;
+            return "Document non trouvé.";
         }
 
         // Cette carte de correspondance améliore la lisibilité et la maintenabilité.
         // Chaque entrée associe une méthode "getter" à une fonction anonyme (closure)
         // qui formate la chaîne de caractères de sortie.
         $parentGetters = [
-            'getClasseur' => fn ($e) => "Classeur: " . $e->getNom(),
-            'getPieceSinistre' => fn ($e) => "Pièce Sinistre: " . $e->getDescription(),
-            'getOffreIndemnisationSinistre' => fn ($e) => "Offre: " . $e->getNom(),
-            'getCotation' => fn ($e) => "Cotation: " . $e->getNom(),
-            'getAvenant' => fn ($e) => "Avenant: " . $e->getReferencePolice(),
-            'getTache' => fn ($e) => "Tâche: " . $e->getDescription(),
-            'getFeedback' => fn ($e) => "Feedback: " . $e->getDescription(),
-            'getClient' => fn ($e) => "Client: " . $e->getNom(),
-            'getBordereau' => fn ($e) => "Bordereau: " . $e->getNom(),
-            'getCompteBancaire' => fn ($e) => "Cpt. Bancaire: " . $e->getNom(),
-            'getPiste' => fn ($e) => "Piste: " . $e->getNom(),
-            'getPartenaire' => fn ($e) => "Partenaire: " . $e->getNom(),
-            'getPaiement' => fn ($e) => "Paiement: " . $e->getReference(),
+            'getPieceSinistre' => fn ($e) => "Lié à la pièce sinistre : '" . $e->getDescription() . "'",
+            'getOffreIndemnisationSinistre' => fn ($e) => "Lié à l'offre d'indemnisation : '" . $e->getNom() . "'",
+            'getCotation' => fn ($e) => "Lié à la cotation : '" . $e->getNom() . "'",
+            'getAvenant' => fn ($e) => "Lié à l'avenant (police n°" . $e->getReferencePolice() . ")",
+            'getTache' => fn ($e) => "Lié à la tâche : '" . $e->getDescription() . "'",
+            'getFeedback' => fn ($e) => "Lié au feedback : '" . $e->getDescription() . "'",
+            'getClient' => fn ($e) => "Lié au client : '" . $e->getNom() . "'",
+            'getBordereau' => fn ($e) => "Lié au bordereau : '" . $e->getNom() . "'",
+            'getCompteBancaire' => fn ($e) => "Lié au compte bancaire : '" . $e->getNom() . "'",
+            'getPiste' => fn ($e) => "Lié à la piste : '" . $e->getNom() . "'",
+            'getPartenaire' => fn ($e) => "Lié au partenaire : '" . $e->getNom() . "'",
+            'getPaiement' => fn ($e) => "Utilisé comme preuve pour le paiement n°" . $e->getReference(),
         ];
 
         foreach ($parentGetters as $getter => $formatter) {
@@ -1800,7 +1799,15 @@ class CalculationProvider
             }
         }
 
-        return "Non-associé";
+        return "Ce document n'est rattaché à aucun élément parent.";
+    }
+
+    public function Document_getClasseurAsString(?Document $document): string
+    {
+        if ($document === null || !$document->getClasseur()) {
+            return "Non classé";
+        }
+        return "Classé dans : '" . $document->getClasseur()->getNom() . "'";
     }
 
     /**
