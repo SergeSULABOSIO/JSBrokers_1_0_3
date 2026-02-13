@@ -32,6 +32,11 @@
             {# Conteneur pour le titre normal, qui sera caché pendant le chargement #}
             <div class="title-left-block" data-collection-target="titleContent">
                 <span class="toggle-icon">+</span>
+                {% if manager_options.totalizableField is defined and manager_options.totalValue is defined %}
+                    <strong class="collection-total-value text-primary mx-2" title="Total {{ manager_options.totalizableField|replace({'_': ' '})|title }}">
+                        {{ manager_options.totalValue|number_format(2, ',', ' ') }}
+                    </strong>
+                {% endif %}
                 <strong class="field-label">{{ form.vars.label|default(form.vars.name) }}</strong>
                 {% if form.vars.help %}<span class="form-text text-muted">({{ form.vars.help }})</span>{% endif %}
                 <span class="badge bg-primary ms-auto" data-collection-target="countBadge" style="display: none;">0</span>

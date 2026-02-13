@@ -27,7 +27,7 @@ class CompteBancaireFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/comptebancaire/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildCompteBancaireLayout($compteId, $isParentNew);
+        $layout = $this->buildCompteBancaireLayout($object, $isParentNew);
 
         return [
             "parametres" => $parametres,
@@ -36,8 +36,9 @@ class CompteBancaireFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildCompteBancaireLayout(int $compteId, bool $isParentNew): array
+    private function buildCompteBancaireLayout(CompteBancaire $object, bool $isParentNew): array
     {
+        $compteId = $object->getId() ?? 0;
         $layout = [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["banque"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["intitule"]], ["champs" => ["numero"]], ["champs" => ["codeSwift"]]]],
@@ -46,7 +47,7 @@ class CompteBancaireFormCanvasProvider implements FormCanvasProviderInterface
             ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'compteBancaire'],
             ['fieldName' => 'paiements', 'entityRouteName' => 'paiement', 'formTitle' => 'Paiement', 'parentFieldName' => 'compteBancaire'],
         ];
-        $this->addCollectionWidgetsToLayout($layout, $compteId, $isParentNew, $collections);
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
         return $layout;
     }
 }

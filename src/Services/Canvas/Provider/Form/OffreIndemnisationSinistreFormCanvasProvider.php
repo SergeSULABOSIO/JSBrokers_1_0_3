@@ -27,7 +27,7 @@ class OffreIndemnisationSinistreFormCanvasProvider implements FormCanvasProvider
             "endpoint_form_url" => "/admin/offreindemnisationsinistre/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildOffreIndemnisationLayout($offreId, $isParentNew);
+        $layout = $this->buildOffreIndemnisationLayout($object, $isParentNew);
 
         return [
             "parametres" => $parametres,
@@ -36,8 +36,9 @@ class OffreIndemnisationSinistreFormCanvasProvider implements FormCanvasProvider
         ];
     }
 
-    private function buildOffreIndemnisationLayout(int $offreId, bool $isParentNew): array
+    private function buildOffreIndemnisationLayout(OffreIndemnisationSinistre $object, bool $isParentNew): array
     {
+        $offreId = $object->getId() ?? 0;
         $layout = [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["beneficiaire"]]]],
@@ -51,7 +52,7 @@ class OffreIndemnisationSinistreFormCanvasProvider implements FormCanvasProvider
             ['fieldName' => 'paiements', 'entityRouteName' => 'paiement', 'formTitle' => 'Paiement', 'parentFieldName' => 'offreIndemnisationSinistre', 'defaultValueConfig' => ['source' => 'montantPayable', 'target' => 'montant']],
         ];
 
-        $this->addCollectionWidgetsToLayout($layout, $offreId, $isParentNew, $collections);
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
         return $layout;
     }
 }

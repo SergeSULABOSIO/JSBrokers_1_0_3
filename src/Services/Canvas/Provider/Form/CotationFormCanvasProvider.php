@@ -16,8 +16,7 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
     public function getCanvas(object $object, ?int $idEntreprise): array
     {
         /** @var Cotation $object */
-        $isCreateMode = $object->getId() === null;
-        $cotationId = $object->getId() ?? 0;
+        $isCreateMode = ($object->getId() === null);
 
         $parametres = [
             'titre_creation' => "Création d'une nouvelle cotation",
@@ -28,7 +27,7 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
             'isCreationMode' => $isCreateMode
         ];
 
-        $layout = $this->buildCotationLayout($cotationId, $isCreateMode);
+        $layout = $this->buildCotationLayout($object, $isCreateMode);
 
         return [
             'parametres' => $parametres,
@@ -37,8 +36,9 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildCotationLayout(int $cotationId, bool $isCreateMode): array
+    private function buildCotationLayout(Cotation $object, bool $isCreateMode): array
     {
+        $cotationId = $object->getId() ?? 0;
         $layout = [
             [ // Ligne 1 : Nom (pleine largeur)
                 'colonnes' => [
@@ -54,7 +54,8 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
         ];
 
         $collections = [
-            ['fieldName' => 'chargements', 'entityRouteName' => 'chargementpourprime', 'formTitle' => 'Chargement', 'parentFieldName' => 'cotation'],
+            ['fieldName' => 'chargements', 'entityRouteName' => 'chargementpourprime', 'formTitle' => 'Chargement', 'parentFieldName' => 'cotation', 'totalizableField' => 'montantFlatExceptionel'],
+            ['fieldName' => 'chargements', 'entityRouteName' => 'chargementpourprime', 'formTitle' => 'Chargement', 'parentFieldName' => 'cotation', 'totalizableField' => 'montant_final'],
             ['fieldName' => 'revenus', 'entityRouteName' => 'revenucourtier', 'formTitle' => 'Revenu', 'parentFieldName' => 'cotation'],
             ['fieldName' => 'tranches', 'entityRouteName' => 'tranche', 'formTitle' => 'Tranche', 'parentFieldName' => 'cotation'],
             ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'cotation'],
@@ -62,7 +63,7 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
             ['fieldName' => 'avenants', 'entityRouteName' => 'avenant', 'formTitle' => 'Avenant', 'parentFieldName' => 'cotation'],
         ];
 
-        $this->addCollectionWidgetsToLayout($layout, $cotationId, $isCreateMode, $collections);
+        $this->addCollectionWidgetsToLayout($layout, $object, $isCreateMode, $collections);
 
         return $layout;
     }

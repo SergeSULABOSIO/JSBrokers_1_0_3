@@ -27,7 +27,7 @@ class BordereauFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/bordereau/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildBordereauLayout($bordereauId, $isParentNew);
+        $layout = $this->buildBordereauLayout($object, $isParentNew);
 
         return [
             "parametres" => $parametres,
@@ -36,14 +36,15 @@ class BordereauFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildBordereauLayout(int $bordereauId, bool $isParentNew): array
+    private function buildBordereauLayout(Bordereau $object, bool $isParentNew): array
     {
+        $bordereauId = $object->getId() ?? 0;
         $layout = [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["assureur"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["montantTTC"]], ["champs" => ["receivedAt"]]]],
         ];
         $collections = [['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'bordereau']];
-        $this->addCollectionWidgetsToLayout($layout, $bordereauId, $isParentNew, $collections);
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
         return $layout;
     }
 }

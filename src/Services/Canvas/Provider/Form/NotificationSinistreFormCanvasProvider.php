@@ -27,7 +27,7 @@ class NotificationSinistreFormCanvasProvider implements FormCanvasProviderInterf
             "endpoint_form_url" => "/admin/notificationsinistre/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildNotificationSinistreLayout($notificationId, $isParentNew);
+        $layout = $this->buildNotificationSinistreLayout($object, $isParentNew);
 
         return [
             "parametres" => $parametres,
@@ -36,8 +36,9 @@ class NotificationSinistreFormCanvasProvider implements FormCanvasProviderInterf
         ];
     }
 
-    private function buildNotificationSinistreLayout(int $notificationId, bool $isParentNew): array
+    private function buildNotificationSinistreLayout(NotificationSinistre $object, bool $isParentNew): array
     {
+        $notificationId = $object->getId() ?? 0;
         $layout = [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["assure"]], ["champs" => ["assureur"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["risque"]]]],
@@ -55,7 +56,7 @@ class NotificationSinistreFormCanvasProvider implements FormCanvasProviderInterf
             ['fieldName' => 'taches', 'entityRouteName' => 'tache', 'formTitle' => 'Tâche', 'parentFieldName' => 'notificationSinistre'],
         ];
 
-        $this->addCollectionWidgetsToLayout($layout, $notificationId, $isParentNew, $collections);
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 
         return $layout;
     }

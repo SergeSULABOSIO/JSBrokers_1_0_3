@@ -27,7 +27,7 @@ class PisteFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/piste/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildPisteLayout($pisteId, $isParentNew);
+        $layout = $this->buildPisteLayout($object, $isParentNew);
 
         return [
             "parametres" => $parametres,
@@ -36,8 +36,9 @@ class PisteFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildPisteLayout(int $pisteId, bool $isParentNew): array
+    private function buildPisteLayout(Piste $object, bool $isParentNew): array
     {
+        $pisteId = $object->getId() ?? 0;
         $layout = [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["client"]], ["champs" => ["risque"]]]],
@@ -49,7 +50,7 @@ class PisteFormCanvasProvider implements FormCanvasProviderInterface
             ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'piste'],
         ];
 
-        $this->addCollectionWidgetsToLayout($layout, $pisteId, $isParentNew, $collections);
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
         return $layout;
     }
 }

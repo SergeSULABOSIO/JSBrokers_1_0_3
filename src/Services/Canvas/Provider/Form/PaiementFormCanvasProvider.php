@@ -27,7 +27,7 @@ class PaiementFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/paiement/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildPaiementLayout($paiementId, $isParentNew);
+        $layout = $this->buildPaiementLayout($object, $isParentNew);
 
         return [
             "parametres" => $parametres,
@@ -36,8 +36,9 @@ class PaiementFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildPaiementLayout(int $paiementId, bool $isParentNew): array
+    private function buildPaiementLayout(Paiement $object, bool $isParentNew): array
     {
+        $paiementId = $object->getId() ?? 0;
         $layout = [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["montant"]], ["champs" => ["reference"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
@@ -48,7 +49,7 @@ class PaiementFormCanvasProvider implements FormCanvasProviderInterface
             ['fieldName' => 'preuves', 'entityRouteName' => 'document', 'formTitle' => 'Preuve', 'parentFieldName' => 'paiement'],
         ];
 
-        $this->addCollectionWidgetsToLayout($layout, $paiementId, $isParentNew, $collections);
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
         return $layout;
     }
 }

@@ -27,7 +27,7 @@ class AvenantFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/avenant/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildAvenantLayout($avenantId, $isParentNew);
+        $layout = $this->buildAvenantLayout($object, $isParentNew);
 
         return [
             "parametres" => $parametres,
@@ -36,8 +36,9 @@ class AvenantFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildAvenantLayout(int $avenantId, bool $isParentNew): array
+    private function buildAvenantLayout(Avenant $object, bool $isParentNew): array
     {
+        $avenantId = $object->getId() ?? 0;
         $layout = [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["cotation"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["numero"]], ["champs" => ["referencePolice"]]]],
@@ -49,7 +50,7 @@ class AvenantFormCanvasProvider implements FormCanvasProviderInterface
             ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'avenant'],
         ];
 
-        $this->addCollectionWidgetsToLayout($layout, $avenantId, $isParentNew, $collections);
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
         return $layout;
     }
 }
