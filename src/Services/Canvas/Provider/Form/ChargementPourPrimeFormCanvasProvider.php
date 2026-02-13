@@ -39,8 +39,11 @@ class ChargementPourPrimeFormCanvasProvider implements FormCanvasProviderInterfa
     private function buildChargementPourPrimeLayout(int $chargementId, bool $isParentNew): array
     {
         $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["cotation"]]]],
+            // Ligne 1 : Le nom du chargement sur toute la largeur.
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"], 'width' => 12]]],
+            // Ligne 2 : Le type et le montant se partagent l'espace.
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["type"]], ["champs" => ["montantFlatExceptionel"]]]],
+            // Le champ 'cotation' est le lien parent, il est géré automatiquement et n'a pas besoin d'être dans le layout visible.
         ];
         return $layout;
     }
