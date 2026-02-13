@@ -14,11 +14,25 @@ trait FormCanvasProviderTrait
                 $getter = 'get' . ucfirst($config['fieldName']);
                 if (method_exists($parentEntity, $getter)) {
                     $collection = $parentEntity->{$getter}();
-                    $valueGetter = 'get' . ucfirst($config['totalizableField']);
+
+                    $fieldName = $config['totalizableField'];
+                    // Convertit snake_case (ex: montant_final) en PascalCase (MontantFinal) pour le getter.
+                    $camelCaseField = lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $fieldName))));
+                    $valueGetter = 'get' . ucfirst($camelCaseField);
+
                     foreach ($collection as $item) {
+                        // ÉTAPE CRUCIALE : Charger les valeurs calculées pour l'élément avant de les utiliser.
+                        $this->canvasBuilder->loadAllCalculatedValues($item);
+
+                        $value = 0;
+                        // Essayer le getter d'abord (ex: getMontantFinal())
                         if (method_exists($item, $valueGetter)) {
-                            $total += $item->{$valueGetter}() ?? 0;
+                            $value = $item->{$valueGetter}();
+                        // Sinon, vérifier la propriété publique (ex: montant_final)
+                        } elseif (property_exists($item, $fieldName) && isset($item->{$fieldName})) {
+                            $value = $item->{$fieldName};
                         }
+                        $total += $value ?? 0;
                     }
                 }
                 $extraOptions['totalizableField'] = $config['totalizableField'];
