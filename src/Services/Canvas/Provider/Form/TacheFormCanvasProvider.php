@@ -3,10 +3,18 @@
 namespace App\Services\Canvas\Provider\Form;
 
 use App\Entity\Tache;
+use App\Services\CanvasBuilder;
+use Doctrine\ORM\EntityManagerInterface;
 
 class TacheFormCanvasProvider implements FormCanvasProviderInterface
 {
     use FormCanvasProviderTrait;
+
+    public function __construct(
+        private CanvasBuilder $canvasBuilder,
+        private EntityManagerInterface $em
+    ) {
+    }
 
     public function supports(string $entityClassName): bool
     {
@@ -17,7 +25,6 @@ class TacheFormCanvasProvider implements FormCanvasProviderInterface
     {
         /** @var Tache $object */
         $isParentNew = ($object->getId() === null);
-        $tacheId = $object->getId() ?? 0;
 
         $parametres = [
             "titre_creation" => "Nouvelle tâche",
@@ -27,7 +34,7 @@ class TacheFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/tache/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildTacheLayout($tacheId, $isParentNew);
+        $layout = $this->buildTacheLayout($object, $isParentNew);
 
         return [
             "parametres" => $parametres,
@@ -36,8 +43,9 @@ class TacheFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildTacheLayout(int $tacheId, bool $isParentNew): array
+    private function buildTacheLayout(Tache $object, bool $isParentNew): array
     {
+        $tacheId = $object->getId() ?? 0;
         $layout = [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["toBeEndedAt"]], ["champs" => ["executor"]], ["champs" => ["closed"]]]],
@@ -48,7 +56,7 @@ class TacheFormCanvasProvider implements FormCanvasProviderInterface
             ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'tache'],
         ];
 
-        $this->addCollectionWidgetsToLayout($layout, $tacheId, $isParentNew, $collections);
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
         return $layout;
     }
 }
