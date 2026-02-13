@@ -3,10 +3,18 @@
 namespace App\Services\Canvas\Provider\Form;
 
 use App\Entity\NotificationSinistre;
+use App\Services\CanvasBuilder;
+use Doctrine\ORM\EntityManagerInterface;
 
 class NotificationSinistreFormCanvasProvider implements FormCanvasProviderInterface
 {
     use FormCanvasProviderTrait;
+
+    public function __construct(
+        private CanvasBuilder $canvasBuilder,
+        private EntityManagerInterface $em
+    ) {
+    }
 
     public function supports(string $entityClassName): bool
     {

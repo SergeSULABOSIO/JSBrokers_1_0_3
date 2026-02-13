@@ -3,10 +3,18 @@
 namespace App\Services\Canvas\Provider\Form;
 
 use App\Entity\Paiement;
+use App\Services\CanvasBuilder;
+use Doctrine\ORM\EntityManagerInterface;
 
 class PaiementFormCanvasProvider implements FormCanvasProviderInterface
 {
     use FormCanvasProviderTrait;
+
+    public function __construct(
+        private CanvasBuilder $canvasBuilder,
+        private EntityManagerInterface $em
+    ) {
+    }
 
     public function supports(string $entityClassName): bool
     {

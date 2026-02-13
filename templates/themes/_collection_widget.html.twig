@@ -34,7 +34,7 @@
                 <span class="toggle-icon">+</span>
                 {% if manager_options.totalizableField is defined and manager_options.totalValue is defined %}
                     <strong class="collection-total-value text-primary mx-2" title="Total {{ manager_options.totalizableField|replace({'_': ' '})|title }}">
-                        {{ manager_options.totalValue|number_format(2, ',', ' ') }}
+                        {{ manager_options.totalValue|number_format(2, ',', ' ') }} {{ manager_options.totalUnit|default('') }}
                     </strong>
                 {% endif %}
                 <strong class="field-label">{{ form.vars.label|default(form.vars.name) }}</strong>
