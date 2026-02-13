@@ -14,8 +14,9 @@ export default class extends Controller {
         "addButtonContainer",
         "countBadge",
         "rowActions", // Cible pour les conteneurs d'actions de ligne
-        "titleLoading", // NOUVEAU : Cible pour le squelette du titre
-        "titleContent"  // NOUVEAU : Cible pour le contenu normal du titre
+        "titleLoading",
+        "titleContent",
+        "totalValueDisplay"
     ];
 
     static values = {
@@ -82,10 +83,15 @@ export default class extends Controller {
             const response = await fetch(dialogListUrl);
             if (!response.ok) throw new Error(`Erreur serveur: ${response.statusText}`);
 
-            const html = await response.text();
-            this.listContainerTarget.innerHTML = html;
+            const data = await response.json(); // NOUVEAU: On attend une réponse JSON
 
-            this.updateCount();
+            // On injecte le HTML de la liste
+            this.listContainerTarget.innerHTML = data.html;
+
+            // On met à jour le total et le compteur
+            this.updateTotal(data.totalValue, data.totalUnit);
+            this.updateCount(data.itemCount);
+
         } catch (error) {
             this.listContainerTarget.innerHTML = `<div class="alert alert-danger">Impossible de charger la liste: ${error.message}</div>`;
             console.error(`${this.nomControleur} - Erreur lors du chargement de la collection:`, error, this.listUrlValue);
@@ -209,6 +215,28 @@ export default class extends Controller {
         }
     }
 
+    /**
+     * NOUVEAU : Met à jour l'affichage du montant total dans le titre de l'accordéon.
+     * @param {number|null} totalValue 
+     * @param {string|null} totalUnit 
+     */
+    updateTotal(totalValue, totalUnit) {
+        if (!this.hasTotalValueDisplayTarget) {
+            return;
+        }
+
+        if (totalValue !== null && totalValue !== undefined) {
+            const formattedValue = totalValue.toLocaleString('fr-FR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+
+            this.totalValueDisplayTarget.textContent = `${formattedValue} ${totalUnit || ''}`.trim();
+            this.totalValueDisplayTarget.style.display = 'inline-block';
+        } else {
+            this.totalValueDisplayTarget.style.display = 'none';
+        }
+    }
 
     /**
      * Rafraîchit la liste si l'événement de sauvegarde concerne cette collection.
@@ -225,11 +253,11 @@ export default class extends Controller {
     /**
      * Met à jour le badge affichant le nombre d'éléments.
      */
-    updateCount() {
+    updateCount(count = null) {
         if (this.hasCountBadgeTarget) {
-            const count = this.listContainerTarget.querySelectorAll('[data-item-id]').length;
-            this.countBadgeTarget.textContent = count;
-            this.countBadgeTarget.style.display = count > 0 ? 'inline-block' : 'none';
+            const itemCount = count !== null ? count : this.listContainerTarget.querySelectorAll('[data-item-id]').length;
+            this.countBadgeTarget.textContent = itemCount;
+            this.countBadgeTarget.style.display = itemCount > 0 ? 'inline-block' : 'none';
         }
     }
 

@@ -1829,6 +1829,17 @@ class CalculationProvider
      */
     private function getChargementPourPrimeMontantTaxe(ChargementPourPrime $chargement): float
     {
+        // --- NOUVELLE LOGIQUE ---
+        // 1. Récupérer le type de chargement et sa fonction.
+        $typeChargement = $chargement->getType();
+
+        // 2. Si le type n'est pas défini ou si sa fonction est d'être une TAXE (ex: TVA, Frais ARCA),
+        //    alors le chargement lui-même est une taxe et ne peut pas être taxé à nouveau.
+        if ($typeChargement === null || $typeChargement->getFonction() === Chargement::FONCTION_TAXE) {
+            return 0.0;
+        }
+        // --- FIN NOUVELLE LOGIQUE ---
+
         $montant = $chargement->getMontantFlatExceptionel() ?? 0.0;
         if ($montant === 0.0) {
             return 0.0;

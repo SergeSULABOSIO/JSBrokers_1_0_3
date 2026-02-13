@@ -565,6 +565,45 @@ trait ControllerUtilsTrait
         $collectionOptions = $this->getCollectionOptionsFromCanvas($parentFormCanvas, $collectionName);
         $totalizableField = $collectionOptions['totalizableField'] ?? null;
 
+        // --- NOUVELLE LOGIQUE DE RÉPONSE JSON ---
+        if ($usage === 'dialog') {
+            $totalValue = null;
+            $totalUnit = '';
+            $data = $parentEntity->{'get' . ucfirst($collectionName)}();
+            $entityClass = $collectionMap[$collectionName];
+
+            if ($totalizableField) {
+                $total = 0;
+                $fieldName = $totalizableField;
+                $camelCaseField = lcfirst(str_replace(' ', '', ucwords(str_replace('_', ' ', $fieldName))));
+                $valueGetter = 'get' . ucfirst($camelCaseField);
+
+                foreach ($data as $item) {
+                    $this->canvasBuilder->loadAllCalculatedValues($item);
+                    $value = property_exists($item, $fieldName) ? ($item->{$fieldName} ?? 0) : 0;
+                    $total += $value;
+                }
+                $totalValue = $total;
+
+                $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
+                foreach ($entityCanvas['liste'] as $fieldDef) {
+                    if ($fieldDef['code'] === $totalizableField && isset($fieldDef['unite'])) {
+                        $totalUnit = $fieldDef['unite'];
+                        break;
+                    }
+                }
+            }
+
+            $html = $this->renderCollectionOrList('dialog', $entityClass, $parentEntity, $id, $data, $collectionName, $totalizableField)->getContent();
+
+            return new JsonResponse([
+                'html' => $html,
+                'totalValue' => $totalValue,
+                'totalUnit' => $totalUnit,
+                'itemCount' => count($data)
+            ]);
+        }
+
         $getter = 'get' . ucfirst($collectionName);
         if (!method_exists($parentEntity, $getter)) {
             throw new \BadMethodCallException(sprintf('La méthode "%s" n\'existe pas sur l\'entité "%s".', $getter, get_class($parentEntity)));
