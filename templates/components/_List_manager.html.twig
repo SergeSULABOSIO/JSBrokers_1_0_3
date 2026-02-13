@@ -57,7 +57,15 @@
                     {# MODIFICATION : On rend les lignes directement côté serveur si des données sont passées.
                        Le contrôleur JS ne chargera les données que lors d'une recherche/refresh. #}
                     {% for entity in data %}
-                        {{ include('components/_list_row.html.twig', { 'entity': entity, 'listeCanvas': listeCanvas, 'entite_nom': entite_nom, 'entityCanvas': entityCanvas, 'usage': usage|default('generic') }) }}
+                        {# NOUVEAU : On passe les variables de contexte de la collection à chaque ligne #}
+                        {{ include('components/_list_row.html.twig', { 
+                            'entity': entity, 
+                            'listeCanvas': listeCanvas, 
+                            'entite_nom': entite_nom, 
+                            'entityCanvas': entityCanvas, 
+                            'usage': usage|default('generic'),
+                            'item': entity, 'parentEntity': parentEntity, 'totalizableField': totalizableField, 'totalizableFieldDetails': totalizableFieldDetails
+                        }) }}
                     {% endfor %}
                 </tbody>
             </table>

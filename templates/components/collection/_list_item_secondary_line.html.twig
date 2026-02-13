@@ -1,0 +1,15 @@
+{# templates/components/collection/_list_item_secondary_line.html.twig #}
+{% if totalizableField is defined and totalizableField is not null and attribute(item, totalizableField) is not null %}
+    {# NOUVEAU RENDU pour les collections totalisables #}
+    {% set value = attribute(item, totalizableField) %}
+    {% set unit = totalizableFieldDetails.unite|default('') %}
+    {% set description = totalizableFieldDetails.description|default('') %}
+
+    <strong>{{ value|number_format(2, ',', ' ') }} {{ unit }}</strong>
+    {% if description %}
+        <span class="text-muted ms-1">- {{ description }}</span>
+    {% endif %}
+{% else %}
+    {# COMPORTEMENT PAR DÉFAUT pour les autres collections #}
+    {{ parentEntity }}
+{% endif %}
