@@ -107,12 +107,15 @@ export default class extends Controller {
      */
     toggleAccordion() {
         // On ne permet pas d'ouvrir l'accordéon s'il est désactivé
-        if (this.disabledValue) return;
+        if (this.disabledValue) {
+            return;
+        }
 
         this.contentPanelTarget.classList.toggle('is-open');
         const icon = this.element.querySelector('.toggle-icon');
         if (icon) {
-            icon.textContent = this.contentPanelTarget.classList.contains('is-open') ? '-' : '+';
+            // On met à jour l'icône en fonction de l'état ouvert/fermé.
+            icon.textContent = this.contentPanelTarget.classList.contains('is-open') ? '−' : '+';
         }
     }
 
