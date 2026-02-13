@@ -84,10 +84,10 @@
         <small class="text-secondary d-flex align-items-center mt-1" data-responsive-cell-target="secondaryInfo">
             {# NOUVEAU : On inclut le template partiel qui gère l'affichage conditionnel #}
             {% include 'components/collection/_list_item_secondary_line.html.twig' with {
-                'item': item,
-                'parentEntity': parentEntity,
-                'totalizableField': totalizableField,
-                'totalizableFieldDetails': totalizableFieldDetails
+                'item': entity,
+                'parentEntity': parentEntity|default(null),
+                'totalizableField': totalizableField|default(null),
+                'totalizableFieldDetails': totalizableFieldDetails|default(null)
             } %}
         </small>
     </td>
