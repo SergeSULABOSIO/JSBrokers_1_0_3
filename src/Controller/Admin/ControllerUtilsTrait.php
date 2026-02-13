@@ -165,7 +165,8 @@ trait ControllerUtilsTrait
         object $parentEntity,
         int $parentId,
         $data,
-        string $collectionFieldName
+        string $collectionFieldName,
+        ?string $totalizableField = null // NOUVEAU
     ): Response {
         $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
         foreach ($data as $item) {
@@ -183,6 +184,20 @@ trait ControllerUtilsTrait
         // NOUVEAU : On génère un ID unique et prédictible pour la liste de l'onglet.
         $listId = 'collection-' . $collectionFieldName . '-for-' . $parentId;
 
+        // NOUVEAU : Récupérer les détails du champ totalisable s'il existe.
+        $totalizableFieldDetails = null;
+        if ($totalizableField) {
+            foreach ($entityCanvas['liste'] as $fieldDef) {
+                if ($fieldDef['code'] === $totalizableField) {
+                    $totalizableFieldDetails = [
+                        'description' => $fieldDef['description'] ?? '',
+                        'unite' => $fieldDef['unite'] ?? ''
+                    ];
+                    break;
+                }
+            }
+        }
+
         $parameters = [
             'listId' => $listId, // NOUVEAU : ID unique pour le contrôleur list-manager.
             'can_add' => true, // On autorise l'ajout pour les listes de collection
@@ -198,6 +213,9 @@ trait ControllerUtilsTrait
             'idEntreprise' => $this->getEntreprise()->getId(),
             'customAddAction' => "click->collection#addItem",
             'parentEntityId' => $parentId,
+            'parentEntity' => $parentEntity, // NOUVEAU: On passe l'objet parent pour le fallback
+            'totalizableField' => $totalizableField, // NOUVEAU
+            'totalizableFieldDetails' => $totalizableFieldDetails, // NOUVEAU
         ];
 
         if ($usage === "dialog") {
@@ -541,13 +559,19 @@ trait ControllerUtilsTrait
             throw new NotFoundHttpException("La collection '$collectionName' n'existe pas ou n'est pas autorisée.");
         }
         $parentEntity = $this->findParentOrNew($parentEntityClass, $id);
+
+        // NOUVEAU : Déterminer si la collection est totalisable en inspectant le canvas du parent.
+        $parentFormCanvas = $this->canvasBuilder->getEntityFormCanvas($parentEntity, $this->getEntreprise()->getId());
+        $collectionOptions = $this->getCollectionOptionsFromCanvas($parentFormCanvas, $collectionName);
+        $totalizableField = $collectionOptions['totalizableField'] ?? null;
+
         $getter = 'get' . ucfirst($collectionName);
         if (!method_exists($parentEntity, $getter)) {
             throw new \BadMethodCallException(sprintf('La méthode "%s" n\'existe pas sur l\'entité "%s".', $getter, get_class($parentEntity)));
         }
         $data = $parentEntity->$getter();
         $entityClass = $collectionMap[$collectionName];
-        return $this->renderCollectionOrList($usage, $entityClass, $parentEntity, $id, $data, $collectionName);
+        return $this->renderCollectionOrList($usage, $entityClass, $parentEntity, $id, $data, $collectionName, $totalizableField);
     }
 
     /**
