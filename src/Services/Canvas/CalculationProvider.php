@@ -1829,23 +1829,8 @@ class CalculationProvider
      */
     private function getChargementPourPrimeMontantTaxe(ChargementPourPrime $chargement): float
     {
-        // --- NOUVELLE LOGIQUE ---
-        // 1. Récupérer le type de chargement et sa fonction.
-        $typeChargement = $chargement->getType();
-
-        // 2. Si le type n'est pas défini ou si sa fonction est d'être une TAXE (ex: TVA, Frais ARCA),
-        //    alors le chargement lui-même est une taxe et ne peut pas être taxé à nouveau.
-        if ($typeChargement === null || $typeChargement->getFonction() === Chargement::FONCTION_TAXE) {
-            return 0.0;
-        }
-        // --- FIN NOUVELLE LOGIQUE ---
-
-        $montant = $chargement->getMontantFlatExceptionel() ?? 0.0;
-        if ($montant === 0.0) {
-            return 0.0;
-        }
-        // La taxe sur un chargement est considérée comme une taxe assureur
-        return $this->serviceTaxes->getMontantTaxe($montant, $this->isIARD($chargement->getCotation()), true);
+        // Conformément à la demande, on ignore le calcul de la taxe pour le moment.
+        return 0.0;
     }
 
     /**
@@ -1853,9 +1838,8 @@ class CalculationProvider
      */
     private function getChargementPourPrimeMontantFinal(ChargementPourPrime $chargement): float
     {
-        $montant = $chargement->getMontantFlatExceptionel() ?? 0.0;
-        $taxe = $this->getChargementPourPrimeMontantTaxe($chargement);
-        return $montant + $taxe;
+        // Le montant final est maintenant le montant brut, sans taxe ajoutée.
+        return $chargement->getMontantFlatExceptionel() ?? 0.0;
     }
 
     /**
