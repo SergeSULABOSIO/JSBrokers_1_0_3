@@ -33,7 +33,7 @@
             <div class="title-left-block" data-collection-target="titleContent">
                 <span class="toggle-icon">+</span>
                 {% if manager_options.totalizableField is defined and manager_options.totalValue is defined %}
-                    <strong class="collection-total-value text-primary mx-2"
+                    <strong class="collection-total-value text-primary"
                             data-action="mouseenter->collection#showTooltip mouseleave->collection#hideTooltip"
                             data-tooltip-text-value="Total {{ manager_options.totalizableField|replace({'_': ' '})|title }}"
                             data-collection-target="totalValueDisplay">
