@@ -82,13 +82,41 @@
 
         {# Ligne 2: Textes secondaires #}
         <small class="text-secondary d-flex align-items-center mt-1" data-responsive-cell-target="secondaryInfo">
-            {# NOUVEAU : On inclut le template partiel qui gère l'affichage conditionnel #}
-            {% include 'components/collection/_list_item_secondary_line.html.twig' with {
-                'item': entity,
-                'parentEntity': parentEntity|default(null),
-                'totalizableField': totalizableField|default(null),
-                'totalizableFieldDetails': totalizableFieldDetails|default(null)
-            } %}
+            {# CORRECTION : La logique d'affichage est maintenant conditionnelle pour éviter les régressions. #}
+            {% if usage is defined and usage == 'dialog' and totalizableField is defined and totalizableField is not null %}
+                {# CAS 1 : Collection totalisable dans une boîte de dialogue. On utilise le nouveau rendu. #}
+                {% include 'components/collection/_list_item_secondary_line.html.twig' with {
+                    'item': entity,
+                    'parentEntity': parentEntity|default(null),
+                    'totalizableField': totalizableField,
+                    'totalizableFieldDetails': totalizableFieldDetails
+                } %}
+            {% elseif usage is defined and usage == 'dialog' %}
+                {# CAS 2 : Collection NON totalisable dans une boîte de dialogue. On utilise l'ancien affichage simplifié. #}
+                {% set first_secondary_displayed = false %}
+                {% for texte in col_principale.textes_secondaires %}
+                    {% set valeur = attribute(entity, texte.attribut_code) %}
+                    {% if not first_secondary_displayed and valeur is not null and valeur is not empty %}
+                        <span class="d-inline-flex align-items-center">
+                            {% if texte.icone is defined %}<twig:UX:Icon name="{{ resolve_icon_name(texte.icone) }}" style="width: {{ texte.icone_taille | default('1.1em') }}; height: {{ texte.icone_taille | default('1.1em') }}; margin-right: 4px;" />{% endif %}
+                            {{ texte.attribut_prefixe | default('') }}
+                            {% if texte.attribut_type|default('') == 'date' and valeur is not null %}{{ valeur|date('d/m/Y') }}{% else %}{{ valeur }}{% endif %}
+                        </span>
+                        {% set first_secondary_displayed = true %}
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                {# CAS 3 : Toutes les autres listes (principales, onglets). On restaure l'ancien affichage complet. #}
+                {% for texte in col_principale.textes_secondaires %}
+                    <span class="d-inline-flex align-items-center">
+                        {% if texte.icone is defined %}<twig:UX:Icon name="{{ resolve_icon_name(texte.icone) }}" style="width: {{ texte.icone_taille | default('1.1em') }}; height: {{ texte.icone_taille | default('1.1em') }}; margin-right: 4px;" />{% endif %}
+                        {{ texte.attribut_prefixe | default('') }}
+                        {% set valeur = attribute(entity, texte.attribut_code) %}
+                        {% if texte.attribut_type|default('') == 'date' and valeur is not null %}{{ valeur|date('d/m/Y') }}{% elseif texte.attribut_type|default('') == 'text' and texte.attribut_taille_max is defined and texte.attribut_taille_max is not null and valeur is not null and valeur|length > texte.attribut_taille_max %}{{ valeur|slice(0, texte.attribut_taille_max) ~ '...' }}{% else %}{{ valeur }}{% endif %}
+                    </span>
+                    {% if not loop.last %}<span class="mx-2">{{ col_principale.textes_secondaires_separateurs|default(' &bull; ')|raw }}</span>{% endif %}
+                {% endfor %}
+            {% endif %}
         </small>
     </td>
 
