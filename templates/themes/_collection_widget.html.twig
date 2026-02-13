@@ -42,7 +42,7 @@
                 {% endif %}
                 <strong class="field-label">{{ form.vars.label|default(form.vars.name) }}</strong>
                 {% if form.vars.help %}<span class="form-text text-muted">({{ form.vars.help }})</span>{% endif %}
-                <span class="badge bg-primary ms-auto" data-collection-target="countBadge" style="display: none;">0</span>
+                <span class="badge bg-primary" data-collection-target="countBadge" style="display: none;">0</span>
             </div>
 
             {# --- CORRECTION : On rend toujours le bouton, mais on le cache avec une classe si désactivé --- #}
