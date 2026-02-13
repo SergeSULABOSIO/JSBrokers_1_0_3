@@ -112,7 +112,9 @@ export default class extends Controller {
         }
 
         this.contentPanelTarget.classList.toggle('is-open');
-        const icon = this.element.querySelector('.toggle-icon');
+        // CORRECTION : On cible l'icône dans le conteneur du titre visible (titleContentTarget),
+        // et non la première icône trouvée dans le widget, qui pouvait être celle du squelette de chargement.
+        const icon = this.titleContentTarget.querySelector('.toggle-icon');
         if (icon) {
             // On met à jour l'icône en fonction de l'état ouvert/fermé.
             icon.textContent = this.contentPanelTarget.classList.contains('is-open') ? '−' : '+';
@@ -417,9 +419,8 @@ export default class extends Controller {
         // Gère l'affichage du squelette dans le titre de l'accordéon.
         if (this.hasTitleLoadingTarget && this.hasTitleContentTarget) {
             this.titleLoadingTarget.style.display = isLoading ? 'flex' : 'none';
-            // CORRECTION: On utilise 'block' pour que le texte d'aide reste en dessous du titre.
-            // 'flex' mettrait le titre et l'aide sur la même ligne.
-            this.titleContentTarget.style.display = isLoading ? 'none' : 'block';
+            // On utilise 'flex' pour correspondre au style CSS et assurer un alignement correct des éléments du titre.
+            this.titleContentTarget.style.display = isLoading ? 'none' : 'flex';
         }
         
         // Gère l'affichage du squelette dans le contenu de l'accordéon.
