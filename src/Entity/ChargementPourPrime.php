@@ -2,13 +2,17 @@
 
 namespace App\Entity;
 
-use Doctrine\ORM\Mapping as ORM;
+use App\Entity\Chargement;
+use App\Entity\Cotation;
+use App\Entity\Traits\CalculatedIndicatorsTrait;
 use App\Repository\ChargementPourPrimeRepository;
+use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: ChargementPourPrimeRepository::class)]
 class ChargementPourPrime
 {
+    use CalculatedIndicatorsTrait;
     
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -42,6 +46,23 @@ class ChargementPourPrime
     #[ORM\Column(length: 255)]
     #[Groups(['list:read'])]
     private ?string $nom = null;
+
+    // NOUVEAU : Attributs calculés
+    #[Groups(['list:read'])]
+    public ?float $montant_final = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montantTaxeAppliquee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $poidsSurPrimeTotale = null;
+
+    #[Groups(['list:read'])]
+    public ?string $ageChargement = null;
+
+    #[Groups(['list:read'])]
+    public ?string $fonctionChargement = null;
+
 
     public function getId(): ?int
     {

@@ -3,6 +3,7 @@
 namespace App\Services\Canvas\Provider\Form;
 
 use App\Entity\Cotation;
+use App\Services\Canvas\Provider\Form\FormCanvasProviderInterface;
 
 class CotationFormCanvasProvider implements FormCanvasProviderInterface
 {
@@ -54,7 +55,6 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
         ];
 
         $collections = [
-            ['fieldName' => 'chargements', 'entityRouteName' => 'chargementpourprime', 'formTitle' => 'Chargement', 'parentFieldName' => 'cotation', 'totalizableField' => 'montantFlatExceptionel'],
             ['fieldName' => 'chargements', 'entityRouteName' => 'chargementpourprime', 'formTitle' => 'Chargement', 'parentFieldName' => 'cotation', 'totalizableField' => 'montant_final'],
             ['fieldName' => 'revenus', 'entityRouteName' => 'revenucourtier', 'formTitle' => 'Revenu', 'parentFieldName' => 'cotation'],
             ['fieldName' => 'tranches', 'entityRouteName' => 'tranche', 'formTitle' => 'Tranche', 'parentFieldName' => 'cotation'],

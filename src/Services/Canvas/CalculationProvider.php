@@ -3,49 +3,49 @@
 namespace App\Services\Canvas;
 
 
-use App\Entity\Note;
-use App\Entity\Taxe;
-use App\Entity\Tache;
-use App\Entity\Client;
-use App\Entity\Groupe;
-use App\Entity\Invite;
-use App\Entity\Risque;
-use DateTimeImmutable;
-use App\Entity\Avenant;
-use App\Entity\Contact;
-use App\Entity\Tranche;
-use App\Entity\Classeur;
 use App\Entity\Assureur;
-use App\Entity\Cotation;
-use App\Entity\Document;
-use App\Entity\Feedback;
-use App\Entity\Paiement;
+use App\Entity\Avenant;
 use App\Entity\Chargement;
 use App\Entity\ChargementPourPrime;
+use App\Entity\Classeur;
+use App\Entity\Client;
+use App\Entity\ConditionPartage;
+use App\Entity\Contact;
+use App\Entity\Cotation;
+use App\Entity\Document;
 use App\Entity\Entreprise;
+use App\Entity\Feedback;
+use App\Entity\Groupe;
+use App\Entity\Invite;
+use App\Entity\ModelePieceSinistre;
+use App\Entity\Note;
+use App\Entity\NotificationSinistre;
+use App\Entity\OffreIndemnisationSinistre;
+use App\Entity\Paiement;
 use App\Entity\Partenaire;
+use App\Entity\PieceSinistre;
+use App\Entity\RevenuPourCourtier;
+use App\Entity\Risque;
 use App\Entity\RolesEnAdministration;
 use App\Entity\RolesEnFinance;
 use App\Entity\RolesEnMarketing;
 use App\Entity\RolesEnProduction;
 use App\Entity\RolesEnSinistre;
+use App\Entity\Tache;
+use App\Entity\Taxe;
+use App\Entity\Tranche;
 use App\Entity\TypeRevenu;
-use App\Entity\PieceSinistre;
+use App\Entity\Utilisateur;
+use App\Repository\CotationRepository;
+use App\Repository\NotificationSinistreRepository;
+use App\Repository\TaxeRepository;
+use App\Repository\UtilisateurRepository;
+
 use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
-use App\Entity\ConditionPartage;
-use App\Entity\RevenuPourCourtier;
-use App\Repository\TaxeRepository;
-use App\Entity\ModelePieceSinistre;
-use App\Entity\NotificationSinistre;
-use App\Repository\CotationRepository;
-use App\Repository\UtilisateurRepository;
-use Doctrine\ORM\EntityNotFoundException;
-
-use App\Entity\OffreIndemnisationSinistre;
-use App\Repository\NotificationSinistreRepository;
-use Symfony\Contracts\Translation\TranslatorInterface;
+use DateTimeImmutable;
 use Symfony\Bundle\SecurityBundle\Security; // Correction: S'assurer que cette ligne est bien présente
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class CalculationProvider
 {
