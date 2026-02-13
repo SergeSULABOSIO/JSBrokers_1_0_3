@@ -6,6 +6,7 @@ use App\Entity\Chargement;
 use App\Entity\ChargementPourPrime;
 use App\Entity\Cotation;
 use App\Services\Canvas\CanvasHelper;
+use App\Services\Canvas\Provider\Entity\EntityCanvasProviderInterface;
 use App\Services\ServiceMonnaies;
 
 class ChargementPourPrimeEntityCanvasProvider implements EntityCanvasProviderInterface
@@ -46,6 +47,12 @@ class ChargementPourPrimeEntityCanvasProvider implements EntityCanvasProviderInt
 
     private function getSpecificIndicators(): array
     {
-        return [];
+        return [
+            ["code" => "montant_final", "intitule" => "Montant Final (TTC)", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant du chargement incluant les taxes applicables."],
+            ["code" => "montantTaxeAppliquee", "intitule" => "Taxe Appliquée", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant de la taxe calculée sur ce chargement, basé sur la branche du risque."],
+            ["code" => "poidsSurPrimeTotale", "intitule" => "Poids sur Prime Totale", "type" => "Calcul", "format" => "Pourcentage", "unite" => "%", "description" => "Pourcentage que ce chargement représente par rapport au montant total de la prime de la cotation."],
+            ["code" => "ageChargement", "intitule" => "Âge du Chargement", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours écoulés depuis la création de ce chargement."],
+            ["code" => "fonctionChargement", "intitule" => "Fonction du Chargement", "type" => "Calcul", "format" => "Texte", "description" => "Rôle fonctionnel de ce type de chargement (ex: Prime nette, Taxe, Frais)."],
+        ];
     }
 }

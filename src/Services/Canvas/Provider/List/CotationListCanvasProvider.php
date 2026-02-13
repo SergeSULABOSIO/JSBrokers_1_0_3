@@ -3,6 +3,7 @@
 namespace App\Services\Canvas\Provider\List;
 
 use App\Entity\Cotation;
+use App\Services\Canvas\Provider\List\ListCanvasProviderInterface;
 
 class CotationListCanvasProvider implements ListCanvasProviderInterface
 {
