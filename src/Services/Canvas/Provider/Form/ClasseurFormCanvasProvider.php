@@ -27,7 +27,7 @@ class ClasseurFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/classeur/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildClasseurLayout($classeurId, $isParentNew);
+        $layout = $this->buildClasseurLayout($object, $isParentNew);
 
         return [
             "parametres" => $parametres,
@@ -36,14 +36,15 @@ class ClasseurFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildClasseurLayout(int $classeurId, bool $isParentNew): array
+    private function buildClasseurLayout(Classeur $object, bool $isParentNew): array
     {
+        $classeurId = $object->getId() ?? 0;
         $layout = [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
         ];
         $collections = [['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'classeur']];
-        $this->addCollectionWidgetsToLayout($layout, $classeurId, $isParentNew, $collections);
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
         return $layout;
     }
 }

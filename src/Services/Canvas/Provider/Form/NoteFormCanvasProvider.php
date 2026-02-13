@@ -27,7 +27,7 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/note/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildNoteLayout($noteId, $isParentNew);
+        $layout = $this->buildNoteLayout($object, $isParentNew);
 
         return [
             "parametres" => $parametres,
@@ -36,14 +36,15 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildNoteLayout(int $noteId, bool $isParentNew): array
+    private function buildNoteLayout(Note $object, bool $isParentNew): array
     {
+        $noteId = $object->getId() ?? 0;
         $layout = [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["reference"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["validated"]]]],
         ];
         $collections = [['fieldName' => 'paiements', 'entityRouteName' => 'paiement', 'formTitle' => 'Paiement', 'parentFieldName' => 'note']];
-        $this->addCollectionWidgetsToLayout($layout, $noteId, $isParentNew, $collections);
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
         return $layout;
     }
 }

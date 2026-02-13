@@ -27,7 +27,7 @@ class PartenaireFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/partenaire/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildPartenaireLayout($partenaireId, $isParentNew);
+        $layout = $this->buildPartenaireLayout($object, $isParentNew);
 
         return [
             "parametres" => $parametres,
@@ -36,8 +36,9 @@ class PartenaireFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildPartenaireLayout(int $partenaireId, bool $isParentNew): array
+    private function buildPartenaireLayout(Partenaire $object, bool $isParentNew): array
     {
+        $partenaireId = $object->getId() ?? 0;
         $layout = [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["email"]], ["champs" => ["telephone"]]]],
@@ -47,7 +48,7 @@ class PartenaireFormCanvasProvider implements FormCanvasProviderInterface
             ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'partenaire'],
             ['fieldName' => 'clients', 'entityRouteName' => 'client', 'formTitle' => 'Client', 'parentFieldName' => 'partenaires'],
         ];
-        $this->addCollectionWidgetsToLayout($layout, $partenaireId, $isParentNew, $collections);
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
         return $layout;
     }
 }

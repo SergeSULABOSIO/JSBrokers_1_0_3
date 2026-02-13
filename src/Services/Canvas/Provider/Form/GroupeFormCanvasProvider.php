@@ -27,7 +27,7 @@ class GroupeFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/groupe/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildGroupeLayout($groupeId, $isParentNew);
+        $layout = $this->buildGroupeLayout($object, $isParentNew);
 
         return [
             "parametres" => $parametres,
@@ -36,14 +36,15 @@ class GroupeFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildGroupeLayout(int $groupeId, bool $isParentNew): array
+    private function buildGroupeLayout(Groupe $object, bool $isParentNew): array
     {
+        $groupeId = $object->getId() ?? 0;
         $layout = [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
         ];
         $collections = [['fieldName' => 'clients', 'entityRouteName' => 'client', 'formTitle' => 'Client', 'parentFieldName' => 'groupe']];
-        $this->addCollectionWidgetsToLayout($layout, $groupeId, $isParentNew, $collections);
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
         return $layout;
     }
 }

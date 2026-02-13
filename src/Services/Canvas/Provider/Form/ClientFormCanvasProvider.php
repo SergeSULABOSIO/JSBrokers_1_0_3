@@ -27,7 +27,7 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/client/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildClientLayout($clientId, $isParentNew);
+        $layout = $this->buildClientLayout($object, $isParentNew);
 
         return [
             "parametres" => $parametres,
@@ -36,8 +36,9 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildClientLayout(int $clientId, bool $isParentNew): array
+    private function buildClientLayout(Client $object, bool $isParentNew): array
     {
+        $clientId = $object->getId() ?? 0;
         // NOUVEAU : On définit la condition de visibilité une seule fois pour la réutiliser.
         $visibilityConditionForLegalFields = [
             'visibility_conditions' => [
@@ -73,7 +74,7 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
             ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'client'],
         ];
 
-        $this->addCollectionWidgetsToLayout($layout, $clientId, $isParentNew, $collections);
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
         return $layout;
     }
 }

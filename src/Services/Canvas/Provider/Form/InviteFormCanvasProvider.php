@@ -27,7 +27,7 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/invite/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildInviteLayout($inviteId, $isParentNew);
+        $layout = $this->buildInviteLayout($object, $isParentNew);
 
         return [
             "parametres" => $parametres,
@@ -36,8 +36,9 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildInviteLayout(int $inviteId, bool $isParentNew): array
+    private function buildInviteLayout(Invite $object, bool $isParentNew): array
     {
+        $inviteId = $object->getId() ?? 0;
         // Ligne 1: Informations de base de l'invité
         $layout = [
             [
@@ -81,7 +82,7 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
                 ],
             ];
 
-            $this->addCollectionWidgetsToLayout($layout, $inviteId, $isParentNew, $collectionsConfig);
+            $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collectionsConfig);
         }
 
         return $layout;

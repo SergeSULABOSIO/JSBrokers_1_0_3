@@ -27,7 +27,7 @@ class FeedbackFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/feedback/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildFeedbackLayout($feedbackId, $isParentNew);
+        $layout = $this->buildFeedbackLayout($object, $isParentNew);
 
         return [
             "parametres" => $parametres,
@@ -36,8 +36,9 @@ class FeedbackFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildFeedbackLayout(int $feedbackId, bool $isParentNew): array
+    private function buildFeedbackLayout(Feedback $object, bool $isParentNew): array
     {
+        $feedbackId = $object->getId() ?? 0;
         $layout = [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["hasNextAction"]], ["champs" => ["nextActionAt"]], ["champs" => ["type"]]]],

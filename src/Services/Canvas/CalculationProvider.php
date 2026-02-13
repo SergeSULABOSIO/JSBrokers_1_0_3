@@ -21,6 +21,7 @@ use App\Entity\Document;
 use App\Entity\Feedback;
 use App\Entity\Paiement;
 use App\Entity\Chargement;
+use App\Entity\ChargementPourPrime;
 use App\Entity\Entreprise;
 use App\Entity\Partenaire;
 use App\Entity\RolesEnAdministration;
@@ -195,6 +196,16 @@ class CalculationProvider
                     'typeFichier' => $this->getDocumentTypeFichier($entity),
                     'parent_string' => $this->Document_getParentAsString($entity),
                     'classeur_string' => $this->Document_getClasseurAsString($entity),
+                ];
+                break;
+            case ChargementPourPrime::class:
+                /** @var ChargementPourPrime $entity */
+                $indicateurs = [
+                    'montant_final' => $this->getChargementPourPrimeMontantFinal($entity),
+                    'montantTaxeAppliquee' => $this->getChargementPourPrimeMontantTaxe($entity),
+                    'poidsSurPrimeTotale' => $this->getChargementPourPrimePoidsSurPrime($entity),
+                    'ageChargement' => $this->calculateChargementPourPrimeAge($entity),
+                    'fonctionChargement' => $this->Chargement_getFonctionString($entity->getType()),
                 ];
                 break;
             case Chargement::class:
@@ -1809,6 +1820,58 @@ class CalculationProvider
             return "Non classé";
         }
         return "Classé dans : '" . $document->getClasseur()->getNom() . "'";
+    }
+
+    // --- Indicateurs pour ChargementPourPrime ---
+
+    /**
+     * Calcule le montant de la taxe applicable sur le montant flat du chargement.
+     */
+    private function getChargementPourPrimeMontantTaxe(ChargementPourPrime $chargement): float
+    {
+        $montant = $chargement->getMontantFlatExceptionel() ?? 0.0;
+        if ($montant === 0.0) {
+            return 0.0;
+        }
+        // La taxe sur un chargement est considérée comme une taxe assureur
+        return $this->serviceTaxes->getMontantTaxe($montant, $this->isIARD($chargement->getCotation()), true);
+    }
+
+    /**
+     * Calcule le montant final (TTC) du chargement.
+     */
+    private function getChargementPourPrimeMontantFinal(ChargementPourPrime $chargement): float
+    {
+        $montant = $chargement->getMontantFlatExceptionel() ?? 0.0;
+        $taxe = $this->getChargementPourPrimeMontantTaxe($chargement);
+        return $montant + $taxe;
+    }
+
+    /**
+     * Calcule le poids du chargement par rapport à la prime totale de la cotation.
+     */
+    private function getChargementPourPrimePoidsSurPrime(ChargementPourPrime $chargement): ?float
+    {
+        $cotation = $chargement->getCotation();
+        if (!$cotation) {
+            return null;
+        }
+
+        $montantChargement = $chargement->getMontantFlatExceptionel() ?? 0.0;
+        $primeTotale = $this->getCotationMontantPrimePayableParClient($cotation);
+
+        if ($primeTotale > 0) {
+            return round(($montantChargement / $primeTotale) * 100, 2);
+        }
+
+        return 0.0;
+    }
+
+    private function calculateChargementPourPrimeAge(ChargementPourPrime $chargement): string
+    {
+        if (!$chargement->getCreatedAt()) return 'N/A';
+        $jours = $this->serviceDates->daysEntre($chargement->getCreatedAt(), new \DateTimeImmutable()) ?? 0;
+        return $jours . ' jour(s)';
     }
 
     /**

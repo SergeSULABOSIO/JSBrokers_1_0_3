@@ -27,7 +27,7 @@ class RisqueFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/risque/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildRisqueLayout($risqueId, $isParentNew);
+        $layout = $this->buildRisqueLayout($object, $isParentNew);
 
         return [
             "parametres" => $parametres,
@@ -36,8 +36,9 @@ class RisqueFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildRisqueLayout(int $risqueId, bool $isParentNew): array
+    private function buildRisqueLayout(Risque $object, bool $isParentNew): array
     {
+        $risqueId = $object->getId() ?? 0;
         $layout = [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nomComplet"]], ["champs" => ["code"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["branche"]], ["champs" => ["imposable"]]]],
@@ -46,7 +47,7 @@ class RisqueFormCanvasProvider implements FormCanvasProviderInterface
             ['fieldName' => 'pistes', 'entityRouteName' => 'piste', 'formTitle' => 'Piste', 'parentFieldName' => 'risque'],
             ['fieldName' => 'notificationSinistres', 'entityRouteName' => 'notificationsinistre', 'formTitle' => 'Sinistre', 'parentFieldName' => 'risque'],
         ];
-        $this->addCollectionWidgetsToLayout($layout, $risqueId, $isParentNew, $collections);
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
         return $layout;
     }
 }

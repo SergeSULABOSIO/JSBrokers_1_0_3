@@ -27,7 +27,7 @@ class ConditionPartageFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/conditionpartage/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildConditionPartageLayout($conditionId, $isParentNew);
+        $layout = $this->buildConditionPartageLayout($object, $isParentNew);
 
         return [
             "parametres" => $parametres,
@@ -36,15 +36,16 @@ class ConditionPartageFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildConditionPartageLayout(int $conditionId, bool $isParentNew): array
+    private function buildConditionPartageLayout(ConditionPartage $object, bool $isParentNew): array
     {
+        $conditionId = $object->getId() ?? 0;
         $layout = [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["partenaire"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["taux"]], ["champs" => ["seuil"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["formule"]], ["champs" => ["uniteMesure"]], ["champs" => ["critereRisque"]]]],
         ];
         $collections = [['fieldName' => 'produits', 'entityRouteName' => 'risque', 'formTitle' => 'Risque', 'parentFieldName' => 'conditionPartage']];
-        $this->addCollectionWidgetsToLayout($layout, $conditionId, $isParentNew, $collections);
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
         return $layout;
     }
 }

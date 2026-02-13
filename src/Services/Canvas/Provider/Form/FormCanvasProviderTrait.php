@@ -4,9 +4,27 @@ namespace App\Services\Canvas\Provider\Form;
 
 trait FormCanvasProviderTrait
 {
-    private function addCollectionWidgetsToLayout(array &$layout, int $parentId, bool $isParentNew, array $collectionsConfig): void
+    private function addCollectionWidgetsToLayout(array &$layout, object $parentEntity, bool $isParentNew, array $collectionsConfig): void
     {
+        $parentId = $parentEntity->getId() ?? 0;
         foreach ($collectionsConfig as $config) {
+            $extraOptions = [];
+            if (isset($config['totalizableField']) && !$isParentNew) {
+                $total = 0;
+                $getter = 'get' . ucfirst($config['fieldName']);
+                if (method_exists($parentEntity, $getter)) {
+                    $collection = $parentEntity->{$getter}();
+                    $valueGetter = 'get' . ucfirst($config['totalizableField']);
+                    foreach ($collection as $item) {
+                        if (method_exists($item, $valueGetter)) {
+                            $total += $item->{$valueGetter}() ?? 0;
+                        }
+                    }
+                }
+                $extraOptions['totalizableField'] = $config['totalizableField'];
+                $extraOptions['totalValue'] = $total;
+            }
+
             $layout[] = [
                 "couleur_fond" => "white",
                 "colonnes" => [
@@ -17,14 +35,15 @@ trait FormCanvasProviderTrait
                         $config['formTitle'],
                         $config['parentFieldName'],
                         $config['defaultValueConfig'] ?? null,
-                        $isParentNew
+                        $isParentNew,
+                        $extraOptions
                     )]],
                 ]
             ];
         }
     }
 
-    private function getCollectionWidgetConfig(string $fieldName, string $entityRouteName, int $parentId, string $formtitle, string $parentFieldName, ?array $defaultValueConfig = null, bool $isParentNew = false): array
+    private function getCollectionWidgetConfig(string $fieldName, string $entityRouteName, int $parentId, string $formtitle, string $parentFieldName, ?array $defaultValueConfig = null, bool $isParentNew = false, array $extraOptions = []): array
     {
         $config = [
             "field_code" => $fieldName,
@@ -45,6 +64,11 @@ trait FormCanvasProviderTrait
 
         if ($defaultValueConfig) {
             $config['options']['defaultValueConfig'] = json_encode($defaultValueConfig);
+        }
+
+        // Merge extra options (like totalizable info)
+        if (!empty($extraOptions)) {
+            $config['options'] = array_merge($config['options'], $extraOptions);
         }
 
         return $config;

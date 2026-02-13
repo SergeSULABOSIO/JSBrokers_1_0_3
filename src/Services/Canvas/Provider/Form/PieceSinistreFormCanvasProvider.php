@@ -27,7 +27,7 @@ class PieceSinistreFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/piecesinistre/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildPieceSinistreLayout($pieceId, $isParentNew);
+        $layout = $this->buildPieceSinistreLayout($object, $isParentNew);
 
         return [
             "parametres" => $parametres,
@@ -36,8 +36,9 @@ class PieceSinistreFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildPieceSinistreLayout(int $pieceId, bool $isParentNew): array
+    private function buildPieceSinistreLayout(PieceSinistre $object, bool $isParentNew): array
     {
+        $pieceId = $object->getId() ?? 0;
         $layout = [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["fourniPar"]], ["champs" => ["receivedAt"]], ["champs" => ["type"]]]],
@@ -47,7 +48,7 @@ class PieceSinistreFormCanvasProvider implements FormCanvasProviderInterface
             ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'pieceSinistre'],
         ];
 
-        $this->addCollectionWidgetsToLayout($layout, $pieceId, $isParentNew, $collections);
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
         return $layout;
     }
 }
