@@ -43,15 +43,20 @@ export default class extends Controller {
 
     connect() {
         this.nomControleur = "Collection";
-        console.log(`${this.nomControleur} - Connecté.`);
+        // console.log(`${this.nomControleur} - Connecté.`);
         this.boundRefresh = this.refresh.bind(this);
         // Écoute l'événement de sauvegarde pour se rafraîchir
         document.addEventListener('app:list.refresh-request', this.boundRefresh);
+        this.tooltipElement = null; // NOUVEAU : Propriété pour stocker l'infobulle
         this.load();
     }
 
     disconnect() {
         document.removeEventListener('app:list.refresh-request', this.boundRefresh);
+        // NOUVEAU : S'assurer que l'infobulle est retirée si le contrôleur est déconnecté
+        if (this.tooltipElement) {
+            this.tooltipElement.remove();
+        }
     }
 
     /**
@@ -59,12 +64,12 @@ export default class extends Controller {
      */
     async load() {
         if (this.disabledValue) {
-            console.log(`${this.nomControleur} - load() - Code: 1986 - disabledValue: `, this.disabledValue);
+            // console.log(`${this.nomControleur} - load() - Code: 1986 - disabledValue: `, this.disabledValue);
             this.listContainerTarget.innerHTML = '<div class="alert alert-warning">Commencez par enregistrer.</div>';
             return;
         }
         if (!this.listUrlValue) {
-            console.log(`${this.nomControleur} - load() - Code: 1986 - listUrlValue: `, this.listUrlValue);
+            // console.log(`${this.nomControleur} - load() - Code: 1986 - listUrlValue: `, this.listUrlValue);
             this.listContainerTarget.innerHTML = "<div class='alert alert-warning'>L'url de la liste n'est pas définie.</div>";
             return;
         }
@@ -161,6 +166,46 @@ export default class extends Controller {
             this.hideTimeouts[row.id] = setTimeout(() => {
                 actionsContainer.classList.remove('visible');
             }, 800);
+        }
+    }
+
+    /**
+     * NOUVEAU : Affiche une infobulle personnalisée lors du survol.
+     * @param {MouseEvent} event
+     */
+    showTooltip(event) {
+        const target = event.currentTarget;
+        const tooltipText = target.dataset.tooltipTextValue;
+
+        if (!tooltipText) return;
+
+        // Créer l'élément d'infobulle
+        this.tooltipElement = document.createElement('div');
+        this.tooltipElement.className = 'canvas-tooltip';
+        this.tooltipElement.textContent = tooltipText;
+        document.body.appendChild(this.tooltipElement);
+
+        // Positionner l'infobulle près du curseur
+        this.tooltipElement.style.left = `${event.pageX + 15}px`;
+        this.tooltipElement.style.top = `${event.pageY + 15}px`;
+
+        // Forcer un reflow pour que la transition CSS s'applique
+        void this.tooltipElement.offsetWidth;
+
+        // Rendre visible avec la classe qui déclenche l'animation
+        this.tooltipElement.classList.add('is-visible');
+    }
+
+    /**
+     * NOUVEAU : Masque et détruit l'infobulle.
+     */
+    hideTooltip() {
+        if (this.tooltipElement) {
+            // On retire simplement l'élément. La transition de sortie n'est pas gérée
+            // pour éviter les "race conditions" si l'utilisateur bouge la souris rapidement.
+            // L'animation d'entrée est conservée.
+            this.tooltipElement.remove();
+            this.tooltipElement = null;
         }
     }
 
