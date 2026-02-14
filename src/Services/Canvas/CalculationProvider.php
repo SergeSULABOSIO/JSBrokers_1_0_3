@@ -253,12 +253,12 @@ class CalculationProvider
             case RevenuPourCourtier::class:
                 /** @var RevenuPourCourtier $entity */
                 $indicateurs = [
-                    'montantCalculeHT' => $this->getRevenuMontantHt($entity),
-                    'montantCalculeTTC' => $this->getRevenuPourCourtierMontantTTC($entity),
+                    'montantCalculeHT' => round($this->getRevenuMontantHt($entity), 2),
+                    'montantCalculeTTC' => round($this->getRevenuPourCourtierMontantTTC($entity), 2),
                     'descriptionCalcul' => $this->getRevenuPourCourtierDescriptionCalcul($entity),
-                    'montant_du' => $this->getRevenuPourCourtierMontantDu($entity),
-                    'montant_paye' => $this->getRevenuPourCourtierMontantPaye($entity),
-                    'solde_restant_du' => $this->getRevenuPourCourtierSoldeRestantDu($entity),
+                    'montant_du' => round($this->getRevenuPourCourtierMontantDu($entity), 2),
+                    'montant_paye' => round($this->getRevenuPourCourtierMontantPaye($entity), 2),
+                    'solde_restant_du' => round($this->getRevenuPourCourtierSoldeRestantDu($entity), 2),
                 ];
                 break;
             case TypeRevenu::class:
@@ -1042,7 +1042,7 @@ class CalculationProvider
         // Priorité 3 : Taux par défaut du partenaire
         if ($partenaireAffaire->getPart() > 0) {
             $assiette = $this->getRevenuMontantPure($revenu, $addressedTo, true);
-            return $assiette * ($partenaireAffaire->getPart() / 100);
+            return $assiette * $partenaireAffaire->getPart();
         }
 
         return 0.0;
@@ -1120,18 +1120,18 @@ class CalculationProvider
         switch ($conditionPartage->getCritereRisque()) {
             case ConditionPartage::CRITERE_EXCLURE_TOUS_CES_RISQUES:
                 if (!$produitsCible->contains($risque)) {
-                    return $assiette * ($taux / 100);
+                    return $assiette * $taux;
                 }
                 return 0.0;
 
             case ConditionPartage::CRITERE_INCLURE_TOUS_CES_RISQUES:
                 if ($produitsCible->contains($risque)) {
-                    return $assiette * ($taux / 100);
+                    return $assiette * $taux;
                 }
                 return 0.0;
 
             case ConditionPartage::CRITERE_PAS_RISQUES_CIBLES:
-                return $assiette * ($taux / 100);
+                return $assiette * $taux;
         }
         return 0.0;
     }
@@ -1573,15 +1573,15 @@ class CalculationProvider
                 if ($typeRevenu->isAppliquerPourcentageDuRisque()) {
                     $risque = $this->getCotationRisque($cotation);
                     if ($risque) {
-                        $montant += $montantChargementPrime * ($risque->getPourcentageCommissionSpecifiqueHT() / 100);
+                        $montant += $montantChargementPrime * $risque->getPourcentageCommissionSpecifiqueHT();
                     }
                 } else {
                     if ($revenu->getTauxExceptionel() != 0) {
-                        $montant += $montantChargementPrime * ($revenu->getTauxExceptionel() / 100);
+                        $montant += $montantChargementPrime * $revenu->getTauxExceptionel();
                     } elseif ($revenu->getMontantFlatExceptionel() != 0) {
                         $montant += $revenu->getMontantFlatExceptionel();
                     } elseif ($typeRevenu->getPourcentage() != 0) {
-                        $montant += $montantChargementPrime * ($typeRevenu->getPourcentage() / 100);
+                        $montant += $montantChargementPrime * $typeRevenu->getPourcentage();
                     } elseif ($typeRevenu->getMontantflat() != 0) { // CORRECTION: Un montant "flat" (forfaitaire) ne doit pas être multiplié.
                         $montant += $typeRevenu->getMontantflat();
                     }
@@ -2384,21 +2384,21 @@ class CalculationProvider
             return "Type de revenu non défini";
         }
 
-        if ($revenu->getTauxExceptionel()) {
-            return "Taux exceptionnel de " . $revenu->getTauxExceptionel() . "%";
+        if ($revenu->getTauxExceptionel() !== null && $revenu->getTauxExceptionel() != 0) {
+            return "Taux exceptionnel de " . ($revenu->getTauxExceptionel() * 100) . "%";
         }
         if ($revenu->getMontantFlatExceptionel()) {
             return "Montant fixe exceptionnel de " . $revenu->getMontantFlatExceptionel();
         }
-        if ($typeRevenu->getPourcentage()) {
-            return "Taux par défaut de " . $typeRevenu->getPourcentage() . "%";
+        if ($typeRevenu->getPourcentage() !== null && $typeRevenu->getPourcentage() != 0) {
+            return "Taux par défaut de " . ($typeRevenu->getPourcentage() * 100) . "%";
         }
         if ($typeRevenu->getMontantflat()) {
             return "Montant fixe par défaut de " . $typeRevenu->getMontantflat();
         }
         if ($typeRevenu->isAppliquerPourcentageDuRisque() && $revenu->getCotation()?->getPiste()?->getRisque()) {
             $tauxRisque = $revenu->getCotation()->getPiste()->getRisque()->getPourcentageCommissionSpecifiqueHT();
-            return "Taux du risque de " . $tauxRisque . "%";
+            return "Taux du risque de " . ($tauxRisque * 100) . "%";
         }
 
         return "Logique de calcul non spécifiée";
