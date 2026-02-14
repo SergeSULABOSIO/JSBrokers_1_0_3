@@ -60,6 +60,7 @@ class CotationEntityCanvasProvider implements EntityCanvasProviderInterface
     private function getSpecificIndicators(): array
     {
         return [
+            ["code" => "contextePiste", "intitule" => "Contexte Piste", "type" => "Calcul", "format" => "Texte", "description" => "Rappelle la piste commerciale à laquelle cette cotation est rattachée."],
             ["code" => "statutSouscription", "intitule" => "Statut", "type" => "Calcul", "format" => "Texte", "description" => "Indique si la cotation a été transformée en police (Souscrite) ou non (En attente)."],
             ["code" => "delaiDepuisCreation", "intitule" => "Âge", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours écoulés depuis la création de la cotation."],
             ["code" => "nombreTranches", "intitule" => "Nb. Tranches", "type" => "Calcul", "format" => "Nombre", "description" => "Nombre de tranches de paiement définies pour cette cotation."],

@@ -112,6 +112,7 @@ class CalculationProvider
             case Cotation::class:
                 /** @var Cotation $entity */
                 $indicateurs = [
+                    'contextePiste' => $this->getCotationContextePiste($entity),
                     'statutSouscription' => $this->calculateStatutSouscription($entity),
                     'delaiDepuisCreation' => $this->calculateDelaiDepuisCreation($entity),
                     'nombreTranches' => $this->calculateNombreTranches($entity),
@@ -1715,6 +1716,24 @@ class CalculationProvider
 
         return 0.0;
     }
+
+    /**
+     * NOUVEAU : Retourne une chaîne décrivant le contexte de la Piste parente.
+     */
+    private function getCotationContextePiste(Cotation $cotation): string
+    {
+        $piste = $cotation->getPiste();
+        if (!$piste) {
+            return "Cette cotation n'est rattachée à aucune piste.";
+        }
+
+        $pisteNom = $piste->getNom() ?? 'N/A';
+        // On s'assure de gérer le cas où le client est null.
+        $clientNom = $piste->getClient() ? $piste->getClient()->getNom() : 'non défini';
+
+        return sprintf("Piste '%s' pour le client '%s'", $pisteNom, $clientNom);
+    }
+
 
     public function Contact_getTypeString(?Contact $contact): string
     {

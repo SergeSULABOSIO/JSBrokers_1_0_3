@@ -83,6 +83,9 @@ class Cotation
 
     //Attributs calculés
     #[Groups(['list:read'])]
+    public ?string $contextePiste = null;
+
+    #[Groups(['list:read'])]
     public ?float $primeTTC;
 
     #[Groups(['list:read'])]
