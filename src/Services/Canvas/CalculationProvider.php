@@ -83,16 +83,16 @@ class CalculationProvider
                     'assureNom' => $assureNom,
                     'delaiDeclaration' => $this->calculateDelaiDeclaration($entity),
                     'ageDossier' => $this->calculateAgeDossier($entity),
-                    'compensationFranchise' => $this->calculateFranchise($entity),
+                    'compensationFranchise' => round($this->calculateFranchise($entity), 2),
                     'tauxIndemnisation' => $this->getNotificationSinistreTauxIndemnisation($entity),
                     'nombreOffres' => $this->getNotificationSinistreNombreOffres($entity),
                     'nombrePaiements' => $this->getNotificationSinistreNombrePaiements($entity),
-                    'montantMoyenParPaiement' => $this->getNotificationSinistreMontantMoyenParPaiement($entity),
+                    'montantMoyenParPaiement' => round($this->getNotificationSinistreMontantMoyenParPaiement($entity) ?? 0.0, 2),
                     'delaiTraitementInitial' => $this->getNotificationSinistreDelaiTraitementInitial($entity),
                     'ratioPaiementsEvaluation' => $this->getNotificationSinistreRatioPaiementsEvaluation($entity),
-                    'compensation' => $this->getNotificationSinistreCompensation($entity),
-                    'compensationVersee' => $this->getNotificationSinistreCompensationVersee($entity),
-                    'compensationSoldeAverser' => $this->getNotificationSinistreSoldeAVerser($entity),
+                    'compensation' => round($this->getNotificationSinistreCompensation($entity), 2),
+                    'compensationVersee' => round($this->getNotificationSinistreCompensationVersee($entity), 2),
+                    'compensationSoldeAverser' => round($this->getNotificationSinistreSoldeAVerser($entity), 2),
                     'indiceCompletude' => $this->getNotificationSinistreIndiceCompletude($entity),
                     'dateDernierReglement' => $this->getNotificationSinistreDateDernierReglement($entity),
                     'dureeReglement' => $this->getNotificationSinistreDureeReglement($entity),
@@ -102,11 +102,11 @@ class CalculationProvider
             case OffreIndemnisationSinistre::class:
                 /** @var OffreIndemnisationSinistre $entity */
                 $indicateurs = [
-                    'compensationVersee' => $this->getOffreIndemnisationCompensationVersee($entity),
-                    'soldeAVerser' => $this->getOffreIndemnisationSoldeAVerser($entity),
+                    'compensationVersee' => round($this->getOffreIndemnisationCompensationVersee($entity), 2),
+                    'soldeAVerser' => round($this->getOffreIndemnisationSoldeAVerser($entity), 2),
                     'pourcentagePaye' => $this->getOffreIndemnisationPourcentagePaye($entity),
                     'nombrePaiements' => $this->getOffreIndemnisationNombrePaiements($entity),
-                    'montantMoyenParPaiement' => $this->getOffreIndemnisationMontantMoyenParPaiement($entity),
+                    'montantMoyenParPaiement' => round($this->getOffreIndemnisationMontantMoyenParPaiement($entity) ?? 0.0, 2),
                 ];
                 break;
             case Cotation::class:
@@ -202,8 +202,8 @@ class CalculationProvider
             case ChargementPourPrime::class:
                 /** @var ChargementPourPrime $entity */
                 $indicateurs = [
-                    'montant_final' => $this->getChargementPourPrimeMontantFinal($entity),
-                    'montantTaxeAppliquee' => $this->getChargementPourPrimeMontantTaxe($entity),
+                    'montant_final' => round($this->getChargementPourPrimeMontantFinal($entity), 2),
+                    'montantTaxeAppliquee' => round($this->getChargementPourPrimeMontantTaxe($entity), 2),
                     'poidsSurPrimeTotale' => $this->getChargementPourPrimePoidsSurPrime($entity),
                     'ageChargement' => $this->calculateChargementPourPrimeAge($entity),
                     'fonctionChargement' => $this->Chargement_getFonctionString($entity->getType()),
@@ -236,9 +236,9 @@ class CalculationProvider
                 $indicateurs = [
                     'typeString' => $this->getNoteTypeString($entity),
                     'addressedToString' => $this->getNoteAddressedToString($entity),
-                    'montantTotal' => $this->getNoteMontantPayable($entity),
-                    'montantPaye' => $this->getNoteMontantPaye($entity),
-                    'solde' => $this->getNoteSolde($entity),
+                    'montantTotal' => round($this->getNoteMontantPayable($entity), 2),
+                    'montantPaye' => round($this->getNoteMontantPaye($entity), 2),
+                    'solde' => round($this->getNoteSolde($entity), 2),
                     'statutPaiement' => $this->getNoteStatutPaiementString($entity),
                 ];
                 break;
@@ -2204,12 +2204,12 @@ class CalculationProvider
 
     private function getConditionPartageDescriptionRegle(ConditionPartage $condition): string
     {
-        $taux = $condition->getTaux() ?? 0;
+        $taux = ($condition->getTaux() ?? 0) * 100;
         $formule = $this->ConditionPartage_getFormuleString($condition);
         $critere = $this->ConditionPartage_getCritereRisqueString($condition);
         $nbRisques = $this->countConditionPartageRisquesCibles($condition);
 
-        $description = "Appliquer {$taux}%";
+        $description = "Appliquer " . $taux . "%";
 
         if ($formule !== "Sans seuil") {
             $seuil = $condition->getSeuil() ?? 0;
