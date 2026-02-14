@@ -51,12 +51,12 @@ class RevenuPourCourtierEntityCanvasProvider implements EntityCanvasProviderInte
     private function getSpecificIndicators(): array
     {
         return [
-            ["code" => "montantCalculeHT", "intitule" => "Montant HT", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant du revenu calculé avant taxes."],
-            ["code" => "montantCalculeTTC", "intitule" => "Montant TTC", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant du revenu calculé toutes taxes comprises."],
-            ["code" => "descriptionCalcul", "intitule" => "Détail du Calcul", "type" => "Texte", "format" => "Texte", "description" => "Description de la méthode de calcul appliquée pour ce revenu."],
-            ["code" => "montant_du", "intitule" => "Montant Dû", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant total du revenu dû au courtier."],
-            ["code" => "montant_paye", "intitule" => "Montant Payé", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant du revenu déjà payé au courtier."],
-            ["code" => "solde_restant_du", "intitule" => "Solde Restant Dû", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant du revenu restant à payer au courtier."],
+            ["code" => "montantCalculeHT", "intitule" => "Montant HT", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Le montant de base du revenu, calculé selon les règles définies (taux ou montant fixe), avant l'application de toute taxe."],
+            ["code" => "montantCalculeTTC", "intitule" => "Montant TTC", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Le montant final du revenu après ajout de toutes les taxes applicables (ex: TVA). C'est ce montant qui est généralement facturé."],
+            ["code" => "descriptionCalcul", "intitule" => "Détail du Calcul", "type" => "Texte", "format" => "Texte", "description" => "Explique comment le montant HT a été obtenu (ex: 'Taux exceptionnel de 10%' ou 'Montant fixe par défaut')."],
+            ["code" => "montant_du", "intitule" => "Montant Dû", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Le montant total TTC qui a été facturé au redevable (assureur ou client) pour ce revenu."],
+            ["code" => "montant_paye", "intitule" => "Montant Payé", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "La somme de tous les paiements déjà reçus par le courtier pour les factures émises pour ce revenu."],
+            ["code" => "solde_restant_du", "intitule" => "Solde Restant Dû", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "La différence entre le montant dû (facturé) et le montant déjà payé. Indique ce qu'il reste à encaisser."],
         ];
     }
 }
