@@ -39,8 +39,8 @@ class RevenuPourCourtierFormCanvasProvider implements FormCanvasProviderInterfac
     private function buildRevenuPourCourtierLayout(int $revenuId, bool $isParentNew): array
     {
         $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["cotation"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["typeRevenu"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["cotation"]], ["champs" => ["typeRevenu"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["montantFlatExceptionel"]], ["champs" => ["tauxExceptionel"]]]],
         ];
         return $layout;

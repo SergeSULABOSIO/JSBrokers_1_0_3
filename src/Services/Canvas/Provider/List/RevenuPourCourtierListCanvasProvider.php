@@ -32,10 +32,9 @@ class RevenuPourCourtierListCanvasProvider implements ListCanvasProviderInterfac
                 [
                     "titre_colonne" => "Montant",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    "attribut_code" => "montantFlatExceptionel",
+                    "attribut_code" => "montantCalculeTTC",
                     "attribut_type" => "nombre",
                 ],
-                ["titre_colonne" => "Taux", "attribut_unité" => "%", "attribut_code" => "tauxExceptionel", "attribut_type" => "nombre"],
             ],
         ];
     }

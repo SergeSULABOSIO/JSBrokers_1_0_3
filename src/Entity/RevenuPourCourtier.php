@@ -52,6 +52,15 @@ class RevenuPourCourtier
 
     // Attributs calculés
     #[Groups(['list:read'])]
+    public ?float $montantCalculeHT = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montantCalculeTTC = null;
+
+    #[Groups(['list:read'])]
+    public ?string $descriptionCalcul = null;
+
+    #[Groups(['list:read'])]
     public ?float $montant_du = null;
 
     #[Groups(['list:read'])]
