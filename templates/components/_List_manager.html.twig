@@ -40,11 +40,14 @@
                                 <div class='d-flex justify-content-start text-secondary m-2'>{{ listeCanvas.colonne_principale.titre_colonne | default('Titre principal') }}</div>
                             </th>
                         {% endif %}
-                        {% for colonne in listeCanvas.colonnes_numeriques | default([]) %}
-                            <th scope="col" style="width:150px" class="th-numeric">
-                                <div class='text-secondary m-2'>{{ colonne.titre_colonne | default('Valeur') }}</div>
-                            </th>
-                        {% endfor %}
+                        {# On n'affiche les colonnes numériques que si on n'est PAS dans une collection totalisable de dialogue #}
+                        {% if not (usage is defined and usage == 'dialog' and totalizableField is defined and totalizableField is not null) %}
+                            {% for colonne in listeCanvas.colonnes_numeriques | default([]) %}
+                                <th scope="col" style="width:150px" class="th-numeric">
+                                    <div class='text-secondary m-2'>{{ colonne.titre_colonne | default('Valeur') }}</div>
+                                </th>
+                            {% endfor %}
+                        {% endif %}
                         {# NOUVEAU : Colonne d'actions pour les collections dans un dialogue #}
                         {% if usage is defined and usage == 'dialog' %}
                             <th scope="col" style="width: 100px;" class="text-end pe-4">

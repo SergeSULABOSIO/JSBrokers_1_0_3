@@ -21,11 +21,10 @@ class RevenuPourCourtierListCanvasProvider implements ListCanvasProviderInterfac
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Revenus Courtier",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:cash-sync"],
+                "texte_principal" => ["attribut_code" => "nom", "icone" => "revenu"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Type: ", "attribut_code" => "typeRevenu"],
-                    ["attribut_prefixe" => "Cotation: ", "attribut_code" => "cotation"],
                 ],
             ],
             "colonnes_numeriques" => [
