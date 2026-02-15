@@ -2512,8 +2512,16 @@ class CalculationProvider
         $isIARD = $this->isIARD($revenu->getCotation());
         // NOTE: La logique suivante suppose que l'on peut trouver la taxe via le repository.
         // Une méthode dédiée dans ServiceTaxes serait préférable pour encapsuler cette logique.
-        $taxe = $this->taxeRepository->findOneBy(['redevable' => Taxe::REDEVABLE_COURTIER, 'branche' => $isIARD ? Taxe::BRANCHE_IARD : Taxe::BRANCHE_VIE]);
-        return $taxe ? $taxe->getTaux() * 100 : 0.0;
+        // CORRECTION: Le champ 'branche' n'existe pas sur l'entité Taxe.
+        // On recherche la taxe par redevable, puis on sélectionne le bon taux (IARD ou VIE).
+        $taxe = $this->taxeRepository->findOneBy(['redevable' => Taxe::REDEVABLE_COURTIER]);
+
+        if (!$taxe) {
+            return 0.0;
+        }
+
+        $rate = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();
+        return ($rate ?? 0.0) * 100;
     }
 
     private function getRevenuTaxeAssureurMontant(RevenuPourCourtier $revenu): float
@@ -2528,8 +2536,16 @@ class CalculationProvider
         $isIARD = $this->isIARD($revenu->getCotation());
         // NOTE: La logique suivante suppose que l'on peut trouver la taxe via le repository.
         // Une méthode dédiée dans ServiceTaxes serait préférable pour encapsuler cette logique.
-        $taxe = $this->taxeRepository->findOneBy(['redevable' => Taxe::REDEVABLE_ASSUREUR, 'branche' => $isIARD ? Taxe::BRANCHE_IARD : Taxe::BRANCHE_VIE]);
-        return $taxe ? $taxe->getTaux() * 100 : 0.0;
+        // CORRECTION: Le champ 'branche' n'existe pas sur l'entité Taxe.
+        // On recherche la taxe par redevable, puis on sélectionne le bon taux (IARD ou VIE).
+        $taxe = $this->taxeRepository->findOneBy(['redevable' => Taxe::REDEVABLE_ASSUREUR]);
+
+        if (!$taxe) {
+            return 0.0;
+        }
+
+        $rate = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();
+        return ($rate ?? 0.0) * 100;
     }
 
 
