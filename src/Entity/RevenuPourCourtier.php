@@ -68,6 +68,36 @@ class RevenuPourCourtier
 
     #[Groups(['list:read'])]
     public ?float $solde_restant_du = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montantPur = null;
+
+    #[Groups(['list:read'])]
+    public ?float $partPartenaire = null;
+
+    #[Groups(['list:read'])]
+    public ?float $retroCommission = null;
+
+    #[Groups(['list:read'])]
+    public ?float $reserve = null;
+
+    #[Groups(['list:read'])]
+    public ?float $retroCommissionReversee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $retroCommissionSolde = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeCourtierMontant = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeCourtierTaux = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeAssureurMontant = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeAssureurTaux = null;
     public function __construct()
     {
         $this->articles = new ArrayCollection();

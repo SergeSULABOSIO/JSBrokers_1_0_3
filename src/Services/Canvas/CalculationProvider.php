@@ -259,6 +259,16 @@ class CalculationProvider
                     'montant_du' => round($this->getRevenuPourCourtierMontantDu($entity), 2),
                     'montant_paye' => round($this->getRevenuPourCourtierMontantPaye($entity), 2),
                     'solde_restant_du' => round($this->getRevenuPourCourtierSoldeRestantDu($entity), 2),
+                    'montantPur' => round($this->getRevenuMontantPur($entity), 2),
+                    'partPartenaire' => $this->getRevenuPartPartenaire($entity),
+                    'retroCommission' => round($this->getRevenuRetroCommission($entity), 2),
+                    'reserve' => round($this->getRevenuReserve($entity), 2),
+                    'retroCommissionReversee' => round($this->getRevenuRetroCommissionReversee($entity), 2),
+                    'retroCommissionSolde' => round($this->getRevenuRetroCommissionSolde($entity), 2),
+                    'taxeCourtierMontant' => round($this->getRevenuTaxeCourtierMontant($entity), 2),
+                    'taxeCourtierTaux' => $this->getRevenuTaxeCourtierTaux($entity),
+                    'taxeAssureurMontant' => round($this->getRevenuTaxeAssureurMontant($entity), 2),
+                    'taxeAssureurTaux' => $this->getRevenuTaxeAssureurTaux($entity),
                 ];
                 break;
             case TypeRevenu::class:
@@ -2403,6 +2413,125 @@ class CalculationProvider
 
         return "Logique de calcul non spécifiée";
     }
+
+    private function getRevenuMontantPur(RevenuPourCourtier $revenu): float
+    {
+        $montantHT = $this->getRevenuMontantHt($revenu);
+        $taxeCourtier = $this->serviceTaxes->getMontantTaxe($montantHT, $this->isIARD($revenu->getCotation()), false);
+        return $montantHT - $taxeCourtier;
+    }
+
+    private function getPartenaireShareRateForRevenu(RevenuPourCourtier $revenu): float
+    {
+        if (!$revenu || !$revenu->getTypeRevenu() || !$revenu->getTypeRevenu()->isShared()) {
+            return 0.0;
+        }
+        $cotation = $revenu->getCotation();
+        if (!$cotation || !$cotation->getPiste()) {
+            return 0.0;
+        }
+
+        $partenaireAffaire = $this->getCotationPartenaire($cotation);
+        if (!$partenaireAffaire) {
+            return 0.0;
+        }
+
+        // Priorité 1 & 2: Conditions de partage
+        $conditionsPartagePiste = $cotation->getPiste()->getConditionsPartageExceptionnelles();
+        if (!$conditionsPartagePiste->isEmpty()) {
+            return $conditionsPartagePiste->first()->getTaux() ?? 0.0;
+        }
+
+        $conditionsPartagePartenaire = $partenaireAffaire->getConditionPartages();
+        if (!$conditionsPartagePartenaire->isEmpty()) {
+            return $conditionsPartagePartenaire->first()->getTaux() ?? 0.0;
+        }
+
+        // Priorité 3: Taux par défaut
+        return $partenaireAffaire->getPart() ?? 0.0;
+    }
+
+    private function getRevenuPartPartenaire(RevenuPourCourtier $revenu): float
+    {
+        // Le taux est stocké en décimal (ex: 0.1 pour 10%), on multiplie par 100 pour l'affichage.
+        return $this->getPartenaireShareRateForRevenu($revenu) * 100;
+    }
+
+    private function getRevenuRetroCommission(RevenuPourCourtier $revenu): float
+    {
+        // Utilise la logique de calcul existante, qui prend en compte les conditions de partage.
+        // Le paramètre `precomputedSums` est vide, ce qui peut impacter la performance mais assure l'exactitude du calcul pour un seul élément.
+        return $this->getRevenuMontantRetrocommissionsPayableParCourtier($revenu, null, -1, []);
+    }
+
+    private function getRevenuReserve(RevenuPourCourtier $revenu): float
+    {
+        $montantPur = $this->getRevenuMontantPur($revenu);
+        $retroCommission = $this->getRevenuRetroCommission($revenu);
+        return $montantPur - $retroCommission;
+    }
+
+    private function getRevenuRetroCommissionReversee(RevenuPourCourtier $revenu): float
+    {
+        $montantPaye = 0.0;
+        if (!$revenu) {
+            return $montantPaye;
+        }
+
+        foreach ($revenu->getArticles() as $article) {
+            $note = $article->getNote();
+            // On ne traite que les articles liés à une note adressée au partenaire.
+            if ($note && $note->getAddressedTo() === Note::TO_PARTENAIRE) {
+                $montantPayableNote = $this->getNoteMontantPayable($note);
+                if ($montantPayableNote > 0) {
+                    $proportionPaiement = $this->getNoteMontantPaye($note) / $montantPayableNote;
+                    // On applique la proportion payée au montant de l'article de ce revenu.
+                    $montantPaye += $proportionPaiement * ($article->getMontant() ?? 0);
+                }
+            }
+        }
+        return $montantPaye;
+    }
+
+    private function getRevenuRetroCommissionSolde(RevenuPourCourtier $revenu): float
+    {
+        $retroCommissionDue = $this->getRevenuRetroCommission($revenu);
+        $retroCommissionReversee = $this->getRevenuRetroCommissionReversee($revenu);
+        return $retroCommissionDue - $retroCommissionReversee;
+    }
+
+    private function getRevenuTaxeCourtierMontant(RevenuPourCourtier $revenu): float
+    {
+        $montantHT = $this->getRevenuMontantHt($revenu);
+        $isIARD = $this->isIARD($revenu->getCotation());
+        return $this->serviceTaxes->getMontantTaxe($montantHT, $isIARD, false);
+    }
+
+    private function getRevenuTaxeCourtierTaux(RevenuPourCourtier $revenu): float
+    {
+        $isIARD = $this->isIARD($revenu->getCotation());
+        // NOTE: La logique suivante suppose que l'on peut trouver la taxe via le repository.
+        // Une méthode dédiée dans ServiceTaxes serait préférable pour encapsuler cette logique.
+        $taxe = $this->taxeRepository->findOneBy(['redevable' => Taxe::REDEVABLE_COURTIER, 'branche' => $isIARD ? Taxe::BRANCHE_IARD : Taxe::BRANCHE_VIE]);
+        return $taxe ? $taxe->getTaux() * 100 : 0.0;
+    }
+
+    private function getRevenuTaxeAssureurMontant(RevenuPourCourtier $revenu): float
+    {
+        $montantHT = $this->getRevenuMontantHt($revenu);
+        $isIARD = $this->isIARD($revenu->getCotation());
+        return $this->serviceTaxes->getMontantTaxe($montantHT, $isIARD, true);
+    }
+
+    private function getRevenuTaxeAssureurTaux(RevenuPourCourtier $revenu): float
+    {
+        $isIARD = $this->isIARD($revenu->getCotation());
+        // NOTE: La logique suivante suppose que l'on peut trouver la taxe via le repository.
+        // Une méthode dédiée dans ServiceTaxes serait préférable pour encapsuler cette logique.
+        $taxe = $this->taxeRepository->findOneBy(['redevable' => Taxe::REDEVABLE_ASSUREUR, 'branche' => $isIARD ? Taxe::BRANCHE_IARD : Taxe::BRANCHE_VIE]);
+        return $taxe ? $taxe->getTaux() * 100 : 0.0;
+    }
+
 
     // --- Indicateurs pour TypeRevenu ---
 

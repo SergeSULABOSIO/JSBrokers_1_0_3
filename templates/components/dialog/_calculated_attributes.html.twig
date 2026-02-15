@@ -5,46 +5,50 @@
     {% if canvas is defined and canvas.liste is defined and canvas.liste is not empty %}
         <h5 class="column-title">Attributs calculés</h5>
         <div class="calculated-attributes-content">
-            {# Le contrôleur 'tooltip' gère l'affichage des descriptions au survol #}
-            <ul class="calculated-attributes-list" data-controller="tooltip">
-                {# On boucle sur tous les champs définis dans le canvas de l'entité #}
-                {% for attr in canvas.liste %}
-                    {# On affiche uniquement les attributs de type 'Calcul' #}
-                    {% if attr.type == 'Calcul' %}
-                        <li
-                            data-action="mouseenter->tooltip#show mouseleave->tooltip#hide"
-                            data-tooltip-content="{{ attr.description|default('Aucune description disponible.') }}"
-                        >
-                            <span class="attr-label">{{ attr.intitule }}:</span>
-                            <span class="attr-value">
-                                {# On récupère dynamiquement la valeur depuis l'objet 'entity' #}
-                                {% set value = attribute(entity, attr.code) %}
-                                
-                                {# Gestion des formats d'affichage spécifiques #}
-                                {% if attr.format is defined and attr.format == 'ArrayAssoc' and value is iterable %}
-                                    {# Formatage pour les tableaux clé-valeur #}
-                                    <table class="attr-table">
-                                        <tbody>
-                                            {% for key, val in value %}
-                                                <tr>
-                                                    <td class="attr-table-key">{{ key }}</td>
-                                                    <td class="attr-table-value">{{ val }}</td>
-                                                </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                {% elseif attr.format is defined and attr.format == 'Date' and value is not null and value.timestamp is defined %}
-                                    {# Formatage pour les dates #}
-                                    {{ value|date('d/m/Y') }}
-                                {% else %}
-                                    {# Affichage par défaut #}
-                                    {{ value }} {{ attr.unite|default('') }}
-                                {% endif %}
-                            </span>
-                        </li>
+            <div data-controller="tooltip">
+                {% set calculated_attributes = canvas.liste|filter(attr => attr.type == 'Calcul') %}
+                {% set grouped_attributes = calculated_attributes|group_by(attr => attr.group|default('Autres')) %}
+
+                {% for group_name, attributes_in_group in grouped_attributes %}
+                    {% if group_name != 'Autres' %}
+                        <h6 class="calculated-attributes-group-title">{{ group_name }}</h6>
                     {% endif %}
+                    <ul class="calculated-attributes-list">
+                        {% for attr in attributes_in_group %}
+                            <li
+                                data-action="mouseenter->tooltip#show mouseleave->tooltip#hide"
+                                data-tooltip-content="{{ attr.description|default('Aucune description disponible.') }}"
+                            >
+                                <span class="attr-label">{{ attr.intitule }}:</span>
+                                <span class="attr-value">
+                                    {% set value = attribute(entity, attr.code) %}
+                                    
+                                    {% if attr.format is defined and attr.format == 'ArrayAssoc' and value is iterable %}
+                                        <table class="attr-table">
+                                            <tbody>
+                                                {% for key, val in value %}
+                                                    <tr>
+                                                        <td class="attr-table-key">{{ key }}</td>
+                                                        <td class="attr-table-value">{{ val }}</td>
+                                                    </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    {% elseif attr.format is defined and attr.format == 'Date' and value is not null and value.timestamp is defined %}
+                                        {{ value|date('d/m/Y') }}
+                                    {% elseif attr.format is defined and attr.format == 'Pourcentage' %}
+                                        {{ value|number_format(2, ',', ' ') }} %
+                                    {% else %}
+                                        {# Affichage par défaut (inclut Monetaire) #}
+                                        {% set formatted_value = (value is number) ? value|number_format(2, ',', ' ') : value %}
+                                        {{ formatted_value }} {{ attr.unite|default('') }}
+                                    {% endif %}
+                                </span>
+                            </li>
+                        {% endfor %}
+                    </ul>
                 {% endfor %}
-            </ul>
+            </div>
         </div>
     {% endif %}
 </div>
