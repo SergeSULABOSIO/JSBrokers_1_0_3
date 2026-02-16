@@ -909,6 +909,21 @@ textarea:hover,
     color: #ffffff; /* Blanc pour la valeur */
 }
 
+/* NOUVEAU : Style pour les titres de groupe dans la colonne des attributs */
+.calculated-attributes-group-title {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #adb5bd; /* Gris clair pour le titre du groupe */
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #495057; /* Ligne de séparation sombre */
+}
+.calculated-attributes-content ul + .calculated-attributes-group-title {
+    margin-top: 1.5rem; /* Ajoute un espace au-dessus des groupes, sauf le premier */
+}
+
 /* --- 4.4 Styles de formulaire spécifiques aux dialogues --- */
 /*
 ===================================================================

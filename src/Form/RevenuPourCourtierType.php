@@ -1,11 +1,9 @@
 <?php
 
 namespace App\Form;
-
-use App\Entity\Revenu;
-use App\Entity\Cotation;
 use App\Entity\TypeRevenu;
 use App\Entity\RevenuPourCourtier;
+use App\Form\TypeRevenuAutocompleteField;
 use App\Services\FormListenerFactory;
 use App\Services\ServiceMonnaies;
 use Symfony\Component\Form\FormEvents;
@@ -53,10 +51,11 @@ class RevenuPourCourtierType extends AbstractType
                     'placeholder' => "Montant fixe",
                 ],
             ])
-            ->add('typerevenu', EntityType::class, [
+            ->add('typeRevenu', TypeRevenuAutocompleteField::class, [
                 'label' => "Type de revenu",
-                'class' => TypeRevenu::class,
-                'choice_label' => 'nom',
+                // La propriété de l'entité est nullable, donc le champ ne doit pas être requis.
+                'required' => false,
+                'placeholder' => "Sélectionner un type de revenu",
             ])
             // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())

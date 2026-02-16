@@ -40,7 +40,8 @@ class RevenuPourCourtierFormCanvasProvider implements FormCanvasProviderInterfac
     {
         $layout = [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["cotation"]], ["champs" => ["typeRevenu"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["cotation"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["typeRevenu"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["montantFlatExceptionel"]], ["champs" => ["tauxExceptionel"]]]],
         ];
         return $layout;

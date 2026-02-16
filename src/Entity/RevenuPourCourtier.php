@@ -98,6 +98,22 @@ class RevenuPourCourtier
 
     #[Groups(['list:read'])]
     public ?float $taxeAssureurTaux = null;
+
+    #[Groups(['list:read'])]
+    public ?string $estPartageable = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeCourtierPayee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeCourtierSolde = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeAssureurPayee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeAssureurSolde = null;
+
     public function __construct()
     {
         $this->articles = new ArrayCollection();
