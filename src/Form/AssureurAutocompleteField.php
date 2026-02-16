@@ -13,22 +13,26 @@ use Symfony\UX\Autocomplete\Form\BaseEntityAutocompleteType;
 class AssureurAutocompleteField extends AbstractType
 {
     public function __construct(
-        private FormListenerFactory $ecouteurFormulaire,
-    ) {}
+        private FormListenerFactory $ecouteurFormulaire
+    ) {
+    }
 
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
             'class' => Assureur::class,
+            'placeholder' => 'Sélectionner un assureur',
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
-            // 'placeholder' => "Séléctionnez l'assureur",
-            // 'choice_label' => 'nom',
-
-            // choose which fields to use in the search
-            // if not passed, *all* fields are used
-            // 'searchable_fields' => ['name'],
-
-            // 'security' => 'ROLE_SOMETHING',
+            'searchable_fields' => ['nom', 'email'],
+            'as_html' => true,
+            'choice_label' => function(Assureur $assureur) {
+                $email = method_exists($assureur, 'getEmail') ? $assureur->getEmail() : 'Email non disponible';
+                return sprintf(
+                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">%s</div></div>',
+                    htmlspecialchars($assureur->getNom()),
+                    htmlspecialchars($email)
+                );
+            },
         ]);
     }
 
