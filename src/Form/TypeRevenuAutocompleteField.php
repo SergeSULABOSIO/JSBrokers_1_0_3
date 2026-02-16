@@ -25,6 +25,8 @@ class TypeRevenuAutocompleteField extends AbstractType
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
             // 'choice_label' est toujours utile pour l'affichage dans le champ une fois sélectionné.
             'choice_label' => 'nom',
+            // On spécifie explicitement sur quel champ chercher pour plus de clarté.
+            'searchable_fields' => ['nom'],
             // 'choice_html_loader' est la clé pour le rendu personnalisé des options dans la liste déroulante.
             'choice_html_loader' => 'autocomplete/type_revenu',
             // NOUVEAU : Indique à Symfony UX Autocomplete de s'attendre à du HTML pour les options.
