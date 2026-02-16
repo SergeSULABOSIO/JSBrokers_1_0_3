@@ -65,7 +65,7 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
         $collections = [
             ['fieldName' => 'chargements', 'entityRouteName' => 'chargementpourprime', 'formTitle' => 'Chargement', 'parentFieldName' => 'cotation', 'totalizableField' => 'montant_final'],
             ['fieldName' => 'revenus', 'entityRouteName' => 'revenucourtier', 'formTitle' => 'Revenu', 'parentFieldName' => 'cotation', 'totalizableField' => 'montantCalculeTTC'],
-            ['fieldName' => 'tranches', 'entityRouteName' => 'tranche', 'formTitle' => 'Tranche', 'parentFieldName' => 'cotation'],
+            ['fieldName' => 'tranches', 'entityRouteName' => 'tranche', 'formTitle' => 'Tranche', 'parentFieldName' => 'cotation', 'totalizableField' => 'montantFlat'],
             ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'cotation'],
             ['fieldName' => 'taches', 'entityRouteName' => 'tache', 'formTitle' => 'Tâche', 'parentFieldName' => 'cotation'],
             ['fieldName' => 'avenants', 'entityRouteName' => 'avenant', 'formTitle' => 'Avenant', 'parentFieldName' => 'cotation'],

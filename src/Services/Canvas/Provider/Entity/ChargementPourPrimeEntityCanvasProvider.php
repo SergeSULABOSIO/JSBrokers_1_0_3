@@ -48,11 +48,11 @@ class ChargementPourPrimeEntityCanvasProvider implements EntityCanvasProviderInt
     private function getSpecificIndicators(): array
     {
         return [
-            ["code" => "montant_final", "intitule" => "Montant Final (TTC)", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant du chargement incluant les taxes applicables."],
-            ["code" => "montantTaxeAppliquee", "intitule" => "Taxe Appliquée", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant de la taxe calculée sur ce chargement, basé sur la branche du risque."],
-            ["code" => "poidsSurPrimeTotale", "intitule" => "Poids sur Prime Totale", "type" => "Calcul", "format" => "Pourcentage", "unite" => "%", "description" => "Pourcentage que ce chargement représente par rapport au montant total de la prime de la cotation."],
-            ["code" => "ageChargement", "intitule" => "Âge du Chargement", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours écoulés depuis la création de ce chargement."],
-            ["code" => "fonctionChargement", "intitule" => "Fonction du Chargement", "type" => "Calcul", "format" => "Texte", "description" => "Rôle fonctionnel de ce type de chargement (ex: Prime nette, Taxe, Frais)."],
+            ["group" => "Détails du Montant", "code" => "montant_final", "intitule" => "Montant Final (TTC)", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant du chargement incluant les taxes applicables."],
+            ["group" => "Détails du Montant", "code" => "montantTaxeAppliquee", "intitule" => "Taxe Appliquée", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant de la taxe calculée sur ce chargement, basé sur la branche du risque."],
+            ["group" => "Analyse & Contexte", "code" => "poidsSurPrimeTotale", "intitule" => "Poids sur Prime Totale", "type" => "Calcul", "format" => "Pourcentage", "unite" => "%", "description" => "Pourcentage que ce chargement représente par rapport au montant total de la prime de la cotation."],
+            ["group" => "Analyse & Contexte", "code" => "ageChargement", "intitule" => "Âge du Chargement", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours écoulés depuis la création de ce chargement."],
+            ["group" => "Analyse & Contexte", "code" => "fonctionChargement", "intitule" => "Fonction du Chargement", "type" => "Calcul", "format" => "Texte", "description" => "Rôle fonctionnel de ce type de chargement (ex: Prime nette, Taxe, Frais)."],
         ];
     }
 }
