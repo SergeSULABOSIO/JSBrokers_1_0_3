@@ -23,19 +23,56 @@ class TypeRevenuAutocompleteField extends AbstractType
             'class' => TypeRevenu::class,
             'placeholder' => 'Sélectionner un type de revenu',
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
-            // 'choice_label' est toujours utile pour l'affichage dans le champ une fois sélectionné.
-            'choice_label' => 'nom',
-            // On spécifie explicitement sur quel champ chercher pour plus de clarté.
             'searchable_fields' => ['nom'],
-            // 'choice_html_loader' est la clé pour le rendu personnalisé des options dans la liste déroulante.
-            'choice_html_loader' => 'autocomplete/type_revenu',
-            // NOUVEAU : Indique à Symfony UX Autocomplete de s'attendre à du HTML pour les options.
             'as_html' => true,
+            // NOUVELLE APPROCHE : On utilise un 'callable' pour générer le HTML directement ici,
+            // ce qui est plus robuste que de dépendre d'un fichier template externe.
+            'choice_label' => function(TypeRevenu $typeRevenu) {
+                $description = $this->generateDescriptionForChoice($typeRevenu);
+                return sprintf(
+                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">%s</div></div>',
+                    htmlspecialchars($typeRevenu->getNom()),
+                    htmlspecialchars($description)
+                );
+            },
         ]);
     }
 
     public function getParent(): string
     {
         return BaseEntityAutocompleteType::class;
+    }
+
+    /**
+     * Génère la chaîne de description pour une option, en répliquant la logique du template Twig.
+     */
+    private function generateDescriptionForChoice(TypeRevenu $typeRevenu): string
+    {
+        $details = [];
+
+        // Logique de calcul
+        if ($typeRevenu->getModeCalcul() === TypeRevenu::MODE_CALCUL_POURCENTAGE_CHARGEMENT && $typeRevenu->getPourcentage() !== null && $typeRevenu->getPourcentage() != 0) {
+            $details[] = number_format($typeRevenu->getPourcentage() * 100, 2) . '%';
+        } elseif ($typeRevenu->getModeCalcul() === TypeRevenu::MODE_CALCUL_MONTANT_FLAT && $typeRevenu->getMontantflat() !== null && $typeRevenu->getMontantflat() != 0) {
+            $details[] = 'Fixe de ' . $typeRevenu->getMontantflat();
+        } elseif ($typeRevenu->isAppliquerPourcentageDuRisque()) {
+            $details[] = 'Taux du risque';
+        }
+
+        // Logique du redevable
+        $redevableMap = [
+            TypeRevenu::REDEVABLE_CLIENT => 'Client',
+            TypeRevenu::REDEVABLE_ASSUREUR => 'Assureur',
+            TypeRevenu::REDEVABLE_REASSURER => 'Réassureur',
+            TypeRevenu::REDEVABLE_PARTENAIRE => 'Partenaire',
+        ];
+        if (isset($redevableMap[$typeRevenu->getRedevable()])) {
+            $details[] = 'Payé par ' . $redevableMap[$typeRevenu->getRedevable()];
+        }
+
+        // Logique du partage
+        $details[] = $typeRevenu->isShared() ? 'Partageable' : 'Non partageable';
+
+        return implode(' · ', $details);
     }
 }
