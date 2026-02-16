@@ -27,6 +27,8 @@ class TypeRevenuAutocompleteField extends AbstractType
             'choice_label' => 'nom',
             // 'choice_html_loader' est la clé pour le rendu personnalisé des options dans la liste déroulante.
             'choice_html_loader' => 'autocomplete/type_revenu',
+            // NOUVEAU : Indique à Symfony UX Autocomplete de s'attendre à du HTML pour les options.
+            'as_html' => true,
         ]);
     }
 
