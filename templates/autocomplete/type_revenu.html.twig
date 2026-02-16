@@ -1,0 +1,34 @@
+{# templates/autocomplete/type_revenu.html.twig #}
+{% set typeRevenu = choice.data %}
+
+<div>
+    <strong>{{ typeRevenu.nom }}</strong>
+    <div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">
+        {% set details = [] %}
+
+        {# Construit la partie calcul #}
+        {% if typeRevenu.modeCalcul == constant('App\\Entity\\TypeRevenu::MODE_CALCUL_POURCENTAGE_CHARGEMENT') and typeRevenu.pourcentage is not null and typeRevenu.pourcentage != 0 %}
+            {% set details = details|merge([ (typeRevenu.pourcentage * 100)|number_format(2) ~ '%' ]) %}
+        {% elseif typeRevenu.modeCalcul == constant('App\\Entity\\TypeRevenu::MODE_CALCUL_MONTANT_FLAT') and typeRevenu.montantflat is not null and typeRevenu.montantflat != 0 %}
+            {% set details = details|merge([ 'Fixe de ' ~ typeRevenu.montantflat ]) %}
+        {% elseif typeRevenu.appliquerPourcentageDuRisque %}
+             {% set details = details|merge([ 'Taux du risque' ]) %}
+        {% endif %}
+
+        {# Construit la partie redevable #}
+        {% set redevableMap = {
+            (constant('App\\Entity\\TypeRevenu::REDEVABLE_CLIENT')): 'Client',
+            (constant('App\\Entity\\TypeRevenu::REDEVABLE_ASSUREUR')): 'Assureur',
+            (constant('App\\Entity\\TypeRevenu::REDEVABLE_REASSURER')): 'Réassureur',
+            (constant('App\\Entity\\TypeRevenu::REDEVABLE_PARTENAIRE')): 'Partenaire'
+        } %}
+        {% if redevableMap[typeRevenu.redevable] is defined %}
+            {% set details = details|merge(['Payé par ' ~ redevableMap[typeRevenu.redevable]]) %}
+        {% endif %}
+
+        {# Construit la partie partage #}
+        {% set details = details|merge([typeRevenu.shared ? 'Partageable' : 'Non partageable']) %}
+
+        {{- details|join(' · ')|trim -}}
+    </div>
+</div>

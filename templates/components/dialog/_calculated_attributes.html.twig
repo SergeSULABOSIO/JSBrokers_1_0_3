@@ -3,18 +3,34 @@
 <div class="col-auto calculated-attributes-column" style="width: 400px;">
     {# On vérifie si le canvas et la liste des attributs existent #}
     {% if canvas is defined and canvas.liste is defined and canvas.liste is not empty %}
-        <h5 class="column-title">Attributs calculés</h5>
-        <div class="calculated-attributes-content">
-            <div data-controller="tooltip">
-                {% set calculated_attributes = canvas.liste|filter(attr => attr.type == 'Calcul') %}
-                {% set grouped_attributes = calculated_attributes|group_by(attr => attr.group|default('Autres')) %}
+        {% set calculated_attributes = canvas.liste|filter(attr => attr.type == 'Calcul') %}
+        {% if calculated_attributes is not empty %}
+            <h5 class="column-title">Attributs calculés</h5>
+            <div class="calculated-attributes-content">
+                <div data-controller="tooltip">
+                    {% set current_group = "___INITIAL_STATE___" %} {# État initial unique pour démarrer la boucle #}
+                    
+                    {% for attr in calculated_attributes %}
+                        {% set attr_group = attr.group|default(null) %}
 
-                {% for group_name, attributes_in_group in grouped_attributes %}
-                    {% if group_name != 'Autres' %}
-                        <h6 class="calculated-attributes-group-title">{{ group_name }}</h6>
-                    {% endif %}
-                    <ul class="calculated-attributes-list">
-                        {% for attr in attributes_in_group %}
+                        {# Si le nom du groupe change, on affiche un nouvel en-tête #}
+                        {% if attr_group != current_group %}
+                            {# On ferme la liste précédente, sauf pour la toute première itération #}
+                            {% if current_group != "___INITIAL_STATE___" %}
+                                </ul>
+                            {% endif %}
+
+                            {# On affiche le titre du groupe s'il existe #}
+                            {% if attr_group is not null %}
+                                <h6 class="calculated-attributes-group-title">{{ attr_group }}</h6>
+                            {% endif %}
+
+                            {# On ouvre une nouvelle liste pour le groupe (ou pour les éléments non groupés) #}
+                            <ul class="calculated-attributes-list">
+                            {% set current_group = attr_group %}
+                        {% endif %}
+
+                        {# On affiche l'élément de liste pour l'attribut courant #}
                             <li
                                 data-action="mouseenter->tooltip#show mouseleave->tooltip#hide"
                                 data-tooltip-content="{{ attr.description|default('Aucune description disponible.') }}"
@@ -22,7 +38,7 @@
                                 <span class="attr-label">{{ attr.intitule }}:</span>
                                 <span class="attr-value">
                                     {% set value = attribute(entity, attr.code) %}
-                                    
+
                                     {% if attr.format is defined and attr.format == 'ArrayAssoc' and value is iterable %}
                                         <table class="attr-table">
                                             <tbody>
@@ -39,16 +55,18 @@
                                     {% elseif attr.format is defined and attr.format == 'Pourcentage' %}
                                         {{ value|number_format(2, ',', ' ') }} %
                                     {% else %}
-                                        {# Affichage par défaut (inclut Monetaire) #}
-                                        {% set formatted_value = (value is number) ? value|number_format(2, ',', ' ') : value %}
-                                        {{ formatted_value }} {{ attr.unite|default('') }}
+                                        {# Affichage par défaut pour Monetaire, Nombre, ou Texte brut. Le test 'is number' n'est pas standard. #}
+                                        {% set is_numeric_format = attr.format is defined and (attr.format == 'Monetaire' or attr.format == 'Nombre') %}
+                                        {{ (is_numeric_format and value is not null) ? value|number_format(2, ',', ' ') : value }} {{ attr.unite|default('') }}
                                     {% endif %}
                                 </span>
                             </li>
-                        {% endfor %}
+                    {% endfor %}
+
+                    {# On s'assure de fermer la toute dernière liste de la boucle #}
                     </ul>
-                {% endfor %}
+                </div>
             </div>
-        </div>
+        {% endif %}
     {% endif %}
 </div>

@@ -269,6 +269,11 @@ class CalculationProvider
                     'taxeCourtierTaux' => $this->getRevenuTaxeCourtierTaux($entity),
                     'taxeAssureurMontant' => round($this->getRevenuTaxeAssureurMontant($entity), 2),
                     'taxeAssureurTaux' => $this->getRevenuTaxeAssureurTaux($entity),
+                    'estPartageable' => $this->getRevenuEstPartageable($entity),
+                    'taxeCourtierPayee' => round($this->getRevenuTaxeCourtierPayee($entity), 2),
+                    'taxeCourtierSolde' => round($this->getRevenuTaxeCourtierSolde($entity), 2),
+                    'taxeAssureurPayee' => round($this->getRevenuTaxeAssureurPayee($entity), 2),
+                    'taxeAssureurSolde' => round($this->getRevenuTaxeAssureurSolde($entity), 2),
                 ];
                 break;
             case TypeRevenu::class:
@@ -2548,6 +2553,65 @@ class CalculationProvider
         return ($rate ?? 0.0) * 100;
     }
 
+    private function getRevenuEstPartageable(RevenuPourCourtier $revenu): string
+    {
+        if ($revenu->getTypeRevenu() && $revenu->getTypeRevenu()->isShared()) {
+            return 'Oui';
+        }
+        return 'Non';
+    }
+
+    private function getRevenuTaxePayee(RevenuPourCourtier $revenu, bool $isTaxeAssureur): float
+    {
+        $montantPaye = 0.0;
+        if (!$revenu) {
+            return $montantPaye;
+        }
+
+        $targetRedevable = $isTaxeAssureur ? Taxe::REDEVABLE_ASSUREUR : Taxe::REDEVABLE_COURTIER;
+
+        foreach ($revenu->getArticles() as $article) {
+            $note = $article->getNote();
+            // On ne traite que les articles liés à une note adressée à l'autorité fiscale.
+            if ($note && $note->getAddressedTo() === Note::TO_AUTORITE_FISCALE) {
+                $taxe = $this->taxeRepository->find($article->getIdPoste());
+
+                // On vérifie que la taxe existe et que son redevable correspond à notre cible.
+                if ($taxe && $taxe->getRedevable() === $targetRedevable) {
+                    $montantPayableNote = $this->getNoteMontantPayable($note);
+                    if ($montantPayableNote > 0) {
+                        $proportionPaiement = $this->getNoteMontantPaye($note) / $montantPayableNote;
+                        $montantPaye += $proportionPaiement * ($article->getMontant() ?? 0);
+                    }
+                }
+            }
+        }
+        return $montantPaye;
+    }
+
+    private function getRevenuTaxeCourtierPayee(RevenuPourCourtier $revenu): float
+    {
+        return $this->getRevenuTaxePayee($revenu, false);
+    }
+
+    private function getRevenuTaxeAssureurPayee(RevenuPourCourtier $revenu): float
+    {
+        return $this->getRevenuTaxePayee($revenu, true);
+    }
+
+    private function getRevenuTaxeCourtierSolde(RevenuPourCourtier $revenu): float
+    {
+        $montantTaxe = $this->getRevenuTaxeCourtierMontant($revenu);
+        $montantPaye = $this->getRevenuTaxeCourtierPayee($revenu);
+        return $montantTaxe - $montantPaye;
+    }
+
+    private function getRevenuTaxeAssureurSolde(RevenuPourCourtier $revenu): float
+    {
+        $montantTaxe = $this->getRevenuTaxeAssureurMontant($revenu);
+        $montantPaye = $this->getRevenuTaxeAssureurPayee($revenu);
+        return $montantTaxe - $montantPaye;
+    }
 
     // --- Indicateurs pour TypeRevenu ---
 
