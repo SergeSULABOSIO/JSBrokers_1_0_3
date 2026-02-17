@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Form;
-use App\Entity\Chargement;
 use App\Entity\ChargementPourPrime;
 use App\Form\ChargementAutocompleteField;
 use App\Services\FormListenerFactory;

@@ -2,7 +2,6 @@
 
 namespace App\Form;
 
-use App\Entity\Assureur;
 use Doctrine\ORM\QueryBuilder;
 use App\Entity\AutoriteFiscale;
 use Doctrine\ORM\EntityRepository;
