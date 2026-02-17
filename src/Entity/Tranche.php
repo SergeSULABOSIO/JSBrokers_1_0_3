@@ -7,6 +7,7 @@ use App\Repository\TrancheRepository;
 use Doctrine\Common\Collections\Collection;
 use App\Entity\Traits\CalculatedIndicatorsTrait;
 use Doctrine\Common\Collections\ArrayCollection;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: TrancheRepository::class)]
 class Tranche
@@ -47,6 +48,15 @@ class Tranche
      */
     #[ORM\OneToMany(targetEntity: Article::class, mappedBy: 'tranche')]
     private Collection $articles;
+
+    #[Groups(['list:read'])]
+    public ?string $contexteParent = null;
+
+    #[Groups(['list:read'])]
+    public ?string $ageTranche = null;
+
+    #[Groups(['list:read'])]
+    public ?string $joursRestantsAvantEcheance = null;
 
     public function __construct()
     {

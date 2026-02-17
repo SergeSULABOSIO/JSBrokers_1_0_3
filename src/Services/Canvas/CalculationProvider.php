@@ -119,6 +119,14 @@ class CalculationProvider
                     'montantMoyenTranche' => $this->calculateMontantMoyenTranche($entity),
                 ];
                 break;
+            case Tranche::class:
+                /** @var Tranche $entity */
+                $indicateurs = [
+                    'ageTranche' => $this->calculateTrancheAge($entity),
+                    'joursRestantsAvantEcheance' => $this->calculateTrancheJoursRestants($entity),
+                    'contexteParent' => $this->getTrancheContexteParent($entity),
+                ];
+                break;
             case Avenant::class:
                 /** @var Avenant $entity */
                 $indicateurs = [
@@ -1749,6 +1757,35 @@ class CalculationProvider
         return sprintf("Piste '%s' pour le client '%s'", $pisteNom, $clientNom);
     }
 
+    /**
+     * Calcule le contexte parent pour une tranche.
+     */
+    private function getTrancheContexteParent(Tranche $tranche): string
+    {
+        return $tranche->getCotation() ? (string) $tranche->getCotation() : 'N/A';
+    }
+
+    private function calculateTrancheAge(Tranche $tranche): string
+    {
+        if (!$tranche->getCreatedAt()) {
+            return 'N/A';
+        }
+        $jours = $this->serviceDates->daysEntre($tranche->getCreatedAt(), new DateTimeImmutable()) ?? 0;
+        return $jours . ' jour(s)';
+    }
+
+    private function calculateTrancheJoursRestants(Tranche $tranche): string
+    {
+        if (!$tranche->getEcheanceAt()) {
+            return 'N/A';
+        }
+        $now = new DateTimeImmutable();
+        if ($tranche->getEcheanceAt() < $now) {
+            return 'Échue';
+        }
+        $jours = $this->serviceDates->daysEntre($now, $tranche->getEcheanceAt()) ?? 0;
+        return $jours . ' jour(s)';
+    }
 
     public function Contact_getTypeString(?Contact $contact): string
     {
