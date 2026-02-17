@@ -49,10 +49,37 @@ class TrancheEntityCanvasProvider implements EntityCanvasProviderInterface
 
     private function getSpecificIndicators(): array
     {
+        $monnaie = $this->serviceMonnaies->getCodeMonnaieAffichage();
         return [
             ["code" => "ageTranche", "intitule" => "Âge", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours depuis la création de la tranche."],
             ["code" => "joursRestantsAvantEcheance", "intitule" => "Jours Restants", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours restants avant la date d'échéance."],
             ["code" => "contexteParent", "intitule" => "Contexte Parent", "type" => "Calcul", "format" => "Texte", "description" => "Contexte de la cotation parente."],
+            
+            // NOUVEAU : Indicateurs financiers basés sur le taux de la tranche
+            ["group" => "Revenu Brut", "code" => "tauxTranche", "intitule" => "Taux Appliqué", "type" => "Calcul", "format" => "Pourcentage", "description" => "Le pourcentage de la prime totale représenté par cette tranche."],
+            ["group" => "Revenu Brut", "code" => "montantCalculeHT", "intitule" => "Montant HT", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Part de la commission HT correspondant à cette tranche."],
+            ["group" => "Revenu Brut", "code" => "montantCalculeTTC", "intitule" => "Montant TTC", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Part de la commission TTC correspondant à cette tranche."],
+            ["group" => "Revenu Brut", "code" => "descriptionCalcul", "intitule" => "Détail du Calcul", "type" => "Calcul", "format" => "Texte", "description" => "Explication du calcul du taux de la tranche."],
+
+            ["group" => "Taxes sur Commission", "code" => "taxeCourtierMontant", "intitule" => "Taxe Courtier (ARCA)", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Part de la taxe courtier correspondant à cette tranche."],
+            ["group" => "Taxes sur Commission", "code" => "taxeAssureurMontant", "intitule" => "Taxe Assureur (TVA)", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Part de la taxe assureur correspondant à cette tranche."],
+
+            ["group" => "Facturation & Paiements", "code" => "montant_du", "intitule" => "Montant Dû", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant total TTC à facturer pour cette tranche."],
+            ["group" => "Facturation & Paiements", "code" => "montant_paye", "intitule" => "Montant Payé", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant effectivement encaissé pour cette tranche."],
+            ["group" => "Facturation & Paiements", "code" => "solde_restant_du", "intitule" => "Solde Restant Dû", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Reste à encaisser sur cette tranche."],
+            ["group" => "Facturation & Paiements", "code" => "taxeCourtierPayee", "intitule" => "Taxe Courtier Payée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Taxe courtier reversée pour cette tranche."],
+            ["group" => "Facturation & Paiements", "code" => "taxeCourtierSolde", "intitule" => "Solde Taxe Courtier", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Taxe courtier restant à reverser."],
+            ["group" => "Facturation & Paiements", "code" => "taxeAssureurPayee", "intitule" => "Taxe Assureur Payée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Taxe assureur reversée pour cette tranche."],
+            ["group" => "Facturation & Paiements", "code" => "taxeAssureurSolde", "intitule" => "Solde Taxe Assureur", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Taxe assureur restant à reverser."],
+
+            ["group" => "Partage Partenaire", "code" => "estPartageable", "intitule" => "Revenu Partageable", "type" => "Calcul", "format" => "Texte", "description" => "Indique si la cotation contient des revenus partageables."],
+            ["group" => "Partage Partenaire", "code" => "montantPur", "intitule" => "Montant Pur", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Assiette de partage (Commission Pure) pour cette tranche."],
+            ["group" => "Partage Partenaire", "code" => "partPartenaire", "intitule" => "Part du Partenaire", "type" => "Calcul", "format" => "Pourcentage", "description" => "Taux de partage applicable."],
+            ["group" => "Partage Partenaire", "code" => "retroCommission", "intitule" => "Rétro-commission Due", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Rétro-commission due sur cette tranche."],
+            ["group" => "Partage Partenaire", "code" => "retroCommissionReversee", "intitule" => "Rétro-commission Reversée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Rétro-commission déjà payée sur cette tranche."],
+            ["group" => "Partage Partenaire", "code" => "retroCommissionSolde", "intitule" => "Rétro-commission Solde", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Solde de rétro-commission à payer."],
+
+            ["group" => "Résultat Final", "code" => "reserve", "intitule" => "Réserve Courtier", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Revenu net final pour le courtier sur cette tranche."],
         ];
     }
 }

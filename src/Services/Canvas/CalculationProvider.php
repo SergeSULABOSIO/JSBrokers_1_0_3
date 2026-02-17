@@ -125,6 +125,29 @@ class CalculationProvider
                     'ageTranche' => $this->calculateTrancheAge($entity),
                     'joursRestantsAvantEcheance' => $this->calculateTrancheJoursRestants($entity),
                     'contexteParent' => $this->getTrancheContexteParent($entity),
+                    // NOUVEAU : Indicateurs financiers
+                    'tauxTranche' => $this->getTrancheTauxDisplay($entity),
+                    'montantCalculeHT' => round($this->getTrancheMontantHT($entity), 2),
+                    'montantCalculeTTC' => round($this->getTrancheMontantTTC($entity), 2),
+                    'descriptionCalcul' => $this->getTrancheDescriptionCalcul($entity),
+                    'taxeCourtierMontant' => round($this->getTrancheTaxeCourtierMontant($entity), 2),
+                    'taxeCourtierTaux' => $this->getTrancheTaxeCourtierTaux($entity),
+                    'taxeAssureurMontant' => round($this->getTrancheTaxeAssureurMontant($entity), 2),
+                    'taxeAssureurTaux' => $this->getTrancheTaxeAssureurTaux($entity),
+                    'montant_du' => round($this->getTrancheMontantTTC($entity), 2), // Montant dû = Montant TTC
+                    'montant_paye' => round($this->getTrancheMontantCommissionEncaissee($entity), 2),
+                    'solde_restant_du' => round($this->getTrancheMontantTTC($entity) - $this->getTrancheMontantCommissionEncaissee($entity), 2),
+                    'taxeCourtierPayee' => round($this->getTrancheMontantTaxePayee($entity, false), 2),
+                    'taxeCourtierSolde' => round($this->getTrancheTaxeCourtierMontant($entity) - $this->getTrancheMontantTaxePayee($entity, false), 2),
+                    'taxeAssureurPayee' => round($this->getTrancheMontantTaxePayee($entity, true), 2),
+                    'taxeAssureurSolde' => round($this->getTrancheTaxeAssureurMontant($entity) - $this->getTrancheMontantTaxePayee($entity, true), 2),
+                    'estPartageable' => $this->getTrancheEstPartageable($entity),
+                    'montantPur' => round($this->getTrancheMontantPur($entity), 2),
+                    'partPartenaire' => $this->getTranchePartPartenaire($entity),
+                    'retroCommission' => round($this->getTrancheRetroCommission($entity), 2),
+                    'retroCommissionReversee' => round($this->getTrancheMontantRetrocommissionsPayableParCourtierPayee($entity), 2),
+                    'retroCommissionSolde' => round($this->getTrancheRetroCommission($entity) - $this->getTrancheMontantRetrocommissionsPayableParCourtierPayee($entity), 2),
+                    'reserve' => round($this->getTrancheReserve($entity), 2),
                 ];
                 break;
             case Avenant::class:
@@ -1785,6 +1808,131 @@ class CalculationProvider
         }
         $jours = $this->serviceDates->daysEntre($now, $tranche->getEcheanceAt()) ?? 0;
         return $jours . ' jour(s)';
+    }
+
+    /**
+     * Calcule le facteur de taux de la tranche (0.0 à 1.0).
+     */
+    private function calculateTrancheTauxFactor(Tranche $tranche): float
+    {
+        // 1. Si un pourcentage est défini explicitement
+        if ($tranche->getPourcentage() !== null && $tranche->getPourcentage() > 0) {
+            // On suppose que le pourcentage est stocké en valeur absolue (ex: 50 pour 50%)
+            return $tranche->getPourcentage() / 100;
+        }
+
+        // 2. Si un montant flat est défini, on le compare au total de la prime
+        if ($tranche->getMontantFlat() !== null && $tranche->getMontantFlat() > 0) {
+            $cotation = $tranche->getCotation();
+            if ($cotation) {
+                $primeTotale = $this->getCotationMontantPrimePayableParClient($cotation);
+                if ($primeTotale > 0) {
+                    return $tranche->getMontantFlat() / $primeTotale;
+                }
+            }
+        }
+
+        return 0.0;
+    }
+
+    private function getTrancheTauxDisplay(Tranche $tranche): float
+    {
+        return $this->calculateTrancheTauxFactor($tranche) * 100;
+    }
+
+    private function getTrancheDescriptionCalcul(Tranche $tranche): string
+    {
+        if ($tranche->getPourcentage() !== null && $tranche->getPourcentage() > 0) {
+            return "Basé sur le taux défini de " . $tranche->getPourcentage() . "%";
+        }
+        if ($tranche->getMontantFlat() !== null && $tranche->getMontantFlat() > 0) {
+            return "Calculé : Montant fixe (" . $tranche->getMontantFlat() . ") / Prime Totale";
+        }
+        return "Taux non défini (0%)";
+    }
+
+    private function getTrancheMontantHT(Tranche $tranche): float
+    {
+        $taux = $this->calculateTrancheTauxFactor($tranche);
+        $cotationHT = $this->getCotationMontantCommissionHt($tranche->getCotation(), -1, false);
+        return $cotationHT * $taux;
+    }
+
+    private function getTrancheMontantTTC(Tranche $tranche): float
+    {
+        $taux = $this->calculateTrancheTauxFactor($tranche);
+        $cotationTTC = $this->getCotationMontantCommissionTtc($tranche->getCotation(), -1, false);
+        return $cotationTTC * $taux;
+    }
+
+    private function getTrancheTaxeCourtierMontant(Tranche $tranche): float
+    {
+        $taux = $this->calculateTrancheTauxFactor($tranche);
+        $cotationTaxe = $this->getCotationMontantTaxeCourtier($tranche->getCotation(), false);
+        return $cotationTaxe * $taux;
+    }
+
+    private function getTrancheTaxeAssureurMontant(Tranche $tranche): float
+    {
+        $taux = $this->calculateTrancheTauxFactor($tranche);
+        $cotationTaxe = $this->getCotationMontantTaxeAssureur($tranche->getCotation(), false);
+        return $cotationTaxe * $taux;
+    }
+
+    private function getTrancheTaxeCourtierTaux(Tranche $tranche): float
+    {
+        $taxe = $this->taxeRepository->findOneBy(['redevable' => Taxe::REDEVABLE_COURTIER]);
+        if (!$taxe) return 0.0;
+        $isIARD = $this->isIARD($tranche->getCotation());
+        $rate = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();
+        return ($rate ?? 0.0) * 100;
+    }
+
+    private function getTrancheTaxeAssureurTaux(Tranche $tranche): float
+    {
+        $taxe = $this->taxeRepository->findOneBy(['redevable' => Taxe::REDEVABLE_ASSUREUR]);
+        if (!$taxe) return 0.0;
+        $isIARD = $this->isIARD($tranche->getCotation());
+        $rate = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();
+        return ($rate ?? 0.0) * 100;
+    }
+
+    private function getTrancheEstPartageable(Tranche $tranche): string
+    {
+        $cotation = $tranche->getCotation();
+        if ($cotation) {
+            foreach ($cotation->getRevenus() as $revenu) {
+                if ($revenu->getTypeRevenu() && $revenu->getTypeRevenu()->isShared()) {
+                    return 'Oui';
+                }
+            }
+        }
+        return 'Non';
+    }
+
+    private function getTrancheMontantPur(Tranche $tranche): float
+    {
+        $taux = $this->calculateTrancheTauxFactor($tranche);
+        $cotationPure = $this->getCotationMontantCommissionPure($tranche->getCotation(), -1, false);
+        return $cotationPure * $taux;
+    }
+
+    private function getTranchePartPartenaire(Tranche $tranche): float
+    {
+        $partenaire = $this->getCotationPartenaire($tranche->getCotation());
+        return $partenaire ? ($partenaire->getPart() * 100) : 0.0;
+    }
+
+    private function getTrancheRetroCommission(Tranche $tranche): float
+    {
+        $taux = $this->calculateTrancheTauxFactor($tranche);
+        $cotationRetro = $this->getCotationMontantRetrocommissionsPayableParCourtier($tranche->getCotation(), null, -1, []);
+        return $cotationRetro * $taux;
+    }
+
+    private function getTrancheReserve(Tranche $tranche): float
+    {
+        return $this->getTrancheMontantPur($tranche) - $this->getTrancheRetroCommission($tranche);
     }
 
     public function Contact_getTypeString(?Contact $contact): string
