@@ -55,6 +55,73 @@ class Tranche
     #[Groups(['list:read'])]
     public ?string $joursRestantsAvantEcheance = null;
 
+    // NOUVEAU : Attributs calculés spécifiques (Miroir de RevenuPourCourtier + Taux Tranche)
+    #[Groups(['list:read'])]
+    public ?float $tauxTranche = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montantCalculeHT = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montantCalculeTTC = null;
+
+    #[Groups(['list:read'])]
+    public ?string $descriptionCalcul = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_du = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_paye = null;
+
+    #[Groups(['list:read'])]
+    public ?float $solde_restant_du = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montantPur = null;
+
+    #[Groups(['list:read'])]
+    public ?float $partPartenaire = null;
+
+    #[Groups(['list:read'])]
+    public ?float $retroCommission = null;
+
+    #[Groups(['list:read'])]
+    public ?float $reserve = null;
+
+    #[Groups(['list:read'])]
+    public ?float $retroCommissionReversee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $retroCommissionSolde = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeCourtierMontant = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeCourtierTaux = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeAssureurMontant = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeAssureurTaux = null;
+
+    #[Groups(['list:read'])]
+    public ?string $estPartageable = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeCourtierPayee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeCourtierSolde = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeAssureurPayee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeAssureurSolde = null;
+
     public function __construct()
     {
         $this->articles = new ArrayCollection();
