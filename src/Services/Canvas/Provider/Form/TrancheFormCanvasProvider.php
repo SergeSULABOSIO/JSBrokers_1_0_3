@@ -39,7 +39,8 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
     private function buildTrancheLayout(int $trancheId, bool $isParentNew): array
     {
         $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["cotation"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["cotation"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["montantFlat"]], ["champs" => ["pourcentage"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["payableAt"]]]],
         ];

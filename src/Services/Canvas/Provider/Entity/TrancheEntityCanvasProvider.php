@@ -50,8 +50,9 @@ class TrancheEntityCanvasProvider implements EntityCanvasProviderInterface
     private function getSpecificIndicators(): array
     {
         return [
-            ["code" => "ageTranche", "intitule" => "Âge", "type" => "Texte", "format" => "Texte", "description" => "Nombre de jours depuis la création de la tranche."],
-            ["code" => "joursRestantsAvantEcheance", "intitule" => "Jours Restants", "type" => "Texte", "format" => "Texte", "description" => "Nombre de jours restants avant la date d'échéance."],
+            ["code" => "ageTranche", "intitule" => "Âge", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours depuis la création de la tranche."],
+            ["code" => "joursRestantsAvantEcheance", "intitule" => "Jours Restants", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours restants avant la date d'échéance."],
+            ["code" => "contexteParent", "intitule" => "Contexte Parent", "type" => "Calcul", "format" => "Texte", "description" => "Contexte de la cotation parente."],
         ];
     }
 }
