@@ -43,7 +43,7 @@ class TrancheEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "payableAt", "intitule" => "Payable le", "type" => "Date"],
                 ["code" => "echeanceAt", "intitule" => "Échéance le", "type" => "Date"],
                 ["code" => "articles", "intitule" => "Articles de note", "type" => "Collection", "targetEntity" => Article::class, "displayField" => "nom"],
-            ], $this->getSpecificIndicators(), $this->canvasHelper->getGlobalIndicatorsCanvas("Tranche"))
+            ], $this->getSpecificIndicators())
         ];
     }
 
