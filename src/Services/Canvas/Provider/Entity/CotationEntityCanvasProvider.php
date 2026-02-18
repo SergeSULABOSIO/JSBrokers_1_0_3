@@ -11,14 +11,12 @@ use App\Entity\Piste;
 use App\Entity\RevenuPourCourtier;
 use App\Entity\Tache;
 use App\Entity\Tranche;
-use App\Services\Canvas\CanvasHelper;
 use App\Services\ServiceMonnaies;
 
 class CotationEntityCanvasProvider implements EntityCanvasProviderInterface
 {
     public function __construct(
-        private ServiceMonnaies $serviceMonnaies,
-        private CanvasHelper $canvasHelper
+        private ServiceMonnaies $serviceMonnaies
     ) {
     }
 
@@ -53,7 +51,7 @@ class CotationEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "tranches", "intitule" => "Tranches", "type" => "Collection", "targetEntity" => Tranche::class, "displayField" => "nom"],
                 ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
                 ["code" => "avenants", "intitule" => "Avenants", "type" => "Collection", "targetEntity" => Avenant::class, "displayField" => "numero"],
-            ], $this->getSpecificIndicators(), $this->canvasHelper->getGlobalIndicatorsCanvas("Cotation"))
+            ], $this->getSpecificIndicators())
         ];
     }
 
