@@ -83,12 +83,6 @@ class Cotation
     public ?string $contextePiste = null;
 
     #[Groups(['list:read'])]
-    public ?float $primeTTC;
-
-    #[Groups(['list:read'])]
-    public ?float $commissionTTC;
-
-    #[Groups(['list:read'])]
     public ?string $statutSouscription = null;
 
     #[Groups(['list:read'])]
@@ -100,6 +94,69 @@ class Cotation
     #[Groups(['list:read'])]
     public ?float $montantMoyenTranche = null;
 
+    // NOUVEAU : Attributs calculés spécifiques
+    #[Groups(['list:read'])]
+    public ?float $primeTotale = null;
+
+    #[Groups(['list:read'])]
+    public ?float $primePayee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $primeSoldeDue = null;
+
+    #[Groups(['list:read'])]
+    public ?float $tauxCommission = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montantHT = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montantTTC = null;
+
+    #[Groups(['list:read'])]
+    public ?string $detailCalcul = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeCourtierMontant = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeAssureurMontant = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_du = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_paye = null;
+
+    #[Groups(['list:read'])]
+    public ?float $solde_restant_du = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeCourtierPayee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeCourtierSolde = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeAssureurPayee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeAssureurSolde = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montantPur = null;
+
+    #[Groups(['list:read'])]
+    public ?float $retroCommission = null;
+
+    #[Groups(['list:read'])]
+    public ?float $retroCommissionReversee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $retroCommissionSolde = null;
+
+    #[Groups(['list:read'])]
+    public ?float $reserve = null;
 
     public function __construct()
     {
