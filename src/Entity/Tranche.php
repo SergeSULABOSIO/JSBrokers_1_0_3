@@ -60,6 +60,15 @@ class Tranche
     public ?float $tauxTranche = null;
 
     #[Groups(['list:read'])]
+    public ?float $primeTranche = null;
+
+    #[Groups(['list:read'])]
+    public ?float $primePayee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $primeSoldeDue = null;
+
+    #[Groups(['list:read'])]
     public ?float $montantCalculeHT = null;
 
     #[Groups(['list:read'])]

@@ -57,6 +57,9 @@ class TrancheEntityCanvasProvider implements EntityCanvasProviderInterface
             
             // NOUVEAU : Indicateurs financiers basés sur le taux de la tranche
             ["group" => "Revenu Brut", "code" => "tauxTranche", "intitule" => "Taux Appliqué", "type" => "Calcul", "format" => "Pourcentage", "description" => "Le pourcentage de la prime totale représenté par cette tranche."],
+            ["group" => "Prime brutte", "code" => "primeTranche", "intitule" => "Prime Tranche", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Part de la prime totale payable pour cette tranche."],
+            ["group" => "Prime brutte", "code" => "primePayee", "intitule" => "Prime Payée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant de la prime déjà réglé pour cette tranche."],
+            ["group" => "Prime brutte", "code" => "primeSoldeDue", "intitule" => "Prime Solde Dû", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant de la prime restant à payer pour cette tranche."],
             ["group" => "Revenu Brut", "code" => "montantCalculeHT", "intitule" => "Montant HT", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Part de la commission HT correspondant à cette tranche."],
             ["group" => "Revenu Brut", "code" => "montantCalculeTTC", "intitule" => "Montant TTC", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Part de la commission TTC correspondant à cette tranche."],
             ["group" => "Revenu Brut", "code" => "descriptionCalcul", "intitule" => "Détail du Calcul", "type" => "Calcul", "format" => "Texte", "description" => "Explication du calcul du taux de la tranche."],

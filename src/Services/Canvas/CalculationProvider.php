@@ -126,6 +126,9 @@ class CalculationProvider
                     'joursRestantsAvantEcheance' => $this->calculateTrancheJoursRestants($entity),
                     'contexteParent' => $this->getTrancheContexteParent($entity),
                     // NOUVEAU : Indicateurs financiers
+                    'primeTranche' => round($this->getTranchePrime($entity), 2),
+                    'primePayee' => round($this->getTranchePrimePayee($entity), 2),
+                    'primeSoldeDue' => round($this->getTranchePrimeSoldeDue($entity), 2),
                     'tauxTranche' => $this->getTrancheTauxDisplay($entity),
                     'montantCalculeHT' => round($this->getTrancheMontantHT($entity), 2),
                     'montantCalculeTTC' => round($this->getTrancheMontantTTC($entity), 2),
@@ -1817,8 +1820,13 @@ class CalculationProvider
     {
         // 1. Si un pourcentage est défini explicitement
         if ($tranche->getPourcentage() !== null && $tranche->getPourcentage() > 0) {
-            // On suppose que le pourcentage est stocké en valeur absolue (ex: 50 pour 50%)
-            return $tranche->getPourcentage() / 100;
+            $valeur = $tranche->getPourcentage();
+            // Correction incohérence stockage : Si la valeur est > 1 (ex: 50), on suppose que c'est un pourcentage entier.
+            // Si la valeur est <= 1 (ex: 0.5), on suppose que c'est déjà une fraction (comportement standard Symfony PercentType).
+            if ($valeur > 1) {
+                return $valeur / 100;
+            }
+            return $valeur;
         }
 
         // 2. Si un montant flat est défini, on le compare au total de la prime
@@ -1843,12 +1851,42 @@ class CalculationProvider
     private function getTrancheDescriptionCalcul(Tranche $tranche): string
     {
         if ($tranche->getPourcentage() !== null && $tranche->getPourcentage() > 0) {
-            return "Basé sur le taux défini de " . $tranche->getPourcentage() . "%";
+            $tauxAffiche = $this->getTrancheTauxDisplay($tranche);
+            return "Basé sur le taux défini de " . $tauxAffiche . "%";
         }
         if ($tranche->getMontantFlat() !== null && $tranche->getMontantFlat() > 0) {
             return "Calculé : Montant fixe (" . $tranche->getMontantFlat() . ") / Prime Totale";
         }
         return "Taux non défini (0%)";
+    }
+
+    private function getTranchePrime(Tranche $tranche): float
+    {
+        $taux = $this->calculateTrancheTauxFactor($tranche);
+        $primeTotale = $this->getCotationMontantPrimePayableParClient($tranche->getCotation());
+        return $primeTotale * $taux;
+    }
+
+    private function getTranchePrimePayee(Tranche $tranche): float
+    {
+        $montant = 0.0;
+        foreach ($tranche->getArticles() as $article) {
+            $note = $article->getNote();
+            // On ne considère que les notes adressées au client (paiement de la prime)
+            if ($note && $note->getAddressedTo() === Note::TO_CLIENT) {
+                $montantPayableNote = $this->getNoteMontantPayable($note);
+                if ($montantPayableNote > 0) {
+                    $proportionPaiement = $this->getNoteMontantPaye($note) / $montantPayableNote;
+                    $montant += $proportionPaiement * ($article->getMontant() ?? 0);
+                }
+            }
+        }
+        return $montant;
+    }
+
+    private function getTranchePrimeSoldeDue(Tranche $tranche): float
+    {
+        return $this->getTranchePrime($tranche) - $this->getTranchePrimePayee($tranche);
     }
 
     private function getTrancheMontantHT(Tranche $tranche): float
