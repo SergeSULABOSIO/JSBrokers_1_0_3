@@ -117,6 +117,36 @@ class CalculationProvider
                     'delaiDepuisCreation' => $this->calculateDelaiDepuisCreation($entity),
                     'nombreTranches' => $this->calculateNombreTranches($entity),
                     'montantMoyenTranche' => $this->calculateMontantMoyenTranche($entity),
+                    
+                    // NOUVEAU : Indicateurs financiers
+                    'primeTotale' => round($this->getCotationMontantPrimePayableParClient($entity), 2),
+                    'primePayee' => round($this->getCotationMontantPrimePayableParClientPayee($entity), 2),
+                    'primeSoldeDue' => round($this->getCotationMontantPrimePayableParClient($entity) - $this->getCotationMontantPrimePayableParClientPayee($entity), 2),
+                    
+                    'tauxCommission' => $this->getCotationTauxCommission($entity),
+                    'montantHT' => round($this->getCotationMontantCommissionHt($entity, -1, false), 2),
+                    'montantTTC' => round($this->getCotationMontantCommissionTtc($entity, -1, false), 2),
+                    'detailCalcul' => "Somme des revenus",
+                    
+                    'taxeCourtierMontant' => round($this->getCotationMontantTaxeCourtier($entity, false), 2),
+                    'taxeAssureurMontant' => round($this->getCotationMontantTaxeAssureur($entity, false), 2),
+                    
+                    'montant_du' => round($this->getCotationMontantCommissionTtc($entity, -1, false), 2),
+                    'montant_paye' => round($this->getCotationMontantCommissionEncaissee($entity), 2),
+                    'solde_restant_du' => round($this->getCotationMontantCommissionTtc($entity, -1, false) - $this->getCotationMontantCommissionEncaissee($entity), 2),
+                    
+                    'taxeCourtierPayee' => round($this->getCotationMontantTaxeCourtierPayee($entity), 2),
+                    'taxeCourtierSolde' => round($this->getCotationMontantTaxeCourtier($entity, false) - $this->getCotationMontantTaxeCourtierPayee($entity), 2),
+                    
+                    'taxeAssureurPayee' => round($this->getCotationMontantTaxeAssureurPayee($entity), 2),
+                    'taxeAssureurSolde' => round($this->getCotationMontantTaxeAssureur($entity, false) - $this->getCotationMontantTaxeAssureurPayee($entity), 2),
+                    
+                    'montantPur' => round($this->getCotationMontantCommissionPure($entity, -1, false), 2),
+                    'retroCommission' => round($this->getCotationMontantRetrocommissionsPayableParCourtier($entity, null, -1, []), 2),
+                    'retroCommissionReversee' => round($this->getCotationMontantRetrocommissionsPayableParCourtierPayee($entity, null), 2),
+                    'retroCommissionSolde' => round($this->getCotationMontantRetrocommissionsPayableParCourtier($entity, null, -1, []) - $this->getCotationMontantRetrocommissionsPayableParCourtierPayee($entity, null), 2),
+                    
+                    'reserve' => round($this->getCotationMontantCommissionPure($entity, -1, false) - $this->getCotationMontantRetrocommissionsPayableParCourtier($entity, null, -1, []), 2),
                 ];
                 break;
             case Tranche::class:
@@ -1298,6 +1328,26 @@ class CalculationProvider
             }
         }
         return $montant;
+    }
+
+    private function getCotationMontantPrimePayableParClientPayee(?Cotation $cotation): float
+    {
+        $montant = 0;
+        if ($cotation) {
+            foreach ($cotation->getTranches() as $tranche) {
+                $montant += $this->getTranchePrimePayee($tranche);
+            }
+        }
+        return $montant;
+    }
+
+    private function getCotationTauxCommission(?Cotation $cotation): float
+    {
+        $prime = $this->getCotationMontantPrimePayableParClient($cotation);
+        if ($prime > 0) {
+            return round(($this->getCotationMontantCommissionHt($cotation, -1, false) / $prime) * 100, 2);
+        }
+        return 0.0;
     }
 
     private function getTrancheMontantRetrocommissionsPayableParCourtierPayee(?Tranche $tranche, ?Partenaire $partenaireCible = null): float
