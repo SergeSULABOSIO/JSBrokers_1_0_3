@@ -60,6 +60,7 @@ class CotationEntityCanvasProvider implements EntityCanvasProviderInterface
         $monnaie = $this->serviceMonnaies->getCodeMonnaieAffichage();
         return [
             ["group" => "Statut & Suivi", "code" => "statutSouscription", "intitule" => "Statut", "type" => "Calcul", "format" => "Texte", "description" => "Indique si la cotation a été transformée en police (Souscrite) ou non (En attente)."],
+            ["group" => "Statut & Suivi", "code" => "referencePolice", "intitule" => "Réf. Police", "type" => "Calcul", "format" => "Texte", "description" => "Référence de la police associée (si souscrite)."],
             ["group" => "Statut & Suivi", "code" => "delaiDepuisCreation", "intitule" => "Âge", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours écoulés depuis la création de la cotation."],
             ["group" => "Contexte", "code" => "contextePiste", "intitule" => "Contexte Piste", "type" => "Calcul", "format" => "Texte", "description" => "Rappelle la piste commerciale à laquelle cette cotation est rattachée."],
             ["group" => "Plan de Paiement", "code" => "nombreTranches", "intitule" => "Nb. Tranches", "type" => "Calcul", "format" => "Nombre", "description" => "Nombre de tranches de paiement définies pour cette cotation."],

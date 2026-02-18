@@ -114,6 +114,7 @@ class CalculationProvider
                 $indicateurs = [
                     'contextePiste' => $this->getCotationContextePiste($entity),
                     'statutSouscription' => $this->calculateStatutSouscription($entity),
+                    'referencePolice' => $this->getCotationReferencePolice($entity),
                     'delaiDepuisCreation' => $this->calculateDelaiDepuisCreation($entity),
                     'nombreTranches' => $this->calculateNombreTranches($entity),
                     'montantMoyenTranche' => $this->calculateMontantMoyenTranche($entity),
@@ -1770,6 +1771,17 @@ class CalculationProvider
     private function calculateStatutSouscription(Cotation $cotation): string
     {
         return $this->isCotationBound($cotation) ? 'Souscrite' : 'En attente';
+    }
+
+    /**
+     * Récupère la référence de la police associée à la cotation via ses avenants.
+     */
+    private function getCotationReferencePolice(Cotation $cotation): string
+    {
+        if ($cotation->getAvenants()->isEmpty()) {
+            return 'Nulle';
+        }
+        return $cotation->getAvenants()->first()->getReferencePolice() ?? 'Nulle';
     }
 
     /**

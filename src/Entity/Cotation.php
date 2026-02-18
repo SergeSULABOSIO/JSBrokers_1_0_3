@@ -86,6 +86,9 @@ class Cotation
     public ?string $statutSouscription = null;
 
     #[Groups(['list:read'])]
+    public ?string $referencePolice = null;
+
+    #[Groups(['list:read'])]
     public ?string $delaiDepuisCreation = null;
 
     #[Groups(['list:read'])]
