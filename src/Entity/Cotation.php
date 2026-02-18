@@ -104,6 +104,9 @@ class Cotation
     public ?float $tauxSP = null;
 
     #[Groups(['list:read'])]
+    public ?string $tauxSPInterpretation = null;
+
+    #[Groups(['list:read'])]
     public ?\DateTimeInterface $dateDernierReglement = null;
 
     #[Groups(['list:read'])]

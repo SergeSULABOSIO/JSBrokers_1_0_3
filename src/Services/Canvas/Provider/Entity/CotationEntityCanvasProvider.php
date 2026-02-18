@@ -69,6 +69,7 @@ class CotationEntityCanvasProvider implements EntityCanvasProviderInterface
             ["group" => "SINISTRALITE", "code" => "indemnisationVersee", "intitule" => "Indemnisation versée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Somme des paiements effectués pour les offres d'indemnisations."],
             ["group" => "SINISTRALITE", "code" => "indemnisationSolde", "intitule" => "Indemnisation solde", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Solde dû au client ou à la victime."],
             ["group" => "SINISTRALITE", "code" => "tauxSP", "intitule" => "Le taux S/P", "type" => "Calcul", "format" => "Pourcentage", "description" => "Rapport Sinistre sur Prime (S/P)."],
+            ["group" => "SINISTRALITE", "code" => "tauxSPInterpretation", "intitule" => "Interprétation S/P", "type" => "Calcul", "format" => "Texte", "description" => "Analyse de la rentabilité technique basée sur le ratio S/P."],
             ["group" => "SINISTRALITE", "code" => "dateDernierReglement", "intitule" => "Date du dernier règlement", "type" => "Calcul", "format" => "Date", "description" => "Date du dernier paiement de l'offre d'indemnisation."],
             ["group" => "SINISTRALITE", "code" => "vitesseReglement", "intitule" => "Vitesse de règlement", "type" => "Calcul", "format" => "Texte", "description" => "Temps écoulé entre la notification et le règlement final."],
 
