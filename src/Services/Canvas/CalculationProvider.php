@@ -204,7 +204,7 @@ class CalculationProvider
                         'dureeCouverture' => $this->calculateDureeCouvertureAvenant($entity),
                         'joursRestants' => $this->calculateJoursRestantsAvenant($entity),
                         'ageAvenant' => $this->calculateAgeAvenant($entity),
-                        'statutRenouvellement' => $this->getAvenantStatutRenouvellementString($entity),
+                        'typeAffaire' => $this->getAvenantTypeAffaire($entity),
                         'periodeCouverture' => $this->getAvenantPeriodeCouverture($entity),
                     ];
                 }
@@ -214,7 +214,7 @@ class CalculationProvider
                     'dureeCouverture' => $this->calculateDureeCouvertureAvenant($entity),
                     'joursRestants' => $this->calculateJoursRestantsAvenant($entity),
                     'ageAvenant' => $this->calculateAgeAvenant($entity),
-                    'statutRenouvellement' => $this->getAvenantStatutRenouvellementString($entity),
+                    'typeAffaire' => $this->getAvenantTypeAffaire($entity),
                     'periodeCouverture' => $this->getAvenantPeriodeCouverture($entity),
 
                     // Indicateurs hérités de la Cotation parente
@@ -2432,6 +2432,44 @@ class CalculationProvider
             return sprintf("Du %s au %s", $avenant->getStartingAt()->format('d/m/Y'), $avenant->getEndingAt()->format('d/m/Y'));
         }
         return 'Période incomplète';
+    }
+
+    /**
+     * Détermine si l'avenant correspond à une nouvelle affaire ou à une affaire existante.
+     */
+    private function getAvenantTypeAffaire(Avenant $avenant): string
+    {
+        $cotation = $avenant->getCotation();
+        if (!$cotation) {
+            return "Indéterminé";
+        }
+
+        $piste = $cotation->getPiste();
+        if (!$piste) {
+            return "Indéterminé";
+        }
+
+        $client = $piste->getClient();
+        $risque = $piste->getRisque();
+        $startingAt = $avenant->getStartingAt();
+
+        if (!$client || !$risque || !$startingAt) {
+            return "Indéterminé";
+        }
+
+        // On cherche s'il existe un autre avenant pour le même client et le même risque,
+        // dont la date d'effet est antérieure à celle de l'avenant actuel.
+        $count = $this->cotationRepository->createQueryBuilder('c')
+            ->select('count(a.id)')
+            ->join('c.piste', 'p')
+            ->join('c.avenants', 'a')
+            ->where('p.client = :client')->setParameter('client', $client)
+            ->andWhere('p.risque = :risque')->setParameter('risque', $risque)
+            ->andWhere('a.id != :currentAvenantId')->setParameter('currentAvenantId', $avenant->getId())
+            ->andWhere('a.startingAt < :currentStartingAt')->setParameter('currentStartingAt', $startingAt)
+            ->getQuery()->getSingleScalarResult();
+
+        return ($count > 0) ? "Affaire existante" : "Nouvelle affaire";
     }
 
     /**

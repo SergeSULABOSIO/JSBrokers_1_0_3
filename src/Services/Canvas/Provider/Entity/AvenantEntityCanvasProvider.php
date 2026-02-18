@@ -50,7 +50,7 @@ class AvenantEntityCanvasProvider implements EntityCanvasProviderInterface
     {
         $monnaie = $this->serviceMonnaies->getCodeMonnaieAffichage();
         return [
-            ["group" => "Statut & Suivi", "code" => "statutRenouvellement", "intitule" => "Statut", "type" => "Calcul", "format" => "Texte", "description" => "Statut actuel du renouvellement de l'avenant."],
+            ["group" => "Statut & Suivi", "code" => "typeAffaire", "intitule" => "Type d'Affaire", "type" => "Calcul", "format" => "Texte", "description" => "Indique s'il s'agit d'une nouvelle affaire ou d'une affaire existante dans le portefeuille."],
             ["group" => "Statut & Suivi", "code" => "periodeCouverture", "intitule" => "Période", "type" => "Calcul", "format" => "Texte", "description" => "Période de couverture (Date d'effet - Date d'échéance)."],
             ["group" => "Statut & Suivi", "code" => "dureeCouverture", "intitule" => "Durée de couverture", "type" => "Calcul", "format" => "Texte", "description" => "Durée totale de la couverture de l'avenant en jours."],
             ["group" => "Statut & Suivi", "code" => "joursRestants", "intitule" => "Jours restants", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours restants avant l'échéance de l'avenant."],
