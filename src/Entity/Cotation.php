@@ -89,6 +89,27 @@ class Cotation
     public ?string $referencePolice = null;
 
     #[Groups(['list:read'])]
+    public ?string $periodeCouverture = null;
+
+    #[Groups(['list:read'])]
+    public ?float $indemnisationDue = null;
+
+    #[Groups(['list:read'])]
+    public ?float $indemnisationVersee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $indemnisationSolde = null;
+
+    #[Groups(['list:read'])]
+    public ?float $tauxSP = null;
+
+    #[Groups(['list:read'])]
+    public ?\DateTimeInterface $dateDernierReglement = null;
+
+    #[Groups(['list:read'])]
+    public ?string $vitesseReglement = null;
+
+    #[Groups(['list:read'])]
     public ?string $delaiDepuisCreation = null;
 
     #[Groups(['list:read'])]

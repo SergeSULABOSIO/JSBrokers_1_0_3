@@ -115,6 +115,15 @@ class CalculationProvider
                     'contextePiste' => $this->getCotationContextePiste($entity),
                     'statutSouscription' => $this->calculateStatutSouscription($entity),
                     'referencePolice' => $this->getCotationReferencePolice($entity),
+                    'periodeCouverture' => $this->getCotationPeriodeCouverture($entity),
+                    // NOUVEAU : Indicateurs Sinistralité
+                    'indemnisationDue' => round($this->getCotationIndemnisationDue($entity), 2),
+                    'indemnisationVersee' => round($this->getCotationIndemnisationVersee($entity), 2),
+                    'indemnisationSolde' => round($this->getCotationIndemnisationSolde($entity), 2),
+                    'tauxSP' => $this->getCotationTauxSP($entity),
+                    'dateDernierReglement' => $this->getCotationDateDernierReglement($entity),
+                    'vitesseReglement' => $this->getCotationVitesseReglement($entity),
+
                     'delaiDepuisCreation' => $this->calculateDelaiDepuisCreation($entity),
                     'nombreTranches' => $this->calculateNombreTranches($entity),
                     'montantMoyenTranche' => $this->calculateMontantMoyenTranche($entity),
@@ -1782,6 +1791,121 @@ class CalculationProvider
             return 'Nulle';
         }
         return $cotation->getAvenants()->first()->getReferencePolice() ?? 'Nulle';
+    }
+
+    /**
+     * Récupère la période de couverture de la cotation via son avenant.
+     */
+    private function getCotationPeriodeCouverture(Cotation $cotation): string
+    {
+        if ($cotation->getAvenants()->isEmpty()) {
+            return 'Aucune';
+        }
+        $avenant = $cotation->getAvenants()->first();
+        if ($avenant->getStartingAt() && $avenant->getEndingAt()) {
+            return sprintf("Du %s au %s", $avenant->getStartingAt()->format('d/m/Y'), $avenant->getEndingAt()->format('d/m/Y'));
+        }
+        return 'Période incomplète';
+    }
+
+    /**
+     * Récupère les sinistres liés à la police de la cotation.
+     */
+    private function getCotationClaims(Cotation $cotation): array
+    {
+        $ref = $this->getCotationReferencePolice($cotation);
+        if ($ref === 'Nulle') return [];
+        
+        return $this->notificationSinistreRepository->findBy(['referencePolice' => $ref]);
+    }
+
+    private function getCotationIndemnisationDue(Cotation $cotation): float
+    {
+        $claims = $this->getCotationClaims($cotation);
+        $total = 0.0;
+        foreach ($claims as $claim) {
+            $total += $this->getNotificationSinistreCompensation($claim);
+        }
+        return $total;
+    }
+
+    private function getCotationIndemnisationVersee(Cotation $cotation): float
+    {
+        $claims = $this->getCotationClaims($cotation);
+        $total = 0.0;
+        foreach ($claims as $claim) {
+            $total += $this->getNotificationSinistreCompensationVersee($claim);
+        }
+        return $total;
+    }
+
+    private function getCotationIndemnisationSolde(Cotation $cotation): float
+    {
+        return $this->getCotationIndemnisationDue($cotation) - $this->getCotationIndemnisationVersee($cotation);
+    }
+
+    private function getCotationTauxSP(Cotation $cotation): float
+    {
+        $prime = $this->getCotationMontantPrimePayableParClient($cotation);
+        $sinistre = $this->getCotationIndemnisationDue($cotation);
+        if ($prime > 0) {
+            return round(($sinistre / $prime) * 100, 2);
+        }
+        return 0.0;
+    }
+
+    private function getCotationDateDernierReglement(Cotation $cotation): ?\DateTimeInterface
+    {
+        $claims = $this->getCotationClaims($cotation);
+        $lastDate = null;
+        foreach ($claims as $claim) {
+            $date = $this->getNotificationSinistreDateDernierReglement($claim);
+            if ($date && ($lastDate === null || $date > $lastDate)) {
+                $lastDate = $date;
+            }
+        }
+        return $lastDate;
+    }
+
+    private function getCotationVitesseReglement(Cotation $cotation): string
+    {
+        $solde = $this->getCotationIndemnisationSolde($cotation);
+        if ($solde > 0) return "Traitement encours";
+        
+        $claims = $this->getCotationClaims($cotation);
+        if (empty($claims)) return "Aucun sinistre";
+
+        // On cherche le dernier paiement global pour calculer la vitesse
+        $lastDate = $this->getCotationDateDernierReglement($cotation);
+        
+        // Pour la date de notification, on prend celle du sinistre associé au dernier paiement
+        // ou par défaut la première notification si on ne peut pas lier directement.
+        // Ici, on simplifie en prenant la date du dernier règlement vs la date de notification du sinistre concerné.
+        // Note: Cette logique est une approximation si plusieurs sinistres sont réglés à des dates différentes.
+        // Mais si le solde est à 0, cela signifie que tout est réglé.
+        // On retourne la durée du dernier règlement effectué.
+        
+        // Pour être précis selon la demande : "temps écoulé entre la date de la notification du sinistre et la date du dernier règlement"
+        // Si plusieurs sinistres, on prend le dernier règlement global et on le compare à la notification de CE sinistre spécifique ?
+        // Ou la toute première notification ? La demande implique un contexte singulier.
+        // On va itérer pour trouver le paiement le plus récent et son sinistre parent.
+        $lastPaymentDate = null;
+        $associatedClaim = null;
+
+        foreach ($claims as $claim) {
+            $date = $this->getNotificationSinistreDateDernierReglement($claim);
+            if ($date && ($lastPaymentDate === null || $date > $lastPaymentDate)) {
+                $lastPaymentDate = $date;
+                $associatedClaim = $claim;
+            }
+        }
+
+        if ($lastPaymentDate && $associatedClaim && $associatedClaim->getNotifiedAt()) {
+            $days = $this->serviceDates->daysEntre($associatedClaim->getNotifiedAt(), $lastPaymentDate);
+            return $days . " jour(s)";
+        }
+        
+        return "N/A";
     }
 
     /**
