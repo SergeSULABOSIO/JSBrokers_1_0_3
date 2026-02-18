@@ -121,6 +121,7 @@ class CalculationProvider
                     'indemnisationVersee' => round($this->getCotationIndemnisationVersee($entity), 2),
                     'indemnisationSolde' => round($this->getCotationIndemnisationSolde($entity), 2),
                     'tauxSP' => $this->getCotationTauxSP($entity),
+                    'tauxSPInterpretation' => $this->getCotationTauxSPInterpretation($entity),
                     'dateDernierReglement' => $this->getCotationDateDernierReglement($entity),
                     'vitesseReglement' => $this->getCotationVitesseReglement($entity),
 
@@ -1852,6 +1853,29 @@ class CalculationProvider
             return round(($sinistre / $prime) * 100, 2);
         }
         return 0.0;
+    }
+
+    private function getCotationTauxSPInterpretation(Cotation $cotation): string
+    {
+        $taux = $this->getCotationTauxSP($cotation);
+        $indemnisationDue = $this->getCotationIndemnisationDue($cotation);
+
+        if ($indemnisationDue == 0) {
+            return "Aucun sinistre indemnisable enregistré pour cette police.";
+        }
+
+        if ($taux == 0 && $indemnisationDue > 0) { // This implies prime is 0 or negative
+            return "La prime étant nulle ou négative, le ratio est infini.";
+        }
+
+        if ($taux < 70) {
+            return "Excellent. Le portefeuille est très rentable.";
+        } elseif ($taux <= 80) {
+            return "Sain. C'est l'équilibre classique pour couvrir les frais de gestion et faire un profit.";
+        } elseif ($taux <= 100) {
+            return "Prudence. La rentabilité est faible et le portefeuille est à surveiller.";
+        }
+        return "Déficitaire. L'assureur perd de l'argent sur la partie technique (il paie plus qu'il ne reçoit).";
     }
 
     private function getCotationDateDernierReglement(Cotation $cotation): ?\DateTimeInterface
