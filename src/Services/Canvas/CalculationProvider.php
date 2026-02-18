@@ -196,11 +196,59 @@ class CalculationProvider
                 break;
             case Avenant::class:
                 /** @var Avenant $entity */
+                $cotation = $entity->getCotation();
+                if (!$cotation) {
+                    // Si l'avenant n'est pas lié à une cotation, on ne peut pas calculer les indicateurs financiers.
+                    // On retourne uniquement les indicateurs basés sur l'avenant lui-même.
+                    return [
+                        'dureeCouverture' => $this->calculateDureeCouvertureAvenant($entity),
+                        'joursRestants' => $this->calculateJoursRestantsAvenant($entity),
+                        'ageAvenant' => $this->calculateAgeAvenant($entity),
+                        'statutRenouvellement' => $this->getAvenantStatutRenouvellementString($entity),
+                        'periodeCouverture' => $this->getAvenantPeriodeCouverture($entity),
+                    ];
+                }
+
                 $indicateurs = [
+                    // Indicateurs de base de l'avenant
                     'dureeCouverture' => $this->calculateDureeCouvertureAvenant($entity),
                     'joursRestants' => $this->calculateJoursRestantsAvenant($entity),
                     'ageAvenant' => $this->calculateAgeAvenant($entity),
                     'statutRenouvellement' => $this->getAvenantStatutRenouvellementString($entity),
+                    'periodeCouverture' => $this->getAvenantPeriodeCouverture($entity),
+
+                    // Indicateurs hérités de la Cotation parente
+                    'contextePiste' => $this->getCotationContextePiste($cotation),
+                    'indemnisationDue' => round($this->getCotationIndemnisationDue($cotation), 2),
+                    'indemnisationVersee' => round($this->getCotationIndemnisationVersee($cotation), 2),
+                    'indemnisationSolde' => round($this->getCotationIndemnisationSolde($cotation), 2),
+                    'tauxSP' => $this->getCotationTauxSP($cotation),
+                    'tauxSPInterpretation' => $this->getCotationTauxSPInterpretation($cotation),
+                    'dateDernierReglement' => $this->getCotationDateDernierReglement($cotation),
+                    'vitesseReglement' => $this->getCotationVitesseReglement($cotation),
+                    'nombreTranches' => $this->calculateNombreTranches($cotation),
+                    'montantMoyenTranche' => $this->calculateMontantMoyenTranche($cotation),
+                    'primeTotale' => round($this->getCotationMontantPrimePayableParClient($cotation), 2),
+                    'primePayee' => round($this->getCotationMontantPrimePayableParClientPayee($cotation), 2),
+                    'primeSoldeDue' => round($this->getCotationMontantPrimePayableParClient($cotation) - $this->getCotationMontantPrimePayableParClientPayee($cotation), 2),
+                    'tauxCommission' => $this->getCotationTauxCommission($cotation),
+                    'montantHT' => round($this->getCotationMontantCommissionHt($cotation, -1, false), 2),
+                    'montantTTC' => round($this->getCotationMontantCommissionTtc($cotation, -1, false), 2),
+                    'detailCalcul' => "Basé sur la cotation associée",
+                    'taxeCourtierMontant' => round($this->getCotationMontantTaxeCourtier($cotation, false), 2),
+                    'taxeAssureurMontant' => round($this->getCotationMontantTaxeAssureur($cotation, false), 2),
+                    'montant_du' => round($this->getCotationMontantCommissionTtc($cotation, -1, false), 2),
+                    'montant_paye' => round($this->getCotationMontantCommissionEncaissee($cotation), 2),
+                    'solde_restant_du' => round($this->getCotationMontantCommissionTtc($cotation, -1, false) - $this->getCotationMontantCommissionEncaissee($cotation), 2),
+                    'taxeCourtierPayee' => round($this->getCotationMontantTaxeCourtierPayee($cotation), 2),
+                    'taxeCourtierSolde' => round($this->getCotationMontantTaxeCourtier($cotation, false) - $this->getCotationMontantTaxeCourtierPayee($cotation), 2),
+                    'taxeAssureurPayee' => round($this->getCotationMontantTaxeAssureurPayee($cotation), 2),
+                    'taxeAssureurSolde' => round($this->getCotationMontantTaxeAssureur($cotation, false) - $this->getCotationMontantTaxeAssureurPayee($cotation), 2),
+                    'montantPur' => round($this->getCotationMontantCommissionPure($cotation, -1, false), 2),
+                    'retroCommission' => round($this->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1, []), 2),
+                    'retroCommissionReversee' => round($this->getCotationMontantRetrocommissionsPayableParCourtierPayee($cotation, null), 2),
+                    'retroCommissionSolde' => round($this->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1, []) - $this->getCotationMontantRetrocommissionsPayableParCourtierPayee($cotation, null), 2),
+                    'reserve' => round($this->getCotationMontantCommissionPure($cotation, -1, false) - $this->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1, []), 2),
                 ];
                 break;
             case Tache::class:
@@ -2373,6 +2421,17 @@ class CalculationProvider
         }
         $jours = $this->serviceDates->daysEntre($avenant->getCreatedAt(), new DateTimeImmutable()) ?? 0;
         return $jours . ' jour(s)';
+    }
+
+    /**
+     * Retourne la période de couverture de l'avenant sous forme de chaîne.
+     */
+    private function getAvenantPeriodeCouverture(Avenant $avenant): string
+    {
+        if ($avenant->getStartingAt() && $avenant->getEndingAt()) {
+            return sprintf("Du %s au %s", $avenant->getStartingAt()->format('d/m/Y'), $avenant->getEndingAt()->format('d/m/Y'));
+        }
+        return 'Période incomplète';
     }
 
     /**
