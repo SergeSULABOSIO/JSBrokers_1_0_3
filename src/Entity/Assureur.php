@@ -392,4 +392,19 @@ class Assureur
 
     #[Groups(['list:read'])]
     public ?float $tauxSP = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montantPur = null;
+
+    #[Groups(['list:read'])]
+    public ?float $retroCommission = null;
+
+    #[Groups(['list:read'])]
+    public ?float $retroCommissionReversee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $retroCommissionSolde = null;
+
+    #[Groups(['list:read'])]
+    public ?float $reserve = null;
 }

@@ -318,6 +318,12 @@ class CalculationProvider
                     'taxeAssureurPayee' => round($stats['taxe_assureur_payee'], 2),
                     'taxeAssureurSolde' => round($stats['taxe_assureur_solde'], 2),
                     
+                    'montantPur' => round($stats['commission_pure'], 2),
+                    'retroCommission' => round($stats['retro_commission_partenaire'], 2),
+                    'retroCommissionReversee' => round($stats['retro_commission_partenaire_payee'], 2),
+                    'retroCommissionSolde' => round($stats['retro_commission_partenaire_solde'], 2),
+                    'reserve' => round($stats['reserve'], 2),
+
                     // Sinistralité
                     'indemnisationDue' => round($stats['sinistre_payable'], 2),
                     'indemnisationVersee' => round($stats['sinistre_paye'], 2),
