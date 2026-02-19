@@ -2,7 +2,6 @@
 
 namespace App\Services\Canvas;
 
-use App\Services\Canvas\Provider\Numeric\NumericCanvasProviderInterface;
 use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
 
 class NumericCanvasProvider
