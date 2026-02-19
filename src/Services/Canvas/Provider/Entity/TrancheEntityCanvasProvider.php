@@ -54,6 +54,8 @@ class TrancheEntityCanvasProvider implements EntityCanvasProviderInterface
             ["code" => "ageTranche", "intitule" => "Âge", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours depuis la création de la tranche."],
             ["code" => "joursRestantsAvantEcheance", "intitule" => "Jours Restants", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours restants avant la date d'échéance."],
             ["code" => "contexteParent", "intitule" => "Contexte Parent", "type" => "Calcul", "format" => "Texte", "description" => "Contexte de la cotation parente."],
+            ["group" => "Contexte Affaire", "code" => "clientDescription", "intitule" => "Client", "type" => "Calcul", "format" => "Texte", "description" => "Détails descriptifs du client."],
+            ["group" => "Contexte Affaire", "code" => "risqueDescription", "intitule" => "Risque", "type" => "Calcul", "format" => "Texte", "description" => "Description de la couverture d'assurance."],
             
             // NOUVEAU : Indicateurs financiers basés sur le taux de la tranche
             ["group" => "Prime brutte", "code" => "primeTranche", "intitule" => "Prime Tranche", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Part de la prime totale payable pour cette tranche."],

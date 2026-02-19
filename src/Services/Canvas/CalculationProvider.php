@@ -112,6 +112,8 @@ class CalculationProvider
             case Cotation::class:
                 /** @var Cotation $entity */
                 $indicateurs = [
+                    'clientDescription' => $this->getClientDescriptionFromCotation($entity),
+                    'risqueDescription' => $this->getRisqueDescriptionFromCotation($entity),
                     'contextePiste' => $this->getCotationContextePiste($entity),
                     'statutSouscription' => $this->calculateStatutSouscription($entity),
                     'referencePolice' => $this->getCotationReferencePolice($entity),
@@ -163,6 +165,8 @@ class CalculationProvider
             case Tranche::class:
                 /** @var Tranche $entity */
                 $indicateurs = [
+                    'clientDescription' => $this->getClientDescriptionFromCotation($entity->getCotation()),
+                    'risqueDescription' => $this->getRisqueDescriptionFromCotation($entity->getCotation()),
                     'ageTranche' => $this->calculateTrancheAge($entity),
                     'joursRestantsAvantEcheance' => $this->calculateTrancheJoursRestants($entity),
                     'contexteParent' => $this->getTrancheContexteParent($entity),
@@ -206,6 +210,8 @@ class CalculationProvider
                         'ageAvenant' => $this->calculateAgeAvenant($entity),
                         'typeAffaire' => $this->getAvenantTypeAffaire($entity),
                         'periodeCouverture' => $this->getAvenantPeriodeCouverture($entity),
+                        'clientDescription' => 'N/A',
+                        'risqueDescription' => 'N/A',
                     ];
                 }
 
@@ -216,6 +222,8 @@ class CalculationProvider
                     'ageAvenant' => $this->calculateAgeAvenant($entity),
                     'typeAffaire' => $this->getAvenantTypeAffaire($entity),
                     'periodeCouverture' => $this->getAvenantPeriodeCouverture($entity),
+                    'clientDescription' => $this->getClientDescriptionFromCotation($cotation),
+                    'risqueDescription' => $this->getRisqueDescriptionFromCotation($cotation),
 
                     // Indicateurs hérités de la Cotation parente
                     'contextePiste' => $this->getCotationContextePiste($cotation),
@@ -325,6 +333,8 @@ class CalculationProvider
             case ChargementPourPrime::class:
                 /** @var ChargementPourPrime $entity */
                 $indicateurs = [
+                    'clientDescription' => $this->getClientDescriptionFromCotation($entity->getCotation()),
+                    'risqueDescription' => $this->getRisqueDescriptionFromCotation($entity->getCotation()),
                     'montant_final' => round($this->getChargementPourPrimeMontantFinal($entity), 2),
                     'montantTaxeAppliquee' => round($this->getChargementPourPrimeMontantTaxe($entity), 2),
                     'poidsSurPrimeTotale' => $this->getChargementPourPrimePoidsSurPrime($entity),
@@ -376,6 +386,8 @@ class CalculationProvider
             case RevenuPourCourtier::class:
                 /** @var RevenuPourCourtier $entity */
                 $indicateurs = [
+                    'clientDescription' => $this->getClientDescriptionFromCotation($entity->getCotation()),
+                    'risqueDescription' => $this->getRisqueDescriptionFromCotation($entity->getCotation()),
                     'montantCalculeHT' => round($this->getRevenuMontantHt($entity), 2),
                     'montantCalculeTTC' => round($this->getRevenuPourCourtierMontantTTC($entity), 2),
                     'descriptionCalcul' => $this->getRevenuPourCourtierDescriptionCalcul($entity),
@@ -2453,8 +2465,13 @@ class CalculationProvider
         $risque = $piste->getRisque();
         $startingAt = $avenant->getStartingAt();
 
-        if (!$client || !$risque || !$startingAt) {
-            return "Indéterminé (Client/Risque/Date manquant)";
+        $missing = [];
+        if (!$client) $missing[] = 'Client';
+        if (!$risque) $missing[] = 'Risque';
+        if (!$startingAt) $missing[] = 'Date d\'effet';
+
+        if (!empty($missing)) {
+            return "Indéterminé (" . implode('/', $missing) . " manquant)";
         }
 
         // On cherche s'il existe un autre avenant pour le même client et le même risque,
@@ -3585,5 +3602,29 @@ class CalculationProvider
         }
 
         return empty($labels) ? 'Aucun accès valide' : implode(', ', $labels);
+    }
+
+    /**
+     * Récupère une description textuelle du client à partir d'une cotation.
+     */
+    private function getClientDescriptionFromCotation(?Cotation $cotation): string
+    {
+        if (!$cotation || !$cotation->getPiste() || !$cotation->getPiste()->getClient()) {
+            return 'N/A';
+        }
+        $client = $cotation->getPiste()->getClient();
+        return $client->getNom() . ' (' . ($client->getEmail() ?? 'Sans email') . ')';
+    }
+
+    /**
+     * Récupère une description textuelle du risque à partir d'une cotation.
+     */
+    private function getRisqueDescriptionFromCotation(?Cotation $cotation): string
+    {
+        if (!$cotation || !$cotation->getPiste() || !$cotation->getPiste()->getRisque()) {
+            return 'N/A';
+        }
+        $risque = $cotation->getPiste()->getRisque();
+        return $risque->getNomComplet();
     }
 }
