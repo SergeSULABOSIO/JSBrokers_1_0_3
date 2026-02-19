@@ -5,15 +5,12 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\PartenaireRepository;
 use Doctrine\Common\Collections\Collection;
-use App\Entity\Traits\CalculatedIndicatorsTrait;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Doctrine\Common\Collections\ArrayCollection;
 
 #[ORM\Entity(repositoryClass: PartenaireRepository::class)]
 class Partenaire
 {
-    use CalculatedIndicatorsTrait;
-
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -98,6 +95,86 @@ class Partenaire
 
     #[Groups(['list:read'])]
     public ?int $nombreConditionsPartage;
+
+    // NOUVEAU : Attributs calculés spécifiques (Miroir de Cotation)
+    #[Groups(['list:read'])]
+    public ?float $primeTotale = null;
+
+    #[Groups(['list:read'])]
+    public ?float $primePayee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $primeSoldeDue = null;
+
+    #[Groups(['list:read'])]
+    public ?float $tauxCommission = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montantHT = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montantTTC = null;
+
+    #[Groups(['list:read'])]
+    public ?string $detailCalcul = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeCourtierMontant = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeAssureurMontant = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_du = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_paye = null;
+
+    #[Groups(['list:read'])]
+    public ?float $solde_restant_du = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeCourtierPayee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeCourtierSolde = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeAssureurPayee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeAssureurSolde = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montantPur = null;
+
+    #[Groups(['list:read'])]
+    public ?float $retroCommission = null;
+
+    #[Groups(['list:read'])]
+    public ?float $retroCommissionReversee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $retroCommissionSolde = null;
+
+    #[Groups(['list:read'])]
+    public ?float $reserve = null;
+
+    // Indicateurs Sinistralité
+    #[Groups(['list:read'])]
+    public ?float $indemnisationDue = null;
+
+    #[Groups(['list:read'])]
+    public ?float $indemnisationVersee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $indemnisationSolde = null;
+
+    #[Groups(['list:read'])]
+    public ?float $tauxSP = null;
+
+    #[Groups(['list:read'])]
+    public ?string $tauxSPInterpretation = null;
 
     public function __construct()
     {
