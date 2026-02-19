@@ -35,19 +35,19 @@ class PartenaireListCanvasProvider implements ListCanvasProviderInterface
                 [
                     "titre_colonne" => "Assiette",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    "attribut_code" => "commission_partageable",
+                    "attribut_code" => "montantPur",
                     "attribut_type" => "nombre",
                 ],
                 [
                     "titre_colonne" => "Rétro-comm.",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    "attribut_code" => "retro_commission_partenaire",
+                    "attribut_code" => "retroCommission",
                     "attribut_type" => "nombre",
                 ],
                 [
                     "titre_colonne" => "Rétro. Payée",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    "attribut_code" => "retro_commission_partenaire_payee",
+                    "attribut_code" => "retroCommissionReversee",
                     "attribut_type" => "nombre",
                 ],
             ],
