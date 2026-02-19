@@ -2,31 +2,7 @@
 
 namespace App\Services\Canvas;
 
-use App\Entity\Assureur;
-use App\Entity\Avenant;
-use App\Entity\Chargement;
-use App\Entity\ChargementPourPrime;
-use App\Entity\Client;
-use App\Entity\ConditionPartage;
-use App\Entity\Contact;
-use App\Entity\Cotation;
-use App\Entity\Entreprise;
-use App\Entity\Feedback;
-use App\Entity\Groupe;
-use App\Entity\Invite;
-use App\Entity\ModelePieceSinistre;
-use App\Entity\OffreIndemnisationSinistre;
-use App\Entity\Paiement;
-use App\Entity\Partenaire;
-use App\Entity\PieceSinistre;
-use App\Entity\Piste;
-use App\Entity\RevenuPourCourtier;
-use App\Entity\Risque;
-use App\Entity\Tache;
-use App\Entity\Tranche;
-use App\Entity\TypeRevenu;
 use App\Services\ServiceMonnaies;
-use App\Services\Canvas\Provider\List\ListCanvasProviderInterface;
 use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
 
 class ListCanvasProvider
