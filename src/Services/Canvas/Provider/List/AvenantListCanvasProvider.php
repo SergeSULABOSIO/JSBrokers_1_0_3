@@ -35,19 +35,19 @@ class AvenantListCanvasProvider implements ListCanvasProviderInterface
                 [
                     "titre_colonne" => "Prime Totale",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    "attribut_code" => "prime_totale",
+                    "attribut_code" => "primeTotale",
                     "attribut_type" => "nombre",
                 ],
                 [
                     "titre_colonne" => "Comm. Totale",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    "attribut_code" => "commission_totale",
+                    "attribut_code" => "montantTTC",
                     "attribut_type" => "nombre",
                 ],
                 [
                     "titre_colonne" => "Rétro-comm.",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    "attribut_code" => "retro_commission_partenaire",
+                    "attribut_code" => "retroCommission",
                     "attribut_type" => "nombre",
                 ],
                 [
