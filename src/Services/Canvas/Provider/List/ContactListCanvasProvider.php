@@ -32,19 +32,19 @@ class ContactListCanvasProvider implements ListCanvasProviderInterface
                 [
                     "titre_colonne" => "Prime Totale",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    "attribut_code" => "prime_totale",
+                    "attribut_code" => "primeTotale",
                     "attribut_type" => "nombre",
                 ],
                 [
                     "titre_colonne" => "Comm. Totale",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    "attribut_code" => "commission_totale",
+                    "attribut_code" => "montantTTC",
                     "attribut_type" => "nombre",
                 ],
                 [
                     "titre_colonne" => "Comm. Pure",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    "attribut_code" => "commission_pure",
+                    "attribut_code" => "montantPur",
                     "attribut_type" => "nombre",
                 ],
                 [

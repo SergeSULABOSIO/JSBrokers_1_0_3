@@ -426,8 +426,41 @@ class CalculationProvider
             case Contact::class:
                 /** @var Contact $entity */
                 $indicateurs = [
-                    'type_string' => $this->Contact_getTypeString($entity),
+                    'type_string' => $this->Contact_getTypeString($entity)
                 ];
+
+                if ($client = $entity->getClient()) {
+                    // On récupère les stats globales filtrées pour le client de ce contact
+                    $stats = $this->getIndicateursGlobaux($client->getEntreprise(), false, ['clientCible' => $client]);
+
+                    $indicateurs = array_merge($indicateurs, [
+                        // Mapping des stats globales vers les attributs de l'entité
+                        'primeTotale' => round($stats['prime_totale'], 2),
+                        'primePayee' => round($stats['prime_totale_payee'], 2),
+                        'primeSoldeDue' => round($stats['prime_totale_solde'], 2),
+                        'tauxCommission' => round($stats['taux_de_commission'], 2),
+                        'montantHT' => round($stats['commission_nette'], 2),
+                        'montantTTC' => round($stats['commission_totale'], 2),
+                        'detailCalcul' => "Agrégation du portefeuille client",
+
+                        'taxeCourtierMontant' => round($stats['taxe_courtier'], 2),
+                        'taxeAssureurMontant' => round($stats['taxe_assureur'], 2),
+
+                        'montant_du' => round($stats['commission_totale'], 2),
+                        'montant_paye' => round($stats['commission_totale_encaissee'], 2),
+                        'solde_restant_du' => round($stats['commission_totale_solde'], 2),
+
+                        'montantPur' => round($stats['commission_pure'], 2),
+                        'reserve' => round($stats['reserve'], 2),
+
+                        // Sinistralité
+                        'indemnisationDue' => round($stats['sinistre_payable'], 2),
+                        'indemnisationVersee' => round($stats['sinistre_paye'], 2),
+                        'indemnisationSolde' => round($stats['sinistre_solde'], 2),
+                        'tauxSP' => round($stats['taux_sinistralite'], 2),
+                        'tauxSPInterpretation' => $this->getInterpretationTauxSP($stats['taux_sinistralite']),
+                    ]);
+                }
                 break;
             case Invite::class:
                 /** @var Invite $entity */

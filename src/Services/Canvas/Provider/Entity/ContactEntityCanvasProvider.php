@@ -47,15 +47,27 @@ class ContactEntityCanvasProvider implements EntityCanvasProviderInterface
 
     private function getSpecificIndicators(): array
     {
+        $monnaie = $this->serviceMonnaies->getCodeMonnaieAffichage();
         return [
-            [
-                "code" => "type_string",
-                "intitule" => "Type",
-                "type" => "Calcul",
-                "format" => "Texte",
-                "fonction" => "Contact_getTypeString",
-                "description" => "Le type de contact (Production, Sinistre, etc.)."
-            ]
+            ["group" => "Information", "code" => "type_string", "intitule" => "Type", "type" => "Calcul", "format" => "Texte", "description" => "Le type de contact (Production, Sinistre, etc.)."],
+
+            // Indicateurs financiers (basés sur le client associé)
+            ["group" => "Prime (Client)", "code" => "primeTotale", "intitule" => "Prime Totale", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Volume total des primes générées par le client."],
+            ["group" => "Prime (Client)", "code" => "primePayee", "intitule" => "Prime Payée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant des primes encaissées pour le client."],
+            ["group" => "Prime (Client)", "code" => "primeSoldeDue", "intitule" => "Prime Solde Dû", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant des primes restant à recouvrer auprès du client."],
+
+            ["group" => "Revenu (Client)", "code" => "montantTTC", "intitule" => "Commission TTC", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Commission totale TTC générée par le client."],
+            ["group" => "Revenu (Client)", "code" => "montant_paye", "intitule" => "Commission Encaissée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant de commission effectivement encaissé pour le client."],
+            ["group" => "Revenu (Client)", "code" => "solde_restant_du", "intitule" => "Solde Commission", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Reste de commission à encaisser pour le client."],
+            ["group" => "Revenu (Client)", "code" => "montantPur", "intitule" => "Commission Pure", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Commission nette après déduction des taxes courtier pour le client."],
+            ["group" => "Revenu (Client)", "code" => "reserve", "intitule" => "Réserve Courtier", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Bénéfice final pour le courtier sur ce client."],
+
+            // Sinistralité (basée sur le client associé)
+            ["group" => "SINISTRALITE (Client)", "code" => "indemnisationDue", "intitule" => "Indemnisation dûe", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant total des sinistres sur le portefeuille du client."],
+            ["group" => "SINISTRALITE (Client)", "code" => "indemnisationVersee", "intitule" => "Indemnisation versée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Somme des paiements effectués pour les sinistres du client."],
+            ["group" => "SINISTRALITE (Client)", "code" => "indemnisationSolde", "intitule" => "Indemnisation solde", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Solde dû pour les sinistres du client."],
+            ["group" => "SINISTRALITE (Client)", "code" => "tauxSP", "intitule" => "Le taux S/P", "type" => "Calcul", "format" => "Pourcentage", "description" => "Rapport Sinistre sur Prime (S/P) global du client."],
+            ["group" => "SINISTRALITE (Client)", "code" => "tauxSPInterpretation", "intitule" => "Interprétation S/P", "type" => "Calcul", "format" => "Texte", "description" => "Analyse de la rentabilité du portefeuille du client."],
         ];
     }
 }

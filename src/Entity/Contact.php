@@ -54,6 +54,64 @@ class Contact
     #[Groups(['list:read'])]
     public ?string $type_string;
 
+    // NOUVEAU : Attributs calculés financiers et de sinistralité (Miroir de Partenaire/Risque)
+    #[Groups(['list:read'])]
+    public ?float $primeTotale = null;
+
+    #[Groups(['list:read'])]
+    public ?float $primePayee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $primeSoldeDue = null;
+
+    #[Groups(['list:read'])]
+    public ?float $tauxCommission = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montantHT = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montantTTC = null;
+
+    #[Groups(['list:read'])]
+    public ?string $detailCalcul = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeCourtierMontant = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeAssureurMontant = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_du = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montant_paye = null;
+
+    #[Groups(['list:read'])]
+    public ?float $solde_restant_du = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montantPur = null;
+
+    #[Groups(['list:read'])]
+    public ?float $reserve = null;
+
+    #[Groups(['list:read'])]
+    public ?float $indemnisationDue = null;
+
+    #[Groups(['list:read'])]
+    public ?float $indemnisationVersee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $indemnisationSolde = null;
+
+    #[Groups(['list:read'])]
+    public ?float $tauxSP = null;
+
+    #[Groups(['list:read'])]
+    public ?string $tauxSPInterpretation = null;
+
 
     public function getId(): ?int
     {
