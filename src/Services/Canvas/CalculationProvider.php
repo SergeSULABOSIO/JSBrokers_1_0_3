@@ -659,9 +659,9 @@ class CalculationProvider
         if ($inviteCible) $qb->andWhere('p.invite = :inviteCible')->setParameter('inviteCible', $inviteCible);
         if ($clientCible) $qb->andWhere('p.client = :clientCible')->setParameter('clientCible', $clientCible);
         if ($groupeCible) $qb->join('p.client', 'cl_g')->andWhere('cl_g.groupe = :groupeCible')->setParameter('groupeCible', $groupeCible);
-        if ($partenaireCible) $qb->join('p.partenaires', 'pa')->andWhere('pa = :partenaireCible')->setParameter('partenaireCible', $partenaireCible);
-        if ($avenantCible) $qb->join('c.avenants', 'av')->andWhere('av = :avenantCible')->setParameter('avenantCible', $avenantCible);
-        if ($trancheCible) $qb->join('c.tranches', 't')->andWhere('t = :trancheCible')->setParameter('trancheCible', $trancheCible);
+        if ($partenaireCible) $qb->andWhere('pa = :partenaireCible')->setParameter('partenaireCible', $partenaireCible);
+        if ($avenantCible) $qb->andWhere('av = :avenantCible')->setParameter('avenantCible', $avenantCible);
+        if ($trancheCible) $qb->andWhere('t = :trancheCible')->setParameter('trancheCible', $trancheCible);
         if ($revenuPourCourtierCible) $qb->join('c.revenus', 'rpc')->andWhere('rpc = :revenuPourCourtierCible')->setParameter('revenuPourCourtierCible', $revenuPourCourtierCible);
         if ($typeRevenuCible) $qb->join('c.revenus', 'rpc_tr')->andWhere('rpc_tr.typeRevenu = :typeRevenuCible')->setParameter('typeRevenuCible', $typeRevenuCible);
 
