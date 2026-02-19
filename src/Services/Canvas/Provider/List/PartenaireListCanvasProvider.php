@@ -3,9 +3,13 @@
 namespace App\Services\Canvas\Provider\List;
 
 use App\Entity\Partenaire;
+use App\Services\ServiceMonnaies;
 
 class PartenaireListCanvasProvider implements ListCanvasProviderInterface
 {
+
+    public function __construct(private ServiceMonnaies $serviceMonnaies) {}
+
     public function supports(string $entityClassName): bool
     {
         return $entityClassName === Partenaire::class;
@@ -26,6 +30,24 @@ class PartenaireListCanvasProvider implements ListCanvasProviderInterface
                     "titre_colonne" => "Part (%)",
                     "attribut_unité" => "%",
                     "attribut_code" => "part",
+                    "attribut_type" => "nombre",
+                ],
+                [
+                    "titre_colonne" => "Assiette",
+                    "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    "attribut_code" => "commission_partageable",
+                    "attribut_type" => "nombre",
+                ],
+                [
+                    "titre_colonne" => "Rétro-comm.",
+                    "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    "attribut_code" => "retro_commission_partenaire",
+                    "attribut_type" => "nombre",
+                ],
+                [
+                    "titre_colonne" => "Rétro. Payée",
+                    "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    "attribut_code" => "retro_commission_partenaire_payee",
                     "attribut_type" => "nombre",
                 ],
             ],
