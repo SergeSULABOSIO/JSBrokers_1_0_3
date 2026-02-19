@@ -2441,12 +2441,12 @@ class CalculationProvider
     {
         $cotation = $avenant->getCotation();
         if (!$cotation) {
-            return "Indéterminé";
+            return "Indéterminé (Cotation manquante)";
         }
 
         $piste = $cotation->getPiste();
         if (!$piste) {
-            return "Indéterminé";
+            return "Indéterminé (Piste manquante)";
         }
 
         $client = $piste->getClient();
@@ -2454,7 +2454,7 @@ class CalculationProvider
         $startingAt = $avenant->getStartingAt();
 
         if (!$client || !$risque || !$startingAt) {
-            return "Indéterminé";
+            return "Indéterminé (Client/Risque/Date manquant)";
         }
 
         // On cherche s'il existe un autre avenant pour le même client et le même risque,
