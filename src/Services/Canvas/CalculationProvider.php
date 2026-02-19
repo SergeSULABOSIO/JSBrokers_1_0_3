@@ -707,6 +707,21 @@ class CalculationProvider
         // 3. Exécuter la requête pour obtenir les cotations filtrées
         $cotationsAcalculer = $qb->getQuery()->getResult();
 
+        // NOUVEAU : Collecter les références de police des cotations du périmètre
+        $policeReferences = [];
+        foreach ($cotationsAcalculer as $cotation) {
+            // On ne considère que les cotations souscrites (qui ont des avenants/polices)
+            if (!$this->isCotationBound($cotation)) {
+                continue;
+            }
+            foreach ($cotation->getAvenants() as $avenant) {
+                if ($avenant->getReferencePolice()) {
+                    $policeReferences[] = $avenant->getReferencePolice();
+                }
+            }
+        }
+        $policeReferences = array_unique($policeReferences);
+
         // NOUVEAU : Pré-calcul des sommes pour éviter les requêtes N+1
         $commissionSums = $this->precomputeCommissionSums($entreprise, $options);
 
@@ -715,6 +730,17 @@ class CalculationProvider
             ->join('ns.invite', 'i')
             ->where('i.entreprise = :entreprise')
             ->setParameter('entreprise', $entreprise);
+
+        // Si la requête sur les cotations a été filtrée (et donc a potentiellement un périmètre restreint),
+        // on utilise les polices de ce périmètre pour filtrer les sinistres.
+        if (!empty($options)) {
+            if (!empty($policeReferences)) {
+                $sinistresQb->andWhere('ns.referencePolice IN (:policeReferences)')->setParameter('policeReferences', $policeReferences);
+            } else {
+                // Si un filtre est actif mais ne retourne aucune police, on ne doit retourner aucun sinistre.
+                $sinistresQb->andWhere('1=0');
+            }
+        }
 
         if ($notificationSinistreCible) {
             $sinistresQb->andWhere('ns = :notificationSinistreCible')
