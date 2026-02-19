@@ -2,7 +2,6 @@
 
 namespace App\Entity;
 
-use App\Entity\Traits\CalculatedIndicatorsTrait;
 use Symfony\Component\Serializer\Annotation\Groups;
 use App\Repository\AssureurRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -12,8 +11,6 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: AssureurRepository::class)]
 class Assureur
 {
-    use CalculatedIndicatorsTrait;
-
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -325,46 +322,74 @@ class Assureur
         return $this;
     }
 
-    //Attributs calculés
+    //Attributs calculés spécifiques
     #[Groups(['list:read'])]
-    public ?float $montant_prime_payable_par_client = null;
+    public ?int $nombrePolicesSouscrites = null;
 
     #[Groups(['list:read'])]
-    public ?float $montant_prime_payable_par_client_payee = null;
+    public ?int $nombreSinistresGeres = null;
 
     #[Groups(['list:read'])]
-    public ?float $montant_prime_payable_par_client_solde = null;
+    public ?string $tauxTransformationCotations = null;
 
     #[Groups(['list:read'])]
-    public ?float $montant_commission_pure = null;
+    public ?float $primeTotale = null;
 
     #[Groups(['list:read'])]
-    public ?float $montant_commission_ht = null;
+    public ?float $primePayee = null;
 
     #[Groups(['list:read'])]
-    public ?float $montant_commission_ttc = null;
+    public ?float $primeSoldeDue = null;
 
     #[Groups(['list:read'])]
-    public ?float $montant_commission_ttc_collectee = null;
+    public ?float $tauxCommission = null;
 
     #[Groups(['list:read'])]
-    public ?float $montant_commission_ttc_solde = null;
+    public ?float $montantHT = null;
 
     #[Groups(['list:read'])]
-    public ?float $montant_taxe_payable_par_assureur = null;
+    public ?float $montantTTC = null;
 
     #[Groups(['list:read'])]
-    public ?float $montant_taxe_payable_par_assureur_payee = null;
+    public ?string $detailCalcul = null;
 
     #[Groups(['list:read'])]
-    public ?float $montant_taxe_payable_par_assureur_solde = null;
+    public ?float $taxeCourtierMontant = null;
 
     #[Groups(['list:read'])]
-    public ?float $montant_retrocommissions_payable_par_courtier = null;
+    public ?float $taxeAssureurMontant = null;
 
     #[Groups(['list:read'])]
-    public ?float $montant_retrocommissions_payable_par_courtier_payee = null;
+    public ?float $montant_du = null;
 
     #[Groups(['list:read'])]
-    public ?float $montant_retrocommissions_payable_par_courtier_solde = null;
+    public ?float $montant_paye = null;
+
+    #[Groups(['list:read'])]
+    public ?float $solde_restant_du = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeCourtierPayee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeCourtierSolde = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeAssureurPayee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeAssureurSolde = null;
+
+    // Indicateurs Sinistralité
+    #[Groups(['list:read'])]
+    public ?float $indemnisationDue = null;
+
+    #[Groups(['list:read'])]
+    public ?float $indemnisationVersee = null;
+
+    #[Groups(['list:read'])]
+    public ?float $indemnisationSolde = null;
+
+    #[Groups(['list:read'])]
+    public ?float $tauxSP = null;
 }
