@@ -29,7 +29,7 @@ class PartenaireListCanvasProvider implements ListCanvasProviderInterface
                 [
                     "titre_colonne" => "Part (%)",
                     "attribut_unité" => "%",
-                    "attribut_code" => "part",
+                    "attribut_code" => "partPourcentage",
                     "attribut_type" => "nombre",
                 ],
                 [
