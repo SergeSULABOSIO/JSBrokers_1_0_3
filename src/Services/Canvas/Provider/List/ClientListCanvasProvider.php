@@ -28,9 +28,32 @@ class ClientListCanvasProvider implements ListCanvasProviderInterface
                     ["attribut_code" => "telephone"],
                 ],
             ],
-            // La méthode getSharedNumericColumns sera gérée par le résolveur principal
-            // pour éviter la duplication.
-            "colonnes_numeriques" => [],
+            "colonnes_numeriques" => [
+                [
+                    "titre_colonne" => "Prime Totale",
+                    "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    "attribut_code" => "prime_totale",
+                    "attribut_type" => "nombre",
+                ],
+                [
+                    "titre_colonne" => "Comm. Totale",
+                    "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    "attribut_code" => "commission_totale",
+                    "attribut_type" => "nombre",
+                ],
+                [
+                    "titre_colonne" => "Sinistre Payable",
+                    "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    "attribut_code" => "sinistre_payable",
+                    "attribut_type" => "nombre",
+                ],
+                [
+                    "titre_colonne" => "Sinistre Payé",
+                    "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    "attribut_code" => "sinistre_paye",
+                    "attribut_type" => "nombre",
+                ],
+            ],
         ];
     }
 }
