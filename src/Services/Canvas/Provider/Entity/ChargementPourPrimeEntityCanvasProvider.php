@@ -53,6 +53,8 @@ class ChargementPourPrimeEntityCanvasProvider implements EntityCanvasProviderInt
             ["group" => "Analyse & Contexte", "code" => "poidsSurPrimeTotale", "intitule" => "Poids sur Prime Totale", "type" => "Calcul", "format" => "Pourcentage", "unite" => "%", "description" => "Pourcentage que ce chargement représente par rapport au montant total de la prime de la cotation."],
             ["group" => "Analyse & Contexte", "code" => "ageChargement", "intitule" => "Âge du Chargement", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours écoulés depuis la création de ce chargement."],
             ["group" => "Analyse & Contexte", "code" => "fonctionChargement", "intitule" => "Fonction du Chargement", "type" => "Calcul", "format" => "Texte", "description" => "Rôle fonctionnel de ce type de chargement (ex: Prime nette, Taxe, Frais)."],
+            ["group" => "Contexte Affaire", "code" => "clientDescription", "intitule" => "Client", "type" => "Calcul", "format" => "Texte", "description" => "Détails descriptifs du client."],
+            ["group" => "Contexte Affaire", "code" => "risqueDescription", "intitule" => "Risque", "type" => "Calcul", "format" => "Texte", "description" => "Description de la couverture d'assurance."],
         ];
     }
 }

@@ -50,6 +50,9 @@ class RevenuPourCourtierEntityCanvasProvider implements EntityCanvasProviderInte
     {
         $monnaie = $this->serviceMonnaies->getCodeMonnaieAffichage();
         return [
+            ["group" => "Contexte Affaire", "code" => "clientDescription", "intitule" => "Client", "type" => "Calcul", "format" => "Texte", "description" => "Détails descriptifs du client."],
+            ["group" => "Contexte Affaire", "code" => "risqueDescription", "intitule" => "Risque", "type" => "Calcul", "format" => "Texte", "description" => "Description de la couverture d'assurance."],
+
             // Groupe 1: Revenu Brut
             ["group" => "Revenu Brut", "code" => "montantCalculeHT", "intitule" => "Montant HT", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Le montant de base du revenu, calculé avant l'application de toute taxe."],
             ["group" => "Revenu Brut", "code" => "montantCalculeTTC", "intitule" => "Montant TTC", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Le montant final du revenu après ajout de toutes les taxes applicables (ex: TVA). C'est ce montant qui est généralement facturé et affiché dans les listes."],
