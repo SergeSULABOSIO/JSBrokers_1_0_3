@@ -100,6 +100,7 @@ class PartenaireType extends AbstractType
                     'label' => false,
                 ],
                 'mapped' => false,
+                'prototype' => false,
             ])
             ->add('documents', CollectionType::class, [
                 'label' => "Documents",
