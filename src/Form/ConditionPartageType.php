@@ -13,6 +13,7 @@ use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\PercentType;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 class ConditionPartageType extends AbstractType
 {
@@ -78,18 +79,15 @@ class ConditionPartageType extends AbstractType
                 ],
             ])
             
-            ->add('produits', RisqueAutocompleteField::class, [
-                'required' => false,
+            ->add('produits', CollectionType::class, [
                 'label' => "Risques ciblés",
-                'help' => "Il s'agit ici des risques concernés ou pas par le partage avec le partenaire.",
-                'class' => Risque::class,
-                'choice_label' => "nomComplet",
-                'multiple' => true,
-                'expanded' => false,
+                'entry_type' => RisqueType::class,
                 'by_reference' => false,
-                'autocomplete' => true,
-                'attr' => [
-                    'placeholder' => "Risques concernés",
+                'allow_add' => true,
+                'allow_delete' => true,
+                'mapped' => false,
+                'entry_options' => [
+                    'label' => false,
                 ],
             ])
             // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
