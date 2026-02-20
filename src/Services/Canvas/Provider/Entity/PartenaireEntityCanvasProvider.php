@@ -32,9 +32,9 @@ class PartenaireEntityCanvasProvider implements EntityCanvasProviderInterface
                 "icone" => "partenaire",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
-                    "Partenaire [[*nom]].",
-                    " Contact: [[email]] / [[telephone]].",
-                    " Part: [[partPourcentage]]%."
+                    "Partenaire [[*nom]], avec une part de [[partPourcentage]]%.",
+                    " Contact: [[email]] / [[telephone]]. Adresse: [[adressePhysique]].",
+                    " Infos légales: Impôt [[numimpot]], RCCM [[rccm]], ID.NAT [[idnat]]."
                 ]
             ],
             "liste" => array_merge([
@@ -59,10 +59,10 @@ class PartenaireEntityCanvasProvider implements EntityCanvasProviderInterface
     {
         $monnaie = $this->serviceMonnaies->getCodeMonnaieAffichage();
         return [
-            ["group" => "Statut & Suivi", "code" => "nombrePistesApportees", "intitule" => "Nb. Pistes", "type" => "Entier", "format" => "Nombre", "description" => "Nombre de pistes apportées par ce partenaire."],
-            ["group" => "Statut & Suivi", "code" => "nombreClientsAssocies", "intitule" => "Nb. Clients", "type" => "Entier", "format" => "Nombre", "description" => "Nombre de clients associés à ce partenaire."],
-            ["group" => "Statut & Suivi", "code" => "nombrePolicesGenerees", "intitule" => "Nb. Polices", "type" => "Entier", "format" => "Nombre", "description" => "Nombre de polices générées via ce partenaire."],
-            ["group" => "Statut & Suivi", "code" => "nombreConditionsPartage", "intitule" => "Nb. Conditions", "type" => "Entier", "format" => "Nombre", "description" => "Nombre de conditions de partage définies pour ce partenaire."],
+            ["group" => "Activité", "code" => "nombrePistesApportees", "intitule" => "Nb. Pistes", "type" => "Entier", "format" => "Nombre", "description" => "Nombre de pistes apportées par ce partenaire."],
+            ["group" => "Activité", "code" => "nombreClientsAssocies", "intitule" => "Nb. Clients", "type" => "Entier", "format" => "Nombre", "description" => "Nombre de clients associés à ce partenaire."],
+            ["group" => "Activité", "code" => "nombrePolicesGenerees", "intitule" => "Nb. Polices", "type" => "Entier", "format" => "Nombre", "description" => "Nombre de polices générées via ce partenaire."],
+            ["group" => "Activité", "code" => "nombreConditionsPartage", "intitule" => "Nb. Conditions", "type" => "Entier", "format" => "Nombre", "description" => "Nombre de conditions de partage définies pour ce partenaire."],
             ["group" => "Statut & Suivi", "code" => "partPourcentage", "intitule" => "Part (%)", "type" => "Calcul", "format" => "Nombre", "unite" => "%", "description" => "Part du partenaire en pourcentage."],
 
             // Groupe SINISTRALITE (Portefeuille Partenaire)
@@ -76,7 +76,7 @@ class PartenaireEntityCanvasProvider implements EntityCanvasProviderInterface
             ["group" => "Prime brutte", "code" => "primeTotale", "intitule" => "Prime Totale", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Volume total des primes générées par le partenaire."],
             ["group" => "Prime brutte", "code" => "primePayee", "intitule" => "Prime Payée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant des primes encaissées."],
             ["group" => "Prime brutte", "code" => "primeSoldeDue", "intitule" => "Prime Solde Dû", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant des primes restant à recouvrer."],
-
+            
             ["group" => "Revenu Brut", "code" => "tauxCommission", "intitule" => "Taux de Com. Moyen", "type" => "Calcul", "format" => "Pourcentage", "description" => "Taux de commission moyen sur le portefeuille."],
             ["group" => "Revenu Brut", "code" => "montantHT", "intitule" => "Commission HT", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Commission totale HT générée."],
             ["group" => "Revenu Brut", "code" => "montantTTC", "intitule" => "Commission TTC", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Commission totale TTC générée."],
