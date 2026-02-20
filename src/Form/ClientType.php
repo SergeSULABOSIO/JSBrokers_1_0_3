@@ -3,6 +3,7 @@
 namespace App\Form;
 
 use App\Entity\Client;
+use App\Entity\Partenaire;
 use App\Entity\Groupe;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -87,15 +88,14 @@ class ClientType extends AbstractType
                 'entry_options' => ['label' => false],
                 'mapped' => false,
             ])
-            ->add('partenaires', CollectionType::class, [
-                'entry_type' => PartenaireType::class,
+            ->add('partenaires', EntityType::class, [
+                'class' => Partenaire::class,
+                'choice_label' => 'nom',
+                'multiple' => true,
+                'expanded' => false,
+                'label' => 'Partenaires',
+                'required' => false,
                 'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'label' => 'Partenaire',
-                'entry_options' => ['label' => false],
-                'mapped' => false,
-                'prototype' => false,
             ])
             ->add('documents', CollectionType::class, [
                 'entry_type' => DocumentType::class,
