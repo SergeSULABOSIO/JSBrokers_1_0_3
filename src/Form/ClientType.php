@@ -85,6 +85,7 @@ class ClientType extends AbstractType
                 'allow_delete' => true,
                 'label' => 'Contacts',
                 'entry_options' => ['label' => false],
+                'mapped' => false,
             ])
             ->add('partenaires', CollectionType::class, [
                 'entry_type' => PartenaireType::class,
@@ -93,6 +94,8 @@ class ClientType extends AbstractType
                 'allow_delete' => true,
                 'label' => 'Partenaire',
                 'entry_options' => ['label' => false],
+                'mapped' => false,
+                'prototype' => false,
             ])
             ->add('documents', CollectionType::class, [
                 'entry_type' => DocumentType::class,
@@ -101,6 +104,7 @@ class ClientType extends AbstractType
                 'allow_delete' => true,
                 'label' => 'Documents',
                 'entry_options' => ['label' => false],
+                'mapped' => false,
             ]);
     }
 
