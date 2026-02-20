@@ -51,11 +51,11 @@ class PartenaireFormCanvasProvider implements FormCanvasProviderInterface
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["email"]], ["champs" => ["telephone"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["part"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["clients"]]]],
         ];
         $collections = [
             ['fieldName' => 'conditionPartages', 'entityRouteName' => 'conditionpartage', 'formTitle' => 'Condition de partage', 'parentFieldName' => 'partenaire'],
             ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'partenaire'],
-            ['fieldName' => 'clients', 'entityRouteName' => 'client', 'formTitle' => 'Client', 'parentFieldName' => 'partenaires', 'totalizableField' => 'primeTotale'],
         ];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
         return $layout;

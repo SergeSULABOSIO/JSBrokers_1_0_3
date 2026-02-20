@@ -71,13 +71,12 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                 ["champs" => [array_merge(['field_code' => 'rccm'], $visibilityConditionForLegalFields)]],
                 ["champs" => [array_merge(['field_code' => 'idnat'], $visibilityConditionForLegalFields)]]
             ]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["partenaires"]]]],
         ];
 
         $collections = [
             // Ligne 5: "Contacts"
             ['fieldName' => 'contacts', 'entityRouteName' => 'contact', 'formTitle' => 'Contact', 'parentFieldName' => 'client'],
-            // Ligne 6: "Partenaires"
-            ['fieldName' => 'partenaires', 'entityRouteName' => 'partenaire', 'formTitle' => 'Partenaire', 'parentFieldName' => 'client'],
             // Ligne 7: "Documents"
             ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'client'],
         ];
