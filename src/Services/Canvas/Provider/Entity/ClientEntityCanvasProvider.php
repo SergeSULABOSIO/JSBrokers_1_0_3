@@ -6,18 +6,16 @@ use App\Entity\Client;
 use App\Entity\Contact;
 use App\Entity\Document;
 use App\Entity\Groupe;
+use App\Entity\Note;
 use App\Entity\NotificationSinistre;
 use App\Entity\Partenaire;
 use App\Entity\Piste;
-use App\Services\Canvas\CanvasHelper;
 use App\Services\ServiceMonnaies;
 
 class ClientEntityCanvasProvider implements EntityCanvasProviderInterface
 {
-    public function __construct(
-        private ServiceMonnaies $serviceMonnaies,
-        private CanvasHelper $canvasHelper
-    ) {
+    public function __construct(private ServiceMonnaies $serviceMonnaies)
+    {
     }
 
     public function supports(string $entityClassName): bool
@@ -33,9 +31,9 @@ class ClientEntityCanvasProvider implements EntityCanvasProviderInterface
                 "icone" => "client",
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
-                    "Client [[*nom]].",
-                    " Contact: [[email]] / [[telephone]].",
-                    " Adresse: [[adresse]]."
+                    "Client [[*nom]], [[civiliteString]].",
+                    " Contact: [[email]] / [[telephone]]. Adresse: [[adresse]].",
+                    " Infos légales: Impôt [[numimpot]], RCCM [[rccm]], ID.NAT [[idnat]]."
                 ]
             ],
             "liste" => array_merge([
