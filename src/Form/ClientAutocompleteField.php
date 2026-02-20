@@ -20,15 +20,17 @@ class ClientAutocompleteField extends AbstractType
     {
         $resolver->setDefaults([
             'class' => Client::class,
-            // 'placeholder' => 'Séléctionner le client',
-            // 'choice_label' => 'nom',
+            'placeholder' => 'Sélectionner le client',
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
-
-            // choose which fields to use in the search
-            // if not passed, *all* fields are used
-            // 'searchable_fields' => ['name'],
-
-            // 'security' => 'ROLE_SOMETHING',
+            'searchable_fields' => ['nom', 'email'],
+            'as_html' => true,
+            'choice_label' => function(Client $client) {
+                return sprintf(
+                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">%s</div></div>',
+                    htmlspecialchars($client->getNom()),
+                    htmlspecialchars($client->getEmail() ?? 'Email non disponible')
+                );
+            },
         ]);
     }
 
