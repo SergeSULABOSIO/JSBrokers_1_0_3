@@ -92,14 +92,12 @@ class PartenaireType extends AbstractType
                 ],
                 'mapped' => false,
             ])
-            ->add('clients', EntityType::class, [
-                'class' => Client::class,
-                'choice_label' => 'nom',
-                'multiple' => true,
-                'expanded' => false,
-                'label' => "Clients du portefeuille",
-                'required' => false,
-                'by_reference' => false,
+            ->add('clients', ClientAutocompleteField::class, [
+               'label' => "Clients",
+               'placeholder' => "Chercher un client",
+               'required' => false,
+               'multiple' => true,
+               'by_reference' => false,
             ])
             ->add('documents', CollectionType::class, [
                 'label' => "Documents",
