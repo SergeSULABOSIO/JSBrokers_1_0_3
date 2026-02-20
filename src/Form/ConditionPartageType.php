@@ -2,7 +2,6 @@
 
 namespace App\Form;
 
-use App\Entity\Risque;
 use App\Entity\ConditionPartage;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\AbstractType;
