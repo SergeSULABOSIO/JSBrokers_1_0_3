@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Traits\CalculatedIndicatorsTrait;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\PartenaireRepository;
 use Doctrine\Common\Collections\Collection;
@@ -11,6 +12,8 @@ use Doctrine\Common\Collections\ArrayCollection;
 #[ORM\Entity(repositoryClass: PartenaireRepository::class)]
 class Partenaire
 {
+    use CalculatedIndicatorsTrait;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -85,16 +88,19 @@ class Partenaire
 
     // Attributs calculés
     #[Groups(['list:read'])]
-    public ?int $nombrePistesApportees;
+    public ?int $nombrePistesApportees = null;
 
     #[Groups(['list:read'])]
-    public ?int $nombreClientsAssocies;
+    public ?int $nombreClientsAssocies = null;
 
     #[Groups(['list:read'])]
-    public ?int $nombrePolicesGenerees;
+    public ?int $nombrePolicesGenerees = null;
 
     #[Groups(['list:read'])]
-    public ?int $nombreConditionsPartage;
+    public ?int $nombreConditionsPartage = null;
+
+    #[Groups(['list:read'])]
+    public ?float $partPourcentage = null;
 
     // NOUVEAU : Attributs calculés spécifiques (Miroir de Cotation)
     #[Groups(['list:read'])]

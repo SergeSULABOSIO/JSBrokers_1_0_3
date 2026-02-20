@@ -17,10 +17,20 @@ class PartenaireNumericCanvasProvider implements NumericCanvasProviderInterface
     {
         /** @var Partenaire $object */
         return array_merge([
-            "part" => [
-                "description" => "Part",
-                "value" => ($object->getPart() ?? 0) * 100,
-                "unit" => "%",
+            "nombrePistesApportees" => [
+                "description" => "Nb. Pistes",
+                "value" => ($object->nombrePistesApportees ?? 0) * 100,
+                "is_percentage" => false
+            ],
+            "nombreClientsAssocies" => [
+                "description" => "Nb. Clients",
+                "value" => ($object->nombreClientsAssocies ?? 0) * 100,
+                "is_percentage" => false
+            ],
+            "nombrePolicesGenerees" => [
+                "description" => "Nb. Polices",
+                "value" => ($object->nombrePolicesGenerees ?? 0) * 100,
+                "is_percentage" => false
             ],
         ], $this->getCalculatedIndicatorsNumericAttributes($object));
     }

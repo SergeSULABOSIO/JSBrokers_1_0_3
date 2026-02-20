@@ -378,7 +378,7 @@ class CalculationProvider
                     'nombreClientsAssocies' => $this->countPartenaireClients($entity),
                     'nombrePolicesGenerees' => $this->countPartenairePolices($entity),
                     'nombreConditionsPartage' => $this->countPartenaireConditions($entity),
-                    'partPourcentage' => ($entity->getPart() ?? 0) * 100,
+                    'partPourcentage' => round(($entity->getPart() ?? 0) * 100, 2),
 
                     // Mapping des stats globales vers les attributs de l'entité (format Cotation)
                     'primeTotale' => round($stats['prime_totale'], 2),
