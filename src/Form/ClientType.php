@@ -88,13 +88,11 @@ class ClientType extends AbstractType
                 'entry_options' => ['label' => false],
                 'mapped' => false,
             ])
-            ->add('partenaires', EntityType::class, [
-                'class' => Partenaire::class,
-                'choice_label' => 'nom',
-                'multiple' => true,
-                'expanded' => false,
-                'label' => 'Partenaires',
+            ->add('partenaires', PartenaireAutocompleteField::class, [
+                'label' => "Partenaires",
+                'placeholder' => "Chercher un partenaire",
                 'required' => false,
+                'multiple' => true,
                 'by_reference' => false,
             ])
             ->add('documents', CollectionType::class, [
