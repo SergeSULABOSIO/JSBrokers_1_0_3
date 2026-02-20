@@ -11,7 +11,6 @@ use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
@@ -348,9 +347,8 @@ trait ControllerUtilsTrait
 
         if (!$entity) {
             $entity = new $entityClass();
-            // L'initialiseur est appelé uniquement si on ne reçoit pas de contexte parent,
-            // pour ne pas écraser la liaison qui sera établie juste après.
-            if (is_callable($initializer) && !$request->query->get('parent_field_name')) {
+            // On appelle l'initialiseur pour définir les valeurs par défaut (ex: Entreprise, dates, etc.)
+            if (is_callable($initializer)) {
                 // Call the initializer function with the new entity and the invite
                 $initializer($entity, $invite);
             }
