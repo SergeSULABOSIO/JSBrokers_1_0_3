@@ -629,7 +629,7 @@ trait ControllerUtilsTrait
         }
         $metadata = $this->em->getClassMetadata($entityClass);
         foreach ($metadata->getAssociationMappings() as $fieldName => $mapping) {
-            if ($mapping['type'] === ClassMetadata::ONE_TO_MANY) {
+            if ($mapping['type'] === ClassMetadata::ONE_TO_MANY || $mapping['type'] === ClassMetadata::MANY_TO_MANY) {
                 $collectionMap[$fieldName] = $mapping['targetEntity'];
             }
         }
