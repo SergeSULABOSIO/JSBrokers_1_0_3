@@ -3,6 +3,7 @@
 namespace App\Form;
 
 use App\Entity\Partenaire;
+use App\Entity\Client;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
@@ -13,6 +14,7 @@ use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\PercentType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 
 class PartenaireType extends AbstractType
 {
@@ -90,17 +92,14 @@ class PartenaireType extends AbstractType
                 ],
                 'mapped' => false,
             ])
-            ->add('clients', CollectionType::class, [
+            ->add('clients', EntityType::class, [
+                'class' => Client::class,
+                'choice_label' => 'nom',
+                'multiple' => true,
+                'expanded' => false,
                 'label' => "Clients du portefeuille",
-                'entry_type' => ClientType::class,
+                'required' => false,
                 'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'entry_options' => [
-                    'label' => false,
-                ],
-                'mapped' => false,
-                'prototype' => false,
             ])
             ->add('documents', CollectionType::class, [
                 'label' => "Documents",
