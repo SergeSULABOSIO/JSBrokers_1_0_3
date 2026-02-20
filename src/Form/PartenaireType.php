@@ -2,17 +2,15 @@
 
 namespace App\Form;
 
-use App\Entity\Entreprise;
 use App\Entity\Partenaire;
 use App\Services\FormListenerFactory;
+use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
-use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\PercentType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
@@ -90,16 +88,18 @@ class PartenaireType extends AbstractType
                 'entry_options' => [
                     'label' => false,
                 ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "partenaire",
-                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 1,
-                    ]),
+                'mapped' => false,
+            ])
+            ->add('clients', CollectionType::class, [
+                'label' => "Clients du portefeuille",
+                'entry_type' => ClientType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
                 ],
+                'mapped' => false,
             ])
             ->add('documents', CollectionType::class, [
                 'label' => "Documents",
@@ -111,17 +111,9 @@ class PartenaireType extends AbstractType
                 'entry_options' => [
                     'label' => false,
                 ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "document",
-                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 5,
-                    ]),
-                ],
+                'mapped' => false,
             ])
+           ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;
     }
 
