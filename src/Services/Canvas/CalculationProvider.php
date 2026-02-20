@@ -797,12 +797,36 @@ class CalculationProvider
         }
         if ($pisteCible) $qb->andWhere('p = :pisteCible')->setParameter('pisteCible', $pisteCible);
         if ($cotationCible) $qb->andWhere('c = :cotationCible')->setParameter('cotationCible', $cotationCible);
-        if ($assureurCible) $qb->andWhere('c.assureur = :assureurCible')->setParameter('assureurCible', $assureurCible);
-        if ($risqueCible) $qb->andWhere('p.risque = :risqueCible')->setParameter('risqueCible', $risqueCible);
+        if ($assureurCible) {
+            if ($assureurCible->getId() === null) {
+                $qb->andWhere('1=0');
+            } else {
+                $qb->andWhere('c.assureur = :assureurCible')->setParameter('assureurCible', $assureurCible);
+            }
+        }
+        if ($risqueCible) {
+            if ($risqueCible->getId() === null) {
+                $qb->andWhere('1=0');
+            } else {
+                $qb->andWhere('p.risque = :risqueCible')->setParameter('risqueCible', $risqueCible);
+            }
+        }
         if ($inviteCible) $qb->andWhere('p.invite = :inviteCible')->setParameter('inviteCible', $inviteCible);
-        if ($clientCible) $qb->andWhere('p.client = :clientCible')->setParameter('clientCible', $clientCible);
+        if ($clientCible) {
+            if ($clientCible->getId() === null) {
+                $qb->andWhere('1=0');
+            } else {
+                $qb->andWhere('p.client = :clientCible')->setParameter('clientCible', $clientCible);
+            }
+        }
         if ($groupeCible) $qb->join('p.client', 'cl_g')->andWhere('cl_g.groupe = :groupeCible')->setParameter('groupeCible', $groupeCible);
-        if ($partenaireCible) $qb->andWhere('pa = :partenaireCible')->setParameter('partenaireCible', $partenaireCible);
+        if ($partenaireCible) {
+            if ($partenaireCible->getId() === null) {
+                $qb->andWhere('1=0');
+            } else {
+                $qb->andWhere('pa = :partenaireCible')->setParameter('partenaireCible', $partenaireCible);
+            }
+        }
         if ($avenantCible) $qb->andWhere('av = :avenantCible')->setParameter('avenantCible', $avenantCible);
         if ($trancheCible) $qb->andWhere('t = :trancheCible')->setParameter('trancheCible', $trancheCible);
         if ($revenuPourCourtierCible) $qb->join('c.revenus', 'rpc')->andWhere('rpc = :revenuPourCourtierCible')->setParameter('revenuPourCourtierCible', $revenuPourCourtierCible);
