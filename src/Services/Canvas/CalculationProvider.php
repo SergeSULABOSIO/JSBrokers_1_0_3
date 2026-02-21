@@ -824,7 +824,7 @@ class CalculationProvider
             if ($partenaireCible->getId() === null) {
                 $qb->andWhere('1=0');
             } else {
-                $qb->andWhere('pa = :partenaireCible')->setParameter('partenaireCible', $partenaireCible);
+                $qb->andWhere('pa = :partenaireCible OR clpa = :partenaireCible')->setParameter('partenaireCible', $partenaireCible);
             }
         }
         if ($avenantCible) $qb->andWhere('av = :avenantCible')->setParameter('avenantCible', $avenantCible);
@@ -1411,13 +1411,21 @@ class CalculationProvider
         // Priorité 1 : Conditions exceptionnelles sur la Piste
         $conditionsPartagePiste = $cotation->getPiste()->getConditionsPartageExceptionnelles();
         if (!$conditionsPartagePiste->isEmpty()) {
-            return $this->applyRevenuConditionsSpeciales($conditionsPartagePiste->first(), $revenu, $addressedTo, $precomputedSums);
+            foreach ($conditionsPartagePiste as $condition) {
+                $montant = $this->applyRevenuConditionsSpeciales($condition, $revenu, $addressedTo, $precomputedSums);
+                if ($montant > 0) return $montant;
+            }
+            return 0.0;
         }
 
         // Priorité 2 : Conditions générales sur le Partenaire
         $conditionsPartagePartenaire = $partenaireAffaire->getConditionPartages();
         if (!$conditionsPartagePartenaire->isEmpty()) {
-            return $this->applyRevenuConditionsSpeciales($conditionsPartagePartenaire->first(), $revenu, $addressedTo, $precomputedSums);
+            foreach ($conditionsPartagePartenaire as $condition) {
+                $montant = $this->applyRevenuConditionsSpeciales($condition, $revenu, $addressedTo, $precomputedSums);
+                if ($montant > 0) return $montant;
+            }
+            return 0.0;
         }
 
         // Priorité 3 : Taux par défaut du partenaire

@@ -3,7 +3,6 @@
 namespace App\Form;
 
 use App\Entity\Partenaire;
-use App\Entity\Client;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
@@ -14,7 +13,6 @@ use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\PercentType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 
 class PartenaireType extends AbstractType
 {
