@@ -379,6 +379,7 @@ class CalculationProvider
                     'nombrePolicesGenerees' => $this->countPartenairePolices($entity),
                     'nombreConditionsPartage' => $this->countPartenaireConditions($entity),
                     'partPourcentage' => round(($entity->getPart() ?? 0) * 100, 2),
+                    'conditionsPartageResume' => $this->getPartenaireConditionsPartageResume($entity),
 
                     // Mapping des stats globales vers les attributs de l'entité (format Cotation)
                     'primeTotale' => round($stats['prime_totale'], 2),
@@ -417,10 +418,15 @@ class CalculationProvider
                 break;
             case ConditionPartage::class:
                 /** @var ConditionPartage $entity */
+                $impact = $this->calculateConditionPartageImpact($entity);
+
                 $indicateurs = [
                     'descriptionRegle' => $this->getConditionPartageDescriptionRegle($entity),
                     'nombreRisquesCibles' => $this->countConditionPartageRisquesCibles($entity),
                     'porteeCondition' => $this->getConditionPartagePortee($entity),
+                    'totalAssiette' => round($impact['assiette'], 2),
+                    'totalRetroCommission' => round($impact['retroCommission'], 2),
+                    'nombreDossiersConcernes' => $impact['dossiers'],
                 ];
                 break;
             case Risque::class:
@@ -3054,6 +3060,76 @@ class CalculationProvider
             return 'Générale (Partenaire)';
         }
         return 'Non définie';
+    }
+
+    private function getPartenaireConditionsPartageResume(Partenaire $partenaire): string
+    {
+        $count = $partenaire->getConditionPartages()->count();
+        if ($count === 0) {
+            return "Aucune condition spécifique (Taux par défaut: " . ($partenaire->getPart() * 100) . "%)";
+        }
+        return $count . " condition(s) spécifique(s) définie(s).";
+    }
+
+    private function calculateConditionPartageImpact(ConditionPartage $condition): array
+    {
+        $assiette = 0.0;
+        $retroCommission = 0.0;
+        $dossiers = 0;
+        
+        $cotations = [];
+        // Déterminer le périmètre des cotations à analyser
+        if ($condition->getPiste()) {
+            // Condition exceptionnelle : uniquement les cotations de cette piste
+            foreach ($condition->getPiste()->getCotations() as $cotation) {
+                if ($this->isCotationBound($cotation)) {
+                    $cotations[] = $cotation;
+                }
+            }
+        } elseif ($condition->getPartenaire()) {
+            // Condition générale : toutes les cotations liées à ce partenaire
+            // Via les pistes du partenaire
+            foreach ($condition->getPartenaire()->getPistes() as $piste) {
+                foreach ($piste->getCotations() as $cotation) {
+                    if ($this->isCotationBound($cotation)) {
+                        $cotations[] = $cotation;
+                    }
+                }
+            }
+            // Via les clients du partenaire
+            foreach ($condition->getPartenaire()->getClients() as $client) {
+                 foreach ($client->getPistes() as $piste) {
+                    foreach ($piste->getCotations() as $cotation) {
+                        if ($this->isCotationBound($cotation)) {
+                            $cotations[] = $cotation;
+                        }
+                    }
+                }
+            }
+        }
+        
+        $cotations = array_unique($cotations, SORT_REGULAR);
+        $precomputedSums = ['by_risque' => [], 'by_client' => [], 'by_partenaire' => []]; // Simplification pour l'affichage unitaire
+
+        foreach ($cotations as $cotation) {
+            $applied = false;
+            foreach ($cotation->getRevenus() as $revenu) {
+                // On simule l'application de la condition pour voir ce qu'elle générerait
+                $montant = $this->applyRevenuConditionsSpeciales($condition, $revenu, -1, $precomputedSums);
+                if ($montant > 0) {
+                    $retroCommission += $montant;
+                    $assiette += $this->getRevenuMontantPure($revenu, -1, true);
+                    $applied = true;
+                }
+            }
+            if ($applied) $dossiers++;
+        }
+        
+        return [
+            'assiette' => $assiette,
+            'retroCommission' => $retroCommission,
+            'dossiers' => $dossiers
+        ];
     }
 
     // --- Indicateurs pour Risque ---

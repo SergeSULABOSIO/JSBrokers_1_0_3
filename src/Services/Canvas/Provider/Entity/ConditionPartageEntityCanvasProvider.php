@@ -70,10 +70,16 @@ class ConditionPartageEntityCanvasProvider implements EntityCanvasProviderInterf
 
     private function getSpecificIndicators(): array
     {
+        $monnaie = $this->serviceMonnaies->getCodeMonnaieAffichage();
         return [
-            ["code" => "descriptionRegle", "intitule" => "Description de la Règle", "type" => "Texte", "format" => "Texte", "description" => "Un résumé lisible de la condition de partage."],
-            ["code" => "nombreRisquesCibles", "intitule" => "Nb. Risques Ciblés", "type" => "Entier", "format" => "Nombre", "description" => "Nombre de produits/risques spécifiques visés par cette condition."],
-            ["code" => "porteeCondition", "intitule" => "Portée", "type" => "Texte", "format" => "Texte", "description" => "Indique si la condition est générale (liée au partenaire) ou exceptionnelle (liée à une piste)."],
+            ["group" => "Définition", "code" => "descriptionRegle", "intitule" => "Description de la Règle", "type" => "Texte", "format" => "Texte", "description" => "Un résumé lisible de la condition de partage."],
+            ["group" => "Définition", "code" => "porteeCondition", "intitule" => "Portée", "type" => "Texte", "format" => "Texte", "description" => "Indique si la condition est générale (liée au partenaire) ou exceptionnelle (liée à une piste)."],
+            
+            ["group" => "Impact Financier", "code" => "totalAssiette", "intitule" => "Assiette Totale", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant total sur lequel cette condition s'est appliquée."],
+            ["group" => "Impact Financier", "code" => "totalRetroCommission", "intitule" => "Rétro-comm. Générée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant total de rétro-commission généré par cette condition."],
+            
+            ["group" => "Statistiques", "code" => "nombreRisquesCibles", "intitule" => "Nb. Risques Ciblés", "type" => "Entier", "format" => "Nombre", "description" => "Nombre de produits/risques spécifiques visés par cette condition."],
+            ["group" => "Statistiques", "code" => "nombreDossiersConcernes", "intitule" => "Dossiers Concernés", "type" => "Calcul", "format" => "Nombre", "description" => "Nombre de dossiers où cette condition a été appliquée."],
         ];
     }
 }

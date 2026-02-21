@@ -85,26 +85,13 @@ class ConditionPartageController extends AbstractController
         return $this->handleDeleteApi($conditionPartage);
     }
 
-    #[Route(
-        '/api/dynamic-query/{idInvite}/{idEntreprise}',
-        name: 'app_dynamic_query',
-        requirements: [
-            'idEntreprise' => Requirement::DIGITS,
-            'idInvite' => Requirement::DIGITS
-        ],
-        methods: ['POST']
-    )]
-    public function query(Request $request): Response
+    #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
+    public function query(Request $request)
     {
         return $this->renderViewOrListComponent(ConditionPartage::class, $request, true);
     }
 
-    #[Route(
-        '/api/{id}/{collectionName}/{usage}',
-        name: 'api.get_collection',
-        requirements: ['id' => Requirement::DIGITS],
-        methods: ['GET']
-    )]
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]
     public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
     {
         return $this->handleCollectionApiRequest($id, $collectionName, ConditionPartage::class, $usage);
