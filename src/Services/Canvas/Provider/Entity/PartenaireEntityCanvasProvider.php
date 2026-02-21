@@ -96,6 +96,7 @@ class PartenaireEntityCanvasProvider implements EntityCanvasProviderInterface
             ["group" => "Partage Partenaire", "code" => "retroCommission", "intitule" => "Rétro-commission Due", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Rétro-commission due au partenaire."],
             ["group" => "Partage Partenaire", "code" => "retroCommissionReversee", "intitule" => "Rétro-commission Reversée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Rétro-commission déjà payée au partenaire."],
             ["group" => "Partage Partenaire", "code" => "retroCommissionSolde", "intitule" => "Rétro-commission Solde", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Solde de rétro-commission à payer."],
+            ["group" => "Partage Partenaire", "code" => "conditionsPartageResume", "intitule" => "Résumé Conditions", "type" => "Calcul", "format" => "Texte", "description" => "Résumé des conditions de partage actives."],
 
             ["group" => "Résultat Final", "code" => "reserve", "intitule" => "Réserve Courtier", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Revenu net final pour le courtier sur ce partenaire."],
         ];

@@ -77,6 +77,15 @@ class ConditionPartage
     #[Groups(['list:read'])]
     public ?string $unite_mesure_string;
 
+    // NOUVEAU : Attributs calculés pour les indicateurs financiers et statistiques
+    #[Groups(['list:read'])]
+    public ?float $totalAssiette = null;
+
+    #[Groups(['list:read'])]
+    public ?float $totalRetroCommission = null;
+
+    #[Groups(['list:read'])]
+    public ?int $nombreDossiersConcernes = null;
   
     
 
