@@ -26,9 +26,10 @@ class ClientAutocompleteField extends AbstractType
             'as_html' => true,
             'choice_label' => function(Client $client) {
                 return sprintf(
-                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">%s</div></div>',
+                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">%s | %s</div></div>',
                     htmlspecialchars($client->getNom()),
-                    htmlspecialchars($client->getEmail() ?? 'Email non disponible')
+                    htmlspecialchars($client->getEmail() ?? 'Email non disponible'),
+                    htmlspecialchars($client->getTelephone() ?? 'Tél. non disponible')
                 );
             },
         ]);
