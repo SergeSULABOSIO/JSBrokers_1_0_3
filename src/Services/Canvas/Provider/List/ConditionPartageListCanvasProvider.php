@@ -26,7 +26,7 @@ class ConditionPartageListCanvasProvider implements ListCanvasProviderInterface
                     "icone" => "mdi:share-variant"
                     ],
                 "textes_secondaires" => [
-                    ["attribut_prefixe" => "Taux: ", "attribut_code" => "taux", "attribut_type" => "pourcentage"],
+                    ["attribut_code" => "descriptionRegle"],
                 ],
             ],
             "colonnes_numeriques" => [
@@ -46,6 +46,7 @@ class ConditionPartageListCanvasProvider implements ListCanvasProviderInterface
                     "titre_colonne" => "Dossiers",
                     "attribut_code" => "nombreDossiersConcernes",
                     "attribut_type" => "nombre",
+                    "attribut_unité" => "",
                 ],
             ],
         ];
