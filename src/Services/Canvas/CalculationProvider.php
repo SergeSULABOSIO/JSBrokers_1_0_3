@@ -3064,11 +3064,26 @@ class CalculationProvider
 
     private function getPartenaireConditionsPartageResume(Partenaire $partenaire): string
     {
-        $count = $partenaire->getConditionPartages()->count();
-        if ($count === 0) {
-            return "Aucune condition spécifique (Taux par défaut: " . ($partenaire->getPart() * 100) . "%)";
+        $conditions = $partenaire->getConditionPartages();
+        if ($conditions->isEmpty()) {
+            return "Aucune condition spécifique définie. Le taux par défaut de " . ($partenaire->getPart() * 100) . "% s'applique à l'ensemble du portefeuille.";
         }
-        return $count . " condition(s) spécifique(s) définie(s).";
+
+        $resume = "Ce partenaire dispose de " . $conditions->count() . " condition(s) spécifique(s) qui modulent le calcul de sa rétro-commission.";
+        
+        foreach ($conditions as $condition) {
+            $resume .= "\n\n• Condition : " . $condition->getNom();
+            $resume .= "\n  Règle : " . $this->getConditionPartageDescriptionRegle($condition);
+            
+            if (!$condition->getProduits()->isEmpty()) {
+                $risquesList = [];
+                foreach ($condition->getProduits() as $risque) {
+                    $risquesList[] = $risque->getNomComplet();
+                }
+                $resume .= "\n  Risques ciblés : " . implode(', ', $risquesList) . ".";
+            }
+        }
+        return $resume;
     }
 
     private function calculateConditionPartageImpact(ConditionPartage $condition): array
