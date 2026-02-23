@@ -427,6 +427,9 @@ class CalculationProvider
                     'totalAssiette' => round($impact['assiette'], 2),
                     'totalRetroCommission' => round($impact['retroCommission'], 2),
                     'nombreDossiersConcernes' => $impact['dossiers'],
+                    'formule_string' => $this->ConditionPartage_getFormuleString($entity),
+                    'critere_risque_string' => $this->ConditionPartage_getCritereRisqueString($entity),
+                    'unite_mesure_string' => $this->ConditionPartage_getUniteMesureString($entity),
                 ];
                 break;
             case Risque::class:
