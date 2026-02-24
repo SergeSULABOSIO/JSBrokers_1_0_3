@@ -51,17 +51,17 @@ class RisqueFormCanvasProvider implements FormCanvasProviderInterface
             [
                 "couleur_fond" => "white",
                 "colonnes" => [
-                    ["largeur" => 8, "champs" => ["nomComplet"]],
-                    ["largeur" => 4, "champs" => ["code"]]
+                    ["width" => 9, "champs" => ["nomComplet"]],
+                    ["width" => 3, "champs" => ["code"]]
                 ]
             ],
-            ["couleur_fond" => "white", "colonnes" => [["largeur" => 12, "champs" => ["description"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["width" => 12, "champs" => ["description"]]]],
             [
                 "couleur_fond" => "white",
                 "colonnes" => [
-                    ["largeur" => 4, "champs" => ["pourcentageCommissionSpecifiqueHT"]],
-                    ["largeur" => 4, "champs" => ["branche"]],
-                    ["largeur" => 4, "champs" => ["imposable"]]
+                    ["width" => 4, "champs" => ["pourcentageCommissionSpecifiqueHT"]],
+                    ["width" => 4, "champs" => ["branche"]],
+                    ["width" => 4, "champs" => ["imposable"]]
                 ]
             ],
         ];

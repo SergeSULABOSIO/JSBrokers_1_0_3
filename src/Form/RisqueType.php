@@ -41,37 +41,49 @@ class RisqueType extends AbstractType
                 'required' => false,
                 'attr' => [
                     'placeholder' => "Description détaillée",
-                    'rows' => 3,
+                    'rows' => 10,
                 ],
             ])
             ->add('pourcentageCommissionSpecifiqueHT', PercentType::class, [
                 'label' => "Taux de commission",
                 'required' => false,
                 'scale' => 2,
-                'help' => "Taux spécifique pour ce risque.",
+                // 'help' => "Taux spécifique.",
                 'attr' => [
                     'placeholder' => "Taux",
                 ],
             ])
             ->add('branche', ChoiceType::class, [
                 'label' => "Branche",
-                'help' => "Branche d'activité (IARD ou Vie).",
                 'expanded' => true,
                 'required' => true,
+                'label_html' => true,
                 'choices'  => [
-                    "IARD (Non-Vie)" => Risque::BRANCHE_IARD_OU_NON_VIE,
-                    "Vie" => Risque::BRANCHE_VIE,
+                    "IARD" => Risque::BRANCHE_IARD_OU_NON_VIE,
+                    "VIE" => Risque::BRANCHE_VIE,
                 ],
+                'choice_label' => function ($choice, $key, $value) {
+                    if ($choice === Risque::BRANCHE_IARD_OU_NON_VIE) {
+                        return '<div><strong>IARD (Non-Vie)</strong><div class="text-muted small">Assurances de dommages (Incendie, Accidents, Risques Divers).</div></div>';
+                    }
+                    return '<div><strong>Vie</strong><div class="text-muted small">Assurances de personnes (Vie, Décès, Capitalisation).</div></div>';
+                },
             ])
             ->add('imposable', ChoiceType::class, [
                 'label' => "Imposable ?",
-                'help' => "Appliquer les taxes sur ce risque ?",
                 'expanded' => true,
                 'required' => true,
+                'label_html' => true,
                 'choices'  => [
                     "Oui" => true,
                     "Non" => false,
                 ],
+                'choice_label' => function ($choice, $key, $value) {
+                    if ($choice === true) {
+                        return '<div><strong>Oui</strong><div class="text-muted small">Les taxes seront calculées.</div></div>';
+                    }
+                    return '<div><strong>Non</strong><div class="text-muted small">Aucune taxe ne sera appliquée.</div></div>';
+                },
             ])
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;
