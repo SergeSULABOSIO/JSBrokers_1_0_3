@@ -48,11 +48,19 @@ class GroupeFormCanvasProvider implements FormCanvasProviderInterface
     {
         $groupeId = $object->getId() ?? 0;
         $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
+            [
+                "couleur_fond" => "white",
+                "colonnes" => [
+                    ["width" => 12, "champs" => ["nom"]],
+                ]
+            ],
+            [
+                "couleur_fond" => "white",
+                "colonnes" => [
+                    ["width" => 12, "champs" => ["description"]],
+                ]
+            ],
         ];
-        $collections = [['fieldName' => 'clients', 'entityRouteName' => 'client', 'formTitle' => 'Client', 'parentFieldName' => 'groupe']];
-        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
         return $layout;
     }
 }
