@@ -41,13 +41,19 @@ class AssureurFormCanvasProvider implements FormCanvasProviderInterface
         $layout = [
             // Ligne 1: le nom
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
-            // Ligne 2: l'email (1/2 de la largeur) et l'adresse (1/2)
+            // Ligne 2: adressePhysique
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["adressePhysique"]]]],
+            // Ligne 3: url (1/2) et email (1/2)
             ["couleur_fond" => "white", "colonnes" => [
-                ["champs" => ["email"], "width" => 6],
-                ["champs" => ["adressePhysique"], "width" => 6]
+                ["champs" => ["url"], "width" => 6],
+                ["champs" => ["email"], "width" => 6]
             ]],
-            // ligne n 3: le num impot, l'id nationale et le rccm.
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["numimpot"]], ["champs" => ["idnat"]], ["champs" => ["rccm"]]]],
+            // Ligne 4: numimpot (1/3), rccm (1/3) et idnat (1/3)
+            ["couleur_fond" => "white", "colonnes" => [
+                ["champs" => ["numimpot"], "width" => 4],
+                ["champs" => ["rccm"], "width" => 4],
+                ["champs" => ["idnat"], "width" => 4]
+            ]],
         ];
 
         return $layout;
