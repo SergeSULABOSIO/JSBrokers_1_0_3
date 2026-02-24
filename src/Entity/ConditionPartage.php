@@ -86,6 +86,9 @@ class ConditionPartage
 
     #[Groups(['list:read'])]
     public ?int $nombreDossiersConcernes = null;
+
+    #[Groups(['list:read'])]
+    public ?string $contexteParent = null;
   
     
 

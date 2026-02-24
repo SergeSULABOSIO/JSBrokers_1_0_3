@@ -74,6 +74,7 @@ class ConditionPartageEntityCanvasProvider implements EntityCanvasProviderInterf
         return [
             ["group" => "Définition", "code" => "descriptionRegle", "intitule" => "Description de la Règle", "type" => "Texte", "format" => "Texte", "description" => "Un résumé lisible de la condition de partage."],
             ["group" => "Définition", "code" => "porteeCondition", "intitule" => "Portée", "type" => "Texte", "format" => "Texte", "description" => "Indique si la condition est générale (liée au partenaire) ou exceptionnelle (liée à une piste)."],
+            ["group" => "Définition", "code" => "contexteParent", "intitule" => "Contexte Parent", "type" => "Calcul", "format" => "Texte", "description" => "L'entité parente (Partenaire ou Piste) à laquelle cette condition est rattachée."],
             
             ["group" => "Impact Financier", "code" => "totalAssiette", "intitule" => "Assiette Totale", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant total sur lequel cette condition s'est appliquée."],
             ["group" => "Impact Financier", "code" => "totalRetroCommission", "intitule" => "Rétro-comm. Générée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant total de rétro-commission généré par cette condition."],
