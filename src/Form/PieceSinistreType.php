@@ -41,7 +41,11 @@ class PieceSinistreType extends AbstractType
                 'label' => "Nature de la pièce",
                 'required' => false,
                 'class' => ModelePieceSinistre::class,
-                'choice_label' => 'nom',
+                'expanded' => true,
+                'label_html' => true,
+                'choice_label' => function (ModelePieceSinistre $modele) {
+                    return '<div><strong>' . $modele->getNom() . '</strong><div class="text-muted small">' . ($modele->getDescription() ?? '') . '</div></div>';
+                },
             ])
             // --- AJOUT DE LA COLLECTION DE DOCUMENTS ---
             ->add('documents', CollectionType::class, [
