@@ -3,61 +3,69 @@
 namespace App\Form;
 
 use App\Entity\Risque;
-use App\Entity\Entreprise;
+use App\Services\FormListenerFactory;
+use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
-use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\PercentType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 
 class RisqueType extends AbstractType
 {
+    public function __construct(
+        private FormListenerFactory $ecouteurFormulaire,
+        private TranslatorInterface $translatorInterface
+    ) {}
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
             ->add('nomComplet', TextType::class, [
-                'label' => "Nom Complet du risque",
+                'label' => "Nom Complet",
                 'attr' => [
                     'placeholder' => "Nom",
                 ],
             ])
             ->add('code', TextType::class, [
-                'label' => "Code du risque",
+                'label' => "Code",
                 'attr' => [
                     'placeholder' => "Code",
                 ],
             ])
             ->add('description', TextareaType::class, [
                 'label' => "Description",
+                'required' => false,
                 'attr' => [
-                    'placeholder' => "Description ici",
+                    'placeholder' => "Description détaillée",
+                    'rows' => 3,
                 ],
             ])
             ->add('pourcentageCommissionSpecifiqueHT', PercentType::class, [
                 'label' => "Taux de commission",
                 'required' => false,
-                'help' => "Il s'agit ici du taux que l'application doit considérer uniquement pour ce risque.",
+                'scale' => 2,
+                'help' => "Taux spécifique pour ce risque.",
                 'attr' => [
                     'placeholder' => "Taux",
                 ],
             ])
             ->add('branche', ChoiceType::class, [
-                'label' => "Branche d'assurance",
-                'help' => "IARD pour 'I'ncendie 'A'ccident et 'R'isques 'D'ivers. Càd autres que les assurances Vie.",
+                'label' => "Branche",
+                'help' => "Branche d'activité (IARD ou Vie).",
                 'expanded' => true,
                 'required' => true,
                 'choices'  => [
-                    "IARD" => Risque::BRANCHE_IARD_OU_NON_VIE,
-                    "VIE" => Risque::BRANCHE_VIE,
+                    "IARD (Non-Vie)" => Risque::BRANCHE_IARD_OU_NON_VIE,
+                    "Vie" => Risque::BRANCHE_VIE,
                 ],
             ])
             ->add('imposable', ChoiceType::class, [
-                'label' => "Ce risque est-il imposable?",
-                'help' => "Oui, si les taxes doivent être chargées.",
+                'label' => "Imposable ?",
+                'help' => "Appliquer les taxes sur ce risque ?",
                 'expanded' => true,
                 'required' => true,
                 'choices'  => [
@@ -65,13 +73,7 @@ class RisqueType extends AbstractType
                     "Non" => false,
                 ],
             ])
-            //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
+            ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;
     }
 
@@ -79,7 +81,13 @@ class RisqueType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Risque::class,
-            'parent_object' => null, // l'objet parent
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }

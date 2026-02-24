@@ -48,8 +48,22 @@ class RisqueFormCanvasProvider implements FormCanvasProviderInterface
     {
         $risqueId = $object->getId() ?? 0;
         $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nomComplet"]], ["champs" => ["code"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["branche"]], ["champs" => ["imposable"]]]],
+            [
+                "couleur_fond" => "white",
+                "colonnes" => [
+                    ["largeur" => 8, "champs" => ["nomComplet"]],
+                    ["largeur" => 4, "champs" => ["code"]]
+                ]
+            ],
+            ["couleur_fond" => "white", "colonnes" => [["largeur" => 12, "champs" => ["description"]]]],
+            [
+                "couleur_fond" => "white",
+                "colonnes" => [
+                    ["largeur" => 4, "champs" => ["pourcentageCommissionSpecifiqueHT"]],
+                    ["largeur" => 4, "champs" => ["branche"]],
+                    ["largeur" => 4, "champs" => ["imposable"]]
+                ]
+            ],
         ];
         $collections = [
             ['fieldName' => 'pistes', 'entityRouteName' => 'piste', 'formTitle' => 'Piste', 'parentFieldName' => 'risque'],
