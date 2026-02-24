@@ -48,8 +48,25 @@ class PieceSinistreFormCanvasProvider implements FormCanvasProviderInterface
     {
         $pieceId = $object->getId() ?? 0;
         $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["fourniPar"]], ["champs" => ["receivedAt"]], ["champs" => ["type"]]]],
+            [
+                "couleur_fond" => "white",
+                "colonnes" => [
+                    ["width" => 12, "champs" => ["description"]],
+                ]
+            ],
+            [
+                "couleur_fond" => "white",
+                "colonnes" => [
+                    ["width" => 6, "champs" => ["fourniPar"]],
+                    ["width" => 6, "champs" => ["receivedAt"]],
+                ]
+            ],
+            [
+                "couleur_fond" => "white",
+                "colonnes" => [
+                    ["width" => 12, "champs" => ["type"]],
+                ]
+            ],
         ];
 
         $collections = [
