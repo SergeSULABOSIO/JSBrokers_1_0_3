@@ -48,7 +48,8 @@ class NotificationSinistreFormCanvasProvider implements FormCanvasProviderInterf
     {
         $notificationId = $object->getId() ?? 0;
         $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["assure"]], ["champs" => ["assureur"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["assure"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["assureur"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["risque"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["referencePolice"]], ["champs" => ["referenceSinistre"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["descriptionDeFait"]]]],

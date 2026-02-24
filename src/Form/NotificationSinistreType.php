@@ -36,24 +36,18 @@ class NotificationSinistreType extends AbstractType
                 'label' => "Assureur concerné",
                 'placeholder' => "Taper pour chercher l'assureur...",
                 'required' => true,
-                'choice_label' => 'nom',
-                'searchable_fields' => ['nom', 'email'],
             ])
             ->add('risque', RisqueAutocompleteField::class, [
                 'class' => Risque::class,
                 'label' => "Couverture d'assurance concernée",
                 'placeholder' => 'Taper pour chercher un risque...',
                 'required' => true,
-                'choice_label' => 'nomComplet',
-                'searchable_fields' => ['nomComplet', 'code'],
             ])
             ->add('assure', ClientAutocompleteField::class, [
                 'class' => Client::class,
                 'label' => "Client concernée",
                 'placeholder' => 'Taper pour chercher le client...',
                 'required' => true,
-                'choice_label' => 'nom',
-                'searchable_fields' => ['nom', 'code'],
             ])
             ->add('referencePolice', TextType::class, [
                 'help' => "Vous devez fournir la référence de la police d'assurance",

@@ -20,15 +20,17 @@ class RisqueAutocompleteField extends AbstractType
     {
         $resolver->setDefaults([
             'class' => Risque::class,
-            // 'placeholder' => 'Choose a Risque',
+            'placeholder' => 'Sélectionner un risque',
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
-            // 'choice_label' => 'nomComplet',
-
-            // choose which fields to use in the search
-            // if not passed, *all* fields are used
-            // 'searchable_fields' => ['name'],
-
-            // 'security' => 'ROLE_SOMETHING',
+            'searchable_fields' => ['nomComplet', 'code'],
+            'as_html' => true,
+            'choice_label' => function(Risque $risque) {
+                return sprintf(
+                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">Code: %s</div></div>',
+                    htmlspecialchars($risque->getNomComplet()),
+                    htmlspecialchars($risque->getCode())
+                );
+            },
         ]);
     }
 

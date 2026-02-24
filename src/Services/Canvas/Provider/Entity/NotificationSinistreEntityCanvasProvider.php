@@ -67,24 +67,28 @@ class NotificationSinistreEntityCanvasProvider implements EntityCanvasProviderIn
 
     private function getSpecificIndicators(): array
     {
+        $monnaie = $this->serviceMonnaies->getCodeMonnaieAffichage();
         return [
-            ["code" => "assureNom", "intitule" => "Nom de l'assuré", "type" => "Calcul", "format" => "Texte", "description" => "Nom du client assuré."],
-            ["code" => "delaiDeclaration", "intitule" => "Délai Déclaration", "type" => "Calcul", "format" => "Texte", "description" => "Délai entre la survenance et la déclaration du sinistre."],
-            ["code" => "ageDossier", "intitule" => "Âge du Dossier", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours depuis la création du dossier."],
-            ["code" => "compensation", "intitule" => "Indemnité Totale", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant total des offres d'indemnisation."],
-            ["code" => "compensationVersee", "intitule" => "Indemnité Versée", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant total déjà versé pour ce sinistre."],
-            ["code" => "compensationSoldeAverser", "intitule" => "Solde à Verser", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant restant à payer pour ce sinistre."],
-            ["code" => "compensationFranchise", "intitule" => "Franchise Appliquée", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant total de la franchise appliquée."],
-            ["code" => "tauxIndemnisation", "intitule" => "Taux Indemnisation", "type" => "Calcul", "format" => "Pourcentage", "description" => "Ratio entre l'indemnité totale offerte et l'évaluation chiffrée."],
-            ["code" => "nombreOffres", "intitule" => "Nb. Offres", "type" => "Calcul", "format" => "Nombre", "description" => "Nombre total d'offres d'indemnisation."],
-            ["code" => "nombrePaiements", "intitule" => "Nb. Paiements", "type" => "Calcul", "format" => "Nombre", "description" => "Nombre total de paiements effectués."],
-            ["code" => "montantMoyenParPaiement", "intitule" => "Moy. par Paiement", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant moyen par paiement."],
-            ["code" => "delaiTraitementInitial", "intitule" => "Délai Trait. Initial", "type" => "Calcul", "format" => "Texte", "description" => "Délai entre la création du dossier et la déclaration à l'assureur."],
-            ["code" => "ratioPaiementsEvaluation", "intitule" => "Ratio Paiement/Éval.", "type" => "Calcul", "format" => "Pourcentage", "description" => "Ratio entre le montant versé et l'évaluation chiffrée."],
-            ["code" => "indiceCompletude", "intitule" => "Complétude Dossier", "type" => "Calcul", "format" => "Pourcentage", "description" => "Pourcentage des pièces requises qui ont été fournies."],
-            ["code" => "dateDernierReglement", "intitule" => "Date Dernier Règlement", "type" => "Calcul", "format" => "Date", "description" => "Date du dernier paiement effectué pour ce sinistre."],
-            ["code" => "dureeReglement", "intitule" => "Durée Règlement", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours entre la déclaration et le dernier règlement."],
-            ["code" => "statusDocumentsAttendus", "intitule" => "Statut Documents", "type" => "Calcul", "format" => "Texte", "description" => "Résumé des documents attendus, fournis et manquants."],
+            ["group" => "Contexte & Délais", "code" => "assureNom", "intitule" => "Nom de l'assuré", "type" => "Calcul", "format" => "Texte", "description" => "Nom du client assuré."],
+            ["group" => "Contexte & Délais", "code" => "delaiDeclaration", "intitule" => "Délai Déclaration", "type" => "Calcul", "format" => "Texte", "description" => "Délai entre la survenance et la déclaration du sinistre."],
+            ["group" => "Contexte & Délais", "code" => "ageDossier", "intitule" => "Âge du Dossier", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours depuis la création du dossier."],
+            ["group" => "Contexte & Délais", "code" => "delaiTraitementInitial", "intitule" => "Délai Trait. Initial", "type" => "Calcul", "format" => "Texte", "description" => "Délai entre la création du dossier et la déclaration à l'assureur."],
+
+            ["group" => "Indemnisation & Paiements", "code" => "compensation", "intitule" => "Indemnité Totale", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant total des offres d'indemnisation."],
+            ["group" => "Indemnisation & Paiements", "code" => "compensationVersee", "intitule" => "Indemnité Versée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant total déjà versé pour ce sinistre."],
+            ["group" => "Indemnisation & Paiements", "code" => "compensationSoldeAverser", "intitule" => "Solde à Verser", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant restant à payer pour ce sinistre."],
+            ["group" => "Indemnisation & Paiements", "code" => "compensationFranchise", "intitule" => "Franchise Appliquée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant total de la franchise appliquée."],
+            ["group" => "Indemnisation & Paiements", "code" => "tauxIndemnisation", "intitule" => "Taux Indemnisation", "type" => "Calcul", "format" => "Pourcentage", "description" => "Ratio entre l'indemnité totale offerte et l'évaluation chiffrée."],
+            ["group" => "Indemnisation & Paiements", "code" => "ratioPaiementsEvaluation", "intitule" => "Ratio Paiement/Éval.", "type" => "Calcul", "format" => "Pourcentage", "description" => "Ratio entre le montant versé et l'évaluation chiffrée."],
+
+            ["group" => "Statistiques Paiements", "code" => "nombreOffres", "intitule" => "Nb. Offres", "type" => "Calcul", "format" => "Nombre", "description" => "Nombre total d'offres d'indemnisation."],
+            ["group" => "Statistiques Paiements", "code" => "nombrePaiements", "intitule" => "Nb. Paiements", "type" => "Calcul", "format" => "Nombre", "description" => "Nombre total de paiements effectués."],
+            ["group" => "Statistiques Paiements", "code" => "montantMoyenParPaiement", "intitule" => "Moy. par Paiement", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant moyen par paiement."],
+            ["group" => "Statistiques Paiements", "code" => "dateDernierReglement", "intitule" => "Date Dernier Règlement", "type" => "Calcul", "format" => "Date", "description" => "Date du dernier paiement effectué pour ce sinistre."],
+            ["group" => "Statistiques Paiements", "code" => "dureeReglement", "intitule" => "Durée Règlement", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours entre la déclaration et le dernier règlement."],
+
+            ["group" => "Gestion Dossier", "code" => "indiceCompletude", "intitule" => "Complétude Dossier", "type" => "Calcul", "format" => "Pourcentage", "description" => "Pourcentage des pièces requises qui ont été fournies."],
+            ["group" => "Gestion Dossier", "code" => "statusDocumentsAttendus", "intitule" => "Statut Documents", "type" => "Calcul", "format" => "Texte", "description" => "Résumé des documents attendus, fournis et manquants."],
         ];
     }
 }
