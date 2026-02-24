@@ -24,6 +24,7 @@ class ClientListCanvasProvider implements ListCanvasProviderInterface
                 "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:account-group"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
+                    ["attribut_code" => "groupeNom"],
                     ["attribut_code" => "email"],
                     ["attribut_code" => "telephone"],
                 ],

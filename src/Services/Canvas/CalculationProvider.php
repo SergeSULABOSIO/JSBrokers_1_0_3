@@ -285,6 +285,7 @@ class CalculationProvider
 
                 $indicateurs = [
                     'civiliteString' => $this->getClientCiviliteString($entity),
+                    'groupeNom' => $entity->getGroupe() ? $entity->getGroupe()->getNom() : 'Aucun groupe',
                     'nombrePistes' => $this->countClientPistes($entity),
                     'nombreSinistres' => $this->countClientSinistres($entity),
                     'nombrePolices' => $this->countClientPolices($entity),
