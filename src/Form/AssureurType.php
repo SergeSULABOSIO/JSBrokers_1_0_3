@@ -21,6 +21,13 @@ class AssureurType extends AbstractType
                     'placeholder' => "Nom",
                 ],
             ])
+            ->add('telephone', TextType::class, [
+                'label' => "Téléphone",
+                'required' => false,
+                'attr' => [
+                    'placeholder' => "Téléphone",
+                ],
+            ])
             ->add('numimpot', TextType::class, [
                 'label' => "Nunméro Impôt",
                 'attr' => [
