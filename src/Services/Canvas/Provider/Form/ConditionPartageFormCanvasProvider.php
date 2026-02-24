@@ -48,9 +48,11 @@ class ConditionPartageFormCanvasProvider implements FormCanvasProviderInterface
     {
         $conditionId = $object->getId() ?? 0;
         $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["partenaire"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["taux"]], ["champs" => ["seuil"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["formule"]], ["champs" => ["uniteMesure"]], ["champs" => ["critereRisque"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["uniteMesure"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["formule"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["critereRisque"]]]],
         ];
         $collections = [['fieldName' => 'produits', 'entityRouteName' => 'risque', 'formTitle' => 'Risque', 'parentFieldName' => 'conditionPartage']];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);

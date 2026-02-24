@@ -430,6 +430,7 @@ class CalculationProvider
                     'formule_string' => $this->ConditionPartage_getFormuleString($entity),
                     'critere_risque_string' => $this->ConditionPartage_getCritereRisqueString($entity),
                     'unite_mesure_string' => $this->ConditionPartage_getUniteMesureString($entity),
+                    'contexteParent' => $this->ConditionPartage_getContexteParentString($entity),
                 ];
                 break;
             case Risque::class:
@@ -2569,6 +2570,19 @@ class CalculationProvider
             ConditionPartage::UNITE_SOMME_COMMISSION_PURE_PARTENAIRE => "Com. pure du partenaire",
             default => "Non définie",
         };
+    }
+
+    public function ConditionPartage_getContexteParentString(?ConditionPartage $condition): string
+    {
+        if ($condition === null) return 'N/A';
+        
+        if ($condition->getPiste()) {
+            return "Piste: " . $condition->getPiste()->getNom();
+        }
+        if ($condition->getPartenaire()) {
+            return "Partenaire: " . $condition->getPartenaire()->getNom();
+        }
+        return "Aucun parent défini";
     }
 
     public function Document_getParentAsString(?Document $document): string
