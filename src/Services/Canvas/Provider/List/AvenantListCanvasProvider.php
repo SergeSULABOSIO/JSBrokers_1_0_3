@@ -22,13 +22,14 @@ class AvenantListCanvasProvider implements ListCanvasProviderInterface
             "colonne_principale" => [
                 "titre_colonne" => "Avenants",
                 "texte_principal" => [
-                    "attribut_code" => "referencePolice",
+                    "attribut_code" => "titrePrincipal",
                     "icone" => "mdi:file-document-edit",
                 ],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Avt n°", "attribut_code" => "numero"],
-                    ["attribut_prefixe" => "Effet: ", "attribut_code" => "startingAt", "attribut_type" => "date"],
+                    ["attribut_code" => "risqueCode"],
+                    ["attribut_code" => "periodeCouverture"],
                 ],
             ],
             "colonnes_numeriques" => [
