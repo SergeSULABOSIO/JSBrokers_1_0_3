@@ -3,12 +3,9 @@
 namespace App\Form;
 
 use App\Entity\Risque;
-use App\Services\FormListenerFactory;
-use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
-use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\PercentType;
@@ -16,10 +13,7 @@ use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 
 class RisqueType extends AbstractType
 {
-    public function __construct(
-        private FormListenerFactory $ecouteurFormulaire,
-        private TranslatorInterface $translatorInterface
-    ) {}
+    public function __construct() {}
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
@@ -85,7 +79,6 @@ class RisqueType extends AbstractType
                     return '<div><strong>Non</strong><div class="text-muted small">Aucune taxe ne sera appliquée.</div></div>';
                 },
             ])
-            ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;
     }
 
