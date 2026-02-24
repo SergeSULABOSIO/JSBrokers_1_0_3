@@ -3,11 +3,8 @@
 namespace App\Form;
 
 use App\Entity\Client;
-use App\Entity\Partenaire;
-use App\Entity\Groupe;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
@@ -64,20 +61,26 @@ class ClientType extends AbstractType
                 'required' => false,
                 'attr' => ['placeholder' => "Numéro d'identification nationale"]
             ])
-            ->add('groupe', EntityType::class, [
-                'class' => Groupe::class,
-                'choice_label' => 'nom',
+            ->add('groupe', GroupeAutocompleteField::class, [
+                'label' => 'Groupe',
+                'placeholder' => 'Sélectionner un groupe',
                 'required' => false,
-                'placeholder' => 'Aucun groupe',
-                'label' => 'Groupe'
             ])
             ->add('exonere', ChoiceType::class, [
-                'label' => "Exonéré de taxes",
+                'label' => "Exonéré de taxes ?",
+                'expanded' => true,
+                'required' => true,
+                'label_html' => true,
                 'choices'  => [
                     'Non' => false,
                     'Oui' => true,
                 ],
-                'expanded' => false,
+                'choice_label' => function ($choice, $key, $value) {
+                    if ($choice === true) {
+                        return '<div><strong>Oui</strong><div class="text-muted small">Le client est exonéré de taxes.</div></div>';
+                    }
+                    return '<div><strong>Non</strong><div class="text-muted small">Les taxes seront appliquées.</div></div>';
+                },
             ])
             ->add('contacts', CollectionType::class, [
                 'entry_type' => ContactType::class,
