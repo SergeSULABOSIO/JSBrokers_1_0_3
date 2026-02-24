@@ -212,6 +212,8 @@ class CalculationProvider
                         'periodeCouverture' => $this->getAvenantPeriodeCouverture($entity),
                         'clientDescription' => 'N/A',
                         'risqueDescription' => 'N/A',
+                        'risqueCode' => 'N/A',
+                        'titrePrincipal' => ($entity->getReferencePolice() ?? 'N/A'),
                     ];
                 }
 
@@ -224,6 +226,8 @@ class CalculationProvider
                     'periodeCouverture' => $this->getAvenantPeriodeCouverture($entity),
                     'clientDescription' => $this->getClientDescriptionFromCotation($cotation),
                     'risqueDescription' => $this->getRisqueDescriptionFromCotation($cotation),
+                    'risqueCode' => $cotation->getPiste()?->getRisque()?->getCode() ?? 'N/A',
+                    'titrePrincipal' => ($entity->getReferencePolice() ?? 'N/A') . ' • ' . ($cotation->getPiste()?->getClient()?->getNom() ?? 'N/A'),
 
                     // Indicateurs hérités de la Cotation parente
                     'contextePiste' => $this->getCotationContextePiste($cotation),
