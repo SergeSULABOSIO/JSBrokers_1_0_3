@@ -41,6 +41,8 @@ class AssureurFormCanvasProvider implements FormCanvasProviderInterface
         $layout = [
             // Ligne 1: le nom
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
+            // Ligne 2: le téléphone
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["telephone"]]]],
             // Ligne 2: adressePhysique
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["adressePhysique"]]]],
             // Ligne 3: url (1/2) et email (1/2)

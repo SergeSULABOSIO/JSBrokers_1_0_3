@@ -26,6 +26,7 @@ class AssureurListCanvasProvider implements ListCanvasProviderInterface
                 "textes_secondaires" => [
                     ["attribut_code" => "email"],
                     ["attribut_code" => "telephone"],
+                    ["attribut_code" => "url"],
                 ],
             ],
             "colonnes_numeriques" => [
