@@ -64,6 +64,9 @@ class OffreIndemnisationSinistre
 
     //Attributs calculés
     #[Groups(['list:read'])]
+    public ?float $montantPayableCalcule = null;
+
+    #[Groups(['list:read'])]
     public ?float $compensationVersee;
 
     #[Groups(['list:read'])]

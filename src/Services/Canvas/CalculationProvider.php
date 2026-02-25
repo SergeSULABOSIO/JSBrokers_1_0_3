@@ -102,6 +102,7 @@ class CalculationProvider
             case OffreIndemnisationSinistre::class:
                 /** @var OffreIndemnisationSinistre $entity */
                 $indicateurs = [
+                    'montantPayableCalcule' => round($entity->getMontantPayable() ?? 0.0, 2),
                     'compensationVersee' => round($this->getOffreIndemnisationCompensationVersee($entity), 2),
                     'soldeAVerser' => round($this->getOffreIndemnisationSoldeAVerser($entity), 2),
                     'pourcentagePaye' => $this->getOffreIndemnisationPourcentagePaye($entity),
@@ -4031,4 +4032,5 @@ class CalculationProvider
         $risque = $cotation->getPiste()->getRisque();
         return $risque->getNomComplet();
     }
+}   }
 }
