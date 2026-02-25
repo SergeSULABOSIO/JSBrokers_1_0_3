@@ -4032,5 +4032,4 @@ class CalculationProvider
         $risque = $cotation->getPiste()->getRisque();
         return $risque->getNomComplet();
     }
-}   }
 }
