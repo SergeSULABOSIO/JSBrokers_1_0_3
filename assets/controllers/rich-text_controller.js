@@ -1,7 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import Quill from 'quill';
-// Assurez-vous que le CSS de Quill est importé. Si vous utilisez Webpack Encore, cela fonctionne généralement :
-import 'quill/dist/quill.snow.css'; 
+import Quill from 'https://cdn.jsdelivr.net/npm/quill@2.0.2/+esm';
 
 /**
  * @class RichTextController
@@ -9,6 +7,9 @@ import 'quill/dist/quill.snow.css';
  */
 export default class extends Controller {
     connect() {
+        // Chargement dynamique du CSS de Quill depuis le CDN
+        this._loadCss();
+
         // Configuration de la barre d'outils avec les options demandées (mise en forme, couleur, etc.)
         const toolbarOptions = [
             ['bold', 'italic', 'underline', 'strike'],        // Boutons de style
@@ -64,5 +65,17 @@ export default class extends Controller {
             
             this.element.style.display = 'block'; // Réafficher le textarea
         }
+    }
+
+    /**
+     * Charge le fichier CSS de Quill si ce n'est pas déjà fait.
+     */
+    _loadCss() {
+        if (document.getElementById('quill-css')) return;
+        const link = document.createElement('link');
+        link.id = 'quill-css';
+        link.rel = 'stylesheet';
+        link.href = 'https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css';
+        document.head.appendChild(link);
     }
 }
