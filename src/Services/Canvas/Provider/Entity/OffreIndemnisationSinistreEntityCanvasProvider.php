@@ -32,14 +32,13 @@ class OffreIndemnisationSinistreEntityCanvasProvider implements EntityCanvasProv
                 'background_image' => '/images/fitures/offreindemnisationsinistre.png',
                 'description_template' => [
                     "Offre [[*nom]] pour le sinistre [[notificationSinistre]].",
-                    " Montant payable: [[montantPayable]]."
+                    " Montant payable: [[montantPayableCalcule]]."
                 ]
             ],
             "liste" => array_merge([
                 ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                 ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
                 ["code" => "franchiseAppliquee", "intitule" => "Franchise", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
-                ["code" => "montantPayable", "intitule" => "Montant Payable", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
                 ["code" => "beneficiaire", "intitule" => "Bénéficiaire", "type" => "Texte"],
                 ["code" => "referenceBancaire", "intitule" => "Réf. Bancaire", "type" => "Texte"],
                 ["code" => "notificationSinistre", "intitule" => "Sinistre", "type" => "Relation", "targetEntity" => NotificationSinistre::class, "displayField" => "referenceSinistre"],
@@ -53,6 +52,7 @@ class OffreIndemnisationSinistreEntityCanvasProvider implements EntityCanvasProv
     private function getSpecificIndicators(): array
     {
         return [
+            ["code" => "montantPayableCalcule", "intitule" => "Montant Payable", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant net à payer au bénéficiaire."],
             ["code" => "compensationVersee", "intitule" => "Montant Versé", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant total déjà versé pour cette offre."],
             ["code" => "soldeAVerser", "intitule" => "Solde à Verser", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant restant à payer pour cette offre."],
             ["code" => "pourcentagePaye", "intitule" => "% Payé", "type" => "Calcul", "format" => "Pourcentage", "unite" => "%", "description" => "Pourcentage du montant payable qui a été versé."],
