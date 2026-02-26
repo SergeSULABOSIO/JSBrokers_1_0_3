@@ -4118,26 +4118,4 @@ class CalculationProvider
         $jours = $this->serviceDates->daysEntre($piste->getCreatedAt(), new DateTimeImmutable()) ?? 0;
         return $jours . ' jour(s)';
     }
-
-    private function getPistePrimeTotaleSouscrite(Piste $piste): float
-    {
-        $total = 0.0;
-        foreach ($piste->getCotations() as $cotation) {
-            if ($this->isCotationBound($cotation)) {
-                $total += $this->getCotationMontantPrimePayableParClient($cotation);
-            }
-        }
-        return $total;
-    }
-
-    private function getPisteCommissionTotaleSouscrite(Piste $piste): float
-    {
-        $total = 0.0;
-        foreach ($piste->getCotations() as $cotation) {
-            if ($this->isCotationBound($cotation)) {
-                $total += $this->getCotationMontantCommissionTtc($cotation, -1, false);
-            }
-        }
-        return $total;
-    }
 }
