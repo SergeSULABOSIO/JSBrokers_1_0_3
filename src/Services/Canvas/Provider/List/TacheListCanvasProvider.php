@@ -16,7 +16,7 @@ class TacheListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Tâches",
-                "texte_principal" => ["attribut_code" => "description", "icone" => "mdi:checkbox-marked-circle-outline"],
+                "texte_principal" => ["attribut_code" => "descriptionText", "icone" => "mdi:checkbox-marked-circle-outline"],
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Pour: ", "attribut_code" => "executor"],
                     ["attribut_prefixe" => "Échéance: ", "attribut_code" => "toBeEndedAt", "attribut_type" => "date"],
