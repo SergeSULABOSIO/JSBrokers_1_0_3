@@ -40,13 +40,13 @@ class PisteListCanvasProvider implements ListCanvasProviderInterface
                 [
                     "titre_colonne" => "Prime Souscrite",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    "attribut_code" => "primeTotaleSouscrite",
+                    "attribut_code" => "primeTotale",
                     "attribut_type" => "calcul", // Changé pour refléter que c'est un calcul
                 ],
                 [
                     "titre_colonne" => "Comm. Souscrite",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    "attribut_code" => "commissionTotaleSouscrite",
+                    "attribut_code" => "montantTTC",
                     "attribut_type" => "calcul", // Changé pour refléter que c'est un calcul
                 ],
             ],
