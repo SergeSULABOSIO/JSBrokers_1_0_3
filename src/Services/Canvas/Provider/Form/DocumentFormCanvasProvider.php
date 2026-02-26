@@ -40,7 +40,8 @@ class DocumentFormCanvasProvider implements FormCanvasProviderInterface
     {
         $layout = [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["fichier"]], ["champs" => ["classeur"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["classeur"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["fichier"]]]],
         ];
 
         return $layout;

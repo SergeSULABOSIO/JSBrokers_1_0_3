@@ -21,16 +21,15 @@ class ClasseurAutocompleteField extends AbstractType
         $resolver->setDefaults([
             'class' => Classeur::class,
             'placeholder' => 'Sélectionner un classeur',
-            'choice_label' => 'nom',
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
-
-            // 'choice_label' => 'name',
-
-            // choose which fields to use in the search
-            // if not passed, *all* fields are used
-            // 'searchable_fields' => ['name'],
-
-            // 'security' => 'ROLE_SOMETHING',
+            'searchable_fields' => ['nom'],
+            'as_html' => true,
+            'choice_label' => function(Classeur $classeur) {
+                return sprintf(
+                    '<div><strong>%s</strong></div>',
+                    htmlspecialchars($classeur->getNom())
+                );
+            },
         ]);
     }
 
