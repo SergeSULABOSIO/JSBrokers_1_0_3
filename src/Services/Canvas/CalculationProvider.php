@@ -24,6 +24,7 @@ use App\Entity\OffreIndemnisationSinistre;
 use App\Entity\Paiement;
 use App\Entity\Partenaire;
 use App\Entity\PieceSinistre;
+use App\Entity\Piste;
 use App\Entity\RevenuPourCourtier;
 use App\Entity\Risque;
 use App\Entity\RolesEnAdministration;
@@ -40,7 +41,6 @@ use App\Repository\CotationRepository;
 use App\Repository\NotificationSinistreRepository;
 use App\Repository\TaxeRepository;
 use App\Repository\UtilisateurRepository;
-
 use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
 use DateTimeImmutable;
@@ -108,6 +108,18 @@ class CalculationProvider
                     'pourcentagePaye' => $this->getOffreIndemnisationPourcentagePaye($entity),
                     'nombrePaiements' => $this->getOffreIndemnisationNombrePaiements($entity),
                     'montantMoyenParPaiement' => round($this->getOffreIndemnisationMontantMoyenParPaiement($entity) ?? 0.0, 2),
+                ];
+                break;
+            case Piste::class:
+                /** @var Piste $entity */
+                $indicateurs = [
+                    'typeAvenantString' => $this->getPisteTypeAvenantString($entity),
+                    'renewalConditionString' => $this->getPisteRenewalConditionString($entity),
+                    'statutTransformation' => $this->getPisteStatutTransformation($entity),
+                    'nombreCotations' => $entity->getCotations()->count(),
+                    'agePiste' => $this->calculatePisteAge($entity),
+                    'primeTotaleSouscrite' => round($this->getPistePrimeTotaleSouscrite($entity), 2),
+                    'commissionTotaleSouscrite' => round($this->getPisteCommissionTotaleSouscrite($entity), 2),
                 ];
                 break;
             case Cotation::class:
@@ -4031,5 +4043,71 @@ class CalculationProvider
         }
         $risque = $cotation->getPiste()->getRisque();
         return $risque->getNomComplet();
+    }
+
+    // --- Indicateurs pour Piste ---
+
+    private function getPisteTypeAvenantString(Piste $piste): string
+    {
+        return match ($piste->getTypeAvenant()) {
+            Piste::AVENANT_SOUSCRIPTION => 'Souscription',
+            Piste::AVENANT_INCORPORATION => 'Incorporation',
+            Piste::AVENANT_PROROGATION => 'Prorogation',
+            Piste::AVENANT_ANNULATION => 'Annulation',
+            Piste::AVENANT_RENOUVELLEMENT => 'Renouvellement',
+            Piste::AVENANT_RESILIATION => 'Résiliation',
+            default => 'Non défini',
+        };
+    }
+
+    private function getPisteRenewalConditionString(Piste $piste): string
+    {
+        return match ($piste->getRenewalCondition()) {
+            Piste::RENEWAL_CONDITION_RENEWABLE => 'À terme renouvelable',
+            Piste::RENEWAL_CONDITION_ADJUSTABLE_AT_EXPIRY => 'Ajustable à l\'échéance',
+            Piste::RENEWAL_CONDITION_ONCE_OFF_AND_EXTENDABLE => 'Temporaire (Non renouvelable)',
+            default => 'Non défini',
+        };
+    }
+
+    private function getPisteStatutTransformation(Piste $piste): string
+    {
+        foreach ($piste->getCotations() as $cotation) {
+            if ($this->isCotationBound($cotation)) {
+                return 'Transformée (Souscrite)';
+            }
+        }
+        return 'En cours';
+    }
+
+    private function calculatePisteAge(Piste $piste): string
+    {
+        if (!$piste->getCreatedAt()) {
+            return 'N/A';
+        }
+        $jours = $this->serviceDates->daysEntre($piste->getCreatedAt(), new DateTimeImmutable()) ?? 0;
+        return $jours . ' jour(s)';
+    }
+
+    private function getPistePrimeTotaleSouscrite(Piste $piste): float
+    {
+        $total = 0.0;
+        foreach ($piste->getCotations() as $cotation) {
+            if ($this->isCotationBound($cotation)) {
+                $total += $this->getCotationMontantPrimePayableParClient($cotation);
+            }
+        }
+        return $total;
+    }
+
+    private function getPisteCommissionTotaleSouscrite(Piste $piste): float
+    {
+        $total = 0.0;
+        foreach ($piste->getCotations() as $cotation) {
+            if ($this->isCotationBound($cotation)) {
+                $total += $this->getCotationMontantCommissionTtc($cotation, -1, false);
+            }
+        }
+        return $total;
     }
 }

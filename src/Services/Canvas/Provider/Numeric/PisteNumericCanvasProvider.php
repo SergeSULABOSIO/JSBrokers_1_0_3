@@ -16,6 +16,7 @@ class PisteNumericCanvasProvider implements NumericCanvasProviderInterface
     public function getCanvas(object $object): array
     {
         /** @var Piste $object */
+        // On fusionne les propriétés directes avec les indicateurs calculés (qui incluent maintenant primeTotaleSouscrite)
         return array_merge([
             "primePotentielle" => [
                 "description" => "Prime Potentielle",

@@ -2,20 +2,7 @@
 
 namespace App\Services\Canvas\Provider\Entity;
 
-use App\Entity\Avenant;
-use App\Entity\Bordereau;
-use App\Entity\Classeur;
-use App\Entity\Client;
-use App\Entity\CompteBancaire;
-use App\Entity\Cotation;
 use App\Entity\Document;
-use App\Entity\Feedback;
-use App\Entity\OffreIndemnisationSinistre;
-use App\Entity\Paiement;
-use App\Entity\Partenaire;
-use App\Entity\PieceSinistre;
-use App\Entity\Piste;
-use App\Entity\Tache;
 use App\Services\Canvas\CanvasHelper;
 use App\Services\ServiceMonnaies;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
