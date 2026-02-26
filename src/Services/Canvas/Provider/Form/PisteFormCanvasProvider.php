@@ -48,9 +48,22 @@ class PisteFormCanvasProvider implements FormCanvasProviderInterface
     {
         $pisteId = $object->getId() ?? 0;
         $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["client"]], ["champs" => ["risque"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["primePotentielle"]]]],
+            [
+                'colonnes' => [
+                    ['width' => 12, 'champs' => ['nom']]
+                ]
+            ],
+            [
+                'colonnes' => [
+                    ['width' => 6, 'champs' => ['client', 'risque', 'exercice']],
+                    ['width' => 6, 'champs' => ['typeAvenant', 'renewalCondition', 'descriptionDuRisque']]
+                ]
+            ],
+            [
+                'colonnes' => [
+                    ['width' => 12, 'champs' => ['primePotentielle', 'commissionPotentielle']]
+                ]
+            ],
         ];
 
         $collections = [

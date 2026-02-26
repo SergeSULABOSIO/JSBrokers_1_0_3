@@ -26,9 +26,10 @@ class RisqueAutocompleteField extends AbstractType
             'as_html' => true,
             'choice_label' => function(Risque $risque) {
                 return sprintf(
-                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">Code: %s</div></div>',
+                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">Code: %s. %s</div></div>',
                     htmlspecialchars($risque->getNomComplet()),
-                    htmlspecialchars($risque->getCode())
+                    htmlspecialchars($risque->getCode()),
+                    htmlspecialchars(substr($risque->getDescription() ?? '', 0, 50) . (strlen($risque->getDescription() ?? '') > 50 ? '...' : ''))
                 );
             },
         ]);

@@ -21,14 +21,16 @@ class InviteAutocompleteField extends AbstractType
         $resolver->setDefaults([
             'class' => Invite::class,
             'placeholder' => 'Ajouter un invité',
-            'choice_label' => 'nom',
-            // 'query_builder' => $this->ecouteurFormulaire->setFiltreUtilisateur(),
-
-            // choose which fields to use in the search
-            // if not passed, *all* fields are used
-            // 'searchable_fields' => ['name'],
-
-            // 'security' => 'ROLE_SOMETHING',
+            'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
+            'searchable_fields' => ['nom', 'email'],
+            'as_html' => true,
+            'choice_label' => function(Invite $invite) {
+                return sprintf(
+                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">%s</div></div>',
+                    htmlspecialchars($invite->getNom() ?? ''),
+                    htmlspecialchars($invite->getEmail() ?? '')
+                );
+            },
         ]);
     }
 

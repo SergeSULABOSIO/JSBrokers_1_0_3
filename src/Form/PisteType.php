@@ -47,26 +47,41 @@ class PisteType extends AbstractType
             ->add('typeAvenant', ChoiceType::class, [
                 'label' => "Type d'Avenant",
                 'expanded' => false,
+                'label_html' => true,
                 'required' => true,
                 'choices'  => [
-                    "SOUSCRIPTION"      => Piste::AVENANT_SOUSCRIPTION,
-                    "INCORPORATION"     => Piste::AVENANT_INCORPORATION,
-                    "PROROGATION"       => Piste::AVENANT_PROROGATION,
-                    "ANNULATION"        => Piste::AVENANT_ANNULATION,
-                    "RENOUVELLEMENT"    => Piste::AVENANT_RENOUVELLEMENT,
-                    "RESILIATION"       => Piste::AVENANT_RESILIATION,
+                    "Souscription"      => Piste::AVENANT_SOUSCRIPTION,
+                    "Incorporation"     => Piste::AVENANT_INCORPORATION,
+                    "Prorogation"       => Piste::AVENANT_PROROGATION,
+                    "Annulation"        => Piste::AVENANT_ANNULATION,
+                    "Renouvellement"    => Piste::AVENANT_RENOUVELLEMENT,
+                    "Résiliation"       => Piste::AVENANT_RESILIATION,
                 ],
+                'choice_label' => function ($choice, $key, $value) {
+                    // Vous pouvez personnaliser les descriptions ici
+                    return '<div><strong>' . $key . '</strong></div>';
+                },
             ])
             ->add('renewalCondition', ChoiceType::class, [
                 'label' => "Type d'assurance.",
                 'help' => "Type d'assurance selon les conditions de renouvellement.",
                 'expanded' => false,
+                'label_html' => true,
                 'required' => true,
                 'choices'  => [
-                    "A TERME RENOUVELLABLE"           => Piste::RENEWAL_CONDITION_RENEWABLE,
-                    "AVEC AJUSTEMENT"                 => Piste::RENEWAL_CONDITION_ADJUSTABLE_AT_EXPIRY,
-                    "TEMPORAIRE NON RENOUVELLABLE"    => Piste::RENEWAL_CONDITION_ONCE_OFF_AND_EXTENDABLE,
+                    "A terme renouvellable"           => Piste::RENEWAL_CONDITION_RENEWABLE,
+                    "Avec ajustement"                 => Piste::RENEWAL_CONDITION_ADJUSTABLE_AT_EXPIRY,
+                    "Temporaire non renouvellable"    => Piste::RENEWAL_CONDITION_ONCE_OFF_AND_EXTENDABLE,
                 ],
+                'choice_label' => function ($choice, $key, $value) {
+                    $desc = match($choice) {
+                        Piste::RENEWAL_CONDITION_RENEWABLE => "Contrat renouvelable tacitement.",
+                        Piste::RENEWAL_CONDITION_ADJUSTABLE_AT_EXPIRY => "Prime ajustable à la fin de la période.",
+                        Piste::RENEWAL_CONDITION_ONCE_OFF_AND_EXTENDABLE => "Couverture unique, extension possible.",
+                        default => ""
+                    };
+                    return '<div><strong>' . $key . '</strong><div class="text-muted small">' . $desc . '</div></div>';
+                },
             ])
 
             ->add('exercice', NumberType::class, [
@@ -98,11 +113,10 @@ class PisteType extends AbstractType
                     'placeholder' => "Description du risque",
                 ],
             ])
-            ->add('risque', EntityType::class, [
+            ->add('risque', RisqueAutocompleteField::class, [
                 'label' => "Couverture d'assurance",
-                'class' => Risque::class,
-                'required' => false,
-                'choice_label' => 'nomComplet',
+                'required' => true,
+                'placeholder' => 'Sélectionner un risque',
             ])
             ->add('partenaires', PartenaireAutocompleteField::class, [
                 'required' => false,
