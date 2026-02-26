@@ -51,11 +51,9 @@ class DocumentType extends AbstractType
                     'placeholder' => "nom",
                 ],
             ])
-            ->add('classeur', EntityType::class, [
+            ->add('classeur', ClasseurAutocompleteField::class, [
                 'label' => "Classeur",
-                'class' => Classeur::class,
                 'required' => false,
-                'choice_label' => 'nom',
             ])
             ->add('fichier', VichFileType::class, [
                 'label' => 'Fichier à uploader',
