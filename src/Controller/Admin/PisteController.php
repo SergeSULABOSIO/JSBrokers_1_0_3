@@ -7,10 +7,8 @@ use App\Entity\Invite;
 use DateTimeImmutable;
 use App\Form\PisteType;
 use App\Constantes\Constante;
-use App\Repository\PisteRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
-use App\Services\Canvas\CalculationProvider;
 use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
@@ -36,11 +34,9 @@ class PisteController extends AbstractController
         private EntityManagerInterface $em,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
-        private PisteRepository $pisteRepository,
         private Constante $constante,
         private JSBDynamicSearchService $searchService,
         private SerializerInterface $serializer, // Ajout de SerializerInterface
-        private CalculationProvider $calculationProvider, // Ajout de CalculationProvider
         CanvasBuilder $canvasBuilder // Inject CanvasBuilder without property promotion
     ) {
         // Assign the injected CanvasBuilder to the property declared in the trait

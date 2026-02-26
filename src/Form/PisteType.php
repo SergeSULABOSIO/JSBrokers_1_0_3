@@ -14,7 +14,6 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
-use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
@@ -43,7 +42,7 @@ class PisteType extends AbstractType
             ])
             ->add('typeAvenant', ChoiceType::class, [
                 'label' => "Type d'Avenant",
-                'expanded' => false,
+                'expanded' => true,
                 'label_html' => true,
                 'required' => true,
                 'choices'  => [
@@ -55,14 +54,22 @@ class PisteType extends AbstractType
                     "Résiliation"       => Piste::AVENANT_RESILIATION,
                 ],
                 'choice_label' => function ($choice, $key, $value) {
-                    // Vous pouvez personnaliser les descriptions ici
-                    return '<div><strong>' . $key . '</strong></div>';
+                    $desc = match ($choice) {
+                        Piste::AVENANT_SOUSCRIPTION => "Création d'une nouvelle police d'assurance.",
+                        Piste::AVENANT_INCORPORATION => "Ajout d'une garantie ou d'un assuré.",
+                        Piste::AVENANT_PROROGATION => "Prolongation de la durée de la police.",
+                        Piste::AVENANT_ANNULATION => "Annulation complète de la police.",
+                        Piste::AVENANT_RENOUVELLEMENT => "Renouvellement de la police à son échéance.",
+                        Piste::AVENANT_RESILIATION => "Rupture du contrat par l'une des parties.",
+                        default => ""
+                    };
+                    return '<div><strong>' . $key . '</strong><div class="text-muted small">' . $desc . '</div></div>';
                 },
             ])
             ->add('renewalCondition', ChoiceType::class, [
                 'label' => "Type d'assurance.",
                 'help' => "Type d'assurance selon les conditions de renouvellement.",
-                'expanded' => false,
+                'expanded' => true,
                 'label_html' => true,
                 'required' => true,
                 'choices'  => [
@@ -134,20 +141,10 @@ class PisteType extends AbstractType
                 'by_reference' => false,
                 'allow_add' => true,
                 'allow_delete' => true,
-                'required' => false,
                 'entry_options' => [
                     'label' => false,
                 ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "partenaire",
-                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 1,
-                    ]),
-                ],
+                'mapped' => false,
             ])
             ->add('taches', CollectionType::class, [
                 'label' => "Liste des tâches",
@@ -158,16 +155,7 @@ class PisteType extends AbstractType
                 'entry_options' => [
                     'label' => false,
                 ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "tache",
-                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 10,
-                    ]),
-                ],
+                'mapped' => false,
             ])
             ->add('cotations', CollectionType::class, [
                 'label' => "Liste des cotations",
@@ -178,16 +166,7 @@ class PisteType extends AbstractType
                 'entry_options' => [
                     'label' => false,
                 ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "cotation",
-                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 10,
-                    ]),
-                ],
+                'mapped' => false,
             ])
             ->add('documents', CollectionType::class, [
                 'label' => "Liste des documents",
@@ -198,23 +177,7 @@ class PisteType extends AbstractType
                 'entry_options' => [
                     'label' => false,
                 ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "document",
-                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 10,
-                    ]),
-                ],
-            ])
-            //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
+                'mapped' => false,
             ])
             // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
@@ -225,7 +188,13 @@ class PisteType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Piste::class,
-            'parent_object' => null, // l'objet parent
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }

@@ -33,14 +33,16 @@ class PisteFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/piste/api/submit",
             "endpoint_delete_url" => "/admin/piste/api/delete",
             "endpoint_form_url" => "/admin/piste/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
         ];
         $layout = $this->buildPisteLayout($object, $isParentNew);
 
         return [
             "parametres" => $parametres,
             "form_layout" => $layout,
-            "fields_map" => $this->buildFieldsMap($layout)
+            "fields_map" => $this->buildFieldsMap($layout),
+            "idEntreprise" => $idEntreprise,
+            "idInvite" => $object->getInvite()?->getId(),
         ];
     }
 
