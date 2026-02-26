@@ -92,7 +92,7 @@ class PisteFormCanvasProvider implements FormCanvasProviderInterface
 
         $collections = [
             ['fieldName' => 'conditionsPartageExceptionnelles', 'entityRouteName' => 'conditionpartage', 'formTitle' => 'Conditions de partage', 'parentFieldName' => 'piste'],
-            ['fieldName' => 'cotations', 'entityRouteName' => 'cotation', 'formTitle' => 'Cotation', 'parentFieldName' => 'piste'],
+            ['fieldName' => 'cotations', 'entityRouteName' => 'cotation', 'formTitle' => 'Cotation', 'parentFieldName' => 'piste', 'totalizableField' => 'primeTotale'],
             ['fieldName' => 'taches', 'entityRouteName' => 'tache', 'formTitle' => 'Tâches', 'parentFieldName' => 'piste'],
             ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'piste'],
         ];

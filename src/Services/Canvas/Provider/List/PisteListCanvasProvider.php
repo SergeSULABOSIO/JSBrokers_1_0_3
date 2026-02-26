@@ -22,7 +22,12 @@ class PisteListCanvasProvider implements ListCanvasProviderInterface
             "colonne_principale" => [
                 "titre_colonne" => "Pistes",
                 "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:road-variant"],
-                "textes_secondaires" => [["attribut_code" => "client"]],
+                "textes_secondaires_separateurs" => " • ",
+                "textes_secondaires" => [
+                    ["attribut_code" => "statutTransformation"],
+                    ["attribut_code" => "client"],
+                    ["attribut_code" => "risqueCode"],
+                ],
             ],
             "colonnes_numeriques" => [
                 [

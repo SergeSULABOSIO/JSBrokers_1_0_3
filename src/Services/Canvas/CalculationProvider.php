@@ -113,6 +113,7 @@ class CalculationProvider
             case Piste::class:
                 /** @var Piste $entity */
                 $indicateurs = [
+                    'risqueCode' => $entity->getRisque()?->getCode() ?? 'N/A',
                     'typeAvenantString' => $this->getPisteTypeAvenantString($entity),
                     'renewalConditionString' => $this->getPisteRenewalConditionString($entity),
                     'statutTransformation' => $this->getPisteStatutTransformation($entity),
