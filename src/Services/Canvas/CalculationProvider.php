@@ -118,8 +118,16 @@ class CalculationProvider
                     'statutTransformation' => $this->getPisteStatutTransformation($entity),
                     'nombreCotations' => $entity->getCotations()->count(),
                     'agePiste' => $this->calculatePisteAge($entity),
-                    'primeTotaleSouscrite' => round($this->getPistePrimeTotaleSouscrite($entity), 2),
-                    'commissionTotaleSouscrite' => round($this->getPisteCommissionTotaleSouscrite($entity), 2),
+                    // NOUVEAU : Indicateurs financiers agrégés des cotations souscrites.
+                    'primeTotale' => round($this->aggregateSubscribedCotationIndicator($entity, 'primeTotale'), 2),
+                    'primePayee' => round($this->aggregateSubscribedCotationIndicator($entity, 'primePayee'), 2),
+                    'primeSoldeDue' => round($this->aggregateSubscribedCotationIndicator($entity, 'primeSoldeDue'), 2),
+                    'montantTTC' => round($this->aggregateSubscribedCotationIndicator($entity, 'montantTTC'), 2),
+                    'montant_paye' => round($this->aggregateSubscribedCotationIndicator($entity, 'montant_paye'), 2),
+                    'solde_restant_du' => round($this->aggregateSubscribedCotationIndicator($entity, 'solde_restant_du'), 2),
+                    'montantPur' => round($this->aggregateSubscribedCotationIndicator($entity, 'montantPur'), 2),
+                    'retroCommission' => round($this->aggregateSubscribedCotationIndicator($entity, 'retroCommission'), 2),
+                    'reserve' => round($this->aggregateSubscribedCotationIndicator($entity, 'reserve'), 2),
                 ];
                 break;
             case Cotation::class:
@@ -783,6 +791,28 @@ class CalculationProvider
         }
 
         return $indicateurs;
+    }
+
+    /**
+     * NOUVEAU : Méthode privée pour agréger un indicateur financier sur toutes les cotations souscrites d'une piste.
+     *
+     * @param Piste $piste L'entité Piste.
+     * @param string $indicatorName Le nom de l'indicateur à agréger (ex: 'primeTotale', 'montantTTC').
+     * @return float La somme de l'indicateur pour toutes les cotations souscrites.
+     */
+    private function aggregateSubscribedCotationIndicator(Piste $piste, string $indicatorName): float
+    {
+        $total = 0.0;
+        foreach ($piste->getCotations() as $cotation) {
+            // On ne prend en compte que les cotations qui ont été transformées en police (souscrites).
+            if ($this->isCotationBound($cotation)) {
+                // On recalcule les indicateurs pour la cotation.
+                $cotationIndicators = $this->getIndicateursSpecifics($cotation);
+                // On ajoute la valeur de l'indicateur demandé au total.
+                $total += $cotationIndicators[$indicatorName] ?? 0.0;
+            }
+        }
+        return $total;
     }
 
     public function getIndicateursGlobaux(Entreprise $entreprise, bool $isBound, array $options = []): array

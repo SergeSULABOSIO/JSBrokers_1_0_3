@@ -3,7 +3,6 @@
 namespace App\Form;
 
 use App\Entity\Piste;
-use App\Entity\Client;
 use App\Entity\Partenaire;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
@@ -36,9 +35,7 @@ class PisteType extends AbstractType
             ])
             ->add('client', ClientAutocompleteField::class, [
                 'label' => "Client / Assurée ou Prospect",
-                'required' => true,
-                'class' => Client::class,
-                'choice_label' => 'nom',
+                'placeholder' => "Sélectionnez un client ou un prospect",
             ])
             ->add('typeAvenant', ChoiceType::class, [
                 'label' => "Type d'Avenant",

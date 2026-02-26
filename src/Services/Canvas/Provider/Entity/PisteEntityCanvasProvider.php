@@ -41,24 +41,27 @@ class PisteEntityCanvasProvider implements EntityCanvasProviderInterface
                     " Statut: [[statutTransformation]]."
                 ]
             ],
-            "liste" => array_merge([
-                ["code" => "id", "intitule" => "ID", "type" => "Entier"],
-                ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
-                ["code" => "risque", "intitule" => "Risque", "type" => "Relation", "targetEntity" => Risque::class, "displayField" => "nomComplet"],
-                ["code" => "client", "intitule" => "Client", "type" => "Relation", "targetEntity" => Client::class, "displayField" => "nom"],
-                ["code" => "invite", "intitule" => "Gestionnaire", "type" => "Relation", "targetEntity" => Invite::class, "displayField" => "email"],
-                ["code" => "primePotentielle", "intitule" => "Prime Potentielle", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
-                ["code" => "commissionPotentielle", "intitule" => "Com. Potentielle", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
-                ["code" => "createdAt", "intitule" => "Créée le", "type" => "Date"],
-                ["code" => "descriptionDuRisque", "intitule" => "Description du Risque", "type" => "Texte"],
-                ["code" => "exercice", "intitule" => "Exercice", "type" => "Entier"],
-                ["code" => "avenantDeBase", "intitule" => "Avenant de Base", "type" => "Relation", "targetEntity" => Avenant::class, "displayField" => "numero"],
-                ["code" => "cotations", "intitule" => "Cotations", "type" => "Collection", "targetEntity" => Cotation::class, "displayField" => "nom"],
-                ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
-                ["code" => "taches", "intitule" => "Tâches", "type" => "Collection", "targetEntity" => Tache::class, "displayField" => "description"],
-                ["code" => "partenaires", "intitule" => "Partenaires", "type" => "Collection", "targetEntity" => Partenaire::class, "displayField" => "nom"],
-                ["code" => "conditionsPartageExceptionnelles", "intitule" => "Conditions de Partage (Except.)", "type" => "Collection", "targetEntity" => ConditionPartage::class, "displayField" => "nom"],
-            ], $this->getSpecificIndicators(), $this->canvasHelper->getGlobalIndicatorsCanvas("Piste"))
+            "liste" => array_merge(
+                [
+                    ["code" => "id", "intitule" => "ID", "type" => "Entier"],
+                    ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
+                    ["code" => "risque", "intitule" => "Risque", "type" => "Relation", "targetEntity" => Risque::class, "displayField" => "nomComplet"],
+                    ["code" => "client", "intitule" => "Client", "type" => "Relation", "targetEntity" => Client::class, "displayField" => "nom"],
+                    ["code" => "invite", "intitule" => "Gestionnaire", "type" => "Relation", "targetEntity" => Invite::class, "displayField" => "email"],
+                    ["code" => "primePotentielle", "intitule" => "Prime Potentielle", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
+                    ["code" => "commissionPotentielle", "intitule" => "Com. Potentielle", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
+                    ["code" => "createdAt", "intitule" => "Créée le", "type" => "Date"],
+                    ["code" => "descriptionDuRisque", "intitule" => "Description du Risque", "type" => "Texte"],
+                    ["code" => "exercice", "intitule" => "Exercice", "type" => "Entier"],
+                    ["code" => "avenantDeBase", "intitule" => "Avenant de Base", "type" => "Relation", "targetEntity" => Avenant::class, "displayField" => "numero"],
+                    ["code" => "cotations", "intitule" => "Cotations", "type" => "Collection", "targetEntity" => Cotation::class, "displayField" => "nom"],
+                    ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
+                    ["code" => "taches", "intitule" => "Tâches", "type" => "Collection", "targetEntity" => Tache::class, "displayField" => "description"],
+                    ["code" => "partenaires", "intitule" => "Partenaires", "type" => "Collection", "targetEntity" => Partenaire::class, "displayField" => "nom"],
+                    ["code" => "conditionsPartageExceptionnelles", "intitule" => "Conditions de Partage (Except.)", "type" => "Collection", "targetEntity" => ConditionPartage::class, "displayField" => "nom"],
+                ],
+                $this->getSpecificIndicators()
+            )
         ];
     }
 
@@ -71,8 +74,16 @@ class PisteEntityCanvasProvider implements EntityCanvasProviderInterface
             ["group" => "Informations Générales", "code" => "agePiste", "intitule" => "Âge", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours depuis la création de la piste."],
             ["group" => "Statut & Suivi", "code" => "statutTransformation", "intitule" => "Statut", "type" => "Calcul", "format" => "Texte", "description" => "Indique si la piste a été transformée en police (Souscrite) ou non."],
             ["group" => "Statut & Suivi", "code" => "nombreCotations", "intitule" => "Nb. Cotations", "type" => "Calcul", "format" => "Nombre", "description" => "Nombre de cotations émises pour cette piste."],
-            ["group" => "Performance Financière", "code" => "primeTotaleSouscrite", "intitule" => "Prime Souscrite", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Somme des primes des cotations souscrites."],
-            ["group" => "Performance Financière", "code" => "commissionTotaleSouscrite", "intitule" => "Com. Souscrite", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Somme des commissions des cotations souscrites."],
+            // NOUVEAU : Indicateurs financiers agrégés des cotations souscrites.
+            ["group" => "Performance Financière (Souscriptions)", "code" => "primeTotale", "intitule" => "Prime Totale", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Somme des primes totales des cotations souscrites."],
+            ["group" => "Performance Financière (Souscriptions)", "code" => "primePayee", "intitule" => "Prime Payée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Somme des primes payées des cotations souscrites."],
+            ["group" => "Performance Financière (Souscriptions)", "code" => "primeSoldeDue", "intitule" => "Solde Prime", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Somme des soldes de prime des cotations souscrites."],
+            ["group" => "Revenus du Courtier (Souscriptions)", "code" => "montantTTC", "intitule" => "Commission TTC", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Somme des commissions TTC des cotations souscrites."],
+            ["group" => "Revenus du Courtier (Souscriptions)", "code" => "montant_paye", "intitule" => "Commission Encaissée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Somme des commissions encaissées des cotations souscrites."],
+            ["group" => "Revenus du Courtier (Souscriptions)", "code" => "solde_restant_du", "intitule" => "Solde Commission", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Somme des soldes de commission des cotations souscrites."],
+            ["group" => "Résultat (Souscriptions)", "code" => "montantPur", "intitule" => "Commission Pure", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Somme des commissions pures des cotations souscrites."],
+            ["group" => "Résultat (Souscriptions)", "code" => "retroCommission", "intitule" => "Rétro-commission", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Somme des rétro-commissions des cotations souscrites."],
+            ["group" => "Résultat (Souscriptions)", "code" => "reserve", "intitule" => "Réserve Courtier", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Somme des réserves des cotations souscrites."],
         ];
     }
 }

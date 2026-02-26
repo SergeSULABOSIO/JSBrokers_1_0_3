@@ -57,19 +57,43 @@ class PisteFormCanvasProvider implements FormCanvasProviderInterface
             ],
             [
                 'colonnes' => [
-                    ['width' => 6, 'champs' => ['client', 'risque', 'exercice']],
-                    ['width' => 6, 'champs' => ['typeAvenant', 'renewalCondition', 'descriptionDuRisque']]
+                    ['width' => 12, 'champs' => ['descriptionDuRisque']]
                 ]
             ],
             [
                 'colonnes' => [
-                    ['width' => 12, 'champs' => ['primePotentielle', 'commissionPotentielle']]
+                    ['width' => 12, 'champs' => ['client']]
+                ]
+            ],
+            [
+                'colonnes' => [
+                    ['width' => 12, 'champs' => ['risque']]
+                ]
+            ],
+            [
+                'colonnes' => [
+                    ['width' => 6, 'champs' => ['typeAvenant']],
+                    ['width' => 6, 'champs' => ['renewalCondition']]
+                ]
+            ],
+            [
+                'colonnes' => [
+                    ['width' => 3, 'champs' => ['exercice']],
+                    ['width' => 5, 'champs' => ['primePotentielle']],
+                    ['width' => 4, 'champs' => ['commissionPotentielle']]
+                ]
+            ],
+            [
+                'colonnes' => [
+                    ['width' => 12, 'champs' => ['partenaires']]
                 ]
             ],
         ];
 
         $collections = [
+            ['fieldName' => 'conditionsPartageExceptionnelles', 'entityRouteName' => 'conditionpartage', 'formTitle' => 'Conditions de partage', 'parentFieldName' => 'piste'],
             ['fieldName' => 'cotations', 'entityRouteName' => 'cotation', 'formTitle' => 'Cotation', 'parentFieldName' => 'piste'],
+            ['fieldName' => 'taches', 'entityRouteName' => 'tache', 'formTitle' => 'Tâches', 'parentFieldName' => 'piste'],
             ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'piste'],
         ];
 
