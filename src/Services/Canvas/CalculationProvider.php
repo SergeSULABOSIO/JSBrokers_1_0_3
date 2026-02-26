@@ -303,6 +303,7 @@ class CalculationProvider
                     'delaiProchaineAction' => $this->calculateFeedbackDelaiProchaineAction($entity),
                     'ageFeedback' => $this->calculateFeedbackAge($entity),
                     'statutProchaineAction' => $this->getFeedbackStatutProchaineActionString($entity),
+                    'descriptionText' => strip_tags($entity->getDescription() ?? ''),
                 ];
                 break;
             case Client::class:
