@@ -71,6 +71,7 @@ class PisteEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             ["group" => "Informations Générales", "code" => "typeAvenantString", "intitule" => "Type d'Avenant", "type" => "Calcul", "format" => "Texte", "description" => "Le type de mouvement d'avenant (Souscription, Annulation, etc.)."],
             ["group" => "Informations Générales", "code" => "renewalConditionString", "intitule" => "Condition de Renouvellement", "type" => "Calcul", "format" => "Texte", "description" => "La condition de renouvellement de la police."],
+            ["group" => "Informations Générales", "code" => "risqueCode", "intitule" => "Code Risque", "type" => "Calcul", "format" => "Texte", "description" => "Code du risque associé à la piste."],
             ["group" => "Informations Générales", "code" => "agePiste", "intitule" => "Âge", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours depuis la création de la piste."],
             ["group" => "Statut & Suivi", "code" => "statutTransformation", "intitule" => "Statut", "type" => "Calcul", "format" => "Texte", "description" => "Indique si la piste a été transformée en police (Souscrite) ou non."],
             ["group" => "Statut & Suivi", "code" => "nombreCotations", "intitule" => "Nb. Cotations", "type" => "Calcul", "format" => "Nombre", "description" => "Nombre de cotations émises pour cette piste."],
