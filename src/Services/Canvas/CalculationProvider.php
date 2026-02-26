@@ -293,6 +293,7 @@ class CalculationProvider
                     'ageTache' => $this->calculateTacheAge($entity),
                     'nombreFeedbacks' => $this->countTacheFeedbacks($entity),
                     'contexteTache' => $this->getTacheContexteString($entity),
+                    'descriptionText' => strip_tags($entity->getDescription() ?? ''),
                 ];
                 break;
             case Feedback::class:
