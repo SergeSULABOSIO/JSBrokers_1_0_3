@@ -308,6 +308,9 @@ class CalculationProvider
                     'ageFeedback' => $this->calculateFeedbackAge($entity),
                     'statutProchaineAction' => $this->getFeedbackStatutProchaineActionString($entity),
                     'descriptionText' => strip_tags($entity->getDescription() ?? ''),
+                    'auteurNom' => $entity->getInvite() ? $entity->getInvite()->getNom() : 'Inconnu',
+                    'nombreDocuments' => $entity->getDocuments()->count(),
+                    'estEnRetard' => $this->getFeedbackEstEnRetardString($entity),
                 ];
                 break;
             case Client::class:
@@ -3059,6 +3062,20 @@ class CalculationProvider
     {
         if ($feedback === null) return null;
         return $feedback->hasNextAction() ? 'Planifiée' : 'Aucune';
+    }
+
+    /**
+     * Indique si la prochaine action du feedback est en retard.
+     */
+    private function getFeedbackEstEnRetardString(Feedback $feedback): string
+    {
+        if (!$feedback->hasNextAction() || !$feedback->getNextActionAt()) {
+            return 'Non applicable';
+        }
+        if ($feedback->getNextActionAt() < new DateTimeImmutable()) {
+            return 'Oui';
+        }
+        return 'Non';
     }
 
     // --- Indicateurs pour Client ---

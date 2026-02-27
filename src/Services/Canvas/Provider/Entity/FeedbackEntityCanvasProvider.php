@@ -52,10 +52,15 @@ class FeedbackEntityCanvasProvider implements EntityCanvasProviderInterface
     private function getSpecificIndicators(): array
     {
         return [
-            ["code" => "typeString", "intitule" => "Type", "type" => "Texte", "format" => "Texte", "description" => "Type de communication (Réunion, Appel, Email, etc.)."],
-            ["code" => "delaiProchaineAction", "intitule" => "Délai Proch. Action", "type" => "Texte", "format" => "Texte", "description" => "Temps restant avant la prochaine action planifiée."],
-            ["code" => "ageFeedback", "intitule" => "Âge", "type" => "Texte", "format" => "Texte", "description" => "Nombre de jours depuis la création du feedback."],
-            ["code" => "statutProchaineAction", "intitule" => "Statut Action", "type" => "Texte", "format" => "Texte", "description" => "Indique si une prochaine action est planifiée ou non."],
+            ["group" => "Informations Générales", "code" => "typeString", "intitule" => "Type", "type" => "Calcul", "format" => "Texte", "description" => "Type de communication (Réunion, Appel, Email, etc.)."],
+            ["group" => "Informations Générales", "code" => "ageFeedback", "intitule" => "Âge", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours depuis la création du feedback."],
+            ["group" => "Informations Générales", "code" => "auteurNom", "intitule" => "Auteur", "type" => "Calcul", "format" => "Texte", "description" => "Nom de l'utilisateur ayant créé ce feedback."],
+            
+            ["group" => "Suivi & Actions", "code" => "statutProchaineAction", "intitule" => "Statut Action", "type" => "Calcul", "format" => "Texte", "description" => "Indique si une prochaine action est planifiée ou non."],
+            ["group" => "Suivi & Actions", "code" => "delaiProchaineAction", "intitule" => "Délai Proch. Action", "type" => "Calcul", "format" => "Texte", "description" => "Temps restant avant la prochaine action planifiée."],
+            ["group" => "Suivi & Actions", "code" => "estEnRetard", "intitule" => "En retard ?", "type" => "Calcul", "format" => "Texte", "description" => "Indique si la prochaine action est en retard."],
+
+            ["group" => "Contenu", "code" => "nombreDocuments", "intitule" => "Nb. Documents", "type" => "Calcul", "format" => "Nombre", "description" => "Nombre de documents joints à ce feedback."],
         ];
     }
 }
