@@ -38,25 +38,43 @@ class FeedbackType extends AbstractType
                 ],
             ])
             ->add('type', ChoiceType::class, [
-                'label' => "Moyen de contact",
-                'expanded' => false,
+                'label' => "Moyen de contact utilisé",
+                'expanded' => true,
+                'required' => true,
+                'label_html' => true,
                 'choices'  => [
-                    "Rencontre physique" => Feedback::TYPE_PHYSICAL_MEETING,
+                    "Physique" => Feedback::TYPE_PHYSICAL_MEETING,
                     "Appel" => Feedback::TYPE_CALL,
-                    "E-mail" => Feedback::TYPE_EMAIL,
+                    "Email" => Feedback::TYPE_EMAIL,
                     "SMS" => Feedback::TYPE_SMS,
-                    "Non défini" => Feedback::TYPE_UNDEFINED,
+                    "Autre" => Feedback::TYPE_UNDEFINED,
                 ],
+                'choice_label' => function ($choice, $key, $value) {
+                    return match ($choice) {
+                        Feedback::TYPE_PHYSICAL_MEETING => '<div><strong>Rencontre physique</strong><div class="text-muted small">Rendez-vous en face à face.</div></div>',
+                        Feedback::TYPE_CALL => '<div><strong>Appel téléphonique</strong><div class="text-muted small">Discussion vocale.</div></div>',
+                        Feedback::TYPE_EMAIL => '<div><strong>E-mail</strong><div class="text-muted small">Échange par courrier électronique.</div></div>',
+                        Feedback::TYPE_SMS => '<div><strong>SMS / Messagerie</strong><div class="text-muted small">Message texte rapide.</div></div>',
+                        default => '<div><strong>Non défini</strong><div class="text-muted small">Autre moyen de contact.</div></div>',
+                    };
+                },
             ])
             ->add('hasNextAction', ChoiceType::class, [
                 'label' => "Y a-t-il une prochaine action?",
                 'help' => "Action consécutive au compte-rendu courant et qui devra être exécutée par la suite.",
-                'expanded' => false,
+                'expanded' => true,
                 'required' => true,
+                'label_html' => true,
                 'choices'  => [
                     "Non" => false,
                     "Oui" => true,
                 ],
+                'choice_label' => function ($choice, $key, $value) {
+                    if ($choice === true) {
+                        return '<div><strong>Oui</strong><div class="text-muted small">Une action de suivi est requise.</div></div>';
+                    }
+                    return '<div><strong>Non</strong><div class="text-muted small">Aucune action immédiate.</div></div>';
+                },
             ])
             ->add('nextAction', TextareaType::class, [
                 'required' => false,

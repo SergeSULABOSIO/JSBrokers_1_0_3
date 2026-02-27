@@ -35,8 +35,9 @@ class TacheEntityCanvasProvider implements EntityCanvasProviderInterface
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Tâche: [[*description]].",
-                    " À terminer avant le [[toBeEndedAt]].",
-                    " Exécuteur: [[executor]]."
+                    " Statut: [[statutExecution]]. Priorité: [[prioriteCalculee]].",
+                    " À terminer avant le [[toBeEndedAt]]. Exécuteur: [[executor]].",
+                    " Contexte: [[contexteTache]]."
                 ]
             ],
             "liste" => array_merge([
