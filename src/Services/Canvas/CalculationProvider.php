@@ -2885,12 +2885,12 @@ class CalculationProvider
     public function getTacheStatutExecutionString(Tache $tache): string
     {
         if ($tache->isClosed()) {
-            return $this->translator->trans('tache_status_completed', [], 'messages');
+            return "Clôturée";
         }
         if ($tache->getToBeEndedAt() < new DateTimeImmutable()) {
-            return $this->translator->trans('tache_status_expired', [], 'messages');
+            return "Expirée";
         }
-        return $this->translator->trans('tache_status_running', [], 'messages');
+        return "En cours";
     }
 
     /**
