@@ -234,6 +234,12 @@ class JSBDynamicSearchService
                     $qb->setParameter($parameterName, $paramValue);
                 }
             }
+            // CAS 3 : C'est une valeur simple (Objet, chaîne, nombre) pour une égalité stricte.
+            // Cela gère les critères passés manuellement par les contrôleurs (ex: extraCriteria).
+            elseif (!is_array($value) && $value !== null && $value !== '') {
+                $qb->andWhere("{$currentAlias}.{$actualField} = :{$parameterName}")
+                    ->setParameter($parameterName, $value);
+            }
         }
     }
 }

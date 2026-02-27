@@ -48,7 +48,8 @@ class TacheFormCanvasProvider implements FormCanvasProviderInterface
         $tacheId = $object->getId() ?? 0;
         $layout = [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["toBeEndedAt"]], ["champs" => ["executor"]], ["champs" => ["closed"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["executor"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["toBeEndedAt"]], ["champs" => ["closed"]]]],
         ];
 
         $collections = [
