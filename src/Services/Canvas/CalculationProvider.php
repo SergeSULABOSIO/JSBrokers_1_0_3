@@ -294,6 +294,10 @@ class CalculationProvider
                     'nombreFeedbacks' => $this->countTacheFeedbacks($entity),
                     'contexteTache' => $this->getTacheContexteString($entity),
                     'descriptionText' => strip_tags($entity->getDescription() ?? ''),
+                    'prioriteCalculee' => $this->getTachePrioriteCalculee($entity),
+                    'dernierFeedbackDate' => $this->getTacheDernierFeedbackDate($entity),
+                    'nombreDocuments' => $this->countTacheDocuments($entity),
+                    'clientConcerne' => $this->getTacheClientConcerne($entity),
                 ];
                 break;
             case Feedback::class:
@@ -2891,6 +2895,61 @@ class CalculationProvider
             return "Expirée";
         }
         return "En cours";
+    }
+
+    /**
+     * Calcule une priorité suggérée basée sur l'échéance.
+     */
+    private function getTachePrioriteCalculee(Tache $tache): string
+    {
+        if ($tache->isClosed()) {
+            return "Aucune (Terminée)";
+        }
+        $now = new DateTimeImmutable();
+        $due = $tache->getToBeEndedAt();
+        if (!$due) return "Non définie";
+        
+        if ($due < $now) return "Urgente (Expirée)";
+        
+        $diff = $this->serviceDates->daysEntre($now, $due);
+        if ($diff <= 2) return "Haute";
+        if ($diff <= 7) return "Moyenne";
+        return "Normale";
+    }
+
+    /**
+     * Récupère la date du dernier feedback.
+     */
+    private function getTacheDernierFeedbackDate(Tache $tache): ?\DateTimeInterface
+    {
+        $last = null;
+        foreach ($tache->getFeedbacks() as $fb) {
+            if (!$last || $fb->getCreatedAt() > $last) {
+                $last = $fb->getCreatedAt();
+            }
+        }
+        return $last;
+    }
+
+    private function countTacheDocuments(Tache $tache): int
+    {
+        return $tache->getDocuments()->count();
+    }
+
+    private function getTacheClientConcerne(Tache $tache): string
+    {
+        $client = null;
+        if ($piste = $tache->getPiste()) {
+            $client = $piste->getClient();
+        } elseif ($cotation = $tache->getCotation()) {
+            $client = $cotation->getPiste()?->getClient();
+        } elseif ($sinistre = $tache->getNotificationSinistre()) {
+            $client = $sinistre->getAssure();
+        } elseif ($offre = $tache->getOffreIndemnisationSinistre()) {
+            $client = $offre->getNotificationSinistre()?->getAssure();
+        }
+        
+        return $client ? $client->getNom() : 'N/A';
     }
 
     /**
