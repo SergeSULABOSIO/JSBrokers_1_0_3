@@ -58,11 +58,17 @@ class TacheEntityCanvasProvider implements EntityCanvasProviderInterface
     private function getSpecificIndicators(): array
     {
         return [
-            ["code" => "statutExecution", "intitule" => "Statut", "type" => "Texte", "format" => "Texte", "description" => "Statut d'exécution de la tâche (En cours, Expirée, Terminée)."],
-            ["code" => "delaiRestant", "intitule" => "Délai Restant", "type" => "Texte", "format" => "Texte", "description" => "Temps restant avant l'échéance de la tâche."],
-            ["code" => "ageTache", "intitule" => "Âge", "type" => "Texte", "format" => "Texte", "description" => "Nombre de jours depuis la création de la tâche."],
-            ["code" => "nombreFeedbacks", "intitule" => "Nb. Feedbacks", "type" => "Entier", "format" => "Nombre", "description" => "Nombre de feedbacks enregistrés pour cette tâche."],
-            ["code" => "contexteTache", "intitule" => "Contexte", "type" => "Calcul", "format" => "Texte", "fonction" => "getTacheContexteString", "description" => "Entité parente à laquelle la tâche est rattachée (Piste, Cotation, etc.)."],
+            ["group" => "Suivi & Délais", "code" => "statutExecution", "intitule" => "Statut", "type" => "Texte", "format" => "Texte", "description" => "Statut d'exécution de la tâche (En cours, Expirée, Terminée)."],
+            ["group" => "Suivi & Délais", "code" => "prioriteCalculee", "intitule" => "Priorité suggérée", "type" => "Calcul", "format" => "Texte", "description" => "Niveau d'urgence calculé en fonction de la date d'échéance."],
+            ["group" => "Suivi & Délais", "code" => "delaiRestant", "intitule" => "Délai Restant", "type" => "Texte", "format" => "Texte", "description" => "Temps restant avant l'échéance de la tâche."],
+            ["group" => "Suivi & Délais", "code" => "ageTache", "intitule" => "Âge", "type" => "Texte", "format" => "Texte", "description" => "Nombre de jours depuis la création de la tâche."],
+            
+            ["group" => "Activité", "code" => "nombreFeedbacks", "intitule" => "Nb. Feedbacks", "type" => "Entier", "format" => "Nombre", "description" => "Nombre de feedbacks enregistrés pour cette tâche."],
+            ["group" => "Activité", "code" => "dernierFeedbackDate", "intitule" => "Dernier Feedback", "type" => "Calcul", "format" => "Date", "description" => "Date du dernier compte-rendu enregistré."],
+            ["group" => "Activité", "code" => "nombreDocuments", "intitule" => "Nb. Documents", "type" => "Calcul", "format" => "Nombre", "description" => "Nombre de documents joints à la tâche."],
+
+            ["group" => "Contexte", "code" => "contexteTache", "intitule" => "Contexte", "type" => "Calcul", "format" => "Texte", "fonction" => "getTacheContexteString", "description" => "Entité parente à laquelle la tâche est rattachée (Piste, Cotation, etc.)."],
+            ["group" => "Contexte", "code" => "clientConcerne", "intitule" => "Client concerné", "type" => "Calcul", "format" => "Texte", "description" => "Nom du client lié à l'affaire ou au sinistre concerné."],
         ];
     }
 }
