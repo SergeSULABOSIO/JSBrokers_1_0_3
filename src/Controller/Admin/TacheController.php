@@ -135,7 +135,9 @@ class TacheController extends AbstractController
     #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
     public function query(Request $request)
     {
-        return $this->renderViewOrListComponent(Tache::class, $request, true);
+        $idInvite = $request->attributes->get('idInvite');
+        $invite = $this->inviteRepository->find($idInvite);
+        return $this->renderViewOrListComponent(Tache::class, $request, true, ['executor' => $invite]);
     }
 
 

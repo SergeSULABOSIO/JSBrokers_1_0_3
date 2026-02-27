@@ -3,7 +3,6 @@
 namespace App\Form;
 
 use App\Entity\Tache;
-use App\Entity\Invite;
 use App\Form\DocumentType;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\AbstractType;
@@ -40,20 +39,25 @@ class TacheType extends AbstractType
                 'required' => true,
             ])
             ->add('closed', ChoiceType::class, [
-                'label' => "La tâche est-elle accomplie?",
-                'expanded' => false,
+                'label' => "Statut de la tâche",
+                'expanded' => true,
+                'label_html' => true,
                 'required' => true,
                 'choices'  => [
-                    "Oui" => true,
-                    "Pas encore." => false,
+                    "En cours" => false,
+                    "Terminée" => true,
                 ],
+                'choice_label' => function ($choice, $key, $value) {
+                    if ($choice === true) {
+                        return '<div><strong>Terminée</strong><div class="text-muted small">La tâche a été réalisée et clôturée.</div></div>';
+                    }
+                    return '<div><strong>En cours</strong><div class="text-muted small">La tâche est toujours en attente de réalisation.</div></div>';
+                },
             ])
             ->add('executor', InviteAutocompleteField::class, [
                 'label' => "Assignée à",
                 'required' => true,
-                'class' => Invite::class,
                 'placeholder' => 'Chercher un utilisateur...',
-                'choice_label' => 'nom',
             ])
             ->add('feedbacks', CollectionType::class, [
                 'label' => "Compte-rendu",

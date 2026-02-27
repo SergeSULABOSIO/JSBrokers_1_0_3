@@ -235,7 +235,7 @@ trait ControllerUtilsTrait
      * @param bool $isQueryResult If true, performs a search and renders only the list content.
      * @return Response
      */
-    private function renderViewOrListComponent(string $entityClass, Request $request, bool $isQueryResult = false): Response
+    private function renderViewOrListComponent(string $entityClass, Request $request, bool $isQueryResult = false, array $extraCriteria = []): Response
     {
         $idInvite = $request->attributes->get('idInvite');
         $idEntreprise = $request->attributes->get('idEntreprise');
@@ -250,6 +250,7 @@ trait ControllerUtilsTrait
             // CORRECTION : Le payload contient maintenant 'criteria' et 'parentContext'.
             $payload = json_decode($request->getContent(), true) ?? [];
             $criteria = $payload['criteria'] ?? [];
+            $criteria = array_merge($criteria, $extraCriteria);
             $parentContext = $payload['parentContext'] ?? null;
             
             // Appel du service de recherche refactorisé et sécurisé
