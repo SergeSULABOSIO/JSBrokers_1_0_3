@@ -63,9 +63,10 @@ class FeedbackFormCanvasProvider implements FormCanvasProviderInterface
             // Ligne 1: Description
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
             
-            // Ligne 2: Moyen de contact (full width)
+            // Ligne 2: Moyen de contact et Y a-t-il une prochaine action?
             ["couleur_fond" => "white", "colonnes" => [
-                ["champs" => ["type"]]
+                ["width" => 6, "champs" => ["type"]],
+                ["width" => 6, "champs" => ["hasNextAction"]]
             ]],
             
             // Ligne 3: Documents
@@ -73,17 +74,12 @@ class FeedbackFormCanvasProvider implements FormCanvasProviderInterface
                 ["champs" => [$this->getCollectionWidgetConfig('documents', 'document', $feedbackId, "Document", 'feedback', null, $isParentNew)]]
             ]],
 
-            // Ligne 4: Y a-t-il une prochaine action?
-            ["couleur_fond" => "white", "colonnes" => [
-                ["champs" => ["hasNextAction"]]
-            ]],
-
-            // Ligne 5: Date de la prochaine action (Conditionnel)
+            // Ligne 4: Date de la prochaine action (Conditionnel)
             ["couleur_fond" => "white", "colonnes" => [
                 ["champs" => [array_merge(['field_code' => 'nextActionAt'], $visibilityConditionNextAction)]]
             ]],
 
-            // Ligne 6: Prochaine action (Détail) (Conditionnel)
+            // Ligne 5: Prochaine action (Détail) (Conditionnel)
             ["couleur_fond" => "white", "colonnes" => [
                 ["champs" => [array_merge(['field_code' => 'nextAction'], $visibilityConditionNextAction)]]
             ]],

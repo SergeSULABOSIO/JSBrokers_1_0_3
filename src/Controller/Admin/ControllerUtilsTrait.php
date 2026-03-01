@@ -409,14 +409,15 @@ trait ControllerUtilsTrait
      * @param Request $request The current HTTP request.
      * @param string $entityClass The FQCN of the entity.
      * @param string $formTypeClass The FQCN of the form type.
-     * @param ?callable $initializer A function to set default values on a new or existing entity before validation.
-     *                               It receives the entity instance and the submitted data array as arguments.
+     * @param ?callable $beforePersist A function to execute logic on the entity before persisting it.
+     *                                 It receives the entity instance as argument.
      * @return JsonResponse
      */
     private function handleFormSubmission(
         Request $request,
         string $entityClass,
-        string $formTypeClass
+        string $formTypeClass,
+        ?callable $beforePersist = null
     ): JsonResponse {
         $data = $request->request->all();
         $files = $request->files->all();
@@ -460,6 +461,11 @@ trait ControllerUtilsTrait
                 //         $entity->setInvite($invite);
                 //     }
                 // }
+            }
+
+            // NOUVEAU : Exécuter une logique personnalisée avant la persistance (ex: définir l'auteur)
+            if ($beforePersist) {
+                $beforePersist($entity);
             }
 
             // CORRECTION & ROBUSTESSE : Remplacement de la méthode 'associateParent' ambiguë.
