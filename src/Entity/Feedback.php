@@ -52,12 +52,13 @@ class Feedback implements OwnerAwareInterface
     private ?Invite $invite = null;
 
     #[ORM\Column(nullable: true)]
-    private ?bool $hasNextAction = null;
+    private ?bool $hasNextAction = false;
 
 
     public function __construct()
     {
         $this->documents = new ArrayCollection();
+        $this->nextActionAt = new \DateTimeImmutable();
     }
 
     public function getId(): ?int

@@ -15,6 +15,7 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Tache;
+use App\Entity\Invite;
 use App\Entity\Feedback;
 use App\Form\FeedbackType;
 use App\Constantes\Constante;
@@ -96,8 +97,10 @@ class FeedbackController extends AbstractController
             $request,
             Feedback::class,
             FeedbackType::class,
-            $feedback
-            // No specific initializer needed for a new Feedback
+            $feedback,
+            function (Feedback $f, Invite $i) {
+                $f->setInvite($i);
+            }
         );
     }
 
@@ -110,7 +113,12 @@ class FeedbackController extends AbstractController
         return $this->handleFormSubmission(
             $request,
             Feedback::class,
-            FeedbackType::class
+            FeedbackType::class,
+            function (Feedback $f) {
+                if (!$f->getInvite()) {
+                    $f->setInvite($this->getInvite());
+                }
+            }
         );
     }
 

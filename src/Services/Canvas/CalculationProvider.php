@@ -302,13 +302,19 @@ class CalculationProvider
                 break;
             case Feedback::class:
                 /** @var Feedback $entity */
+                $auteur = $entity->getInvite();
+                if (!$auteur && $entity->getTache()) {
+                    $auteur = $entity->getTache()->getExecutor();
+                }
+                $auteurNom = $auteur ? ($auteur->getNom() ?: $auteur->getEmail()) : 'Inconnu';
+
                 $indicateurs = [
                     'typeString' => $this->getFeedbackTypeString($entity),
                     'delaiProchaineAction' => $this->calculateFeedbackDelaiProchaineAction($entity),
                     'ageFeedback' => $this->calculateFeedbackAge($entity),
                     'statutProchaineAction' => $this->getFeedbackStatutProchaineActionString($entity),
                     'descriptionText' => strip_tags($entity->getDescription() ?? ''),
-                    'auteurNom' => $entity->getInvite() ? $entity->getInvite()->getNom() : 'Inconnu',
+                    'auteurNom' => $auteurNom,
                     'nombreDocuments' => $entity->getDocuments()->count(),
                     'estEnRetard' => $this->getFeedbackEstEnRetardString($entity),
                 ];
@@ -3018,11 +3024,11 @@ class CalculationProvider
         if ($feedback === null) return null;
 
         return match ($feedback->getType()) {
-            Feedback::TYPE_PHYSICAL_MEETING => $this->translator->trans('feedback_type_physical_meeting', [], 'messages'),
-            Feedback::TYPE_CALL => $this->translator->trans('feedback_type_call', [], 'messages'),
-            Feedback::TYPE_EMAIL => $this->translator->trans('feedback_type_email', [], 'messages'),
-            Feedback::TYPE_SMS => $this->translator->trans('feedback_type_sms', [], 'messages'),
-            Feedback::TYPE_UNDEFINED => $this->translator->trans('feedback_type_undefined', [], 'messages'),
+            Feedback::TYPE_PHYSICAL_MEETING => "Rencontre physique",
+            Feedback::TYPE_CALL => "Appel téléphonique",
+            Feedback::TYPE_EMAIL => "E-mail",
+            Feedback::TYPE_SMS => "SMS / Messagerie",
+            Feedback::TYPE_UNDEFINED => "Autre",
             default => null,
         };
     }
