@@ -2,7 +2,6 @@
 
 namespace App\Form;
 
-use App\Constantes\Constante;
 use App\Entity\Monnaie;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -10,59 +9,49 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
-use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 
 class MonnaieType extends AbstractType
 {
-
-    public function __construct(
-        private Constante $constante
-    )
-    {
-        
-    }
-
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
             ->add('nom', TextType::class, [
-                'label' => "currency_form_label_name",
+                'label' => "Nom",
                 'attr' => [
-                    'placeholder' => "currency_form_label_name_placeholder",
+                    'placeholder' => "Nom de la monnaie",
                 ],
             ])
             ->add('code', TextType::class, [
-                'label' => "currency_form_code",
+                'label' => "Code",
                 'attr' => [
-                    'placeholder' => "currency_form_code_placeholder",
+                    'placeholder' => "Code ISO (ex: USD)",
                 ],
             ])
             ->add('tauxusd', NumberType::class, [
-                'label' => "currency_form_rate",
-                'help' => "currency_form_rate_help",
+                'label' => "Taux USD",
+                'scale' => 4,
                 'attr' => [
-                    'placeholder' => "currency_form_rate_place_holder",
+                    'placeholder' => "Taux de change",
                 ],
             ])
             ->add('fonction', ChoiceType::class, [
-                'label' => "currency_form_fonction",
-                'expanded' => false,
-                'choices'  => $this->constante->getTabFonctionsMonnaies(),
-            ])
-            ->add('locale', ChoiceType::class, [
-                'label' => "currency_form_local",
-                'expanded' => false,
-                'choices'  => $this->constante->getTabIsMonnaieLocale(),
-            ])
-            //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "currency_form_save",
-                'attr' => [
-                    'class' => "btn btn-secondary",
+                'label' => "Fonction",
+                'expanded' => true,
+                'choices'  => [
+                    "Aucune" => Monnaie::FONCTION_AUCUNE,
+                    "Saisie et Affichage" => Monnaie::FONCTION_SAISIE_ET_AFFICHAGE,
+                    "Saisie Uniquement" => Monnaie::FONCTION_SAISIE_UNIQUEMENT,
+                    "Affichage Uniquement" => Monnaie::FONCTION_AFFICHAGE_UNIQUEMENT,
                 ],
             ])
-            // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
-            // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
+            ->add('locale', ChoiceType::class, [
+                'label' => "Monnaie Locale ?",
+                'expanded' => true,
+                'choices'  => [
+                    "Non" => false,
+                    "Oui" => true,
+                ],
+            ])
         ;
     }
 
@@ -70,6 +59,13 @@ class MonnaieType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Monnaie::class,
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }

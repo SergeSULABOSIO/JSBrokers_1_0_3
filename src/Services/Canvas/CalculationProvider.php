@@ -18,6 +18,7 @@ use App\Entity\Feedback;
 use App\Entity\Groupe;
 use App\Entity\Invite;
 use App\Entity\ModelePieceSinistre;
+use App\Entity\Monnaie;
 use App\Entity\Note;
 use App\Entity\NotificationSinistre;
 use App\Entity\OffreIndemnisationSinistre;
@@ -802,6 +803,13 @@ class CalculationProvider
                         $indicateurs[$field . 'String'] = $this->Role_getAccessString($entity, [$field]);
                     }
                 }
+                break;
+            case Monnaie::class:
+                /** @var Monnaie $entity */
+                $indicateurs = [
+                    'fonctionString' => $this->getMonnaieFonctionString($entity),
+                    'localeString' => $entity->isLocale() ? 'Oui' : 'Non',
+                ];
                 break;
                 // D'autres entités pourraient être ajoutées ici avec 'case AutreEntite::class:'
         }
@@ -3913,6 +3921,17 @@ class CalculationProvider
     public function getModelePieceSinistreStatutObligationString(ModelePieceSinistre $modele): string
     {
         return $modele->isObligatoire() ? 'Obligatoire' : 'Facultative';
+    }
+
+    public function getMonnaieFonctionString(Monnaie $monnaie): string
+    {
+        return match ($monnaie->getFonction()) {
+            Monnaie::FONCTION_AUCUNE => "Aucune",
+            Monnaie::FONCTION_SAISIE_ET_AFFICHAGE => "Saisie et Affichage",
+            Monnaie::FONCTION_SAISIE_UNIQUEMENT => "Saisie Uniquement",
+            Monnaie::FONCTION_AFFICHAGE_UNIQUEMENT => "Affichage Uniquement",
+            default => "Non définie",
+        };
     }
 
     // --- Indicateurs pour Classeur ---

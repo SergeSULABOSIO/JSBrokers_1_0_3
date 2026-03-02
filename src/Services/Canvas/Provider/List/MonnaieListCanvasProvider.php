@@ -16,11 +16,19 @@ class MonnaieListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Monnaies",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:currency-usd"],
+                "texte_principal" => ["attribut_code" => "nom", "icone" => "monnaie"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_code" => "code"],
-                    ["attribut_prefixe" => "Symbole: ", "attribut_code" => "symbole"],
+                    ["attribut_prefixe" => "Taux USD: ", "attribut_code" => "tauxusd"],
+                ],
+            ],
+            "colonnes_numeriques" => [
+                [
+                    "titre_colonne" => "Taux USD",
+                    "attribut_unité" => "",
+                    "attribut_code" => "tauxusd",
+                    "attribut_type" => "nombre",
                 ],
             ],
         ];
