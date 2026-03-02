@@ -6,6 +6,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\MonnaieRepository;
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: MonnaieRepository::class)]
 class Monnaie
@@ -13,18 +14,22 @@ class Monnaie
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $nom = null;
 
     #[Assert\NotBlank(message: "Le code ne peut pas être vide.")]
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $code = null;
 
     #[Assert\NotBlank(message: "Le taux ne peut pas être vide.")]
     #[Assert\Positive(message: "Le taux doit être une valeur positive.")]
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
+    #[Groups(['list:read'])]
     private ?string $tauxusd = null;
 
     public const FONCTION_AUCUNE = -1;
@@ -33,9 +38,11 @@ class Monnaie
     public const FONCTION_AFFICHAGE_UNIQUEMENT = 2;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $fonction = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?bool $locale = null;
 
     #[ORM\ManyToOne(inversedBy: 'monnaies')]
