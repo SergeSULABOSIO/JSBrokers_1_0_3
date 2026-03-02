@@ -806,9 +806,14 @@ class CalculationProvider
                 break;
             case Monnaie::class:
                 /** @var Monnaie $entity */
+                $taux = (float)$entity->getTauxusd();
                 $indicateurs = [
                     'fonctionString' => $this->getMonnaieFonctionString($entity),
                     'localeString' => $entity->isLocale() ? 'Oui' : 'Non',
+                    'tauxInverse' => $taux > 0 ? round(1 / $taux, 4) : 0,
+                    'statutTaux' => $taux == 1 ? 'Pivot' : ($taux > 1 ? 'Forte' : 'Faible'),
+                    'formatExemple' => "1 000 " . $entity->getCode(),
+                    'typeDevise' => $entity->isLocale() ? 'Nationale' : 'Étrangère',
                 ];
                 break;
                 // D'autres entités pourraient être ajoutées ici avec 'case AutreEntite::class:'
