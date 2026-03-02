@@ -95,4 +95,11 @@ class MonnaieController extends AbstractController
     {
         return $this->renderViewOrListComponent(Monnaie::class, $request, true);
     }
+
+    #[Route('/api/get-entity-details/{entityType}/{id}', name: 'api.get_entity_details', methods: ['GET'], requirements: ['id' => Requirement::DIGITS])]
+    public function getEntityDetailsApi(string $entityType, int $id): JsonResponse
+    {
+        $details = $this->getEntityDetailsForType($entityType, $id);
+        return $this->json($details, 200, [], ['groups' => 'list:read']);
+    }
 }
