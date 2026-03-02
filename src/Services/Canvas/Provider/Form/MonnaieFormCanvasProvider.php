@@ -49,15 +49,20 @@ class MonnaieFormCanvasProvider implements FormCanvasProviderInterface
             [
                 "couleur_fond" => "white",
                 "colonnes" => [
-                    ["width" => 6, "champs" => ["nom"]],
-                    ["width" => 6, "champs" => ["code"]],
+                    ["width" => 9, "champs" => ["nom"]],
+                    ["width" => 3, "champs" => ["code"]],
                 ]
             ],
             [
                 "couleur_fond" => "white",
                 "colonnes" => [
-                    ["width" => 6, "champs" => ["tauxusd"]],
-                    ["width" => 6, "champs" => ["locale"]]
+                    ["width" => 12, "champs" => ["tauxusd"]],
+                ]
+            ],
+            [
+                "couleur_fond" => "white",
+                "colonnes" => [
+                    ["width" => 12, "champs" => ["locale"]],
                 ]
             ],
             [
