@@ -2,18 +2,14 @@
 
 namespace App\Form;
 
-use App\Entity\Tache;
-use App\Entity\Invite;
 use App\Entity\Feedback;
 use App\Form\DocumentType;
 use App\Services\FormListenerFactory;
-use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
-use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
@@ -28,6 +24,8 @@ class FeedbackType extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        /** @var Feedback|null $feedback */
+        $feedback = $options['data'] ?? null;
 
         $builder
             ->add('description', TextareaType::class, [
@@ -84,10 +82,14 @@ class FeedbackType extends AbstractType
                 ],
             ])
             ->add('nextActionAt', DateTimeType::class, [
-                'label' => "Date de la prochaine action",
+                'label' => "Date d'éxécution de la prochaine action",
                 'help' => "Date en laquelle la prochaine action devra être exécutée.",
                 'required' => false,
                 'widget' => 'single_text',
+                'input' => 'datetime_immutable',
+                'html5' => false,
+                'format' => 'dd/MM/yyyy HH:mm',
+                'data' => $feedback?->getNextActionAt() ?? new \DateTimeImmutable(),
             ])
             // --- AJOUT DE LA COLLECTION DE DOCUMENTS ---
             ->add('documents', CollectionType::class, [
