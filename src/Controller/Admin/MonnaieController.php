@@ -4,149 +4,95 @@ namespace App\Controller\Admin;
 
 use App\Entity\Monnaie;
 use App\Form\MonnaieType;
-use App\Entity\Entreprise;
-use App\Entity\Utilisateur;
+use App\Entity\Invite;
 use App\Constantes\Constante;
-use App\Constantes\MenuActivator;
 use App\Repository\InviteRepository;
 use App\Repository\MonnaieRepository;
 use App\Repository\EntrepriseRepository;
+use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Mailer\MailerInterface;
+use App\Controller\Admin\ControllerUtilsTrait;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
-use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Serializer\SerializerInterface;
 
 #[Route("/admin/monnaie", name: 'admin.monnaie.')]
 #[IsGranted('ROLE_USER')]
 class MonnaieController extends AbstractController
 {
-    public MenuActivator $activator;
+    use ControllerUtilsTrait;
 
     public function __construct(
-        private MailerInterface $mailer,
-        private TranslatorInterface $translator,
-        private EntityManagerInterface $manager,
+        private EntityManagerInterface $em,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
         private MonnaieRepository $monnaieRepository,
         private Constante $constante,
+        private JSBDynamicSearchService $searchService,
+        private SerializerInterface $serializer,
+        CanvasBuilder $canvasBuilder
     ) {
-        $this->activator = new MenuActivator(MenuActivator::GROUPE_FINANCE);
+        $this->canvasBuilder = $canvasBuilder;
+    }
+
+    protected function getCollectionMap(): array
+    {
+        return $this->buildCollectionMapFromEntity(Monnaie::class);
+    }
+
+    protected function getParentAssociationMap(): array
+    {
+        return $this->buildParentAssociationMapFromEntity(Monnaie::class);
     }
 
     #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function index($idEntreprise, Request $request)
     {
-        $page = $request->query->getInt("page", 1);
-
-        return $this->render('admin/monnaie/index.html.twig', [
-            'pageName' => $this->translator->trans("currency_page_name_list"),
-            'utilisateur' => $this->getUser(),
-            'entreprise' => $this->entrepriseRepository->find($idEntreprise),
-            'monnaies' => $this->monnaieRepository->paginateforEntreprise($idEntreprise, $page),
-            'page' => $page,
-            'constante' => $this->constante,
-            'activator' => $this->activator,
-        ]);
+        return $this->renderViewOrListComponent(Monnaie::class, $request);
     }
 
-
-    #[Route('/create/{idEntreprise}', name: 'create')]
-    public function create($idEntreprise, Request $request)
+    #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
+    public function getFormApi(?Monnaie $monnaie, Request $request): Response
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Monnaie */
-        $monnaie = new Monnaie();
-        //Paramètres par défaut
-        $monnaie->setEntreprise($entreprise);
-        $monnaie->setTauxusd(1);
-        $monnaie->setLocale(false);
-        $monnaie->setFonction(-1);
-
-        $form = $this->createForm(MonnaieType::class, $monnaie);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($monnaie);
-            $this->manager->flush();
-            // $this->addFlash("success", $this->translator->trans("currency_creation_ok", [
-            //     ":currency" => $monnaie->getNom(),
-            // ]));
-            // return $this->redirectToRoute("admin.monnaie.index", [
-            //     'idEntreprise' => $idEntreprise,
-            // ]);
-            return new Response("Ok");
-        }
-        return $this->render('admin/monnaie/create.html.twig', [
-            'pageName' => $this->translator->trans("currency_page_name_new"),
-            'utilisateur' => $user,
-            'entreprise' => $entreprise,
-            'monnaie' => $monnaie,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
+        return $this->renderFormCanvas(
+            $request,
+            Monnaie::class,
+            MonnaieType::class,
+            $monnaie,
+            function (Monnaie $monnaie, Invite $invite) {
+                $monnaie->setEntreprise($invite->getEntreprise());
+                $monnaie->setTauxusd(1);
+                $monnaie->setLocale(false);
+                $monnaie->setFonction(Monnaie::FONCTION_AUCUNE);
+            }
+        );
     }
 
-
-    #[Route('/edit/{idEntreprise}/{idMonnaie}', name: 'edit', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit($idEntreprise, $idMonnaie, Request $request)
+    #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
+    public function submitApi(Request $request): JsonResponse
     {
-        /** @var Entreprise $entreprise */
-        $entreprise = $this->entrepriseRepository->find($idEntreprise);
-
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-
-        /** @var Monnaie */
-        $monnaie = $this->monnaieRepository->find($idMonnaie);
-
-        $form = $this->createForm(MonnaieType::class, $monnaie);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->manager->persist($monnaie); //On peut ignorer cette instruction car la fonction flush suffit.
-            $this->manager->flush();
-            return new Response("Ok");
-        }
-        return $this->render('admin/monnaie/edit.html.twig', [
-            'pageName' => $this->translator->trans("currency_page_name_update", [
-                ":currency" => $monnaie->getNom(),
-            ]),
-            'utilisateur' => $user,
-            'monnaie' => $monnaie,
-            'entreprise' => $entreprise,
-            'activator' => $this->activator,
-            'form' => $form,
-        ]);
+        return $this->handleFormSubmission(
+            $request,
+            Monnaie::class,
+            MonnaieType::class
+        );
     }
 
-
-    #[Route('/remove/{idEntreprise}/{idMonnaie}', name: 'remove', requirements: ['idMonnaie' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove($idEntreprise, $idMonnaie, Request $request)
+    #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
+    public function deleteApi(Monnaie $monnaie): Response
     {
-        /** @var Monnaie $monnaie */
-        $monnaie = $this->monnaieRepository->find($idMonnaie);
+        return $this->handleDeleteApi($monnaie);
+    }
 
-        $message = $this->translator->trans("currency_deletion_ok", [
-            ":currency" => $monnaie->getNom(),
-        ]);;
-        
-        $this->manager->remove($monnaie);
-        $this->manager->flush();
-
-        $this->addFlash("success", $message);
-        return $this->redirectToRoute("admin.monnaie.index", [
-            'idEntreprise' => $idEntreprise,
-        ]);
+    #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
+    public function query(Request $request): Response
+    {
+        return $this->renderViewOrListComponent(Monnaie::class, $request, true);
     }
 }
