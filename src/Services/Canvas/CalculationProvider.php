@@ -8,6 +8,7 @@ use App\Entity\Avenant;
 use App\Entity\Chargement;
 use App\Entity\ChargementPourPrime;
 use App\Entity\Classeur;
+use App\Entity\CompteBancaire;
 use App\Entity\Client;
 use App\Entity\ConditionPartage;
 use App\Entity\Contact;
@@ -814,6 +815,18 @@ class CalculationProvider
                     'statutTaux' => $taux == 1 ? 'Pivot' : ($taux > 1 ? 'Forte' : 'Faible'),
                     'formatExemple' => "1 000 " . $entity->getCode(),
                     'typeDevise' => $entity->isLocale() ? 'Nationale' : 'Étrangère',
+                ];
+                break;
+            case CompteBancaire::class:
+                /** @var CompteBancaire $entity */
+                $stats = $this->calculateCompteBancaireStats($entity);
+                $indicateurs = [
+                    'soldeActuel' => round($stats['solde'], 2),
+                    'totalEntrees' => round($stats['entrees'], 2),
+                    'totalSorties' => round($stats['sorties'], 2),
+                    'nombreTransactions' => $stats['count'],
+                    'moyenneTransaction' => round($stats['average'], 2),
+                    'dateDerniereTransaction' => $stats['lastDate'],
                 ];
                 break;
                 // D'autres entités pourraient être ajoutées ici avec 'case AutreEntite::class:'
@@ -4226,5 +4239,54 @@ class CalculationProvider
         }
         $jours = $this->serviceDates->daysEntre($piste->getCreatedAt(), new DateTimeImmutable()) ?? 0;
         return $jours . ' jour(s)';
+    }
+
+    private function calculateCompteBancaireStats(CompteBancaire $compte): array
+    {
+        $entrees = 0.0;
+        $sorties = 0.0;
+        $count = 0;
+        $lastDate = null;
+
+        foreach ($compte->getPaiements() as $paiement) {
+            $montant = $paiement->getMontant() ?? 0.0;
+            $date = $paiement->getPaidAt();
+            $isEntree = false;
+
+            // Determine direction
+            if ($paiement->getOffreIndemnisationSinistre()) {
+                // Sinistre = Sortie
+                $isEntree = false;
+            } elseif ($note = $paiement->getNote()) {
+                // Note
+                if ($note->getAddressedTo() === Note::TO_CLIENT) {
+                    // Client pays us = Entrée
+                    $isEntree = true;
+                } else {
+                    // Paying Insurer, Partner, Tax = Sortie
+                    $isEntree = false;
+                }
+            }
+
+            if ($isEntree) {
+                $entrees += $montant;
+            } else {
+                $sorties += $montant;
+            }
+
+            $count++;
+            if ($date && ($lastDate === null || $date > $lastDate)) {
+                $lastDate = $date;
+            }
+        }
+
+        return [
+            'entrees' => $entrees,
+            'sorties' => $sorties,
+            'solde' => $entrees - $sorties,
+            'count' => $count,
+            'average' => $count > 0 ? ($entrees + $sorties) / $count : 0.0,
+            'lastDate' => $lastDate
+        ];
     }
 }
