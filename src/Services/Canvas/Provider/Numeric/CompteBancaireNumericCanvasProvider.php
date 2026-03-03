@@ -3,10 +3,13 @@
 namespace App\Services\Canvas\Provider\Numeric;
 
 use App\Entity\CompteBancaire;
+use App\Services\Canvas\CalculationProvider;
 
 class CompteBancaireNumericCanvasProvider implements NumericCanvasProviderInterface
 {
-    use CalculatedIndicatorsNumericProviderTrait;
+    public function __construct(private CalculationProvider $calculationProvider)
+    {
+    }
 
     public function supports(string $entityClassName): bool
     {
@@ -15,6 +18,6 @@ class CompteBancaireNumericCanvasProvider implements NumericCanvasProviderInterf
 
     public function getCanvas(object $object): array
     {
-        return $this->getCalculatedIndicatorsNumericAttributes($object);
+        return $this->calculationProvider->getIndicateursSpecifics($object);
     }
 }

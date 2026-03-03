@@ -21,6 +21,8 @@ class MonnaieListCanvasProvider implements ListCanvasProviderInterface
                 "textes_secondaires" => [
                     ["attribut_code" => "code"],
                     ["attribut_prefixe" => "Taux USD: ", "attribut_code" => "tauxusd"],
+                    ["attribut_prefixe" => "Locale: ", "attribut_code" => "localeString"],
+                    ["attribut_prefixe" => "Fonction: ", "attribut_code" => "fonctionString"],
                 ],
             ],
             "colonnes_numeriques" => [

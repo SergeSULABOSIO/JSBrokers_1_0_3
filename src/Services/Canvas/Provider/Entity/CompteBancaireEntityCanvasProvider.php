@@ -48,6 +48,15 @@ class CompteBancaireEntityCanvasProvider implements EntityCanvasProviderInterfac
 
     private function getSpecificIndicators(): array
     {
-        return [];
+        $monnaie = $this->serviceMonnaies->getCodeMonnaieAffichage();
+        return [
+            ["group" => "Solde & Mouvements", "code" => "soldeActuel", "intitule" => "Solde Actuel", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Solde calculé (Entrées - Sorties)."],
+            ["group" => "Solde & Mouvements", "code" => "totalEntrees", "intitule" => "Total Entrées", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Somme des encaissements."],
+            ["group" => "Solde & Mouvements", "code" => "totalSorties", "intitule" => "Total Sorties", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Somme des décaissements."],
+            
+            ["group" => "Activité", "code" => "nombreTransactions", "intitule" => "Nb. Transactions", "type" => "Calcul", "format" => "Nombre", "description" => "Nombre total de mouvements."],
+            ["group" => "Activité", "code" => "moyenneTransaction", "intitule" => "Moyenne / Trans.", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant moyen d'une transaction."],
+            ["group" => "Activité", "code" => "dateDerniereTransaction", "intitule" => "Dernier Mvt.", "type" => "Calcul", "format" => "Date", "description" => "Date de la dernière transaction enregistrée."],
+        ];
     }
 }
