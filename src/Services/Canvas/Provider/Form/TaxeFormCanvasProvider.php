@@ -39,9 +39,11 @@ class TaxeFormCanvasProvider implements FormCanvasProviderInterface
     private function buildTaxeLayout(Taxe $object, bool $isParentNew): array
     {
         $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["code"], 'width' => 12]]],
+            [
+                "couleur_fond" => "white",
+                "colonnes" => [["champs" => ["code"], 'width' => 6], ["champs" => ["tauxIARD"], 'width' => 3], ["champs" => ["tauxVIE"], 'width' => 3]]
+            ],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"], 'width' => 12]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["tauxIARD"], 'width' => 6], ["champs" => ["tauxVIE"], 'width' => 6]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["redevable"], 'width' => 12]]],
         ];
 
