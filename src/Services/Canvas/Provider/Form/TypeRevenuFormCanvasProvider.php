@@ -38,15 +38,23 @@ class TypeRevenuFormCanvasProvider implements FormCanvasProviderInterface
 
     private function buildTypeRevenuLayout(int $typeRevenuId, bool $isParentNew): array
     {
-        $visibilityForPercentage = [
+        $visibilityPercentage = [
             'visibility_conditions' => [
-                ['field' => 'modeCalcul', 'operator' => '==', 'value' => TypeRevenu::MODE_CALCUL_POURCENTAGE_CHARGEMENT]
+                [
+                    'field' => 'modeCalcul',
+                    'operator' => '==',
+                    'value' => TypeRevenu::MODE_CALCUL_POURCENTAGE_CHARGEMENT
+                ]
             ]
         ];
 
-        $visibilityForFlat = [
+        $visibilityFlat = [
             'visibility_conditions' => [
-                ['field' => 'modeCalcul', 'operator' => '==', 'value' => TypeRevenu::MODE_CALCUL_MONTANT_FLAT]
+                [
+                    'field' => 'modeCalcul',
+                    'operator' => '==',
+                    'value' => TypeRevenu::MODE_CALCUL_MONTANT_FLAT
+                ]
             ]
         ];
 
@@ -63,24 +71,28 @@ class TypeRevenuFormCanvasProvider implements FormCanvasProviderInterface
             ],
             [
                 'colonnes' => [
-                    ['width' => 12, 'champs' => [array_merge(['field_code' => 'typeChargement'], $visibilityForPercentage)]]
+                    ['width' => 10, 'champs' => [array_merge(['field_code' => 'typeChargement'], $visibilityPercentage)]],
+                    ['width' => 2, 'champs' => [array_merge(['field_code' => 'pourcentage'], $visibilityPercentage)]]
                 ]
             ],
             [
                 'colonnes' => [
-                    ['width' => 6, 'champs' => [array_merge(['field_code' => 'pourcentage'], $visibilityForPercentage)]],
-                    ['width' => 6, 'champs' => [array_merge(['field_code' => 'montantflat'], $visibilityForFlat)]]
+                    ['width' => 12, 'champs' => [array_merge(['field_code' => 'montantflat'], $visibilityFlat)]]
                 ]
             ],
             [
                 'colonnes' => [
-                    ['width' => 12, 'champs' => [array_merge(['field_code' => 'appliquerPourcentageDuRisque'], $visibilityForPercentage)]]
+                    ['width' => 12, 'champs' => ['appliquerPourcentageDuRisque']]
                 ]
             ],
             [
                 'colonnes' => [
-                    ['width' => 6, 'champs' => ['redevable']],
-                    ['width' => 6, 'champs' => ['multipayments']]
+                    ['width' => 12, 'champs' => ['redevable']]
+                ]
+            ],
+            [
+                'colonnes' => [
+                    ['width' => 12, 'champs' => ['multipayments']]
                 ]
             ],
             [
