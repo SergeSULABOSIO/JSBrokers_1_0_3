@@ -63,33 +63,32 @@ class TaxeType extends AbstractType
             ])
             ->add('redevable', ChoiceType::class, [
                 'label' => "Qui en est l'assujetti?",
-                'expanded' => false,
+                'expanded' => true,
+                'label_html' => true,
                 'required' => true,
                 'choices'  => [
                     "L'assureur" => Taxe::REDEVABLE_ASSUREUR,
                     "Le courtier" => Taxe::REDEVABLE_COURTIER,
                 ],
+                'choice_label' => function ($choice, $key, $value) {
+                    $desc = match ($choice) {
+                        Taxe::REDEVABLE_ASSUREUR => "La taxe est due par la compagnie d'assurance.",
+                        Taxe::REDEVABLE_COURTIER => "La taxe est due par le courtier.",
+                        default => ""
+                    };
+                    return '<div><strong>' . $key . '</strong><div class="text-muted small">' . $desc . '</div></div>';
+                },
             ])
             ->add('autoriteFiscales', CollectionType::class, [
                 'label' => "Autorités fiscales",
                 'help' => "Autorité fiscale concernée par cette taxe",
-                'entry_type' => AutoriteFiscaleType::class,
+                'entry_type' => AutoriteFiscaleAutocompleteField::class,
                 'by_reference' => false,
                 'allow_add' => true,
                 'required' => false,
                 'allow_delete' => true,
                 'entry_options' => [
                     'label' => false,
-                ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "taxe",
-                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 1,
-                    ]),
                 ],
             ])
         ;

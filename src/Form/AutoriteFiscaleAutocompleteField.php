@@ -40,12 +40,14 @@ class AutoriteFiscaleAutocompleteField extends AbstractType
                     ->setParameter('eseId', $entreprise->getId())
                     ->orderBy('autorite.id', 'ASC');
             },
-
-            // choose which fields to use in the search
-            // if not passed, *all* fields are used
-            // 'searchable_fields' => ['name'],
-
-            // 'security' => 'ROLE_SOMETHING',
+            'as_html' => true,
+            'choice_label' => function(AutoriteFiscale $autorite) {
+                return sprintf(
+                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">%s</div></div>',
+                    htmlspecialchars($autorite->getNom()),
+                    htmlspecialchars($autorite->getAbreviation() ?? "Pas d'abréviation")
+                );
+            },
         ]);
     }
 
