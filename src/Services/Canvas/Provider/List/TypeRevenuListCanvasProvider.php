@@ -39,7 +39,7 @@ class TypeRevenuListCanvasProvider implements ListCanvasProviderInterface
                 [
                     "titre_colonne" => "Pourcentage",
                     "attribut_unité" => "%",
-                    "attribut_code" => "pourcentage",
+                    "attribut_code" => "pourcentageDisplay",
                     "attribut_type" => "nombre",
                 ],
             ],
