@@ -834,6 +834,8 @@ class CalculationProvider
                 $indicateurs = [
                     'redevableString' => $this->getTaxeRedevableString($entity),
                     'nombreAutorites' => $entity->getAutoriteFiscales()->count(),
+                    'tauxIARDPercent' => (float)($entity->getTauxIARD() ?? 0) * 100,
+                    'tauxVIEPercent' => (float)($entity->getTauxVIE() ?? 0) * 100,
                 ];
                 break;
                 // D'autres entités pourraient être ajoutées ici avec 'case AutreEntite::class:'
