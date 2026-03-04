@@ -3,10 +3,17 @@
 namespace App\Services\Canvas\Provider\Numeric;
 
 use App\Entity\TypeRevenu;
+use App\Services\ServiceMonnaies;
 
 class TypeRevenuNumericCanvasProvider implements NumericCanvasProviderInterface
 {
     use CalculatedIndicatorsNumericProviderTrait;
+
+    public function __construct(
+        private ServiceMonnaies $serviceMonnaies
+    )
+    {
+    }
 
     public function supports(string $entityClassName): bool
     {
@@ -18,12 +25,13 @@ class TypeRevenuNumericCanvasProvider implements NumericCanvasProviderInterface
         /** @var TypeRevenu $object */
         $attributes = [
             "montantflat" => [
-                "description" => "Montant Flat",
-                "value" => ($object->getMontantflat() ?? 0) * 100,
+                "description" => "Montant Fixe",
+                "value" => $object->getMontantflat() ?? 0,
+                "unit" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
             ],
             "pourcentage" => [
                 "description" => "Pourcentage",
-                "value" => $object->getPourcentage() ?? 0,
+                "value" => ($object->getPourcentage() ?? 0) * 100,
                 "unit" => "%",
             ],
         ];

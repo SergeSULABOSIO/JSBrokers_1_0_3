@@ -87,6 +87,22 @@ class TypeRevenu
     #[Groups(['list:read'])]
     private ?int $modeCalcul = null;
 
+    #[Groups(['list:read'])]
+    public ?string $descriptionModeCalcul = null;
+
+    #[Groups(['list:read'])]
+    public ?string $redevableString = null;
+
+    #[Groups(['list:read'])]
+    public ?string $sharedString = null;
+
+    /**
+     * @var int|null
+     */
+    #[Groups(['list:read'])]
+    public ?int $nombreUtilisations = null;
+
+
     public function __construct()
     {
         $this->revenuPourCourtiers = new ArrayCollection();
