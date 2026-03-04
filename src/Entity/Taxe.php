@@ -55,6 +55,11 @@ class Taxe
     #[ORM\OneToMany(targetEntity: Article::class, mappedBy: 'taxeFacturee')]
     private Collection $articles;
 
+    // Attributs calculés pour l'affichage dans les listes
+    public ?float $tauxIARDPercent = null;
+
+    public ?float $tauxVIEPercent = null;
+
 
     public function __construct()
     {

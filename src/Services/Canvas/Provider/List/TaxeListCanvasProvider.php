@@ -26,10 +26,10 @@ class TaxeListCanvasProvider implements ListCanvasProviderInterface
                 [
                     "titre_colonne" => "Taux IARD",
                     "attribut_unité" => "%",
-                    "attribut_code" => "tauxIARD",
-                    "attribut_type" => "nombre",
+                    "attribut_code" => "tauxIARDPercent",
+                    "attribut_type" => "calcul",
                 ],
-                ["titre_colonne" => "Taux VIE", "attribut_unité" => "%", "attribut_code" => "tauxVIE", "attribut_type" => "nombre"],
+                ["titre_colonne" => "Taux VIE", "attribut_unité" => "%", "attribut_code" => "tauxVIEPercent", "attribut_type" => "calcul"],
             ],
         ];
     }
