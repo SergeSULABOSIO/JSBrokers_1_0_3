@@ -8,6 +8,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\TaxeRepository;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: TaxeRepository::class)]
@@ -16,37 +17,45 @@ class Taxe
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[Assert\NotBlank(message: "Ce champ ne peut pas être vide.")]
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $description = null;
 
     #[Assert\NotBlank(message: "Ce champ ne peut pas être vide.")]
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
+    #[Groups(['list:read'])]
     private ?string $tauxIARD = null;
 
     #[Assert\NotBlank(message: "Ce champ ne peut pas être vide.")]
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
+    #[Groups(['list:read'])]
     private ?string $tauxVIE = null;
 
     #[Assert\NotBlank(message: "Ce champ ne peut pas être vide.")]
     #[ORM\Column(length: 5)]
+    #[Groups(['list:read'])]
     private ?string $code = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $redevable = null;
 
     public const REDEVABLE_ASSUREUR = 0;
     public const REDEVABLE_COURTIER = 1;
 
     #[ORM\ManyToOne(inversedBy: 'taxes')]
+    #[Groups(['list:read'])]
     private ?Entreprise $entreprise = null;
 
     /**
      * @var Collection<int, AutoriteFiscale>
      */
     #[ORM\OneToMany(targetEntity: AutoriteFiscale::class, mappedBy: 'taxe', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[Groups(['list:read'])]
     private Collection $autoriteFiscales;
 
     /**
@@ -56,10 +65,18 @@ class Taxe
     private Collection $articles;
 
     // Attributs calculés pour l'affichage dans les listes
+    #[Groups(['list:read'])]
     public ?float $tauxIARDPercent = null;
 
+    #[Groups(['list:read'])]
     public ?float $tauxVIEPercent = null;
 
+    // Attributs calculés pour la vue détaillée
+    #[Groups(['list:read'])]
+    public ?string $redevableString = null;
+
+    #[Groups(['list:read'])]
+    public ?int $nombreAutorites = null;
 
     public function __construct()
     {
