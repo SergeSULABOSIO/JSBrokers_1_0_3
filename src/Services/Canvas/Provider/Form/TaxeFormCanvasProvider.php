@@ -27,7 +27,7 @@ class TaxeFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/taxe/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildTaxeLayout($taxeId, $isParentNew);
+        $layout = $this->buildTaxeLayout($object, $isParentNew);
 
         return [
             "parametres" => $parametres,
@@ -36,13 +36,21 @@ class TaxeFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildTaxeLayout(int $taxeId, bool $isParentNew): array
+    private function buildTaxeLayout(Taxe $object, bool $isParentNew): array
     {
         $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["code"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["tauxIARD"]], ["champs" => ["tauxVIE"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["code"], 'width' => 12]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"], 'width' => 12]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["tauxIARD"], 'width' => 6], ["champs" => ["tauxVIE"], 'width' => 6]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["redevable"], 'width' => 12]]],
         ];
+
+        $collections = [
+            ['fieldName' => 'autoriteFiscales', 'entityRouteName' => 'autoritefiscale', 'formTitle' => 'Autorité Fiscale', 'parentFieldName' => 'taxe'],
+        ];
+
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
+
         return $layout;
     }
 }

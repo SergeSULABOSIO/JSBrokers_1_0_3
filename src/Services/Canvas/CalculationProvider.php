@@ -829,6 +829,13 @@ class CalculationProvider
                     'dateDerniereTransaction' => $stats['lastDate'],
                 ];
                 break;
+            case Taxe::class:
+                /** @var Taxe $entity */
+                $indicateurs = [
+                    'redevableString' => $this->getTaxeRedevableString($entity),
+                    'nombreAutorites' => $entity->getAutoriteFiscales()->count(),
+                ];
+                break;
                 // D'autres entités pourraient être ajoutées ici avec 'case AutreEntite::class:'
         }
 
@@ -4028,6 +4035,15 @@ class CalculationProvider
     private function getInviteProprietaireString(Invite $invite): string
     {
         return $invite->isProprietaire() ? 'Oui' : 'Non';
+    }
+
+    private function getTaxeRedevableString(Taxe $taxe): string
+    {
+        return match ($taxe->getRedevable()) {
+            Taxe::REDEVABLE_ASSUREUR => "L'assureur",
+            Taxe::REDEVABLE_COURTIER => "Le courtier",
+            default => "Non défini",
+        };
     }
 
     /**

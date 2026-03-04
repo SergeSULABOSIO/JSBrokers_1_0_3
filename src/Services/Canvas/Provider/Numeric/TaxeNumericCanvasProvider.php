@@ -6,7 +6,7 @@ use App\Entity\Taxe;
 
 class TaxeNumericCanvasProvider implements NumericCanvasProviderInterface
 {
-    // This entity does not use CalculatedIndicatorsTrait
+    use CalculatedIndicatorsNumericProviderTrait;
 
     public function supports(string $entityClassName): bool
     {
@@ -16,7 +16,7 @@ class TaxeNumericCanvasProvider implements NumericCanvasProviderInterface
     public function getCanvas(object $object): array
     {
         /** @var Taxe $object */
-        return [
+        return array_merge([
             "tauxIARD" => [
                 "description" => "Taux IARD",
                 "value" => (float)($object->getTauxIARD() ?? '0') * 100,
@@ -27,6 +27,6 @@ class TaxeNumericCanvasProvider implements NumericCanvasProviderInterface
                 "value" => (float)($object->getTauxVIE() ?? '0') * 100,
                 "unit" => "%",
             ],
-        ];
+        ], $this->getCalculatedIndicatorsNumericAttributes($object));
     }
 }
