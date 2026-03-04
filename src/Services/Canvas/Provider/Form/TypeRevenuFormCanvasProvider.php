@@ -38,6 +38,18 @@ class TypeRevenuFormCanvasProvider implements FormCanvasProviderInterface
 
     private function buildTypeRevenuLayout(int $typeRevenuId, bool $isParentNew): array
     {
+        $visibilityForPercentage = [
+            'visibility_conditions' => [
+                ['field' => 'modeCalcul', 'operator' => '==', 'value' => TypeRevenu::MODE_CALCUL_POURCENTAGE_CHARGEMENT]
+            ]
+        ];
+
+        $visibilityForFlat = [
+            'visibility_conditions' => [
+                ['field' => 'modeCalcul', 'operator' => '==', 'value' => TypeRevenu::MODE_CALCUL_MONTANT_FLAT]
+            ]
+        ];
+
         return [
             [
                 'colonnes' => [
@@ -51,58 +63,18 @@ class TypeRevenuFormCanvasProvider implements FormCanvasProviderInterface
             ],
             [
                 'colonnes' => [
-                    [
-                        'width' => 12,
-                        'champs' => [
-                            [
-                                'field_code' => 'typeChargement',
-                                'visibility_conditions' => [
-                                    ['field' => 'modeCalcul', 'operator' => '==', 'value' => TypeRevenu::MODE_CALCUL_POURCENTAGE_CHARGEMENT]
-                                ]
-                            ]
-                        ]
-                    ]
+                    ['width' => 12, 'champs' => [array_merge(['field_code' => 'typeChargement'], $visibilityForPercentage)]]
                 ]
             ],
             [
                 'colonnes' => [
-                    [
-                        'width' => 6,
-                        'champs' => [
-                            [
-                                'field_code' => 'pourcentage',
-                                'visibility_conditions' => [
-                                    ['field' => 'modeCalcul', 'operator' => '==', 'value' => TypeRevenu::MODE_CALCUL_POURCENTAGE_CHARGEMENT]
-                                ]
-                            ]
-                        ]
-                    ],
-                    [
-                        'width' => 6,
-                        'champs' => [
-                            [
-                                'field_code' => 'montantflat',
-                                'visibility_conditions' => [
-                                    ['field' => 'modeCalcul', 'operator' => '==', 'value' => TypeRevenu::MODE_CALCUL_MONTANT_FLAT]
-                                ]
-                            ]
-                        ]
-                    ]
+                    ['width' => 6, 'champs' => [array_merge(['field_code' => 'pourcentage'], $visibilityForPercentage)]],
+                    ['width' => 6, 'champs' => [array_merge(['field_code' => 'montantflat'], $visibilityForFlat)]]
                 ]
             ],
             [
                 'colonnes' => [
-                    [
-                        'width' => 12,
-                        'champs' => [
-                            [
-                                'field_code' => 'appliquerPourcentageDuRisque',
-                                'visibility_conditions' => [
-                                    ['field' => 'modeCalcul', 'operator' => '==', 'value' => TypeRevenu::MODE_CALCUL_POURCENTAGE_CHARGEMENT]
-                                ]
-                            ]
-                        ]
-                    ]
+                    ['width' => 12, 'champs' => [array_merge(['field_code' => 'appliquerPourcentageDuRisque'], $visibilityForPercentage)]]
                 ]
             ],
             [

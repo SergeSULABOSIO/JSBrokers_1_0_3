@@ -690,6 +690,7 @@ class CalculationProvider
                     'redevableString' => $this->getTypeRevenuRedevableString($entity),
                     'sharedString' => $this->getTypeRevenuSharedString($entity),
                     'nombreUtilisations' => $this->countTypeRevenuUtilisations($entity),
+                    'pourcentageDisplay' => ($entity->getPourcentage() ?? 0) * 100,
                 ];
                 break;
             case Entreprise::class:

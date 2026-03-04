@@ -45,7 +45,6 @@ class TypeRevenuEntityCanvasProvider implements EntityCanvasProviderInterface
             ["code" => "id", "intitule" => "ID", "type" => "Entier"],
             ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
             ["code" => "typeChargement", "intitule" => "Chargement Cible", "type" => "Relation", "targetEntity" => Chargement::class, "displayField" => "nom"],
-            ["code" => "pourcentage", "intitule" => "Pourcentage", "type" => "Nombre", "unite" => "%"],
             ["code" => "montantflat", "intitule" => "Montant Fixe", "type" => "Nombre", "format" => "Monetaire", "unite" => $monnaie],
             ["code" => "multipayments", "intitule" => "Paiements multiples", "type" => "Booleen"],
             ["code" => "appliquerPourcentageDuRisque", "intitule" => "Appliquer % du risque", "type" => "Booleen"],
@@ -56,6 +55,7 @@ class TypeRevenuEntityCanvasProvider implements EntityCanvasProviderInterface
     {
         return [
             ["group" => "Configuration", "code" => "descriptionModeCalcul", "intitule" => "Mode de Calcul", "type" => "Calcul", "format" => "Texte", "description" => "Définit si le revenu est un pourcentage d'un chargement ou un montant fixe."],
+            ["group" => "Configuration", "code" => "pourcentageDisplay", "intitule" => "Pourcentage", "type" => "Calcul", "format" => "Pourcentage", "description" => "Le taux de revenu en pourcentage."],
             ["group" => "Partage & Facturation", "code" => "redevableString", "intitule" => "Redevable", "type" => "Calcul", "format" => "Texte", "description" => "Définit qui est le débiteur de ce revenu (Client, Assureur, etc.)."],
             ["group" => "Partage & Facturation", "code" => "sharedString", "intitule" => "Partageable", "type" => "Calcul", "format" => "Texte", "description" => "Indique si ce revenu est partageable avec un partenaire."],
             ["group" => "Statistiques", "code" => "nombreUtilisations", "intitule" => "Nombre d'utilisations", "type" => "Calcul", "format" => "Nombre", "description" => "Indique dans combien de revenus pour courtier ce type est utilisé."],

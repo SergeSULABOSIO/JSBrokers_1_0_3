@@ -102,6 +102,9 @@ class TypeRevenu
     #[Groups(['list:read'])]
     public ?int $nombreUtilisations = null;
 
+    #[Groups(['list:read'])]
+    public ?float $pourcentageDisplay = null;
+
 
     public function __construct()
     {
