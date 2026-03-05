@@ -50,26 +50,17 @@ class TypeRevenuFormCanvasProvider implements FormCanvasProviderInterface
                 ]
             ],
             [
-                'visibility_conditions' => [
-                    ['field' => 'modeCalcul', 'operator' => '==', 'value' => TypeRevenu::MODE_CALCUL_POURCENTAGE_CHARGEMENT]
-                ],
                 'colonnes' => [
                     ['width' => 10, 'champs' => ['typeChargement']],
                     ['width' => 2, 'champs' => ['pourcentage']]
                 ]
             ],
             [
-                'visibility_conditions' => [
-                    ['field' => 'modeCalcul', 'operator' => '==', 'value' => TypeRevenu::MODE_CALCUL_MONTANT_FLAT]
-                ],
                 'colonnes' => [
                     ['width' => 12, 'champs' => ['montantflat']]
                 ]
             ],
             [
-                'visibility_conditions' => [
-                    ['field' => 'modeCalcul', 'operator' => '==', 'value' => TypeRevenu::MODE_CALCUL_POURCENTAGE_CHARGEMENT]
-                ],
                 'colonnes' => [
                     ['width' => 12, 'champs' => ['appliquerPourcentageDuRisque']]
                 ]
