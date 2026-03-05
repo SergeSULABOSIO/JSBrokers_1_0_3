@@ -2,7 +2,6 @@
 
 namespace App\Form;
 
-use App\Entity\Revenu;
 use App\Entity\Chargement;
 use App\Entity\TypeRevenu;
 use App\Services\ServiceMonnaies;
@@ -15,8 +14,6 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
-use Symfony\Component\Form\Extension\Core\Type\NumberType;
-use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\PercentType;
 
 class TypeRevenuType extends AbstractType
