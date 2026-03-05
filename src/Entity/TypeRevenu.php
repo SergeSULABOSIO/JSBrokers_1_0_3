@@ -109,6 +109,7 @@ class TypeRevenu
     public function __construct()
     {
         $this->revenuPourCourtiers = new ArrayCollection();
+        $this->modeCalcul = self::MODE_CALCUL_POURCENTAGE_CHARGEMENT;
         // $this->articles = new ArrayCollection();
     }
 
