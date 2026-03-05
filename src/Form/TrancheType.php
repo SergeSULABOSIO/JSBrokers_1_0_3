@@ -34,6 +34,7 @@ class TrancheType extends AbstractType
                 'label' => "Mode de calcul",
                 'mapped' => false, // Ce champ n'est pas lié directement à l'entité
                 'expanded' => true,
+                'data' => 'pourcentage', // Valeur par défaut pour l'initialisation
                 'choices' => [
                     'Pourcentage' => 'pourcentage',
                     'Montant Fixe' => 'montant_fixe',
@@ -58,9 +59,13 @@ class TrancheType extends AbstractType
             ->add('pourcentage', PercentType::class, [
                 'label' => "Pourcentage",
                 'required' => false,
-                'scale' => 3,
+                'scale' => 2,
+                'type' => 'integer',
+                'html5' => true,
                 'attr' => [
                     'placeholder' => "Portion",
+                    'step' => 0.01,
+                    'min' => 0,
                 ],
             ])
             ->add('montantFlat', MoneyType::class, [
@@ -77,12 +82,10 @@ class TrancheType extends AbstractType
                 $tranche = $event->getData();
                 $form = $event->getForm();
 
-                // Détermine le mode de calcul par défaut
-                $mode = 'pourcentage'; // Défaut
+                // Si un montant fixe est déjà défini (mode édition), on bascule la sélection
                 if ($tranche && $tranche->getMontantFlat() !== null && $tranche->getMontantFlat() > 0) {
-                    $mode = 'montant_fixe';
+                    $form->get('modeCalcul')->setData('montant_fixe');
                 }
-                $form->get('modeCalcul')->setData($mode);
             })
         ;
     }
