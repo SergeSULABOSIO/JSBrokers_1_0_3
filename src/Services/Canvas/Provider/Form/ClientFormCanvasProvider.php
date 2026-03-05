@@ -60,23 +60,44 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
 
         $layout = [
             // Ligne 1: "civilité" (1/3), "nom" (2/3)
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["civilite"], "width" => 4], ["champs" => ["nom"], "width" => 8]]],
+            [
+                // "couleur_fond" => "white", 
+                "colonnes" => [["champs" => ["civilite"], "width" => 4], ["champs" => ["nom"], "width" => 8]]
+            ],
             // Ligne 2: "groupe" (full width)
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["groupe"]]]],
+            [
+                // "couleur_fond" => "white", 
+                "colonnes" => [["champs" => ["groupe"]]]
+            ],
             // Ligne 3: "adresse" (full width)
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["adresse"]]]],
+            [
+                // "couleur_fond" => "white", 
+                "colonnes" => [["champs" => ["adresse"]]]
+            ],
             // Ligne 4: "email", "telephone" (1/2 each)
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["email"], "width" => 6], ["champs" => ["telephone"], "width" => 6]]],
+            [
+                // "couleur_fond" => "white", 
+                "colonnes" => [["champs" => ["email"], "width" => 6], ["champs" => ["telephone"], "width" => 6]]
+            ],
             // Ligne 5: "exonere" (full width)
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["exonere"]]]],
+            [
+                // "couleur_fond" => "white", 
+                "colonnes" => [["champs" => ["exonere"]]]
+            ],
             // Ligne 6: "numimpot", "rccm", "idnat" (1/3 each) - Conditional
-            ["couleur_fond" => "white", "colonnes" => [
-                ["champs" => [array_merge(['field_code' => 'numimpot'], $visibilityConditionForLegalFields)], "width" => 4],
-                ["champs" => [array_merge(['field_code' => 'rccm'], $visibilityConditionForLegalFields)], "width" => 4],
-                ["champs" => [array_merge(['field_code' => 'idnat'], $visibilityConditionForLegalFields)], "width" => 4]
-            ]],
+            [
+                // "couleur_fond" => "white", 
+                "colonnes" => [
+                    ["champs" => [array_merge(['field_code' => 'numimpot'], $visibilityConditionForLegalFields)], "width" => 4],
+                    ["champs" => [array_merge(['field_code' => 'rccm'], $visibilityConditionForLegalFields)], "width" => 4],
+                    ["champs" => [array_merge(['field_code' => 'idnat'], $visibilityConditionForLegalFields)], "width" => 4]
+                ]
+            ],
             // Ligne 7: "partenaires"
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["partenaires"]]]],
+            [
+                // "couleur_fond" => "white", 
+                "colonnes" => [["champs" => ["partenaires"]]]
+            ],
         ];
 
         $collections = [

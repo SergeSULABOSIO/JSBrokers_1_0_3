@@ -38,6 +38,17 @@ class TypeRevenuFormCanvasProvider implements FormCanvasProviderInterface
 
     private function buildTypeRevenuLayout(int $typeRevenuId, bool $isParentNew): array
     {
+        // Définition de la condition de visibilité selon le modèle ClientFormCanvasProvider
+        $visibilityPercentage = [
+            'visibility_conditions' => [
+                [
+                    'field' => 'modeCalcul',
+                    'operator' => 'in',
+                    'value' => [TypeRevenu::MODE_CALCUL_POURCENTAGE_CHARGEMENT]
+                ]
+            ]
+        ];
+
         return [
             [
                 'colonnes' => [
@@ -51,8 +62,8 @@ class TypeRevenuFormCanvasProvider implements FormCanvasProviderInterface
             ],
             [
                 'colonnes' => [
-                    ['width' => 10, 'champs' => ['typeChargement']],
-                    ['width' => 2, 'champs' => ['pourcentage']]
+                    ['width' => 8, 'champs' => [array_merge(['field_code' => 'typeChargement'], $visibilityPercentage)]],
+                    ['width' => 4, 'champs' => [array_merge(['field_code' => 'pourcentage'], $visibilityPercentage)]]
                 ]
             ],
             [
