@@ -54,6 +54,9 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
             // Ligne 1: Nom (Toute la largeur)
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
             
+            // Ligne 2: Mode de calcul (Toute la largeur)
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["modeCalcul"]]]],
+            
             // Ligne 3: Montant Fixe (Visible si modeCalcul == montant_fixe)
             ["couleur_fond" => "white", "colonnes" => [["champs" => [array_merge(['field_code' => 'montantFlat'], $visibilityConditionMontant)]]]],
             
