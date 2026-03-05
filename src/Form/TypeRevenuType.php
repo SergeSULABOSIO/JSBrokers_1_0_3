@@ -39,13 +39,13 @@ class TypeRevenuType extends AbstractType
             ])
             ->add('modeCalcul', ChoiceType::class, [
                 'label' => "Mode de calcul",
-                'help' => "Comment calcule-t-on ce revenu?",
-                'expanded' => false,
-                'required' => true,
+                // 'help' => "Comment calcule-t-on ce revenu?",
                 'choices'  => [
                     "Pourcentage d'un chargement" => TypeRevenu::MODE_CALCUL_POURCENTAGE_CHARGEMENT,
                     "Un montant fixe à préciser" => TypeRevenu::MODE_CALCUL_MONTANT_FLAT,
                 ],
+                'expanded' => false,
+                'required' => false,
             ])
             ->add('typeChargement', EntityType::class, [
                 'label' => "Chargement cible",
@@ -113,14 +113,6 @@ class TypeRevenuType extends AbstractType
                     "Le réassureur" => TypeRevenu::REDEVABLE_REASSURER,
                 ],
             ])
-            
-            //Le bouton d'enregistrement / soumission
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
         ;
     }
 
@@ -128,6 +120,13 @@ class TypeRevenuType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => TypeRevenu::class,
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }
