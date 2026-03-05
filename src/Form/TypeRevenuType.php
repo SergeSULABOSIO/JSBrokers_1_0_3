@@ -44,10 +44,11 @@ class TypeRevenuType extends AbstractType
                 'required' => false,
                 'label_html' => true,
                 'choice_label' => function ($choice, $key, $value) {
-                    if ($value === TypeRevenu::MODE_CALCUL_POURCENTAGE_CHARGEMENT) {
-                        return '<div><strong>Pourcentage d\'un chargement</strong><div class="text-muted small">Le revenu est un pourcentage d\'un composant de la prime (ex: prime nette).</div></div>';
-                    }
-                    return '<div><strong>Montant fixe</strong><div class="text-muted small">Le revenu est un montant forfaitaire prédéfini.</div></div>';
+                    $labels = [
+                        TypeRevenu::MODE_CALCUL_POURCENTAGE_CHARGEMENT => '<div><strong>Pourcentage d\'un chargement</strong><div class="text-muted small">Le revenu est un pourcentage d\'un composant de la prime (ex: prime nette).</div></div>',
+                        TypeRevenu::MODE_CALCUL_MONTANT_FLAT => '<div><strong>Montant fixe</strong><div class="text-muted small">Le revenu est un montant forfaitaire prédéfini.</div></div>',
+                    ];
+                    return $labels[$value] ?? '<div><strong>' . $key . '</strong></div>';
                 },
             ])
             ->add('typeChargement', EntityType::class, [
