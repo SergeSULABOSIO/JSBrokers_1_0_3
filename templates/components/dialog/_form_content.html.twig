@@ -18,9 +18,8 @@
                     {% set row_visibility_conditions = (row.visibility_conditions is defined) ? row.visibility_conditions|json_encode : null %}
 
                     <div class="row"
-                        data-dialog-instance-target="formRow"
+                        data-dialog-instance-target="formRow {% if row_visibility_conditions %}dynamicFieldContainer{% endif %}"
                         {% if row_visibility_conditions %}
-                            data-dialog-instance-target="dynamicFieldContainer"
                             data-visibility-conditions-value="{{ row_visibility_conditions }}"
                         {% endif %}
                     >
