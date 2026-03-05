@@ -49,6 +49,16 @@ class TypeRevenuFormCanvasProvider implements FormCanvasProviderInterface
             ]
         ];
 
+        $visibilityFlat = [
+            'visibility_conditions' => [
+                [
+                    'field' => 'modeCalcul',
+                    'operator' => 'in',
+                    'value' => [TypeRevenu::MODE_CALCUL_MONTANT_FLAT]
+                ]
+            ]
+        ];
+
         return [
             [
                 'colonnes' => [
@@ -68,7 +78,7 @@ class TypeRevenuFormCanvasProvider implements FormCanvasProviderInterface
             ],
             [
                 'colonnes' => [
-                    ['width' => 12, 'champs' => ['montantflat']]
+                    ['width' => 12, 'champs' => [array_merge(['field_code' => 'montantflat'], $visibilityFlat)]]
                 ]
             ],
             [

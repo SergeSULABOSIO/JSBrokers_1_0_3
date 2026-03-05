@@ -24,8 +24,15 @@ class ClientType extends AbstractType
                     'Entreprise' => Client::CIVILITE_ENTREPRISE,
                     'ASBL' => Client::CIVILITE_ASBL,
                 ],
-                'expanded' => false,
+                'expanded' => true,
                 'required' => false,
+                'label_html' => true,
+                'choice_label' => function ($choice, $key, $value) {
+                    if ($value === Client::CIVILITE_ENTREPRISE || $value === Client::CIVILITE_ASBL) {
+                        return '<div><strong>' . $key . '</strong><div class="text-muted small">Personne morale. Les champs N° Impôt, RCCM, etc. seront affichés.</div></div>';
+                    }
+                    return '<div><strong>' . $key . '</strong><div class="text-muted small">Personne physique.</div></div>';
+                },
             ])
             ->add('nom', TextType::class, [
                 'label' => "Nom",
