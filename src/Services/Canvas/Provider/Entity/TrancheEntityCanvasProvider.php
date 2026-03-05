@@ -83,6 +83,13 @@ class TrancheEntityCanvasProvider implements EntityCanvasProviderInterface
             ["group" => "Partage Partenaire", "code" => "retroCommissionSolde", "intitule" => "Rétro-commission Solde", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Solde de rétro-commission à payer."],
 
             ["group" => "Résultat Final", "code" => "reserve", "intitule" => "Réserve Courtier", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Revenu net final pour le courtier sur cette tranche."],
+
+            // NOUVEAU : Groupe Suivi des Encaissements
+            ["group" => "Suivi des Encaissements", "code" => "statutPaiement", "intitule" => "Statut Paiement", "type" => "Calcul", "format" => "Texte", "description" => "État actuel du paiement de la prime."],
+            ["group" => "Suivi des Encaissements", "code" => "tauxAvancement", "intitule" => "Progression", "type" => "Calcul", "format" => "Pourcentage", "description" => "Pourcentage de la prime encaissée."],
+            ["group" => "Suivi des Encaissements", "code" => "resteAPayer", "intitule" => "Reste à Payer", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant restant à encaisser."],
+            ["group" => "Suivi des Encaissements", "code" => "retardPaiement", "intitule" => "En Retard ?", "type" => "Calcul", "format" => "Texte", "description" => "Indique si le paiement est en retard par rapport à l'échéance."],
+            ["group" => "Suivi des Encaissements", "code" => "dateDernierEncaissement", "intitule" => "Dernier Encaissement", "type" => "Calcul", "format" => "Date", "description" => "Date du dernier paiement reçu pour cette tranche."],
         ];
     }
 }

@@ -55,6 +55,15 @@ class Tranche
     #[Groups(['list:read'])]
     public ?string $joursRestantsAvantEcheance = null;
 
+    #[Groups(['list:read'])]
+    public ?float $pourcentageAffiche = null;
+
+    #[Groups(['list:read'])]
+    public ?string $clientNom = null;
+
+    #[Groups(['list:read'])]
+    public ?string $cotationNom = null;
+
     // NOUVEAU : Attributs calculés spécifiques (Miroir de RevenuPourCourtier + Taux Tranche)
     #[Groups(['list:read'])]
     public ?float $tauxTranche = null;
@@ -130,6 +139,22 @@ class Tranche
 
     #[Groups(['list:read'])]
     public ?float $taxeAssureurSolde = null;
+
+    // NOUVEAU : 5 Attributs calculés supplémentaires pour le suivi
+    #[Groups(['list:read'])]
+    public ?string $statutPaiement = null;
+
+    #[Groups(['list:read'])]
+    public ?float $tauxAvancement = null;
+
+    #[Groups(['list:read'])]
+    public ?float $resteAPayer = null;
+
+    #[Groups(['list:read'])]
+    public ?string $retardPaiement = null;
+
+    #[Groups(['list:read'])]
+    public ?\DateTimeInterface $dateDernierEncaissement = null;
 
     public function __construct()
     {

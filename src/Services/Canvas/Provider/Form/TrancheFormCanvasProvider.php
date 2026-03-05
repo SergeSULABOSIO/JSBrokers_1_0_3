@@ -38,11 +38,33 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
 
     private function buildTrancheLayout(int $trancheId, bool $isParentNew): array
     {
+        // Conditions de visibilité pour les champs dynamiques
+        $visibilityConditionPourcentage = [
+            'visibility_conditions' => [
+                ['field' => 'modeCalcul', 'operator' => 'in', 'value' => ['pourcentage']]
+            ]
+        ];
+        $visibilityConditionMontant = [
+            'visibility_conditions' => [
+                ['field' => 'modeCalcul', 'operator' => 'in', 'value' => ['montant_fixe']]
+            ]
+        ];
+
         $layout = [
+            // Ligne 1: Nom (Toute la largeur)
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["cotation"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["montantFlat"]], ["champs" => ["pourcentage"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["payableAt"]]]],
+            
+            // Ligne 3: Montant Fixe (Visible si modeCalcul == montant_fixe)
+            ["couleur_fond" => "white", "colonnes" => [["champs" => [array_merge(['field_code' => 'montantFlat'], $visibilityConditionMontant)]]]],
+            
+            // Ligne 4: Pourcentage (Visible si modeCalcul == pourcentage)
+            ["couleur_fond" => "white", "colonnes" => [["champs" => [array_merge(['field_code' => 'pourcentage'], $visibilityConditionPourcentage)]]]],
+            
+            // Ligne 5: PayableAt et EcheanceAt (6/12 chacun)
+            ["couleur_fond" => "white", "colonnes" => [
+                ["champs" => ["payableAt"], "width" => 6],
+                ["champs" => ["echeanceAt"], "width" => 6]
+            ]],
         ];
         return $layout;
     }

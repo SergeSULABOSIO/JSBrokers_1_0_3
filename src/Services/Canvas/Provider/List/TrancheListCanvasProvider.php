@@ -24,8 +24,9 @@ class TrancheListCanvasProvider implements ListCanvasProviderInterface
                 "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:chart-pie"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
-                    ["attribut_prefixe" => "Cotation: ", "attribut_code" => "cotation"],
-                    ["attribut_prefixe" => "Payable le: ", "attribut_code" => "payableAt", "attribut_type" => "date"],
+                    ["attribut_prefixe" => "Échéance: ", "attribut_code" => "echeanceAt", "attribut_type" => "date"],
+                    ["attribut_prefixe" => "Cotation: ", "attribut_code" => "cotationNom"],
+                    ["attribut_prefixe" => "Client: ", "attribut_code" => "clientNom"],
                 ],
             ],
             "colonnes_numeriques" => [
@@ -35,7 +36,7 @@ class TrancheListCanvasProvider implements ListCanvasProviderInterface
                     "attribut_code" => "montantFlat",
                     "attribut_type" => "nombre",
                 ],
-                ["titre_colonne" => "Pourcentage", "attribut_unité" => "%", "attribut_code" => "pourcentage", "attribut_type" => "nombre"],
+                ["titre_colonne" => "Pourcentage", "attribut_unité" => "%", "attribut_code" => "pourcentageAffiche", "attribut_type" => "nombre"],
             ],
         ];
     }

@@ -194,6 +194,9 @@ class CalculationProvider
                     'ageTranche' => $this->calculateTrancheAge($entity),
                     'joursRestantsAvantEcheance' => $this->calculateTrancheJoursRestants($entity),
                     'contexteParent' => $this->getTrancheContexteParent($entity),
+                    'pourcentageAffiche' => $this->getTrancheTauxDisplay($entity),
+                    'clientNom' => $entity->getCotation()?->getPiste()?->getClient()?->getNom() ?? 'N/A',
+                    'cotationNom' => $entity->getCotation()?->getNom() ?? 'N/A',
                     // NOUVEAU : Indicateurs financiers
                     'primeTranche' => round($this->getTranchePrime($entity), 2),
                     'primePayee' => round($this->getTranchePrimePayee($entity), 2),
@@ -220,6 +223,12 @@ class CalculationProvider
                     'retroCommissionReversee' => round($this->getTrancheMontantRetrocommissionsPayableParCourtierPayee($entity), 2),
                     'retroCommissionSolde' => round($this->getTrancheRetroCommission($entity) - $this->getTrancheMontantRetrocommissionsPayableParCourtierPayee($entity), 2),
                     'reserve' => round($this->getTrancheReserve($entity), 2),
+                    // NOUVEAU : 5 Attributs calculés supplémentaires
+                    'statutPaiement' => $this->getTrancheStatutPaiement($entity),
+                    'tauxAvancement' => $this->getTrancheTauxAvancement($entity),
+                    'resteAPayer' => round($this->getTranchePrimeSoldeDue($entity), 2),
+                    'retardPaiement' => $this->getTrancheRetardPaiement($entity),
+                    'dateDernierEncaissement' => $this->getTrancheDateDernierEncaissement($entity),
                 ];
                 break;
             case Avenant::class:
@@ -2642,6 +2651,56 @@ class CalculationProvider
     private function getTrancheReserve(Tranche $tranche): float
     {
         return $this->getTrancheMontantPur($tranche) - $this->getTrancheRetroCommission($tranche);
+    }
+
+    private function getTrancheStatutPaiement(Tranche $tranche): string
+    {
+        $prime = $this->getTranchePrime($tranche);
+        $paye = $this->getTranchePrimePayee($tranche);
+
+        if ($prime <= 0) return 'N/A';
+        if ($paye >= $prime) return 'Payée';
+        if ($paye > 0) return 'Partiellement payée';
+        return 'Non payée';
+    }
+
+    private function getTrancheTauxAvancement(Tranche $tranche): float
+    {
+        $prime = $this->getTranchePrime($tranche);
+        if ($prime <= 0) return 0.0;
+        return round(($this->getTranchePrimePayee($tranche) / $prime) * 100, 2);
+    }
+
+    private function getTrancheRetardPaiement(Tranche $tranche): string
+    {
+        $solde = $this->getTranchePrimeSoldeDue($tranche);
+        if ($solde <= 0) return 'Non';
+
+        $echeance = $tranche->getEcheanceAt();
+        if (!$echeance) return 'N/A';
+
+        $now = new DateTimeImmutable();
+        if ($echeance < $now) {
+            $jours = $this->serviceDates->daysEntre($echeance, $now);
+            return "Oui (" . $jours . " jours)";
+        }
+        return 'Non';
+    }
+
+    private function getTrancheDateDernierEncaissement(Tranche $tranche): ?\DateTimeInterface
+    {
+        $lastDate = null;
+        foreach ($tranche->getArticles() as $article) {
+            $note = $article->getNote();
+            if ($note && $note->getAddressedTo() === Note::TO_CLIENT) {
+                foreach ($note->getPaiements() as $paiement) {
+                    if ($paiement->getPaidAt() && (!$lastDate || $paiement->getPaidAt() > $lastDate)) {
+                        $lastDate = $paiement->getPaidAt();
+                    }
+                }
+            }
+        }
+        return $lastDate;
     }
 
     public function Contact_getTypeString(?Contact $contact): string
