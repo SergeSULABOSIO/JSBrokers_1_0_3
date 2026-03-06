@@ -10,6 +10,7 @@ use App\Repository\ChargementRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Services\Canvas\CalculationProvider;
 use App\Services\JSBDynamicSearchService;
 use App\Services\CanvasBuilder;
 use Symfony\Component\HttpFoundation\Request;
@@ -41,6 +42,7 @@ class ChargementController extends AbstractController
         private Constante $constante,
         private JSBDynamicSearchService $searchService,
         private SerializerInterface $serializer,
+        private CalculationProvider $calculationProvider,
         CanvasBuilder $canvasBuilder // Inject CanvasBuilder without property promotion
     ) {
         // Assign the injected CanvasBuilder to the property declared in the trait

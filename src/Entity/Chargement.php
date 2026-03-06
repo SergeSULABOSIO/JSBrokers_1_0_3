@@ -55,7 +55,17 @@ class Chargement
     private ?int $fonction = null;
 
     #[Groups(['list:read'])]
+    // Cette propriété est hydratée par CalculationProvider
     public ?string $fonction_string;
+
+    #[Groups(['list:read'])]
+    public ?float $montantTotalApplique = null;
+
+    #[Groups(['list:read'])]
+    public ?int $nombreUtilisations = null;
+
+    #[Groups(['list:read'])]
+    public ?float $poidsMoyenSurPrime = null;
 
     public const FONCTION_PRIME_NETTE = 1;
     public const FONCTION_FRONTING = 2;

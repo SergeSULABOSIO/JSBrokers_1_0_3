@@ -39,7 +39,8 @@ class ChargementFormCanvasProvider implements FormCanvasProviderInterface
     private function buildChargementLayout(int $chargementId, bool $isParentNew): array
     {
         $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["fonction"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["fonction"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
         ];
         return $layout;

@@ -573,8 +573,22 @@ class CalculationProvider
                 break;
             case Chargement::class:
                 /** @var Chargement $entity */
+                $montantTotal = 0.0;
+                $poidsTotal = 0.0;
+                $utilisations = $entity->getChargementPourPrimes();
+                $nombreUtilisations = $utilisations->count();
+
+                foreach ($utilisations as $utilisation) {
+                    $montantTotal += $utilisation->getMontantFlatExceptionel() ?? 0.0;
+                    $poidsTotal += $this->getChargementPourPrimePoidsSurPrime($utilisation) ?? 0.0;
+                }
+                $poidsMoyen = ($nombreUtilisations > 0) ? ($poidsTotal / $nombreUtilisations) : 0.0;
+
                 $indicateurs = [
                     'fonction_string' => $this->Chargement_getFonctionString($entity),
+                    'montantTotalApplique' => round($montantTotal, 2),
+                    'nombreUtilisations' => $nombreUtilisations,
+                    'poidsMoyenSurPrime' => round($poidsMoyen, 2),
                 ];
                 break;
             case Contact::class:
