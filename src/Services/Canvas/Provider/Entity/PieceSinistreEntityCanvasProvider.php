@@ -9,9 +9,7 @@ use App\Services\ServiceMonnaies;
 use App\Entity\ModelePieceSinistre;
 use App\Entity\NotificationSinistre;
 use App\Services\Canvas\CanvasHelper;
-use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
-#[AutoconfigureTag('app.entity_canvas_provider')]
 class PieceSinistreEntityCanvasProvider implements EntityCanvasProviderInterface
 {
     public function __construct(
