@@ -10,6 +10,7 @@ use App\Repository\BordereauRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use DateTimeImmutable;
+use App\Services\Canvas\CalculationProvider;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\CanvasBuilder;
 use App\Services\JSBDynamicSearchService;
@@ -42,6 +43,7 @@ class BordereauController extends AbstractController
         private Constante $constante,
         private JSBDynamicSearchService $searchService,
         private SerializerInterface $serializer,
+        private CalculationProvider $calculationProvider,
         CanvasBuilder $canvasBuilder // Inject CanvasBuilder without property promotion
     ) {
         // Assign the injected CanvasBuilder to the property declared in the trait

@@ -48,8 +48,10 @@ class BordereauFormCanvasProvider implements FormCanvasProviderInterface
     {
         $bordereauId = $object->getId() ?? 0;
         $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]], ["champs" => ["assureur"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["montantTTC"]], ["champs" => ["receivedAt"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["type"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["assureur"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["montantTTC"], "width" => 6], ["champs" => ["receivedAt"], "width" => 6]]],
         ];
         $collections = [['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'bordereau']];
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);

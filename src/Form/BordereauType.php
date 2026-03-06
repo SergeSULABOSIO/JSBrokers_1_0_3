@@ -2,26 +2,26 @@
 
 namespace App\Form;
 
-use App\Entity\Invite;
-use App\Entity\Assureur;
 use App\Entity\Bordereau;
+use App\Services\ServiceMonnaies;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
-use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 class BordereauType extends AbstractType
 {
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
-        private TranslatorInterface $translatorInterface
+        private TranslatorInterface $translatorInterface,
+        private ServiceMonnaies $serviceMonnaies
     ) {}
     
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -30,10 +30,17 @@ class BordereauType extends AbstractType
             ->add('type', ChoiceType::class, [
                 'label' => "Type",
                 'required' => true,
-                'expanded' => false,
+                'expanded' => true,
+                'label_html' => true,
                 'choices'  => [
                     "Bordereau de production" => Bordereau::TYPE_BOREDERAU_PRODUCTION,
                 ],
+                'choice_label' => function ($choice, $key, $value) {
+                    if ($choice === Bordereau::TYPE_BOREDERAU_PRODUCTION) {
+                        return '<div><strong>Bordereau de production</strong><div class="text-muted small">Récapitulatif des primes émises, renouvellements et avenants.</div></div>';
+                    }
+                    return '<div><strong>' . $key . '</strong></div>';
+                },
             ])
             ->add('nom', TextType::class, [
                 'label' => "Nom",
@@ -45,9 +52,11 @@ class BordereauType extends AbstractType
                 'label' => "Date de réception",
                 'widget' => 'single_text',
             ])
-            ->add('montantTTC', NumberType::class, [
+            ->add('montantTTC', MoneyType::class, [
                 'label' => "Montant",
                 'required' => false,
+                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                'grouping' => true,
                 'attr' => [
                     'placeholder' => "Montant",
                 ],
