@@ -16,8 +16,10 @@ class ChargementListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Types de Chargement",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:cog-transfer"],
+                "texte_principal" => ["attribut_code" => "nom", "icone" => "chargement"],
+                "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
+                    ["attribut_prefixe" => "Fonction: ", "attribut_code" => "fonction_string"],
                     ["attribut_code" => "description", "attribut_taille_max" => 50],
                 ],
             ],

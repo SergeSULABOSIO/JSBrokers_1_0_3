@@ -29,14 +29,25 @@ class ChargementType extends AbstractType
             ])
             ->add('fonction', ChoiceType::class, [
                 'label' => "Type de chargement",
-                'expanded' => false,
+                'expanded' => true,
                 'required' => true,
+                'label_html' => true,
                 'choices'  => [
                     "Prime nette" => Chargement::FONCTION_PRIME_NETTE,
                     "Fronting" => Chargement::FONCTION_FRONTING,
                     "Frais accessoires" => Chargement::FONCTION_FRAIS_ADMIN,
                     "Taxe" => Chargement::FONCTION_TAXE,
                 ],
+                'choice_label' => function ($choice, $key, $value) {
+                    $desc = match ($choice) {
+                        Chargement::FONCTION_PRIME_NETTE => "La part de la prime destinée à couvrir le risque pur.",
+                        Chargement::FONCTION_FRONTING => "Frais liés aux opérations de fronting.",
+                        Chargement::FONCTION_FRAIS_ADMIN => "Frais de gestion, accessoires ou de police.",
+                        Chargement::FONCTION_TAXE => "Taxes applicables (TVA, ARCA, etc.).",
+                        default => ""
+                    };
+                    return '<div><strong>' . $key . '</strong><div class="text-muted small">' . $desc . '</div></div>';
+                },
             ])
         ;
     }
