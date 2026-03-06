@@ -48,8 +48,9 @@ class PaiementFormCanvasProvider implements FormCanvasProviderInterface
     {
         $paiementId = $object->getId() ?? 0;
         $layout = [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["montant"]], ["champs" => ["paidAt"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["reference"]], ["champs" => ["CompteBancaire"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["reference"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["montant"], "width" => 6], ["champs" => ["paidAt"], "width" => 6]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["CompteBancaire"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
         ];
 
