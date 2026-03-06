@@ -26,11 +26,7 @@ class TrancheEntityCanvasProvider implements EntityCanvasProviderInterface
                 "description" => "Tranche de Paiement",
                 "icone" => "tranche",
                 'background_image' => '/images/fitures/default.jpg',
-                'description_template' => [
-                    "Tranche [[*nom]] pour la cotation [[cotation]].",
-                    " Montant: [[montantFlat]] ou [[pourcentage]]%.",
-                    " Payable le [[payableAt]]."
-                ]
+                'description_template' => ["Tranche [[*nom]] pour la cotation [[cotation]].", " Taux: [[tauxTranche]]%. Échéance le [[echeanceAt|date('d/m/Y')]]."]
             ],
             "liste" => array_merge([
                 ["code" => "id", "intitule" => "ID", "type" => "Entier"],
@@ -56,9 +52,9 @@ class TrancheEntityCanvasProvider implements EntityCanvasProviderInterface
             ["group" => "Contexte Affaire", "code" => "risqueDescription", "intitule" => "Risque", "type" => "Calcul", "format" => "Texte", "description" => "Description de la couverture d'assurance."],
             
             // NOUVEAU : Indicateurs financiers basés sur le taux de la tranche
-            ["group" => "Prime brutte", "code" => "primeTranche", "intitule" => "Prime Tranche", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Part de la prime totale payable pour cette tranche."],
-            ["group" => "Prime brutte", "code" => "primePayee", "intitule" => "Prime Payée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant de la prime déjà réglé pour cette tranche."],
-            ["group" => "Prime brutte", "code" => "primeSoldeDue", "intitule" => "Prime Solde Dû", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant de la prime restant à payer pour cette tranche."],
+            ["group" => "Prime Brute", "code" => "primeTranche", "intitule" => "Prime Tranche", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Part de la prime totale payable pour cette tranche."],
+            ["group" => "Prime Brute", "code" => "primePayee", "intitule" => "Prime Payée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant de la prime déjà réglé pour cette tranche."],
+            ["group" => "Prime Brute", "code" => "primeSoldeDue", "intitule" => "Prime Solde Dû", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant de la prime restant à payer pour cette tranche."],
             ["group" => "Revenu Brut", "code" => "tauxTranche", "intitule" => "Taux Appliqué", "type" => "Calcul", "format" => "Pourcentage", "description" => "Le pourcentage de la prime totale représenté par cette tranche."],
             ["group" => "Revenu Brut", "code" => "montantCalculeHT", "intitule" => "Montant HT", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Part de la commission HT correspondant à cette tranche."],
             ["group" => "Revenu Brut", "code" => "montantCalculeTTC", "intitule" => "Montant TTC", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Part de la commission TTC correspondant à cette tranche."],
