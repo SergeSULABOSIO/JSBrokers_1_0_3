@@ -54,6 +54,19 @@ class RevenuPourCourtier
     #[Groups(['list:read'])]
     public ?float $montantCalculeHT = null;
 
+    // NOUVEAU : Attributs calculés pour l'affichage contextuel
+    #[Groups(['list:read'])]
+    public ?string $nomCompletAvecStatut = null;
+
+    #[Groups(['list:read'])]
+    public ?string $referencePolice = null;
+
+    #[Groups(['list:read'])]
+    public ?string $clientNom = null;
+
+    #[Groups(['list:read'])]
+    public ?string $typeRevenuNom = null;
+
     #[Groups(['list:read'])]
     public ?float $montantCalculeTTC = null;
 

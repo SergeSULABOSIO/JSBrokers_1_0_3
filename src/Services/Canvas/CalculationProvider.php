@@ -751,9 +751,20 @@ class CalculationProvider
                 break;
             case RevenuPourCourtier::class:
                 /** @var RevenuPourCourtier $entity */
+                $cotation = $entity->getCotation();
+                $clientNom = $cotation?->getPiste()?->getClient()?->getNom() ?? 'N/A';
+                $refPolice = $cotation ? $this->getCotationReferencePolice($cotation) : 'N/A';
+                $nomComplet = sprintf("Revenu '%s' sur Police #%s", $entity->getNom(), $refPolice);
+
                 $indicateurs = [
+                    // NOUVEAU : Indicateurs contextuels
+                    'nomCompletAvecStatut' => $nomComplet,
+                    'referencePolice' => $refPolice,
+                    'clientNom' => $clientNom,
+                    'typeRevenuNom' => $entity->getTypeRevenu()?->getNom() ?? 'N/A',
                     'clientDescription' => $this->getClientDescriptionFromCotation($entity->getCotation()),
                     'risqueDescription' => $this->getRisqueDescriptionFromCotation($entity->getCotation()),
+                    // Indicateurs financiers existants
                     'montantCalculeHT' => round($this->getRevenuMontantHt($entity), 2),
                     'montantCalculeTTC' => round($this->getRevenuPourCourtierMontantTTC($entity), 2),
                     'descriptionCalcul' => $this->getRevenuPourCourtierDescriptionCalcul($entity),

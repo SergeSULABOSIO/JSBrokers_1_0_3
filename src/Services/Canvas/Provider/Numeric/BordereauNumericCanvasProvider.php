@@ -6,8 +6,6 @@ use App\Entity\Bordereau;
 
 class BordereauNumericCanvasProvider implements NumericCanvasProviderInterface
 {
-    use CalculatedIndicatorsNumericProviderTrait;
-
     public function supports(string $entityClassName): bool
     {
         return $entityClassName === Bordereau::class;
@@ -16,6 +14,11 @@ class BordereauNumericCanvasProvider implements NumericCanvasProviderInterface
     public function getCanvas(object $object): array
     {
         /** @var Bordereau $object */
-        return $this->getCalculatedIndicatorsNumericAttributes($object);
+        return [
+            "montantTTC" => [
+                "description" => "Montant TTC",
+                "value" => ($object->getMontantTTC() ?? 0) * 100,
+            ],
+        ];
     }
 }

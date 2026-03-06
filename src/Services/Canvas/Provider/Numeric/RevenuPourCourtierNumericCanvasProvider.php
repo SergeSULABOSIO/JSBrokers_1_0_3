@@ -16,18 +16,6 @@ class RevenuPourCourtierNumericCanvasProvider implements NumericCanvasProviderIn
     public function getCanvas(object $object): array
     {
         /** @var RevenuPourCourtier $object */
-        $attributes = [
-            "montantFlatExceptionel" => [
-                "description" => "Montant Flat",
-                "value" => ($object->getMontantFlatExceptionel() ?? 0) * 100,
-            ],
-            "tauxExceptionel" => [
-                "description" => "Taux",
-                "value" => $object->getTauxExceptionel() ?? 0,
-                "unit" => "%",
-            ],
-        ];
-
-        return array_merge($attributes, $this->getCalculatedIndicatorsNumericAttributes($object));
+        return $this->getCalculatedIndicatorsNumericAttributes($object);
     }
 }
