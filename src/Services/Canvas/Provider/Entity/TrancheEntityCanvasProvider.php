@@ -5,14 +5,12 @@ namespace App\Services\Canvas\Provider\Entity;
 use App\Entity\Article;
 use App\Entity\Cotation;
 use App\Entity\Tranche;
-use App\Services\Canvas\CanvasHelper;
 use App\Services\ServiceMonnaies;
 
 class TrancheEntityCanvasProvider implements EntityCanvasProviderInterface
 {
     public function __construct(
-        private ServiceMonnaies $serviceMonnaies,
-        private CanvasHelper $canvasHelper
+        private ServiceMonnaies $serviceMonnaies
     ) {
     }
 
