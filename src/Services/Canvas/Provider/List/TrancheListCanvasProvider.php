@@ -21,7 +21,7 @@ class TrancheListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Tranches",
-                "texte_principal" => ["attribut_code" => "nomCompletAvecStatut", "icone" => "mdi:chart-pie"],
+                "texte_principal" => ["attribut_code" => "nomCompletAvecStatut", "icone" => "tranche"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Échéance: ", "attribut_code" => "echeanceAt", "attribut_type" => "date"],
