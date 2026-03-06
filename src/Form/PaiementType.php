@@ -3,21 +3,15 @@
 namespace App\Form;
 
 use App\Constantes\Constante;
-use App\Entity\CompteBancaire;
 use App\Entity\Paiement;
-use App\Entity\FactureCommission;
 use App\Services\FormListenerFactory;
-use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
-use App\Entity\OffreIndemnisationSinistre;
 use App\Services\ServiceMonnaies;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\MoneyType;
-use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
@@ -60,11 +54,9 @@ class PaiementType extends AbstractType
                 'label' => "Date de paiement",
                 'widget' => 'single_text',
             ])
-            ->add('CompteBancaire', EntityType::class, [
+            ->add('CompteBancaire', CompteBancaireAutocompleteField::class, [
                 'label' => "Compte bancaire",
                 'required' => true,
-                'class' => CompteBancaire::class,
-                'choice_label' => 'nom',
             ])
             ->add('preuves', CollectionType::class, [
                 'label' => 'Preuves de paiement',

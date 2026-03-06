@@ -16,11 +16,6 @@ class PaiementNumericCanvasProvider implements NumericCanvasProviderInterface
     public function getCanvas(object $object): array
     {
         /** @var Paiement $object */
-        return array_merge([
-            "montant" => [
-                "description" => "Montant",
-                "value" => ($object->getMontant() ?? 0) * 100,
-            ],
-        ], $this->getCalculatedIndicatorsNumericAttributes($object));
+        return $this->getCalculatedIndicatorsNumericAttributes($object);
     }
 }

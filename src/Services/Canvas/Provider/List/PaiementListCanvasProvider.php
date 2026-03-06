@@ -21,9 +21,11 @@ class PaiementListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Paiements",
-                "texte_principal" => ["attribut_code" => "reference", "icone" => "mdi:cash-multiple"],
+                "texte_principal" => ["attribut_code" => "nomCompletAvecStatut", "icone" => "paiement"],
+                "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
-                    ["attribut_code" => "description", "attribut_taille_max" => 50],
+                    ["attribut_prefixe" => "Date: ", "attribut_code" => "paidAt", "attribut_type" => "date"],
+                    ["attribut_prefixe" => "Contexte: ", "attribut_code" => "contexte"],
                 ],
             ],
             "colonnes_numeriques" => [
