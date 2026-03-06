@@ -72,6 +72,9 @@ class Tranche
     #[Groups(['list:read'])]
     public ?string $cotationNom = null;
 
+    #[Groups(['list:read'])]
+    public ?string $nomCompletAvecStatut = null;
+
     // NOUVEAU : Attributs liés à la police
     #[Groups(['list:read'])]
     public ?string $referencePolice = null;
