@@ -189,7 +189,11 @@ class CalculationProvider
             case Tranche::class:
                 /** @var Tranche $entity */
                 $cotation = $entity->getCotation(); // NOUVEAU : Récupérer la cotation parente pour réutiliser sa logique.
+                
+                $isBound = $cotation && $this->isCotationBound($cotation);
+                $statutSuffix = $isBound ? '(Police)' : '(Projet)';
                 $indicateurs = [
+                    'nomCompletAvecStatut' => $entity->getNom() . ' ' . $statutSuffix,
                     'clientDescription' => $this->getClientDescriptionFromCotation($cotation),
                     'risqueDescription' => $this->getRisqueDescriptionFromCotation($cotation),
                     'ageTranche' => $this->calculateTrancheAge($entity),
