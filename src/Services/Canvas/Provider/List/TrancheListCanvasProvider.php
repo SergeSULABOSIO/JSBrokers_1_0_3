@@ -25,8 +25,8 @@ class TrancheListCanvasProvider implements ListCanvasProviderInterface
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Échéance: ", "attribut_code" => "echeanceAt", "attribut_type" => "date"],
-                    ["attribut_prefixe" => "Cotation: ", "attribut_code" => "cotationNom"],
-                    ["attribut_prefixe" => "Client: ", "attribut_code" => "clientNom"],
+                    ["attribut_code" => "cotationNom"],
+                    ["attribut_code" => "clientNom"],
                 ],
             ],
             "colonnes_numeriques" => [
