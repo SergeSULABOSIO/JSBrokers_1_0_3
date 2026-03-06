@@ -15,7 +15,6 @@
 namespace App\Controller\Admin;
 
 use DateTimeImmutable;
-use App\Entity\Document;
 use App\Entity\Paiement;
 use App\Form\PaiementType;
 use App\Constantes\Constante;
@@ -26,9 +25,9 @@ use App\Repository\ClasseurRepository;
 use App\Repository\PaiementRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Services\Canvas\CalculationProvider;
 use App\Services\JSBDynamicSearchService;
 use App\Services\CanvasBuilder;
-use App\Entity\OffreIndemnisationSinistre;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use App\Controller\Admin\ControllerUtilsTrait;
@@ -62,6 +61,7 @@ class PaiementController extends AbstractController
         private Constante $constante,
         private JSBDynamicSearchService $searchService, // Ajoutez cette ligne
         private SerializerInterface $serializer, // Ajout de SerializerInterface
+        private CalculationProvider $calculationProvider,
         CanvasBuilder $canvasBuilder // Inject CanvasBuilder without property promotion
     ) {
         // Assign the injected CanvasBuilder to the property declared in the trait

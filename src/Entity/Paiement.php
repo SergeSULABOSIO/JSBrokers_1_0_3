@@ -58,6 +58,21 @@ class Paiement
     #[ORM\ManyToOne(inversedBy: 'paiements')]
     private ?CompteBancaire $CompteBancaire = null;
 
+    // NOUVEAU : Attributs calculés pour l'affichage (hydratés par CalculationProvider)
+    #[Groups(['list:read'])]
+    public ?string $nomCompletAvecStatut = null;
+
+    #[Groups(['list:read'])]
+    public ?string $typePaiement = null;
+
+    #[Groups(['list:read'])]
+    public ?string $referencePolice = null;
+
+    #[Groups(['list:read'])]
+    public ?string $clientNom = null;
+
+    #[Groups(['list:read'])]
+    public ?string $contexte = null;
 
     public function __construct()
     {
