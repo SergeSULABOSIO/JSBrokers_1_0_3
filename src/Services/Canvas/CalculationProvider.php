@@ -188,15 +188,20 @@ class CalculationProvider
                 break;
             case Tranche::class:
                 /** @var Tranche $entity */
+                $cotation = $entity->getCotation(); // NOUVEAU : Récupérer la cotation parente pour réutiliser sa logique.
                 $indicateurs = [
-                    'clientDescription' => $this->getClientDescriptionFromCotation($entity->getCotation()),
-                    'risqueDescription' => $this->getRisqueDescriptionFromCotation($entity->getCotation()),
+                    'clientDescription' => $this->getClientDescriptionFromCotation($cotation),
+                    'risqueDescription' => $this->getRisqueDescriptionFromCotation($cotation),
                     'ageTranche' => $this->calculateTrancheAge($entity),
                     'joursRestantsAvantEcheance' => $this->calculateTrancheJoursRestants($entity),
                     'contexteParent' => $this->getTrancheContexteParent($entity),
                     'pourcentageAffiche' => $this->getTrancheTauxDisplay($entity),
                     'clientNom' => $entity->getCotation()?->getPiste()?->getClient()?->getNom() ?? 'N/A',
                     'cotationNom' => $entity->getCotation()?->getNom() ?? 'N/A',
+                    // NOUVEAU : Attributs liés à la police via la cotation parente.
+                    'referencePolice' => $cotation ? $this->getCotationReferencePolice($cotation) : 'N/A',
+                    'periodeCouverture' => $cotation ? $this->getCotationPeriodeCouverture($cotation) : 'N/A',
+                    'assureurNom' => $cotation?->getAssureur()?->getNom() ?? 'N/A',
                     // NOUVEAU : Indicateurs financiers
                     'primeTranche' => round($this->getTranchePrime($entity), 2),
                     'primePayee' => round($this->getTranchePrimePayee($entity), 2),

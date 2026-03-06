@@ -48,6 +48,11 @@ class TrancheEntityCanvasProvider implements EntityCanvasProviderInterface
             ["code" => "ageTranche", "intitule" => "Âge", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours depuis la création de la tranche."],
             ["code" => "joursRestantsAvantEcheance", "intitule" => "Jours Restants", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours restants avant la date d'échéance."],
             ["code" => "contexteParent", "intitule" => "Contexte Parent", "type" => "Calcul", "format" => "Texte", "description" => "Contexte de la cotation parente."],
+            
+            ["group" => "Détails Police", "code" => "referencePolice", "intitule" => "Réf. Police", "type" => "Calcul", "format" => "Texte", "description" => "Référence de la police associée (si la cotation est souscrite)."],
+            ["group" => "Détails Police", "code" => "periodeCouverture", "intitule" => "Période de Couverture", "type" => "Calcul", "format" => "Texte", "description" => "Période de couverture de la police (Date d'effet - Date d'échéance)."],
+            ["group" => "Détails Police", "code" => "assureurNom", "intitule" => "Assureur", "type" => "Calcul", "format" => "Texte", "description" => "Nom de la compagnie d'assurance."],
+
             ["group" => "Contexte Affaire", "code" => "clientDescription", "intitule" => "Client", "type" => "Calcul", "format" => "Texte", "description" => "Détails descriptifs du client."],
             ["group" => "Contexte Affaire", "code" => "risqueDescription", "intitule" => "Risque", "type" => "Calcul", "format" => "Texte", "description" => "Description de la couverture d'assurance."],
             

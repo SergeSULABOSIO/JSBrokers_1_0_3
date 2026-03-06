@@ -72,6 +72,16 @@ class Tranche
     #[Groups(['list:read'])]
     public ?string $cotationNom = null;
 
+    // NOUVEAU : Attributs liés à la police
+    #[Groups(['list:read'])]
+    public ?string $referencePolice = null;
+
+    #[Groups(['list:read'])]
+    public ?string $periodeCouverture = null;
+
+    #[Groups(['list:read'])]
+    public ?string $assureurNom = null;
+
     // NOUVEAU : Attributs calculés spécifiques (Miroir de RevenuPourCourtier + Taux Tranche)
     #[Groups(['list:read'])]
     public ?float $tauxTranche = null;

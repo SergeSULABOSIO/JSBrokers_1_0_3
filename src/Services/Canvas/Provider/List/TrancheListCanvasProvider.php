@@ -31,9 +31,9 @@ class TrancheListCanvasProvider implements ListCanvasProviderInterface
             ],
             "colonnes_numeriques" => [
                 [
-                    "titre_colonne" => "Montant",
+                    "titre_colonne" => "Prime Tranche",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    "attribut_code" => "montantFlat",
+                    "attribut_code" => "primeTranche",
                     "attribut_type" => "nombre",
                 ],
                 ["titre_colonne" => "Pourcentage", "attribut_unité" => "%", "attribut_code" => "pourcentageAffiche", "attribut_type" => "nombre"],
