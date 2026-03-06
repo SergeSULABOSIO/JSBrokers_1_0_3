@@ -192,8 +192,17 @@ class CalculationProvider
                 
                 $isBound = $cotation && $this->isCotationBound($cotation);
                 $statutSuffix = $isBound ? '(Police)' : '(Projet)';
+                
+                $nomComplet = $entity->getNom() . ' ' . $statutSuffix;
+                if ($isBound) {
+                    $refPolice = $this->getCotationReferencePolice($cotation);
+                    if ($refPolice && $refPolice !== 'Nulle') {
+                        $nomComplet .= ' #' . $refPolice;
+                    }
+                }
+
                 $indicateurs = [
-                    'nomCompletAvecStatut' => $entity->getNom() . ' ' . $statutSuffix,
+                    'nomCompletAvecStatut' => $nomComplet,
                     'clientDescription' => $this->getClientDescriptionFromCotation($cotation),
                     'risqueDescription' => $this->getRisqueDescriptionFromCotation($cotation),
                     'ageTranche' => $this->calculateTrancheAge($entity),
