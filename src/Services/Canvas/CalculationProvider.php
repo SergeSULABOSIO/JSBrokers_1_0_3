@@ -5,11 +5,12 @@ namespace App\Services\Canvas;
 
 use App\Entity\Assureur;
 use App\Entity\Avenant;
+use App\Entity\Bordereau;
 use App\Entity\Chargement;
 use App\Entity\ChargementPourPrime;
 use App\Entity\Classeur;
-use App\Entity\CompteBancaire;
 use App\Entity\Client;
+use App\Entity\CompteBancaire;
 use App\Entity\ConditionPartage;
 use App\Entity\Contact;
 use App\Entity\Cotation;
@@ -631,6 +632,16 @@ class CalculationProvider
                     'montantTotalApplique' => round($montantTotal, 2),
                     'nombreUtilisations' => $nombreUtilisations,
                     'poidsMoyenSurPrime' => round($poidsMoyen, 2),
+                ];
+                break;
+            case Bordereau::class:
+                /** @var Bordereau $entity */
+                $indicateurs = [
+                    'typeString' => $this->getBordereauTypeString($entity),
+                    'ageBordereau' => $this->calculateBordereauAge($entity),
+                    'delaiSoumission' => $this->calculateBordereauDelaiSoumission($entity),
+                    'nombreDocuments' => $entity->getDocuments()->count(),
+                    'assureurNom' => $entity->getAssureur()?->getNom() ?? 'N/A',
                 ];
                 break;
             case Contact::class:
@@ -2485,6 +2496,32 @@ class CalculationProvider
             return 'N/A';
         }
         $jours = $this->serviceDates->daysEntre($cotation->getCreatedAt(), new DateTimeImmutable()) ?? 0;
+        return $jours . ' jour(s)';
+    }
+
+    private function getBordereauTypeString(Bordereau $bordereau): string
+    {
+        return match ($bordereau->getType()) {
+            Bordereau::TYPE_BOREDERAU_PRODUCTION => 'Bordereau de production',
+            default => 'Type inconnu',
+        };
+    }
+
+    private function calculateBordereauAge(Bordereau $bordereau): string
+    {
+        if (!$bordereau->getReceivedAt()) {
+            return 'N/A';
+        }
+        $jours = $this->serviceDates->daysEntre($bordereau->getReceivedAt(), new \DateTimeImmutable()) ?? 0;
+        return $jours . ' jour(s)';
+    }
+
+    private function calculateBordereauDelaiSoumission(Bordereau $bordereau): string
+    {
+        if (!$bordereau->getCreatedAt() || !$bordereau->getReceivedAt()) {
+            return 'N/A';
+        }
+        $jours = $this->serviceDates->daysEntre($bordereau->getCreatedAt(), $bordereau->getReceivedAt()) ?? 0;
         return $jours . ' jour(s)';
     }
 

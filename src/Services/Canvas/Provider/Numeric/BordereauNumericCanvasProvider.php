@@ -16,11 +16,6 @@ class BordereauNumericCanvasProvider implements NumericCanvasProviderInterface
     public function getCanvas(object $object): array
     {
         /** @var Bordereau $object */
-        return array_merge([
-            "montantTTC" => [
-                "description" => "Montant TTC",
-                "value" => ($object->getMontantTTC() ?? 0) * 100,
-            ],
-        ], $this->getCalculatedIndicatorsNumericAttributes($object));
+        return $this->getCalculatedIndicatorsNumericAttributes($object);
     }
 }

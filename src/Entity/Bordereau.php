@@ -55,7 +55,19 @@ class Bordereau implements OwnerAwareInterface
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'bordereau', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $documents;
-
+ 
+    // NOUVEAU : Attributs calculés pour l'affichage et l'analyse
+    #[Groups(['list:read'])]
+    public ?string $typeString = null;
+ 
+    #[Groups(['list:read'])]
+    public ?string $ageBordereau = null;
+ 
+    #[Groups(['list:read'])]
+    public ?string $delaiSoumission = null;
+ 
+    #[Groups(['list:read'])]
+    public ?int $nombreDocuments = null;
    
 
     public function __construct()
