@@ -60,7 +60,6 @@ class TrancheType extends AbstractType
                 'label' => "Pourcentage",
                 'required' => false,
                 'scale' => 2,
-                'type' => 'integer',
                 'html5' => true,
                 'attr' => [
                     'placeholder' => "Portion",

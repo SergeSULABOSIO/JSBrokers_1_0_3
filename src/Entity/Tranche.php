@@ -14,30 +14,38 @@ class Tranche
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['list:read'])]
     private ?string $nom = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
     private ?float $montantFlat = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
     private ?float $pourcentage = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $payableAt = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\Column]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'tranches')]
     private ?Cotation $cotation = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $echeanceAt = null;
 
     /**
