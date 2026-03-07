@@ -1,16 +1,46 @@
 <?php
 namespace App\Controller\Admin;
 
-use App\Entity\Invite;
+use App\Entity\Assureur;
+use App\Entity\AutoriteFiscale;
+use App\Entity\Avenant;
+use App\Entity\Bordereau;
+use App\Entity\Chargement;
+use App\Entity\ChargementPourPrime;
+use App\Entity\Classeur;
+use App\Entity\Client;
+use App\Entity\CompteBancaire;
+use App\Entity\ConditionPartage;
+use App\Entity\Contact;
+use App\Entity\Cotation;
+use App\Entity\Document;
 use App\Entity\Entreprise;
+use App\Entity\Feedback;
+use App\Entity\Groupe;
+use App\Entity\Invite;
+use App\Entity\ModelePieceSinistre;
+use App\Entity\Monnaie;
+use App\Entity\Note;
+use App\Entity\NotificationSinistre;
+use App\Entity\OffreIndemnisationSinistre;
+use App\Entity\Paiement;
+use App\Entity\Partenaire;
+use App\Entity\PieceSinistre;
+use App\Entity\Piste;
+use App\Entity\RevenuPourCourtier;
+use App\Entity\Risque;
+use App\Entity\Tache;
+use App\Entity\Taxe;
+use App\Entity\Tranche;
+use App\Entity\TypeRevenu;
 use App\Entity\Utilisateur;
 use App\Services\CanvasBuilder;
-use Doctrine\ORM\Mapping\ClassMetadata;
-use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Mapping\ClassMetadata;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
@@ -698,49 +728,49 @@ trait ControllerUtilsTrait
             '_tableau_de_bord_component.html.twig' => 'App\Controller\Admin\EntrepriseDashbordController::index',
             // FINANCES
             '_view_manager.html.twig' => [
-                \App\Entity\Monnaie::class => 'App\Controller\Admin\MonnaieController::index',
-                \App\Entity\CompteBancaire::class => 'App\Controller\Admin\CompteBancaireController::index',
-                \App\Entity\AutoriteFiscale::class => 'App\Controller\Admin\AutoriteFiscaleController::index',
-                \App\Entity\Taxe::class => 'App\Controller\Admin\TaxeController::index',
-                \App\Entity\TypeRevenu::class => 'App\Controller\Admin\TypeRevenuController::index',
-                \App\Entity\Tranche::class => 'App\Controller\Admin\TrancheController::index',
-                \App\Entity\Chargement::class => 'App\Controller\Admin\ChargementController::index',
-                \App\Entity\ChargementPourPrime::class => 'App\Controller\Admin\ChargementPourPrimeController::index',
-                \App\Entity\Note::class => 'App\Controller\Admin\NoteController::index',
-                \App\Entity\Paiement::class => 'App\Controller\Admin\PaiementController::index',
-                \App\Entity\Bordereau::class => 'App\Controller\Admin\BordereauController::index',
-                \App\Entity\RevenuPourCourtier::class => 'App\Controller\Admin\RevenuPourCourtierController::index',
+                Monnaie::class => 'App\Controller\Admin\MonnaieController::index',
+                CompteBancaire::class => 'App\Controller\Admin\CompteBancaireController::index',
+                AutoriteFiscale::class => 'App\Controller\Admin\AutoriteFiscaleController::index',
+                Taxe::class => 'App\Controller\Admin\TaxeController::index',
+                TypeRevenu::class => 'App\Controller\Admin\TypeRevenuController::index',
+                Tranche::class => 'App\Controller\Admin\TrancheController::index',
+                Chargement::class => 'App\Controller\Admin\ChargementController::index',
+                ChargementPourPrime::class => 'App\Controller\Admin\ChargementPourPrimeController::index',
+                Note::class => 'App\Controller\Admin\NoteController::index',
+                Paiement::class => 'App\Controller\Admin\PaiementController::index',
+                Bordereau::class => 'App\Controller\Admin\BordereauController::index',
+                RevenuPourCourtier::class => 'App\Controller\Admin\RevenuPourCourtierController::index',
             ],
             // MARKETING
             '_view_manager_marketing.html.twig' => [
-                \App\Entity\Piste::class => 'App\Controller\Admin\PisteController::index',
-                \App\Entity\Tache::class => 'App\Controller\Admin\TacheController::index',
-                \App\Entity\Feedback::class => 'App\Controller\Admin\FeedbackController::index',
+                Piste::class => 'App\Controller\Admin\PisteController::index',
+                Tache::class => 'App\Controller\Admin\TacheController::index',
+                Feedback::class => 'App\Controller\Admin\FeedbackController::index',
             ],
             // PRODUCTION
             '_view_manager_production.html.twig' => [
-                \App\Entity\Groupe::class => 'App\Controller\Admin\GroupeController::index',
-                \App\Entity\Client::class => 'App\Controller\Admin\ClientController::index',
-                \App\Entity\Assureur::class => 'App\Controller\Admin\AssureurController::index',
-                \App\Entity\Contact::class => 'App\Controller\Admin\ContactController::index',
-                \App\Entity\Risque::class => 'App\Controller\Admin\RisqueController::index',
-                \App\Entity\Avenant::class => 'App\Controller\Admin\AvenantController::index',
-                \App\Entity\ConditionPartage::class => 'App\Controller\Admin\ConditionPartageController::index',
-                \App\Entity\Partenaire::class => 'App\Controller\Admin\PartenaireController::index',
-                \App\Entity\Cotation::class => 'App\Controller\Admin\CotationController::index',
+                Groupe::class => 'App\Controller\Admin\GroupeController::index',
+                Client::class => 'App\Controller\Admin\ClientController::index',
+                Assureur::class => 'App\Controller\Admin\AssureurController::index',
+                Contact::class => 'App\Controller\Admin\ContactController::index',
+                Risque::class => 'App\Controller\Admin\RisqueController::index',
+                Avenant::class => 'App\Controller\Admin\AvenantController::index',
+                ConditionPartage::class => 'App\Controller\Admin\ConditionPartageController::index',
+                Partenaire::class => 'App\Controller\Admin\PartenaireController::index',
+                Cotation::class => 'App\Controller\Admin\CotationController::index',
             ],
             // SINISTRE
             '_view_manager_sinistre.html.twig' => [
-                \App\Entity\ModelePieceSinistre::class => 'App\Controller\Admin\ModelePieceSinistreController::index',
-                \App\Entity\PieceSinistre::class => 'App\Controller\Admin\PieceSinistreController::index',
-                \App\Entity\NotificationSinistre::class => 'App\Controller\Admin\NotificationSinistreController::index',
-                \App\Entity\OffreIndemnisationSinistre::class => 'App\Controller\Admin\OffreIndemnisationSinistreController::index',
+                ModelePieceSinistre::class => 'App\Controller\Admin\ModelePieceSinistreController::index',
+                PieceSinistre::class => 'App\Controller\Admin\PieceSinistreController::index',
+                NotificationSinistre::class => 'App\Controller\Admin\NotificationSinistreController::index',
+                OffreIndemnisationSinistre::class => 'App\Controller\Admin\OffreIndemnisationSinistreController::index',
             ],
             // ADMINISTRATION
             '_view_manager_administration.html.twig' => [
-                \App\Entity\Document::class => 'App\Controller\Admin\DocumentController::index',
-                \App\Entity\Classeur::class => 'App\Controller\Admin\ClasseurController::index',
-                \App\Entity\Invite::class => 'App\Controller\Admin\InviteController::index',
+                Document::class => 'App\Controller\Admin\DocumentController::index',
+                Classeur::class => 'App\Controller\Admin\ClasseurController::index',
+                Invite::class => 'App\Controller\Admin\InviteController::index',
           ],
             //PARAMETRES
             '_mon_compte_component.html.twig' => 'App\Controller\RegistrationController::register',
