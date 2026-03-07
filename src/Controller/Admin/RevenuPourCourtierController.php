@@ -24,9 +24,9 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
-#[Route("/admin/revenucourtier", name: 'admin.revenucourtier.')]
+#[Route("/admin/revenupourcourtier", name: 'admin.revenupourcourtier.')]
 #[IsGranted('ROLE_USER')]
-class RevenuCourtierController extends AbstractController
+class RevenuPourCourtierController extends AbstractController
 {
     use HandleChildAssociationTrait;
     use ControllerUtilsTrait;
