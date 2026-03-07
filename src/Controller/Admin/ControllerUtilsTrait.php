@@ -709,7 +709,7 @@ trait ControllerUtilsTrait
                 \App\Entity\Note::class => 'App\Controller\Admin\NoteController::index',
                 \App\Entity\Paiement::class => 'App\Controller\Admin\PaiementController::index',
                 \App\Entity\Bordereau::class => 'App\Controller\Admin\BordereauController::index',
-                \App\Entity\RevenuPourCourtier::class => 'App\Controller\Admin\RevenuCourtierController::index',
+                \App\Entity\RevenuPourCourtier::class => 'App\Controller\Admin\RevenuPourCourtierController::index',
             ],
             // MARKETING
             '_view_manager_marketing.html.twig' => [
