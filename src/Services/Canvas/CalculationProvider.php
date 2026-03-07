@@ -754,7 +754,7 @@ class CalculationProvider
                 $cotation = $entity->getCotation();
                 $clientNom = $cotation?->getPiste()?->getClient()?->getNom() ?? 'N/A';
                 $refPolice = $cotation ? $this->getCotationReferencePolice($cotation) : 'N/A';
-                $nomComplet = sprintf("Revenu '%s' sur Police #%s", $entity->getNom(), $refPolice);
+                $nomComplet = sprintf("%s sur Police #%s", $entity->getNom(), $refPolice);
 
                 $indicateurs = [
                     // NOUVEAU : Indicateurs contextuels
