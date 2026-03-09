@@ -60,26 +60,43 @@ class NoteType extends AbstractType
                 ],
             ])
             ->add('type', ChoiceType::class, [
-                'label' => "Type",
+                'label' => "Type de note",
                 'required' => true,
-                'expanded' => false,
+                'expanded' => true,
+                'label_html' => true,
                 'choices'  => [
                     // "Null" => Note::TYPE_NULL,
                     "Débit" => Note::TYPE_NOTE_DE_DEBIT,
                     "Crédit" => Note::TYPE_NOTE_DE_CREDIT,
-                ]
+                ],
+                'choice_label' => function ($choice, $key, $value) {
+                    if ($value === Note::TYPE_NOTE_DE_DEBIT) {
+                        return '<div><strong>' . $key . '</strong><div class="text-muted small">Une facture envoyée pour réclamer un paiement (ex: commission, frais).</div></div>';
+                    }
+                    return '<div><strong>' . $key . '</strong><div class="text-muted small">Un avoir envoyé pour annuler ou rembourser une facture précédente.</div></div>';
+                },
             ])
             ->add('addressedTo', ChoiceType::class, [
-                'label' => "Destination",
+                'label' => "À qui s'adresse cette note ?",
                 'required' => true,
-                'expanded' => false,
+                'expanded' => true,
+                'label_html' => true,
                 'choices'  => [
                     // "Null" => Note::TO_NULL,
                     "Le client" => Note::TO_CLIENT,
                     "L'assureur" => Note::TO_ASSUREUR,
                     "L'intermédiaire" => Note::TO_PARTENAIRE,
                     "L'autorité fiscale" => Note::TO_AUTORITE_FISCALE,
-                ]
+                ],
+                'choice_label' => function ($choice, $key, $value) {
+                    $descriptions = [
+                        Note::TO_CLIENT => "Pour facturer une prime, des frais ou un service directement au client.",
+                        Note::TO_ASSUREUR => "Pour réclamer une commission ou d'autres frais à la compagnie d'assurance.",
+                        Note::TO_PARTENAIRE => "Pour payer une rétro-commission ou facturer des frais à un partenaire.",
+                        Note::TO_AUTORITE_FISCALE => "Pour déclarer et payer des taxes collectées (ex: TVA, taxe ARCA)."
+                    ];
+                    return '<div><strong>' . $key . '</strong><div class="text-muted small">' . ($descriptions[$value] ?? '') . '</div></div>';
+                },
             ])
             ->add('signedBy', TextType::class, [
                 'label' => "Signataire",

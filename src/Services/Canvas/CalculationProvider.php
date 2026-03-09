@@ -4288,16 +4288,16 @@ class CalculationProvider
         $montantDu = $this->getNoteMontantPayable($note);
         $montantPaye = $this->getNoteMontantPaye($note);
 
-        if ($montantDu == 0) {
-            return $this->translator->trans('payment_status_not_applicable', [], 'messages');
+        if ($montantDu == 0 && $montantPaye == 0) {
+            return 'N/A';
         }
         if ($montantPaye >= $montantDu) {
-            return $this->translator->trans('payment_status_paid', [], 'messages');
+            return 'Payée';
         }
         if ($montantPaye > 0 && $montantPaye < $montantDu) {
-            return $this->translator->trans('payment_status_partial', [], 'messages');
+            return 'Partiel';
         }
-        return $this->translator->trans('payment_status_unpaid', [], 'messages');
+        return 'Impayée';
     }
 
     /**
