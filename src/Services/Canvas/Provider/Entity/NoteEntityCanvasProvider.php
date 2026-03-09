@@ -11,14 +11,12 @@ use App\Entity\Invite;
 use App\Entity\Note;
 use App\Entity\Paiement;
 use App\Entity\Partenaire;
-use App\Services\Canvas\CanvasHelper;
 use App\Services\ServiceMonnaies;
 
 class NoteEntityCanvasProvider implements EntityCanvasProviderInterface
 {
     public function __construct(
-        private ServiceMonnaies $serviceMonnaies,
-        private CanvasHelper $canvasHelper
+        private ServiceMonnaies $serviceMonnaies
     ) {
     }
 
@@ -32,12 +30,12 @@ class NoteEntityCanvasProvider implements EntityCanvasProviderInterface
         return [
             "parametres" => [
                 "description" => "Note de Débit/Crédit",
-                "icone" => "note",
+                "icone" => "note", // Alias for 'tdesign:bill-filled'
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
                     "Note [[*reference]] - [[nom]].",
                     " Type: [[typeString]], Destinataire: [[addressedToString]].",
-                    " Montant: [[montantTotal]]."
+                    " Montant: [[montantTotal]], Solde: [[solde]]."
                 ]
             ],
             "liste" => array_merge([
@@ -61,13 +59,14 @@ class NoteEntityCanvasProvider implements EntityCanvasProviderInterface
 
     private function getSpecificIndicators(): array
     {
+        $monnaie = $this->serviceMonnaies->getCodeMonnaieAffichage();
         return [
-            ["code" => "typeString", "intitule" => "Type", "type" => "Texte", "format" => "Texte", "description" => "Indique s'il s'agit d'une note de débit ou de crédit."],
-            ["code" => "addressedToString", "intitule" => "Destinataire", "type" => "Texte", "format" => "Texte", "description" => "Entité à qui la note est adressée (Client, Assureur, etc.)."],
-            ["code" => "montantTotal", "intitule" => "Montant Total", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Somme totale des articles de la note."],
-            ["code" => "montantPaye", "intitule" => "Montant Payé", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Somme totale des paiements reçus pour cette note."],
-            ["code" => "solde", "intitule" => "Solde", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant restant à payer."],
-            ["code" => "statutPaiement", "intitule" => "Statut Paiement", "type" => "Texte", "format" => "Texte", "description" => "Statut du paiement (Impayée, Partiel, Payée)."],
+            ["group" => "Détails", "code" => "typeString", "intitule" => "Type", "type" => "Calcul", "format" => "Texte", "description" => "Indique s'il s'agit d'une note de débit ou de crédit."],
+            ["group" => "Détails", "code" => "addressedToString", "intitule" => "Destinataire", "type" => "Calcul", "format" => "Texte", "description" => "Entité à qui la note est adressée (Client, Assureur, etc.)."],
+            ["group" => "Finances", "code" => "montantTotal", "intitule" => "Montant Total", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Somme totale des articles de la note."],
+            ["group" => "Finances", "code" => "montantPaye", "intitule" => "Montant Payé", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Somme totale des paiements reçus pour cette note."],
+            ["group" => "Finances", "code" => "solde", "intitule" => "Solde", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant restant à payer."],
+            ["group" => "Finances", "code" => "statutPaiement", "intitule" => "Statut Paiement", "type" => "Calcul", "format" => "Texte", "description" => "Statut du paiement (Impayée, Partiel, Payée)."],
         ];
     }
 }
