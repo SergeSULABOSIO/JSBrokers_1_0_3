@@ -4248,9 +4248,9 @@ class CalculationProvider
         if ($note === null) return null;
 
         return match ($note->getType()) {
-            Note::TYPE_NOTE_DE_DEBIT => $this->translator->trans('note_type_debit', [], 'messages'),
-            Note::TYPE_NOTE_DE_CREDIT => $this->translator->trans('note_type_credit', [], 'messages'),
-            default => $this->translator->trans('note_type_unknown', [], 'messages'),
+            Note::TYPE_NOTE_DE_DEBIT => 'Note de débit',
+            Note::TYPE_NOTE_DE_CREDIT => 'Note de crédit',
+            default => 'Inconnu',
         };
     }
 
@@ -4262,11 +4262,11 @@ class CalculationProvider
         if ($note === null) return null;
 
         return match ($note->getAddressedTo()) {
-            Note::TO_CLIENT => $this->translator->trans('addressed_to_client', [], 'messages'),
-            Note::TO_ASSUREUR => $this->translator->trans('addressed_to_insurer', [], 'messages'),
-            Note::TO_PARTENAIRE => $this->translator->trans('addressed_to_partner', [], 'messages'),
-            Note::TO_AUTORITE_FISCALE => $this->translator->trans('addressed_to_fiscal_authority', [], 'messages'),
-            default => $this->translator->trans('addressed_to_unknown', [], 'messages'),
+            Note::TO_CLIENT => 'Client',
+            Note::TO_ASSUREUR => 'Assureur',
+            Note::TO_PARTENAIRE => 'Intermédiaire',
+            Note::TO_AUTORITE_FISCALE => 'Autorité Fiscale',
+            default => 'Inconnu',
         };
     }
 
