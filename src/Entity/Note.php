@@ -103,6 +103,25 @@ class Note implements OwnerAwareInterface
     #[Groups(['list:read'])]
     private ?\DateTimeImmutable $sentAt = null;
 
+    // Attributs calculés
+    #[Groups(['list:read'])]
+    public ?string $typeString = null;
+
+    #[Groups(['list:read'])]
+    public ?string $addressedToString = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montantTotal = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montantPaye = null;
+
+    #[Groups(['list:read'])]
+    public ?float $solde = null;
+
+    #[Groups(['list:read'])]
+    public ?string $statutPaiement = null;
+
     public function __construct()
     {
         $this->articles = new ArrayCollection();

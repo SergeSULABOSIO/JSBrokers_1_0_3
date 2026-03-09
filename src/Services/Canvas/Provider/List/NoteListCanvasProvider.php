@@ -21,30 +21,31 @@ class NoteListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Notes",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:note-text"],
+                "texte_principal" => ["attribut_code" => "nom", "icone" => "note"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Réf: ", "attribut_code" => "reference"],
-                    ["attribut_prefixe" => "Statut: ", "attribut_code" => "status_string"],
+                    ["attribut_prefixe" => "Dest.: ", "attribut_code" => "addressedToString"],
+                    ["attribut_prefixe" => "Statut: ", "attribut_code" => "statutPaiement"],
                 ],
             ],
             "colonnes_numeriques" => [
                 [
-                    "titre_colonne" => "Montant Payable",
+                    "titre_colonne" => "Montant Total",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    "attribut_code" => "montant_payable",
+                    "attribut_code" => "montantTotal",
                     "attribut_type" => "nombre",
                 ],
                 [
                     "titre_colonne" => "Montant Payé",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    "attribut_code" => "montant_paye",
+                    "attribut_code" => "montantPaye",
                     "attribut_type" => "nombre",
                 ],
                 [
                     "titre_colonne" => "Solde",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    "attribut_code" => "montant_solde",
+                    "attribut_code" => "solde",
                     "attribut_type" => "nombre",
                 ],
             ],

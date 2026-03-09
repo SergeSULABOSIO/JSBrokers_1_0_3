@@ -693,17 +693,6 @@ class CalculationProvider
                     'status_string' => $this->getInviteStatusString($entity),
                 ];
                 break;
-            case Note::class:
-                /** @var Note $entity */
-                $indicateurs = [
-                    'typeString' => $this->getNoteTypeString($entity),
-                    'addressedToString' => $this->getNoteAddressedToString($entity),
-                    'montantTotal' => round($this->getNoteMontantPayable($entity), 2),
-                    'montantPaye' => round($this->getNoteMontantPaye($entity), 2),
-                    'solde' => round($this->getNoteSolde($entity), 2),
-                    'statutPaiement' => $this->getNoteStatutPaiementString($entity),
-                ];
-                break;
             case Groupe::class:
                 /** @var Groupe $entity */
                 // On récupère les stats globales filtrées pour ce groupe
@@ -822,6 +811,17 @@ class CalculationProvider
                 $indicateurs = [
                     'nombreUtilisations' => $this->countModelePieceSinistreUtilisations($entity),
                     'statutObligation' => $this->getModelePieceSinistreStatutObligationString($entity),
+                ];
+                break;
+            case Note::class:
+                /** @var Note $entity */
+                $indicateurs = [
+                    'typeString' => $this->getNoteTypeString($entity),
+                    'addressedToString' => $this->getNoteAddressedToString($entity),
+                    'montantTotal' => round($this->getNoteMontantPayable($entity), 2),
+                    'montantPaye' => round($this->getNoteMontantPaye($entity), 2),
+                    'solde' => round($this->getNoteSolde($entity), 2),
+                    'statutPaiement' => $this->getNoteStatutPaiementString($entity),
                 ];
                 break;
             case Classeur::class:
@@ -2585,6 +2585,31 @@ class CalculationProvider
         return sprintf("Piste '%s' pour le client '%s'", $pisteNom, $clientNom);
     }
 
+    private function calculatePisteAge(Piste $piste): string
+    {
+        if (!$piste->getCreatedAt()) {
+            return 'N/A';
+        }
+        $jours = $this->serviceDates->daysEntre($piste->getCreatedAt(), new DateTimeImmutable()) ?? 0;
+        return $jours . ' jour(s)';
+    }
+
+    private function getClientDescriptionFromCotation(?Cotation $cotation): string
+    {
+        if (!$cotation || !$cotation->getPiste() || !$cotation->getPiste()->getClient()) {
+            return 'N/A';
+        }
+        return $cotation->getPiste()->getClient()->getNom();
+    }
+
+    private function getRisqueDescriptionFromCotation(?Cotation $cotation): string
+    {
+        if (!$cotation || !$cotation->getPiste() || !$cotation->getPiste()->getRisque()) {
+            return 'N/A';
+        }
+        return $cotation->getPiste()->getRisque()->getNomComplet();
+    }
+
     /**
      * Calcule le contexte parent pour une tranche.
      */
@@ -4213,6 +4238,98 @@ class CalculationProvider
         return $classeur->getDocuments()->isEmpty() ? 'Oui' : 'Non';
     }
 
+    // --- Indicateurs pour Note ---
+
+    /**
+     * Retourne le type de note sous forme de chaîne.
+     */
+    public function getNoteTypeString(?Note $note): ?string
+    {
+        if ($note === null) return null;
+
+        return match ($note->getType()) {
+            Note::TYPE_NOTE_DE_DEBIT => $this->translator->trans('note_type_debit', [], 'messages'),
+            Note::TYPE_NOTE_DE_CREDIT => $this->translator->trans('note_type_credit', [], 'messages'),
+            default => $this->translator->trans('note_type_unknown', [], 'messages'),
+        };
+    }
+
+    /**
+     * Retourne le destinataire de la note sous forme de chaîne.
+     */
+    public function getNoteAddressedToString(?Note $note): ?string
+    {
+        if ($note === null) return null;
+
+        return match ($note->getAddressedTo()) {
+            Note::TO_CLIENT => $this->translator->trans('addressed_to_client', [], 'messages'),
+            Note::TO_ASSUREUR => $this->translator->trans('addressed_to_insurer', [], 'messages'),
+            Note::TO_PARTENAIRE => $this->translator->trans('addressed_to_partner', [], 'messages'),
+            Note::TO_AUTORITE_FISCALE => $this->translator->trans('addressed_to_fiscal_authority', [], 'messages'),
+            default => $this->translator->trans('addressed_to_unknown', [], 'messages'),
+        };
+    }
+
+    /**
+     * Calcule le montant total payable pour une note.
+     */
+    private function getNoteMontantPayable(?Note $note): float
+    {
+        $montant = 0;
+        if ($note) {
+            foreach ($note->getArticles() as $article) {
+                $montant += $article->getMontant();
+            }
+        }
+        return $montant;
+    }
+
+    /**
+     * Calcule le montant total payé pour une note.
+     */
+    private function getNoteMontantPaye(?Note $note): float
+    {
+        $montant = 0;
+        if ($note) {
+            foreach ($note->getPaiements() as $encaisse) {
+                /** @var Paiement $paiement */
+                $paiement = $encaisse;
+                $montant += $paiement->getMontant();
+            }
+        }
+        return $montant;
+    }
+
+    /**
+     * Calcule le solde d'une note.
+     */
+    private function getNoteSolde(Note $note): float
+    {
+        return $this->getNoteMontantPayable($note) - $this->getNoteMontantPaye($note);
+    }
+
+    /**
+     * Retourne le statut de paiement d'une note sous forme de chaîne.
+     */
+    public function getNoteStatutPaiementString(?Note $note): ?string
+    {
+        if ($note === null) return null;
+
+        $montantDu = $this->getNoteMontantPayable($note);
+        $montantPaye = $this->getNoteMontantPaye($note);
+
+        if ($montantDu == 0) {
+            return $this->translator->trans('payment_status_not_applicable', [], 'messages');
+        }
+        if ($montantPaye >= $montantDu) {
+            return $this->translator->trans('payment_status_paid', [], 'messages');
+        }
+        if ($montantPaye > 0 && $montantPaye < $montantDu) {
+            return $this->translator->trans('payment_status_partial', [], 'messages');
+        }
+        return $this->translator->trans('payment_status_unpaid', [], 'messages');
+    }
+
     /**
      * NOUVEAU : Retourne la chaîne de caractères pour la propriété propriétaire de l'invité.
      */
@@ -4252,68 +4369,6 @@ class CalculationProvider
 
         // Si l'utilisateur existe mais n'a pas vérifié son email.
         return "En attente de vérification";
-    }
-
-    // --- Indicateurs pour Note ---
-
-    /**
-     * Retourne le type de note sous forme de chaîne.
-     */
-    public function getNoteTypeString(?Note $note): ?string
-    {
-        if ($note === null) return null;
-
-        return match ($note->getType()) {
-            Note::TYPE_NOTE_DE_DEBIT => $this->translator->trans('note_type_debit', [], 'messages'),
-            Note::TYPE_NOTE_DE_CREDIT => $this->translator->trans('note_type_credit', [], 'messages'),
-            default => $this->translator->trans('note_type_unknown', [], 'messages'),
-        };
-    }
-
-    /**
-     * Retourne le destinataire de la note sous forme de chaîne.
-     */
-    public function getNoteAddressedToString(?Note $note): ?string
-    {
-        if ($note === null) return null;
-
-        return match ($note->getAddressedTo()) {
-            Note::TO_CLIENT => $this->translator->trans('addressed_to_client', [], 'messages'),
-            Note::TO_ASSUREUR => $this->translator->trans('addressed_to_insurer', [], 'messages'),
-            Note::TO_PARTENAIRE => $this->translator->trans('addressed_to_partner', [], 'messages'),
-            Note::TO_AUTORITE_FISCALE => $this->translator->trans('addressed_to_fiscal_authority', [], 'messages'),
-            default => $this->translator->trans('addressed_to_unknown', [], 'messages'),
-        };
-    }
-
-    /**
-     * Calcule le solde d'une note.
-     */
-    private function getNoteSolde(Note $note): float
-    {
-        return $this->getNoteMontantPayable($note) - $this->getNoteMontantPaye($note);
-    }
-
-    /**
-     * Retourne le statut de paiement d'une note sous forme de chaîne.
-     */
-    public function getNoteStatutPaiementString(?Note $note): ?string
-    {
-        if ($note === null) return null;
-
-        $montantDu = $this->getNoteMontantPayable($note);
-        $montantPaye = $this->getNoteMontantPaye($note);
-
-        if ($montantDu == 0) {
-            return $this->translator->trans('payment_status_not_applicable', [], 'messages');
-        }
-        if ($montantPaye >= $montantDu) {
-            return $this->translator->trans('payment_status_paid', [], 'messages');
-        }
-        if ($montantPaye > 0 && $montantPaye < $montantDu) {
-            return $this->translator->trans('payment_status_partial', [], 'messages');
-        }
-        return $this->translator->trans('payment_status_unpaid', [], 'messages');
     }
 
     /**
@@ -4373,30 +4428,6 @@ class CalculationProvider
         return empty($labels) ? 'Aucun accès valide' : implode(', ', $labels);
     }
 
-    /**
-     * Récupère une description textuelle du client à partir d'une cotation.
-     */
-    private function getClientDescriptionFromCotation(?Cotation $cotation): string
-    {
-        if (!$cotation || !$cotation->getPiste() || !$cotation->getPiste()->getClient()) {
-            return 'N/A';
-        }
-        $client = $cotation->getPiste()->getClient();
-        return $client->getNom() . ' (' . ($client->getEmail() ?? 'Sans email') . ')';
-    }
-
-    /**
-     * Récupère une description textuelle du risque à partir d'une cotation.
-     */
-    private function getRisqueDescriptionFromCotation(?Cotation $cotation): string
-    {
-        if (!$cotation || !$cotation->getPiste() || !$cotation->getPiste()->getRisque()) {
-            return 'N/A';
-        }
-        $risque = $cotation->getPiste()->getRisque();
-        return $risque->getNomComplet();
-    }
-
     // --- Indicateurs pour Piste ---
 
     private function getPisteTypeAvenantString(Piste $piste): string
@@ -4432,15 +4463,6 @@ class CalculationProvider
         return 'En cours';
     }
 
-    private function calculatePisteAge(Piste $piste): string
-    {
-        if (!$piste->getCreatedAt()) {
-            return 'N/A';
-        }
-        $jours = $this->serviceDates->daysEntre($piste->getCreatedAt(), new DateTimeImmutable()) ?? 0;
-        return $jours . ' jour(s)';
-    }
-
     private function calculateCompteBancaireStats(CompteBancaire $compte): array
     {
         $entrees = 0.0;
@@ -4450,22 +4472,14 @@ class CalculationProvider
 
         foreach ($compte->getPaiements() as $paiement) {
             $montant = $paiement->getMontant() ?? 0.0;
-            $date = $paiement->getPaidAt();
             $isEntree = false;
 
-            // Determine direction
             if ($paiement->getOffreIndemnisationSinistre()) {
-                // Sinistre = Sortie
+                // Indemnisation = Sortie
                 $isEntree = false;
             } elseif ($note = $paiement->getNote()) {
-                // Note
-                if ($note->getAddressedTo() === Note::TO_CLIENT) {
-                    // Client pays us = Entrée
-                    $isEntree = true;
-                } else {
-                    // Paying Insurer, Partner, Tax = Sortie
-                    $isEntree = false;
-                }
+                // Note de débit = Entrée (Encaissement), Note de crédit = Sortie (Décaissement)
+                $isEntree = ($note->getType() === Note::TYPE_NOTE_DE_DEBIT);
             }
 
             if ($isEntree) {
@@ -4475,18 +4489,21 @@ class CalculationProvider
             }
 
             $count++;
-            if ($date && ($lastDate === null || $date > $lastDate)) {
-                $lastDate = $date;
+            if ($paiement->getPaidAt() && (!$lastDate || $paiement->getPaidAt() > $lastDate)) {
+                $lastDate = $paiement->getPaidAt();
             }
         }
 
+        $solde = $entrees - $sorties;
+        $average = $count > 0 ? ($entrees + $sorties) / $count : 0.0; // Moyenne des mouvements (absolus)
+
         return [
+            'solde' => $solde,
             'entrees' => $entrees,
             'sorties' => $sorties,
-            'solde' => $entrees - $sorties,
             'count' => $count,
-            'average' => $count > 0 ? ($entrees + $sorties) / $count : 0.0,
-            'lastDate' => $lastDate
+            'average' => $average,
+            'lastDate' => $lastDate,
         ];
     }
 }

@@ -9,7 +9,6 @@ use App\Form\NoteType;
 use App\Repository\NoteRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
-use App\Services\Canvas\CalculationProvider;
 use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
@@ -39,8 +38,7 @@ class NoteController extends AbstractController
         private Constante $constante,
         private JSBDynamicSearchService $searchService,
         private SerializerInterface $serializer, // Ajout de SerializerInterface
-        private CalculationProvider $calculationProvider, // Ajout de CalculationProvider
-        CanvasBuilder $canvasBuilder // Inject CanvasBuilder without property promotion
+        CanvasBuilder $canvasBuilder
     ) {
         // Assign the injected CanvasBuilder to the property declared in the trait
         $this->canvasBuilder = $canvasBuilder;
