@@ -4271,36 +4271,6 @@ class CalculationProvider
     }
 
     /**
-     * Calcule le montant total payable pour une note.
-     */
-    private function getNoteMontantPayable(?Note $note): float
-    {
-        $montant = 0;
-        if ($note) {
-            foreach ($note->getArticles() as $article) {
-                $montant += $article->getMontant();
-            }
-        }
-        return $montant;
-    }
-
-    /**
-     * Calcule le montant total payé pour une note.
-     */
-    private function getNoteMontantPaye(?Note $note): float
-    {
-        $montant = 0;
-        if ($note) {
-            foreach ($note->getPaiements() as $encaisse) {
-                /** @var Paiement $paiement */
-                $paiement = $encaisse;
-                $montant += $paiement->getMontant();
-            }
-        }
-        return $montant;
-    }
-
-    /**
      * Calcule le solde d'une note.
      */
     private function getNoteSolde(Note $note): float
