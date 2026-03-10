@@ -62,8 +62,6 @@ class AssureurIndicatorStrategy implements IndicatorCalculationStrategyInterface
         ];
     }
 
-    // --- Méthodes spécifiques à Assureur ---
-
     private function countAssureurPolicesSouscrites(Assureur $assureur): int
     {
         $count = 0;
@@ -83,13 +81,9 @@ class AssureurIndicatorStrategy implements IndicatorCalculationStrategyInterface
     private function calculateAssureurTauxTransformation(Assureur $assureur): string
     {
         $totalCotations = $assureur->getCotations()->count();
-        if ($totalCotations === 0) {
-            return 'N/A';
-        }
-
+        if ($totalCotations === 0) return 'N/A';
         $policesSouscrites = $this->countAssureurPolicesSouscrites($assureur);
         $taux = ($policesSouscrites / $totalCotations) * 100;
-
         return round($taux, 2) . ' %';
     }
 }
