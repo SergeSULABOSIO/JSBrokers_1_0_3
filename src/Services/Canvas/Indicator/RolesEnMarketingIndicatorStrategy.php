@@ -3,7 +3,6 @@
 namespace App\Services\Canvas\Indicator;
 
 use App\Entity\RolesEnMarketing;
-use App\Entity\Tache;
 use App\Services\ServiceDates;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -11,7 +10,8 @@ class RolesEnMarketingIndicatorStrategy implements IndicatorCalculationStrategyI
 {
     public function __construct(
         private ServiceDates $serviceDates,
-        private TranslatorInterface $translator
+        private TranslatorInterface $translator,
+        private IndicatorCalculationHelper $calculationHelper
     ) {
     }
 
@@ -22,9 +22,22 @@ class RolesEnMarketingIndicatorStrategy implements IndicatorCalculationStrategyI
 
     public function calculate(object $entity): array
     {
+        /** @var RolesEnMarketing $entity */
+        $invite = $entity->getInvite();
+        $inviteNom = $invite ? $invite->getNom() : 'N/A';
         
+        $indicateurs = [
+            'inviteNom' => $inviteNom,
+        ];
+        
+        $accessFields = ['accessPiste', 'accessTache', 'accessFeedback'];
+        
+        foreach ($accessFields as $field) {
+            if (method_exists($entity, 'get' . ucfirst($field))) {
+                $indicateurs[$field . 'String'] = $this->calculationHelper->getRoleAccessString($entity, [$field]);
+            }
+        }
+
+        return $indicateurs;
     }
-
-    // --- Méthodes privées déplacées depuis CalculationProvider ---
-
 }
