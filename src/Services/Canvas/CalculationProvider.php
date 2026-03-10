@@ -376,21 +376,21 @@ class CalculationProvider
                     'reserve' => round($this->getCotationMontantCommissionPure($cotation, -1, false) - $this->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1, []), 2),
                 ];
                 break;
-            case Tache::class:
-                /** @var Tache $entity */
-                $indicateurs = [
-                    'statutExecution' => $this->getTacheStatutExecutionString($entity),
-                    'delaiRestant' => $this->calculateTacheDelaiRestant($entity),
-                    'ageTache' => $this->calculateTacheAge($entity),
-                    'nombreFeedbacks' => $this->countTacheFeedbacks($entity),
-                    'contexteTache' => $this->getTacheContexteString($entity),
-                    'descriptionText' => strip_tags($entity->getDescription() ?? ''),
-                    'prioriteCalculee' => $this->getTachePrioriteCalculee($entity),
-                    'dernierFeedbackDate' => $this->getTacheDernierFeedbackDate($entity),
-                    'nombreDocuments' => $this->countTacheDocuments($entity),
-                    'clientConcerne' => $this->getTacheClientConcerne($entity),
-                ];
-                break;
+            // case Tache::class:
+            //     /** @var Tache $entity */
+            //     $indicateurs = [
+            //         'statutExecution' => $this->getTacheStatutExecutionString($entity),
+            //         'delaiRestant' => $this->calculateTacheDelaiRestant($entity),
+            //         'ageTache' => $this->calculateTacheAge($entity),
+            //         'nombreFeedbacks' => $this->countTacheFeedbacks($entity),
+            //         'contexteTache' => $this->getTacheContexteString($entity),
+            //         'descriptionText' => strip_tags($entity->getDescription() ?? ''),
+            //         'prioriteCalculee' => $this->getTachePrioriteCalculee($entity),
+            //         'dernierFeedbackDate' => $this->getTacheDernierFeedbackDate($entity),
+            //         'nombreDocuments' => $this->countTacheDocuments($entity),
+            //         'clientConcerne' => $this->getTacheClientConcerne($entity),
+            //     ];
+            //     break;
             case Feedback::class:
                 /** @var Feedback $entity */
                 $auteur = $entity->getInvite();
