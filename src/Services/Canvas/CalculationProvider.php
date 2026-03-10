@@ -44,16 +44,21 @@ use App\Repository\CotationRepository;
 use App\Repository\NotificationSinistreRepository;
 use App\Repository\TaxeRepository;
 use App\Repository\UtilisateurRepository;
+use App\Services\Canvas\Indicator\IndicatorCalculationStrategyInterface;
 use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
 use DateTimeImmutable;
 use Symfony\Bundle\SecurityBundle\Security; // Correction: S'assurer que cette ligne est bien présente
+use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class CalculationProvider
 {
     /**
+     * @var IndicatorCalculationStrategyInterface[]
      */
+    private iterable $strategies;
+
     public function __construct(
         private ServiceDates $serviceDates,
         private Security $security,
@@ -62,8 +67,11 @@ class CalculationProvider
         private NotificationSinistreRepository $notificationSinistreRepository,
         private TaxeRepository $taxeRepository,
         private TranslatorInterface $translator,
-        private UtilisateurRepository $utilisateurRepository
-    ) {}
+        private UtilisateurRepository $utilisateurRepository,
+        #[TaggedIterator('app.indicator_calculation_strategy')] iterable $strategies
+    ) {
+        $this->strategies = $strategies;
+    } 
 
     /**
      * Calcule les indicateurs spécifiques pour une entité donnée.
@@ -73,6 +81,17 @@ class CalculationProvider
      */
     public function getIndicateursSpecifics(object $entity): array
     {
+        // NOUVELLE LOGIQUE : Itération sur les stratégies injectées
+        foreach ($this->strategies as $strategy) {
+            if ($strategy->supports(get_class($entity))) {
+                return $strategy->calculate($entity);
+            }
+        }
+
+        return [];
+
+        // L'ANCIENNE LOGIQUE CI-DESSOUS DOIT ÊTRE SUPPRIMÉE ET DÉPLACÉE DANS LES STRATÉGIES
+        
         $indicateurs = [];
 
         switch (get_class($entity)) {

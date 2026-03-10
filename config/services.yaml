@@ -49,6 +49,10 @@ services:
         App\Services\Canvas\Provider\Numeric\NumericCanvasProviderInterface:
             tags: ['app.numeric_canvas_provider']
 
+        # NOUVEAU : Pour les stratégies de calcul d'indicateurs
+        App\Services\Canvas\Indicator\IndicatorCalculationStrategyInterface:
+            tags: ['app.indicator_calculation_strategy']
+
     # NOUVEAU : Décorateur pour le PropertyAccessor du Sérialiseur.
     # Cela permet d'intercepter les exceptions Doctrine (EntityNotFoundException)
     # lors de la sérialisation de relations rompues, sans faire planter l'application.
