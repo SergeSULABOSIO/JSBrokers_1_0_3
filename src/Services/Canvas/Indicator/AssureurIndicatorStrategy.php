@@ -3,13 +3,11 @@
 namespace App\Services\Canvas\Indicator;
 
 use App\Entity\Assureur;
-use App\Services\Canvas\CalculationProvider;
 
 class AssureurIndicatorStrategy implements IndicatorCalculationStrategyInterface
 {
     public function __construct(
-        private CalculationProvider $calculationProvider,
-        private IndicatorCalculationHelper $helper
+        private IndicatorCalculationHelper $calculationHelper
     ) {
     }
 
@@ -21,8 +19,7 @@ class AssureurIndicatorStrategy implements IndicatorCalculationStrategyInterface
     public function calculate(object $entity): array
     {
         /** @var Assureur $entity */
-        // On récupère les stats globales filtrées pour cet assureur
-        $stats = $this->calculationProvider->getIndicateursGlobaux($entity->getEntreprise(), false, ['assureurCible' => $entity]);
+        $stats = $this->calculationHelper->getIndicateursGlobaux($entity->getEntreprise(), false, ['assureurCible' => $entity]);
 
         return [
             'nombrePolicesSouscrites' => $this->countAssureurPolicesSouscrites($entity),
@@ -61,11 +58,11 @@ class AssureurIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'indemnisationVersee' => round($stats['sinistre_paye'], 2),
             'indemnisationSolde' => round($stats['sinistre_solde'], 2),
             'tauxSP' => round($stats['taux_sinistralite'], 2),
-            'tauxSPInterpretation' => $this->helper->getInterpretationTauxSP($stats['taux_sinistralite']),
+            'tauxSPInterpretation' => $this->calculationHelper->getInterpretationTauxSP($stats['taux_sinistralite']),
         ];
     }
 
-    // --- Méthodes privées déplacées depuis CalculationProvider ---
+    // --- Méthodes spécifiques à Assureur ---
 
     private function countAssureurPolicesSouscrites(Assureur $assureur): int
     {
