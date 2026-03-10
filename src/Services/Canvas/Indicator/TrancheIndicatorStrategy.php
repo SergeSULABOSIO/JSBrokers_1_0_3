@@ -12,7 +12,6 @@ use App\Entity\Risque;
 use App\Entity\TypeRevenu;
 use App\Entity\Note;
 use App\Entity\Paiement;
-use App\Entity\Chargement;
 use App\Repository\TaxeRepository;
 use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
