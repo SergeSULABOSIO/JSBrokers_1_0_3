@@ -1,3 +1,5 @@
+<?php
+
 // src/Services/Canvas/Indicator/IndicatorCalculationHelper.php
 namespace App\Services\Canvas\Indicator;
 
