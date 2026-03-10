@@ -3,18 +3,9 @@
 namespace App\Services\Canvas\Indicator;
 
 use App\Entity\AutoriteFiscale;
-use App\Entity\Tache;
-use App\Services\ServiceDates;
-use Symfony\Contracts\Translation\TranslatorInterface;
 
 class AutoriteFiscaleIndicatorStrategy implements IndicatorCalculationStrategyInterface
 {
-    public function __construct(
-        private ServiceDates $serviceDates,
-        private TranslatorInterface $translator
-    ) {
-    }
-
     public function supports(string $entityClassName): bool
     {
         return $entityClassName === AutoriteFiscale::class;
@@ -22,9 +13,6 @@ class AutoriteFiscaleIndicatorStrategy implements IndicatorCalculationStrategyIn
 
     public function calculate(object $entity): array
     {
-        
+        return [];
     }
-
-    // --- Méthodes privées déplacées depuis CalculationProvider ---
-
 }

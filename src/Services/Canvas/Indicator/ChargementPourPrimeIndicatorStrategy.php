@@ -3,15 +3,14 @@
 namespace App\Services\Canvas\Indicator;
 
 use App\Entity\ChargementPourPrime;
-use App\Entity\Tache;
 use App\Services\ServiceDates;
-use Symfony\Contracts\Translation\TranslatorInterface;
+use DateTimeImmutable;
 
 class ChargementPourPrimeIndicatorStrategy implements IndicatorCalculationStrategyInterface
 {
     public function __construct(
         private ServiceDates $serviceDates,
-        private TranslatorInterface $translator
+        private IndicatorCalculationHelper $calculationHelper
     ) {
     }
 
@@ -22,9 +21,22 @@ class ChargementPourPrimeIndicatorStrategy implements IndicatorCalculationStrate
 
     public function calculate(object $entity): array
     {
-        
+        /** @var ChargementPourPrime $entity */
+        return [
+            'clientDescription' => $this->calculationHelper->getClientDescriptionFromCotation($entity->getCotation()),
+            'risqueDescription' => $this->calculationHelper->getRisqueDescriptionFromCotation($entity->getCotation()),
+            'montant_final' => round($entity->getMontantFlatExceptionel() ?? 0.0, 2),
+            'montantTaxeAppliquee' => 0.0, // Toujours 0 selon l'ancien CalculationProvider
+            'poidsSurPrimeTotale' => $this->calculationHelper->getChargementPourPrimePoidsSurPrime($entity),
+            'ageChargement' => $this->calculateChargementPourPrimeAge($entity),
+            'fonctionChargement' => $this->calculationHelper->Chargement_getFonctionString($entity->getType()),
+        ];
     }
 
-    // --- Méthodes privées déplacées depuis CalculationProvider ---
-
+    private function calculateChargementPourPrimeAge(ChargementPourPrime $chargement): string
+    {
+        if (!$chargement->getCreatedAt()) return 'N/A';
+        $jours = $this->serviceDates->daysEntre($chargement->getCreatedAt(), new DateTimeImmutable()) ?? 0;
+        return $jours . ' jour(s)';
+    }
 }
