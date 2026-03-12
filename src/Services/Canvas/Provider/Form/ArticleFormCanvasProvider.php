@@ -46,35 +46,46 @@ class ArticleFormCanvasProvider implements FormCanvasProviderInterface
 
     private function buildArticleLayout(Article $object, bool $isParentNew): array
     {
+        // On définit la condition : "Visible SI le champ revenuFacture n'est pas vide"
+        $conditionRevenu = [
+            'visibility_conditions' => [
+                [
+                    'field' => 'revenuFacture',
+                    'operator' => '!=',
+                    'value' => '' // Le champ Autocomplete renvoie une chaîne vide quand rien n'est sélectionné
+                ]
+            ]
+        ];
+
         $layout = [
-            // Ligne 1: Nom et description
+            // Ligne 1: Nom et description (Toujours visible)
             [
                 "colonnes" => [
                     ["champs" => ["nom"], "width" => 12]
                 ]
             ],
-            // Ligne 2: Montant
-            [
-                "colonnes" => [
-                    ["champs" => ["montant"], "width" => 12]
-                ]
-            ],
-            // Ligne 3: Tranche (Prime liée)
-            [
-                "colonnes" => [
-                    ["champs" => ["tranche"], "width" => 12]
-                ]
-            ],
-            // Ligne 4: Revenu / Commission liée
+            // Ligne 2: Revenu / Commission liée (Le champ "maître", toujours visible)
             [
                 "colonnes" => [
                     ["champs" => ["revenuFacture"], "width" => 12]
                 ]
             ],
-            // Ligne 5: Taxe liée
+            // Ligne 3: Tranche (Prime liée) - Conditionnel
             [
                 "colonnes" => [
-                    ["champs" => ["taxeFacturee"], "width" => 12]
+                    ["champs" => [array_merge(['field_code' => 'tranche'], $conditionRevenu)], "width" => 12]
+                ]
+            ],
+            // Ligne 4: Taxe liée - Conditionnel
+            [
+                "colonnes" => [
+                    ["champs" => [array_merge(['field_code' => 'taxeFacturee'], $conditionRevenu)], "width" => 12]
+                ]
+            ],
+            // Ligne 5: Montant - Conditionnel
+            [
+                "colonnes" => [
+                    ["champs" => [array_merge(['field_code' => 'montant'], $conditionRevenu)], "width" => 12]
                 ]
             ]
         ];
