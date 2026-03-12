@@ -2,24 +2,15 @@
 
 namespace App\Form;
 
-use App\Entity\Note;
-use App\Entity\Taxe;
 use App\Entity\Article;
-use App\Entity\Tranche;
-use App\Entity\TypeRevenu;
-use App\Entity\RevenuPourCourtier;
 use App\Services\FormListenerFactory;
 use App\Services\ServiceMonnaies;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\MoneyType;
-use Symfony\Component\Form\Extension\Core\Type\SubmitType;
-use Symfony\Component\Form\Extension\Core\Type\PercentType;
-use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 class ArticleType extends AbstractType
 {
@@ -35,67 +26,48 @@ class ArticleType extends AbstractType
             ->add('nom', TextType::class, [
                 'label' => "Nom",
                 'attr' => [
-                    'placeholder' => "Nom",
+                    'placeholder' => "Description de la ligne",
                 ],
             ])
-            ->add('tranche', TrancheAutocompleteField::class, [
-                'label' => "Tranche",
-                'class' => Tranche::class,
-                'disabled' => true,
-                'required' => false,
-                // 'choice_label' => 'nom',
-            ])
             ->add('montant', MoneyType::class, [
-                'label' => "Prime TTC",
+                'label' => "Montant (TTC)",
                 'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                 'grouping' => true,
                 'disabled' => false,
                 'attr' => [
                     'placeholder' => "Montant payable",
                 ],
+            ])
+            // Utilisation des Autocompletes modernes sans écraser leur configuration interne
+            ->add('tranche', TrancheAutocompleteField::class, [
+                'label' => "Lié à une Tranche",
+                'required' => false,
+            ])
+            ->add('revenuFacture', RevenuPourCourtierAutocompleteField::class, [
+                'label' => "Lié à un Revenu/Commission",
+                'required' => false,
+            ])
+            ->add('taxeFacturee', TaxeAutocompleteField::class, [
+                'label' => "Lié à une Taxe",
+                'required' => false,
             ]);
-        // $builder
-        //     ->add('revenuFacture', EntityType::class, [
-        //         'label' => "Revenu",
-        //         'class' => RevenuPourCourtier::class,
-        //         'required' => false,
-        //         'choice_label' => 'nom',
-        //     ]);
-        // $builder
-        //     ->add('taxeFacturee', EntityType::class, [
-        //         'label' => "Taxe",
-        //         'class' => Taxe::class,
-        //         'required' => false,
-        //         'choice_label' => 'code',
-        //     ]);
-        // $builder
-        //     ->add('pourcentage', PercentType::class, [
-        //         'label' => "Portion concernée de la tranche",
-        //         'help' => "100% si vous désirez s'appliquer sur toute cette tranche, sinon merci de préciser la portion en pourcentage.",
-        //         'required' => true,
-        //         'scale' => 3,
-        //         'attr' => [
-        //             'placeholder' => "Portion",
-        //         ],
-        //     ])
-        // ->add('note', EntityType::class, [
-        //     'class' => Note::class,
-        //     'choice_label' => 'id',
-        // ])
-        //Le bouton suivant
-        $builder
-            ->add('Enregistrer', SubmitType::class, [
-                'label' => "Enregistrer",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ]);
+            
+            // Note: Le champ 'pourcentage' n'est pas dans l'entité Article
+            // Note: Le bouton 'Enregistrer' est retiré car géré par la modale du Canvas
+            // Note: Le champ 'note' est retiré car injecté dynamiquement
     }
 
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
             'data_class' => Article::class,
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }

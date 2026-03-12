@@ -2,7 +2,7 @@
 
 namespace App\Form;
 
-use App\Entity\Article;
+use App\Entity\Taxe;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -10,7 +10,7 @@ use Symfony\UX\Autocomplete\Form\AsEntityAutocompleteField;
 use Symfony\UX\Autocomplete\Form\BaseEntityAutocompleteType;
 
 #[AsEntityAutocompleteField]
-class ArticleAutocompleteField extends AbstractType
+class TaxeAutocompleteField extends AbstractType
 {
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
@@ -19,19 +19,17 @@ class ArticleAutocompleteField extends AbstractType
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
-            'class' => Article::class,
-            'placeholder' => 'Sélectionner un article',
-            // ATTENTION: Commenté car l'entité Article n'a pas de relation "Entreprise" directe par défaut
-            // 'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(), 
-            'searchable_fields' => ['nom'],
+            'class' => Taxe::class,
+            'placeholder' => 'Rechercher une taxe',
+            'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
+            'searchable_fields' => ['code', 'nom'],
             'as_html' => true,
-            'choice_label' => function(Article $article) {
-                $montant = $article->getMontant() !== null ? number_format($article->getMontant(), 2, ',', ' ') : 'Montant non défini';
-                
+            'choice_label' => function(Taxe $taxe) {
+                // Utilise le code si disponible (vu qu'il était utilisé dans l'ancien ArticleType)
+                $affichage = $taxe->getCode() ?? 'Taxe';
                 return sprintf(
-                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">Montant : %s</div></div>',
-                    htmlspecialchars($article->getNom() ?? 'Sans nom'),
-                    htmlspecialchars($montant)
+                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">Compte de taxe</div></div>',
+                    htmlspecialchars($affichage)
                 );
             },
         ]);
