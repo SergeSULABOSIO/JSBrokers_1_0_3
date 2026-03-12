@@ -4,11 +4,11 @@ namespace App\Form;
 
 use App\Entity\RevenuPourCourtier;
 use App\Services\FormListenerFactory;
+use Doctrine\ORM\EntityRepository;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\UX\Autocomplete\Form\AsEntityAutocompleteField;
 use Symfony\UX\Autocomplete\Form\BaseEntityAutocompleteType;
-use Doctrine\ORM\EntityRepository;
 
 #[AsEntityAutocompleteField]
 class RevenuPourCourtierAutocompleteField extends AbstractType
@@ -23,26 +23,15 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
             'class' => RevenuPourCourtier::class,
             'placeholder' => 'Rechercher un revenu',
             'query_builder' => function (EntityRepository $er) {
-                // On récupère l'ID de l'entreprise courante depuis la requête ou le contexte.
-                // Si ton ecouteurFormulaire a une méthode pour récupérer l'entreprise, utilise-la.
-                // Exemple : $entrepriseId = $this->ecouteurFormulaire->getCurrentEntrepriseId();
+                // On récupère l'ID de l'entreprise via la méthode disponible dans FormListenerFactory
+                $entrepriseId = $this->ecouteurFormulaire->getCurrentEntrepriseId();
                 
-                // On crée le QueryBuilder en faisant la jointure avec typeRevenu
-                $qb = $er->createQueryBuilder('r')
-                    ->leftJoin('r.typeRevenu', 'tr');
-                
-                // Si tu as un moyen de récupérer l'ID de l'entreprise via ton factory
-                if (method_exists($this->ecouteurFormulaire, 'getCurrentEntrepriseId')) {
-                     $entrepriseId = $this->ecouteurFormulaire->getCurrentEntrepriseId();
-                     if($entrepriseId) {
-                         $qb->andWhere('tr.entreprise = :eseId')
-                            ->setParameter('eseId', $entrepriseId);
-                     }
-                }
-                // Si la méthode n'existe pas, on retourne simplement le QB sans le filtre
-                // ou tu peux implémenter la logique pour récupérer l'entreprise active ici.
-
-                return $qb;
+                // On fait une jointure (join) sur typeRevenu pour accéder à l'entreprise
+                return $er->createQueryBuilder('r')
+                    ->join('r.typeRevenu', 'tr')
+                    ->where('tr.entreprise = :eseId')
+                    ->setParameter('eseId', $entrepriseId)
+                    ->orderBy('r.id', 'ASC');
             },
             'searchable_fields' => ['nom'],
             'as_html' => true,
