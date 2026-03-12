@@ -75,13 +75,15 @@ class NoteController extends AbstractController
             NoteType::class,
             $note,
             function (Note $note, Invite $invite) {
-                // Initialisation uniquement pour l'affichage (Front-end)
                 $note->setSignature((string)time());
                 $note->setReference("N" . time());
                 $note->setType(Note::TYPE_NOTE_DE_DEBIT);
                 $note->setInvite($invite);
                 $note->setAddressedTo(Note::TO_ASSUREUR);
                 $note->setValidated(false);
+                
+                // NOUVEAU : Initialisation de la date du jour au premier chargement
+                $note->setSentAt(new \DateTimeImmutable());
             }
         );
     }
@@ -89,13 +91,15 @@ class NoteController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request): JsonResponse
     {
+        // NOUVEAU : On récupère l'invité connecté de manière sécurisée côté serveur
+        $inviteConnecte = $this->getInvite();
+
         return $this->handleFormSubmission(
             $request,
             Note::class,
             NoteType::class,
-            // NOUVEAU : Fonction callback pour injecter les données techniques manquantes avant la sauvegarde
-            function (Note $note) {
-                // S'il s'agit d'une nouvelle note (pas d'ID)
+            function (Note $note) use ($inviteConnecte) {
+                // S'il s'agit d'une nouvelle note
                 if (!$note->getId()) {
                     if (!$note->getReference()) {
                         $note->setReference("N" . time());
@@ -105,6 +109,14 @@ class NoteController extends AbstractController
                     }
                     if ($note->isValidated() === null) {
                         $note->setValidated(false);
+                    }
+                    
+                    // NOUVEAU : On s'assure que la note est bien liée à l'utilisateur (et donc à l'entreprise) pour ne pas être orpheline
+                    $note->setInvite($inviteConnecte);
+                    
+                    // NOUVEAU : Sécurité supplémentaire si la date n'est pas passée dans le POST
+                    if (!$note->getSentAt()) {
+                        $note->setSentAt(new \DateTimeImmutable());
                     }
                 }
             }
