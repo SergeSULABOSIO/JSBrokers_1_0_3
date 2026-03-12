@@ -3,9 +3,10 @@
 namespace App\Services;
 
 use App\Entity\Entreprise;
+use App\Entity\Utilisateur;
 use DateTimeImmutable;
-use Doctrine\ORM\QueryBuilder;
 use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Form\Event\PostSubmitEvent;
 
@@ -14,10 +15,7 @@ class FormListenerFactory
 
     public function __construct(
         private Security $security
-    )
-    {
-        
-    }
+    ) {}
     public function timeStamps(): callable
     {
         return function (PostSubmitEvent $event) {
@@ -32,7 +30,7 @@ class FormListenerFactory
     //Avec paramètre
     public function timeStampsWithWhen(string $when): callable
     {
-        return function (PostSubmitEvent $event) use ($when){
+        return function (PostSubmitEvent $event) use ($when) {
             $data = $event->getData();
             $data->setUpdatedAt(new DateTimeImmutable($when));
             if (!$data->getId()) {
@@ -61,6 +59,23 @@ class FormListenerFactory
         };
     }
 
+    public function getCurrentEntrepriseId(): int
+    {
+        /** @var Utilisateur $user */
+        $user = $this->security->getUser();
+
+        /** @var Entreprise $entreprise */
+        $entreprise = $user->getConnectedTo();
+        return $entreprise->getId();
+    }
+
+    public function getCurrentUtilisateurId(): int
+    {
+        /** @var Utilisateur $user */
+        $user = $this->security->getUser();
+        return $user->getId();
+    }
+
     public function setFiltreEntreprise(): callable
     {
         return function (EntityRepository $er): QueryBuilder {
@@ -70,12 +85,12 @@ class FormListenerFactory
             /** @var Entreprise $entreprise */
             $entreprise = $user->getConnectedTo();
 
-            
+
             // dd($entreprise->getNom());
 
             return $er->createQueryBuilder('e')
                 ->where('e.entreprise =:eseId')
-                ->setParameter('eseId', $entreprise != null ? $entreprise->getId(): -1)
+                ->setParameter('eseId', $entreprise != null ? $entreprise->getId() : -1)
                 ->orderBy('e.id', 'ASC');
         };
     }
