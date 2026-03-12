@@ -67,13 +67,13 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
 
             // --- Lignes conditionnelles basées sur le destinataire ---
             // Ligne 5: Le client
-            array_merge(["colonnes" => [["champs" => ["client"]]]], $visibilityClient),
+            ["colonnes" => [["champs" => [array_merge(['field_code' => 'client'], $visibilityClient)]]]],
             // Ligne 6: L'assureur
-            array_merge(["colonnes" => [["champs" => ["assureur"]]]], $visibilityAssureur),
+            ["colonnes" => [["champs" => [array_merge(['field_code' => 'assureur'], $visibilityAssureur)]]]],
             // Ligne 7: L'intermédiaire (partenaire)
-            array_merge(["colonnes" => [["champs" => ["partenaire"]]]], $visibilityPartenaire),
+            ["colonnes" => [["champs" => [array_merge(['field_code' => 'partenaire'], $visibilityPartenaire)]]]],
             // Ligne 8: L'autorité fiscale
-            array_merge(["colonnes" => [["champs" => ["autoritefiscale"]]]], $visibilityAutorite),
+            ["colonnes" => [["champs" => [array_merge(['field_code' => 'autoritefiscale'], $visibilityAutorite)]]]],
 
             // Ligne 9: Collection d'articles
             [
@@ -83,7 +83,7 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
             ],
 
             // Ligne 10: Comptes bancaires (conditionnel, visible si type = Débit)
-            array_merge(["colonnes" => [["champs" => ["comptes"]]]], $visibilityComptes),
+            ["colonnes" => [["champs" => [array_merge(['field_code' => 'comptes'], $visibilityComptes)]]]],
 
             // Ligne 11: Collection des paiements
             [
