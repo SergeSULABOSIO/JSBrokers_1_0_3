@@ -57,16 +57,11 @@ class NoteController extends AbstractController
     #[Route('/test', name: 'test')]
     public function edit(): Response
     {
-        // Vous pouvez passer une variable 'note' si c'est une édition
-        // $note = ...
-        
-        return $this->render('components/note/editor.html.twig', [
-            // 'note' => $note, 
-        ]);
+        return $this->render('components/note/editor.html.twig', []);
     }
 
     #[Route('/index/{idInvite}/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function index(Request $request)
+    public function index(Request $request): Response
     {
         return $this->renderViewOrListComponent(Note::class, $request);
     }
@@ -80,8 +75,9 @@ class NoteController extends AbstractController
             NoteType::class,
             $note,
             function (Note $note, Invite $invite) {
-                $note->setSignature(time());
-                $note->setReference("N" . (time()));
+                // Initialisation uniquement pour l'affichage (Front-end)
+                $note->setSignature((string)time());
+                $note->setReference("N" . time());
                 $note->setType(Note::TYPE_NOTE_DE_DEBIT);
                 $note->setInvite($invite);
                 $note->setAddressedTo(Note::TO_ASSUREUR);
@@ -96,7 +92,22 @@ class NoteController extends AbstractController
         return $this->handleFormSubmission(
             $request,
             Note::class,
-            NoteType::class
+            NoteType::class,
+            // NOUVEAU : Fonction callback pour injecter les données techniques manquantes avant la sauvegarde
+            function (Note $note) {
+                // S'il s'agit d'une nouvelle note (pas d'ID)
+                if (!$note->getId()) {
+                    if (!$note->getReference()) {
+                        $note->setReference("N" . time());
+                    }
+                    if (!$note->getSignature()) {
+                        $note->setSignature((string)time());
+                    }
+                    if ($note->isValidated() === null) {
+                        $note->setValidated(false);
+                    }
+                }
+            }
         );
     }
 
