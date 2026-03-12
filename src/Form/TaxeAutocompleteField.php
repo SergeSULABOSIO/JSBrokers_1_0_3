@@ -22,14 +22,23 @@ class TaxeAutocompleteField extends AbstractType
             'class' => Taxe::class,
             'placeholder' => 'Rechercher une taxe',
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
-            'searchable_fields' => ['code', 'nom'],
+            'searchable_fields' => ['code', 'description'],
             'as_html' => true,
             'choice_label' => function(Taxe $taxe) {
-                // Utilise le code si disponible (vu qu'il était utilisé dans l'ancien ArticleType)
+                // Extraction des taux
+                $iard = $taxe->getTauxIARD() !== null ? ((float)$taxe->getTauxIARD() * 100) . '%' : '-';
+                $vie = $taxe->getTauxVIE() !== null ? ((float)$taxe->getTauxVIE() * 100) . '%' : '-';
+                
                 $affichage = $taxe->getCode() ?? 'Taxe';
+                // On tronque la description si elle est trop longue pour ne pas casser l'interface
+                $desc = mb_substr($taxe->getDescription() ?? '', 0, 40) . (mb_strlen($taxe->getDescription() ?? '') > 40 ? '...' : '');
+                
                 return sprintf(
-                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">Compte de taxe</div></div>',
-                    htmlspecialchars($affichage)
+                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">%s | IARD: %s | VIE: %s</div></div>',
+                    htmlspecialchars($affichage),
+                    htmlspecialchars($desc),
+                    $iard,
+                    $vie
                 );
             },
         ]);
