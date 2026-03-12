@@ -3,46 +3,24 @@
 namespace App\Form;
 
 use App\Entity\Note;
-use App\Entity\Client;
-use App\Entity\Assureur;
-use App\Entity\Partenaire;
-use App\Entity\CompteBancaire;
-use App\Entity\AutoriteFiscale;
-use App\Services\ServiceMonnaies;
-use App\Services\FormListenerFactory;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
-use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
-use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
-use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 
 class NoteType extends AbstractType
 {
-    private string $helpArticle = "";
-    private string $helpAssureur = "";
-    private string $helpClient = "";
-    private string $helppartenaire = "";
-    private string $helpautorite = "";
-
-    public function __construct(
-        private FormListenerFactory $ecouteurFormulaire,
-        private TranslatorInterface $translatorInterface,
-        private ServiceMonnaies $serviceMonnaies,
-    ) {}
-
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
             ->add('nom', TextType::class, [
-                'label' => "Nom",
+                'label' => "Objet de la note",
                 'attr' => [
-                    'placeholder' => "Nom",
+                    'placeholder' => "Ex: Commission sur police #123",
                 ],
             ])
             ->add('reference', TextType::class, [
@@ -50,13 +28,15 @@ class NoteType extends AbstractType
                 'disabled' => true,
                 'label' => "Référence",
                 'attr' => [
-                    'placeholder' => "Référence",
+                    'placeholder' => "Générée automatiquement",
                 ],
             ])
             ->add('description', TextareaType::class, [
-                'label' => "Description",
+                'label' => "Description détaillée",
+                'required' => false,
                 'attr' => [
-                    'placeholder' => "Description",
+                    'placeholder' => "Ajoutez des détails concernant cette note...",
+                    'rows' => 4,
                 ],
             ])
             ->add('type', ChoiceType::class, [
@@ -65,7 +45,6 @@ class NoteType extends AbstractType
                 'expanded' => true,
                 'label_html' => true,
                 'choices'  => [
-                    // "Null" => Note::TYPE_NULL,
                     "Débit" => Note::TYPE_NOTE_DE_DEBIT,
                     "Crédit" => Note::TYPE_NOTE_DE_CREDIT,
                 ],
@@ -82,7 +61,6 @@ class NoteType extends AbstractType
                 'expanded' => true,
                 'label_html' => true,
                 'choices'  => [
-                    // "Null" => Note::TO_NULL,
                     "Le client" => Note::TO_CLIENT,
                     "L'assureur" => Note::TO_ASSUREUR,
                     "L'intermédiaire" => Note::TO_PARTENAIRE,
@@ -98,89 +76,41 @@ class NoteType extends AbstractType
                     return '<div><strong>' . $key . '</strong><div class="text-muted small">' . ($descriptions[$value] ?? '') . '</div></div>';
                 },
             ])
-            ->add('signedBy', TextType::class, [
-                'label' => "Signataire",
-                'attr' => [
-                    'placeholder' => "Nom du signataire",
+            ->add('client', ClientAutocompleteField::class, [
+                'label' => "Client ciblé",
+                'required' => false,
+            ])
+            ->add('assureur', AssureurAutocompleteField::class, [
+                'label' => "Assureur ciblé",
+                'required' => false,
+            ])
+            ->add('partenaire', PartenaireAutocompleteField::class, [
+                'label' => "Intermédiaire / Partenaire ciblé",
+                'required' => false,
+            ])
+            ->add('autoritefiscale', AutoriteFiscaleAutocompleteField::class, [
+                'label' => "Autorité fiscale ciblée",
+                'required' => false,
+            ])
+            ->add('comptes', CompteBancaireAutocompleteField::class, [
+                'label' => "Comptes bancaires",
+                'help' => "Comptes bancaires auxquels vous désirez vous faire payer.",
+                'required' => false,
+                'multiple' => true,
+            ])
+            ->add('articles', CollectionType::class, [
+                'label' => "Articles de la note",
+                'entry_type' => ArticleType::class,
+                'by_reference' => false,
+                'allow_add' => false,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
                 ],
             ])
-            ->add('titleSignedBy', TextType::class, [
-                'label' => "Titre du signataire",
-                'attr' => [
-                    'placeholder' => "Titre du signataire",
-                ],
-            ])
-            //champ non mappé
-            ->add('montantDue', MoneyType::class, [
-                'label' => "Montant dû",
-                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                'grouping' => true,
-                'mapped' => false,
-                'disabled' => true,
-                'attr' => [
-                    'placeholder' => "Montant dû",
-                ],
-            ])
-            //champ non mappé
-            ->add('montantPaye', MoneyType::class, [
-                'label' => "Montant payé",
-                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                'grouping' => true,
-                'mapped' => false,
-                'disabled' => true,
-                'attr' => [
-                    'placeholder' => "Montant payé",
-                ],
-            ])
-            //champ non mappé
-            ->add('montantSolde', MoneyType::class, [
-                'label' => "Solde restant dû",
-                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                'grouping' => true,
-                'mapped' => false,
-                'disabled' => true,
-                'attr' => [
-                    'placeholder' => "Solde restant dû",
-                ],
-            ])
-
-        ;
-
-        /**
-         * @var Note $note
-         */
-        $note = $options['note'];
-        if ($note != null) {
-            if ($note->getId() != null) {
-                $builder
-                    ->add('articles', CollectionType::class, [
-                        'label' => "Articles",
-                        'help' => $this->helpArticle,
-                        'entry_type' => ArticleType::class,
-                        'by_reference' => false,
-                        'allow_add' => false,
-                        'allow_delete' => true,
-                        'entry_options' => [
-                            'label' => false,
-                        ],
-                        'attr' => [
-                            'data-controller' => 'form-collection-entites',
-                            'data-form-collection-entites-data-value' => json_encode([
-                                'addLabel' => $this->translatorInterface->trans("commom_add"),
-                                'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                                'icone' => "tranche",
-                                'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                                'tailleMax' => 0,
-                            ]),
-                        ],
-                    ]);
-            }
-        }
-
-        $builder
             ->add('paiements', CollectionType::class, [
-                'label' => "Paiements",
-                'help' => "Les paiements relatives à cette note.",
+                'label' => "Paiements liés",
+                'help' => "Les paiements relatifs à cette note.",
                 'entry_type' => PaiementType::class,
                 'by_reference' => false,
                 'allow_add' => true,
@@ -188,73 +118,25 @@ class NoteType extends AbstractType
                 'entry_options' => [
                     'label' => false,
                 ],
+            ])
+            ->add('signedBy', TextType::class, [
+                'label' => "Signataire",
+                'required' => false,
                 'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "paiement",
-                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 12,
-                    ]),
+                    'placeholder' => "Nom du signataire",
                 ],
             ])
-            ->add('assureur', AssureurAutocompleteField::class, [
-                'label' => "Assureur",
-                'help' => $this->helpAssureur,
-                'class' => Assureur::class,
+            ->add('titleSignedBy', TextType::class, [
+                'label' => "Titre du signataire",
                 'required' => false,
-                'choice_label' => 'nom',
-            ])
-            ->add('client', ClientAutocompleteField::class, [
-                'label' => "Client",
-                'help' => $this->helpClient,
-                'class' => Client::class,
-                'required' => false,
-                'choice_label' => 'nom',
-            ])
-            ->add('partenaire', PartenaireAutocompleteField::class, [
-                'label' => "Intermédiaire",
-                'help' => $this->helppartenaire,
-                'class' => Partenaire::class,
-                'required' => false,
-                'choice_label' => 'nom',
+                'attr' => [
+                    'placeholder' => "Ex: Directeur Général",
+                ],
             ])
             ->add('sentAt', DateTimeType::class, [
                 'label' => "Date de soumission",
+                'required' => false,
                 'widget' => 'single_text',
-            ])
-            ->add('autoritefiscale', AutoriteFiscaleAutocompleteField::class, [
-                'label' => "Autorité fiscale",
-                'help' => $this->helpautorite,
-                'class' => AutoriteFiscale::class,
-                'required' => false,
-                'choice_label' => 'nom',
-            ])
-            ->add('comptes', CompteBancaireAutocompleteField::class, [
-                'label' => "Comptes bancaires",
-                'help' => "Comptes bancaires auxquels vous désirez vous faire payés.",
-                'attr' => [
-                    'placeholder' => "Séléctionner le compte",
-                ],
-                'class' => CompteBancaire::class,
-                'required' => false,
-                'multiple' => true,
-                'choice_label' => 'nom',
-            ])
-            //Le bouton enregistrer
-            ->add('enregistrer', SubmitType::class, [
-                'label' => "ENREGISTRER",
-                'attr' => [
-                    'class' => "btn btn-secondary",
-                ],
-            ])
-            //Le bouton enregistrer
-            ->add('ajouterarticles', SubmitType::class, [
-                'label' => "AJOUTER LES ARTICLES",
-                'attr' => [
-                    'class' => "btn btn-primary",
-                ],
             ]);
     }
 
@@ -262,9 +144,13 @@ class NoteType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Note::class,
-            "idNote" => -1,
-            "note" => null,
-            'parent_object' => null, // l'objet parent
+            'csrf_protection' => false,
+            'allow_extra_fields' => true,
         ]);
+    }
+
+    public function getBlockPrefix(): string
+    {
+        return '';
     }
 }
