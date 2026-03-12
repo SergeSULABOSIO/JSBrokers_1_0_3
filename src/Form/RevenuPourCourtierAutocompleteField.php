@@ -26,10 +26,15 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
                 $entrepriseId = $this->ecouteurFormulaire->getCurrentEntrepriseId();
                 
                 return $er->createQueryBuilder('r')
+                    ->addSelect('tr', 'c', 'a', 'assureur', 'piste', 'client', 'partenaires') // Optimisation pour éviter les requêtes N+1
                     ->join('r.typeRevenu', 'tr')
                     // Exigence métier : la cotation DOIT exister et DOIT avoir un avenant
                     ->join('r.cotation', 'c')
                     ->join('c.avenants', 'a')
+                    ->leftJoin('c.assureur', 'assureur')
+                    ->leftJoin('c.piste', 'piste')
+                    ->leftJoin('piste.client', 'client')
+                    ->leftJoin('piste.partenaires', 'partenaires')
                     ->where('tr.entreprise = :eseId')
                     ->setParameter('eseId', $entrepriseId)
                     ->orderBy('r.id', 'ASC');
@@ -41,21 +46,37 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
                 $taux = $revenu->getTauxExceptionel() !== null ? ($revenu->getTauxExceptionel() * 100) . '%' : '-';
                 $montant = $revenu->getMontantFlatExceptionel() !== null ? number_format($revenu->getMontantFlatExceptionel(), 2, ',', ' ') : '-';
                 
-                // Récupération de l'avenant (qui existe forcément grâce au query_builder)
+                // Récupération des entités liées
                 $cotation = $revenu->getCotation();
                 $avenant = ($cotation && !$cotation->getAvenants()->isEmpty()) ? $cotation->getAvenants()->first() : null;
+                $piste = $cotation ? $cotation->getPiste() : null;
                 
-                // Extraction de la référence et du numéro
+                // Extraction des références et des noms
                 $policeRef = ($avenant && $avenant->getReferencePolice()) ? $avenant->getReferencePolice() : 'N/A';
                 $avenantNum = ($avenant && $avenant->getNumero()) ? $avenant->getNumero() : 'N/A';
+                
+                $assureurNom = ($cotation && $cotation->getAssureur()) ? $cotation->getAssureur()->getNom() : 'N/A';
+                $clientNom = ($piste && $piste->getClient()) ? $piste->getClient()->getNom() : 'N/A';
+                
+                // Un lead/piste peut avoir plusieurs partenaires
+                $partenaireNoms = [];
+                if ($piste && !$piste->getPartenaires()->isEmpty()) {
+                    foreach ($piste->getPartenaires() as $partenaire) {
+                        $partenaireNoms[] = $partenaire->getNom();
+                    }
+                }
+                $partenaireNom = !empty($partenaireNoms) ? implode(', ', $partenaireNoms) : 'N/A';
                 
                 $typeRevenu = $revenu->getTypeRevenu() ? $revenu->getTypeRevenu()->getNom() : 'Type N/A';
                 
                 return sprintf(
-                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">Réf Police: %s | Avenant: %s | Type: %s | Taux: %s | Flat: %s</div></div>',
+                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">Réf Police: %s | Avenant: %s | Assureur: %s | Client: %s | Partenaire(s): %s | Type: %s | Taux: %s | Flat: %s</div></div>',
                     htmlspecialchars($revenu->getNom() ?? 'Sans nom'),
                     htmlspecialchars($policeRef),
                     htmlspecialchars($avenantNum),
+                    htmlspecialchars($assureurNom),
+                    htmlspecialchars($clientNom),
+                    htmlspecialchars($partenaireNom),
                     htmlspecialchars($typeRevenu),
                     $taux,
                     $montant
