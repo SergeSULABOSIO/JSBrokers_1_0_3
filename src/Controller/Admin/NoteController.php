@@ -54,6 +54,17 @@ class NoteController extends AbstractController
         return $this->buildParentAssociationMapFromEntity(Note::class);
     }
 
+    #[Route('/test', name: 'test')]
+    public function edit(): Response
+    {
+        // Vous pouvez passer une variable 'note' si c'est une édition
+        // $note = ...
+        
+        return $this->render('components/note/editor.html.twig', [
+            // 'note' => $note, 
+        ]);
+    }
+
     #[Route('/index/{idInvite}/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function index(Request $request)
     {

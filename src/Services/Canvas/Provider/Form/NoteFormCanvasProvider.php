@@ -47,56 +47,52 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
     private function buildNoteLayout(Note $object, bool $isParentNew): array
     {
         $noteId = $object->getId() ?? 0;
+
+        // --- Définition des conditions de visibilité ---
+        $visibilityClient = ['visibility_conditions' => [['field' => 'addressedTo', 'operator' => 'in', 'value' => [Note::TO_CLIENT]]]];
+        $visibilityAssureur = ['visibility_conditions' => [['field' => 'addressedTo', 'operator' => 'in', 'value' => [Note::TO_ASSUREUR]]]];
+        $visibilityPartenaire = ['visibility_conditions' => [['field' => 'addressedTo', 'operator' => 'in', 'value' => [Note::TO_PARTENAIRE]]]];
+        $visibilityAutorite = ['visibility_conditions' => [['field' => 'addressedTo', 'operator' => 'in', 'value' => [Note::TO_AUTORITE_FISCALE]]]];
+        $visibilityComptes = ['visibility_conditions' => [['field' => 'type', 'operator' => 'in', 'value' => [Note::TYPE_NOTE_DE_DEBIT]]]];
+
         $layout = [
-            // Ligne 1: nom (2/3), reference (1/3)
+            // Ligne 1: le type
+            ["colonnes" => [["champs" => ["type"]]]],
+            // Ligne 2: le nom
+            ["colonnes" => [["champs" => ["nom"]]]],
+            // Ligne 3: la référence
+            ["colonnes" => [["champs" => ["reference"]]]],
+            // Ligne 4: A qui s'adresse la note (destinataire)
+            ["colonnes" => [["champs" => ["addressedTo"]]]],
+
+            // --- Lignes conditionnelles basées sur le destinataire ---
+            // Ligne 5: Le client
+            array_merge(["colonnes" => [["champs" => ["client"]]]], $visibilityClient),
+            // Ligne 6: L'assureur
+            array_merge(["colonnes" => [["champs" => ["assureur"]]]], $visibilityAssureur),
+            // Ligne 7: L'intermédiaire (partenaire)
+            array_merge(["colonnes" => [["champs" => ["partenaire"]]]], $visibilityPartenaire),
+            // Ligne 8: L'autorité fiscale
+            array_merge(["colonnes" => [["champs" => ["autoritefiscale"]]]], $visibilityAutorite),
+
+            // Ligne 9: Collection d'articles
             [
-                "colonnes" => [
-                    ["champs" => ["nom"], "width" => 8],
-                    ["champs" => ["reference"], "width" => 4]
-                ]
+                "colonnes" => [[
+                    "champs" => [$this->getCollectionWidgetConfig('articles', 'article', $noteId, 'Article', 'note', null, $isParentNew)]
+                ]]
             ],
-            // Ligne 2: type (1/2), addressedTo (1/2)
+
+            // Ligne 10: Comptes bancaires (conditionnel, visible si type = Débit)
+            array_merge(["colonnes" => [["champs" => ["comptes"]]]], $visibilityComptes),
+
+            // Ligne 11: Collection des paiements
             [
-                "colonnes" => [
-                    ["champs" => ["type"], "width" => 6],
-                    ["champs" => ["addressedTo"], "width" => 6]
-                ]
-            ],
-            // Ligne 3: Description
-            [
-                "colonnes" => [["champs" => ["description"]]]
-            ],
-            // Lignes conditionnelles
-            [
-                "colonnes" => [["champs" => [['field_code' => 'client']]]],
-                'visibility_conditions' => [['field' => 'addressedTo', 'operator' => 'in', 'value' => [Note::TO_CLIENT]]]
-            ],
-            [
-                "colonnes" => [["champs" => [['field_code' => 'assureur']]]],
-                'visibility_conditions' => [['field' => 'addressedTo', 'operator' => 'in', 'value' => [Note::TO_ASSUREUR]]]
-            ],
-            [
-                "colonnes" => [["champs" => [['field_code' => 'partenaire']]]],
-                'visibility_conditions' => [['field' => 'addressedTo', 'operator' => 'in', 'value' => [Note::TO_PARTENAIRE]]]
-            ],
-            [
-                "colonnes" => [["champs" => [['field_code' => 'autoritefiscale']]]],
-                'visibility_conditions' => [['field' => 'addressedTo', 'operator' => 'in', 'value' => [Note::TO_AUTORITE_FISCALE]]]
-            ],
-            // Ligne 5: Comptes bancaires
-            [
-                "colonnes" => [["champs" => ["comptes"]]]
-            ],
-            // Ligne 6: Validated
-            [
-                "colonnes" => [["champs" => ["validated"]]]
+                "colonnes" => [[
+                    "champs" => [$this->getCollectionWidgetConfig('paiements', 'paiement', $noteId, 'Paiement', 'note', null, $isParentNew)]
+                ]]
             ],
         ];
-        $collections = [
-            ['fieldName' => 'articles', 'entityRouteName' => 'article', 'formTitle' => 'Article', 'parentFieldName' => 'note'],
-            ['fieldName' => 'paiements', 'entityRouteName' => 'paiement', 'formTitle' => 'Paiement', 'parentFieldName' => 'note']
-        ];
-        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
+
         return $layout;
     }
 }
