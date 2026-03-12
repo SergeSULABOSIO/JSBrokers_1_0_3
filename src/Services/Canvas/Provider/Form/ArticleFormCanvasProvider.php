@@ -47,19 +47,34 @@ class ArticleFormCanvasProvider implements FormCanvasProviderInterface
     private function buildArticleLayout(Article $object, bool $isParentNew): array
     {
         $layout = [
-            // Ligne 1: Nom et Montant
+            // Ligne 1: Nom et description
             [
                 "colonnes" => [
-                    ["champs" => ["nom"], "width" => 8],
-                    ["champs" => ["montant"], "width" => 4]
+                    ["champs" => ["nom"], "width" => 12]
                 ]
             ],
-            // Ligne 2: Les 3 liaisons possibles côte à côte
+            // Ligne 2: Montant
             [
                 "colonnes" => [
-                    ["champs" => ["tranche"], "width" => 4],
-                    ["champs" => ["revenuFacture"], "width" => 4],
-                    ["champs" => ["taxeFacturee"], "width" => 4]
+                    ["champs" => ["montant"], "width" => 12]
+                ]
+            ],
+            // Ligne 3: Tranche (Prime liée)
+            [
+                "colonnes" => [
+                    ["champs" => ["tranche"], "width" => 12]
+                ]
+            ],
+            // Ligne 4: Revenu / Commission liée
+            [
+                "colonnes" => [
+                    ["champs" => ["revenuFacture"], "width" => 12]
+                ]
+            ],
+            // Ligne 5: Taxe liée
+            [
+                "colonnes" => [
+                    ["champs" => ["taxeFacturee"], "width" => 12]
                 ]
             ]
         ];
