@@ -1,0 +1,419 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Édition de Facture / Note{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <!-- DÉCOMMENTEZ CE LIEN UNIQUEMENT SI BOOTSTRAP 5 N'EST PAS DÉJÀ DANS VOTRE PROJET -->
+    <!-- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"> -->
+    <style>
+        /* --- CLASSES UTILITAIRES PERSONNALISÉES (Complément à Bootstrap) --- */
+        .text-xxs { font-size: 0.65rem; }
+        .text-xs { font-size: 0.75rem; }
+        .tracking-tight { letter-spacing: -0.025em; }
+        .tracking-widest { letter-spacing: 0.1em; }
+        .cursor-pointer { cursor: pointer; }
+        .cursor-not-allowed { cursor: not-allowed; }
+        .w-fit { width: fit-content; }
+        
+        /* Animations */
+        @keyframes loading-bar { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
+        .animate-loading-bar { animation: loading-bar 1.5s infinite linear; width: 33%; height: 100%; background-color: #0d6efd; }
+        
+        /* Scrollbar custom */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        /* Inputs sans style pour rendu propre */
+        .input-bare { border: none; background: transparent; outline: none; box-shadow: none; padding: 0; }
+        .input-bare:focus { outline: none; box-shadow: none; background: transparent; }
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        
+        /* Hover personnalisé pour les listes Modales */
+        .hover-bg-light:hover { background-color: #f8f9fa; }
+        .hover-bg-primary-subtle:hover { background-color: #cfe2ff; }
+        .hover-text-danger:hover { color: #dc3545 !important; }
+        
+        /* Mode Impression et Prévisualisation */
+        @media print {
+            body, html, .vh-100 { height: auto !important; overflow: visible !important; background: white !important; }
+            .overflow-auto { overflow: visible !important; }
+            .d-print-none { display: none !important; }
+            .shadow-lg, .shadow-sm, .border, .border-top { box-shadow: none !important; border: none !important; }
+            .print-paper { padding: 0 !important; max-width: 100% !important; }
+            .input-bare { -webkit-appearance: none; appearance: none; }
+        }
+        
+        .preview-wrapper .d-print-none { display: none !important; }
+        .preview-wrapper input, .preview-wrapper textarea, .preview-wrapper select, .preview-wrapper button, .preview-wrapper [data-action] { 
+            pointer-events: none; border: none !important; background: transparent !important; resize: none; 
+        }
+        
+        /* Z-index sur-mesure pour les Toasts et Modales */
+        .z-modal { z-index: 1050; }
+        .z-toast { z-index: 1100; }
+        .z-loader { z-index: 9999; }
+    </style>
+{% endblock %}
+
+{% block body %}
+<div class="vh-100 d-flex flex-column position-relative overflow-hidden bg-light" 
+     data-controller="invoice-editor"
+     data-action="click@window->invoice-editor#closeDropdowns"
+     data-invoice-editor-submit-url-value="{{ path('admin.note.api.submit') }}"
+     data-invoice-editor-invoice-id-value="{{ note.id | default('') }}"
+     data-invoice-editor-preview-mode-class="preview-wrapper">
+
+    <!-- BARRE DE PROGRESSION GLOBALE -->
+    <div data-invoice-editor-target="loadingBar" class="d-none position-absolute top-0 start-0 w-100 z-loader bg-primary bg-opacity-25" style="height: 3px;">
+        <div class="animate-loading-bar"></div>
+    </div>
+
+    <!-- TOASTS DE FEEDBACK -->
+    <div data-invoice-editor-target="duplicateToast" class="d-none position-fixed bottom-0 start-50 translate-middle-x mb-5 z-toast align-items-center gap-2 bg-danger bg-opacity-10 border border-danger text-danger px-4 py-2 rounded-4 shadow">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span class="text-xxs fw-bold text-uppercase tracking-widest" data-invoice-editor-target="duplicateMessage">Attention : Doublon détecté.</span>
+    </div>
+
+    <div data-invoice-editor-target="errorToast" class="d-none position-fixed bottom-0 start-50 translate-middle-x mb-5 z-toast align-items-center gap-2 bg-danger bg-opacity-10 border border-danger text-danger px-4 py-2 rounded-4 shadow">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span class="text-xxs fw-bold text-uppercase tracking-widest" data-invoice-editor-target="errorMessage">Erreur</span>
+    </div>
+
+    <div data-invoice-editor-target="successToast" class="d-none position-fixed bottom-0 end-0 mb-5 me-4 z-toast align-items-center gap-2 bg-dark text-white px-4 py-2 rounded-4 shadow-lg">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#198754" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <span class="text-xxs fw-bold text-uppercase tracking-widest" data-invoice-editor-target="successMessage">Enregistrement réussi</span>
+    </div>
+
+    <!-- INFOBULLE (TOOLTIP) -->
+    <div data-invoice-editor-target="tooltip" class="d-none position-fixed flex-column bg-dark text-white rounded-3 shadow-lg p-3 z-loader border border-secondary" style="width: 260px; pointer-events: none; text-align: left;">
+        <div class="text-xxs fw-bold text-secondary text-uppercase tracking-widest mb-1" data-invoice-editor-target="ttCotation"></div>
+        <div class="fw-bold text-xs text-white mb-2" data-invoice-editor-target="ttRevenu"></div>
+        <div class="row gx-3 gy-2 text-xxs border-top border-secondary pt-2 m-0">
+            <div class="col-12 p-0"><span class="text-secondary d-block text-uppercase mb-1" style="font-size:0.55rem;">Type de revenu</span><span class="fw-medium text-white" data-invoice-editor-target="ttType"></span></div>
+            <div class="col-6 p-0"><span class="text-secondary d-block text-uppercase mb-1" style="font-size:0.55rem;">Police</span><span class="fw-medium text-white" data-invoice-editor-target="ttPolice"></span></div>
+            <div class="col-6 p-0"><span class="text-secondary d-block text-uppercase mb-1" style="font-size:0.55rem;">Avenant</span><span class="fw-medium text-white" data-invoice-editor-target="ttAvenant"></span></div>
+            <div class="col-12 p-0"><span class="text-secondary d-block text-uppercase mb-1" style="font-size:0.55rem;">Période</span><span class="fw-medium text-white" data-invoice-editor-target="ttPeriode"></span></div>
+            
+            <div data-invoice-editor-target="ttCreditContent" class="d-none col-12 p-0 pt-2 border-top border-secondary mt-2">
+                <span class="text-secondary d-block text-uppercase mb-1" style="font-size:0.55rem;">Rétro-commission</span>
+                <span class="fw-bold text-success text-xs" data-invoice-editor-target="ttRetroCom"></span>
+            </div>
+            
+            <div data-invoice-editor-target="ttInvoiceContent" class="d-none col-12 p-0 row m-0 pt-2 border-top border-secondary mt-2">
+                <div class="col-6 p-0"><span class="text-secondary d-block text-uppercase mb-1" style="font-size:0.55rem;">Montant HT</span><span class="fw-bold text-white text-xs" data-invoice-editor-target="ttMontantHT"></span></div>
+                <div class="col-6 p-0"><span class="text-secondary d-block text-uppercase mb-1" style="font-size:0.55rem;">Prime Totale TTC</span><span class="fw-bold text-success text-xs" data-invoice-editor-target="ttPrimeTTC"></span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CORPS PRINCIPAL DE LA FACTURE SCROLLABLE -->
+    <div class="flex-grow-1 overflow-auto p-3 p-md-4 p-lg-5 custom-scrollbar">
+        <div class="container-fluid pb-5">
+            <div id="invoice-capture-area" data-invoice-editor-target="printArea" class="bg-white rounded-4 shadow-lg p-4 p-md-5 mx-auto print-paper" style="max-width: 1000px;">
+                
+                <!-- EN-TÊTE -->
+                <div class="d-flex flex-column gap-4 mb-5">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="d-flex flex-column gap-2">
+                            <h1 class="display-5 fw-bold text-uppercase tracking-tight border-bottom border-dark border-3 pb-2 text-dark mb-0" data-invoice-editor-target="mainTitle">FACTURE</h1>
+                            <span data-invoice-editor-target="badgeCreation" class="badge bg-warning text-dark text-xxs px-2 py-1 border border-warning text-uppercase tracking-widest shadow-sm d-print-none align-self-start">Mode Création</span>
+                            <span data-invoice-editor-target="badgeId" class="d-none badge bg-success text-white text-xxs px-2 py-1 border border-success text-uppercase tracking-widest shadow-sm align-self-start"></span>
+                        </div>
+                        
+                        <div class="text-end">
+                            <p class="fs-6 fw-bold text-dark text-uppercase tracking-widest mb-1" data-invoice-editor-target="companyName">AIB RDC Sarl</p>
+                            <div class="text-xxs text-secondary font-monospace">
+                                Édité par: <span class="fw-bold text-dark" data-invoice-editor-target="userName">Jean Dupont</span><br />
+                                <span class="fst-italic" data-invoice-editor-target="userRole">Courtier Senior</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row gy-4 text-dark">
+                        <div class="col-md-7">
+                            <div class="d-flex flex-wrap bg-light p-1 rounded-3 mb-3 w-fit d-print-none gap-1">
+                                <button type="button" data-action="click->invoice-editor#setTarget" data-target-type="assureur" class="btn btn-light btn-sm text-xxs fw-bold text-uppercase tracking-widest shadow-sm text-dark btn-target">Facturer Assureur</button>
+                                <button type="button" data-action="click->invoice-editor#setTarget" data-target-type="client" class="btn btn-link btn-sm text-xxs fw-bold text-uppercase tracking-widest text-secondary text-decoration-none btn-target">Facturer Client</button>
+                                <button type="button" data-action="click->invoice-editor#setTarget" data-target-type="partenaire" class="btn btn-link btn-sm text-xxs fw-bold text-uppercase tracking-widest text-secondary text-decoration-none btn-target">Note Partenaire</button>
+                            </div>
+
+                            <div class="bg-light p-4 rounded-4 border">
+                                <div class="mb-2">
+                                    <label class="d-block text-xxs fw-bold text-secondary text-uppercase tracking-widest">Destinataire</label>
+                                </div>
+                                <div data-action="click->invoice-editor#openTargetModal" class="w-100 text-start cursor-pointer mb-3 p-3 bg-white border rounded-3 d-flex justify-content-between align-items-center">
+                                    <div data-invoice-editor-target="targetContent" class="w-100"></div>
+                                </div>
+                                
+                                <div class="pt-3 border-top border-secondary-subtle">
+                                    <label class="d-block text-xxs fw-bold text-secondary text-uppercase tracking-widest mb-1" data-invoice-editor-target="labelTitle">Objet de la facture</label>
+                                    <input type="text" data-invoice-editor-target="labelInput" data-action="input->invoice-editor#onLabelInput" placeholder="Ex: Facturation des commissions..." class="w-100 input-bare text-xs fw-semibold text-dark" />
+                                    
+                                    <div class="d-flex align-items-center gap-2 mt-2 d-print-none">
+                                        <input type="checkbox" id="auto-label" data-invoice-editor-target="autoLabelCheck" data-action="change->invoice-editor#toggleAutoLabel" checked class="form-check-input mt-0" style="width:0.8rem;height:0.8rem;" />
+                                        <label for="auto-label" class="text-xxs text-uppercase tracking-widest text-secondary cursor-pointer m-0">Générer automatiquement l'objet</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-5 d-flex gap-4">
+                            <div class="border-start border-dark border-3 ps-3">
+                                <label class="d-block text-xxs fw-bold text-secondary text-uppercase tracking-widest mb-1">Référence</label>
+                                <input type="text" data-invoice-editor-target="refInput" data-action="input->invoice-editor#markUnsaved" value="INV-2026-001" class="input-bare font-monospace fw-bold fs-6 text-dark w-100" />
+                            </div>
+                            <div class="border-start border-dark border-3 ps-3">
+                                <label class="d-block text-xxs fw-bold text-secondary text-uppercase tracking-widest mb-1">Date émission</label>
+                                <input type="date" data-invoice-editor-target="dateInput" data-action="change->invoice-editor#onDateChange" value="{{ "now"|date("Y-m-d") }}" class="input-bare fw-bold fs-6 text-dark w-100" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TABLEAU -->
+                <div class="border-top border-dark border-2 position-relative mt-4 pt-3">
+                    <table class="table table-borderless w-100 mb-0" style="table-layout: fixed;">
+                        <thead class="border-bottom text-xxs fw-bold text-uppercase tracking-widest text-dark">
+                            <tr>
+                                <th class="text-center py-3 text-secondary d-print-none" style="width: 5%;">#</th>
+                                <th class="text-start py-3 ps-2" style="width: 35%;">REVENU</th>
+                                <th class="text-center py-3" style="width: 10%;">Qté</th>
+                                <th class="text-end py-3" style="width: 15%;" data-invoice-editor-target="thPrice">Prix Unit.</th>
+                                <th class="text-center py-3" style="width: 15%;">Tranche</th>
+                                <th class="text-end py-3 pe-2" style="width: 15%;">Total HT</th>
+                                <th class="py-3 d-print-none" style="width: 5%;"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-xs" data-invoice-editor-target="itemsBody" style="border-top: 1px solid #f8f9fa;">
+                        </tbody>
+                    </table>
+                </div>
+
+                <button type="button" data-action="click->invoice-editor#openNewRevenuModal" class="btn btn-primary btn-sm mt-3 d-flex align-items-center gap-2 text-xxs fw-bold text-uppercase tracking-widest d-print-none shadow-sm rounded-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Ajouter une ligne
+                </button>
+
+                <!-- TOTAUX & OPTIONS -->
+                <div class="row mt-5 pt-4 border-top">
+                    <div class="col-md-6 d-print-none">
+                        <div class="bg-light p-4 rounded-4 border">
+                            <div class="row g-3">
+                                <div class="col-6" data-invoice-editor-target="taxContainer">
+                                    <label class="d-block text-xxs fw-bold text-secondary text-uppercase tracking-widest mb-2">Taxe Applicable</label>
+                                    <div data-action="click->invoice-editor#openTaxModal" class="w-100 px-3 py-2 bg-white border rounded-3 cursor-pointer text-xs fw-bold d-flex justify-content-between align-items-center">
+                                        <span data-invoice-editor-target="taxCodeDisplay">TVA</span>
+                                        <span class="text-secondary" data-invoice-editor-target="taxRateDisplay">16%</span>
+                                    </div>
+                                </div>
+                                <div class="col-6" data-invoice-editor-target="currencyContainer">
+                                    <label class="d-block text-xxs fw-bold text-secondary text-uppercase tracking-widest mb-2">Devise</label>
+                                    <div data-action="click->invoice-editor#openCurrencyModal" class="w-full px-3 py-2 bg-white border rounded-3 cursor-pointer text-xs fw-bold text-center">
+                                        <span data-invoice-editor-target="currencyDisplay">USD</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-5 offset-md-1 d-flex flex-column gap-2">
+                        <div class="d-flex justify-content-between align-items-center px-2 text-xxs fw-bold text-secondary text-uppercase tracking-widest">
+                            <span data-invoice-editor-target="subtotalLabel">Sous-total HT</span>
+                            <span class="text-dark text-sm" data-invoice-editor-target="subtotalDisplay">0.00</span>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center px-2 text-xxs fst-italic text-secondary" data-invoice-editor-target="taxRowDisplay">
+                            <span data-invoice-editor-target="taxNameDisplay">Taxe</span>
+                            <span data-invoice-editor-target="taxAmountDisplay">0.00</span>
+                        </div>
+                        
+                        <div class="pt-3 mt-2 border-top border-dark border-3 d-flex flex-column px-2">
+                            <div class="d-flex justify-content-between align-items-end text-dark mb-1">
+                                <span class="fs-6 fw-bold text-uppercase tracking-tight" data-invoice-editor-target="grandTotalLabel">Total TTC</span>
+                                <span class="fs-4 fw-bold tracking-tight text-primary" data-invoice-editor-target="grandTotalDisplay">0.00</span>
+                            </div>
+                            <div class="text-end mt-1 print:mt-2">
+                                <span class="text-xxs text-secondary text-uppercase tracking-widest fw-bold d-block mb-1">Arrêté à la somme de :</span>
+                                <span class="text-xs text-dark fst-italic fw-semibold lh-sm d-block" data-invoice-editor-target="wordsDisplay">Zéro</span>
+                            </div>
+
+                            <!-- PAIEMENTS -->
+                            <div class="mt-4 pt-3 border-top">
+                                <div data-action="click->invoice-editor#openPaymentsList" class="d-flex justify-content-between align-items-center text-sm fw-bold text-success cursor-pointer p-2 rounded-2 hover-bg-light transition-colors">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="text-uppercase tracking-tight text-xxs" data-invoice-editor-target="paidLabel">Total Encaissé</span>
+                                        <span data-invoice-editor-target="paymentsBadge" class="d-none badge bg-success text-white rounded-pill text-xxs d-print-none">0</span>
+                                    </div>
+                                    <span class="text-sm tabular-nums" data-invoice-editor-target="totalPaidDisplay">0.00</span>
+                                </div>
+                                
+                                <div class="d-flex justify-content-between align-items-center text-sm fw-bold text-danger mt-1 p-2">
+                                    <span class="text-uppercase tracking-tight text-xxs">Solde Restant Dû</span>
+                                    <span class="text-sm tabular-nums" data-invoice-editor-target="balanceDueDisplay">0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BANQUES & FOOTER -->
+                <div class="mt-5 pt-4 border-top text-center opacity-75 print-opacity-100" data-invoice-editor-target="footerSection">
+                    <div data-invoice-editor-target="banksWrapper">
+                        <div class="d-flex justify-content-center align-items-center gap-2 mb-3 d-print-none">
+                            <p class="text-xxs fw-bold text-uppercase tracking-widest text-dark m-0" style="letter-spacing:0.3em;">Comptes Bancaires</p>
+                            <button type="button" data-action="click->invoice-editor#openNewBankModal" class="btn btn-light btn-sm rounded-circle p-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            </button>
+                        </div>
+                        <div class="d-flex flex-column gap-2 align-items-center justify-content-center mx-auto mb-4" data-invoice-editor-target="banksBody" style="max-width: 600px;">
+                        </div>
+                    </div>
+
+                    <div class="text-xxs fw-medium text-uppercase tracking-widest lh-lg mx-auto text-secondary border-top pt-3" data-invoice-editor-target="legalMentions" style="max-width: 700px; font-size: 0.5rem;">
+                        <p class="fw-bold text-dark m-0" data-invoice-editor-target="companyFooterName">AIB RDC Sarl • Kinshasa, Gombe / RDC • Tél: +243 81 000 0000</p>
+                        <p class="m-0" data-invoice-editor-target="companyFooterInfo">RCCM: CD/KIN/RCCM/14-B-XXXX • ID Nat: 01-XXXXX-NXXXXX • N° Impôt: AXXXXXXX</p>
+                        <p class="mt-1 text-secondary fst-italic text-capitalize tracking-normal m-0" data-invoice-editor-target="taxExemptMention" style="letter-spacing:normal;">TVA non applicable (Art. 293 B du CGI) • Le client peut effectuer le paiement sur l'un des comptes ci-dessus.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DOCK BOTTOM (BARRE D'OUTILS) -->
+    <div class="bg-white border-top py-3 px-4 shadow-sm d-print-none position-relative z-3 flex-shrink-0">
+        <div class="container-fluid max-w-6xl p-0 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+            <div class="d-flex align-items-center gap-3 w-100 justify-content-between justify-content-md-start">
+                <div class="d-none d-md-flex align-items-center gap-2 fw-bold fs-5 tracking-tight text-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+                    <span class="text-dark">FACT.CORE</span>
+                </div>
+                <div class="d-flex bg-light p-1 rounded-3 w-100 w-md-auto">
+                    <button type="button" data-action="click->invoice-editor#setPreviewMode" data-mode="false" class="mode-btn btn btn-white btn-sm flex-grow-1 text-xxs fw-bold text-uppercase tracking-widest shadow-sm text-dark">Édition</button>
+                    <button type="button" data-action="click->invoice-editor#setPreviewMode" data-mode="true" class="mode-btn btn btn-link btn-sm flex-grow-1 text-xxs fw-bold text-uppercase tracking-widest text-secondary text-decoration-none">Visualisation</button>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-3 w-100 justify-content-end">
+                <div class="d-none d-md-flex flex-column align-items-end justify-content-center me-2">
+                    <span data-invoice-editor-target="statusUnsaved" class="d-none text-xxs fw-bold text-warning text-uppercase tracking-widest d-flex align-items-center gap-1">
+                        <span class="rounded-circle bg-warning" style="width:6px;height:6px;"></span> Non enregistré
+                    </span>
+                    <span data-invoice-editor-target="statusSaved" class="text-xxs fw-bold text-secondary text-uppercase tracking-widest d-flex align-items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#198754" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> À jour
+                    </span>
+                    <span data-invoice-editor-target="statusTime" class="text-secondary font-monospace" style="font-size:0.5rem; margin-top:2px;">Nouveau</span>
+                </div>
+
+                <div class="d-flex align-items-center gap-2 flex-grow-1 flex-md-grow-0">
+                    <button type="button" data-action="click->invoice-editor#openPaymentForm" data-invoice-editor-target="btnAction" class="btn btn-success btn-sm d-flex align-items-center justify-content-center gap-2 text-xxs fw-bold text-uppercase tracking-widest shadow-sm rounded-3 py-2 px-3 flex-grow-1 flex-md-grow-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+                        <span class="d-none d-sm-inline" data-invoice-editor-target="btnPaymentLabel">Encaisser</span>
+                    </button>
+
+                    <button type="button" data-action="click->invoice-editor#save" data-invoice-editor-target="btnSave btnAction" class="btn btn-primary btn-sm d-flex align-items-center justify-content-center gap-2 text-xxs fw-bold text-uppercase tracking-widest shadow-sm rounded-3 py-2 px-3 flex-grow-1 flex-md-grow-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        <span class="d-none d-sm-inline" data-invoice-editor-target="btnSaveLabel">Enregistrer</span>
+                    </button>
+                    
+                    <div class="position-relative flex-grow-1 flex-md-grow-0" data-invoice-editor-target="exportWrapper">
+                        <button type="button" data-action="click->invoice-editor#toggleExportMenu" data-invoice-editor-target="btnExport" class="btn btn-light border btn-sm d-flex align-items-center justify-content-center gap-2 text-xxs fw-bold text-uppercase tracking-widest rounded-3 py-2 px-3 w-100" disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            <span class="d-none d-sm-inline">Exporter</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                        </button>
+                        <div data-invoice-editor-target="exportMenu" class="position-absolute bottom-100 end-0 mb-2 bg-white border rounded-3 shadow-lg d-none z-modal" style="width: 200px;">
+                            <div class="list-group list-group-flush rounded-3">
+                                <button type="button" data-action="click->invoice-editor#exportPdf" class="list-group-item list-group-item-action d-flex align-items-center gap-3 text-xs fw-semibold text-dark py-3 border-bottom"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="text-danger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2-2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg> PDF (Imprimer)</button>
+                                <button type="button" data-action="click->invoice-editor#exportImage" class="list-group-item list-group-item-action d-flex align-items-center gap-3 text-xs fw-semibold text-dark py-3 border-0"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> Image (PNG)</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL GÉNÉRIQUE DE SÉLECTION -->
+    <div data-invoice-editor-target="selectionModal" class="d-none position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 align-items-center justify-content-center p-3 z-modal">
+        <div class="bg-white w-100 rounded-4 shadow-lg d-flex flex-column" style="max-width: 450px; max-height: 80vh;">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                <h2 class="fs-6 fw-bold text-uppercase tracking-tight text-dark m-0" data-invoice-editor-target="modalTitle">Choisir</h2>
+                <button type="button" data-action="click->invoice-editor#closeModal" class="btn btn-sm btn-light rounded-circle p-1 text-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="p-3 overflow-auto custom-scrollbar flex-grow-1">
+                <div class="position-relative mb-3" data-invoice-editor-target="modalSearchContainer">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" class="position-absolute top-50 translate-middle-y text-secondary" style="left: 12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" data-action="input->invoice-editor#filterModal" placeholder="Rechercher..." class="form-control form-control-sm bg-light" style="padding-left: 32px;" />
+                </div>
+                <div class="d-flex flex-column gap-2" data-invoice-editor-target="modalList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PAIEMENT FORM -->
+    <div data-invoice-editor-target="paymentModal" class="d-none position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 align-items-center justify-content-center p-3 z-modal">
+        <div class="bg-white w-100 rounded-4 shadow-lg d-flex flex-column" style="max-width: 400px;">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-success bg-opacity-10 text-success rounded-top-4">
+                <h2 class="text-sm font-bold text-uppercase tracking-tight m-0 d-flex align-items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+                    <span data-invoice-editor-target="paymentModalTitle">Encaisser</span>
+                </h2>
+                <button type="button" data-action="click->invoice-editor#closePaymentForm" class="btn btn-sm btn-outline-success border-0 rounded-circle p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <form data-action="submit->invoice-editor#submitPayment" class="p-4 d-flex flex-column gap-3">
+                <input type="hidden" data-invoice-editor-target="paymentIdInput" />
+                <div>
+                    <label class="d-block text-xxs fw-bold text-secondary text-uppercase tracking-widest mb-1">Montant</label>
+                    <div class="position-relative">
+                        <input required type="number" step="0.01" min="0.01" data-invoice-editor-target="paymentAmountInput" class="form-control form-control-sm bg-light fw-bold text-dark" style="padding-right: 50px;" />
+                        <span class="position-absolute top-50 end-0 translate-middle-y fw-bold text-secondary text-xs pe-3" data-invoice-editor-target="paymentCurrencyLabel">USD</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="d-block text-xxs fw-bold text-secondary text-uppercase tracking-widest mb-1">Date</label>
+                    <input required type="date" data-invoice-editor-target="paymentDateInput" class="form-control form-control-sm bg-light fw-medium text-dark" />
+                </div>
+                <div>
+                    <label class="d-block text-xxs fw-bold text-secondary text-uppercase tracking-widest mb-1">Référence</label>
+                    <input type="text" data-invoice-editor-target="paymentRefInput" placeholder="Ex: Virement..." class="form-control form-control-sm bg-light" />
+                </div>
+                <div>
+                    <label class="d-block text-xxs fw-bold text-secondary text-uppercase tracking-widest mb-1">Preuve de paiement (Fichier)</label>
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="cursor-pointer flex-grow-1 bg-light border border-dashed rounded-3 p-2 text-center transition-colors hover-bg-primary-subtle m-0">
+                            <span class="text-xs fw-medium text-secondary" data-invoice-editor-target="paymentProofName">Cliquer pour attacher un fichier...</span>
+                            <input type="file" class="d-none" data-invoice-editor-target="paymentProofInput" data-action="change->invoice-editor#handlePaymentFileChange" />
+                        </label>
+                        <button type="button" data-action="click->invoice-editor#clearPaymentFile" data-invoice-editor-target="btnPaymentProofClear" class="d-none btn btn-sm btn-outline-danger border-0 p-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="pt-3 mt-1 border-top d-flex gap-2">
+                    <button type="button" data-action="click->invoice-editor#closePaymentForm" class="btn btn-light flex-grow-1 fw-bold text-xxs text-uppercase tracking-widest">Annuler</button>
+                    <button type="submit" class="btn btn-success flex-grow-1 fw-bold text-xxs text-uppercase tracking-widest shadow-sm">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL PAIEMENTS LIST -->
+    <div data-invoice-editor-target="paymentListModal" class="d-none position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 align-items-center justify-content-center p-3 z-modal">
+        <div class="bg-white w-100 rounded-4 shadow-lg d-flex flex-column" style="max-width: 600px; max-height: 85vh;">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                <h2 class="fs-6 fw-bold text-uppercase tracking-tight text-dark m-0">Détails des transactions</h2>
+                <button type="button" data-action="click->invoice-editor#closePaymentsList" class="btn btn-sm btn-light rounded-circle p-1 text-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="p-3 overflow-auto custom-scrollbar flex-grow-1" data-invoice-editor-target="paymentListBody"></div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
