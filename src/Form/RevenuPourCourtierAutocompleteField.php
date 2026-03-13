@@ -7,7 +7,9 @@ use App\Entity\RevenuPourCourtier;
 use App\Services\FormListenerFactory;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\QueryBuilder;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\OptionsResolver\Options;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\UX\Autocomplete\Form\AsEntityAutocompleteField;
 use Symfony\UX\Autocomplete\Form\BaseEntityAutocompleteType;
@@ -27,81 +29,7 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
         $resolver->setDefaults([
             'class' => RevenuPourCourtier::class,
             'placeholder' => 'Rechercher un revenu',
-            'query_builder' => function (EntityRepository $er) {
-                $entrepriseId = $this->ecouteurFormulaire->getCurrentEntrepriseId();
-                
-                $request = $this->requestStack->getCurrentRequest();
-                $noteId = $request ? $request->query->get('note_id') : null;
-                
-                error_log(sprintf("\n[RevenuAutocomplete DEBUG] --- Démarrage. NoteID reçu: %s ---", $noteId ?? 'NULL'));
-                
-                $qb = $er->createQueryBuilder('r')
-                    ->addSelect('tr', 'c', 'a', 'assureur', 'piste', 'client')
-                    ->join('r.typeRevenu', 'tr')
-                    ->join('r.cotation', 'c')
-                    ->join('c.avenants', 'a')
-                    ->leftJoin('c.assureur', 'assureur')
-                    ->leftJoin('c.piste', 'piste')
-                    ->leftJoin('piste.client', 'client')
-                    ->where('tr.entreprise = :eseId')
-                    ->setParameter('eseId', $entrepriseId);
-
-                // --- VERROUILLAGE STRICT DU FILTRAGE ---
-                if ($noteId) {
-                    $note = $this->em->getRepository(Note::class)->find($noteId);
-                    
-                    if ($note) {
-                        $destinataire = $note->getAddressedTo();
-                        error_log(sprintf("[RevenuAutocomplete DEBUG] Note trouvée. Type destinataire: '%s'", $destinataire));
-                        
-                        // Utilisation de "==" pour éviter les bugs de typage (string "1" vs entier 1)
-                        if ($destinataire == Note::TO_CLIENT) {
-                            if ($note->getClient()) {
-                                error_log(sprintf("[RevenuAutocomplete DEBUG] Filtrage strict sur Client ID: %s", $note->getClient()->getId()));
-                                $qb->andWhere('client.id = :clientId')
-                                   ->setParameter('clientId', $note->getClient()->getId());
-                            } else {
-                                error_log("[RevenuAutocomplete DEBUG] FAIL-SAFE: Destinataire = Client, mais champ Client vide !");
-                                $qb->andWhere('1 = 0');
-                            }
-                        } 
-                        elseif ($destinataire == Note::TO_ASSUREUR) {
-                            if ($note->getAssureur()) {
-                                error_log(sprintf("[RevenuAutocomplete DEBUG] Filtrage strict sur Assureur ID: %s", $note->getAssureur()->getId()));
-                                $qb->andWhere('assureur.id = :assureurId')
-                                   ->setParameter('assureurId', $note->getAssureur()->getId());
-                            } else {
-                                error_log("[RevenuAutocomplete DEBUG] FAIL-SAFE: Destinataire = Assureur, mais champ Assureur vide !");
-                                $qb->andWhere('1 = 0');
-                            }
-                        }
-                        elseif ($destinataire == Note::TO_PARTENAIRE) {
-                            if ($note->getPartenaire()) {
-                                error_log(sprintf("[RevenuAutocomplete DEBUG] Filtrage strict sur Partenaire ID: %s", $note->getPartenaire()->getId()));
-                                $qb->leftJoin('piste.partenaires', 'partenaires')
-                                   ->andWhere('partenaires.id = :partenaireId')
-                                   ->setParameter('partenaireId', $note->getPartenaire()->getId());
-                            } else {
-                                error_log("[RevenuAutocomplete DEBUG] FAIL-SAFE: Destinataire = Partenaire, mais champ Partenaire vide !");
-                                $qb->andWhere('1 = 0');
-                            }
-                        } 
-                        else {
-                            error_log(sprintf("[RevenuAutocomplete DEBUG] FAIL-SAFE: Type de destinataire ignoré ou non géré (%s)", $destinataire));
-                            $qb->andWhere('1 = 0'); // On bloque tout si le type n'est pas reconnu
-                        }
-                    } else {
-                        error_log("[RevenuAutocomplete DEBUG] FAIL-SAFE: Note introuvable en base de données !");
-                        $qb->andWhere('1 = 0');
-                    }
-                } else {
-                    error_log("[RevenuAutocomplete DEBUG] FAIL-SAFE: Aucun ID de Note fourni à l'URL !");
-                    $qb->andWhere('1 = 0');
-                }
-
-                $qb->orderBy('r.id', 'ASC');
-                return $qb;
-            },
+            'note_id' => null, // Déclaration de notre option personnalisée
             'searchable_fields' => ['nom'],
             'as_html' => true,
             'choice_label' => function(RevenuPourCourtier $revenu) {
@@ -125,8 +53,79 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
                     $taux,
                     $montant
                 );
-            },
+            }
         ]);
+
+        // La MÉTHODE OFFICIELLE : Un normalizer qui retourne l'objet QueryBuilder directement
+        $resolver->setNormalizer('query_builder', function (Options $options, $value) {
+            
+            // On récupère le repository via l'EntityManager injecté
+            $er = $this->em->getRepository($options['class']);
+            
+            $entrepriseId = $this->ecouteurFormulaire->getCurrentEntrepriseId();
+            $request = $this->requestStack->getCurrentRequest();
+            
+            // Récupération des IDs classiques ou LIVE depuis le Javascript
+            $noteId = $options['note_id'] 
+                ?? ($request ? $request->query->get('note_id') : null)
+                ?? ($request ? $request->query->get('parent_id') : null);
+                
+            $liveAssureurId = $request ? $request->query->get('live_assureur_id') : null;
+            $liveClientId = $request ? $request->query->get('live_client_id') : null;
+            
+            $qb = $er->createQueryBuilder('r')
+                ->addSelect('tr', 'c', 'a', 'assureur', 'piste', 'client')
+                ->join('r.typeRevenu', 'tr')
+                ->join('r.cotation', 'c')
+                ->join('c.avenants', 'a') // INNER JOIN pour les polices validées
+                ->leftJoin('c.assureur', 'assureur')
+                ->leftJoin('c.piste', 'piste')
+                ->leftJoin('piste.client', 'client')
+                ->where('tr.entreprise = :eseId')
+                ->setParameter('eseId', $entrepriseId);
+
+            // --- 1. PRIORITÉ ABSOLUE : Données LIVE de l'interface ---
+            if ($liveAssureurId) {
+                error_log("[RevenuAutocomplete DEBUG] Filtrage LIVE par Assureur ID: " . $liveAssureurId);
+                $qb->andWhere('assureur.id = :assureurId')->setParameter('assureurId', $liveAssureurId);
+            } 
+            elseif ($liveClientId) {
+                error_log("[RevenuAutocomplete DEBUG] Filtrage LIVE par Client ID: " . $liveClientId);
+                $qb->andWhere('client.id = :clientId')->setParameter('clientId', $liveClientId);
+            }
+            // --- 2. FALLBACK : Données de la base de données ---
+            elseif ($noteId) {
+                $note = $this->em->getRepository(Note::class)->find($noteId);
+                
+                if ($note) {
+                    $destinataire = $note->getAddressedTo();
+                    
+                    if ($destinataire == Note::TO_CLIENT && $note->getClient()) {
+                        $qb->andWhere('client.id = :clientId')->setParameter('clientId', $note->getClient()->getId());
+                    } 
+                    elseif ($destinataire == Note::TO_ASSUREUR && $note->getAssureur()) {
+                        $qb->andWhere('assureur.id = :assureurId')->setParameter('assureurId', $note->getAssureur()->getId());
+                    }
+                    elseif ($destinataire == Note::TO_PARTENAIRE && $note->getPartenaire()) {
+                        $qb->leftJoin('piste.partenaires', 'partenaires')
+                           ->andWhere('partenaires.id = :partenaireId')
+                           ->setParameter('partenaireId', $note->getPartenaire()->getId());
+                    } else {
+                        $qb->andWhere('1 = 0');
+                    }
+                } else {
+                    $qb->andWhere('1 = 0');
+                }
+            } 
+            else {
+                error_log("[RevenuAutocomplete DEBUG] INFO: Aucun NoteID ni LiveID. Affichage global par défaut.");
+            }
+
+            $qb->orderBy('r.id', 'ASC');
+            
+            // On retourne DIRECTEMENT l'objet QueryBuilder
+            return $qb;
+        });
     }
 
     public function getParent(): string
