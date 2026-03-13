@@ -25,9 +25,11 @@ class ArticleType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $request = $this->requestStack->getCurrentRequest();
+        /** @var Article|null $article */
         $article = $builder->getData();
         $noteId = null;
-        $revenuIdInitial = null; // Pour initialiser le filtre Tranche en édition
+        $revenuIdInitial = null;
+        $isCreationMode = !$article || !$article->getId();
 
         if ($article) {
             if ($article->getNote()) {
@@ -38,6 +40,11 @@ class ArticleType extends AbstractType
             }
         } elseif ($request && $request->query->has('parent_id')) {
             $noteId = $request->query->get('parent_id');
+        }
+
+        $trancheRowAttrs = [];
+        if ($isCreationMode) {
+            $trancheRowAttrs['class'] = 'd-none';
         }
 
         $builder
@@ -59,10 +66,10 @@ class ArticleType extends AbstractType
             ->add('tranche', TrancheAutocompleteField::class, [
                 'label' => "Lié à une Tranche",
                 'required' => false,
-                // On passe l'ID du revenu au PHP pour valider l'édition initiale
-                'revenu_id' => $revenuIdInitial, 
+                'revenu_id' => $revenuIdInitial,
+                'row_attr' => $trancheRowAttrs,
                 'attr' => [
-                    // On connecte le nouveau contrôleur Javascript au champ Tranche
+                    // Branchement du super-contrôleur spécifique à la Tranche
                     'data-controller' => 'tranche-autocomplete-filter'
                 ]
             ])
@@ -87,11 +94,7 @@ class ArticleType extends AbstractType
             'data_class' => Article::class,
             'csrf_protection' => false,
             'allow_extra_fields' => true,
-            'attr' => [
-                // CORRECTION : On attache le contrôleur à la racine de l'Article
-                // Il va pouvoir gérer l'affichage/masquage interne de ses champs
-                'data-controller' => 'conditional-article-fields'
-            ]
+            // (Suppression du contrôleur global pour éviter les conflits)
         ]);
     }
 
