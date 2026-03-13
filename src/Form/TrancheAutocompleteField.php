@@ -23,7 +23,7 @@ class TrancheAutocompleteField extends AbstractType
         private FormListenerFactory $ecouteurFormulaire,
         private RequestStack $requestStack,
         private EntityManagerInterface $em,
-        private CanvasBuilder $canvasBuilder // Injection du CanvasBuilder
+        private CanvasBuilder $canvasBuilder
     ) {}
 
     public function configureOptions(OptionsResolver $resolver): void
@@ -47,7 +47,7 @@ class TrancheAutocompleteField extends AbstractType
                 // MAGIE DU CANVAS BUILDER : Hydratation dynamique de l'entité Tranche
                 $this->canvasBuilder->loadAllCalculatedValues($tranche);
 
-                // Extraction des indicateurs financiers hydratés (Adapté aux attributs de l'entité Tranche)
+                // Extraction des indicateurs financiers hydratés
                 $prime = $tranche->primeTranche ?? $tranche->montant_du ?? 0.0;
                 $paye = $tranche->primePayee ?? $tranche->montant_paye ?? 0.0;
                 $solde = $tranche->primeSoldeDue ?? $tranche->solde_restant_du ?? 0.0;
@@ -59,7 +59,7 @@ class TrancheAutocompleteField extends AbstractType
                 $reserve = $tranche->reserve ?? 0.0;
                 $retrocom = $tranche->retroCommission ?? 0.0;
 
-                // Formatage HTML enrichi, cohérent avec RevenuPourCourtier (ligne bleue, séparateurs &bull;)
+                // Formatage HTML enrichi avec la charte bleue cobalt et les puces
                 return sprintf(
                     '<div>
                         <strong>%s</strong>
@@ -99,32 +99,25 @@ class TrancheAutocompleteField extends AbstractType
                 );
             },
             
-            // La méthode officielle pour retourner le QueryBuilder
             'query_builder' => function (Options $options) {
                 return function (EntityRepository $er) use ($options): QueryBuilder {
-                    $entrepriseId = $this->ecouteurFormulaire->getCurrentEntrepriseId();
                     $request = $this->requestStack->getCurrentRequest();
                     
-                    // Récupération de l'ID du revenu (via AJAX Stimulus ou via l'option d'édition)
                     $liveRevenuId = $request ? $request->query->get('live_revenu_id') : null;
                     $formRevenuId = $options['revenu_id'];
 
-                    $qb = $er->createQueryBuilder('t')
-                        ->join('t.cotation', 'c')
-                        ->join('c.piste', 'piste')
-                        ->where('piste.entreprise = :eseId')
-                        ->setParameter('eseId', $entrepriseId);
+                    // Initialisation propre sans la jointure Piste/Entreprise
+                    $qb = $er->createQueryBuilder('t');
 
                     // --- 1. FILTRE LIVE (Depuis Stimulus Javascript) ---
                     if ($liveRevenuId) {
                         $revenu = $this->em->getRepository(RevenuPourCourtier::class)->find($liveRevenuId);
                         
                         if ($revenu && $revenu->getCotation()) {
-                            // On filtre strictement sur la Cotation du Revenu choisi !
                             $qb->andWhere('t.cotation = :cotationId')
                                ->setParameter('cotationId', $revenu->getCotation()->getId());
                         } else {
-                            $qb->andWhere('1 = 0'); // Sécurité: pas de revenu = pas de tranche
+                            $qb->andWhere('1 = 0'); // Sécurité: pas de cotation trouvée = liste vide
                         }
                     } 
                     // --- 2. FILTRE INITIAL (Au chargement de la page d'édition) ---
@@ -139,8 +132,7 @@ class TrancheAutocompleteField extends AbstractType
                     } 
                     // --- 3. AUCUN REVENU CHOISI ---
                     else {
-                        // On n'affiche aucune tranche par défaut.
-                        $qb->andWhere('1 = 0');
+                        $qb->andWhere('1 = 0'); // Si aucun revenu n'est sélectionné, la liste est vide par défaut
                     }
 
                     $qb->orderBy('t.id', 'ASC');
