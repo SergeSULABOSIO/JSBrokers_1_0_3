@@ -87,6 +87,11 @@ class ArticleType extends AbstractType
             'data_class' => Article::class,
             'csrf_protection' => false,
             'allow_extra_fields' => true,
+            'attr' => [
+                // CORRECTION : On attache le contrôleur à la racine de l'Article
+                // Il va pouvoir gérer l'affichage/masquage interne de ses champs
+                'data-controller' => 'conditional-article-fields'
+            ]
         ]);
     }
 

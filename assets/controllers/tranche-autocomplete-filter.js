@@ -3,22 +3,24 @@ import { Controller } from '@hotwired/stimulus';
 /*
  * Ce contrôleur Stimulus met à jour l'URL d'appel AJAX du champ Tranche
  * en y injectant l'ID du Revenu sélectionné juste au-dessus.
- * Compatible 100% Asset Mapper.
  */
 export default class extends Controller {
     connect() {
-        // 1. On cherche le champ "Revenu"
-        // Comme défini dans tes formulaires, il s'appelle 'revenuFacture'
-        this.revenuSelect = document.querySelector('select[name="revenuFacture"]');
+        // 1. Trouver le formulaire Article parent pour scoper la recherche (évite les conflits entre plusieurs articles)
+        this.articleForm = this.element.closest('[data-controller~="conditional-article-fields"]');
         
-        // 2. On identifie le conteneur du champ Tranche (pour modifier l'URL)
+        if (this.articleForm) {
+            // 2. Trouver le select Revenu spécifique à CET article (gère le format collection)
+            this.revenuSelect = this.articleForm.querySelector('select[name*="[revenuFacture]"]');
+        }
+        
+        // 3. On identifie le conteneur du champ Tranche pour modifier l'URL AJAX
         this.autocompleteWrapper = this.element.closest('[data-controller*="autocomplete"]');
 
         if (this.revenuSelect) {
-            // On écoute chaque changement sur le Revenu
+            // On écoute chaque changement sur le Revenu pour actualiser l'URL de la tranche
             this.revenuSelect.addEventListener('change', () => this.updateAutocompleteUrl());
-            
-            // On exécute au chargement pour gérer l'état initial (mode édition)
+            // On exécute au chargement pour gérer l'état initial
             setTimeout(() => this.updateAutocompleteUrl(), 100);
         }
 
@@ -39,7 +41,7 @@ export default class extends Controller {
 
         if (!urlAttr) return;
 
-        // Mémoriser l'URL de base
+        // Mémoriser l'URL de base la première fois
         if (!this.baseUrl) {
             this.baseUrl = this.autocompleteWrapper.getAttribute(urlAttr);
         }
@@ -48,7 +50,7 @@ export default class extends Controller {
             const url = new URL(this.baseUrl, window.location.origin);
             
             if (revenuId && revenuId !== '') {
-                // On injecte l'ID du revenu "en direct" pour le filtre côté PHP
+                // On injecte l'ID du revenu "en direct" pour le filtre PHP
                 url.searchParams.set('live_revenu_id', revenuId);
             } else {
                 url.searchParams.delete('live_revenu_id');
