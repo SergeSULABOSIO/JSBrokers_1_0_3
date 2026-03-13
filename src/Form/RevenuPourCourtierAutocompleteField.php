@@ -23,7 +23,6 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
         private FormListenerFactory $ecouteurFormulaire,
         private RequestStack $requestStack,
         private EntityManagerInterface $em,
-        // INJECTION ARCHITECTURALE PARFAITE : Le chef d'orchestre
         private CanvasBuilder $canvasBuilder
     ) {}
     
@@ -36,9 +35,6 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
             'searchable_fields' => ['nom'],
             'as_html' => true,
             'choice_label' => function(RevenuPourCourtier $revenu) {
-                // 1. Informations textuelles basiques
-                $taux = $revenu->getTauxExceptionel() !== null ? ($revenu->getTauxExceptionel() * 100) . '%' : '-';
-                $montant = $revenu->getMontantFlatExceptionel() !== null ? number_format($revenu->getMontantFlatExceptionel(), 2, ',', ' ') : '-';
                 
                 $cotation = $revenu->getCotation();
                 $avenant = ($cotation && !$cotation->getAvenants()->isEmpty()) ? $cotation->getAvenants()->first() : null;
@@ -48,36 +44,74 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
                 $assureurNom = ($cotation && $cotation->getAssureur()) ? $cotation->getAssureur()->getNom() : 'N/A';
                 $clientNom = ($piste && $piste->getClient()) ? $piste->getClient()->getNom() : 'N/A';
                 
-                // 2. MAGIE DU CANVAS BUILDER : On hydrate dynamiquement l'entité avec ses valeurs calculées
+                // MAGIE DU CANVAS BUILDER : On hydrate dynamiquement l'entité avec la stratégie
                 $this->canvasBuilder->loadAllCalculatedValues($revenu);
                 
-                // L'entité possède maintenant des propriétés dynamiques injectées par la stratégie !
-                $montantTTC = $revenu->montant_du ?? 0.0;
-                $montantPaye = $revenu->montant_paye ?? 0.0;
-                $soldeRestantDu = $revenu->solde_restant_du ?? 0.0;
+                // 1. Extraction des indicateurs financiers via les VRAIES clés de ta stratégie
+                $revenuTTC = $revenu->montantCalculeTTC ?? $revenu->montant_du ?? 0.0;
+                $montantPaye = $revenu->montantPaye ?? $revenu->montant_paye ?? 0.0;
+                $soldeRestantDu = $revenu->soldeRestantDu ?? $revenu->solde_restant_du ?? 0.0;
+                $taxeCourtier = $revenu->taxeCourtierMontant ?? 0.0;
+                $taxeAssureur = $revenu->taxeAssureurMontant ?? 0.0;
+                
+                // NOUVEAU: Extraction de la commission pure, réserve et rétrocommission
+                $commissionPure = $revenu->commissionPure ?? $revenu->commission_pure ?? 0.0;
+                $reserve = $revenu->reserve ?? 0.0;
+                $retrocom = $revenu->retrocommission ?? $revenu->retrocom ?? $revenu->montantRetrocommission ?? 0.0;
+                
+                // Tente de récupérer le nom du partenaire via les clés hydratées, sinon via les entités liées
+                $partenaireNom = $revenu->partenaireNom ?? $revenu->partenaire_nom ?? null;
+                if (!$partenaireNom && $piste && method_exists($piste, 'getPartenaires') && !$piste->getPartenaires()->isEmpty()) {
+                    $partenaireNom = $piste->getPartenaires()->first()->getNom();
+                }
+                $partenaireNom = $partenaireNom ?? 'N/A';
+
+                // 2. Récupération du nombre de tranches depuis la cotation liée
+                $nombreTranches = 0;
+                if ($cotation && method_exists($cotation, 'getTranches')) {
+                    $nombreTranches = $cotation->getTranches()->count();
+                }
 
                 // 3. Formatage HTML enrichi
+                // Utilisation de puces (&bull;) élégantes et discrètes entre les attributs
                 return sprintf(
                     '<div>
                         <strong>%s</strong>
                         <div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">
-                            Réf Police: %s | Assureur: %s | Client: %s | Taux: %s | Flat: %s
+                            Réf Police: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Assureur: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Client: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Tranches: %d
                         </div>
-                        <div style="font-size: 0.85em; padding-left: 2px; margin-top: 4px; border-top: 1px dashed #ccc; padding-top: 2px; display: flex; gap: 10px;">
-                            <span class="text-primary"><strong>TTC:</strong> %s</span>
-                            <span class="text-success"><strong>Payé:</strong> %s</span>
-                            <span class="text-danger"><strong>Solde:</strong> %s</span>
+                        <div style="color: #0047AB; font-weight: bold; font-size: 0.85em; padding-left: 2px; margin-top: 4px; border-top: 1px dashed #ccc; padding-top: 2px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px;">
+                            <span title="Montant TTC calculé">TTC: %s</span>
+                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
+                            <span title="Montant payé">Payé: %s</span>
+                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
+                            <span title="Solde restant dû">Solde: %s</span>
+                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
+                            <span title="Taxe à la charge du courtier (Ex: ARCA)">Taxe Courtier: %s</span>
+                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
+                            <span title="Taxe à la charge de l\'assureur (Ex: TVA)">Taxe Assureur: %s</span>
+                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
+                            <span title="Commission pure (assiette partageable)">Com. Pure: %s</span>
+                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
+                            <span title="Réserve calculée">Réserve: %s</span>
+                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
+                            <span title="Rétrocommission au partenaire">Rétro (%s): %s</span>
                         </div>
                     </div>',
                     htmlspecialchars($revenu->getNom() ?? 'Sans nom'),
                     htmlspecialchars($policeRef),
                     htmlspecialchars($assureurNom),
                     htmlspecialchars($clientNom),
-                    $taux,
-                    $montant,
-                    number_format((float)$montantTTC, 2, ',', ' '),
+                    $nombreTranches,
+                    number_format((float)$revenuTTC, 2, ',', ' '),
                     number_format((float)$montantPaye, 2, ',', ' '),
-                    number_format((float)$soldeRestantDu, 2, ',', ' ')
+                    number_format((float)$soldeRestantDu, 2, ',', ' '),
+                    number_format((float)$taxeCourtier, 2, ',', ' '),
+                    number_format((float)$taxeAssureur, 2, ',', ' '),
+                    number_format((float)$commissionPure, 2, ',', ' '),
+                    number_format((float)$reserve, 2, ',', ' '),
+                    htmlspecialchars($partenaireNom),
+                    number_format((float)$retrocom, 2, ',', ' ')
                 );
             }
         ]);

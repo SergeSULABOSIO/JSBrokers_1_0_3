@@ -24,13 +24,18 @@ class ArticleType extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        // 1. Récupération robuste de l'ID de la Note parente
         $request = $this->requestStack->getCurrentRequest();
         $article = $builder->getData();
         $noteId = null;
+        $revenuIdInitial = null; // Pour initialiser le filtre Tranche en édition
 
-        if ($article && $article->getNote()) {
-            $noteId = $article->getNote()->getId();
+        if ($article) {
+            if ($article->getNote()) {
+                $noteId = $article->getNote()->getId();
+            }
+            if ($article->getRevenuFacture()) {
+                $revenuIdInitial = $article->getRevenuFacture()->getId();
+            }
         } elseif ($request && $request->query->has('parent_id')) {
             $noteId = $request->query->get('parent_id');
         }
@@ -45,8 +50,8 @@ class ArticleType extends AbstractType
             ->add('revenuFacture', RevenuPourCourtierAutocompleteField::class, [
                 'label' => "Lié à un Revenu/Commission",
                 'required' => false,
+                'note_id' => $noteId,
                 'attr' => [
-                    // Connexion au script Javascript
                     'data-controller' => 'revenu-autocomplete-filter',
                     'data-revenu-autocomplete-filter-note-id-value' => $noteId
                 ]
@@ -54,6 +59,12 @@ class ArticleType extends AbstractType
             ->add('tranche', TrancheAutocompleteField::class, [
                 'label' => "Lié à une Tranche",
                 'required' => false,
+                // On passe l'ID du revenu au PHP pour valider l'édition initiale
+                'revenu_id' => $revenuIdInitial, 
+                'attr' => [
+                    // On connecte le nouveau contrôleur Javascript au champ Tranche
+                    'data-controller' => 'tranche-autocomplete-filter'
+                ]
             ])
             ->add('taxeFacturee', TaxeAutocompleteField::class, [
                 'label' => "Lié à une Taxe",
