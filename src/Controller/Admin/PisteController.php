@@ -4,18 +4,18 @@ namespace App\Controller\Admin;
 
 use App\Entity\Piste;
 use App\Entity\Invite;
-use DateTimeImmutable;
-use App\Form\PisteType;
 use App\Constantes\Constante;
+use App\Form\PisteType;
+use App\Repository\PisteRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
+use App\Controller\Admin\ControllerUtilsTrait;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use App\Controller\Admin\ControllerUtilsTrait;
 use App\Entity\Traits\HandleChildAssociationTrait;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Serializer\SerializerInterface;
@@ -34,12 +34,12 @@ class PisteController extends AbstractController
         private EntityManagerInterface $em,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
+        private PisteRepository $pisteRepository,
         private Constante $constante,
         private JSBDynamicSearchService $searchService,
-        private SerializerInterface $serializer, // Ajout de SerializerInterface
-        CanvasBuilder $canvasBuilder // Inject CanvasBuilder without property promotion
+        private SerializerInterface $serializer,
+        CanvasBuilder $canvasBuilder
     ) {
-        // Assign the injected CanvasBuilder to the property declared in the trait
         $this->canvasBuilder = $canvasBuilder;
     }
 
@@ -53,8 +53,14 @@ class PisteController extends AbstractController
         return $this->buildParentAssociationMapFromEntity(Piste::class);
     }
 
+    #[Route('/test', name: 'test')]
+    public function edit(): Response
+    {
+        return $this->render('components/piste/editor.html.twig', []);
+    }
+
     #[Route('/index/{idInvite}/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function index(Request $request)
+    public function index(Request $request): Response
     {
         return $this->renderViewOrListComponent(Piste::class, $request);
     }
@@ -68,9 +74,7 @@ class PisteController extends AbstractController
             PisteType::class,
             $piste,
             function (Piste $piste, Invite $invite) {
-                $piste->setTypeAvenant(Piste::AVENANT_SOUSCRIPTION);
-                $piste->setInvite($invite);
-                $piste->setExercice((new DateTimeImmutable("now"))->format('Y'));
+                // Initialisation pour une nouvelle piste côté front-end si nécessaire
             }
         );
     }
@@ -78,10 +82,19 @@ class PisteController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request): JsonResponse
     {
+        // On récupère l'invité connecté de manière sécurisée côté serveur
+        $inviteConnecte = $this->getInvite();
+
         return $this->handleFormSubmission(
             $request,
             Piste::class,
-            PisteType::class
+            PisteType::class,
+            function (Piste $piste) use ($inviteConnecte) {
+                // Subtilité gérée ici : On assigne l'invité UNIQUEMENT s'il s'agit d'une création (pas d'ID)
+                if (!$piste->getId()) {
+                    $piste->setInvite($inviteConnecte);
+                }
+            }
         );
     }
 

@@ -3,8 +3,8 @@
 namespace App\Form;
 
 use App\Entity\Chargement;
-use App\Services\Canvas\CalculationProvider;
 use App\Services\FormListenerFactory;
+use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\UX\Autocomplete\Form\AsEntityAutocompleteField;
@@ -15,7 +15,7 @@ class ChargementAutocompleteField extends AbstractType
 {
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
-        private CalculationProvider $calculationProvider
+        private IndicatorCalculationHelper $calculationHelper // <-- Injection du BON service !
     ) {
     }
 
@@ -28,10 +28,12 @@ class ChargementAutocompleteField extends AbstractType
             'searchable_fields' => ['nom'],
             'as_html' => true,
             'choice_label' => function(Chargement $chargement) {
-                $description = $this->calculationProvider->Chargement_getFonctionString($chargement);
+                // On appelle la méthode depuis le bon helper
+                $description = $this->calculationHelper->Chargement_getFonctionString($chargement);
+                
                 return sprintf(
                     '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">Fonction: %s</div></div>',
-                    htmlspecialchars($chargement->getNom()),
+                    htmlspecialchars($chargement->getNom() ?? 'Sans nom'),
                     htmlspecialchars($description ?? 'Non définie')
                 );
             },
