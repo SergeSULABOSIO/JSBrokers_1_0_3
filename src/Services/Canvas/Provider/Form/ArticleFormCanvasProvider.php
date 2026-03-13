@@ -46,46 +46,35 @@ class ArticleFormCanvasProvider implements FormCanvasProviderInterface
 
     private function buildArticleLayout(Article $object, bool $isParentNew): array
     {
-        // On définit la condition : "Visible SI le champ revenuFacture n'est pas vide"
-        $conditionRevenu = [
-            'visibility_conditions' => [
-                [
-                    'field' => 'revenuFacture',
-                    'operator' => '!=',
-                    'value' => '' // Le champ Autocomplete renvoie une chaîne vide quand rien n'est sélectionné
-                ]
-            ]
-        ];
-
         $layout = [
-            // Ligne 1: Nom et description (Toujours visible)
+            // Ligne 1: Nom et description
             [
                 "colonnes" => [
                     ["champs" => ["nom"], "width" => 12]
                 ]
             ],
-            // Ligne 2: Revenu / Commission liée (Le champ "maître", toujours visible)
+            // Ligne 2: Revenu / Commission liée
             [
                 "colonnes" => [
                     ["champs" => ["revenuFacture"], "width" => 12]
                 ]
             ],
-            // Ligne 3: Tranche (Prime liée) - Conditionnel
+            // Ligne 3: Tranche (Prime liée)
             [
                 "colonnes" => [
-                    ["champs" => [array_merge(['field_code' => 'tranche'], $conditionRevenu)], "width" => 12]
+                    ["champs" => ["tranche"], "width" => 12]
                 ]
             ],
-            // Ligne 4: Taxe liée - Conditionnel
+            // Ligne 4: Taxe liée
             [
                 "colonnes" => [
-                    ["champs" => [array_merge(['field_code' => 'taxeFacturee'], $conditionRevenu)], "width" => 12]
+                    ["champs" => ["taxeFacturee"], "width" => 12]
                 ]
             ],
-            // Ligne 5: Montant - Conditionnel
+            // Ligne 5: Montant
             [
                 "colonnes" => [
-                    ["champs" => [array_merge(['field_code' => 'montant'], $conditionRevenu)], "width" => 12]
+                    ["champs" => ["montant"], "width" => 12]
                 ]
             ]
         ];
