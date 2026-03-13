@@ -19,7 +19,7 @@ class ArticleType extends AbstractType
         private FormListenerFactory $ecouteurFormulaire,
         private TranslatorInterface $translatorInterface,
         private ServiceMonnaies $serviceMonnaies,
-        private RequestStack $requestStack // Indispensable pour lire le parent_id dans l'URL
+        private RequestStack $requestStack
     ) {}
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -30,10 +30,8 @@ class ArticleType extends AbstractType
         $noteId = null;
 
         if ($article && $article->getNote()) {
-            // Mode Édition : l'Article existe déjà en base, il connaît sa Note.
             $noteId = $article->getNote()->getId();
         } elseif ($request && $request->query->has('parent_id')) {
-            // Mode Création : l'ID vient de ton dialog-instance_controller.js
             $noteId = $request->query->get('parent_id');
         }
 
@@ -48,9 +46,8 @@ class ArticleType extends AbstractType
                 'label' => "Lié à un Revenu/Commission",
                 'required' => false,
                 'attr' => [
-                    // On connecte le contrôleur Stimulus au champ Autocomplete
+                    // Connexion au script Javascript
                     'data-controller' => 'revenu-autocomplete-filter',
-                    // On transmet l'ID de la note au script Javascript
                     'data-revenu-autocomplete-filter-note-id-value' => $noteId
                 ]
             ])
