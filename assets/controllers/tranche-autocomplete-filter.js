@@ -5,6 +5,8 @@ import { Controller } from '@hotwired/stimulus';
  * Gère les modales, les collections Symfony, et le cache TomSelect.
  */
 export default class extends Controller {
+    static targets = ["formRow"];
+
     connect() {
         // 1. ASTUCE MAGIQUE : Trouver le champ Revenu EXACT de cette ligne de collection
         // Si le nom est "note[articles][0][tranche]", on cherche "note[articles][0][revenuFacture]"
@@ -12,10 +14,6 @@ export default class extends Controller {
         
         // On remonte au formulaire parent (qui est dans la modale) pour chercher le champ
         this.revenuSelect = this.element.closest('form').querySelector(`select[name="${revenuName}"]`);
-
-        // 2. Trouver le conteneur visuel de la Tranche (la ligne entière) pour pouvoir la masquer.
-        // On cherche le bloc parent (col-, form-group ou mb-3 généré par ton CanvasBuilder)
-        this.formRow = this.element.closest('.mb-3, .form-group, [class*="col-"]') || this.element.parentElement.parentElement;
 
         if (this.revenuSelect) {
             // On écoute le changement du Revenu
@@ -37,8 +35,9 @@ export default class extends Controller {
         const hasRevenu = (revenuId && revenuId !== '');
 
         // 1. GESTION DE L'AFFICHAGE (Masquer si aucun revenu)
-        if (this.formRow) {
-            this.formRow.style.display = hasRevenu ? 'block' : 'none';
+        // CORRECTION : On utilise la cible explicite, c'est 100% fiable.
+        if (this.hasFormRowTarget) {
+            this.formRowTarget.classList.toggle('d-none', !hasRevenu);
         }
 
         // 2. VIDAGE DU CHAMP TRANCHE
