@@ -1,8 +1,9 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Entity;
 
-use App\Entity\Entreprise;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
@@ -11,6 +12,10 @@ use App\Repository\TaxeRepository;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
+/**
+ * Entité Taxe
+ * Refactorisée : la relation avec Article a été supprimée.
+ */
 #[ORM\Entity(repositoryClass: TaxeRepository::class)]
 class Taxe
 {
@@ -35,53 +40,16 @@ class Taxe
     #[Groups(['list:read'])]
     private ?string $tauxVIE = null;
 
-    #[Assert\NotBlank(message: "Ce champ ne peut pas être vide.")]
-    #[ORM\Column(length: 5)]
-    #[Groups(['list:read'])]
-    private ?string $code = null;
-
-    #[ORM\Column]
-    #[Groups(['list:read'])]
-    private ?int $redevable = null;
-
-    public const REDEVABLE_ASSUREUR = 0;
-    public const REDEVABLE_COURTIER = 1;
-
-    #[ORM\ManyToOne(inversedBy: 'taxes')]
-    #[Groups(['list:read'])]
-    private ?Entreprise $entreprise = null;
-
     /**
      * @var Collection<int, AutoriteFiscale>
      */
-    #[ORM\OneToMany(targetEntity: AutoriteFiscale::class, mappedBy: 'taxe', cascade: ['persist', 'remove'], orphanRemoval: true)]
-    #[Groups(['list:read'])]
+    #[ORM\OneToMany(targetEntity: AutoriteFiscale::class, mappedBy: 'taxe')]
     private Collection $autoriteFiscales;
-
-    /**
-     * @var Collection<int, Article>
-     */
-    #[ORM\OneToMany(targetEntity: Article::class, mappedBy: 'taxeFacturee')]
-    private Collection $articles;
-
-    // Attributs calculés pour l'affichage dans les listes
-    #[Groups(['list:read'])]
-    public ?float $tauxIARDPercent = null;
-
-    #[Groups(['list:read'])]
-    public ?float $tauxVIEPercent = null;
-
-    // Attributs calculés pour la vue détaillée
-    #[Groups(['list:read'])]
-    public ?string $redevableString = null;
-
-    #[Groups(['list:read'])]
-    public ?int $nombreAutorites = null;
 
     public function __construct()
     {
         $this->autoriteFiscales = new ArrayCollection();
-        $this->articles = new ArrayCollection();
+        // L'initialisation de $this->articles a été supprimée.
     }
 
     public function getId(): ?int
@@ -94,105 +62,33 @@ class Taxe
         return $this->description;
     }
 
-    public function setDescription(string $description): self
+    public function setDescription(string $description): static
     {
         $this->description = $description;
-        
+
         return $this;
     }
 
-    // public function getOrganisation(): ?string
-    // {
-    //     return $this->organisation;
-    // }
-
-    // public function setOrganisation(string $organisation): self
-    // {
-        
-    //     $this->organisation = $organisation;
-        
-    //     return $this;
-    // }
-
-    public function __toString()
-    {
-        $txt = " (" . (float)$this->tauxIARD * 100 . "%@IARD & " . (float)$this->tauxVIE * 100 . "%@VIE)";
-        if ($this->tauxIARD == $this->tauxVIE) {
-            $txt = " (" . (float)$this->tauxIARD * 100 . "%)";
-        }
-        return ($this->code ?? '') . $txt;
-    }
-    
-    /**
-     * Get the value of tauxIARD
-     */
     public function getTauxIARD(): ?string
     {
         return $this->tauxIARD;
     }
 
-    /**
-     * Set the value of tauxIARD
-     *
-     * @return  self
-     */
-    public function setTauxIARD(?string $tauxIARD): self
+    public function setTauxIARD(string $tauxIARD): static
     {
         $this->tauxIARD = $tauxIARD;
+
         return $this;
     }
 
-    /**
-     * Get the value of tauxVIE
-     */
     public function getTauxVIE(): ?string
     {
         return $this->tauxVIE;
     }
 
-    /**
-     * Set the value of tauxVIE
-     *
-     * @return  self
-     */
-    public function setTauxVIE(?string $tauxVIE): self
+    public function setTauxVIE(string $tauxVIE): static
     {
         $this->tauxVIE = $tauxVIE;
-        return $this;
-    }
-
-    public function getCode(): ?string
-    {
-        return $this->code;
-    }
-
-    public function setCode(string $code): static
-    {
-        $this->code = $code;
-
-        return $this;
-    }
-
-    public function getRedevable(): ?int
-    {
-        return $this->redevable;
-    }
-
-    public function setRedevable(int $redevable): static
-    {
-        $this->redevable = $redevable;
-
-        return $this;
-    }
-
-    public function getEntreprise(): ?Entreprise
-    {
-        return $this->entreprise;
-    }
-
-    public function setEntreprise(?Entreprise $entreprise): static
-    {
-        $this->entreprise = $entreprise;
 
         return $this;
     }
@@ -221,36 +117,6 @@ class Taxe
             // set the owning side to null (unless already changed)
             if ($autoriteFiscale->getTaxe() === $this) {
                 $autoriteFiscale->setTaxe(null);
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return Collection<int, Article>
-     */
-    public function getArticles(): Collection
-    {
-        return $this->articles;
-    }
-
-    public function addArticle(Article $article): static
-    {
-        if (!$this->articles->contains($article)) {
-            $this->articles->add($article);
-            $article->setTaxeFacturee($this);
-        }
-
-        return $this;
-    }
-
-    public function removeArticle(Article $article): static
-    {
-        if ($this->articles->removeElement($article)) {
-            // set the owning side to null (unless already changed)
-            if ($article->getTaxeFacturee() === $this) {
-                $article->setTaxeFacturee(null);
             }
         }
 

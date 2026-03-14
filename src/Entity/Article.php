@@ -7,24 +7,28 @@ namespace App\Entity;
 use App\Repository\ArticleRepository;
 use Doctrine\ORM\Mapping as ORM;
 
+/**
+ * Entité Article - Refactorisée pour Symfony 7.1.5
+ * Suppression des champs 'nom' et 'taxeFacturee'.
+ */
 #[ORM\Entity(repositoryClass: ArticleRepository::class)]
 class Article
 {
     #[ORM\Id]
-    #[ORM\GeneratedValue]
+    #[ORM\GeneratedValue(strategy: 'IDENTITY')]
     #[ORM\Column]
     private ?int $id = null;
 
     /**
-     * Quantité décimale pour la ligne de facturation
+     * Quantité décimale (ex: 1.5, 10.0)
      */
     #[ORM\Column(type: 'float', nullable: true)]
     private ?float $quantite = null;
 
-    #[ORM\ManyToOne(inversedBy: 'articles')]
+    #[ORM\ManyToOne(targetEntity: Tranche::class, inversedBy: 'articles')]
     private ?Tranche $tranche = null;
 
-    #[ORM\ManyToOne(inversedBy: 'articles')]
+    #[ORM\ManyToOne(targetEntity: Note::class, inversedBy: 'articles')]
     private ?Note $note = null;
 
     #[ORM\Column(nullable: true)]
@@ -35,9 +39,6 @@ class Article
 
     #[ORM\ManyToOne(targetEntity: RevenuPourCourtier::class, inversedBy: 'articles')]
     private ?RevenuPourCourtier $revenuFacture = null;
-
-    #[ORM\ManyToOne(inversedBy: 'articles')]
-    private ?Taxe $taxeFacturee = null;
 
     public function getId(): ?int
     {
@@ -107,17 +108,6 @@ class Article
     public function setRevenuFacture(?RevenuPourCourtier $revenuFacture): static
     {
         $this->revenuFacture = $revenuFacture;
-        return $this;
-    }
-
-    public function getTaxeFacturee(): ?Taxe
-    {
-        return $this->taxeFacturee;
-    }
-
-    public function setTaxeFacturee(?Taxe $taxeFacturee): static
-    {
-        $this->taxeFacturee = $taxeFacturee;
         return $this;
     }
 }
