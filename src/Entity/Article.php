@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Entity;
 
 use App\Repository\ArticleRepository;
@@ -13,8 +15,11 @@ class Article
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $nom = null;
+    /**
+     * Quantité décimale pour la ligne de facturation
+     */
+    #[ORM\Column(type: 'float', nullable: true)]
+    private ?float $quantite = null;
 
     #[ORM\ManyToOne(inversedBy: 'articles')]
     private ?Tranche $tranche = null;
@@ -28,31 +33,25 @@ class Article
     #[ORM\Column]
     private ?int $idPoste = null;
 
-    #[ORM\ManyToOne(inversedBy: 'articles')]
+    #[ORM\ManyToOne(targetEntity: RevenuPourCourtier::class, inversedBy: 'articles')]
     private ?RevenuPourCourtier $revenuFacture = null;
 
     #[ORM\ManyToOne(inversedBy: 'articles')]
     private ?Taxe $taxeFacturee = null;
-
-    public function __construct()
-    {
-
-    }
 
     public function getId(): ?int
     {
         return $this->id;
     }
 
-    public function getNom(): ?string
+    public function getQuantite(): ?float
     {
-        return $this->nom;
+        return $this->quantite;
     }
 
-    public function setNom(string $nom): static
+    public function setQuantite(?float $quantite): static
     {
-        $this->nom = $nom;
-
+        $this->quantite = $quantite;
         return $this;
     }
 
@@ -64,7 +63,6 @@ class Article
     public function setTranche(?Tranche $tranche): static
     {
         $this->tranche = $tranche;
-
         return $this;
     }
 
@@ -76,7 +74,6 @@ class Article
     public function setNote(?Note $note): static
     {
         $this->note = $note;
-
         return $this;
     }
 
@@ -88,7 +85,6 @@ class Article
     public function setMontant(?float $montant): static
     {
         $this->montant = $montant;
-
         return $this;
     }
 
@@ -100,7 +96,6 @@ class Article
     public function setIdPoste(int $idPoste): static
     {
         $this->idPoste = $idPoste;
-
         return $this;
     }
 
@@ -112,7 +107,6 @@ class Article
     public function setRevenuFacture(?RevenuPourCourtier $revenuFacture): static
     {
         $this->revenuFacture = $revenuFacture;
-
         return $this;
     }
 
@@ -124,7 +118,6 @@ class Article
     public function setTaxeFacturee(?Taxe $taxeFacturee): static
     {
         $this->taxeFacturee = $taxeFacturee;
-
         return $this;
     }
 }

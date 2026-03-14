@@ -6,6 +6,10 @@ use App\Entity\Article;
 use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
 
+/**
+ * Fournisseur de Canvas pour l'entité Article.
+ * Définit la structure du formulaire dynamique pour l'affichage step-by-step.
+ */
 class ArticleFormCanvasProvider implements FormCanvasProviderInterface
 {
     use FormCanvasProviderTrait;
@@ -21,14 +25,17 @@ class ArticleFormCanvasProvider implements FormCanvasProviderInterface
         return $entityClassName === Article::class;
     }
 
+    /**
+     * Génère la configuration du Canvas pour le formulaire d'article.
+     */
     public function getCanvas(object $object, ?int $idEntreprise): array
     {
         /** @var Article $object */
         $isParentNew = ($object->getId() === null);
 
         $parametres = [
-            "titre_creation" => "Nouvel Article",
-            "titre_modification" => "Modification de l'Article #%id%",
+            "titre_creation" => "Ajouter un élément de facturation",
+            "titre_modification" => "Modifier la ligne #%id%",
             "endpoint_submit_url" => "/admin/article/api/submit",
             "endpoint_delete_url" => "/admin/article/api/delete",
             "endpoint_form_url" => "/admin/article/api/get-form",
@@ -44,41 +51,38 @@ class ArticleFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
+    /**
+     * Construit la grille (layout) du formulaire Article.
+     * Note: Le champ 'nom' a été supprimé.
+     */
     private function buildArticleLayout(Article $object, bool $isParentNew): array
     {
-        $layout = [
-            // Ligne 1: Nom et description
-            [
-                "colonnes" => [
-                    ["champs" => ["nom"], "width" => 12]
-                ]
-            ],
-            // Ligne 2: Revenu / Commission liée
+        return [
+            // Ligne 1 : Revenu (Le déclencheur de la cascade)
             [
                 "colonnes" => [
                     ["champs" => ["revenuFacture"], "width" => 12]
                 ]
             ],
-            // Ligne 3: Tranche (Prime liée)
+            // Ligne 2 : Tranche (Masquée initialement par ArticleType)
             [
                 "colonnes" => [
                     ["champs" => ["tranche"], "width" => 12]
                 ]
             ],
-            // Ligne 4: Taxe liée
+            // Ligne 3 : Quantité et Montant TTC côte à côte (50% / 50%)
+            [
+                "colonnes" => [
+                    ["champs" => ["quantite"], "width" => 6],
+                    ["champs" => ["montant"], "width" => 6]
+                ]
+            ],
+            // Ligne 4 : Taxe (Masquée initialement)
             [
                 "colonnes" => [
                     ["champs" => ["taxeFacturee"], "width" => 12]
                 ]
             ],
-            // Ligne 5: Montant
-            [
-                "colonnes" => [
-                    ["champs" => ["montant"], "width" => 12]
-                ]
-            ]
         ];
-
-        return $layout;
     }
 }

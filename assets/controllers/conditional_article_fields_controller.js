@@ -1,46 +1,108 @@
 import { Controller } from '@hotwired/stimulus';
 
-/*
- * Contrôleur Stimulus pour afficher/masquer dynamiquement 
- * le champ Tranche dans ArticleType.php en fonction du Revenu
- */
 export default class extends Controller {
-    
-    connect() {
-        // Exécuter au chargement pour masquer la tranche si le revenu est vide
-        // Un léger délai pour laisser le temps à TomSelect de se construire
-        setTimeout(() => this.toggle(), 100);
+    static targets = ['revenu', 'tranche', 'commission', 'retrocommission', 'taxe'];
 
-        // CORRECTION : Utilisation de name*="[revenuFacture]" pour contourner le nommage des collections (note[articles][0][revenuFacture])
-        const revenuSelect = this.element.querySelector('select[name*="[revenuFacture]"]');
-        if (revenuSelect) {
-            // On écoute l'événement 'change' déclenché par TomSelect
-            revenuSelect.addEventListener('change', () => this.toggle());
+    connect() {
+        console.log("🟢 [ArticleFields] Connecté. Initialisation de la surveillance...");
+        
+        // Stockage de la dernière valeur connue pour ne déclencher l'affichage que s'il y a un vrai changement
+        this.lastRevenuValue = null;
+        
+        // Failsafe 1 : Écoute globale sur tout le formulaire (Event Delegation)
+        this.element.addEventListener('change', () => this.checkAndUpdate());
+        
+        // Failsafe 2 : Vérification périodique légère (Polling). 
+        // Utile car TomSelect/Symfony UX absorbe souvent les événements natifs 'change'.
+        this.pollingInterval = setInterval(() => {
+            this.checkAndUpdate();
+        }, 500);
+
+        // Première vérification au chargement
+        setTimeout(() => this.checkAndUpdate(), 100);
+    }
+
+    disconnect() {
+        // Nettoyage de l'intervalle lorsque le contrôleur/la modale est détruit
+        if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
         }
     }
 
-    toggle() {
-        const revenuSelect = this.element.querySelector('select[name*="[revenuFacture]"]');
-        if (!revenuSelect) return;
+    // --- Helpers robustes pour retrouver les champs même si Symfony UX a effacé les data-targets ---
+    getRevenuElement() { 
+        return this.hasRevenuTarget ? this.revenuTarget : this.element.querySelector('[name*="[typeRevenu]"]'); 
+    }
+    getTrancheElement() { 
+        return this.hasTrancheTarget ? this.trancheTarget : this.element.querySelector('[name*="[tranche]"]'); 
+    }
+    getCommissionElement() { 
+        return this.hasCommissionTarget ? this.commissionTarget : this.element.querySelector('[name*="[tauxCommission]"]'); 
+    }
+    getRetrocommissionElement() { 
+        return this.hasRetrocommissionTarget ? this.retrocommissionTarget : this.element.querySelector('[name*="[tauxRetrocommission]"]'); 
+    }
+    getTaxeElement() { 
+        return this.hasTaxeTarget ? this.taxeTarget : this.element.querySelector('[name*="[taxe]"]'); 
+    }
 
-        // On vérifie si l'utilisateur a sélectionné quelque chose
-        const hasRevenu = revenuSelect.value && revenuSelect.value !== '';
+    /**
+     * Vérifie la valeur actuelle et met à jour l'UI si nécessaire
+     */
+    checkAndUpdate() {
+        const revEl = this.getRevenuElement();
+        if (!revEl) {
+            // Silencieux car le champ peut ne pas encore être dans le DOM
+            return;
+        }
 
-        // CORRECTION : On ne cible que la tranche (les montants et taxes doivent rester accessibles même sans revenu)
-        const dependentFields = ['tranche'];
-
-        dependentFields.forEach(fieldName => {
-            // Sélecteur adapté aux collections
-            const fieldInput = this.element.querySelector(`[name*="[${fieldName}]"]`);
+        // Si c'est un wrapper TomSelect, trouver le select/input sous-jacent
+        let actualInput = (revEl.tagName === 'SELECT' || revEl.tagName === 'INPUT') 
+            ? revEl 
+            : revEl.querySelector('select, input') || revEl;
             
-            if (fieldInput) {
-                // On remonte à la balise de grille (div col-) générée par le système Canvas 
-                const container = fieldInput.closest('div[class*="col-"]');
-                if (container) {
-                    // Affiche ou masque la ligne complète dynamiquement
-                    container.style.display = hasRevenu ? 'block' : 'none';
-                }
+        let currentValue = actualInput.value;
+
+        // Optimisation : On ne fait rien si la valeur est identique à la précédente
+        if (this.lastRevenuValue === currentValue) {
+            return;
+        }
+        
+        this.lastRevenuValue = currentValue;
+
+        // Validation de la présence du revenu
+        const hasRevenu = currentValue !== undefined && currentValue !== null && String(currentValue).trim() !== "";
+        console.log(`🔍 [ArticleFields] Changement détecté ! Nouveau Revenu: "${currentValue}" -> Afficher les champs conditionnels: ${hasRevenu}`);
+
+        // Mise à jour de chaque champ
+        this.toggleField('Tranche', this.getTrancheElement(), hasRevenu);
+        this.toggleField('Commission', this.getCommissionElement(), hasRevenu);
+        this.toggleField('Rétrocommission', this.getRetrocommissionElement(), hasRevenu);
+        this.toggleField('Taxe', this.getTaxeElement(), hasRevenu);
+    }
+
+    /**
+     * Utilitaire pour afficher/masquer un élément et son conteneur
+     */
+    toggleField(name, element, show) {
+        if (!element) return;
+
+        // Remonter de manière sécurisée au bon conteneur Bootstrap
+        let container = element.closest('.mb-3') || element.closest('.form-group') || element.closest('.row') || element.parentElement;
+        
+        if (show) {
+            if (container.classList.contains('d-none')) {
+                console.log(`👁️ [ArticleFields] Apparition de : ${name}`);
+                container.classList.remove('d-none');
+                
+                // CORRECTIF TomSelect: force le redessin car largeur bloquée à 0px quand caché
+                setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
             }
-        });
+        } else {
+            if (!container.classList.contains('d-none')) {
+                console.log(`🙈 [ArticleFields] Masquage de : ${name}`);
+                container.classList.add('d-none');
+            }
+        }
     }
 }

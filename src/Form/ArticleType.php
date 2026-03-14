@@ -9,7 +9,7 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
-use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\HttpFoundation\RequestStack;
 
@@ -29,6 +29,9 @@ class ArticleType extends AbstractType
         $article = $builder->getData();
         $noteId = null;
         $revenuIdInitial = null;
+        $trancheIdInitial = null;
+        
+        // Détection du mode création pour masquer les champs par défaut
         $isCreationMode = !$article || !$article->getId();
 
         if ($article) {
@@ -38,55 +41,69 @@ class ArticleType extends AbstractType
             if ($article->getRevenuFacture()) {
                 $revenuIdInitial = $article->getRevenuFacture()->getId();
             }
+            if ($article->getTranche()) {
+                $trancheIdInitial = $article->getTranche()->getId();
+            }
         } elseif ($request && $request->query->has('parent_id')) {
             $noteId = $request->query->get('parent_id');
         }
 
-        // On s'assure que la cible pour notre contrôleur Stimulus est toujours présente.
-        $trancheRowAttrs = [
-            'data-tranche-autocomplete-filter-target' => 'formRow'
-        ];
-        if ($isCreationMode) {
-            $trancheRowAttrs['class'] = 'd-none'; // On ajoute la classe pour cacher la ligne uniquement en mode création.
-        }
+        // mb-3 est crucial pour le design défini dans app.css
+        $baseRowClass = 'mb-3';
 
         $builder
-            ->add('nom', TextType::class, [
-                'label' => "Nom",
-                'attr' => [
-                    'placeholder' => "Description de la ligne",
-                ],
-            ])
+            // 1. REVENU (Toujours visible au chargement)
             ->add('revenuFacture', RevenuPourCourtierAutocompleteField::class, [
                 'label' => "Lié à un Revenu/Commission",
                 'required' => false,
                 'note_id' => $noteId,
+                'row_attr' => ['class' => $baseRowClass],
                 'attr' => [
                     'data-controller' => 'revenu-autocomplete-filter',
                     'data-revenu-autocomplete-filter-note-id-value' => $noteId
                 ]
             ])
+            // 2. TRANCHE (Apparaît après le choix du Revenu)
             ->add('tranche', TrancheAutocompleteField::class, [
                 'label' => "Lié à une Tranche",
                 'required' => false,
                 'revenu_id' => $revenuIdInitial,
-                'row_attr' => $trancheRowAttrs, // On applique nos attributs de ligne.
+                'row_attr' => [
+                    'class' => $baseRowClass . ' tranche-form-row' . ($isCreationMode && !$revenuIdInitial ? ' d-none' : '')
+                ],
                 'attr' => [
-                    // Branchement du super-contrôleur spécifique à la Tranche
                     'data-controller' => 'tranche-autocomplete-filter'
                 ]
             ])
-            ->add('taxeFacturee', TaxeAutocompleteField::class, [
-                'label' => "Lié à une Taxe",
-                'required' => false,
+            // 3. QUANTITÉ (Nouveau champ - Apparaît après le choix de la Tranche)
+            ->add('quantite', NumberType::class, [
+                'label' => "Quantité",
+                'html5' => true,
+                'scale' => 2,
+                'attr' => [
+                    'placeholder' => "0.00",
+                    'step' => '0.01',
+                ],
+                'row_attr' => [
+                    'class' => $baseRowClass . ' quantite-form-row' . ($isCreationMode && !$trancheIdInitial ? ' d-none' : '')
+                ],
             ])
+            // 4. MONTANT (Apparaît après le choix de la Tranche)
             ->add('montant', MoneyType::class, [
                 'label' => "Montant (TTC)",
                 'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                 'grouping' => true,
-                'disabled' => false,
-                'attr' => [
-                    'placeholder' => "Montant payable",
+                'attr' => ['placeholder' => "0.00"],
+                'row_attr' => [
+                    'class' => $baseRowClass . ' montant-form-row' . ($isCreationMode && !$trancheIdInitial ? ' d-none' : '')
+                ],
+            ])
+            // 5. TAXE (Apparaît après le choix de la Tranche)
+            ->add('taxeFacturee', TaxeAutocompleteField::class, [
+                'label' => "Lié à une Taxe",
+                'required' => false,
+                'row_attr' => [
+                    'class' => $baseRowClass . ' taxe-form-row' . ($isCreationMode && !$trancheIdInitial ? ' d-none' : '')
                 ],
             ]);
     }
@@ -97,7 +114,6 @@ class ArticleType extends AbstractType
             'data_class' => Article::class,
             'csrf_protection' => false,
             'allow_extra_fields' => true,
-            // (Suppression du contrôleur global pour éviter les conflits)
         ]);
     }
 
