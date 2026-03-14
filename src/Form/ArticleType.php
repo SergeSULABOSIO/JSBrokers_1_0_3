@@ -42,9 +42,12 @@ class ArticleType extends AbstractType
             $noteId = $request->query->get('parent_id');
         }
 
-        $trancheRowAttrs = [];
+        // On s'assure que la cible pour notre contrôleur Stimulus est toujours présente.
+        $trancheRowAttrs = [
+            'data-tranche-autocomplete-filter-target' => 'formRow'
+        ];
         if ($isCreationMode) {
-            $trancheRowAttrs['class'] = 'd-none';
+            $trancheRowAttrs['class'] = 'd-none'; // On ajoute la classe pour cacher la ligne uniquement en mode création.
         }
 
         $builder
@@ -67,7 +70,7 @@ class ArticleType extends AbstractType
                 'label' => "Lié à une Tranche",
                 'required' => false,
                 'revenu_id' => $revenuIdInitial,
-                'row_attr' => $trancheRowAttrs,
+                'row_attr' => $trancheRowAttrs, // On applique nos attributs de ligne.
                 'attr' => [
                     // Branchement du super-contrôleur spécifique à la Tranche
                     'data-controller' => 'tranche-autocomplete-filter'
