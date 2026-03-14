@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Form;
 
 use App\Entity\Article;
@@ -8,18 +10,22 @@ use App\Services\ServiceMonnaies;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
-use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\HttpFoundation\RequestStack;
 
+/**
+ * Formulaire Article refactorisé pour Symfony 7.1.5.
+ * - Gestion de l'affichage en cascade (Revenu -> Tranche -> Quantité/Montant).
+ * - Suppression des champs 'nom' et 'taxeFacturee'.
+ * - Calcul automatique du montant basé sur la quantité.
+ */
 class ArticleType extends AbstractType
 {
     public function __construct(
-        private FormListenerFactory $ecouteurFormulaire,
-        private TranslatorInterface $translatorInterface,
-        private ServiceMonnaies $serviceMonnaies,
-        private RequestStack $requestStack
+        private readonly FormListenerFactory $ecouteurFormulaire,
+        private readonly ServiceMonnaies $serviceMonnaies,
+        private readonly RequestStack $requestStack
     ) {}
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -27,32 +33,27 @@ class ArticleType extends AbstractType
         $request = $this->requestStack->getCurrentRequest();
         /** @var Article|null $article */
         $article = $builder->getData();
+        
         $noteId = null;
         $revenuIdInitial = null;
         $trancheIdInitial = null;
         
-        // Détection du mode création pour masquer les champs par défaut
+        // On détermine si nous sommes en mode création
         $isCreationMode = !$article || !$article->getId();
 
         if ($article) {
-            if ($article->getNote()) {
-                $noteId = $article->getNote()->getId();
-            }
-            if ($article->getRevenuFacture()) {
-                $revenuIdInitial = $article->getRevenuFacture()->getId();
-            }
-            if ($article->getTranche()) {
-                $trancheIdInitial = $article->getTranche()->getId();
-            }
-        } elseif ($request && $request->query->has('parent_id')) {
-            $noteId = $request->query->get('parent_id');
+            $noteId = $article->getNote()?->getId();
+            $revenuIdInitial = $article->getRevenuFacture()?->getId();
+            $trancheIdInitial = $article->getTranche()?->getId();
+        } elseif ($request?->query->has('parent_id')) {
+            $noteId = (int)$request->query->get('parent_id');
         }
 
-        // mb-3 est crucial pour le design défini dans app.css
+        // 'mb-3' est la classe de base pour respecter le design défini dans app.css
         $baseRowClass = 'mb-3';
 
         $builder
-            // 1. REVENU (Toujours visible au chargement)
+            // 1. REVENU : Toujours visible au chargement.
             ->add('revenuFacture', RevenuPourCourtierAutocompleteField::class, [
                 'label' => "Lié à un Revenu/Commission",
                 'required' => false,
@@ -63,49 +64,52 @@ class ArticleType extends AbstractType
                     'data-revenu-autocomplete-filter-note-id-value' => $noteId
                 ]
             ])
-            // 2. TRANCHE (Apparaît après le choix du Revenu)
+
+            // 2. TRANCHE : Masquée initialement, apparaît après le choix du Revenu.
             ->add('tranche', TrancheAutocompleteField::class, [
                 'label' => "Lié à une Tranche",
                 'required' => false,
                 'revenu_id' => $revenuIdInitial,
                 'row_attr' => [
-                    'class' => $baseRowClass . ' tranche-form-row' . ($isCreationMode && !$revenuIdInitial ? ' d-none' : '')
+                    'class' => sprintf('%s tranche-form-row %s', $baseRowClass, ($isCreationMode && !$revenuIdInitial ? 'd-none' : ''))
                 ],
                 'attr' => [
-                    'data-controller' => 'tranche-autocomplete-filter'
+                    'data-controller' => 'tranche-autocomplete-filter',
+                    'data-action' => 'change->tranche-autocomplete-filter#handleTrancheChange'
                 ]
             ])
-            // 3. QUANTITÉ (Nouveau champ - Apparaît après le choix de la Tranche)
+
+            // 3. QUANTITÉ : Masquée initialement, apparaît après le choix de la Tranche.
             ->add('quantite', NumberType::class, [
                 'label' => "Quantité",
                 'html5' => true,
-                'scale' => 2,
+                // Valeur par défaut de 1.0 en création
+                'data' => $article?->getQuantite() ?? 1.0,
                 'attr' => [
-                    'placeholder' => "0.00",
+                    'placeholder' => "1.00",
                     'step' => '0.01',
+                    'data-action' => 'input->tranche-autocomplete-filter#calculateTotal'
                 ],
                 'row_attr' => [
-                    'class' => $baseRowClass . ' quantite-form-row' . ($isCreationMode && !$trancheIdInitial ? ' d-none' : '')
+                    'class' => sprintf('%s quantite-form-row %s', $baseRowClass, ($isCreationMode && !$trancheIdInitial ? 'd-none' : ''))
                 ],
             ])
-            // 4. MONTANT (Apparaît après le choix de la Tranche)
+
+            // 4. MONTANT : Masqué initialement, apparaît après le choix de la Tranche.
             ->add('montant', MoneyType::class, [
-                'label' => "Montant (TTC)",
+                'label' => "Montant Total (TTC)",
                 'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                 'grouping' => true,
-                'attr' => ['placeholder' => "0.00"],
-                'row_attr' => [
-                    'class' => $baseRowClass . ' montant-form-row' . ($isCreationMode && !$trancheIdInitial ? ' d-none' : '')
+                'attr' => [
+                    'placeholder' => "0.00",
+                    'data-action' => 'change->tranche-autocomplete-filter#updateUnitPrice'
                 ],
-            ])
-            // 5. TAXE (Apparaît après le choix de la Tranche)
-            ->add('taxeFacturee', TaxeAutocompleteField::class, [
-                'label' => "Lié à une Taxe",
-                'required' => false,
                 'row_attr' => [
-                    'class' => $baseRowClass . ' taxe-form-row' . ($isCreationMode && !$trancheIdInitial ? ' d-none' : '')
+                    'class' => sprintf('%s montant-form-row %s', $baseRowClass, ($isCreationMode && !$trancheIdInitial ? 'd-none' : ''))
                 ],
             ]);
+            
+            // Note: Le champ 'nom' et le champ 'taxeFacturee' ont été supprimés.
     }
 
     public function configureOptions(OptionsResolver $resolver): void

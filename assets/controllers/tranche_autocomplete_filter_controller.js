@@ -1,116 +1,129 @@
 import { Controller } from '@hotwired/stimulus';
 
 /**
- * Contrôleur pour la gestion de l'Article
- * 1. Filtre les tranches en fonction du Revenu (AJAX).
- * 2. Affiche les champs en cascade : Revenu -> Tranche -> (Quantité, Montant, Taxe).
+ * Contrôleur Stimulus pour la cascade d'affichage et le calcul automatique.
+ * Relation : Revenu -> Tranche -> (Quantité & Montant).
+ * Formule : Montant Total = Quantité * Prix Unitaire.
  */
 export default class extends Controller {
+    // Prix unitaire mémorisé pour recalculer le total lors du changement de quantité
+    unitPrice = 0;
 
     connect() {
-        // Identification du champ Revenu lié dans la même ligne de formulaire
-        const revenuName = this.element.name.replace(/tranche/, 'revenuFacture');
+        // Identification des champs par rapport au nom dynamique (gestion des collections [0], [1]...)
+        const baseName = this.element.name; 
+        const revenuName = baseName.replace(/tranche/, 'revenuFacture');
+        const quantiteName = baseName.replace(/tranche/, 'quantite');
+        const montantName = baseName.replace(/tranche/, 'montant');
+
         this.form = this.element.closest('form');
         this.revenuSelect = this.form.querySelector(`select[name="${revenuName}"]`);
+        this.quantiteInput = this.form.querySelector(`input[name="${quantiteName}"]`);
+        this.montantInput = this.form.querySelector(`input[name="${montantName}"]`);
 
-        // On écoute les changements sur le Revenu pour piloter la Tranche
         if (this.revenuSelect) {
             this.revenuSelect.addEventListener('change', () => this.handleRevenuChange());
         }
 
-        // On écoute les changements sur la Tranche pour piloter les champs finaux
-        this.element.addEventListener('change', () => this.handleTrancheChange());
+        // Initialisation des données si on charge un article existant
+        this.initializeData();
 
-        // Initialisation immédiate (avec un léger délai pour TomSelect)
         setTimeout(() => {
             this.handleRevenuChange();
             this.handleTrancheChange();
-        }, 50);
+        }, 60);
 
         this.element.addEventListener('focus', () => this.updateUrl());
     }
 
     /**
-     * Gère la visibilité de la Tranche selon le choix du Revenu
+     * Initialise le prix unitaire basé sur les valeurs actuelles
      */
+    initializeData() {
+        if (this.montantInput && this.quantiteInput) {
+            const montant = parseFloat(this.montantInput.value) || 0;
+            const qty = parseFloat(this.quantiteInput.value) || 1;
+            if (qty > 0) {
+                this.unitPrice = montant / qty;
+            }
+        }
+    }
+
     handleRevenuChange() {
         if (!this.revenuSelect) return;
 
-        const revenuId = this.revenuSelect.value;
-        const hasRevenu = (revenuId && revenuId !== '');
-
+        const hasRevenu = (this.revenuSelect.value && this.revenuSelect.value !== '');
         const trancheRow = this.element.closest('.tranche-form-row');
+
         if (trancheRow) {
             const wasHidden = trancheRow.classList.contains('d-none');
             trancheRow.classList.toggle('d-none', !hasRevenu);
-
-            // Si le champ apparaît, on force le recalcul de TomSelect
-            if (wasHidden && hasRevenu) {
-                this.forceRepaint();
-            }
+            if (wasHidden && hasRevenu) this.forceRepaint();
         }
 
-        // Si on vide le revenu, on doit vider et masquer ce qui suit
-        if (!hasRevenu) {
-            this.clearTranche();
-        }
-        
+        if (!hasRevenu) this.clearTranche();
         this.updateUrl();
     }
 
-    /**
-     * Gère la visibilité de Quantité, Montant et Taxe selon la Tranche
-     */
     handleTrancheChange() {
-        const trancheId = this.element.value;
-        const hasTranche = (trancheId && trancheId !== '');
+        const hasTranche = (this.element.value && this.element.value !== '');
+        const dependentRows = this.form.querySelectorAll('.montant-form-row, .quantite-form-row');
 
-        // Ciblage des parents dépendants via les classes CSS injectées par le PHP
-        const dependentRows = this.form.querySelectorAll('.montant-form-row, .quantite-form-row, .taxe-form-row');
-        
         dependentRows.forEach(row => {
             const wasHidden = row.classList.contains('d-none');
             row.classList.toggle('d-none', !hasTranche);
-            
-            if (wasHidden && hasTranche) {
-                this.forceRepaint();
-            }
+            if (wasHidden && hasTranche) this.forceRepaint();
         });
+
+        // Si une tranche est sélectionnée, on synchronise le prix unitaire
+        if (hasTranche) {
+            this.initializeData();
+        }
     }
 
     /**
-     * Réinitialise le champ Tranche (TomSelect ou Standard)
+     * Calcule le Montant Total : Qté * Prix Unitaire
      */
+    calculateTotal() {
+        if (!this.quantiteInput || !this.montantInput) return;
+        const qty = parseFloat(this.quantiteInput.value) || 0;
+        const total = qty * this.unitPrice;
+        this.montantInput.value = total.toFixed(2);
+    }
+
+    /**
+     * Si l'utilisateur modifie le montant global manuellement, 
+     * on met à jour le prix unitaire pour les futurs changements de quantité.
+     */
+    updateUnitPrice() {
+        if (!this.quantiteInput || !this.montantInput) return;
+        const qty = parseFloat(this.quantiteInput.value) || 1;
+        const montant = parseFloat(this.montantInput.value) || 0;
+        if (qty > 0) {
+            this.unitPrice = montant / qty;
+        }
+    }
+
     clearTranche() {
         if (this.element.tomselect) {
             this.element.tomselect.clear(true);
-            this.element.tomselect.clearOptions(); 
+            this.element.tomselect.clearOptions();
         } else {
             this.element.value = '';
         }
-        // Propagation pour masquer les champs suivants
         this.handleTrancheChange();
     }
 
-    /**
-     * Force TomSelect à relire sa largeur (évite le bug du 0px quand caché)
-     */
     forceRepaint() {
         setTimeout(() => {
             window.dispatchEvent(new Event('resize'));
-            if (this.element.tomselect) {
-                this.element.tomselect.sync();
-            }
-        }, 15);
+            if (this.element.tomselect) this.element.tomselect.sync();
+        }, 20);
     }
 
-    /**
-     * Met à jour l'URL AJAX pour filtrer les tranches par Revenu
-     */
     updateUrl() {
         if (!this.revenuSelect) return;
         const revenuId = this.revenuSelect.value;
-        
         let urlAttr = this.element.hasAttribute('data-symfony--ux-autocomplete--autocomplete-url-value') 
             ? 'data-symfony--ux-autocomplete--autocomplete-url-value' 
             : 'data-autocomplete-url-value';
@@ -121,14 +134,9 @@ export default class extends Controller {
 
         try {
             const url = new URL(this.baseUrl, window.location.origin);
-            if (revenuId) {
-                url.searchParams.set('live_revenu_id', revenuId);
-            } else {
-                url.searchParams.delete('live_revenu_id');
-            }
+            if (revenuId) url.searchParams.set('live_revenu_id', revenuId);
+            else url.searchParams.delete('live_revenu_id');
             this.element.setAttribute(urlAttr, url.toString());
-        } catch (e) {
-            console.error("[Tranche DEBUG] Erreur URL:", e);
-        }
+        } catch (e) {}
     }
 }

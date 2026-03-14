@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services\Canvas\Provider\Form;
 
 use App\Entity\Article;
@@ -7,16 +9,15 @@ use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Fournisseur de Canvas pour l'entité Article.
- * Définit la structure du formulaire dynamique pour l'affichage step-by-step.
+ * Provider de layout pour l'Article (Version sans Nom ni Taxe)
  */
 class ArticleFormCanvasProvider implements FormCanvasProviderInterface
 {
     use FormCanvasProviderTrait;
 
     public function __construct(
-        private CanvasBuilder $canvasBuilder,
-        private EntityManagerInterface $em
+        private readonly CanvasBuilder $canvasBuilder,
+        private readonly EntityManagerInterface $em
     ) {
     }
 
@@ -25,17 +26,14 @@ class ArticleFormCanvasProvider implements FormCanvasProviderInterface
         return $entityClassName === Article::class;
     }
 
-    /**
-     * Génère la configuration du Canvas pour le formulaire d'article.
-     */
     public function getCanvas(object $object, ?int $idEntreprise): array
     {
         /** @var Article $object */
         $isParentNew = ($object->getId() === null);
 
         $parametres = [
-            "titre_creation" => "Ajouter un élément de facturation",
-            "titre_modification" => "Modifier la ligne #%id%",
+            "titre_creation" => "Ajouter une ligne de facturation",
+            "titre_modification" => "Modifier l'article #%id%",
             "endpoint_submit_url" => "/admin/article/api/submit",
             "endpoint_delete_url" => "/admin/article/api/delete",
             "endpoint_form_url" => "/admin/article/api/get-form",
@@ -51,36 +49,26 @@ class ArticleFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    /**
-     * Construit la grille (layout) du formulaire Article.
-     * Note: Le champ 'nom' a été supprimé.
-     */
     private function buildArticleLayout(Article $object, bool $isParentNew): array
     {
         return [
-            // Ligne 1 : Revenu (Le déclencheur de la cascade)
+            // Ligne 1 : Revenu (Le point d'entrée)
             [
                 "colonnes" => [
                     ["champs" => ["revenuFacture"], "width" => 12]
                 ]
             ],
-            // Ligne 2 : Tranche (Masquée initialement par ArticleType)
+            // Ligne 2 : Tranche (Dépend du revenu)
             [
                 "colonnes" => [
                     ["champs" => ["tranche"], "width" => 12]
                 ]
             ],
-            // Ligne 3 : Quantité et Montant TTC côte à côte (50% / 50%)
+            // Ligne 3 : Quantité et Montant Total (Côte à côte 50/50)
             [
                 "colonnes" => [
                     ["champs" => ["quantite"], "width" => 6],
                     ["champs" => ["montant"], "width" => 6]
-                ]
-            ],
-            // Ligne 4 : Taxe (Masquée initialement)
-            [
-                "colonnes" => [
-                    ["champs" => ["taxeFacturee"], "width" => 12]
                 ]
             ],
         ];
