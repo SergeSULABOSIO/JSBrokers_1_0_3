@@ -97,36 +97,43 @@ export default class extends Controller {
      * Formule : Montant = Montant TTC du Revenu * Quantité * Taux de la Tranche
      */
     calculateTotal() {
-        if (!this.quantiteInput || !this.montantInput) return;
+        console.log('%c--- Début Calcul Montant ---', 'color: #0d6efd; font-weight: bold;');
+
+        if (!this.quantiteInput || !this.montantInput) {
+            console.error('[ERREUR] Champs Quantité ou Montant introuvables.');
+            return;
+        }
 
         const qty = parseFloat(this.quantiteInput.value) || 0;
         let tauxTranche = 0;
         let montantTtcRevenu = 0;
 
-        if (this.element.tomselect) {
-            const trancheId = this.element.value;
-            const trancheOption = this.element.tomselect.options[trancheId];
-            
-            if (trancheOption) {
-                tauxTranche = parseFloat(trancheOption.taux || trancheOption.pourcentage || 0);
-                montantTtcRevenu = parseFloat(trancheOption.montantTtcRevenu || trancheOption.montant_ttc_revenu || trancheOption.revenuMontantTtc || trancheOption.montantTtc || 0);
-                if (tauxTranche > 1) {
-                    tauxTranche = tauxTranche / 100;
-                }
-            }
-        }
-
-        // Get montantTtcRevenu from the selected Revenu
+        // 1. Récupérer le Montant TTC depuis le champ Revenu (la seule source fiable)
         if (this.revenuSelect && this.revenuSelect.tomselect) {
             const revenuId = this.revenuSelect.value;
             const revenuOption = this.revenuSelect.tomselect.options[revenuId];
             if (revenuOption) {
-                montantTtcRevenu = parseFloat(revenuOption.montantTtc || 0); // Assuming 'montantTtc' is the data attribute for revenu TTC
+                montantTtcRevenu = parseFloat(revenuOption.montantTtc || 0);
             }
         }
 
+        // 2. Récupérer le Taux depuis le champ Tranche
+        if (this.element.tomselect) {
+            const trancheId = this.element.value;
+            const trancheOption = this.element.tomselect.options[trancheId];
+            if (trancheOption) {
+                // La valeur 'tauxTranche' est déjà un décimal (ex: 0.5) grâce à la stratégie PHP.
+                // Il ne faut PAS la re-diviser par 100.
+                tauxTranche = parseFloat(trancheOption.taux || 0);
+            }
+        }
+
+        console.log(`Données de calcul : Montant Revenu TTC = ${montantTtcRevenu}, Quantité = ${qty}, Taux Tranche = ${tauxTranche}`);
+
         const total = montantTtcRevenu * qty * tauxTranche;
+        console.log(`Résultat : ${montantTtcRevenu} * ${qty} * ${tauxTranche} = ${total.toFixed(2)}`);
         this.montantInput.value = total.toFixed(2);
+        console.log('%c--- Fin Calcul Montant ---', 'color: #0d6efd; font-weight: bold;');
     }
 
     updateUrl() {
