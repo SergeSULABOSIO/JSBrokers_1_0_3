@@ -61,7 +61,7 @@ class TrancheAutocompleteField extends AbstractType
 
                 // Formatage HTML enrichi avec la charte bleue cobalt et les puces
                 return sprintf(
-                    '<div>
+                    '<div data-taux="%s">
                         <strong>%s</strong>
                         <div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">
                             Réf Police: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Assureur: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Client: %s
@@ -84,6 +84,7 @@ class TrancheAutocompleteField extends AbstractType
                             <span title="Rétrocommission associée à cette tranche">Rétro: %s</span>
                         </div>
                     </div>',
+                    $tranche->tauxTranche ?? 0.0, // Taux de la tranche
                     htmlspecialchars($tranche->getNom() ?? 'Tranche sans nom'),
                     htmlspecialchars($policeRef),
                     htmlspecialchars($assureurNom),
