@@ -75,7 +75,7 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
                 // 3. Formatage HTML enrichi
                 // Utilisation de puces (&bull;) élégantes et discrètes entre les attributs
                 return sprintf(
-                    '<div>
+                    '<div data-montant-ttc="%s">
                         <strong>%s</strong>
                         <div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">
                             Réf Police: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Assureur: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Client: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Tranches: %d
@@ -98,6 +98,7 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
                             <span title="Rétrocommission au partenaire">Rétro (%s): %s</span>
                         </div>
                     </div>',
+                    (int) round($revenuTTC * 100), // Montant TTC en centimes
                     htmlspecialchars($revenu->getNom() ?? 'Sans nom'),
                     htmlspecialchars($policeRef),
                     htmlspecialchars($assureurNom),
