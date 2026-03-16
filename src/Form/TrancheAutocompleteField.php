@@ -59,7 +59,7 @@ class TrancheAutocompleteField extends AbstractType
                 $reserve = $tranche->reserve ?? 0.0;
                 $retrocom = $tranche->retroCommission ?? 0.0;
 
-                $tauxAffiche = ($tranche->tauxTranche ?? 0.0) * 100; // Convertir en pourcentage
+                $tauxAffiche = $tranche->tauxTranche ?? 0.0; // La valeur est déjà en pourcentage via la stratégie
 
                 // Formatage HTML enrichi avec la charte bleue cobalt et les puces
                 return sprintf( // Ligne 63
