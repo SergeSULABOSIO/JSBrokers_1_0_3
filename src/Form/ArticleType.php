@@ -18,7 +18,8 @@ use Symfony\Component\HttpFoundation\RequestStack;
  * Formulaire Article refactorisé pour Symfony 7.1.5.
  * - Gestion de l'affichage en cascade (Revenu -> Tranche -> Quantité/Montant).
  * - Suppression des champs 'nom' et 'taxeFacturee'.
- * - Calcul automatique du montant basé sur la quantité.
+ * - Calcul automatique complet : Revenu TTC * Quantité * Taux.
+ * - Libellés optimisés pour une meilleure expérience utilisateur (UX).
  */
 class ArticleType extends AbstractType
 {
@@ -55,7 +56,7 @@ class ArticleType extends AbstractType
         $builder
             // 1. REVENU : Toujours visible au chargement.
             ->add('revenuFacture', RevenuPourCourtierAutocompleteField::class, [
-                'label' => "Lié à un Revenu/Commission",
+                'label' => "Revenu / Commission source à facturer",
                 'required' => false,
                 'note_id' => $noteId,
                 'row_attr' => ['class' => $baseRowClass],
@@ -65,51 +66,48 @@ class ArticleType extends AbstractType
                 ]
             ])
 
-            // 2. TRANCHE : Masquée initialement, apparaît après le choix du Revenu.
+            // 2. TRANCHE : Apparaît après le choix du Revenu.
             ->add('tranche', TrancheAutocompleteField::class, [
-                'label' => "Lié à une Tranche",
+                'label' => "Tranche de prime correspondante",
                 'required' => false,
                 'revenu_id' => $revenuIdInitial,
                 'row_attr' => [
                     'class' => sprintf('%s tranche-form-row %s', $baseRowClass, ($isCreationMode && !$revenuIdInitial ? 'd-none' : ''))
                 ],
+                // Le contrôleur est monté ici. Il écoutera la tranche, mais aussi les champs frères.
                 'attr' => [
-                    'data-controller' => 'tranche-autocomplete-filter',
-                    'data-action' => 'change->tranche-autocomplete-filter#handleTrancheChange'
+                    'data-controller' => 'tranche-autocomplete-filter'
                 ]
             ])
 
-            // 3. QUANTITÉ : Masquée initialement, apparaît après le choix de la Tranche.
+            // 3. QUANTITÉ : Apparaît après le choix de la Tranche.
             ->add('quantite', NumberType::class, [
-                'label' => "Quantité",
+                'label' => "Quantité (nombre d'unités)",
                 'html5' => true,
                 // Valeur par défaut de 1.0 en création
                 'data' => $article?->getQuantite() ?? 1.0,
                 'attr' => [
                     'placeholder' => "1.00",
-                    'step' => '0.01',
-                    'data-action' => 'input->tranche-autocomplete-filter#calculateTotal'
+                    'step' => '0.01'
                 ],
                 'row_attr' => [
                     'class' => sprintf('%s quantite-form-row %s', $baseRowClass, ($isCreationMode && !$trancheIdInitial ? 'd-none' : ''))
                 ],
             ])
 
-            // 4. MONTANT : Masqué initialement, apparaît après le choix de la Tranche.
+            // 4. MONTANT : Apparaît après le choix de la Tranche et se remplit tout seul.
             ->add('montant', MoneyType::class, [
-                'label' => "Montant Total (TTC)",
+                'label' => "Montant total à facturer (TTC)",
                 'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                 'grouping' => true,
                 'attr' => [
                     'placeholder' => "0.00",
-                    'data-action' => 'change->tranche-autocomplete-filter#updateUnitPrice'
+                    'readonly' => true // Optionnel : à activer si vous voulez interdire la saisie manuelle et forcer le calcul
                 ],
                 'row_attr' => [
                     'class' => sprintf('%s montant-form-row %s', $baseRowClass, ($isCreationMode && !$trancheIdInitial ? 'd-none' : ''))
                 ],
             ]);
-            
-            // Note: Le champ 'nom' et le champ 'taxeFacturee' ont été supprimés.
     }
 
     public function configureOptions(OptionsResolver $resolver): void
