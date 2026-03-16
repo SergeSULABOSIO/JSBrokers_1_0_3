@@ -1,9 +1,8 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Entity;
 
+use App\Entity\Entreprise;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
@@ -12,10 +11,6 @@ use App\Repository\TaxeRepository;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
-/**
- * Entité Taxe
- * Refactorisée : la relation avec Article a été supprimée.
- */
 #[ORM\Entity(repositoryClass: TaxeRepository::class)]
 class Taxe
 {
@@ -40,6 +35,17 @@ class Taxe
     #[Groups(['list:read'])]
     private ?string $tauxVIE = null;
 
+    #[ORM\ManyToOne(inversedBy: 'taxes')]
+    #[Groups(['list:read'])]
+    private ?Entreprise $entreprise = null;
+
+    #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
+    private ?int $redevable = null;
+
+    public const REDEVABLE_COURTIER = 0;
+    public const REDEVABLE_ASSUREUR = 1;
+
     /**
      * @var Collection<int, AutoriteFiscale>
      */
@@ -49,7 +55,6 @@ class Taxe
     public function __construct()
     {
         $this->autoriteFiscales = new ArrayCollection();
-        // L'initialisation de $this->articles a été supprimée.
     }
 
     public function getId(): ?int
@@ -65,7 +70,6 @@ class Taxe
     public function setDescription(string $description): static
     {
         $this->description = $description;
-
         return $this;
     }
 
@@ -77,7 +81,6 @@ class Taxe
     public function setTauxIARD(string $tauxIARD): static
     {
         $this->tauxIARD = $tauxIARD;
-
         return $this;
     }
 
@@ -89,7 +92,28 @@ class Taxe
     public function setTauxVIE(string $tauxVIE): static
     {
         $this->tauxVIE = $tauxVIE;
+        return $this;
+    }
 
+    public function getEntreprise(): ?Entreprise
+    {
+        return $this->entreprise;
+    }
+
+    public function setEntreprise(?Entreprise $entreprise): static
+    {
+        $this->entreprise = $entreprise;
+        return $this;
+    }
+
+    public function getRedevable(): ?int
+    {
+        return $this->redevable;
+    }
+
+    public function setRedevable(?int $redevable): static
+    {
+        $this->redevable = $redevable;
         return $this;
     }
 
@@ -107,19 +131,16 @@ class Taxe
             $this->autoriteFiscales->add($autoriteFiscale);
             $autoriteFiscale->setTaxe($this);
         }
-
         return $this;
     }
 
     public function removeAutoriteFiscale(AutoriteFiscale $autoriteFiscale): static
     {
         if ($this->autoriteFiscales->removeElement($autoriteFiscale)) {
-            // set the owning side to null (unless already changed)
             if ($autoriteFiscale->getTaxe() === $this) {
                 $autoriteFiscale->setTaxe(null);
             }
         }
-
         return $this;
     }
 }

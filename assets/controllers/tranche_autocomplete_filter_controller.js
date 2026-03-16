@@ -1,132 +1,143 @@
 import { Controller } from '@hotwired/stimulus';
 
-/**
- * Contrôleur Stimulus pour la cascade d'affichage et le calcul automatique.
- * Relation : Revenu -> Tranche -> (Quantité & Montant).
- * Formule : Montant Total = Quantité * Prix Unitaire.
+/*
+ * Contrôleur JS Brokers (Symfony 7.1)
+ * Gère la dépendance Revenu -> Tranche et le CALCUL AUTOMATIQUE du montant.
  */
 export default class extends Controller {
-    // Prix unitaire mémorisé pour recalculer le total lors du changement de quantité
-    unitPrice = 0;
+    static targets = ["formRow"];
 
     connect() {
-        // Identification des champs par rapport au nom dynamique (gestion des collections [0], [1]...)
-        const baseName = this.element.name; 
+        // 1. Identification des champs exacts pour la ligne de collection
+        const baseName = this.element.name;
         const revenuName = baseName.replace(/tranche/, 'revenuFacture');
         const quantiteName = baseName.replace(/tranche/, 'quantite');
         const montantName = baseName.replace(/tranche/, 'montant');
-
+        
         this.form = this.element.closest('form');
         this.revenuSelect = this.form.querySelector(`select[name="${revenuName}"]`);
         this.quantiteInput = this.form.querySelector(`input[name="${quantiteName}"]`);
         this.montantInput = this.form.querySelector(`input[name="${montantName}"]`);
 
+        // 2. ÉCOUTEURS D'ÉVÉNEMENTS 
         if (this.revenuSelect) {
-            this.revenuSelect.addEventListener('change', () => this.handleRevenuChange());
+            this.revenuSelect.addEventListener('change', () => {
+                this.handleRevenuChange();
+                this.calculateTotal(); 
+            });
+            setTimeout(() => this.handleRevenuChange(), 50);
         }
 
-        // Initialisation des données si on charge un article existant
-        this.initializeData();
+        if (this.quantiteInput) {
+            this.quantiteInput.addEventListener('input', () => this.calculateTotal()); 
+        }
 
-        setTimeout(() => {
-            this.handleRevenuChange();
+        this.element.addEventListener('change', () => {
             this.handleTrancheChange();
-        }, 60);
+            this.calculateTotal(); 
+        });
 
+        // Sécurité pour la mise à jour de l'URL AJAX
         this.element.addEventListener('focus', () => this.updateUrl());
-    }
+        this.element.addEventListener('mouseenter', () => this.updateUrl());
 
-    /**
-     * Initialise le prix unitaire basé sur les valeurs actuelles
-     */
-    initializeData() {
-        if (this.montantInput && this.quantiteInput) {
-            const montant = parseFloat(this.montantInput.value) || 0;
-            const qty = parseFloat(this.quantiteInput.value) || 1;
-            if (qty > 0) {
-                this.unitPrice = montant / qty;
-            }
-        }
+        setTimeout(() => this.handleTrancheChange(), 60);
     }
 
     handleRevenuChange() {
         if (!this.revenuSelect) return;
 
-        const hasRevenu = (this.revenuSelect.value && this.revenuSelect.value !== '');
-        const trancheRow = this.element.closest('.tranche-form-row');
+        const revenuId = this.revenuSelect.value;
+        const hasRevenu = (revenuId && revenuId !== '');
 
-        if (trancheRow) {
-            const wasHidden = trancheRow.classList.contains('d-none');
-            trancheRow.classList.toggle('d-none', !hasRevenu);
-            if (wasHidden && hasRevenu) this.forceRepaint();
+        // Gestion de l'affichage dynamique
+        let targetRow = null;
+        if (this.hasFormRowTarget) {
+            targetRow = this.formRowTarget;
+        } else {
+            targetRow = this.element.closest('.mb-3'); 
         }
 
-        if (!hasRevenu) this.clearTranche();
+        if (targetRow) {
+            const wasHidden = targetRow.classList.contains('d-none');
+            targetRow.classList.toggle('d-none', !hasRevenu);
+
+            if (wasHidden && hasRevenu) {
+                setTimeout(() => {
+                    window.dispatchEvent(new Event('resize'));
+                    if (this.element.tomselect) this.element.tomselect.sync(); 
+                }, 10);
+            }
+        }
+
+        if (this.element.tomselect) {
+            this.element.tomselect.clear(true); 
+            this.element.tomselect.clearOptions(); 
+        } else {
+            this.element.value = '';
+        }
+
         this.updateUrl();
     }
 
     handleTrancheChange() {
         const hasTranche = (this.element.value && this.element.value !== '');
         const dependentRows = this.form.querySelectorAll('.montant-form-row, .quantite-form-row');
-
+        
         dependentRows.forEach(row => {
             const wasHidden = row.classList.contains('d-none');
             row.classList.toggle('d-none', !hasTranche);
-            if (wasHidden && hasTranche) this.forceRepaint();
+            if (wasHidden && hasTranche) {
+                setTimeout(() => window.dispatchEvent(new Event('resize')), 10);
+            }
         });
-
-        // Si une tranche est sélectionnée, on synchronise le prix unitaire
-        if (hasTranche) {
-            this.initializeData();
-        }
     }
 
     /**
-     * Calcule le Montant Total : Qté * Prix Unitaire
+     * Formule : Montant = Montant TTC du Revenu * Quantité * Taux de la Tranche
      */
     calculateTotal() {
         if (!this.quantiteInput || !this.montantInput) return;
+
         const qty = parseFloat(this.quantiteInput.value) || 0;
-        const total = qty * this.unitPrice;
-        this.montantInput.value = total.toFixed(2);
-    }
+        let tauxTranche = 0;
+        let montantTtcRevenu = 0;
 
-    /**
-     * Si l'utilisateur modifie le montant global manuellement, 
-     * on met à jour le prix unitaire pour les futurs changements de quantité.
-     */
-    updateUnitPrice() {
-        if (!this.quantiteInput || !this.montantInput) return;
-        const qty = parseFloat(this.quantiteInput.value) || 1;
-        const montant = parseFloat(this.montantInput.value) || 0;
-        if (qty > 0) {
-            this.unitPrice = montant / qty;
-        }
-    }
-
-    clearTranche() {
         if (this.element.tomselect) {
-            this.element.tomselect.clear(true);
-            this.element.tomselect.clearOptions();
-        } else {
-            this.element.value = '';
-        }
-        this.handleTrancheChange();
-    }
+            const trancheId = this.element.value;
+            const trancheOption = this.element.tomselect.options[trancheId];
+            
+            if (trancheOption) {
+                tauxTranche = parseFloat(trancheOption.taux || trancheOption.pourcentage || 0);
+                montantTtcRevenu = parseFloat(trancheOption.montantTtcRevenu || trancheOption.montant_ttc_revenu || trancheOption.revenuMontantTtc || trancheOption.montantTtc || 0);
 
-    forceRepaint() {
-        setTimeout(() => {
-            window.dispatchEvent(new Event('resize'));
-            if (this.element.tomselect) this.element.tomselect.sync();
-        }, 20);
+                if (tauxTranche > 1) {
+                    tauxTranche = tauxTranche / 100;
+                }
+            }
+        }
+
+        if (montantTtcRevenu === 0 && this.revenuSelect && this.revenuSelect.tomselect) {
+            const revenuId = this.revenuSelect.value;
+            const revenuOption = this.revenuSelect.tomselect.options[revenuId];
+            if (revenuOption) {
+                montantTtcRevenu = parseFloat(revenuOption.montantTTC || revenuOption.montant_ttc || revenuOption.montantFlatExceptionel || 0);
+            }
+        }
+
+        const total = montantTtcRevenu * qty * tauxTranche;
+        this.montantInput.value = total.toFixed(2);
     }
 
     updateUrl() {
         if (!this.revenuSelect) return;
+        
         const revenuId = this.revenuSelect.value;
         let urlAttr = this.element.hasAttribute('data-symfony--ux-autocomplete--autocomplete-url-value') 
             ? 'data-symfony--ux-autocomplete--autocomplete-url-value' 
-            : 'data-autocomplete-url-value';
+            : (this.element.hasAttribute('data-autocomplete-url-value') ? 'data-autocomplete-url-value' : null);
+
+        if (!urlAttr) return;
 
         if (!this.baseUrl) {
             this.baseUrl = this.element.getAttribute(urlAttr);
@@ -134,9 +145,14 @@ export default class extends Controller {
 
         try {
             const url = new URL(this.baseUrl, window.location.origin);
-            if (revenuId) url.searchParams.set('live_revenu_id', revenuId);
-            else url.searchParams.delete('live_revenu_id');
+            if (revenuId && revenuId !== '') {
+                url.searchParams.set('live_revenu_id', revenuId);
+            } else {
+                url.searchParams.delete('live_revenu_id');
+            }
             this.element.setAttribute(urlAttr, url.toString());
-        } catch (e) {}
+        } catch (e) {
+            console.error("[TrancheAutocomplete DEBUG] Erreur de mise à jour de l'URL:", e);
+        }
     }
 }

@@ -31,9 +31,6 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
     private function getNatureArticle(Article $article): string
     {
-        if ($article->getTaxeFacturee() !== null) {
-            return 'Taxe';
-        }
         if ($article->getRevenuFacture() !== null) {
             return 'Commission / Revenu';
         }
@@ -45,9 +42,6 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
     private function getElementLie(Article $article): string
     {
-        if ($article->getTaxeFacturee() !== null) {
-            return $article->getTaxeFacturee()->getCode() ?? 'Taxe sans nom';
-        }
         if ($article->getRevenuFacture() !== null) {
             return $article->getRevenuFacture()->getNom() ?? 'Revenu sans nom';
         }
