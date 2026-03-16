@@ -59,6 +59,8 @@ class TrancheAutocompleteField extends AbstractType
                 $reserve = $tranche->reserve ?? 0.0;
                 $retrocom = $tranche->retroCommission ?? 0.0;
 
+                $tauxAffiche = ($tranche->tauxTranche ?? 0.0) * 100; // Convertir en pourcentage
+
                 // Formatage HTML enrichi avec la charte bleue cobalt et les puces
                 return sprintf( // Ligne 63
                     '<div data-taux="%f" data-prime="%f" data-paye="%f" data-solde="%f" data-taxe-courtier="%f" data-taxe-assureur="%f" data-commission-pure="%f" data-reserve="%f" data-retrocom="%f">
@@ -67,6 +69,8 @@ class TrancheAutocompleteField extends AbstractType
                             Réf Police: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Assureur: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Client: %s
                         </div>
                         <div style="color: #0047AB; font-weight: bold; font-size: 0.85em; padding-left: 2px; margin-top: 4px; border-top: 1px dashed #ccc; padding-top: 2px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px;">
+                            <span title="Taux de la tranche">Taux: %s</span>
+                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
                             <span title="Prime TTC calculée pour cette tranche">Prime: %s</span>
                             <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
                             <span title="Montant payé sur cette tranche">Payé: %s</span>
@@ -97,6 +101,7 @@ class TrancheAutocompleteField extends AbstractType
                     htmlspecialchars($policeRef),
                     htmlspecialchars($assureurNom),
                     htmlspecialchars($clientNom),
+                    number_format((float)$tauxAffiche, 2, ',', ' ') . '%', // Ajout du taux affiché
                     number_format((float)$prime, 2, ',', ' '),
                     number_format((float)$paye, 2, ',', ' '),
                     number_format((float)$solde, 2, ',', ' '),
