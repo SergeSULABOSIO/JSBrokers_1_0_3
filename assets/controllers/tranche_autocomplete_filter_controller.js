@@ -33,7 +33,7 @@ export default class extends Controller {
         }
 
         this.element.addEventListener('change', () => {
-            this.handleTrancheChange();
+            this.handleTrancheChange(); 
             this.calculateTotal(); 
         });
 
@@ -41,7 +41,7 @@ export default class extends Controller {
         this.element.addEventListener('focus', () => this.updateUrl());
         this.element.addEventListener('mouseenter', () => this.updateUrl());
 
-        setTimeout(() => this.handleTrancheChange(), 60);
+        setTimeout(() => { this.handleTrancheChange(); this.calculateTotal(); }, 60);
     }
 
     handleRevenuChange() {
