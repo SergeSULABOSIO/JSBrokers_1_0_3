@@ -26,7 +26,7 @@ export default class extends Controller {
                 this.calculateTotal(); 
             });
             setTimeout(() => this.handleRevenuChange(), 50);
-        }
+        } 
 
         if (this.quantiteInput) {
             this.quantiteInput.addEventListener('input', () => this.calculateTotal()); 
@@ -34,14 +34,18 @@ export default class extends Controller {
 
         this.element.addEventListener('change', () => {
             this.handleTrancheChange(); 
-            this.calculateTotal(); 
+            this.calculateTotal();
         });
 
         // Sécurité pour la mise à jour de l'URL AJAX
         this.element.addEventListener('focus', () => this.updateUrl());
         this.element.addEventListener('mouseenter', () => this.updateUrl());
 
-        setTimeout(() => { this.handleTrancheChange(); this.calculateTotal(); }, 60);
+        setTimeout(() => { 
+            this.handleTrancheChange(); 
+            this.handleRevenuChange();
+            this.calculateTotal(); 
+        }, 60);
     }
 
     handleRevenuChange() {
