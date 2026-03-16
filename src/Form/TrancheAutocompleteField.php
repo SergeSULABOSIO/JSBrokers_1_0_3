@@ -60,8 +60,8 @@ class TrancheAutocompleteField extends AbstractType
                 $retrocom = $tranche->retroCommission ?? 0.0;
 
                 // Formatage HTML enrichi avec la charte bleue cobalt et les puces
-                return sprintf(
-                    '<div data-taux="%s">
+                return sprintf( // Ligne 63
+                    '<div data-taux="%f" data-prime="%f" data-paye="%f" data-solde="%f" data-taxe-courtier="%f" data-taxe-assureur="%f" data-commission-pure="%f" data-reserve="%f" data-retrocom="%f">
                         <strong>%s</strong>
                         <div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">
                             Réf Police: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Assureur: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Client: %s
@@ -84,7 +84,15 @@ class TrancheAutocompleteField extends AbstractType
                             <span title="Rétrocommission associée à cette tranche">Rétro: %s</span>
                         </div>
                     </div>',
-                    $tranche->tauxTranche ?? 0.0, // Taux de la tranche
+                    $tranche->tauxTranche ?? 0.0, // Taux de la tranche (pour data-taux)
+                    $prime, // pour data-prime
+                    $paye, // pour data-paye
+                    $solde, // pour data-solde
+                    $taxeCourtier, // pour data-taxe-courtier
+                    $taxeAssureur, // pour data-taxe-assureur
+                    $commissionPure, // pour data-commission-pure
+                    $reserve, // pour data-reserve
+                    $retrocom, // pour data-retrocom
                     htmlspecialchars($tranche->getNom() ?? 'Tranche sans nom'),
                     htmlspecialchars($policeRef),
                     htmlspecialchars($assureurNom),
@@ -99,7 +107,16 @@ class TrancheAutocompleteField extends AbstractType
                     number_format((float)$retrocom, 2, ',', ' ')
                 );
             },
-            
+
+
+
+
+
+
+
+
+
+
             'query_builder' => function (Options $options) {
                 return function (EntityRepository $er) use ($options): QueryBuilder {
                     $request = $this->requestStack->getCurrentRequest();
@@ -142,6 +159,7 @@ class TrancheAutocompleteField extends AbstractType
             }
         ]);
     }
+
 
     public function getParent(): string
     {
