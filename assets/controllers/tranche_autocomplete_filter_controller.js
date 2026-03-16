@@ -110,18 +110,18 @@ export default class extends Controller {
             if (trancheOption) {
                 tauxTranche = parseFloat(trancheOption.taux || trancheOption.pourcentage || 0);
                 montantTtcRevenu = parseFloat(trancheOption.montantTtcRevenu || trancheOption.montant_ttc_revenu || trancheOption.revenuMontantTtc || trancheOption.montantTtc || 0);
-
                 if (tauxTranche > 1) {
                     tauxTranche = tauxTranche / 100;
                 }
             }
         }
 
-        if (montantTtcRevenu === 0 && this.revenuSelect && this.revenuSelect.tomselect) {
+        // Get montantTtcRevenu from the selected Revenu
+        if (this.revenuSelect && this.revenuSelect.tomselect) {
             const revenuId = this.revenuSelect.value;
             const revenuOption = this.revenuSelect.tomselect.options[revenuId];
             if (revenuOption) {
-                montantTtcRevenu = parseFloat(revenuOption.montantTTC || revenuOption.montant_ttc || revenuOption.montantFlatExceptionel || 0);
+                montantTtcRevenu = parseFloat(revenuOption.montantTtc || 0); // Assuming 'montantTtc' is the data attribute for revenu TTC
             }
         }
 
