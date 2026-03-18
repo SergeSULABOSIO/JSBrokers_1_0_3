@@ -51,9 +51,20 @@ class ArticleFormCanvasProvider implements FormCanvasProviderInterface
 
     private function buildArticleLayout(Article $object, bool $isParentNew): array
     {
+        // Condition de visibilité pour la quantité, dépend de la sélection d'une tranche
+        $visibilityConditionForQuantite = [
+            'visibility_conditions' => [
+                [
+                    'field' => 'tranche', // Le champ à écouter
+                    'operator' => 'not_empty', // L'opérateur de comparaison
+                ]
+            ]
+        ];
+
         return [
             // Ligne 1 : Revenu (Le point d'entrée)
             [
+                "colonnes" => [
                     ["champs" => ["revenuFacture"], "width" => 12]
                 ]
             ],
@@ -63,7 +74,13 @@ class ArticleFormCanvasProvider implements FormCanvasProviderInterface
                     ["champs" => ["tranche"], "width" => 12]
                 ]
             ],
-            // Ligne 3 : Quantité et Montant Total (Côte à côte 50/50)
+            // Ligne 3 : Quantité (apparaît après le choix de la Tranche)
             [
+                "colonnes" => [
+                    // On fusionne la définition du champ 'quantite' avec la condition de visibilité
+                    ["champs" => [array_merge(['field_code' => 'quantite'], $visibilityConditionForQuantite)], "width" => 12]
+                ]
+            ],
+        ];
     }
 }

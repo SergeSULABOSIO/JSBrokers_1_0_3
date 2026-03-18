@@ -29,17 +29,17 @@ class Article
     private ?float $quantite = null;
 
     #[ORM\ManyToOne(targetEntity: Tranche::class, inversedBy: 'articles')]
-    private ?Tranche $tranche = null;
+    private ?Tranche $tranche = null; // Pas de sérialisation directe pour éviter les boucles
 
     #[ORM\ManyToOne(targetEntity: Note::class, inversedBy: 'articles')]
-    private ?Note $note = null;
+    private ?Note $note = null; // Pas de sérialisation directe pour éviter les boucles
 
     #[ORM\Column]
     #[Groups(['list:read'])]
     private ?int $idPoste = null;
 
     #[ORM\ManyToOne(targetEntity: RevenuPourCourtier::class, inversedBy: 'articles')]
-    private ?RevenuPourCourtier $revenuFacture = null;
+    private ?RevenuPourCourtier $revenuFacture = null; // Sérialisation directe pour l'ID et les propriétés simples
 
     // --- Attributs calculés (non persistés) ---
     // Hydratés par ArticleIndicatorStrategy et sérialisables.
