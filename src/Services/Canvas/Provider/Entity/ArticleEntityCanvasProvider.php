@@ -40,7 +40,6 @@ class ArticleEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "montant", "intitule" => "Montant Brut", "type" => "Nombre"],
                 ["code" => "note", "intitule" => "Note Parente", "type" => "Relation", "targetEntity" => Note::class, "displayField" => "reference"],
                 ["code" => "tranche", "intitule" => "Tranche (Prime)", "type" => "Relation", "targetEntity" => Tranche::class, "displayField" => "nom"],
-                ["code" => "revenuFacture", "intitule" => "Revenu / Commission", "type" => "Relation", "targetEntity" => RevenuPourCourtier::class, "displayField" => "nom"],
                 ["code" => "taxeFacturee", "intitule" => "Taxe", "type" => "Relation", "targetEntity" => Taxe::class, "displayField" => "nom"],
             ], $this->getSpecificIndicators())
         ];

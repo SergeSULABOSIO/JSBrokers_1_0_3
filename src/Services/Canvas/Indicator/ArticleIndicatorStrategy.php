@@ -23,7 +23,7 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
         return [
             'natureArticle' => $this->getNatureArticle($entity),
             'elementLie' => $this->getElementLie($entity),
-            'montantArticle' => round($entity->getMontant() ?? 0, 2),
+            'montantArticle' => round($this->calculateMontantArticle($entity) ?? 0, 2),
             'pourcentageNote' => round($this->calculatePourcentageNote($entity), 2),
             'statutNoteParent' => $this->getStatutNoteParent($entity),
         ];
@@ -49,6 +49,14 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
             return $article->getTranche()->getNom() ?? 'Tranche sans nom';
         }
         return 'N/A';
+    }
+
+    private function calculateMontantArticle(Article $article): float
+    {
+        $revenu = $article->getNote()?->getRevenuFacture();
+        $quantity = $article->getQuantite() ?? 1;
+        $tranche = $article->getTranche();
+        return ($revenu && $tranche) ? (($revenu->montantCalculeTTC ?? 0) * $quantity * (($tranche->tauxTranche ?? 0)/100)) : 0;
     }
 
     private function calculatePourcentageNote(Article $article): float

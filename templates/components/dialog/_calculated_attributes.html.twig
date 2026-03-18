@@ -17,7 +17,7 @@
                         {% if attr_group != current_group %}
                             {# On ferme la liste précédente, sauf pour la toute première itération #}
                             {% if current_group != "___INITIAL_STATE___" %}
-                                </ul>
+                            </ul>
                             {% endif %}
 
                             {# On affiche le titre du groupe s'il existe #}
@@ -27,7 +27,7 @@
 
                             {# On ouvre une nouvelle liste pour le groupe (ou pour les éléments non groupés) #}
                             <ul class="calculated-attributes-list">
-                            {% set current_group = attr_group %}
+                                {% set current_group = attr_group %}
                         {% endif %}
 
                         {# On affiche l'élément de liste pour l'attribut courant #}
@@ -62,7 +62,7 @@
                                 </span>
                             </li>
                     {% endfor %}
-
+                    
                     {# On s'assure de fermer la toute dernière liste de la boucle #}
                     </ul>
                 </div>

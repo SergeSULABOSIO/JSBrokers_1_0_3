@@ -54,7 +54,6 @@ class ArticleFormCanvasProvider implements FormCanvasProviderInterface
         return [
             // Ligne 1 : Revenu (Le point d'entrée)
             [
-                "colonnes" => [
                     ["champs" => ["revenuFacture"], "width" => 12]
                 ]
             ],
@@ -66,11 +65,5 @@ class ArticleFormCanvasProvider implements FormCanvasProviderInterface
             ],
             // Ligne 3 : Quantité et Montant Total (Côte à côte 50/50)
             [
-                "colonnes" => [
-                    ["champs" => ["quantite"], "width" => 6],
-                    ["champs" => ["montant"], "width" => 6]
-                ]
-            ],
-        ];
     }
 }
