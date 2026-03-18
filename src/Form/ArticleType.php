@@ -54,7 +54,7 @@ class ArticleType extends AbstractType
         $baseRowClass = 'mb-3';
 
         $builder
-            // 1. REVENU : Toujours visible au chargement.
+        // 1. REVENU : Toujours visible au chargement.
             ->add('revenuFacture', RevenuPourCourtierAutocompleteField::class, [
                 'label' => "Revenu / Commission source à facturer",
                 'required' => false,
@@ -65,7 +65,7 @@ class ArticleType extends AbstractType
                     'data-revenu-autocomplete-filter-note-id-value' => $noteId
                 ]
             ])
-
+            
             // 2. TRANCHE : Apparaît après le choix du Revenu.
             ->add('tranche', TrancheAutocompleteField::class, [
                 'label' => "Tranche de prime correspondante",
@@ -79,30 +79,15 @@ class ArticleType extends AbstractType
                     'data-controller' => 'tranche-autocomplete-filter'
                 ]
             ])
-
+            
             // 3. QUANTITÉ : Apparaît après le choix de la Tranche.
             ->add('quantite', NumberType::class, [
                 'label' => "Quantité (nombre d'unités)",
                 'html5' => true,
-                // Valeur par défaut de 1.0 en création
-                'data' => $article?->getQuantite() ?? 1.0,
+                'data' => 1.0,
                 'attr' => [
                     'placeholder' => "1.00",
                     'step' => '0.01'
-                ],
-                'row_attr' => [
-                    'class' => sprintf('%s quantite-form-row %s', $baseRowClass, ($isCreationMode && !$trancheIdInitial ? 'd-none' : ''))
-                ],
-            ])
-
-            // 4. MONTANT : Apparaît après le choix de la Tranche et se remplit tout seul.
-            ->add('montant', MoneyType::class, [
-                'label' => "Montant total à facturer (TTC)",
-                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                'grouping' => true,
-                'attr' => [
-                    'placeholder' => "0.00",
-                    'readonly' => true // Optionnel : à activer si vous voulez interdire la saisie manuelle et forcer le calcul
                 ],
                 'row_attr' => [
                     'class' => sprintf('%s montant-form-row %s', $baseRowClass, ($isCreationMode && !$trancheIdInitial ? 'd-none' : ''))
