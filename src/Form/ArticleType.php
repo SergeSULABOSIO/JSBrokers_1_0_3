@@ -79,9 +79,7 @@ class ArticleType extends AbstractType
                     'data-controller' => 'revenu-autocomplete-filter',
                     'data-revenu-autocomplete-filter-note-id-value' => $noteId
                 ]
-            ]);
-            
-        // Ajout d'un écouteur PRE_SUBMIT pour ajuster dynamiquement les champs 'tranche' et 'quantite'
+            ]); // Ajout d'un écouteur PRE_SUBMIT pour ajuster dynamiquement les champs 'tranche' et 'quantite'
         $builder->addEventListener(FormEvents::PRE_SUBMIT, function (FormEvent $event) use ($baseRowClass, $isCreationMode) {
             $data = $event->getData();
             $form = $event->getForm();
@@ -135,5 +133,7 @@ class ArticleType extends AbstractType
                     'class' => sprintf('%s quantite-form-row', $baseRowClass) // La visibilité est gérée par le CanvasProvider
                 ],
             ]);
+        // Le champ idPoste n'est plus nécessaire et a été supprimé de l'entité Article.
+        // Il n'est donc plus ajouté au formulaire.
     }
 }
