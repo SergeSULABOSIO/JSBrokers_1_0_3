@@ -34,10 +34,6 @@ class Article
     #[ORM\ManyToOne(targetEntity: Note::class, inversedBy: 'articles')]
     private ?Note $note = null; // Pas de sérialisation directe pour éviter les boucles
 
-    #[ORM\Column]
-    #[Groups(['list:read'])]
-    private ?int $idPoste = null;
-
     #[ORM\ManyToOne(targetEntity: RevenuPourCourtier::class, inversedBy: 'articles')]
     private ?RevenuPourCourtier $revenuFacture = null; // Sérialisation directe pour l'ID et les propriétés simples
 
@@ -93,17 +89,6 @@ class Article
     public function setNote(?Note $note): static
     {
         $this->note = $note;
-        return $this;
-    }
-
-    public function getIdPoste(): ?int
-    {
-        return $this->idPoste;
-    }
-
-    public function setIdPoste(int $idPoste): static
-    {
-        $this->idPoste = $idPoste;
         return $this;
     }
 
