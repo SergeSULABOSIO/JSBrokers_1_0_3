@@ -89,7 +89,7 @@ class ArticleType extends AbstractType
                     'step' => '0.01'
                 ],
                 'row_attr' => [
-                    'class' => sprintf('%s montant-form-row %s', $baseRowClass, ($isCreationMode && !$trancheIdInitial ? 'd-none' : ''))
+                    'class' => sprintf('%s quantite-form-row', $baseRowClass) // La visibilité est gérée par le CanvasProvider
                 ],
             ]);
     }

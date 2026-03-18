@@ -21,7 +21,7 @@ class ArticleListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Articles",
-                "texte_principal" => ["attribut_code" => "nom", "icone" => "default"],
+                "texte_principal" => ["attribut_code" => "elementLie", "icone" => "default"], // Utilisation de 'elementLie' comme texte principal
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Nature: ", "attribut_code" => "natureArticle"],

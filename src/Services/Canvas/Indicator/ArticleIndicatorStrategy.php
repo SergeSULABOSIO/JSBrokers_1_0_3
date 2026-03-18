@@ -53,7 +53,7 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
     private function calculateMontantArticle(Article $article): float
     {
-        $revenu = $article->getNote()?->getRevenuFacture();
+        $revenu = $article->getRevenuFacture(); // Accès direct à la relation revenuFacture
         $quantity = $article->getQuantite() ?? 1;
         $tranche = $article->getTranche();
         return ($revenu && $tranche) ? (($revenu->montantCalculeTTC ?? 0) * $quantity * (($tranche->tauxTranche ?? 0)/100)) : 0;
@@ -66,14 +66,14 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
             return 0.0;
         }
 
-        $montantArticle = $article->getMontant() ?? 0.0;
+        $montantArticle = $article->montantArticle ?? 0.0; // Utilisation de la propriété calculée
         if ($montantArticle == 0) {
             return 0.0;
         }
 
         $totalNote = 0.0;
         foreach ($note->getArticles() as $art) {
-            $totalNote += $art->getMontant() ?? 0.0;
+            $totalNote += $art->montantArticle ?? 0.0; // Utilisation de la propriété calculée
         }
 
         if ($totalNote == 0) {

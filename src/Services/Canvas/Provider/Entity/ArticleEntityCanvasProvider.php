@@ -4,8 +4,6 @@ namespace App\Services\Canvas\Provider\Entity;
 
 use App\Entity\Article;
 use App\Entity\Note;
-use App\Entity\RevenuPourCourtier;
-use App\Entity\Taxe;
 use App\Entity\Tranche;
 use App\Services\ServiceMonnaies;
 
@@ -29,18 +27,14 @@ class ArticleEntityCanvasProvider implements EntityCanvasProviderInterface
                 "icone" => "default", // Icône générique
                 'background_image' => '/images/fitures/default.jpg',
                 'description_template' => [
-                    "Article: [[nom]].",
                     " Nature: [[natureArticle]] ([[elementLie]]).",
                     " Montant: [[montantArticle]] ([[pourcentageNote]]% de la note)."
                 ]
             ],
             "liste" => array_merge([
                 ["code" => "id", "intitule" => "ID", "type" => "Entier"],
-                ["code" => "nom", "intitule" => "Description / Nom", "type" => "Texte"],
-                ["code" => "montant", "intitule" => "Montant Brut", "type" => "Nombre"],
                 ["code" => "note", "intitule" => "Note Parente", "type" => "Relation", "targetEntity" => Note::class, "displayField" => "reference"],
                 ["code" => "tranche", "intitule" => "Tranche (Prime)", "type" => "Relation", "targetEntity" => Tranche::class, "displayField" => "nom"],
-                ["code" => "taxeFacturee", "intitule" => "Taxe", "type" => "Relation", "targetEntity" => Taxe::class, "displayField" => "nom"],
             ], $this->getSpecificIndicators())
         ];
     }
