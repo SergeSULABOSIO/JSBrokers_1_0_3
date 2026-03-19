@@ -99,7 +99,6 @@ class ArticleType extends AbstractType
             $form->add('quantite', NumberType::class, [
                 'label' => "Quantité (nombre d'unités)",
                 'html5' => true,
-                'data' => 1.0, // Valeur par défaut
                 'attr' => ['placeholder' => "1.00", 'step' => '0.01'],
                 'row_attr' => ['class' => sprintf('%s quantite-form-row', $baseRowClass)]
             ]);
@@ -124,7 +123,6 @@ class ArticleType extends AbstractType
             ->add('quantite', NumberType::class, [
                 'label' => "Quantité (nombre d'unités)",
                 'html5' => true,
-                'data' => 1.0,
                 'attr' => [
                     'placeholder' => "1.00",
                     'step' => '0.01'
