@@ -29,6 +29,7 @@ class Article
     private ?float $quantite = null;
 
     #[ORM\ManyToOne(targetEntity: Tranche::class, inversedBy: 'articles')]
+    #[Groups(['list:read'])]
     private ?Tranche $tranche = null; // Pas de sérialisation directe pour éviter les boucles
 
     #[ORM\ManyToOne(targetEntity: Note::class, inversedBy: 'articles')]
