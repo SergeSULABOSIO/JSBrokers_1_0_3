@@ -36,6 +36,7 @@ class Article
     private ?Note $note = null; // Pas de sérialisation directe pour éviter les boucles
 
     #[ORM\ManyToOne(targetEntity: RevenuPourCourtier::class, inversedBy: 'articles')]
+    #[Groups(['list:read'])]
     private ?RevenuPourCourtier $revenuFacture = null; // Sérialisation directe pour l'ID et les propriétés simples
 
     // --- Attributs calculés (non persistés) ---
