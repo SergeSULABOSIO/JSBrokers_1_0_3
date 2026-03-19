@@ -64,7 +64,7 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
         $montant = 0;
         if ($note) {
             foreach ($note->getArticles() as $article) {
-                $montant += $article->getMontant();
+                $montant += $article->montantArticle ?? 0;
             }
         }
         return $montant;
