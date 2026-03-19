@@ -26,11 +26,11 @@ class ArticleAutocompleteField extends AbstractType
             'searchable_fields' => ['nom'],
             'as_html' => true,
             'choice_label' => function(Article $article) {
-                $montant = $article->getMontant() !== null ? number_format($article->getMontant(), 2, ',', ' ') : 'Montant non défini';
+                $montant = $article->montantArticle !== null ? number_format($article->montantArticle, 2, ',', ' ') : 'Montant non défini';
                 
                 return sprintf(
                     '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">Montant : %s</div></div>',
-                    htmlspecialchars($article->getNom() ?? 'Sans nom'),
+                    htmlspecialchars($article->elementLie ?? 'Article sans description'),
                     htmlspecialchars($montant)
                 );
             },

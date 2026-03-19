@@ -682,8 +682,8 @@ class IndicatorCalculationHelper
                 if ($note && ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT)) {
                     $montantPayableNote = $this->getNoteMontantPayable($note);
                     if ($montantPayableNote > 0) {
-                        $proportionPaiement = $this->getNoteMontantPaye($note) / $montantPayableNote;
-                        $montant += $proportionPaiement * $article->getMontant();
+                        $proportionPaiement = ($this->getNoteMontantPaye($note) ?? 0) / $montantPayableNote;
+                        $montant += $proportionPaiement * ($article->montantArticle ?? 0);
                     }
                 }
             }
@@ -696,7 +696,7 @@ class IndicatorCalculationHelper
         $montant = 0;
         if ($note) {
             foreach ($note->getArticles() as $article) {
-                $montant += $article->getMontant();
+                $montant += $article->montantArticle ?? 0;
             }
         }
         return $montant;
@@ -748,13 +748,14 @@ class IndicatorCalculationHelper
         foreach ($tranche->getArticles() as $article) {
             $note = $article->getNote();
             if ($note && $note->getAddressedTo() === Note::TO_AUTORITE_FISCALE) {
-                $taxe = $this->taxeRepository->find($article->getIdPoste());
+                // La taxe est maintenant liée à l'AutoriteFiscale de la Note, et non plus directement à l'Article via idPoste.
+                $taxe = $note->getAutoritefiscale()?->getTaxe();
 
                 if ($taxe && $taxe->getRedevable() === $targetRedevable) {
                     $montantPayableNote = $this->getNoteMontantPayable($note);
                     if ($montantPayableNote > 0) {
-                        $proportionPaiement = $this->getNoteMontantPaye($note) / $montantPayableNote;
-                        $montant += $proportionPaiement * $article->getMontant();
+                        $proportionPaiement = ($this->getNoteMontantPaye($note) ?? 0) / $montantPayableNote;
+                        $montant += $proportionPaiement * ($article->montantArticle ?? 0);
                     }
                 }
             }
@@ -955,7 +956,7 @@ class IndicatorCalculationHelper
                 }
 
                 if ($note->getAddressedTo() == Note::TO_PARTENAIRE) {
-                    $montant += $proportionPaiement * ($article->getMontant() ?? 0);
+                    $montant += $proportionPaiement * ($article->montantArticle ?? 0);
                 }
             }
         }
@@ -1026,7 +1027,7 @@ class IndicatorCalculationHelper
                 $montantPayableNote = $this->getNoteMontantPayable($note);
                 if ($montantPayableNote > 0) {
                     $proportionPaiement = $this->getNoteMontantPaye($note) / $montantPayableNote;
-                    $montant += $proportionPaiement * ($article->getMontant() ?? 0);
+                    $montant += $proportionPaiement * ($article->montantArticle ?? 0);
                 }
             }
         }
