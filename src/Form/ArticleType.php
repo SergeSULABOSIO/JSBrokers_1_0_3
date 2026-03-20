@@ -104,6 +104,25 @@ class ArticleType extends AbstractType
             ]);
         });
 
+        // Configuration des options pour le champ quantité
+        $quantiteOptions = [
+            'label' => "Quantité (nombre d'unités)",
+            'html5' => true,
+            'attr' => [
+                'placeholder' => "1.00",
+                'step' => '0.01'
+            ],
+            'row_attr' => [
+                'class' => sprintf('%s quantite-form-row', $baseRowClass) // La visibilité est gérée par le CanvasProvider
+            ],
+        ];
+
+        // En mode création, on force la valeur à 1.0 par défaut pour l'UX.
+        // En mode édition, on omet 'data' pour que le formulaire utilise la valeur de l'entité (BDD).
+        if ($isCreationMode) {
+            $quantiteOptions['data'] = 1.0;
+        }
+
         // Ajout initial des champs 'tranche' et 'quantite' pour le premier rendu du formulaire (avant toute soumission).
         // Ces champs seront remplacés par l'écouteur PRE_SUBMIT si le formulaire est soumis.
         $builder
@@ -120,17 +139,7 @@ class ArticleType extends AbstractType
                 ]
             ])
             
-            ->add('quantite', NumberType::class, [
-                'label' => "Quantité (nombre d'unités)",
-                'html5' => true,
-                'attr' => [
-                    'placeholder' => "1.00",
-                    'step' => '0.01'
-                ],
-                'row_attr' => [
-                    'class' => sprintf('%s quantite-form-row', $baseRowClass) // La visibilité est gérée par le CanvasProvider
-                ],
-            ]);
+            ->add('quantite', NumberType::class, $quantiteOptions);
         // Le champ idPoste n'est plus nécessaire et a été supprimé de l'entité Article.
         // Il n'est donc plus ajouté au formulaire.
     }
