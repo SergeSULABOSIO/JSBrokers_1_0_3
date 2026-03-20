@@ -171,7 +171,9 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
     private function getTrancheTaxeCourtierTaux(Tranche $tranche): float
     {
-        $taxe = $this->taxeRepository->findOneBy(['redevable' => Taxe::REDEVABLE_COURTIER]);
+        $entreprise = $tranche->getCotation()?->getPiste()?->getInvite()?->getEntreprise();
+        
+        $taxe = $this->taxeRepository->findOneBy(['redevable' => Taxe::REDEVABLE_COURTIER, 'entreprise' => $entreprise]);
         if (!$taxe) return 0.0;
         $isIARD = $this->calculationHelper->isIARD($tranche->getCotation());
         $rate = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();
@@ -180,7 +182,9 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
     private function getTrancheTaxeAssureurTaux(Tranche $tranche): float
     {
-        $taxe = $this->taxeRepository->findOneBy(['redevable' => Taxe::REDEVABLE_ASSUREUR]);
+        $entreprise = $tranche->getCotation()?->getPiste()?->getInvite()?->getEntreprise();
+        
+        $taxe = $this->taxeRepository->findOneBy(['redevable' => Taxe::REDEVABLE_ASSUREUR, 'entreprise' => $entreprise]);
         if (!$taxe) return 0.0;
         $isIARD = $this->calculationHelper->isIARD($tranche->getCotation());
         $rate = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();

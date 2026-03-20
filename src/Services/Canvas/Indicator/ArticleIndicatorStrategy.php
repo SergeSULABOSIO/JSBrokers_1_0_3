@@ -3,12 +3,18 @@
 namespace App\Services\Canvas\Indicator;
 
 use App\Entity\Article;
+use App\Entity\Taxe;
+use App\Entity\RevenuPourCourtier;
+use App\Entity\Tranche;
+use App\Repository\TaxeRepository;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
 {
     public function __construct(
-        private TranslatorInterface $translator
+        private TranslatorInterface $translator,
+        private IndicatorCalculationHelper $calculationHelper,
+        private TaxeRepository $taxeRepository
     ) {
     }
 
@@ -54,9 +60,54 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
     private function calculateMontantArticle(Article $article): float
     {
         $revenu = $article->getRevenuFacture(); // Accès direct à la relation revenuFacture
-        $quantity = $article->getQuantite() ?? 1;
         $tranche = $article->getTranche();
+        $quantity = $article->getQuantite() ?? 1;
+
+        // --- HYDRATATION FORCÉE DU REVENU ---
+        // On s'assure que les indicateurs du revenu sont calculés pour l'affichage dans le formulaire
+        if ($revenu) {
+            $this->hydrateRevenu($revenu);
+        }
+
+        // --- HYDRATATION FORCÉE DE LA TRANCHE ---
+        // On s'assure que les indicateurs de la tranche sont calculés
+        if ($tranche) {
+            $this->hydrateTranche($tranche);
+        }
+
         return ($revenu && $tranche) ? (($revenu->montantCalculeTTC ?? 0) * $quantity * (($tranche->tauxTranche ?? 0)/100)) : 0;
+    }
+
+    private function hydrateRevenu(RevenuPourCourtier $revenu): void
+    {
+        // Calcul des valeurs financières de base
+        $montantHT = $this->calculationHelper->getRevenuMontantHt($revenu);
+        $taxeTaux = $this->getTaxeTaux($revenu, Taxe::REDEVABLE_COURTIER); // Simplification: Taux courtier par défaut pour hydratation
+        $taxeMontant = $montantHT * ($taxeTaux / 100);
+        
+        // Hydratation des propriétés publiques (utilisées par le champ autocomplete et l'affichage)
+        $revenu->montantCalculeHT = $montantHT;
+        $revenu->taxeCourtierMontant = $taxeMontant;
+        $revenu->montantCalculeTTC = $montantHT + $this->getTaxeMontantAssureur($revenu); // TTC inclut taxe assureur
+        $revenu->montantPur = $montantHT - $taxeMontant;
+        $revenu->reserve = $revenu->montantPur - $this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($revenu, null, -1, []);
+    }
+
+    private function hydrateTranche(Tranche $tranche): void
+    {
+        $tranche->tauxTranche = $this->calculateTrancheTaux($tranche);
+    }
+
+    private function calculateTrancheTaux(Tranche $tranche): float
+    {
+        if ($tranche->getPourcentage() !== null && $tranche->getPourcentage() > 0) {
+            return ($tranche->getPourcentage() > 1) ? $tranche->getPourcentage() : $tranche->getPourcentage() * 100;
+        }
+        if ($tranche->getMontantFlat() !== null && $tranche->getMontantFlat() > 0 && $tranche->getCotation()) {
+            $prime = $this->calculationHelper->getCotationMontantPrimePayableParClient($tranche->getCotation());
+            return ($prime > 0) ? ($tranche->getMontantFlat() / $prime) * 100 : 0.0;
+        }
+        return 0.0;
     }
 
     private function calculatePourcentageNote(Article $article): float
@@ -91,5 +142,27 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
         }
 
         return $note->isValidated() ? 'Validée' : 'Brouillon';
+    }
+
+    // --- Méthodes utilitaires simplifiées pour l'hydratation interne ---
+    private function getTaxeMontantAssureur(RevenuPourCourtier $revenu): float
+    {
+        $ht = $this->calculationHelper->getRevenuMontantHt($revenu);
+        $taux = $this->getTaxeTaux($revenu, Taxe::REDEVABLE_ASSUREUR);
+        return $ht * ($taux / 100);
+    }
+
+    private function getTaxeTaux(RevenuPourCourtier $revenu, int $redevable): float
+    {
+        $isIARD = $this->calculationHelper->isIARD($revenu->getCotation());
+        
+        $entreprise = $revenu->getTypeRevenu()?->getEntreprise();
+        // Fallback
+        if (!$entreprise) $entreprise = $revenu->getCotation()?->getPiste()?->getInvite()?->getEntreprise();
+        
+        $taxe = $this->taxeRepository->findOneBy(['redevable' => $redevable, 'entreprise' => $entreprise]);
+        if (!$taxe) return 0.0;
+        $rate = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();
+        return ($rate ?? 0.0) * 100;
     }
 }
