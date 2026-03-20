@@ -543,9 +543,9 @@ class IndicatorCalculationHelper
     public function getCotationMontantPrimePayableParClient(?Cotation $cotation): float
     {
         $montant = 0;
-        if ($cotation) {
+        if ($cotation && $cotation->getChargements()) {
             foreach ($cotation->getChargements() as $chargement) {
-                $montant += $chargement->getMontantFlatExceptionel();
+                $montant += $chargement->getMontantFlatExceptionel() ?? 0.0;
             }
         }
         return $montant;
@@ -595,8 +595,9 @@ class IndicatorCalculationHelper
     public function getRevenuMontantHtAddressedTo($addressedTo, RevenuPourCourtier $revenu): float
     {
         $montant = 0;
-        if ($addressedTo != -1) {
-            if ($revenu->getTypeRevenu()->getRedevable() == $addressedTo) {
+        $typeRevenu = $revenu->getTypeRevenu();
+        if ($addressedTo != -1 && $typeRevenu) {
+            if ($typeRevenu->getRedevable() == $addressedTo) {
                 $montant += $this->getRevenuMontantHt($revenu);
             }
         } else {
@@ -620,13 +621,13 @@ class IndicatorCalculationHelper
                         $montant += $montantChargementPrime * $risque->getPourcentageCommissionSpecifiqueHT();
                     }
                 } else {
-                    if ($revenu->getTauxExceptionel() != 0) {
+                    if ($revenu->getTauxExceptionel() && $revenu->getTauxExceptionel() != 0) {
                         $montant += $montantChargementPrime * $revenu->getTauxExceptionel();
-                    } elseif ($revenu->getMontantFlatExceptionel() != 0) {
+                    } elseif ($revenu->getMontantFlatExceptionel() && $revenu->getMontantFlatExceptionel() != 0) {
                         $montant += $revenu->getMontantFlatExceptionel();
-                    } elseif ($typeRevenu->getPourcentage() != 0) {
+                    } elseif ($typeRevenu->getPourcentage() && $typeRevenu->getPourcentage() != 0) {
                         $montant += $montantChargementPrime * $typeRevenu->getPourcentage();
-                    } elseif ($typeRevenu->getMontantflat() != 0) {
+                    } elseif ($typeRevenu->getMontantflat() && $typeRevenu->getMontantflat() != 0) {
                         $montant += $typeRevenu->getMontantflat();
                     }
                 }
@@ -638,10 +639,14 @@ class IndicatorCalculationHelper
     public function getCotationMontantChargementPrime(?Cotation $cotation, ?TypeRevenu $typeRevenu)
     {
         $montantChargementCible = 0;
-        if ($cotation != null && $typeRevenu != null) {
+        if ($cotation != null && $typeRevenu != null && $typeRevenu->getTypeChargement()) {
+            $targetTypeId = $typeRevenu->getTypeChargement()->getId();
+            
             foreach ($cotation->getChargements() as $loading) {
-                if ($loading->getType() == $typeRevenu->getTypeChargement()) {
-                    $montantChargementCible = $loading->getMontantFlatExceptionel();
+                // Comparaison robuste par ID pour éviter les problèmes de Proxy Doctrine
+                if ($loading->getType() && $loading->getType()->getId() === $targetTypeId) {
+                    $montantChargementCible = $loading->getMontantFlatExceptionel() ?? 0.0;
+                    break; // On a trouvé le chargement correspondant, on peut sortir
                 }
             }
         }
