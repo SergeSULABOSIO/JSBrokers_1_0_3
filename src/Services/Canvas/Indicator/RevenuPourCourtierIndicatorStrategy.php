@@ -80,7 +80,7 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
                 $montantPayableNote = $this->calculationHelper->getNoteMontantPayable($note);
                 if ($montantPayableNote > 0) {
                     $proportionPaiement = $this->calculationHelper->getNoteMontantPaye($note) / $montantPayableNote;
-                    $montantPaye += $proportionPaiement * ($article->getMontant() ?? 0);
+                    $montantPaye += $proportionPaiement * ($article->montantArticle ?? 0);
                 }
             }
         }
@@ -146,7 +146,7 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
                 $montantPayableNote = $this->calculationHelper->getNoteMontantPayable($note);
                 if ($montantPayableNote > 0) {
                     $proportionPaiement = $this->calculationHelper->getNoteMontantPaye($note) / $montantPayableNote;
-                    $montantPaye += $proportionPaiement * ($article->getMontant() ?? 0);
+                    $montantPaye += $proportionPaiement * ($article->montantArticle ?? 0);
                 }
             }
         }
@@ -160,10 +160,15 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
         return $montantHT * $taux;
     }
 
-    private function getRevenuTaxeTaux(RevenuPourCourtier $revenu, string $redevable): float
+    private function getRevenuTaxeTaux(RevenuPourCourtier $revenu, int $redevable): float
     {
         $isIARD = $this->calculationHelper->isIARD($revenu->getCotation());
-        $taxe = $this->taxeRepository->findOneBy(['redevable' => $redevable]);
+        
+        $entreprise = $revenu->getTypeRevenu()?->getEntreprise();
+        // Fallback si le type de revenu n'a pas d'entreprise (ex: création dynamique)
+        if (!$entreprise) $entreprise = $revenu->getCotation()?->getPiste()?->getInvite()?->getEntreprise();
+        
+        $taxe = $this->taxeRepository->findOneBy(['redevable' => $redevable, 'entreprise' => $entreprise]);
         if (!$taxe) return 0.0;
         $rate = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();
         return ($rate ?? 0.0) * 100;
@@ -177,12 +182,12 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
         foreach ($revenu->getArticles() as $article) {
             $note = $article->getNote();
             if ($note && $note->getAddressedTo() === Note::TO_AUTORITE_FISCALE) {
-                $taxe = $this->taxeRepository->find($article->getIdPoste());
+                $taxe = $note->getAutoritefiscale()?->getTaxe();
                 if ($taxe && $taxe->getRedevable() === $targetRedevable) {
                     $montantPayableNote = $this->calculationHelper->getNoteMontantPayable($note);
                     if ($montantPayableNote > 0) {
                         $proportionPaiement = $this->calculationHelper->getNoteMontantPaye($note) / $montantPayableNote;
-                        $montantPaye += $proportionPaiement * ($article->getMontant() ?? 0);
+                        $montantPaye += $proportionPaiement * ($article->montantArticle ?? 0);
                     }
                 }
             }
