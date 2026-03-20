@@ -19,6 +19,9 @@ export default class extends Controller {
 
         // 2. ÉCOUTEURS D'ÉVÉNEMENTS 
         if (this.revenuSelect) {
+            // On stocke la valeur initiale pour éviter de vider le champ Tranche au chargement
+            this.previousRevenuId = this.revenuSelect.value;
+
             this.revenuSelect.addEventListener('change', () => {
                 this.handleRevenuChange();
             });
@@ -69,11 +72,16 @@ export default class extends Controller {
             }
         }
 
-        if (this.element.tomselect) {
-            this.element.tomselect.clear(true); 
-            this.element.tomselect.clearOptions(); 
-        } else {
-            this.element.value = '';
+        // On ne vide la tranche QUE si le revenu a réellement changé
+        if (this.previousRevenuId !== revenuId) {
+            if (this.element.tomselect) {
+                this.element.tomselect.clear(true); 
+                this.element.tomselect.clearOptions(); 
+            } else {
+                this.element.value = '';
+            }
+            // Mise à jour de la référence pour la prochaine comparaison
+            this.previousRevenuId = revenuId;
         }
 
         this.updateUrl();

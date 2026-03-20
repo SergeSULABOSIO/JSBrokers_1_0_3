@@ -546,6 +546,12 @@ export default class extends Controller {
         if (condition.operator === 'in') {
             return condition.value.map(String).includes(String(sourceValue));
         }
+
+        // Ajout du support pour l'opérateur 'not_empty' demandé par ArticleFormCanvasProvider
+        if (condition.operator === 'not_empty') {
+            return sourceValue !== null && sourceValue !== undefined && String(sourceValue).trim() !== "";
+        }
+
         return false;
     }
 
