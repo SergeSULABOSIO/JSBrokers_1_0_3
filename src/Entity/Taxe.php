@@ -20,6 +20,11 @@ class Taxe
     #[Groups(['list:read'])]
     private ?int $id = null;
 
+    #[Assert\NotBlank(message: "Le code ne peut pas être vide.")]
+    #[ORM\Column(length: 50)]
+    #[Groups(['list:read'])]
+    private ?string $code = null;
+
     #[Assert\NotBlank(message: "Ce champ ne peut pas être vide.")]
     #[ORM\Column(length: 255)]
     #[Groups(['list:read'])]
@@ -60,6 +65,17 @@ class Taxe
     public function getId(): ?int
     {
         return $this->id;
+    }
+
+    public function getCode(): ?string
+    {
+        return $this->code;
+    }
+
+    public function setCode(string $code): static
+    {
+        $this->code = $code;
+        return $this;
     }
 
     public function getDescription(): ?string
@@ -142,5 +158,10 @@ class Taxe
             }
         }
         return $this;
+    }
+
+    public function __toString(): string
+    {
+        return $this->code ?? 'Taxe sans code';
     }
 }
