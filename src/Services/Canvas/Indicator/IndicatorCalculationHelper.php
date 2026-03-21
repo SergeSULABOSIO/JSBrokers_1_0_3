@@ -1061,4 +1061,30 @@ class IndicatorCalculationHelper
         $net_total = $net_payable_par_assureur + $net_payable_par_client;
         return $this->serviceTaxes->getMontantTaxe($net_total, $isIARD, $isTaxAssureur);
     }
+
+    // --- NOUVELLES MÉTHODES UTILITAIRES POUR LES STRATÉGIES ---
+
+    public function getTrancheTauxFactor(Tranche $tranche): float
+    {
+        if ($tranche->getPourcentage() !== null && $tranche->getPourcentage() > 0) {
+            $valeur = $tranche->getPourcentage();
+            return ($valeur > 1) ? $valeur / 100 : $valeur;
+        }
+        if ($tranche->getMontantFlat() !== null && $tranche->getMontantFlat() > 0) {
+            $cotation = $tranche->getCotation();
+            if ($cotation) {
+                $primeTotale = $this->getCotationMontantPrimePayableParClient($cotation);
+                if ($primeTotale > 0) return $tranche->getMontantFlat() / $primeTotale;
+            }
+        }
+        return 0.0;
+    }
+
+    public function getRevenuMontantTTC(RevenuPourCourtier $revenu): float
+    {
+        $ht = $this->getRevenuMontantHt($revenu);
+        $isIARD = $this->isIARD($revenu->getCotation());
+        $taxe = $this->serviceTaxes->getMontantTaxe($ht, $isIARD, true); // Taxe Assureur sur TTC
+        return $ht + $taxe;
+    }
 }

@@ -47,15 +47,15 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
                 
                 // 1. Extraction des indicateurs financiers via les VRAIES clés de ta stratégie
                 $revenuTTC = $revenu->montantCalculeTTC ?? $revenu->montant_du ?? 0.0;
-                $montantPaye = $revenu->montantPaye ?? $revenu->montant_paye ?? 0.0;
-                $soldeRestantDu = $revenu->soldeRestantDu ?? $revenu->solde_restant_du ?? 0.0;
+                $montantPaye = $revenu->montant_paye ?? 0.0; // Correction : Utiliser la clé exacte de la stratégie
+                $soldeRestantDu = $revenu->solde_restant_du ?? 0.0; // Correction : Utiliser la clé exacte
                 $taxeCourtier = $revenu->taxeCourtierMontant ?? 0.0;
                 $taxeAssureur = $revenu->taxeAssureurMontant ?? 0.0;
                 
                 // NOUVEAU: Extraction de la commission pure, réserve et rétrocommission
-                $commissionPure = $revenu->commissionPure ?? $revenu->commission_pure ?? 0.0;
+                $commissionPure = $revenu->montantPur ?? 0.0; 
                 $reserve = $revenu->reserve ?? 0.0;
-                $retrocom = $revenu->retrocommission ?? $revenu->retrocom ?? $revenu->montantRetrocommission ?? 0.0;
+                $retrocom = $revenu->retroCommission ?? 0.0; // Correction : Case sensitive (C majuscule)
                 
                 // Tente de récupérer le nom du partenaire via les clés hydratées, sinon via les entités liées
                 $partenaireNom = $revenu->partenaireNom ?? $revenu->partenaire_nom ?? null;
@@ -79,7 +79,7 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
                             Réf Police: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Assureur: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Client: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Tranches: %d
                         </div>
                         <div style="color: #0047AB; font-weight: bold; font-size: 0.85em; padding-left: 2px; margin-top: 4px; border-top: 1px dashed #ccc; padding-top: 2px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px;">
-                            <span title="Montant TTC calculé">TTC: %s</span>
+                            <span title="Montant TTC calculé">Valeur TTC: %s</span>
                             <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
                             <span title="Montant payé">Payé: %s</span>
                             <span style="color: #adb5bd; font-weight: normal;">&bull;</span>

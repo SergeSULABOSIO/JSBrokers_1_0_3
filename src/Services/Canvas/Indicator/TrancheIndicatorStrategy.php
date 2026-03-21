@@ -103,19 +103,7 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
     private function calculateTrancheTauxFactor(Tranche $tranche): float
     {
-        if ($tranche->getPourcentage() !== null && $tranche->getPourcentage() > 0) {
-            $valeur = $tranche->getPourcentage();
-            return ($valeur > 1) ? $valeur / 100 : $valeur;
-        }
-
-        if ($tranche->getMontantFlat() !== null && $tranche->getMontantFlat() > 0) {
-            $cotation = $tranche->getCotation();
-            if ($cotation) {
-                $primeTotale = $this->calculationHelper->getCotationMontantPrimePayableParClient($cotation);
-                if ($primeTotale > 0) return $tranche->getMontantFlat() / $primeTotale;
-            }
-        }
-        return 0.0;
+        return $this->calculationHelper->getTrancheTauxFactor($tranche);
     }
 
     private function getTrancheTauxDisplay(Tranche $tranche): float
