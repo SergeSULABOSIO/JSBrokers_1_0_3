@@ -69,6 +69,32 @@ class ArticleController extends AbstractController
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
     public function getFormApi(?Article $article, Request $request): Response
     {
+        // --- CORRECTION : HYDRATATION EN MODE ÉDITION ---
+        // En mode édition, on recharge l'article avec ses dépendances profondes pour éviter 
+        // les problèmes de calcul (0.00 USD) dus aux Proxies Doctrine non initialisés.
+        if ($article && $article->getId()) {
+            $article = $this->em->createQueryBuilder()
+                ->select('a', 'r', 'tr', 'c', 'char', 'chart', 't', 'p', 'risk', 'i', 'e', 'tc') // Ajout de 'chart' (Type de chargement)
+                ->from(Article::class, 'a')
+                ->leftJoin('a.revenuFacture', 'r')
+                ->leftJoin('r.typeRevenu', 'tr')
+                ->leftJoin('r.cotation', 'c')
+                ->leftJoin('c.chargements', 'char') // Crucial pour les calculs de primes
+                ->leftJoin('char.type', 'chart')    // INDISPENSABLE: Charge le type de chargement pour identifier la base de calcul (HT)
+                ->leftJoin('c.piste', 'p')          // Nécessaire pour trouver l'entreprise (via invite)
+                ->leftJoin('p.risque', 'risk')      // AJOUT : Nécessaire pour isIARD (Taxes)
+                ->leftJoin('p.invite', 'i')
+                ->leftJoin('i.entreprise', 'e')     // Nécessaire pour le calcul des Taxes
+                ->leftJoin('a.tranche', 't')
+                ->leftJoin('t.cotation', 'tc')      // La tranche a besoin de sa cotation pour ses propres calculs
+                ->where('a.id = :id')
+                ->setParameter('id', $article->getId())
+                ->getQuery()
+                ->getOneOrNullResult();
+                
+            // Si l'article n'est plus trouvé (cas rare), on laisse le $article original (null ou proxy)
+        }
+
         return $this->renderFormCanvas(
             $request,
             Article::class,

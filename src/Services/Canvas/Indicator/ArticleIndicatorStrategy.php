@@ -80,6 +80,13 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
     private function hydrateRevenu(RevenuPourCourtier $revenu): void
     {
+        // --- WARM UP (Réchauffement) DES PROXIES ---
+        // On accède aux propriétés clés pour forcer Doctrine à charger les objets liés s'ils sont encore en Proxy
+        // Cela évite les calculs à 0.00 si le contrôleur n'a pas fait d'Eager Loading.
+        $revenu->getTypeRevenu()?->getNom(); 
+        $revenu->getCotation()?->getChargements()->count(); // Charge la collection de chargements pour le calcul HT
+        $revenu->getCotation()?->getPiste()?->getRisque()?->getId(); // Charge la piste et le risque pour les taxes
+
         // Calcul des valeurs financières de base
         $montantHT = $this->calculationHelper->getRevenuMontantHt($revenu);
         $taxeTaux = $this->getTaxeTaux($revenu, Taxe::REDEVABLE_COURTIER); // Simplification: Taux courtier par défaut pour hydratation
@@ -95,6 +102,10 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
     private function hydrateTranche(Tranche $tranche): void
     {
+        // --- WARM UP DES PROXIES ---
+        $tranche->getCotation()?->getChargements()->count(); // Nécessaire pour le calcul de la prime totale
+        $tranche->getCotation()?->getPiste()?->getInvite()?->getEntreprise(); // Nécessaire pour trouver la bonne Taxe
+
         $tranche->tauxTranche = $this->calculateTrancheTaux($tranche);
     }
 

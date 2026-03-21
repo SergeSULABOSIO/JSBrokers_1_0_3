@@ -74,13 +74,20 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
     private function getRevenuPourCourtierMontantPaye(RevenuPourCourtier $revenu): float
     {
         $montantPaye = 0.0;
+        $revenuTTC = $this->getRevenuPourCourtierMontantTTC($revenu); // Utilisation de la valeur calculée localement
+
         foreach ($revenu->getArticles() as $article) {
             $note = $article->getNote();
             if ($note) {
                 $montantPayableNote = $this->calculationHelper->getNoteMontantPayable($note);
                 if ($montantPayableNote > 0) {
                     $proportionPaiement = $this->calculationHelper->getNoteMontantPaye($note) / $montantPayableNote;
-                    $montantPaye += $proportionPaiement * ($article->montantArticle ?? 0);
+                    
+                    // CALCUL ROBUSTE DU MONTANT ARTICLE (Au lieu de lire la propriété qui peut être null)
+                    $tauxTranche = $article->getTranche() ? $this->calculationHelper->getTrancheTauxFactor($article->getTranche()) : 0;
+                    $montantArticle = $revenuTTC * ($article->getQuantite() ?? 1) * $tauxTranche;
+
+                    $montantPaye += $proportionPaiement * $montantArticle;
                 }
             }
         }
@@ -146,7 +153,13 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
                 $montantPayableNote = $this->calculationHelper->getNoteMontantPayable($note);
                 if ($montantPayableNote > 0) {
                     $proportionPaiement = $this->calculationHelper->getNoteMontantPaye($note) / $montantPayableNote;
-                    $montantPaye += $proportionPaiement * ($article->montantArticle ?? 0);
+                    
+                    // Calcul robuste
+                    $revenuTTC = $this->getRevenuPourCourtierMontantTTC($revenu);
+                    $tauxTranche = $article->getTranche() ? $this->calculationHelper->getTrancheTauxFactor($article->getTranche()) : 0;
+                    $montantArticle = $revenuTTC * ($article->getQuantite() ?? 1) * $tauxTranche;
+                    
+                    $montantPaye += $proportionPaiement * $montantArticle;
                 }
             }
         }
@@ -187,7 +200,13 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
                     $montantPayableNote = $this->calculationHelper->getNoteMontantPayable($note);
                     if ($montantPayableNote > 0) {
                         $proportionPaiement = $this->calculationHelper->getNoteMontantPaye($note) / $montantPayableNote;
-                        $montantPaye += $proportionPaiement * ($article->montantArticle ?? 0);
+                        
+                        // Calcul robuste
+                        $revenuTTC = $this->getRevenuPourCourtierMontantTTC($revenu);
+                        $tauxTranche = $article->getTranche() ? $this->calculationHelper->getTrancheTauxFactor($article->getTranche()) : 0;
+                        $montantArticle = $revenuTTC * ($article->getQuantite() ?? 1) * $tauxTranche;
+
+                        $montantPaye += $proportionPaiement * $montantArticle;
                     }
                 }
             }
