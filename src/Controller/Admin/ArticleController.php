@@ -69,11 +69,39 @@ class ArticleController extends AbstractController
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
     public function getFormApi(?Article $article, Request $request): Response
     {
-        // En supprimant l'hydratation manuelle complexe, on laisse Doctrine utiliser son comportement natif 
-        // (Lazy Loading). Cela garantit que toute donnée accédée par les stratégies de calcul (cotation, 
-        // chargements, taxes, etc.) sera automatiquement chargée depuis la base de données au moment précis 
-        // où elle est nécessaire.
-        // Cela assure une précision identique entre le mode création et le mode édition.
+        // --- HYDRATATION EXPLICITE ROBUSTE ---
+        // En mode édition, on force le chargement de toutes les données nécessaires aux calculs financiers
+        // (HT, TTC, Taxes, Primes) pour éviter les valeurs à 0.00 USD dues aux Proxies non initialisés.
+        if ($article && $article->getId()) {
+            $article = $this->em->createQueryBuilder()
+                ->select('a', 'r', 'tr', 'c', 'char', 'chart', 't', 'p', 'risk', 'i', 'e', 'tc', 'tc_char', 'tc_chart', 'tc_p', 'tc_i', 'tc_e')
+                ->from(Article::class, 'a')
+                
+                // --- BRANCHE REVENU (Pour calculs Commissions & Taxes) ---
+                ->leftJoin('a.revenuFacture', 'r')
+                ->leftJoin('r.typeRevenu', 'tr')
+                ->leftJoin('r.cotation', 'c')
+                ->leftJoin('c.chargements', 'char') 
+                ->leftJoin('char.type', 'chart')    // INDISPENSABLE: Pour identifier "Prime Nette" vs autres
+                ->leftJoin('c.piste', 'p')
+                ->leftJoin('p.risque', 'risk')      // INDISPENSABLE: Pour isIARD() -> Taux de Taxe correct
+                ->leftJoin('p.invite', 'i')
+                ->leftJoin('i.entreprise', 'e')     // INDISPENSABLE: Pour trouver la Taxe configurée
+                
+                // --- BRANCHE TRANCHE (Pour calculs Primes & Soldes) ---
+                ->leftJoin('a.tranche', 't')
+                ->leftJoin('t.cotation', 'tc')      // Relation distincte dans Doctrine
+                ->leftJoin('tc.chargements', 'tc_char') // INDISPENSABLE: Pour calculer la Prime Totale de la Tranche
+                ->leftJoin('tc_char.type', 'tc_chart')
+                ->leftJoin('tc.piste', 'tc_p')
+                ->leftJoin('tc_p.invite', 'tc_i')
+                ->leftJoin('tc_i.entreprise', 'tc_e') // Pour les taxes de la tranche
+                
+                ->where('a.id = :id')
+                ->setParameter('id', $article->getId())
+                ->getQuery()
+                ->getOneOrNullResult();
+        }
 
         return $this->renderFormCanvas(
             $request,
