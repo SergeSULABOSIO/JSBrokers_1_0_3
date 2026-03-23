@@ -69,41 +69,11 @@ class ArticleController extends AbstractController
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
     public function getFormApi(?Article $article, Request $request): Response
     {
-        // --- CORRECTION : HYDRATATION EN MODE ÉDITION ---
-        // En mode édition, on recharge l'article avec ses dépendances profondes pour éviter 
-        // les problèmes de calcul (0.00 USD) dus aux Proxies Doctrine non initialisés.
-        if ($article && $article->getId()) {
-            $article = $this->em->createQueryBuilder()
-                // SÉLECTION COMPLÈTE : On inclut tous les alias définis ci-dessous pour hydrater l'objet en profondeur
-                ->select('a', 'r', 'tr', 'c', 'char', 'chart', 't', 'p', 'risk', 'i', 'e', 'tc', 'tc_char', 'tc_chart', 'tc_p', 'tc_i', 'tc_e') 
-                ->from(Article::class, 'a')
-                
-                // --- BRANCHE REVENU ---
-                ->leftJoin('a.revenuFacture', 'r')
-                ->leftJoin('r.typeRevenu', 'tr')
-                ->leftJoin('r.cotation', 'c')
-                ->leftJoin('c.chargements', 'char') // Pour calcul base HT du Revenu
-                ->leftJoin('char.type', 'chart')    // Pour identifier le type de chargement (Prime Nette vs Accessoire)
-                ->leftJoin('c.piste', 'p')
-                ->leftJoin('p.risque', 'risk')      // Pour isIARD (Taxes)
-                ->leftJoin('p.invite', 'i')
-                ->leftJoin('i.entreprise', 'e')     // Pour trouver le taux de Taxe configuré
-                
-                // --- BRANCHE TRANCHE (CORRECTION PRINCIPALE) ---
-                ->leftJoin('a.tranche', 't')
-                ->leftJoin('t.cotation', 'tc')      // La tranche a sa propre référence à la cotation
-                ->leftJoin('tc.chargements', 'tc_char') // INDISPENSABLE: Pour calculer la Prime Totale de la Tranche
-                ->leftJoin('tc_char.type', 'tc_chart')
-                ->leftJoin('tc.piste', 'tc_p')      // Pour remonter à l'entreprise de la tranche
-                ->leftJoin('tc_p.invite', 'tc_i')
-                ->leftJoin('tc_i.entreprise', 'tc_e') // Pour les taxes de la tranche
-                ->where('a.id = :id')
-                ->setParameter('id', $article->getId())
-                ->getQuery()
-                ->getOneOrNullResult();
-                
-            // Si l'article n'est plus trouvé (cas rare), on laisse le $article original (null ou proxy)
-        }
+        // En supprimant l'hydratation manuelle complexe, on laisse Doctrine utiliser son comportement natif 
+        // (Lazy Loading). Cela garantit que toute donnée accédée par les stratégies de calcul (cotation, 
+        // chargements, taxes, etc.) sera automatiquement chargée depuis la base de données au moment précis 
+        // où elle est nécessaire.
+        // Cela assure une précision identique entre le mode création et le mode édition.
 
         return $this->renderFormCanvas(
             $request,
