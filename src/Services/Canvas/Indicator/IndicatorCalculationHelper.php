@@ -10,6 +10,7 @@ use App\Entity\Note;
 use App\Entity\Paiement;
 use App\Entity\Partenaire;
 use App\Entity\RevenuPourCourtier;
+use App\Entity\Article;
 use App\Entity\ConditionPartage;
 use App\Entity\TypeRevenu;
 use App\Entity\Chargement;
@@ -688,7 +689,7 @@ class IndicatorCalculationHelper
                     $montantPayableNote = $this->getNoteMontantPayable($note);
                     if ($montantPayableNote > 0) {
                         $proportionPaiement = ($this->getNoteMontantPaye($note) ?? 0) / $montantPayableNote;
-                        $montant += $proportionPaiement * ($article->montantArticle ?? 0);
+                        $montant += $proportionPaiement * $this->getArticleMontant($article);
                     }
                 }
             }
@@ -701,7 +702,7 @@ class IndicatorCalculationHelper
         $montant = 0;
         if ($note) {
             foreach ($note->getArticles() as $article) {
-                $montant += $article->montantArticle ?? 0;
+                $montant += $this->getArticleMontant($article);
             }
         }
         return $montant;
@@ -760,7 +761,7 @@ class IndicatorCalculationHelper
                     $montantPayableNote = $this->getNoteMontantPayable($note);
                     if ($montantPayableNote > 0) {
                         $proportionPaiement = ($this->getNoteMontantPaye($note) ?? 0) / $montantPayableNote;
-                        $montant += $proportionPaiement * ($article->montantArticle ?? 0);
+                        $montant += $proportionPaiement * $this->getArticleMontant($article);
                     }
                 }
             }
@@ -961,7 +962,7 @@ class IndicatorCalculationHelper
                 }
 
                 if ($note->getAddressedTo() == Note::TO_PARTENAIRE) {
-                    $montant += $proportionPaiement * ($article->montantArticle ?? 0);
+                    $montant += $proportionPaiement * $this->getArticleMontant($article);
                 }
             }
         }
@@ -1032,7 +1033,7 @@ class IndicatorCalculationHelper
                 $montantPayableNote = $this->getNoteMontantPayable($note);
                 if ($montantPayableNote > 0) {
                     $proportionPaiement = $this->getNoteMontantPaye($note) / $montantPayableNote;
-                    $montant += $proportionPaiement * ($article->montantArticle ?? 0);
+                    $montant += $proportionPaiement * $this->getArticleMontant($article);
                 }
             }
         }
@@ -1063,6 +1064,19 @@ class IndicatorCalculationHelper
     }
 
     // --- NOUVELLES MÉTHODES UTILITAIRES POUR LES STRATÉGIES ---
+
+    public function getArticleMontant(Article $article): float
+    {
+        $revenu = $article->getRevenuFacture();
+        $tranche = $article->getTranche();
+        
+        if (!$revenu || !$tranche) {
+            return 0.0;
+        }
+
+        // Formule : RevenuTTC * Quantité * TauxTranche
+        return $this->getRevenuMontantTTC($revenu) * ($article->getQuantite() ?? 1.0) * $this->getTrancheTauxFactor($tranche);
+    }
 
     public function getTrancheTauxFactor(Tranche $tranche): float
     {

@@ -11,7 +11,8 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
 {
     public function __construct(
         private ServiceDates $serviceDates,
-        private TranslatorInterface $translator
+        private TranslatorInterface $translator,
+        private IndicatorCalculationHelper $calculationHelper
     ) {
     }
 
@@ -61,13 +62,8 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
     private function getNoteMontantPayable(?Note $note): float
     {
-        $montant = 0;
-        if ($note) {
-            foreach ($note->getArticles() as $article) {
-                $montant += $article->montantArticle ?? 0;
-            }
-        }
-        return $montant;
+        // Utilisation du helper pour garantir que les montants des articles sont calculés à la volée
+        return $this->calculationHelper->getNoteMontantPayable($note);
     }
 
     private function getNoteMontantPaye(?Note $note): float
