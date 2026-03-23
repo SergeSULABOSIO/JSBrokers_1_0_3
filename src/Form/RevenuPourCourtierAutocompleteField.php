@@ -45,6 +45,30 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
                 // MAGIE DU CANVAS BUILDER : On hydrate dynamiquement l'entité avec la stratégie
                 $this->canvasBuilder->loadAllCalculatedValues($revenu);
                 
+                // --- BLOC DE DÉBOGAGE (Visible dans la console du navigateur - F12) ---
+                $debugData = [
+                    'ID Revenu' => $revenu->getId(),
+                    '1. Type Revenu' => $revenu->getTypeRevenu() ? $revenu->getTypeRevenu()->getNom() : 'NULL',
+                    '2. Cotation' => $revenu->getCotation() ? 'ID: ' . $revenu->getCotation()->getId() : 'NULL',
+                    '3. Chargements' => $revenu->getCotation() ? $revenu->getCotation()->getChargements()->count() : 'N/A',
+                    '4. Piste & Client' => ($revenu->getCotation() && $revenu->getCotation()->getPiste()) ? 'OK' : 'Piste NULL',
+                    '5. Entreprise' => 'Non trouvée', // Par défaut
+                    '6. Montant HT Calculé' => $revenu->montantCalculeHT,
+                    '7. Montant TTC Calculé' => $revenu->montantCalculeTTC
+                ];
+
+                // Test accès entreprise pour Taxe
+                $ent = $revenu->getTypeRevenu()?->getEntreprise();
+                if (!$ent) $ent = $revenu->getCotation()?->getPiste()?->getInvite()?->getEntreprise();
+                if ($ent) $debugData['5. Entreprise'] = 'ID: ' . $ent->getId();
+
+                $consoleLog = sprintf(
+                    '<script>console.groupCollapsed("🔍 DEBUG REVENU #%d"); console.table(%s); console.groupEnd();</script>',
+                    $revenu->getId(),
+                    json_encode($debugData)
+                );
+                // -----------------------------------------------------------------------
+
                 // 1. Extraction des indicateurs financiers via les VRAIES clés de ta stratégie
                 $revenuTTC = $revenu->montantCalculeTTC ?? $revenu->montant_du ?? 0.0;
                 $montantPaye = $revenu->montant_paye ?? 0.0; // Correction : Utiliser la clé exacte de la stratégie
@@ -72,8 +96,8 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
 
                 // 3. Formatage HTML enrichi
                 // Utilisation de puces (&bull;) élégantes et discrètes entre les attributs
-                return sprintf(
-                    '<div data-montant-ttc="%f">
+                return $consoleLog . sprintf(
+                    '<div data-montant-ttc="%f" style="border-left: 3px solid %s; padding-left: 8px;">
                         <strong>%s</strong>
                         <div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">
                             Réf Police: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Assureur: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Client: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Tranches: %d
@@ -97,6 +121,7 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
                         </div>
                     </div>',
                     $revenuTTC, // Montant TTC
+                    ($revenuTTC > 0 ? '#28a745' : '#dc3545'), // Bordure verte si > 0, rouge sinon (indicateur visuel rapide)
                     htmlspecialchars($revenu->getNom() ?? 'Sans nom'),
                     htmlspecialchars($policeRef),
                     htmlspecialchars($assureurNom),

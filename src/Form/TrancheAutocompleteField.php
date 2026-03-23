@@ -47,6 +47,23 @@ class TrancheAutocompleteField extends AbstractType
                 // MAGIE DU CANVAS BUILDER : Hydratation dynamique de l'entité Tranche
                 $this->canvasBuilder->loadAllCalculatedValues($tranche);
 
+                // --- BLOC DE DÉBOGAGE ---
+                $debugData = [
+                    'ID Tranche' => $tranche->getId(),
+                    '1. Cotation' => $tranche->getCotation() ? 'ID: ' . $tranche->getCotation()->getId() : 'NULL',
+                    '2. Chargements (Prime Totale)' => $tranche->getCotation() ? $tranche->getCotation()->getChargements()->count() : 'N/A',
+                    '3. Taux Tranche' => $tranche->tauxTranche,
+                    '4. Prime Tranche Calculée' => $tranche->primeTranche,
+                    '5. Montant TTC Calculé' => $tranche->montantCalculeTTC
+                ];
+
+                $consoleLog = sprintf(
+                    '<script>console.groupCollapsed("🔍 DEBUG TRANCHE #%d"); console.table(%s); console.groupEnd();</script>',
+                    $tranche->getId(),
+                    json_encode($debugData)
+                );
+                // -------------------------
+
                 // Extraction des indicateurs financiers hydratés
                 $prime = $tranche->primeTranche ?? $tranche->montant_du ?? 0.0;
                 $paye = $tranche->primePayee ?? $tranche->montant_paye ?? 0.0;
@@ -62,8 +79,8 @@ class TrancheAutocompleteField extends AbstractType
                 $tauxAffiche = $tranche->tauxTranche ?? 0.0; // La valeur est déjà en pourcentage via la stratégie
 
                 // Formatage HTML enrichi avec la charte bleue cobalt et les puces
-                return sprintf( // Ligne 63
-                    '<div data-taux="%f" data-prime="%f" data-paye="%f" data-solde="%f" data-taxe-courtier="%f" data-taxe-assureur="%f" data-commission-pure="%f" data-reserve="%f" data-retrocom="%f">
+                return $consoleLog . sprintf( // Ligne 63
+                    '<div data-taux="%f" data-prime="%f" data-paye="%f" data-solde="%f" data-taxe-courtier="%f" data-taxe-assureur="%f" data-commission-pure="%f" data-reserve="%f" data-retrocom="%f" style="border-left: 3px solid %s; padding-left: 8px;">
                         <strong>%s</strong>
                         <div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">
                             Réf Police: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Assureur: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Client: %s
@@ -97,6 +114,7 @@ class TrancheAutocompleteField extends AbstractType
                     $commissionPure, // pour data-commission-pure
                     $reserve, // pour data-reserve
                     $retrocom, // pour data-retrocom
+                    ($prime > 0 ? '#28a745' : '#dc3545'), // Bordure visuelle Debug
                     htmlspecialchars($tranche->getNom() ?? 'Tranche sans nom'),
                     htmlspecialchars($policeRef),
                     htmlspecialchars($assureurNom),
