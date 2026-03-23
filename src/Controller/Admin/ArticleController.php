@@ -74,19 +74,29 @@ class ArticleController extends AbstractController
         // les problèmes de calcul (0.00 USD) dus aux Proxies Doctrine non initialisés.
         if ($article && $article->getId()) {
             $article = $this->em->createQueryBuilder()
-                ->select('a', 'r', 'tr', 'c', 'char', 'chart', 't', 'p', 'risk', 'i', 'e', 'tc') // Ajout de 'chart' (Type de chargement)
+                // SÉLECTION COMPLÈTE : On inclut tous les alias définis ci-dessous pour hydrater l'objet en profondeur
+                ->select('a', 'r', 'tr', 'c', 'char', 'chart', 't', 'p', 'risk', 'i', 'e', 'tc', 'tc_char', 'tc_chart', 'tc_p', 'tc_i', 'tc_e') 
                 ->from(Article::class, 'a')
+                
+                // --- BRANCHE REVENU ---
                 ->leftJoin('a.revenuFacture', 'r')
                 ->leftJoin('r.typeRevenu', 'tr')
                 ->leftJoin('r.cotation', 'c')
-                ->leftJoin('c.chargements', 'char') // Crucial pour les calculs de primes
-                ->leftJoin('char.type', 'chart')    // INDISPENSABLE: Charge le type de chargement pour identifier la base de calcul (HT)
-                ->leftJoin('c.piste', 'p')          // Nécessaire pour trouver l'entreprise (via invite)
-                ->leftJoin('p.risque', 'risk')      // AJOUT : Nécessaire pour isIARD (Taxes)
+                ->leftJoin('c.chargements', 'char') // Pour calcul base HT du Revenu
+                ->leftJoin('char.type', 'chart')    // Pour identifier le type de chargement (Prime Nette vs Accessoire)
+                ->leftJoin('c.piste', 'p')
+                ->leftJoin('p.risque', 'risk')      // Pour isIARD (Taxes)
                 ->leftJoin('p.invite', 'i')
-                ->leftJoin('i.entreprise', 'e')     // Nécessaire pour le calcul des Taxes
+                ->leftJoin('i.entreprise', 'e')     // Pour trouver le taux de Taxe configuré
+                
+                // --- BRANCHE TRANCHE (CORRECTION PRINCIPALE) ---
                 ->leftJoin('a.tranche', 't')
-                ->leftJoin('t.cotation', 'tc')      // La tranche a besoin de sa cotation pour ses propres calculs
+                ->leftJoin('t.cotation', 'tc')      // La tranche a sa propre référence à la cotation
+                ->leftJoin('tc.chargements', 'tc_char') // INDISPENSABLE: Pour calculer la Prime Totale de la Tranche
+                ->leftJoin('tc_char.type', 'tc_chart')
+                ->leftJoin('tc.piste', 'tc_p')      // Pour remonter à l'entreprise de la tranche
+                ->leftJoin('tc_p.invite', 'tc_i')
+                ->leftJoin('tc_i.entreprise', 'tc_e') // Pour les taxes de la tranche
                 ->where('a.id = :id')
                 ->setParameter('id', $article->getId())
                 ->getQuery()
