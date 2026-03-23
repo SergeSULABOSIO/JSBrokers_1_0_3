@@ -75,7 +75,8 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
             $this->hydrateTranche($tranche);
         }
 
-        return ($revenu && $tranche) ? (($revenu->montantCalculeTTC ?? 0) * $quantity * (($tranche->tauxTranche ?? 0)/100)) : 0;
+        // Utilisation du helper pour le calcul final (garantit la cohérence avec le total de la note)
+        return $this->calculationHelper->getArticleMontant($article);
     }
 
     private function hydrateRevenu(RevenuPourCourtier $revenu): void
@@ -89,13 +90,16 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
         // Calcul des valeurs financières de base
         $montantHT = $this->calculationHelper->getRevenuMontantHt($revenu);
-        $taxeTaux = $this->getTaxeTaux($revenu, Taxe::REDEVABLE_COURTIER); // Simplification: Taux courtier par défaut pour hydratation
+        $taxeTaux = $this->getTaxeTaux($revenu, Taxe::REDEVABLE_COURTIER);
         $taxeMontant = $montantHT * ($taxeTaux / 100);
         
         // Hydratation des propriétés publiques (utilisées par le champ autocomplete et l'affichage)
         $revenu->montantCalculeHT = $montantHT;
         $revenu->taxeCourtierMontant = $taxeMontant;
-        $revenu->montantCalculeTTC = $montantHT + $this->getTaxeMontantAssureur($revenu); // TTC inclut taxe assureur
+        
+        // CORRECTION : Utilisation du helper pour garantir que le TTC inclut bien la taxe assureur correcte
+        $revenu->montantCalculeTTC = $this->calculationHelper->getRevenuMontantTTC($revenu);
+        
         $revenu->montantPur = $montantHT - $taxeMontant;
         $revenu->reserve = $revenu->montantPur - $this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($revenu, null, -1, []);
     }
@@ -106,19 +110,8 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
         $tranche->getCotation()?->getChargements()->count(); // Nécessaire pour le calcul de la prime totale
         $tranche->getCotation()?->getPiste()?->getInvite()?->getEntreprise(); // Nécessaire pour trouver la bonne Taxe
 
-        $tranche->tauxTranche = $this->calculateTrancheTaux($tranche);
-    }
-
-    private function calculateTrancheTaux(Tranche $tranche): float
-    {
-        if ($tranche->getPourcentage() !== null && $tranche->getPourcentage() > 0) {
-            return ($tranche->getPourcentage() > 1) ? $tranche->getPourcentage() : $tranche->getPourcentage() * 100;
-        }
-        if ($tranche->getMontantFlat() !== null && $tranche->getMontantFlat() > 0 && $tranche->getCotation()) {
-            $prime = $this->calculationHelper->getCotationMontantPrimePayableParClient($tranche->getCotation());
-            return ($prime > 0) ? ($tranche->getMontantFlat() / $prime) * 100 : 0.0;
-        }
-        return 0.0;
+        // CORRECTION : Utilisation du helper pour garantir le bon facteur de taux
+        $tranche->tauxTranche = $this->calculationHelper->getTrancheTauxFactor($tranche) * 100;
     }
 
     private function calculatePourcentageNote(Article $article): float
