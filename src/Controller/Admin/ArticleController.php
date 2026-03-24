@@ -74,7 +74,7 @@ class ArticleController extends AbstractController
         // (HT, TTC, Taxes, Primes) pour éviter les valeurs à 0.00 USD dues aux Proxies non initialisés.
         if ($article && $article->getId()) {
             $article = $this->em->createQueryBuilder()
-                ->select('a', 'r', 'tr', 'tr_chart', 'tr_e', 'c', 'char', 'chart', 't', 'p', 'risk', 'i', 'e', 'tc', 'tc_char', 'tc_chart', 'tc_p', 'tc_risk', 'tc_i', 'tc_e')
+                ->select('a', 'r', 'tr', 'tr_chart', 'tr_e', 'c', 'char', 'chart', 't', 'p', 'risk', 'i', 'e', 'tc', 'tc_rev', 'tc_rev_tr', 'tc_char', 'tc_chart', 'tc_p', 'tc_risk', 'tc_i', 'tc_e')
                 ->from(Article::class, 'a')
                 
                 // --- BRANCHE REVENU (Pour calculs Commissions & Taxes) ---
@@ -93,6 +93,8 @@ class ArticleController extends AbstractController
                 // --- BRANCHE TRANCHE (Pour calculs Primes & Soldes) ---
                 ->leftJoin('a.tranche', 't')
                 ->leftJoin('t.cotation', 'tc')      // Relation distincte dans Doctrine
+                ->leftJoin('tc.revenus', 'tc_rev')   // MANQUANT : Pour que la Tranche puisse calculer sa part de commission TTC
+                ->leftJoin('tc_rev.typeRevenu', 'tc_rev_tr') // MANQUANT : Dépendance de tc.revenus
                 ->leftJoin('tc.chargements', 'tc_char') // INDISPENSABLE: Pour calculer la Prime Totale de la Tranche
                 ->leftJoin('tc_char.type', 'tc_chart')
                 ->leftJoin('tc.piste', 'tc_p')
