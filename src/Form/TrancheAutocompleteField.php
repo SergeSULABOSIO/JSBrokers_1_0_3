@@ -50,17 +50,17 @@ class TrancheAutocompleteField extends AbstractType
                 // --- BLOC DE DÉBOGAGE ---
                 $debugData = [
                     'ID Tranche' => $tranche->getId(),
-                    '1. Cotation' => $tranche->getCotation() ? 'ID: ' . $tranche->getCotation()->getId() : 'NULL',
-                    '2. Chargements (Prime Totale)' => $tranche->getCotation() ? $tranche->getCotation()->getChargements()->count() : 'N/A',
-                    '3. Taux Tranche' => $tranche->tauxTranche,
-                    '4. Prime Tranche Calculée' => $tranche->primeTranche,
-                    '5. Montant TTC Calculé' => $tranche->montantCalculeTTC
+                    'Cotation' => $tranche->getCotation() ? 'OK' : 'NULL',
+                    'Chargements' => $tranche->getCotation() ? $tranche->getCotation()->getChargements()->count() : '?',
+                    'Taux' => $tranche->tauxTranche,
+                    'Prime' => $tranche->primeTranche,
+                    'TTC' => $tranche->montantCalculeTTC
                 ];
 
-                $consoleLog = sprintf(
-                    '<script>console.groupCollapsed("🔍 DEBUG TRANCHE #%d"); console.table(%s); console.groupEnd();</script>',
-                    $tranche->getId(),
-                    json_encode($debugData)
+                // Affichage VISIBLE
+                $debugHtml = sprintf(
+                    '<div style="font-size: 9px; color: red; background: #fff0f0; border: 1px solid red; padding: 2px; margin-bottom: 2px;">DEBUG: %s</div>',
+                    json_encode($debugData, JSON_UNESCAPED_UNICODE)
                 );
                 // -------------------------
 
@@ -79,8 +79,8 @@ class TrancheAutocompleteField extends AbstractType
                 $tauxAffiche = $tranche->tauxTranche ?? 0.0; // La valeur est déjà en pourcentage via la stratégie
 
                 // Formatage HTML enrichi avec la charte bleue cobalt et les puces
-                return $consoleLog . sprintf( // Ligne 63
-                    '<div data-taux="%f" data-prime="%f" data-paye="%f" data-solde="%f" data-taxe-courtier="%f" data-taxe-assureur="%f" data-commission-pure="%f" data-reserve="%f" data-retrocom="%f" style="border-left: 3px solid %s; padding-left: 8px;">
+                return $debugHtml . sprintf( // Ligne 63
+                    '<div data-taux="%f" data-prime="%f" data-paye="%f" data-solde="%f" data-taxe-courtier="%f" data-taxe-assureur="%f" data-commission-pure="%f" data-reserve="%f" data-retrocom="%f" style="border-left: 3px solid %s; padding-left: 8px; margin-top: 5px;">
                         <strong>%s</strong>
                         <div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">
                             Réf Police: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Assureur: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Client: %s

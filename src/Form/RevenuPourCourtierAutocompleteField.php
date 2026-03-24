@@ -48,24 +48,23 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
                 // --- BLOC DE DÉBOGAGE (Visible dans la console du navigateur - F12) ---
                 $debugData = [
                     'ID Revenu' => $revenu->getId(),
-                    '1. Type Revenu' => $revenu->getTypeRevenu() ? $revenu->getTypeRevenu()->getNom() : 'NULL',
-                    '2. Cotation' => $revenu->getCotation() ? 'ID: ' . $revenu->getCotation()->getId() : 'NULL',
-                    '3. Chargements' => $revenu->getCotation() ? $revenu->getCotation()->getChargements()->count() : 'N/A',
-                    '4. Piste & Client' => ($revenu->getCotation() && $revenu->getCotation()->getPiste()) ? 'OK' : 'Piste NULL',
-                    '5. Entreprise' => 'Non trouvée', // Par défaut
-                    '6. Montant HT Calculé' => $revenu->montantCalculeHT,
-                    '7. Montant TTC Calculé' => $revenu->montantCalculeTTC
+                    'Type' => $revenu->getTypeRevenu() ? 'OK' : 'NULL',
+                    'Cotation' => $revenu->getCotation() ? $revenu->getCotation()->getId() : 'NULL',
+                    'Chargements' => $revenu->getCotation() ? $revenu->getCotation()->getChargements()->count() : '?',
+                    'Entreprise' => 'Non',
+                    'HT' => $revenu->montantCalculeHT,
+                    'TTC' => $revenu->montantCalculeTTC
                 ];
 
                 // Test accès entreprise pour Taxe
                 $ent = $revenu->getTypeRevenu()?->getEntreprise();
                 if (!$ent) $ent = $revenu->getCotation()?->getPiste()?->getInvite()?->getEntreprise();
-                if ($ent) $debugData['5. Entreprise'] = 'ID: ' . $ent->getId();
+                if ($ent) $debugData['Entreprise'] = 'OK (' . $ent->getId() . ')';
 
-                $consoleLog = sprintf(
-                    '<script>console.groupCollapsed("🔍 DEBUG REVENU #%d"); console.table(%s); console.groupEnd();</script>',
-                    $revenu->getId(),
-                    json_encode($debugData)
+                // Affichage VISIBLE à l'écran (texte rouge)
+                $debugHtml = sprintf(
+                    '<div style="font-size: 9px; color: red; background: #fff0f0; border: 1px solid red; padding: 2px; margin-bottom: 2px;">DEBUG: %s</div>',
+                    json_encode($debugData, JSON_UNESCAPED_UNICODE)
                 );
                 // -----------------------------------------------------------------------
 
@@ -96,8 +95,8 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
 
                 // 3. Formatage HTML enrichi
                 // Utilisation de puces (&bull;) élégantes et discrètes entre les attributs
-                return $consoleLog . sprintf(
-                    '<div data-montant-ttc="%f" style="border-left: 3px solid %s; padding-left: 8px;">
+                return $debugHtml . sprintf(
+                    '<div data-montant-ttc="%f" style="border-left: 3px solid %s; padding-left: 8px; margin-top: 5px;">
                         <strong>%s</strong>
                         <div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">
                             Réf Police: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Assureur: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Client: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Tranches: %d
