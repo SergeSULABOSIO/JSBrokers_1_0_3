@@ -7,6 +7,7 @@ namespace App\Form;
 use App\Entity\Article;
 use App\Services\FormListenerFactory;
 use App\Services\ServiceMonnaies;
+use App\Services\CanvasBuilder;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -27,7 +28,8 @@ class ArticleType extends AbstractType
     public function __construct(
         private readonly FormListenerFactory $ecouteurFormulaire,
         private readonly ServiceMonnaies $serviceMonnaies,
-        private readonly RequestStack $requestStack
+        private readonly RequestStack $requestStack,
+        private readonly CanvasBuilder $canvasBuilder
     ) {}
 
     public function configureOptions(OptionsResolver $resolver): void
@@ -49,7 +51,17 @@ class ArticleType extends AbstractType
         $request = $this->requestStack->getCurrentRequest();
         /** @var Article|null $article */
         $article = $builder->getData();
+
+        // MAGIE DU CANVAS BUILDER : On force l'hydratation de l'objet Article
+        // Cela est crucial en mode édition pour que les indicateurs financiers 
+        // (montantArticle, natureArticle...) soient disponibles immédiatement.
+        if ($article) {
+            $this->canvasBuilder->loadAllCalculatedValues($article);
+        }
         
+        // Débogage : Visualisation de l'objet Article (ID présent en édition, NULL en création)
+        dump($article);
+
         $noteId = null;
         $revenuIdInitial = null;
         $trancheIdInitial = null;
