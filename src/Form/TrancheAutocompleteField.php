@@ -63,7 +63,7 @@ class TrancheAutocompleteField extends AbstractType
 
                 // Formatage HTML enrichi avec la charte bleue cobalt et les puces
                 return sprintf(
-                    '<div data-taux="%f" data-prime="%f" data-paye="%f" data-solde="%f" data-taxe-courtier="%f" data-taxe-assureur="%f" data-commission-pure="%f" data-reserve="%f" data-retrocom="%f" style="border-left: 3px solid %s; padding-left: 8px; margin-top: 5px;">
+                    '<div data-taux="%f" data-prime="%f" data-paye="%f" data-solde="%f" data-taxe-courtier="%f" data-taxe-assureur="%f" data-commission-pure="%f" data-reserve="%f" data-retrocom="%f" style="margin-top: 5px;">
                         <strong>%s</strong>
                         <div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">
                             Réf Police: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Assureur: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Client: %s
@@ -97,7 +97,6 @@ class TrancheAutocompleteField extends AbstractType
                     $commissionPure, // pour data-commission-pure
                     $reserve, // pour data-reserve
                     $retrocom, // pour data-retrocom
-                    ($prime > 0 ? '#28a745' : '#dc3545'), // Bordure visuelle Debug
                     htmlspecialchars($tranche->getNom() ?? 'Tranche sans nom'),
                     htmlspecialchars($policeRef),
                     htmlspecialchars($assureurNom),
