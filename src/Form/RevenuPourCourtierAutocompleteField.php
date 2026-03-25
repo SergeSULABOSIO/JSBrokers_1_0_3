@@ -45,29 +45,6 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
                 // MAGIE DU CANVAS BUILDER : On hydrate dynamiquement l'entité avec la stratégie
                 $this->canvasBuilder->loadAllCalculatedValues($revenu);
                 
-                // --- BLOC DE DÉBOGAGE (Visible dans la console du navigateur - F12) ---
-                $debugData = [
-                    'ID Revenu' => $revenu->getId(),
-                    'Type' => $revenu->getTypeRevenu() ? 'OK' : 'NULL',
-                    'Cotation' => $revenu->getCotation() ? $revenu->getCotation()->getId() : 'NULL',
-                    'Chargements' => $revenu->getCotation() ? $revenu->getCotation()->getChargements()->count() : '?',
-                    'Entreprise' => 'Non',
-                    'HT' => $revenu->montantCalculeHT,
-                    'TTC' => $revenu->montantCalculeTTC
-                ];
-
-                // Test accès entreprise pour Taxe
-                $ent = $revenu->getTypeRevenu()?->getEntreprise();
-                if (!$ent) $ent = $revenu->getCotation()?->getPiste()?->getInvite()?->getEntreprise();
-                if ($ent) $debugData['Entreprise'] = 'OK (' . $ent->getId() . ')';
-
-                // Affichage VISIBLE à l'écran (texte rouge)
-                $debugHtml = sprintf(
-                    '<div style="font-size: 9px; color: red; background: #fff0f0; border: 1px solid red; padding: 2px; margin-bottom: 2px;">DEBUG: %s</div>',
-                    json_encode($debugData, JSON_UNESCAPED_UNICODE)
-                );
-                // -----------------------------------------------------------------------
-
                 // 1. Extraction des indicateurs financiers via les VRAIES clés de ta stratégie
                 $revenuTTC = $revenu->montantCalculeTTC ?? $revenu->montant_du ?? 0.0;
                 $montantPaye = $revenu->montant_paye ?? 0.0; // Correction : Utiliser la clé exacte de la stratégie
@@ -95,7 +72,7 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
 
                 // 3. Formatage HTML enrichi
                 // Utilisation de puces (&bull;) élégantes et discrètes entre les attributs
-                return $debugHtml . sprintf(
+                return sprintf(
                     '<div data-montant-ttc="%f" style="border-left: 3px solid %s; padding-left: 8px; margin-top: 5px;">
                         <strong>%s</strong>
                         <div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">
