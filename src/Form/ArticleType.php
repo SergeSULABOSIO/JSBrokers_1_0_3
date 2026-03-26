@@ -86,6 +86,8 @@ class ArticleType extends AbstractType
                 foreach ($cotation->getAvenants() as $avenant) $this->canvasBuilder->loadAllCalculatedValues($avenant);
                 foreach ($cotation->getChargements() as $cp) {
                     if ($typeChargement = $cp->getType()) $this->canvasBuilder->loadAllCalculatedValues($typeChargement);
+                    // Force l'initialisation du proxy si c'en est un
+                    $cp->getNom(); 
                     $this->canvasBuilder->loadAllCalculatedValues($cp);
                 }
 
@@ -95,9 +97,11 @@ class ArticleType extends AbstractType
 
             // NIVEAU 1 : Les Flux de Facturation (Revenu ou Tranche)
             if ($revenu) {
+                $revenu->getNom(); // Wake up proxy
                 $this->canvasBuilder->loadAllCalculatedValues($revenu);
             }
             if ($tranche) {
+                $tranche->getNom(); // Wake up proxy
                 $this->canvasBuilder->loadAllCalculatedValues($tranche);
             }
 
@@ -107,6 +111,10 @@ class ArticleType extends AbstractType
         
         // Débogage structuré : Article et ses relations totalement hydratées
         dump('--- DEBUT DEBUG HYDRATATION ARTICLE ---');
+        if ($article) {
+            $cot = $article->getRevenuFacture()?->getCotation() ?? $article->getTranche()?->getCotation();
+            if ($cot) dump('MOTEUR (Cotation):', $cot);
+        }
         dump('OBJET ARTICLE:', $article);
         if ($article?->getRevenuFacture()) dump('OBJET REVENU LIE (Complet):', $article->getRevenuFacture());
         if ($article?->getTranche()) dump('OBJET TRANCHE LIE (Complet):', $article->getTranche());
