@@ -84,10 +84,15 @@ class ArticleController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request): JsonResponse
     {
+        $inviteConnecte = $this->getInvite();
+
         return $this->handleFormSubmission(
             $request,
             Article::class,
-            ArticleType::class
+            ArticleType::class,
+            function (Article $article) use ($inviteConnecte) {
+                // On peut ici forcer des liaisons si nécessaire (ex: lier la note via le parent_id)
+            }
         );
     }
 

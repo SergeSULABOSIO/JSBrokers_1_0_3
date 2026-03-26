@@ -6,7 +6,6 @@ namespace App\Form;
 
 use App\Entity\Article;
 use App\Entity\Entreprise;
-use App\Entity\Taxe;
 use App\Services\FormListenerFactory;
 use App\Services\ServiceMonnaies;
 use App\Services\CanvasBuilder;
@@ -76,18 +75,26 @@ class ArticleType extends AbstractType
             $cotation = $revenu?->getCotation() ?? $tranche?->getCotation();
 
             if ($cotation) {
+                $cotation->getNom(); // Wake up Proxy Cotation
+
                 // Hydratation des acteurs (Assureur, Client, Partenaires)
                 if ($assureur = $cotation->getAssureur()) $this->canvasBuilder->loadAllCalculatedValues($assureur);
                 if ($piste = $cotation->getPiste()) {
+                    $piste->getNom(); // Wake up Proxy Piste
                     if ($client = $piste->getClient()) $this->canvasBuilder->loadAllCalculatedValues($client);
+                    
+                    $piste->getPartenaires()->count(); // Force chargement collection
                     foreach ($piste->getPartenaires() as $partenaire) $this->canvasBuilder->loadAllCalculatedValues($partenaire);
                 }
+
                 // Hydratation des éléments de prime (Chargements et Avenants)
+                $cotation->getAvenants()->count(); // Force chargement collection
                 foreach ($cotation->getAvenants() as $avenant) $this->canvasBuilder->loadAllCalculatedValues($avenant);
+
+                $cotation->getChargements()->count(); // Force chargement collection
                 foreach ($cotation->getChargements() as $cp) {
                     if ($typeChargement = $cp->getType()) $this->canvasBuilder->loadAllCalculatedValues($typeChargement);
-                    // Force l'initialisation du proxy si c'en est un
-                    $cp->getNom(); 
+                    $cp->getNom(); // Wake up Proxy ChargementPourPrime
                     $this->canvasBuilder->loadAllCalculatedValues($cp);
                 }
 
