@@ -1,6 +1,7 @@
 <?php
 namespace App\Controller\Admin;
 
+use App\Entity\Article;
 use App\Entity\Assureur;
 use App\Entity\AutoriteFiscale;
 use App\Entity\Avenant;
@@ -420,7 +421,12 @@ trait ControllerUtilsTrait
 
         $form = $this->createForm($formTypeClass, $entity);
         $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
-        $this->loadCalculatedValues($entityCanvas, $entity);
+
+        // Exception pour l'Article : l'hydratation est gérée en cascade "Bottom-Up" dans ArticleType.
+        // Pour les autres entités, on maintient l'hydratation automatique pour éviter toute régression.
+        if (!$entity instanceof Article) {
+            $this->loadCalculatedValues($entityCanvas, $entity);
+        }
 
         return $this->render('components/dialog/_form_content.html.twig', [
             'form' => $form->createView(),
