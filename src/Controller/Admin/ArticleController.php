@@ -69,46 +69,6 @@ class ArticleController extends AbstractController
     #[Route('/api/get-form/{id?}', name: 'api.get_form', methods: ['GET'])]
     public function getFormApi(?Article $article, Request $request): Response
     {
-        // --- HYDRATATION EXPLICITE ROBUSTE ---
-        // En mode édition, on force le chargement de toutes les données nécessaires aux calculs financiers
-        // (HT, TTC, Taxes, Primes) pour éviter les valeurs à 0.00 USD dues aux Proxies non initialisés.
-        if ($article && $article->getId()) {
-            $article = $this->em->createQueryBuilder()
-                ->select('a', 'r', 'tr', 'tr_chart', 'tr_e', 'c', 'char', 'chart', 't', 'p', 'risk', 'i', 'e', 'tc', 'tc_rev', 'tc_rev_tr', 'tc_char', 'tc_chart', 'tc_p', 'tc_risk', 'tc_i', 'tc_e')
-                ->from(Article::class, 'a')
-                
-                // --- BRANCHE REVENU (Pour calculs Commissions & Taxes) ---
-                ->leftJoin('a.revenuFacture', 'r')
-                ->leftJoin('r.typeRevenu', 'tr')
-                ->leftJoin('tr.typeChargement', 'tr_chart') // MANQUANT AVANT : Pour lier le revenu au chargement
-                ->leftJoin('tr.entreprise', 'tr_e')         // MANQUANT AVANT : Contexte entreprise du type de revenu
-                ->leftJoin('r.cotation', 'c')
-                ->leftJoin('c.chargements', 'char') 
-                ->leftJoin('char.type', 'chart')    // INDISPENSABLE: Pour identifier "Prime Nette" vs autres
-                ->leftJoin('c.piste', 'p')
-                ->leftJoin('p.risque', 'risk')      // INDISPENSABLE: Pour isIARD() -> Taux de Taxe correct
-                ->leftJoin('p.invite', 'i')
-                ->leftJoin('i.entreprise', 'e')     // INDISPENSABLE: Pour trouver la Taxe configurée
-                
-                // --- BRANCHE TRANCHE (Pour calculs Primes & Soldes) ---
-                ->leftJoin('a.tranche', 't')
-                ->leftJoin('t.cotation', 'tc')      // Relation distincte dans Doctrine
-                ->leftJoin('tc.revenus', 'tc_rev')   // MANQUANT : Pour que la Tranche puisse calculer sa part de commission TTC
-                ->leftJoin('tc_rev.typeRevenu', 'tc_rev_tr') // MANQUANT : Dépendance de tc.revenus
-                ->leftJoin('tc.chargements', 'tc_char') // INDISPENSABLE: Pour calculer la Prime Totale de la Tranche
-                ->leftJoin('tc_char.type', 'tc_chart')
-                ->leftJoin('tc.piste', 'tc_p')
-                ->leftJoin('tc_p.risque', 'tc_risk') // MANQUANT AVANT : Pour le calcul isIARD de la tranche (Taxes)
-                ->leftJoin('tc_p.invite', 'tc_i')
-                ->leftJoin('tc_i.entreprise', 'tc_e') // Pour les taxes de la tranche
-                
-                ->where('a.id = :id')
-                ->setParameter('id', $article->getId())
-                ->getQuery()
-                ->setHint(\Doctrine\ORM\Query::HINT_REFRESH, true) // CORRECTION : Appelé sur l'objet Query et non le QueryBuilder
-                ->getOneOrNullResult();
-        }
-
         return $this->renderFormCanvas(
             $request,
             Article::class,
