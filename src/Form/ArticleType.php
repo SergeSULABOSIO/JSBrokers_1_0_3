@@ -55,79 +55,11 @@ class ArticleType extends AbstractType
         /** @var Article|null $article */
         $article = $builder->getData();
 
-        if ($article) {
-            // --- CASCADE D'HYDRATATION RÉCURSIVE (BOTTOM-UP) ---
-
-            // NIVEAU 4 : Le Socle (Entreprise et Taxes)
-            // Indispensable pour les calculs de TVA et les règles de gestion globales.
-            $entrepriseId = $this->ecouteurFormulaire->getCurrentEntrepriseId();
-            $entreprise = $this->em->getRepository(Entreprise::class)->find($entrepriseId);
-            if ($entreprise) {
-                $this->canvasBuilder->loadAllCalculatedValues($entreprise);
-                foreach ($entreprise->getTaxes() as $taxe) {
-                    $this->canvasBuilder->loadAllCalculatedValues($taxe);
-                }
-            }
-
-            // NIVEAU 3 : Les Satellites de la Cotation
-            $revenu = $article->getRevenuFacture();
-            $tranche = $article->getTranche();
-            $cotation = $revenu?->getCotation() ?? $tranche?->getCotation();
-
-            if ($cotation) {
-                $cotation->getNom(); // Wake up Proxy Cotation
-
-                // Hydratation des acteurs (Assureur, Client, Partenaires)
-                if ($assureur = $cotation->getAssureur()) $this->canvasBuilder->loadAllCalculatedValues($assureur);
-                if ($piste = $cotation->getPiste()) {
-                    $piste->getNom(); // Wake up Proxy Piste
-                    if ($client = $piste->getClient()) $this->canvasBuilder->loadAllCalculatedValues($client);
-                    
-                    $piste->getPartenaires()->count(); // Force chargement collection
-                    foreach ($piste->getPartenaires() as $partenaire) $this->canvasBuilder->loadAllCalculatedValues($partenaire);
-                }
-
-                // Hydratation des éléments de prime (Chargements et Avenants)
-                $cotation->getAvenants()->count(); // Force chargement collection
-                foreach ($cotation->getAvenants() as $avenant) $this->canvasBuilder->loadAllCalculatedValues($avenant);
-
-                $cotation->getChargements()->count(); // Force chargement collection
-                foreach ($cotation->getChargements() as $cp) {
-                    if ($typeChargement = $cp->getType()) $this->canvasBuilder->loadAllCalculatedValues($typeChargement);
-                    $cp->getNom(); // Wake up Proxy ChargementPourPrime
-                    $this->canvasBuilder->loadAllCalculatedValues($cp);
-                }
-
-                // NIVEAU 2 : Le Moteur Financier (Cotation)
-                $this->canvasBuilder->loadAllCalculatedValues($cotation);
-            }
-
-            // NIVEAU 1 : Les Flux de Facturation (Revenu ou Tranche)
-            if ($revenu) {
-                $this->em->initializeObject($revenu); // Force l'initialisation du proxy RevenuPourCourtier
-                $revenu->getNom();
-                $this->canvasBuilder->loadAllCalculatedValues($revenu);
-            }
-            if ($tranche) {
-                $this->em->initializeObject($tranche); // Force l'initialisation du proxy Tranche
-                $tranche->getNom();
-                $this->canvasBuilder->loadAllCalculatedValues($tranche);
-            }
-
-            // NIVEAU 0 : La Cible Finale (Article)
-            $this->canvasBuilder->loadAllCalculatedValues($article);
+        // En mode édition, on déclenche l'hydratation profonde et le debug financier
+        if ($article && $article->getId()) {
+            $this->hydrateArticleCascade($article);
+            $this->dumpFinancialIndicators($article);
         }
-        
-        // Débogage structuré : Article et ses relations totalement hydratées
-        dump('--- DEBUT DEBUG HYDRATATION ARTICLE ---');
-        if ($article) {
-            $cot = $article->getRevenuFacture()?->getCotation() ?? $article->getTranche()?->getCotation();
-            if ($cot) dump('MOTEUR (Cotation):', $cot);
-        }
-        dump('OBJET ARTICLE:', $article);
-        if ($article?->getRevenuFacture()) dump('OBJET REVENU LIE (Complet):', $article->getRevenuFacture());
-        if ($article?->getTranche()) dump('OBJET TRANCHE LIE (Complet):', $article->getTranche());
-        dump('--- FIN DEBUG HYDRATATION ARTICLE ---');
 
         $noteId = null;
         $revenuIdInitial = null;
@@ -221,5 +153,120 @@ class ArticleType extends AbstractType
             ->add('quantite', NumberType::class, $quantiteOptions);
         // Le champ idPoste n'est plus nécessaire et a été supprimé de l'entité Article.
         // Il n'est donc plus ajouté au formulaire.
+    }
+
+    /**
+     * Effectue une hydratation récursive de bas en haut (Bottom-Up) pour l'Article.
+     * Garantit que toutes les dépendances financières sont prêtes avant le rendu du formulaire.
+     */
+    private function hydrateArticleCascade(Article $article): void
+    {
+        // NIVEAU 4 : Le Socle (Entreprise et Taxes)
+        $entrepriseId = $this->ecouteurFormulaire->getCurrentEntrepriseId();
+        $entreprise = $this->em->getRepository(Entreprise::class)->find($entrepriseId);
+        if ($entreprise) {
+            $this->canvasBuilder->loadAllCalculatedValues($entreprise);
+            foreach ($entreprise->getTaxes() as $taxe) {
+                $this->canvasBuilder->loadAllCalculatedValues($taxe);
+            }
+        }
+
+        // NIVEAU 3 : Les Satellites de la Cotation
+        $revenu = $article->getRevenuFacture();
+        $tranche = $article->getTranche();
+        $cotation = $revenu?->getCotation() ?? $tranche?->getCotation();
+
+        if ($cotation) {
+            $this->em->initializeObject($cotation);
+            $cotation->getNom();
+
+            // Acteurs
+            if ($assureur = $cotation->getAssureur()) {
+                $this->em->initializeObject($assureur);
+                $this->canvasBuilder->loadAllCalculatedValues($assureur);
+            }
+            if ($piste = $cotation->getPiste()) {
+                $this->em->initializeObject($piste);
+                if ($client = $piste->getClient()) {
+                    $this->em->initializeObject($client);
+                    $this->canvasBuilder->loadAllCalculatedValues($client);
+                }
+                $piste->getPartenaires()->count();
+                foreach ($piste->getPartenaires() as $partenaire) {
+                    $this->em->initializeObject($partenaire);
+                    $this->canvasBuilder->loadAllCalculatedValues($partenaire);
+                }
+            }
+
+            // Eléments de Prime
+            $cotation->getAvenants()->count();
+            foreach ($cotation->getAvenants() as $avenant) {
+                $this->em->initializeObject($avenant);
+                $this->canvasBuilder->loadAllCalculatedValues($avenant);
+            }
+            $cotation->getChargements()->count();
+            foreach ($cotation->getChargements() as $cp) {
+                $this->em->initializeObject($cp);
+                if ($cp->getType()) $this->em->initializeObject($cp->getType());
+                $this->canvasBuilder->loadAllCalculatedValues($cp);
+            }
+
+            // NIVEAU 2 : Le Moteur Financier (Cotation)
+            $this->canvasBuilder->loadAllCalculatedValues($cotation);
+        }
+
+        // NIVEAU 1 : Flux de Facturation
+        if ($revenu) {
+            $this->em->initializeObject($revenu);
+            $this->canvasBuilder->loadAllCalculatedValues($revenu);
+        }
+        if ($tranche) {
+            $this->em->initializeObject($tranche);
+            $this->canvasBuilder->loadAllCalculatedValues($tranche);
+        }
+
+        // NIVEAU 0 : L'Ancêtre
+        $this->canvasBuilder->loadAllCalculatedValues($article);
+    }
+
+    /**
+     * Affiche les indicateurs financiers détaillés des objets liés pour le débogage en mode édition.
+     */
+    private function dumpFinancialIndicators(Article $article): void
+    {
+        dump('--- DEBUT DEBUG INDICATEURS FINANCIERS ARTICLE (Mode Édition) ---');
+        
+        if ($revenu = $article->getRevenuFacture()) {
+            dump('REVENU (#'.$revenu->getId().')', [
+                'Montant TTC' => $revenu->montantCalculeTTC,
+                'Montant Payé' => $revenu->montant_paye,
+                'Solde' => $revenu->solde_restant_du,
+                'Taxe Courtier' => $revenu->taxeCourtierMontant,
+                'Taxe Assureur' => $revenu->taxeAssureurMontant,
+                'Commission pure' => $revenu->montantPur,
+                'Réserve' => $revenu->reserve,
+                'Rétrocommission' => $revenu->retroCommission,
+            ]);
+        }
+
+        if ($tranche = $article->getTranche()) {
+            dump('TRANCHE (#'.$tranche->getId().')', [
+                'Taux calculé (%)' => $tranche->tauxTranche,
+                'Prime' => $tranche->primeTranche,
+                'Prime payée' => $tranche->primePayee,
+                'Solde' => $tranche->primeSoldeDue,
+                'Taxe Courtier' => $tranche->taxeCourtierMontant,
+                'Taxe Assureur' => $tranche->taxeAssureurMontant,
+                'Commission pure' => $tranche->montantPur,
+                'Réserve' => $tranche->reserve,
+                'Rétrocommission' => $tranche->retroCommission,
+            ]);
+        }
+
+        if ($cot = $article->getRevenuFacture()?->getCotation() ?? $article->getTranche()?->getCotation()) {
+            dump('MOTEUR SOURCE (Cotation TTC)', $cot->montantTTC);
+        }
+
+        dump('--- FIN DEBUG INDICATEURS ---');
     }
 }
