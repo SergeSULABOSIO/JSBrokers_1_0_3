@@ -104,11 +104,13 @@ class ArticleType extends AbstractType
 
             // NIVEAU 1 : Les Flux de Facturation (Revenu ou Tranche)
             if ($revenu) {
-                $revenu->getNom(); // Wake up proxy
+                $this->em->initializeObject($revenu); // Force l'initialisation du proxy RevenuPourCourtier
+                $revenu->getNom();
                 $this->canvasBuilder->loadAllCalculatedValues($revenu);
             }
             if ($tranche) {
-                $tranche->getNom(); // Wake up proxy
+                $this->em->initializeObject($tranche); // Force l'initialisation du proxy Tranche
+                $tranche->getNom();
                 $this->canvasBuilder->loadAllCalculatedValues($tranche);
             }
 
