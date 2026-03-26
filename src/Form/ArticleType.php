@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Form;
 
 use App\Entity\Article;
+use App\Entity\Entreprise;
+use App\Entity\Taxe;
 use App\Services\FormListenerFactory;
 use App\Services\ServiceMonnaies;
 use App\Services\CanvasBuilder;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -29,7 +32,8 @@ class ArticleType extends AbstractType
         private readonly FormListenerFactory $ecouteurFormulaire,
         private readonly ServiceMonnaies $serviceMonnaies,
         private readonly RequestStack $requestStack,
-        private readonly CanvasBuilder $canvasBuilder
+        private readonly CanvasBuilder $canvasBuilder,
+        private readonly EntityManagerInterface $em
     ) {}
 
     public function configureOptions(OptionsResolver $resolver): void
@@ -52,15 +56,61 @@ class ArticleType extends AbstractType
         /** @var Article|null $article */
         $article = $builder->getData();
 
-        // MAGIE DU CANVAS BUILDER : On force l'hydratation de l'objet Article
-        // Cela est crucial en mode édition pour que les indicateurs financiers 
-        // (montantArticle, natureArticle...) soient disponibles immédiatement.
         if ($article) {
+            // --- CASCADE D'HYDRATATION RÉCURSIVE (BOTTOM-UP) ---
+
+            // NIVEAU 4 : Le Socle (Entreprise et Taxes)
+            // Indispensable pour les calculs de TVA et les règles de gestion globales.
+            $entrepriseId = $this->ecouteurFormulaire->getCurrentEntrepriseId();
+            $entreprise = $this->em->getRepository(Entreprise::class)->find($entrepriseId);
+            if ($entreprise) {
+                $this->canvasBuilder->loadAllCalculatedValues($entreprise);
+                foreach ($entreprise->getTaxes() as $taxe) {
+                    $this->canvasBuilder->loadAllCalculatedValues($taxe);
+                }
+            }
+
+            // NIVEAU 3 : Les Satellites de la Cotation
+            $revenu = $article->getRevenuFacture();
+            $tranche = $article->getTranche();
+            $cotation = $revenu?->getCotation() ?? $tranche?->getCotation();
+
+            if ($cotation) {
+                // Hydratation des acteurs (Assureur, Client, Partenaires)
+                if ($assureur = $cotation->getAssureur()) $this->canvasBuilder->loadAllCalculatedValues($assureur);
+                if ($piste = $cotation->getPiste()) {
+                    if ($client = $piste->getClient()) $this->canvasBuilder->loadAllCalculatedValues($client);
+                    foreach ($piste->getPartenaires() as $partenaire) $this->canvasBuilder->loadAllCalculatedValues($partenaire);
+                }
+                // Hydratation des éléments de prime (Chargements et Avenants)
+                foreach ($cotation->getAvenants() as $avenant) $this->canvasBuilder->loadAllCalculatedValues($avenant);
+                foreach ($cotation->getChargements() as $cp) {
+                    if ($typeChargement = $cp->getType()) $this->canvasBuilder->loadAllCalculatedValues($typeChargement);
+                    $this->canvasBuilder->loadAllCalculatedValues($cp);
+                }
+
+                // NIVEAU 2 : Le Moteur Financier (Cotation)
+                $this->canvasBuilder->loadAllCalculatedValues($cotation);
+            }
+
+            // NIVEAU 1 : Les Flux de Facturation (Revenu ou Tranche)
+            if ($revenu) {
+                $this->canvasBuilder->loadAllCalculatedValues($revenu);
+            }
+            if ($tranche) {
+                $this->canvasBuilder->loadAllCalculatedValues($tranche);
+            }
+
+            // NIVEAU 0 : La Cible Finale (Article)
             $this->canvasBuilder->loadAllCalculatedValues($article);
         }
         
-        // Débogage : Visualisation de l'objet Article (ID présent en édition, NULL en création)
-        dump($article);
+        // Débogage structuré : Article et ses relations totalement hydratées
+        dump('--- DEBUT DEBUG HYDRATATION ARTICLE ---');
+        dump('OBJET ARTICLE:', $article);
+        if ($article?->getRevenuFacture()) dump('OBJET REVENU LIE (Complet):', $article->getRevenuFacture());
+        if ($article?->getTranche()) dump('OBJET TRANCHE LIE (Complet):', $article->getTranche());
+        dump('--- FIN DEBUG HYDRATATION ARTICLE ---');
 
         $noteId = null;
         $revenuIdInitial = null;
