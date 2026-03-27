@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Form;
 
 use App\Entity\Article;
-use App\Entity\Entreprise;
 use App\Services\FormListenerFactory;
 use App\Services\ServiceMonnaies;
 use App\Services\CanvasBuilder;
