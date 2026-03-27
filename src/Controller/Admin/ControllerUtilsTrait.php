@@ -818,7 +818,7 @@ trait ControllerUtilsTrait
         // La logique est maintenant entièrement déléguée au CanvasBuilder.
         // Le paramètre $entityCanvas est conservé pour la compatibilité avec les appels existants,
         // mais la nouvelle méthode du builder n'en a plus besoin car elle le récupère elle-même.
-        if (method_exists($this->canvasBuilder, 'loadAllCalculatedValues')) {
+        if (is_object($entity) && method_exists($this->canvasBuilder, 'loadAllCalculatedValues')) {
             $this->canvasBuilder->loadAllCalculatedValues($entity);
         }
     }
