@@ -55,12 +55,6 @@ class ArticleType extends AbstractType
         /** @var Article|null $article */
         $article = $builder->getData();
 
-        // En mode édition, on déclenche l'hydratation profonde et le debug financier
-        if ($article && $article->getId()) {
-            $this->hydrateArticleCascade($article);
-            $this->dumpFinancialIndicators($article);
-        }
-
         $noteId = null;
         $revenuIdInitial = null;
         $trancheIdInitial = null;
@@ -153,104 +147,5 @@ class ArticleType extends AbstractType
             ->add('quantite', NumberType::class, $quantiteOptions);
         // Le champ idPoste n'est plus nécessaire et a été supprimé de l'entité Article.
         // Il n'est donc plus ajouté au formulaire.
-    }
-
-    private function hydrateArticleCascade(Article $article): void
-    {
-        dump("--- DÉBUT DE L'EXPLORATION RÉCURSIVE DE L'ARTICLE ---");
-        $history = [];
-        $this->exploreAttributes($article, $history);
-        dump("--- FIN DE L'EXPLORATION ---");
-    }
-
-    /**
-     * Explore récursivement les attributs d'un objet.
-     * @param array $history Stocke les hashes des objets déjà visités pour éviter l'auto-récursion infinie.
-     */
-    private function exploreAttributes(object $object, array &$history, int $level = 0): void
-    {
-        $hash = spl_object_hash($object);
-        if (isset($history[$hash])) {
-            return; // Déjà visité, on sort.
-        }
-        $history[$hash] = true;
-
-        $indent = str_repeat('    ', $level);
-        $reflection = new \ReflectionObject($object);
-        
-        dump($indent . "OBJET : " . $reflection->getShortName());
-
-        foreach ($reflection->getProperties() as $prop) {
-            $prop->setAccessible(true);
-            
-            // On vérifie si la propriété est initialisée (évite les erreurs sur les typed properties non settées)
-            if (!$prop->isInitialized($object)) {
-                continue;
-            }
-
-            $value = $prop->getValue($object);
-            $typeName = $prop->getType() ? $prop->getType()->getName() : 'mixed';
-
-            // Si c'est une collection Doctrine, on explore chaque élément
-            if ($value instanceof \Doctrine\Common\Collections\Collection) {
-                dump($indent . "  -> Attribut [Collection]: " . $prop->getName() . " (" . $value->count() . " items)");
-                foreach ($value as $item) {
-                    if (is_object($item)) {
-                        $this->exploreAttributes($item, $history, $level + 1);
-                    }
-                }
-            } 
-            // Si c'est un objet simple (et pas une Date car c'est un "terminal")
-            elseif (is_object($value) && !($value instanceof \DateTimeInterface)) {
-                dump($indent . "  -> Attribut [Objet]: " . $prop->getName() . " (" . get_class($value) . ")");
-                $this->exploreAttributes($value, $history, $level + 1);
-            } 
-            // Sinon c'est une valeur scalaire (String, Int, etc.)
-            else {
-                // Optionnel : lister aussi les scalaires si besoin
-                // dump($indent . "  -> Attribut [" . $typeName . "]: " . $prop->getName());
-            }
-        }
-    }
-
-    /**
-     * Affiche les indicateurs financiers détaillés des objets liés pour le débogage en mode édition.
-     */
-    private function dumpFinancialIndicators(Article $article): void
-    {
-        dump('--- DEBUT DEBUG INDICATEURS FINANCIERS ARTICLE (Mode Édition) ---');
-        
-        if ($revenu = $article->getRevenuFacture()) {
-            dump('REVENU (#'.$revenu->getId().')', [
-                'Montant TTC' => $revenu->montantCalculeTTC,
-                'Montant Payé' => $revenu->montant_paye,
-                'Solde' => $revenu->solde_restant_du,
-                'Taxe Courtier' => $revenu->taxeCourtierMontant,
-                'Taxe Assureur' => $revenu->taxeAssureurMontant,
-                'Commission pure' => $revenu->montantPur,
-                'Réserve' => $revenu->reserve,
-                'Rétrocommission' => $revenu->retroCommission,
-            ]);
-        }
-
-        if ($tranche = $article->getTranche()) {
-            dump('TRANCHE (#'.$tranche->getId().')', [
-                'Taux calculé (%)' => $tranche->tauxTranche,
-                'Prime' => $tranche->primeTranche,
-                'Prime payée' => $tranche->primePayee,
-                'Solde' => $tranche->primeSoldeDue,
-                'Taxe Courtier' => $tranche->taxeCourtierMontant,
-                'Taxe Assureur' => $tranche->taxeAssureurMontant,
-                'Commission pure' => $tranche->montantPur,
-                'Réserve' => $tranche->reserve,
-                'Rétrocommission' => $tranche->retroCommission,
-            ]);
-        }
-
-        if ($cot = $article->getRevenuFacture()?->getCotation() ?? $article->getTranche()?->getCotation()) {
-            dump('MOTEUR SOURCE (Cotation TTC)', $cot->montantTTC);
-        }
-
-        dump('--- FIN DEBUG INDICATEURS ---');
     }
 }
