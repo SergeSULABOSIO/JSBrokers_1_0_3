@@ -155,78 +155,62 @@ class ArticleType extends AbstractType
         // Il n'est donc plus ajouté au formulaire.
     }
 
-    /**
-     * Effectue une hydratation récursive de bas en haut (Bottom-Up) pour l'Article.
-     * Garantit que toutes les dépendances financières sont prêtes avant le rendu du formulaire.
-     */
     private function hydrateArticleCascade(Article $article): void
     {
-        // NIVEAU 4 : Le Socle (Entreprise et Taxes)
-        $entrepriseId = $this->ecouteurFormulaire->getCurrentEntrepriseId();
-        $entreprise = $this->em->getRepository(Entreprise::class)->find($entrepriseId);
-        if ($entreprise) {
-            $this->canvasBuilder->loadAllCalculatedValues($entreprise);
-            foreach ($entreprise->getTaxes() as $taxe) {
-                $this->canvasBuilder->loadAllCalculatedValues($taxe);
-            }
+        dump("--- DÉBUT DE L'EXPLORATION RÉCURSIVE DE L'ARTICLE ---");
+        $history = [];
+        $this->exploreAttributes($article, $history);
+        dump("--- FIN DE L'EXPLORATION ---");
+    }
+
+    /**
+     * Explore récursivement les attributs d'un objet.
+     * @param array $history Stocke les hashes des objets déjà visités pour éviter l'auto-récursion infinie.
+     */
+    private function exploreAttributes(object $object, array &$history, int $level = 0): void
+    {
+        $hash = spl_object_hash($object);
+        if (isset($history[$hash])) {
+            return; // Déjà visité, on sort.
         }
+        $history[$hash] = true;
 
-        // NIVEAU 3 : Les Satellites de la Cotation
-        $revenu = $article->getRevenuFacture();
-        $tranche = $article->getTranche();
-        $cotation = $revenu?->getCotation() ?? $tranche?->getCotation();
+        $indent = str_repeat('    ', $level);
+        $reflection = new \ReflectionObject($object);
+        
+        dump($indent . "OBJET : " . $reflection->getShortName());
 
-        if ($cotation) {
-            $this->em->initializeObject($cotation);
-            $cotation->getNom();
-
-            // Acteurs
-            if ($assureur = $cotation->getAssureur()) {
-                $this->em->initializeObject($assureur);
-                $this->canvasBuilder->loadAllCalculatedValues($assureur);
+        foreach ($reflection->getProperties() as $prop) {
+            $prop->setAccessible(true);
+            
+            // On vérifie si la propriété est initialisée (évite les erreurs sur les typed properties non settées)
+            if (!$prop->isInitialized($object)) {
+                continue;
             }
-            if ($piste = $cotation->getPiste()) {
-                $this->em->initializeObject($piste);
-                if ($client = $piste->getClient()) {
-                    $this->em->initializeObject($client);
-                    $this->canvasBuilder->loadAllCalculatedValues($client);
+
+            $value = $prop->getValue($object);
+            $typeName = $prop->getType() ? $prop->getType()->getName() : 'mixed';
+
+            // Si c'est une collection Doctrine, on explore chaque élément
+            if ($value instanceof \Doctrine\Common\Collections\Collection) {
+                dump($indent . "  -> Attribut [Collection]: " . $prop->getName() . " (" . $value->count() . " items)");
+                foreach ($value as $item) {
+                    if (is_object($item)) {
+                        $this->exploreAttributes($item, $history, $level + 1);
+                    }
                 }
-                $piste->getPartenaires()->count();
-                foreach ($piste->getPartenaires() as $partenaire) {
-                    $this->em->initializeObject($partenaire);
-                    $this->canvasBuilder->loadAllCalculatedValues($partenaire);
-                }
+            } 
+            // Si c'est un objet simple (et pas une Date car c'est un "terminal")
+            elseif (is_object($value) && !($value instanceof \DateTimeInterface)) {
+                dump($indent . "  -> Attribut [Objet]: " . $prop->getName() . " (" . get_class($value) . ")");
+                $this->exploreAttributes($value, $history, $level + 1);
+            } 
+            // Sinon c'est une valeur scalaire (String, Int, etc.)
+            else {
+                // Optionnel : lister aussi les scalaires si besoin
+                // dump($indent . "  -> Attribut [" . $typeName . "]: " . $prop->getName());
             }
-
-            // Eléments de Prime
-            $cotation->getAvenants()->count();
-            foreach ($cotation->getAvenants() as $avenant) {
-                $this->em->initializeObject($avenant);
-                $this->canvasBuilder->loadAllCalculatedValues($avenant);
-            }
-            $cotation->getChargements()->count();
-            foreach ($cotation->getChargements() as $cp) {
-                $this->em->initializeObject($cp);
-                if ($cp->getType()) $this->em->initializeObject($cp->getType());
-                $this->canvasBuilder->loadAllCalculatedValues($cp);
-            }
-
-            // NIVEAU 2 : Le Moteur Financier (Cotation)
-            $this->canvasBuilder->loadAllCalculatedValues($cotation);
         }
-
-        // NIVEAU 1 : Flux de Facturation
-        if ($revenu) {
-            $this->em->initializeObject($revenu);
-            $this->canvasBuilder->loadAllCalculatedValues($revenu);
-        }
-        if ($tranche) {
-            $this->em->initializeObject($tranche);
-            $this->canvasBuilder->loadAllCalculatedValues($tranche);
-        }
-
-        // NIVEAU 0 : L'Ancêtre
-        $this->canvasBuilder->loadAllCalculatedValues($article);
     }
 
     /**

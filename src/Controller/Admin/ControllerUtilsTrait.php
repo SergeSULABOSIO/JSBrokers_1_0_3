@@ -1,7 +1,6 @@
 <?php
 namespace App\Controller\Admin;
 
-use App\Entity\Article;
 use App\Entity\Assureur;
 use App\Entity\AutoriteFiscale;
 use App\Entity\Avenant;
@@ -37,6 +36,7 @@ use App\Entity\TypeRevenu;
 use App\Entity\Utilisateur;
 use App\Services\CanvasBuilder;
 use App\Services\JSBDynamicSearchService;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -422,11 +422,7 @@ trait ControllerUtilsTrait
         $form = $this->createForm($formTypeClass, $entity);
         $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
 
-        // Exception pour l'Article : l'hydratation est gérée en cascade "Bottom-Up" dans ArticleType.
-        // Pour les autres entités, on maintient l'hydratation automatique pour éviter toute régression.
-        if (!$entity instanceof Article) {
-            $this->loadCalculatedValues($entityCanvas, $entity);
-        }
+        $this->loadCalculatedValues($entityCanvas, $entity);
 
         return $this->render('components/dialog/_form_content.html.twig', [
             'form' => $form->createView(),
