@@ -31,6 +31,11 @@ class CalculationProvider
     {
         $entityClass = get_class($entity);
 
+        // Résolution des Proxies Doctrine : on récupère la classe parente (la vraie entité)
+        if ($entity instanceof \Doctrine\Persistence\Proxy) {
+            $entityClass = get_parent_class($entity);
+        }
+
         foreach ($this->strategies as $strategy) {
             if ($strategy->supports($entityClass)) {
                 return $strategy->calculate($entity);
