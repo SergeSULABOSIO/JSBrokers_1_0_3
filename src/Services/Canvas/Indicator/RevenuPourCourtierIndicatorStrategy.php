@@ -7,12 +7,14 @@ use App\Entity\Note;
 use App\Entity\Paiement;
 use App\Entity\Taxe;
 use App\Repository\TaxeRepository;
+use Doctrine\ORM\EntityManagerInterface;
 
 class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrategyInterface
 {
     public function __construct(
         private IndicatorCalculationHelper $calculationHelper,
-        private TaxeRepository $taxeRepository
+        private TaxeRepository $taxeRepository,
+        private EntityManagerInterface $em
     ) {
     }
 
@@ -24,6 +26,13 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
     public function calculate(object $entity): array
     {
         /** @var RevenuPourCourtier $entity */
+
+        // On s'assure que l'entité et sa cotation sont chargées (Proxies Doctrine)
+        $this->em->initializeObject($entity);
+        if ($entity->getCotation()) {
+            $this->em->initializeObject($entity->getCotation());
+        }
+
         $cotation = $entity->getCotation();
         $clientNom = $cotation?->getPiste()?->getClient()?->getNom() ?? 'N/A';
         $refPolice = $cotation ? $this->calculationHelper->getCotationReferencePolice($cotation) : 'N/A';

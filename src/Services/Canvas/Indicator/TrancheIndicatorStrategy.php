@@ -8,13 +8,15 @@ use App\Entity\Note;
 use App\Repository\TaxeRepository;
 use App\Services\ServiceDates;
 use DateTimeImmutable;
+use Doctrine\ORM\EntityManagerInterface;
 
 class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
 {
     public function __construct(
         private ServiceDates $serviceDates,
         private TaxeRepository $taxeRepository,
-        private IndicatorCalculationHelper $calculationHelper
+        private IndicatorCalculationHelper $calculationHelper,
+        private EntityManagerInterface $em
     ) {
     }
 
@@ -26,6 +28,13 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
     public function calculate(object $entity): array
     {
         /** @var Tranche $entity */
+
+        // Initialisation forcée si l'objet est un Proxy non chargé
+        $this->em->initializeObject($entity);
+        if ($entity->getCotation()) {
+            $this->em->initializeObject($entity->getCotation());
+        }
+
         $cotation = $entity->getCotation();
         
         $isBound = $this->calculationHelper->isCotationBound($cotation);
