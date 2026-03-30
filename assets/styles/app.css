@@ -1426,3 +1426,82 @@ textarea:hover,
 .list-row-actions-container .btn:hover .ux-icon {
     stroke-width: 2.5; /* Trait plus épais pour un effet "gras" au survol */
 }
+
+/* ================================================================== */
+/* SECTION 6: STYLES POUR LES ITEMS D'AUTOCOMPLÉTION (TOMSELECT)      */
+/* ================================================================== */
+
+.jsb-autocomplete-item {
+    padding: 10px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 0; /* Les lignes horizontales feront la séparation */
+    transition: background-color 0.15s ease;
+}
+
+/* LIGNE 1 : TITRE */
+.jsb-autocomplete-title {
+    color: #0047AB; /* Bleu Cobalt */
+    font-weight: bold;
+    font-size: 1.1rem;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.jsb-autocomplete-title-suffix {
+    font-weight: normal;
+    color: #6c757d;
+    font-size: 0.85em;
+}
+
+/* LIGNE 2 : CONTEXTE */
+.jsb-autocomplete-context {
+    color: #495057;
+    font-size: 0.82em;
+    padding: 6px 0;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 10px;
+    row-gap: 2px;
+    align-items: center;
+}
+
+.jsb-context-separator {
+    color: #adb5bd;
+}
+
+/* LIGNE 3 : GRILLE DES INDICATEURS FINANCIERS */
+.jsb-autocomplete-indicators {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 4 colonnes */
+    gap: 10px;
+    background-color: #f8f9fa; /* Fond gris très clair */
+    border-left: 4px solid #0047AB; /* Bordure Cobalt */
+    padding: 10px;
+    border-radius: 0 6px 6px 0;
+    margin-top: 8px;
+}
+
+.jsb-indicator-label {
+    display: block;
+    font-size: 0.7rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    margin-bottom: 1px;
+}
+
+.jsb-indicator-value {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #212529;
+}
+
+/* Variantes de couleurs pour les valeurs */
+.jsb-indicator-value.text-success { color: #198754 !important; }
+.jsb-indicator-value.text-danger { color: #dc3545 !important; }
+.jsb-indicator-value.text-cobalt { color: #0047AB !important; }

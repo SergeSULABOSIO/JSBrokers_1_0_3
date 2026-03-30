@@ -61,47 +61,36 @@ class TrancheAutocompleteField extends AbstractType
 
                 $tauxAffiche = $tranche->tauxTranche ?? 0.0; // La valeur est déjà en pourcentage via la stratégie
 
-                // Formatage HTML enrichi avec la charte bleue cobalt et les puces
                 return sprintf(
-                    '<div data-taux="%f" data-prime="%f" data-paye="%f" data-solde="%f" data-taxe-courtier="%f" data-taxe-assureur="%f" data-commission-pure="%f" data-reserve="%f" data-retrocom="%f" style="margin-top: 5px;">
-                        <strong>%s</strong>
-                        <div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">
-                            Réf Police: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Assureur: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Client: %s
+                    '<div class="jsb-autocomplete-item" data-taux="%f">
+                        <!-- BLOC 1 : TITRE -->
+                        <div class="jsb-autocomplete-title">%s <span class="jsb-autocomplete-title-suffix">(Taux: %s)</span></div>
+                        <!-- BLOC 2 : CONTEXTE -->
+                        <div class="jsb-autocomplete-context">
+                            <span>Police: <strong>%s</strong></span>
+                            <span class="jsb-context-separator">|</span>
+                            <span>Assureur: <strong>%s</strong></span>
+                            <span class="jsb-context-separator">|</span>
+                            <span>Client: <strong>%s</strong></span>
                         </div>
-                        <div style="color: #0047AB; font-weight: bold; font-size: 0.85em; padding-left: 2px; margin-top: 4px; border-top: 1px dashed #ccc; padding-top: 2px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px;">
-                            <span title="Taux de la tranche">Taux: %s</span>
-                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
-                            <span title="Prime TTC calculée pour cette tranche">Prime: %s</span>
-                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
-                            <span title="Montant payé sur cette tranche">Payé: %s</span>
-                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
-                            <span title="Solde restant dû">Solde: %s</span>
-                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
-                            <span title="Taxe à la charge du courtier (Ex: ARCA)">Taxe Courtier: %s</span>
-                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
-                            <span title="Taxe à la charge de l\'assureur (Ex: TVA)">Taxe Assureur: %s</span>
-                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
-                            <span title="Commission pure (assiette partageable)">Com. Pure: %s</span>
-                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
-                            <span title="Réserve calculée">Réserve: %s</span>
-                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
-                            <span title="Rétrocommission associée à cette tranche">Rétro: %s</span>
+                        <!-- BLOC 3 : INDICATEURS -->
+                        <div class="jsb-autocomplete-indicators">
+                            <div><span class="jsb-indicator-label">Prime TTC</span><span class="jsb-indicator-value">%s</span></div>
+                            <div><span class="jsb-indicator-label">Encaissé</span><span class="jsb-indicator-value text-success">%s</span></div>
+                            <div><span class="jsb-indicator-label">Solde</span><span class="jsb-indicator-value text-danger">%s</span></div>
+                            <div><span class="jsb-indicator-label">Com. Pure</span><span class="jsb-indicator-value text-cobalt">%s</span></div>
+                            <div><span class="jsb-indicator-label">Réserve</span><span class="jsb-indicator-value">%s</span></div>
+                            <div><span class="jsb-indicator-label">Rétro</span><span class="jsb-indicator-value">%s</span></div>
+                            <div><span class="jsb-indicator-label">T. Courtier</span><span class="jsb-indicator-value">%s</span></div>
+                            <div><span class="jsb-indicator-label">T. Assureur</span><span class="jsb-indicator-value">%s</span></div>
                         </div>
                     </div>',
-                    $tranche->tauxTranche ?? 0.0, // Taux de la tranche (pour data-taux)
-                    $prime, // pour data-prime
-                    $paye, // pour data-paye
-                    $solde, // pour data-solde
-                    $taxeCourtier, // pour data-taxe-courtier
-                    $taxeAssureur, // pour data-taxe-assureur
-                    $commissionPure, // pour data-commission-pure
-                    $reserve, // pour data-reserve
-                    $retrocom, // pour data-retrocom
+                    $tranche->tauxTranche ?? 0.0,
                     htmlspecialchars($tranche->getNom() ?? 'Tranche sans nom'),
+                    number_format((float)$tauxAffiche, 2, ',', ' ') . '%',
                     htmlspecialchars($policeRef),
                     htmlspecialchars($assureurNom),
                     htmlspecialchars($clientNom),
-                    number_format((float)$tauxAffiche, 2, ',', ' ') . '%', // Ajout du taux affiché
                     number_format((float)$prime, 2, ',', ' '),
                     number_format((float)$paye, 2, ',', ' '),
                     number_format((float)$solde, 2, ',', ' '),

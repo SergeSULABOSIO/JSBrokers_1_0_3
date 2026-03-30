@@ -71,32 +71,33 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
                 }
 
                 // 3. Formatage HTML enrichi
-                // Utilisation de puces (&bull;) élégantes et discrètes entre les attributs
                 return sprintf(
-                    '<div data-montant-ttc="%f" style="margin-top: 5px;">
-                        <strong>%s</strong>
-                        <div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">
-                            Réf Police: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Assureur: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Client: %s <span style="color: #adb5bd; margin: 0 4px;">&bull;</span> Tranches: %d
+                    '<div class="jsb-autocomplete-item" data-montant-ttc="%f">
+                        <!-- BLOC 1 : TITRE -->
+                        <div class="jsb-autocomplete-title">%s</div>
+                        <!-- BLOC 2 : CONTEXTE -->
+                        <div class="jsb-autocomplete-context">
+                            <span>Police: <strong>%s</strong></span>
+                            <span class="jsb-context-separator">|</span>
+                            <span>Assureur: <strong>%s</strong></span>
+                            <span class="jsb-context-separator">|</span>
+                            <span>Client: <strong>%s</strong></span>
+                            <span class="jsb-context-separator">|</span>
+                            <span class="badge bg-secondary">%d tranches</span>
                         </div>
-                        <div style="color: #0047AB; font-weight: bold; font-size: 0.85em; padding-left: 2px; margin-top: 4px; border-top: 1px dashed #ccc; padding-top: 2px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px;">
-                            <span title="Montant TTC calculé">Valeur TTC: %s</span>
-                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
-                            <span title="Montant payé">Payé: %s</span>
-                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
-                            <span title="Solde restant dû">Solde: %s</span>
-                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
-                            <span title="Taxe à la charge du courtier (Ex: ARCA)">Taxe Courtier: %s</span>
-                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
-                            <span title="Taxe à la charge de l\'assureur (Ex: TVA)">Taxe Assureur: %s</span>
-                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
-                            <span title="Commission pure (assiette partageable)">Com. Pure: %s</span>
-                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
-                            <span title="Réserve calculée">Réserve: %s</span>
-                            <span style="color: #adb5bd; font-weight: normal;">&bull;</span>
-                            <span title="Rétrocommission au partenaire">Rétro (%s): %s</span>
+                        <!-- BLOC 3 : INDICATEURS -->
+                        <div class="jsb-autocomplete-indicators">
+                            <div><span class="jsb-indicator-label">Valeur TTC</span><span class="jsb-indicator-value">%s</span></div>
+                            <div><span class="jsb-indicator-label">Total Payé</span><span class="jsb-indicator-value text-success">%s</span></div>
+                            <div><span class="jsb-indicator-label">Solde Dû</span><span class="jsb-indicator-value text-danger">%s</span></div>
+                            <div><span class="jsb-indicator-label">Com. Pure</span><span class="jsb-indicator-value text-cobalt">%s</span></div>
+                            <div><span class="jsb-indicator-label">Réserve</span><span class="jsb-indicator-value">%s</span></div>
+                            <div><span class="jsb-indicator-label">Rétro (%s)</span><span class="jsb-indicator-value">%s</span></div>
+                            <div><span class="jsb-indicator-label">T. Courtier</span><span class="jsb-indicator-value">%s</span></div>
+                            <div><span class="jsb-indicator-label">T. Assureur</span><span class="jsb-indicator-value">%s</span></div>
                         </div>
                     </div>',
-                    $revenuTTC, // Montant TTC
+                    $revenuTTC,
                     htmlspecialchars($revenu->getNom() ?? 'Sans nom'),
                     htmlspecialchars($policeRef),
                     htmlspecialchars($assureurNom),
@@ -105,12 +106,12 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
                     number_format((float)$revenuTTC, 2, ',', ' '),
                     number_format((float)$montantPaye, 2, ',', ' '),
                     number_format((float)$soldeRestantDu, 2, ',', ' '),
-                    number_format((float)$taxeCourtier, 2, ',', ' '),
-                    number_format((float)$taxeAssureur, 2, ',', ' '),
                     number_format((float)$commissionPure, 2, ',', ' '),
                     number_format((float)$reserve, 2, ',', ' '),
                     htmlspecialchars($partenaireNom),
-                    number_format((float)$retrocom, 2, ',', ' ')
+                    number_format((float)$retrocom, 2, ',', ' '),
+                    number_format((float)$taxeCourtier, 2, ',', ' '),
+                    number_format((float)$taxeAssureur, 2, ',', ' ')
                 );
             }
         ]);
