@@ -48,18 +48,34 @@ class TrancheAutocompleteField extends AbstractType
                 $this->canvasBuilder->loadAllCalculatedValues($tranche);
 
                 // Extraction des indicateurs financiers hydratés
-                $prime = $tranche->primeTranche ?? $tranche->montant_du ?? 0.0;
-                $paye = $tranche->primePayee ?? $tranche->montant_paye ?? 0.0;
-                $solde = $tranche->primeSoldeDue ?? $tranche->solde_restant_du ?? 0.0;
-                
+                $primeTTC = $tranche->primeTranche ?? 0.0;
+                $primePayee = $tranche->primePayee ?? 0.0;
+                $primeSolde = $tranche->primeSoldeDue ?? 0.0;
+
+                $comTTC = $tranche->montant_du ?? 0.0;
+                $comEncaissée = $tranche->montant_paye ?? 0.0;
+                $comSolde = $tranche->solde_restant_du ?? 0.0;
+
+                $retroDue = $tranche->retroCommission ?? 0.0;
+                $retroPayee = $tranche->retroCommissionReversee ?? 0.0;
+                $retroSolde = $tranche->retroCommissionSolde ?? 0.0;
+
                 $taxeCourtier = $tranche->taxeCourtierMontant ?? 0.0;
+                $taxeCPayee = $tranche->taxeCourtierPayee ?? 0.0;
+                $taxeCSolde = $tranche->taxeCourtierSolde ?? 0.0;
+
                 $taxeAssureur = $tranche->taxeAssureurMontant ?? 0.0;
-                
-                $commissionPure = $tranche->montantPur ?? 0.0;
-                $reserve = $tranche->reserve ?? 0.0;
-                $retrocom = $tranche->retroCommission ?? 0.0;
+                $taxeAPayee = $tranche->taxeAssureurPayee ?? 0.0;
+                $taxeASolde = $tranche->taxeAssureurSolde ?? 0.0;
 
                 $tauxAffiche = $tranche->tauxTranche ?? 0.0; // La valeur est déjà en pourcentage via la stratégie
+
+                // Classes CSS pour les soldes (Rouge si != 0, Vert si == 0)
+                $clsPS = abs($primeSolde) < 0.01 ? 'text-success' : 'text-danger';
+                $clsCS = abs($comSolde) < 0.01 ? 'text-success' : 'text-danger';
+                $clsRS = abs($retroSolde) < 0.01 ? 'text-success' : 'text-danger';
+                $clsTCS = abs($taxeCSolde) < 0.01 ? 'text-success' : 'text-danger';
+                $clsTAS = abs($taxeASolde) < 0.01 ? 'text-success' : 'text-danger';
 
                 return sprintf(
                     '<div class="jsb-autocomplete-item" data-taux="%f">
@@ -75,14 +91,36 @@ class TrancheAutocompleteField extends AbstractType
                         </div>
                         <!-- BLOC 3 : INDICATEURS -->
                         <div class="jsb-autocomplete-indicators">
-                            <div><span class="jsb-indicator-label">Prime TTC</span><span class="jsb-indicator-value">%s</span></div>
-                            <div><span class="jsb-indicator-label">Encaissé</span><span class="jsb-indicator-value text-success">%s</span></div>
-                            <div><span class="jsb-indicator-label">Solde</span><span class="jsb-indicator-value text-danger">%s</span></div>
-                            <div><span class="jsb-indicator-label">Com. Pure</span><span class="jsb-indicator-value text-cobalt">%s</span></div>
-                            <div><span class="jsb-indicator-label">Réserve</span><span class="jsb-indicator-value">%s</span></div>
-                            <div><span class="jsb-indicator-label">Rétro</span><span class="jsb-indicator-value">%s</span></div>
-                            <div><span class="jsb-indicator-label">T. Courtier</span><span class="jsb-indicator-value">%s</span></div>
-                            <div><span class="jsb-indicator-label">T. Assureur</span><span class="jsb-indicator-value">%s</span></div>
+                            <!-- Colonne 1 : Prime -->
+                            <div>
+                                <div><span class="jsb-indicator-label">Prime TTC</span><span class="jsb-indicator-value">%s</span></div>
+                                <div><span class="jsb-indicator-label">Prime Payée</span><span class="jsb-indicator-value">%s</span></div>
+                                <div><span class="jsb-indicator-label">Solde</span><span class="jsb-indicator-value %s">%s</span></div>
+                            </div>
+                            <!-- Colonne 2 : Commission -->
+                            <div>
+                                <div><span class="jsb-indicator-label">Com. TTC</span><span class="jsb-indicator-value">%s</span></div>
+                                <div><span class="jsb-indicator-label">Com. Encaissée</span><span class="jsb-indicator-value">%s</span></div>
+                                <div><span class="jsb-indicator-label">Solde</span><span class="jsb-indicator-value %s">%s</span></div>
+                            </div>
+                            <!-- Colonne 3 : Rétrocommission -->
+                            <div>
+                                <div><span class="jsb-indicator-label">Rétro Dûe</span><span class="jsb-indicator-value">%s</span></div>
+                                <div><span class="jsb-indicator-label">Rétro Payée</span><span class="jsb-indicator-value">%s</span></div>
+                                <div><span class="jsb-indicator-label">Solde</span><span class="jsb-indicator-value %s">%s</span></div>
+                            </div>
+                            <!-- Colonne 4 : Taxe Courtier -->
+                            <div>
+                                <div><span class="jsb-indicator-label">Taxe Courtier</span><span class="jsb-indicator-value">%s</span></div>
+                                <div><span class="jsb-indicator-label">Taxe Payée</span><span class="jsb-indicator-value">%s</span></div>
+                                <div><span class="jsb-indicator-label">Solde</span><span class="jsb-indicator-value %s">%s</span></div>
+                            </div>
+                            <!-- Colonne 5 : Taxe Assureur -->
+                            <div>
+                                <div><span class="jsb-indicator-label">Taxe Assureur</span><span class="jsb-indicator-value">%s</span></div>
+                                <div><span class="jsb-indicator-label">Taxe Payée</span><span class="jsb-indicator-value">%s</span></div>
+                                <div><span class="jsb-indicator-label">Solde</span><span class="jsb-indicator-value %s">%s</span></div>
+                            </div>
                         </div>
                     </div>',
                     $tranche->tauxTranche ?? 0.0,
@@ -91,14 +129,21 @@ class TrancheAutocompleteField extends AbstractType
                     htmlspecialchars($policeRef),
                     htmlspecialchars($assureurNom),
                     htmlspecialchars($clientNom),
-                    number_format((float)$prime, 2, ',', ' '),
-                    number_format((float)$paye, 2, ',', ' '),
-                    number_format((float)$solde, 2, ',', ' '),
+                    number_format((float)$primeTTC, 2, ',', ' '),
+                    number_format((float)$primePayee, 2, ',', ' '),
+                    $clsPS, number_format((float)$primeSolde, 2, ',', ' '),
+                    number_format((float)$comTTC, 2, ',', ' '),
+                    number_format((float)$comEncaissée, 2, ',', ' '),
+                    $clsCS, number_format((float)$comSolde, 2, ',', ' '),
+                    number_format((float)$retroDue, 2, ',', ' '),
+                    number_format((float)$retroPayee, 2, ',', ' '),
+                    $clsRS, number_format((float)$retroSolde, 2, ',', ' '),
                     number_format((float)$taxeCourtier, 2, ',', ' '),
+                    number_format((float)$taxeCPayee, 2, ',', ' '),
+                    $clsTCS, number_format((float)$taxeCSolde, 2, ',', ' '),
                     number_format((float)$taxeAssureur, 2, ',', ' '),
-                    number_format((float)$commissionPure, 2, ',', ' '),
-                    number_format((float)$reserve, 2, ',', ' '),
-                    number_format((float)$retrocom, 2, ',', ' ')
+                    number_format((float)$taxeAPayee, 2, ',', ' '),
+                    $clsTAS, number_format((float)$taxeASolde, 2, ',', ' ')
                 );
             },
 

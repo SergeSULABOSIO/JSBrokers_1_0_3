@@ -45,18 +45,27 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
                 // MAGIE DU CANVAS BUILDER : On hydrate dynamiquement l'entité avec la stratégie
                 $this->canvasBuilder->loadAllCalculatedValues($revenu);
                 
-                // 1. Extraction des indicateurs financiers via les VRAIES clés de ta stratégie
-                $revenuTTC = $revenu->montantCalculeTTC ?? $revenu->montant_du ?? 0.0;
-                $montantPaye = $revenu->montant_paye ?? 0.0; // Correction : Utiliser la clé exacte de la stratégie
-                $soldeRestantDu = $revenu->solde_restant_du ?? 0.0; // Correction : Utiliser la clé exacte
-                $taxeCourtier = $revenu->taxeCourtierMontant ?? 0.0;
-                $taxeAssureur = $revenu->taxeAssureurMontant ?? 0.0;
-                
-                // NOUVEAU: Extraction de la commission pure, réserve et rétrocommission
-                $commissionPure = $revenu->montantPur ?? 0.0; 
+                // 1. Extraction des indicateurs financiers (Basé sur RevenuPourCourtier.php)
+                $comTTC = $revenu->montantCalculeTTC ?? 0.0;
+                $comPayee = $revenu->montant_paye ?? 0.0;
+                $comSolde = $revenu->solde_restant_du ?? 0.0;
+
+                $comHT = $revenu->montantCalculeHT ?? 0.0;
+                $comPure = $revenu->montantPur ?? 0.0;
                 $reserve = $revenu->reserve ?? 0.0;
-                $retrocom = $revenu->retroCommission ?? 0.0; // Correction : Case sensitive (C majuscule)
-                
+
+                $retroDue = $revenu->retroCommission ?? 0.0;
+                $retroPayee = $revenu->retroCommissionReversee ?? 0.0;
+                $retroSolde = $revenu->retroCommissionSolde ?? 0.0;
+
+                $taxeCMontant = $revenu->taxeCourtierMontant ?? 0.0;
+                $taxeCPayee = $revenu->taxeCourtierPayee ?? 0.0;
+                $taxeCSolde = $revenu->taxeCourtierSolde ?? 0.0;
+
+                $taxeAMontant = $revenu->taxeAssureurMontant ?? 0.0;
+                $taxeAPayee = $revenu->taxeAssureurPayee ?? 0.0;
+                $taxeASolde = $revenu->taxeAssureurSolde ?? 0.0;
+
                 // Tente de récupérer le nom du partenaire via les clés hydratées, sinon via les entités liées
                 $partenaireNom = $revenu->partenaireNom ?? $revenu->partenaire_nom ?? null;
                 if (!$partenaireNom && $piste && method_exists($piste, 'getPartenaires') && !$piste->getPartenaires()->isEmpty()) {
@@ -70,9 +79,16 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
                     $nombreTranches = $cotation->getTranches()->count();
                 }
 
+                // Classes CSS pour les soldes (Rouge si != 0, Vert si == 0)
+                // Note: On utilise un delta de 0.01 pour les comparaisons de flottants
+                $clsCS = abs($comSolde) < 0.01 ? 'text-success' : 'text-danger';
+                $clsRS = abs($retroSolde) < 0.01 ? 'text-success' : 'text-danger';
+                $clsTCS = abs($taxeCSolde) < 0.01 ? 'text-success' : 'text-danger';
+                $clsTAS = abs($taxeASolde) < 0.01 ? 'text-success' : 'text-danger';
+
                 // 3. Formatage HTML enrichi
                 return sprintf(
-                    '<div class="jsb-autocomplete-item" data-montant-ttc="%f">
+                    '<div class="jsb-autocomplete-item" data-id="%d">
                         <!-- BLOC 1 : TITRE -->
                         <div class="jsb-autocomplete-title">%s</div>
                         <!-- BLOC 2 : CONTEXTE -->
@@ -87,31 +103,60 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
                         </div>
                         <!-- BLOC 3 : INDICATEURS -->
                         <div class="jsb-autocomplete-indicators">
-                            <div><span class="jsb-indicator-label">Valeur TTC</span><span class="jsb-indicator-value">%s</span></div>
-                            <div><span class="jsb-indicator-label">Total Payé</span><span class="jsb-indicator-value text-success">%s</span></div>
-                            <div><span class="jsb-indicator-label">Solde Dû</span><span class="jsb-indicator-value text-danger">%s</span></div>
-                            <div><span class="jsb-indicator-label">Com. Pure</span><span class="jsb-indicator-value text-cobalt">%s</span></div>
-                            <div><span class="jsb-indicator-label">Réserve</span><span class="jsb-indicator-value">%s</span></div>
-                            <div><span class="jsb-indicator-label">Rétro (%s)</span><span class="jsb-indicator-value">%s</span></div>
-                            <div><span class="jsb-indicator-label">T. Courtier</span><span class="jsb-indicator-value">%s</span></div>
-                            <div><span class="jsb-indicator-label">T. Assureur</span><span class="jsb-indicator-value">%s</span></div>
+                            <!-- Colonne 1 : Commission TTC -->
+                            <div>
+                                <div><span class="jsb-indicator-label">Com. TTC</span><span class="jsb-indicator-value">%s</span></div>
+                                <div><span class="jsb-indicator-label">Encaissée</span><span class="jsb-indicator-value">%s</span></div>
+                                <div><span class="jsb-indicator-label">Solde</span><span class="jsb-indicator-value %s">%s</span></div>
+                            </div>
+                            <!-- Colonne 2 : Détails HT -->
+                            <div>
+                                <div><span class="jsb-indicator-label">Com. HT</span><span class="jsb-indicator-value">%s</span></div>
+                                <div><span class="jsb-indicator-label">Com. Pure</span><span class="jsb-indicator-value text-cobalt">%s</span></div>
+                                <div><span class="jsb-indicator-label">Réserve</span><span class="jsb-indicator-value">%s</span></div>
+                            </div>
+                            <!-- Colonne 3 : Rétrocommission -->
+                            <div>
+                                <div><span class="jsb-indicator-label">Rétro (%s)</span><span class="jsb-indicator-value">%s</span></div>
+                                <div><span class="jsb-indicator-label">Rétro Payée</span><span class="jsb-indicator-value">%s</span></div>
+                                <div><span class="jsb-indicator-label">Solde</span><span class="jsb-indicator-value %s">%s</span></div>
+                            </div>
+                            <!-- Colonne 4 : Taxe Courtier -->
+                            <div>
+                                <div><span class="jsb-indicator-label">T. Courtier</span><span class="jsb-indicator-value">%s</span></div>
+                                <div><span class="jsb-indicator-label">Taxe Payée</span><span class="jsb-indicator-value">%s</span></div>
+                                <div><span class="jsb-indicator-label">Solde</span><span class="jsb-indicator-value %s">%s</span></div>
+                            </div>
+                            <!-- Colonne 5 : Taxe Assureur -->
+                            <div>
+                                <div><span class="jsb-indicator-label">T. Assureur</span><span class="jsb-indicator-value">%s</span></div>
+                                <div><span class="jsb-indicator-label">Taxe Payée</span><span class="jsb-indicator-value">%s</span></div>
+                                <div><span class="jsb-indicator-label">Solde</span><span class="jsb-indicator-value %s">%s</span></div>
+                            </div>
                         </div>
                     </div>',
-                    $revenuTTC,
+                    $revenu->getId(),
                     htmlspecialchars($revenu->getNom() ?? 'Sans nom'),
                     htmlspecialchars($policeRef),
                     htmlspecialchars($assureurNom),
                     htmlspecialchars($clientNom),
                     $nombreTranches,
-                    number_format((float)$revenuTTC, 2, ',', ' '),
-                    number_format((float)$montantPaye, 2, ',', ' '),
-                    number_format((float)$soldeRestantDu, 2, ',', ' '),
-                    number_format((float)$commissionPure, 2, ',', ' '),
+                    number_format((float)$comTTC, 2, ',', ' '),
+                    number_format((float)$comPayee, 2, ',', ' '),
+                    $clsCS, number_format((float)$comSolde, 2, ',', ' '),
+                    number_format((float)$comHT, 2, ',', ' '),
+                    number_format((float)$comPure, 2, ',', ' '),
                     number_format((float)$reserve, 2, ',', ' '),
                     htmlspecialchars($partenaireNom),
-                    number_format((float)$retrocom, 2, ',', ' '),
-                    number_format((float)$taxeCourtier, 2, ',', ' '),
-                    number_format((float)$taxeAssureur, 2, ',', ' ')
+                    number_format((float)$retroDue, 2, ',', ' '),
+                    number_format((float)$retroPayee, 2, ',', ' '),
+                    $clsRS, number_format((float)$retroSolde, 2, ',', ' '),
+                    number_format((float)$taxeCMontant, 2, ',', ' '),
+                    number_format((float)$taxeCPayee, 2, ',', ' '),
+                    $clsTCS, number_format((float)$taxeCSolde, 2, ',', ' '),
+                    number_format((float)$taxeAMontant, 2, ',', ' '),
+                    number_format((float)$taxeAPayee, 2, ',', ' '),
+                    $clsTAS, number_format((float)$taxeASolde, 2, ',', ' ')
                 );
             }
         ]);

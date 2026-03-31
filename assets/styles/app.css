@@ -1477,7 +1477,7 @@ textarea:hover,
 /* LIGNE 3 : GRILLE DES INDICATEURS FINANCIERS */
 .jsb-autocomplete-indicators {
     display: grid;
-    grid-template-columns: repeat(4, 1fr); /* 4 colonnes */
+    grid-template-columns: repeat(5, 1fr); /* 5 colonnes */
     gap: 10px;
     background-color: #f8f9fa; /* Fond gris très clair */
     border-left: 4px solid #0047AB; /* Bordure Cobalt */
