@@ -55,6 +55,17 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
         $visibilityAutorite = ['visibility_conditions' => [['field' => 'addressedTo', 'operator' => 'in', 'value' => [Note::TO_AUTORITE_FISCALE]]]];
         $visibilityComptes = ['visibility_conditions' => [['field' => 'type', 'operator' => 'in', 'value' => [Note::TYPE_NOTE_DE_DEBIT]]]];
 
+        // --- Configuration de la collection d'articles (Totalisable comme dans Cotation) ---
+        $articlesExtra = ['totalizableField' => 'montantArticle'];
+        if (!$isParentNew) {
+            $total = 0;
+            foreach ($object->getArticles() as $article) {
+                $this->canvasBuilder->loadAllCalculatedValues($article);
+                $total += $article->montantArticle ?? 0;
+            }
+            $articlesExtra['totalValue'] = $total;
+        }
+
         $layout = [
             // Ligne 1: le type
             ["colonnes" => [["champs" => ["type"]]]],
@@ -78,7 +89,7 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
             // Ligne 9: Collection d'articles
             [
                 "colonnes" => [[
-                    "champs" => [$this->getCollectionWidgetConfig('articles', 'article', $noteId, 'Article', 'note', null, $isParentNew)]
+                    "champs" => [$this->getCollectionWidgetConfig('articles', 'article', $noteId, 'Article', 'note', null, $isParentNew, $articlesExtra)]
                 ]]
             ],
 
