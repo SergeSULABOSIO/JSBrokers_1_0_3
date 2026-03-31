@@ -40,7 +40,9 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
         return [
             "parametres" => $parametres,
             "form_layout" => $layout,
-            "fields_map" => $this->buildFieldsMap($layout)
+            "fields_map" => $this->buildFieldsMap($layout),
+            "idEntreprise" => $idEntreprise,
+            "idInvite" => $object->getInvite()?->getId(),
         ];
     }
 
