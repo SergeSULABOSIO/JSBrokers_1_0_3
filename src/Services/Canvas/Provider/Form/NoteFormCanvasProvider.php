@@ -23,10 +23,11 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
 
     public function getCanvas(object $object, ?int $idEntreprise): array
     {
+        // Debug : Vérifie si l'invité est bien présent sur la Note (injecté par l'initializer du Controller)
+        dd($object, $object->getInvite(), $idEntreprise); 
+
         /** @var Note $object */
         $isParentNew = ($object->getId() === null);
-        $noteId = $object->getId() ?? 0;
-        $idInvite = $object->getInvite()?->getId();
 
         $parametres = [
             "titre_creation" => "Nouvelle Note",
@@ -36,16 +37,16 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/note/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildNoteLayout($object, $isParentNew, $idEntreprise, $idInvite);
+        $layout = $this->buildNoteLayout($object, $isParentNew);
 
         return [
             "parametres" => $parametres,
             "form_layout" => $layout,
-            "fields_map" => $this->buildFieldsMap($layout)
+            "fields_map" => $this->buildFieldsMap($layout),
         ];
     }
 
-    private function buildNoteLayout(Note $object, bool $isParentNew, ?int $idEntreprise, ?int $idInvite): array
+    private function buildNoteLayout(Note $object, bool $isParentNew): array
     {
         $noteId = $object->getId() ?? 0;
 
@@ -94,7 +95,7 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
             ['fieldName' => 'paiements', 'entityRouteName' => 'paiement', 'formTitle' => 'Paiement', 'parentFieldName' => 'note'],
         ];
 
-        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections, $idEntreprise, $idInvite);
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 
         return $layout;
     }
