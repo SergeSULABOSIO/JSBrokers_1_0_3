@@ -4,7 +4,7 @@ namespace App\Services\Canvas\Provider\Form;
 
 trait FormCanvasProviderTrait
 {
-    private function addCollectionWidgetsToLayout(array &$layout, object $parentEntity, bool $isParentNew, array $collectionsConfig): void
+    private function addCollectionWidgetsToLayout(array &$layout, object $parentEntity, bool $isParentNew, array $collectionsConfig, ?int $idEntreprise = null, ?int $idInvite = null): void
     {
         $parentId = $parentEntity->getId() ?? 0;
         foreach ($collectionsConfig as $config) {
@@ -50,14 +50,16 @@ trait FormCanvasProviderTrait
                         $config['parentFieldName'],
                         $config['defaultValueConfig'] ?? null,
                         $isParentNew,
-                        $extraOptions
+                        $extraOptions,
+                        $idEntreprise,
+                        $idInvite
                     )]],
                 ]
             ];
         }
     }
 
-    private function getCollectionWidgetConfig(string $fieldName, string $entityRouteName, int $parentId, string $formtitle, string $parentFieldName, ?array $defaultValueConfig = null, bool $isParentNew = false, array $extraOptions = []): array
+    private function getCollectionWidgetConfig(string $fieldName, string $entityRouteName, int $parentId, string $formtitle, string $parentFieldName, ?array $defaultValueConfig = null, bool $isParentNew = false, array $extraOptions = [], ?int $idEntreprise = null, ?int $idInvite = null): array
     {
         $config = [
             "field_code" => $fieldName,
@@ -73,6 +75,8 @@ trait FormCanvasProviderTrait
                 "parentFieldName" => $parentFieldName,
                 "disabled" => $isParentNew,
                 "url" => "/admin/" . strtolower($parentFieldName) . "/api/" . $parentId . "/" . $fieldName,
+                "idEntreprise" => $idEntreprise,
+                "idInvite" => $idInvite,
             ]
         ];
 
