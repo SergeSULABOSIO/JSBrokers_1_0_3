@@ -385,7 +385,6 @@ trait ControllerUtilsTrait
                 $initializer($entity, $invite);
             }
         }
-
         $formCanvas = $this->canvasBuilder->getEntityFormCanvas($entity, $entreprise->getId());
 
         // NOUVEAU : Injection dynamique du champ parent pour les collections polymorphes.
