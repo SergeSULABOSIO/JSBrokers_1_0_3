@@ -92,7 +92,14 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
 
         $collections = [
             ['fieldName' => 'articles', 'entityRouteName' => 'article', 'formTitle' => 'Article', 'parentFieldName' => 'note', 'totalizableField' => 'montantArticle'],
-            ['fieldName' => 'paiements', 'entityRouteName' => 'paiement', 'formTitle' => 'Paiement', 'parentFieldName' => 'note', 'totalizableField' => 'montantPaiement'],
+            [
+                'fieldName' => 'paiements',
+                'entityRouteName' => 'paiement',
+                'formTitle' => 'Paiement',
+                'parentFieldName' => 'note',
+                'totalizableField' => 'montantPaiement',
+                'disabled' => ($object->solde !== null && $object->solde <= 0) // Désactive le bouton si le solde est nul ou négatif
+            ],
         ];
 
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
