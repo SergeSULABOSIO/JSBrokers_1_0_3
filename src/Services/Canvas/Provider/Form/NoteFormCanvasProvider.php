@@ -98,9 +98,12 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
                 'formTitle' => 'Paiement',
                 'parentFieldName' => 'note',
                 'totalizableField' => 'montantPaiement',
-                'disabled' => ($object->solde !== null && $object->solde <= 0) // Désactive le bouton si le solde est nul ou négatif
+                // Désactive si le solde est explicitement 0 ou moins (Note soldée)
+                'disabled' => ($object->solde !== null && (float)$object->solde <= 0)
             ],
         ];
+
+        dump("[NoteProvider] Évaluation bouton Paiement - Solde: " . ($object->solde ?? 'NULL') . " - Désactivé: " . ($object->solde !== null && (float)$object->solde <= 0 ? 'OUI' : 'NON'));
 
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 
