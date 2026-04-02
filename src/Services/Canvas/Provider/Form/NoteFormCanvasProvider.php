@@ -92,7 +92,7 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
 
         $collections = [
             ['fieldName' => 'articles', 'entityRouteName' => 'article', 'formTitle' => 'Article', 'parentFieldName' => 'note', 'totalizableField' => 'montantArticle'],
-            ['fieldName' => 'paiements', 'entityRouteName' => 'paiement', 'formTitle' => 'Paiement', 'parentFieldName' => 'note'],
+            ['fieldName' => 'paiements', 'entityRouteName' => 'paiement', 'formTitle' => 'Paiement', 'parentFieldName' => 'note', 'totalizableField' => 'montantPaiement'],
         ];
 
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
