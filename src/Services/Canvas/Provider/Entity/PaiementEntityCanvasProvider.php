@@ -50,11 +50,13 @@ class PaiementEntityCanvasProvider implements EntityCanvasProviderInterface
 
     private function getSpecificIndicators(): array
     {
+        $monnaie = $this->serviceMonnaies->getCodeMonnaieAffichage();
         return [
             ["group" => "Contexte", "code" => "typePaiement", "intitule" => "Type", "type" => "Calcul", "format" => "Texte", "description" => "Nature du paiement (Prime ou Sinistre)."],
             ["group" => "Contexte", "code" => "contexte", "intitule" => "Dossier", "type" => "Calcul", "format" => "Texte", "description" => "Référence du dossier associé (Note ou Sinistre)."],
             ["group" => "Détails Police", "code" => "referencePolice", "intitule" => "Réf. Police", "type" => "Calcul", "format" => "Texte", "description" => "Police d'assurance concernée."],
             ["group" => "Détails Police", "code" => "clientNom", "intitule" => "Client / Assuré", "type" => "Calcul", "format" => "Texte", "description" => "Nom du client ou de l'assuré concerné."],
+            ["group" => "Finances", "code" => "montantPaiement", "intitule" => "Montant du Paiement", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Le montant payé."],
         ];
     }
 }

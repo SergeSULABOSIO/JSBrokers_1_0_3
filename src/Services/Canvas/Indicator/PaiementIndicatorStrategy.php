@@ -62,6 +62,7 @@ class PaiementIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'referencePolice' => $refPolice,
             'clientNom' => $clientNom,
             'contexte' => $contexte,
+            'montantPaiement' => $entity->getMontant() ?? 0.0,
         ];
     }
 

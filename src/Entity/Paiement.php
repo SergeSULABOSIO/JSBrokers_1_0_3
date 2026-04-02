@@ -74,6 +74,9 @@ class Paiement
     #[Groups(['list:read'])]
     public ?string $contexte = null;
 
+    #[Groups(['list:read'])]
+    public ?float $montantPaiement = null;
+
     public function __construct()
     {
         $this->preuves = new ArrayCollection();
