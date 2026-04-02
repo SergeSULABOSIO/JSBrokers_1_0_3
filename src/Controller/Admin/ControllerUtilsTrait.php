@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controller\Admin;
 
 use App\Entity\Assureur;
@@ -130,7 +131,8 @@ trait ControllerUtilsTrait
      * @param string $collectionFieldName Le 'field_code' du widget de collection à trouver.
      * @return array Les options trouvées, ou un tableau vide.
      */
-    private function getCollectionOptionsFromCanvas(array $entityFormCanvas, string $collectionFieldName): array {
+    private function getCollectionOptionsFromCanvas(array $entityFormCanvas, string $collectionFieldName): array
+    {
         // OPTIMISATION : On vérifie d'abord si une carte aplatie des champs existe.
         // Cette carte est générée par le FormCanvasProvider pour de meilleures performances.
         if (isset($entityFormCanvas['fields_map'][$collectionFieldName])) {
@@ -283,7 +285,7 @@ trait ControllerUtilsTrait
             $criteria = $payload['criteria'] ?? [];
             $criteria = array_merge($criteria, $extraCriteria);
             $parentContext = $payload['parentContext'] ?? null;
-            
+
             // Appel du service de recherche refactorisé et sécurisé
             // CORRECTION : On passe le contexte du parent au service de recherche.
             $searchResult = $this->searchService->search($entityClass, $criteria, $entreprise, $parentContext);
@@ -311,7 +313,7 @@ trait ControllerUtilsTrait
                 'html' => $html,
                 'numericAttributesAndValues' => $numericData
             ]);
-        } 
+        }
         // CAS 2: C'est le chargement initial de la page, on rend le conteneur principal.
         else {
             // NOUVEAU : On ne charge plus les données lors de l'affichage initial.
@@ -385,6 +387,8 @@ trait ControllerUtilsTrait
                 $initializer($entity, $invite);
             }
         }
+
+
         $formCanvas = $this->canvasBuilder->getEntityFormCanvas($entity, $entreprise->getId());
 
         // NOUVEAU : Injection dynamique du champ parent pour les collections polymorphes.
@@ -423,6 +427,8 @@ trait ControllerUtilsTrait
 
         $this->loadCalculatedValues($entityCanvas, $entity);
 
+        // dd("idEntreprise:", $entreprise->getId(), "idInvite:", $invite->getId(), "isCreationMode:", $isCreationMode, "canvas:", $formCanvas);
+
         return $this->render('components/dialog/_form_content.html.twig', [
             'form' => $form->createView(),
             'formCanvas' => $formCanvas, // On passe le canvas potentiellement modifié.
@@ -460,18 +466,18 @@ trait ControllerUtilsTrait
 
         $form = $this->createForm($formTypeClass, $entity);
 
-    // CORRECTION : S'assure que les champs à choix multiples (checkboxes) sont bien vidés.
-    // Quand un champ 'multiple' est soumis sans aucune option cochée, sa clé est absente des données POST.
-    // Le paramètre `clearMissing=false` dans `submit()` empêchait alors la mise à jour, conservant l'ancienne valeur.
-    // En ajoutant manuellement une clé avec un tableau vide pour les champs multiples absents,
-    // on force le formulaire à enregistrer la sélection vide.
-    foreach ($form->all() as $child) {
-        $config = $child->getConfig();
-        if ($config->getOption('multiple') === true && !array_key_exists($child->getName(), $submittedData)) {
-            $submittedData[$child->getName()] = [];
+        // CORRECTION : S'assure que les champs à choix multiples (checkboxes) sont bien vidés.
+        // Quand un champ 'multiple' est soumis sans aucune option cochée, sa clé est absente des données POST.
+        // Le paramètre `clearMissing=false` dans `submit()` empêchait alors la mise à jour, conservant l'ancienne valeur.
+        // En ajoutant manuellement une clé avec un tableau vide pour les champs multiples absents,
+        // on force le formulaire à enregistrer la sélection vide.
+        foreach ($form->all() as $child) {
+            $config = $child->getConfig();
+            if ($config->getOption('multiple') === true && !array_key_exists($child->getName(), $submittedData)) {
+                $submittedData[$child->getName()] = [];
+            }
         }
-    }
-    $form->submit($submittedData, false); // Le paramètre `false` est maintenant sûr.
+        $form->submit($submittedData, false); // Le paramètre `false` est maintenant sûr.
 
         if ($form->isSubmitted() && $form->isValid()) {
             // NOUVEAU : Logique pour associer l'entreprise et/ou l'invité si les IDs sont fournis
@@ -552,7 +558,7 @@ trait ControllerUtilsTrait
             $entityName = $this->getEntityName($entity);
             $this->em->remove($entity);
             $this->em->flush();
-            
+
             // Using (e) to be more generic with gender.
             return $this->json(['message' => ucfirst($entityName) . ' supprimé(e) avec succès.']);
         } catch (\Exception $e) {
@@ -772,7 +778,7 @@ trait ControllerUtilsTrait
                 Document::class => 'App\Controller\Admin\DocumentController::index',
                 Classeur::class => 'App\Controller\Admin\ClasseurController::index',
                 Invite::class => 'App\Controller\Admin\InviteController::index',
-          ],
+            ],
             //PARAMETRES
             '_mon_compte_component.html.twig' => 'App\Controller\RegistrationController::register',
             '_licence_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index', // TODO: A remplacer par le bon contrôleur

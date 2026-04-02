@@ -3,6 +3,8 @@
 namespace App\Form;
 
 use App\Entity\Note;
+use App\Services\FormListenerFactory;
+use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -14,6 +16,10 @@ use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 
 class NoteType extends AbstractType
 {
+    public function __construct(
+        private readonly FormListenerFactory $ecouteurFormulaire
+    ) {}
+
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
@@ -102,11 +108,12 @@ class NoteType extends AbstractType
                 'label' => "Articles de la note",
                 'entry_type' => ArticleType::class,
                 'by_reference' => false,
-                'allow_add' => false,
+                'allow_add' => true,
                 'allow_delete' => true,
                 'entry_options' => [
                     'label' => false,
                 ],
+                'mapped' => false,
             ])
             ->add('paiements', CollectionType::class, [
                 'label' => "Paiements liés",
@@ -118,7 +125,9 @@ class NoteType extends AbstractType
                 'entry_options' => [
                     'label' => false,
                 ],
+                'mapped' => false,
             ])
+            ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
             ->add('signedBy', TextType::class, [
                 'label' => "Signataire",
                 'required' => false,
