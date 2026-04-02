@@ -46,42 +46,48 @@ class PaiementType extends AbstractType
         $defaultMontant = null;
         $defaultDescription = null;
         $defaultCompte = null;
-        $defaultReference = null;
 
         // Logique spécifique au mode CRÉATION
-        if ($isCreationMode) {
-            // 1. Récupération de la note parente via le contexte (parent_id dans l'URL AJAX)
-            $noteId = $request?->query->get('parent_id');
-            if ($noteId) {
-                $note = $this->em->getRepository(Note::class)->find($noteId);
-            }
+        if ($isCreationMode && $paiement) {
+            // 1. Récupération de la note (déjà associée par le Controller via renderFormCanvas)
+            $note = $paiement->getNote();
+            
+            // Fallback : recherche via la requête si l'association n'est pas encore faite
+            $noteId = $note ? $note->getId() : $request?->query->get('parent_id');
+            $note = $note ?? ($noteId ? $this->em->getRepository(Note::class)->find($noteId) : null);
 
             if ($note) {
                 // 2. Calcul du montant par défaut (le solde de la note)
                 $payable = $this->calculationHelper->getNoteMontantPayable($note);
                 $paye = $this->calculationHelper->getNoteMontantPaye($note);
-                $solde = $payable - $paye;
+                $solde = (float)($payable - $paye);
                 $defaultMontant = $solde > 0 ? $solde : 0;
 
-                // 3. Génération de la référence automatique
-                $defaultReference = 'PAY-' . (new \DateTime())->format('dmY-His');
+                // 3. Génération de la référence automatique si absente
+                if (!$paiement->getReference()) {
+                    $paiement->setReference('PAY-' . (new \DateTime())->format('dmY-His'));
+                }
 
                 // 4. Identification du nom réel du destinataire (au lieu du label N/A)
-                $recipientName = match ($note->getAddressedTo()) {
-                    Note::TO_CLIENT => $note->getClient()?->getNom(),
-                    Note::TO_ASSUREUR => $note->getAssureur()?->getNom(),
-                    Note::TO_PARTENAIRE => $note->getPartenaire()?->getNom(),
-                    Note::TO_AUTORITE_FISCALE => $note->getAutoritefiscale()?->getNom(),
-                    default => 'Inconnu'
-                } ?? 'Non défini';
+                $recipient = match ($note->getAddressedTo()) {
+                    Note::TO_CLIENT => $note->getClient(),
+                    Note::TO_ASSUREUR => $note->getAssureur(),
+                    Note::TO_PARTENAIRE => $note->getPartenaire(),
+                    Note::TO_AUTORITE_FISCALE => $note->getAutoritefiscale(),
+                    default => null
+                };
+                $recipientName = $recipient ? $recipient->getNom() : 'Non défini';
 
                 // 5. Génération de la description automatique
-                $defaultDescription = sprintf(
-                    "Règlement relatif à la Note %s (%s). Destinataire : %s.",
-                    $note->getReference(),
-                    $note->getNom(),
-                    $recipientName
-                );
+                if (!$paiement->getDescription()) {
+                    $defaultDescription = sprintf(
+                        "Règlement relatif à la Note %s (%s). Destinataire : %s.",
+                        $note->getReference() ?? '#',
+                        $note->getNom() ?? 'N/A',
+                        $recipientName
+                    );
+                    $paiement->setDescription($defaultDescription);
+                }
             }
 
             // 6. Recherche du compte bancaire par défaut de l'entreprise
@@ -104,10 +110,10 @@ class PaiementType extends AbstractType
             ])
             ->add('reference', TextType::class, [
                 'required' => false,
-                'disabled' => true, // Comme dans NoteType
-                'data' => $isCreationMode ? $defaultReference : $paiement?->getReference(),
+                'disabled' => false, 
                 'label' => "Référence",
-                'attr' => ['placeholder' => "Générée automatiquement"],
+                // readonly empêche la saisie mais permet l'envoi de la valeur en POST
+                'attr' => ['readonly' => true, 'placeholder' => "Générée automatiquement"],
             ])
             ->add('description', TextareaType::class, [
                 'label' => "Description",

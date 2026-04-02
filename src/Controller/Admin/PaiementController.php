@@ -111,7 +111,6 @@ class PaiementController extends AbstractController
                     $paiement->setMontant((float)$defaultMontant);
                 }
                 $paiement->setPaidAt(new DateTimeImmutable("now"));
-                $paiement->setDescription("Descript. à générer automatiquement ici.");
             }
         );
     }
