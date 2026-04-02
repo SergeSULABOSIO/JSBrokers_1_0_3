@@ -24,7 +24,7 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
     public function getCanvas(object $object, ?int $idEntreprise): array
     {
         // Debug : Vérifie si l'invité est bien présent sur la Note (injecté par l'initializer du Controller)
-        dd($object, $object->getInvite(), $idEntreprise); 
+        // dd($object, $object->getInvite(), $idEntreprise); 
 
         /** @var Note $object */
         $isParentNew = ($object->getId() === null);
