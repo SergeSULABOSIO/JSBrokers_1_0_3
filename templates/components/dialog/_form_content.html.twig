@@ -66,9 +66,8 @@
                 {{ form_widget(form) }}
             {% endif %}
 
-            {# On rend le reste du formulaire uniquement si on n'a pas de layout #}
-            {# ou si on veut forcer l'apparition des champs non-mappés oubliés (comme articles/paiements) #}
-            {% set renderRest = (formCanvas.form_layout is not defined or formCanvas.form_layout is empty) %}
-            {{ form_end(form, {'render_rest': renderRest}) }}
+            {# On force render_rest à true pour s'assurer que les champs non-mappés (articles/paiements) #}
+            {# ne soient jamais oubliés si la boucle de layout ne les attrape pas parfaitement. #}
+            {{ form_end(form, {'render_rest': true}) }}
         </div>
     </div>
