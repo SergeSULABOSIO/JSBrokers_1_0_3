@@ -42,7 +42,7 @@ class NoteType extends AbstractType
                 'required' => false,
                 'attr' => [
                     'placeholder' => "Ajoutez des détails concernant cette note...",
-                    'rows' => 4,
+                    'class' => 'editeur-riche'
                 ],
             ])
             ->add('type', ChoiceType::class, [

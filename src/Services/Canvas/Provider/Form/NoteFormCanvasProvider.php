@@ -64,6 +64,8 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
             ["colonnes" => [["champs" => ["nom"]]]],
             // Ligne 3: la référence
             ["colonnes" => [["champs" => ["reference"]]]],
+            // Ligne 3.1: La description détaillée (Editeur riche)
+            ["colonnes" => [["champs" => ["description"]]]],
             // Ligne 4: A qui s'adresse la note (destinataire)
             ["colonnes" => [["champs" => ["addressedTo"]]]],
 
