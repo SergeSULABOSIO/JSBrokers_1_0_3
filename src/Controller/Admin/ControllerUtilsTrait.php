@@ -600,8 +600,7 @@ trait ControllerUtilsTrait
         }
         $parentEntity = $this->findParentOrNew($parentEntityClass, $id);
 
-        // Hydratation systématique du parent pour que les règles de visibilité/désactivation
-        // du canevas de formulaire soient basées sur des données à jour (ex: solde).
+        // Hydratation du parent lors de l'appel API pour maintenir l'état du bouton d'ajout
         $this->loadCalculatedValues(null, $parentEntity);
 
         // NOUVEAU : Déterminer si la collection est totalisable en inspectant le canvas du parent.

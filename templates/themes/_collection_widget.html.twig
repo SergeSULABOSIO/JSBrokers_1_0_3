@@ -8,11 +8,10 @@
 
     {# On détermine si l'accordéon lui-même doit être désactivé (clic bloqué). #}
     {# Il n'est désactivé QUE si nous sommes en mode création (parentEntityId == 0). #}
+    {# En mode édition (ID > 0), on veut toujours pouvoir ouvrir l'accordéon pour gérer les items existants. #}
     {% set isAccordionDisabled = (manager_options.parentEntityId|default(0) == 0) %}
     
-    {# CRUCIAL : On découple les options envoyées au contrôleur Stimulus. #}
-    {# Le contrôleur JS ne doit être "disabled" que si l'accordéon entier doit être bloqué. #}
-    {# Sinon, il empêcherait le dépliage (toggleAccordion). #}
+    {# On découple : le contrôleur JS n'est bloqué que si l'accordéon entier est inactif #}
     {% set stimulus_options = manager_options|merge({
         'disabled': isAccordionDisabled
     }) %}
