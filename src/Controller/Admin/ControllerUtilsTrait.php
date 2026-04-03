@@ -425,6 +425,8 @@ trait ControllerUtilsTrait
         $form = $this->createForm($formTypeClass, $entity);
         $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
 
+        // dd("idEntreprise:", $entreprise->getId(), "idInvite:", $invite->getId(), "isCreationMode:", $isCreationMode, "canvas:", $formCanvas);
+
         return $this->render('components/dialog/_form_content.html.twig', [
             'form' => $form->createView(),
             'formCanvas' => $formCanvas, // On passe le canvas potentiellement modifié.
@@ -598,7 +600,7 @@ trait ControllerUtilsTrait
         }
         $parentEntity = $this->findParentOrNew($parentEntityClass, $id);
 
-        // Hydratation du parent lors de l'appel API pour maintenir l'état du bouton d'ajout
+        // Hydratation systématique pour maintenir l'état du bouton d'ajout.
         $this->loadCalculatedValues(null, $parentEntity);
 
         // NOUVEAU : Déterminer si la collection est totalisable en inspectant le canvas du parent.
@@ -641,7 +643,8 @@ trait ControllerUtilsTrait
                 'html' => $html,
                 'totalValue' => $totalValue,
                 'totalUnit' => $totalUnit,
-                'itemCount' => count($data)
+                'itemCount' => count($data),
+                'isDisabled' => $collectionOptions['disabled'] ?? false
             ]);
         }
 
@@ -870,6 +873,9 @@ trait ControllerUtilsTrait
         if (!$entity) {
             throw new NotFoundHttpException("L'entité '$entityType' avec l'ID '$id' n'a pas été trouvée.");
         }
+
+        // Hydratation avant la génération du canevas pour les calculs de solde.
+        $this->loadCalculatedValues(null, $entity);
 
         $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
         // Cet appel unique charge maintenant TOUTES les valeurs calculées,
