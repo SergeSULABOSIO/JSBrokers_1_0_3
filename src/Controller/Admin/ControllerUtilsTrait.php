@@ -387,8 +387,8 @@ trait ControllerUtilsTrait
                 $initializer($entity, $invite);
             }
         }
-        
-        $this->loadCalculatedValues(null, $entity);
+
+
         $formCanvas = $this->canvasBuilder->getEntityFormCanvas($entity, $entreprise->getId());
 
         // NOUVEAU : Injection dynamique du champ parent pour les collections polymorphes.
@@ -599,6 +599,10 @@ trait ControllerUtilsTrait
             throw new NotFoundHttpException("La collection '$collectionName' n'existe pas ou n'est pas autorisée.");
         }
         $parentEntity = $this->findParentOrNew($parentEntityClass, $id);
+
+        // Hydratation systématique du parent pour que les règles de visibilité/désactivation
+        // du canevas de formulaire soient basées sur des données à jour (ex: solde).
+        $this->loadCalculatedValues(null, $parentEntity);
 
         // NOUVEAU : Déterminer si la collection est totalisable en inspectant le canvas du parent.
         $parentFormCanvas = $this->canvasBuilder->getEntityFormCanvas($parentEntity, $this->getEntreprise()->getId());
