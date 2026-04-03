@@ -66,8 +66,6 @@
                 {{ form_widget(form) }}
             {% endif %}
 
-            {# On force render_rest à true pour s'assurer que les champs non-mappés (articles/paiements) #}
-            {# ne soient jamais oubliés si la boucle de layout ne les attrape pas parfaitement. #}
             {{ form_end(form, {'render_rest': true}) }}
         </div>
     </div>
