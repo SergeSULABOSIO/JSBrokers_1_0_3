@@ -112,8 +112,6 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
             ],
         ];
 
-        dump("[NoteProvider] Évaluation bouton Paiement - Solde: " . ($object->solde ?? 'NULL') . " - Désactivé: " . ($object->solde !== null && (float)$object->solde <= 0 ? 'OUI' : 'NON'));
-
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
 
         return $layout;
