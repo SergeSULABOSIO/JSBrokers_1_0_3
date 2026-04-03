@@ -39,6 +39,11 @@ trait FormCanvasProviderTrait
                 $extraOptions['totalValue'] = $total;
             }
 
+            // On détermine si le widget doit être désactivé.
+            // Par défaut, on désactive en mode création ($isParentNew),
+            // SAUF si le provider a spécifié une règle personnalisée dans $config['disabled'].
+            $isDisabled = $config['disabled'] ?? $isParentNew;
+
             $layout[] = [
                 "couleur_fond" => "white",
                 "colonnes" => [
@@ -49,7 +54,7 @@ trait FormCanvasProviderTrait
                         $config['formTitle'],
                         $config['parentFieldName'],
                         $config['defaultValueConfig'] ?? null,
-                        $isParentNew,
+                        $isDisabled,
                         $extraOptions,
                         $idEntreprise,
                         $idInvite
@@ -59,7 +64,7 @@ trait FormCanvasProviderTrait
         }
     }
 
-    private function getCollectionWidgetConfig(string $fieldName, string $entityRouteName, int $parentId, string $formtitle, string $parentFieldName, ?array $defaultValueConfig = null, bool $isParentNew = false, array $extraOptions = [], ?int $idEntreprise = null, ?int $idInvite = null): array
+    private function getCollectionWidgetConfig(string $fieldName, string $entityRouteName, int $parentId, string $formtitle, string $parentFieldName, ?array $defaultValueConfig = null, bool $isDisabled = false, array $extraOptions = [], ?int $idEntreprise = null, ?int $idInvite = null): array
     {
         $config = [
             "field_code" => $fieldName,
@@ -73,7 +78,7 @@ trait FormCanvasProviderTrait
                 "itemTitleEdit" => "Modifier : " . $formtitle . " #%id%",
                 "parentEntityId" => $parentId,
                 "parentFieldName" => $parentFieldName,
-                "disabled" => $isParentNew,
+                "disabled" => $isDisabled,
                 "url" => "/admin/" . strtolower($parentFieldName) . "/api/" . $parentId . "/" . $fieldName,
                 "idEntreprise" => $idEntreprise,
                 "idInvite" => $idInvite,
