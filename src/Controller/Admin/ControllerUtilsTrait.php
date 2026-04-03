@@ -388,6 +388,9 @@ trait ControllerUtilsTrait
             }
         }
 
+        // Hydratation avant la génération du canevas pour que le Provider
+        // évalue correctement le solde (évite le solde NULL).
+        $this->loadCalculatedValues(null, $entity);
 
         $formCanvas = $this->canvasBuilder->getEntityFormCanvas($entity, $entreprise->getId());
 
