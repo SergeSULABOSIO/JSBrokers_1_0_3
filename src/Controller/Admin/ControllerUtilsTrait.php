@@ -425,8 +425,6 @@ trait ControllerUtilsTrait
         $form = $this->createForm($formTypeClass, $entity);
         $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
 
-        // dd("idEntreprise:", $entreprise->getId(), "idInvite:", $invite->getId(), "isCreationMode:", $isCreationMode, "canvas:", $formCanvas);
-
         return $this->render('components/dialog/_form_content.html.twig', [
             'form' => $form->createView(),
             'formCanvas' => $formCanvas, // On passe le canvas potentiellement modifié.
