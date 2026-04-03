@@ -127,7 +127,6 @@ class NoteType extends AbstractType
                 ],
                 'mapped' => false,
             ])
-            ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
             ->add('signedBy', TextType::class, [
                 'label' => "Signataire",
                 'required' => false,
