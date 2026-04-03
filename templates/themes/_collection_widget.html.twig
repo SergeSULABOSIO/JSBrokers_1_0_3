@@ -5,11 +5,21 @@
 
     {# On récupère l'état 'disabled' depuis les options #}
     {% set isDisabled = manager_options.disabled|default(false) %}
+
+    {# On détermine si l'accordéon lui-même doit être désactivé (clic bloqué). #}
+    {# Il n'est désactivé QUE si nous sommes en mode création (parentEntityId == 0). #}
+    {% set isAccordionDisabled = (manager_options.parentEntityId|default(0) == 0) %}
     
-    {# --- CORRECTION : On affiche toujours le widget, mais on lui ajoute une classe 'is-disabled' en mode création --- #}
+    {# CRUCIAL : On découple les options envoyées au contrôleur Stimulus. #}
+    {# Le contrôleur JS ne doit être "disabled" que si l'accordéon entier doit être bloqué. #}
+    {# Sinon, il empêcherait le dépliage (toggleAccordion). #}
+    {% set stimulus_options = manager_options|merge({
+        'disabled': isAccordionDisabled
+    }) %}
+
     <div 
-        {{ stimulus_controller('collection', manager_options) }} 
-        class="collection-manager-accordion {{ isDisabled ? 'is-disabled' : '' }}"
+        {{ stimulus_controller('collection', stimulus_options) }} 
+        class="collection-manager-accordion {{ isAccordionDisabled ? 'is-disabled' : '' }}"
         id="collection-{{ id }}"
         data-collection-id-entreprise-value="{{ idEntreprise }}"
         data-collection-id-invite-value="{{ idInvite }}"

@@ -91,7 +91,14 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
         ];
 
         $collections = [
-            ['fieldName' => 'articles', 'entityRouteName' => 'article', 'formTitle' => 'Article', 'parentFieldName' => 'note', 'totalizableField' => 'montantArticle'],
+            [
+                'fieldName' => 'articles', 
+                'entityRouteName' => 'article', 
+                'formTitle' => 'Article', 
+                'parentFieldName' => 'note', 
+                'totalizableField' => 'montantArticle',
+                'disabled' => false
+            ],
             [
                 'fieldName' => 'paiements',
                 'entityRouteName' => 'paiement',
