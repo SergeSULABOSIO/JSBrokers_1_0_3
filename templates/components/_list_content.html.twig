@@ -1,3 +1,14 @@
 {% for entity in data %}
-    {{ include('components/_list_row.html.twig', { 'entity': entity, 'listeCanvas': listeCanvas, 'entite_nom': entite_nom }) }}
+    {{ include('components/_list_row.html.twig', { 
+        'entity': entity, 
+        'listeCanvas': listeCanvas, 
+        'entite_nom': entite_nom,
+        'usage': usage|default(null),
+        'parentEntity': parentEntity|default(null),
+        'totalizableField': totalizableField|default(null),
+        'totalizableFieldDetails': totalizableFieldDetails|default(null),
+        'secondaryField': secondaryField|default(null),
+        'secondaryLabel': secondaryLabel|default(null),
+        'secondaryFieldDetails': secondaryFieldDetails|default(null)
+    }) }}
 {% endfor %}
