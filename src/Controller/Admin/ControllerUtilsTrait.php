@@ -199,8 +199,8 @@ trait ControllerUtilsTrait
         $data,
         string $collectionFieldName,
         ?string $totalizableField = null,
-        ?string $secondaryField = null, // NOUVEAU
-        ?string $secondaryLabel = null  // NOUVEAU
+        ?string $secondaryField = null,
+        ?string $secondaryLabel = null
     ): Response {
         $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
         foreach ($data as $item) {
@@ -233,6 +233,17 @@ trait ControllerUtilsTrait
         }
 
         // NOUVEAU : Récupérer les détails du champ secondaire s'il existe pour le formatage (ex: date).
+        $secondaryFieldDetails = null;
+        if ($secondaryField) {
+            foreach (($entityCanvas['liste'] ?? []) as $fieldDef) {
+                if (($fieldDef['code'] ?? null) === $secondaryField) {
+                    $secondaryFieldDetails = $fieldDef;
+                    break;
+                }
+            }
+        }
+
+        // Récupérer les détails du champ secondaire pour le formatage (ex: date)
         $secondaryFieldDetails = null;
         if ($secondaryField) {
             foreach (($entityCanvas['liste'] ?? []) as $fieldDef) {
