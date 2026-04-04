@@ -107,6 +107,8 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
                 'formTitle' => 'Paiement',
                 'parentFieldName' => 'note',
                 'totalizableField' => 'montantPaiement',
+                'secondaryField' => 'paidAt', // On veut afficher la date
+                'secondaryLabel' => ' * Date: le ', // Séparateur et préfixe
                 // Désactive si le solde est explicitement 0 ou moins (Note soldée)
                 'disabled' => ($object->solde !== null && (float)$object->solde <= 0)
             ],
