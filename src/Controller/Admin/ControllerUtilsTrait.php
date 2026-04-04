@@ -258,12 +258,12 @@ trait ControllerUtilsTrait
             'idEntreprise' => $this->getEntreprise()->getId(),
             'customAddAction' => "click->collection#addItem",
             'parentEntityId' => $parentId,
-            'parentEntity' => $parentEntity, // NOUVEAU: On passe l'objet parent pour le fallback
-            'totalizableField' => $totalizableField, // NOUVEAU
-            'secondaryField' => $secondaryField, // NOUVEAU
-            'secondaryLabel' => $secondaryLabel, // NOUVEAU
-            'totalizableFieldDetails' => $totalizableFieldDetails, // NOUVEAU
-            'secondaryFieldDetails' => $secondaryFieldDetails, // NOUVEAU
+            'parentEntity' => $parentEntity,
+            'totalizableField' => $totalizableField,
+            'secondaryField' => $secondaryField,
+            'secondaryLabel' => $secondaryLabel,
+            'totalizableFieldDetails' => $totalizableFieldDetails,
+            'secondaryFieldDetails' => $secondaryFieldDetails,
         ];
 
         if ($usage === "dialog") {
