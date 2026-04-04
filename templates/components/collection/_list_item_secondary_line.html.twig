@@ -9,6 +9,22 @@
     {% if description %}
         <span class="text-muted ms-1">- {{ description }}</span>
     {% endif %}
+
+    {# CONCATÉNATION DE L'INFORMATION SECONDAIRE #}
+    {% if secondaryField is defined and secondaryField is not null and attribute(item, secondaryField) is not empty %}
+        {% set secVal = attribute(item, secondaryField) %}
+        
+        {# Formatage intelligent si c'est une date #}
+        {% if secondaryFieldDetails is defined and (secondaryFieldDetails.type|default('') == 'Date' or secondaryFieldDetails.format|default('') == 'Date') %}
+            {% set secVal = secVal|date('d-m-Y') %}
+        {% endif %}
+        
+        {# Affichage du label et de la valeur concaténée #}
+        <span class="text-muted small">
+            {{ secondaryLabel|default(' * ') }}
+            <span class="fw-bold text-dark">{{ secVal }}</span>
+        </span>
+    {% endif %}
 {% else %}
     {# COMPORTEMENT PAR DÉFAUT pour les autres collections #}
     {{ parentEntity }}

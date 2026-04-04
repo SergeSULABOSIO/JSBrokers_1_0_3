@@ -10,7 +10,7 @@ trait FormCanvasProviderTrait
         foreach ($collectionsConfig as $config) {
             $extraOptions = [];
             
-            // NOUVEAU : On capture les options de rendu pour la ligne secondaire de l'item
+            // Capture des options de rendu pour la ligne secondaire enrichie
             if (isset($config['secondaryField'])) $extraOptions['secondaryField'] = $config['secondaryField'];
             if (isset($config['secondaryLabel'])) $extraOptions['secondaryLabel'] = $config['secondaryLabel'];
 
