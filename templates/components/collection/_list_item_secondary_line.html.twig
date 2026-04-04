@@ -11,7 +11,7 @@
     {% endif %}
 
     {# CONCATÉNATION DE L'INFORMATION SECONDAIRE #}
-    {% if secondaryField is defined and secondaryField is not null and attribute(item, secondaryField) is not empty %}
+    {% if secondaryField is defined and secondaryField is not null and attribute(item, secondaryField) is not null %}
         {% set secVal = attribute(item, secondaryField) %}
         
         {# Formatage intelligent si c'est une date #}
