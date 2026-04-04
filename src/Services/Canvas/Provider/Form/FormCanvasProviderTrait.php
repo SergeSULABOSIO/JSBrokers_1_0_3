@@ -9,6 +9,11 @@ trait FormCanvasProviderTrait
         $parentId = $parentEntity->getId() ?? 0;
         foreach ($collectionsConfig as $config) {
             $extraOptions = [];
+            
+            // NOUVEAU : On capture les options de rendu pour la ligne secondaire de l'item
+            if (isset($config['secondaryField'])) $extraOptions['secondaryField'] = $config['secondaryField'];
+            if (isset($config['secondaryLabel'])) $extraOptions['secondaryLabel'] = $config['secondaryLabel'];
+
             if (isset($config['totalizableField']) && !$isParentNew) {
                 $total = 0;
                 $getter = 'get' . ucfirst($config['fieldName']);

@@ -198,7 +198,9 @@ trait ControllerUtilsTrait
         int $parentId,
         $data,
         string $collectionFieldName,
-        ?string $totalizableField = null // NOUVEAU
+        ?string $totalizableField = null,
+        ?string $secondaryField = null, // NOUVEAU
+        ?string $secondaryLabel = null  // NOUVEAU
     ): Response {
         $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
         foreach ($data as $item) {
@@ -230,6 +232,17 @@ trait ControllerUtilsTrait
             }
         }
 
+        // NOUVEAU : Récupérer les détails du champ secondaire s'il existe pour le formatage (ex: date).
+        $secondaryFieldDetails = null;
+        if ($secondaryField) {
+            foreach (($entityCanvas['liste'] ?? []) as $fieldDef) {
+                if (($fieldDef['code'] ?? null) === $secondaryField) {
+                    $secondaryFieldDetails = $fieldDef;
+                    break;
+                }
+            }
+        }
+
         $parameters = [
             'listId' => $listId, // NOUVEAU : ID unique pour le contrôleur list-manager.
             'can_add' => true, // On autorise l'ajout pour les listes de collection
@@ -247,7 +260,10 @@ trait ControllerUtilsTrait
             'parentEntityId' => $parentId,
             'parentEntity' => $parentEntity, // NOUVEAU: On passe l'objet parent pour le fallback
             'totalizableField' => $totalizableField, // NOUVEAU
+            'secondaryField' => $secondaryField, // NOUVEAU
+            'secondaryLabel' => $secondaryLabel, // NOUVEAU
             'totalizableFieldDetails' => $totalizableFieldDetails, // NOUVEAU
+            'secondaryFieldDetails' => $secondaryFieldDetails, // NOUVEAU
         ];
 
         if ($usage === "dialog") {
@@ -610,6 +626,8 @@ trait ControllerUtilsTrait
         $parentFormCanvas = $this->canvasBuilder->getEntityFormCanvas($parentEntity, $this->getEntreprise()->getId());
         $collectionOptions = $this->getCollectionOptionsFromCanvas($parentFormCanvas, $collectionName);
         $totalizableField = $collectionOptions['totalizableField'] ?? null;
+        $secondaryField = $collectionOptions['secondaryField'] ?? null;
+        $secondaryLabel = $collectionOptions['secondaryLabel'] ?? null;
 
         // --- NOUVELLE LOGIQUE DE RÉPONSE JSON ---
         if ($usage === 'dialog') {
@@ -640,7 +658,7 @@ trait ControllerUtilsTrait
                 }
             }
 
-            $html = $this->renderCollectionOrList('dialog', $entityClass, $parentEntity, $id, $data, $collectionName, $totalizableField)->getContent();
+            $html = $this->renderCollectionOrList('dialog', $entityClass, $parentEntity, $id, $data, $collectionName, $totalizableField, $secondaryField, $secondaryLabel)->getContent();
 
             return new JsonResponse([
                 'html' => $html,
@@ -657,7 +675,7 @@ trait ControllerUtilsTrait
         }
         $data = $parentEntity->$getter();
         $entityClass = $collectionMap[$collectionName];
-        return $this->renderCollectionOrList($usage, $entityClass, $parentEntity, $id, $data, $collectionName, $totalizableField);
+        return $this->renderCollectionOrList($usage, $entityClass, $parentEntity, $id, $data, $collectionName, $totalizableField, $secondaryField, $secondaryLabel);
     }
 
     /**
