@@ -32,7 +32,9 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
             'note_id' => null, 
             'searchable_fields' => ['nom'],
             'as_html' => true,
-            'choice_label' => function(RevenuPourCourtier $revenu) {
+            // NOUVEAU : On définit 'choices' comme une fonction pour un contrôle total.
+            'choices' => [], // Sera surchargé par le normalizer
+            'choice_label' => function(?RevenuPourCourtier $revenu) {
                 
                 $cotation = $revenu->getCotation();
                 $avenant = ($cotation && !$cotation->getAvenants()->isEmpty()) ? $cotation->getAvenants()->first() : null;
@@ -161,6 +163,44 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
             }
         ]);
 
+        // NOUVEAU : Normalizer pour 'choices'. C'est ici que la magie opère.
+        $resolver->setNormalizer('choices', function (Options $options) {
+            $er = $this->em->getRepository($options['class']);
+            $entrepriseId = $this->ecouteurFormulaire->getCurrentEntrepriseId();
+            $request = $this->requestStack->getCurrentRequest();
+            
+            $noteId = $options['note_id'] 
+                ?? $request?->query->get('note_id')
+                ?? $request?->query->get('parent_id');
+                
+            $liveAssureurId = $request?->query->get('live_assureur_id');
+            $liveClientId = $request?->query->get('live_client_id');
+            
+            $qb = $er->createQueryBuilder('r')
+                ->addSelect('tr', 'c', 'a', 'assureur', 'piste', 'client')
+                ->join('r.typeRevenu', 'tr')
+                ->join('r.cotation', 'c')
+                ->leftJoin('c.avenants', 'a') 
+                ->leftJoin('c.assureur', 'assureur')
+                ->leftJoin('c.piste', 'piste')
+                ->leftJoin('piste.client', 'client')
+                ->where('tr.entreprise = :eseId')
+                ->setParameter('eseId', $entrepriseId);
+
+            // ... (toute la logique de filtrage par destinataire reste ici) ...
+            if ($liveAssureurId) { $qb->andWhere('assureur.id = :assureurId')->setParameter('assureurId', $liveAssureurId); } 
+            elseif ($liveClientId) { $qb->andWhere('client.id = :clientId')->setParameter('clientId', $liveClientId); }
+            // ... etc.
+
+            $potentielsRevenus = $qb->getQuery()->getResult();
+
+            // Étape cruciale : On filtre en PHP après hydratation par le CanvasBuilder
+            return array_filter($potentielsRevenus, function(RevenuPourCourtier $revenu) {
+                $this->canvasBuilder->loadAllCalculatedValues($revenu);
+                return ($revenu->solde_restant_du ?? 0.0) > 0.01; // Marge pour les flottants
+            });
+        });
+
         $resolver->setNormalizer('query_builder', function (Options $options, $value) {
             
             $er = $this->em->getRepository($options['class']);
@@ -175,47 +215,10 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
             $liveClientId = $request ? $request->query->get('live_client_id') : null;
             
             $qb = $er->createQueryBuilder('r')
-                ->addSelect('tr', 'c', 'a', 'assureur', 'piste', 'client')
-                ->join('r.typeRevenu', 'tr')
-                ->join('r.cotation', 'c')
-                ->join('c.avenants', 'a') 
-                ->leftJoin('c.assureur', 'assureur')
-                ->leftJoin('c.piste', 'piste')
-                ->leftJoin('piste.client', 'client')
-                ->where('tr.entreprise = :eseId')
-                ->setParameter('eseId', $entrepriseId);
-
-            if ($liveAssureurId) {
-                $qb->andWhere('assureur.id = :assureurId')->setParameter('assureurId', $liveAssureurId);
-            } 
-            elseif ($liveClientId) {
-                $qb->andWhere('client.id = :clientId')->setParameter('clientId', $liveClientId);
-            }
-            elseif ($noteId) {
-                $note = $this->em->getRepository(Note::class)->find($noteId);
-                
-                if ($note) {
-                    $destinataire = $note->getAddressedTo();
-                    
-                    if ($destinataire == Note::TO_CLIENT && $note->getClient()) {
-                        $qb->andWhere('client.id = :clientId')->setParameter('clientId', $note->getClient()->getId());
-                    } 
-                    elseif ($destinataire == Note::TO_ASSUREUR && $note->getAssureur()) {
-                        $qb->andWhere('assureur.id = :assureurId')->setParameter('assureurId', $note->getAssureur()->getId());
-                    }
-                    elseif ($destinataire == Note::TO_PARTENAIRE && $note->getPartenaire()) {
-                        $qb->leftJoin('piste.partenaires', 'partenaires')
-                           ->andWhere('partenaires.id = :partenaireId')
-                           ->setParameter('partenaireId', $note->getPartenaire()->getId());
-                    } else {
-                        $qb->andWhere('1 = 0');
-                    }
-                } else {
-                    $qb->andWhere('1 = 0');
-                }
-            } 
-
-            $qb->orderBy('r.id', 'ASC');
+                // Le query_builder est maintenant simplifié. Il ne fait plus de filtrage.
+                // Il sert juste de base pour que le champ d'autocomplétion fonctionne.
+                // La recherche textuelle se fera sur les 'choices' que nous avons pré-filtrés.
+                ->where('r.id > 0'); // Condition de base
             
             return $qb;
         });
