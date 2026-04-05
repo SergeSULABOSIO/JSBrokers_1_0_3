@@ -33,15 +33,11 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
             'searchable_fields' => ['nom'],
             'as_html' => true,
             'choice_label' => fn(RevenuPourCourtier $revenu) => $this->renderChoiceLabel($revenu),
-            'choices' => [], // Sera surchargé par le normalizer
+            'parent_article' => null, // NOUVEAU : On définit l'option personnalisée.
         ]);
 
-        $resolver->setNormalizer('choices', fn(Options $options) => $this->getEligibleRevenus($options));
-
-        // Le query_builder est maintenant simplifié. Il ne fait plus de filtrage métier.
-        // Il sert juste de base pour que le composant d'autocomplétion fonctionne.
-        // La recherche textuelle se fera sur les 'choices' que nous avons pré-filtrés.
-        $resolver->setNormalizer('query_builder', fn(Options $options, $value) => $this->em->getRepository($options['class'])->createQueryBuilder('r')->where('r.id > 0'));
+        // Le query_builder est maintenant le seul responsable du filtrage.
+        $resolver->setNormalizer('query_builder', fn(Options $options) => $this->getEligibleRevenusQueryBuilder($options));
     }
 
     public function getParent(): string
@@ -50,12 +46,40 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
     }
 
     /**
-     * Récupère et filtre les revenus éligibles.
+     * Construit le QueryBuilder pour ne récupérer que les revenus éligibles.
      *
      * @param Options $options
-     * @return array
+     * @return \Doctrine\ORM\QueryBuilder
      */
-    private function getEligibleRevenus(Options $options): array
+    private function getEligibleRevenusQueryBuilder(Options $options): \Doctrine\ORM\QueryBuilder
+    {
+        // 1. On récupère la liste des IDs des revenus éligibles (non soldés) pour la recherche.
+        $eligibleRevenus = $this->fetchAndFilterEligibleRevenus($options);
+        $eligibleIds = array_map(fn(RevenuPourCourtier $r) => $r->getId(), $eligibleRevenus);
+
+        // 2. En mode édition, on s'assure que l'ID du revenu déjà associé à l'article est inclus, même si son solde est nul.
+        // On utilise notre nouvelle option 'parent_article'.
+        $parentArticle = $options['parent_article'];
+        if ($parentArticle instanceof \App\Entity\Article && $parentArticle->getRevenuFacture()) {
+            $currentRevenuId = $parentArticle->getRevenuFacture()->getId();
+            if (!in_array($currentRevenuId, $eligibleIds)) {
+                $eligibleIds[] = $currentRevenuId;
+            }
+        }
+
+        // Si aucun revenu n'est éligible, on s'assure que la requête ne retourne rien.
+        if (empty($eligibleIds)) {
+            $eligibleIds = [0]; // Utilise un ID qui ne correspondra à rien.
+        }
+
+        // 3. On retourne un QueryBuilder final qui filtre sur ces IDs.
+        $er = $this->em->getRepository($options['class']);
+        return $er->createQueryBuilder('r')
+            ->where('r.id IN (:ids)')
+            ->setParameter('ids', $eligibleIds);
+    }
+
+    private function fetchAndFilterEligibleRevenus(Options $options): array
     {
         $er = $this->em->getRepository($options['class']);
         $entrepriseId = $this->ecouteurFormulaire->getCurrentEntrepriseId();
@@ -87,7 +111,6 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
         // Filtre final en PHP après hydratation par le CanvasBuilder
         return array_filter($potentielsRevenus, function(RevenuPourCourtier $revenu) {
             $this->canvasBuilder->loadAllCalculatedValues($revenu);
-            dump("Revenu: " . $revenu->getNom(), "Solde calculé: " . ($revenu->solde_restant_du ?? 'NULL'));
             return ($revenu->solde_restant_du ?? 0.0) > 0.01;
         });
     }
