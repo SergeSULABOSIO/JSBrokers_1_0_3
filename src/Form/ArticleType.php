@@ -88,36 +88,14 @@ class ArticleType extends AbstractType
             ->add('revenuFacture', RevenuPourCourtierAutocompleteField::class, [
                 'label' => "Revenu / Commission source à facturer",
                 'required' => false,
-                'note_id' => $noteId,
+                'note_id' => $noteId, // Pour le filtrage contextuel en création
+                'parent_article' => $article, // Pour la robustesse en édition
                 'row_attr' => ['class' => $baseRowClass],
                 'attr' => [
                     'data-controller' => 'revenu-autocomplete-filter',
                     'data-revenu-autocomplete-filter-note-id-value' => $noteId
                 ]
-            ]); // Ajout d'un écouteur PRE_SUBMIT pour ajuster dynamiquement les champs 'tranche' et 'quantite'
-        $builder->addEventListener(FormEvents::PRE_SUBMIT, function (FormEvent $event) use ($baseRowClass, $isCreationMode) {
-            $data = $event->getData();
-            $form = $event->getForm();
-
-            $revenuFactureId = $data['revenuFacture'] ?? null;
-
-            // Re-ajout du champ 'tranche' avec l'ID du revenu soumis
-            $form->add('tranche', TrancheAutocompleteField::class, [
-                'label' => "Tranche de prime correspondante",
-                'required' => false,
-                'revenu_id' => $revenuFactureId, // Utilise l'ID du revenu soumis pour le query_builder
-                'row_attr' => ['class' => sprintf('%s tranche-form-row %s', $baseRowClass, ($isCreationMode && !$revenuFactureId ? 'd-none' : ''))],
-                'attr' => ['data-controller' => 'tranche-autocomplete-filter']
             ]);
-
-            // Re-ajout du champ 'quantite'. Sa visibilité est gérée par le CanvasProvider, mais il doit faire partie du formulaire.
-            $form->add('quantite', NumberType::class, [
-                'label' => "Quantité (nombre d'unités)",
-                'html5' => true,
-                'attr' => ['placeholder' => "1.00", 'step' => '0.01'],
-                'row_attr' => ['class' => sprintf('%s quantite-form-row', $baseRowClass)]
-            ]);
-        });
 
         // Configuration des options pour le champ quantité
         $quantiteOptions = [
