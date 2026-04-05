@@ -87,6 +87,7 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
         // Filtre final en PHP après hydratation par le CanvasBuilder
         return array_filter($potentielsRevenus, function(RevenuPourCourtier $revenu) {
             $this->canvasBuilder->loadAllCalculatedValues($revenu);
+            dump("Revenu: " . $revenu->getNom(), "Solde calculé: " . ($revenu->solde_restant_du ?? 'NULL'));
             return ($revenu->solde_restant_du ?? 0.0) > 0.01;
         });
     }
