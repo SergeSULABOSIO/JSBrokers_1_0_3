@@ -27,12 +27,10 @@ class NoteType extends AbstractType
             'data-controller' => 'note-form',
         ]);
 
-        // Classes de base pour les wrappers de champs
-        $choiceWrapperClass = 'form-check'; // Classe par défaut pour les radios
-
         // On ajoute les data-targets pour que Stimulus puisse identifier les champs
-        $typeChoiceAttr = fn($choiceValue, $key, $value) => ['data-note-form-target' => 'typeInput', 'data-action' => 'change->note-form#toggleFields'];
-        $addressedToChoiceAttr = fn($choiceValue, $key, $value) => ['data-note-form-target' => 'addressedToWrapper'];
+        // NOUVEAU : On utilise 'row_attr' pour cibler le div parent de chaque choix.
+        $typeChoiceAttr = fn($choice, $key, $value) => ['data-note-form-target' => 'typeInput', 'data-action' => 'change->note-form#toggleFields'];
+        $addressedToChoiceAttr = fn($choice, $key, $value) => ['data-note-form-target' => 'addressedToWrapper'];
         $bankAccountsRowAttr = ['data-note-form-target' => 'bankAccountsWrapper'];
 
         $builder
@@ -63,8 +61,8 @@ class NoteType extends AbstractType
                 'required' => true,
                 'expanded' => true,
                 'label_html' => true,
-                'choice_attr' => $typeChoiceAttr, // Applique l'action Stimulus
-                'choice_wrapper_class' => $choiceWrapperClass,
+                // CORRECTION : On applique les attributs à chaque choix individuel.
+                'choice_attr' => $typeChoiceAttr,
                 'choices'  => [
                     "Débit" => Note::TYPE_NOTE_DE_DEBIT,
                     "Crédit" => Note::TYPE_NOTE_DE_CREDIT,
@@ -81,8 +79,8 @@ class NoteType extends AbstractType
                 'required' => true,
                 'expanded' => true,
                 'label_html' => true,
-                'choice_attr' => $addressedToChoiceAttr, // Identifie chaque option pour le masquage
-                'choice_wrapper_class' => $choiceWrapperClass,
+                // CORRECTION : On applique les attributs à chaque choix individuel.
+                'choice_attr' => $addressedToChoiceAttr,
                 'choices'  => [
                     "Le client" => Note::TO_CLIENT,
                     "L'assureur" => Note::TO_ASSUREUR,
