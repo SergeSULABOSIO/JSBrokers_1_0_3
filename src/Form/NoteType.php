@@ -22,6 +22,19 @@ class NoteType extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        // NOUVEAU : On ajoute le contrôleur Stimulus au formulaire
+        $builder->setAttribute('attr', [
+            'data-controller' => 'note-form',
+        ]);
+
+        // Classes de base pour les wrappers de champs
+        $choiceWrapperClass = 'form-check'; // Classe par défaut pour les radios
+
+        // On ajoute les data-targets pour que Stimulus puisse identifier les champs
+        $typeChoiceAttr = fn($choiceValue, $key, $value) => ['data-note-form-target' => 'typeInput', 'data-action' => 'change->note-form#toggleFields'];
+        $addressedToChoiceAttr = fn($choiceValue, $key, $value) => ['data-note-form-target' => 'addressedToWrapper'];
+        $bankAccountsRowAttr = ['data-note-form-target' => 'bankAccountsWrapper'];
+
         $builder
             ->add('nom', TextType::class, [
                 'label' => "Objet de la note",
@@ -50,6 +63,8 @@ class NoteType extends AbstractType
                 'required' => true,
                 'expanded' => true,
                 'label_html' => true,
+                'choice_attr' => $typeChoiceAttr, // Applique l'action Stimulus
+                'choice_wrapper_class' => $choiceWrapperClass,
                 'choices'  => [
                     "Débit" => Note::TYPE_NOTE_DE_DEBIT,
                     "Crédit" => Note::TYPE_NOTE_DE_CREDIT,
@@ -66,6 +81,8 @@ class NoteType extends AbstractType
                 'required' => true,
                 'expanded' => true,
                 'label_html' => true,
+                'choice_attr' => $addressedToChoiceAttr, // Identifie chaque option pour le masquage
+                'choice_wrapper_class' => $choiceWrapperClass,
                 'choices'  => [
                     "Le client" => Note::TO_CLIENT,
                     "L'assureur" => Note::TO_ASSUREUR,
@@ -102,6 +119,7 @@ class NoteType extends AbstractType
                 'label' => "Comptes bancaires",
                 'help' => "Comptes bancaires auxquels vous désirez vous faire payer.",
                 'required' => false,
+                'row_attr' => $bankAccountsRowAttr, // Identifie le champ pour le masquage
                 'multiple' => true,
             ])
             ->add('articles', CollectionType::class, [
