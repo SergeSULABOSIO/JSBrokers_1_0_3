@@ -55,6 +55,7 @@ class ArticleType extends AbstractType
         $article = $builder->getData();
 
         $noteId = null;
+        $note = null;
         $revenuIdInitial = null;
         $trancheIdInitial = null;
         
@@ -62,6 +63,7 @@ class ArticleType extends AbstractType
         $isCreationMode = !$article || !$article->getId();
 
         if ($article) {
+            $note = $article->getNote();
             $noteId = $article->getNote()?->getId();
             $revenuIdInitial = $article->getRevenuFacture()?->getId();
             $trancheIdInitial = $article->getTranche()?->getId();
@@ -78,6 +80,7 @@ class ArticleType extends AbstractType
             
         } elseif ($request?->query->has('parent_id')) {
             $noteId = (int)$request->query->get('parent_id');
+            $note = $this->em->getRepository(\App\Entity\Note::class)->find($noteId);
         }
 
         // 'mb-3' est la classe de base pour respecter le design défini dans app.css
@@ -90,6 +93,7 @@ class ArticleType extends AbstractType
                 'required' => false,
                 'note_id' => $noteId, // Pour le filtrage contextuel en création
                 'parent_article' => $article, // Pour la robustesse en édition
+                'parent_note' => $note, // NOUVEAU : On passe l'entité Note pour le contexte de surlignage.
                 'row_attr' => ['class' => $baseRowClass],
                 'attr' => [
                     'data-controller' => 'revenu-autocomplete-filter',

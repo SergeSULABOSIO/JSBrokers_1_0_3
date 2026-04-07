@@ -68,6 +68,16 @@ export default class extends Controller {
                     if (clientSelect && clientSelect.value) {
                         url.searchParams.set('live_client_id', clientSelect.value);
                     }
+                } else if (addressedTo === 2) { // 2 = L'intermédiaire (Partenaire)
+                    const partenaireSelect = document.querySelector('select[name*="[partenaire]"]') || document.querySelector('select[name="partenaire"]');
+                    if (partenaireSelect && partenaireSelect.value) {
+                        url.searchParams.set('live_partenaire_id', partenaireSelect.value);
+                    }
+                } else if (addressedTo === 3) { // 3 = L'autorité fiscale
+                    const autoriteSelect = document.querySelector('select[name*="[autoritefiscale]"]') || document.querySelector('select[name="autoritefiscale"]');
+                    if (autoriteSelect && autoriteSelect.value) {
+                        url.searchParams.set('live_autorite_id', autoriteSelect.value);
+                    }
                 }
             }
 

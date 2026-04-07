@@ -1486,6 +1486,14 @@ textarea:hover,
     margin-top: 8px;
 }
 
+/* NOUVEAU : Style pour surligner une colonne d'indicateurs */
+.jsb-indicator-highlight {
+    background-color: #e9ecef !important; /* Un gris un peu plus soutenu que le fond */
+    border-radius: 4px;
+    padding: 5px;
+    margin: -5px; /* Compense le padding pour ne pas décaler le layout */
+}
+
 .jsb-indicator-label {
     display: block;
     font-size: 0.7rem;
