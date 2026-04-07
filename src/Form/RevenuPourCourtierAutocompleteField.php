@@ -23,6 +23,9 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
         private EntityManagerInterface $em,
         private CanvasBuilder $canvasBuilder
     ) {}
+
+    // NOUVEAU : Propriété pour stocker les options résolues.
+    private ?Options $currentOptions = null;
     
     public function configureOptions(OptionsResolver $resolver): void
     {
@@ -38,7 +41,13 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
         ]);
 
         // Le query_builder est maintenant le seul responsable du filtrage.
-        $resolver->setNormalizer('query_builder', fn(Options $options) => $this->getEligibleRevenusQueryBuilder($options));
+        // NOUVEAU : On utilise une fonction complète pour stocker les options.
+        $resolver->setNormalizer('query_builder', function (Options $options) {
+            // On stocke les options résolues pour y accéder plus tard (ex: dans renderChoiceLabel).
+            $this->currentOptions = $options;
+            
+            return $this->getEligibleRevenusQueryBuilder($options);
+        });
     }
 
     public function getParent(): string
@@ -115,31 +124,40 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
         // Filtre final en PHP après hydratation par le CanvasBuilder
         return array_filter($potentielsRevenus, function(RevenuPourCourtier $revenu) {
             $this->canvasBuilder->loadAllCalculatedValues($revenu);
+            
+            // On unifie le contexte : priorité au live, sinon fallback sur le statique.
             $request = $this->requestStack->getCurrentRequest();
+            $parentNote = $this->currentOptions ? $this->currentOptions['parent_note'] : null;
+            $noteAddressedTo = $parentNote?->getAddressedTo();
 
-            // Scénario 1: On facture une rétro-commission à un partenaire
-            if ($request?->query->has('live_partenaire_id')) {
+            // Scénario 1: Rétro-commission
+            if ($request?->query->has('live_partenaire_id') || ($parentNote && $noteAddressedTo === Note::TO_PARTENAIRE)) {
                 return ($revenu->retroCommissionSolde ?? 0.0) > 0.01;
             }
 
-            // Scénario 2: On facture une taxe à une autorité fiscale
-            if ($liveAutoriteId = $request?->query->get('live_autorite_id')) {
-                $autorite = $this->em->getRepository(\App\Entity\AutoriteFiscale::class)->find($liveAutoriteId);
-                if ($autorite && $taxe = $autorite->getTaxe()) {
-                    if ($taxe->getRedevable() === \App\Entity\Taxe::REDEVABLE_COURTIER) {
-                        return ($revenu->taxeCourtierSolde ?? 0.0) > 0.01;
-                    } elseif ($taxe->getRedevable() === \App\Entity\Taxe::REDEVABLE_ASSUREUR) {
-                        return ($revenu->taxeAssureurSolde ?? 0.0) > 0.01;
+            // Scénario 2: Taxe
+            $liveAutoriteId = $request?->query->get('live_autorite_id');
+            if ($liveAutoriteId || ($parentNote && $noteAddressedTo === Note::TO_AUTORITE_FISCALE)) {
+                $autoriteId = $liveAutoriteId ?? $parentNote?->getAutoritefiscale()?->getId();
+                if ($autoriteId) {
+                    $autorite = $this->em->getRepository(\App\Entity\AutoriteFiscale::class)->find($autoriteId);
+                    if ($autorite && $taxe = $autorite->getTaxe()) {
+                        if ($taxe->getRedevable() === \App\Entity\Taxe::REDEVABLE_COURTIER) {
+                            return ($revenu->taxeCourtierSolde ?? 0.0) > 0.01;
+                        } elseif ($taxe->getRedevable() === \App\Entity\Taxe::REDEVABLE_ASSUREUR) {
+                            return ($revenu->taxeAssureurSolde ?? 0.0) > 0.01;
+                        }
                     }
                 }
             }
 
-            // Scénario 3 (par défaut): On facture une commission à un client ou un assureur.
-            // On ne montre que les revenus dont le solde de commission est positif.
-            // Les taxes seront facturées dans une note séparée destinée à l'autorité fiscale.
-            if ($request?->query->has('live_assureur_id') || $request?->query->has('live_client_id')) {
+            // Scénario 3 (par défaut): Commission
+            $liveAssureurId = $request?->query->get('live_assureur_id');
+            $liveClientId = $request?->query->get('live_client_id');
+            if ($liveAssureurId || $liveClientId || ($parentNote && in_array($noteAddressedTo, [Note::TO_ASSUREUR, Note::TO_CLIENT]))) {
                 return ($revenu->solde_restant_du ?? 0.0) > 0.01;
             }
+
             return false; // Par défaut, on ne montre rien si le contexte n'est pas clair.
         });
     }
@@ -204,7 +222,7 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
 
         // Contexte statique (chargement initial en mode édition)
         /** @var \App\Entity\Note|null $parentNote */
-        $parentNote = $this->getParentNoteFromOptions();
+        $parentNote = $this->currentOptions ? $this->currentOptions['parent_note'] : null;
         $noteAddressedTo = $parentNote?->getAddressedTo();
 
         // Logique de surlignage unifiée
@@ -297,16 +315,5 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
             number_format($taxeAPayee, 2, ',', ' '),
             $clsTAS, number_format($taxeASolde, 2, ',', ' ')
         );
-    }
-
-    /**
-     * Helper pour récupérer la note parente depuis les options du formulaire.
-     * Nécessaire car renderChoiceLabel n'a pas accès directement aux options.
-     */
-    private function getParentNoteFromOptions(): ?\App\Entity\Note
-    {
-        // Cette méthode est une astuce. Normalement, on accède aux options dans configureOptions.
-        // Ici, on suppose que le resolver a déjà été configuré.
-        return $this->requestStack->getCurrentRequest()?->attributes->get('data')?->getParent()?->getData();
     }
 }
