@@ -4,7 +4,6 @@ namespace App\Form;
 
 use App\Entity\Note;
 use App\Services\FormListenerFactory;
-use Doctrine\DBAL\Types\BooleanType;
 use Symfony\Component\Form\FormEvent;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
@@ -13,8 +12,8 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
-use Symfony\Component\Form\Extension\Core\Type\CollectionType;
-use Symfony\Component\Form\Extension\Core\Type\TextareaType;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType; 
+use Symfony\Component\Form\Extension\Core\Type\TextareaType; 
 
 class NoteType extends AbstractType
 {
@@ -67,33 +66,81 @@ class NoteType extends AbstractType
             // Le champ 'addressedTo' est conservé pour la logique métier mais masqué.
             ->add('addressedTo', ChoiceType::class, ['row_attr' => ['class' => 'd-none']])
 
-            // --- NOUVEAU : Champs booléens pour chaque option de destinataire ---
-            ->add('addressedToClient', BooleanType::class, [
+            // --- NOUVEAU : Champs ChoiceType pour chaque option de destinataire (simulant des checkboxes) ---
+            ->add('addressedToClient', ChoiceType::class, [
                 'label' => 'Le client',
                 'help' => 'Pour facturer une prime, des frais ou un service directement au client.',
                 'mapped' => false,
                 'required' => false,
+                'label_html' => true, // Permet l'affichage HTML dans le label
+                'choices' => [
+                    'Le client' => Note::TO_CLIENT,
+                ],
+                'expanded' => true, // Rendu comme radio/checkbox
+                'multiple' => true, // Rendu comme checkbox
+                'choice_label' => function ($choice, $key, $value) {
+                    return '<div><strong>' . $key . '</strong><div class="text-muted small">Pour facturer une prime, des frais ou un service directement au client.</div></div>';
+                },
             ])
-            ->add('addressedToAssureur', BooleanType::class, [
+            ->add('addressedToAssureur', ChoiceType::class, [
                 'label' => "L'assureur",
                 'help' => "Pour réclamer une commission ou d'autres frais à la compagnie d'assurance.",
                 'mapped' => false,
                 'required' => false,
+                'label_html' => true, // Permet l'affichage HTML dans le label
+                'choices' => [
+                    "L'assureur" => Note::TO_ASSUREUR,
+                ],
+                'expanded' => true,
+                'multiple' => true,
+                'choice_label' => function ($choice, $key, $value) {
+                    return '<div><strong>' . $key . '</strong><div class="text-muted small">Pour réclamer une commission ou d\'autres frais à la compagnie d\'assurance.</div></div>';
+                },
             ])
-            ->add('addressedToPartenaire', BooleanType::class, [
+            ->add('addressedToPartenaire', ChoiceType::class, [
                 'label' => "L'intermédiaire",
                 'help' => "Pour payer une rétro-commission ou facturer des frais à un partenaire.",
                 'mapped' => false,
                 'required' => false,
+                'label_html' => true, // Permet l'affichage HTML dans le label
+                'choices' => [
+                    "L'intermédiaire" => Note::TO_PARTENAIRE,
+                ],
+                'expanded' => true,
+                'multiple' => true,
+                'choice_label' => function ($choice, $key, $value) {
+                    return '<div><strong>' . $key . '</strong><div class="text-muted small">Pour payer une rétro-commission ou facturer des frais à un partenaire.</div></div>';
+                },
             ])
-            ->add('addressedToAutoriteFiscale', BooleanType::class, [
+            ->add('addressedToAutoriteFiscale', ChoiceType::class, [
                 'label' => "L'autorité fiscale",
                 'help' => "Pour déclarer et payer des taxes collectées (ex: TVA, taxe ARCA).",
                 'mapped' => false,
                 'required' => false,
+                'label_html' => true, // Permet l'affichage HTML dans le label
+                'choices' => [
+                    "L'autorité fiscale" => Note::TO_AUTORITE_FISCALE,
+                ],
+                'expanded' => true,
+                'multiple' => true,
+                'choice_label' => function ($choice, $key, $value) {
+                    return '<div><strong>' . $key . '</strong><div class="text-muted small">Pour déclarer et payer des taxes collectées (ex: TVA, taxe ARCA).</div></div>';
+                },
             ])
             ->add('client', ClientAutocompleteField::class, [
                 'label' => "Client ciblé",
+                'required' => false,
+            ])
+            ->add('assureur', AssureurAutocompleteField::class, [
+                'label' => "Assureur ciblé",
+                'required' => false,
+            ])
+            ->add('partenaire', PartenaireAutocompleteField::class, [
+                'label' => "Intermédiaire / Partenaire ciblé",
+                'required' => false,
+            ])
+            ->add('autoritefiscale', AutoriteFiscaleAutocompleteField::class, [
+                'label' => "Autorité fiscale ciblée",
                 'required' => false,
             ])
             ->add('assureur', AssureurAutocompleteField::class, [
@@ -166,8 +213,10 @@ class NoteType extends AbstractType
             if ($note && $note->getAddressedTo() !== null) {
                 if ($note->getAddressedTo() === Note::TO_CLIENT) $form->get('addressedToClient')->setData(true);
                 if ($note->getAddressedTo() === Note::TO_ASSUREUR) $form->get('addressedToAssureur')->setData(true);
-                if ($note->getAddressedTo() === Note::TO_PARTENAIRE) $form->get('addressedToPartenaire')->setData(true);
-                if ($note->getAddressedTo() === Note::TO_AUTORITE_FISCALE) $form->get('addressedToAutoriteFiscale')->setData(true);
+                if ($note->getAddressedTo() === Note::TO_CLIENT) $form->get('addressedToClient')->setData([Note::TO_CLIENT]);
+                if ($note->getAddressedTo() === Note::TO_ASSUREUR) $form->get('addressedToAssureur')->setData([Note::TO_ASSUREUR]);
+                if ($note->getAddressedTo() === Note::TO_PARTENAIRE) $form->get('addressedToPartenaire')->setData([Note::TO_PARTENAIRE]);
+                if ($note->getAddressedTo() === Note::TO_AUTORITE_FISCALE) $form->get('addressedToAutoriteFiscale')->setData([Note::TO_AUTORITE_FISCALE]);
             }
         });
 
