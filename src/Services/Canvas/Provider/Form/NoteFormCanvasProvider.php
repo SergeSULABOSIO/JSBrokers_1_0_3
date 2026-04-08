@@ -68,20 +68,22 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
         $layout = [
             // Ligne 1: le type
             ["colonnes" => [["champs" => ["type"]]]],
-            // Ligne 2: le nom
-            ["colonnes" => [["champs" => ["nom"]]]],
-            // Ligne 3: la référence
-            ["colonnes" => [["champs" => ["reference"]]]],
-            // Ligne 3.1: La description détaillée (Editeur riche)
-            ["colonnes" => [["champs" => ["description"]]]],
             
-            // --- NOUVEAU : Ligne 4 - Options de destinataire, chacune sur sa propre ligne ---
+            // --- DÉPLACÉ : Options de destinataire, directement après le type ---
+            // On utilise une première ligne "factice" uniquement pour le titre du groupe.
             // On utilise une première ligne "factice" uniquement pour le titre du groupe.
             ["group_title" => "À qui s'adresse cette note ?", "colonnes" => []],
             ["colonnes" => [["champs" => [array_merge(['field_code' => 'addressedToClient'], $visibilityDebitOption)]]]],
             ["colonnes" => [["champs" => [array_merge(['field_code' => 'addressedToAssureur'], $visibilityDebitOption)]]]],
             ["colonnes" => [["champs" => [array_merge(['field_code' => 'addressedToPartenaire'], $visibilityCreditOption)]]]],
             ["colonnes" => [["champs" => [array_merge(['field_code' => 'addressedToAutoriteFiscale'], $visibilityDebitOption)]]]],
+            
+            // Ligne 2: le nom (anciennement Ligne 2)
+            ["colonnes" => [["champs" => ["nom"]]]],
+            // Ligne 3: la référence (anciennement Ligne 3)
+            ["colonnes" => [["champs" => ["reference"]]]],
+            // Ligne 3.1: La description détaillée (Editeur riche) (anciennement Ligne 3.1)
+            ["colonnes" => [["champs" => ["description"]]]],
 
             // --- Lignes conditionnelles basées sur le destinataire ---
             // Ligne 5: Le client

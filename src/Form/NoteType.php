@@ -69,6 +69,7 @@ class NoteType extends AbstractType
             // --- NOUVEAU : Champs ChoiceType pour chaque option de destinataire (simulant des checkboxes) ---
             ->add('addressedToClient', ChoiceType::class, [
                 'label' => 'Le client',
+                'help' => 'Pour facturer une prime, des frais ou un service directement au client.',
                 'mapped' => false,
                 'required' => false,
                 'label_html' => true, // Permet l'affichage HTML dans le label
@@ -83,6 +84,7 @@ class NoteType extends AbstractType
             ])
             ->add('addressedToAssureur', ChoiceType::class, [
                 'label' => "L'assureur",
+                'help' => "Pour réclamer une commission ou d'autres frais à la compagnie d'assurance.",
                 'mapped' => false,
                 'required' => false,
                 'label_html' => true, // Permet l'affichage HTML dans le label
@@ -97,6 +99,7 @@ class NoteType extends AbstractType
             ])
             ->add('addressedToPartenaire', ChoiceType::class, [
                 'label' => "L'intermédiaire",
+                'help' => "Pour payer une rétro-commission ou facturer des frais à un partenaire.",
                 'mapped' => false,
                 'required' => false,
                 'label_html' => true, // Permet l'affichage HTML dans le label
@@ -111,6 +114,7 @@ class NoteType extends AbstractType
             ])
             ->add('addressedToAutoriteFiscale', ChoiceType::class, [
                 'label' => "L'autorité fiscale",
+                'help' => "Pour déclarer et payer des taxes collectées (ex: TVA, taxe ARCA).",
                 'mapped' => false,
                 'required' => false,
                 'label_html' => true, // Permet l'affichage HTML dans le label
@@ -125,6 +129,18 @@ class NoteType extends AbstractType
             ])
             ->add('client', ClientAutocompleteField::class, [
                 'label' => "Client ciblé",
+                'required' => false,
+            ])
+            ->add('assureur', AssureurAutocompleteField::class, [
+                'label' => "Assureur ciblé",
+                'required' => false,
+            ])
+            ->add('partenaire', PartenaireAutocompleteField::class, [
+                'label' => "Intermédiaire / Partenaire ciblé",
+                'required' => false,
+            ])
+            ->add('autoritefiscale', AutoriteFiscaleAutocompleteField::class, [
+                'label' => "Autorité fiscale ciblée",
                 'required' => false,
             ])
             ->add('assureur', AssureurAutocompleteField::class, [
