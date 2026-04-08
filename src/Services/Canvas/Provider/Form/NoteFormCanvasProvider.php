@@ -51,11 +51,19 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
         $noteId = $object->getId() ?? 0;
 
         // --- Définition des conditions de visibilité ---
+        // Conditions pour les champs de sélection de destinataire (Client, Assureur, etc.)
         $visibilityClient = ['visibility_conditions' => [['field' => 'addressedTo', 'operator' => 'in', 'value' => [Note::TO_CLIENT]]]];
         $visibilityAssureur = ['visibility_conditions' => [['field' => 'addressedTo', 'operator' => 'in', 'value' => [Note::TO_ASSUREUR]]]];
         $visibilityPartenaire = ['visibility_conditions' => [['field' => 'addressedTo', 'operator' => 'in', 'value' => [Note::TO_PARTENAIRE]]]];
         $visibilityAutorite = ['visibility_conditions' => [['field' => 'addressedTo', 'operator' => 'in', 'value' => [Note::TO_AUTORITE_FISCALE]]]];
+        
+        // Condition pour le champ 'comptes'
         $visibilityComptes = ['visibility_conditions' => [['field' => 'type', 'operator' => 'in', 'value' => [Note::TYPE_NOTE_DE_DEBIT]]]];
+
+        // NOUVEAU : Conditions pour les options de destinataire (les cases à cocher)
+        $visibilityDebitOption = ['visibility_conditions' => [['field' => 'type', 'operator' => 'in', 'value' => [Note::TYPE_NOTE_DE_DEBIT]]]];
+        $visibilityCreditOption = ['visibility_conditions' => [['field' => 'type', 'operator' => 'in', 'value' => [Note::TYPE_NOTE_DE_CREDIT]]]];
+
 
         $layout = [
             // Ligne 1: le type
@@ -66,8 +74,15 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
             ["colonnes" => [["champs" => ["reference"]]]],
             // Ligne 3.1: La description détaillée (Editeur riche)
             ["colonnes" => [["champs" => ["description"]]]],
-            // Ligne 4: A qui s'adresse la note (destinataire)
-            ["colonnes" => [["champs" => ["addressedTo"]]]],
+            
+            // NOUVEAU : Ligne 4 - Regroupement des options de destinataire
+            // On utilise une ligne spéciale avec un titre pour regrouper visuellement les cases.
+            ["group_title" => "À qui s'adresse cette note ?", "colonnes" => [
+                ["champs" => [array_merge(['field_code' => 'addressedToClient'], $visibilityDebitOption)]],
+                ["champs" => [array_merge(['field_code' => 'addressedToAssureur'], $visibilityDebitOption)]],
+                ["champs" => [array_merge(['field_code' => 'addressedToPartenaire'], $visibilityCreditOption)]],
+                ["champs" => [array_merge(['field_code' => 'addressedToAutoriteFiscale'], $visibilityDebitOption)]],
+            ]],
 
             // --- Lignes conditionnelles basées sur le destinataire ---
             // Ligne 5: Le client

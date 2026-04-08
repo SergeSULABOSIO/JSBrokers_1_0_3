@@ -15,6 +15,12 @@
                 {# Pour chaque ligne définie dans la configuration du layout... #}
                 {% for row in formCanvas.form_layout %}
                     {# NOUVEAU : On vérifie d'abord si une condition de visibilité est définie pour la LIGNE entière. #}
+                    {% if row.group_title is defined %}
+                        <div class="row">
+                            <div class="col-12"><label class="form-label required">{{ row.group_title }}</label></div>
+                        </div>
+                    {% endif %}
+
                     {% set row_visibility_conditions = (row.visibility_conditions is defined) ? row.visibility_conditions|json_encode : null %}
 
                     <div class="row"
