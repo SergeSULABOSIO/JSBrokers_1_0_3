@@ -75,14 +75,13 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
             // Ligne 3.1: La description détaillée (Editeur riche)
             ["colonnes" => [["champs" => ["description"]]]],
             
-            // NOUVEAU : Ligne 4 - Regroupement des options de destinataire
-            // On utilise une ligne spéciale avec un titre pour regrouper visuellement les cases.
-            ["group_title" => "À qui s'adresse cette note ?", "colonnes" => [
-                ["champs" => [array_merge(['field_code' => 'addressedToClient'], $visibilityDebitOption)]],
-                ["champs" => [array_merge(['field_code' => 'addressedToAssureur'], $visibilityDebitOption)]],
-                ["champs" => [array_merge(['field_code' => 'addressedToPartenaire'], $visibilityCreditOption)]],
-                ["champs" => [array_merge(['field_code' => 'addressedToAutoriteFiscale'], $visibilityDebitOption)]],
-            ]],
+            // --- NOUVEAU : Ligne 4 - Options de destinataire, chacune sur sa propre ligne ---
+            // On utilise une première ligne "factice" uniquement pour le titre du groupe.
+            ["group_title" => "À qui s'adresse cette note ?", "colonnes" => []],
+            ["colonnes" => [["champs" => [array_merge(['field_code' => 'addressedToClient'], $visibilityDebitOption)]]]],
+            ["colonnes" => [["champs" => [array_merge(['field_code' => 'addressedToAssureur'], $visibilityDebitOption)]]]],
+            ["colonnes" => [["champs" => [array_merge(['field_code' => 'addressedToPartenaire'], $visibilityCreditOption)]]]],
+            ["colonnes" => [["champs" => [array_merge(['field_code' => 'addressedToAutoriteFiscale'], $visibilityDebitOption)]]]],
 
             // --- Lignes conditionnelles basées sur le destinataire ---
             // Ligne 5: Le client
