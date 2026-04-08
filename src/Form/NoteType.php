@@ -28,9 +28,10 @@ class NoteType extends AbstractType
         ]);
 
         // On ajoute les data-targets pour que Stimulus puisse identifier les champs
-        // NOUVEAU : On utilise 'row_attr' pour cibler le div parent de chaque choix.
-        $typeChoiceAttr = fn($choice, $key, $value) => ['data-note-form-target' => 'typeInput', 'data-action' => 'change->note-form#toggleFields'];
-        $addressedToChoiceAttr = fn($choice, $key, $value) => ['data-note-form-target' => 'addressedToWrapper'];
+        // CORRECTION : On utilise 'choice_row_attr' pour cibler le div wrapper de chaque option radio.
+        $typeChoiceAttr = fn($choice, $key, $value) => ['data-action' => 'change->note-form#toggleFields'];
+        $typeRowAttr = fn($choice, $key, $value) => ['data-note-form-target' => 'typeInput'];
+        $addressedToRowAttr = fn($choice, $key, $value) => ['data-note-form-target' => 'addressedToWrapper'];
         $bankAccountsRowAttr = ['data-note-form-target' => 'bankAccountsWrapper'];
 
         $builder
@@ -61,8 +62,8 @@ class NoteType extends AbstractType
                 'required' => true,
                 'expanded' => true,
                 'label_html' => true,
-                // CORRECTION : On applique les attributs à chaque choix individuel.
                 'choice_attr' => $typeChoiceAttr,
+                'choice_row_attr' => $typeRowAttr,
                 'choices'  => [
                     "Débit" => Note::TYPE_NOTE_DE_DEBIT,
                     "Crédit" => Note::TYPE_NOTE_DE_CREDIT,
@@ -79,8 +80,8 @@ class NoteType extends AbstractType
                 'required' => true,
                 'expanded' => true,
                 'label_html' => true,
-                // CORRECTION : On applique les attributs à chaque choix individuel.
-                'choice_attr' => $addressedToChoiceAttr,
+                // CORRECTION : On applique le data-target au wrapper de chaque choix.
+                'choice_row_attr' => $addressedToRowAttr,
                 'choices'  => [
                     "Le client" => Note::TO_CLIENT,
                     "L'assureur" => Note::TO_ASSUREUR,
