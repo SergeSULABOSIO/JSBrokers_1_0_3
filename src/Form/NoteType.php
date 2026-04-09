@@ -88,6 +88,10 @@ class NoteType extends AbstractType
                 'label' => "Client ciblé",
                 'required' => false,
             ])
+            ->add('assureur', AssureurAutocompleteField::class, [
+                'label' => "Assureur ciblé",
+                'required' => false,
+            ])
             ->add('partenaire', PartenaireAutocompleteField::class, [
                 'label' => "Intermédiaire / Partenaire ciblé",
                 'required' => false,
