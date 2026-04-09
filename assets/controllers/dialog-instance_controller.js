@@ -18,15 +18,22 @@ export default class extends Controller {
     static outlets = ['modal'];
     static targets = [
         'content', 'formRow', 'dynamicFieldContainer', 'header', 'title', 'titleIcon', 
-        'closeButton', 'progressBarContainer', 'footer', 'feedbackContainer', 'submitButton', 
+        'closeButton', 'progressBarContainer', 'footer', 'feedbackContainer', 'submitButton',
         'closeFooterButton', 'saveIcon', 'closeIcon',
         // NOUVEAU : Ajout de addressedToTarget pour un accès direct au champ addressedTo
         // Note: Pour un ChoiceType expanded (radio buttons), addressedToTarget fera référence
         // au premier élément du groupe de radio buttons, mais nous utiliserons querySelectorAll
         // pour cibler tous les boutons radio par leur nom.
-        'addressedTo' 
+        'addressedTo'
     ];
     
+
+    /**
+     * @property {string|null} lastNoteType - Stocke la dernière valeur connue du champ 'type' de la note.
+     * Utilisé pour détecter les changements et réinitialiser 'addressedTo'.
+     */
+    lastNoteType = null;
+
 
     /**
      * Méthode du cycle de vie de Stimulus.
@@ -54,12 +61,6 @@ export default class extends Controller {
          * @private
          */
         this.isTitleIconLoaded = false;
-
-        /**
-         * @property {string|null} lastNoteType - Stocke la dernière valeur connue du champ 'type' de la note.
-         * Utilisé pour détecter les changements et réinitialiser 'addressedTo'.
-         */
-        this.lastNoteType = null;
         const detail = this.element.dialogDetail;
         console.log(`[${++window.logSequence}] - [${this.nomControleur}] - [connect] - Code: 1986 - Début - Données:`, detail, this.element, this.contentTarget);
         this.cetteApplication = this.application; 
@@ -528,9 +529,10 @@ export default class extends Controller {
             row.classList.toggle('d-none', visibleColumns.length === 0);
         });
 
-        // NOUVEAU : On appelle la logique de mise à jour des choix dynamiques.
-        // C'est le bon endroit car cette méthode est appelée à l'initialisation et à chaque changement.
-        this._updateDynamicChoices();
+        // NOUVEAU : On appelle la logique de mise à jour des choix dynamiques à la fin.
+        const form = this.contentTarget.querySelector('form');
+        if (form) this._updateDynamicChoices(form);
+
     }
 
     /**
@@ -538,80 +540,53 @@ export default class extends Controller {
      * en fonction de la valeur d'un autre champ.
      * @private
      */
-    _updateDynamicChoices() {
-        const form = this.contentTarget.querySelector('form');
-        if (!form) return;
-
-        // On cible le champ 'type' de la note.
+    _updateDynamicChoices(form) {
+        // On écoute les changements sur le champ 'type' de la note.
         const noteTypeField = form.elements['type'];
-        // On s'assure qu'il s'agit bien d'un groupe de boutons radio.
         if (!noteTypeField || !(noteTypeField instanceof RadioNodeList)) return;
 
-        const noteType = noteTypeField.value;
-        // Si aucune valeur n'est sélectionnée, on ne fait rien.
-        if (noteType === undefined || noteType === '') return;
+        const currentNoteType = noteTypeField.value;
+        const addressedToChoices = this.contentTarget.querySelectorAll('[name="addressedTo"]');
 
-        // On cible toutes les options (radio/checkbox) qui ont notre attribut `data-visibility-target`.
-        const choices = this.contentTarget.querySelectorAll('[data-visibility-target="choice"]');
+        // Étape 1 : Si le type de note a changé, on réinitialise 'addressedTo'.
+        if (this.lastNoteType !== null && this.lastNoteType !== currentNoteType) {
+            let wasChanged = false;
+            addressedToChoices.forEach(choice => {
+                if (choice.checked) {
+                    choice.checked = false;
+                    wasChanged = true;
+                }
+            });
+            // Si une option a été décochée, on déclenche un événement 'change' pour que les champs dépendants (client, assureur...) se masquent.
+            if (wasChanged && addressedToChoices.length > 0) {
+                addressedToChoices[0].dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+        // On met à jour la dernière valeur connue.
+        this.lastNoteType = currentNoteType;
 
-        choices.forEach(choice => {
-            // Chaque option est dans un div .form-check que nous devons masquer/afficher.
-            const parentWrapper = choice.closest('.form-check'); 
+        // Étape 2 : On met à jour la visibilité des options de 'addressedTo'.
+        addressedToChoices.forEach(choice => {
+            const parentWrapper = choice.closest('.form-check');
             if (!parentWrapper) return;
 
             let shouldBeVisible = false;
             // On vérifie la visibilité en fonction du type de note sélectionné.
             // CORRECTION : Utilisation des valeurs '0' et '1' pour Débit et Crédit.
-            if (noteType === '0') { // Note::TYPE_NOTE_DE_DEBIT
+            if (currentNoteType === '0') { // Note::TYPE_NOTE_DE_DEBIT
                 shouldBeVisible = choice.dataset.visibilityDebit === 'true';
-            } else if (noteType === '1') { // Note::TYPE_NOTE_DE_CREDIT
+            } else if (currentNoteType === '1') { // Note::TYPE_NOTE_DE_CREDIT
                 shouldBeVisible = choice.dataset.visibilityCredit === 'true';
             }
 
-            // Si le type de note est vide ou inconnu, toutes les options addressedTo doivent être masquées.
+            // Si le type de note est vide ou inconnu, toutes les options sont masquées.
             if (currentNoteType === undefined || currentNoteType === '') {
                 shouldBeVisible = false;
             }
 
+            // On affiche ou on masque le conteneur de l'option.
             parentWrapper.style.display = shouldBeVisible ? '' : 'none';
         });
-    }
-
-    /**
-     * NOUVEAU : Évalue une condition de visibilité unique.
-     * @param {object} condition - L'objet condition à évaluer.
-     * @returns {boolean} - `true` si la condition est remplie, sinon `false`.
-     */
-    evaluateCondition(condition) {
-        const form = this.contentTarget.querySelector('form'); // Search within modal-body
-        const fieldName = condition.field;
-        const field = form.elements[fieldName]; // Manière robuste de récupérer un champ de formulaire
-
-        if (!field) return false;
-
-        let sourceValue;
-        if (field instanceof RadioNodeList) {
-            // Cas d'un groupe de boutons radio (expanded: true)
-            const checkedRadio = form.querySelector(`[name="${fieldName}"]:checked`);
-            if (!checkedRadio) return false;
-            sourceValue = checkedRadio.value;
-        } else {
-            // Cas d'un <select>, <input>, etc. (expanded: false)
-            sourceValue = field.value;
-        }
-
-        if (sourceValue === null || sourceValue === undefined) return false;
-
-        if (condition.operator === 'in') {
-            return condition.value.map(String).includes(String(sourceValue));
-        }
-
-        // Ajout du support pour l'opérateur 'not_empty' demandé par ArticleFormCanvasProvider
-        if (condition.operator === 'not_empty') {
-            return sourceValue !== null && sourceValue !== undefined && String(sourceValue).trim() !== "";
-        }
-
-        return false;
     }
 
     /**
