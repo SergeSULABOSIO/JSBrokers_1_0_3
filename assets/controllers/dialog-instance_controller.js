@@ -518,6 +518,7 @@ export default class extends Controller {
         });
 
         // NOUVEAU : On appelle la logique de mise à jour des choix dynamiques.
+        // C'est le bon endroit car cette méthode est appelée à l'initialisation et à chaque changement.
         this._updateDynamicChoices();
     }
 
@@ -530,31 +531,35 @@ export default class extends Controller {
         const form = this.contentTarget.querySelector('form');
         if (!form) return;
 
-        // On écoute les changements sur le champ 'type' de la note.
+        // On cible le champ 'type' de la note.
         const noteTypeField = form.elements['type'];
+        // On s'assure qu'il s'agit bien d'un groupe de boutons radio.
         if (!noteTypeField || !(noteTypeField instanceof RadioNodeList)) return;
 
         const noteType = noteTypeField.value;
+        // Si aucune valeur n'est sélectionnée, on ne fait rien.
         if (noteType === undefined || noteType === '') return;
 
         // On cible toutes les options (radio/checkbox) qui ont notre attribut `data-visibility-target`.
         const choices = this.contentTarget.querySelectorAll('[data-visibility-target="choice"]');
 
         choices.forEach(choice => {
-            const parentWrapper = choice.closest('.form-check'); // Chaque option est dans un div .form-check
+            // Chaque option est dans un div .form-check que nous devons masquer/afficher.
+            const parentWrapper = choice.closest('.form-check'); 
             if (!parentWrapper) return;
 
             let shouldBeVisible = false;
             // On vérifie la visibilité en fonction du type de note sélectionné.
-            if (noteType === '1') { // Note::TYPE_NOTE_DE_DEBIT
+            // CORRECTION : Utilisation des valeurs '0' et '1' pour Débit et Crédit.
+            if (noteType === '0') { // Note::TYPE_NOTE_DE_DEBIT
                 shouldBeVisible = choice.dataset.visibilityDebit === 'true';
-            } else if (noteType === '2') { // Note::TYPE_NOTE_DE_CREDIT
+            } else if (noteType === '1') { // Note::TYPE_NOTE_DE_CREDIT
                 shouldBeVisible = choice.dataset.visibilityCredit === 'true';
             }
 
             parentWrapper.style.display = shouldBeVisible ? '' : 'none';
 
-            // Si l'option masquée était sélectionnée, on la désélectionne.
+            // Si l'option masquée était sélectionnée, on la désélectionne pour éviter les soumissions invalides.
             if (!shouldBeVisible && choice.checked) choice.checked = false;
         });
     }
