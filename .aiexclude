@@ -1,0 +1,55 @@
+# --- Symfony Core & Backend ---
+/vendor/
+/var/
+/config/secrets/
+/config/jwt/
+.env.local
+.env.*.local
+
+# --- Asset Mapper (Spécifique Symfony 7) ---
+# Très important : Asset Mapper télécharge les libs JS ici. 
+# Gemini n'a pas besoin de relire le code de Bootstrap ou de Stimulus.
+/assets/vendor/
+/public/assets/
+/importmap.php
+
+# --- Database & Storage ---
+/*.db
+/*.sqlite
+/public/uploads/
+/public/bundles/
+/migrations/*.sql
+
+# --- Outils de Qualité & Tests ---
+/.phpunit.result.cache
+/phpstan-baseline.neon
+/tests/_output/
+/tests/_support/_generated/
+/.php-cs-fixer.dist.php
+/rector.php
+
+# --- Docker & Infrastructure ---
+/.docker/
+/docker-compose.override.yml
+
+# --- Fichiers Système & IDE ---
+/.vscode/
+/.idea/
+/.git/
+.DS_Store
+*.log
+*.tmp
+*.bak
+
+# --- Médias et Front-end lourd ---
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+*.pdf
+*.woff
+*.woff2
+*.ttf
+*.eot
