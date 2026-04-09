@@ -19,7 +19,12 @@ export default class extends Controller {
     static targets = [
         'content', 'formRow', 'dynamicFieldContainer', 'header', 'title', 'titleIcon', 
         'closeButton', 'progressBarContainer', 'footer', 'feedbackContainer', 'submitButton', 
-        'closeFooterButton', 'saveIcon', 'closeIcon'
+        'closeFooterButton', 'saveIcon', 'closeIcon',
+        // NOUVEAU : Ajout de addressedToTarget pour un accès direct au champ addressedTo
+        // Note: Pour un ChoiceType expanded (radio buttons), addressedToTarget fera référence
+        // au premier élément du groupe de radio buttons, mais nous utiliserons querySelectorAll
+        // pour cibler tous les boutons radio par leur nom.
+        'addressedTo' 
     ];
     
 
@@ -49,6 +54,12 @@ export default class extends Controller {
          * @private
          */
         this.isTitleIconLoaded = false;
+
+        /**
+         * @property {string|null} lastNoteType - Stocke la dernière valeur connue du champ 'type' de la note.
+         * Utilisé pour détecter les changements et réinitialiser 'addressedTo'.
+         */
+        this.lastNoteType = null;
         const detail = this.element.dialogDetail;
         console.log(`[${++window.logSequence}] - [${this.nomControleur}] - [connect] - Code: 1986 - Début - Données:`, detail, this.element, this.contentTarget);
         this.cetteApplication = this.application; 
@@ -557,10 +568,12 @@ export default class extends Controller {
                 shouldBeVisible = choice.dataset.visibilityCredit === 'true';
             }
 
-            parentWrapper.style.display = shouldBeVisible ? '' : 'none';
+            // Si le type de note est vide ou inconnu, toutes les options addressedTo doivent être masquées.
+            if (currentNoteType === undefined || currentNoteType === '') {
+                shouldBeVisible = false;
+            }
 
-            // Si l'option masquée était sélectionnée, on la désélectionne pour éviter les soumissions invalides.
-            if (!shouldBeVisible && choice.checked) choice.checked = false;
+            parentWrapper.style.display = shouldBeVisible ? '' : 'none';
         });
     }
 
