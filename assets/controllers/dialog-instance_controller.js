@@ -516,6 +516,47 @@ export default class extends Controller {
             const visibleColumns = columns.filter(col => !col.classList.contains('d-none'));
             row.classList.toggle('d-none', visibleColumns.length === 0);
         });
+
+        // NOUVEAU : On appelle la logique de mise à jour des choix dynamiques.
+        this._updateDynamicChoices();
+    }
+
+    /**
+     * NOUVEAU : Gère la visibilité des options individuelles (ex: boutons radio)
+     * en fonction de la valeur d'un autre champ.
+     * @private
+     */
+    _updateDynamicChoices() {
+        const form = this.contentTarget.querySelector('form');
+        if (!form) return;
+
+        // On écoute les changements sur le champ 'type' de la note.
+        const noteTypeField = form.elements['type'];
+        if (!noteTypeField || !(noteTypeField instanceof RadioNodeList)) return;
+
+        const noteType = noteTypeField.value;
+        if (noteType === undefined || noteType === '') return;
+
+        // On cible toutes les options (radio/checkbox) qui ont notre attribut `data-visibility-target`.
+        const choices = this.contentTarget.querySelectorAll('[data-visibility-target="choice"]');
+
+        choices.forEach(choice => {
+            const parentWrapper = choice.closest('.form-check'); // Chaque option est dans un div .form-check
+            if (!parentWrapper) return;
+
+            let shouldBeVisible = false;
+            // On vérifie la visibilité en fonction du type de note sélectionné.
+            if (noteType === '1') { // Note::TYPE_NOTE_DE_DEBIT
+                shouldBeVisible = choice.dataset.visibilityDebit === 'true';
+            } else if (noteType === '2') { // Note::TYPE_NOTE_DE_CREDIT
+                shouldBeVisible = choice.dataset.visibilityCredit === 'true';
+            }
+
+            parentWrapper.style.display = shouldBeVisible ? '' : 'none';
+
+            // Si l'option masquée était sélectionnée, on la désélectionne.
+            if (!shouldBeVisible && choice.checked) choice.checked = false;
+        });
     }
 
     /**
