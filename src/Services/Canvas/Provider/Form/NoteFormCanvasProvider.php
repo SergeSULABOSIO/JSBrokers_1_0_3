@@ -68,24 +68,21 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
         $layout = [
             // Ligne 1: le type
             ["colonnes" => [["champs" => ["type"]]]],
-            // Ligne 2: le destinataire
+            // Ligne 2: Le destinataire et les champs conditionnels associés
             ["colonnes" => [["champs" => ["addressedTo"]]]],
-            // Ligne 2: le nom (anciennement Ligne 2)
-            ["colonnes" => [["champs" => ["nom"]]]],
-            // Ligne 3: la référence (anciennement Ligne 3)
-            ["colonnes" => [["champs" => ["reference"]]]],
-            // Ligne 3.1: La description détaillée (Editeur riche) (anciennement Ligne 3.1)
-            ["colonnes" => [["champs" => ["description"]]]],
-
-            // --- Lignes conditionnelles basées sur le destinataire ---
-            // Ligne 5: Le client
             ["colonnes" => [["champs" => [array_merge(['field_code' => 'client'], $visibilityClient)]]]],
-            // Ligne 6: L'assureur
             ["colonnes" => [["champs" => [array_merge(['field_code' => 'assureur'], $visibilityAssureur)]]]],
-            // Ligne 7: L'intermédiaire (partenaire) 
             ["colonnes" => [["champs" => [array_merge(['field_code' => 'partenaire'], $visibilityPartenaire)]]]],
-            // Ligne 8: L'autorité fiscale
             ["colonnes" => [["champs" => [array_merge(['field_code' => 'autoritefiscale'], $visibilityAutorite)]]]],
+
+            // Ligne 3: le nom
+            ["colonnes" => [["champs" => ["nom"]]]],
+
+            // Ligne 4: la référence
+            ["colonnes" => [["champs" => ["reference"]]]],
+
+            // Ligne 5: La description détaillée (Editeur riche)
+            ["colonnes" => [["champs" => ["description"]]]],
 
             // Ligne 10: Comptes bancaires (conditionnel, visible si type = Débit)
             ["colonnes" => [["champs" => [array_merge(['field_code' => 'comptes'], $visibilityComptes)]]]],
