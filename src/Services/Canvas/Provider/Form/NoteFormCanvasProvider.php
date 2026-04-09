@@ -82,7 +82,7 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
             ["colonnes" => [["champs" => [array_merge(['field_code' => 'client'], $visibilityClient)]]]],
             // Ligne 6: L'assureur
             ["colonnes" => [["champs" => [array_merge(['field_code' => 'assureur'], $visibilityAssureur)]]]],
-            // Ligne 7: L'intermédiaire (partenaire)
+            // Ligne 7: L'intermédiaire (partenaire) 
             ["colonnes" => [["champs" => [array_merge(['field_code' => 'partenaire'], $visibilityPartenaire)]]]],
             // Ligne 8: L'autorité fiscale
             ["colonnes" => [["champs" => [array_merge(['field_code' => 'autoritefiscale'], $visibilityAutorite)]]]],
