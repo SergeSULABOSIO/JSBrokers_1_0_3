@@ -52,10 +52,23 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
 
         // --- Définition des conditions de visibilité ---
         // Conditions pour les champs de sélection de destinataire (Client, Assureur, etc.)
-        $visibilityClient = ['visibility_conditions' => [['field' => 'addressedTo', 'operator' => 'in', 'value' => [Note::TO_CLIENT]]]];
-        $visibilityAssureur = ['visibility_conditions' => [['field' => 'addressedTo', 'operator' => 'in', 'value' => [Note::TO_ASSUREUR]]]];
-        $visibilityPartenaire = ['visibility_conditions' => [['field' => 'addressedTo', 'operator' => 'in', 'value' => [Note::TO_PARTENAIRE]]]];
-        $visibilityAutorite = ['visibility_conditions' => [['field' => 'addressedTo', 'operator' => 'in', 'value' => [Note::TO_AUTORITE_FISCALE]]]];
+        // NOUVEAU : Ajout d'une condition pour s'assurer que 'addressedTo' a une valeur.
+        $visibilityClient = ['visibility_conditions' => [
+            ['field' => 'addressedTo', 'operator' => 'not_empty'],
+            ['field' => 'addressedTo', 'operator' => 'in', 'value' => [Note::TO_CLIENT]]
+        ]];
+        $visibilityAssureur = ['visibility_conditions' => [
+            ['field' => 'addressedTo', 'operator' => 'not_empty'],
+            ['field' => 'addressedTo', 'operator' => 'in', 'value' => [Note::TO_ASSUREUR]]
+        ]];
+        $visibilityPartenaire = ['visibility_conditions' => [
+            ['field' => 'addressedTo', 'operator' => 'not_empty'],
+            ['field' => 'addressedTo', 'operator' => 'in', 'value' => [Note::TO_PARTENAIRE]]
+        ]];
+        $visibilityAutorite = ['visibility_conditions' => [
+            ['field' => 'addressedTo', 'operator' => 'not_empty'],
+            ['field' => 'addressedTo', 'operator' => 'in', 'value' => [Note::TO_AUTORITE_FISCALE]]
+        ]];
         
         // Condition pour le champ 'comptes'
         $visibilityComptes = ['visibility_conditions' => [['field' => 'type', 'operator' => 'in', 'value' => [Note::TYPE_NOTE_DE_DEBIT]]]];
