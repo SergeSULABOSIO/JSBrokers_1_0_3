@@ -83,6 +83,14 @@ class NoteType extends AbstractType
                     ];
                     return '<div><strong>' . $key . '</strong><div class="text-muted small">' . ($descriptions[$value] ?? '') . '</div></div>';
                 },
+                'choice_attr' => function ($choice, $key, $value) {
+                    // C'est ici que nous ajoutons les attributs de données pour le ciblage dynamique.
+                    return [
+                        'data-visibility-target' => 'choice',
+                        'data-visibility-debit' => in_array($value, [Note::TO_CLIENT, Note::TO_ASSUREUR]) ? 'true' : 'false',
+                        'data-visibility-credit' => in_array($value, [Note::TO_PARTENAIRE, Note::TO_AUTORITE_FISCALE]) ? 'true' : 'false',
+                    ];
+                },
             ])
             ->add('client', ClientAutocompleteField::class, [
                 'label' => "Client ciblé",
