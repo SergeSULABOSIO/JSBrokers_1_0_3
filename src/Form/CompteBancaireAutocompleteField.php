@@ -43,7 +43,7 @@ class CompteBancaireAutocompleteField extends AbstractType
 
                 // 3. Construction du HTML en s'inspirant de RevenuPourCourtierAutocompleteField
                 return sprintf(
-                    '<div class="jsb-autocomplete-item" data-entity-type="CompteBancaire">
+                    '<div class="jsb-autocomplete-item">
                         <div class="jsb-autocomplete-title">%s</div>
                         <div class="jsb-autocomplete-context">
                             <span>Entreprise: <strong>%s</strong></span>
