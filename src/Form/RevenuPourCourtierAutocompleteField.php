@@ -40,17 +40,18 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
             'parent_note' => null, // NOUVEAU : Pour recevoir l'entité Note parente.
         ]);
 
-        // Le query_builder est maintenant le seul responsable du filtrage.
-        // NOUVEAU : On utilise une fonction complète pour stocker les options.
-        $resolver->setNormalizer('query_builder', function (Options $options) {
-            // On stocke les options résolues pour y accéder plus tard (ex: dans renderChoiceLabel).
+        // CORRECTION : On utilise un normaliseur pour capturer les options avant de définir le query_builder.
+        // C'est la méthode robuste pour accéder au contexte du formulaire (ex: parent_note)
+        // tout en fournissant au query_builder une closure avec la signature attendue (un seul argument).
+        $resolver->setNormalizer('query_builder', function (Options $options, $value) {
+            // 1. On stocke les options pour que `renderChoiceLabel` et `fetchAndFilterEligibleRevenus` y aient accès.
             $this->currentOptions = $options;
-            
-            // CORRECTION : Le QueryBuilder ne doit plus filtrer.
-            // Il doit pouvoir retrouver n'importe quel RevenuPourCourtier par son ID lors de la soumission.
-            // Le filtrage des options affichées est déjà géré par fetchAndFilterEligibleRevenus()
-            // qui est appelé par le contrôleur d'autocomplétion de Symfony UX.
-            return fn(\App\Repository\RevenuPourCourtierRepository $er) => $er->createQueryBuilder('r');
+
+            // 2. On retourne la closure que Symfony utilisera pour construire le QueryBuilder.
+            // Cette closure respecte la signature attendue (un seul argument).
+            return function (\App\Repository\RevenuPourCourtierRepository $er) {
+                return $er->createQueryBuilder('r');
+            };
         });
     }
 
