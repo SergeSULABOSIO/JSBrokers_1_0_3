@@ -46,13 +46,12 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
             // On stocke les options résolues pour y accéder plus tard (ex: dans renderChoiceLabel).
             $this->currentOptions = $options;
             
-            return $this->getEligibleRevenusQueryBuilder($options);
+            // CORRECTION : Le QueryBuilder ne doit plus filtrer.
+            // Il doit pouvoir retrouver n'importe quel RevenuPourCourtier par son ID lors de la soumission.
+            // Le filtrage des options affichées est déjà géré par fetchAndFilterEligibleRevenus()
+            // qui est appelé par le contrôleur d'autocomplétion de Symfony UX.
+            return fn(\App\Repository\RevenuPourCourtierRepository $er) => $er->createQueryBuilder('r');
         });
-    }
-
-    public function getParent(): string
-    {
-        return BaseEntityAutocompleteType::class;
     }
 
     /**
@@ -61,32 +60,9 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
      * @param Options $options
      * @return \Doctrine\ORM\QueryBuilder
      */
-    private function getEligibleRevenusQueryBuilder(Options $options): \Doctrine\ORM\QueryBuilder
+    public function getParent(): string
     {
-        // 1. On récupère la liste des IDs des revenus éligibles (non soldés) pour la recherche.
-        $eligibleRevenus = $this->fetchAndFilterEligibleRevenus($options);
-        $eligibleIds = array_map(fn(RevenuPourCourtier $r) => $r->getId(), $eligibleRevenus);
-
-        // 2. En mode édition, on s'assure que l'ID du revenu déjà associé à l'article est inclus, même si son solde est nul.
-        // On utilise notre nouvelle option 'parent_article'.
-        $parentArticle = $options['parent_article'] ?? null;
-        if ($parentArticle instanceof \App\Entity\Article && $parentArticle->getRevenuFacture()) {
-            $currentRevenuId = $parentArticle->getRevenuFacture()->getId();
-            if (!in_array($currentRevenuId, $eligibleIds)) {
-                $eligibleIds[] = $currentRevenuId;
-            }
-        }
-
-        // Si aucun revenu n'est éligible, on s'assure que la requête ne retourne rien.
-        if (empty($eligibleIds)) {
-            $eligibleIds = [0]; // Utilise un ID qui ne correspondra à rien.
-        }
-
-        // 3. On retourne un QueryBuilder final qui filtre sur ces IDs.
-        $er = $this->em->getRepository($options['class']);
-        return $er->createQueryBuilder('r')
-            ->where('r.id IN (:ids)')
-            ->setParameter('ids', $eligibleIds);
+        return BaseEntityAutocompleteType::class;
     }
 
     private function fetchAndFilterEligibleRevenus(Options $options): array
