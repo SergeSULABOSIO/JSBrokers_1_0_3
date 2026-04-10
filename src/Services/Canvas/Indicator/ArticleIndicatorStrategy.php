@@ -51,26 +51,36 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
         $revenu = $article->getRevenuFacture();
         $tranche = $article->getTranche();
 
+        // On récupère la cotation depuis le revenu ou la tranche pour trouver la police.
+        $cotation = $revenu?->getCotation() ?? $tranche?->getCotation();
+        $policeRef = 'Police N/A';
+        if ($cotation && !$cotation->getAvenants()->isEmpty()) {
+            $avenant = $cotation->getAvenants()->first();
+            $policeRef = $avenant->getReferencePolice() ?? 'Police N/A';
+        }
+
         // On s'assure que la tranche est hydratée pour avoir son taux.
         if ($tranche) {
             $this->hydrateTranche($tranche);
         }
 
         if ($revenu !== null) {
-            $nomRevenu = $revenu->getNom() ?? 'Revenu sans nom';
+            $nomRevenu = htmlspecialchars($revenu->getNom() ?? 'Revenu sans nom');
             // Si une tranche est également liée, on construit la description détaillée.
             if ($tranche !== null) {
-                $nomTranche = $tranche->getNom() ?? 'Tranche sans nom';
+                $nomTranche = htmlspecialchars($tranche->getNom() ?? 'Tranche sans nom');
                 $tauxTranche = number_format($tranche->tauxTranche ?? 0.0, 2, ',', ' ');
                 $quantite = number_format($article->getQuantite() ?? 1.0, 2, ',', ' ');
 
-                // Format : "Commission Ordinaire (1ère Tranche @ 50,00% x 1,00)"
-                return sprintf('%s (%s @%s%% x %s)', $nomRevenu, $nomTranche, $tauxTranche, $quantite);
+                // Format : "Police 123 - Commission Ordinaire (1ère Tranche @ 50,00% x 1,00)"
+                return sprintf('%s - %s (%s @%s%% x %s)', $policeRef, $nomRevenu, $nomTranche, $tauxTranche, $quantite);
             }
-            return $nomRevenu;
+            // Format : "Police 123 - Commission Ordinaire"
+            return sprintf('%s - %s', $policeRef, $nomRevenu);
         }
         if ($tranche !== null) { // Cas où l'on facture une prime directement, sans passer par un revenu.
-            return sprintf('Prime / %s', $tranche->getNom() ?? 'Tranche sans nom');
+            // Format : "Police 123 - Prime / 1ère Tranche"
+            return sprintf('%s - Prime / %s', $policeRef, htmlspecialchars($tranche->getNom() ?? 'Tranche sans nom'));
         }
         return 'N/A';
     }
