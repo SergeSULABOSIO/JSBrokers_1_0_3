@@ -149,53 +149,13 @@ class TrancheAutocompleteField extends AbstractType
 
 
 
-
-
-
-
-
-
-
-            'query_builder' => function (Options $options) {
-                return function (EntityRepository $er) use ($options): QueryBuilder {
-                    $request = $this->requestStack->getCurrentRequest();
-                    
-                    $liveRevenuId = $request ? $request->query->get('live_revenu_id') : null;
-                    $formRevenuId = $options['revenu_id'];
-
-                    // Initialisation propre sans la jointure Piste/Entreprise
-                    $qb = $er->createQueryBuilder('t');
-
-                    // --- 1. FILTRE LIVE (Depuis Stimulus Javascript) ---
-                    if ($liveRevenuId) {
-                        $revenu = $this->em->getRepository(RevenuPourCourtier::class)->find($liveRevenuId);
-                        
-                        if ($revenu && $revenu->getCotation()) {
-                            $qb->andWhere('t.cotation = :cotationId')
-                               ->setParameter('cotationId', $revenu->getCotation()->getId());
-                        } else {
-                            $qb->andWhere('1 = 0'); // Sécurité: pas de cotation trouvée = liste vide
-                        }
-                    } 
-                    // --- 2. FILTRE INITIAL (Au chargement de la page d'édition) ---
-                    elseif ($formRevenuId) {
-                        $revenu = $this->em->getRepository(RevenuPourCourtier::class)->find($formRevenuId);
-                        if ($revenu && $revenu->getCotation()) {
-                            $qb->andWhere('t.cotation = :cotationId')
-                               ->setParameter('cotationId', $revenu->getCotation()->getId());
-                        } else {
-                            $qb->andWhere('1 = 0');
-                        }
-                    } 
-                    // --- 3. AUCUN REVENU CHOISI ---
-                    else {
-                        $qb->andWhere('1 = 0'); // Si aucun revenu n'est sélectionné, la liste est vide par défaut
-                    }
-
-                    $qb->orderBy('t.id', 'ASC');
-                    return $qb;
-                };
-            }
+            // CORRECTION : Le QueryBuilder ne doit plus filtrer.
+            // Il doit pouvoir retrouver n'importe quelle Tranche par son ID lors de la soumission.
+            // Le filtrage des options affichées est déjà géré par l'URL d'autocomplétion
+            // qui reçoit 'live_revenu_id' et filtre les tranches de la bonne cotation.
+            'query_builder' => function (EntityRepository $er) {
+                return $er->createQueryBuilder('t');
+            },
         ]);
     }
 

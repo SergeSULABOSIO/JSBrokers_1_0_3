@@ -477,9 +477,31 @@ trait ControllerUtilsTrait
         $files = $request->files->all();
         $submittedData = array_merge($data, $files);
 
-        $entity = isset($data['id']) && $data['id']
-            ? $this->em->getRepository($entityClass)->find($data['id'])
-            : new $entityClass();
+        $isCreationMode = !isset($data['id']) || !$data['id'];
+        $entity = $isCreationMode ? new $entityClass() : $this->em->getRepository($entityClass)->find($data['id']);
+
+        if (!$entity) {
+            throw $this->createNotFoundException("L'entité avec l'ID {$data['id']} n'a pas été trouvée.");
+        }
+
+        // CORRECTION CRUCIALE : Pour les formulaires complexes comme ArticleType, le contexte
+        // (la Note parente) est nécessaire AVANT la soumission pour que les QueryBuilders des
+        // champs Autocomplete (Revenu, Tranche) puissent valider les IDs soumis.
+        // On pré-hydrate l'entité avec son parent si on est en mode création.
+        if ($isCreationMode) {
+            $parentMap = $this->buildParentAssociationMapFromEntity($entityClass);
+            foreach ($parentMap as $parentField => $parentClass) {
+                if (isset($data[$parentField]) && !empty($data[$parentField])) {
+                    $parentEntity = $this->em->getRepository($parentClass)->find($data[$parentField]);
+                    if ($parentEntity) {
+                        $setter = 'set' . ucfirst($parentField);
+                        if (method_exists($entity, $setter)) {
+                            $entity->$setter($parentEntity);
+                        }
+                    }
+                }
+            }
+        }
 
         $form = $this->createForm($formTypeClass, $entity);
 
