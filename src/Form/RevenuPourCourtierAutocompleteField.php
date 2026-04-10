@@ -35,23 +35,25 @@ class RevenuPourCourtierAutocompleteField extends AbstractType
             'note_id' => null, 
             'searchable_fields' => ['nom'],
             'as_html' => true,
-            'choice_label' => fn(RevenuPourCourtier $revenu) => $this->renderChoiceLabel($revenu),
             'parent_article' => null, // NOUVEAU : On définit l'option personnalisée.
             'parent_note' => null, // NOUVEAU : Pour recevoir l'entité Note parente.
+            
+            // On utilise une closure simple pour le query_builder, qui est robuste pour la validation.
+            'query_builder' => function (\App\Repository\RevenuPourCourtierRepository $er) {
+                return $er->createQueryBuilder('r');
+            },
         ]);
 
-        // CORRECTION : On utilise un normaliseur pour capturer les options avant de définir le query_builder.
-        // C'est la méthode robuste pour accéder au contexte du formulaire (ex: parent_note)
-        // tout en fournissant au query_builder une closure avec la signature attendue (un seul argument).
-        $resolver->setNormalizer('query_builder', function (Options $options, $value) {
-            // 1. On stocke les options pour que `renderChoiceLabel` et `fetchAndFilterEligibleRevenus` y aient accès.
+        // CORRECTION POUR LE SURLIGNAGE :
+        // On utilise un normaliseur sur 'choice_label'. C'est la méthode la plus fiable
+        // pour capturer le contexte (les Options) AVANT que le choice_label ne soit utilisé,
+        // que ce soit au rendu initial ou lors des requêtes AJAX d'autocomplétion.
+        $resolver->setNormalizer('choice_label', function (Options $options, $value) {
+            // 1. On stocke les options pour que `renderChoiceLabel` y ait accès.
             $this->currentOptions = $options;
 
-            // 2. On retourne la closure que Symfony utilisera pour construire le QueryBuilder.
-            // Cette closure respecte la signature attendue (un seul argument).
-            return function (\App\Repository\RevenuPourCourtierRepository $er) {
-                return $er->createQueryBuilder('r');
-            };
+            // 2. On retourne la fonction qui sera réellement utilisée comme 'choice_label'.
+            return fn(RevenuPourCourtier $revenu) => $this->renderChoiceLabel($revenu);
         });
     }
 
