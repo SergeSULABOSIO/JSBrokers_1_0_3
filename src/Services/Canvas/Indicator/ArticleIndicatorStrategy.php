@@ -51,16 +51,25 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
         $revenu = $article->getRevenuFacture();
         $tranche = $article->getTranche();
 
+        // On s'assure que la tranche est hydratée pour avoir son taux.
+        if ($tranche) {
+            $this->hydrateTranche($tranche);
+        }
+
         if ($revenu !== null) {
             $nomRevenu = $revenu->getNom() ?? 'Revenu sans nom';
-            // Si une tranche est également liée, on l'ajoute à la description.
+            // Si une tranche est également liée, on construit la description détaillée.
             if ($tranche !== null) {
                 $nomTranche = $tranche->getNom() ?? 'Tranche sans nom';
-                return sprintf('%s (Tranche: %s)', $nomRevenu, $nomTranche);
+                $tauxTranche = number_format($tranche->tauxTranche ?? 0.0, 2, ',', ' ');
+                $quantite = number_format($article->getQuantite() ?? 1.0, 2, ',', ' ');
+
+                // Format : "Commission Ordinaire (1ère Tranche @ 50,00% x 1,00)"
+                return sprintf('%s (%s @%s%% x %s)', $nomRevenu, $nomTranche, $tauxTranche, $quantite);
             }
             return $nomRevenu;
         }
-        if ($tranche !== null) {
+        if ($tranche !== null) { // Cas où l'on facture une prime directement, sans passer par un revenu.
             return sprintf('Prime / %s', $tranche->getNom() ?? 'Tranche sans nom');
         }
         return 'N/A';
