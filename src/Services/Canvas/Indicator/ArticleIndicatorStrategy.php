@@ -48,11 +48,20 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
     private function getElementLie(Article $article): string
     {
-        if ($article->getRevenuFacture() !== null) {
-            return $article->getRevenuFacture()->getNom() ?? 'Revenu sans nom';
+        $revenu = $article->getRevenuFacture();
+        $tranche = $article->getTranche();
+
+        if ($revenu !== null) {
+            $nomRevenu = $revenu->getNom() ?? 'Revenu sans nom';
+            // Si une tranche est également liée, on l'ajoute à la description.
+            if ($tranche !== null) {
+                $nomTranche = $tranche->getNom() ?? 'Tranche sans nom';
+                return sprintf('%s (Tranche: %s)', $nomRevenu, $nomTranche);
+            }
+            return $nomRevenu;
         }
-        if ($article->getTranche() !== null) {
-            return $article->getTranche()->getNom() ?? 'Tranche sans nom';
+        if ($tranche !== null) {
+            return sprintf('Prime / %s', $tranche->getNom() ?? 'Tranche sans nom');
         }
         return 'N/A';
     }
