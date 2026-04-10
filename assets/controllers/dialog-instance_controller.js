@@ -590,6 +590,48 @@ export default class extends Controller {
     }
 
     /**
+     * NOUVEAU : Évalue une condition de visibilité unique.
+     * @param {object} condition - L'objet condition à évaluer.
+     * @returns {boolean} - `true` si la condition est remplie, sinon `false`.
+     */
+    evaluateCondition(condition) {
+        const form = this.contentTarget.querySelector('form'); // Search within modal-body
+        const fieldName = condition.field;
+        const field = form.elements[fieldName]; // Manière robuste de récupérer un champ de formulaire
+
+        if (!field) return false;
+
+        let sourceValue;
+        if (field instanceof RadioNodeList) {
+            // Cas d'un groupe de boutons radio (expanded: true)
+            const checkedRadio = form.querySelector(`[name="${fieldName}"]:checked`);
+            if (!checkedRadio) return false;
+            sourceValue = checkedRadio.value;
+        } else {
+            // Cas d'un <select>, <input>, etc. (expanded: false)
+            sourceValue = field.value;
+        }
+
+        if (sourceValue === null || sourceValue === undefined) return false;
+
+        if (condition.operator === 'in') {
+            // On s'assure que les deux côtés sont des chaînes de caractères pour une comparaison fiable
+            return condition.value.map(String).includes(String(sourceValue));
+        }
+
+        // Ajout du support pour l'opérateur 'not_empty'
+        if (condition.operator === 'not_empty') {
+            // La condition est remplie si la valeur n'est pas null, undefined, ou une chaîne vide.
+            return sourceValue !== null && sourceValue !== undefined && String(sourceValue).trim() !== "";
+        }
+
+        return false;
+    }
+
+
+
+
+    /**
      * NOUVEAU : Génère le HTML pour un squelette de chargement avec un message personnalisable.
      * @param {string} message - Le message à afficher à côté du spinner.
      * @returns {string} Le HTML du squelette.
