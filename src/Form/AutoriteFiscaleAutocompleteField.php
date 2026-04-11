@@ -5,6 +5,7 @@ namespace App\Form;
 use Doctrine\ORM\QueryBuilder;
 use App\Entity\AutoriteFiscale;
 use Doctrine\ORM\EntityRepository;
+use App\Services\Canvas\Autocomplete\AutoriteFiscaleAutocompleteCanvasProvider;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -17,7 +18,8 @@ class AutoriteFiscaleAutocompleteField extends AbstractType
 {
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
-        private Security $security
+        private Security $security,
+        private AutoriteFiscaleAutocompleteCanvasProvider $canvasProvider
     ) {}
     
     public function configureOptions(OptionsResolver $resolver): void
@@ -25,7 +27,6 @@ class AutoriteFiscaleAutocompleteField extends AbstractType
         $resolver->setDefaults([
             'class' => AutoriteFiscale::class,
             'placeholder' => "Séléctionnez l'autorité",
-            'choice_label' => 'nom',
             'query_builder' => function (EntityRepository $er): QueryBuilder {
                 /** @var Utilisateur $user */
                 $user = $this->security->getUser();
@@ -41,13 +42,8 @@ class AutoriteFiscaleAutocompleteField extends AbstractType
                     ->orderBy('autorite.id', 'ASC');
             },
             'as_html' => true,
-            'choice_label' => function(AutoriteFiscale $autorite) {
-                return sprintf(
-                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">%s</div></div>',
-                    htmlspecialchars($autorite->getNom()),
-                    htmlspecialchars($autorite->getAbreviation() ?? "Pas d'abréviation")
-                );
-            },
+            // La logique de rendu est maintenant déléguée au service dédié.
+            'choice_label' => fn(AutoriteFiscale $autorite) => $this->canvasProvider->getChoiceLabel($autorite),
         ]);
     }
 

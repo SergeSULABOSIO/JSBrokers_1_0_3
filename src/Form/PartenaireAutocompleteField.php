@@ -3,6 +3,7 @@
 namespace App\Form;
 
 use App\Entity\Partenaire;
+use App\Services\Canvas\Autocomplete\PartenaireAutocompleteCanvasProvider;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -15,6 +16,7 @@ class PartenaireAutocompleteField extends AbstractType
 
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
+        private PartenaireAutocompleteCanvasProvider $canvasProvider
     ) {}
     
     public function configureOptions(OptionsResolver $resolver): void
@@ -25,14 +27,8 @@ class PartenaireAutocompleteField extends AbstractType
             'query_builder' => $this->ecouteurFormulaire->setFiltreEntreprise(),
             'searchable_fields' => ['nom', 'email'],
             'as_html' => true,
-            'choice_label' => function(Partenaire $partenaire) {
-                return sprintf(
-                    '<div><strong>%s</strong><div style="color: #6c757d; font-size: 0.85em; padding-left: 2px; margin-top: 2px;">%s (Part: %s%%)</div></div>',
-                    htmlspecialchars($partenaire->getNom()),
-                    htmlspecialchars($partenaire->getEmail() ?? 'Email non disponible'),
-                    ($partenaire->getPart() ?? 0) * 100
-                );
-            },
+            // La logique de rendu est maintenant déléguée au service dédié.
+            'choice_label' => fn(Partenaire $partenaire) => $this->canvasProvider->getChoiceLabel($partenaire),
         ]);
     }
 
