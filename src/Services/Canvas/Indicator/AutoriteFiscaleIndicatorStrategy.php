@@ -3,13 +3,17 @@
 namespace App\Services\Canvas\Indicator;
 
 use App\Entity\AutoriteFiscale;
+use App\Entity\Entreprise;
 use App\Entity\Note;
+use App\Entity\Taxe;
+use Doctrine\ORM\EntityManagerInterface;
 
 class AutoriteFiscaleIndicatorStrategy implements IndicatorCalculationStrategyInterface
 {
-    public function __construct(private IndicatorCalculationHelper $calculationHelper)
-    {
-    }
+    public function __construct(
+        private IndicatorCalculationHelper $calculationHelper,
+        private EntityManagerInterface $em
+    ) {}
 
     public function supports(string $entityClassName): bool
     {
@@ -32,11 +36,34 @@ class AutoriteFiscaleIndicatorStrategy implements IndicatorCalculationStrategyIn
     {
         $due = 0.0;
         $paid = 0.0;
+        $taxeCible = $autorite->getTaxe();
 
-        // On parcourt toutes les notes adressées à cette autorité
+        if (!$taxeCible) {
+            return ['due' => 0.0, 'paid' => 0.0, 'balance' => 0.0];
+        }
+
+        $redevableCible = $taxeCible->getRedevable();
+        $entreprise = $autorite->getTaxe()->getEntreprise();
+        // CORRECTION : On utilise maintenant la relation directe.
+        // On recherche les revenus liés à l'entreprise de la taxe de l'autorité.
+        $revenus = $this->em->getRepository(\App\Entity\RevenuPourCourtier::class)->findBy([
+            'entreprise' => $entreprise
+        ]);
+
+        foreach ($revenus as $revenu) {
+            $isIARD = $this->calculationHelper->isIARD($revenu->getCotation());
+            $tauxApplicable = $isIARD ? $taxeCible->getTauxIARD() : $taxeCible->getTauxVIE();
+
+            if ($tauxApplicable > 0) {
+                $montantHT = $this->calculationHelper->getRevenuMontantHt($revenu);
+                $taxeCalculee = $montantHT * $tauxApplicable;
+                $due += $taxeCalculee;
+            }
+        }
+
+        // Calcul du montant payé en parcourant les notes de l'autorité
         foreach ($autorite->getNotes() as $note) {
             if ($note->getType() === Note::TYPE_NOTE_DE_DEBIT) {
-                $due += $this->calculationHelper->getNoteMontantPayable($note);
                 $paid += $this->calculationHelper->getNoteMontantPaye($note);
             }
         }

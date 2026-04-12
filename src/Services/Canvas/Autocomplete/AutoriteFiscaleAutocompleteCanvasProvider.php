@@ -20,7 +20,10 @@ class AutoriteFiscaleAutocompleteCanvasProvider
 
         $nomAutorite = $autorite->getNom() ?? 'Autorité sans nom';
         $abreviation = $autorite->getAbreviation() ?? 'N/A';
-        $taxeCode = $autorite->getTaxe()?->getCode() ?? 'N/A';
+        $taxe = $autorite->getTaxe();
+        $taxeCode = $taxe?->getCode() ?? 'N/A';
+        $tauxIARD = $taxe ? ($taxe->getTauxIARD() ?? 0.0) * 100 : 0.0;
+        $tauxVIE = $taxe ? ($taxe->getTauxVIE() ?? 0.0) * 100 : 0.0;
 
         $taxeDue = $autorite->taxeDue ?? 0.0;
         $taxePayee = $autorite->taxePayee ?? 0.0;
@@ -30,7 +33,7 @@ class AutoriteFiscaleAutocompleteCanvasProvider
             '<div class="jsb-autocomplete-item" style="background-color: #ffffff;">
                 <div class="jsb-autocomplete-title">%s (%s)</div>
                 <div class="jsb-autocomplete-context">
-                    <span>Taxe associée: <strong>%s</strong></span>
+                    <span>Taxe associée: <strong>%s (%s%% IARD / %s%% VIE)</strong></span>
                 </div>
                 <div class="jsb-autocomplete-indicators" style="grid-template-columns: repeat(3, 1fr);">
                     <div><div><span class="jsb-indicator-label">Taxe Dûe</span><span class="jsb-indicator-value">%s</span></div></div>
@@ -41,6 +44,8 @@ class AutoriteFiscaleAutocompleteCanvasProvider
             htmlspecialchars($nomAutorite),
             htmlspecialchars($abreviation),
             htmlspecialchars($taxeCode),
+            number_format($tauxIARD, 2, ',', ' '),
+            number_format($tauxVIE, 2, ',', ' '),
             number_format($taxeDue, 2, ',', ' '),
             number_format($taxePayee, 2, ',', ' '),
             number_format($solde, 2, ',', ' ')
