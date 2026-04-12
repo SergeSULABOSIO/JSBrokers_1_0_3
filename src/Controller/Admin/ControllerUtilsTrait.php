@@ -528,6 +528,16 @@ trait ControllerUtilsTrait
                         $entity->setEntreprise($entreprise);
                     }
                 }
+                // NOUVEAU : Logique pour associer l'invité créateur
+                if (isset($data['idInvite']) && method_exists($entity, 'setInvite')) {
+                    // On vérifie si l'entité n'a pas déjà un invité (pour ne pas écraser)
+                    if (method_exists($entity, 'getInvite') && $entity->getInvite() === null) {
+                        $invite = $this->inviteRepository->find($data['idInvite']);
+                        if ($invite) {
+                            $entity->setInvite($invite);
+                        }
+                    }
+                }
                 // REMOVED: This block was incorrectly setting the invite from userContext.idInvite
                 // The form's 'invite' field should handle the association for new roles,
                 // which is correctly initialized by the `renderFormCanvas` initializer.

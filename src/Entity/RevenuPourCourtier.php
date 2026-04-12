@@ -2,14 +2,17 @@
 
 namespace App\Entity;
 
+use App\Entity\Traits\AuditableTrait;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\RevenuPourCourtierRepository;
 use Doctrine\Common\Collections\{ArrayCollection, Collection};
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: RevenuPourCourtierRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class RevenuPourCourtier
 {
+    use AuditableTrait;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -27,14 +30,6 @@ class RevenuPourCourtier
     #[ORM\Column(nullable: true)]
     #[Groups(['list:read'])]
     private ?float $tauxExceptionel = null;
-
-    #[ORM\Column]
-    #[Groups(['list:read'])]
-    private ?\DateTimeImmutable $createdAt = null;
-
-    #[ORM\Column]
-    #[Groups(['list:read'])]
-    private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'revenus')]
     #[Groups(['list:read'])]
@@ -173,29 +168,6 @@ class RevenuPourCourtier
         return $this;
     }
 
-    public function getCreatedAt(): ?\DateTimeImmutable
-    {
-        return $this->createdAt;
-    }
-
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static
-    {
-        $this->createdAt = $createdAt;
-
-        return $this;
-    }
-
-    public function getUpdatedAt(): ?\DateTimeImmutable
-    {
-        return $this->updatedAt;
-    }
-
-    public function setUpdatedAt(\DateTimeImmutable $updatedAt): static
-    {
-        $this->updatedAt = $updatedAt;
-
-        return $this;
-    }
 
     public function getCotation(): ?Cotation
     {
