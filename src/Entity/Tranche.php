@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Traits\AuditableTrait;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\TrancheRepository;
 use Doctrine\Common\Collections\Collection;
@@ -9,8 +10,10 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: TrancheRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Tranche
 {
+    use AuditableTrait;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -32,14 +35,6 @@ class Tranche
     #[ORM\Column]
     #[Groups(['list:read'])]
     private ?\DateTimeImmutable $payableAt = null;
-
-    #[ORM\Column]
-    #[Groups(['list:read'])]
-    private ?\DateTimeImmutable $createdAt = null;
-
-    #[ORM\Column]
-    #[Groups(['list:read'])]
-    private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'tranches')]
     private ?Cotation $cotation = null;
