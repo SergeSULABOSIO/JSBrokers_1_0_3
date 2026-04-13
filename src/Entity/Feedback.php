@@ -13,7 +13,6 @@ use Symfony\Component\Serializer\Annotation\Groups;
 class Feedback implements OwnerAwareInterface
 {
     use AuditableTrait;
-    #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     #[Groups(['list:read'])]
