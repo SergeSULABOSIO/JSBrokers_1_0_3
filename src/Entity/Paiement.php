@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Traits\AuditableTrait;
 use Doctrine\ORM\Mapping as ORM;
 use App\Entity\Traits\TimestampableTrait;
 use App\Repository\PaiementRepository;
@@ -12,7 +13,7 @@ use Symfony\Component\Serializer\Annotation\Groups;
 #[ORM\HasLifecycleCallbacks]
 class Paiement
 {
-    use TimestampableTrait;
+    use AuditableTrait;
 
 
     #[ORM\Id]
@@ -36,12 +37,6 @@ class Paiement
     #[ORM\Column]
     #[Groups(['list:read'])]
     private ?\DateTimeImmutable $paidAt = null;
-
-    // #[ORM\Column]
-    // private ?\DateTimeImmutable $createdAt = null;
-
-    // #[ORM\Column]
-    // private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'paiements')]
     private ?OffreIndemnisationSinistre $offreIndemnisationSinistre = null;

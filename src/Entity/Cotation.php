@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Traits\AuditableTrait;
 use App\Repository\CotationRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -9,8 +10,10 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: CotationRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Cotation
 {
+    use AuditableTrait;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -24,14 +27,6 @@ class Cotation
     #[ORM\Column]
     #[Groups(['list:read'])]
     private ?int $duree = null;
-
-    #[ORM\Column]
-    #[Groups(['list:read'])]
-    private ?\DateTimeImmutable $createdAt = null;
-
-    #[ORM\Column]
-    #[Groups(['list:read'])]
-    private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'cotations')]
     #[Groups(['list:read'])]

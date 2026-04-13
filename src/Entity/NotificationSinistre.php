@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Traits\AuditableTrait;
 use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\ORM\EntityNotFoundException;
@@ -12,8 +13,10 @@ use App\Repository\NotificationSinistreRepository;
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: NotificationSinistreRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class NotificationSinistre implements OwnerAwareInterface
 {
+    use AuditableTrait;
     use CalculatedIndicatorsTrait;
 
     #[ORM\Id]
@@ -48,18 +51,6 @@ class NotificationSinistre implements OwnerAwareInterface
 
     #[ORM\ManyToOne(inversedBy: 'notificationSinistres')]
     private ?Risque $risque = null;
-
-    #[ORM\Column]
-    #[Groups(['list:read'])]
-    private ?\DateTimeImmutable $createdAt = null;
-
-    #[ORM\Column]
-    #[Groups(['list:read'])]
-    private ?\DateTimeImmutable $updatedAt = null;
-
-    #[ORM\ManyToOne(inversedBy: 'notificationSinistres')]
-    #[Groups(['list:read'])]
-    private ?Invite $invite = null;
 
     #[ORM\Column(nullable: true)]
     #[Groups(['list:read'])]
