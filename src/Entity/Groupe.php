@@ -5,13 +5,16 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\GroupeRepository;
 use Doctrine\Common\Collections\Collection;
+use App\Entity\Traits\AuditableTrait;
 use App\Entity\Traits\CalculatedIndicatorsTrait;
 use Doctrine\Common\Collections\ArrayCollection;
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: GroupeRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Groupe
 {
+    use AuditableTrait;
     use CalculatedIndicatorsTrait;
 
     #[ORM\Id]
@@ -27,10 +30,6 @@ class Groupe
     #[ORM\Column(length: 255)]
     #[Groups(['list:read'])]
     private ?string $description = null;
-
-    #[ORM\ManyToOne(inversedBy: 'groupes')]
-    #[Groups(['list:read'])]
-    private ?Entreprise $entreprise = null;
 
     /**
      * @var Collection<int, Client>
@@ -78,18 +77,6 @@ class Groupe
     public function setDescription(string $description): static
     {
         $this->description = $description;
-
-        return $this;
-    }
-
-    public function getEntreprise(): ?Entreprise
-    {
-        return $this->entreprise;
-    }
-
-    public function setEntreprise(?Entreprise $entreprise): static
-    {
-        $this->entreprise = $entreprise;
 
         return $this;
     }

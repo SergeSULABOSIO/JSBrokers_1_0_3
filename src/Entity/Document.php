@@ -4,7 +4,7 @@ namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\DocumentRepository;
-use App\Entity\Traits\TimestampableTrait;
+use App\Entity\Traits\AuditableTrait;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Vich\UploaderBundle\Mapping\Annotation as Vich;
@@ -14,7 +14,7 @@ use Vich\UploaderBundle\Mapping\Annotation as Vich;
 #[Vich\Uploadable]
 class Document
 {
-    use TimestampableTrait;
+    use AuditableTrait;
     
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -32,12 +32,6 @@ class Document
     #[ORM\Column(length: 255, nullable: true)]
     #[Groups(['list:read'])]
     private ?string $nomFichierStocke = null;
-
-    // #[ORM\Column]
-    // private ?\DateTimeImmutable $createdAt = null;
-
-    // #[ORM\Column]
-    // private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'documents')]
     private ?Classeur $classeur = null;
@@ -130,30 +124,6 @@ class Document
 
         return $this;
     }
-
-    // public function getCreatedAt(): ?\DateTimeImmutable
-    // {
-    //     return $this->createdAt;
-    // }
-
-    // public function setCreatedAt(\DateTimeImmutable $createdAt): static
-    // {
-    //     $this->createdAt = $createdAt;
-
-    //     return $this;
-    // }
-
-    // public function getUpdatedAt(): ?\DateTimeImmutable
-    // {
-    //     return $this->updatedAt;
-    // }
-
-    // public function setUpdatedAt(\DateTimeImmutable $updatedAt): static
-    // {
-    //     $this->updatedAt = $updatedAt;
-
-    //     return $this;
-    // }
 
     public function getClasseur(): ?Classeur
     {

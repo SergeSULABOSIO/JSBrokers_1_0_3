@@ -4,12 +4,15 @@ namespace App\Entity;
 
 use App\Repository\RolesEnSinistreRepository;
 use Doctrine\DBAL\Types\Types;
+use App\Entity\Traits\AuditableTrait;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: RolesEnSinistreRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class RolesEnSinistre implements OwnerAwareInterface
 {
+    use AuditableTrait;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -31,10 +34,6 @@ class RolesEnSinistre implements OwnerAwareInterface
     #[ORM\Column(type: Types::ARRAY)]
     #[Groups(['list:read'])]
     private array $accessReglement = [];
-
-    #[ORM\ManyToOne(inversedBy: 'rolesEnSinistre')]
-    #[Groups(['list:read'])]
-    private ?Invite $invite = null;
 
     public function getId(): ?int
     {
@@ -85,18 +84,6 @@ class RolesEnSinistre implements OwnerAwareInterface
     public function setAccessReglement(array $accessReglement): static
     {
         $this->accessReglement = $accessReglement;
-
-        return $this;
-    }
-
-    public function getInvite(): ?Invite
-    {
-        return $this->invite;
-    }
-
-    public function setInvite(?Invite $invite): static
-    {
-        $this->invite = $invite;
 
         return $this;
     }

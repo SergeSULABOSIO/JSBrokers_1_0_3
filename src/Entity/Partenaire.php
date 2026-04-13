@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Traits\AuditableTrait;
 use App\Entity\Traits\CalculatedIndicatorsTrait;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\PartenaireRepository;
@@ -10,8 +11,10 @@ use Symfony\Component\Serializer\Annotation\Groups;
 use Doctrine\Common\Collections\ArrayCollection;
 
 #[ORM\Entity(repositoryClass: PartenaireRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Partenaire
 {
+    use AuditableTrait;
     use CalculatedIndicatorsTrait;
 
     #[ORM\Id]
@@ -39,10 +42,6 @@ class Partenaire
     #[ORM\Column]
     #[Groups(['list:read'])]
     private ?float $part = null;
-
-    #[ORM\ManyToOne(inversedBy: 'partenaires')]
-    #[Groups(['list:read'])]
-    private ?Entreprise $entreprise = null;
 
     /**
      * @var Collection<int, Document>
@@ -252,18 +251,6 @@ class Partenaire
     public function setPart(float $part): static
     {
         $this->part = $part;
-
-        return $this;
-    }
-
-    public function getEntreprise(): ?Entreprise
-    {
-        return $this->entreprise;
-    }
-
-    public function setEntreprise(?Entreprise $entreprise): static
-    {
-        $this->entreprise = $entreprise;
 
         return $this;
     }

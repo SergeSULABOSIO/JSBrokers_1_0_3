@@ -5,12 +5,15 @@ namespace App\Entity;
 use App\Repository\NoteRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
+use App\Entity\Traits\AuditableTrait;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: NoteRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Note implements OwnerAwareInterface
 {
+    use AuditableTrait;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -42,10 +45,6 @@ class Note implements OwnerAwareInterface
     public const TO_ASSUREUR = 1;
     public const TO_PARTENAIRE = 2;
     public const TO_AUTORITE_FISCALE = 3;
-
-    #[ORM\ManyToOne(inversedBy: 'notes')]
-    #[Groups(['list:read'])]
-    private ?Invite $invite = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     #[Groups(['list:read'])]
@@ -184,18 +183,6 @@ class Note implements OwnerAwareInterface
     public function setType(int $type): static
     {
         $this->type = $type;
-
-        return $this;
-    }
-
-    public function getInvite(): ?Invite
-    {
-        return $this->invite;
-    }
-
-    public function setInvite(?Invite $invite): static
-    {
-        $this->invite = $invite;
 
         return $this;
     }

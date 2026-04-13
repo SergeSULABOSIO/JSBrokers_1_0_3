@@ -4,12 +4,15 @@ namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\CompteBancaireRepository;
+use App\Entity\Traits\AuditableTrait;
 use Doctrine\Common\Collections\{ArrayCollection, Collection};
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: CompteBancaireRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class CompteBancaire
 {
+    use AuditableTrait;
     
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -32,10 +35,6 @@ class CompteBancaire
     #[ORM\Column(length: 255)]
     #[Groups(['list:read'])]
     private ?string $codeSwift = null;
-
-    #[ORM\ManyToOne(inversedBy: 'compteBancaires')]
-    #[Groups(['list:read'])]
-    private ?Entreprise $entreprise = null;
 
     /**
      * @var Collection<int, Document>
@@ -123,18 +122,6 @@ class CompteBancaire
     public function __toString()
     {
         return $this->nom ?? (($this->intitule ?? '') . " - " . ($this->banque ?? ''));
-    }
-
-    public function getEntreprise(): ?Entreprise
-    {
-        return $this->entreprise;
-    }
-
-    public function setEntreprise(?Entreprise $entreprise): static
-    {
-        $this->entreprise = $entreprise;
-
-        return $this;
     }
 
     /**

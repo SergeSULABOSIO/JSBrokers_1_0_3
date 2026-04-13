@@ -4,12 +4,15 @@ namespace App\Entity;
 
 use App\Repository\RolesEnProductionRepository;
 use Doctrine\DBAL\Types\Types;
+use App\Entity\Traits\AuditableTrait;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: RolesEnProductionRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class RolesEnProduction implements OwnerAwareInterface
 {
+    use AuditableTrait;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -51,10 +54,6 @@ class RolesEnProduction implements OwnerAwareInterface
     #[ORM\Column(type: Types::ARRAY)]
     #[Groups(['list:read'])]
     private array $accessCotation = [];
-
-    #[ORM\ManyToOne(inversedBy: 'rolesEnProduction')]
-    #[Groups(['list:read'])]
-    private ?Invite $invite = null;
 
     public function getId(): ?int
     {
@@ -165,18 +164,6 @@ class RolesEnProduction implements OwnerAwareInterface
     public function setAccessCotation(array $accessCotation): static
     {
         $this->accessCotation = $accessCotation;
-
-        return $this;
-    }
-
-    public function getInvite(): ?Invite
-    {
-        return $this->invite;
-    }
-
-    public function setInvite(?Invite $invite): static
-    {
-        $this->invite = $invite;
 
         return $this;
     }

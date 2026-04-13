@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Entity\Traits\AuditableTrait;
 use Symfony\Component\Serializer\Annotation\Groups;
 use App\Repository\ArticleRepository;
 use Doctrine\ORM\Mapping as ORM;
@@ -13,8 +14,10 @@ use Doctrine\ORM\Mapping as ORM;
  * Suppression des champs 'nom' et 'taxeFacturee'.
  */
 #[ORM\Entity(repositoryClass: ArticleRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Article
 {
+    use AuditableTrait;
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'IDENTITY')]
     #[ORM\Column]

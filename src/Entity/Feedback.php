@@ -4,7 +4,7 @@ namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\FeedbackRepository;
-use App\Entity\Traits\TimestampableTrait;
+use App\Entity\Traits\AuditableTrait;
 use Doctrine\Common\Collections\{ArrayCollection, Collection};
 use Symfony\Component\Serializer\Annotation\Groups;
 
@@ -12,7 +12,7 @@ use Symfony\Component\Serializer\Annotation\Groups;
 #[ORM\HasLifecycleCallbacks]
 class Feedback implements OwnerAwareInterface
 {
-    use TimestampableTrait;
+    use AuditableTrait;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -48,9 +48,6 @@ class Feedback implements OwnerAwareInterface
     public const TYPE_SMS = 3;
     public const TYPE_UNDEFINED = 4;
     
-    #[ORM\ManyToOne(inversedBy: 'feedback')]
-    private ?Invite $invite = null;
-
     #[ORM\Column(nullable: true)]
     private ?bool $hasNextAction = false;
 
@@ -74,18 +71,6 @@ class Feedback implements OwnerAwareInterface
     public function setDescription(string $description): static
     {
         $this->description = $description;
-
-        return $this;
-    }
-
-    public function getInvite(): ?Invite
-    {
-        return $this->invite;
-    }
-
-    public function setInvite(?Invite $invite): static
-    {
-        $this->invite = $invite;
 
         return $this;
     }

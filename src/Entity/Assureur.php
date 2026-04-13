@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Traits\AuditableTrait;
 use Symfony\Component\Serializer\Annotation\Groups;
 use App\Repository\AssureurRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -9,8 +10,10 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: AssureurRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Assureur
 {
+    use AuditableTrait;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -36,9 +39,6 @@ class Assureur
     #[ORM\Column(length: 255, nullable: true)]
     #[Groups(['list:read'])]
     private ?string $adressePhysique = null;
-
-    #[ORM\ManyToOne(inversedBy: 'assureurs')]
-    private ?Entreprise $entreprise = null;
 
     /**
      * @var Collection<int, Cotation>
@@ -145,18 +145,6 @@ class Assureur
     public function setAdressePhysique(?string $adressePhysique): static
     {
         $this->adressePhysique = $adressePhysique;
-
-        return $this;
-    }
-
-    public function getEntreprise(): ?Entreprise
-    {
-        return $this->entreprise;
-    }
-
-    public function setEntreprise(?Entreprise $entreprise): static
-    {
-        $this->entreprise = $entreprise;
 
         return $this;
     }

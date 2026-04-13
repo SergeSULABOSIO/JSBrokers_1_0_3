@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Traits\AuditableTrait;
 use App\Entity\Traits\CalculatedIndicatorsTrait;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Doctrine\ORM\Mapping as ORM;
@@ -10,8 +11,10 @@ use Doctrine\Common\Collections\ArrayCollection;
 use App\Repository\OffreIndemnisationSinistreRepository;
 
 #[ORM\Entity(repositoryClass: OffreIndemnisationSinistreRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class OffreIndemnisationSinistre
 {
+    use AuditableTrait;
     use CalculatedIndicatorsTrait;
 
     #[ORM\Id]

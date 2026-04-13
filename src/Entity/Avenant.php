@@ -2,6 +2,7 @@
 namespace App\Entity;
 
 
+use App\Entity\Traits\AuditableTrait;
 use App\Entity\Traits\CalculatedIndicatorsTrait;
 use Symfony\Component\Serializer\Annotation\Groups;
 use App\Repository\AvenantRepository;
@@ -11,8 +12,10 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: AvenantRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Avenant
 {
+    use AuditableTrait;
     use CalculatedIndicatorsTrait;
 
     //Renewal status
@@ -37,14 +40,6 @@ class Avenant
     #[ORM\Column]
     #[Groups(['list:read'])]
     private ?\DateTimeImmutable $endingAt = null;
-
-    #[ORM\Column]
-    #[Groups(['list:read'])]
-    private ?\DateTimeImmutable $createdAt = null;
-
-    #[ORM\Column]
-    #[Groups(['list:read'])]
-    private ?\DateTimeImmutable $updatedAt = null;
 
     /**
      * @var Collection<int, Document>
@@ -114,30 +109,6 @@ class Avenant
     public function setEndingAt(\DateTimeImmutable $endingAt): static
     {
         $this->endingAt = $endingAt;
-
-        return $this;
-    }
-
-    public function getCreatedAt(): ?\DateTimeImmutable
-    {
-        return $this->createdAt;
-    }
-
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static
-    {
-        $this->createdAt = $createdAt;
-
-        return $this;
-    }
-
-    public function getUpdatedAt(): ?\DateTimeImmutable
-    {
-        return $this->updatedAt;
-    }
-
-    public function setUpdatedAt(\DateTimeImmutable $updatedAt): static
-    {
-        $this->updatedAt = $updatedAt;
 
         return $this;
     }

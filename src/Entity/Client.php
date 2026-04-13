@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Traits\AuditableTrait;
 use Symfony\Component\Serializer\Annotation\Groups;
 use App\Repository\ClientRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -11,8 +12,10 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 
 #[ORM\Entity(repositoryClass: ClientRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Client
 {
+    use AuditableTrait;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -39,10 +42,6 @@ class Client
     #[ORM\Column]
     #[Groups(['list:read'])]
     private ?bool $exonere = null;
-
-    #[ORM\ManyToOne(inversedBy: 'clients')]
-    #[Groups(['list:read'])]
-    private ?Entreprise $entreprise = null;
 
     /**
      * @var Collection<int, Contact>
@@ -270,18 +269,6 @@ class Client
     public function setExonere(bool $exonere): static
     {
         $this->exonere = $exonere;
-
-        return $this;
-    }
-
-    public function getEntreprise(): ?Entreprise
-    {
-        return $this->entreprise;
-    }
-
-    public function setEntreprise(?Entreprise $entreprise): static
-    {
-        $this->entreprise = $entreprise;
 
         return $this;
     }

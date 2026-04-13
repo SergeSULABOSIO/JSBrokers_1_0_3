@@ -4,12 +4,15 @@ namespace App\Entity;
 
 use App\Repository\RolesEnFinanceRepository;
 use Doctrine\DBAL\Types\Types;
+use App\Entity\Traits\AuditableTrait;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: RolesEnFinanceRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class RolesEnFinance implements OwnerAwareInterface
 {
+    use AuditableTrait;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -31,10 +34,6 @@ class RolesEnFinance implements OwnerAwareInterface
     #[ORM\Column(type: Types::ARRAY)]
     #[Groups(['list:read'])]
     private array $accessTaxe = [];
-
-    #[ORM\ManyToOne(inversedBy: 'rolesEnFinance')]
-    #[Groups(['list:read'])]
-    private ?Invite $invite = null;
 
     #[ORM\Column(type: Types::ARRAY)]
     #[Groups(['list:read'])]
@@ -113,18 +112,6 @@ class RolesEnFinance implements OwnerAwareInterface
     public function setAccessTaxe(array $accessTaxe): static
     {
         $this->accessTaxe = $accessTaxe;
-
-        return $this;
-    }
-
-    public function getInvite(): ?Invite
-    {
-        return $this->invite;
-    }
-
-    public function setInvite(?Invite $invite): static
-    {
-        $this->invite = $invite;
 
         return $this;
     }

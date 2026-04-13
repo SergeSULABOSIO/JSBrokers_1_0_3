@@ -4,12 +4,15 @@ namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\PieceSinistreRepository;
+use App\Entity\Traits\AuditableTrait;
 use Doctrine\Common\Collections\{ArrayCollection, Collection};
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: PieceSinistreRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class PieceSinistre implements OwnerAwareInterface
 {
+    use AuditableTrait;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -30,10 +33,6 @@ class PieceSinistre implements OwnerAwareInterface
     #[ORM\Column(length: 255)]
     #[Groups(['list:read'])]
     private ?string $fourniPar = null;
-
-    #[ORM\ManyToOne(inversedBy: 'pieceSinistres')]
-    #[Groups(['list:read'])]
-    private ?Invite $invite = null;
 
     #[ORM\ManyToOne(inversedBy: 'pieces')]
     private ?NotificationSinistre $notificationSinistre = null;
@@ -108,18 +107,6 @@ class PieceSinistre implements OwnerAwareInterface
     public function setFourniPar(string $fourniPar): static
     {
         $this->fourniPar = $fourniPar;
-
-        return $this;
-    }
-
-    public function getInvite(): ?Invite
-    {
-        return $this->invite;
-    }
-
-    public function setInvite(?Invite $invite): static
-    {
-        $this->invite = $invite;
 
         return $this;
     }

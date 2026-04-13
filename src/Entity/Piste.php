@@ -5,13 +5,16 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\PisteRepository;
 use Doctrine\Common\Collections\Collection;
+use App\Entity\Traits\AuditableTrait;
 use App\Entity\Traits\CalculatedIndicatorsTrait;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Doctrine\Common\Collections\ArrayCollection;
 
 #[ORM\Entity(repositoryClass: PisteRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Piste implements OwnerAwareInterface
 {
+    use AuditableTrait;
     use CalculatedIndicatorsTrait;
 
     //Type d'Avenant
@@ -44,10 +47,6 @@ class Piste implements OwnerAwareInterface
     #[Groups(['list:read'])]
     private ?Client $client = null;
 
-    #[ORM\ManyToOne(inversedBy: 'pistes')]
-    #[Groups(['list:read'])]
-    private ?Invite $invite = null;
-
     #[ORM\Column(nullable: true)]
     #[Groups(['list:read'])]
     private ?float $primePotentielle = null;
@@ -55,14 +54,6 @@ class Piste implements OwnerAwareInterface
     #[ORM\Column(nullable: true)]
     #[Groups(['list:read'])]
     private ?float $commissionPotentielle = null;
-
-    #[ORM\Column]
-    #[Groups(['list:read'])]
-    private ?\DateTimeImmutable $createdAt = null;
-
-    #[ORM\Column]
-    #[Groups(['list:read'])]
-    private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\Column]
     #[Groups(['list:read'])]
@@ -173,42 +164,6 @@ class Piste implements OwnerAwareInterface
     public function setRisque(?Risque $risque): static
     {
         $this->risque = $risque;
-
-        return $this;
-    }
-
-    public function getCreatedAt(): ?\DateTimeImmutable
-    {
-        return $this->createdAt;
-    }
-
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static
-    {
-        $this->createdAt = $createdAt;
-
-        return $this;
-    }
-
-    public function getUpdatedAt(): ?\DateTimeImmutable
-    {
-        return $this->updatedAt;
-    }
-
-    public function setUpdatedAt(\DateTimeImmutable $updatedAt): static
-    {
-        $this->updatedAt = $updatedAt;
-
-        return $this;
-    }
-
-    public function getInvite(): ?Invite
-    {
-        return $this->invite;
-    }
-
-    public function setInvite(?Invite $invite): static
-    {
-        $this->invite = $invite;
 
         return $this;
     }
