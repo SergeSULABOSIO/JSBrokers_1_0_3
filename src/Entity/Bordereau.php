@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Traits\AuditableTrait;
 use Symfony\Component\Serializer\Annotation\Groups;
 use App\Repository\BordereauRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -9,8 +10,10 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: BordereauRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Bordereau implements OwnerAwareInterface
 {
+    use AuditableTrait;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -32,23 +35,11 @@ class Bordereau implements OwnerAwareInterface
 
     #[ORM\Column]
     #[Groups(['list:read'])]
-    private ?\DateTimeImmutable $createdAt = null;
-
-    #[ORM\Column]
-    #[Groups(['list:read'])]
-    private ?\DateTimeImmutable $updatedAt = null;
-
-    #[ORM\Column]
-    #[Groups(['list:read'])]
     private ?\DateTimeImmutable $receivedAt = null;
 
     #[ORM\Column]
     #[Groups(['list:read'])]
     private ?float $montantTTC = null;
-
-    #[ORM\ManyToOne(inversedBy: 'bordereaus')]
-    #[Groups(['list:read'])]
-    private ?Invite $invite = null;
 
     /**
      * @var Collection<int, Document>
@@ -104,30 +95,6 @@ class Bordereau implements OwnerAwareInterface
         return $this;
     }
 
-    public function getCreatedAt(): ?\DateTimeImmutable
-    {
-        return $this->createdAt;
-    }
-
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static
-    {
-        $this->createdAt = $createdAt;
-
-        return $this;
-    }
-
-    public function getUpdatedAt(): ?\DateTimeImmutable
-    {
-        return $this->updatedAt;
-    }
-
-    public function setUpdatedAt(\DateTimeImmutable $updatedAt): static
-    {
-        $this->updatedAt = $updatedAt;
-
-        return $this;
-    }
-
     public function getReceivedAt(): ?\DateTimeImmutable
     {
         return $this->receivedAt;
@@ -148,18 +115,6 @@ class Bordereau implements OwnerAwareInterface
     public function setMontantTTC(float $montantTTC): static
     {
         $this->montantTTC = $montantTTC;
-
-        return $this;
-    }
-
-    public function getInvite(): ?Invite
-    {
-        return $this->invite;
-    }
-
-    public function setInvite(?Invite $invite): static
-    {
-        $this->invite = $invite;
 
         return $this;
     }

@@ -4,13 +4,16 @@ namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\ModelePieceSinistreRepository;
+use App\Entity\Traits\AuditableTrait;
 use Doctrine\Common\Collections\{ArrayCollection, Collection};
 use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ModelePieceSinistreRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class ModelePieceSinistre
 {
+    use AuditableTrait;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -35,10 +38,6 @@ class ModelePieceSinistre
      */
     #[ORM\OneToMany(mappedBy: 'type', targetEntity: PieceSinistre::class)]
     private Collection $pieceSinistres;
-
-    #[ORM\ManyToOne(inversedBy: 'modelePieceSinistres')]
-    #[ORM\JoinColumn(nullable: false)]
-    private ?Entreprise $entreprise = null;
 
     // Attributs calculés
     #[Groups(['list:read'])]
@@ -87,17 +86,6 @@ class ModelePieceSinistre
     public function setObligatoire(bool $obligatoire): static
     {
         $this->obligatoire = $obligatoire;
-        return $this;
-    }
-
-    public function getEntreprise(): ?Entreprise
-    {
-        return $this->entreprise;
-    }
-
-    public function setEntreprise(?Entreprise $entreprise): static
-    {
-        $this->entreprise = $entreprise;
         return $this;
     }
 

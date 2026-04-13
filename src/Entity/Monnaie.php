@@ -4,13 +4,16 @@ namespace App\Entity;
 
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use App\Entity\Traits\AuditableTrait;
 use App\Repository\MonnaieRepository;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: MonnaieRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Monnaie
 {
+    use AuditableTrait;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -44,9 +47,6 @@ class Monnaie
     #[ORM\Column]
     #[Groups(['list:read'])]
     private ?bool $locale = null;
-
-    #[ORM\ManyToOne(inversedBy: 'monnaies')]
-    private ?Entreprise $entreprise = null;
 
     public function __construct()
     {
@@ -116,18 +116,6 @@ class Monnaie
     public function setLocale(bool $locale): static
     {
         $this->locale = $locale;
-
-        return $this;
-    }
-
-    public function getEntreprise(): ?Entreprise
-    {
-        return $this->entreprise;
-    }
-
-    public function setEntreprise(?Entreprise $entreprise): static
-    {
-        $this->entreprise = $entreprise;
 
         return $this;
     }

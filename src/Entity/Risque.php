@@ -5,13 +5,16 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\RisqueRepository;
 use Doctrine\Common\Collections\Collection;
+use App\Entity\Traits\AuditableTrait;
 use App\Entity\Traits\CalculatedIndicatorsTrait;
 use Symfony\Component\Serializer\Annotation\Groups;
 use Doctrine\Common\Collections\ArrayCollection;
 
 #[ORM\Entity(repositoryClass: RisqueRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Risque
 {
+    use AuditableTrait;
     use CalculatedIndicatorsTrait;
 
     #[ORM\Id]
@@ -37,10 +40,6 @@ class Risque
     private ?int $branche = null;
     public const BRANCHE_IARD_OU_NON_VIE = 0;
     public const BRANCHE_VIE = 1;
-
-    #[ORM\ManyToOne(inversedBy: 'risques')]
-    #[Groups(['list:read'])]
-    private ?Entreprise $entreprise = null;
 
     #[ORM\Column(length: 255)]
     #[Groups(['list:read'])]
@@ -216,18 +215,6 @@ class Risque
     public function setBranche(int $branche): static
     {
         $this->branche = $branche;
-
-        return $this;
-    }
-
-    public function getEntreprise(): ?Entreprise
-    {
-        return $this->entreprise;
-    }
-
-    public function setEntreprise(?Entreprise $entreprise): static
-    {
-        $this->entreprise = $entreprise;
 
         return $this;
     }

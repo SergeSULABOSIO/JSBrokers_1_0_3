@@ -4,7 +4,7 @@ namespace App\Entity;
 
 use Symfony\Component\Serializer\Annotation\Groups;
 use Doctrine\ORM\Mapping as ORM;
-use App\Entity\Traits\TimestampableTrait;
+use App\Entity\Traits\AuditableTrait;
 use App\Repository\TacheRepository;
 use Doctrine\Common\Collections\{ArrayCollection, Collection};
 
@@ -12,7 +12,7 @@ use Doctrine\Common\Collections\{ArrayCollection, Collection};
 #[ORM\HasLifecycleCallbacks]
 class Tache
 {
-    use TimestampableTrait;
+    use AuditableTrait;
     
     //Execution status
     public const EXECUTION_STATUS_STILL_VALID      = 0;
@@ -29,10 +29,6 @@ class Tache
     #[ORM\Column(length: 255)]
     #[Groups(['list:read'])]
     private ?string $description = null;
-
-    #[ORM\ManyToOne(inversedBy: 'taches')]
-    #[Groups(['list:read'])]
-    private ?Invite $executor = null;
 
     #[ORM\Column]
     #[Groups(['list:read'])]
@@ -93,18 +89,6 @@ class Tache
     public function setDescription(string $description): static
     {
         $this->description = $description;
-
-        return $this;
-    }
-
-    public function getExecutor(): ?Invite
-    {
-        return $this->executor;
-    }
-
-    public function setExecutor(?Invite $executor): static
-    {
-        $this->executor = $executor;
 
         return $this;
     }

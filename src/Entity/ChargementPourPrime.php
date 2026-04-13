@@ -4,14 +4,17 @@ namespace App\Entity;
 
 use App\Entity\Chargement;
 use App\Entity\Cotation;
+use App\Entity\Traits\AuditableTrait;
 use App\Entity\Traits\CalculatedIndicatorsTrait;
 use App\Repository\ChargementPourPrimeRepository;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: ChargementPourPrimeRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class ChargementPourPrime
 {
+    use AuditableTrait;
     use CalculatedIndicatorsTrait;
     
     #[ORM\Id]
@@ -104,30 +107,6 @@ class ChargementPourPrime
 
     //     return $this;
     // }
-
-    public function getCreatedAt(): ?\DateTimeImmutable
-    {
-        return $this->createdAt;
-    }
-
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static
-    {
-        $this->createdAt = $createdAt;
-
-        return $this;
-    }
-
-    public function getUpdatedAt(): ?\DateTimeImmutable
-    {
-        return $this->updatedAt;
-    }
-
-    public function setUpdatedAt(\DateTimeImmutable $updatedAt): static
-    {
-        $this->updatedAt = $updatedAt;
-
-        return $this;
-    }
 
     public function getCotation(): ?Cotation
     {

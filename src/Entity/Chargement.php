@@ -4,12 +4,15 @@ namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\ChargementRepository;
+use App\Entity\Traits\AuditableTrait;
 use Doctrine\Common\Collections\{ArrayCollection, Collection};
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: ChargementRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Chargement
 {
+    use AuditableTrait;
     
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -34,10 +37,6 @@ class Chargement
     // #[ORM\Column(nullable: true)]
     // private ?float $tauxSurPrimeNette = null;
     
-    #[ORM\ManyToOne(inversedBy: 'chargements')]
-    #[Groups(['list:read'])]
-    private ?Entreprise $entreprise = null;
-
     /**
      * @var Collection<int, ChargementPourPrime>
      */
@@ -132,18 +131,6 @@ class Chargement
 
     //     return $this;
     // }
-
-    public function getEntreprise(): ?Entreprise
-    {
-        return $this->entreprise;
-    }
-
-    public function setEntreprise(?Entreprise $entreprise): static
-    {
-        $this->entreprise = $entreprise;
-
-        return $this;
-    }
 
     // public function getTauxSurPrimeNette(): ?float
     // {

@@ -6,12 +6,15 @@ use App\Repository\ClasseurRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
+use App\Entity\Traits\AuditableTrait;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: ClasseurRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Classeur
 {
+    use AuditableTrait;
     public const NOM_CLASSEUR_POP = "PREUVES DES PAIEMENTS";
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -26,14 +29,6 @@ class Classeur
     #[ORM\Column(length: 255)]
     #[Groups(['list:read'])]
     private ?string $description = null;
-
-    #[ORM\ManyToOne(inversedBy: 'classeurs')]
-    #[Groups(['list:read'])]
-    private ?Entreprise $entreprise = null;
-
-    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
-    #[Groups(['list:read'])]
-    private ?\DateTimeImmutable $createdAt = null;
 
     /**
      * @var Collection<int, Document>
@@ -60,9 +55,6 @@ class Classeur
     public function __construct()
     {
         $this->documents = new ArrayCollection();
-        if ($this->createdAt === null) {
-            $this->createdAt = new \DateTimeImmutable();
-        }
     }
 
     public function getId(): ?int
@@ -90,18 +82,6 @@ class Classeur
     public function setDescription(string $description): static
     {
         $this->description = $description;
-
-        return $this;
-    }
-
-    public function getEntreprise(): ?Entreprise
-    {
-        return $this->entreprise;
-    }
-
-    public function setEntreprise(?Entreprise $entreprise): static
-    {
-        $this->entreprise = $entreprise;
 
         return $this;
     }
@@ -139,10 +119,5 @@ class Classeur
         }
 
         return $this;
-    }
-
-    public function getCreatedAt(): ?\DateTimeImmutable
-    {
-        return $this->createdAt;
     }
 }

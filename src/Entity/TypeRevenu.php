@@ -4,12 +4,15 @@ namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\TypeRevenuRepository;
+use App\Entity\Traits\AuditableTrait;
 use Doctrine\Common\Collections\{ArrayCollection, Collection};
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: TypeRevenuRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class TypeRevenu
 {
+    use AuditableTrait;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -50,10 +53,6 @@ class TypeRevenu
     #[ORM\Column(nullable: true)]
     #[Groups(['list:read'])]
     private ?float $pourcentage = null;
-
-    #[ORM\ManyToOne(inversedBy: 'typerevenus')]
-    #[Groups(['list:read'])]
-    private ?Entreprise $entreprise = null;
 
     #[ORM\Column(nullable: true)]
     #[Groups(['list:read'])]
@@ -199,18 +198,6 @@ class TypeRevenu
     public function setPourcentage(?float $pourcentage): static
     {
         $this->pourcentage = $pourcentage;
-
-        return $this;
-    }
-
-    public function getEntreprise(): ?Entreprise
-    {
-        return $this->entreprise;
-    }
-
-    public function setEntreprise(?Entreprise $entreprise): static
-    {
-        $this->entreprise = $entreprise;
 
         return $this;
     }

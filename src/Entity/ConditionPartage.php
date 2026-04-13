@@ -5,13 +5,16 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\Collection;
 use App\Repository\ConditionPartageRepository;
+use App\Entity\Traits\AuditableTrait;
 use App\Entity\Traits\CalculatedIndicatorsTrait;
 use Doctrine\Common\Collections\ArrayCollection;
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: ConditionPartageRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class ConditionPartage
 {
+    use AuditableTrait;
     use CalculatedIndicatorsTrait;
 
     #[ORM\Id]

@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Entity\Traits\AuditableTrait;
 use App\Entity\Entreprise;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -12,8 +13,10 @@ use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: TaxeRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Taxe
 {
+    use AuditableTrait;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -39,10 +42,6 @@ class Taxe
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 2)]
     #[Groups(['list:read'])]
     private ?string $tauxVIE = null;
-
-    #[ORM\ManyToOne(inversedBy: 'taxes')]
-    #[Groups(['list:read'])]
-    private ?Entreprise $entreprise = null;
 
     #[ORM\Column(nullable: true)]
     #[Groups(['list:read'])]
@@ -108,17 +107,6 @@ class Taxe
     public function setTauxVIE(string $tauxVIE): static
     {
         $this->tauxVIE = $tauxVIE;
-        return $this;
-    }
-
-    public function getEntreprise(): ?Entreprise
-    {
-        return $this->entreprise;
-    }
-
-    public function setEntreprise(?Entreprise $entreprise): static
-    {
-        $this->entreprise = $entreprise;
         return $this;
     }
 
