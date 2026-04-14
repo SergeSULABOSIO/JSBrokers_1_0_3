@@ -7,6 +7,7 @@ use App\Entity\Entreprise;
 use App\Entity\Monnaie;
 use App\Entity\Taxe;
 use App\Entity\Utilisateur;
+use App\Repository\MonnaieRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 
@@ -24,11 +25,15 @@ class ServiceMonnaies
 
     public function getMonnaies()
     {
+        /** @var MonnaieRepository $monnaieRepository */
+        $monnaieRepository = $this->entityManager->getRepository(Monnaie::class);
+
         if ($this->getUtilisateurConnecte()) {
             if ($this->getUtilisateurConnecte()->getConnectedTo()) {
                 /** @var Entreprise $entreprise */
                 $entreprise = $this->getUtilisateurConnecte()->getConnectedTo();
-                return $entreprise->getMonnaies();
+                // MODIFICATION : On utilise le repository pour trouver les monnaies par entreprise.
+                return $monnaieRepository->findBy(['entreprise' => $entreprise]);
             }
         }
         return [];
@@ -36,14 +41,13 @@ class ServiceMonnaies
 
     public function getMonnaieAffichage(): ?Monnaie
     {
-        if ($this->getUtilisateurConnecte()) {
-            if ($this->getUtilisateurConnecte()->getConnectedTo()) {
-                /** @var Entreprise $entreprise */
-                $entreprise = $this->getUtilisateurConnecte()->getConnectedTo();
-                foreach ($entreprise->getMonnaies() as $monnaie) {
-                    if ($monnaie->getFonction() == Monnaie::FONCTION_AFFICHAGE_UNIQUEMENT || $monnaie->getFonction() == Monnaie::FONCTION_SAISIE_ET_AFFICHAGE) {
-                        return $monnaie;
-                    }
+        // MODIFICATION : On utilise la méthode modernisée getMonnaies().
+        $monnaies = $this->getMonnaies();
+        if (!empty($monnaies)) {
+            foreach ($monnaies as $monnaie) {
+                /** @var Monnaie $monnaie */
+                if ($monnaie->getFonction() == Monnaie::FONCTION_AFFICHAGE_UNIQUEMENT || $monnaie->getFonction() == Monnaie::FONCTION_SAISIE_ET_AFFICHAGE) {
+                    return $monnaie;
                 }
             }
         }
@@ -62,15 +66,12 @@ class ServiceMonnaies
 
     public function getCodeMonnaieLocale(): ?string
     {
-        if ($this->getUtilisateurConnecte()) {
-            if ($this->getUtilisateurConnecte()->getConnectedTo()) {
-                /** @var Entreprise $entreprise */
-                $entreprise = $this->getUtilisateurConnecte()->getConnectedTo();
+        $monnaies = $this->getMonnaies();
+        if (!empty($monnaies)) {
+            foreach ($monnaies as $monnaie) {
                 /** @var Monnaie $monnaie */
-                foreach ($entreprise->getMonnaies() as $monnaie) {
-                    if ($monnaie->isLocale() == true) {
-                        return $monnaie->getCode();
-                    }
+                if ($monnaie->isLocale() == true) {
+                    return $monnaie->getCode();
                 }
             }
         }

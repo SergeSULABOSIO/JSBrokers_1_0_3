@@ -478,17 +478,28 @@ trait ControllerUtilsTrait
         $submittedData = array_merge($data, $files);
 
         $isCreationMode = !isset($data['id']) || !$data['id'];
-        $entity = $isCreationMode ? new $entityClass() : $this->em->getRepository($entityClass)->find($data['id']);
+        $entity = $isCreationMode ? new $entityClass() : $this->em->getRepository($entityClass)->find($data['id'] ?? null);
 
         if (!$entity) {
-            throw $this->createNotFoundException("L'entité avec l'ID {$data['id']} n'a pas été trouvée.");
+            throw $this->createNotFoundException("L'entité avec l'ID " . ($data['id'] ?? 'null') . " n'a pas été trouvée.");
         }
 
-        // CORRECTION CRUCIALE : Pour les formulaires complexes comme ArticleType, le contexte
-        // (la Note parente) est nécessaire AVANT la soumission pour que les QueryBuilders des
-        // champs Autocomplete (Revenu, Tranche) puissent valider les IDs soumis.
-        // On pré-hydrate l'entité avec son parent si on est en mode création.
+        // Valide l'accès à l'espace de travail pour obtenir l'entreprise et l'invité actuels.
+        ['entreprise' => $currentEntreprise, 'invite' => $currentInvite] = $this->validateWorkspaceAccess($request);
+
         if ($isCreationMode) {
+            // Renseigne automatiquement l'entreprise et l'invité pour les nouvelles entités
+            // si elles utilisent AuditableTrait et que ces champs ne sont pas déjà définis.
+            if (method_exists($entity, 'setEntreprise') && (method_exists($entity, 'getEntreprise') && $entity->getEntreprise() === null)) {
+                $entity->setEntreprise($currentEntreprise);
+            }
+            if (method_exists($entity, 'setInvite') && (method_exists($entity, 'getInvite') && $entity->getInvite() === null)) {
+                $entity->setInvite($currentInvite);
+            }
+            // CORRECTION CRUCIALE : Pour les formulaires complexes comme ArticleType, le contexte
+            // (la Note parente) est nécessaire AVANT la soumission pour que les QueryBuilders des
+            // champs Autocomplete (Revenu, Tranche) puissent valider les IDs soumis.
+            // On pré-hydrate l'entité avec son parent si on est en mode création.
             $parentMap = $this->buildParentAssociationMapFromEntity($entityClass);
             foreach ($parentMap as $parentField => $parentClass) {
                 if (isset($data[$parentField]) && !empty($data[$parentField])) {
@@ -520,35 +531,6 @@ trait ControllerUtilsTrait
 
         if ($form->isSubmitted() && $form->isValid()) {
             // NOUVEAU : Logique pour associer l'entreprise et/ou l'invité si les IDs sont fournis
-            // et que l'entité est nouvelle.
-            if (!$entity->getId()) {
-                if (isset($data['idEntreprise']) && method_exists($entity, 'setEntreprise')) {
-                    $entreprise = $this->entrepriseRepository->find($data['idEntreprise']);
-                    if ($entreprise) {
-                        $entity->setEntreprise($entreprise);
-                    }
-                }
-                // NOUVEAU : Logique pour associer l'invité créateur
-                if (isset($data['idInvite']) && method_exists($entity, 'setInvite')) {
-                    // On vérifie si l'entité n'a pas déjà un invité (pour ne pas écraser)
-                    if (method_exists($entity, 'getInvite') && $entity->getInvite() === null) {
-                        $invite = $this->inviteRepository->find($data['idInvite']);
-                        if ($invite) {
-                            $entity->setInvite($invite);
-                        }
-                    }
-                }
-                // REMOVED: This block was incorrectly setting the invite from userContext.idInvite
-                // The form's 'invite' field should handle the association for new roles,
-                // which is correctly initialized by the `renderFormCanvas` initializer.
-                // if (isset($data['idInvite']) && method_exists($entity, 'setInvite')) {
-                //     $invite = $this->inviteRepository->find($data['idInvite']);
-                //     if ($invite) {
-                //         $entity->setInvite($invite);
-                //     }
-                // }
-            }
-
             // NOUVEAU : Exécuter une logique personnalisée avant la persistance (ex: définir l'auteur)
             if ($beforePersist) {
                 $beforePersist($entity);
