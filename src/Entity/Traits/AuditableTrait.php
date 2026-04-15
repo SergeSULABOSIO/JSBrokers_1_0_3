@@ -19,7 +19,7 @@ trait AuditableTrait
     private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: true)]
     private ?Entreprise $entreprise = null;
 
     #[ORM\ManyToOne]
