@@ -12,18 +12,18 @@ use Doctrine\ORM\Mapping as ORM;
  */
 trait AuditableTrait
 {
-    #[ORM\Column(type: 'datetime_immutable', options: ["default" => "CURRENT_TIMESTAMP"])]
+    #[ORM\Column(type: 'datetime_immutable')]
     private ?\DateTimeImmutable $createdAt = null;
 
     #[ORM\Column(type: 'datetime_immutable', nullable: true)]
     private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: true)]
-    private ?Entreprise $entreprise = null;
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Entreprise $entreprise = null; // Garder nullable ici pour la flexibilité, mais la BDD l'exigera.
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: true)]
+    #[ORM\JoinColumn(nullable: false)]
     private ?Invite $invite = null;
 
     public function getCreatedAt(): ?\DateTimeImmutable
@@ -73,12 +73,13 @@ trait AuditableTrait
     #[ORM\PrePersist]
     public function onPrePersist(): void
     {
-        $this->createdAt = new \DateTimeImmutable();
+        $this->createdAt = new \DateTimeImmutable('now');
+        $this->updatedAt = new \DateTimeImmutable('now');
     }
 
     #[ORM\PreUpdate]
     public function onPreUpdate(): void
     {
-        $this->updatedAt = new \DateTimeImmutable();
+        $this->updatedAt = new \DateTimeImmutable('now');
     }
 }
