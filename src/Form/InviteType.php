@@ -115,9 +115,6 @@ class InviteType extends AbstractType
                 ],
                 'mapped' => false,
             ])
-
-            // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
-            ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
         ;
     }
 
