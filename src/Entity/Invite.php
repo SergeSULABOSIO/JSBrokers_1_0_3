@@ -136,6 +136,10 @@ class Invite implements OwnerAwareInterface
     #[ORM\JoinColumn(nullable: false)]
     private ?Utilisateur $utilisateur = null;
 
+    #[ORM\ManyToOne(inversedBy: 'invites')]
+    #[ORM\JoinColumn(nullable: true)] // On force la nullabilité ici
+    private ?Entreprise $entreprise = null;
+
 
     public function __construct()
     {
@@ -575,6 +579,18 @@ class Invite implements OwnerAwareInterface
     public function setUtilisateur(?Utilisateur $utilisateur): static
     {
         $this->utilisateur = $utilisateur;
+
+        return $this;
+    }
+
+    public function getEntreprise(): ?Entreprise
+    {
+        return $this->entreprise;
+    }
+
+    public function setEntreprise(?Entreprise $entreprise): static
+    {
+        $this->entreprise = $entreprise;
 
         return $this;
     }
