@@ -101,49 +101,45 @@ class InviteController extends AbstractController
             return $this->json(['message' => $this->translator->trans("invite_sending_invite_not_granted", [':user' => $user->getNom()])], 403);
         }
 
-        $data = $request->request->all();
-        $isNew = !isset($data['id']) || empty($data['id']);
-
-        // Logique personnalisée pour la création d'un invité
-        if ($isNew && isset($data['utilisateur'])) {
-            $utilisateurIdOrEmail = $data['utilisateur'];
-            $utilisateur = null;
-
-            // Si c'est un email (contient '@'), on cherche ou on crée l'utilisateur
-            if (filter_var($utilisateurIdOrEmail, FILTER_VALIDATE_EMAIL)) {
-                $utilisateur = $this->utilisateurRepository->findOneBy(['email' => $utilisateurIdOrEmail]);
-
-                // Cas 2: L'utilisateur n'existe pas, on le crée
-                if (!$utilisateur) {
-                    $utilisateur = new Utilisateur();
-                    $utilisateur->setEmail($utilisateurIdOrEmail);
-                    $utilisateur->setNom($data['nom'] ?? 'Nouveau Collaborateur');
-                    // Créer un mot de passe temporaire et sécurisé
-                    $randomPassword = bin2hex(random_bytes(16));
-                    $utilisateur->setPassword($this->passwordHasher->hashPassword($utilisateur, $randomPassword));
-                    $utilisateur->setVerified(false); // L'utilisateur devra vérifier son email
-                    $this->em->persist($utilisateur);
-                    // On ne flush pas tout de suite, handleFormSubmission le fera.
-                }
-            } else { // Sinon, c'est un ID
-                $utilisateur = $this->utilisateurRepository->find($utilisateurIdOrEmail);
-            }
-
-            if (!$utilisateur) {
-                return $this->json(['message' => "Impossible de trouver ou de créer l'utilisateur."], 400);
-            }
-
-            // On remplace l'email/id par l'ID de l'utilisateur pour que le formulaire le traite correctement.
-            $request->request->set('utilisateur', $utilisateur->getId());
-        }
-
         $response = $this->handleFormSubmission(
             $request,
             Invite::class,
-            InviteType::class
+            InviteType::class,
+            function (Invite $invite) use ($request) {
+                // Ce callback est exécuté avant la persistance de l'entité.
+                // C'est l'endroit parfait pour gérer la logique de l'email.
+                if (!$invite->getId()) { // Uniquement en mode création
+                    $data = $request->request->all();
+                    $email = $data['email'] ?? null;
+
+                    if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                        // Normalement, la validation du formulaire devrait déjà l'empêcher.
+                        // C'est une sécurité supplémentaire.
+                        throw new \InvalidArgumentException("L'adresse email fournie est invalide ou manquante.");
+                    }
+
+                    $utilisateur = $this->utilisateurRepository->findOneBy(['email' => $email]);
+
+                    if (!$utilisateur) {
+                        // L'utilisateur n'existe pas, on le crée.
+                        $utilisateur = new Utilisateur();
+                        $utilisateur->setEmail($email);
+                        $utilisateur->setNom($data['nom'] ?? 'Nouveau Collaborateur');
+                        // Créer un mot de passe temporaire et sécurisé
+                        $randomPassword = bin2hex(random_bytes(16));
+                        $utilisateur->setPassword($this->passwordHasher->hashPassword($utilisateur, $randomPassword));
+                        $utilisateur->setVerified(false); // L'utilisateur devra vérifier son email
+                        $this->em->persist($utilisateur);
+                    }
+
+                    // On lie l'utilisateur (existant ou nouveau) à l'invité.
+                    $invite->setUtilisateur($utilisateur);
+                }
+            }
         );
 
         // Si c'est une création réussie, on déclenche l'événement d'invitation
+        $isNew = !isset($request->request->all()['id']) || empty($request->request->all()['id']);
         if ($response->getStatusCode() === 200 && $isNew) {
             $responseData = json_decode($response->getContent(), true);
             if (isset($responseData['entity']['id'])) {
