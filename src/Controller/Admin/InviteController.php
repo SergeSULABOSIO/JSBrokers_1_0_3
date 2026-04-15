@@ -4,11 +4,13 @@ namespace App\Controller\Admin;
 
 use App\Entity\Invite;
 use App\Form\InviteType;
+use App\Security\EmailVerifier;
 use App\Entity\Utilisateur;
 use App\Constantes\Constante;
 use App\Event\InvitationEvent;
 use App\Repository\InviteRepository;
 use App\Entity\Traits\HandleChildAssociationTrait;
+use App\Repository\UtilisateurRepository;
 use App\Repository\EntrepriseRepository;
 use App\Services\CanvasBuilder;
 use App\Services\JSBDynamicSearchService;
@@ -16,12 +18,15 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Mime\Address;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
@@ -33,15 +38,18 @@ class InviteController extends AbstractController
     use HandleChildAssociationTrait;
 
     public function __construct(
-        private MailerInterface $mailer,
-        private TranslatorInterface $translator,
-        private EntityManagerInterface $em,
-        private EntrepriseRepository $entrepriseRepository,
-        private InviteRepository $inviteRepository,
-        private Constante $constante,
-        private JSBDynamicSearchService $searchService,
-        private SerializerInterface $serializer,
-        private EventDispatcherInterface $dispatcher,
+        private readonly MailerInterface $mailer,
+        private readonly TranslatorInterface $translator,
+        private readonly EntityManagerInterface $em,
+        private readonly EntrepriseRepository $entrepriseRepository,
+        private readonly InviteRepository $inviteRepository,
+        private readonly UtilisateurRepository $utilisateurRepository,
+        private readonly UserPasswordHasherInterface $passwordHasher,
+        private readonly EmailVerifier $emailVerifier,
+        private readonly Constante $constante,
+        private readonly JSBDynamicSearchService $searchService,
+        private readonly SerializerInterface $serializer,
+        private readonly EventDispatcherInterface $dispatcher,
         CanvasBuilder $canvasBuilder
     ) {
         $this->canvasBuilder = $canvasBuilder;
@@ -96,12 +104,46 @@ class InviteController extends AbstractController
         $data = $request->request->all();
         $isNew = !isset($data['id']) || empty($data['id']);
 
+        // Logique personnalisée pour la création d'un invité
+        if ($isNew && isset($data['utilisateur'])) {
+            $utilisateurIdOrEmail = $data['utilisateur'];
+            $utilisateur = null;
+
+            // Si c'est un email (contient '@'), on cherche ou on crée l'utilisateur
+            if (filter_var($utilisateurIdOrEmail, FILTER_VALIDATE_EMAIL)) {
+                $utilisateur = $this->utilisateurRepository->findOneBy(['email' => $utilisateurIdOrEmail]);
+
+                // Cas 2: L'utilisateur n'existe pas, on le crée
+                if (!$utilisateur) {
+                    $utilisateur = new Utilisateur();
+                    $utilisateur->setEmail($utilisateurIdOrEmail);
+                    $utilisateur->setNom($data['nom'] ?? 'Nouveau Collaborateur');
+                    // Créer un mot de passe temporaire et sécurisé
+                    $randomPassword = bin2hex(random_bytes(16));
+                    $utilisateur->setPassword($this->passwordHasher->hashPassword($utilisateur, $randomPassword));
+                    $utilisateur->setVerified(false); // L'utilisateur devra vérifier son email
+                    $this->em->persist($utilisateur);
+                    // On ne flush pas tout de suite, handleFormSubmission le fera.
+                }
+            } else { // Sinon, c'est un ID
+                $utilisateur = $this->utilisateurRepository->find($utilisateurIdOrEmail);
+            }
+
+            if (!$utilisateur) {
+                return $this->json(['message' => "Impossible de trouver ou de créer l'utilisateur."], 400);
+            }
+
+            // On remplace l'email/id par l'ID de l'utilisateur pour que le formulaire le traite correctement.
+            $request->request->set('utilisateur', $utilisateur->getId());
+        }
+
         $response = $this->handleFormSubmission(
             $request,
             Invite::class,
             InviteType::class
         );
 
+        // Si c'est une création réussie, on déclenche l'événement d'invitation
         if ($response->getStatusCode() === 200 && $isNew) {
             $responseData = json_decode($response->getContent(), true);
             if (isset($responseData['entity']['id'])) {
@@ -109,6 +151,20 @@ class InviteController extends AbstractController
                 if ($newInvite) {
                     try {
                         $this->dispatcher->dispatch(new InvitationEvent($newInvite));
+
+                        // Si l'utilisateur vient d'être créé, on envoie l'email de vérification/invitation
+                        $invitedUser = $newInvite->getUtilisateur();
+                        if ($invitedUser && !$invitedUser->isVerified()) {
+                            $this->emailVerifier->sendEmailConfirmation(
+                                'app_verify_email',
+                                $invitedUser,
+                                (new TemplatedEmail())
+                                    ->from(new Address('support@demo.fr', 'Support JS-Brokers'))
+                                    ->to((string) $invitedUser->getEmail())
+                                    ->subject('Vous êtes invité à rejoindre ' . $newInvite->getEntreprise()->getNom())
+                                    ->htmlTemplate('registration/invitation_email.html.twig')
+                            );
+                        }
                     } catch (\Throwable $th) {
                         $responseData['warning'] = $this->translator->trans("invite_email_sending_error");
                         return new JsonResponse($responseData);

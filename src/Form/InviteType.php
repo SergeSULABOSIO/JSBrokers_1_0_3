@@ -14,29 +14,26 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
-use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 class InviteType extends AbstractType
 {
     public function __construct(
-        private FormListenerFactory $ecouteurFormulaire,
-        private TranslatorInterface $translatorInterface,
-        private ServiceMonnaies $serviceMonnaies,
-        private Security $security
+        private readonly FormListenerFactory $ecouteurFormulaire,
+        private readonly TranslatorInterface $translatorInterface,
+        private readonly ServiceMonnaies $serviceMonnaies,
+        private readonly Security $security
     ) {}
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('email', EmailType::class, [
-                // 'label' => false,
-                'label' => "Email",
-                'empty_data' => '',
-                'required' => true,
+            ->add('utilisateur', UtilisateurAutocompleteField::class, [
+                'label' => "Collaborateur",
+                'help' => "Saisissez l'adresse email du collaborateur. S'il n'a pas de compte, une invitation lui sera envoyée.",
                 'attr' => [
-                    'placeholder' => "Adresse mail valide de l'invité",
+                    'placeholder' => "Rechercher ou inviter par email...",
                 ],
             ])
             ->add('nom', TextType::class, [

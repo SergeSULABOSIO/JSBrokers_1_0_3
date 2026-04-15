@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use App\Entity\Traits\AuditableTrait;
 use App\Repository\EntrepriseRepository;
 use Doctrine\Common\Collections\Collection;
 use Symfony\Component\HttpFoundation\File\File;
@@ -13,10 +14,12 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: EntrepriseRepository::class)]
 #[Vich\Uploadable()]
+#[ORM\HasLifecycleCallbacks]
 class Entreprise
 {
     use CalculatedIndicatorsTrait;
-
+    use AuditableTrait;
+    
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -47,12 +50,6 @@ class Entreprise
     #[ORM\Column(length: 255)]
     private ?string $numimpot = null;
 
-    #[ORM\Column]
-    private ?\DateTimeImmutable $createdAt = null;
-
-    #[ORM\Column]
-    private ?\DateTimeImmutable $updatedAt = null;
-
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $thumbnail = null;
 
@@ -60,9 +57,6 @@ class Entreprise
     #[Vich\UploadableField(mapping: 'entreprises', fileNameProperty: 'thumbnail')]
     #[Assert\Image()]
     private ?File $thumbnailFile = null;
-
-    #[ORM\ManyToOne(inversedBy: 'entreprises')]
-    private ?Utilisateur $utilisateur = null;
 
     /**
      * @var Collection<int, Utilisateur>
@@ -122,7 +116,7 @@ class Entreprise
     public function isInvited(?Utilisateur $user): bool
     {
         foreach ($this->getInvites() as $invite) {
-            if ($invite->getEmail() == $user->getEmail()) {
+            if ($invite->getUtilisateur() && $invite->getUtilisateur()->getEmail() == $user->getEmail()) {
                 return true;
             }
         }
@@ -182,23 +176,6 @@ class Entreprise
         return $this->nom;
     }
 
-    public function getCreatedAt(): ?\DateTimeImmutable
-    {
-        return $this->createdAt;
-    }
-
-    public function setCreatedAt(\DateTimeImmutable $createdAt): self
-    {
-        $this->createdAt = $createdAt;
-
-        return $this;
-    }
-
-    public function getThumbnailFile(): ?File
-    {
-        return $this->thumbnailFile;
-    }
-
     public function setThumbnailFile(File $thumbnailFile): self
     {
         $this->thumbnailFile = $thumbnailFile;
@@ -206,17 +183,9 @@ class Entreprise
         return $this;
     }
 
-
-    public function getUpdatedAt(): ?\DateTimeImmutable
+    public function getThumbnailFile(): ?File
     {
-        return $this->updatedAt;
-    }
-
-    public function setUpdatedAt(\DateTimeImmutable $updatedAt): self
-    {
-        $this->updatedAt = $updatedAt;
-
-        return $this;
+        return $this->thumbnailFile;
     }
 
     /**
@@ -247,18 +216,6 @@ class Entreprise
     public function setThumbnail(?string $thumbnail): static
     {
         $this->thumbnail = $thumbnail;
-
-        return $this;
-    }
-
-    public function getUtilisateur(): ?Utilisateur
-    {
-        return $this->utilisateur;
-    }
-
-    public function setUtilisateur(?Utilisateur $utilisateur): static
-    {
-        $this->utilisateur = $utilisateur;
 
         return $this;
     }
