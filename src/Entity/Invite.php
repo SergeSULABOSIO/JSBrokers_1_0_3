@@ -4,20 +4,21 @@ namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\InviteRepository;
+use App\Entity\Traits\AuditableTrait;
 use Doctrine\Common\Collections\Collection;
 use App\Entity\Traits\CalculatedIndicatorsTrait;
 use Doctrine\Common\Collections\ArrayCollection;
 use Symfony\Component\Serializer\Annotation\Groups;
-use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: InviteRepository::class)]
+#[ORM\HasLifecycleCallbacks]
 class Invite implements OwnerAwareInterface
 {
     use CalculatedIndicatorsTrait;
+    use AuditableTrait;
 
     public const ACCESS_LECTURE = 0;
     public const ACCESS_ECRITURE = 1;
-    public const ACCESS_MODIFICATION = 2;
     public const ACCESS_SUPPRESSION = 3;
 
 
@@ -26,17 +27,6 @@ class Invite implements OwnerAwareInterface
     #[ORM\Column]
     #[Groups(['list:read'])]
     private ?int $id = null;
-
-    #[Assert\NotBlank()]
-    #[ORM\Column(length: 255)]
-    #[Groups(['list:read'])]
-    private ?string $email = null;
-
-    #[ORM\Column]
-    private ?\DateTimeImmutable $createdAt = null;
-
-    #[ORM\Column]
-    private ?\DateTimeImmutable $updatedAt = null;
 
     /**
      * @var Collection<int, Piste>
@@ -78,17 +68,15 @@ class Invite implements OwnerAwareInterface
     private ?string $nom = null;
 
     #[ORM\ManyToOne(targetEntity: self::class, inversedBy: 'assistants')]
-    private ?self $invite = null;
+    private ?self $manager = null;
 
     /**
      * @var Collection<int, self>
      */
-    #[ORM\OneToMany(targetEntity: self::class, mappedBy: 'invite')]
+    #[ORM\OneToMany(targetEntity: self::class, mappedBy: 'manager')]
     private Collection $assistants;
 
-    #[ORM\ManyToOne(inversedBy: 'invites')]
-    private ?Entreprise $entreprise = null;
-
+    
     #[ORM\Column(nullable: true)]
     private ?bool $proprietaire = null;
 
@@ -144,6 +132,10 @@ class Invite implements OwnerAwareInterface
     #[Groups(['list:read'])]
     public ?string $status_string = null;
 
+    #[ORM\ManyToOne(inversedBy: 'invites')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Utilisateur $utilisateur = null;
+
 
     public function __construct()
     {
@@ -151,7 +143,7 @@ class Invite implements OwnerAwareInterface
         $this->pistes = new ArrayCollection();
         $this->taches = new ArrayCollection();
         $this->feedback = new ArrayCollection();
-        $this->bordereaus = new ArrayCollection();
+        $this->bordereaus = new ArrayCollection(); 
         $this->pieceSinistres = new ArrayCollection();
         $this->notificationSinistres = new ArrayCollection();
         $this->assistants = new ArrayCollection();
@@ -166,42 +158,6 @@ class Invite implements OwnerAwareInterface
     public function getId(): ?int
     {
         return $this->id;
-    }
-
-    public function getEmail(): ?string
-    {
-        return $this->email;
-    }
-
-    public function setEmail(string $email): static
-    {
-        $this->email = $email;
-
-        return $this;
-    }
-
-    public function getCreatedAt(): ?\DateTimeImmutable
-    {
-        return $this->createdAt;
-    }
-
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static
-    {
-        $this->createdAt = $createdAt;
-
-        return $this;
-    }
-
-    public function getUpdatedAt(): ?\DateTimeImmutable
-    {
-        return $this->updatedAt;
-    }
-
-    public function setUpdatedAt(\DateTimeImmutable $updatedAt): static
-    {
-        $this->updatedAt = $updatedAt;
-
-        return $this;
     }
 
     /**
@@ -236,7 +192,7 @@ class Invite implements OwnerAwareInterface
 
     public function __toString(): string
     {
-        return $this->nom . " (" . $this->email . ")";
+        return $this->nom . " (" . ($this->utilisateur ? $this->utilisateur->getEmail() : 'N/A') . ")";
     }
 
     /**
@@ -379,26 +335,16 @@ class Invite implements OwnerAwareInterface
         return $this;
     }
 
-    public function getInvite(): ?self
+    public function getManager(): ?self
     {
-        return $this->invite;
+        return $this->manager;
     }
 
-    public function setInvite(?self $invite): static
+    public function setManager(?self $manager): static
     {
-        $this->invite = $invite;
-
+        $this->manager = $manager;
         return $this;
     }
-
-    /**
-     * @return Collection<int, self>
-     */
-    public function getAssistants(): Collection
-    {
-        return $this->assistants;
-    }
-
     public function addAssistant(self $assistant): static
     {
         if (!$this->assistants->contains($assistant)) {
@@ -413,7 +359,7 @@ class Invite implements OwnerAwareInterface
     {
         if ($this->assistants->removeElement($assistant)) {
             // set the owning side to null (unless already changed)
-            if ($assistant->getInvite() === $this) {
+            if ($assistant->getManager() === $this) {
                 $assistant->setInvite(null);
             }
         }
@@ -421,16 +367,12 @@ class Invite implements OwnerAwareInterface
         return $this;
     }
 
-    public function getEntreprise(): ?Entreprise
+    /**
+     * @return Collection<int, self>
+     */
+    public function getAssistants(): Collection
     {
-        return $this->entreprise;
-    }
-
-    public function setEntreprise(?Entreprise $entreprise): static
-    {
-        $this->entreprise = $entreprise;
-
-        return $this;
+        return $this->assistants;
     }
 
     public function isProprietaire(): ?bool
@@ -621,6 +563,18 @@ class Invite implements OwnerAwareInterface
                 $rolesEnAdministration->setInvite(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getUtilisateur(): ?Utilisateur
+    {
+        return $this->utilisateur;
+    }
+
+    public function setUtilisateur(?Utilisateur $utilisateur): static
+    {
+        $this->utilisateur = $utilisateur;
 
         return $this;
     }

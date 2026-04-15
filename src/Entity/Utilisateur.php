@@ -13,6 +13,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
 
 #[ORM\Entity(repositoryClass: UtilisateurRepository::class)]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
+#[ORM\HasLifecycleCallbacks]
 #[UniqueEntity(fields: ['email'], message: 'Cette adresse mail est déjà utilisée. Veuillez nous en fournir une autre.')]
 class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
 {
@@ -66,9 +67,16 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     #[Groups(['list:read'])]
     private ?Entreprise $connectedTo = null;
 
+    /**
+     * @var Collection<int, Invite>
+     */
+    #[ORM\OneToMany(targetEntity: Invite::class, mappedBy: 'utilisateur', orphanRemoval: true)]
+    private Collection $invites;
+
     public function __construct()
     {
         $this->entreprises = new ArrayCollection();
+        $this->invites = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -202,28 +210,6 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->entreprises;
     }
 
-    public function addEntreprise(Entreprise $entreprise): static
-    {
-        if (!$this->entreprises->contains($entreprise)) {
-            $this->entreprises->add($entreprise);
-            $entreprise->setUtilisateur($this);
-        }
-
-        return $this;
-    }
-
-    public function removeEntreprise(Entreprise $entreprise): static
-    {
-        if ($this->entreprises->removeElement($entreprise)) {
-            // set the owning side to null (unless already changed)
-            if ($entreprise->getUtilisateur() === $this) {
-                $entreprise->setUtilisateur(null);
-            }
-        }
-
-        return $this;
-    }
-
     public function getLocale(): ?string
     {
         return $this->locale;
@@ -251,5 +237,49 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
         $this->connectedTo = $connectedTo;
 
         return $this;
+    }
+
+    /**
+     * @return Collection<int, Invite>
+     */
+    public function getInvites(): Collection
+    {
+        return $this->invites;
+    }
+
+    public function addInvite(Invite $invite): static
+    {
+        if (!$this->invites->contains($invite)) {
+            $this->invites->add($invite);
+            $invite->setUtilisateur($this);
+        }
+
+        return $this;
+    }
+
+    public function removeInvite(Invite $invite): static
+    {
+        if ($this->invites->removeElement($invite)) {
+            // set the owning side to null (unless already changed)
+            if ($invite->getUtilisateur() === $this) {
+                $invite->setUtilisateur(null);
+            }
+        }
+
+        return $this;
+    }
+
+    #[ORM\PrePersist]
+    public function onPrePersist(): void
+    {
+        if ($this->createdAt === null) {
+            $this->createdAt = new \DateTimeImmutable();
+        }
+    }
+
+    #[ORM\PreUpdate]
+    public function onPreUpdate(): void
+    {
+        $this->updatedAt = new \DateTimeImmutable();
     }
 }
