@@ -63,8 +63,8 @@ class EspaceDeTravailComponentController extends AbstractController
     )]
     public function index(int $idInvite, int $idEntreprise, Request $request): Response
     {
-        // La validation de l'accès est maintenant dans une méthode privée dédiée.
-        $this->validateWorkspaceAccess($request);
+        // AMÉLIORATION : On passe explicitement les IDs de la route pour une validation sécurisée.
+        $this->validateWorkspaceAccess($idEntreprise, $idInvite);
 
         // La logique de transformation du menu est maintenant dans le ControllerUtilsTrait.
         $processedMenuData = $this->processDataForShortEntityNames($this->menuData);
@@ -92,8 +92,8 @@ class EspaceDeTravailComponentController extends AbstractController
     )]
     public function loadComponent(int $idInvite, int $idEntreprise, Request $request, LoggerInterface $logger): Response
     {
-        // La validation est maintenant centralisée dans une méthode privée.
-        $this->validateWorkspaceAccess($request);
+        // AMÉLIORATION : On passe explicitement les IDs de la route pour une validation sécurisée.
+        $this->validateWorkspaceAccess($idEntreprise, $idInvite);
 
         $logger->info('[ESPACE_DE_TRAVAIL] API /load-component reçue, redirection vers le contrôleur compétent.', [
             'params' => $request->query->all()
