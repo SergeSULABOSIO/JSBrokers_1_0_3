@@ -218,7 +218,7 @@ class AppFixtures extends Fixture
             $pisteDate = $faker->dateTimeBetween('2025-01-01', '2026-10-31');
 
             $piste = new Piste();
-            $piste->setNom('Opportunité ' . $faker->bs)
+            $piste->setNom('Opportunité ' . $faker->catchPhrase)
                 ->setClient($faker->randomElement($clients))
                 ->setRisque($faker->randomElement($risques))
                 ->setPrimePotentielle($faker->randomFloat(2, 5000, 100000))
@@ -268,7 +268,7 @@ class AppFixtures extends Fixture
 
                     // Générer une note de débit pour la commission
                     if ($faker->boolean(90)) {
-                        $noteDate = $faker->dateTimeBetween($startingAt, $startingAt->format('Y-m-d H:i:s') . ' +10 days');
+                        $noteDate = $faker->dateTimeBetween($startingAt->format('Y-m-d H:i:s'), $startingAt->format('Y-m-d H:i:s') . ' +10 days');
                         $note = new Note();
                         $note->setNom("Commission sur police " . $avenant->getReferencePolice())
                             ->setType(Note::TYPE_NOTE_DE_DEBIT)
@@ -291,7 +291,7 @@ class AppFixtures extends Fixture
 
                         // 85% de chance que la commission soit payée
                         if ($faker->boolean(85)) {
-                            $paiementDate = $faker->dateTimeBetween($noteDate, $noteDate->format('Y-m-d H:i:s') . ' +45 days');
+                            $paiementDate = $faker->dateTimeBetween($noteDate->format('Y-m-d H:i:s'), $noteDate->format('Y-m-d H:i:s') . ' +45 days');
                             $paiement = new Paiement();
                             // Le montant sera calculé par le listener, on met une valeur indicative
                             $paiement->setMontant($piste->getCommissionPotentielle())
