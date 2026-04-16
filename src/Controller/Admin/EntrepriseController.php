@@ -9,6 +9,7 @@ use App\Form\EntrepriseType;
 use App\Repository\InviteRepository;
 use App\Message\EntreprisePDFMessage;
 use App\Repository\EntrepriseRepository;
+use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -93,10 +94,6 @@ class EntrepriseController extends AbstractController
             $proprietaire->setEntreprise($entreprise);
             $proprietaire->setProprietaire(true);
             
-            // L'AuditableTrait sur Invite s'occupera de `createdAt`, `updatedAt` et `entreprise`.
-            // On doit juste définir l'invité créateur, qui est lui-même dans ce cas précis.
-            $proprietaire->setInvite($proprietaire);
-
             $this->manager->persist($proprietaire);
 
             // L'AuditableTrait sur Entreprise a besoin de l'invité créateur. 
