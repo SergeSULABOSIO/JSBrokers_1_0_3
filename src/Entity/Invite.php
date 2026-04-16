@@ -3,19 +3,18 @@
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
-use App\Repository\InviteRepository;
-use App\Entity\Traits\AuditableTrait;
+use App\Entity\Traits\TimestampableTrait;
 use Doctrine\Common\Collections\Collection;
 use App\Entity\Traits\CalculatedIndicatorsTrait;
 use Doctrine\Common\Collections\ArrayCollection;
 use Symfony\Component\Serializer\Annotation\Groups;
+use App\Repository\InviteRepository;
 
 #[ORM\Entity(repositoryClass: InviteRepository::class)]
 #[ORM\HasLifecycleCallbacks]
-class Invite implements OwnerAwareInterface
+class Invite
 {
     use CalculatedIndicatorsTrait;
-    use AuditableTrait;
 
     public const ACCESS_LECTURE = 0;
     public const ACCESS_ECRITURE = 1;
@@ -157,6 +156,7 @@ class Invite implements OwnerAwareInterface
         $this->rolesEnProduction = new ArrayCollection();
         $this->rolesEnSinistre = new ArrayCollection();
         $this->rolesEnAdministration = new ArrayCollection();
+        $this->createdAt = new \DateTimeImmutable();
     }
 
     public function getId(): ?int
@@ -594,4 +594,6 @@ class Invite implements OwnerAwareInterface
 
         return $this;
     }
+
+    use TimestampableTrait;
 }

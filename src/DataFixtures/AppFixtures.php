@@ -71,12 +71,7 @@ class AppFixtures extends Fixture
         $adminInvite->setUtilisateur($adminUser);
         $adminInvite->setEntreprise($entreprise);
         $adminInvite->setProprietaire(true);
-        // L'AuditableTrait s'occupera de createdAt, updatedAt.
-        // On persiste l'invité une première fois pour qu'il ait un ID.
         $manager->persist($adminInvite);
-        $manager->flush(); // Étape 2 : On flush pour que l'invité admin ait un ID.
-
-        $adminInvite->setInvite($adminInvite); // Maintenant on peut lier l'invité à lui-même comme créateur.
 
         // 2. Création de l'invité Victor ESAFE
         $inviteUser = new Utilisateur();
@@ -93,7 +88,6 @@ class AppFixtures extends Fixture
         $victorInvite->setUtilisateur($inviteUser);
         $victorInvite->setEntreprise($entreprise);
         $victorInvite->setProprietaire(false);
-        $victorInvite->setInvite($adminInvite); // Créé par l'admin
         // TODO: Ajouter la logique des rôles pour la lecture seule
         $manager->persist($victorInvite);
 

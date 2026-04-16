@@ -23,7 +23,7 @@ trait AuditableTrait
     private ?Entreprise $entreprise = null; // Garder nullable ici pour la flexibilité, mais la BDD l'exigera.
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: true)]
     private ?Invite $invite = null;
 
     public function getCreatedAt(): ?\DateTimeImmutable
