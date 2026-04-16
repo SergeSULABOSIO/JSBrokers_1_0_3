@@ -2,6 +2,8 @@
 
 namespace App\DataFixtures;
 
+use App\Entity\Chargement;
+use App\Entity\TypeRevenu;
 use App\Entity\Article;
 use App\Entity\Assureur;
 use App\Entity\AutoriteFiscale;
@@ -50,6 +52,9 @@ class AppFixtures extends Fixture
         $entreprise->setCapitalSociale($faker->randomFloat(2, 50000, 1000000));
         $entreprise->setSiteweb('www.aib-rdc.com');
         $manager->persist($entreprise);
+
+        // On flush une première fois pour que l'entreprise ait un ID.
+        $manager->flush();
 
         $adminUser = new Utilisateur();
         $adminUser->setNom('Serge SULA BOSIO');
@@ -196,6 +201,50 @@ class AppFixtures extends Fixture
             $manager->persist($risque);
             $risques[] = $risque;
         }
+
+        // 7.bis Création des Types de Chargement
+        $chargements = [];
+        $chargementPrimeNette = new Chargement();
+        $chargementPrimeNette->setNom("Prime nette")
+            ->setFonction(Chargement::FONCTION_PRIME_NETTE)
+            ->setDescription("La part de la prime destinée à couvrir le risque pur.")
+            ->setEntreprise($entreprise)->setInvite($adminInvite);
+        $manager->persist($chargementPrimeNette);
+        $chargements['prime_nette'] = $chargementPrimeNette;
+
+        $chargementFronting = new Chargement();
+        $chargementFronting->setNom("Fronting")
+            ->setFonction(Chargement::FONCTION_FRONTING)
+            ->setDescription("Frais liés aux opérations de fronting.")
+            ->setEntreprise($entreprise)->setInvite($adminInvite);
+        $manager->persist($chargementFronting);
+        $chargements['fronting'] = $chargementFronting;
+
+        $chargementFrais = new Chargement();
+        $chargementFrais->setNom("Frais accessoires")
+            ->setFonction(Chargement::FONCTION_FRAIS_ADMIN)
+            ->setDescription("Frais de gestion, accessoires ou de police.")
+            ->setEntreprise($entreprise)->setInvite($adminInvite);
+        $manager->persist($chargementFrais);
+        $chargements['frais'] = $chargementFrais;
+
+        // 7.ter Création des Types de Revenu
+        $typeRevenuCommOrdinaire = new TypeRevenu();
+        $typeRevenuCommOrdinaire->setNom("Commission Ordinaire")->setAppliquerPourcentageDuRisque(true)->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR)->setShared(true)->setTypeChargement($chargementPrimeNette)->setEntreprise($entreprise)->setInvite($adminInvite);
+        $manager->persist($typeRevenuCommOrdinaire);
+
+        $typeRevenuCommFronting = new TypeRevenu();
+        $typeRevenuCommFronting->setNom("Commission sur Fronting")->setPourcentage(0.30)->setTypeChargement($chargementFronting)->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR)->setShared(false)->setEntreprise($entreprise)->setInvite($adminInvite);
+        $manager->persist($typeRevenuCommFronting);
+
+        $typeRevenuConsultance = new TypeRevenu();
+        $typeRevenuConsultance->setNom("Frais de consultance")->setPourcentage(0.05)->setTypeChargement($chargementPrimeNette)->setRedevable(TypeRevenu::REDEVABLE_CLIENT)->setShared(false)->setEntreprise($entreprise)->setInvite($adminInvite);
+        $manager->persist($typeRevenuConsultance);
+
+        $typeRevenuGestion = new TypeRevenu();
+        $typeRevenuGestion->setNom("Honoraire de gestion")->setPourcentage(0.02)->setTypeChargement($chargementPrimeNette)->setRedevable(TypeRevenu::REDEVABLE_CLIENT)->setShared(false)->setEntreprise($entreprise)->setInvite($adminInvite);
+        $manager->persist($typeRevenuGestion);
+
 
         // 8. Génération des données opérationnelles (Clients, Pistes, Cotations, Avenants)
         $clients = [];
