@@ -345,7 +345,6 @@ trait ControllerUtilsTrait
             'data' => $data,
             'entite_nom' => $this->getEntityName($entityClass),
             'serverRootName' => $this->getServerRootName($entityClass),
-            'constante' => $this->constante,
             'listeCanvas' => $this->canvasBuilder->getListeCanvas($entityClass),
             'entityCanvas' => $entityCanvas,
             'entityFormCanvas' => $this->canvasBuilder->getEntityFormCanvas(new $entityClass(), (int)$idEntreprise),
