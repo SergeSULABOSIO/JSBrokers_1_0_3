@@ -53,9 +53,6 @@ class AppFixtures extends Fixture
         $entreprise->setSiteweb('www.aib-rdc.com');
         $manager->persist($entreprise);
 
-        // On flush une première fois pour que l'entreprise ait un ID.
-        $manager->flush();
-
         $adminUser = new Utilisateur();
         $adminUser->setNom('Serge SULA BOSIO');
         $adminUser->setEmail('admin@js-brokers.com');
@@ -63,17 +60,23 @@ class AppFixtures extends Fixture
         $adminUser->setRoles(['ROLE_ADMIN']);
         $adminUser->setVerified(true);
         $adminUser->setConnectedTo($entreprise);
+        $entreprise->setUtilisateur($adminUser); // Lier l'utilisateur créateur
         $manager->persist($adminUser);
+
+        // Étape 1 : On flush pour que l'entreprise et l'utilisateur admin aient un ID.
+        $manager->flush();
 
         $adminInvite = new Invite();
         $adminInvite->setNom('Administrateur (Serge SULA)');
         $adminInvite->setUtilisateur($adminUser);
         $adminInvite->setEntreprise($entreprise);
         $adminInvite->setProprietaire(true);
-        $adminInvite->setInvite($adminInvite); // L'admin se crée lui-même
+        // L'AuditableTrait s'occupera de createdAt, updatedAt.
+        // On persiste l'invité une première fois pour qu'il ait un ID.
         $manager->persist($adminInvite);
+        $manager->flush(); // Étape 2 : On flush pour que l'invité admin ait un ID.
 
-        $entreprise->setInvite($adminInvite); // Lier l'entreprise à son créateur
+        $adminInvite->setInvite($adminInvite); // Maintenant on peut lier l'invité à lui-même comme créateur.
 
         // 2. Création de l'invité Victor ESAFE
         $inviteUser = new Utilisateur();
