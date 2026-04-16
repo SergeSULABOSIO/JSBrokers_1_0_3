@@ -18,7 +18,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
-#[Route("/admin/entreprise_dashbord", name: 'admin.entreprise.')]
+#[Route("/admin/entreprise_dashbord", name: 'admin.entreprise_dashboard.')]
 #[IsGranted('ROLE_USER')]
 class EntrepriseDashbordController extends AbstractController
 {
@@ -32,7 +32,7 @@ class EntrepriseDashbordController extends AbstractController
     }
 
 
-    #[Route('/index/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    #[Route('/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function index($idEntreprise, Request $request, JSBTableauDeBordBuilder $jSBTableauDeBordBuilder)
     {
         /** @var Utilisateur $user */

@@ -42,13 +42,14 @@ class EntrepriseController extends AbstractController
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
-        
         if ($user->isVerified()) {
             return $this->render('admin/entreprise/index.html.twig', [
                 'pageName' => $this->translator->trans("entreprise_page_name_list"),
                 'utilisateur' => $user,
                 'entreprises' => $this->entrepriseRepository->paginateUtilisateur($user->getId(), $page),
                 'page' => $request->query->getInt("page", 1),
+                // NOUVEAU : On passe l'invité courant pour faciliter l'accès à ses informations
+                'invite' => $this->inviteRepository->findOneBy(['utilisateur' => $user]),
                 'nbEntreprises' => $this->entrepriseRepository->getNBEntreprises(),
                 // 'nbInvites' => $this->inviteRepository->getNBInvites(),
             ]);
