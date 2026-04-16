@@ -33,13 +33,9 @@ class SecurityController extends AbstractController
     #[Route(path: '/', name: 'app_index')]
     public function index(AuthenticationUtils $authenticationUtils): Response
     {
-        // AMÉLIORATION : Si l'utilisateur est déjà connecté, on le redirige vers sa liste d'entreprises.
-        if ($this->getUser()) {
-            return $this->redirectToRoute('admin.entreprise.index');
-        }
-
-        // Sinon, on le redirige vers la page de connexion.
-        return $this->redirectToRoute('app_login');
+        return $this->render('home/index.html.twig', [
+            'pageName' => $this->translator->trans("Accueil")
+        ]);
     }
 
     #[Route(path: '/translate/{locale}/{currentURL}', name: 'app_translate', requirements: ['currentURL' => '.+'])]
