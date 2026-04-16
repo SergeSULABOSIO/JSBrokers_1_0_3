@@ -22,18 +22,27 @@ use App\Entity\Risque;
 use App\Entity\Taxe;
 use App\Entity\Utilisateur;
 use DateTimeImmutable;
+use App\DataFixtures\UtilisateurFixtures;
 use Doctrine\Bundle\FixturesBundle\Fixture;
+use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
 use Faker\Factory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-class AppFixtures extends Fixture
+class AppFixtures extends Fixture implements DependentFixtureInterface
 {
     private UserPasswordHasherInterface $passwordHasher;
 
     public function __construct(UserPasswordHasherInterface $passwordHasher)
     {
         $this->passwordHasher = $passwordHasher;
+    }
+
+    public function getDependencies()
+    {
+        return [
+            UtilisateurFixtures::class,
+        ];
     }
 
     public function load(ObjectManager $manager): void
@@ -52,16 +61,12 @@ class AppFixtures extends Fixture
         $entreprise->setCapitalSociale($faker->randomFloat(2, 50000, 1000000));
         $entreprise->setSiteweb('www.aib-rdc.com');
         $manager->persist($entreprise);
-
-        $adminUser = new Utilisateur();
-        $adminUser->setNom('Serge SULA BOSIO');
-        $adminUser->setEmail('admin@js-brokers.com');
-        $adminUser->setPassword($this->passwordHasher->hashPassword($adminUser, 'admin'));
-        $adminUser->setRoles(['ROLE_ADMIN']);
-        $adminUser->setVerified(true);
+        
+        // On récupère l'admin user créé dans UtilisateurFixtures
+        /** @var Utilisateur $adminUser */
+        $adminUser = $this->getReference(UtilisateurFixtures::ADMIN_USER_REFERENCE);
         $adminUser->setConnectedTo($entreprise);
         $entreprise->setUtilisateur($adminUser); // Lier l'utilisateur créateur
-        $manager->persist($adminUser);
 
         // Étape 1 : On flush pour que l'entreprise et l'utilisateur admin aient un ID.
         $manager->flush();
@@ -74,14 +79,9 @@ class AppFixtures extends Fixture
         $manager->persist($adminInvite);
 
         // 2. Création de l'invité Victor ESAFE
-        $inviteUser = new Utilisateur();
-        $inviteUser->setNom('Victor ESAFE');
-        $inviteUser->setEmail('invite@js-brokers.com');
-        $inviteUser->setPassword($this->passwordHasher->hashPassword($inviteUser, 'invite'));
-        $inviteUser->setRoles(['ROLE_USER']); // Rôle de base
-        $inviteUser->setVerified(true);
+        /** @var Utilisateur $inviteUser */
+        $inviteUser = $this->getReference(UtilisateurFixtures::INVITE_USER_REFERENCE);
         $inviteUser->setConnectedTo($entreprise);
-        $manager->persist($inviteUser);
 
         $victorInvite = new Invite();
         $victorInvite->setNom('Victor ESAFE (Lecteur)');
