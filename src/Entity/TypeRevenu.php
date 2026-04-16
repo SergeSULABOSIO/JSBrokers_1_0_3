@@ -109,6 +109,7 @@ class TypeRevenu
     {
         $this->revenuPourCourtiers = new ArrayCollection();
         $this->modeCalcul = self::MODE_CALCUL_POURCENTAGE_CHARGEMENT;
+        $this->multipayments = true; // Définir une valeur par défaut
         // $this->articles = new ArrayCollection();
     }
 
