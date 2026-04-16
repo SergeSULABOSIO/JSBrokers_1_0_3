@@ -74,14 +74,17 @@ class EntrepriseController extends AbstractController
         $entreprise = new Entreprise();
         // dd("Ici");
         $form = $this->createForm(EntrepriseType::class, $entreprise);
-        $form->handleRequest($request);
-        if ($form->isSubmitted() && $form->isValid()) {
+        $form->handleRequest($request); 
+        if ($form->isSubmitted() && $form->isValid()) { 
             // L'AuditableTrait va maintenant lier l'entreprise au créateur (Invite)
             // Mais pour le tout premier 'Invite' (le propriétaire), nous devons le créer manuellement.
 
             // On persiste l'entreprise d'abord pour qu'elle ait un ID.
             $this->manager->persist($entreprise);
             $this->manager->flush(); // Flush pour obtenir l'ID de l'entreprise
+
+            // Lier l'utilisateur créateur
+            $entreprise->setUtilisateur($user);
 
             //On cree aussi l'invité proprietaire de l'entreprise
             /** @var Invite $proprietaire */
@@ -97,8 +100,8 @@ class EntrepriseController extends AbstractController
 
             $this->manager->persist($proprietaire);
 
-            // L'AuditableTrait sur Entreprise a besoin de l'invité créateur.
-            $entreprise->setInvite($proprietaire);
+            // L'AuditableTrait sur Entreprise a besoin de l'invité créateur. 
+            // $entreprise->setInvite($proprietaire); // Plus nécessaire
 
             $this->manager->flush();
 
