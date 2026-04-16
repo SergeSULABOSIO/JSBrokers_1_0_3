@@ -65,27 +65,13 @@ trait ControllerUtilsTrait
      * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException Si l'entreprise n'est pas trouvée.
      * @throws \Symfony\Component\Security\Core\Exception\AccessDeniedException Si l'accès est refusé.
      */
-    private function validateWorkspaceAccess(Request $request): array
+    private function validateWorkspaceAccess(int $idEntreprise, int $idInvite): array
     {
-        $idEntreprise = $request->query->get('idEntreprise');
-        $idInvite = $request->query->get('idInvite');
+        $entreprise = $this->entrepriseRepository->find($idEntreprise) ?? throw $this->createNotFoundException("L'entreprise n'a pas été trouvée pour générer le formulaire.");
+        $invite = $this->inviteRepository->find($idInvite) ?? throw $this->createNotFoundException("L'invité n'a pas été trouvé.");
 
-        if (!$idEntreprise) {
-            $entreprise = $this->getEntreprise();
-        } else {
-            $entreprise = $this->entrepriseRepository->find($idEntreprise);
-        }
-        if (!$entreprise) {
-            throw $this->createNotFoundException("L'entreprise n'a pas été trouvée pour générer le formulaire.");
-        }
-
-        if (!$idInvite) {
-            $invite = $this->getInvite();
-        } else {
-            $invite = $this->inviteRepository->find($idInvite);
-        }
-        if (!$invite || $invite->getEntreprise()->getId() !== $entreprise->getId()) {
-            throw $this->createAccessDeniedException("Vous n'avez pas les droits pour générer ce formulaire.");
+        if ($invite->getEntreprise()->getId() !== $entreprise->getId()) {
+            throw $this->createAccessDeniedException("L'invité n'appartient pas à l'entreprise spécifiée.");
         }
 
         return ['entreprise' => $entreprise, 'invite' => $invite];
@@ -392,7 +378,11 @@ trait ControllerUtilsTrait
         ?object $entity,
         ?callable $initializer = null
     ): Response {
-        ['entreprise' => $entreprise, 'invite' => $invite] = $this->validateWorkspaceAccess($request);
+        // CORRECTION : On extrait les IDs de la requête pour les passer à la méthode de validation.
+        $idEntreprise = (int)$request->query->get('idEntreprise');
+        $idInvite = (int)$request->query->get('idInvite');
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->validateWorkspaceAccess($idEntreprise, $idInvite);
+
         $isCreationMode = ($entity === null);
 
         if (!$entity) {
@@ -484,8 +474,11 @@ trait ControllerUtilsTrait
             throw $this->createNotFoundException("L'entité avec l'ID " . ($data['id'] ?? 'null') . " n'a pas été trouvée.");
         }
 
-        // Valide l'accès à l'espace de travail pour obtenir l'entreprise et l'invité actuels.
-        ['entreprise' => $currentEntreprise, 'invite' => $currentInvite] = $this->validateWorkspaceAccess($request);
+        // CORRECTION : On extrait les IDs des données soumises pour valider l'accès.
+        // On utilise les données du formulaire (`$data`) plutôt que la requête pour plus de fiabilité.
+        $idEntreprise = isset($data['idEntreprise']) ? (int)$data['idEntreprise'] : 0;
+        $idInvite = isset($data['idInvite']) ? (int)$data['idInvite'] : 0;
+        ['entreprise' => $currentEntreprise, 'invite' => $currentInvite] = $this->validateWorkspaceAccess($idEntreprise, $idInvite);
 
         if ($isCreationMode) {
             // Renseigne automatiquement l'entreprise et l'invité pour les nouvelles entités

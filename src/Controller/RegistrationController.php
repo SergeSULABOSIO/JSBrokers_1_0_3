@@ -37,27 +37,33 @@ class RegistrationController extends AbstractController
     {
         $titrePage = "Création du compte utilisateur";
 
-        $user = new Utilisateur();
+        // AMÉLIORATION : Logique clarifiée pour la création vs l'édition.
+        $isEditMode = false;
         if ($this->getUser()) {
             /** @var Utilisateur $user */
             $user = $this->getUser();
             $titrePage = "Edition de " . $user->getNom();
+            $isEditMode = true;
+        } else {
+            $user = new Utilisateur();
         }
 
         $form = $this->createForm(RegistrationFormType::class, $user);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var string $plainPassword */
+            // AMÉLIORATION : Le mot de passe n'est encodé que s'il a été fourni.
+            // Cela permet à un utilisateur de modifier son profil sans changer son mot de passe.
             $plainPassword = $form->get('plainPassword')->getData();
-
-            // encode the plain password
-            $user->setPassword($userPasswordHasher->hashPassword($user, $plainPassword));
+            if ($plainPassword) {
+                $user->setPassword($userPasswordHasher->hashPassword($user, $plainPassword));
+            }
 
             $entityManager->persist($user);
             $entityManager->flush();
 
-            if (!$this->getUser()) {
+            // AMÉLIORATION : L'email de confirmation n'est envoyé qu'en mode création.
+            if (!$isEditMode) {
                 // generate a signed url and email it to the user
                 $this->emailVerifier->sendEmailConfirmation(
                     'app_verify_email',
@@ -68,9 +74,10 @@ class RegistrationController extends AbstractController
                         ->subject("JS Brokers - Confirmation d'adresse mail - " . $user->getEmail())
                         ->htmlTemplate('registration/confirmation_email.html.twig')
                 );
+                // Connexion automatique de l'utilisateur après son inscription.
+                return $security->login($user, AppAuthenticator::class, 'main');
             }
-            // do anything else you need here, like send an email
-            return $security->login($user, AppAuthenticator::class, 'main');
+            $this->addFlash('success', 'Votre profil a été mis à jour avec succès.');
         }
 
         return $this->render('registration/register.html.twig', [
@@ -92,10 +99,10 @@ class RegistrationController extends AbstractController
         } catch (VerifyEmailExceptionInterface $exception) {
             $this->addFlash('verify_email_error', $translator->trans($exception->getReason(), [], 'VerifyEmailBundle'));
 
-            return $this->redirectToRoute('app_register');
+            return $this->redirectToRoute('app_login');
         }
 
-        // @TODO Change the redirect on success and handle or remove the flash message in your templates
+        // AMÉLIORATION : Redirection vers la page de connexion après une vérification réussie.
         $this->addFlash('success', "Votre adresse mail vient d'être vérifiée et elle est bien valide. Vous pouvez maintenant travailler.");
         return $this->redirectToRoute('app_login');
     }

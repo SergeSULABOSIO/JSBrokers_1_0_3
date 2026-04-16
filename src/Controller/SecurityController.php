@@ -31,20 +31,15 @@ class SecurityController extends AbstractController
     ) {}
 
     #[Route(path: '/', name: 'app_index')]
-    public function index(Request $request): Response
+    public function index(AuthenticationUtils $authenticationUtils): Response
     {
-        /** @var Utilisateur $user */
-        $user = $this->getUser();
-        // dd($user);
-        if ($user) {
-            $this->localeSwitcher->setLocale($user->getLocale());
-        } else {
-            $this->localeSwitcher->setLocale($request->getLocale());
+        // AMÉLIORATION : Si l'utilisateur est déjà connecté, on le redirige vers sa liste d'entreprises.
+        if ($this->getUser()) {
+            return $this->redirectToRoute('admin.entreprise.index');
         }
 
-        return $this->render('home/index.html.twig', [
-            'pageName' => $this->translator->trans("security_home"),
-        ]);
+        // Sinon, on le redirige vers la page de connexion.
+        return $this->redirectToRoute('app_login');
     }
 
     #[Route(path: '/translate/{locale}/{currentURL}', name: 'app_translate', requirements: ['currentURL' => '.+'])]
@@ -72,8 +67,11 @@ class SecurityController extends AbstractController
             /** @var Utilisateur $user */
             $user = $this->getUser();
             if ($user->isVerified()) {
-                // return new RedirectResponse($this->urlGenerator->generate("app_user_dashbord", ['idUtilisateur' => 32]));
                 return $this->redirectToRoute('admin.entreprise.index');
+            } else {
+                // AMÉLIORATION : Si l'utilisateur est connecté mais non vérifié, on le redirige
+                // vers la page qui lui permet de renvoyer l'email de vérification.
+                return $this->redirectToRoute('app_reverify_email');
             }
         }
 
