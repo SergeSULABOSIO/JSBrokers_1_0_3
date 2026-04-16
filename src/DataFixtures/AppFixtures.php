@@ -101,28 +101,40 @@ class AppFixtures extends Fixture
 
         // 3. Création des Monnaies
         $usd = new Monnaie();
-        $usd->setNom('Dollar Américain')->setCode('USD')->setTauxusd('1.00')->setLocale(false)->setFonction(Monnaie::FONCTION_SAISIE_ET_AFFICHAGE)->setEntreprise($entreprise)->setInvite($adminInvite);
+        $usd->setNom('Dollar Américain')->setCode('USD')->setTauxusd('1.00')->setLocale(false)->setFonction(Monnaie::FONCTION_SAISIE_ET_AFFICHAGE);
+        $usd->setEntreprise($entreprise);
+        $usd->setInvite($adminInvite);
         $manager->persist($usd);
 
         $cdf = new Monnaie();
-        $cdf->setNom('Franc Congolais')->setCode('CDF')->setTauxusd('2250.00')->setLocale(true)->setFonction(Monnaie::FONCTION_SAISIE_UNIQUEMENT)->setEntreprise($entreprise)->setInvite($adminInvite);
+        $cdf->setNom('Franc Congolais')->setCode('CDF')->setTauxusd('2250.00')->setLocale(true)->setFonction(Monnaie::FONCTION_SAISIE_UNIQUEMENT);
+        $cdf->setEntreprise($entreprise);
+        $cdf->setInvite($adminInvite);
         $manager->persist($cdf);
 
         // 4. Création des Taxes et Autorités Fiscales
         $taxeArca = new Taxe();
-        $taxeArca->setCode('ARCA')->setDescription("Taxe régulateur")->setTauxIARD('2.00')->setTauxVIE('2.00')->setRedevable(Taxe::REDEVABLE_COURTIER)->setEntreprise($entreprise)->setInvite($adminInvite);
+        $taxeArca->setCode('ARCA')->setDescription("Taxe régulateur")->setTauxIARD('2.00')->setTauxVIE('2.00')->setRedevable(Taxe::REDEVABLE_COURTIER);
+        $taxeArca->setEntreprise($entreprise);
+        $taxeArca->setInvite($adminInvite);
         $manager->persist($taxeArca);
 
         $autoriteArca = new AutoriteFiscale();
-        $autoriteArca->setNom('Autorité de régulation et de contrôle des assurances en RDC')->setAbreviation('ARCA')->setTaxe($taxeArca)->setEntreprise($entreprise)->setInvite($adminInvite);
+        $autoriteArca->setNom('Autorité de régulation et de contrôle des assurances en RDC')->setAbreviation('ARCA')->setTaxe($taxeArca);
+        $autoriteArca->setEntreprise($entreprise);
+        $autoriteArca->setInvite($adminInvite);
         $manager->persist($autoriteArca);
 
         $taxeTva = new Taxe();
-        $taxeTva->setCode('TVA')->setDescription("Taxe sur la Valeur Ajoutée")->setTauxIARD('16.00')->setTauxVIE('0.00')->setRedevable(Taxe::REDEVABLE_ASSUREUR)->setEntreprise($entreprise)->setInvite($adminInvite);
+        $taxeTva->setCode('TVA')->setDescription("Taxe sur la Valeur Ajoutée")->setTauxIARD('16.00')->setTauxVIE('0.00')->setRedevable(Taxe::REDEVABLE_ASSUREUR);
+        $taxeTva->setEntreprise($entreprise);
+        $taxeTva->setInvite($adminInvite);
         $manager->persist($taxeTva);
 
         $autoriteDgi = new AutoriteFiscale();
-        $autoriteDgi->setNom('Direction Générale des Impôts')->setAbreviation('DGI')->setTaxe($taxeTva)->setEntreprise($entreprise)->setInvite($adminInvite);
+        $autoriteDgi->setNom('Direction Générale des Impôts')->setAbreviation('DGI')->setTaxe($taxeTva);
+        $autoriteDgi->setEntreprise($entreprise);
+        $autoriteDgi->setInvite($adminInvite);
         $manager->persist($autoriteDgi);
 
         // 5. Création des Assureurs
@@ -208,44 +220,51 @@ class AppFixtures extends Fixture
         // 7.bis Création des Types de Chargement
         $chargements = [];
         $chargementPrimeNette = new Chargement();
-        $chargementPrimeNette->setNom("Prime nette")
+        $chargementPrimeNette
+            ->setNom("Prime nette")
             ->setFonction(Chargement::FONCTION_PRIME_NETTE)
-            ->setDescription("La part de la prime destinée à couvrir le risque pur.")
-            ->setEntreprise($entreprise)->setInvite($adminInvite);
+            ->setDescription("La part de la prime destinée à couvrir le risque pur.");
+        $chargementPrimeNette->setEntreprise($entreprise)->setInvite($adminInvite);
         $manager->persist($chargementPrimeNette);
         $chargements['prime_nette'] = $chargementPrimeNette;
 
         $chargementFronting = new Chargement();
-        $chargementFronting->setNom("Fronting")
+        $chargementFronting
+            ->setNom("Fronting")
             ->setFonction(Chargement::FONCTION_FRONTING)
-            ->setDescription("Frais liés aux opérations de fronting.")
-            ->setEntreprise($entreprise)->setInvite($adminInvite);
+            ->setDescription("Frais liés aux opérations de fronting.");
+        $chargementFronting->setEntreprise($entreprise)->setInvite($adminInvite);
         $manager->persist($chargementFronting);
         $chargements['fronting'] = $chargementFronting;
 
         $chargementFrais = new Chargement();
-        $chargementFrais->setNom("Frais accessoires")
+        $chargementFrais
+            ->setNom("Frais accessoires")
             ->setFonction(Chargement::FONCTION_FRAIS_ADMIN)
-            ->setDescription("Frais de gestion, accessoires ou de police.")
-            ->setEntreprise($entreprise)->setInvite($adminInvite);
+            ->setDescription("Frais de gestion, accessoires ou de police.");
+        $chargementFrais->setEntreprise($entreprise)->setInvite($adminInvite);
         $manager->persist($chargementFrais);
         $chargements['frais'] = $chargementFrais;
 
         // 7.ter Création des Types de Revenu
         $typeRevenuCommOrdinaire = new TypeRevenu();
-        $typeRevenuCommOrdinaire->setNom("Commission Ordinaire")->setAppliquerPourcentageDuRisque(true)->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR)->setShared(true)->setTypeChargement($chargementPrimeNette)->setEntreprise($entreprise)->setInvite($adminInvite);
+        $typeRevenuCommOrdinaire->setNom("Commission Ordinaire")->setAppliquerPourcentageDuRisque(true)->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR)->setShared(true)->setTypeChargement($chargementPrimeNette);
+        $typeRevenuCommOrdinaire->setEntreprise($entreprise)->setInvite($adminInvite);
         $manager->persist($typeRevenuCommOrdinaire);
 
         $typeRevenuCommFronting = new TypeRevenu();
-        $typeRevenuCommFronting->setNom("Commission sur Fronting")->setPourcentage(0.30)->setTypeChargement($chargementFronting)->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR)->setShared(false)->setEntreprise($entreprise)->setInvite($adminInvite);
+        $typeRevenuCommFronting->setNom("Commission sur Fronting")->setPourcentage(0.30)->setTypeChargement($chargementFronting)->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR)->setShared(false);
+        $typeRevenuCommFronting->setEntreprise($entreprise)->setInvite($adminInvite);
         $manager->persist($typeRevenuCommFronting);
 
         $typeRevenuConsultance = new TypeRevenu();
-        $typeRevenuConsultance->setNom("Frais de consultance")->setPourcentage(0.05)->setTypeChargement($chargementPrimeNette)->setRedevable(TypeRevenu::REDEVABLE_CLIENT)->setShared(false)->setEntreprise($entreprise)->setInvite($adminInvite);
+        $typeRevenuConsultance->setNom("Frais de consultance")->setPourcentage(0.05)->setTypeChargement($chargementPrimeNette)->setRedevable(TypeRevenu::REDEVABLE_CLIENT)->setShared(false);
+        $typeRevenuConsultance->setEntreprise($entreprise)->setInvite($adminInvite);
         $manager->persist($typeRevenuConsultance);
 
         $typeRevenuGestion = new TypeRevenu();
-        $typeRevenuGestion->setNom("Honoraire de gestion")->setPourcentage(0.02)->setTypeChargement($chargementPrimeNette)->setRedevable(TypeRevenu::REDEVABLE_CLIENT)->setShared(false)->setEntreprise($entreprise)->setInvite($adminInvite);
+        $typeRevenuGestion->setNom("Honoraire de gestion")->setPourcentage(0.02)->setTypeChargement($chargementPrimeNette)->setRedevable(TypeRevenu::REDEVABLE_CLIENT)->setShared(false);
+        $typeRevenuGestion->setEntreprise($entreprise)->setInvite($adminInvite);
         $manager->persist($typeRevenuGestion);
 
 
@@ -260,7 +279,8 @@ class AppFixtures extends Fixture
                 ->setCivilite(Client::CIVILITE_ENTREPRISE)
                 ->setExonere($faker->boolean(5))
                 ->setEntreprise($entreprise)
-                ->setInvite($faker->randomElement($allInvites));
+                ->setInvite($faker->randomElement($allInvites))
+                ->setCreatedAt(DateTimeImmutable::createFromMutable($faker->dateTimeBetween('2025-01-01', '2026-10-31')));
             $manager->persist($client);
             $clients[] = $client;
         }
@@ -317,6 +337,8 @@ class AppFixtures extends Fixture
                         ->setInvite($cotation->getInvite())
                         ->setCreatedAt($startingAt);
                     $manager->persist($avenant);
+                $piste->setAvenantDeBase($avenant); // Lier l'avenant à la piste
+                $manager->persist($piste);
 
                     // Générer une note de débit pour la commission
                     if ($faker->boolean(90)) {
@@ -333,6 +355,7 @@ class AppFixtures extends Fixture
                             ->setInvite($cotation->getInvite())
                             ->setCreatedAt(DateTimeImmutable::createFromMutable($noteDate));
 
+                    $note->setInvite($cotation->getInvite());
                         $article = new Article();
                         $article->setNote($note)
                             ->setEntreprise($entreprise)
@@ -351,7 +374,8 @@ class AppFixtures extends Fixture
                                 ->setReference('PAY-' . $faker->unique()->numberBetween(10000, 99999))
                                 ->setPaidAt(DateTimeImmutable::createFromMutable($paiementDate))
                                 ->setEntreprise($entreprise)
-                                ->setInvite($note->getInvite());
+                                ->setInvite($note->getInvite())
+                                ->setCreatedAt(DateTimeImmutable::createFromMutable($paiementDate));
                             $manager->persist($paiement);
                         }
                     }
