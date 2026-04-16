@@ -353,7 +353,7 @@ class Invite
     {
         if (!$this->assistants->contains($assistant)) {
             $this->assistants->add($assistant);
-            $assistant->setInvite($this);
+            $assistant->setManager($this);
         }
 
         return $this;
@@ -364,7 +364,7 @@ class Invite
         if ($this->assistants->removeElement($assistant)) {
             // set the owning side to null (unless already changed)
             if ($assistant->getManager() === $this) {
-                $assistant->setInvite(null);
+                $assistant->setManager(null);
             }
         }
 
