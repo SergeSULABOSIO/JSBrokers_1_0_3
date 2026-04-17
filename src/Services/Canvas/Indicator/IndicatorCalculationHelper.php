@@ -478,7 +478,8 @@ class IndicatorCalculationHelper
         $taxe_assureur_solde = $taxe_assureur - $taxe_assureur_payee;
         $sinistre_solde = $sinistre_payable - $sinistre_paye;
         $taux_sinistralite = ($prime_totale > 0) ? ($sinistre_payable / $prime_totale) * 100 : 0;
-        $taux_de_commission = ($prime_nette > 0) ? ($commission_nette / $prime_nette) * 100 : 0;
+        // CORRECTION : Il manquait la multiplication par 100 pour obtenir un pourcentage.
+        $taux_de_commission = ($prime_nette > 0) ? ($commission_nette / $prime_nette) * 100 : 0.0;
         $taux_de_retrocommission_effectif = ($commission_partageable > 0) ? ($retro_commission_partenaire / $commission_partageable) * 100 : 0;
         $taux_de_paiement_prime = ($prime_totale > 0) ? ($prime_totale_payee / $prime_totale) * 100 : 0;
         $taux_de_paiement_commission = ($commission_totale > 0) ? ($commission_totale_encaissee / $commission_totale) * 100 : 0;
