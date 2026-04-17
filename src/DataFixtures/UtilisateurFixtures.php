@@ -45,6 +45,6 @@ class UtilisateurFixtures extends Fixture
         // On ajoute une référence pour cet utilisateur aussi
         $this->addReference(self::INVITE_USER_REFERENCE, $inviteUser);
 
-        $manager->flush();
+        // $manager->flush(); // Retiré pour laisser la fixture principale gérer la transaction.
     }
 }
