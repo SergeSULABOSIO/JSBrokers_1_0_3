@@ -70,7 +70,7 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     /**
      * @var Collection<int, Invite>
      */
-    #[ORM\OneToMany(targetEntity: Invite::class, mappedBy: 'utilisateur', orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: Invite::class, mappedBy: 'utilisateur', orphanRemoval: true, cascade: ['persist'])]
     private Collection $invites;
 
     public function __construct()
