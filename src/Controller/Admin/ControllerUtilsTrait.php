@@ -92,7 +92,7 @@ trait ControllerUtilsTrait
             throw $this->createAccessDeniedException("Utilisateur non authentifié.");
         }
         /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneByEmail($user->getEmail());
+        $invite = $this->inviteRepository->findOneBy(['utilisateur' => $user]);
         if (!$invite) {
             throw $this->createNotFoundException("Aucun invité trouvé pour l'utilisateur actuel.");
         }
@@ -378,10 +378,8 @@ trait ControllerUtilsTrait
         ?callable $initializer = null
     ): Response {
         // CORRECTION : On extrait les IDs de la requête pour les passer à la méthode de validation.
-        $idEntreprise = (int)$request->query->get('idEntreprise');
-        $idInvite = (int)$request->query->get('idInvite');
-        ['entreprise' => $entreprise, 'invite' => $invite] = $this->validateWorkspaceAccess($idEntreprise, $idInvite);
-
+        $entreprise = $this->getEntreprise();
+        $invite = $this->getInvite();
         $isCreationMode = ($entity === null);
 
         if (!$entity) {
