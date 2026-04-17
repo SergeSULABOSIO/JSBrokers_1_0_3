@@ -25,14 +25,8 @@ class ServiceTaxes
 
     public function getTaxes()
     {
-        if ($this->getUtilisateurConnecte()) {
-            if ($this->getUtilisateurConnecte()->getConnectedTo()) {
-                /** @var Entreprise $entreprise */
-                $entreprise = $this->getUtilisateurConnecte()->getConnectedTo();
-                return $entreprise->getTaxes();
-            }
-        }
-        return [];
+        // Les taxes sont globales au système et non liées à une entreprise spécifique.
+        return $this->entityManager->getRepository(Taxe::class)->findAll();
     }
 
     public function getTaxesPayableParCourtier()
