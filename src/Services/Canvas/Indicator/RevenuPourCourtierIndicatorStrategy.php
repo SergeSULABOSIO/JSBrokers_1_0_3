@@ -46,7 +46,7 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
             'clientDescription' => $this->calculationHelper->getClientDescriptionFromCotation($entity->getCotation()),
             'risqueDescription' => $this->calculationHelper->getRisqueDescriptionFromCotation($entity->getCotation()),
             'montantCalculeHT' => round($this->calculationHelper->getRevenuMontantHt($entity), 2),
-            'montantCalculeTTC' => round($this->getRevenuPourCourtierMontantTTC($entity), 2),
+            'montantCalculeTTC' => round($this->calculationHelper->getRevenuMontantTTC($entity), 2),
             'descriptionCalcul' => $this->getRevenuPourCourtierDescriptionCalcul($entity),
             'montant_du' => round($this->getRevenuPourCourtierMontantTTC($entity), 2),
             'montant_paye' => round($this->getRevenuPourCourtierMontantPaye($entity), 2),
@@ -67,17 +67,6 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
             'taxeAssureurPayee' => round($this->getRevenuTaxePayee($entity, true), 2),
             'taxeAssureurSolde' => round($this->getRevenuTaxeMontant($entity, true) - $this->getRevenuTaxePayee($entity, true), 2),
         ];
-    }
-
-    private function getRevenuPourCourtierMontantTTC(RevenuPourCourtier $revenu): float
-    {
-        $montantHT = $this->calculationHelper->getRevenuMontantHt($revenu);
-        if ($montantHT === 0.0) return 0.0;
-        
-        // Simulating getMontantTaxe for TTC
-        $isIARD = $this->calculationHelper->isIARD($revenu->getCotation());
-        $taxe = $this->getRevenuTaxeMontant($revenu, true); // Taxe Assureur applies to TTC pricing
-        return $montantHT + $taxe;
     }
 
     private function getRevenuPourCourtierMontantPaye(RevenuPourCourtier $revenu): float
@@ -172,7 +161,7 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
     private function getRevenuTaxeMontant(RevenuPourCourtier $revenu, bool $isTaxeAssureur): float
     {
         $montantHT = $this->calculationHelper->getRevenuMontantHt($revenu);
-        $taux = $this->getRevenuTaxeTaux($revenu, $isTaxeAssureur ? Taxe::REDEVABLE_ASSUREUR : Taxe::REDEVABLE_COURTIER) / 100;
+        $taux = $this->getRevenuTaxeTaux($revenu, $isTaxeAssureur ? Taxe::REDEVABLE_ASSUREUR : Taxe::REDEVABLE_COURTIER);
         return $montantHT * $taux;
     }
 
@@ -187,7 +176,7 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
         $taxe = $this->taxeRepository->findOneBy(['redevable' => $redevable, 'entreprise' => $entreprise]);
         if (!$taxe) return 0.0;
         $rate = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();
-        return ($rate ?? 0.0) * 100;
+        return ($rate ?? 0.0);
     }
 
     private function getRevenuTaxePayee(RevenuPourCourtier $revenu, bool $isTaxeAssureur): float
