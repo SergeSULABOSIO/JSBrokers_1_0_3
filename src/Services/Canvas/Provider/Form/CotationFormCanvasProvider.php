@@ -49,15 +49,15 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
     {
         $cotationId = $object->getId() ?? 0;
         $layout = [
-            [ // Ligne 1 : Nom (pleine largeur)
+            [ // Ligne 1 : Nom (8/12) et Durée (4/12)
                 'colonnes' => [
-                    ['width' => 12, 'champs' => ['nom']]
+                    ['width' => 8, 'champs' => ['nom']],
+                    ['width' => 4, 'champs' => ['duree']]
                 ]
             ],
-            [ // Ligne 2 : Durée et Assureur (côte à côte)
+            [ // Ligne 2 : Assureur (pleine largeur)
                 'colonnes' => [
-                    ['width' => 4, 'champs' => ['duree']],
-                    ['width' => 8, 'champs' => ['assureur']]
+                    ['width' => 12, 'champs' => ['assureur']]
                 ]
             ]
         ];

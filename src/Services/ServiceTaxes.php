@@ -3,11 +3,8 @@
 namespace App\Services;
 
 use App\Entity\AutoriteFiscale;
-use App\Entity\Entreprise;
-use App\Entity\Risque;
 use App\Entity\Taxe;
 use App\Entity\Utilisateur;
-use ArrayObject;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 
