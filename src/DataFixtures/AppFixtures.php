@@ -76,7 +76,7 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
         $adminInvite->setUtilisateur($adminUser);
         $adminInvite->setEntreprise($entreprise);
         $adminInvite->setProprietaire(true);
-        $manager->persist($adminInvite);
+        $entreprise->addInvite($adminInvite); // On l'ajoute simplement à l'entreprise
 
         // 2. Création de l'invité Victor ESAFE
         /** @var Utilisateur $inviteUser */
@@ -89,7 +89,7 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
         $victorInvite->setEntreprise($entreprise);
         $victorInvite->setProprietaire(false);
         // TODO: Ajouter la logique des rôles pour la lecture seule
-        $manager->persist($victorInvite);
+        $entreprise->addInvite($victorInvite); // On l'ajoute simplement à l'entreprise
 
         $allInvites = [$adminInvite, $victorInvite];
 

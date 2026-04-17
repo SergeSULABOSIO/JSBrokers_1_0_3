@@ -131,7 +131,7 @@ class Invite
     #[Groups(['list:read'])]
     public ?string $status_string = null;
 
-    #[ORM\ManyToOne(inversedBy: 'invites')]
+    #[ORM\ManyToOne(inversedBy: 'invites', cascade: ['persist'])]
     #[ORM\JoinColumn(nullable: false)]
     private ?Utilisateur $utilisateur = null;
 

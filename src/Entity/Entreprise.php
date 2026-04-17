@@ -75,7 +75,7 @@ class Entreprise
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $siteweb = null;
 
-    #[ORM\ManyToOne]
+    #[ORM\ManyToOne(cascade: ['persist'])]
     #[ORM\JoinColumn(nullable: false)]
     private ?Utilisateur $utilisateur = null;
 
