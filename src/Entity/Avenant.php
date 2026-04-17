@@ -22,6 +22,41 @@ class Avenant
     public const RENEWAL_STATUS_LOST        = 0;
     public const RENEWAL_STATUS_ONCE_OFF    = 1;
 
+    // NOUVEAU : Attributs calculés spécifiques à l'avenant
+    #[Groups(['list:read'])]
+    public ?string $dureeCouverture = null;
+    #[Groups(['list:read'])]
+    public ?string $joursRestants = null;
+    #[Groups(['list:read'])]
+    public ?string $ageAvenant = null;
+    #[Groups(['list:read'])]
+    public ?string $typeAffaire = null;
+    #[Groups(['list:read'])]
+    public ?string $periodeCouverture = null;
+    #[Groups(['list:read'])]
+    public ?string $clientDescription = null;
+    #[Groups(['list:read'])]
+    public ?string $risqueDescription = null;
+    #[Groups(['list:read'])]
+    public ?string $risqueCode = null;
+    #[Groups(['list:read'])]
+    public ?string $titrePrincipal = null;
+    #[Groups(['list:read'])]
+    public ?string $contextePiste = null;
+    #[Groups(['list:read'])]
+    public ?float $taxeCourtierPayee = null;
+    #[Groups(['list:read'])]
+    public ?float $taxeCourtierSolde = null;
+    #[Groups(['list:read'])]
+    public ?float $taxeAssureurPayee = null;
+    #[Groups(['list:read'])]
+    public ?float $taxeAssureurSolde = null;
+    #[Groups(['list:read'])]
+    public ?float $retroCommission = null;
+    #[Groups(['list:read'])]
+    public ?float $retroCommissionReversee = null;
+    #[Groups(['list:read'])]
+    public ?float $retroCommissionSolde = null;
     // NOUVEAU : Attributs calculés (Miroir de Cotation)
     #[Groups(['list:read'])]
     public ?float $indemnisationDue = null;
