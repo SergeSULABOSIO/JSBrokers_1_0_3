@@ -868,38 +868,18 @@ class IndicatorCalculationHelper
         return $montant;
     }
 
-    public function getRevenuMontantPure(?RevenuPourCourtier $revenu, $addressedTo, bool $onlySharable): float
+    /**
+     * NOUVEAU : Calcule le montant "pur" d'un revenu (HT moins la taxe courtier).
+     * Centralise la logique pour éviter les incohérences.
+     *
+     * @param RevenuPourCourtier $revenu
+     * @return float
+     */
+    public function getRevenuMontantPure(RevenuPourCourtier $revenu): float
     {
-        if ($addressedTo != -1) {
-            if ($revenu->getTypeRevenu()->getRedevable() == $addressedTo) {
-                return $this->calculateCommissionPure($revenu, $onlySharable);
-            }
-            return 0;
-        } else {
-            return $this->calculateCommissionPure($revenu, $onlySharable);
-        }
-    }
-
-    public function calculateCommissionPure(RevenuPourCourtier $revenu, bool $onlySharable)
-    {
-        $taxeCourtier = 0;
-        $taxeAssureur = false;
-        $comNette = 0;
-        $isIARD = $this->isIARD($revenu->getCotation());
-        $commissionPure = 0;
-
-        if ($onlySharable == true) {
-            if ($revenu->getTypeRevenu()->isShared() == true) {
-                $comNette = $this->getRevenuMontantHt($revenu);
-                $taxeCourtier = $this->serviceTaxes->getMontantTaxe($comNette, $isIARD, $taxeAssureur);
-                $commissionPure = $comNette - $taxeCourtier;
-            }
-        } else {
-            $comNette = $this->getRevenuMontantHt($revenu);
-            $taxeCourtier = $this->serviceTaxes->getMontantTaxe($comNette, $isIARD, $taxeAssureur);
-            $commissionPure = $comNette - $taxeCourtier;
-        }
-        return $commissionPure;
+        $montantHT = $this->getRevenuMontantHt($revenu);
+        $taxeCourtier = $this->serviceTaxes->getMontantTaxe($montantHT, $this->isIARD($revenu->getCotation()), false);
+        return $montantHT - $taxeCourtier;
     }
 
     public function calculerRetroCommission(?Risque $risque, ?ConditionPartage $conditionPartage, $assiette): float
@@ -1062,13 +1042,12 @@ class IndicatorCalculationHelper
         $revenu = $article->getRevenuFacture();
         $tranche = $article->getTranche();
         
-        // CORRECTION : Si un revenu est lié, le montant de l'article est basé sur le TTC du revenu,
-        // proportionnellement à la tranche et à la quantité.
         if ($revenu && $tranche) {
             return $this->getRevenuMontantTTC($revenu) * ($article->getQuantite() ?? 1.0) * $this->getTrancheTauxFactor($tranche);
         }
-        // Si pas de revenu, on retourne 0 pour éviter les calculs inattendus.
-        return $this->getRevenuMontantTTC($revenu) * ($article->getQuantite() ?? 1.0) * $this->getTrancheTauxFactor($tranche);
+        // Si l'article n'est pas (encore) lié à un revenu et une tranche,
+        // son montant est de 0. Cela corrige l'erreur lors de l'ajout d'un nouvel article.
+        return 0.0;
     }
 
     public function getTrancheTauxFactor(Tranche $tranche): float
