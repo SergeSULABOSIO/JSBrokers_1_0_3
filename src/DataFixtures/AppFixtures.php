@@ -243,21 +243,25 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
         // 7.ter Création des Types de Revenu
         $typeRevenuCommOrdinaire = new TypeRevenu();
         $typeRevenuCommOrdinaire->setNom("Commission Ordinaire")->setAppliquerPourcentageDuRisque(true)->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR)->setShared(true)->setTypeChargement($chargementPrimeNette);
+        $typeRevenuCommOrdinaire->setMultipayments(true);
         $typeRevenuCommOrdinaire->setEntreprise($entreprise)->setInvite($adminInvite);
         $manager->persist($typeRevenuCommOrdinaire);
 
         $typeRevenuCommFronting = new TypeRevenu();
         $typeRevenuCommFronting->setNom("Commission sur Fronting")->setPourcentage(0.30)->setTypeChargement($chargementFronting)->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR)->setShared(false);
+        $typeRevenuCommFronting->setMultipayments(true);
         $typeRevenuCommFronting->setEntreprise($entreprise)->setInvite($adminInvite);
         $manager->persist($typeRevenuCommFronting);
 
         $typeRevenuConsultance = new TypeRevenu();
         $typeRevenuConsultance->setNom("Frais de consultance")->setPourcentage(0.05)->setTypeChargement($chargementPrimeNette)->setRedevable(TypeRevenu::REDEVABLE_CLIENT)->setShared(false);
+        $typeRevenuConsultance->setMultipayments(false);
         $typeRevenuConsultance->setEntreprise($entreprise)->setInvite($adminInvite);
         $manager->persist($typeRevenuConsultance);
 
         $typeRevenuGestion = new TypeRevenu();
         $typeRevenuGestion->setNom("Honoraire de gestion")->setPourcentage(0.02)->setTypeChargement($chargementPrimeNette)->setRedevable(TypeRevenu::REDEVABLE_CLIENT)->setShared(false);
+        $typeRevenuGestion->setMultipayments(true);
         $typeRevenuGestion->setEntreprise($entreprise)->setInvite($adminInvite);
         $manager->persist($typeRevenuGestion);
 
