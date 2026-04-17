@@ -49,11 +49,11 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
             'descriptionCalcul' => $this->getRevenuPourCourtierDescriptionCalcul($entity),
             'montant_du' => round($this->calculationHelper->getRevenuMontantTTC($entity), 2),
             'montant_paye' => round($this->getRevenuPourCourtierMontantPaye($entity), 2),
-            'solde_restant_du' => round($this->calculationHelper->getRevenuMontantTTC($entity) - $this->getRevenuPourCourtierMontantPaye($entity), 2),
-            'montantPur' => round($this->getRevenuMontantPur($entity), 2),
+            'solde_restant_du' => round($this->calculationHelper->getRevenuMontantTTC($entity) - $this->getRevenuPourCourtierMontantPaye($entity), 2),            
+            'montantPur' => round($this->calculationHelper->getRevenuMontantPure($entity), 2),
             'partPartenaire' => $this->getRevenuPartPartenaire($entity),
-            'retroCommission' => round($this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1, []), 2),
-            'reserve' => round($this->getRevenuMontantPur($entity) - $this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1, []), 2),
+            'retroCommission' => round($this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1, []), 2),            
+            'reserve' => round($this->calculationHelper->getRevenuMontantPure($entity) - $this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1, []), 2),
             'retroCommissionReversee' => round($this->getRevenuRetroCommissionReversee($entity), 2),
             'retroCommissionSolde' => round($this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1, []) - $this->getRevenuRetroCommissionReversee($entity), 2),
             'taxeCourtierMontant' => round($this->getRevenuTaxeMontant($entity, false), 2),
@@ -110,13 +110,6 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
             return "Taux du risque de " . ($tauxRisque * 100) . "%";
         }
         return "Logique de calcul non spécifiée";
-    }
-
-    private function getRevenuMontantPur(RevenuPourCourtier $revenu): float
-    {
-        $montantHT = $this->calculationHelper->getRevenuMontantHt($revenu);
-        $taxeCourtier = $this->getRevenuTaxeMontant($revenu, false);
-        return $montantHT - $taxeCourtier;
     }
 
     public function getRevenuPartPartenaire(RevenuPourCourtier $revenu): float
