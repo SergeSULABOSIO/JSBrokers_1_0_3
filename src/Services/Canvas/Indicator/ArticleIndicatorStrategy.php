@@ -118,7 +118,7 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
         // Calcul des valeurs financières de base
         $montantHT = $this->calculationHelper->getRevenuMontantHt($revenu);
-        // CORRECTION : Le taux retourné par getTaxeTaux n'est plus multiplié par 100, donc on ne divise plus.
+        // CORRECTION : getTaxeTaux retourne maintenant le taux en facteur (ex: 0.16), donc plus besoin de diviser.
         $taxeTaux = $this->getTaxeTaux($revenu, Taxe::REDEVABLE_COURTIER); 
         $taxeMontant = $montantHT * $taxeTaux;
         
@@ -196,6 +196,7 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
         $taxe = $this->taxeRepository->findOneBy(['redevable' => $redevable, 'entreprise' => $entreprise]);
         if (!$taxe) return 0.0;
         $rate = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();
+        // CORRECTION : On retourne le taux en facteur (ex: 0.16) et non en pourcentage.
         return ($rate ?? 0.0);
     }
 }
