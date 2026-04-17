@@ -65,15 +65,15 @@ class ServiceTaxes
         if ($taxeAssureur == true) {
             foreach ($this->getTaxesPayableParAssureur() as $taxeAss) {
                 $gross += match ($tauxIARD) {
-                    true => $montantNet * $taxeAss->getTauxIARD(),
-                    false => $montantNet * $taxeAss->getTauxVIE(),
+                    true => $montantNet * ($taxeAss->getTauxIARD() / 100),
+                    false => $montantNet * ($taxeAss->getTauxVIE() / 100),
                 };
             }
         } else {
             foreach ($this->getTaxesPayableParCourtier() as $taxeCou) {
                 $gross += match ($tauxIARD) {
-                    true => $montantNet * $taxeCou->getTauxIARD(),
-                    false => $montantNet * $taxeCou->getTauxVIE(),
+                    true => $montantNet * ($taxeCou->getTauxIARD() / 100),
+                    false => $montantNet * ($taxeCou->getTauxVIE() / 100),
                 };
             }
         }
