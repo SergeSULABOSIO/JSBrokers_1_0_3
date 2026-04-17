@@ -3,8 +3,6 @@
 namespace App\Services\Canvas\Indicator;
 
 use App\Entity\RevenuPourCourtier;
-use App\Entity\Note;
-use App\Entity\Paiement;
 use App\Entity\Taxe;
 use App\Repository\TaxeRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -48,9 +46,9 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
             'montantCalculeHT' => round($this->calculationHelper->getRevenuMontantHt($entity), 2),
             'montantCalculeTTC' => round($this->calculationHelper->getRevenuMontantTTC($entity), 2),
             'descriptionCalcul' => $this->getRevenuPourCourtierDescriptionCalcul($entity),
-            'montant_du' => round($this->getRevenuPourCourtierMontantTTC($entity), 2),
+            'montant_du' => round($this->calculationHelper->getRevenuMontantTTC($entity), 2),
             'montant_paye' => round($this->getRevenuPourCourtierMontantPaye($entity), 2),
-            'solde_restant_du' => round($this->getRevenuPourCourtierMontantTTC($entity) - $this->getRevenuPourCourtierMontantPaye($entity), 2),
+            'solde_restant_du' => round($this->calculationHelper->getRevenuMontantTTC($entity) - $this->getRevenuPourCourtierMontantPaye($entity), 2),
             'montantPur' => round($this->getRevenuMontantPur($entity), 2),
             'partPartenaire' => $this->getRevenuPartPartenaire($entity),
             'retroCommission' => round($this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1, []), 2),
@@ -161,6 +159,7 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
     private function getRevenuTaxeMontant(RevenuPourCourtier $revenu, bool $isTaxeAssureur): float
     {
         $montantHT = $this->calculationHelper->getRevenuMontantHt($revenu);
+        // CORRECTION : getRevenuTaxeTaux retourne maintenant le taux en facteur (ex: 0.16), donc plus besoin de diviser.
         $taux = $this->getRevenuTaxeTaux($revenu, $isTaxeAssureur ? Taxe::REDEVABLE_ASSUREUR : Taxe::REDEVABLE_COURTIER);
         return $montantHT * $taux;
     }
@@ -176,6 +175,7 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
         $taxe = $this->taxeRepository->findOneBy(['redevable' => $redevable, 'entreprise' => $entreprise]);
         if (!$taxe) return 0.0;
         $rate = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();
+        // CORRECTION : On retourne le taux en facteur (ex: 0.16) et non en pourcentage.
         return ($rate ?? 0.0);
     }
 

@@ -79,15 +79,15 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'taxeAssureurPayee' => round($this->calculationHelper->getCotationMontantTaxeAssureurPayee($cotation), 2),
             'taxeAssureurSolde' => round($this->calculationHelper->getCotationMontantTaxeAssureur($cotation, false) - $this->calculationHelper->getCotationMontantTaxeAssureurPayee($cotation), 2),
             'montantPur' => round($this->calculationHelper->getCotationMontantCommissionPure($cotation, -1, false), 2),
-            // CORRECTION : On s'assure qu'un partenaire existe avant de calculer la rétro-commission.
-            'retroCommission' => $cotation->getPiste()?->getPartenaire() ? round($this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1, []), 2) : 0.0,
-            'retroCommissionReversee' => $cotation->getPiste()?->getPartenaire() ? round($this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtierPayee($cotation, null), 2) : 0.0,
-            'retroCommissionSolde' => $cotation->getPiste()?->getPartenaire() ? round(
+            // CORRECTION : On utilise la méthode du helper pour obtenir le partenaire et on vérifie son existence.
+            'retroCommission' => $this->calculationHelper->getCotationPartenaire($cotation) ? round($this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1, []), 2) : 0.0,
+            'retroCommissionReversee' => $this->calculationHelper->getCotationPartenaire($cotation) ? round($this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtierPayee($cotation, null), 2) : 0.0,
+            'retroCommissionSolde' => $this->calculationHelper->getCotationPartenaire($cotation) ? round(
                 $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1, []) -
                 $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtierPayee($cotation, null),
                 2
             ) : 0.0,
-            'reserve' => round($this->calculationHelper->getCotationMontantCommissionPure($cotation, -1, false) - ($cotation->getPiste()?->getPartenaire() ? $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1, []) : 0.0), 2),
+            'reserve' => round($this->calculationHelper->getCotationMontantCommissionPure($cotation, -1, false) - ($this->calculationHelper->getCotationPartenaire($cotation) ? $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1, []) : 0.0), 2),
         ];
     }
 
