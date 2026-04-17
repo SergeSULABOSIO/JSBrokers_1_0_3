@@ -45,7 +45,7 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column]
     #[Groups(['list:read'])]
-    private bool $isVerified = false;
+    private bool $verified = false;
 
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $createdAt = null;
@@ -168,12 +168,12 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function isVerified(): bool
     {
-        return $this->isVerified;
+        return $this->verified;
     }
 
     public function setVerified(bool $isVerified): static
     {
-        $this->isVerified = $isVerified;
+        $this->verified = $isVerified;
 
         return $this;
     }
