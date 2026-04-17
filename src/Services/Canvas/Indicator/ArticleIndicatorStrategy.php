@@ -118,8 +118,9 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
         // Calcul des valeurs financières de base
         $montantHT = $this->calculationHelper->getRevenuMontantHt($revenu);
-        $taxeTaux = $this->getTaxeTaux($revenu, Taxe::REDEVABLE_COURTIER);
-        $taxeMontant = $montantHT * ($taxeTaux / 100);
+        // CORRECTION : Le taux retourné par getTaxeTaux n'est plus multiplié par 100, donc on ne divise plus.
+        $taxeTaux = $this->getTaxeTaux($revenu, Taxe::REDEVABLE_COURTIER); 
+        $taxeMontant = $montantHT * $taxeTaux;
         
         // Hydratation des propriétés publiques (utilisées par le champ autocomplete et l'affichage)
         $revenu->montantCalculeHT = $montantHT;
@@ -195,6 +196,6 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
         $taxe = $this->taxeRepository->findOneBy(['redevable' => $redevable, 'entreprise' => $entreprise]);
         if (!$taxe) return 0.0;
         $rate = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();
-        return ($rate ?? 0.0) * 100;
+        return ($rate ?? 0.0);
     }
 }

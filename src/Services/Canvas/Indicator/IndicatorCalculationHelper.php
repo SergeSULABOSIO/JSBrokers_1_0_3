@@ -1070,11 +1070,12 @@ class IndicatorCalculationHelper
         $revenu = $article->getRevenuFacture();
         $tranche = $article->getTranche();
         
-        if (!$revenu || !$tranche) {
-            return 0.0;
+        // CORRECTION : Si un revenu est lié, le montant de l'article est basé sur le TTC du revenu,
+        // proportionnellement à la tranche et à la quantité.
+        if ($revenu && $tranche) {
+            return $this->getRevenuMontantTTC($revenu) * ($article->getQuantite() ?? 1.0) * $this->getTrancheTauxFactor($tranche);
         }
-
-        // Formule : RevenuTTC * Quantité * TauxTranche
+        // Si pas de revenu, on retourne 0 pour éviter les calculs inattendus.
         return $this->getRevenuMontantTTC($revenu) * ($article->getQuantite() ?? 1.0) * $this->getTrancheTauxFactor($tranche);
     }
 
