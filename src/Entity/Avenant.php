@@ -21,6 +21,54 @@ class Avenant
     //Renewal status
     public const RENEWAL_STATUS_LOST        = 0;
     public const RENEWAL_STATUS_ONCE_OFF    = 1;
+
+    // NOUVEAU : Attributs calculés (Miroir de Cotation)
+    #[Groups(['list:read'])]
+    public ?float $indemnisationDue = null;
+    #[Groups(['list:read'])]
+    public ?float $indemnisationVersee = null;
+    #[Groups(['list:read'])]
+    public ?float $indemnisationSolde = null;
+    #[Groups(['list:read'])]
+    public ?float $tauxSP = null;
+    #[Groups(['list:read'])]
+    public ?string $tauxSPInterpretation = null;
+    #[Groups(['list:read'])]
+    public ?\DateTimeInterface $dateDernierReglement = null;
+    #[Groups(['list:read'])]
+    public ?string $vitesseReglement = null;
+    #[Groups(['list:read'])]
+    public ?int $nombreTranches = null;
+    #[Groups(['list:read'])]
+    public ?float $montantMoyenTranche = null;
+    #[Groups(['list:read'])]
+    public ?float $primeTotale = null;
+    #[Groups(['list:read'])]
+    public ?float $primePayee = null;
+    #[Groups(['list:read'])]
+    public ?float $primeSoldeDue = null;
+    #[Groups(['list:read'])]
+    public ?float $tauxCommission = null;
+    #[Groups(['list:read'])]
+    public ?float $montantHT = null;
+    #[Groups(['list:read'])]
+    public ?float $montantTTC = null;
+    #[Groups(['list:read'])]
+    public ?string $detailCalcul = null;
+    #[Groups(['list:read'])]
+    public ?float $taxeCourtierMontant = null;
+    #[Groups(['list:read'])]
+    public ?float $taxeAssureurMontant = null;
+    #[Groups(['list:read'])]
+    public ?float $montant_du = null;
+    #[Groups(['list:read'])]
+    public ?float $montant_paye = null;
+    #[Groups(['list:read'])]
+    public ?float $solde_restant_du = null;
+    #[Groups(['list:read'])]
+    public ?float $montantPur = null;
+    #[Groups(['list:read'])]
+    public ?float $reserve = null;
     public const RENEWAL_STATUS_RENEWED     = 2;
     public const RENEWAL_STATUS_EXTENDED    = 3;
     public const RENEWAL_STATUS_RUNNING     = 4;
