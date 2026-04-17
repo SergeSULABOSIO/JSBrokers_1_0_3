@@ -118,8 +118,8 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
         // Calcul des valeurs financières de base
         $montantHT = $this->calculationHelper->getRevenuMontantHt($revenu);
-        // CORRECTION : getTaxeTaux retourne maintenant le taux en facteur (ex: 0.16), donc plus besoin de diviser.
-        $taxeTaux = $this->getTaxeTaux($revenu, Taxe::REDEVABLE_COURTIER); 
+        // CORRECTION : On s'assure que le taux est un facteur (ex: 0.02) avant de multiplier.
+        $taxeTaux = $this->getTaxeTaux($revenu, Taxe::REDEVABLE_COURTIER);
         $taxeMontant = $montantHT * $taxeTaux;
         
         // Hydratation des propriétés publiques (utilisées par le champ autocomplete et l'affichage)
@@ -187,7 +187,7 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
     private function getTaxeTaux(RevenuPourCourtier $revenu, int $redevable): float
     {
-        $isIARD = $this->calculationHelper->isIARD($revenu->getCotation());
+        $isIARD = $this->calculationHelper->isIARD($revenu->getCotation()); // ex: true
         
         $entreprise = $revenu->getTypeRevenu()?->getEntreprise();
         // Fallback
@@ -196,7 +196,7 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
         $taxe = $this->taxeRepository->findOneBy(['redevable' => $redevable, 'entreprise' => $entreprise]);
         if (!$taxe) return 0.0;
         $rate = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();
-        // CORRECTION : On retourne le taux en facteur (ex: 0.16) et non en pourcentage.
-        return ($rate ?? 0.0);
+        // CORRECTION : La BDD stocke le taux en facteur (ex: 0.16). On retourne cette valeur directement.
+        return (float)($rate ?? 0.0);
     }
 }

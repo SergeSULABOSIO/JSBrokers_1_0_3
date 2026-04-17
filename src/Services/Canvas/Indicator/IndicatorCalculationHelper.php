@@ -22,6 +22,7 @@ use App\Entity\OffreIndemnisationSinistre;
 use App\Repository\CotationRepository;
 use App\Repository\NotificationSinistreRepository;
 use App\Repository\TaxeRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
 use DateTimeImmutable;
@@ -33,7 +34,8 @@ class IndicatorCalculationHelper
         private NotificationSinistreRepository $notificationSinistreRepository,
         private TaxeRepository $taxeRepository,
         private ServiceTaxes $serviceTaxes,
-        private ServiceDates $serviceDates
+        private ServiceDates $serviceDates,
+        private EntityManagerInterface $em
     ) {
     }
 
@@ -799,30 +801,19 @@ class IndicatorCalculationHelper
         $partenaireAffaire = $this->getCotationPartenaire($cotation);
         if (!$partenaireAffaire || !$this->isSamePartenaire($partenaireAffaire, $partenaireCible)) return 0.0;
 
-        $conditionsPartagePiste = $cotation->getPiste()->getConditionsPartageExceptionnelles();
-        if (!$conditionsPartagePiste->isEmpty()) {
-            foreach ($conditionsPartagePiste as $condition) {
-                $montant = $this->applyRevenuConditionsSpeciales($condition, $revenu, $addressedTo, $precomputedSums);
-                if ($montant > 0) return $montant;
-            }
-            return 0.0;
-        }
 
-        $conditionsPartagePartenaire = $partenaireAffaire->getConditionPartages();
-        if (!$conditionsPartagePartenaire->isEmpty()) {
-            foreach ($conditionsPartagePartenaire as $condition) {
-                $montant = $this->applyRevenuConditionsSpeciales($condition, $revenu, $addressedTo, $precomputedSums);
-                if ($montant > 0) return $montant;
-            }
-            return 0.0;
-        }
-
-        if ($partenaireAffaire->getPart() > 0) {
-            $assiette = $this->getRevenuMontantPure($revenu, $addressedTo, true);
-            return $assiette * $partenaireAffaire->getPart();
-        }
-
-        return 0.0;
+        // On instancie la stratégie pour utiliser sa logique de calcul de taux.
+        // C'est une approche pragmatique pour réutiliser la logique existante sans duplication.
+        $revenuStrategy = new RevenuPourCourtierIndicatorStrategy($this, $this->taxeRepository, $this->em);
+        
+        // On récupère le taux de partage (maintenant un facteur correct, ex: 0.15)
+        $tauxPartage = $revenuStrategy->getRevenuPartPartenaire($revenu);
+    
+        // On calcule l'assiette (Commission Pure)
+        $assiette = $this->getRevenuMontantPure($revenu, $addressedTo, true);
+    
+        // On applique le taux à l'assiette
+        return $assiette * $tauxPartage;
     }
 
     public function getCotationPartenaire(?Cotation $cotation)

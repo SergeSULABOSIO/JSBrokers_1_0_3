@@ -3,6 +3,7 @@
 namespace App\Services\Canvas\Indicator;
 
 use App\Entity\RevenuPourCourtier;
+use App\Entity\Note;
 use App\Entity\Taxe;
 use App\Repository\TaxeRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -118,23 +119,25 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
         return $montantHT - $taxeCourtier;
     }
 
-    private function getRevenuPartPartenaire(RevenuPourCourtier $revenu): float
+    public function getRevenuPartPartenaire(RevenuPourCourtier $revenu): float
     {
         $partenaireAffaire = $this->calculationHelper->getCotationPartenaire($revenu->getCotation());
         if (!$partenaireAffaire) return 0.0;
 
-        $cotation = $revenu->getCotation();
-        $conditionsPartagePiste = $cotation->getPiste()->getConditionsPartageExceptionnelles();
+        $conditionsPartagePiste = $revenu->getCotation()?->getPiste()?->getConditionsPartageExceptionnelles();
         if (!$conditionsPartagePiste->isEmpty()) {
-            return ($conditionsPartagePiste->first()->getTaux() ?? 0.0) * 100;
+            // CORRECTION : On retourne le taux brut (ex: 0.15) et non un pourcentage.
+            return $conditionsPartagePiste->first()->getTaux() ?? 0.0;
         }
 
         $conditionsPartagePartenaire = $partenaireAffaire->getConditionPartages();
         if (!$conditionsPartagePartenaire->isEmpty()) {
-            return ($conditionsPartagePartenaire->first()->getTaux() ?? 0.0) * 100;
+            // CORRECTION : On retourne le taux brut (ex: 0.15) et non un pourcentage.
+            return $conditionsPartagePartenaire->first()->getTaux() ?? 0.0;
         }
 
-        return ($partenaireAffaire->getPart() ?? 0.0) * 100;
+        // CORRECTION : On retourne le taux brut (ex: 0.15) et non un pourcentage.
+        return $partenaireAffaire->getPart() ?? 0.0;
     }
 
     private function getRevenuRetroCommissionReversee(RevenuPourCourtier $revenu): float
@@ -159,14 +162,14 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
     private function getRevenuTaxeMontant(RevenuPourCourtier $revenu, bool $isTaxeAssureur): float
     {
         $montantHT = $this->calculationHelper->getRevenuMontantHt($revenu);
-        // CORRECTION : getRevenuTaxeTaux retourne maintenant le taux en facteur (ex: 0.16), donc plus besoin de diviser.
+        // CORRECTION : On s'assure que le taux retourné est bien un facteur (ex: 0.16)
         $taux = $this->getRevenuTaxeTaux($revenu, $isTaxeAssureur ? Taxe::REDEVABLE_ASSUREUR : Taxe::REDEVABLE_COURTIER);
         return $montantHT * $taux;
     }
 
     private function getRevenuTaxeTaux(RevenuPourCourtier $revenu, int $redevable): float
     {
-        $isIARD = $this->calculationHelper->isIARD($revenu->getCotation());
+        $isIARD = $this->calculationHelper->isIARD($revenu->getCotation()); // ex: true
         
         $entreprise = $revenu->getTypeRevenu()?->getEntreprise();
         // Fallback si le type de revenu n'a pas d'entreprise (ex: création dynamique)
@@ -175,8 +178,8 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
         $taxe = $this->taxeRepository->findOneBy(['redevable' => $redevable, 'entreprise' => $entreprise]);
         if (!$taxe) return 0.0;
         $rate = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();
-        // CORRECTION : On retourne le taux en facteur (ex: 0.16) et non en pourcentage.
-        return ($rate ?? 0.0);
+        // CORRECTION : La BDD stocke le taux en facteur (ex: 0.16). On retourne cette valeur directement.
+        return (float)($rate ?? 0.0);
     }
 
     private function getRevenuTaxePayee(RevenuPourCourtier $revenu, bool $isTaxeAssureur): float
