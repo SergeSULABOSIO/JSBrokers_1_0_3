@@ -12,6 +12,7 @@ use App\Entity\Client;
 use App\Entity\ConditionPartage;
 use App\Entity\Cotation;
 use App\Entity\Entreprise;
+use App\Entity\RevenuPourCourtier;
 use App\Entity\Invite;
 use App\Entity\Monnaie;
 use App\Entity\Note;
@@ -19,6 +20,8 @@ use App\Entity\Paiement;
 use App\Entity\Partenaire;
 use App\Entity\Piste;
 use App\Entity\Risque;
+use App\Entity\ChargementPourPrime;
+use App\Entity\Tranche;
 use App\Entity\Taxe;
 use App\Entity\Utilisateur;
 use DateTimeImmutable;
@@ -314,25 +317,95 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
                     ->setInvite($piste->getInvite())
                     ->setCreatedAt(DateTimeImmutable::createFromMutable($cotationDate));
                 $manager->persist($cotation);
+                $montantTotalPrime = $piste->getPrimePotentielle();
 
-                // 70% de chance que la cotation soit acceptée et devienne une police (Avenant)
                 if ($faker->boolean(70)) {
                     $placementDate = $faker->dateTimeBetween($cotationDate, $cotationDate->format('Y-m-d H:i:s') . ' +5 days');
                     $startingAt = DateTimeImmutable::createFromMutable($placementDate);
                     $endingAt = $startingAt->modify('+1 year');
 
                     $avenant = new Avenant();
-                    $avenant->setDescription('Police d\'assurance ' . $piste->getRisque()->getNomComplet())
+                    $avenant->setDescription('Police d\'assurance pour ' . $piste->getRisque()->getNomComplet())
                         ->setReferencePolice('POL-' . $faker->unique()->numberBetween(2025000, 2026999))
                         ->setCotation($cotation)
                         ->setStartingAt($startingAt)
                         ->setEndingAt($endingAt)
                         ->setEntreprise($entreprise)
-                        ->setInvite($cotation->getInvite())
-                        ->setCreatedAt($startingAt);
+                        ->setInvite($cotation->getInvite());
                     $manager->persist($avenant);
-                $piste->setAvenantDeBase($avenant); // Lier l'avenant à la piste
-                $manager->persist($piste);
+                    $piste->setAvenantDeBase($avenant);
+                    $manager->persist($piste);
+
+                    // NOUVEAU : Définir les chargements, revenus et tranches pour la cotation
+                    // 1. Chargement pour la prime nette (toujours présent)
+                    $cppNette = new ChargementPourPrime();
+                    $cppNette->setCotation($cotation)
+                        ->setNom("Prime Nette pour " . $cotation->getNom())
+                        ->setType($chargements['prime_nette'])
+                        ->setMontantFlatExceptionel($piste->getPrimePotentielle())
+                        ->setEntreprise($entreprise)
+                        ->setInvite($adminInvite);
+                    $manager->persist($cppNette);
+
+                    // 2. Revenu de commission ordinaire (toujours présent)
+                    $revenuCommOrdinaire = new RevenuPourCourtier();
+                    $revenuCommOrdinaire
+                        ->setNom("Commission sur " . $cotation->getNom())
+                        ->setCotation($cotation)
+                        ->setTypeRevenu($typeRevenuCommOrdinaire)
+                        ->setMontantFlatExceptionel($piste->getCommissionPotentielle())
+                        ->setEntreprise($entreprise)
+                        ->setInvite($adminInvite);
+                    $manager->persist($revenuCommOrdinaire);
+
+                    // 3. Chargements et revenus additionnels (aléatoires)
+                    if ($faker->boolean(30)) { // 30% de chance d'avoir du fronting
+                        $montantFronting = round($piste->getPrimePotentielle() * $faker->randomFloat(2, 0.05, 0.15), 2);
+                        $montantTotalPrime += $montantFronting;
+
+                        $cppFronting = new ChargementPourPrime();
+                        $cppFronting->setNom("Fronting sur " . $cotation->getNom())
+                            ->setCotation($cotation)->setType($chargements['fronting'])->setMontantFlatExceptionel($montantFronting)->setEntreprise($entreprise)->setInvite($adminInvite);
+                        $manager->persist($cppFronting);
+
+                        $revenuFronting = new RevenuPourCourtier();
+                        $montantRevenuFronting = round($montantFronting * $typeRevenuCommFronting->getPourcentage(), 2);
+                        $revenuFronting->setNom("Commission sur Fronting pour " . $cotation->getNom())
+                            ->setCotation($cotation)->setTypeRevenu($typeRevenuCommFronting)->setMontantFlatExceptionel($montantRevenuFronting)->setEntreprise($entreprise)->setInvite($adminInvite);
+                        $manager->persist($revenuFronting);
+                    }
+
+                    if ($faker->boolean(50)) { // 50% de chance d'avoir des frais accessoires
+                        $montantFrais = $faker->randomFloat(2, 50, 500);
+                        $montantTotalPrime += $montantFrais;
+                        $cppFrais = new ChargementPourPrime();
+                        $cppFrais->setNom("Frais accessoires pour " . $cotation->getNom())
+                            ->setCotation($cotation)->setType($chargements['frais'])->setMontantFlatExceptionel($montantFrais)->setEntreprise($entreprise)->setInvite($adminInvite);
+                        $manager->persist($cppFrais);
+                    }
+
+                    // 4. Création des tranches de paiement
+                    $nombreTranches = $faker->numberBetween(1, 4);
+                    $montantRestant = $montantTotalPrime;
+                    $echeanceTranche = $startingAt;
+
+                    for ($k = 1; $k <= $nombreTranches; $k++) {
+                        $tranche = new Tranche();
+                        $montantTranche = ($k === $nombreTranches) ? $montantRestant : round($montantTotalPrime / $nombreTranches, 2);
+                        $montantRestant -= $montantTranche;
+                        $echeanceTranche = $echeanceTranche->modify('+' . (12 / $nombreTranches) . ' months');
+
+                        $tranche->setCotation($cotation)
+                            ->setNom("Tranche " . $k . "/" . $nombreTranches . " - " . $cotation->getNom())
+                            ->setMontantFlat($montantTranche)
+                            ->setPourcentage(round(($montantTranche / $montantTotalPrime) * 100, 2))
+                            ->setPayableAt($startingAt)
+                            ->setEcheanceAt($echeanceTranche)
+                            ->setEntreprise($entreprise)
+                            ->setInvite($adminInvite);
+                        $manager->persist($tranche);
+                    }
+
 
                     // Générer une note de débit pour la commission
                     if ($faker->boolean(90)) {
@@ -340,13 +413,13 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
                         $note = new Note();
                         $note->setNom("Commission sur police " . $avenant->getReferencePolice())
                             ->setType(Note::TYPE_NOTE_DE_DEBIT)
-                            ->setAddressedTo(Note::TO_ASSUREUR)
+                            ->setAddressedTo(Note::TO_CLIENT)
                             ->setAssureur($cotation->getAssureur())
                             ->setReference('ND-' . $faker->unique()->numberBetween(10000, 99999))
                             ->setValidated(true)
                             ->setSignature((string)time())
                             ->setEntreprise($entreprise)
-                            ->setInvite($cotation->getInvite())
+                            ->setInvite($cotation->getInvite()) // Assigner l'invite
                             ->setCreatedAt(DateTimeImmutable::createFromMutable($noteDate));
 
                     $note->setInvite($cotation->getInvite());
@@ -354,7 +427,6 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
                         $article->setNote($note)
                             ->setEntreprise($entreprise)
                             ->setInvite($cotation->getInvite());
-                        // Les montants seront calculés par le listener, on ne les met pas ici.
                         $manager->persist($article);
                         $manager->persist($note);
 
@@ -362,13 +434,11 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
                         if ($faker->boolean(85)) {
                             $paiementDate = $faker->dateTimeBetween($noteDate->format('Y-m-d H:i:s'), $noteDate->format('Y-m-d H:i:s') . ' +45 days');
                             $paiement = new Paiement();
-                            // Le montant sera calculé par le listener, on met une valeur indicative
                             $paiement->setMontant($piste->getCommissionPotentielle())
                                 ->setNote($note)
                                 ->setReference('PAY-' . $faker->unique()->numberBetween(10000, 99999))
                                 ->setPaidAt(DateTimeImmutable::createFromMutable($paiementDate))
                                 ->setEntreprise($entreprise)
-                                ->setInvite($note->getInvite())
                                 ->setCreatedAt(DateTimeImmutable::createFromMutable($paiementDate));
                             $manager->persist($paiement);
                         }
