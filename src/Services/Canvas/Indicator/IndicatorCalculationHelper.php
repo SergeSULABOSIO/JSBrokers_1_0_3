@@ -882,6 +882,27 @@ class IndicatorCalculationHelper
         return $montantHT - $taxeCourtier;
     }
 
+    /**
+     * NOUVEAU : Calcule le montant de la taxe courtier pour un revenu spécifique.
+     *
+     * @param RevenuPourCourtier $revenu
+     * @return float
+     */
+    public function getRevenuMontantTaxeCourtier(RevenuPourCourtier $revenu): float
+    {
+        $montantHT = $this->getRevenuMontantHt($revenu);
+        return $this->serviceTaxes->getMontantTaxe($montantHT, $this->isIARD($revenu->getCotation()), false); // false = Taxe Courtier
+    }
+
+    /**
+     * NOUVEAU : Calcule le montant de la taxe assureur pour un revenu spécifique.
+     */
+    public function getRevenuMontantTaxeAssureur(RevenuPourCourtier $revenu): float
+    {
+        $montantHT = $this->getRevenuMontantHt($revenu);
+        return $this->serviceTaxes->getMontantTaxe($montantHT, $this->isIARD($revenu->getCotation()), true); // true = Taxe Assureur
+    }
+
     public function calculerRetroCommission(?Risque $risque, ?ConditionPartage $conditionPartage, $assiette): float
     {
         if (!$conditionPartage || !$risque) return 0.0;

@@ -174,7 +174,7 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
         if (!$taxe) return 0.0;
         $isIARD = $this->calculationHelper->isIARD($tranche->getCotation());
         $rate = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();
-        return ($rate ?? 0.0) * 100;
+        return (float)($rate ?? 0.0);
     }
 
     private function getTrancheTaxeAssureurTaux(Tranche $tranche): float
@@ -185,7 +185,7 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
         if (!$taxe) return 0.0;
         $isIARD = $this->calculationHelper->isIARD($tranche->getCotation());
         $rate = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();
-        return ($rate ?? 0.0) * 100;
+        return (float)($rate ?? 0.0);
     }
 
     private function getTrancheEstPartageable(Tranche $tranche): string
