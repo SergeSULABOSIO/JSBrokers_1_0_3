@@ -61,6 +61,7 @@ class ServiceTaxes
         $gross = 0;
         if ($taxeAssureur == true) {
             foreach ($this->getTaxesPayableParAssureur() as $taxeAss) {
+                dump("TAUX BRUT TAXE ASSUREUR (IARD / VIE):", $taxeAss->getTauxIARD(), $taxeAss->getTauxVIE());
                 $gross += match ($tauxIARD) {
                     true => $montantNet * ($taxeAss->getTauxIARD() / 100),
                     false => $montantNet * ($taxeAss->getTauxVIE() / 100),
@@ -68,6 +69,7 @@ class ServiceTaxes
             }
         } else {
             foreach ($this->getTaxesPayableParCourtier() as $taxeCou) {
+                dump("TAUX BRUT TAXE COURTIER (IARD / VIE):", $taxeCou->getTauxIARD(), $taxeCou->getTauxVIE());
                 $gross += match ($tauxIARD) {
                     true => $montantNet * ($taxeCou->getTauxIARD() / 100),
                     false => $montantNet * ($taxeCou->getTauxVIE() / 100),
