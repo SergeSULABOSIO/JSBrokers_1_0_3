@@ -56,15 +56,15 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
             'reserve' => round($this->calculationHelper->getRevenuMontantPure($entity) - $this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1, []), 2),
             'retroCommissionReversee' => round($this->getRevenuRetroCommissionReversee($entity), 2),
             'retroCommissionSolde' => round($this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1, []) - $this->getRevenuRetroCommissionReversee($entity), 2),
-            'taxeCourtierMontant' => round($this->getRevenuTaxeMontant($entity, false), 2),
-            'taxeCourtierTaux' => $this->getRevenuTaxeTaux($entity, Taxe::REDEVABLE_COURTIER),
-            'taxeAssureurMontant' => round($this->getRevenuTaxeMontant($entity, true), 2),
-            'taxeAssureurTaux' => $this->getRevenuTaxeTaux($entity, Taxe::REDEVABLE_ASSUREUR),
+            'taxeCourtierMontant' => round($this->calculationHelper->getRevenuMontantTaxeCourtier($entity), 2),
+            'taxeCourtierTaux' => $this->getTaxeTaux($entity, Taxe::REDEVABLE_COURTIER),
+            'taxeAssureurMontant' => round($this->calculationHelper->getRevenuMontantTaxeAssureur($entity), 2),
+            'taxeAssureurTaux' => $this->getTaxeTaux($entity, Taxe::REDEVABLE_ASSUREUR),
             'estPartageable' => ($entity->getTypeRevenu() && $entity->getTypeRevenu()->isShared()) ? 'Oui' : 'Non',
-            'taxeCourtierPayee' => round($this->getRevenuTaxePayee($entity, false), 2),
-            'taxeCourtierSolde' => round($this->getRevenuTaxeMontant($entity, false) - $this->getRevenuTaxePayee($entity, false), 2),
-            'taxeAssureurPayee' => round($this->getRevenuTaxePayee($entity, true), 2),
-            'taxeAssureurSolde' => round($this->getRevenuTaxeMontant($entity, true) - $this->getRevenuTaxePayee($entity, true), 2),
+            'taxeCourtierPayee' => round($this->getRevenuTaxePayee($entity, Taxe::REDEVABLE_COURTIER), 2),
+            'taxeCourtierSolde' => round($this->calculationHelper->getRevenuMontantTaxeCourtier($entity) - $this->getRevenuTaxePayee($entity, Taxe::REDEVABLE_COURTIER), 2),
+            'taxeAssureurPayee' => round($this->getRevenuTaxePayee($entity, Taxe::REDEVABLE_ASSUREUR), 2),
+            'taxeAssureurSolde' => round($this->calculationHelper->getRevenuMontantTaxeAssureur($entity) - $this->getRevenuTaxePayee($entity, Taxe::REDEVABLE_ASSUREUR), 2),
         ];
     }
 
@@ -152,33 +152,22 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
         return $montantPaye;
     }
 
-    private function getRevenuTaxeMontant(RevenuPourCourtier $revenu, bool $isTaxeAssureur): float
-    {
-        $montantHT = $this->calculationHelper->getRevenuMontantHt($revenu);
-        // CORRECTION : On s'assure que le taux retourné est bien un facteur (ex: 0.16)
-        $taux = $this->getRevenuTaxeTaux($revenu, $isTaxeAssureur ? Taxe::REDEVABLE_ASSUREUR : Taxe::REDEVABLE_COURTIER);
-        return $montantHT * $taux;
-    }
-
-    private function getRevenuTaxeTaux(RevenuPourCourtier $revenu, int $redevable): float
+    private function getTaxeTaux(RevenuPourCourtier $revenu, int $redevable): float
     {
         $isIARD = $this->calculationHelper->isIARD($revenu->getCotation()); // ex: true
         
         $entreprise = $revenu->getTypeRevenu()?->getEntreprise();
         // Fallback si le type de revenu n'a pas d'entreprise (ex: création dynamique)
         if (!$entreprise) $entreprise = $revenu->getCotation()?->getPiste()?->getInvite()?->getEntreprise();
-        
         $taxe = $this->taxeRepository->findOneBy(['redevable' => $redevable, 'entreprise' => $entreprise]);
         if (!$taxe) return 0.0;
         $rate = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();
-        // CORRECTION : La BDD stocke le taux en facteur (ex: 0.16). On retourne cette valeur directement.
         return (float)($rate ?? 0.0);
     }
 
-    private function getRevenuTaxePayee(RevenuPourCourtier $revenu, bool $isTaxeAssureur): float
+    private function getRevenuTaxePayee(RevenuPourCourtier $revenu, int $targetRedevable): float
     {
         $montantPaye = 0.0;
-        $targetRedevable = $isTaxeAssureur ? Taxe::REDEVABLE_ASSUREUR : Taxe::REDEVABLE_COURTIER;
 
         foreach ($revenu->getArticles() as $article) {
             $note = $article->getNote();
