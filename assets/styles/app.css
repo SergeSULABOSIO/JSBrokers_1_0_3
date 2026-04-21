@@ -1062,6 +1062,15 @@ textarea:hover,
 }
 
 /* --- 4.6 Messages de feedback --- */
+.feedback-container {
+    /* NOUVEAU : On s'assure que le conteneur peut grandir mais pas au-delà de l'espace disponible. */
+    flex: 1 1 auto; /* flex-grow: 1, flex-shrink: 1, flex-basis: auto */
+    min-width: 0; /* Correctif crucial pour que le flex-shrink fonctionne correctement avec du contenu long. */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
 .feedback-container .feedback-message {
     padding: 10px 15px;
     border-radius: 5px;
