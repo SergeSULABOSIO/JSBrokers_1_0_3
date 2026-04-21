@@ -5,7 +5,6 @@ namespace App\Form;
 use App\Constantes\Constante;
 use App\Entity\Paiement;
 use App\Entity\Note;
-use App\Entity\Utilisateur;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use App\Services\FormListenerFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -88,12 +87,8 @@ class PaiementType extends AbstractType
                     );
                     $paiement->setDescription($defaultDescription);
                 }
-            }
-
-            // 6. Recherche du compte bancaire par défaut de l'entreprise
-            $user = $this->security->getUser();
-            if ($user instanceof Utilisateur && $entreprise = $user->getConnectedTo()) {
-                $defaultCompte = $entreprise->getCompteBancaires()->first() ?: null;
+                // 6. Recherche du compte bancaire par défaut à partir de la note parente.
+                $defaultCompte = $note->getComptes()->first() ?: null;
             }
         }
 
@@ -120,6 +115,8 @@ class PaiementType extends AbstractType
                 'data' => $isCreationMode ? $defaultDescription : $paiement?->getDescription(),
                 'attr' => [
                     'placeholder' => "Description",
+                    // On désactive l'éditeur riche pour ce champ spécifique pour éviter l'erreur JS.
+                    'data-rich-text-disabled' => 'true',
                 ],
             ])
             ->add('paidAt', DateTimeType::class, [
