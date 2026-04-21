@@ -346,13 +346,13 @@ export default class extends Controller {
         // On remplace le corps de la modale par un squelette de chargement
         // tout en conservant l'ancien contenu en cas d'erreur.
         const bodyContainer = this.contentTarget;
-        let originalBodyHtml = '';
-        if (bodyContainer) {
-            // On ne sauvegarde le HTML que si on n'est pas déjà en train de recharger.
-            // Cela évite de sauvegarder un squelette comme "original".
-            originalBodyHtml = bodyContainer.innerHTML;
-            bodyContainer.innerHTML = this._getSkeletonHtml('Enregistrement des données...');
-        }
+        let originalBodyHtml = ''; // On conserve la variable pour la compatibilité avec handleFailedSubmit
+        // if (bodyContainer) {
+        //     // On ne sauvegarde le HTML que si on n'est pas déjà en train de recharger.
+        //     // Cela évite de sauvegarder un squelette comme "original".
+        //     originalBodyHtml = bodyContainer.innerHTML;
+        //     bodyContainer.innerHTML = this._getSkeletonHtml('Enregistrement des données...');
+        // }
 
         // 1. On récupère les données du formulaire directement dans un objet FormData.
         const formData = new FormData(event.target);
@@ -417,10 +417,10 @@ export default class extends Controller {
      * @private
      */
     handleFailedSubmit(error, bodyContainer, originalBodyHtml) {
-        // 1. On restaure le formulaire original pour permettre à l'utilisateur de corriger.
-        if (bodyContainer && originalBodyHtml) {
-            bodyContainer.innerHTML = originalBodyHtml;
-        }
+        // // 1. On restaure le formulaire original pour permettre à l'utilisateur de corriger.
+        // if (bodyContainer && originalBodyHtml) {
+        //     bodyContainer.innerHTML = originalBodyHtml;
+        // }
 
         // 2. On notifie le cerveau de l'échec de validation.
         this.notifyCerveau('app:form.validation-error', {
