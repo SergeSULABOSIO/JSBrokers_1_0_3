@@ -20,37 +20,36 @@ export default class extends Controller {
             ['clean']                                         // Bouton pour effacer le formatage
         ];
 
-        // 1. Créer un conteneur pour l'éditeur.
+        // 1. Créer un conteneur pour l'éditeur et l'insérer dans le DOM avant le textarea.
         const editorContainer = document.createElement('div');
         editorContainer.style.height = '200px';
-
-        // 2. Insérer ce conteneur juste avant le textarea original.
         this.element.parentNode.insertBefore(editorContainer, this.element);
 
-        // 3. Initialiser Quill sur ce conteneur.
-        // Quill va automatiquement créer la barre d'outils et l'injecter avant l'éditeur.
+        // 2. Initialiser Quill sur ce conteneur.
+        // Quill va automatiquement créer la barre d'outils (.ql-toolbar) comme un frère juste avant l'éditeur.
         this.quill = new Quill(editorContainer, {
             modules: { toolbar: toolbarOptions },
             theme: 'snow',
             placeholder: this.element.getAttribute('placeholder') || 'Saisissez votre texte ici...'
         });
 
-        // 4. Charger le contenu initial du textarea dans l'éditeur.
+        // 3. Charger le contenu initial du textarea dans l'éditeur.
         this.quill.root.innerHTML = this.element.value;
 
-        // 5. Cacher le textarea original, qui sert maintenant de stockage de données.
+        // 4. Cacher le textarea original, qui ne sert plus que de stockage de données.
         this.element.style.display = 'none';
 
-        // 6. À chaque changement dans l'éditeur, mettre à jour la valeur du textarea caché.
+        // 5. Synchroniser le contenu de l'éditeur avec le textarea caché à chaque changement.
         this.quill.on('text-change', () => {
             this.element.value = this.quill.root.innerHTML;
+            // On déclenche manuellement l'événement 'change' pour que les formulaires Symfony le détectent.
             this.element.dispatchEvent(new Event('change', { bubbles: true }));
         });
     }
 
     disconnect() {
-        // La méthode de nettoyage est volontairement laissée vide pour garantir
-        // que l'éditeur s'affiche sans interférence.
+        // La méthode de nettoyage est volontairement laissée vide pour garantir que l'éditeur s'affiche.
+        // Nous reviendrons sur le nettoyage dans un second temps, une fois la fonctionnalité restaurée.
     }
 
     /**
