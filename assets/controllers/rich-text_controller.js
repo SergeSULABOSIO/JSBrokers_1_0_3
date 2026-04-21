@@ -20,23 +20,12 @@ export default class extends Controller {
             ['clean']                                         // Bouton pour effacer le formatage
         ];
 
-        // NOUVEAU : Création d'un wrapper global pour l'éditeur et sa barre d'outils.
-        this.wrapper = document.createElement('div');
-        this.wrapper.classList.add('quill-wrapper');
-        
-        // NOUVEAU : Création explicite du conteneur pour la barre d'outils.
-        const toolbarContainer = document.createElement('div');
-        this.wrapper.appendChild(toolbarContainer);
-
-        // Création du conteneur pour l'instance Quill.
+        // 1. Création du conteneur qui deviendra l'éditeur Quill.
         const editorContainer = document.createElement('div');
         editorContainer.style.height = '200px';
-        this.wrapper.appendChild(editorContainer);
 
-        // On insère le wrapper juste avant le textarea.
-        if (this.element.parentNode) {
-            this.element.parentNode.insertBefore(this.wrapper, this.element);
-        }
+        // On insère ce conteneur temporaire pour que Quill puisse s'initialiser.
+        this.element.parentNode.insertBefore(editorContainer, this.element);
         
         // On cache le textarea original (qui servira de stockage caché)
         this.element.style.display = 'none';
@@ -44,14 +33,24 @@ export default class extends Controller {
         // Initialisation de Quill
         this.quill = new Quill(editorContainer, {
             modules: {
-                // On indique à Quill d'utiliser notre conteneur pour la barre d'outils.
-                toolbar: {
-                    container: toolbarOptions
-                }
+                // On passe directement le tableau d'options, Quill créera la barre d'outils.
+                toolbar: toolbarOptions
             },
             theme: 'snow', // Thème standard propre
             placeholder: this.element.getAttribute('placeholder') || 'Saisissez votre texte ici...'
         });
+
+        // 2. NOUVEAU : Création du wrapper et réorganisation du DOM.
+        // Maintenant que Quill a créé l'éditeur (.ql-container) et la barre d'outils (.ql-toolbar),
+        // nous les déplaçons dans notre propre wrapper pour un nettoyage fiable.
+        this.wrapper = document.createElement('div');
+        this.wrapper.classList.add('quill-wrapper');
+        
+        // On insère le wrapper juste avant l'éditeur Quill.
+        editorContainer.parentNode.insertBefore(this.wrapper, editorContainer);
+        // On déplace la barre d'outils et l'éditeur DANS le wrapper.
+        this.wrapper.appendChild(this.quill.getModule('toolbar').container);
+        this.wrapper.appendChild(editorContainer);
 
         // On charge le contenu initial du textarea dans l'éditeur
         this.quill.root.innerHTML = this.element.value;
