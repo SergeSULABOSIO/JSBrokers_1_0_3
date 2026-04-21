@@ -71,11 +71,9 @@ class ArticleType extends AbstractType
             // Hydratation ciblée pour le mode édition afin de peupler les champs Autocomplete
             if ($revenu = $article->getRevenuFacture()) {
                 $this->canvasBuilder->loadAllCalculatedValues($revenu);
-                dump($revenu);
             }
             if ($tranche = $article->getTranche()) {
                 $this->canvasBuilder->loadAllCalculatedValues($tranche);
-                dump($tranche);
             }
             
         } elseif ($request?->query->has('parent_id')) {

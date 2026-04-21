@@ -395,30 +395,11 @@ export default class extends Controller {
             this.handleSuccessfulSubmit(result);
  
         } catch (error) {
-            // En cas d'erreur, on restaure le formulaire original pour afficher les erreurs.
-            if (bodyContainer && originalBodyHtml) {
-                bodyContainer.innerHTML = originalBodyHtml;
-            }
+            // En cas d'erreur, on délègue la gestion à une méthode dédiée pour plus de clarté.
+            this.handleFailedSubmit(error, bodyContainer, originalBodyHtml);
 
-            // Notifier le cerveau de l'échec de validation
-            this.notifyCerveau('app:form.validation-error', {
-                message: error.message || 'Erreur de validation',
-                errors: error.errors || {}
-            });
- 
-            // Affiche le message d'erreur après la restauration du formulaire.
-            this.showFeedback('error', error.message || 'Une erreur est survenue.');
-            this.feedbackOnNextLoad = null; // S'assurer qu'aucun message de succès ne remplace l'erreur.
- 
-            // On affiche les erreurs de champ, mais on ignore les erreurs globales (fieldName === '')
-            // car elles sont déjà affichées par showFeedback.
-            // La méthode `displayErrors` a été améliorée pour gérer les formulaires imbriqués.
-            if (error.errors && Object.keys(error.errors).some(k => k !== '')) {
-                this.displayErrors(error.errors);
-            }
         } finally {
-            this.toggleLoading(false);
-            // NOUVEAU : La gestion du spinner est maintenant plus fine.
+            // La gestion du spinner est maintenant plus fine.
             // Si une erreur s'est produite (pas de rechargement), on arrête le spinner.
             // Si un rechargement est en cours, on le laisse tourner, il sera arrêté par `handleContentReady`.
             if (!this.isReloading) {
@@ -426,6 +407,39 @@ export default class extends Controller {
                 this.toggleProgressBar(false);
             }
         }
+    }
+
+    /**
+     * NOUVEAU : Centralise la logique de traitement après une soumission échouée.
+     * @param {object} error - L'objet d'erreur reçu du fetch.
+     * @param {HTMLElement} bodyContainer - Le conteneur du corps de la modale.
+     * @param {string} originalBodyHtml - Le HTML original du formulaire à restaurer.
+     * @private
+     */
+    handleFailedSubmit(error, bodyContainer, originalBodyHtml) {
+        // 1. On restaure le formulaire original pour permettre à l'utilisateur de corriger.
+        if (bodyContainer && originalBodyHtml) {
+            bodyContainer.innerHTML = originalBodyHtml;
+        }
+
+        // 2. On notifie le cerveau de l'échec de validation.
+        this.notifyCerveau('app:form.validation-error', {
+            message: error.message || 'Erreur de validation',
+            errors: error.errors || {}
+        });
+
+        // 3. On affiche le message d'erreur principal dans le pied de page.
+        this.showFeedback('error', error.message || 'Une erreur est survenue.');
+        this.feedbackOnNextLoad = null; // On s'assure qu'aucun message de succès ne remplace l'erreur.
+
+        // 4. On affiche les erreurs spécifiques aux champs, si elles existent.
+        if (error.errors && Object.keys(error.errors).some(k => k !== '')) {
+            this.displayErrors(error.errors);
+        }
+
+        // 5. CRUCIAL : On ré-initialise la visibilité des champs dynamiques (tranche, quantité)
+        // après la restauration du DOM.
+        this.initializeFormVisibility();
     }
 
     /**
