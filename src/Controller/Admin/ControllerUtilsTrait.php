@@ -522,6 +522,20 @@ trait ControllerUtilsTrait
         if ($form->isSubmitted() && $form->isValid()) {
             // NOUVEAU : Logique pour associer l'entreprise et/ou l'invité si les IDs sont fournis
             // NOUVEAU : Exécuter une logique personnalisée avant la persistance (ex: définir l'auteur)
+
+            // NOUVEAU : Vérification anti-doublon générique avant la persistance.
+            // Si la méthode de vérification existe sur le contrôleur, on l'appelle.
+            if (method_exists($this, 'checkForDuplicates')) {
+                $duplicateError = $this->checkForDuplicates($entity);
+                if ($duplicateError) {
+                    return $this->json([
+                        'message' => $duplicateError['message'],
+                        'errors' => ['' => [$duplicateError['message']]] // Erreur globale
+                    ], Response::HTTP_UNPROCESSABLE_ENTITY); // 422
+                }
+            }
+
+
             if ($beforePersist) {
                 $beforePersist($entity);
             }

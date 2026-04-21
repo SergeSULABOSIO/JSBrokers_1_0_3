@@ -113,4 +113,51 @@ class ArticleController extends AbstractController
     {
         return $this->handleCollectionApiRequest($id, $collectionName, Article::class, $usage);
     }
+
+    /**
+     * Vérifie si un article similaire existe déjà dans la note.
+     * Un doublon est défini par la même combinaison de [revenuFacture, tranche].
+     *
+     * @param Article $article L'entité Article à vérifier.
+     * @return array|null Un tableau avec le message d'erreur si un doublon est trouvé, sinon null.
+     */
+    private function checkForDuplicates(Article $article): ?array
+    {
+        $note = $article->getNote();
+        $revenu = $article->getRevenuFacture();
+        $tranche = $article->getTranche();
+
+        // Si les éléments clés ne sont pas définis, on ne peut pas vérifier.
+        if (!$note || !$revenu) {
+            return null;
+        }
+
+        // On construit la requête pour trouver un article existant avec la même combinaison.
+        $qb = $this->articleRepository->createQueryBuilder('a');
+        $qb->select('count(a.id)')
+            ->where('a.note = :note')
+            ->andWhere('a.revenuFacture = :revenu')
+            ->setParameter('note', $note)
+            ->setParameter('revenu', $revenu);
+
+        // La tranche est optionnelle, on ajuste la requête en conséquence.
+        if ($tranche) {
+            $qb->andWhere('a.tranche = :tranche')->setParameter('tranche', $tranche);
+        } else {
+            $qb->andWhere('a.tranche IS NULL');
+        }
+
+        // Si on est en mode édition, il faut exclure l'article lui-même de la recherche.
+        if ($article->getId()) {
+            $qb->andWhere('a.id != :articleId')->setParameter('articleId', $article->getId());
+        }
+
+        if ($qb->getQuery()->getSingleScalarResult() > 0) {
+            $trancheNom = $tranche ? $tranche->getNom() : 'N/A';
+            $message = sprintf("Un article existe déjà pour le revenu '%s' et la tranche '%s'.", $revenu->getNom(), $trancheNom);
+            return ['message' => $message];
+        }
+
+        return null;
+    }
 }
