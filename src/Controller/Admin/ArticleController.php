@@ -153,8 +153,9 @@ class ArticleController extends AbstractController
         }
 
         if ($qb->getQuery()->getSingleScalarResult() > 0) {
-            $trancheNom = $tranche ? $tranche->getNom() : 'N/A';
-            $message = sprintf("Un article existe déjà pour le revenu '%s' et la tranche '%s'.", $revenu->getNom(), $trancheNom);
+            // Message d'erreur raccourci pour éviter les problèmes de layout dans le footer de la modale.
+            // Le timestamp et le contexte sont déjà gérés côté client.
+            $message = "Cet article existe déjà dans la note.";
             return ['message' => $message];
         }
 
