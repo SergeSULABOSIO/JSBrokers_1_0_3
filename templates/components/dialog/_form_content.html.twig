@@ -52,15 +52,15 @@
                                     {% else %}
                                         {# Pour les champs standards, on utilise form_row qui génère un div.mb-3. #}
                                         {% if form[field_code] is defined %}
-                                            {% set field_options = (field is mapping and field.options is defined) ? field.options : {} %}
-                                            {% set widget_attr = field_options.attr|default({}) %}
+                                            {% set current_field_options = (field is mapping and field.options is defined) ? field.options : {} %}
+                                            {% set current_widget_attr = current_field_options.attr|default({}) %}
                                             
                                             {# Détection automatique des Textarea pour activer l'éditeur riche #}
                                             {% if 'textarea' in form[field_code].vars.block_prefixes %}
-                                                {% set widget_attr = widget_attr|merge({'data-controller': 'rich-text'}) %}
+                                                {% set current_widget_attr = current_widget_attr|merge({'data-controller': 'rich-text'}) %}
                                             {% endif %}
                                             
-                                            {{ form_row(form[field_code], {'manager_options': field_options, 'widget_attr': widget_attr, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
+                                            {{ form_row(form[field_code], {'manager_options': current_field_options, 'attr': current_widget_attr, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
                                         {% endif %}
                                     {% endif %}
                                 {% endfor %}
