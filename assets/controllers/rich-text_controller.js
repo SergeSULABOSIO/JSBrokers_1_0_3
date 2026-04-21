@@ -20,14 +20,23 @@ export default class extends Controller {
             ['clean']                                         // Bouton pour effacer le formatage
         ];
 
-        // Création du conteneur visuel pour l'éditeur
-        const editorContainer = document.createElement('div');
-        // On définit une hauteur par défaut confortable (similaire à votre classe .editeur-riche)
-        editorContainer.style.height = '200px'; 
-        editorContainer.style.backgroundColor = '#fff'; // Fond blanc pour l'éditeur
+        // NOUVEAU : Création d'un wrapper global pour l'éditeur et sa barre d'outils.
+        this.wrapper = document.createElement('div');
+        this.wrapper.classList.add('quill-wrapper');
         
-        // On insère l'éditeur juste avant le textarea
-        this.element.parentNode.insertBefore(editorContainer, this.element);
+        // NOUVEAU : Création explicite du conteneur pour la barre d'outils.
+        const toolbarContainer = document.createElement('div');
+        this.wrapper.appendChild(toolbarContainer);
+
+        // Création du conteneur pour l'instance Quill.
+        const editorContainer = document.createElement('div');
+        editorContainer.style.height = '200px';
+        this.wrapper.appendChild(editorContainer);
+
+        // On insère le wrapper juste avant le textarea.
+        if (this.element.parentNode) {
+            this.element.parentNode.insertBefore(this.wrapper, this.element);
+        }
         
         // On cache le textarea original (qui servira de stockage caché)
         this.element.style.display = 'none';
@@ -35,7 +44,10 @@ export default class extends Controller {
         // Initialisation de Quill
         this.quill = new Quill(editorContainer, {
             modules: {
-                toolbar: toolbarOptions
+                // On indique à Quill d'utiliser notre conteneur pour la barre d'outils.
+                toolbar: {
+                    container: toolbarOptions
+                }
             },
             theme: 'snow', // Thème standard propre
             placeholder: this.element.getAttribute('placeholder') || 'Saisissez votre texte ici...'
@@ -54,21 +66,11 @@ export default class extends Controller {
 
     disconnect() {
         // Nettoyage si le contrôleur est retiré
-        if (this.quill) {
-            // On vérifie si le conteneur principal de Quill existe toujours dans le DOM.
-            // C'est la vérification la plus importante.
-            if (this.quill.container && document.body.contains(this.quill.container)) {
-                const quillContainer = this.quill.container; // Le conteneur de l'éditeur lui-même (.ql-container)
-                
-                // La barre d'outils est généralement un frère précédent du conteneur.
-                const toolbar = quillContainer.previousSibling;
-                if (toolbar && toolbar.classList && toolbar.classList.contains('ql-toolbar')) {
-                    toolbar.remove();
-                }
-
-                // On retire le conteneur de l'éditeur, ce qui retire aussi le textarea visuel.
-                quillContainer.remove();
-            }
+        // NOUVEAU : Logique de nettoyage simplifiée et robuste.
+        // On vérifie si notre wrapper a été créé et s'il est toujours dans le DOM.
+        if (this.wrapper && this.wrapper.parentNode) {
+            // On supprime simplement le wrapper, qui contient l'éditeur et sa barre d'outils.
+            this.wrapper.remove();
             
             this.element.style.display = 'block'; // Réafficher le textarea
         }
