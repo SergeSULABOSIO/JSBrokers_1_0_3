@@ -20,41 +20,37 @@ export default class extends Controller {
             ['clean']                                         // Bouton pour effacer le formatage
         ];
 
-        // 1. Créer un conteneur pour l'éditeur et l'insérer dans le DOM.
+        // 1. Créer un conteneur pour l'éditeur.
         const editorContainer = document.createElement('div');
         editorContainer.style.height = '200px';
+
+        // 2. Insérer ce conteneur juste avant le textarea original.
         this.element.parentNode.insertBefore(editorContainer, this.element);
 
-        // 2. Initialiser Quill sur ce conteneur.
-        // Quill va automatiquement créer la barre d'outils (.ql-toolbar) comme un frère juste avant l'éditeur.
+        // 3. Initialiser Quill sur ce conteneur.
+        // Quill va automatiquement créer la barre d'outils et l'injecter avant l'éditeur.
         this.quill = new Quill(editorContainer, {
             modules: { toolbar: toolbarOptions },
             theme: 'snow',
             placeholder: this.element.getAttribute('placeholder') || 'Saisissez votre texte ici...'
         });
 
-        // 3. Charger le contenu initial et cacher le textarea original.
+        // 4. Charger le contenu initial du textarea dans l'éditeur.
         this.quill.root.innerHTML = this.element.value;
+
+        // 5. Cacher le textarea original, qui sert maintenant de stockage de données.
         this.element.style.display = 'none';
 
-        // 4. Synchroniser le contenu de l'éditeur avec le textarea caché à chaque changement.
+        // 6. À chaque changement dans l'éditeur, mettre à jour la valeur du textarea caché.
         this.quill.on('text-change', () => {
             this.element.value = this.quill.root.innerHTML;
-            // On déclenche manuellement l'événement 'change' pour que les formulaires Symfony le détectent.
             this.element.dispatchEvent(new Event('change', { bubbles: true }));
         });
     }
 
     disconnect() {
-        // Nettoyage robuste : on vérifie que l'éditeur et ses éléments existent avant de les supprimer.
-        if (this.quill && this.quill.container && this.quill.container.parentNode) {
-            const toolbar = this.quill.getModule('toolbar').container;
-            // On supprime la barre d'outils et l'éditeur, s'ils existent toujours.
-            if (toolbar && toolbar.parentNode) toolbar.remove();
-            this.quill.container.remove();
-            // On réaffiche le textarea original.
-            this.element.style.display = 'block';
-        }
+        // Pour l'instant, nous laissons cette méthode vide pour garantir que l'éditeur s'affiche.
+        // Nous reviendrons sur le nettoyage dans un second temps, une fois la fonctionnalité restaurée.
     }
 
     /**
