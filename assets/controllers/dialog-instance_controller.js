@@ -18,12 +18,8 @@ export default class extends Controller {
     static outlets = ['modal'];
     static targets = [
         'content', 'formRow', 'dynamicFieldContainer', 'header', 'title', 'titleIcon', 
-        'closeButton', 'progressBarContainer', 'footer', 'feedbackContainer', 'submitButton',
-        'closeFooterButton', 'saveIcon', 'closeIcon',
-        // NOUVEAU : Ajout de addressedToTarget pour un accès direct au champ addressedTo
-        // Note: Pour un ChoiceType expanded (radio buttons), addressedToTarget fera référence
-        // au premier élément du groupe de radio buttons, mais nous utiliserons querySelectorAll
-        // pour cibler tous les boutons radio par leur nom.
+        'closeButton', 'progressBarContainer', 'footer', 'feedbackContainer', 'submitButton', 'closeFooterButton', 
+        'saveIcon', 'closeIcon',
         'addressedTo'
     ];
     
@@ -61,9 +57,6 @@ export default class extends Controller {
          * @private
          */
         this.isTitleIconLoaded = false;
-        const detail = this.element.dialogDetail;
-        console.log(`[${++window.logSequence}] - [${this.nomControleur}] - [connect] - Code: 1986 - Début - Données:`, detail, this.element, this.contentTarget);
-        this.cetteApplication = this.application; 
 
         this.boundHandleContentReady = this.handleContentReady.bind(this);
         document.addEventListener('ui:dialog.content-ready', this.boundHandleContentReady);
@@ -73,6 +66,8 @@ export default class extends Controller {
         this.boundHandleIconLoaded = this.handleIconLoaded.bind(this);
         document.addEventListener('app:icon.loaded', this.boundHandleIconLoaded);
         document.addEventListener('app:dialog.do-close', this.boundDoClose);
+
+        const detail = this.element.dialogDetail;
 
         if (detail) {
             // On encapsule l'appel asynchrone pour gérer les erreurs d'initialisation.
@@ -113,8 +108,6 @@ export default class extends Controller {
         this.parentContext = detail.parentContext || null;
         this.formTemplateHTML = detail.formTemplateHTML || null;
 
-        this._logState('start', '1986', detail);
-        console.log(`[${++window.logSequence}] - [${this.nomControleur}] - [start] - Code: 1986 - Start - Context:`, detail.context, this.context);
         // Charge le contenu complet depuis le serveur
         this.loadContent(true);
     }
@@ -127,10 +120,7 @@ export default class extends Controller {
      * @private
      */
     loadContent(isInitialLoad = false) {
-        this._logState("loadContent", "1986", this.detail);
-        console.log(`${this.nomControleur} - loadContent() - Demande de contenu pour ${this.dialogId}`);
-
-        // NOUVEAU : On ne met à jour le squelette du titre et de l'icône que lors du chargement initial.
+        // On ne met à jour le squelette du titre et de l'icône que lors du chargement initial.
         if (isInitialLoad) {
             // Afficher les squelettes dans l'en-tête et le pied de page
             this.titleTarget.innerHTML = '<div class="skeleton-line" style="width: 250px; height: 24px;"></div>';
@@ -138,14 +128,14 @@ export default class extends Controller {
                 this.titleIconTarget.innerHTML = ''; // Vider l'icône précédente
             }
         }
-        this.closeButtonTarget.disabled = true; // Disable header close button
-        this.submitButtonTarget.disabled = true; // Disable submit button
-        this.closeFooterButtonTarget.disabled = true; // Disable footer close button
+        this.closeButtonTarget.disabled = true;
+        this.submitButtonTarget.disabled = true;
+        this.closeFooterButtonTarget.disabled = true;
 
-        this.progressBarContainerTarget.classList.add('is-loading'); // Show progress bar
+        this.progressBarContainerTarget.classList.add('is-loading');
 
-        // NOUVEAU : On vérifie si un squelette est déjà présent pour éviter le "flash"
-        // visuel lors du rechargement après une sauvegarde.
+        // On vérifie si un squelette est déjà présent pour éviter le "flash" visuel
+        // lors du rechargement après une sauvegarde.
         const isSkeletonAlreadyPresent = this.contentTarget.querySelector('.form-column-skeleton');
 
         if (!isSkeletonAlreadyPresent) {
@@ -163,11 +153,9 @@ export default class extends Controller {
         this.contentTarget.style.minHeight = ''; // On retire la hauteur min du spinner
 
         let endpointUrl = this.entityFormCanvas.parametres.endpoint_form_url;
-        // NOUVEAU : Si c'est un nouveau rôle et qu'il y a un parent de type 'invite',
-        // on ajoute l'ID de l'invité parent aux paramètres de la requête GET du formulaire.
-        // Cela permet au serveur d'initialiser le rôle avec le bon invité.
-        // MODIFICATION : Généralisation du passage du contexte parent.
-        // Si on crée une nouvelle entité depuis une collection, on passe l'ID du parent et le nom du champ
+
+        // Si on crée une nouvelle entité depuis une collection (un "parentContext" est fourni),
+        // on passe l'ID du parent et le nom du champ
         // de la relation en paramètres GET. Le serveur pourra ainsi injecter dynamiquement le champ
         // de relation (ex: 'cotation', 'piste') dans le formulaire de l'enfant.
         if (this.isCreateMode && this.parentContext && this.parentContext.id && this.parentContext.fieldName) {
@@ -183,7 +171,7 @@ export default class extends Controller {
             endpoint: endpointUrl, // Utiliser l'endpoint potentiellement modifié
             entity: this.entity,
             context: this.context,
-            entityFormCanvas: this.entityFormCanvas // NOUVEAU : Ajout de l'objet entityFormCanvas
+            entityFormCanvas: this.entityFormCanvas
         };
 
         // Notifie le cerveau pour qu'il charge le contenu
@@ -191,7 +179,7 @@ export default class extends Controller {
     }
 
     /**
-     * NOUVEAU: Gère la réception du contenu HTML envoyé par le Cerveau.
+     * Gère la réception du contenu HTML envoyé par le Cerveau.
      * @param {CustomEvent} event 
      */
     handleContentReady(event) {
@@ -201,8 +189,6 @@ export default class extends Controller {
         if (dialogId !== this.dialogId) {
             return;
         }
-
-        console.log(`${this.nomControleur} - handleContentReady() - Contenu reçu pour ${this.dialogId}`);
 
         if (error) {
             const errorMessage = error.message || "Une erreur inconnue est survenue.";            
@@ -219,8 +205,7 @@ export default class extends Controller {
         // Mettre à jour le titre de la modale
         this.titleTarget.textContent = event.detail.title;
 
-        // NOUVEAU : Mettre à jour l'icône du titre
-        // On ne demande l'icône qu'une seule fois au premier chargement.
+        // On ne demande l'icône du titre qu'une seule fois au premier chargement.
         if (this.hasTitleIconTarget && icon && !this.isTitleIconLoaded) {
             this.notifyCerveau('ui:icon.request', {
                 iconName: icon,
@@ -237,10 +222,9 @@ export default class extends Controller {
         if (form) {
             form.setAttribute('data-action', 'submit->dialog-instance#submitForm');
         }
-        // Réinitialiser les styles du corps de la modale après le chargement du contenu réel
 
 
-        // NOUVEAU : Initialiser la logique de visibilité dynamique du formulaire
+        // Initialiser la logique de visibilité dynamique du formulaire
         this.initializeFormVisibility();
 
         const mainDialogElement = this.modalOutlet.element;
@@ -253,25 +237,25 @@ export default class extends Controller {
             mainDialogElement.classList.remove('has-attributes-column');
         }
 
-        // NOUVEAU : Notifier le cerveau que le dialogue est prêt et affiché.
+        // Notifier le cerveau que le dialogue est prêt et affiché.
         this.notifyCerveau('ui:dialog.opened', {
             mode: this.isCreateMode ? 'creation' : 'edition',
             entity: this.entity
         });
 
-        // On s'assure que la classe de mode édition est bien présente si nécessaire
+        // On s'assure que la classe de mode édition est bien présente si nécessaire.
         if (!this.isCreateMode) {
             mainDialogElement.classList.add('is-edit-mode');
         }
 
-        // NOUVEAU : Affiche un message de feedback en attente s'il y en a un.
+        // Affiche un message de feedback en attente s'il y en a un.
         if (this.feedbackOnNextLoad) {
             this.showFeedback(this.feedbackOnNextLoad.type, this.feedbackOnNextLoad.message);
             this.feedbackOnNextLoad = null; // On le réinitialise pour la prochaine fois.
         }
 
-        // NOUVEAU : On s'assure que les boutons sont réactivés après un rechargement.
-        this.toggleLoading(false); //
+        // On s'assure que les boutons sont réactivés après un rechargement.
+        this.toggleLoading(false);
         this.toggleProgressBar(false); // Cacher la barre de progression
     }
 
@@ -309,7 +293,7 @@ export default class extends Controller {
             // On ajoute le premier élément parsé (le <svg>) à la cible.
             if (template.content.firstChild) {
                 targetElement.appendChild(template.content.firstChild);
-                // CORRECTION : On ne met le drapeau à jour que si c'est l'icône du titre.
+                // On ne met le drapeau à jour que si c'est l'icône du titre.
                 if (requesterId === this.dialogId) {
                     this.isTitleIconLoaded = true;
                 }
@@ -326,8 +310,8 @@ export default class extends Controller {
         const mainDialogElement = this.modalOutlet.element;
         mainDialogElement.classList.add('is-edit-mode');
 
-        // CORRECTION : On force l'ajout de la classe pour que le squelette de la colonne des attributs
-        // soit visible pendant la transition. Cette classe sera réévaluée correctement
+        // On force l'ajout de la classe pour que le squelette de la colonne des attributs
+        // soit visible pendant la transition. Cette classe sera réévaluée
         // dans `handleContentReady` une fois le nouveau contenu chargé.
         mainDialogElement.classList.add('has-attributes-column');
 
@@ -353,22 +337,19 @@ export default class extends Controller {
         event.preventDefault();
         this.toggleLoading(true);
         this.toggleProgressBar(true);
- 
-        // NOUVEAU : Ne pas nettoyer le conteneur de feedback ici pour assurer la persistance du message "Enregistrement en cours..."
-        // Le message sera mis à jour par showFeedback() juste après.
-        // Désactiver les boutons
-        this.toggleLoading(true);
- 
-        // NOUVEAU : Affiche un message de feedback pendant la soumission.
+  
+        // Affiche un message de feedback pendant la soumission.
         this.showFeedback('warning', 'Enregistrement en cours, veuillez patienter...');
  
-        this.isReloading = false; // NOUVEAU : On réinitialise le drapeau de rechargement.
+        this.isReloading = false; // On réinitialise le drapeau de rechargement.
 
-        // NOUVEAU : On remplace le corps de la modale par un squelette de chargement
+        // On remplace le corps de la modale par un squelette de chargement
         // tout en conservant l'ancien contenu en cas d'erreur.
-        const bodyContainer = this.contentTarget; // this.contentTarget IS the modal-body
+        const bodyContainer = this.contentTarget;
         let originalBodyHtml = '';
         if (bodyContainer) {
+            // On ne sauvegarde le HTML que si on n'est pas déjà en train de recharger.
+            // Cela évite de sauvegarder un squelette comme "original".
             originalBodyHtml = bodyContainer.innerHTML;
             bodyContainer.innerHTML = this._getSkeletonHtml('Enregistrement des données...');
         }
@@ -381,19 +362,16 @@ export default class extends Controller {
         }
         // On fusionne tout le contexte. C'est plus simple et plus dynamique.
         if (this.userContext) {
-            for (const [key, rawValue] of Object.entries(this.userContext)) {
-                // CORRECTION : Gestion des valeurs complexes dans le contexte.
+            for (const [key, value] of Object.entries(this.userContext)) {
                 // Si la valeur est un objet avec un 'id', on prend l'id.
                 // Sinon, on prend la valeur brute. Cela évite d'envoyer "[object Object]".
-                let valueToAppend = rawValue;
-                if (typeof rawValue === 'object' && rawValue !== null && 'id' in rawValue) {
-                    valueToAppend = rawValue.id;
-                }
- 
+                const valueToAppend = (typeof value === 'object' && value !== null && 'id' in value)
+                    ? value.id
+                    : value;
                 formData.append(key, valueToAppend);
             }
         }
-        // NOUVEAU : On ajoute le parent s'il a été fourni par le cerveau.
+        // On ajoute le parent s'il a été fourni par le cerveau.
         // Cela est utilisé pour lier un contact à une notification, par exemple.
         if (this.parentContext && this.parentContext.id && this.parentContext.fieldName) {
             formData.append(this.parentContext.fieldName, this.parentContext.id);
@@ -417,25 +395,24 @@ export default class extends Controller {
             this.handleSuccessfulSubmit(result);
  
         } catch (error) {
-            console.error(error);
-
-            // NOUVEAU : En cas d'erreur, on restaure le formulaire original pour afficher les erreurs.
+            // En cas d'erreur, on restaure le formulaire original pour afficher les erreurs.
             if (bodyContainer && originalBodyHtml) {
                 bodyContainer.innerHTML = originalBodyHtml;
             }
 
-            // NOUVEAU : Notifier le cerveau de l'échec de validation
+            // Notifier le cerveau de l'échec de validation
             this.notifyCerveau('app:form.validation-error', {
                 message: error.message || 'Erreur de validation',
                 errors: error.errors || {}
             });
  
-            // NOUVEAU : Affiche le message d'erreur après la restauration du formulaire.
+            // Affiche le message d'erreur après la restauration du formulaire.
             this.showFeedback('error', error.message || 'Une erreur est survenue.');
             this.feedbackOnNextLoad = null; // S'assurer qu'aucun message de succès ne remplace l'erreur.
  
             // On affiche les erreurs de champ, mais on ignore les erreurs globales (fieldName === '')
             // car elles sont déjà affichées par showFeedback.
+            // La méthode `displayErrors` a été améliorée pour gérer les formulaires imbriqués.
             if (error.errors && Object.keys(error.errors).some(k => k !== '')) {
                 this.displayErrors(error.errors);
             }
@@ -452,7 +429,7 @@ export default class extends Controller {
     }
 
     /**
-     * NOUVEAU : Centralise la logique de traitement après une soumission réussie.
+     * Centralise la logique de traitement après une soumission réussie.
      * @param {object} result - Le résultat JSON de la requête fetch.
      * @private
      */
@@ -460,8 +437,6 @@ export default class extends Controller {
         // On indique qu'un rechargement est en cours.
         // Le `finally` de `submitForm` ne masquera pas les indicateurs de chargement.
         this.isReloading = true;
-
-        // NOUVEAU : Nettoyer le feedback existant avant d'en afficher un nouveau après le rechargement.
 
         // On stocke le message de succès pour l'afficher APRÈS le rechargement de la vue.
         this.feedbackOnNextLoad = { type: 'success', message: result.message };
@@ -479,7 +454,7 @@ export default class extends Controller {
     }
 
     /**
-     * NOUVEAU : Initialise les écouteurs pour les champs dynamiques du formulaire.
+     * Initialise les écouteurs pour les champs dynamiques du formulaire.
      * Cette méthode est appelée une fois que le contenu du formulaire est chargé.
      */
     initializeFormVisibility() {
@@ -512,7 +487,7 @@ export default class extends Controller {
     }
 
     /**
-     * NOUVEAU : Vérifie la visibilité de tous les champs et lignes dynamiques.
+     * Vérifie la visibilité de tous les champs et lignes dynamiques.
      */
     checkFormVisibility() {
         if (!this.hasDynamicFieldContainerTarget) return;
@@ -532,14 +507,14 @@ export default class extends Controller {
             row.classList.toggle('d-none', visibleColumns.length === 0);
         });
 
-        // NOUVEAU : On appelle la logique de mise à jour des choix dynamiques à la fin.
+        // On appelle la logique de mise à jour des choix dynamiques à la fin.
         const form = this.contentTarget.querySelector('form');
         if (form) this._updateDynamicChoices(form);
 
     }
 
     /**
-     * NOUVEAU : Gère la visibilité des options individuelles (ex: boutons radio)
+     * Gère la visibilité des options individuelles (ex: boutons radio)
      * en fonction de la valeur d'un autre champ.
      * @private
      */
@@ -574,9 +549,9 @@ export default class extends Controller {
             if (!parentWrapper) return;
 
             let shouldBeVisible = false;
-            // On vérifie la visibilité en fonction du type de note sélectionné.
-            // CORRECTION : Utilisation des valeurs '0' et '1' pour Débit et Crédit.
-            if (currentNoteType === '0') { // Note::TYPE_NOTE_DE_DEBIT
+            
+            // Utilisation des valeurs '0' et '1' pour Débit et Crédit.
+            if (currentNoteType === '0') { // Correspond à Note::TYPE_NOTE_DE_DEBIT
                 shouldBeVisible = choice.dataset.visibilityDebit === 'true';
             } else if (currentNoteType === '1') { // Note::TYPE_NOTE_DE_CREDIT
                 shouldBeVisible = choice.dataset.visibilityCredit === 'true';
@@ -593,7 +568,7 @@ export default class extends Controller {
     }
 
     /**
-     * NOUVEAU : Évalue une condition de visibilité unique.
+     * Évalue une condition de visibilité unique.
      * @param {object} condition - L'objet condition à évaluer.
      * @returns {boolean} - `true` si la condition est remplie, sinon `false`.
      */
@@ -635,7 +610,7 @@ export default class extends Controller {
 
 
     /**
-     * NOUVEAU : Génère le HTML pour un squelette de chargement avec un message personnalisable.
+     * Génère le HTML pour un squelette de chargement avec un message personnalisable.
      * @param {string} message - Le message à afficher à côté du spinner.
      * @returns {string} Le HTML du squelette.
      * @private
@@ -705,13 +680,13 @@ export default class extends Controller {
         const feedbackContainer = this.feedbackContainerTarget;
         if (!feedbackContainer) return;
 
-        // On formate la date et l'heure actuelles [cite: 7, 8]
+        // On formate la date et l'heure actuelles
         const now = new Date();
         const date = now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
         const time = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const timestamp = `Dernière mise à jour le ${date} à ${time} ::`;
 
-        // On détermine la classe CSS à utiliser en fonction du type
+        // On détermine la classe CSS à utiliser en fonction du type de message.
         let feedbackClass = '';
         switch (type) {
             case 'success':
@@ -740,27 +715,25 @@ export default class extends Controller {
      * @param {object} errors - Un objet où les clés sont les noms des champs et les valeurs sont les messages d'erreur.
      */
     displayErrors(errors) {
-        // --- CORRECTION : S'assurer que la cible du feedback est définie ---
         this.feedbackContainer = this.feedbackContainerTarget;
 
-        const form = this.contentTarget.querySelector('form'); // Search within modal-body
+        const form = this.contentTarget.querySelector('form');
         for (const [fieldName, messages] of Object.entries(errors)) {
-            // NOUVELLE GESTION : Si le nom du champ est vide, c'est une erreur globale.
+            // Si le nom du champ est vide, c'est une erreur globale.
             if (fieldName === '') {
-                // On ne fait plus rien ici, car showFeedback s'en occupe déjà.
-                /* if (this.feedbackContainer) {
-                    const globalErrors = messages.join('<br>');
-                    // On ajoute l'erreur globale au conteneur de feedback général
-                    this.feedbackContainer.innerHTML += `<div class="mt-2">${globalErrors}</div>`;
-                }
-                continue; // On passe au champ suivant
+                // Les erreurs globales (sans nom de champ) sont déjà gérées par la méthode showFeedback.
+                continue;
             }
 
-            const input = form.querySelector(`[name="${fieldName}"]`);
+            // Recherche plus robuste pour les formulaires imbriqués.
+            // Au lieu de chercher `[name="revenuFacture"]`, on cherche `[name$="[revenuFacture]"]`,
+            // ce qui correspond à `articles[0][revenuFacture]` ou tout autre nom de champ se terminant ainsi.
+            const input = form.querySelector(`[name$="[${fieldName}]"]`) || form.querySelector(`[name="${fieldName}"]`);
+
             if (input) {
                 // Ajoute la classe Bootstrap pour le style d'erreur
                 input.classList.add('is-invalid');
-
+ 
                 // Crée et insère le message d'erreur juste après le champ
                 const errorDiv = document.createElement('div');
                 errorDiv.className = 'invalid-feedback d-block'; // d-block pour le forcer à être visible
@@ -781,7 +754,7 @@ export default class extends Controller {
     }
 
     /**
-     * NOUVEAU : Méthode qui exécute la fermeture, appelée par le cerveau.
+     * Méthode qui exécute la fermeture, appelée par le cerveau.
      * @param {CustomEvent} event
      */
     doClose(event) {
@@ -853,7 +826,7 @@ export default class extends Controller {
      * Déclenche manuellement la soumission du formulaire interne.
      */
     triggerSubmit() {
-        const form = this.contentTarget.querySelector('form'); // Form is inside modal-body
+        const form = this.contentTarget.querySelector('form');
         if (form) { // Search within modal-content
             form.requestSubmit();
         }
@@ -866,21 +839,5 @@ export default class extends Controller {
      * @param {object} detail - L'objet contenant les données à logger.
      * @private
      */
-    _logState(callingFunction, code, detail) {
-        if (detail) {
-            var isCreateMode = true;
-            if (detail.entity) {
-                if (detail.entity.id) {
-                    isCreateMode = false;
-                }
-            }
-            console.groupCollapsed(`${this.nomControleur} - ${callingFunction}() - Code:${code}`);
-            console.log(`| Mode:`, (isCreateMode) ? 'Création' : 'Édition');
-            console.log(`| Entité:`, detail.entity);
-            console.log(`| Contexte:`, detail.context);
-            console.log(`| Canvas:`, detail.entityFormCanvas);
-            console.groupEnd();
-        }
-
-    }
+    _logState(callingFunction, code, detail) {}
 }

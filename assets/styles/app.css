@@ -814,10 +814,6 @@ textarea:hover,
     border-bottom: 1px solid #495057;
 }
 
-/* REFACTORING : Le défilement est maintenant géré par le parent '.calculated-attributes-column'. */
-.calculated-attributes-content {
-    /* Les propriétés de défilement et de flex-grow sont retirées. */
-}
 .calculated-attributes-list {
     list-style: none;
     padding: 0;
