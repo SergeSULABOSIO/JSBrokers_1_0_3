@@ -434,10 +434,13 @@ export default class extends Controller {
             this.showFeedback('error', error.message || 'Une erreur est survenue.');
             this.feedbackOnNextLoad = null; // S'assurer qu'aucun message de succès ne remplace l'erreur.
  
-            if (error.errors) {
+            // On affiche les erreurs de champ, mais on ignore les erreurs globales (fieldName === '')
+            // car elles sont déjà affichées par showFeedback.
+            if (error.errors && Object.keys(error.errors).some(k => k !== '')) {
                 this.displayErrors(error.errors);
             }
         } finally {
+            this.toggleLoading(false);
             // NOUVEAU : La gestion du spinner est maintenant plus fine.
             // Si une erreur s'est produite (pas de rechargement), on arrête le spinner.
             // Si un rechargement est en cours, on le laisse tourner, il sera arrêté par `handleContentReady`.
@@ -744,7 +747,8 @@ export default class extends Controller {
         for (const [fieldName, messages] of Object.entries(errors)) {
             // NOUVELLE GESTION : Si le nom du champ est vide, c'est une erreur globale.
             if (fieldName === '') {
-                if (this.feedbackContainer) {
+                // On ne fait plus rien ici, car showFeedback s'en occupe déjà.
+                /* if (this.feedbackContainer) {
                     const globalErrors = messages.join('<br>');
                     // On ajoute l'erreur globale au conteneur de feedback général
                     this.feedbackContainer.innerHTML += `<div class="mt-2">${globalErrors}</div>`;

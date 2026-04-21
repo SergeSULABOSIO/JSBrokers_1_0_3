@@ -1071,7 +1071,11 @@ textarea:hover,
     border-radius: 5px;
     margin-bottom: 5px; /* Espace si plusieurs messages s'affichent */
     font-size: 0.9em;
-    display: block; /* S'assure que le message prend toute la largeur */
+    /* MODIFICATION : On passe en flexbox pour un meilleur contrôle */
+    display: flex;
+    flex-wrap: wrap; /* Permet au contenu de passer à la ligne */
+    align-items: center;
+    gap: 0 8px; /* Espace horizontal entre le timestamp et le message */
 }
 
 /* Style pour les messages de succès (vert) */
@@ -1101,7 +1105,13 @@ textarea:hover,
 /* Style pour la partie "timestamp" du message */
 .feedback-message .timestamp {
     font-weight: bold;
-    margin-right: 8px;
+    white-space: nowrap; /* Empêche le timestamp de se couper */
+}
+
+/* NOUVEAU : Style pour le texte du message pour qu'il prenne l'espace restant */
+.feedback-message span:last-child {
+    flex-grow: 1;
+    word-break: break-word; /* Permet de couper les mots longs si nécessaire */
 }
 
 /* --- 4.7 Barres de défilement spécifiques --- */
