@@ -56,12 +56,11 @@
                                             {% set widget_attr = field_options.attr|default({}) %}
                                             
                                             {# NOUVEAU : Détection automatique des Textarea pour activer l'éditeur riche, sauf si désactivé explicitement #}
-                                            {% set isRichTextDisabled = widget_attr['data-rich-text-disabled'] is defined and widget_attr['data-rich-text-disabled'] == 'true' %}
-                                            {% if 'textarea' in form[field_code].vars.block_prefixes and not isRichTextDisabled %}
+                                            {% if 'textarea' in form[field_code].vars.block_prefixes %}
                                                 {% set widget_attr = widget_attr|merge({'data-controller': 'rich-text'}) %}
                                             {% endif %}
                                             
-                                            {{ form_row(form[field_code], {'manager_options': field_options, 'attr': widget_attr, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
+                                            {{ form_row(form[field_code], {'manager_options': field_options, 'widget_attr': widget_attr, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
                                         {% endif %}
                                     {% endif %}
                                 {% endfor %}

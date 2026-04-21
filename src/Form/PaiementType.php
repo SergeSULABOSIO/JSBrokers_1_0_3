@@ -115,8 +115,6 @@ class PaiementType extends AbstractType
                 'data' => $isCreationMode ? $defaultDescription : $paiement?->getDescription(),
                 'attr' => [
                     'placeholder' => "Description",
-                    // On désactive l'éditeur riche pour ce champ spécifique pour éviter l'erreur JS.
-                    'data-rich-text-disabled' => 'true',
                 ],
             ])
             ->add('paidAt', DateTimeType::class, [

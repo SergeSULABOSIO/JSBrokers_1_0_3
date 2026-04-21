@@ -55,13 +55,20 @@ export default class extends Controller {
     disconnect() {
         // Nettoyage si le contrôleur est retiré
         if (this.quill) {
-            const container = this.quill.container.parentNode; // Le wrapper .ql-container
-            const toolbar = container.previousSibling; // La barre d'outils .ql-toolbar
-            
-            if (toolbar && toolbar.classList.contains('ql-toolbar')) {
-                toolbar.remove();
+            // On vérifie si le conteneur principal de Quill existe toujours dans le DOM.
+            // C'est la vérification la plus importante.
+            if (this.quill.container && document.body.contains(this.quill.container)) {
+                const quillContainer = this.quill.container; // Le conteneur de l'éditeur lui-même (.ql-container)
+                
+                // La barre d'outils est généralement un frère précédent du conteneur.
+                const toolbar = quillContainer.previousSibling;
+                if (toolbar && toolbar.classList && toolbar.classList.contains('ql-toolbar')) {
+                    toolbar.remove();
+                }
+
+                // On retire le conteneur de l'éditeur, ce qui retire aussi le textarea visuel.
+                quillContainer.remove();
             }
-            container.remove();
             
             this.element.style.display = 'block'; // Réafficher le textarea
         }
