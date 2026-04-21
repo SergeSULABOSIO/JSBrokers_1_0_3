@@ -55,7 +55,7 @@
                                             {% set field_options = (field is mapping and field.options is defined) ? field.options : {} %}
                                             {% set widget_attr = field_options.attr|default({}) %}
                                             
-                                            {# NOUVEAU : Détection automatique des Textarea pour activer l'éditeur riche, sauf si désactivé explicitement #}
+                                            {# Détection automatique des Textarea pour activer l'éditeur riche #}
                                             {% if 'textarea' in form[field_code].vars.block_prefixes %}
                                                 {% set widget_attr = widget_attr|merge({'data-controller': 'rich-text'}) %}
                                             {% endif %}
