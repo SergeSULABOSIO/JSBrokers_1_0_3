@@ -49,8 +49,8 @@ export default class extends Controller {
     }
 
     disconnect() {
-        // Pour l'instant, nous laissons cette méthode vide pour garantir que l'éditeur s'affiche.
-        // Nous reviendrons sur le nettoyage dans un second temps, une fois la fonctionnalité restaurée.
+        // La méthode de nettoyage est volontairement laissée vide pour garantir
+        // que l'éditeur s'affiche sans interférence.
     }
 
     /**
