@@ -52,11 +52,12 @@ class AutoriteFiscaleIndicatorStrategy implements IndicatorCalculationStrategyIn
 
         foreach ($revenus as $revenu) {
             $isIARD = $this->calculationHelper->isIARD($revenu->getCotation());
-            $tauxApplicable = $isIARD ? $taxeCible->getTauxIARD() : $taxeCible->getTauxVIE();
+            // Le taux est stocké en % (ex: 16), on le convertit en facteur (ex: 0.16) pour le calcul.
+            $tauxBrut = $isIARD ? $taxeCible->getTauxIARD() : $taxeCible->getTauxVIE();
 
-            if ($tauxApplicable > 0) {
+            if ($tauxBrut > 0) {
                 $montantHT = $this->calculationHelper->getRevenuMontantHt($revenu);
-                $taxeCalculee = $montantHT * $tauxApplicable;
+                $taxeCalculee = $montantHT * ($tauxBrut / 100);
                 $due += $taxeCalculee;
             }
         }

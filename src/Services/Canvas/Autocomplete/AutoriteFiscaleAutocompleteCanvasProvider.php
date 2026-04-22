@@ -22,8 +22,8 @@ class AutoriteFiscaleAutocompleteCanvasProvider
         $abreviation = $autorite->getAbreviation() ?? 'N/A';
         $taxe = $autorite->getTaxe();
         $taxeCode = $taxe?->getCode() ?? 'N/A';
-        $tauxIARD = $taxe ? ($taxe->getTauxIARD() ?? 0.0) * 100 : 0.0;
-        $tauxVIE = $taxe ? ($taxe->getTauxVIE() ?? 0.0) * 100 : 0.0;
+        $tauxIARD = $taxe ? ($taxe->getTauxIARD() ?? 0.0) : 0.0;
+        $tauxVIE = $taxe ? ($taxe->getTauxVIE() ?? 0.0) : 0.0;
 
         $taxeDue = $autorite->taxeDue ?? 0.0;
         $taxePayee = $autorite->taxePayee ?? 0.0;
