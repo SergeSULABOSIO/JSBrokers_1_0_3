@@ -51,13 +51,31 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
     {
         if ($note === null) return null;
 
-        return match ($note->getAddressedTo()) {
-            Note::TO_CLIENT => 'Client',
-            Note::TO_ASSUREUR => 'Assureur',
-            Note::TO_PARTENAIRE => 'Intermédiaire',
-            Note::TO_AUTORITE_FISCALE => 'Autorité Fiscale',
-            default => 'Inconnu',
-        };
+        switch ($note->getAddressedTo()) {
+            case Note::TO_CLIENT:
+                return $note->getClient()?->getNom() ?? 'Client';
+
+            case Note::TO_ASSUREUR:
+                return $note->getAssureur()?->getNom() ?? 'Assureur';
+
+            case Note::TO_PARTENAIRE:
+                return $note->getPartenaire()?->getNom() ?? 'Intermédiaire';
+
+            case Note::TO_AUTORITE_FISCALE:
+                if ($autorite = $note->getAutoritefiscale()) {
+                    $nom = $autorite->getNom();
+                    $abbreviation = $autorite->getAbreviation();
+                    // Si une abréviation existe et n'est pas vide, on la préfixe au nom complet.
+                    if ($abbreviation && trim($abbreviation) !== '') {
+                        return trim($abbreviation) . ' - ' . $nom;
+                    }
+                    return $nom;
+                }
+                return 'Autorité Fiscale';
+
+            default:
+                return 'Inconnu';
+        }
     }
 
     private function getNoteMontantPayable(?Note $note): float
