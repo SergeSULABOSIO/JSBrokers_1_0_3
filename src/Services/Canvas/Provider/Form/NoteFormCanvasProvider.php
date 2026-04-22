@@ -97,17 +97,6 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
             // Ligne 5: La description détaillée (Editeur riche)
             ["colonnes" => [["champs" => ["description"]]]],
 
-            // Ligne 10: Comptes bancaires (conditionnel, visible si type = Débit)
-            ["colonnes" => [["champs" => [array_merge(['field_code' => 'comptes'], $visibilityComptes)]]]],
-
-            // Ligne 11: Signataire
-            ["colonnes" => [["champs" => ["signedBy"]]]],
-            
-            // Ligne 12: Titre du signataire
-            ["colonnes" => [["champs" => ["titleSignedBy"]]]],
-            
-            // Ligne 13: Date de soumission
-            ["colonnes" => [["champs" => ["sentAt"]]]],
         ];
 
         $collections = [
@@ -133,6 +122,24 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
         ];
 
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
+
+        // On ajoute le reste des champs après les collections
+        $remainingLayout = [
+            // Ligne 10: Comptes bancaires (conditionnel, visible si type = Débit)
+            ["colonnes" => [["champs" => [array_merge(['field_code' => 'comptes'], $visibilityComptes)]]]],
+
+            // Ligne 11: Signataire
+            ["colonnes" => [["champs" => ["signedBy"]]]],
+            
+            // Ligne 12: Titre du signataire
+            ["colonnes" => [["champs" => ["titleSignedBy"]]]],
+            
+            // Ligne 13: Date de soumission
+            ["colonnes" => [["champs" => ["sentAt"]]]],
+        ];
+        
+        // Fusionne le layout de base avec les champs restants
+        $layout = array_merge($layout, $remainingLayout);
 
         return $layout;
     }
