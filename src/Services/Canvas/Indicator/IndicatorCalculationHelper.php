@@ -1083,11 +1083,11 @@ class IndicatorCalculationHelper
                 $isIARD = $this->isIARD($revenu->getCotation());
                 $tauxTaxe = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();
 
-                // Le taux est stocké en facteur (ex: 0.16), pas besoin de diviser par 100.
-                $montantTaxe = $montantHTRevenu * ($tauxTaxe ?? 0.0);
+                // CORRECTION : Le taux est stocké en pourcentage (ex: 16). Il faut le diviser par 100.
+                $montantTaxe = $montantHTRevenu * (($tauxTaxe ?? 0.0) / 100);
 
                 // On retourne le montant de la taxe pour la tranche, en négatif.
-                return -1 * $montantTaxe * $quantite * $facteurTranche;
+                return -1 * abs($montantTaxe * $quantite * $facteurTranche);
             }
         }
 
