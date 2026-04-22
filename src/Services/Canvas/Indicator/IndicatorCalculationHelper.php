@@ -1087,14 +1087,14 @@ class IndicatorCalculationHelper
                 $montantTaxe = $montantHTRevenu * (($tauxTaxe ?? 0.0) / 100);
 
                 // On retourne le montant de la taxe pour la tranche, en négatif.
-                return -1 * abs($montantTaxe * $quantite * $facteurTranche);
+                return abs($montantTaxe * $quantite * $facteurTranche);
             }
         }
 
         // CAS 2 : Comportement par défaut pour toutes les autres notes (débit, crédit client/assureur...).
         // Le montant est basé sur le montant TTC du revenu.
         $montant = $this->getRevenuMontantTTC($revenu) * $quantite * $facteurTranche;
-        return ($note->getType() === Note::TYPE_NOTE_DE_CREDIT) ? -1 * $montant : $montant;
+        return abs($montant);
     }
 
     public function getTrancheTauxFactor(Tranche $tranche): float
