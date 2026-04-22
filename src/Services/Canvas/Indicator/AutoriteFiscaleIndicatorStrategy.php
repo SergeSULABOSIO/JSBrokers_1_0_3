@@ -64,9 +64,7 @@ class AutoriteFiscaleIndicatorStrategy implements IndicatorCalculationStrategyIn
 
         // Calcul du montant payé en parcourant les notes de l'autorité
         foreach ($autorite->getNotes() as $note) {
-            if ($note->getType() === Note::TYPE_NOTE_DE_DEBIT) {
-                $paid += $this->calculationHelper->getNoteMontantPaye($note);
-            }
+            $paid += $this->calculationHelper->getNoteMontantPaye($note);
         }
 
         return [
