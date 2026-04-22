@@ -1062,13 +1062,39 @@ class IndicatorCalculationHelper
     {
         $revenu = $article->getRevenuFacture();
         $tranche = $article->getTranche();
-        
-        if ($revenu && $tranche) {
-            return $this->getRevenuMontantTTC($revenu) * ($article->getQuantite() ?? 1.0) * $this->getTrancheTauxFactor($tranche);
+        $note = $article->getNote();
+
+        if (!$revenu || !$tranche || !$note) {
+            // Si l'article n'est pas (encore) lié à un revenu, une tranche ou une note,
+            // son montant est de 0. Cela corrige l'erreur lors de l'ajout d'un nouvel article.
+            return 0.0;
         }
-        // Si l'article n'est pas (encore) lié à un revenu et une tranche,
-        // son montant est de 0. Cela corrige l'erreur lors de l'ajout d'un nouvel article.
-        return 0.0;
+
+        $quantite = $article->getQuantite() ?? 1.0;
+        $facteurTranche = $this->getTrancheTauxFactor($tranche);
+
+        // CAS 1 : Note de crédit pour une autorité fiscale.
+        // Le montant doit être le montant de la taxe, en négatif.
+        if ($note->getType() === Note::TYPE_NOTE_DE_CREDIT && $note->getAddressedTo() === Note::TO_AUTORITE_FISCALE) {
+            $autoriteFiscale = $note->getAutoritefiscale();
+            if ($autoriteFiscale && $autoriteFiscale->getTaxe()) {
+                $taxe = $autoriteFiscale->getTaxe();
+                $montantHTRevenu = $this->getRevenuMontantHt($revenu);
+                $isIARD = $this->isIARD($revenu->getCotation());
+                $tauxTaxe = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();
+
+                // Le taux est stocké en facteur (ex: 0.16), pas besoin de diviser par 100.
+                $montantTaxe = $montantHTRevenu * ($tauxTaxe ?? 0.0);
+
+                // On retourne le montant de la taxe pour la tranche, en négatif.
+                return -1 * $montantTaxe * $quantite * $facteurTranche;
+            }
+        }
+
+        // CAS 2 : Comportement par défaut pour toutes les autres notes (débit, crédit client/assureur...).
+        // Le montant est basé sur le montant TTC du revenu.
+        $montant = $this->getRevenuMontantTTC($revenu) * $quantite * $facteurTranche;
+        return ($note->getType() === Note::TYPE_NOTE_DE_CREDIT) ? -1 * $montant : $montant;
     }
 
     public function getTrancheTauxFactor(Tranche $tranche): float
