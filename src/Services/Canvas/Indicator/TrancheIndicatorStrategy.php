@@ -40,14 +40,17 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
         $cotation = $entity->getCotation();
         
         $isBound = $this->calculationHelper->isCotationBound($cotation);
-        $statutSuffix = $isBound ? '(Police)' : '(Projet)';
-        
-        $nomComplet = $entity->getNom() . ' ' . $statutSuffix;
+
+        $nomComplet = $entity->getNom() ?? 'Tranche sans nom';
         if ($isBound) {
             $refPolice = $this->calculationHelper->getCotationReferencePolice($cotation);
-            if ($refPolice && $refPolice !== 'Nulle') {
-                $nomComplet .= ' #' . $refPolice;
-            }
+            $risqueCode = $cotation?->getPiste()?->getRisque()?->getCode() ?? 'N/A';
+            $assureurNom = $cotation?->getAssureur()?->getNom() ?? 'N/A';
+
+            // Format: Tranche n°1 - Police: 124578... - RC Auto / SFA
+            $nomComplet = sprintf('%s - Police: %s - %s / %s', $nomComplet, $refPolice, $risqueCode, $assureurNom);
+        } else {
+            $nomComplet .= ' (Projet)';
         }
 
         $montantCommissionTTC = round($this->getTrancheMontantTTC($entity), 2);
