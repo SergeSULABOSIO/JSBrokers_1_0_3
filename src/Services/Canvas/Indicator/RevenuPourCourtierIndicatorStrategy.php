@@ -25,6 +25,8 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
     public function calculate(object $entity): array
     {
         /** @var RevenuPourCourtier $entity */
+        $montantHT = $this->calculationHelper->getRevenuMontantHt($entity);
+        $taxeCourtier = $this->calculationHelper->getRevenuMontantTaxeCourtier($entity);
 
         // On s'assure que l'entité et sa cotation sont chargées (Proxies Doctrine)
         $this->em->initializeObject($entity);
@@ -44,16 +46,12 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
             'typeRevenuNom' => $entity->getTypeRevenu()?->getNom() ?? 'N/A',
             'clientDescription' => $this->calculationHelper->getClientDescriptionFromCotation($entity->getCotation()),
             'risqueDescription' => $this->calculationHelper->getRisqueDescriptionFromCotation($entity->getCotation()),
-            'montantCalculeHT' => round($this->calculationHelper->getRevenuMontantHt($entity), 2),
             'montantCalculeTTC' => round($this->calculationHelper->getRevenuMontantTTC($entity), 2),
             'descriptionCalcul' => $this->getRevenuPourCourtierDescriptionCalcul($entity),
             'montant_du' => round($this->calculationHelper->getRevenuMontantTTC($entity), 2),
             'montant_paye' => round($this->getRevenuPourCourtierMontantPaye($entity), 2),
             'solde_restant_du' => round($this->calculationHelper->getRevenuMontantTTC($entity) - $this->getRevenuPourCourtierMontantPaye($entity), 2),            
             'montantPur' => round($this->calculationHelper->getRevenuMontantPure($entity), 2),
-            'partPartenaire' => $this->getRevenuPartPartenaire($entity),
-            'retroCommission' => round($this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1, []), 2),            
-            'reserve' => round($this->calculationHelper->getRevenuMontantPure($entity) - $this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1, []), 2),
             'retroCommissionReversee' => round($this->getRevenuRetroCommissionReversee($entity), 2),
             'retroCommissionSolde' => round($this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1, []) - $this->getRevenuRetroCommissionReversee($entity), 2),
             'taxeCourtierMontant' => round($this->calculationHelper->getRevenuMontantTaxeCourtier($entity), 2),
@@ -65,9 +63,12 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
             'taxeCourtierSolde' => round($this->calculationHelper->getRevenuMontantTaxeCourtier($entity) - $this->getRevenuTaxePayee($entity, Taxe::REDEVABLE_COURTIER), 2),
             'taxeAssureurPayee' => round($this->getRevenuTaxePayee($entity, Taxe::REDEVABLE_ASSUREUR), 2),
             'taxeAssureurSolde' => round($this->calculationHelper->getRevenuMontantTaxeAssureur($entity) - $this->getRevenuTaxePayee($entity, Taxe::REDEVABLE_ASSUREUR), 2),
+            'montantCalculeHT' => $montantHT,
+            'partPartenaire' => round($this->getRevenuPartPartenaire($entity) * 100, 2), // CORRECTION: On multiplie par 100 pour l'affichage
+            'montantRetrocommission' => $this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1, []),
+            'reserve' => $this->getReserveCourtier($entity),
         ];
     }
-
     private function getRevenuPourCourtierMontantPaye(RevenuPourCourtier $revenu): float
     {
         $montantPaye = 0.0;
@@ -86,6 +87,13 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
             }
         }
         return $montantPaye;
+    }
+
+    private function getReserveCourtier(RevenuPourCourtier $revenu): float
+    {
+        $montantPur = $this->calculationHelper->getRevenuMontantPure($revenu);
+        $retrocommission = $this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($revenu, null, -1, []);
+        return $montantPur - $retrocommission;
     }
 
     private function getRevenuPourCourtierDescriptionCalcul(RevenuPourCourtier $revenu): string
@@ -112,25 +120,59 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
         return "Logique de calcul non spécifiée";
     }
 
+    /**
+     * Calcule le taux de rétrocommission (part du partenaire) pour un revenu donné.
+     * Cette méthode est publique pour être réutilisable par le Helper.
+     *
+     * @param RevenuPourCourtier $revenu
+     * @return float Le taux de partage sous forme de facteur (ex: 0.35).
+     */
     public function getRevenuPartPartenaire(RevenuPourCourtier $revenu): float
     {
-        $partenaireAffaire = $this->calculationHelper->getCotationPartenaire($revenu->getCotation());
-        if (!$partenaireAffaire) return 0.0;
-
-        $conditionsPartagePiste = $revenu->getCotation()?->getPiste()?->getConditionsPartageExceptionnelles();
-        if (!$conditionsPartagePiste->isEmpty()) {
-            // CORRECTION : On retourne le taux brut (ex: 0.15) et non un pourcentage.
-            return $conditionsPartagePiste->first()->getTaux() ?? 0.0;
+        // Si le revenu n'est pas partageable, le taux est 0.
+        if (!$revenu->getTypeRevenu() || !$revenu->getTypeRevenu()->isShared()) {
+            return 0.0;
         }
 
-        $conditionsPartagePartenaire = $partenaireAffaire->getConditionPartages();
-        if (!$conditionsPartagePartenaire->isEmpty()) {
-            // CORRECTION : On retourne le taux brut (ex: 0.15) et non un pourcentage.
-            return $conditionsPartagePartenaire->first()->getTaux() ?? 0.0;
+        $cotation = $revenu->getCotation();
+        if (!$cotation || !$cotation->getPiste()) {
+            return 0.0;
         }
 
-        // CORRECTION : On retourne le taux brut (ex: 0.15) et non un pourcentage.
-        return $partenaireAffaire->getPart() ?? 0.0;
+        $piste = $cotation->getPiste();
+        $partenaire = $this->calculationHelper->getCotationPartenaire($cotation);
+
+        // S'il n'y a pas de partenaire associé à l'affaire, pas de partage.
+        if (!$partenaire) {
+            return 0.0;
+        }
+
+        // On vérifie d'abord s'il y a des conditions de partage exceptionnelles sur la piste.
+        if (!$piste->getConditionsPartageExceptionnelles()->isEmpty()) {
+            foreach ($piste->getConditionsPartageExceptionnelles() as $condition) {
+                // On vérifie si la condition s'applique à ce risque.
+                $critereRisque = $condition->getCritereRisque();
+                $produitsCibles = $condition->getProduits();
+                $risqueActuel = $piste->getRisque();
+
+                $isApplicable = false;
+                if ($critereRisque === $condition::CRITERE_PAS_RISQUES_CIBLES) {
+                    $isApplicable = true;
+                } elseif ($critereRisque === $condition::CRITERE_INCLURE_TOUS_CES_RISQUES && $produitsCibles->contains($risqueActuel)) {
+                    $isApplicable = true;
+                } elseif ($critereRisque === $condition::CRITERE_EXCLURE_TOUS_CES_RISQUES && !$produitsCibles->contains($risqueActuel)) {
+                    $isApplicable = true;
+                }
+
+                if ($isApplicable) {
+                    // La première condition applicable trouvée détermine le taux.
+                    return $condition->getTaux() ?? 0.0;
+                }
+            }
+        }
+
+        // S'il n'y a pas de condition exceptionnelle applicable, on utilise le taux par défaut du partenaire.
+        return $partenaire->getPart() ?? 0.0;
     }
 
     private function getRevenuRetroCommissionReversee(RevenuPourCourtier $revenu): float
@@ -155,7 +197,6 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
     private function getTaxeTaux(RevenuPourCourtier $revenu, int $redevable): float
     {
         $isIARD = $this->calculationHelper->isIARD($revenu->getCotation()); // ex: true
-        
         $entreprise = $revenu->getTypeRevenu()?->getEntreprise();
         // Fallback si le type de revenu n'a pas d'entreprise (ex: création dynamique)
         if (!$entreprise) $entreprise = $revenu->getCotation()?->getPiste()?->getInvite()?->getEntreprise();
@@ -177,9 +218,7 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
                     $montantPayableNote = $this->calculationHelper->getNoteMontantPayable($note);
                     if ($montantPayableNote > 0) {
                         $proportionPaiement = $this->calculationHelper->getNoteMontantPaye($note) / $montantPayableNote;
-                        
                         $montantArticle = $this->calculationHelper->getArticleMontant($article);
-
                         $montantPaye += $proportionPaiement * $montantArticle;
                     }
                 }

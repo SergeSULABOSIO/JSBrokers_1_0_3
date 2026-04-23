@@ -688,7 +688,10 @@ class IndicatorCalculationHelper
         if ($tranche) {
             foreach ($tranche->getArticles() as $article) {
                 $note = $article->getNote();
-                if ($note && ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT)) {
+                // CORRECTION : On s'assure que l'article facture bien un revenu (commission)
+                // et que la note est adressée au client ou à l'assureur.
+                // Cela empêche de compter les paiements de taxes ou de rétrocessions comme des encaissements de commission.
+                if ($note && $article->getRevenuFacture() && ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT)) {
                     $montantPayableNote = $this->getNoteMontantPayable($note);
                     if ($montantPayableNote > 0) {
                         $proportionPaiement = ($this->getNoteMontantPaye($note) ?? 0) / $montantPayableNote;
