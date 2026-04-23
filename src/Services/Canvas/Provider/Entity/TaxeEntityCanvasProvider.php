@@ -51,7 +51,7 @@ class TaxeEntityCanvasProvider implements EntityCanvasProviderInterface
     {
         return [
             ["group" => "Détails", "code" => "redevableString", "intitule" => "Redevable", "type" => "Calcul", "format" => "Texte", "description" => "Entité redevable de la taxe."],
-            ["group" => "Statistiques", "code" => "nombreAutorites", "intitule" => "Nb. Autorités", "type" => "Calcul", "format" => "Nombre", "description" => "Nombre d'autorités fiscales associées."],
+            ["group" => "Détails", "code" => "autoritesFiscalesString", "intitule" => "Autorités Fiscales", "type" => "Calcul", "format" => "Texte", "description" => "Liste des autorités fiscales associées à cette taxe."],
             ["group" => "Statistiques", "code" => "montantTaxeTotal", "intitule" => "Montant Taxe Total", "type" => "Calcul", "format" => "Monetaire", "description" => "Montant total de cette taxe calculé sur l'ensemble du portefeuille."],
             ["group" => "Statistiques", "code" => "montantTaxePaye", "intitule" => "Montant Taxe Payé", "type" => "Calcul", "format" => "Monetaire", "description" => "Montant total des paiements effectués pour cette taxe."],
             ["group" => "Statistiques", "code" => "soldeRestantDu", "intitule" => "Solde Restant Dû", "type" => "Calcul", "format" => "Monetaire", "description" => "Solde restant à payer pour cette taxe."],
