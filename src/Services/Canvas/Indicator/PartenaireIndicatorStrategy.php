@@ -83,7 +83,8 @@ class PartenaireIndicatorStrategy implements IndicatorCalculationStrategyInterfa
     {
         $conditions = $partenaire->getConditionPartages();
         if ($conditions->isEmpty()) {
-            return "Aucune condition spécifique définie. Le taux par défaut de " . ($partenaire->getPart() * 100) . "% s'applique à l'ensemble du portefeuille.";
+            // CORRECTION: Le taux 'part' est un facteur (ex: 0.35), il faut le multiplier par 100.
+            return "Aucune condition spécifique définie. Le taux par défaut de " . round(($partenaire->getPart() ?? 0) * 100, 2) . "% s'applique à l'ensemble du portefeuille.";
         }
 
         $resume = "Ce partenaire dispose de " . $conditions->count() . " condition(s) spécifique(s) qui modulent le calcul de sa rétro-commission.";
@@ -105,7 +106,8 @@ class PartenaireIndicatorStrategy implements IndicatorCalculationStrategyInterfa
 
     private function getConditionPartageDescriptionRegle(ConditionPartage $condition): string
     {
-        $taux = ($condition->getTaux() ?? 0) * 100;
+        // CORRECTION: Le taux de la condition est un facteur (ex: 0.15), il faut le multiplier par 100.
+        $taux = round(($condition->getTaux() ?? 0) * 100, 2);
         
         $formule = match ($condition->getFormule()) {
             ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL => "Assiette >= Seuil",

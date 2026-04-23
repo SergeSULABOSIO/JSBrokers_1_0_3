@@ -25,8 +25,9 @@ class TaxeIndicatorStrategy implements IndicatorCalculationStrategyInterface
         return [
             'redevableString' => $this->getTaxeRedevableString($entity),
             'nombreAutorites' => $entity->getAutoriteFiscales()->count(),
-            'tauxIARDPercent' => (float)($entity->getTauxIARD() ?? 0) * 100,
-            'tauxVIEPercent' => (float)($entity->getTauxVIE() ?? 0) * 100,
+            // CORRECTION: Le taux est déjà en pourcentage dans la BDD (ex: 16.00), pas besoin de multiplier par 100.
+            'tauxIARDPercent' => (float)($entity->getTauxIARD() ?? 0),
+            'tauxVIEPercent' => (float)($entity->getTauxVIE() ?? 0),
         ];
     }
 

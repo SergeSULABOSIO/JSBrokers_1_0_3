@@ -49,6 +49,8 @@ class TaxeType extends AbstractType
             ->add('tauxIARD', PercentType::class, [
                 'label' => "Taux (IARD)",
                 'required' => false,
+                'scale' => 2,
+                'type' => 'integer', // Stocke la valeur telle quelle (ex: 16 pour 16%)
                 'attr' => [
                     'placeholder' => "Taux",
                 ],
@@ -56,6 +58,8 @@ class TaxeType extends AbstractType
             ->add('tauxVIE', PercentType::class, [
                 'label' => "Taux (VIE)",
                 'required' => false,
+                'scale' => 2,
+                'type' => 'integer', // Stocke la valeur telle quelle (ex: 2 pour 2%)
                 'attr' => [
                     'placeholder' => "Taux",
                 ],
