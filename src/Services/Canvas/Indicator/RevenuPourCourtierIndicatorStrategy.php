@@ -75,7 +75,9 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
 
         foreach ($revenu->getArticles() as $article) {
             $note = $article->getNote();
-            if ($note) {
+            // CORRECTION : On ne comptabilise que les paiements sur les notes de commission
+            // (adressées au client ou à l'assureur).
+            if ($note && in_array($note->getAddressedTo(), [Note::TO_CLIENT, Note::TO_ASSUREUR])) {
                 $montantPayableNote = $this->calculationHelper->getNoteMontantPayable($note);
                 if ($montantPayableNote > 0) {
                     $proportionPaiement = $this->calculationHelper->getNoteMontantPaye($note) / $montantPayableNote;
