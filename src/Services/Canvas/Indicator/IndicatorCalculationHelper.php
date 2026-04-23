@@ -1066,17 +1066,10 @@ class IndicatorCalculationHelper
         $revenu = $article->getRevenuFacture();
         $tranche = $article->getTranche();
         $note = $article->getNote();
-
-        if (!$revenu || !$tranche || !$note) {
-            // Si l'article n'est pas (encore) lié à un revenu, une tranche ou une note,
-            // son montant est de 0. Cela corrige l'erreur lors de l'ajout d'un nouvel article.
-            return 0.0;
-        }
-
-        $quantite = $article->getQuantite() ?? 1.0;
-        $facteurTranche = $this->getTrancheTauxFactor($tranche);
-
-        // CAS 1 : Note de crédit pour une autorité fiscale.
+ 
+        if (!$note) return 0.0;
+ 
+        // CAS 1 : Note de crédit pour une autorité fiscale (taxe).
         // Le montant doit être le montant de la taxe, en négatif.
         if ($note->getType() === Note::TYPE_NOTE_DE_CREDIT && $note->getAddressedTo() === Note::TO_AUTORITE_FISCALE) {
             $autoriteFiscale = $note->getAutoritefiscale();
@@ -1086,18 +1079,38 @@ class IndicatorCalculationHelper
                 $isIARD = $this->isIARD($revenu->getCotation());
                 $tauxTaxe = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();
 
-                // CORRECTION : Le taux est stocké en pourcentage (ex: 16). Il faut le diviser par 100.
                 $montantTaxe = $montantHTRevenu * (($tauxTaxe ?? 0.0) / 100);
-
-                // On retourne le montant de la taxe pour la tranche, en négatif.
+ 
+                // Le facteur de tranche n'est pertinent que si une tranche est liée.
+                $facteurTranche = $tranche ? $this->getTrancheTauxFactor($tranche) : 1.0;
+                $quantite = $article->getQuantite() ?? 1.0;
+ 
                 return abs($montantTaxe * $quantite * $facteurTranche);
             }
         }
-
-        // CAS 2 : Comportement par défaut pour toutes les autres notes (débit, crédit client/assureur...).
-        // Le montant est basé sur le montant TTC du revenu.
-        $montant = $this->getRevenuMontantTTC($revenu) * $quantite * $facteurTranche;
-        return abs($montant);
+ 
+        // CAS 2 : Note de crédit pour un partenaire (rétrocommission).
+        if ($note->getType() === Note::TYPE_NOTE_DE_CREDIT && $note->getAddressedTo() === Note::TO_PARTENAIRE && $revenu) {
+            // On calcule le montant total de la rétrocommission pour le revenu.
+            $montantRetroBase = $this->getRevenuMontantRetrocommissionsPayableParCourtier($revenu, null, -1, []);
+            // On applique le prorata de la tranche et la quantité.
+            $facteurTranche = $tranche ? $this->getTrancheTauxFactor($tranche) : 1.0;
+            $quantite = $article->getQuantite() ?? 1.0;
+            return abs($montantRetroBase * $facteurTranche * $quantite);
+        }
+ 
+        // CAS 3 : Comportement par défaut pour les autres notes (débit, crédit client/assureur...).
+        // Le montant est basé sur le montant TTC du revenu, proportionnellement à la tranche.
+        if ($revenu && $tranche) {
+            $quantite = $article->getQuantite() ?? 1.0;
+            $facteurTranche = $this->getTrancheTauxFactor($tranche);
+            $montant = $this->getRevenuMontantTTC($revenu) * $quantite * $facteurTranche;
+            return abs($montant);
+        }
+ 
+        // Si l'article n'est pas (encore) complètement lié (ex: en cours de création),
+        // ou si c'est un article libre sans revenu/tranche, son montant est 0.
+        return 0.0;
     }
 
     public function getTrancheTauxFactor(Tranche $tranche): float
