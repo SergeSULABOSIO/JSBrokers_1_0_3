@@ -9,11 +9,13 @@ use App\Repository\TaxeRepository;
 use App\Services\ServiceDates;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Services\ServiceMonnaies;
 
 class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
 {
     public function __construct(
         private ServiceDates $serviceDates,
+        private ServiceMonnaies $serviceMonnaies,
         private TaxeRepository $taxeRepository,
         private IndicatorCalculationHelper $calculationHelper,
         private EntityManagerInterface $em
@@ -48,6 +50,11 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
             }
         }
 
+        $montantCommissionTTC = round($this->getTrancheMontantTTC($entity), 2);
+        $montantTaxeCourtier = round($this->getTrancheTaxeCourtierMontant($entity), 2);
+        $montantTaxeAssureur = round($this->getTrancheTaxeAssureurMontant($entity), 2);
+        $montantRetroCommission = round($this->getTrancheRetroCommission($entity), 2);
+        $monnaieCode = $this->serviceMonnaies->getCodeMonnaieAffichage();
         return [
             'nomCompletAvecStatut' => $nomComplet,
             'clientDescription' => $this->calculationHelper->getClientDescriptionFromCotation($cotation),
@@ -65,32 +72,38 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'primePayee' => round($this->calculationHelper->getTranchePrimePayee($entity), 2),
             'primeSoldeDue' => round($this->getTranchePrime($entity) - $this->calculationHelper->getTranchePrimePayee($entity), 2),
             'tauxTranche' => $this->getTrancheTauxDisplay($entity),
-            'montantCalculeHT' => round($this->getTrancheMontantHT($entity), 2),
-            'montantCalculeTTC' => round($this->getTrancheMontantTTC($entity), 2),
+            'montantCalculeHT' => round($this->getTrancheMontantHT($entity), 2), // Maintenu pour compatibilité
+            'montantCalculeTTC' => $montantCommissionTTC,
             'descriptionCalcul' => $this->getTrancheDescriptionCalcul($entity),
-            'taxeCourtierMontant' => round($this->getTrancheTaxeCourtierMontant($entity), 2),
+            'taxeCourtierMontant' => $montantTaxeCourtier,
             'taxeCourtierTaux' => $this->getTrancheTaxeCourtierTaux($entity),
-            'taxeAssureurMontant' => round($this->getTrancheTaxeAssureurMontant($entity), 2),
+            'taxeAssureurMontant' => $montantTaxeAssureur,
             'taxeAssureurTaux' => $this->getTrancheTaxeAssureurTaux($entity),
-            'montant_du' => round($this->getTrancheMontantTTC($entity), 2),
+            'montant_du' => $montantCommissionTTC,
             'montant_paye' => round($this->calculationHelper->getTrancheMontantCommissionEncaissee($entity), 2),
-            'solde_restant_du' => round($this->getTrancheMontantTTC($entity) - $this->calculationHelper->getTrancheMontantCommissionEncaissee($entity), 2),
+            'solde_restant_du' => $montantCommissionTTC - round($this->calculationHelper->getTrancheMontantCommissionEncaissee($entity), 2),
             'taxeCourtierPayee' => round($this->calculationHelper->getTrancheMontantTaxePayee($entity, false), 2),
-            'taxeCourtierSolde' => round($this->getTrancheTaxeCourtierMontant($entity) - $this->calculationHelper->getTrancheMontantTaxePayee($entity, false), 2),
+            'taxeCourtierSolde' => $montantTaxeCourtier - round($this->calculationHelper->getTrancheMontantTaxePayee($entity, false), 2),
             'taxeAssureurPayee' => round($this->calculationHelper->getTrancheMontantTaxePayee($entity, true), 2),
-            'taxeAssureurSolde' => round($this->getTrancheTaxeAssureurMontant($entity) - $this->calculationHelper->getTrancheMontantTaxePayee($entity, true), 2),
+            'taxeAssureurSolde' => $montantTaxeAssureur - round($this->calculationHelper->getTrancheMontantTaxePayee($entity, true), 2),
             'estPartageable' => $this->getTrancheEstPartageable($entity),
             'montantPur' => round($this->getTrancheMontantPur($entity), 2),
             'partPartenaire' => $this->getTranchePartPartenaire($entity),
-            'retroCommission' => round($this->getTrancheRetroCommission($entity), 2),
+            'retroCommission' => $montantRetroCommission,
             'retroCommissionReversee' => round($this->calculationHelper->getTrancheMontantRetrocommissionsPayableParCourtierPayee($entity), 2),
-            'retroCommissionSolde' => round($this->getTrancheRetroCommission($entity) - $this->calculationHelper->getTrancheMontantRetrocommissionsPayableParCourtierPayee($entity), 2),
+            'retroCommissionSolde' => $montantRetroCommission - round($this->calculationHelper->getTrancheMontantRetrocommissionsPayableParCourtierPayee($entity), 2),
             'reserve' => round($this->getTrancheMontantPur($entity) - $this->getTrancheRetroCommission($entity), 2),
             'statutPaiement' => $this->getTrancheStatutPaiement($entity),
             'tauxAvancement' => $this->getTrancheTauxAvancement($entity),
             'resteAPayer' => round($this->getTranchePrime($entity) - $this->calculationHelper->getTranchePrimePayee($entity), 2),
             'retardPaiement' => $this->getTrancheRetardPaiement($entity),
             'dateDernierEncaissement' => $this->getTrancheDateDernierEncaissement($entity),
+
+            // Nouveaux indicateurs pour l'affichage en liste
+            'taxeCourtierAffichee' => sprintf('%s (%s %s)', $this->getTaxeAutoriteNom($entity, Taxe::REDEVABLE_COURTIER), number_format($montantTaxeCourtier, 2), $monnaieCode),
+            'taxeAssureurAffichee' => sprintf('%s (%s %s)', $this->getTaxeAutoriteNom($entity, Taxe::REDEVABLE_ASSUREUR), number_format($montantTaxeAssureur, 2), $monnaieCode),
+            'commissionTTCAffichee' => sprintf('Com TTC (%s %s)', number_format($montantCommissionTTC, 2), $monnaieCode),
+            'retroCommissionAffichee' => sprintf('RétroCom (%s %s)', number_format($montantRetroCommission, 2), $monnaieCode),
         ];
     }
 
@@ -269,5 +282,20 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
             }
         }
         return $lastDate;
+    }
+
+    private function getTaxeAutoriteNom(Tranche $tranche, int $redevable): string
+    {
+        $entreprise = $tranche->getCotation()?->getPiste()?->getInvite()?->getEntreprise();
+        if (!$entreprise) return 'N/A';
+
+        $taxe = $this->taxeRepository->findOneBy(['redevable' => $redevable, 'entreprise' => $entreprise]);
+        if (!$taxe) return 'N/A';
+
+        $autorite = $taxe->getAutoriteFiscales()->first();
+        if (!$autorite) return $taxe->getCode() ?? 'Taxe';
+
+        // On privilégie l'abréviation si elle existe
+        return $autorite->getAbreviation() ?: $autorite->getNom();
     }
 }

@@ -27,6 +27,10 @@ class TrancheListCanvasProvider implements ListCanvasProviderInterface
                     ["attribut_prefixe" => "Échéance: ", "attribut_code" => "echeanceAt", "attribut_type" => "date"],
                     ["attribut_code" => "cotationNom"],
                     ["attribut_code" => "clientNom"],
+                    ["attribut_code" => "taxeCourtierAffichee"],
+                    ["attribut_code" => "taxeAssureurAffichee"],
+                    ["attribut_code" => "commissionTTCAffichee"],
+                    ["attribut_code" => "retroCommissionAffichee"],
                 ],
             ],
             "colonnes_numeriques" => [
