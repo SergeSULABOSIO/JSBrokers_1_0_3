@@ -21,18 +21,16 @@ class PaiementListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Paiements",
-                "texte_principal" => ["attribut_code" => "nomCompletAvecStatut", "icone" => "paiement"],
-                "textes_secondaires_separateurs" => " • ",
+                "texte_principal" => ["attribut_code" => "ligne_principale", "icone" => "paiement"],
                 "textes_secondaires" => [
-                    ["attribut_prefixe" => "Date: ", "attribut_code" => "paidAt", "attribut_type" => "date"],
-                    ["attribut_prefixe" => "Contexte: ", "attribut_code" => "contexte"],
+                    ["attribut_code" => "ligne_secondaire"],
                 ],
             ],
             "colonnes_numeriques" => [
                 [
                     "titre_colonne" => "Montant",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    "attribut_code" => "montant",
+                    "attribut_code" => "montantPaiement",
                     "attribut_type" => "nombre",
                 ],
             ],
