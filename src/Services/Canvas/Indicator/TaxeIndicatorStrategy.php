@@ -36,6 +36,8 @@ class TaxeIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'montantTaxeTotal' => round($stats['due'], 2),
             'montantTaxePaye' => round($stats['paid'], 2),
             'soldeRestantDu' => round($stats['balance'], 2),
+            'autoritesFiscalesString' => $this->getAutoritesFiscalesString($entity),
+            'descriptionStripped' => strip_tags($entity->getDescription() ?? ''),
         ];
     }
 
@@ -48,6 +50,21 @@ class TaxeIndicatorStrategy implements IndicatorCalculationStrategyInterface
             Taxe::REDEVABLE_COURTIER => "Le courtier",
             default => "Non défini",
         };
+    }
+
+    private function getAutoritesFiscalesString(Taxe $taxe): string
+    {
+        $autorites = $taxe->getAutoriteFiscales();
+        if ($autorites->isEmpty()) {
+            return 'Aucune';
+        }
+
+        $noms = [];
+        foreach ($autorites as $autorite) {
+            $noms[] = $autorite->getNom();
+        }
+
+        return implode(', ', $noms);
     }
 
     private function calculateTaxeStats(Taxe $taxe): array
