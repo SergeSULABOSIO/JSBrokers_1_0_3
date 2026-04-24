@@ -66,6 +66,12 @@ class Article
     #[Groups(['list:read'])]
     public ?float $valeurUnitaire = null;
 
+    #[Groups(['list:read'])]
+    public ?float $montantArticleHT = null;
+
+    #[Groups(['list:read'])]
+    public ?float $valeurUnitaireHT = null;
+
     public function getId(): ?int
     {
         return $this->id;
