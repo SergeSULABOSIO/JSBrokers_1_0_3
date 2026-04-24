@@ -48,6 +48,8 @@ class ArticleEntityCanvasProvider implements EntityCanvasProviderInterface
             ["group" => "Détails", "code" => "elementLie", "intitule" => "Élément lié", "type" => "Calcul", "format" => "Texte", "description" => "Affiche le nom de l'entité source (Taxe, Tranche, Revenu) liée à cet article."],
             ["group" => "Finances", "code" => "montantArticle", "intitule" => "Montant Payable", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Le montant de cette ligne de facturation."],
             ["group" => "Finances", "code" => "valeurUnitaire", "intitule" => "Valeur Unitaire", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "La valeur unitaire de l'article (Montant / Quantité)."],
+            ["group" => "Finances", "code" => "montantArticleHT", "intitule" => "Montant HT", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Le montant Hors Taxe de cette ligne de facturation."],
+            ["group" => "Finances", "code" => "valeurUnitaireHT", "intitule" => "Valeur Unitaire HT", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "La valeur unitaire Hors Taxe de l'article (Montant HT / Quantité)."],
             ["group" => "Finances", "code" => "pourcentageNote", "intitule" => "Poids dans la note", "type" => "Calcul", "format" => "Pourcentage", "description" => "Le pourcentage que représente cet article par rapport au total de la note parente."],
             ["group" => "Statut", "code" => "statutNoteParent", "intitule" => "Statut Note", "type" => "Calcul", "format" => "Texte", "description" => "Indique si la note à laquelle appartient cet article est validée ou en brouillon."],
         ];

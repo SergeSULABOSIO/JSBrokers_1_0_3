@@ -54,11 +54,16 @@
 <body>
 
     <div class="actions-bar sticky-top">
-        <button class="btn btn-light" onclick="window.close()">
-            Retourner à l'édition
+        {# NOUVEAU : Ajout de l'icône 'action:close' #}
+        <button class="btn btn-light d-inline-flex align-items-center gap-2" onclick="window.close()">
+            <span class="button-icon" data-icon-alias="action:close"></span>
+            <span>Retourner à l'édition</span>
         </button>
-        <button class="btn btn-primary" onclick="window.print()">
-            Imprimer
+
+        {# NOUVEAU : Ajout de l'icône 'action:print' #}
+        <button class="btn btn-primary d-inline-flex align-items-center gap-2" onclick="window.print()">
+            <span class="button-icon" data-icon-alias="action:print"></span>
+            <span>Imprimer</span>
         </button>
     </div>
 

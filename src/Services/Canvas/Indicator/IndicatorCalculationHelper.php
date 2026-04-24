@@ -1161,6 +1161,17 @@ class IndicatorCalculationHelper
         return 0.0;
     }
 
+    /**
+     * NOUVEAU : Méthode publique pour accéder à la logique de ServiceTaxes.
+     *
+     * @param boolean $isIARD
+     * @param boolean $isTaxeAssureur
+     * @return Taxe|null
+     */
+    public function getTaxeApplicable(bool $isIARD, bool $isTaxeAssureur): ?\App\Entity\Taxe
+    {
+        return $this->serviceTaxes->getTaxeApplicable($isIARD, $isTaxeAssureur);
+    }
 
     public function getTrancheTauxFactor(Tranche $tranche): float
     {
