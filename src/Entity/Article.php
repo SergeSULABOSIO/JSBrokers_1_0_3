@@ -60,6 +60,9 @@ class Article
     #[Groups(['list:read'])]
     public ?string $statutNoteParent = null;
 
+    #[Groups(['list:read'])]
+    public ?string $description = null;
+
     public function getId(): ?int
     {
         return $this->id;
