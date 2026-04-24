@@ -714,6 +714,21 @@ class IndicatorCalculationHelper
         return $montant;
     }
 
+    /**
+     * NOUVEAU : Calcule le montant total HT d'une note.
+     */
+    public function getNoteMontantHT(?Note $note): float
+    {
+        $montant = 0;
+        if ($note) {
+            foreach ($note->getArticles() as $article) {
+                // On utilise la méthode HT de l'article que nous avons créée précédemment.
+                $montant += $this->getArticleMontantHT($article);
+            }
+        }
+        return $montant;
+    }
+
     public function getNoteMontantPaye(?Note $note): float
     {
         $montant = 0;

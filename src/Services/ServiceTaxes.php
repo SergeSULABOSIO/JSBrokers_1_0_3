@@ -56,6 +56,21 @@ class ServiceTaxes
         return $tab;
     }
 
+    /**
+     * NOUVEAU : Récupère l'objet Taxe applicable.
+     *
+     * @param boolean $isTaxeAssureur
+     * @return Taxe|null
+     */
+    public function getTaxeApplicable(bool $isIARD, bool $isTaxeAssureur): ?Taxe
+    {
+        $taxes = $isTaxeAssureur ? $this->getTaxesPayableParAssureur() : $this->getTaxesPayableParCourtier();
+        // Dans la logique actuelle, il n'y a qu'une seule taxe par redevable.
+        // On retourne donc la première trouvée.
+        return count($taxes) > 0 ? $taxes[0] : null;
+    }
+
+
     public function getMontantTaxe($montantNet, bool $tauxIARD, bool $taxeAssureur)
     {
         $gross = 0;
