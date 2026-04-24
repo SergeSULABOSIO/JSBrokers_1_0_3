@@ -151,7 +151,8 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
         
         // On utilise le service de taxes pour trouver la taxe applicable.
         // Pour une note de débit, la taxe est toujours celle de l'assureur.
-        $taxe = $this->calculationHelper->serviceTaxes->getTaxeApplicable($isIARD, true);
+        // CORRECTION : On utilise la nouvelle méthode publique du helper.
+        $taxe = $this->calculationHelper->getTaxeApplicable($isIARD, true);
 
         return $taxe?->getCode() ?? 'Taxe';
     }
