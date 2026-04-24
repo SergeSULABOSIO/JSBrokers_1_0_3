@@ -32,6 +32,10 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
         // On s'assure de ne pas diviser par zéro.
         $valeurUnitaire = ($quantite != 0) ? $montantArticle / $quantite : 0.0;
 
+        // NOUVEAU : Calcul des montants HT
+        $montantArticleHT = round($this->calculationHelper->getArticleMontantHT($entity) ?? 0, 2);
+        $valeurUnitaireHT = ($quantite != 0) ? $montantArticleHT / $quantite : 0.0;
+
         return [
             'natureArticle' => $this->getNatureArticle($entity),
             'elementLie' => $this->getElementLie($entity),
@@ -42,6 +46,9 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'description' => $this->getDynamicDescription($entity),
             // NOUVEAU : Calcul de la valeur unitaire
             'valeurUnitaire' => $valeurUnitaire,
+            // NOUVEAU : Ajout des valeurs HT
+            'montantArticleHT' => $montantArticleHT,
+            'valeurUnitaireHT' => $valeurUnitaireHT,
         ];
     }
 

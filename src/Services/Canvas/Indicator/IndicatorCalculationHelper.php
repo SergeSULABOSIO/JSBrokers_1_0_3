@@ -1113,6 +1113,40 @@ class IndicatorCalculationHelper
         return 0.0;
     }
 
+    /**
+     * NOUVEAU : Calcule le montant HT d'un article.
+     * Cette méthode est une copie de getArticleMontant, mais utilise getRevenuMontantHt au lieu de getRevenuMontantTTC.
+     */
+    public function getArticleMontantHT(Article $article): float
+    {
+        $revenu = $article->getRevenuFacture();
+        $tranche = $article->getTranche();
+        $note = $article->getNote();
+
+        if (!$note) return 0.0;
+
+        // Pour les notes de crédit (taxe, rétro-commission), le montant est déjà HT.
+        if ($note->getType() === Note::TYPE_NOTE_DE_CREDIT) {
+            // On réutilise la logique existante qui est correcte pour les crédits.
+            return $this->getArticleMontant($article);
+        }
+
+        // CAS PAR DÉFAUT : Note de débit (commission, etc.)
+        // Le montant est basé sur le montant HT du revenu, proportionnellement à la tranche.
+        if ($revenu && $tranche) {
+            $quantite = $article->getQuantite() ?? 1.0;
+            $facteurTranche = $this->getTrancheTauxFactor($tranche);
+            // La seule différence est ici : on appelle getRevenuMontantHt
+            $montant = $this->getRevenuMontantHt($revenu) * $quantite * $facteurTranche;
+            return abs($montant);
+        }
+
+        // Si l'article n'est pas (encore) complètement lié (ex: en cours de création),
+        // ou si c'est un article libre sans revenu/tranche, son montant est 0.
+        return 0.0;
+    }
+
+
     public function getTrancheTauxFactor(Tranche $tranche): float
     {
         if ($tranche->getPourcentage() !== null && $tranche->getPourcentage() > 0) {
