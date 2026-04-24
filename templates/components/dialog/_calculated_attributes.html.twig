@@ -17,8 +17,12 @@
                     data-event-url="{{ action.url }}"
                     data-event-payload="{{ {id: entity.id}|json_encode }}"
                 >
-                    {# L'icône sera injectée par JS, on prépare un conteneur #}
+                    {# CORRECTION : On revient à la logique JS pour le chargement de l'icône via son alias. #}
                     <span class="button-icon" data-icon-alias="{{ action.icon }}"></span>
+                    {# NOUVEAU : Afficher le texte seulement si on a moins de 2 boutons #}
+                    {% if formCanvas.parametres.attribute_actions|length < 2 %}
+                        <span>{{ action.label }}</span>
+                    {% endif %}
                 </button>
             {% endfor %}
         </div>

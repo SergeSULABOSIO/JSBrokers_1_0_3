@@ -54,15 +54,14 @@
 <body>
 
     <div class="actions-bar sticky-top">
-        {# NOUVEAU : Ajout de l'icône 'action:close' #}
+        {# CORRECTION : Utilisation de Twig UX Icons #}
         <button class="btn btn-light d-inline-flex align-items-center gap-2" onclick="window.close()">
-            <span class="button-icon" data-icon-alias="action:close"></span>
+            <twig:UX:Icon name="action:close" class="button-icon" />
             <span>Retourner à l'édition</span>
         </button>
 
-        {# NOUVEAU : Ajout de l'icône 'action:print' #}
         <button class="btn btn-primary d-inline-flex align-items-center gap-2" onclick="window.print()">
-            <span class="button-icon" data-icon-alias="action:print"></span>
+            <twig:UX:Icon name="action:print" class="button-icon" />
             <span>Imprimer</span>
         </button>
     </div>
@@ -157,6 +156,12 @@
                         <td colspan="3" class="text-end border-0"><strong>Total TTC</strong></td>
                         <td class="border-0">{{ note.montantTotal|number_format(2, ',', ' ') }} {{ monnaie }}</td>
                     </tr>
+                    {# NOUVEAU : Montant total en lettres #}
+                    <tr>
+                        <td colspan="4" class="text-end border-0 fst-italic text-muted pt-3">
+                            Arrêté la présente note à la somme de : {{ note.montantTotal|to_words(monnaie) }}.
+                        </td>
+                    </tr>
                 </tfoot>
             </table>
 
@@ -187,5 +192,11 @@
         </div>
     </div>
 
+    {# NOUVEAU : Script pour le rendu des icônes UX #}
+    <script type="importmap">
+    {
+        "imports": { "iconify-icon": "https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js" }
+    }
+    </script>
 </body>
 </html>

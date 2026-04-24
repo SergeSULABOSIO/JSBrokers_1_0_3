@@ -104,13 +104,18 @@ class NoteController extends AbstractController
     #[Route('/apercu/{id}', name: 'show_preview', methods: ['GET'])]
     public function showPreview(Note $note): Response
     {
-        // On s'assure que toutes les valeurs calculées sont chargées avant de rendre la vue.
+        // CORRECTION : On charge les valeurs calculées pour la note ET pour chaque article.
+        
+        // 1. On charge les valeurs de la note (montantTotal, montantTaxe, etc.)
         $this->canvasBuilder->loadAllCalculatedValues($note);
 
-        // On récupère l'entreprise pour les détails (logo, nom, etc.)
-        $entreprise = $note->getInvite()?->getEntreprise();
+        // 2. On charge les valeurs pour chaque article (montantArticleHT, valeurUnitaireHT, etc.)
+        foreach ($note->getArticles() as $article) {
+            $this->canvasBuilder->loadAllCalculatedValues($article);
+        }
 
-        // On récupère le canvas de l'entité pour avoir accès aux définitions des champs (ex: unité monétaire)
+        // 3. On récupère l'entreprise et les autres données nécessaires pour le template.
+        $entreprise = $this->getEntreprise();
         $entityCanvas = $this->canvasBuilder->getEntityCanvas(Note::class);
 
         return $this->render('admin/note/note_preview.html.twig', [
