@@ -64,8 +64,9 @@
         <div class="invoice-header">
             <div class="row align-items-center">
                 <div class="col">
-                    {% if entreprise and entreprise.logo %}
-                        <img src="{{ asset('uploads/logos/' ~ entreprise.logo) }}" alt="Logo" style="max-height: 80px;">
+                    {# CORRECTION : Utilisation du bon nom de propriété (thumbnail) et du bon chemin d'upload (entreprises) #}
+                    {% if entreprise and entreprise.thumbnail %}
+                        <img src="{{ asset('images/entreprises/' ~ entreprise.thumbnail) }}" alt="Logo" style="max-height: 80px;">
                     {% endif %}
                     <h4 class="mt-2 mb-0">{{ entreprise.nom|default('Votre Entreprise') }}</h4>
                     <p class="text-muted">{{ entreprise.adresse|default('') }}</p>

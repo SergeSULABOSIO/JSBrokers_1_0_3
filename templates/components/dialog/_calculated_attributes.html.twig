@@ -8,14 +8,15 @@
                 <button 
                     type="button" 
                     class="btn btn-sm btn-outline-light attributes-toolbar-button"
-                    data-action="click->dialog-instance#handleAttributeAction"
+                    {# NOUVEAU : Ajout des actions pour le tooltip et le clic #}
+                    data-action="mouseenter->tooltip#show mouseleave->tooltip#hide click->dialog-instance#handleAttributeAction"
+                    data-tooltip-content="{{ action.label }}"
                     data-event-name="{{ action.event }}"
                     data-event-url="{{ action.url }}"
                     data-event-payload="{{ {id: entity.id}|json_encode }}"
                 >
                     {# L'icône sera injectée par JS, on prépare un conteneur #}
                     <span class="button-icon" data-icon-alias="{{ action.icon }}"></span>
-                    <span class="button-text">{{ action.label }}</span>
                 </button>
             {% endfor %}
         </div>
