@@ -54,14 +54,14 @@
 <body>
 
     <div class="actions-bar sticky-top">
-        {# CORRECTION : Utilisation de Twig UX Icons #}
+        {# CORRECTION : Utilisation de Twig UX Icons, comme dans la barre d'outils principale. #}
         <button class="btn btn-light d-inline-flex align-items-center gap-2" onclick="window.close()">
-            <twig:UX:Icon name="action:close" class="button-icon" />
+            <twig:UX:Icon name="{{ resolve_icon_name('action:close') }}" class="button-icon" />
             <span>Retourner à l'édition</span>
         </button>
 
         <button class="btn btn-primary d-inline-flex align-items-center gap-2" onclick="window.print()">
-            <twig:UX:Icon name="action:print" class="button-icon" />
+            <twig:UX:Icon name="{{ resolve_icon_name('action:print') }}" class="button-icon" />
             <span>Imprimer</span>
         </button>
     </div>
@@ -192,11 +192,5 @@
         </div>
     </div>
 
-    {# NOUVEAU : Script pour le rendu des icônes UX #}
-    <script type="importmap">
-    {
-        "imports": { "iconify-icon": "https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js" }
-    }
-    </script>
 </body>
 </html>
