@@ -288,8 +288,9 @@ export default class extends Controller {
         // NOUVEAU : Gérer les icônes pour la barre d'outils des attributs
         else if (requesterId.startsWith(`${this.dialogId}-attr-action-`)) {
             const iconAlias = requesterId.split('-').pop();
-            // On cherche le conteneur d'icône correspondant dans la barre d'outils
-            targetElement = this.element.querySelector(`.attributes-toolbar .button-icon[data-icon-alias="${iconAlias}"]`);
+            // On cherche le conteneur d'icône correspondant dans la barre d'outils. On remplace '--' par ':' pour retrouver l'alias original.
+            const originalIconAlias = iconAlias.replace('--', ':');
+            targetElement = this.element.querySelector(`.attributes-toolbar .button-icon[data-icon-alias="${originalIconAlias}"]`);
         }
     
         // Si une cible a été trouvée, on injecte l'icône de manière robuste.
@@ -524,8 +525,9 @@ export default class extends Controller {
                 this.notifyCerveau('ui:icon.request', {
                     iconName: iconAlias,
                     iconSize: 18, // Taille adaptée pour un bouton de barre d'outils
-                    // On crée un ID de demandeur unique pour chaque icône d'action
-                    requesterId: `${this.dialogId}-attr-action-${iconAlias}`
+                    // On crée un ID de demandeur unique et valide comme sélecteur CSS.
+                    // On remplace ':' par '--' pour éviter les erreurs de syntaxe.
+                    requesterId: `${this.dialogId}-attr-action-${iconAlias.replace(':', '--')}`
                 });
             }
         });
