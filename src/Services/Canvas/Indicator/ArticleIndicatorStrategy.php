@@ -3,6 +3,7 @@
 namespace App\Services\Canvas\Indicator;
 
 use App\Entity\Article;
+use App\Entity\Note;
 use App\Entity\Taxe;
 use App\Entity\RevenuPourCourtier;
 use App\Entity\Tranche;
@@ -32,7 +33,37 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'montantArticle' => round($this->calculateMontantArticle($entity) ?? 0, 2),
             'pourcentageNote' => round($this->calculatePourcentageNote($entity), 2),
             'statutNoteParent' => $this->getStatutNoteParent($entity),
+            // NOUVEAU : Calcul de la description contextuelle
+            'description' => $this->getDynamicDescription($entity),
         ];
+    }
+
+    /**
+     * NOUVEAU : Construit une description brève pour l'article en fonction du contexte de la note.
+     */
+    private function getDynamicDescription(Article $article): string
+    {
+        $note = $article->getNote();
+        if (!$note) {
+            return 'Article non lié.';
+        }
+
+        $revenu = $article->getRevenuFacture();
+        if (!$revenu) {
+            return 'Revenu non défini.';
+        }
+
+        switch ($note->getAddressedTo()) {
+            case Note::TO_CLIENT:
+            case Note::TO_ASSUREUR:
+                return "Commission de courtage sur " . ($revenu->getNom() ?? 'revenu');
+            case Note::TO_PARTENAIRE:
+                return "Rétro-commission à " . ($note->getPartenaire()?->getNom() ?? 'partenaire');
+            case Note::TO_AUTORITE_FISCALE:
+                return "Taxe due à " . ($note->getAutoritefiscale()?->getNom() ?? 'autorité fiscale');
+            default:
+                return $revenu->getNom() ?? 'Détail de l\'article';
+        }
     }
 
     private function getNatureArticle(Article $article): string

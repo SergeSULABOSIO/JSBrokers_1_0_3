@@ -43,6 +43,7 @@ class ArticleEntityCanvasProvider implements EntityCanvasProviderInterface
     {
         $monnaie = $this->serviceMonnaies->getCodeMonnaieAffichage();
         return [
+            ["group" => "Détails", "code" => "description", "intitule" => "Description contextuelle", "type" => "Calcul", "format" => "Texte", "description" => "Description dynamique de l'article basée sur le contexte de la note."],
             ["group" => "Détails", "code" => "natureArticle", "intitule" => "Nature de l'article", "type" => "Calcul", "format" => "Texte", "description" => "Indique la nature comptable de la ligne (Taxe, Commission, Prime, ou Libre)."],
             ["group" => "Détails", "code" => "elementLie", "intitule" => "Élément lié", "type" => "Calcul", "format" => "Texte", "description" => "Affiche le nom de l'entité source (Taxe, Tranche, Revenu) liée à cet article."],
             ["group" => "Finances", "code" => "montantArticle", "intitule" => "Montant Payable", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Le montant de cette ligne de facturation."],

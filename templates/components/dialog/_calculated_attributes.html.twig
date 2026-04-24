@@ -1,6 +1,7 @@
 {# templates/components/dialog/_calculated_attributes.html.twig #}
 
-<div class="col-auto calculated-attributes-column" style="width: 400px;">
+{# CORRECTION : On déplace le contrôleur tooltip ici pour qu'il englobe la barre d'outils ET les attributs #}
+<div class="col-auto calculated-attributes-column" style="width: 400px;" data-controller="tooltip">
     {# NOUVEAU : Barre d'outils pour les attributs, visible uniquement en mode édition #}
     {% if not isCreationMode and formCanvas.parametres.attribute_actions is defined and formCanvas.parametres.attribute_actions is not empty %}
         <div class="attributes-toolbar">
@@ -31,7 +32,7 @@
                 Attributs calculés
             </h5>
             <div class="calculated-attributes-content">
-                <div data-controller="tooltip">
+                <div> {# Le data-controller="tooltip" était ici, il a été déplacé sur l'élément parent. #}
                     {% set current_group = "___INITIAL_STATE___" %} {# État initial unique pour démarrer la boucle #}
                     
                     {% for attr in calculated_attributes %}
