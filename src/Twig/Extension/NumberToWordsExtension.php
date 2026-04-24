@@ -2,7 +2,7 @@
 
 namespace App\Twig\Extension;
 
-use NumberToWords\NumberToWords;
+use Kwn\NumberToWords\NumberToWords;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFilter;
 
@@ -26,6 +26,6 @@ class NumberToWordsExtension extends AbstractExtension
     {
         $numberToWords = new NumberToWords();
         $converter = $numberToWords->getCurrencyTransformer('fr');
-        return ucfirst($converter->toWords($number * 100, $currency));
+        return ucfirst($converter->toWords(intval($number * 100), $currency));
     }
 }
