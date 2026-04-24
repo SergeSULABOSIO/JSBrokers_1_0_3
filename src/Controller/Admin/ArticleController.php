@@ -153,9 +153,8 @@ class ArticleController extends AbstractController
         }
 
         if ($qb->getQuery()->getSingleScalarResult() > 0) {
-            // Message d'erreur raccourci pour éviter les problèmes de layout dans le footer de la modale.
-            // Le timestamp et le contexte sont déjà gérés côté client.
-            $message = "Cet article existe déjà dans la note.";
+            // Message d'erreur concis. Le client (dialog-instance) ajoutera le contexte (timestamp, etc.).
+            $message = "Cet article existe déjà.";
             return ['message' => $message];
         }
 

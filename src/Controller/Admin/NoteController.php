@@ -10,6 +10,7 @@ use App\Repository\NoteRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use App\Services\CanvasBuilder;
+use App\Services\ServiceMonnaies;
 use App\Services\Canvas\CalculationProvider;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
@@ -40,6 +41,7 @@ class NoteController extends AbstractController
         private JSBDynamicSearchService $searchService,
         private SerializerInterface $serializer, // Ajout de SerializerInterface
         private CalculationProvider $calculationProvider,
+        private ServiceMonnaies $serviceMonnaies, // NOUVEAU : Injection du service des monnaies
         CanvasBuilder $canvasBuilder
     ) {
         // Assign the injected CanvasBuilder to the property declared in the trait
@@ -88,6 +90,36 @@ class NoteController extends AbstractController
                 $note->setSentAt(new \DateTimeImmutable());
             }
         );
+    }
+
+    #[Route('/api/get-preview-url/{id}', name: 'api.get_preview_url', methods: ['GET'])]
+    public function getPreviewUrlApi(Note $note): JsonResponse
+    {
+        // On génère l'URL absolue vers la page d'aperçu.
+        $previewUrl = $this->generateUrl('admin.note.show_preview', ['id' => $note->getId()], \Symfony\Component\Routing\Generator\UrlGeneratorInterface::ABSOLUTE_URL);
+
+        return $this->json(['previewUrl' => $previewUrl]);
+    }
+
+    #[Route('/apercu/{id}', name: 'show_preview', methods: ['GET'])]
+    public function showPreview(Note $note): Response
+    {
+        // On s'assure que toutes les valeurs calculées sont chargées avant de rendre la vue.
+        $this->canvasBuilder->loadAllCalculatedValues($note);
+
+        // On récupère l'entreprise pour les détails (logo, nom, etc.)
+        $entreprise = $note->getInvite()?->getEntreprise();
+
+        // On récupère le canvas de l'entité pour avoir accès aux définitions des champs (ex: unité monétaire)
+        $entityCanvas = $this->canvasBuilder->getEntityCanvas(Note::class);
+
+        return $this->render('admin/note/note_preview.html.twig', [
+            'note' => $note,
+            'entreprise' => $entreprise,
+            'entityCanvas' => $entityCanvas,
+            // On passe la monnaie d'affichage pour l'utiliser dans le template
+            'monnaie' => $this->serviceMonnaies->getCodeMonnaieAffichage()
+        ]);
     }
 
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
