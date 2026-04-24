@@ -35,7 +35,17 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/note/api/submit",
             "endpoint_delete_url" => "/admin/note/api/delete",
             "endpoint_form_url" => "/admin/note/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // NOUVEAU : Définition de la barre d'outils pour le volet des attributs.
+            // Cette barre ne sera affichée qu'en mode édition.
+            "attribute_actions" => [
+                [
+                    "label" => "Visualiser la note",
+                    "icon" => "action:view", // Alias pour l'icône de visualisation
+                    "event" => "ui:note.preview-request", // Événement à envoyer au cerveau
+                    "url" => "/admin/note/api/get-preview-url/" . ($object->getId() ?? '0') // URL que le cerveau appellera
+                ]
+            ]
         ];
         $layout = $this->buildNoteLayout($object, $isParentNew);
 

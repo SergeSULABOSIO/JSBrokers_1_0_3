@@ -1,0 +1,139 @@
+{# templates/admin/note/note_preview.html.twig #}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aperçu : {{ note.typeString }} {{ note.reference }}</title>
+    {# On inclut Bootstrap pour le style #}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .invoice-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            background-color: #fff;
+            border: 1px solid #dee2e6;
+            box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
+        }
+        .invoice-header {
+            padding: 2rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .invoice-body {
+            padding: 2rem;
+        }
+        .invoice-footer {
+            padding: 2rem;
+            background-color: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+        }
+        .actions-bar {
+            padding: 1rem;
+            text-align: center;
+            background-color: #343a40;
+        }
+        .table thead th {
+            text-align: right;
+        }
+        .table tbody td {
+            text-align: right;
+        }
+        .table thead th:first-child, .table tbody td:first-child {
+            text-align: left;
+        }
+        .total-section td {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="actions-bar sticky-top">
+        <button class="btn btn-light" onclick="window.close()">
+            Retourner à l'édition
+        </button>
+        <button class="btn btn-primary" onclick="window.print()">
+            Imprimer
+        </button>
+    </div>
+
+    <div class="invoice-container">
+        <div class="invoice-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    {% if entreprise and entreprise.logo %}
+                        <img src="{{ asset('uploads/logos/' ~ entreprise.logo) }}" alt="Logo" style="max-height: 80px;">
+                    {% endif %}
+                    <h4 class="mt-2 mb-0">{{ entreprise.nom|default('Votre Entreprise') }}</h4>
+                    <p class="text-muted">{{ entreprise.adresse|default('') }}</p>
+                </div>
+                <div class="col text-end">
+                    <h2>{{ note.typeString }}</h2>
+                    <p class="mb-1"><strong>Référence :</strong> {{ note.reference }}</p>
+                    <p class="mb-0"><strong>Date :</strong> {{ note.sentAt|date('d/m/Y') }}</p>
+                </div>
+            </div>
+            <hr>
+            <div class="row">
+                <div class="col">
+                    <strong>Destinataire :</strong>
+                    <p class="mb-0">{{ note.addressedToString }}</p>
+                    {# Ici, vous pourriez ajouter l'adresse du destinataire si elle est disponible #}
+                </div>
+            </div>
+        </div>
+
+        <div class="invoice-body">
+            <h5>Détails de la note : {{ note.nom }}</h5>
+            <table class="table mt-4">
+                <thead class="table-light">
+                    <tr>
+                        <th>Article</th>
+                        <th>Quantité</th>
+                        <th>Prix Unitaire</th>
+                        <th>Montant</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for article in note.articles %}
+                        <tr>
+                            <td>
+                                <strong>{{ article.revenuFacture.nom }}</strong><br>
+                                <small class="text-muted">{{ article.description }}</small>
+                            </td>
+                            <td>{{ article.quantite|number_format(2, ',', ' ') }}</td>
+                            <td>{{ article.valeurUnitaire|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                            <td>{{ article.montantArticle|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    {# Ici, vous pourriez ajouter les taxes si elles sont modélisées #}
+                    <tr class="total-section">
+                        <td colspan="3" class="text-end border-0"><strong>Total HT</strong></td>
+                        <td class="border-0">{{ note.montantTotal|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                    </tr>
+                    {# Exemple de taxe
+                    <tr>
+                        <td colspan="3" class="text-end border-0">Taxe (TVA 18%)</td>
+                        <td class="border-0">XXX.XX {{ monnaie }}</td>
+                    </tr>
+                    #}
+                    <tr class="total-section table-secondary">
+                        <td colspan="3" class="text-end border-0"><strong>Total TTC</strong></td>
+                        <td class="border-0">{{ note.montantTotal|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="invoice-footer text-center">
+            <p class="text-muted">Merci de votre confiance.</p>
+        </div>
+    </div>
+
+</body>
+</html>

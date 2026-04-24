@@ -920,6 +920,33 @@ textarea:hover,
     margin-top: 1.5rem; /* Ajoute un espace au-dessus des groupes, sauf le premier */
 }
 
+/* NOUVEAU : Barre d'outils pour la colonne des attributs */
+.attributes-toolbar {
+    background-color: #343a40; /* Un gris un peu plus clair que le fond de la colonne */
+    border-radius: var(--bs-border-radius-sm);
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.attributes-toolbar-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    padding: 0.3rem 0.8rem;
+}
+
+.attributes-toolbar-button .button-icon {
+    display: inline-flex;
+    align-items: center;
+}
+
+.attributes-toolbar-button .button-icon svg {
+    width: 18px;
+    height: 18px;
+}
 /* --- 4.4 Styles de formulaire spécifiques aux dialogues --- */
 /*
 ===================================================================

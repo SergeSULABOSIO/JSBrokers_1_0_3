@@ -1,11 +1,34 @@
 {# templates/components/dialog/_calculated_attributes.html.twig #}
 
 <div class="col-auto calculated-attributes-column" style="width: 400px;">
+    {# NOUVEAU : Barre d'outils pour les attributs, visible uniquement en mode édition #}
+    {% if not isCreationMode and formCanvas.parametres.attribute_actions is defined and formCanvas.parametres.attribute_actions is not empty %}
+        <div class="attributes-toolbar">
+            {% for action in formCanvas.parametres.attribute_actions %}
+                <button 
+                    type="button" 
+                    class="btn btn-sm btn-outline-light attributes-toolbar-button"
+                    data-action="click->dialog-instance#handleAttributeAction"
+                    data-event-name="{{ action.event }}"
+                    data-event-url="{{ action.url }}"
+                    data-event-payload="{{ {id: entity.id}|json_encode }}"
+                >
+                    {# L'icône sera injectée par JS, on prépare un conteneur #}
+                    <span class="button-icon" data-icon-alias="{{ action.icon }}"></span>
+                    <span class="button-text">{{ action.label }}</span>
+                </button>
+            {% endfor %}
+        </div>
+    {% endif %}
+
     {# On vérifie si le canvas et la liste des attributs existent #}
     {% if canvas is defined and canvas.liste is defined and canvas.liste is not empty %}
         {% set calculated_attributes = canvas.liste|filter(attr => attr.type == 'Calcul') %}
         {% if calculated_attributes is not empty %}
-            <h5 class="column-title">Attributs calculés</h5>
+            {# On ajoute une classe pour gérer l'espacement si la barre d'outils est présente #}
+            <h5 class="column-title {% if not isCreationMode and formCanvas.parametres.attribute_actions is defined %}mt-3{% endif %}">
+                Attributs calculés
+            </h5>
             <div class="calculated-attributes-content">
                 <div data-controller="tooltip">
                     {% set current_group = "___INITIAL_STATE___" %} {# État initial unique pour démarrer la boucle #}

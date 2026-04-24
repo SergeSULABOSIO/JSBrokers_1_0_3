@@ -227,6 +227,9 @@ export default class extends Controller {
         // Initialiser la logique de visibilité dynamique du formulaire
         this.initializeFormVisibility();
 
+        // NOUVEAU : Initialiser la logique de la barre d'outils des attributs
+        this.initializeAttributeToolbar();
+
         const mainDialogElement = this.modalOutlet.element;
 
         // On vérifie si le contenu retourné contient des attributs calculés pour ajuster la classe CSS.
@@ -281,6 +284,12 @@ export default class extends Controller {
             targetElement = this.hasSaveIconTarget ? this.saveIconTarget : null;
         } else if (requesterId === this.dialogId + '-close') {
             targetElement = this.hasCloseIconTarget ? this.closeIconTarget : null;
+        }
+        // NOUVEAU : Gérer les icônes pour la barre d'outils des attributs
+        else if (requesterId.startsWith(`${this.dialogId}-attr-action-`)) {
+            const iconAlias = requesterId.split('-').pop();
+            // On cherche le conteneur d'icône correspondant dans la barre d'outils
+            targetElement = this.element.querySelector(`.attributes-toolbar .button-icon[data-icon-alias="${iconAlias}"]`);
         }
     
         // Si une cible a été trouvée, on injecte l'icône de manière robuste.
@@ -500,6 +509,44 @@ export default class extends Controller {
         this.checkFormVisibility();
     }
 
+    /**
+     * NOUVEAU : Initialise les icônes pour la barre d'outils des attributs.
+     * Cette méthode est appelée une fois que le contenu du formulaire est chargé.
+     */
+    initializeAttributeToolbar() {
+        const attributeToolbar = this.element.querySelector('.attributes-toolbar');
+        if (!attributeToolbar) return;
+
+        const iconContainers = attributeToolbar.querySelectorAll('.button-icon[data-icon-alias]');
+        iconContainers.forEach(container => {
+            const iconAlias = container.dataset.iconAlias;
+            if (iconAlias) {
+                this.notifyCerveau('ui:icon.request', {
+                    iconName: iconAlias,
+                    iconSize: 18, // Taille adaptée pour un bouton de barre d'outils
+                    // On crée un ID de demandeur unique pour chaque icône d'action
+                    requesterId: `${this.dialogId}-attr-action-${iconAlias}`
+                });
+            }
+        });
+    }
+
+    /**
+     * NOUVEAU : Gère le clic sur un bouton d'action de la barre d'outils des attributs.
+     * @param {MouseEvent} event 
+     */
+    handleAttributeAction(event) {
+        const button = event.currentTarget;
+        const eventName = button.dataset.eventName;
+        const eventUrl = button.dataset.eventUrl;
+        const payload = JSON.parse(button.dataset.eventPayload || '{}');
+
+        if (eventName && eventUrl) {
+            // On enrichit le payload avec l'URL que le cerveau devra appeler
+            payload.url = eventUrl;
+            this.notifyCerveau(eventName, payload);
+        }
+    }
     /**
      * Vérifie la visibilité de tous les champs et lignes dynamiques.
      */

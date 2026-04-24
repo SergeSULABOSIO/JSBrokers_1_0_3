@@ -332,6 +332,9 @@ export default class extends Controller {
             case 'ui:dialog.close-request':
                 this.broadcast('app:dialog.do-close', { dialogId: payload.dialogId });
                 break;
+            case 'ui:note.preview-request':
+                this.handleNotePreviewRequest(payload);
+                break;
             case 'ui:icon.request':
                 this.handleIconRequest(payload);
                 break;
@@ -937,6 +940,31 @@ export default class extends Controller {
                 html: `<!-- error loading icon ${iconName} -->`,
                 requesterId
             });
+        }
+    }
+
+    /**
+     * NOUVEAU : Gère la demande de prévisualisation d'une note.
+     * @param {object} payload 
+     * @param {string} payload.url - L'URL à appeler pour obtenir le lien de l'aperçu.
+     */
+    async handleNotePreviewRequest(payload) {
+        if (!payload.url) {
+            console.error("[Cerveau] Demande d'aperçu de note reçue sans URL.", payload);
+            this._showNotification("Impossible de générer l'aperçu : URL manquante.", "error");
+            return;
+        }
+
+        try {
+            const response = await fetch(payload.url);
+            const result = await response.json();
+            if (!response.ok) throw result;
+
+            // Ouvre le lien de l'aperçu dans un nouvel onglet.
+            window.open(result.previewUrl, '_blank');
+        } catch (error) {
+            console.error("[Cerveau] Erreur lors de la récupération de l'URL de l'aperçu :", error);
+            this._showNotification(error.message || "Erreur lors de la génération de l'aperçu.", "error");
         }
     }
 }
