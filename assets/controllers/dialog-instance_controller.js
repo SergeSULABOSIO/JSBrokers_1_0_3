@@ -287,10 +287,11 @@ export default class extends Controller {
         }
         // NOUVEAU : Gérer les icônes pour la barre d'outils des attributs
         else if (requesterId.startsWith(`${this.dialogId}-attr-action-`)) {
-            const iconAlias = requesterId.split('-').pop();
+            // CORRECTION : On extrait l'alias encodé en retirant le préfixe.
+            const encodedAlias = requesterId.substring((this.dialogId + '-attr-action-').length);
             // On cherche le conteneur d'icône correspondant dans la barre d'outils. On remplace '--' par ':' pour retrouver l'alias original.
-            const originalIconAlias = iconAlias.replace('--', ':');
-            targetElement = this.element.querySelector(`.attributes-toolbar .button-icon[data-icon-alias="${originalIconAlias}"]`);
+            const originalAlias = encodedAlias.replace('--', ':');
+            targetElement = this.element.querySelector(`.attributes-toolbar .button-icon[data-icon-alias="${originalAlias}"]`);
         }
     
         // Si une cible a été trouvée, on injecte l'icône de manière robuste.
