@@ -121,6 +121,15 @@ class Note implements OwnerAwareInterface
     #[Groups(['list:read'])]
     public ?string $statutPaiement = null;
 
+    #[Groups(['list:read'])]
+    public ?float $montantTaxe = null;
+
+    #[Groups(['list:read'])]
+    public ?string $nomTaxe = null;
+
+    #[Groups(['list:read'])]
+    public ?float $tauxTaxe = null;
+
     public function __construct()
     {
         $this->articles = new ArrayCollection();

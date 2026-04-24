@@ -24,14 +24,31 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
     public function calculate(object $entity): array
     {
         /** @var Note $entity */
+        $montantTotal = round($this->getNoteMontantPayable($entity), 2);
+        $montantTaxe = round($this->getNoteMontantTaxe($entity), 2);
+        $montantHT = $montantTotal - $montantTaxe;
+
         return [
             'typeString' => $this->getNoteTypeString($entity),
             'addressedToString' => $this->getNoteAddressedToString($entity),
-            'montantTotal' => round($this->getNoteMontantPayable($entity), 2),
+            'montantTotal' => $montantTotal,
             'montantPaye' => round($this->getNoteMontantPaye($entity), 2),
             'solde' => round($this->getNoteSolde($entity), 2),
             'statutPaiement' => $this->getNoteStatutPaiementString($entity),
+            'montantTaxe' => $montantTaxe,
+            'nomTaxe' => $this->getNoteNomTaxe($entity),
+            'tauxTaxe' => $this->getNoteTauxTaxe($entity, $montantHT),
         ];
+    }
+
+    private function getNoteMontantTaxe(Note $note): float
+    {
+        // Les notes de crédit (rétro-commission, paiement de taxe) sont considérées comme HT.
+        if ($note->getType() === Note::TYPE_NOTE_DE_CREDIT) {
+            return 0.0;
+        }
+        // Pour les notes de débit, la taxe est la différence entre le montant TTC et le montant HT.
+        return $this->calculationHelper->getNoteMontantPayable($note) - $this->calculationHelper->getNoteMontantHT($note);
     }
 
     // --- Méthodes privées déplacées depuis CalculationProvider ---
@@ -119,5 +136,32 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             return 'Partiel';
         }
         return 'Impayée';
+    }
+
+    private function getNoteNomTaxe(Note $note): ?string
+    {
+        // On prend le premier article pour déterminer le contexte de la taxe.
+        $firstArticle = $note->getArticles()->first();
+        if (!$firstArticle || !$firstArticle->getRevenuFacture()) {
+            return 'Taxe';
+        }
+
+        $revenu = $firstArticle->getRevenuFacture();
+        $isIARD = $this->calculationHelper->isIARD($revenu->getCotation());
+        
+        // On utilise le service de taxes pour trouver la taxe applicable.
+        // Pour une note de débit, la taxe est toujours celle de l'assureur.
+        $taxe = $this->calculationHelper->serviceTaxes->getTaxeApplicable($isIARD, true);
+
+        return $taxe?->getCode() ?? 'Taxe';
+    }
+
+    private function getNoteTauxTaxe(Note $note, float $montantHT): ?float
+    {
+        $montantTaxe = $this->getNoteMontantTaxe($note);
+        if ($montantHT > 0 && $montantTaxe > 0) {
+            return ($montantTaxe / $montantHT) * 100;
+        }
+        return 0.0;
     }
 }
