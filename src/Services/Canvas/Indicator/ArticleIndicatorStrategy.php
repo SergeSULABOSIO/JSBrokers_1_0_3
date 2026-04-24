@@ -27,14 +27,21 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
     public function calculate(object $entity): array
     {
         /** @var Article $entity */
+        $montantArticle = round($this->calculateMontantArticle($entity) ?? 0, 2);
+        $quantite = $entity->getQuantite() ?? 1.0;
+        // On s'assure de ne pas diviser par zéro.
+        $valeurUnitaire = ($quantite != 0) ? $montantArticle / $quantite : 0.0;
+
         return [
             'natureArticle' => $this->getNatureArticle($entity),
             'elementLie' => $this->getElementLie($entity),
-            'montantArticle' => round($this->calculateMontantArticle($entity) ?? 0, 2),
+            'montantArticle' => $montantArticle,
             'pourcentageNote' => round($this->calculatePourcentageNote($entity), 2),
             'statutNoteParent' => $this->getStatutNoteParent($entity),
             // NOUVEAU : Calcul de la description contextuelle
             'description' => $this->getDynamicDescription($entity),
+            // NOUVEAU : Calcul de la valeur unitaire
+            'valeurUnitaire' => $valeurUnitaire,
         ];
     }
 
