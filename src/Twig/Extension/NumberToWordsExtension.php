@@ -2,7 +2,7 @@
 
 namespace App\Twig\Extension;
 
-use Kwn\NumberToWords\NumberToWords;
+use NumberToWords\NumberToWords;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFilter;
 
