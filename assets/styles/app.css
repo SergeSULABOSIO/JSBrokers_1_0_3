@@ -936,6 +936,18 @@ textarea:hover,
     gap: 0.5rem;
     font-size: 0.85rem;
     padding: 0.3rem 0.8rem;
+    /* NOUVEAU : Styles pour le bouton sans bordure */
+    border: none;
+    color: #e9ecef; /* Couleur gris clair pour l'icône par défaut */
+}
+
+.attributes-toolbar-button:hover {
+    background-color: rgba(255, 255, 255, 0.1); /* Léger fond blanc transparent au survol */
+    color: #ffffff; /* Icône blanche au survol */
+}
+
+.attributes-toolbar-button:focus {
+    box-shadow: none; /* Supprime l'ombre au focus */
 }
 
 .attributes-toolbar-button .button-icon {

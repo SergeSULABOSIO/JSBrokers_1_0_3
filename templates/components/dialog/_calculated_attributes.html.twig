@@ -8,7 +8,8 @@
             {% for action in formCanvas.parametres.attribute_actions %}
                 <button 
                     type="button" 
-                    class="btn btn-sm btn-outline-light attributes-toolbar-button"
+                    {# CORRECTION : On retire 'btn-outline-light' pour supprimer la bordure #}
+                    class="btn btn-sm attributes-toolbar-button"
                     {# NOUVEAU : Ajout des actions pour le tooltip et le clic #}
                     data-action="mouseenter->tooltip#show mouseleave->tooltip#hide click->dialog-instance#handleAttributeAction"
                     data-tooltip-content="{{ action.label }}"
