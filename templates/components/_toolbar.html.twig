@@ -57,6 +57,13 @@
         title="Supprimer" style="display:none;">
         <twig:UX:Icon name="{{ resolve_icon_name('fluent:delete-20-filled') }}" class="toolbar-icon" />
     </button>
+
+    {# NOUVEAU : Séparateur et conteneur pour les actions spécifiques #}
+    <div class="toolbar-separator" data-toolbar-target="specificActionsSeparator" style="display: none;"></div>
+    <div class="d-flex gap-1" data-toolbar-target="specificActionsContainer">
+        <!-- Les boutons spécifiques seront injectés ici par le contrôleur Stimulus -->
+    </div>
+
     <div class="toolbar-separator"></div>
     <button 
         data-action="click->toolbar#notify" 
