@@ -61,6 +61,10 @@ export default class extends Controller {
         // Le canvas de formulaire est initialisé avec celui de la rubrique principale, puis mis à jour au changement d'onglet.
         this.activeFormCanvas = this.entityFormCanvasValue; // Initialisation avec la valeur du contexte principal.
         this.boundHandleContextUpdate = this.handleContextUpdate.bind(this);
+        
+        // NOUVEAU : Lier la méthode pour gérer la réception des icônes.
+        this.boundHandleIconLoaded = this.handleIconLoaded.bind(this);
+
 
         this.initializeToolbarState();
         this.setupEventListeners();
@@ -73,6 +77,9 @@ export default class extends Controller {
      */
     setupEventListeners() {
         document.addEventListener('app:context.changed', this.boundHandleContextUpdate); // NOUVEAU : Écoute le changement de contexte global
+
+        // NOUVEAU : Écouter la réponse du cerveau lorsque l'icône est prête.
+        document.addEventListener('app:icon.loaded', this.boundHandleIconLoaded);
     }
 
     /**
@@ -96,6 +103,9 @@ export default class extends Controller {
      */
     disconnect() {
         document.removeEventListener('app:context.changed', this.boundHandleContextUpdate);
+
+        // NOUVEAU : Nettoyer l'écouteur d'icône.
+        document.removeEventListener('app:icon.loaded', this.boundHandleIconLoaded);
     }
 
     /**
@@ -241,6 +251,10 @@ export default class extends Controller {
             // On crée le conteneur pour l'icône
             const iconContainer = document.createElement('div');
             iconContainer.className = 'toolbar-icon';
+            // NOUVEAU : On donne un ID unique au conteneur pour pouvoir le cibler
+            // lorsque le cerveau renverra le SVG de l'icône.
+            iconContainer.id = `toolbar-specific-action-${action.icon.replace(/:/g, '--')}-${selectedId}`;
+
             button.appendChild(iconContainer);
 
             // On demande au cerveau de charger l'icône
@@ -248,8 +262,8 @@ export default class extends Controller {
                 iconName: action.icon,
                 iconSize: 24,
                 // ID unique pour que la réponse du cerveau cible le bon conteneur d'icône
-                // On remplace les caractères non valides pour un sélecteur CSS.
-                requesterId: `toolbar-specific-action-${action.icon.replace(/:/g, '--')}-${selectedId}`
+                // On passe l'ID du conteneur que nous venons de créer.
+                requesterId: iconContainer.id
             });
 
             // On attache l'événement de clic
