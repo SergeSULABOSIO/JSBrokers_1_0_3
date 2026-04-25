@@ -2,6 +2,8 @@
 
 namespace App\Controller\Admin;
 
+use Dompdf\Dompdf;
+use Dompdf\Options;
 use App\Entity\Note;
 use App\Entity\Invite;
 use App\Constantes\Constante;
@@ -124,6 +126,62 @@ class NoteController extends AbstractController
             'entityCanvas' => $entityCanvas,
             // On passe la monnaie d'affichage pour l'utiliser dans le template
             'monnaie' => $this->serviceMonnaies->getCodeMonnaieAffichage()
+        ]);
+    }
+
+    #[Route('/download-pdf/{id}', name: 'download_pdf', methods: ['GET'])]
+    public function downloadPdf(Note $note): Response
+    {
+        // 1. On configure DomPDF pour qu'il respecte les styles d'impression (@media print)
+        $pdfOptions = new Options();
+        $pdfOptions->set('defaultFont', 'Arial');
+        $pdfOptions->set('isHtml5ParserEnabled', true);
+        // NOUVEAU : Autorise DomPDF à télécharger des contenus externes (CSS, images).
+        // C'est la clé pour que le style Bootstrap soit appliqué.
+        $pdfOptions->set('isRemoteEnabled', true);
+        // La ligne la plus importante : elle demande à DomPDF de simuler le rendu d'impression
+        // NOUVEAU : Améliore la compatibilité avec les CSS modernes (Flexbox, etc.)
+        $pdfOptions->set('chroot', $this->getParameter('kernel.project_dir') . '/public');
+
+
+        $pdfOptions->setDefaultMediaType('print');
+
+        $dompdf = new Dompdf($pdfOptions);
+
+        // 2. On récupère le contexte nécessaire pour le template, comme dans showPreview
+        $this->canvasBuilder->loadAllCalculatedValues($note);
+        foreach ($note->getArticles() as $article) {
+            $this->canvasBuilder->loadAllCalculatedValues($article);
+        }
+        $entreprise = $this->getEntreprise();
+        $entityCanvas = $this->canvasBuilder->getEntityCanvas(Note::class);
+        $monnaie = $this->serviceMonnaies->getCodeMonnaieAffichage();
+
+        // NOUVEAU : On prépare les chemins absolus pour les images
+        $logoPath = null;
+        if ($entreprise && $entreprise->getThumbnail()) {
+            $logoPath = $this->getParameter('kernel.project_dir') . '/public/images/entreprises/' . $entreprise->getThumbnail();
+        } else {
+            $logoPath = $this->getParameter('kernel.project_dir') . '/public/images/entreprises/logofav.png';
+        }
+
+        // 3. On génère le HTML en utilisant la méthode renderView
+        $html = $this->renderView('admin/note/note_preview.html.twig', [
+            'note' => $note,
+            'entreprise' => $entreprise,
+            'entityCanvas' => $entityCanvas,
+            'monnaie' => $monnaie,
+            // On passe le chemin absolu du logo au template
+            'logo_path_for_pdf' => $logoPath,
+        ]);
+
+        // 4. On charge le HTML dans DomPDF, on génère le PDF et on le propose au téléchargement
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+        return new Response($dompdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="note-' . $note->getReference() . '.pdf"',
         ]);
     }
 

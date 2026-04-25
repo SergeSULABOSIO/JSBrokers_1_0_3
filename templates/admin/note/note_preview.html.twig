@@ -80,13 +80,22 @@
             <twig:UX:Icon name="{{ resolve_icon_name('action:print') }}" width="18px" height="18px" />
             <span>Imprimer</span>
         </button>
+
+        {# NOUVEAU : Bouton pour télécharger en PDF #}
+        <a href="{{ path('admin.note.download_pdf', {id: note.id}) }}" class="btn btn-danger d-inline-flex align-items-center gap-2" target="_blank">
+            <twig:UX:Icon name="{{ resolve_icon_name('action:download') }}" width="18px" height="18px" />
+            <span>Télécharger en PDF</span>
+        </a>
     </div>
 
     <div class="invoice-container">
         <div class="invoice-header">
             {# NOUVEAU : Logo de l'entreprise centré en haut #}
             <div class="text-center mb-4">
-                {% if entreprise and entreprise.thumbnail %}
+                {# CORRECTION : On utilise le chemin absolu pour le PDF s'il est fourni, sinon on utilise asset() pour le web #}
+                {% if logo_path_for_pdf is defined and logo_path_for_pdf %}
+                    <img src="{{ logo_path_for_pdf }}" alt="Logo" style="max-height: 80px;">
+                {% elseif entreprise and entreprise.thumbnail %}
                     <img src="{{ asset('images/entreprises/' ~ entreprise.thumbnail) }}" alt="Logo" style="max-height: 80px;">
                 {% else %}
                     <img src="{{ asset('images/entreprises/logofav.png') }}" alt="Logo JS Brokers" style="max-height: 80px;">
