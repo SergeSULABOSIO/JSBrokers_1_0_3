@@ -87,12 +87,12 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
     handleContextUpdate(event) {
-        // NOUVEAU : Le payload de 'app:context.changed' contient la sélection et le formCanvas initial.
-        const { selection, formCanvas } = event.detail;
+        // CORRECTION : On récupère la sélection et le formCanvas depuis le payload de l'événement.
+        // C'est cette logique qui avait été incorrectement modifiée et qui est maintenant restaurée.
+        const { selection, formCanvas, isTabSwitch } = event.detail;
         this.selectos = selection || [];
-        if (formCanvas) { // Le formCanvas peut être null initialement pour les collections
+        if (formCanvas || isTabSwitch) { // On met à jour le canvas s'il est fourni ou si on change d'onglet.
             this.activeFormCanvas = formCanvas;
-            this.entityFormCanvasValue = formCanvas;
         }
         this.organizeButtons();
     }
