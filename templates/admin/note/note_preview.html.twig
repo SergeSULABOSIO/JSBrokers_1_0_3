@@ -49,6 +49,22 @@
         .total-section td {
             font-weight: bold;
         }
+
+        /* NOUVEAU : Styles spécifiques pour l'impression */
+        @media print {
+            body {
+                background-color: #fff; /* Fond blanc pour l'impression */
+            }
+            .actions-bar {
+                display: none !important; /* Masque la barre d'actions lors de l'impression */
+            }
+            .invoice-container {
+                margin: 0;
+                border: none;
+                box-shadow: none;
+                max-width: 100%; /* La facture prend toute la largeur de la page */
+            }
+        }
     </style>
 </head>
 <body>
@@ -56,12 +72,12 @@
     <div class="actions-bar sticky-top">
         {# CORRECTION : Utilisation de Twig UX Icons, comme dans la barre d'outils principale. #}
         <button class="btn btn-light d-inline-flex align-items-center gap-2" onclick="window.close()">
-            <twig:UX:Icon name="{{ resolve_icon_name('action:close') }}" class="button-icon" />
+            <twig:UX:Icon name="{{ resolve_icon_name('action:close') }}" width="18px" height="18px" />
             <span>Retourner à l'édition</span>
         </button>
 
         <button class="btn btn-primary d-inline-flex align-items-center gap-2" onclick="window.print()">
-            <twig:UX:Icon name="{{ resolve_icon_name('action:print') }}" class="button-icon" />
+            <twig:UX:Icon name="{{ resolve_icon_name('action:print') }}" width="18px" height="18px" />
             <span>Imprimer</span>
         </button>
     </div>
@@ -69,11 +85,13 @@
     <div class="invoice-container">
         <div class="invoice-header">
             {# NOUVEAU : Logo de l'entreprise centré en haut #}
-            {% if entreprise and entreprise.thumbnail %}
-                <div class="text-center mb-4">
+            <div class="text-center mb-4">
+                {% if entreprise and entreprise.thumbnail %}
                     <img src="{{ asset('images/entreprises/' ~ entreprise.thumbnail) }}" alt="Logo" style="max-height: 80px;">
-                </div>
-            {% endif %}
+                {% else %}
+                    <img src="{{ asset('images/entreprises/logofav.png') }}" alt="Logo JS Brokers" style="max-height: 80px;">
+                {% endif %}
+            </div>
             <div class="row align-items-center">
                 <div class="col">
                     <h4 class="mt-2 mb-0">{{ entreprise.nom|default('Votre Entreprise') }}</h4>

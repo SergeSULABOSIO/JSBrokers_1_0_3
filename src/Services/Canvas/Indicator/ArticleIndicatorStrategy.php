@@ -67,17 +67,16 @@ class ArticleIndicatorStrategy implements IndicatorCalculationStrategyInterface
             return 'Revenu non défini.';
         }
 
-        switch ($note->getAddressedTo()) {
-            case Note::TO_CLIENT:
-            case Note::TO_ASSUREUR:
-                return "Commission de courtage sur " . ($revenu->getNom() ?? 'revenu');
-            case Note::TO_PARTENAIRE:
-                return "Rétro-commission à " . ($note->getPartenaire()?->getNom() ?? 'partenaire');
-            case Note::TO_AUTORITE_FISCALE:
-                return "Taxe due à " . ($note->getAutoritefiscale()?->getNom() ?? 'autorité fiscale');
-            default:
-                return $revenu->getNom() ?? 'Détail de l\'article';
+        $tranche = $article->getTranche();
+        $cotation = $revenu->getCotation();
+        $policeRef = 'Police N/A';
+
+        if ($cotation && !$cotation->getAvenants()->isEmpty()) {
+            $policeRef = $cotation->getAvenants()->first()->getReferencePolice() ?? 'Police N/A';
         }
+
+        // Format : "référence-de-la-police" x "nom-de-la-tranche"
+        return sprintf('%s x %s', $policeRef, $tranche?->getNom() ?? 'Tranche non définie');
     }
 
     private function getNatureArticle(Article $article): string
