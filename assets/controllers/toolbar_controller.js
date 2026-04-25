@@ -29,6 +29,8 @@ export default class extends Controller {
         'btsupprimer',
         'bttoutcocher',
         'btouvrir',
+        'specificActionsSeparator', // NOUVEAU : Séparateur
+        'specificActionsContainer'  // NOUVEAU : Conteneur pour les boutons
     ];
 
     /**
@@ -122,6 +124,12 @@ export default class extends Controller {
 
         // Règle : "Supprimer" est visible dès qu'il y a au moins une sélection (unique ou multiple).
         this.toggleButton(this.btsupprimerTarget, canDelete);
+
+        // NOUVEAU : Gérer les actions spécifiques à l'entité
+        const specificActions = canvasParams.attribute_actions || [];
+        // Les actions spécifiques ne sont visibles que pour une sélection unique.
+        const canShowSpecificActions = selectionCount === 1 && specificActions.length > 0;
+        this.updateSpecificActionButtons(canShowSpecificActions ? specificActions : []);
     }
 
     /**
@@ -152,6 +160,10 @@ export default class extends Controller {
         this.toggleButton(this.btmodifierTarget, false);
         this.toggleButton(this.btouvrirTarget, false);
         this.toggleButton(this.btsupprimerTarget, false);
+
+        // Les actions spécifiques sont aussi cachées par défaut.
+        this.toggleButton(this.specificActionsSeparatorTarget, false);
+        this.specificActionsContainerTarget.innerHTML = '';
     }
 
     /**
@@ -192,5 +204,62 @@ export default class extends Controller {
             detail: { type, source: this.nomControleur, payload, timestamp: Date.now() }
         });
         this.element.dispatchEvent(event);
+    }
+
+    /**
+     * NOUVEAU : Crée et affiche les boutons pour les actions spécifiques.
+     * @param {Array} actions - Le tableau de configuration des actions venant du FormCanvas.
+     * @private
+     */
+    updateSpecificActionButtons(actions) {
+        // On vide le conteneur
+        this.specificActionsContainerTarget.innerHTML = '';
+
+        // On affiche ou masque le séparateur en fonction de la présence d'actions
+        this.toggleButton(this.specificActionsSeparatorTarget, actions.length > 0);
+
+        if (actions.length === 0) {
+            return;
+        }
+
+        // On récupère l'ID de l'unique élément sélectionné
+        const selectedId = this.selectos[0].id;
+
+        actions.forEach(action => {
+            // NOUVELLE LOGIQUE D'URL :
+            // Si l'URL contient le placeholder %id%, on le remplace.
+            // Sinon, on suppose que l'URL est déjà complète (cas où le PHP a déjà injecté l'ID).
+            const finalUrl = action.url.includes('%id%')
+                ? action.url.replace('%id%', selectedId)
+                : action.url;
+
+            const button = document.createElement('button');
+            button.className = 'btn btn-default'; // Utilisation de la classe par défaut pour la cohérence
+            button.setAttribute('type', 'button');
+            button.setAttribute('title', action.label); // Pour l'infobulle
+
+            // On crée le conteneur pour l'icône
+            const iconContainer = document.createElement('div');
+            iconContainer.className = 'toolbar-icon';
+            button.appendChild(iconContainer);
+
+            // On demande au cerveau de charger l'icône
+            this.notifyCerveau('ui:icon.request', {
+                iconName: action.icon,
+                iconSize: 24,
+                // ID unique pour que la réponse du cerveau cible le bon conteneur d'icône
+                // On remplace les caractères non valides pour un sélecteur CSS.
+                requesterId: `toolbar-specific-action-${action.icon.replace(/:/g, '--')}-${selectedId}`
+            });
+
+            // On attache l'événement de clic
+            button.addEventListener('click', () => {
+                this.notifyCerveau(action.event, {
+                    url: finalUrl, // Le cerveau reçoit l'URL finale à appeler
+                    selection: this.selectos // On passe la sélection complète
+                });
+            });
+            this.specificActionsContainerTarget.appendChild(button);
+        });
     }
 }

@@ -340,6 +340,10 @@ export default class extends Controller {
                 break;
             case 'ui:dialog.closed':
                 break;
+            // NOUVEAU : Gère la demande de prévisualisation d'une note.
+            case 'ui:note.preview-request':
+                this.handleNotePreviewRequest(payload);
+                break;
             default:
                 console.warn(`-> ATTENTION: Aucun gestionnaire défini pour l'événement "${type}".`);
         }
@@ -944,27 +948,32 @@ export default class extends Controller {
     }
 
     /**
-     * NOUVEAU : Gère la demande de prévisualisation d'une note.
+     * Gère la demande de prévisualisation d'une note ou le téléchargement d'un PDF.
      * @param {object} payload 
      * @param {string} payload.url - L'URL à appeler pour obtenir le lien de l'aperçu.
      */
     async handleNotePreviewRequest(payload) {
         if (!payload.url) {
-            console.error("[Cerveau] Demande d'aperçu de note reçue sans URL.", payload);
-            this._showNotification("Impossible de générer l'aperçu : URL manquante.", "error");
+            console.error("[Cerveau] Demande d'action sur la note reçue sans URL.", payload);
+            this._showNotification("Impossible de réaliser l'action : URL manquante.", "error");
             return;
         }
 
         try {
+            this._publishSelectionStatus('Génération du document...');
+            this.broadcast('app:loading.start');
             const response = await fetch(payload.url);
             const result = await response.json();
             if (!response.ok) throw result;
 
             // Ouvre le lien de l'aperçu dans un nouvel onglet.
             window.open(result.previewUrl, '_blank');
+            this._publishSelectionStatus('Document prêt.');
         } catch (error) {
-            console.error("[Cerveau] Erreur lors de la récupération de l'URL de l'aperçu :", error);
-            this._showNotification(error.message || "Erreur lors de la génération de l'aperçu.", "error");
+            console.error("[Cerveau] Erreur lors de la récupération de l'URL pour l'action sur la note :", error);
+            this._showNotification(error.message || "Erreur lors de la génération du document.", "error");
+        } finally {
+            this.broadcast('app:loading.stop');
         }
     }
 }
