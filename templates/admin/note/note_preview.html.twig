@@ -65,6 +65,21 @@
                 max-width: 100%; /* La facture prend toute la largeur de la page */
             }
         }
+
+        {# NOUVEAU : Styles spécifiques pour forcer le rendu visuel dans DomPDF #}
+        {# Ces styles ne s'appliquent que lors de la génération du PDF grâce à la condition #}
+        {% if logo_path_for_pdf is defined and logo_path_for_pdf %}
+            @media print {
+                .table-light {
+                    background-color: #f8f9fa !important; /* Force le fond gris clair de l'en-tête */
+                }
+                .table tbody tr {
+                    border-top-width: 1px !important; /* Force l'affichage de la ligne de séparation */
+                    border-top-style: solid !important;
+                    border-top-color: #dee2e6 !important;
+                }
+            }
+        {% endif %}
     </style>
 </head>
 <body>
