@@ -1196,4 +1196,62 @@ class IndicatorCalculationHelper
         $taxe = $this->serviceTaxes->getMontantTaxe($ht, $isIARD, true); // Taxe Assureur sur TTC
         return $ht + $taxe;
     }
+
+    // --- NOUVELLES MÉTHODES POUR PAIEMENT ---
+
+    public function getPaiementTypePaiement(Paiement $paiement): string
+    {
+        if ($paiement->getNote() !== null) {
+            return 'Prime';
+        }
+        if ($paiement->getOffreIndemnisationSinistre() !== null) {
+            return 'Sinistre';
+        }
+        return 'N/A';
+    }
+
+    public function getPaiementContexte(Paiement $paiement): string
+    {
+        if ($note = $paiement->getNote()) {
+            return $note->getReference() ?? 'N/A';
+        }
+        if ($offre = $paiement->getOffreIndemnisationSinistre()) {
+            return $offre->getNotificationSinistre()?->getReferenceSinistre() ?? 'N/A';
+        }
+        return 'N/A';
+    }
+
+    public function getPaiementMontantPaiement(Paiement $paiement): ?float
+    {
+        return $paiement->getMontant();
+    }
+
+    private function getPaiementCotation(Paiement $paiement): ?Cotation
+    {
+        if ($note = $paiement->getNote()) {
+            // Un paiement sur une note est lié à un article, qui est lié à une tranche, qui est liée à une cotation.
+            // On suppose ici qu'une note a au moins un article.
+            return $note->getArticles()->first()?->getTranche()?->getCotation();
+        }
+        if ($offre = $paiement->getOffreIndemnisationSinistre()) {
+            $sinistre = $offre->getNotificationSinistre();
+            if ($sinistre && $sinistre->getReferencePolice()) {
+                // On utilise la méthode existante pour trouver la cotation via la référence de police.
+                return $this->cotationRepository->findOneByAvenantReference($sinistre->getReferencePolice());
+            }
+        }
+        return null;
+    }
+
+    public function getPaiementReferencePolice(Paiement $paiement): string
+    {
+        $cotation = $this->getPaiementCotation($paiement);
+        return $cotation ? $this->getCotationReferencePolice($cotation) : 'N/A';
+    }
+
+    public function getPaiementClientNom(Paiement $paiement): string
+    {
+        $cotation = $this->getPaiementCotation($paiement);
+        return $cotation ? $this->getClientDescriptionFromCotation($cotation) : 'N/A';
+    }
 }
