@@ -1254,4 +1254,38 @@ class IndicatorCalculationHelper
         $cotation = $this->getPaiementCotation($paiement);
         return $cotation ? $this->getClientDescriptionFromCotation($cotation) : 'N/A';
     }
+
+    /**
+     * NOUVEAU : Méthode déplacée depuis NoteIndicatorStrategy pour être réutilisable.
+     * Retourne le nom du destinataire d'une note sous forme de chaîne.
+     */
+    public function getNoteAddressedToString(?Note $note): ?string
+    {
+        if ($note === null) return null;
+
+        switch ($note->getAddressedTo()) {
+            case Note::TO_CLIENT:
+                return $note->getClient()?->getNom() ?? 'Client';
+
+            case Note::TO_ASSUREUR:
+                return $note->getAssureur()?->getNom() ?? 'Assureur';
+
+            case Note::TO_PARTENAIRE:
+                return $note->getPartenaire()?->getNom() ?? 'Intermédiaire';
+
+            case Note::TO_AUTORITE_FISCALE:
+                if ($autorite = $note->getAutoritefiscale()) {
+                    $nom = $autorite->getNom();
+                    $abbreviation = $autorite->getAbreviation();
+                    if ($abbreviation && trim($abbreviation) !== '') {
+                        return trim($abbreviation) . ' - ' . $nom;
+                    }
+                    return $nom;
+                }
+                return 'Autorité Fiscale';
+
+            default:
+                return 'Inconnu';
+        }
+    }
 }
