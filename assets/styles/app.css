@@ -317,7 +317,7 @@ textarea:hover,
     /* On supprime les dimensions fixes pour laisser Bootstrap gérer la taille */
     border-radius: 8px; /* Coins légèrement arrondis pour un look moderne */
     border: none;
-    padding: 0.5rem; /* Padding uniforme */
+    padding: 0.65rem; /* Padding uniforme augmenté de 30% (0.5 * 1.3) */
     line-height: 1; /* Assure un bon alignement vertical de l'icône */
     transition: all 0.2s ease-in-out; /* Animation douce pour toutes les propriétés */
 }
@@ -337,8 +337,8 @@ textarea:hover,
 }
 
 .toolbar-icon {
-    width: 24px;
-    height: 24px;
+    width: 31px; /* Taille augmentée de 30% (24 * 1.3) */
+    height: 31px; /* Taille augmentée de 30% (24 * 1.3) */
     color: #6c757d; /* Gris par défaut pour les icônes */
     transition: color 0.2s ease-in-out; /* Animation douce pour la couleur */
 }

@@ -56,10 +56,12 @@ export default class extends Controller {
      * @private
      */
     initialize() {
-        // L'état du contrôleur est simple : il ne stocke que le tableau des "selectos" reçu du Cerveau.
         this.selectos = [];
-        // Le canvas de formulaire est initialisé avec celui de la rubrique principale, puis mis à jour au changement d'onglet.
-        this.activeFormCanvas = this.entityFormCanvasValue; // Initialisation avec la valeur du contexte principal.
+        this.activeFormCanvas = this.entityFormCanvasValue;
+        
+        // NOUVEAU : Initialisation du cache pour les icônes.
+        this.iconCache = new Map();
+
         this.boundHandleContextUpdate = this.handleContextUpdate.bind(this);
         
         // NOUVEAU : Lier la méthode pour gérer la réception des icônes.
@@ -68,6 +70,9 @@ export default class extends Controller {
 
         this.initializeToolbarState();
         this.setupEventListeners();
+
+        // NOUVEAU : Pré-charger les icônes spécifiques dès le début.
+        this._preloadSpecificActionIcons();
     }
 
     /**
@@ -175,6 +180,44 @@ export default class extends Controller {
     }
 
     /**
+     * NOUVEAU : Parcourt les actions spécifiques définies dans le canvas
+     * et demande au cerveau de pré-charger les icônes manquantes.
+     * @private
+     */
+    _preloadSpecificActionIcons() {
+        const specificActions = this.activeFormCanvas?.parametres?.attribute_actions || [];
+        if (specificActions.length === 0) return;
+
+        specificActions.forEach(action => {
+            if (action.icon && !this.iconCache.has(action.icon)) {
+                this.notifyCerveau('ui:icon.request', {
+                    iconName: action.icon,
+                    requesterId: `toolbar-preload-${action.icon}` // ID pour le suivi, ne correspond à aucun élément
+                });
+            }
+        });
+    }
+
+    /**
+     * NOUVEAU : Parcourt les actions spécifiques définies dans le canvas
+     * et demande au cerveau de pré-charger les icônes manquantes.
+     * @private
+     */
+    _preloadSpecificActionIcons() {
+        const specificActions = this.activeFormCanvas?.parametres?.attribute_actions || [];
+        if (specificActions.length === 0) return;
+
+        specificActions.forEach(action => {
+            if (action.icon && !this.iconCache.has(action.icon)) {
+                this.notifyCerveau('ui:icon.request', {
+                    iconName: action.icon,
+                    requesterId: `toolbar-preload-${action.icon}` // ID pour le suivi, ne correspond à aucun élément
+                });
+            }
+        });
+    }
+
+    /**
      * Méthode générique pour notifier le Cerveau d'une action de la barre d'outils.
      * L'événement à envoyer est défini dans l'attribut `data-toolbar-event-name-param` du bouton.
      * @param {MouseEvent} event - L'événement de clic.
@@ -249,20 +292,22 @@ export default class extends Controller {
             // On crée le conteneur pour l'icône
             const iconContainer = document.createElement('div');
             iconContainer.className = 'toolbar-icon';
-            // NOUVEAU : On donne un ID unique au conteneur pour pouvoir le cibler
-            // lorsque le cerveau renverra le SVG de l'icône.
-            iconContainer.id = `toolbar-specific-action-${action.icon.replace(/:/g, '--')}-${selectedId}`;
 
             button.appendChild(iconContainer);
 
-            // On demande au cerveau de charger l'icône
-            this.notifyCerveau('ui:icon.request', {
-                iconName: action.icon,
-                iconSize: 24,
-                // ID unique pour que la réponse du cerveau cible le bon conteneur d'icône
-                // On passe l'ID du conteneur que nous venons de créer.
-                requesterId: iconContainer.id
-            });
+            // NOUVELLE LOGIQUE : On utilise le cache.
+            if (this.iconCache.has(action.icon)) {
+                // Si l'icône est en cache, on l'injecte directement.
+                iconContainer.innerHTML = this.iconCache.get(action.icon);
+            } else {
+                // Sinon (cas de fallback), on la demande au serveur.
+                iconContainer.id = `toolbar-specific-action-${action.icon.replace(/:/g, '--')}-${selectedId}`;
+                this.notifyCerveau('ui:icon.request', {
+                    iconName: action.icon,
+                    iconSize: 24,
+                    requesterId: iconContainer.id
+                });
+            }
 
             // On attache l'événement de clic
             button.addEventListener('click', () => {
@@ -273,5 +318,27 @@ export default class extends Controller {
             });
             this.specificActionsContainerTarget.appendChild(button);
         });
+    }
+
+    /**
+     * NOUVEAU : Gère la réception du HTML de l'icône et l'injecte dans le bon conteneur.
+     * @param {CustomEvent} event
+     */
+    handleIconLoaded(event) {
+        const { html, requesterId, iconName } = event.detail;
+    
+        // Étape 1 : Mettre en cache l'icône dans tous les cas.
+        if (iconName && html) {
+            this.iconCache.set(iconName, html);
+        }
+    
+        // On s'assure que l'événement nous est destiné (l'ID du demandeur commence par 'toolbar-specific-action-')
+        // et que le conteneur d'icône correspondant existe dans le DOM.
+        if (requesterId && requesterId.startsWith('toolbar-specific-action-')) {
+            const iconContainer = this.element.querySelector(`#${requesterId}`);
+            if (iconContainer) {
+                iconContainer.innerHTML = html;
+            }
+        }
     }
 }
