@@ -541,12 +541,18 @@ export default class extends Controller {
     handleAttributeAction(event) {
         const button = event.currentTarget;
         const eventName = button.dataset.eventName;
-        const eventUrl = button.dataset.eventUrl;
+        const urlTemplate = button.dataset.eventUrl; // C'est maintenant un template d'URL
         const payload = JSON.parse(button.dataset.eventPayload || '{}');
 
-        if (eventName && eventUrl) {
+        if (eventName && urlTemplate) {
+            // CORRECTION : On remplace le placeholder %id% par l'ID de l'entité en cours d'édition.
+            // this.entity.id est toujours disponible dans ce contexte.
+            const finalUrl = urlTemplate.includes('%id%')
+                ? urlTemplate.replace('%id%', this.entity.id)
+                : urlTemplate;
+
             // On enrichit le payload avec l'URL que le cerveau devra appeler
-            payload.url = eventUrl;
+            payload.url = finalUrl;
             this.notifyCerveau(eventName, payload);
         }
     }
