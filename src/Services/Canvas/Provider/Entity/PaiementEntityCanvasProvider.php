@@ -57,6 +57,8 @@ class PaiementEntityCanvasProvider implements EntityCanvasProviderInterface
             ["group" => "Détails Police", "code" => "referencePolice", "intitule" => "Réf. Police", "type" => "Calcul", "format" => "Texte", "description" => "Police d'assurance concernée."],
             ["group" => "Détails Police", "code" => "clientNom", "intitule" => "Client / Assuré", "type" => "Calcul", "format" => "Texte", "description" => "Nom du client ou de l'assuré concerné."],
             ["group" => "Finances", "code" => "montantPaiement", "intitule" => "Montant du Paiement", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Le montant payé."],
+            ["group" => "Affichage", "code" => "ligne_principale", "intitule" => "Ligne Principale (Liste)", "type" => "Calcul", "format" => "Texte", "description" => "Texte principal affiché dans les listes."],
+            ["group" => "Affichage", "code" => "ligne_secondaire", "intitule" => "Ligne Secondaire (Liste)", "type" => "Calcul", "format" => "Texte", "description" => "Texte secondaire affiché dans les listes."],
         ];
     }
 }

@@ -30,7 +30,7 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
         return [
             'typeString' => $this->getNoteTypeString($entity),
-            'addressedToString' => $this->getNoteAddressedToString($entity),
+            'addressedToString' => $this->calculationHelper->getNoteAddressedToString($entity),
             'montantTotal' => $montantTotal,
             'montantPaye' => round($this->getNoteMontantPaye($entity), 2),
             'solde' => round($this->getNoteSolde($entity), 2),
@@ -62,37 +62,6 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             Note::TYPE_NOTE_DE_CREDIT => 'Note de crédit',
             default => 'Inconnu',
         };
-    }
-
-    private function getNoteAddressedToString(?Note $note): ?string
-    {
-        if ($note === null) return null;
-
-        switch ($note->getAddressedTo()) {
-            case Note::TO_CLIENT:
-                return $note->getClient()?->getNom() ?? 'Client';
-
-            case Note::TO_ASSUREUR:
-                return $note->getAssureur()?->getNom() ?? 'Assureur';
-
-            case Note::TO_PARTENAIRE:
-                return $note->getPartenaire()?->getNom() ?? 'Intermédiaire';
-
-            case Note::TO_AUTORITE_FISCALE:
-                if ($autorite = $note->getAutoritefiscale()) {
-                    $nom = $autorite->getNom();
-                    $abbreviation = $autorite->getAbreviation();
-                    // Si une abréviation existe et n'est pas vide, on la préfixe au nom complet.
-                    if ($abbreviation && trim($abbreviation) !== '') {
-                        return trim($abbreviation) . ' - ' . $nom;
-                    }
-                    return $nom;
-                }
-                return 'Autorité Fiscale';
-
-            default:
-                return 'Inconnu';
-        }
     }
 
     private function getNoteMontantPayable(?Note $note): float
