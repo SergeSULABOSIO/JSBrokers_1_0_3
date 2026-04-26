@@ -56,6 +56,9 @@ export default class extends Controller {
      * @private
      */
     initialize() {
+        // CORRECTION : Définir le nom du contrôleur en premier pour que les événements envoyés depuis initialize() soient valides.
+        this.nomControleur = "Toolbar";
+
         this.selectos = [];
         this.activeFormCanvas = this.entityFormCanvasValue;
         
@@ -192,26 +195,8 @@ export default class extends Controller {
             if (action.icon && !this.iconCache.has(action.icon)) {
                 this.notifyCerveau('ui:icon.request', {
                     iconName: action.icon,
-                    requesterId: `toolbar-preload-${action.icon}` // ID pour le suivi, ne correspond à aucun élément
-                });
-            }
-        });
-    }
-
-    /**
-     * NOUVEAU : Parcourt les actions spécifiques définies dans le canvas
-     * et demande au cerveau de pré-charger les icônes manquantes.
-     * @private
-     */
-    _preloadSpecificActionIcons() {
-        const specificActions = this.activeFormCanvas?.parametres?.attribute_actions || [];
-        if (specificActions.length === 0) return;
-
-        specificActions.forEach(action => {
-            if (action.icon && !this.iconCache.has(action.icon)) {
-                this.notifyCerveau('ui:icon.request', {
-                    iconName: action.icon,
-                    requesterId: `toolbar-preload-${action.icon}` // ID pour le suivi, ne correspond à aucun élément
+                    // CORRECTION : Remplacer ':' par '--' pour créer un ID de requête valide comme sélecteur CSS, et supprimer la méthode dupliquée.
+                    requesterId: `toolbar-preload-${action.icon.replace(/:/g, '--')}` 
                 });
             }
         });
