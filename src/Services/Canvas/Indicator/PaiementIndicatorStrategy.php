@@ -42,13 +42,12 @@ class PaiementIndicatorStrategy implements IndicatorCalculationStrategyInterface
         if ($note = $paiement->getNote()) {
             // On récupère le nom court du destinataire (ex: 'ARCA' pour l'autorité fiscale).
             $destinataire = $this->calculationHelper->getNoteAddressedToString($note);
-            $nomNote = $note->getNom();
 
             // On adapte le préfixe en fonction du type de note.
             if ($note->getType() === \App\Entity\Note::TYPE_NOTE_DE_DEBIT) {
-                return sprintf("Paiement de %s - %s", $destinataire ?? 'N/A', $nomNote ?? 'N/A');
+                return sprintf("Paiement de %s", $destinataire ?? 'N/A');
             } elseif ($note->getType() === \App\Entity\Note::TYPE_NOTE_DE_CREDIT) {
-                return sprintf("Paiement vers %s - %s", $destinataire ?? 'N/A', $nomNote ?? 'N/A');
+                return sprintf("Paiement vers %s", $destinataire ?? 'N/A');
             }
         }
 
@@ -61,6 +60,14 @@ class PaiementIndicatorStrategy implements IndicatorCalculationStrategyInterface
     // NOUVEAU : Méthode pour générer la ligne secondaire
     private function getLigneSecondaire(Paiement $paiement): string
     {
-        return sprintf("Réf. %s", $paiement->getReference() ?? 'N/A');
+        $reference = $paiement->getReference() ?? 'N/A';
+        $secondaryText = sprintf("Réf. %s", $reference);
+
+        if ($note = $paiement->getNote()) {
+            $nomNote = $note->getNom() ?? 'Note sans nom';
+            $secondaryText .= sprintf(" * %s", $nomNote);
+        }
+
+        return $secondaryText;
     }
 }
