@@ -43,7 +43,8 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
                     "label" => "Visualiser la note",
                     "icon" => "action:view", // Alias pour l'icône de visualisation
                     "event" => "ui:note.preview-request", // Événement à envoyer au cerveau
-                    "url" => "/admin/note/api/get-preview-url/" . ($object->getId() ?? '0') // URL que le cerveau appellera
+                    // CORRECTION : On utilise un placeholder %id% que le JavaScript remplacera par l'ID de l'élément sélectionné.
+                    "url" => "/admin/note/api/get-preview-url/%id%"
                 ]
             ]
         ];
