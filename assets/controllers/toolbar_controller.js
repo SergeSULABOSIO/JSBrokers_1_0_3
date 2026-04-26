@@ -87,13 +87,11 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
     handleContextUpdate(event) {
-        // CORRECTION : On récupère la sélection et le formCanvas depuis le payload de l'événement.
-        // C'est cette logique qui avait été incorrectement modifiée et qui est maintenant restaurée.
-        const { selection, formCanvas, isTabSwitch } = event.detail;
+        // CORRECTION FINALE : On se fie entièrement au contexte envoyé par le cerveau.
+        // Le cerveau garantit maintenant que formCanvas est toujours présent.
+        const { selection, formCanvas } = event.detail;
         this.selectos = selection || [];
-        if (formCanvas || isTabSwitch) { // On met à jour le canvas s'il est fourni ou si on change d'onglet.
-            this.activeFormCanvas = formCanvas;
-        }
+        this.activeFormCanvas = formCanvas || {}; // On se protège avec un objet vide si jamais il est null.
         this.organizeButtons();
     }
 
