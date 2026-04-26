@@ -289,7 +289,8 @@ export default class extends Controller {
                 iconContainer.id = `toolbar-specific-action-${action.icon.replace(/:/g, '--')}-${selectedId}`;
                 this.notifyCerveau('ui:icon.request', {
                     iconName: action.icon,
-                    iconSize: 24,
+                    // CORRECTION : On demande une icône de 31px pour correspondre à la taille définie dans app.css pour .toolbar-icon.
+                    iconSize: 31,
                     requesterId: iconContainer.id
                 });
             }
