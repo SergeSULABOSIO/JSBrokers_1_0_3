@@ -113,6 +113,9 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
             ["colonnes" => [["champs" => [array_merge(['field_code' => 'partenaire'], $visibilityPartenaire)]]]],
             ["colonnes" => [["champs" => [array_merge(['field_code' => 'autoritefiscale'], $visibilityAutorite)]]]],
 
+            // NOUVEAU : Ajout du champ Bordereau. Il est conditionné par la présence d'un assureur.
+            ["colonnes" => [["champs" => [array_merge(['field_code' => 'bordereau'], $visibilityAssureur)]]]],
+
             // Ligne 3: le nom
             ["colonnes" => [["champs" => ["nom"]]]],
 

@@ -46,6 +46,12 @@ class Bordereau implements OwnerAwareInterface
      */
     #[ORM\OneToMany(targetEntity: Document::class, mappedBy: 'bordereau', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $documents;
+
+    /**
+     * @var Collection<int, Note>
+     */
+    #[ORM\OneToMany(targetEntity: Note::class, mappedBy: 'bordereau')]
+    private Collection $notes;
  
     // NOUVEAU : Attributs calculés pour l'affichage et l'analyse
     #[Groups(['list:read'])]
@@ -64,6 +70,7 @@ class Bordereau implements OwnerAwareInterface
     public function __construct()
     {
         $this->documents = new ArrayCollection();
+        $this->notes = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -157,6 +164,36 @@ class Bordereau implements OwnerAwareInterface
     public function setType(int $type): static
     {
         $this->type = $type;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Note>
+     */
+    public function getNotes(): Collection
+    {
+        return $this->notes;
+    }
+
+    public function addNote(Note $note): static
+    {
+        if (!$this->notes->contains($note)) {
+            $this->notes->add($note);
+            $note->setBordereau($this);
+        }
+
+        return $this;
+    }
+
+    public function removeNote(Note $note): static
+    {
+        if ($this->notes->removeElement($note)) {
+            // set the owning side to null (unless already changed)
+            if ($note->getBordereau() === $this) {
+                $note->setBordereau(null);
+            }
+        }
 
         return $this;
     }

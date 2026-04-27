@@ -102,6 +102,10 @@ class Note implements OwnerAwareInterface
     #[Groups(['list:read'])]
     private ?\DateTimeImmutable $sentAt = null;
 
+    #[ORM\ManyToOne(inversedBy: 'notes')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Bordereau $bordereau = null;
+
     // Attributs calculés
     #[Groups(['list:read'])]
     public ?string $typeString = null;
@@ -390,6 +394,18 @@ class Note implements OwnerAwareInterface
     public function setSentAt(?\DateTimeImmutable $sentAt): static
     {
         $this->sentAt = $sentAt;
+
+        return $this;
+    }
+
+    public function getBordereau(): ?Bordereau
+    {
+        return $this->bordereau;
+    }
+
+    public function setBordereau(?Bordereau $bordereau): static
+    {
+        $this->bordereau = $bordereau;
 
         return $this;
     }
