@@ -288,12 +288,9 @@ export default class extends Controller {
             } else {
                 // Sinon (cas de fallback), on la demande au serveur.
                 iconContainer.id = `toolbar-specific-action-${action.icon.replace(/:/g, '--')}-${selectedId}`;
-                this.notifyCerveau('ui:icon.request', {
-                    iconName: action.icon,
-                    // CORRECTION : On demande une icône de 31px pour correspondre à la taille définie dans app.css pour .toolbar-icon.
-                    iconSize: 31,
-                    requesterId: iconContainer.id
-                });
+                // CORRECTION : On demande une icône de 31px pour correspondre à la taille définie dans app.css pour .toolbar-icon.
+                const iconSize = 31;
+                this.notifyCerveau('ui:icon.request', { iconName: action.icon, iconSize: iconSize, requesterId: iconContainer.id });
             }
 
             // On attache l'événement de clic

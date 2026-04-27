@@ -86,18 +86,18 @@
 
     <div class="actions-bar sticky-top">
         {# CORRECTION : Utilisation de Twig UX Icons, comme dans la barre d'outils principale. #}
-        <button class="btn btn-light d-inline-flex align-items-center gap-2" onclick="window.close()">
+        <button class="btn btn-light d-inline-flex align-items-center gap-2" data-controller="ripple" onclick="window.close()">
             <twig:UX:Icon name="{{ resolve_icon_name('action:close') }}" width="18px" height="18px" />
             <span>Retourner à l'édition</span>
         </button>
 
-        <button class="btn btn-primary d-inline-flex align-items-center gap-2" onclick="window.print()">
+        <button class="btn btn-primary d-inline-flex align-items-center gap-2" data-controller="ripple" onclick="window.print()">
             <twig:UX:Icon name="{{ resolve_icon_name('action:print') }}" width="18px" height="18px" />
             <span>Imprimer</span>
         </button>
 
         {# NOUVEAU : Bouton pour télécharger en PDF #}
-        <a href="{{ path('admin.note.download_pdf', {id: note.id}) }}" class="btn btn-danger d-inline-flex align-items-center gap-2" target="_blank">
+        <a href="{{ path('admin.note.download_pdf', {id: note.id}) }}" class="btn btn-danger d-inline-flex align-items-center gap-2" data-controller="ripple" target="_blank">
             <twig:UX:Icon name="{{ resolve_icon_name('action:download') }}" width="18px" height="18px" />
             <span>Télécharger en PDF</span>
         </a>
