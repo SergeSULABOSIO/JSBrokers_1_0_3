@@ -21,6 +21,9 @@ export default class extends Controller {
     static targets = [
         'menu', 'btAjouter', 'btModifier', 'btOuvrir', 'btToutCocher',
         'btActualiser', 'btSupprimer', 'btParametrer', 'btQuitter',
+        // NOUVEAU : Cibles pour les actions spécifiques
+        'specificActionsContainer',
+        'specificActionsSeparator'
     ];
 
     /**
@@ -36,6 +39,9 @@ export default class extends Controller {
         this.entities = [];
         this.entityFormCanvas = null;
 
+        // NOUVEAU : Cache pour les icônes, comme dans la barre d'outils
+        this.iconCache = new Map();
+
         this.boundHandleContextUpdate = this.handleContextUpdate.bind(this);
         this.boundHideContextMenu = this.hideContextMenu.bind(this);
         this.boundHandleKeyboardShortcuts = this.handleKeyboardShortcuts.bind(this);
@@ -43,6 +49,10 @@ export default class extends Controller {
         this.menuTarget.style.display = 'none';
         document.addEventListener('click', this.boundHideContextMenu, false);
         document.addEventListener('app:context.changed', this.boundHandleContextUpdate);
+
+        // NOUVEAU : Écouteur pour la réception des icônes
+        this.boundHandleIconLoaded = this.handleIconLoaded.bind(this);
+        document.addEventListener('app:icon.loaded', this.boundHandleIconLoaded);
     }
 
     /**
@@ -52,6 +62,7 @@ export default class extends Controller {
     disconnect() {
         document.removeEventListener('click', this.boundHideContextMenu, false);
         document.removeEventListener('app:context.changed', this.boundHandleContextUpdate);
+        document.removeEventListener('app:icon.loaded', this.boundHandleIconLoaded);
         document.removeEventListener('keydown', this.boundHandleKeyboardShortcuts);
     }
 
@@ -138,6 +149,13 @@ export default class extends Controller {
                 this.btSupprimerTarget.style.display = 'none';
             }
         }
+
+        // NOUVEAU : Gérer les actions spécifiques
+        const specificActions = this.entityFormCanvas?.parametres?.attribute_actions || [];
+        const canShowSpecificActions = isSingleSelection && specificActions.length > 0;
+        if (this.hasSpecificActionsContainerTarget) {
+            this.updateSpecificActionButtons(canShowSpecificActions ? specificActions : []);
+        }
     }
 
     /**
@@ -189,6 +207,93 @@ export default class extends Controller {
     }
 
     /**
+     * NOUVEAU : Crée et affiche les boutons pour les actions spécifiques dans le menu.
+     * @param {Array} actions - Le tableau de configuration des actions.
+     * @private
+     */
+    updateSpecificActionButtons(actions) {
+        this.specificActionsContainerTarget.innerHTML = '';
+        this.specificActionsSeparatorTarget.style.display = actions.length > 0 ? 'block' : 'none';
+
+        if (actions.length === 0) return;
+
+        const selectedId = this.entities[0].id;
+
+        actions.forEach(action => {
+            const finalUrl = action.url.includes('%id%') ? action.url.replace('%id%', selectedId) : action.url;
+
+            const li = document.createElement('li');
+            // CORRECTION : Utilisation des mêmes classes que les autres options pour un alignement parfait.
+            li.className = 'd-flex align-items-center gap-3';
+            li.setAttribute('data-action', 'click->context-menu#notify');
+            li.setAttribute('data-context-menu-event-name-param', action.event);
+            // On stocke les données nécessaires directement sur l'élément <li>
+            li.dataset.url = finalUrl;
+            li.dataset.selection = JSON.stringify(this.entities);
+
+            const iconSpan = document.createElement('span');
+            // CORRECTION : Utilisation de la bonne classe pour l'icône.
+            iconSpan.className = 'context-menu-icon';
+            iconSpan.id = `context-menu-icon-${action.icon.replace(':', '--')}-${crypto.randomUUID()}`;
+            li.appendChild(iconSpan);
+
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'flex-grow-1';
+            labelSpan.textContent = action.label;
+            li.appendChild(labelSpan);
+
+            // CORRECTION : Ajout du conteneur pour le raccourci, même s'il est vide, pour maintenir l'alignement.
+            const shortcutSpan = document.createElement('span');
+            shortcutSpan.className = 'context-menu-shortcut';
+            li.appendChild(shortcutSpan);
+
+            this.specificActionsContainerTarget.appendChild(li);
+
+            // On charge l'icône
+            if (this.iconCache.has(action.icon)) {
+                this.handleIconLoaded({ detail: { html: this.iconCache.get(action.icon), requesterId: iconSpan.id, iconName: action.icon } });
+            } else {
+                this.notifyCerveau('ui:icon.request', {
+                    iconName: action.icon,
+                    iconSize: 18,
+                    requesterId: iconSpan.id
+                });
+            }
+        });
+    }
+
+    /**
+     * NOUVEAU : Gère la réception du HTML de l'icône et l'injecte.
+     * @param {CustomEvent} event
+     */
+    handleIconLoaded(event) {
+        const { html, requesterId, iconName } = event.detail;
+
+        if (iconName && html && !html.trim().startsWith('<!--')) {
+            this.iconCache.set(iconName, html);
+        }
+
+        // On ne traite que les requêtes venant de ce contrôleur
+        if (requesterId && requesterId.startsWith('context-menu-icon-')) {
+            const iconContainer = document.getElementById(requesterId);
+            if (iconContainer && html && !html.trim().startsWith('<!--')) {
+                // Injection robuste de l'icône
+                iconContainer.innerHTML = '';
+                const template = document.createElement('template');
+                template.innerHTML = html.trim();
+                if (template.content.firstChild) {
+                    // On s'assure que l'icône SVG a la bonne couleur pour le menu sombre
+                    const svg = template.content.firstChild;
+                    if (svg.tagName.toLowerCase() === 'svg') {
+                        svg.style.color = 'inherit'; // Hérite la couleur du texte du menu
+                    }
+                    iconContainer.appendChild(svg);
+                }
+            }
+        }
+    }
+
+    /**
      * Méthode générique pour notifier le Cerveau d'une action.
      * @param {MouseEvent} event - L'événement de clic du bouton.
      */
@@ -197,16 +302,20 @@ export default class extends Controller {
         this.hideContextMenu();
 
         const button = event.currentTarget;
-        const eventName = button.dataset.contextMenuEventNameParam;
+        // CORRECTION : On récupère les données depuis l'élément <li>
+        const eventName = button.dataset.contextMenuEventNameParam || button.dataset.eventName;
 
         if (!eventName) {
-            console.error("Le bouton n'a pas de 'data-context-menu-event-name-param' défini.", button);
+            console.error("L'élément de menu n'a pas de 'data-context-menu-event-name-param' ou 'data-event-name' défini.", button);
             return;
         }
 
         // Le payload est maintenant générique, comme pour la barre d'outils.
         // C'est au cerveau de l'interpréter.
         const payload = {
+            // NOUVEAU : On ajoute l'URL pour les actions spécifiques
+            url: button.dataset.url,
+            // On garde la logique existante pour les autres boutons
             selection: this.entities, // Envoie la sélection complète (objets selecto)
             formCanvas: this.entityFormCanvas, // Envoie le contexte du formulaire actif (celui de l'onglet)
         };
