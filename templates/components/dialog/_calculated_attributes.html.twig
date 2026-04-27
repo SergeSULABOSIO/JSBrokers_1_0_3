@@ -10,7 +10,7 @@
                     type="button" 
                     {# CORRECTION : On retire 'btn-outline-light' pour supprimer la bordure #}
                     class="btn btn-sm attributes-toolbar-button"
-                    {# NOUVEAU : Ajout des actions pour le tooltip et le clic #}
+                    data-controller="ripple" {# NOUVEAU : Ajout de l'effet d'onde #}
                     data-action="mouseenter->tooltip#show mouseleave->tooltip#hide click->dialog-instance#handleAttributeAction"
                     data-tooltip-content="{{ action.label }}"
                     data-event-name="{{ action.event }}"
