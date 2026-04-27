@@ -45,6 +45,20 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
                     "event" => "ui:note.preview-request", // Événement à envoyer au cerveau
                     // CORRECTION : On utilise un placeholder %id% que le JavaScript remplacera par l'ID de l'élément sélectionné.
                     "url" => "/admin/note/api/get-preview-url/%id%"
+                ],
+                // NOUVEAU : Action pour imprimer la note
+                [
+                    "label" => "Imprimer",
+                    "icon" => "action:print",
+                    "event" => "ui:note.preview-request", // On réutilise le même événement qui ouvre une nouvelle fenêtre
+                    "url" => "/admin/note/api/get-preview-url/%id%?print=1" // On ajoute un paramètre pour déclencher l'impression
+                ],
+                // NOUVEAU : Action pour télécharger la note en PDF
+                [
+                    "label" => "Télécharger en PDF",
+                    "icon" => "action:download",
+                    "event" => "ui:note.preview-request", // On réutilise le même événement
+                    "url" => "/admin/note/api/get-preview-url/%id%?download=1" // On ajoute un paramètre pour le téléchargement
                 ]
             ]
         ];

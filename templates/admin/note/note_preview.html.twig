@@ -234,5 +234,14 @@
         </div>
     </div>
 
+    {# NOUVEAU : Script pour déclencher l'impression si le paramètre 'print' est dans l'URL #}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('print')) {
+                window.print();
+            }
+        });
+    </script>
 </body>
 </html>

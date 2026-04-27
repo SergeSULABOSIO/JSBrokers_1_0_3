@@ -95,12 +95,22 @@ class NoteController extends AbstractController
     }
 
     #[Route('/api/get-preview-url/{id}', name: 'api.get_preview_url', methods: ['GET'])]
-    public function getPreviewUrlApi(Note $note): JsonResponse
+    public function getPreviewUrlApi(Note $note, Request $request): JsonResponse
     {
-        // On génère l'URL absolue vers la page d'aperçu.
-        $previewUrl = $this->generateUrl('admin.note.show_preview', ['id' => $note->getId()], \Symfony\Component\Routing\Generator\UrlGeneratorInterface::ABSOLUTE_URL);
+        // NOUVEAU : On vérifie si on doit télécharger directement ou juste afficher/imprimer.
+        if ($request->query->get('download')) {
+            // Si le paramètre 'download' est présent, on génère l'URL de téléchargement PDF.
+            $finalUrl = $this->generateUrl('admin.note.download_pdf', ['id' => $note->getId()], \Symfony\Component\Routing\Generator\UrlGeneratorInterface::ABSOLUTE_URL);
+        } else {
+            // Sinon, on génère l'URL de l'aperçu, en conservant les autres paramètres (comme 'print').
+            $params = ['id' => $note->getId()];
+            if ($request->query->get('print')) {
+                $params['print'] = 1;
+            }
+            $finalUrl = $this->generateUrl('admin.note.show_preview', $params, \Symfony\Component\Routing\Generator\UrlGeneratorInterface::ABSOLUTE_URL);
+        }
 
-        return $this->json(['previewUrl' => $previewUrl]);
+        return $this->json(['previewUrl' => $finalUrl]);
     }
 
     #[Route('/apercu/{id}', name: 'show_preview', methods: ['GET'])]
