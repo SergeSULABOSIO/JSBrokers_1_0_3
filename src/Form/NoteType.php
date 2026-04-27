@@ -2,17 +2,18 @@
 
 namespace App\Form;
 
+use App\Entity\Bordereau;
+use App\Repository\BordereauRepository;
 use App\Entity\Note;
 use App\Services\FormListenerFactory;
-use Symfony\Component\Form\FormEvent;
-use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
-use Symfony\Component\Form\Extension\Core\Type\CollectionType; 
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType; 
 
 class NoteType extends AbstractType
@@ -107,6 +108,26 @@ class NoteType extends AbstractType
             ->add('autoritefiscale', AutoriteFiscaleAutocompleteField::class, [
                 'label' => "Autorité fiscale ciblée",
                 'required' => false,
+            ])
+            ->add('bordereau', EntityType::class, [
+                'class' => Bordereau::class,
+                'choice_label' => 'nom',
+                'placeholder' => 'Sélectionnez le bordereau de production',
+                'required' => true,
+                'label' => 'Lier à un bordereau de production',
+                'help' => "Lie cette note à un bordereau pour une meilleure traçabilité.",
+                'query_builder' => function (BordereauRepository $br) use ($options) {
+                    /** @var Note|null $note */
+                    $note = $options['data'] ?? null;
+                    $assureurId = $note && $note->getAssureur() ? $note->getAssureur()->getId() : null;
+
+                    $qb = $br->createQueryBuilder('b');
+
+                    if ($assureurId) {
+                        return $qb->where('b.assureur = :assureurId')->setParameter('assureurId', $assureurId);
+                    }
+                    return $qb->where('1 = 0'); // Ne montre aucun bordereau si aucun assureur n'est sélectionné
+                },
             ])
             ->add('comptes', CompteBancaireAutocompleteField::class, [
                 'label' => "Comptes bancaires",
