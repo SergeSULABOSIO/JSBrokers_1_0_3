@@ -274,23 +274,20 @@ export default class extends Controller {
             button.setAttribute('type', 'button');
             button.setAttribute('title', action.label); // Pour l'infobulle
             button.setAttribute('data-controller', 'ripple'); // NOUVEAU : Ajout du contrôleur pour l'effet d'onde
-
-            // On crée le conteneur pour l'icône
-            const iconContainer = document.createElement('div');
-            iconContainer.className = 'toolbar-icon';
-
-            button.appendChild(iconContainer);
+            // CORRECTION : On ne crée plus de div intermédiaire. Le bouton est vide pour l'instant.
 
             // NOUVELLE LOGIQUE : On utilise le cache.
             if (this.iconCache.has(action.icon)) {
                 // Si l'icône est en cache, on l'injecte directement.
-                iconContainer.innerHTML = this.iconCache.get(action.icon);
+                // CORRECTION : On appelle handleIconLoaded pour insérer l'icône dans le bouton.
+                this.handleIconLoaded({ detail: { html: this.iconCache.get(action.icon), requesterId: `toolbar-specific-action-${action.icon.replace(/:/g, '--')}-${selectedId}`, iconName: action.icon } }, button);
             } else {
                 // Sinon (cas de fallback), on la demande au serveur.
-                iconContainer.id = `toolbar-specific-action-${action.icon.replace(/:/g, '--')}-${selectedId}`;
+                // CORRECTION : L'ID de la requête est maintenant attaché au bouton lui-même.
+                button.id = `toolbar-specific-action-${action.icon.replace(/:/g, '--')}-${selectedId}`;
                 // CORRECTION : On demande une icône de 31px pour correspondre à la taille définie dans app.css pour .toolbar-icon.
                 const iconSize = 31;
-                this.notifyCerveau('ui:icon.request', { iconName: action.icon, iconSize: iconSize, requesterId: iconContainer.id });
+                this.notifyCerveau('ui:icon.request', { iconName: action.icon, iconSize: iconSize, requesterId: button.id });
             }
 
             // On attache l'événement de clic
@@ -306,22 +303,30 @@ export default class extends Controller {
 
     /**
      * NOUVEAU : Gère la réception du HTML de l'icône et l'injecte dans le bon conteneur.
+     * @param {CustomEvent} event L'événement contenant le HTML de l'icône.
+     * @param {HTMLElement|null} directTarget Le bouton cible si l'icône vient du cache.
      * @param {CustomEvent} event
      */
-    handleIconLoaded(event) {
+    handleIconLoaded(event, directTarget = null) {
         const { html, requesterId, iconName } = event.detail;
     
         // Étape 1 : Mettre en cache l'icône dans tous les cas.
         if (iconName && html) {
             this.iconCache.set(iconName, html);
         }
-    
-        // On s'assure que l'événement nous est destiné (l'ID du demandeur commence par 'toolbar-specific-action-')
-        // et que le conteneur d'icône correspondant existe dans le DOM.
-        if (requesterId && requesterId.startsWith('toolbar-specific-action-')) {
-            const iconContainer = this.element.querySelector(`#${requesterId}`);
-            if (iconContainer) {
-                iconContainer.innerHTML = html;
+
+        // Étape 2 : Trouver la cible (soit via l'ID de la requête, soit la cible directe passée en paramètre)
+        const targetButton = directTarget || (requesterId ? this.element.querySelector(`#${requesterId}`) : null);
+
+        // Étape 3 : Injecter l'icône de manière intelligente.
+        if (targetButton && html) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+            const svgElement = tempDiv.querySelector('svg');
+            if (svgElement) {
+                svgElement.classList.add('toolbar-icon'); // On ajoute la classe directement sur le SVG.
+                targetButton.innerHTML = ''; // On vide le bouton avant d'ajouter.
+                targetButton.appendChild(svgElement);
             }
         }
     }
