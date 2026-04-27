@@ -273,6 +273,7 @@ export default class extends Controller {
             button.className = 'btn btn-default'; // Utilisation de la classe par défaut pour la cohérence
             button.setAttribute('type', 'button');
             button.setAttribute('title', action.label); // Pour l'infobulle
+            button.setAttribute('data-controller', 'ripple'); // NOUVEAU : Ajout du contrôleur pour l'effet d'onde
 
             // On crée le conteneur pour l'icône
             const iconContainer = document.createElement('div');

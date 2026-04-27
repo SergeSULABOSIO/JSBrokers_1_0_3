@@ -17,6 +17,7 @@
 >
     <button 
         data-action="click->toolbar#notify" 
+        data-controller="ripple"
         data-toolbar-event-name-param="ui:toolbar.close-request"
         data-toolbar-target="btquitter" 
         class="btn btn-icon-danger"
@@ -25,6 +26,7 @@
     </button>
     <div class="toolbar-separator"></div>
     <button 
+        data-controller="ripple"
         data-action="click->toolbar#notify" 
         data-toolbar-event-name-param="ui:toolbar.add-request"
         data-toolbar-target="btajouter" 
@@ -33,6 +35,7 @@
         <twig:UX:Icon name="{{ resolve_icon_name('gridicons:add') }}" class="toolbar-icon" />
     </button>
     <button 
+        data-controller="ripple"
         data-action="click->toolbar#notify" 
         data-toolbar-event-name-param="ui:toolbar.edit-request"
         data-toolbar-target="btmodifier" 
@@ -42,6 +45,7 @@
     </button>
     {# NOUVEAU : Ajout du bouton Ouvrir #}
     <button
+        data-controller="ripple"
         data-action="click->toolbar#notify"
         data-toolbar-event-name-param="ui:toolbar.open-request"
         data-toolbar-target="btouvrir"
@@ -50,6 +54,7 @@
         <twig:UX:Icon name="{{ resolve_icon_name('fad:open') }}" class="toolbar-icon" />
     </button>
     <button 
+        data-controller="ripple"
         data-action="click->toolbar#notify" 
         data-toolbar-event-name-param="app:delete-request"
         data-toolbar-target="btsupprimer" 
@@ -66,6 +71,7 @@
 
     <div class="toolbar-separator"></div>
     <button 
+        data-controller="ripple"
         data-action="click->toolbar#notify" 
         data-toolbar-event-name-param="ui:toolbar.select-all-request"
         data-toolbar-target="bttoutcocher" 
@@ -74,6 +80,7 @@
         <twig:UX:Icon name="{{ resolve_icon_name('material-symbols:check-box') }}" class="toolbar-icon" />
     </button>
     <button 
+        data-controller="ripple"
         data-action="click->toolbar#notify" 
         data-toolbar-event-name-param="ui:toolbar.refresh-request"
         data-toolbar-target="btrecharger"
@@ -83,6 +90,7 @@
     </button>
     <div class="toolbar-separator"></div>
     <button 
+        data-controller="ripple"
         data-action="click->toolbar#notify" 
         data-toolbar-event-name-param="ui:toolbar.settings-request"
         data-toolbar-target="btparametres"
