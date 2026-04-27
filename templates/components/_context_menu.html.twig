@@ -45,6 +45,13 @@
             <span class="flex-grow-1">Modifier</span>
             <span class="context-menu-shortcut">M</span>
         </li>
+
+        {# NOUVEAU : Séparateur et conteneur pour les actions spécifiques (Visualiser, Imprimer, etc.) #}
+        <li class="separator" data-context-menu-target="specificActionsSeparator" style="display: none;"></li>
+        <ul data-context-menu-target="specificActionsContainer" class="list-unstyled m-0 p-0">
+            <!-- Les actions spécifiques seront injectées ici par context-menu_controller.js -->
+        </ul>
+
         {# Option "Tout Cocher" #}
         <li 
             data-context-menu-target="btToutCocher" 
