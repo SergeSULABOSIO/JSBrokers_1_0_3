@@ -111,7 +111,17 @@ class NoteType extends AbstractType
             ])
             ->add('bordereau', EntityType::class, [
                 'class' => Bordereau::class,
-                'choice_label' => 'nom',
+                'choice_label' => function (Bordereau $bordereau) {
+                    // Display reference, period, and insurer for better context
+                    return sprintf(
+                        '%s (Réf: %s, Période: %s - %s) - %s',
+                        $bordereau->getNom(),
+                        $bordereau->getReference(),
+                        $bordereau->getPeriodeDebut()?->format('d/m/Y'),
+                        $bordereau->getPeriodeFin()?->format('d/m/Y'),
+                        $bordereau->getAssureur()?->getNom()
+                    );
+                },
                 'placeholder' => 'Optionnel : Lier à un bordereau',
                 'required' => false,
                 'label' => 'Bordereau de production associé',
