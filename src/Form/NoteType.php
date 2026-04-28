@@ -112,9 +112,9 @@ class NoteType extends AbstractType
             ->add('bordereau', EntityType::class, [
                 'class' => Bordereau::class,
                 'choice_label' => 'nom',
-                'placeholder' => 'Sélectionnez le bordereau de production',
-                'required' => true,
-                'label' => 'Lier à un bordereau de production',
+                'placeholder' => 'Optionnel : Lier à un bordereau',
+                'required' => false,
+                'label' => 'Bordereau de production associé',
                 'help' => "Lie cette note à un bordereau pour une meilleure traçabilité.",
                 'query_builder' => function (BordereauRepository $br) use ($options) {
                     /** @var Note|null $note */

@@ -103,7 +103,7 @@ class Note implements OwnerAwareInterface
     private ?\DateTimeImmutable $sentAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'notes')]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: true)]
     private ?Bordereau $bordereau = null;
 
     // Attributs calculés
