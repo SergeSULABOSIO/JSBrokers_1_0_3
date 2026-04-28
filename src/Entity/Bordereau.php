@@ -60,11 +60,6 @@ class Bordereau implements OwnerAwareInterface
     #[Groups(['list:read'])]
     private ?\DateTimeImmutable $periodeFin = null;
 
-    // NOUVEAU : Date à laquelle le paiement a été reçu par le courtier.
-    #[ORM\Column(nullable: true)]
-    #[Groups(['list:read'])]
-    private ?\DateTimeImmutable $paidAt = null;
-
     #[ORM\Column]
     #[Groups(['list:read'])]
     private ?float $montantCommissionHT = null;
@@ -84,6 +79,12 @@ class Bordereau implements OwnerAwareInterface
      */
     #[ORM\OneToMany(targetEntity: Note::class, mappedBy: 'bordereau')]
     private Collection $notes;
+
+    /**
+     * @var Collection<int, Operation>
+     */
+    #[ORM\OneToMany(targetEntity: Operation::class, mappedBy: 'bordereau', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $operations;
 
     // NOUVEAU : Le statut actuel du bordereau.
     #[ORM\Column]
@@ -117,6 +118,7 @@ class Bordereau implements OwnerAwareInterface
     {
         $this->documents = new ArrayCollection();
         $this->notes = new ArrayCollection();
+        $this->operations = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -280,18 +282,6 @@ class Bordereau implements OwnerAwareInterface
         return $this;
     }
 
-    public function getPaidAt(): ?\DateTimeImmutable
-    {
-        return $this->paidAt;
-    }
-
-    public function setPaidAt(?\DateTimeImmutable $paidAt): static
-    {
-        $this->paidAt = $paidAt;
-
-        return $this;
-    }
-
     public function getMontantTaxe(): ?float
     {
         return $this->montantTaxe;
@@ -312,6 +302,36 @@ class Bordereau implements OwnerAwareInterface
     public function setStatut(int $statut): static
     {
         $this->statut = $statut;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Operation>
+     */
+    public function getOperations(): Collection
+    {
+        return $this->operations;
+    }
+
+    public function addOperation(Operation $operation): static
+    {
+        if (!$this->operations->contains($operation)) {
+            $this->operations->add($operation);
+            $operation->setBordereau($this);
+        }
+
+        return $this;
+    }
+
+    public function removeOperation(Operation $operation): static
+    {
+        if ($this->operations->removeElement($operation)) {
+            // set the owning side to null (unless already changed)
+            if ($operation->getBordereau() === $this) {
+                $operation->setBordereau(null);
+            }
+        }
 
         return $this;
     }

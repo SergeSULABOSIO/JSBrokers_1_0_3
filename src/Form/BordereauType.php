@@ -48,22 +48,77 @@ class BordereauType extends AbstractType
                     'placeholder' => "Nom",
                 ],
             ])
+            ->add('assureur', AssureurAutocompleteField::class, [
+                'label' => "Assureur",
+                'placeholder' => "Sélectionnez un assureur",
+            ])
+            ->add('reference', TextType::class, [
+                'label' => "Référence",
+                'attr' => [
+                    'placeholder' => "Référence",
+                ],
+            ])
             ->add('receivedAt', DateTimeType::class, [
                 'label' => "Date de réception",
                 'widget' => 'single_text',
+                'input' => 'datetime_immutable',
+                'html5' => true,
             ])
-            ->add('montantTTC', MoneyType::class, [
-                'label' => "Montant",
+            ->add('periodeDebut', DateTimeType::class, [
+                'label' => "Période Début",
+                'widget' => 'single_text',
+                'input' => 'datetime_immutable',
+            ])
+            ->add('periodeFin', DateTimeType::class, [
+                'label' => "Période Fin",
+                'widget' => 'single_text',
+                'input' => 'datetime_immutable',
+            ])
+            ->add('montantCommissionHT', MoneyType::class, [
+                'label' => "Montant HT",
                 'required' => false,
                 'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                 'grouping' => true,
                 'attr' => [
-                    'placeholder' => "Montant",
+                    'readonly' => true,
+                    'data-dialog-instance-target' => 'montantHT', // Cible pour le JS
                 ],
             ])
-            ->add('assureur', AssureurAutocompleteField::class, [
-                'label' => "Assureur",
-                'placeholder' => "Sélectionnez un assureur",
+            ->add('montantTaxe', MoneyType::class, [
+                'label' => "Montant Taxe",
+                'required' => false,
+                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                'grouping' => true,
+                'scale' => 2,
+                'attr' => [
+                    'readonly' => true,
+                    'data-dialog-instance-target' => 'montantTaxe', // Cible pour le JS
+                ],
+            ])
+            ->add('statut', ChoiceType::class, [
+                'label' => 'Statut',
+                'expanded' => true,
+                'required' => true,
+                'label_html' => true,
+                'choices' => [
+                    'À vérifier' => Bordereau::STATUT_A_VERIFIER,
+                    'Contesté' => Bordereau::STATUT_CONTESTE,
+                    'Validé' => Bordereau::STATUT_VALIDE,
+                    'Payé' => Bordereau::STATUT_PAYE,
+                    'Partiellement Payé' => Bordereau::STATUT_PARTIELLEMENT_PAYE,
+                    'Annulé' => Bordereau::STATUT_ANNULE,
+                ],
+                'choice_label' => function ($choice, $key, $value) {
+                    $descriptions = [
+                        Bordereau::STATUT_A_VERIFIER => 'Reçu, en attente de vérification par le courtier.',
+                        Bordereau::STATUT_CONTESTE => 'Le courtier a signalé une anomalie.',
+                        Bordereau::STATUT_VALIDE => 'Vérifié et conforme, en attente de paiement.',
+                        Bordereau::STATUT_PAYE => 'L\'assureur a payé la totalité de la commission.',
+                        Bordereau::STATUT_PARTIELLEMENT_PAYE => 'Un paiement partiel de la commission a été reçu.',
+                        Bordereau::STATUT_ANNULE => 'Le bordereau a été annulé.',
+                    ];
+                    return '<div><strong>' . $key . '</strong><div class="text-muted small">' . ($descriptions[$value] ?? '') . '</div></div>';
+                },
             ])
             ->add('documents', CollectionType::class, [
                 'label' => "Documents",
@@ -75,13 +130,35 @@ class BordereauType extends AbstractType
                     'label' => false,
                 ],
                 'attr' => [
-                    'data-controller' => 'form-collection-entites',
+                    // On ajoute une action pour que notre JS puisse recalculer les totaux
+                    'data-action' => 'change->dialog-instance#recalculateTotals',
+                    'data-dialog-instance-target' => 'operationsContainer',
+                    'data-controller' => 'collection', // Utilisons un contrôleur plus simple
                     'data-form-collection-entites-data-value' => json_encode([
                         'addLabel' => $this->translatorInterface->trans("commom_add"),
                         'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
                         'icone' => "document",
                         'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
                         'tailleMax' => 1,
+                    ]),
+                ],
+            ])
+            ->add('operations', CollectionType::class, [
+                'label' => "Opérations concernées par ce bordereau",
+                'entry_type' => OperationType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => [
+                    'label' => false,
+                ],
+                'attr' => [
+                    'data-controller' => 'form-collection-entites',
+                    'data-form-collection-entites-data-value' => json_encode([
+                        'addLabel' => $this->translatorInterface->trans("commom_add"),
+                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
+                        'icone' => "plus-circle",
+                        'tailleMax' => 100,
                     ]),
                 ],
             ])

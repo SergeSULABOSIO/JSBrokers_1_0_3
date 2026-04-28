@@ -18,7 +18,8 @@ export default class extends Controller {
     static outlets = ['modal'];
     static targets = [
         'content', 'formRow', 'dynamicFieldContainer', 'header', 'title', 'titleIcon', 
-        'closeButton', 'progressBarContainer', 'footer', 'feedbackContainer', 'submitButton', 'closeFooterButton', 
+        'closeButton', 'progressBarContainer', 'footer', 'feedbackContainer', 'submitButton', 'closeFooterButton',
+        'montantHT', 'montantTaxe', 'operationsContainer',
         'saveIcon', 'closeIcon',
         'addressedTo'
     ];
@@ -229,6 +230,9 @@ export default class extends Controller {
 
         // NOUVEAU : Initialiser la logique de la barre d'outils des attributs
         this.initializeAttributeToolbar();
+
+        // NOUVEAU : Lancer un premier calcul des totaux au chargement du formulaire
+        this.recalculateTotals();
 
         const mainDialogElement = this.modalOutlet.element;
 
@@ -676,6 +680,38 @@ export default class extends Controller {
         return false;
     }
 
+    /**
+     * NOUVEAU : Recalcule et met à jour les champs 'montantCommissionHT' et 'montantTaxe'
+     * du bordereau en se basant sur la somme des opérations dans la collection.
+     */
+    recalculateTotals() {
+        // On vérifie si les cibles nécessaires sont présentes.
+        if (!this.hasOperationsContainerTarget || !this.hasMontantHTTarget || !this.hasMontantTaxeTarget) {
+            return;
+        }
+
+        let totalHT = 0;
+        let totalTaxe = 0;
+
+        // On parcourt chaque ligne d'opération dans la collection.
+        const operationRows = this.operationsContainerTarget.querySelectorAll('.collection-item, .form-collection-item'); // Gère les deux types de classes
+        operationRows.forEach(row => {
+            const montantHTInput = row.querySelector('input[name*="[montantHT]"]');
+            const montantTaxeInput = row.querySelector('input[name*="[montantTaxe]"]');
+
+            if (montantHTInput) {
+                totalHT += parseFloat(montantHTInput.value) || 0;
+            }
+            if (montantTaxeInput) {
+                totalTaxe += parseFloat(montantTaxeInput.value) || 0;
+            }
+        });
+
+        // On met à jour les champs readonly du bordereau.
+        // Note: Les champs MoneyType stockent la valeur en centimes, il faut donc multiplier par 100.
+        this.montantHTTarget.value = totalHT;
+        this.montantTaxeTarget.value = totalTaxe;
+    }
 
 
 
