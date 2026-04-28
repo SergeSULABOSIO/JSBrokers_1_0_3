@@ -5,11 +5,13 @@ namespace App\Services\Canvas\Indicator;
 use App\Entity\Bordereau;
 use App\Services\ServiceDates;
 use DateTimeImmutable;
+use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 
 class BordereauIndicatorStrategy implements IndicatorCalculationStrategyInterface
 {
     public function __construct(
-        private ServiceDates $serviceDates
+        private ServiceDates $serviceDates,
+        private IndicatorCalculationHelper $indicatorCalculationHelper // Inject the helper
     ) {
     }
 
@@ -18,15 +20,26 @@ class BordereauIndicatorStrategy implements IndicatorCalculationStrategyInterfac
         return $entityClassName === Bordereau::class;
     }
 
+    // Removed calculateBordereauDelaiSoumission as it's no longer relevant in the new workflow.
+    // The concept of "submission delay" by the broker doesn't apply if the insurer provides the bordereau.
+
     public function calculate(object $entity): array
     {
         /** @var Bordereau $entity */
+
+        $montantCommissionTTC = ($entity->getMontantCommissionHT() ?? 0.0) + ($entity->getMontantTaxe() ?? 0.0);
+        $montantEncaisse = $this->indicatorCalculationHelper->getBordereauMontantEncaisse($entity);
+        $solde = $montantCommissionTTC - $montantEncaisse;
+
         return [
             'typeString' => $this->getBordereauTypeString($entity),
+            'statutString' => $this->getBordereauStatutString($entity),
             'ageBordereau' => $this->calculateBordereauAge($entity),
-            'delaiSoumission' => $this->calculateBordereauDelaiSoumission($entity),
             'nombreDocuments' => $entity->getDocuments()->count(),
             'assureurNom' => $entity->getAssureur()?->getNom() ?? 'N/A',
+            'montantCommissionTTC' => $montantCommissionTTC,
+            'montantEncaisse' => $montantEncaisse,
+            'solde' => $solde,
         ];
     }
 
@@ -38,17 +51,23 @@ class BordereauIndicatorStrategy implements IndicatorCalculationStrategyInterfac
         };
     }
 
+    private function getBordereauStatutString(Bordereau $bordereau): string
+    {
+        return match ($bordereau->getStatut()) {
+            Bordereau::STATUT_A_VERIFIER => 'À vérifier',
+            Bordereau::STATUT_CONTESTE => 'Contesté',
+            Bordereau::STATUT_VALIDE => 'Validé',
+            Bordereau::STATUT_PAYE => 'Payé',
+            Bordereau::STATUT_PARTIELLEMENT_PAYE => 'Partiellement payé',
+            Bordereau::STATUT_ANNULE => 'Annulé',
+            default => 'Statut inconnu',
+        };
+    }
+
     private function calculateBordereauAge(Bordereau $bordereau): string
     {
         if (!$bordereau->getReceivedAt()) return 'N/A';
         $jours = $this->serviceDates->daysEntre($bordereau->getReceivedAt(), new DateTimeImmutable()) ?? 0;
-        return $jours . ' jour(s)';
-    }
-
-    private function calculateBordereauDelaiSoumission(Bordereau $bordereau): string
-    {
-        if (!$bordereau->getCreatedAt() || (!$bordereau->getReceivedAt())) return 'N/A';
-        $jours = $this->serviceDates->daysEntre($bordereau->getCreatedAt(), $bordereau->getReceivedAt()) ?? 0;
         return $jours . ' jour(s)';
     }
 }

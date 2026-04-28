@@ -24,16 +24,24 @@ class BordereauListCanvasProvider implements ListCanvasProviderInterface
                 "texte_principal" => ["attribut_code" => "nom", "icone" => "bordereau"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
+                    ["attribut_code" => "reference"],
                     ["attribut_code" => "typeString"],
                     ["attribut_prefixe" => "Assureur: ", "attribut_code" => "assureurNom"],
                     ["attribut_prefixe" => "Reçu le: ", "attribut_code" => "receivedAt", "attribut_type" => "date"],
+                    ["attribut_prefixe" => "Statut: ", "attribut_code" => "statutString"],
                 ],
             ],
             "colonnes_numeriques" => [
                 [
-                    "titre_colonne" => "Montant TTC",
+                    "titre_colonne" => "Commission TTC",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                    "attribut_code" => "montantTTC",
+                    "attribut_code" => "montantCommissionTTC",
+                    "attribut_type" => "nombre",
+                ],
+                [
+                    "titre_colonne" => "Solde",
+                    "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    "attribut_code" => "solde",
                     "attribut_type" => "nombre",
                 ],
             ],

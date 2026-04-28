@@ -35,7 +35,7 @@ class BordereauFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/bordereau/api/get-form",
             "isCreationMode" => $isParentNew
         ];
-        $layout = $this->buildBordereauLayout($object, $isParentNew);
+        $layout = $this->buildBordereauLayout($object, $isParentNew, $idEntreprise);
 
         return [
             "parametres" => $parametres,
@@ -44,17 +44,22 @@ class BordereauFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildBordereauLayout(Bordereau $object, bool $isParentNew): array
+    private function buildBordereauLayout(Bordereau $object, bool $isParentNew, ?int $idEntreprise): array
     {
         $bordereauId = $object->getId() ?? 0;
         $layout = [
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["type"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["assureur"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["montantTTC"], "width" => 6], ["champs" => ["receivedAt"], "width" => 6]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["reference"], "width" => 6], ["champs" => ["type"], "width" => 6]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["periodeDebut"], "width" => 6], ["champs" => ["periodeFin"], "width" => 6]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["receivedAt"], "width" => 6], ["champs" => ["paidAt"], "width" => 6]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["montantCommissionHT"], "width" => 6], ["champs" => ["montantTaxe"], "width" => 6]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["statut"]]]],
         ];
-        $collections = [['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'bordereau']];
-        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
+        $collections = [
+            ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'bordereau']
+        ];
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections, $idEntreprise);
         return $layout;
     }
 }

@@ -19,6 +19,7 @@ use App\Entity\Taxe;
 use App\Entity\Document;
 use App\Entity\NotificationSinistre;
 use App\Entity\OffreIndemnisationSinistre;
+use App\Entity\Bordereau; // Import Bordereau
 use App\Repository\CotationRepository;
 use App\Repository\NotificationSinistreRepository;
 use App\Repository\TaxeRepository;
@@ -1287,5 +1288,20 @@ class IndicatorCalculationHelper
             default:
                 return 'Inconnu';
         }
+    }
+
+    /**
+     * Calcule le montant total encaissé pour un bordereau, en sommant les paiements des notes associées.
+     *
+     * @param Bordereau $bordereau
+     * @return float
+     */
+    public function getBordereauMontantEncaisse(Bordereau $bordereau): float
+    {
+        $totalEncaisse = 0.0;
+        foreach ($bordereau->getNotes() as $note) {
+            $totalEncaisse += $this->getNoteMontantPaye($note);
+        }
+        return $totalEncaisse;
     }
 }

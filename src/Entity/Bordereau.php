@@ -24,12 +24,13 @@ class Bordereau implements OwnerAwareInterface
     #[Groups(['list:read'])]
     private ?int $type = null;
 
-    // NOUVEAU : Statuts pour le suivi du cycle de vie du bordereau
-    public const STATUT_BROUILLON = 0;
-    public const STATUT_SOUMIS = 1;
-    public const STATUT_PAYE = 2;
-    public const STATUT_PARTIELLEMENT_PAYE = 3;
-    public const STATUT_ANNULE = 4;
+    // NOUVEAU : Statuts adaptés au flux "entrant"
+    public const STATUT_A_VERIFIER = 0;       // Reçu, en attente de vérification par le courtier
+    public const STATUT_CONTESTE = 1;         // Le courtier a signalé une anomalie
+    public const STATUT_VALIDE = 2;           // Vérifié et conforme, en attente de paiement
+    public const STATUT_PAYE = 3;             // L'assureur a payé la totalité
+    public const STATUT_PARTIELLEMENT_PAYE = 4; // Paiement partiel reçu
+    public const STATUT_ANNULE = 5;           // Le bordereau a été annulé par l'assureur
     public const TYPE_BOREDERAU_PRODUCTION = 0;
 
     #[ORM\Column(length: 255)]
@@ -40,10 +41,10 @@ class Bordereau implements OwnerAwareInterface
     #[Groups(['list:read'])]
     private ?Assureur $assureur = null;
 
-    // CORRECTION : Renommé en 'createdAt' pour plus de clarté sur sa fonction (date de création)
+    // Le nom 'receivedAt' est parfait ici. C'est la date de réception du document.
     #[ORM\Column]
     #[Groups(['list:read'])]
-    private ?\DateTimeImmutable $createdAt = null;
+    private ?\DateTimeImmutable $receivedAt = null;
 
     // NOUVEAU : La référence unique du bordereau, essentielle pour la communication et le suivi.
     #[ORM\Column(length: 255, unique: true)]
@@ -59,10 +60,10 @@ class Bordereau implements OwnerAwareInterface
     #[Groups(['list:read'])]
     private ?\DateTimeImmutable $periodeFin = null;
 
-    // NOUVEAU : Dates clés du cycle de vie
+    // NOUVEAU : Date à laquelle le paiement a été reçu par le courtier.
     #[ORM\Column(nullable: true)]
     #[Groups(['list:read'])]
-    private ?\DateTimeImmutable $submittedAt = null;
+    private ?\DateTimeImmutable $paidAt = null;
 
     #[ORM\Column]
     #[Groups(['list:read'])]
@@ -87,7 +88,7 @@ class Bordereau implements OwnerAwareInterface
     // NOUVEAU : Le statut actuel du bordereau.
     #[ORM\Column]
     #[Groups(['list:read'])]
-    private ?int $statut = self::STATUT_BROUILLON;
+    private ?int $statut = self::STATUT_A_VERIFIER;
  
     // NOUVEAU : Attributs calculés pour l'affichage et l'analyse
     #[Groups(['list:read'])]
@@ -147,14 +148,14 @@ class Bordereau implements OwnerAwareInterface
         return $this;
     }
 
-    public function getCreatedAt(): ?\DateTimeImmutable
+    public function getReceivedAt(): ?\DateTimeImmutable
     {
-        return $this->createdAt;
+        return $this->receivedAt;
     }
 
-    public function setCreatedAt(\DateTimeImmutable $createdAt): static
+    public function setReceivedAt(\DateTimeImmutable $receivedAt): static
     {
-        $this->createdAt = $createdAt;
+        $this->receivedAt = $receivedAt;
 
         return $this;
     }
@@ -279,14 +280,14 @@ class Bordereau implements OwnerAwareInterface
         return $this;
     }
 
-    public function getSubmittedAt(): ?\DateTimeImmutable
+    public function getPaidAt(): ?\DateTimeImmutable
     {
-        return $this->submittedAt;
+        return $this->paidAt;
     }
 
-    public function setSubmittedAt(?\DateTimeImmutable $submittedAt): static
+    public function setPaidAt(?\DateTimeImmutable $paidAt): static
     {
-        $this->submittedAt = $submittedAt;
+        $this->paidAt = $paidAt;
 
         return $this;
     }
