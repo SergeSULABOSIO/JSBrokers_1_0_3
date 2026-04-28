@@ -708,9 +708,10 @@ export default class extends Controller {
         });
 
         // On met à jour les champs readonly du bordereau.
-        // Note: Les champs MoneyType stockent la valeur en centimes, il faut donc multiplier par 100.
-        this.montantHTTarget.value = totalHT;
-        this.montantTaxeTarget.value = totalTaxe;
+        // Les champs MoneyType de Symfony gèrent la conversion en centimes automatiquement.
+        // On affiche la valeur brute ici, le formulaire se chargera de la conversion si nécessaire.
+        this.montantHTTarget.value = totalHT.toFixed(2); // Afficher avec 2 décimales
+        this.montantTaxeTarget.value = totalTaxe.toFixed(2); // Afficher avec 2 décimales
     }
 
 

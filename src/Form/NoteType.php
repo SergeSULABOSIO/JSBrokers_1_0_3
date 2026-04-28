@@ -109,35 +109,11 @@ class NoteType extends AbstractType
                 'label' => "Autorité fiscale ciblée",
                 'required' => false,
             ])
-            ->add('bordereau', EntityType::class, [
-                'class' => Bordereau::class,
-                'choice_label' => function (Bordereau $bordereau) {
-                    // Display reference, period, and insurer for better context
-                    return sprintf(
-                        '%s (Réf: %s, Période: %s - %s) - %s',
-                        $bordereau->getNom(),
-                        $bordereau->getReference(),
-                        $bordereau->getPeriodeDebut()?->format('d/m/Y'),
-                        $bordereau->getPeriodeFin()?->format('d/m/Y'),
-                        $bordereau->getAssureur()?->getNom()
-                    );
-                },
+            ->add('bordereau', BordereauAutocompleteField::class, [
                 'placeholder' => 'Optionnel : Lier à un bordereau',
                 'required' => false,
                 'label' => 'Bordereau de production associé',
                 'help' => "Lie cette note à un bordereau pour une meilleure traçabilité.",
-                'query_builder' => function (BordereauRepository $br) use ($options) {
-                    /** @var Note|null $note */
-                    $note = $options['data'] ?? null;
-                    $assureurId = $note && $note->getAssureur() ? $note->getAssureur()->getId() : null;
-
-                    $qb = $br->createQueryBuilder('b');
-
-                    if ($assureurId) {
-                        return $qb->where('b.assureur = :assureurId')->setParameter('assureurId', $assureurId);
-                    }
-                    return $qb->where('1 = 0'); // Ne montre aucun bordereau si aucun assureur n'est sélectionné
-                },
             ])
             ->add('comptes', CompteBancaireAutocompleteField::class, [
                 'label' => "Comptes bancaires",

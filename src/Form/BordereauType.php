@@ -49,6 +49,7 @@ class BordereauType extends AbstractType
                 ],
             ])
             ->add('assureur', AssureurAutocompleteField::class, [
+                // Ligne 3: Assureur
                 'label' => "Assureur",
                 'placeholder' => "Sélectionnez un assureur",
             ])
@@ -58,43 +59,14 @@ class BordereauType extends AbstractType
                     'placeholder' => "Référence",
                 ],
             ])
+            // Ligne 4: Référence du bordereau (8/12) et Date de réception (4/12)
             ->add('receivedAt', DateTimeType::class, [
                 'label' => "Date de réception",
                 'widget' => 'single_text',
                 'input' => 'datetime_immutable',
                 'html5' => true,
             ])
-            ->add('periodeDebut', DateTimeType::class, [
-                'label' => "Période Début",
-                'widget' => 'single_text',
-                'input' => 'datetime_immutable',
-            ])
-            ->add('periodeFin', DateTimeType::class, [
-                'label' => "Période Fin",
-                'widget' => 'single_text',
-                'input' => 'datetime_immutable',
-            ])
-            ->add('montantCommissionHT', MoneyType::class, [
-                'label' => "Montant HT",
-                'required' => false,
-                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                'grouping' => true,
-                'attr' => [
-                    'readonly' => true,
-                    'data-dialog-instance-target' => 'montantHT', // Cible pour le JS
-                ],
-            ])
-            ->add('montantTaxe', MoneyType::class, [
-                'label' => "Montant Taxe",
-                'required' => false,
-                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                'grouping' => true,
-                'scale' => 2,
-                'attr' => [
-                    'readonly' => true,
-                    'data-dialog-instance-target' => 'montantTaxe', // Cible pour le JS
-                ],
-            ])
+            // Ligne 5: Statut (HTML enrichi)
             ->add('statut', ChoiceType::class, [
                 'label' => 'Statut',
                 'expanded' => true,
@@ -120,6 +92,39 @@ class BordereauType extends AbstractType
                     return '<div><strong>' . $key . '</strong><div class="text-muted small">' . ($descriptions[$value] ?? '') . '</div></div>';
                 },
             ])
+            // Ligne 6: Période début (6/12) et Période fin (6/12)
+            ->add('periodeDebut', DateTimeType::class, [
+                'label' => "Période Début",
+                'widget' => 'single_text',
+                'input' => 'datetime_immutable',
+            ])
+            ->add('periodeFin', DateTimeType::class, [
+                'label' => "Période Fin",
+                'widget' => 'single_text',
+                'input' => 'datetime_immutable',
+            ])
+            // Ligne 7: Montant HT (6/12) et Montant Taxe (6/12) - Non éditables
+            ->add('montantCommissionHT', MoneyType::class, [
+                'label' => "Montant HT",
+                'required' => false,
+                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                'grouping' => true,
+                'attr' => [ // Non éditable
+                    'readonly' => true,
+                    'data-dialog-instance-target' => 'montantHT', // Cible pour le JS
+                ],
+            ])
+            ->add('montantTaxe', MoneyType::class, [
+                'label' => "Montant Taxe",
+                'required' => false,
+                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                'grouping' => true,
+                'scale' => 2, // Ensure correct precision for currency
+                'attr' => [ // Non éditable
+                    'readonly' => true,
+                    'data-dialog-instance-target' => 'montantTaxe', // Cible pour le JS
+                ],
+            ])
             ->add('documents', CollectionType::class, [
                 'label' => "Documents",
                 'entry_type' => DocumentType::class,
@@ -130,8 +135,6 @@ class BordereauType extends AbstractType
                     'label' => false,
                 ],
                 'attr' => [
-                    // On ajoute une action pour que notre JS puisse recalculer les totaux
-                    'data-action' => 'change->dialog-instance#recalculateTotals',
                     'data-dialog-instance-target' => 'operationsContainer',
                     'data-controller' => 'collection', // Utilisons un contrôleur plus simple
                     'data-form-collection-entites-data-value' => json_encode([
@@ -153,6 +156,8 @@ class BordereauType extends AbstractType
                     'label' => false,
                 ],
                 'attr' => [
+                    // On ajoute une action pour que notre JS puisse recalculer les totaux
+                    'data-action' => 'change->dialog-instance#recalculateTotals',
                     'data-controller' => 'form-collection-entites',
                     'data-form-collection-entites-data-value' => json_encode([
                         'addLabel' => $this->translatorInterface->trans("commom_add"),
