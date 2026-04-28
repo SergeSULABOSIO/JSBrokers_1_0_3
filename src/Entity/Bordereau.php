@@ -23,6 +23,13 @@ class Bordereau implements OwnerAwareInterface
     #[ORM\Column]
     #[Groups(['list:read'])]
     private ?int $type = null;
+
+    // NOUVEAU : Statuts pour le suivi du cycle de vie du bordereau
+    public const STATUT_BROUILLON = 0;
+    public const STATUT_SOUMIS = 1;
+    public const STATUT_PAYE = 2;
+    public const STATUT_PARTIELLEMENT_PAYE = 3;
+    public const STATUT_ANNULE = 4;
     public const TYPE_BOREDERAU_PRODUCTION = 0;
 
     #[ORM\Column(length: 255)]
@@ -33,13 +40,37 @@ class Bordereau implements OwnerAwareInterface
     #[Groups(['list:read'])]
     private ?Assureur $assureur = null;
 
+    // CORRECTION : Renommé en 'createdAt' pour plus de clarté sur sa fonction (date de création)
     #[ORM\Column]
     #[Groups(['list:read'])]
-    private ?\DateTimeImmutable $receivedAt = null;
+    private ?\DateTimeImmutable $createdAt = null;
+
+    // NOUVEAU : La référence unique du bordereau, essentielle pour la communication et le suivi.
+    #[ORM\Column(length: 255, unique: true)]
+    #[Groups(['list:read'])]
+    private ?string $reference = null;
+
+    // NOUVEAU : Période couverte par le bordereau. Indispensable.
+    #[ORM\Column]
+    #[Groups(['list:read'])]
+    private ?\DateTimeImmutable $periodeDebut = null;
 
     #[ORM\Column]
     #[Groups(['list:read'])]
-    private ?float $montantTTC = null;
+    private ?\DateTimeImmutable $periodeFin = null;
+
+    // NOUVEAU : Dates clés du cycle de vie
+    #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
+    private ?\DateTimeImmutable $submittedAt = null;
+
+    #[ORM\Column]
+    #[Groups(['list:read'])]
+    private ?float $montantCommissionHT = null;
+
+    #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
+    private ?float $montantTaxe = null;
 
     /**
      * @var Collection<int, Document>
@@ -52,6 +83,11 @@ class Bordereau implements OwnerAwareInterface
      */
     #[ORM\OneToMany(targetEntity: Note::class, mappedBy: 'bordereau')]
     private Collection $notes;
+
+    // NOUVEAU : Le statut actuel du bordereau.
+    #[ORM\Column]
+    #[Groups(['list:read'])]
+    private ?int $statut = self::STATUT_BROUILLON;
  
     // NOUVEAU : Attributs calculés pour l'affichage et l'analyse
     #[Groups(['list:read'])]
@@ -65,6 +101,15 @@ class Bordereau implements OwnerAwareInterface
  
     #[Groups(['list:read'])]
     public ?int $nombreDocuments = null;
+
+    // NOUVEAU : Attributs calculés financiers
+    #[Groups(['list:read'])]
+    public ?float $montantCommissionTTC = null;
+
+    #[Groups(['list:read'])]
+    public ?float $montantEncaisse = null;
+    #[Groups(['list:read'])]
+    public ?float $solde = null;
    
 
     public function __construct()
@@ -102,26 +147,26 @@ class Bordereau implements OwnerAwareInterface
         return $this;
     }
 
-    public function getReceivedAt(): ?\DateTimeImmutable
+    public function getCreatedAt(): ?\DateTimeImmutable
     {
-        return $this->receivedAt;
+        return $this->createdAt;
     }
 
-    public function setReceivedAt(\DateTimeImmutable $receivedAt): static
+    public function setCreatedAt(\DateTimeImmutable $createdAt): static
     {
-        $this->receivedAt = $receivedAt;
+        $this->createdAt = $createdAt;
 
         return $this;
     }
 
-    public function getMontantTTC(): ?float
+    public function getMontantCommissionHT(): ?float
     {
-        return $this->montantTTC;
+        return $this->montantCommissionHT;
     }
 
-    public function setMontantTTC(float $montantTTC): static
+    public function setMontantCommissionHT(float $montantCommissionHT): static
     {
-        $this->montantTTC = $montantTTC;
+        $this->montantCommissionHT = $montantCommissionHT;
 
         return $this;
     }
@@ -194,6 +239,78 @@ class Bordereau implements OwnerAwareInterface
                 $note->setBordereau(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getReference(): ?string
+    {
+        return $this->reference;
+    }
+
+    public function setReference(string $reference): static
+    {
+        $this->reference = $reference;
+
+        return $this;
+    }
+
+    public function getPeriodeDebut(): ?\DateTimeImmutable
+    {
+        return $this->periodeDebut;
+    }
+
+    public function setPeriodeDebut(\DateTimeImmutable $periodeDebut): static
+    {
+        $this->periodeDebut = $periodeDebut;
+
+        return $this;
+    }
+
+    public function getPeriodeFin(): ?\DateTimeImmutable
+    {
+        return $this->periodeFin;
+    }
+
+    public function setPeriodeFin(\DateTimeImmutable $periodeFin): static
+    {
+        $this->periodeFin = $periodeFin;
+
+        return $this;
+    }
+
+    public function getSubmittedAt(): ?\DateTimeImmutable
+    {
+        return $this->submittedAt;
+    }
+
+    public function setSubmittedAt(?\DateTimeImmutable $submittedAt): static
+    {
+        $this->submittedAt = $submittedAt;
+
+        return $this;
+    }
+
+    public function getMontantTaxe(): ?float
+    {
+        return $this->montantTaxe;
+    }
+
+    public function setMontantTaxe(?float $montantTaxe): static
+    {
+        $this->montantTaxe = $montantTaxe;
+
+        return $this;
+    }
+
+    public function getStatut(): ?int
+    {
+        return $this->statut;
+    }
+
+    public function setStatut(int $statut): static
+    {
+        $this->statut = $statut;
 
         return $this;
     }
