@@ -287,7 +287,7 @@ export default class extends Controller {
         // Le contexte pour le nouvel élément.
         const context = {
             originatorId: this.element.id, // On s'identifie pour le rafraîchissement
-        };
+        }; //
  
         // Le contexte parent pour lier le nouvel élément.
         const parentContext = {
@@ -339,7 +339,7 @@ export default class extends Controller {
             formCanvas: formCanvas,
             context: context,
             parentContext: parentContext
-        });
+        }); //
     }
 
     /**

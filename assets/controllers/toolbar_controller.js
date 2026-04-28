@@ -195,7 +195,7 @@ export default class extends Controller {
             if (action.icon && !this.iconCache.has(action.icon)) {
                 this.notifyCerveau('ui:icon.request', {
                     iconName: action.icon,
-                    // CORRECTION : Remplacer ':' par '--' pour créer un ID de requête valide comme sélecteur CSS, et supprimer la méthode dupliquée.
+                    // CORRECTION : Remplacer ':' par '--' pour créer un ID de requête valide comme sélecteur CSS.
                     requesterId: `toolbar-preload-${action.icon.replace(/:/g, '--')}` 
                 });
             }
