@@ -15,9 +15,9 @@ class BordereauNumericCanvasProvider implements NumericCanvasProviderInterface
     {
         /** @var Bordereau $object */
         return [
-            "montantTTC" => [
-                "description" => "Montant TTC",
-                "value" => ($object->getMontantTTC() ?? 0) * 100,
+            "montantCommissionTTC" => [ // Utilise le nom correct de l'attribut calculé
+                "description" => "Commission TTC", // Met à jour la description pour plus de clarté
+                "value" => ($object->montantCommissionTTC ?? 0) * 100, // Accède directement à la propriété publique
             ],
         ];
     }
