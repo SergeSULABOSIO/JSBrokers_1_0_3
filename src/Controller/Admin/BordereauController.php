@@ -80,6 +80,7 @@ class BordereauController extends AbstractController
                 $bordereau->setType(Bordereau::TYPE_BOREDERAU_PRODUCTION);
                 $bordereau->setInvite($invite);
                 $bordereau->setEntreprise($invite->getEntreprise()); // Définir l'entreprise explicitement
+                $bordereau->setReference('BORD-' . (new DateTimeImmutable())->format('ymd') . '-' . substr(uniqid(), 0, 3)); // Générer une référence unique de 15 caractères pour le nouveau bordereau
                 $bordereau->setReceivedAt(new DateTimeImmutable("now"));
             }
         );
