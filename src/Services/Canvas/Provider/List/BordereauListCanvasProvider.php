@@ -39,6 +39,12 @@ class BordereauListCanvasProvider implements ListCanvasProviderInterface
                     "attribut_type" => "nombre",
                 ],
                 [
+                    "titre_colonne" => "Montant Encaissé",
+                    "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    "attribut_code" => "montantEncaisse",
+                    "attribut_type" => "nombre",
+                ],
+                [
                     "titre_colonne" => "Solde",
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                     "attribut_code" => "solde",
