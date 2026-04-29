@@ -40,15 +40,36 @@ use App\Services\JSBDynamicSearchService;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
+use App\Repository\EntrepriseRepository;
+use App\Repository\InviteRepository;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
+use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Form\FormInterface;
 
 /**
  * @trait ControllerUtilsTrait
  * @description Fournit des méthodes utilitaires pour les contrôleurs, notamment pour la validation d'accès et la déduction de noms.
+ *
+ * @property EntityManagerInterface $em
+ * @property EntrepriseRepository $entrepriseRepository
+ * @property InviteRepository $inviteRepository
+ * @property JSBDynamicSearchService $searchService
+ * @property SerializerInterface $serializer
+ *
+ * @method Response render(string $view, array $parameters = [], ?Response $response = null)
+ * @method string renderView(string $view, array $parameters = [])
+ * @method JsonResponse json($data, int $status = 200, array $headers = [], array $context = [])
+ * @method Response forward(string $controller, array $path = [], array $query = [])
+ * @method FormInterface createForm(string $type, $data = null, array $options = [])
+ * @method UserInterface|null getUser()
+ * @method NotFoundHttpException createNotFoundException(string $message = '', \Throwable $previous = null)
+ * @method AccessDeniedException createAccessDeniedException(string $message = 'Access Denied.', \Throwable $previous = null)
+ * @method string generateUrl(string $route, array $parameters = [], int $referenceType = UrlGeneratorInterface::ABSOLUTE_PATH)
  */
 trait ControllerUtilsTrait
 {
@@ -58,8 +79,6 @@ trait ControllerUtilsTrait
      *
      * Cette méthode vérifie que l'entreprise et l'invité existent et que l'invité
      * appartient bien à l'entreprise spécifiée. Elle retourne les entités validées.
-     *
-     * @param Request $request La requête HTTP actuelle.
      * @return array{entreprise: Entreprise, invite: Invite} Un tableau contenant les entités validées.
      *
      * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException Si l'entreprise n'est pas trouvée.
@@ -859,6 +878,12 @@ trait ControllerUtilsTrait
         return $this->forward($controllerAction, $request->attributes->all());
     }
 
+    /**
+     * Charge les valeurs calculées pour une entité ou pour toutes les entités d'un canvas.
+     *
+     * @param array|null $entityCanvas Le canvas de l'entité si disponible.
+     * @param object $entity L'entité pour laquelle charger les valeurs calculées.
+     */
     public function loadCalculatedValues($entityCanvas, $entity)
     {
         // La logique est maintenant entièrement déléguée au CanvasBuilder.
