@@ -25,7 +25,6 @@ class BordereauFormCanvasProvider implements FormCanvasProviderInterface
     {
         /** @var Bordereau $object */
         $isParentNew = ($object->getId() === null);
-        $bordereauId = $object->getId() ?? 0;
 
         $parametres = [
             "titre_creation" => "Nouveau Bordereau",
@@ -33,9 +32,9 @@ class BordereauFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/bordereau/api/submit",
             "endpoint_delete_url" => "/admin/bordereau/api/delete",
             "endpoint_form_url" => "/admin/bordereau/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
         ];
-        $layout = $this->buildBordereauLayout($object, $isParentNew, $idEntreprise);
+        $layout = $this->buildBordereauLayout($object, $isParentNew); // buildBordereauLayout ne prend plus idEntreprise
 
         return [
             "parametres" => $parametres,
@@ -44,7 +43,7 @@ class BordereauFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildBordereauLayout(Bordereau $object, bool $isParentNew, ?int $idEntreprise): array
+    private function buildBordereauLayout(Bordereau $object, bool $isParentNew): array // Signature alignée sur NoteFormCanvasProvider
     {
         $bordereauId = $object->getId() ?? 0;
         $layout = [
@@ -57,9 +56,20 @@ class BordereauFormCanvasProvider implements FormCanvasProviderInterface
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["statut"]]]],
         ];
         $collections = [
+            [
+                'fieldName' => 'operations', 
+                'entityRouteName' => 'operation', 
+                'formTitle' => 'Opération', 
+                'parentFieldName' => 'bordereau',
+                'totalizableField' => 'montantTTC', // Champ à totaliser
+                'secondaryField' => 'referencePolice', // Champ secondaire à afficher
+                'secondaryLabel' => 'Police: ' // Label pour le champ secondaire
+            ],
             ['fieldName' => 'documents', 'entityRouteName' => 'document', 'formTitle' => 'Document', 'parentFieldName' => 'bordereau']
         ];
-        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections, $idEntreprise);
+
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
+
         return $layout;
     }
 }
