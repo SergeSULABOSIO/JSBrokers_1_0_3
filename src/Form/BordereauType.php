@@ -134,17 +134,8 @@ class BordereauType extends AbstractType
                 'entry_options' => [
                     'label' => false,
                 ],
-                'attr' => [
-                    'data-dialog-instance-target' => 'operationsContainer',
-                    'data-controller' => 'collection', // Utilisons un contrôleur plus simple
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "document",
-                        'dossieractions' => 0,  //1=On doit chercher l'icone "role" dans le dossier ICONES/ACTIONS, sinon on la chercher dans le dossier racine càd le dossier ICONES (le dossier racime)
-                        'tailleMax' => 1,
-                    ]),
-                ],
+                // La configuration du widget est maintenant gérée par le BordereauFormCanvasProvider.
+                'mapped' => false,
             ])
             ->add('operations', CollectionType::class, [
                 'label' => "Opérations concernées par ce bordereau",
@@ -155,20 +146,11 @@ class BordereauType extends AbstractType
                 'entry_options' => [
                     'label' => false,
                 ],
-                'attr' => [
-                    // On ajoute une action pour que notre JS puisse recalculer les totaux
-                    'data-action' => 'change->dialog-instance#recalculateTotals',
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-data-value' => json_encode([
-                        'addLabel' => $this->translatorInterface->trans("commom_add"),
-                        'deleteLabel' => $this->translatorInterface->trans("commom_delete"),
-                        'icone' => "plus-circle",
-                        'tailleMax' => 100,
-                    ]),
-                ],
+                // La configuration du widget est maintenant gérée par le BordereauFormCanvasProvider.
+                'mapped' => false,
             ])
             // ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())
-            ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
+            ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->updateTimestamp())
         ;
     }
 

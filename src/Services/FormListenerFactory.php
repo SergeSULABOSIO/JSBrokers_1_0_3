@@ -26,6 +26,22 @@ class FormListenerFactory
             }
         };
     }
+    
+    /**
+     * Met à jour uniquement le champ 'updatedAt' d'une entité.
+     * Idéal pour les entités où la date de création est gérée manuellement (ex: Bordereau.receivedAt).
+     */
+    public function updateTimestamp(): callable
+    {
+        return function (PostSubmitEvent $event) {
+            $entity = $event->getData();
+
+            // S'assure que l'entité existe et qu'elle a une méthode setUpdatedAt
+            if ($entity && method_exists($entity, 'setUpdatedAt')) {
+                $entity->setUpdatedAt(new DateTimeImmutable('now'));
+            }
+        };
+    }
 
     //Avec paramètre
     public function timeStampsWithWhen(string $when): callable
