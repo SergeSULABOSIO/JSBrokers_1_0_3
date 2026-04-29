@@ -18,8 +18,8 @@ export default class extends Controller {
     static outlets = ['modal'];
     static targets = [
         'content', 'formRow', 'dynamicFieldContainer', 'header', 'title', 'titleIcon', 
-        'closeButton', 'progressBarContainer', 'footer', 'feedbackContainer', 'submitButton', 'closeFooterButton',
-        'montantHT', 'montantTaxe', 'operationsContainer',
+        'closeButton', 'progressBarContainer', 'footer', 'feedbackContainer', 'submitButton', 'closeFooterButton', // Removed montantHT, montantTaxe
+        'operationsContainer', // Kept operationsContainer as it's still relevant for other logic if needed.
         'saveIcon', 'closeIcon',
         'addressedTo'
     ];
@@ -230,9 +230,6 @@ export default class extends Controller {
 
         // NOUVEAU : Initialiser la logique de la barre d'outils des attributs
         this.initializeAttributeToolbar();
-
-        // NOUVEAU : Lancer un premier calcul des totaux au chargement du formulaire
-        this.recalculateTotals();
 
         const mainDialogElement = this.modalOutlet.element;
 
@@ -679,42 +676,7 @@ export default class extends Controller {
 
         return false;
     }
-
-    /**
-     * NOUVEAU : Recalcule et met à jour les champs 'montantCommissionHT' et 'montantTaxe'
-     * du bordereau en se basant sur la somme des opérations dans la collection.
-     */
-    recalculateTotals() {
-        // On vérifie si les cibles nécessaires sont présentes.
-        if (!this.hasOperationsContainerTarget || !this.hasMontantHTTarget || !this.hasMontantTaxeTarget) {
-            return;
-        }
-
-        let totalHT = 0;
-        let totalTaxe = 0;
-
-        // On parcourt chaque ligne d'opération dans la collection.
-        const operationRows = this.operationsContainerTarget.querySelectorAll('.collection-item, .form-collection-item'); // Gère les deux types de classes
-        operationRows.forEach(row => {
-            const montantHTInput = row.querySelector('input[name*="[montantHT]"]');
-            const montantTaxeInput = row.querySelector('input[name*="[montantTaxe]"]');
-
-            if (montantHTInput) {
-                totalHT += parseFloat(montantHTInput.value) || 0;
-            }
-            if (montantTaxeInput) {
-                totalTaxe += parseFloat(montantTaxeInput.value) || 0;
-            }
-        });
-
-        // On met à jour les champs readonly du bordereau.
-        // Les champs MoneyType de Symfony gèrent la conversion en centimes automatiquement.
-        // On affiche la valeur brute ici, le formulaire se chargera de la conversion si nécessaire.
-        this.montantHTTarget.value = totalHT.toFixed(2); // Afficher avec 2 décimales
-        this.montantTaxeTarget.value = totalTaxe.toFixed(2); // Afficher avec 2 décimales
-    }
-
-
+    
 
     /**
      * Génère le HTML pour un squelette de chargement avec un message personnalisable.

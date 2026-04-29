@@ -51,7 +51,6 @@ class BordereauFormCanvasProvider implements FormCanvasProviderInterface
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"], "width" => 6], ["champs" => ["reference"], "width" => 6]]], // Ligne 2: Nom et Référence
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["assureur"]]]], // Ligne 3: Assureur
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["periodeDebut"], "width" => 4], ["champs" => ["periodeFin"], "width" => 4], ["champs" => ["receivedAt"], "width" => 4]]], // Ligne 4: Période début, Période fin et Date de reception
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["montantCommissionHT"], "width" => 6], ["champs" => ["montantTaxe"], "width" => 6]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["statut"]]]],
         ];
         $collections = [

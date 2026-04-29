@@ -103,28 +103,6 @@ class BordereauType extends AbstractType
                 'widget' => 'single_text',
                 'input' => 'datetime_immutable',
             ])
-            // Ligne 7: Montant HT (6/12) et Montant Taxe (6/12) - Non éditables
-            ->add('montantCommissionHT', MoneyType::class, [
-                'label' => "Montant HT",
-                'required' => false,
-                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                'grouping' => true,
-                'attr' => [ // Non éditable
-                    'readonly' => true,
-                    'data-dialog-instance-target' => 'montantHT', // Cible pour le JS
-                ],
-            ])
-            ->add('montantTaxe', MoneyType::class, [
-                'label' => "Montant Taxe",
-                'required' => false,
-                'currency' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-                'grouping' => true,
-                'scale' => 2, // Ensure correct precision for currency
-                'attr' => [ // Non éditable
-                    'readonly' => true,
-                    'data-dialog-instance-target' => 'montantTaxe', // Cible pour le JS
-                ],
-            ])
             ->add('documents', CollectionType::class, [
                 'label' => "Documents",
                 'entry_type' => DocumentType::class,

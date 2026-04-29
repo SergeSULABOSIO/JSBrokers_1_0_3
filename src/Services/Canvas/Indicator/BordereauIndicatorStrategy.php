@@ -26,8 +26,20 @@ class BordereauIndicatorStrategy implements IndicatorCalculationStrategyInterfac
     public function calculate(object $entity): array
     {
         /** @var Bordereau $entity */
-
-        $montantCommissionTTC = ($entity->getMontantCommissionHT() ?? 0.0) + ($entity->getMontantTaxe() ?? 0.0);
+        
+        // Calcul des montants HT et Taxe à partir des opérations
+        $totalMontantHT = 0.0;
+        $totalMontantTaxe = 0.0;
+        foreach ($entity->getOperations() as $operation) {
+            // Assurez-vous que l'opération a ses propres montants HT et Taxe
+            // ou que ces derniers sont calculés et hydratés sur l'objet Operation.
+            // Pour l'instant, on suppose qu'ils sont directement accessibles.
+            $totalMontantHT += $operation->getMontantHT() ?? 0.0;
+            $totalMontantTaxe += $operation->getMontantTaxe() ?? 0.0;
+        }
+        $entity->montantCommissionHT = $totalMontantHT;
+        $entity->montantTaxe = $totalMontantTaxe;
+        $montantCommissionTTC = $totalMontantHT + $totalMontantTaxe;
         $montantEncaisse = $this->indicatorCalculationHelper->getBordereauMontantEncaisse($entity);
         $solde = $montantCommissionTTC - $montantEncaisse;
 
@@ -36,6 +48,8 @@ class BordereauIndicatorStrategy implements IndicatorCalculationStrategyInterfac
             'statutString' => $this->getBordereauStatutString($entity),
             'ageBordereau' => $this->calculateBordereauAge($entity),
             'nombreDocuments' => $entity->getDocuments()->count(),
+            'montantCommissionHT' => $totalMontantHT, // Ajout des montants calculés
+            'montantTaxe' => $totalMontantTaxe,       // Ajout des montants calculés
             'assureurNom' => $entity->getAssureur()?->getNom() ?? 'N/A',
             'montantCommissionTTC' => $montantCommissionTTC,
             'montantEncaisse' => $montantEncaisse,
