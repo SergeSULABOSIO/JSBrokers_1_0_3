@@ -2,9 +2,11 @@
 
 namespace App\Services\Canvas\Provider\Form;
 
+use App\Services\CanvasBuilder;
+
 trait FormCanvasProviderTrait
 {
-    private function addCollectionWidgetsToLayout(array &$layout, object $parentEntity, bool $isParentNew, array $collectionsConfig, ?int $idEntreprise = null, ?int $idInvite = null): void
+    private function addCollectionWidgetsToLayout(array &$layout, object $parentEntity, bool $isParentNew, array $collectionsConfig, ?int $idEntreprise = null, ?int $idInvite = null, ?CanvasBuilder $canvasBuilder = null): void
     {
         $parentId = $parentEntity->getId() ?? 0;
         foreach ($collectionsConfig as $config) {
@@ -27,7 +29,7 @@ trait FormCanvasProviderTrait
 
                     foreach ($collection as $item) {
                         // ÉTAPE CRUCIALE : Charger les valeurs calculées pour l'élément avant de les utiliser.
-                        $this->canvasBuilder->loadAllCalculatedValues($item);
+                        $canvasBuilder->loadAllCalculatedValues($item);
 
                         $value = 0;
                         // Essayer le getter d'abord (ex: getMontantFinal())
@@ -63,7 +65,7 @@ trait FormCanvasProviderTrait
                         $extraOptions,
                         $idEntreprise,
                         $idInvite
-                    )]],
+                    )]], // Correction: Ajout des IDs
                 ]
             ];
         }

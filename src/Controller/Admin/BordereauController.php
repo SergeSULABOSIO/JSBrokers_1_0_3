@@ -79,6 +79,7 @@ class BordereauController extends AbstractController
             function (Bordereau $bordereau, Invite $invite) {
                 $bordereau->setType(Bordereau::TYPE_BOREDERAU_PRODUCTION);
                 $bordereau->setInvite($invite);
+                $bordereau->setEntreprise($invite->getEntreprise()); // Définir l'entreprise explicitement
                 $bordereau->setReceivedAt(new DateTimeImmutable("now"));
             }
         );

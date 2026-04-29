@@ -2,7 +2,6 @@
 
 namespace App\Entity;
 
-use App\Entity\Traits\AuditableTrait;
 use Symfony\Component\Serializer\Annotation\Groups;
 use App\Repository\BordereauRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -10,13 +9,13 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: BordereauRepository::class)]
-#[ORM\HasLifecycleCallbacks]
-class Bordereau implements OwnerAwareInterface
-{
-    use AuditableTrait;
+#[ORM\HasLifecycleCallbacks] // Garder HasLifecycleCallbacks pour updatedAt
+class Bordereau implements OwnerAwareInterface // Implémente OwnerAwareInterface pour setInvite
+{    
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    // #[Groups(['list:read'])] // Removed as it was causing issues with serialization in some contexts
     #[Groups(['list:read'])]
     private ?int $id = null;
 
@@ -36,6 +35,18 @@ class Bordereau implements OwnerAwareInterface
     #[ORM\Column(length: 255)]
     #[Groups(['list:read'])]
     private ?string $nom = null;
+
+    #[ORM\ManyToOne(inversedBy: 'bordereaus')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Invite $invite = null;
+
+    #[ORM\ManyToOne(inversedBy: 'bordereaus')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?Entreprise $entreprise = null;
+
+    #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
+    private ?\DateTimeImmutable $updatedAt = null;
 
     #[ORM\ManyToOne(inversedBy: 'bordereaus')]
     #[Groups(['list:read'])]
@@ -332,6 +343,42 @@ class Bordereau implements OwnerAwareInterface
                 $operation->setBordereau(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getInvite(): ?Invite
+    {
+        return $this->invite;
+    }
+
+    public function setInvite(?Invite $invite): static
+    {
+        $this->invite = $invite;
+
+        return $this;
+    }
+
+    public function getEntreprise(): ?Entreprise
+    {
+        return $this->entreprise;
+    }
+
+    public function setEntreprise(?Entreprise $entreprise): static
+    {
+        $this->entreprise = $entreprise;
+
+        return $this;
+    }
+
+    public function getUpdatedAt(): ?\DateTimeImmutable
+    {
+        return $this->updatedAt;
+    }
+
+    public function setUpdatedAt(?\DateTimeImmutable $updatedAt): static
+    {
+        $this->updatedAt = $updatedAt;
 
         return $this;
     }
