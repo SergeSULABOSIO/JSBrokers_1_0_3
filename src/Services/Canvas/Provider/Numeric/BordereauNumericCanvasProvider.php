@@ -19,6 +19,10 @@ class BordereauNumericCanvasProvider implements NumericCanvasProviderInterface
                 "description" => "Commission TTC", // Met à jour la description pour plus de clarté
                 "value" => ($object->montantCommissionTTC ?? 0) * 100, // Accède directement à la propriété publique
             ],
+            "montantEncaisse" => [
+                "description" => "Montant Encaissé",
+                "value" => ($object->montantEncaisse ?? 0) * 100,
+            ],
         ];
     }
 }
