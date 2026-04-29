@@ -29,7 +29,7 @@ class IconCanvasProvider
         'monnaie'         => 'hugeicons:dollar-circle',
         'note'            => 'tdesign:bill-filled',
         'offre'           => 'hugeicons:invoice-01',
-        'operation'       => 'hugeicons:transaction-01', // Ajout pour la rubrique Opération
+        'operation'       => 'tabler:transaction-dollar', // Ajout pour la rubrique Opération
         'paiement'        => 'hugeicons:dollar-receive-02',
         'partenaire'      => 'carbon:partnership',
         'piece-sinistre'  => 'hugeicons:document-attachment',
