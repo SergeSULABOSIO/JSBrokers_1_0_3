@@ -70,14 +70,12 @@ class Bordereau implements OwnerAwareInterface // Implémente OwnerAwareInterfac
     #[ORM\Column]
     #[Groups(['list:read'])]
     private ?\DateTimeImmutable $periodeFin = null;
-
-    #[ORM\Column]
+    
     #[Groups(['list:read'])]
-    private ?float $montantCommissionHT = null;
+    public ?float $montantCommissionHT = null; // Attribut calculé
 
-    #[ORM\Column(nullable: true)]
     #[Groups(['list:read'])]
-    private ?float $montantTaxe = null;
+    public ?float $montantTaxe = null; // Attribut calculé
 
     /**
      * @var Collection<int, Document>
@@ -169,18 +167,6 @@ class Bordereau implements OwnerAwareInterface // Implémente OwnerAwareInterfac
     public function setReceivedAt(\DateTimeImmutable $receivedAt): static
     {
         $this->receivedAt = $receivedAt;
-
-        return $this;
-    }
-
-    public function getMontantCommissionHT(): ?float
-    {
-        return $this->montantCommissionHT;
-    }
-
-    public function setMontantCommissionHT(float $montantCommissionHT): static
-    {
-        $this->montantCommissionHT = $montantCommissionHT;
 
         return $this;
     }
@@ -289,18 +275,6 @@ class Bordereau implements OwnerAwareInterface // Implémente OwnerAwareInterfac
     public function setPeriodeFin(\DateTimeImmutable $periodeFin): static
     {
         $this->periodeFin = $periodeFin;
-
-        return $this;
-    }
-
-    public function getMontantTaxe(): ?float
-    {
-        return $this->montantTaxe;
-    }
-
-    public function setMontantTaxe(?float $montantTaxe): static
-    {
-        $this->montantTaxe = $montantTaxe;
 
         return $this;
     }
