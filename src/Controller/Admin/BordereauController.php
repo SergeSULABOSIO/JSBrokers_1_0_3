@@ -116,7 +116,7 @@ class BordereauController extends AbstractController
         return $this->handleCollectionApiRequest($id, $collectionName, Bordereau::class, $usage);
     }
 
-    #[Route('/api/get-analysis-url/{id}', name: 'api.get_analysis_url', methods: ['GET'])]
+    #[Route('/api/get-analysis-url/{id}', name: 'api.get_analysis_url', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
     public function getAnalysisUrlApi(Bordereau $bordereau, Request $request): JsonResponse
     {
         // On génère l'URL de la page d'analyse.
