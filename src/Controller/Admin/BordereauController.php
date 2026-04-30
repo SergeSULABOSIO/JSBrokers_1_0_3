@@ -3,33 +3,34 @@
 namespace App\Controller\Admin;
 
 use App\Constantes\Constante;
+use App\Controller\Admin\ControllerUtilsTrait;
 use App\Entity\Bordereau;
 use App\Entity\Invite;
+use App\Entity\Traits\HandleChildAssociationTrait;
 use App\Form\BordereauType;
 use App\Repository\BordereauRepository;
-use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
-use DateTimeImmutable;
+use App\Repository\InviteRepository;
 use App\Services\Canvas\CalculationProvider;
-use Doctrine\ORM\EntityManagerInterface;
 use App\Services\CanvasBuilder;
 use App\Services\JSBDynamicSearchService;
+use DateTimeImmutable;
+use Doctrine\ORM\EntityManagerInterface;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Reader\Exception as ReaderException;
-use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Mailer\MailerInterface;
-use App\Controller\Admin\ControllerUtilsTrait;
-use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use App\Entity\Traits\HandleChildAssociationTrait;
-use Symfony\Component\Serializer\SerializerInterface;
-use Symfony\Component\Routing\Requirement\Requirement;
-use Symfony\Contracts\Translation\TranslatorInterface;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Mailer\MailerInterface;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Requirement\Requirement;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[Route("/admin/bordereau", name: 'admin.bordereau.')]
 #[IsGranted('ROLE_USER')]
@@ -173,7 +174,7 @@ class BordereauController extends AbstractController
                     if ($worksheet) {
                         /** @var Worksheet $worksheet */
                         $highestColumn = $worksheet->getHighestColumn(); // ex: 'F'
-                        $highestColumnIndex = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($highestColumn); // ex: 6
+                        $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn); // ex: 6
                         
                         $columns = [];
                         // On lit la première ligne pour récupérer les en-têtes de colonnes
