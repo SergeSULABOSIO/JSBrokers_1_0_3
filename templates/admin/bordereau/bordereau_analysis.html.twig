@@ -35,6 +35,7 @@
             text-align: center;
             background-color: #343a40;
         }
+{% extends 'base.html.twig' %}
 
         @media print {
             .actions-bar {
@@ -50,6 +51,7 @@
     </style>
 </head>
 <body>
+{% block title %}Analyse du Bordereau {{ bordereau.reference }}{% endblock %}
 
     <div class="actions-bar sticky-top">
         <button class="btn btn-light d-inline-flex align-items-center gap-2" data-controller="ripple" onclick="window.close()">
@@ -61,6 +63,18 @@
             <twig:UX:Icon name="{{ resolve_icon_name('action:print') }}" width="18px" height="18px" />
             <span>Imprimer</span>
         </button>
+{% block body %}
+<div class="container-fluid my-4" data-controller="bordereau-analysis">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-file-excel text-success me-2"></i>
+            Analyse du Bordereau : <span class="fw-bold">{{ bordereau.reference }}</span>
+        </h1>
+        {# Le bouton de retour pointe maintenant vers l'espace de travail, ce qui est plus cohérent dans une SPA #}
+        <a href="{{ path('app_espace_de_travail_component.index', {'idInvite': app.user.invite.id, 'idEntreprise': entreprise.id}) }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>
+            Retour à l'espace de travail
+        </a>
     </div>
 
     <div class="analysis-container">
@@ -75,6 +89,41 @@
                     <p class="mb-1"><strong>Référence :</strong> {{ bordereau.reference }}</p>
                     <p class="mb-0"><strong>Période :</strong> {{ bordereau.periodeDebut|date('d/m/Y') }} au {{ bordereau.periodeFin|date('d/m/Y') }}</p>
                 </div>
+    {% if error %}
+        <div class="alert alert-danger">
+            <h4 class="alert-heading">Erreur d'analyse</h4>
+            <p>{{ error }}</p>
+        </div>
+    {% else %}
+        {# ÉTAPE 1 : Sélection de la feuille #}
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Étape 1: Sélection de la feuille de calcul</h6>
+            </div>
+            <div class="card-body">
+                {% if viewData.sheets|length > 1 %}
+                    <p>Le fichier contient plusieurs feuilles. Veuillez sélectionner celle qui contient les données à analyser.</p>
+                    <form>
+                        {% for sheet in viewData.sheets %}
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="selectedSheet" id="sheet-{{ loop.index0 }}" value="{{ sheet.sheetName }}" {{ loop.first ? 'checked' : '' }} data-bordereau-analysis-target="sheetSelection">
+                                <label class="form-check-label" for="sheet-{{ loop.index0 }}">
+                                    <strong>{{ sheet.sheetName }}</strong> <span class="text-muted">({{ sheet.columns|length }} colonnes détectées)</span>
+                                </label>
+                            </div>
+                        {% endfor %}
+                        <button type="button" class="btn btn-primary mt-3" data-action="bordereau-analysis#showMappingStep">
+                            Valider et passer à l'étape 2
+                            <i class="fas fa-arrow-right ms-2"></i>
+                        </button>
+                    </form>
+                {% elseif viewData.sheets|length == 1 %}
+                    <p>Une seule feuille a été détectée : <strong>{{ viewData.sheets[0].sheetName }}</strong>. Passage automatique à l'étape suivante.</p>
+                    {# Input caché pour que le contrôleur Stimulus le trouve même avec une seule feuille #}
+                    <input type="radio" name="selectedSheet" value="{{ viewData.sheets[0].sheetName }}" checked class="d-none" data-bordereau-analysis-target="sheetSelection">
+                {% else %}
+                     <div class="alert alert-warning">Aucune feuille de calcul contenant des données n'a été trouvée.</div>
+                {% endif %}
             </div>
         </div>
 
@@ -88,6 +137,13 @@
                 </div>
             {% elseif analysisData is not empty %}
                 <p class="mt-4">Le fichier Excel attaché contient les feuilles et colonnes suivantes :</p>
+        {# ÉTAPE 2 : Mappage des colonnes (initialement cachée) #}
+        <div class="card shadow mb-4 d-none" data-bordereau-analysis-target="step2">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Étape 2: Mappage des colonnes</h6>
+            </div>
+            <div class="card-body">
+                <p>Veuillez faire correspondre les colonnes de votre fichier avec les champs requis par le système.</p>
                 
                 <div class="accordion" id="sheetsAccordion">
                     {% for sheet in analysisData %}
@@ -105,9 +161,44 @@
                                             <li class="list-group-item">{{ column|default('Colonne vide') }}</li>
                                         {% else %}
                                             <li class="list-group-item">Aucune colonne trouvée dans la première ligne.</li>
+                {% for sheet in viewData.sheets %}
+                    <div data-bordereau-analysis-target="mappingContainer" data-sheet-name="{{ sheet.sheetName }}" data-is-first="{{ loop.first ? 'true' : 'false' }}">
+                        <h5 class="mb-3">Feuille : <span class="badge bg-secondary">{{ sheet.sheetName }}</span></h5>
+                        <form class="column-mapping-form">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Colonne du fichier Excel</th>
+                                            <th>Correspondance système</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    {# On itère sur les colonnes en conservant la lettre (clé) et le nom (valeur) #}
+                                    {% for col_letter, col_name in sheet.columns %}
+                                        <tr>
+                                            <td>
+                                                <span class="badge bg-info me-2">{{ col_letter }}</span>
+                                                <strong>{{ col_name|default('Colonne sans nom') }}</strong>
+                                            </td>
+                                            <td>
+                                                <select name="mapping[{{ col_name }}]" class="form-select form-select-sm">
+                                                    <option value="">Ignorer cette colonne</option>
+                                                    {% for key, label in viewData.mapping_options %}
+                                                        <option value="{{ key }}">{{ label }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </td>
+                                        </tr>
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="2" class="text-center text-muted">Aucune colonne détectée dans cette feuille.</td>
+                                        </tr>
                                         {% endfor %}
                                     </ul>
                                 </div>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     {% endfor %}
@@ -118,6 +209,14 @@
                     <p>Le fichier Excel semble vide ou illisible.</p>
                 </div>
             {% endif %}
+                            <button type="submit" class="btn btn-success mt-3">
+                                Lancer l'analyse
+                                <i class="fas fa-cogs ms-2"></i>
+                            </button>
+                        </form>
+                    </div>
+                {% endfor %}
+            </div>
         </div>
 
         <div class="analysis-footer text-center">
@@ -132,3 +231,6 @@
 
 </body>
 </html>
+    {% endif %}
+</div>
+{% endblock %}
