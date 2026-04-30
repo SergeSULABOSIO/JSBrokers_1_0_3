@@ -33,6 +33,17 @@ class BordereauFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/bordereau/api/delete",
             "endpoint_form_url" => "/admin/bordereau/api/get-form",
             "isCreationMode" => $isParentNew,
+            // NOUVEAU : Définition de la barre d'outils pour le volet des attributs.
+            // Cette barre ne sera affichée qu'en mode édition.
+            "attribute_actions" => [
+                [
+                    "label" => "Analyser le bordereau",
+                    "icon" => "action:analyser", // Alias pour l'icône d'analyse
+                    "event" => "ui:bordereau.analysis-request", // Événement à envoyer au cerveau
+                    // On utilise un placeholder %id% que le JavaScript remplacera par l'ID de l'élément sélectionné.
+                    "url" => "/admin/bordereau/api/get-analysis-url/%id%"
+                ]
+            ]
         ];
         $layout = $this->buildBordereauLayout($object, $isParentNew); // buildBordereauLayout ne prend plus idEntreprise
 
