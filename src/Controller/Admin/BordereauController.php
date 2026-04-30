@@ -148,10 +148,10 @@ class BordereauController extends AbstractController
         // Étape 1: Trouver le premier document de type Excel parmi les documents attachés.
         $allowedExtensions = ['xlsx', 'xls', 'ods'];
         foreach ($bordereau->getDocuments() as $doc) {
-            if ($doc->getFichier()) {
-                $extension = pathinfo($doc->getFichier(), PATHINFO_EXTENSION);
+            if ($doc->getNomFichierStocke()) { // Utiliser getNomFichierStocke() pour vérifier la présence du fichier
+                $extension = pathinfo($doc->getNomFichierStocke(), PATHINFO_EXTENSION); // Utiliser getNomFichierStocke() pour l'extension
                 if (in_array(strtolower($extension), $allowedExtensions)) {
-                    dump('Found Excel document:', $doc->getFichier(), 'Extension:', $extension);
+                    dump('Found Excel document:', $doc->getNomFichierStocke(), 'Extension:', $extension); // Afficher le nom du fichier stocké
                     $excelDocument = $doc;
                     break; // On a trouvé notre fichier, on arrête la boucle.
                 }
@@ -160,9 +160,9 @@ class BordereauController extends AbstractController
 
         if (!$excelDocument) {
             $error = "Aucun fichier Excel (.xlsx, .xls, .ods) n'est attaché à ce bordereau. Veuillez retourner à l'édition pour y attacher un fichier valide.";
-        } else {
+        } else { // Ce bloc sera maintenant exécuté si un fichier est trouvé
             // On construit le chemin complet vers le fichier uploadé
-            $filePath = $params->get('kernel.project_dir') . '/public/uploads/documents/' . $excelDocument->getFichier();
+            $filePath = $params->get('kernel.project_dir') . '/public/uploads/documents/' . $excelDocument->getNomFichierStocke(); // Utiliser getNomFichierStocke() pour le chemin
 
             try {
                 $spreadsheet = IOFactory::load($filePath);
@@ -171,12 +171,14 @@ class BordereauController extends AbstractController
                 foreach ($sheetNames as $sheetName) {
                     $worksheet = $spreadsheet->getSheetByName($sheetName);
                     if ($worksheet) {
+                        /** @var Worksheet $worksheet */
                         $highestColumn = $worksheet->getHighestColumn(); // ex: 'F'
                         $highestColumnIndex = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($highestColumn); // ex: 6
                         
                         $columns = [];
                         // On lit la première ligne pour récupérer les en-têtes de colonnes
-                        for ($col = 1; $col <= $highestColumnIndex; ++$col) { //
+                        // CORRECTION : Ajout de l'annotation @var ci-dessus pour aider Intelephense
+                        for ($col = 1; $col <= $highestColumnIndex; ++$col) {
                             $columns[] = $worksheet->getCellByColumnAndRow($col, 1)->getValue(); //
                         }
 
