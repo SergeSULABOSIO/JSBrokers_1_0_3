@@ -18,6 +18,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use App\Controller\Admin\ControllerUtilsTrait;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use App\Entity\Traits\HandleChildAssociationTrait;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
@@ -113,5 +114,31 @@ class BordereauController extends AbstractController
     public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
     {
         return $this->handleCollectionApiRequest($id, $collectionName, Bordereau::class, $usage);
+    }
+
+    #[Route('/api/get-analysis-url/{id}', name: 'api.get_analysis_url', methods: ['GET'])]
+    public function getAnalysisUrlApi(Bordereau $bordereau, Request $request): JsonResponse
+    {
+        // On génère l'URL de la page d'analyse.
+        $finalUrl = $this->generateUrl(
+            'admin.bordereau.show_analysis',
+            ['id' => $bordereau->getId()],
+            \Symfony\Component\Routing\Generator\UrlGeneratorInterface::ABSOLUTE_URL
+        );
+
+        return $this->json(['analysisUrl' => $finalUrl]);
+    }
+
+    #[Route('/analyse/{id}', name: 'show_analysis', methods: ['GET'])]
+    public function showAnalysis(Bordereau $bordereau): Response
+    {
+        // Pour l'instant, nous chargeons simplement les données de base.
+        // Plus tard, on pourra charger des valeurs calculées comme pour les notes.
+        $entreprise = $this->getEntreprise();
+
+        return $this->render('admin/bordereau/bordereau_analysis.html.twig', [
+            'bordereau' => $bordereau,
+            'entreprise' => $entreprise,
+        ]);
     }
 }

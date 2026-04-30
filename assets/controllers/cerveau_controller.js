@@ -335,6 +335,9 @@ export default class extends Controller {
             case 'ui:note.preview-request':
                 this.handleNotePreviewRequest(payload);
                 break;
+            case 'ui:bordereau.analysis-request':
+                this.handleBordereauAnalysisRequest(payload);
+                break;
             case 'ui:icon.request':
                 this.handleIconRequest(payload);
                 break;
@@ -972,6 +975,35 @@ export default class extends Controller {
         } catch (error) {
             console.error("[Cerveau] Erreur lors de la récupération de l'URL pour l'action sur la note :", error);
             this._showNotification(error.message || "Erreur lors de la génération du document.", "error");
+        } finally {
+            this.broadcast('app:loading.stop');
+        }
+    }
+
+    /**
+     * Gère la demande d'analyse d'un bordereau.
+     * @param {object} payload 
+     * @param {string} payload.url - L'URL à appeler pour obtenir le lien de l'analyse.
+     */
+    async handleBordereauAnalysisRequest(payload) {
+        if (!payload.url) {
+            console.error("[Cerveau] Demande d'action sur le bordereau reçue sans URL.", payload);
+            this._showNotification("Impossible de réaliser l'action : URL manquante.", "error");
+            return;
+        }
+
+        try {
+            this._publishSelectionStatus("Génération de l'analyse...");
+            this.broadcast('app:loading.start');
+            const response = await fetch(payload.url);
+            const result = await response.json();
+            if (!response.ok) throw result;
+
+            window.open(result.analysisUrl, '_blank');
+            this._publishSelectionStatus('Analyse prête.');
+        } catch (error) {
+            console.error("[Cerveau] Erreur lors de la récupération de l'URL pour l'action sur le bordereau :", error);
+            this._showNotification(error.message || "Erreur lors de la génération de l'analyse.", "error");
         } finally {
             this.broadcast('app:loading.stop');
         }
