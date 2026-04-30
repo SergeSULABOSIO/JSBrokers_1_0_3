@@ -48,8 +48,10 @@ class OperationFormCanvasProvider implements FormCanvasProviderInterface
     private function buildOperationLayout(Operation $object, bool $isParentNew): array
     {
         $layout = [
-            ["colonnes" => [["champs" => ["referencePolice"]]]],
-            ["colonnes" => [["champs" => ["numeroAvenant"]]]],
+            ["colonnes" => [
+                ["champs" => ["referencePolice"], "width" => 8],
+                ["champs" => ["numeroAvenant"], "width" => 4]
+            ]],
             ["colonnes" => [["champs" => ["montantHT"], "width" => 6], ["champs" => ["montantTaxe"], "width" => 6]]],
         ];
 

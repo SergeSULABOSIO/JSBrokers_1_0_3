@@ -29,7 +29,9 @@ trait FormCanvasProviderTrait
 
                     foreach ($collection as $item) {
                         // ÉTAPE CRUCIALE : Charger les valeurs calculées pour l'élément avant de les utiliser.
-                        $canvasBuilder->loadAllCalculatedValues($item);
+                        if (property_exists($this, 'canvasBuilder') && $this->canvasBuilder instanceof CanvasBuilder) {
+                            $this->canvasBuilder->loadAllCalculatedValues($item);
+                        }
 
                         $value = 0;
                         // Essayer le getter d'abord (ex: getMontantFinal())
