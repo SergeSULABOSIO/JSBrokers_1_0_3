@@ -45,9 +45,10 @@ class IconCanvasProvider
         'utilisateur'     => 'mdi:user-circle',
         'dashboard'       => 'ant-design:dashboard-twotone',
         'default'         => 'mdi:file-outline', // Icône par défaut
-
+        
         // --- Icônes d'Actions ---
         'action:add'          => 'gridicons:add',
+        'action:analyser'     => 'boxicons:analyze-filled',
         'action:alert'        => 'fluent:alert-24-regular',
         'action:annulation'   => 'fluent:calendar-cancel-24-regular',
         'action:cancel'       => 'hugeicons:cancel-01',
