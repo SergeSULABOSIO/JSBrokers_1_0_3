@@ -14,6 +14,9 @@ use App\Services\Canvas\CalculationProvider;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\CanvasBuilder;
 use App\Services\JSBDynamicSearchService;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Reader\Exception as ReaderException;
+use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use App\Controller\Admin\ControllerUtilsTrait;
@@ -130,15 +133,63 @@ class BordereauController extends AbstractController
     }
 
     #[Route('/analyse/{id}', name: 'show_analysis', methods: ['GET'])]
-    public function showAnalysis(Bordereau $bordereau): Response
+    public function showAnalysis(Bordereau $bordereau, ParameterBagInterface $params): Response
     {
-        // Pour l'instant, nous chargeons simplement les données de base.
-        // Plus tard, on pourra charger des valeurs calculées comme pour les notes.
         $entreprise = $this->getEntreprise();
+        $analysisData = [];
+        $error = null;
+        $excelDocument = null;
+
+        // Étape 1: Trouver le premier document de type Excel parmi les documents attachés.
+        $allowedExtensions = ['xlsx', 'xls', 'ods'];
+        foreach ($bordereau->getDocuments() as $doc) {
+            if ($doc->getFichier()) {
+                $extension = pathinfo($doc->getFichier(), PATHINFO_EXTENSION);
+                if (in_array(strtolower($extension), $allowedExtensions)) {
+                    $excelDocument = $doc;
+                    break; // On a trouvé notre fichier, on arrête la boucle.
+                }
+            }
+        }
+
+        if (!$excelDocument) {
+            $error = "Aucun fichier Excel (.xlsx, .xls, .ods) n'est attaché à ce bordereau. Veuillez retourner à l'édition pour y attacher un fichier valide.";
+        } else {
+            // On construit le chemin complet vers le fichier uploadé
+            $filePath = $params->get('kernel.project_dir') . '/public/uploads/documents/' . $excelDocument->getFichier();
+
+            try {
+                $spreadsheet = IOFactory::load($filePath);
+                $sheetNames = $spreadsheet->getSheetNames();
+
+                foreach ($sheetNames as $sheetName) {
+                    $worksheet = $spreadsheet->getSheetByName($sheetName);
+                    if ($worksheet) {
+                        $highestColumn = $worksheet->getHighestColumn(); // ex: 'F'
+                        $highestColumnIndex = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($highestColumn); // ex: 6
+                        
+                        $columns = [];
+                        // On lit la première ligne pour récupérer les en-têtes de colonnes
+                        for ($col = 1; $col <= $highestColumnIndex; ++$col) {
+                            $columns[] = $worksheet->getCellByColumnAndRow($col, 1)->getValue();
+                        }
+
+                        $analysisData[] = [
+                            'sheetName' => $sheetName,
+                            'columns' => $columns,
+                        ];
+                    }
+                }
+            } catch (ReaderException $e) {
+                $error = "Une erreur est survenue lors de la lecture du fichier Excel : " . $e->getMessage();
+            }
+        }
 
         return $this->render('admin/bordereau/bordereau_analysis.html.twig', [
             'bordereau' => $bordereau,
             'entreprise' => $entreprise,
+            'analysisData' => $analysisData,
+            'error' => $error,
         ]);
     }
 }
