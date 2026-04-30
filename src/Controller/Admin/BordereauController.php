@@ -137,67 +137,82 @@ class BordereauController extends AbstractController
     #[Route('/analyse/{id}', name: 'show_analysis', methods: ['GET'])]
     public function showAnalysis(Bordereau $bordereau, ParameterBagInterface $params): Response
     {
-        $entreprise = $this->getEntreprise();
-        $analysisData = [];
+        $entreprise = $this->getEntreprise(); // Récupère l'entreprise courante
+        $viewData = [
+            'sheets' => [],
+            'mapping_options' => [
+                'reference_police' => 'Référence de la police',
+                'prime_totale' => 'Prime totale',
+                'commission_ht' => 'Commission HT',
+                'taxe_commission' => 'Taxe sur commission',
+            ]
+        ];
         $error = null;
         $excelDocument = null;
-
-        // Debugging: Check what documents are associated with the Bordereau
-        dump($bordereau->getDocuments()->count()); // Affiche le nombre de documents
-        dump($bordereau->getDocuments());          // Affiche la collection complète de documents
-
+    
         // Étape 1: Trouver le premier document de type Excel parmi les documents attachés.
         $allowedExtensions = ['xlsx', 'xls', 'ods'];
         foreach ($bordereau->getDocuments() as $doc) {
-            if ($doc->getNomFichierStocke()) { // Utiliser getNomFichierStocke() pour vérifier la présence du fichier
-                $extension = pathinfo($doc->getNomFichierStocke(), PATHINFO_EXTENSION); // Utiliser getNomFichierStocke() pour l'extension
+            if ($doc->getNomFichierStocke()) {
+                $extension = pathinfo($doc->getNomFichierStocke(), PATHINFO_EXTENSION);
                 if (in_array(strtolower($extension), $allowedExtensions)) {
-                    dump('Found Excel document:', $doc->getNomFichierStocke(), 'Extension:', $extension); // Afficher le nom du fichier stocké
                     $excelDocument = $doc;
-                    break; // On a trouvé notre fichier, on arrête la boucle.
+                    break;
                 }
             }
         }
-
+    
         if (!$excelDocument) {
             $error = "Aucun fichier Excel (.xlsx, .xls, .ods) n'est attaché à ce bordereau. Veuillez retourner à l'édition pour y attacher un fichier valide.";
-        } else { // Ce bloc sera maintenant exécuté si un fichier est trouvé
-            // On construit le chemin complet vers le fichier uploadé
-            $filePath = $params->get('kernel.project_dir') . '/public/uploads/documents/' . $excelDocument->getNomFichierStocke(); // Utiliser getNomFichierStocke() pour le chemin
-
+        } else {
+            $filePath = $params->get('kernel.project_dir') . '/public/uploads/documents/' . $excelDocument->getNomFichierStocke();
+    
             try {
                 $spreadsheet = IOFactory::load($filePath);
                 $sheetNames = $spreadsheet->getSheetNames();
-
+    
+                if (empty($sheetNames)) {
+                    $error = "Le fichier Excel ne contient aucune feuille de calcul. L'analyse est impossible.";
+                }
+    
                 foreach ($sheetNames as $sheetName) {
                     $worksheet = $spreadsheet->getSheetByName($sheetName);
                     if ($worksheet) {
                         /** @var Worksheet $worksheet */
-                        $highestColumn = $worksheet->getHighestColumn(); // ex: 'F'
-                        $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn); // ex: 6
-                        
-                        $columns = [];
-                        // On lit la première ligne pour récupérer les en-têtes de colonnes
-                        // CORRECTION : Ajout de l'annotation @var ci-dessus pour aider Intelephense
-                        for ($col = 1; $col <= $highestColumnIndex; ++$col) {
-                            $columns[] = $worksheet->getCell(Coordinate::stringFromColumnIndex($col) . '1')->getValue();
+                        $highestRow = $worksheet->getHighestRow();
+                        if ($highestRow < 1) {
+                            // Si la feuille est vide, on ne l'ajoute pas à l'analyse.
+                            continue;
                         }
-
-                        $analysisData[] = [
+    
+                        $highestColumn = $worksheet->getHighestColumn(1); // On se base sur la première ligne pour les en-têtes
+                        $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn);
+    
+                        $columns = [];
+                        for ($col = 1; $col <= $highestColumnIndex; ++$col) {
+                            $columns[Coordinate::stringFromColumnIndex($col)] = $worksheet->getCell(Coordinate::stringFromColumnIndex($col) . '1')->getValue();
+                        }
+    
+                        $viewData['sheets'][] = [
                             'sheetName' => $sheetName,
                             'columns' => $columns,
                         ];
                     }
                 }
+    
+                if (empty($viewData['sheets']) && !$error) {
+                    $error = "Aucune feuille de calcul avec des données n'a été trouvée dans le fichier.";
+                }
+    
             } catch (ReaderException $e) {
                 $error = "Une erreur est survenue lors de la lecture du fichier Excel : " . $e->getMessage();
             }
         }
-
+    
         return $this->render('admin/bordereau/bordereau_analysis.html.twig', [
             'bordereau' => $bordereau,
             'entreprise' => $entreprise,
-            'analysisData' => $analysisData,
+            'viewData' => $viewData,
             'error' => $error,
         ]);
     }
