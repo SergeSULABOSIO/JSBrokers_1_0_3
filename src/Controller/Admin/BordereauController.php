@@ -15,6 +15,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use App\Services\CanvasBuilder;
 use App\Services\JSBDynamicSearchService;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Reader\Exception as ReaderException;
 use Symfony\Component\DependencyInjection\ParameterBag\ParameterBagInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -140,12 +141,17 @@ class BordereauController extends AbstractController
         $error = null;
         $excelDocument = null;
 
+        // Debugging: Check what documents are associated with the Bordereau
+        dump($bordereau->getDocuments()->count()); // Affiche le nombre de documents
+        dump($bordereau->getDocuments());          // Affiche la collection complète de documents
+
         // Étape 1: Trouver le premier document de type Excel parmi les documents attachés.
         $allowedExtensions = ['xlsx', 'xls', 'ods'];
         foreach ($bordereau->getDocuments() as $doc) {
             if ($doc->getFichier()) {
                 $extension = pathinfo($doc->getFichier(), PATHINFO_EXTENSION);
                 if (in_array(strtolower($extension), $allowedExtensions)) {
+                    dump('Found Excel document:', $doc->getFichier(), 'Extension:', $extension);
                     $excelDocument = $doc;
                     break; // On a trouvé notre fichier, on arrête la boucle.
                 }
@@ -170,8 +176,8 @@ class BordereauController extends AbstractController
                         
                         $columns = [];
                         // On lit la première ligne pour récupérer les en-têtes de colonnes
-                        for ($col = 1; $col <= $highestColumnIndex; ++$col) {
-                            $columns[] = $worksheet->getCellByColumnAndRow($col, 1)->getValue();
+                        for ($col = 1; $col <= $highestColumnIndex; ++$col) { //
+                            $columns[] = $worksheet->getCellByColumnAndRow($col, 1)->getValue(); //
                         }
 
                         $analysisData[] = [
