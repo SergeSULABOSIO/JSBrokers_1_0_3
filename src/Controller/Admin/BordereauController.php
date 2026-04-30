@@ -138,6 +138,7 @@ class BordereauController extends AbstractController
     public function showAnalysis(Bordereau $bordereau, ParameterBagInterface $params): Response
     {
         $entreprise = $this->getEntreprise(); // Récupère l'entreprise courante
+        $invite = $this->getInvite(); // NOUVEAU : On récupère l'invité courant.
         $viewData = [
             'sheets' => [],
             'mapping_options' => [
@@ -212,6 +213,7 @@ class BordereauController extends AbstractController
         return $this->render('admin/bordereau/bordereau_analysis.html.twig', [
             'bordereau' => $bordereau,
             'entreprise' => $entreprise,
+            'invite' => $invite, // NOUVEAU : On passe l'invité au template.
             'viewData' => $viewData,
             'error' => $error,
         ]);

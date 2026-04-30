@@ -1,68 +1,6 @@
 {# templates/admin/bordereau/bordereau_analysis.html.twig #}
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analyse : Bordereau {{ bordereau.reference }}</title>
-    <link rel="icon" href="{{ asset('images/entreprises/logofav.png') }}" type="image/png">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background-color: #f8f9fa;
-        }
-        .analysis-container {
-            max-width: 800px;
-            margin: 2rem auto;
-            background-color: #fff;
-            border: 1px solid #dee2e6;
-            box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
-        }
-        .analysis-header {
-            padding: 2rem;
-            border-bottom: 1px solid #dee2e6;
-        }
-        .analysis-body {
-            padding: 2rem;
-        }
-        .analysis-footer {
-            padding: 2rem;
-            background-color: #f8f9fa;
-            border-top: 1px solid #dee2e6;
-        }
-        .actions-bar {
-            padding: 1rem;
-            text-align: center;
-            background-color: #343a40;
-        }
 {% extends 'base.html.twig' %}
-
-        @media print {
-            .actions-bar {
-                display: none !important;
-            }
-            .analysis-container {
-                margin: 0;
-                border: none;
-                box-shadow: none;
-                max-width: 100%;
-            }
-        }
-    </style>
-</head>
-<body>
 {% block title %}Analyse du Bordereau {{ bordereau.reference }}{% endblock %}
-
-    <div class="actions-bar sticky-top">
-        <button class="btn btn-light d-inline-flex align-items-center gap-2" data-controller="ripple" onclick="window.close()">
-            <twig:UX:Icon name="{{ resolve_icon_name('action:close') }}" width="18px" height="18px" />
-            <span>Retourner à l'édition</span>
-        </button>
-
-        <button class="btn btn-primary d-inline-flex align-items-center gap-2" data-controller="ripple" onclick="window.print()">
-            <twig:UX:Icon name="{{ resolve_icon_name('action:print') }}" width="18px" height="18px" />
-            <span>Imprimer</span>
-        </button>
 {% block body %}
 <div class="container-fluid my-4" data-controller="bordereau-analysis">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -76,26 +14,13 @@
             Retour à l'espace de travail
         </a>
     </div>
-
-    <div class="analysis-container">
-        <div class="analysis-header">
-            <div class="row align-items-center">
-                <div class="col">
-                    <h4 class="mt-2 mb-0">{{ entreprise.nom|default('Votre Entreprise') }}</h4>
-                    <p class="text-muted">{{ entreprise.adresse|default('') }}</p>
-                </div>
-                <div class="col text-end">
-                    <h2>Analyse de Bordereau</h2>
-                    <p class="mb-1"><strong>Référence :</strong> {{ bordereau.reference }}</p>
-                    <p class="mb-0"><strong>Période :</strong> {{ bordereau.periodeDebut|date('d/m/Y') }} au {{ bordereau.periodeFin|date('d/m/Y') }}</p>
-                </div>
     {% if error %}
         <div class="alert alert-danger">
             <h4 class="alert-heading">Erreur d'analyse</h4>
             <p>{{ error }}</p>
         </div>
     {% else %}
-        {# ÉTAPE 1 : Sélection de la feuille #}
+        {# ÉTAPE 1 : Sélection de la feuille. Cette carte est toujours visible. #}
         <div class="card shadow mb-4">
             <div class="card-header py-3">
                 <h6 class="m-0 font-weight-bold text-primary">Étape 1: Sélection de la feuille de calcul</h6>
@@ -106,12 +31,14 @@
                     <form>
                         {% for sheet in viewData.sheets %}
                             <div class="form-check mb-2">
+                                {# La cible Stimulus pour identifier les radios de sélection #}
                                 <input class="form-check-input" type="radio" name="selectedSheet" id="sheet-{{ loop.index0 }}" value="{{ sheet.sheetName }}" {{ loop.first ? 'checked' : '' }} data-bordereau-analysis-target="sheetSelection">
                                 <label class="form-check-label" for="sheet-{{ loop.index0 }}">
                                     <strong>{{ sheet.sheetName }}</strong> <span class="text-muted">({{ sheet.columns|length }} colonnes détectées)</span>
                                 </label>
                             </div>
                         {% endfor %}
+                        {# Le bouton qui déclenche l'action Stimulus pour passer à l'étape 2 #}
                         <button type="button" class="btn btn-primary mt-3" data-action="bordereau-analysis#showMappingStep">
                             Valider et passer à l'étape 2
                             <i class="fas fa-arrow-right ms-2"></i>
@@ -119,25 +46,14 @@
                     </form>
                 {% elseif viewData.sheets|length == 1 %}
                     <p>Une seule feuille a été détectée : <strong>{{ viewData.sheets[0].sheetName }}</strong>. Passage automatique à l'étape suivante.</p>
-                    {# Input caché pour que le contrôleur Stimulus le trouve même avec une seule feuille #}
+                    {# Input caché pour que le contrôleur Stimulus le trouve même avec une seule feuille et puisse passer à l'étape 2 #}
                     <input type="radio" name="selectedSheet" value="{{ viewData.sheets[0].sheetName }}" checked class="d-none" data-bordereau-analysis-target="sheetSelection">
                 {% else %}
                      <div class="alert alert-warning">Aucune feuille de calcul contenant des données n'a été trouvée.</div>
                 {% endif %}
             </div>
         </div>
-
-        <div class="analysis-body">
-            <h5>Analyse du bordereau : {{ bordereau.nom }}</h5>
-            
-            {% if error %}
-                <div class="alert alert-danger mt-4">
-                    <h4 class="alert-heading">Analyse Impossible</h4>
-                    <p>{{ error }}</p>
-                </div>
-            {% elseif analysisData is not empty %}
-                <p class="mt-4">Le fichier Excel attaché contient les feuilles et colonnes suivantes :</p>
-        {# ÉTAPE 2 : Mappage des colonnes (initialement cachée) #}
+        {# ÉTAPE 2 : Mappage des colonnes. Initialement cachée avec 'd-none' et ciblée par Stimulus. #}
         <div class="card shadow mb-4 d-none" data-bordereau-analysis-target="step2">
             <div class="card-header py-3">
                 <h6 class="m-0 font-weight-bold text-primary">Étape 2: Mappage des colonnes</h6>
@@ -145,24 +61,9 @@
             <div class="card-body">
                 <p>Veuillez faire correspondre les colonnes de votre fichier avec les champs requis par le système.</p>
                 
-                <div class="accordion" id="sheetsAccordion">
-                    {% for sheet in analysisData %}
-                        <div class="accordion-item">
-                            <h2 class="accordion-header" id="heading-{{ loop.index }}">
-                                <button class="accordion-button {% if not loop.first %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ loop.index }}" aria-expanded="{% if loop.first %}true{% else %}false{% endif %}" aria-controls="collapse-{{ loop.index }}">
-                                    Feuille : <strong>{{ sheet.sheetName }}</strong>
-                                </button>
-                            </h2>
-                            <div id="collapse-{{ loop.index }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}" aria-labelledby="heading-{{ loop.index }}" data-bs-parent="#sheetsAccordion">
-                                <div class="accordion-body">
-                                    <h6>Colonnes détectées :</h6>
-                                    <ul class="list-group list-group-flush">
-                                        {% for column in sheet.columns %}
-                                            <li class="list-group-item">{{ column|default('Colonne vide') }}</li>
-                                        {% else %}
-                                            <li class="list-group-item">Aucune colonne trouvée dans la première ligne.</li>
                 {% for sheet in viewData.sheets %}
-                    <div data-bordereau-analysis-target="mappingContainer" data-sheet-name="{{ sheet.sheetName }}" data-is-first="{{ loop.first ? 'true' : 'false' }}">
+                    {# Conteneur de mappage pour chaque feuille, ciblé par Stimulus #}
+                    <div data-bordereau-analysis-target="mappingContainer" data-sheet-name="{{ sheet.sheetName }}" data-is-first="{{ loop.first ? 'true' : 'false' }}" style="display: none;">
                         <h5 class="mb-3">Feuille : <span class="badge bg-secondary">{{ sheet.sheetName }}</span></h5>
                         <form class="column-mapping-form">
                             <div class="table-responsive">
@@ -174,7 +75,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                    {# On itère sur les colonnes en conservant la lettre (clé) et le nom (valeur) #}
+                                    {# On itère sur les colonnes en conservant la lettre (clé) et le nom (valeur) fournis par le contrôleur #}
                                     {% for col_letter, col_name in sheet.columns %}
                                         <tr>
                                             <td>
@@ -195,20 +96,9 @@
                                             <td colspan="2" class="text-center text-muted">Aucune colonne détectée dans cette feuille.</td>
                                         </tr>
                                         {% endfor %}
-                                    </ul>
-                                </div>
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="alert alert-warning mt-4">
-                    <h4 class="alert-heading">Aucune donnée à analyser</h4>
-                    <p>Le fichier Excel semble vide ou illisible.</p>
-                </div>
-            {% endif %}
                             <button type="submit" class="btn btn-success mt-3">
                                 Lancer l'analyse
                                 <i class="fas fa-cogs ms-2"></i>
@@ -218,19 +108,6 @@
                 {% endfor %}
             </div>
         </div>
-
-        <div class="analysis-footer text-center">
-            <p class="mb-1 fw-bold">{{ entreprise.nom|default('Votre Entreprise') }}</p>
-            <p class="text-muted small fst-italic mb-0">
-                {{ entreprise.adresse|default('') }}
-            </p>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
-</body>
-</html>
     {% endif %}
 </div>
 {% endblock %}
