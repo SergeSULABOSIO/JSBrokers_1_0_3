@@ -180,7 +180,7 @@ class BordereauController extends AbstractController
                         // On lit la première ligne pour récupérer les en-têtes de colonnes
                         // CORRECTION : Ajout de l'annotation @var ci-dessus pour aider Intelephense
                         for ($col = 1; $col <= $highestColumnIndex; ++$col) {
-                            $columns[] = $worksheet->getCell(\PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($col) . '1')->getValue();
+                            $columns[] = $worksheet->getCell(Coordinate::stringFromColumnIndex($col) . '1')->getValue();
                         }
 
                         $analysisData[] = [
