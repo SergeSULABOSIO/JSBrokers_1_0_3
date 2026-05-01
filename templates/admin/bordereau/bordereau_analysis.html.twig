@@ -24,7 +24,13 @@
         }
     </style>
 </head>
-<body data-controller="bordereau-analysis">
+{% set sheets_data_json = {} %}
+{% for sheet in viewData.sheets %}
+    {% set sheets_data_json = sheets_data_json|merge({(sheet.sheetName): sheet.data}) %}
+{% endfor %}
+<body data-controller="bordereau-analysis"
+      data-bordereau-analysis-sheets-data-value="{{ sheets_data_json|json_encode|e('html_attr') }}"
+>
 
     <div class="actions-bar sticky-top">
         {# Le bouton de retour ferme simplement la fenêtre, comme dans note_preview #}
@@ -116,8 +122,9 @@
                                         <table class="table table-bordered table-striped">
                                             <thead class="table-light">
                                                 <tr>
-                                                    <th>Colonne du fichier Excel</th>
-                                                    <th>Correspondance système</th>
+                                                    <th style="width: 40%;">Colonne du fichier Excel</th>
+                                                    <th style="width: 30%;">Correspondance système</th>
+                                                    <th style="width: 30%;">Résultat de l'analyse</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -128,13 +135,19 @@
                                                         <strong>{{ col_name|default('Colonne sans nom') }}</strong>
                                                     </td>
                                                     <td>
-                                                        <select name="mapping[{{ col_name }}]" class="form-select form-select-sm">
+                                                        <select name="mapping[{{ col_name }}]"
+                                                                class="form-select form-select-sm"
+                                                                data-bordereau-analysis-target="mappingSelect"
+                                                                data-action="bordereau-analysis#validateColumn"
+                                                                data-column-letter="{{ col_letter }}">
                                                             <option value="">Ignorer cette colonne</option>
                                                             {% for key, label in viewData.mapping_options %}
                                                                 <option value="{{ key }}">{{ label }}</option>
                                                             {% endfor %}
                                                         </select>
                                                     </td>
+                                                    <td data-bordereau-analysis-target="analysisResult"
+                                                        data-result-for="{{ col_letter }}" data-sheet-name="{{ sheet.sheetName }}"></td>
                                                 </tr>
                                             {% else %}
                                                 <tr>
@@ -144,7 +157,9 @@
                                             </tbody>
                                         </table>
                                     </div>
-                                    <button type="submit" class="btn btn-primary mt-3 d-inline-flex align-items-center gap-2">
+                                    <button type="submit"
+                                            class="btn btn-primary mt-3 d-inline-flex align-items-center gap-2"
+                                            data-bordereau-analysis-target="submitButton">
                                         Lancer l'analyse
                                         <twig:UX:Icon name="{{ resolve_icon_name('action:analyser') }}" width="18px" height="18px" />
                                     </button>

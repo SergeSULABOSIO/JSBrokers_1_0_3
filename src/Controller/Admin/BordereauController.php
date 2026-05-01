@@ -189,14 +189,21 @@ class BordereauController extends AbstractController
                         $highestColumn = $worksheet->getHighestColumn(1); // On se base sur la première ligne pour les en-têtes
                         $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn);
     
+                        // NOUVEAU: Lire toutes les données de la feuille
+                        $sheetData = $worksheet->toArray(null, true, true, true);
+                        $headers = array_shift($sheetData) ?: []; // La première ligne est l'en-tête
+    
                         $columns = [];
                         for ($col = 1; $col <= $highestColumnIndex; ++$col) {
-                            $columns[Coordinate::stringFromColumnIndex($col)] = $worksheet->getCell(Coordinate::stringFromColumnIndex($col) . '1')->getValue();
+                            $colLetter = Coordinate::stringFromColumnIndex($col);
+                            $columns[$colLetter] = $headers[$colLetter] ?? null;
                         }
     
                         $viewData['sheets'][] = [
                             'sheetName' => $sheetName,
                             'columns' => $columns,
+                            'headers' => $headers, // NOUVEAU: On passe les en-têtes séparément
+                            'data' => $sheetData,      // NOUVEAU: On passe les données des lignes
                         ];
                     }
                 }
