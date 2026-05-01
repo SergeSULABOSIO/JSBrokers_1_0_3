@@ -40,6 +40,15 @@
 
     <div class="analysis-container">
         <div class="analysis-header">
+            <div class="text-center mb-4">
+                {% if entreprise and entreprise.thumbnail %}
+                    <img src="{{ asset('images/entreprises/' ~ entreprise.thumbnail) }}" alt="Logo" style="max-height: 80px;">
+                {% else %}
+                    {# Fallback sur un logo par défaut si l'entreprise n'en a pas #}
+                    <img src="{{ asset('images/entreprises/logofav.png') }}" alt="Logo JS Brokers" style="max-height: 80px;">
+                {% endif %}
+            </div>
+            <hr>
             <div class="row align-items-center">
                 <div class="col">
                     <h4 class="mt-2 mb-0">{{ entreprise.nom|default('Votre Entreprise') }}</h4>
@@ -135,9 +144,9 @@
                                             </tbody>
                                         </table>
                                     </div>
-                                    <button type="submit" class="btn btn-success mt-3">
+                                    <button type="submit" class="btn btn-primary mt-3 d-inline-flex align-items-center gap-2">
                                         Lancer l'analyse
-                                        <twig:UX:Icon name="lucide:play-circle" class="ms-2" />
+                                        <twig:UX:Icon name="{{ resolve_icon_name('action:analyser') }}" width="18px" height="18px" />
                                     </button>
                                 </form>
                             </div>
