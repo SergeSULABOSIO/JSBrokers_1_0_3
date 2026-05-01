@@ -110,9 +110,14 @@ export default class extends Controller {
                     if (valueStr === '-') {
                         valueStr = '0';
                     }
-                    const cleanedValue = valueStr.replace(/,/g, '.')      // 1. Remplace la virgule par un point (ex: "1 035,81" -> "1 035.81")
-                        .replace(/\s/g, '')       // 2. Supprime les espaces (ex: "1 035.81" -> "1035.81")
-                        .replace(/[^\d.-]/g, ''); // 3. Supprime tout ce qui n'est pas un chiffre, un point ou un tiret.
+                    // DEBUG: Affiche la valeur brute reçue d'Excel
+                    // console.log(`[Debug] Valeur brute: "${valueStr}"`);
+
+                    const cleanedValue = valueStr
+                        .replace(/[\s\u00A0]/g, '') // 1. Supprime TOUS les espaces, y compris les insécables.
+                        .replace(/,/g, '.')         // 2. Remplace la virgule par un point.
+                        .replace(/[^\d.-]/g, '');   // 3. Supprime tout ce qui n'est pas un chiffre, un point ou un tiret.
+
                     isValid = !isNaN(parseFloat(cleanedValue)) && isFinite(cleanedValue);
                 }
             }
