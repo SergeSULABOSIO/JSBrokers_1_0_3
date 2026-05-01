@@ -90,6 +90,12 @@ export default class extends Controller {
 
         const invalidRows = [];
         sheetData.forEach((row, index) => {
+            // NOUVEAU : Vérifie si la ligne est entièrement vide. Si oui, on l'ignore.
+            // Cela empêche la validation des lignes vides après la fin du tableau.
+            if (Object.values(row).every(cell => cell === null || cell === undefined)) {
+                return; // Passe à la ligne suivante
+            }
+
             const value = row[columnLetter];
             let isValid = false;
 
@@ -99,8 +105,12 @@ export default class extends Controller {
                 if (value === null || value === undefined || String(value).trim() === '') {
                     isValid = false;
                 } else {
-                    const cleanedValue = String(value)
-                        .replace(/\s/g, '')       // Supprime les espaces
+                    let valueStr = String(value).trim();
+                    // NOUVEAU : Si la valeur est juste un tiret, on la traite comme zéro.
+                    if (valueStr === '-') {
+                        valueStr = '0';
+                    }
+                    const cleanedValue = valueStr.replace(/\s/g, '')       // Supprime les espaces (ex: "12 000" -> "12000")
                         .replace(/[^\d,.-]/g, '') // Supprime les symboles monétaires etc.
                         .replace(',', '.');       // Remplace la virgule par un point
                     isValid = !isNaN(parseFloat(cleanedValue)) && isFinite(cleanedValue);
