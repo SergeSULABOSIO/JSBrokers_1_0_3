@@ -113,12 +113,12 @@ export default class extends Controller {
                     // DEBUG: Affiche la valeur brute reçue d'Excel
                     // console.log(`[Debug] Valeur brute: "${valueStr}"`);
 
-                    const cleanedValue = valueStr
-                        .replace(/[\s\u00A0]/g, '') // 1. Supprime TOUS les espaces, y compris les insécables.
-                        .replace(/,/g, '.')         // 2. Remplace la virgule par un point.
-                        .replace(/[^\d.-]/g, '');   // 3. Supprime tout ce qui n'est pas un chiffre, un point ou un tiret.
+                    const cleanedValue = valueStr.replace(/[\s\u00A0]/g, '') // 1. Supprime TOUS les espaces, y compris les insécables.
+                        .replace(/,/g, '.') // 2. Remplace la virgule par un point.
+                        .replace(/[^\d.-]/g, ''); // 3. Supprime tout ce qui n'est pas un chiffre, un point ou un tiret.
 
                     isValid = !isNaN(parseFloat(cleanedValue)) && isFinite(cleanedValue);
+
                 }
             }
 
