@@ -1,5 +1,4 @@
 import { Controller } from '@hotwired/stimulus';
-import { enter, leave } from 'el-transition';
 /**
  * @class BordereauAnalysisController
  * @description Gère l'interface de l'analyse de bordereau en deux étapes.
@@ -56,7 +55,7 @@ export default class extends Controller {
      * @param {string} sheetName - Le nom de la feuille à afficher. Si null, la première sera affichée.
      */
     showStep2(sheetName = null) {
-        enter(this.step2Target);
+        this.step2Target.classList.remove('d-none');
 
         this.mappingContainerTargets.forEach(container => {
             const isTargetSheet = sheetName ? container.dataset.sheetName === sheetName : container.dataset.isFirst === 'true';
