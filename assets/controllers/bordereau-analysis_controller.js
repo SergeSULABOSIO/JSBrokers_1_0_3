@@ -110,9 +110,9 @@ export default class extends Controller {
                     if (valueStr === '-') {
                         valueStr = '0';
                     }
-                    const cleanedValue = valueStr.replace(/\s/g, '')       // Supprime les espaces (ex: "12 000" -> "12000")
-                        .replace(/[^\d,.-]/g, '') // Supprime les symboles monétaires etc.
-                        .replace(/,/g, '.');      // NOUVEAU : Remplace TOUTES les virgules par un point
+                    const cleanedValue = valueStr.replace(/,/g, '.')      // 1. Remplace la virgule par un point (ex: "1 035,81" -> "1 035.81")
+                        .replace(/\s/g, '')       // 2. Supprime les espaces (ex: "1 035.81" -> "1035.81")
+                        .replace(/[^\d.-]/g, ''); // 3. Supprime tout ce qui n'est pas un chiffre, un point ou un tiret.
                     isValid = !isNaN(parseFloat(cleanedValue)) && isFinite(cleanedValue);
                 }
             }
