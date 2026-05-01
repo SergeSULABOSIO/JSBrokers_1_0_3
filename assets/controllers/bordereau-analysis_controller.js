@@ -112,7 +112,7 @@ export default class extends Controller {
                     }
                     const cleanedValue = valueStr.replace(/\s/g, '')       // Supprime les espaces (ex: "12 000" -> "12000")
                         .replace(/[^\d,.-]/g, '') // Supprime les symboles monétaires etc.
-                        .replace(',', '.');       // Remplace la virgule par un point
+                        .replace(/,/g, '.');      // NOUVEAU : Remplace TOUTES les virgules par un point
                     isValid = !isNaN(parseFloat(cleanedValue)) && isFinite(cleanedValue);
                 }
             }
