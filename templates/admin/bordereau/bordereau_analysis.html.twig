@@ -30,6 +30,7 @@
 {% endfor %}
 <body data-controller="bordereau-analysis"
       data-bordereau-analysis-sheets-data-value="{{ sheets_data_json|json_encode|e('html_attr') }}"
+      data-bordereau-analysis-chargements-value="{{ viewData.chargements|json_encode|e('html_attr') }}"
 >
 
     <div class="actions-bar sticky-top">
