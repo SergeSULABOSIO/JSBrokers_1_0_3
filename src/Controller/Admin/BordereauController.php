@@ -4,6 +4,7 @@ namespace App\Controller\Admin;
 
 use App\Constantes\Constante;
 use App\Controller\Admin\ControllerUtilsTrait;
+use App\Entity\Chargement;
 use App\Entity\Bordereau;
 use App\Entity\Invite;
 use App\Entity\Traits\HandleChildAssociationTrait;
@@ -11,6 +12,7 @@ use App\Form\BordereauType;
 use App\Repository\BordereauRepository;
 use App\Repository\EntrepriseRepository;
 use App\Repository\InviteRepository;
+use App\Repository\ChargementRepository;
 use App\Services\Canvas\CalculationProvider;
 use App\Services\CanvasBuilder;
 use App\Services\JSBDynamicSearchService;
@@ -45,6 +47,7 @@ class BordereauController extends AbstractController
         private EntityManagerInterface $em,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
+        private ChargementRepository $chargementRepository,
         private BordereauRepository $bordereauRepository,
         private Constante $constante,
         private JSBDynamicSearchService $searchService,
@@ -135,7 +138,7 @@ class BordereauController extends AbstractController
     }
 
     #[Route('/analyse/{id}', name: 'show_analysis', methods: ['GET'])]
-    public function showAnalysis(Bordereau $bordereau, ParameterBagInterface $params): Response
+    public function showAnalysis(Bordereau $bordereau, ParameterBagInterface $params, ChargementRepository $chargementRepository): Response
     {
         $entreprise = $this->getEntreprise(); // Récupère l'entreprise courante
         $invite = $this->getInvite(); // NOUVEAU : On récupère l'invité courant.
@@ -146,7 +149,8 @@ class BordereauController extends AbstractController
                 'prime_totale' => 'Prime totale',
                 'commission_ht' => 'Commission HT',
                 'taxe_commission' => 'Taxe sur commission',
-            ]
+            ],
+            'chargements' => [], // Initialisation
         ];
         $error = null;
         $excelDocument = null;
@@ -216,12 +220,24 @@ class BordereauController extends AbstractController
                 $error = "Une erreur est survenue lors de la lecture du fichier Excel : " . $e->getMessage();
             }
         }
+
+        // NOUVEAU : Récupérer tous les chargements de l'entreprise
+        $chargements = $chargementRepository->findBy(['entreprise' => $entreprise]);
+
+        // On ne garde que les champs nécessaires pour le frontend (id, nom)
+        $chargementsData = array_map(function(Chargement $chargement) {
+            return [
+                'id' => $chargement->getId(),
+                'nom' => $chargement->getNom(),
+            ];
+        }, $chargements);
+        $viewData['chargements'] = $chargementsData;
     
         return $this->render('admin/bordereau/bordereau_analysis.html.twig', [
             'bordereau' => $bordereau,
             'entreprise' => $entreprise,
             'invite' => $invite, // NOUVEAU : On passe l'invité au template.
-            'viewData' => $viewData,
+            'viewData' => $viewData, // Contient maintenant les chargements
             'error' => $error,
         ]);
     }
