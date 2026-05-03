@@ -110,14 +110,28 @@ export default class extends Controller {
                     if (valueStr === '-') {
                         valueStr = '0';
                     }
-                    // DEBUG: Affiche la valeur brute reçue d'Excel
-                    // console.log(`[Debug] Valeur brute: "${valueStr}"`);
+                    
+                    // --- Début du bloc de débogage ---
+                    // console.log(`--- Débogage pour la valeur: "${value}" (Ligne ${index + 2}) ---`);
+                    // console.log(`1. Chaîne initiale (après trim): "${valueStr}"`);
 
-                    const cleanedValue = valueStr.replace(/[\s\u00A0]/g, '') // 1. Supprime TOUS les espaces, y compris les insécables.
-                        .replace(/,/g, '.') // 2. Remplace la virgule par un point.
-                        .replace(/[^\d.-]/g, ''); // 3. Supprime tout ce qui n'est pas un chiffre, un point ou un tiret.
+                    // Étape 1 : Supprimer les espaces (y compris insécables) et les parenthèses pour les négatifs.
+                    let cleanedValue = valueStr.replace(/[\s\u00A0()]/g, '');
+                    // console.log(`2. Après suppression des espaces/parenthèses: "${cleanedValue}"`);
 
-                    isValid = !isNaN(parseFloat(cleanedValue)) && isFinite(cleanedValue);
+                    // Étape 2 : Supprimer les virgules utilisées comme séparateurs de milliers.
+                    // Ex: "81,392.14" -> "81392.14"
+                    cleanedValue = cleanedValue.replace(/,(?=\d{3})/g, '');
+                    // console.log(`3. Après suppression des virgules de milliers: "${cleanedValue}"`);
+
+                    // Étape 3 : Remplacer la virgule décimale par un point.
+                    // Ex: "1035,81" -> "1035.81"
+                    cleanedValue = cleanedValue.replace(',', '.');
+                    // console.log(`4. Valeur nettoyée finale: "${cleanedValue}"`);
+                    // --- Fin du bloc de débogage ---
+
+                    const parsedValue = parseFloat(cleanedValue);
+                    isValid = !isNaN(parsedValue) && isFinite(parsedValue);
 
                 }
             }
