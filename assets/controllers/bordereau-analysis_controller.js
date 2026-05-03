@@ -19,7 +19,14 @@ export default class extends Controller {
     };
 
     connect() {
-        this.requiredMappings = new Set(['reference_police', 'prime_totale', 'commission_ht', 'taxe_commission']);
+        this.requiredMappings = new Set([
+            'reference_police',
+            'date_effet_avenant',
+            'date_expiration_avenant',
+            'nom_client',
+            'commission_ht_assureur',
+            'taxe_commission_assureur'
+        ]);
         this.validationState = new Map(); // Stocke l'état de validation pour chaque colonne mappée
 
         // NOUVEAU : On ajoute les chargements reçus à la liste des champs à mapper.
@@ -131,10 +138,21 @@ export default class extends Controller {
             const value = row[columnLetter];
             let isValid = false;
 
-            if (mappingType === 'reference_police') {
+            if (mappingType === 'reference_police' || mappingType === 'nom_client') {
                 isValid = typeof value === 'string' && value.trim() !== '';
-            } else { // prime_totale, commission_ht, taxe_commission et tous les chargements
-                // La validation pour les chargements est la même que pour les autres champs numériques.
+            } else if (mappingType === 'date_effet_avenant' || mappingType === 'date_expiration_avenant') {
+                if (value === null || value === undefined) {
+                    isValid = false;
+                } else if (typeof value === 'number') {
+                    // Gère les dates Excel stockées comme des nombres (jours depuis 1900)
+                    isValid = value > 0;
+                } else {
+                    // Gère les dates stockées comme des chaînes (ex: "25/12/2024")
+                    const date = new Date(value);
+                    isValid = !isNaN(date.getTime());
+                }
+            } else { // commission_ht_assureur, taxe_commission_assureur et tous les chargements
+                // La validation pour les champs numériques reste la même.
                 if (value === null || value === undefined || String(value).trim() === '') {
                     isValid = false;
                 } else {

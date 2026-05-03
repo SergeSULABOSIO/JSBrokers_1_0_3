@@ -145,10 +145,12 @@ class BordereauController extends AbstractController
         $viewData = [
             'sheets' => [],
             'mapping_options' => [
-                'reference_police' => 'Référence de la police',
-                'prime_totale' => 'Prime totale',
-                'commission_ht' => 'Commission HT',
-                'taxe_commission' => 'Taxe sur commission',
+                'reference_police' => 'N° de Police (Obligatoire)',
+                'date_effet_avenant' => 'Date d\'effet (Obligatoire)',
+                'date_expiration_avenant' => 'Date d\'expiration (Obligatoire)',
+                'nom_client' => 'Nom du client (Obligatoire)',
+                'commission_ht_assureur' => 'Commission HT Assureur (Obligatoire)',
+                'taxe_commission_assureur' => 'Taxe sur commission Assureur (Obligatoire)',
             ],
             'chargements' => [], // Initialisation
         ];
