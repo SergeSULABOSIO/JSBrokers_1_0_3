@@ -13,17 +13,49 @@ export default class extends Controller {
 
     static values = {
         sheetsData: Object,
+        // NOUVEAU : On reçoit les chargements depuis le backend via le template Twig.
+        // Le format attendu est un tableau d'objets : [{id, nom}, ...]
+        chargements: Array
     };
 
     connect() {
         this.requiredMappings = new Set(['reference_police', 'prime_totale', 'commission_ht', 'taxe_commission']);
         this.validationState = new Map(); // Stocke l'état de validation pour chaque colonne mappée
 
+        // NOUVEAU : On ajoute les chargements reçus à la liste des champs à mapper.
+        this.addChargementOptions();
+
         // Si une seule feuille est détectée, on passe directement à l'étape 2.
         if (this.sheetSelectionTargets.length === 1) {
             this.showStep2();
         }
         this.updateSubmitButtonState();
+    }
+
+    /**
+     * NOUVEAU : Ajoute dynamiquement les chargements comme options dans tous les selects de mappage.
+     */
+    addChargementOptions() {
+        if (!this.hasChargementsValue || this.chargementsValue.length === 0) {
+            return;
+        }
+
+        // On crée un groupe d'options pour les chargements.
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = 'Chargements (Optionnel)';
+
+        this.chargementsValue.forEach(chargement => {
+            const option = document.createElement('option');
+            // La valeur sera préfixée pour être facilement identifiable lors de la soumission.
+            option.value = `chargement_${chargement.id}`;
+            option.textContent = chargement.nom;
+            optgroup.appendChild(option);
+        });
+
+        // On ajoute ce groupe d'options à chaque <select> de mappage.
+        this.mappingSelectTargets.forEach(select => {
+            select.appendChild(optgroup.cloneNode(true));
+        });
     }
 
     /**
@@ -101,7 +133,8 @@ export default class extends Controller {
 
             if (mappingType === 'reference_police') {
                 isValid = typeof value === 'string' && value.trim() !== '';
-            } else { // prime_totale, commission_ht, taxe_commission
+            } else { // prime_totale, commission_ht, taxe_commission et tous les chargements
+                // La validation pour les chargements est la même que pour les autres champs numériques.
                 if (value === null || value === undefined || String(value).trim() === '') {
                     isValid = false;
                 } else {
