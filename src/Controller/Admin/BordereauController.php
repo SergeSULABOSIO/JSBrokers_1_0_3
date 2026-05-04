@@ -4,12 +4,14 @@ namespace App\Controller\Admin;
 
 use App\Constantes\Constante;
 use App\Controller\Admin\ControllerUtilsTrait;
+use App\Entity\TypeRevenu;
 use App\Entity\Chargement;
 use App\Entity\Bordereau;
 use App\Entity\Invite;
 use App\Entity\Traits\HandleChildAssociationTrait;
 use App\Form\BordereauType;
 use App\Repository\BordereauRepository;
+use App\Repository\TypeRevenuRepository;
 use App\Repository\EntrepriseRepository;
 use App\Repository\InviteRepository;
 use App\Repository\ChargementRepository;
@@ -138,7 +140,7 @@ class BordereauController extends AbstractController
     }
 
     #[Route('/analyse/{id}', name: 'show_analysis', methods: ['GET'])]
-    public function showAnalysis(Bordereau $bordereau, ParameterBagInterface $params, ChargementRepository $chargementRepository): Response
+    public function showAnalysis(Bordereau $bordereau, ParameterBagInterface $params, ChargementRepository $chargementRepository, TypeRevenuRepository $typeRevenuRepository): Response
     {
         $entreprise = $this->getEntreprise(); // Récupère l'entreprise courante
         $invite = $this->getInvite(); // NOUVEAU : On récupère l'invité courant.
@@ -153,6 +155,7 @@ class BordereauController extends AbstractController
                 'taxe_commission_assureur' => 'Taxe sur commission Assureur (Obligatoire)',
             ],
             'chargements' => [], // Initialisation
+            'typeRevenus' => [], // NOUVEAU : Initialisation pour les types de revenu
         ];
         $error = null;
         $excelDocument = null;
@@ -234,6 +237,18 @@ class BordereauController extends AbstractController
             ];
         }, $chargements);
         $viewData['chargements'] = $chargementsData;
+
+        // NOUVEAU : Récupérer tous les types de revenu de l'entreprise
+        $typeRevenus = $typeRevenuRepository->findBy(['entreprise' => $entreprise]);
+
+        // On ne garde que les champs nécessaires pour le frontend (id, nom)
+        $typeRevenusData = array_map(function(TypeRevenu $typeRevenu) {
+            return [
+                'id' => $typeRevenu->getId(),
+                'nom' => $typeRevenu->getNom(),
+            ];
+        }, $typeRevenus);
+        $viewData['typeRevenus'] = $typeRevenusData;
     
         return $this->render('admin/bordereau/bordereau_analysis.html.twig', [
             'bordereau' => $bordereau,
