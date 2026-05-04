@@ -116,13 +116,17 @@
                     </div>
                     <div class="card-body">
                         <p>Veuillez faire correspondre les colonnes de votre fichier avec les champs requis par le système.</p>
+                        {# Feedback en temps réel sur l'état du mappage #}
+                        <div data-bordereau-analysis-target="mappingStatusFeedback" class="alert alert-info mb-3">
+                            Chargement du statut de mappage...
+                        </div>
                         
                         {% for sheet in viewData.sheets %}
                             <div data-bordereau-analysis-target="mappingContainer" data-sheet-name="{{ sheet.sheetName }}" data-is-first="{{ loop.first ? 'true' : 'false' }}" style="display: none;">
                                 <h5 class="mb-3">Feuille : <span class="badge bg-secondary">{{ sheet.sheetName }}</span></h5>
                                 <form class="column-mapping-form">
                                     <div class="table-responsive">
-                                        <table class="table table-bordered table-striped">
+                                        <table class="table table-bordered table-striped align-middle">
                                             <thead class="table-light">
                                                 <tr>
                                                     <th style="width: 40%;">Colonne du fichier Excel</th>
@@ -133,9 +137,10 @@
                                             <tbody>
                                             {% for col_letter, col_name in sheet.columns %}
                                                 <tr>
-                                                    <td>
+                                                    <td data-column-name-cell="{{ col_letter }}">
+                                                        {# Ajout d'un data-attribut pour cibler le texte de la colonne #}
                                                         <span class="badge bg-info me-2">{{ col_letter }}</span>
-                                                        <strong>{{ col_name|default('Colonne sans nom') }}</strong>
+                                                        <span data-bordereau-analysis-target="columnNameText">{{ col_name|default('Colonne sans nom') }}</span>
                                                     </td>
                                                     <td>
                                                         <select name="mapping[{{ col_name }}]"

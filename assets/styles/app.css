@@ -1589,3 +1589,10 @@ textarea:hover,
 .jsb-indicator-value.text-success { color: #198754 !important; }
 .jsb-indicator-value.text-danger { color: #dc3545 !important; }
 .jsb-indicator-value.text-cobalt { color: #0047AB !important; }
+
+/* NOUVEAU : Style pour les options de mappage déjà sélectionnées */
+.mapped-option {
+    background-color: #e9ecef !important; /* Gris très clair */
+    color: #6c757d; /* Texte gris pour indiquer qu'elle est "prise" */
+    font-style: italic;
+}

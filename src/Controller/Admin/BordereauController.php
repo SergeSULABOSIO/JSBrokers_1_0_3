@@ -147,14 +147,15 @@ class BordereauController extends AbstractController
         $viewData = [
             'sheets' => [],
             'mapping_options' => [
-                'reference_police' => 'N° de Police',
-                'date_effet_avenant' => 'Date d\'effet',
-                'date_expiration_avenant' => 'Date d\'expiration',
-                'date_operation' => 'Date d\'opération',
-                'risque' => 'Risque',
-                'nom_client' => 'Assuré',
-                'commission_ht_assureur' => 'Commission HT Payable',
-                'taxe_commission_assureur' => 'Taxe sur commission payable',
+                'reference_police' => 'N° de Police', // Obligatoire
+                'date_effet_avenant' => 'Date d\'effet', // Obligatoire
+                'date_expiration_avenant' => 'Date d\'expiration', // Obligatoire
+                'date_operation' => 'Date d\'opération', // Obligatoire
+                'risque' => 'Risque', // Obligatoire
+                'nom_client' => 'Assuré', // Obligatoire
+                'commission_ht_assureur' => 'Commission HT Payable', // Obligatoire
+                'taxe_commission_assureur' => 'Taxe sur commission payable', // Obligatoire
+                'taux_commission' => 'Taux de commission', // Obligatoire
             ],
             'chargements' => [], // Initialisation
             'typeRevenus' => [], // NOUVEAU : Initialisation pour les types de revenu
