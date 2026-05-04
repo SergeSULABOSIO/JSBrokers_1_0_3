@@ -186,7 +186,7 @@ export default class extends Controller {
         this.validationState.delete(columnLetter);
 
         // Met à jour l'état visuel du nom de la colonne (gras/normal)
-        const columnNameTextElement = selectElement.closest('td').querySelector('[data-bordereau-analysis-target="columnNameText"]');
+        const columnNameTextElement = selectElement.closest('tr').querySelector('[data-bordereau-analysis-target="columnNameText"]');
         columnNameTextElement.classList.remove('fw-bold'); // Supprime par défaut
 
         if (!mappingType) {
