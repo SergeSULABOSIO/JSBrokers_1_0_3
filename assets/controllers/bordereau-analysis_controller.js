@@ -14,8 +14,9 @@ export default class extends Controller {
     static values = {
         sheetsData: Object,
         // NOUVEAU : On reçoit les chargements depuis le backend via le template Twig.
-        // Le format attendu est un tableau d'objets : [{id, nom}, ...]
-        chargements: Array
+        chargements: Array,
+        // NOUVEAU : On reçoit les types de revenu de la même manière.
+        typeRevenus: Array
     };
 
     connect() {
@@ -31,6 +32,8 @@ export default class extends Controller {
 
         // NOUVEAU : On ajoute les chargements reçus à la liste des champs à mapper.
         this.addChargementOptions();
+        // NOUVEAU : On ajoute les types de revenu.
+        this.addTypeRevenuOptions();
 
         // Si une seule feuille est détectée, on passe directement à l'étape 2.
         if (this.sheetSelectionTargets.length === 1) {
@@ -56,6 +59,32 @@ export default class extends Controller {
             // La valeur sera préfixée pour être facilement identifiable lors de la soumission.
             option.value = `chargement_${chargement.id}`;
             option.textContent = chargement.nom;
+            optgroup.appendChild(option);
+        });
+
+        // On ajoute ce groupe d'options à chaque <select> de mappage.
+        this.mappingSelectTargets.forEach(select => {
+            select.appendChild(optgroup.cloneNode(true));
+        });
+    }
+
+    /**
+     * NOUVEAU : Ajoute dynamiquement les types de revenu comme options dans tous les selects de mappage.
+     */
+    addTypeRevenuOptions() {
+        if (!this.hasTypeRevenusValue || this.typeRevenusValue.length === 0) {
+            return;
+        }
+
+        // On crée un groupe d'options pour les revenus.
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = 'Revenus (Optionnel)';
+
+        this.typeRevenusValue.forEach(revenu => {
+            const option = document.createElement('option');
+            // La valeur sera préfixée pour être facilement identifiable lors de la soumission.
+            option.value = `revenu_${revenu.id}`;
+            option.textContent = revenu.nom;
             optgroup.appendChild(option);
         });
 
