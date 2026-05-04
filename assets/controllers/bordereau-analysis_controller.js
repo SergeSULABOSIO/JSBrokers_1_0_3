@@ -14,9 +14,11 @@ export default class extends Controller {
     static values = {
         sheetsData: Object,
         // NOUVEAU : On reçoit les chargements depuis le backend via le template Twig.
-        chargements: Array,
+        chargements: Array, // [{id, nom}, ...]
         // NOUVEAU : On reçoit les types de revenu de la même manière.
-        typeRevenus: Array
+        typeRevenus: Array, // [{id, nom}, ...]
+        // NOUVEAU : On reçoit les options de mappage système depuis le backend.
+        mappingOptions: Object // {key: label, ...}
     };
 
     connect() {
@@ -24,9 +26,11 @@ export default class extends Controller {
             'reference_police',
             'date_effet_avenant',
             'date_expiration_avenant',
+            'date_operation', // Nouveau champ obligatoire
+            'risque', // Nouveau champ obligatoire
             'nom_client',
-            'commission_ht_assureur',
-            'taxe_commission_assureur'
+            'commission_ht_assureur', // Libellé modifié
+            'taxe_commission_assureur' // Libellé modifié
         ]);
         this.validationState = new Map(); // Stocke l'état de validation pour chaque colonne mappée
 
@@ -34,6 +38,8 @@ export default class extends Controller {
         this.addChargementOptions();
         // NOUVEAU : On ajoute les types de revenu.
         this.addTypeRevenuOptions();
+        // NOUVEAU : On ajoute les options de mappage système.
+        this.addSystemOptions();
 
         // Si une seule feuille est détectée, on passe directement à l'étape 2.
         if (this.sheetSelectionTargets.length === 1) {
@@ -94,6 +100,30 @@ export default class extends Controller {
         });
     }
 
+    /**
+     * NOUVEAU : Ajoute dynamiquement les options de mappage système comme options dans tous les selects.
+     */
+    addSystemOptions() {
+        if (!this.hasMappingOptionsValue || Object.keys(this.mappingOptionsValue).length === 0) {
+            return;
+        }
+
+        // On crée un groupe d'options pour les champs système obligatoires.
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = 'Options systèmes (Obligatoire)';
+
+        // On itère sur les options reçues du backend et on les ajoute au groupe.
+        for (const key in this.mappingOptionsValue) {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = this.mappingOptionsValue[key];
+            optgroup.appendChild(option);
+        }
+
+        this.mappingSelectTargets.forEach(select => {
+            select.appendChild(optgroup.cloneNode(true));
+        });
+    }
     /**
      * Action déclenchée lorsqu'un select de mappage est modifié.
      * @param {Event} event
@@ -169,7 +199,7 @@ export default class extends Controller {
 
             if (mappingType === 'reference_police' || mappingType === 'nom_client') {
                 isValid = typeof value === 'string' && value.trim() !== '';
-            } else if (mappingType === 'date_effet_avenant' || mappingType === 'date_expiration_avenant') {
+            } else if (mappingType.startsWith('date_')) { // Gère toutes les dates (effet, expiration, opération)
                 if (value === null || value === undefined) {
                     isValid = false;
                 } else if (typeof value === 'number') {
@@ -180,7 +210,10 @@ export default class extends Controller {
                     const date = new Date(value);
                     isValid = !isNaN(date.getTime());
                 }
-            } else { // commission_ht_assureur, taxe_commission_assureur et tous les chargements
+            } else if (mappingType === 'risque') { // Nouveau champ Risque
+                isValid = typeof value === 'string' && value.trim() !== '';
+            }
+            else { // commission_ht_assureur, taxe_commission_assureur et tous les chargements et revenus
                 // La validation pour les champs numériques reste la même.
                 if (value === null || value === undefined || String(value).trim() === '') {
                     isValid = false;
