@@ -31,6 +31,7 @@
 <body data-controller="bordereau-analysis"
       data-bordereau-analysis-sheets-data-value="{{ sheets_data_json|json_encode|e('html_attr') }}"
       data-bordereau-analysis-chargements-value="{{ viewData.chargements|json_encode|e('html_attr') }}"
+      data-bordereau-analysis-mapping-options-value="{{ viewData.mapping_options|json_encode|e('html_attr') }}"
       data-bordereau-analysis-type-revenus-value="{{ viewData.typeRevenus|json_encode|e('html_attr') }}"
 >
 
@@ -142,10 +143,7 @@
                                                                 data-bordereau-analysis-target="mappingSelect"
                                                                 data-action="bordereau-analysis#validateColumn"
                                                                 data-column-letter="{{ col_letter }}">
-                                                            <option value="">Ignorer cette colonne</option>
-                                                            {% for key, label in viewData.mapping_options %}
-                                                                <option value="{{ key }}">{{ label }}</option>
-                                                            {% endfor %}
+                                                            <option value="">Ignorer cette colonne</option> {# Cette option sera toujours présente #}
                                                         </select>
                                                     </td>
                                                     <td data-bordereau-analysis-target="analysisResult"
