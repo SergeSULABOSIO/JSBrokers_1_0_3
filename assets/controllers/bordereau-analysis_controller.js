@@ -7,8 +7,8 @@ import { Controller } from '@hotwired/stimulus';
  */
 export default class extends Controller {
     static targets = [
-        "sheetSelection", "step2", "mappingContainer",
-        "mappingSelect", "analysisResult", "submitButton"
+        "sheetSelection", "step2", "mappingContainer", "mappingStatusFeedback",
+        "mappingSelect", "analysisResult", "submitButton", "columnNameText"
     ];
 
     static values = {
@@ -27,10 +27,11 @@ export default class extends Controller {
             'date_effet_avenant',
             'date_expiration_avenant',
             'date_operation', // Nouveau champ obligatoire
-            'risque', // Nouveau champ obligatoire
+            'risque',         // Nouveau champ obligatoire
             'nom_client',
-            'commission_ht_assureur', // Libellé modifié
-            'taxe_commission_assureur' // Libellé modifié
+            'commission_ht_assureur',
+            'taxe_commission_assureur',
+            'taux_commission' // Nouveau champ obligatoire
         ]);
         this.validationState = new Map(); // Stocke l'état de validation pour chaque colonne mappée
 
@@ -40,12 +41,15 @@ export default class extends Controller {
         this.addTypeRevenuOptions();
         // NOUVEAU : On ajoute les options de mappage système.
         this.addSystemOptions();
+        // Initialise le feedback de mappage
+        this.updateMappingStatusFeedback();
 
         // Si une seule feuille est détectée, on passe directement à l'étape 2.
         if (this.sheetSelectionTargets.length === 1) {
             this.showStep2();
         }
         this.updateSubmitButtonState();
+        this.updateSelectOptionsVisuals(); // Initialise la coloration des options
     }
 
     /**
@@ -105,6 +109,10 @@ export default class extends Controller {
      */
     addSystemOptions() {
         if (!this.hasMappingOptionsValue || Object.keys(this.mappingOptionsValue).length === 0) {
+            // Si mappingOptionsValue est vide, cela signifie que le backend n'a pas fourni les options.
+            // Cela peut arriver si le contrôleur PHP n'est pas à jour ou si l'entreprise n'a pas de données.
+            // Pour éviter une erreur, on peut logguer un avertissement ou simplement retourner.
+            console.warn("Aucune option de mappage système n'a été fournie par le backend.");
             return;
         }
 
@@ -121,13 +129,16 @@ export default class extends Controller {
         }
 
         this.mappingSelectTargets.forEach(select => {
-            select.appendChild(optgroup.cloneNode(true));
+            // Insérer le groupe d'options système juste après l'option "Ignorer cette colonne"
+            select.insertBefore(optgroup.cloneNode(true), select.children[1]);
         });
     }
     /**
      * Action déclenchée lorsqu'un select de mappage est modifié.
      * @param {Event} event
      */
+    // La méthode validateColumn est appelée lorsque l'utilisateur change une sélection.
+    // Elle doit maintenant aussi mettre à jour le feedback et la coloration des options.
     validateColumn(event) {
         const selectElement = event.currentTarget;
         this.performValidation(selectElement);
@@ -174,6 +185,10 @@ export default class extends Controller {
         // Réinitialise l'état de validation pour cette colonne
         this.validationState.delete(columnLetter);
 
+        // Met à jour l'état visuel du nom de la colonne (gras/normal)
+        const columnNameTextElement = selectElement.closest('td').querySelector('[data-bordereau-analysis-target="columnNameText"]');
+        columnNameTextElement.classList.remove('fw-bold'); // Supprime par défaut
+
         if (!mappingType) {
             resultCell.innerHTML = ''; // Vide la cellule de résultat si "Ignorer" est sélectionné
             this.updateSubmitButtonState();
@@ -199,7 +214,7 @@ export default class extends Controller {
 
             if (mappingType === 'reference_police' || mappingType === 'nom_client') {
                 isValid = typeof value === 'string' && value.trim() !== '';
-            } else if (mappingType.startsWith('date_')) { // Gère toutes les dates (effet, expiration, opération)
+            } else if (mappingType.startsWith('date_')) { // Gère toutes les dates (effet, expiration, opération, etc.)
                 if (value === null || value === undefined) {
                     isValid = false;
                 } else if (typeof value === 'number') {
@@ -210,8 +225,7 @@ export default class extends Controller {
                     const date = new Date(value);
                     isValid = !isNaN(date.getTime());
                 }
-            } else if (mappingType === 'risque') { // Nouveau champ Risque
-                isValid = typeof value === 'string' && value.trim() !== '';
+            } else if (mappingType === 'risque' || mappingType === 'taux_commission' || mappingType.startsWith('chargement_') || mappingType.startsWith('revenu_')) {
             }
             else { // commission_ht_assureur, taxe_commission_assureur et tous les chargements et revenus
                 // La validation pour les champs numériques reste la même.
@@ -262,6 +276,11 @@ export default class extends Controller {
             resultCell.innerHTML = this.getFeedbackHtml('error', message);
             this.validationState.set(columnLetter, false);
         }
+        
+        // Si la colonne est mappée et valide, on met le nom en gras
+        if (mappingType && this.validationState.get(columnLetter)) {
+            columnNameTextElement.classList.add('fw-bold');
+        }
 
         this.updateSubmitButtonState();
     }
@@ -293,6 +312,7 @@ export default class extends Controller {
 
         const hasAllRequired = [...this.requiredMappings].every(type => mappedTypes.has(type));
         this.submitButtonTarget.disabled = !(hasAllRequired && allValid);
+        this.updateMappingStatusFeedback(); // Met à jour le feedback après chaque validation
     }
 
     /**
@@ -312,5 +332,69 @@ export default class extends Controller {
                 ${message}
             </span>
         `;
+    }
+
+    /**
+     * Met à jour le paragraphe de feedback sur l'état du mappage.
+     */
+    updateMappingStatusFeedback() {
+        if (!this.hasMappingStatusFeedbackTarget) {
+            return;
+        }
+
+        const mappedRequiredCount = new Set();
+        const mappedOptionalCount = new Set();
+        const totalOptionalCount = this.chargementsValue.length + this.typeRevenusValue.length;
+
+        this.mappingSelectTargets.forEach(select => {
+            const mappingType = select.value;
+            if (mappingType) {
+                if (this.requiredMappings.has(mappingType)) {
+                    mappedRequiredCount.add(mappingType);
+                } else if (mappingType.startsWith('chargement_') || mappingType.startsWith('revenu_')) {
+                    mappedOptionalCount.add(mappingType);
+                }
+            }
+        });
+
+        const requiredMapped = mappedRequiredCount.size;
+        const requiredRemaining = this.requiredMappings.size - requiredMapped;
+        const optionalMapped = mappedOptionalCount.size;
+
+        let message = ``;
+
+        if (requiredRemaining > 0) {
+            message += `Il reste <span class="fw-bold text-danger">${requiredRemaining}</span> champ(s) obligatoire(s) à mapper.`;
+        } else {
+            message += `Tous les champs obligatoires (<span class="fw-bold text-success">${this.requiredMappings.size}/${this.requiredMappings.size}</span>) sont mappés.`;
+            if (totalOptionalCount > 0) {
+                message += ` Vous avez mappé <span class="fw-bold text-info">${optionalMapped}</span> champ(s) optionnel(s) sur ${totalOptionalCount} disponible(s).`;
+            }
+        }
+
+        this.mappingStatusFeedbackTarget.innerHTML = message;
+        this.updateSelectOptionsVisuals(); // Met à jour la coloration des options
+    }
+
+    /**
+     * Met à jour l'apparence des options dans les selects pour indiquer celles déjà mappées.
+     */
+    updateSelectOptionsVisuals() {
+        const selectedValues = new Set();
+        this.mappingSelectTargets.forEach(select => {
+            if (select.value) {
+                selectedValues.add(select.value);
+            }
+        });
+
+        this.mappingSelectTargets.forEach(select => {
+            Array.from(select.options).forEach(option => {
+                option.classList.remove('mapped-option');
+                // Si l'option est sélectionnée ailleurs ET n'est pas l'option actuellement sélectionnée dans ce select
+                if (selectedValues.has(option.value) && option.value !== select.value) {
+                    option.classList.add('mapped-option');
+                }
+            });
+        });
     }
 }
