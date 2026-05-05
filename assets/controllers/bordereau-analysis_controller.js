@@ -379,11 +379,11 @@ export default class extends Controller {
         let message = ``;
 
         if (requiredRemaining > 0) {
-            message += `Il reste <strong class="text-danger">${requiredRemaining}</strong> champ(s) obligatoire(s) à mapper.`;
+            message += `Il reste <strong>${requiredRemaining}</strong> champ(s) obligatoire(s) à mapper.`;
         } else {
-            message += `Tous les champs obligatoires (<strong class="text-success">${this.requiredMappings.size}/${this.requiredMappings.size}</strong>) sont mappés.`;
+            message += `Tous les champs obligatoires (<strong>${this.requiredMappings.size}/${this.requiredMappings.size}</strong>) sont mappés.`;
             if (totalOptionalCount > 0) {
-                message += ` Vous avez mappé <strong class="text-info">${optionalMapped}</strong> champ(s) optionnel(s) sur <strong>${totalOptionalCount}</strong> disponible(s).`;
+                message += ` Vous avez mappé <strong>${optionalMapped}</strong> champ(s) optionnel(s) sur <strong>${totalOptionalCount}</strong> disponible(s).`;
             }
         }
 
