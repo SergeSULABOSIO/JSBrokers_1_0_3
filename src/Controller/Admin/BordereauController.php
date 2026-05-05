@@ -202,7 +202,7 @@ class BordereauController extends AbstractController
                         $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn);
     
                         // NOUVEAU: Lire toutes les données de la feuille
-                        $sheetData = $worksheet->toArray(null, true, true, true);
+                        $sheetData = $worksheet->toArray(null, true, false, true); // Changed formatData to false
                         $headers = array_shift($sheetData) ?: []; // La première ligne est l'en-tête
     
                         $columns = [];
