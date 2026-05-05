@@ -19,7 +19,7 @@ export default class extends Controller {
         typeRevenus: Array, // [{id, nom}, ...]
         // NOUVEAU : On reçoit les options de mappage système depuis le backend.
         mappingOptions: Object, // {key: label, ...}
-        analysisResults: Object // NOUVEAU : Résultats de l'analyse des avenants
+        analysisResults: Array // CORRECTION : Doit être un tableau pour correspondre aux données reçues.
     };
 
     connect() {
