@@ -453,74 +453,20 @@ export default class extends Controller {
         this.submitButtonTarget.textContent = "Analyse en cours...";
         this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('warning', 'Analyse en cours, veuillez patienter...');
 
+        // NOUVEAU : Notifier le Cerveau pour qu'il gère la soumission de l'analyse
         try {
-            // Assumer qu'il y a une URL d'API pour soumettre l'analyse.
-            // Cette URL devrait être passée via un data-value au contrôleur.
-            // Pour l'instant, on va simuler une réponse.
-            // this.notifyCerveau('bordereau:submit-analysis', payload);
-
-            // Simulation d'une réponse backend
-            const simulatedResponse = await new Promise(resolve => setTimeout(() => {
-                resolve({
-                    analysisResults: [
-                        {
-                            type: "new",
-                            bordereau_line_info: {
-                                reference_police: "POL-NEW-001",
-                                date_effet_avenant: "2024-01-01",
-                                nom_client: "Nouveau Client A",
-                                commission_ht_assureur: 1500,
-                                taxe_commission_assureur: 240,
-                                taux_commission: 0.15
-                            },
-                            details: "Cet avenant n'existe pas dans la base de données de l'entreprise.",
-                            actions: [
-                                { label: "Ajouter cet avenant", event: "bordereau:add-new-avenant", payload: { /* ... data ... */ } }
-                            ]
-                        },
-                        {
-                            type: "discrepancy",
-                            bordereau_line_info: {
-                                reference_police: "POL-EXIST-002",
-                                date_effet_avenant: "2023-06-01",
-                                nom_client: "Client B",
-                                commission_ht_assureur: 2000,
-                                taxe_commission_assureur: 320,
-                                taux_commission: 0.16
-                            },
-                            database_info: {
-                                prime_ttc: 12000,
-                                commission_ttc: 2320
-                            },
-                            bordereau_values: {
-                                prime_ttc: 12500,
-                                commission_ttc: 2420
-                            },
-                            details: "Discrépance détectée sur les primes et commissions. Base: 2320, Bordereau: 2420.",
-                            actions: [
-                                { label: "Contester", event: "bordereau:dispute-avenant", payload: { /* ... data ... */ } },
-                                { label: "Modifier la base", event: "bordereau:update-database-avenant", payload: { /* ... data ... */ } }
-                            ]
-                        },
-                        {
-                            type: "match",
-                            bordereau_line_info: {
-                                reference_police: "POL-MATCH-003",
-                                date_effet_avenant: "2023-03-15",
-                                nom_client: "Client C",
-                                commission_ht_assureur: 1000,
-                                taxe_commission_assureur: 160,
-                                taux_commission: 0.16
-                            },
-                            details: "Cet avenant correspond aux données en base.",
-                            actions: []
-                        }
-                    ]
-                });
-            }, 1500));
-
-            this.analysisResultsValue = simulatedResponse.analysisResults; // Stocke les résultats
-            this.showStep(3); // Passe à l'étape 3
+            this.dispatch('cerveau:event', {
+                detail: {
+                    type: 'bordereau:submit-analysis',
+                    source: 'bordereau-analysis_controller',
+                    payload: {
+                        url: `/admin/bordereau/api/submit-analysis/${this.bordereauIdValue}`,
+                        data: payload
+                    },
+                    timestamp: Date.now()
+                },
+                bubbles: true
+            });
         } catch (error) {
             console.error("Erreur lors de la soumission de l'analyse:", error);
             this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('error', `Erreur lors de l'analyse: ${error.message}`);
