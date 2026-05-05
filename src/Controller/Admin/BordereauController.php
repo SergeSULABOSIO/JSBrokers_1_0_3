@@ -33,7 +33,8 @@ use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
-use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Component\Serializer\SerializerInterface; 
+use App\Repository\AvenantRepository; // NOUVEAU
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[Route("/admin/bordereau", name: 'admin.bordereau.')]
@@ -55,7 +56,8 @@ class BordereauController extends AbstractController
         private JSBDynamicSearchService $searchService,
         private SerializerInterface $serializer,
         private CalculationProvider $calculationProvider,
-        CanvasBuilder $canvasBuilder // Inject CanvasBuilder without property promotion
+        CanvasBuilder $canvasBuilder, // Inject CanvasBuilder without property promotion
+        private AvenantRepository $avenantRepository // NOUVEAU : Ajout du repository Avenant
     ) {
         // Assign the injected CanvasBuilder to the property declared in the trait
         $this->canvasBuilder = $canvasBuilder;
@@ -152,6 +154,7 @@ class BordereauController extends AbstractController
                 'date_expiration_avenant' => 'Date d\'expiration', // Obligatoire
                 'date_operation' => 'Date d\'opération', // Obligatoire
                 'risque' => 'Risque', // Obligatoire
+                'prime_ttc' => 'Prime TTC', // NOUVEAU : Ajout de la prime TTC
                 'nom_client' => 'Assuré', // Obligatoire
                 'commission_ht_assureur' => 'Commission HT Payable', // Obligatoire
                 'taxe_commission_assureur' => 'Taxe sur commission payable', // Obligatoire
@@ -260,5 +263,193 @@ class BordereauController extends AbstractController
             'viewData' => $viewData, // Contient maintenant les chargements
             'error' => $error,
         ]);
+    }
+
+    // NOUVEAU : Route pour soumettre l'analyse du bordereau
+    #[Route('/api/submit-analysis/{id}', name: 'api.submit_analysis', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    public function submitAnalysisApi(Bordereau $bordereau, Request $request): JsonResponse
+    {
+        $entreprise = $this->getEntreprise();
+        $payload = json_decode($request->getContent(), true);
+
+        $sheetName = $payload['sheetName'] ?? null;
+        $mappedColumns = $payload['mappedColumns'] ?? [];
+        $sheetsData = $payload['sheetsData'] ?? [];
+
+        if (!$sheetName || !isset($sheetsData[$sheetName])) {
+            return $this->json(['error' => 'Nom de feuille ou données de feuille manquantes.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $selectedSheetData = $sheetsData[$sheetName]['data'] ?? [];
+        $analysisResults = [];
+
+        foreach ($selectedSheetData as $rowIndex => $rowData) {
+            // Skip empty rows
+            if (empty(array_filter($rowData))) {
+                continue;
+            }
+
+            $bordereauLineInfo = [];
+            foreach ($mappedColumns as $systemField => $excelColumnLetter) {
+                $value = $rowData[$excelColumnLetter] ?? null;
+                $bordereauLineInfo[$systemField] = $this->parseExcelValue($value, $systemField);
+            }
+
+            $referencePolice = $bordereauLineInfo['reference_police'] ?? null;
+            if (!$referencePolice) {
+                // If no police reference, we can't process this line for comparison
+                $analysisResults[] = [
+                    'type' => 'error',
+                    'bordereau_line_info' => $bordereauLineInfo,
+                    'details' => "Ligne " . ($rowIndex + 2) . ": Référence de police manquante pour l'analyse.",
+                    'actions' => []
+                ];
+                continue;
+            }
+
+            // Find existing Avenants for this police reference and entreprise
+            $existingAvenants = $this->avenantRepository->findBy([
+                'referencePolice' => $referencePolice,
+                'entreprise' => $entreprise
+            ]);
+
+            if (empty($existingAvenants)) {
+                $analysisResults[] = [
+                    'type' => 'new',
+                    'bordereau_line_info' => $bordereauLineInfo,
+                    'details' => "Ligne " . ($rowIndex + 2) . ": Cet avenant n'existe pas dans la base de données de l'entreprise.",
+                    'actions' => [
+                        ['label' => 'Ajouter cet avenant', 'event' => 'bordereau:add-new-avenant', 'payload' => $bordereauLineInfo]
+                    ]
+                ];
+            } else {
+                // For simplicity, we'll compare against the first found avenant.
+                // In a real scenario, you might need more sophisticated matching (e.g., by date, type).
+                $matchedAvenant = $existingAvenants[0];
+                $discrepancyFound = false;
+                $details = [];
+
+                // Calculate values from bordereau line
+                $bordereauPrimeTTC = $bordereauLineInfo['prime_ttc'] ?? 0;
+                $bordereauCommissionHT = $bordereauLineInfo['commission_ht_assureur'] ?? 0;
+                $bordereauTaxeCommission = $bordereauLineInfo['taxe_commission_assureur'] ?? 0;
+                $bordereauCommissionTTC = $bordereauCommissionHT + $bordereauTaxeCommission;
+                $bordereauTauxCommission = $bordereauLineInfo['taux_commission'] ?? 0;
+
+                // Get values from existing Avenant using Constante service
+                // Ensure Constante service is properly initialized and has access to the Avenant's related entities
+                $databasePrimeTTC = $this->constante->Avenant_getPrimeTTC($matchedAvenant);
+                $databaseCommissionTTC = $this->constante->Avenant_getCommissionTTC($matchedAvenant);
+                // For taux_commission, we might need to access Cotation directly if not available via Avenant_getCommissionTTC
+                $databaseTauxCommission = $matchedAvenant->getCotation() ? $matchedAvenant->getCotation()->tauxCommission : 0;
+
+                // Compare Prime TTC
+                if (abs($bordereauPrimeTTC - $databasePrimeTTC) > 0.01) { // Use a small tolerance for float comparison
+                    $discrepancyFound = true;
+                    $details[] = "Prime TTC: Base=" . number_format($databasePrimeTTC, 2) . ", Bordereau=" . number_format($bordereauPrimeTTC, 2);
+                }
+
+                // Compare Commission TTC
+                if (abs($bordereauCommissionTTC - $databaseCommissionTTC) > 0.01) {
+                    $discrepancyFound = true;
+                    $details[] = "Commission TTC: Base=" . number_format($databaseCommissionTTC, 2) . ", Bordereau=" . number_format($bordereauCommissionTTC, 2);
+                }
+
+                // Compare Taux de commission
+                if (abs($bordereauTauxCommission - $databaseTauxCommission) > 0.0001) { // Small tolerance for percentage
+                    $discrepancyFound = true;
+                    $details[] = "Taux Commission: Base=" . number_format($databaseTauxCommission * 100, 2) . "%, Bordereau=" . number_format($bordereauTauxCommission * 100, 2) . "%";
+                }
+
+                if ($discrepancyFound) {
+                    $analysisResults[] = [
+                        'type' => 'discrepancy',
+                        'bordereau_line_info' => $bordereauLineInfo,
+                        'database_info' => [
+                            'prime_ttc' => $databasePrimeTTC,
+                            'commission_ttc' => $databaseCommissionTTC,
+                            'taux_commission' => $databaseTauxCommission,
+                        ],
+                        'bordereau_values' => [
+                            'prime_ttc' => $bordereauPrimeTTC,
+                            'commission_ttc' => $bordereauCommissionTTC,
+                            'taux_commission' => $bordereauTauxCommission,
+                        ],
+                        'details' => "Ligne " . ($rowIndex + 2) . ": Discrépance détectée. " . implode(", ", $details),
+                        'actions' => [
+                            ['label' => 'Contester', 'event' => 'bordereau:dispute-avenant', 'payload' => ['avenantId' => $matchedAvenant->getId(), 'bordereauLine' => $bordereauLineInfo]],
+                            ['label' => 'Modifier la base', 'event' => 'bordereau:update-database-avenant', 'payload' => ['avenantId' => $matchedAvenant->getId(), 'bordereauLine' => $bordereauLineInfo]]
+                        ]
+                    ];
+                } else {
+                    $analysisResults[] = [
+                        'type' => 'match',
+                        'bordereau_line_info' => $bordereauLineInfo,
+                        'details' => "Ligne " . ($rowIndex + 2) . ": Cet avenant correspond aux données en base.",
+                        'actions' => []
+                    ];
+                }
+            }
+        }
+
+        return $this->json(['analysisResults' => $analysisResults]);
+    }
+
+    /**
+     * Helper to parse and convert Excel values based on expected system field type.
+     * @param mixed $value
+     * @param string $systemField
+     * @return mixed
+     */
+    private function parseExcelValue($value, string $systemField)
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        switch ($systemField) {
+            case 'date_effet_avenant':
+            case 'date_expiration_avenant':
+            case 'date_operation':
+                // Attempt to parse date. PhpSpreadsheet often converts dates to numbers.
+                if (is_numeric($value)) {
+                    try {
+                        // Excel date format (days since 1900-01-01)
+                        return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value);
+                    } catch (\Exception $e) {
+                        // Fallback if conversion fails
+                        return null;
+                    }
+                } elseif (is_string($value)) {
+                    try {
+                        // Try common date formats
+                        return new DateTimeImmutable($value);
+                    } catch (\Exception $e) {
+                        return null;
+                    }
+                }
+                return null;
+            case 'prime_ttc':
+            case 'commission_ht_assureur':
+            case 'taxe_commission_assureur':
+            case 'taux_commission':
+                // Convert to float, handling common string representations (e.g., "1 234,56", "1.234.567,89")
+                if (is_string($value)) {
+                    // Remove spaces, replace comma with dot for float conversion
+                    $cleanedValue = str_replace([' ', "\u{00A0}"], '', $value); // Also remove non-breaking spaces
+                    $cleanedValue = str_replace(',', '.', $cleanedValue);
+                    // Handle cases like "1.234.567,89" -> "1234567.89"
+                    if (substr_count($cleanedValue, '.') > 1) {
+                        $lastDotPos = strrpos($cleanedValue, '.');
+                        if ($lastDotPos !== false) {
+                            $cleanedValue = str_replace('.', '', substr($cleanedValue, 0, $lastDotPos)) . substr($cleanedValue, $lastDotPos);
+                        }
+                    }
+                    return (float) $cleanedValue;
+                }
+                return (float) $value;
+            default:
+                return $value;
+        }
     }
 }
