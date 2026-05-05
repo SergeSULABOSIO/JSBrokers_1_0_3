@@ -441,69 +441,15 @@ export default class extends Controller {
     }
 
     /**
-     * NOUVEAU : Rend les résultats de l'analyse des avenants.
+     * NOUVEAU : Gère la réception des résultats d'analyse du Cerveau.
+     * @param {CustomEvent} event
      */
-    renderAnalysisResults() {
-        if (!this.hasAnalysisResultsListTarget) return;
-
-        this.analysisResultsListTarget.innerHTML = ''; // Vide la liste précédente
-
-        if (!this.analysisResultsValue || this.analysisResultsValue.length === 0) {
-            this.analysisResultsListTarget.innerHTML = '<li class="list-group-item text-center text-muted">Aucun résultat d\'analyse à afficher.</li>';
-            return;
-        }
-
-        this.analysisResultsValue.forEach(result => {
-            const listItem = document.createElement('li');
-            listItem.classList.add('list-group-item', 'd-flex', 'flex-column', 'gap-2');
-
-            let statusClass = '';
-            let statusIcon = '';
-            if (result.type === 'new') {
-                statusClass = 'list-group-item-info';
-                statusIcon = '<i class="bi bi-plus-circle-fill text-info me-2"></i>';
-            } else if (result.type === 'discrepancy') {
-                statusClass = 'list-group-item-warning';
-                statusIcon = '<i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>';
-            } else if (result.type === 'match') {
-                statusClass = 'list-group-item-success';
-                statusIcon = '<i class="bi bi-check-circle-fill text-success me-2"></i>';
-            }
-
-            listItem.classList.add(statusClass);
-
-            let bordereauInfoHtml = Object.entries(result.bordereau_line_info || {}).map(([key, value]) => `<strong>${key.replace(/_/g, ' ')}:</strong> ${value}`).join(' | ');
-
-            let actionsHtml = result.actions.map(action =>
-                `<a href="#" class="btn btn-sm btn-outline-primary" data-action="click->bordereau-analysis#handleAnalysisAction" data-event-name="${action.event}" data-payload='${JSON.stringify(action.payload)}'>${action.label}</a>`
-            ).join(' ');
-
-            listItem.innerHTML = `
-                <div class="d-flex align-items-center">
-                    ${statusIcon}
-                    <h5 class="mb-0">${result.bordereau_line_info.reference_police || 'Avenant sans référence'}</h5>
-                </div>
-                <p class="mb-1 text-muted small">${bordereauInfoHtml}</p>
-                <p class="mb-2">${result.details}</p>
-                ${actionsHtml ? `<div class="d-flex gap-2">${actionsHtml}</div>` : ''}
-            `;
-            this.analysisResultsListTarget.appendChild(listItem);
-        });
-    }
-
-    /**
-     * NOUVEAU : Gère le clic sur un bouton d'action de l'étape 3.
-     * Pour l'instant, ne fait que logguer l'événement.
-     * @param {Event} event
-     */
-    handleAnalysisAction(event) {
-        event.preventDefault();
-        const button = event.currentTarget;
-        const eventName = button.dataset.eventName;
-        const payload = JSON.parse(button.dataset.payload || '{}');
-
-        console.log(`Action d'analyse déclenchée: ${eventName}`, payload);
-        // Ici, vous enverriez un événement au Cerveau pour gérer l'action réelle.
-        // this.notifyCerveau(eventName, payload);
+    _handleAnalysisCompleted(event) {
+        const { analysisResults } = event.detail;
+        this.analysisResultsValue = analysisResults;
+        this.showStep(3); // Passe à l'étape 3
+        this.submitButtonTarget.disabled = false;
+        this.submitButtonTarget.textContent = "Lancer l'analyse";
+        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('success', 'Analyse terminée avec succès.');
     }
 }
