@@ -36,15 +36,29 @@
 >
 
     <div class="actions-bar sticky-top">
-        {# Le bouton de retour ferme simplement la fenêtre, comme dans note_preview #}
-        <button class="btn btn-light d-inline-flex align-items-center gap-2" data-controller="ripple" onclick="window.close()">
-            <twig:UX:Icon name="lucide:arrow-left" width="18px" height="18px" />
-            <span>Retour</span>
-        </button>
-        <button class="btn btn-primary d-inline-flex align-items-center gap-2" data-controller="ripple" onclick="window.print()">
-            <twig:UX:Icon name="lucide:printer" width="18px" height="18px" />
-            <span>Imprimer</span>
-        </a>
+        <div class="d-flex justify-content-center align-items-center w-100 gap-2">
+            {# Le bouton de retour ferme simplement la fenêtre, comme dans note_preview #}
+            <button class="btn btn-light d-inline-flex align-items-center gap-2" data-controller="ripple" onclick="window.close()">
+                <twig:UX:Icon name="lucide:arrow-left" width="18px" height="18px" />
+                <span>Retour</span>
+            </button>
+            <button class="btn btn-secondary d-inline-flex align-items-center gap-2" data-controller="ripple" onclick="window.print()">
+                <twig:UX:Icon name="lucide:printer" width="18px" height="18px" />
+                <span>Imprimer</span>
+            </button>
+            {# NOUVEAU : Bouton "Lancer l'analyse" déplacé ici, masqué par défaut #}
+            <button type="submit"
+                    class="btn btn-primary d-inline-flex align-items-center gap-2 d-none"
+                    data-bordereau-analysis-target="submitButton"
+                    data-controller="ripple">
+                <twig:UX:Icon name="{{ resolve_icon_name('action:analyser') }}" width="18px" height="18px" />
+                <span>Lancer l'analyse</span>
+            </button>
+        </div>
+        {# NOUVEAU : Le feedback est déplacé ici, masqué par défaut #}
+        <div data-bordereau-analysis-target="mappingStatusFeedback" class="alert alert-dark small p-2 mt-2 mb-0 d-none" role="alert">
+            Chargement du statut de mappage...
+        </div>
     </div>
 
     <div class="analysis-container">
@@ -116,10 +130,7 @@
                     </div>
                     <div class="card-body">
                         <p>Veuillez faire correspondre les colonnes de votre fichier avec les champs requis par le système.</p>
-                        {# Feedback en temps réel sur l'état du mappage #}
-                        <div data-bordereau-analysis-target="mappingStatusFeedback" class="alert alert-info mb-3">
-                            Chargement du statut de mappage...
-                        </div>
+                        {# Le feedback a été déplacé dans la barre d'outils #}
                         
                         {% for sheet in viewData.sheets %}
                             <div data-bordereau-analysis-target="mappingContainer" data-sheet-name="{{ sheet.sheetName }}" data-is-first="{{ loop.first ? 'true' : 'false' }}" style="display: none;">
@@ -162,12 +173,7 @@
                                             </tbody>
                                         </table>
                                     </div>
-                                    <button type="submit"
-                                            class="btn btn-primary mt-3 d-inline-flex align-items-center gap-2"
-                                            data-bordereau-analysis-target="submitButton">
-                                        Lancer l'analyse
-                                        <twig:UX:Icon name="{{ resolve_icon_name('action:analyser') }}" width="18px" height="18px" />
-                                    </button>
+                                    {# Le bouton de soumission a été déplacé dans la barre d'outils #}
                                 </form>
                             </div>
                         {% endfor %}

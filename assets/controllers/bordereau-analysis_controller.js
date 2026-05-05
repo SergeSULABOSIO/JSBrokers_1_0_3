@@ -165,6 +165,11 @@ export default class extends Controller {
      */
     showStep2(sheetName = null) {
         this.step2Target.classList.remove('d-none');
+        
+        // NOUVEAU : On affiche le bouton "Lancer l'analyse" et le feedback dans la barre d'outils
+        // car on entre dans l'étape de mappage.
+        this.submitButtonTarget.classList.remove('d-none');
+        this.mappingStatusFeedbackTarget.classList.remove('d-none');
 
         this.mappingContainerTargets.forEach(container => {
             const isTargetSheet = sheetName ? container.dataset.sheetName === sheetName : container.dataset.isFirst === 'true';
