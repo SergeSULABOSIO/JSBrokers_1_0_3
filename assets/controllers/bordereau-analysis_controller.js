@@ -8,24 +8,26 @@ import { Controller } from '@hotwired/stimulus';
 export default class extends Controller {
     static targets = [
         "sheetSelection", "step2", "mappingContainer", "mappingStatusFeedback",
-        "mappingSelect", "analysisResult", "submitButton", "columnNameText"
+        "mappingSelect", "analysisResult", "submitButton", "columnNameText", "step1", "step3", "analysisResultsList"
     ];
 
     static values = {
+        bordereauId: Number, // NOUVEAU : ID du bordereau pour l'API
         sheetsData: Object,
         // NOUVEAU : On reçoit les chargements depuis le backend via le template Twig.
         chargements: Array, // [{id, nom}, ...]
         // NOUVEAU : On reçoit les types de revenu de la même manière.
         typeRevenus: Array, // [{id, nom}, ...]
-        // NOUVEAU : On reçoit les options de mappage système depuis le backend.
-        mappingOptions: Object // {key: label, ...}
+        mappingOptions: Object, // NOUVEAU : On reçoit les options de mappage système depuis le backend.
+        analysisResults: Object // NOUVEAU : Résultats de l'analyse des avenants
     };
 
     connect() {
         this.requiredMappings = new Set([
             'reference_police',
             'date_effet_avenant',
-            'date_expiration_avenant',
+            'date_expiration_avenant', 
+            'prime_ttc', // NOUVEAU : Ajout de la prime TTC
             'date_operation', // Nouveau champ obligatoire
             'risque',         // Nouveau champ obligatoire
             'nom_client',
@@ -44,10 +46,13 @@ export default class extends Controller {
         // Initialise le feedback de mappage
         this.updateMappingStatusFeedback();
 
-        // Si une seule feuille est détectée, on passe directement à l'étape 2.
-        if (this.sheetSelectionTargets.length === 1) {
-            this.showStep2();
+        this.currentStep = 1; // NOUVEAU : Initialise l'étape actuelle
+        if (this.sheetSelectionTargets.length === 1 && this.sheetsDataValue && Object.keys(this.sheetsDataValue).length === 1) {
+            this.showStep(2); // Si une seule feuille, passe directement à l'étape 2
         }
+        // NOUVEAU : Écoute l'événement de complétion de l'analyse du Cerveau
+        document.addEventListener('bordereau:analysis-completed', this._handleAnalysisCompleted.bind(this));
+
         this.updateSubmitButtonState();
         this.updateSelectOptionsVisuals(); // Initialise la coloration des options
     }
@@ -148,24 +153,46 @@ export default class extends Controller {
      * Affiche l'étape 2 (mappage) et sélectionne le bon tableau de mappage
      * en fonction de la feuille choisie à l'étape 1.
      */
-    showMappingStep() {
+    showMappingStep(event) {
+        if (event) event.preventDefault(); // Empêche le comportement par défaut du bouton
         const selectedSheetInput = this.sheetSelectionTargets.find(radio => radio.checked);
         if (!selectedSheetInput) {
             // Cas de sécurité, ne devrait pas arriver avec un radio button.
             return;
         }
         const selectedSheetName = selectedSheetInput.value;
-
-        this.showStep2(selectedSheetName);
+        this.showStep(2, selectedSheetName);
     }
 
+    /**
+     * NOUVEAU : Gère la transition entre les étapes de l'analyse.
+     * @param {number} stepNumber - Le numéro de l'étape à afficher (1, 2 ou 3).
+     * @param {string} [sheetName=null] - Le nom de la feuille à afficher pour l'étape 2.
+     */
+    showStep(stepNumber, sheetName = null) {
+        this.currentStep = stepNumber;
+        this.step1Target.classList.add('d-none');
+        this.step2Target.classList.add('d-none');
+        this.step3Target.classList.add('d-none');
+
+        this.submitButtonTarget.classList.add('d-none'); // Cache le bouton de soumission par défaut
+        this.mappingStatusFeedbackTarget.classList.add('d-none'); // Cache le feedback par défaut
+
+        if (stepNumber === 1) {
+            this.step1Target.classList.remove('d-none');
+        } else if (stepNumber === 2) {
+            this.step2Target.classList.remove('d-none');
+            this._showMappingUI(sheetName);
+        } else if (stepNumber === 3) {
+            this.step3Target.classList.remove('d-none');
+            this.renderAnalysisResults();
+        }
+    }
     /**
      * Logique d'affichage de l'étape 2.
      * @param {string} sheetName - Le nom de la feuille à afficher. Si null, la première sera affichée.
      */
-    showStep2(sheetName = null) {
-        this.step2Target.classList.remove('d-none');
-        
+    _showMappingUI(sheetName = null) {
         // NOUVEAU : On affiche le bouton "Lancer l'analyse" et le feedback dans la barre d'outils
         // car on entre dans l'étape de mappage.
         this.submitButtonTarget.classList.remove('d-none');

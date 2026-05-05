@@ -1596,3 +1596,25 @@ textarea:hover,
     color: #6c757d; /* Texte gris pour indiquer qu'elle est "prise" */
     font-style: italic;
 }
+
+/* NOUVEAU : Styles pour les étapes de l'analyse de bordereau */
+.step-content {
+    padding: 1rem;
+    background-color: #ffffff;
+    border-radius: var(--bs-border-radius);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1rem;
+}
+
+/* Vous pouvez ajouter des styles spécifiques pour les listes de résultats si nécessaire */
+
+/* NOUVEAU : Styles pour les étapes de l'analyse de bordereau */
+.step-content {
+    padding: 1rem;
+    background-color: #ffffff;
+    border-radius: var(--bs-border-radius);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1rem;
+}
+
+/* Vous pouvez ajouter des styles spécifiques pour les listes de résultats si nécessaire */

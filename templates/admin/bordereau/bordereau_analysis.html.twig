@@ -33,6 +33,7 @@
       data-bordereau-analysis-chargements-value="{{ viewData.chargements|json_encode|e('html_attr') }}"
       data-bordereau-analysis-mapping-options-value="{{ viewData.mapping_options|json_encode|e('html_attr') }}"
       data-bordereau-analysis-type-revenus-value="{{ viewData.typeRevenus|json_encode|e('html_attr') }}"
+      data-bordereau-analysis-bordereau-id-value="{{ bordereau.id }}" {# NOUVEAU : ID du bordereau #}
 >
 
     <div class="actions-bar sticky-top">
@@ -48,7 +49,7 @@
             </button>
             {# NOUVEAU : Bouton "Lancer l'analyse" déplacé ici, masqué par défaut #}
             <button type="submit"
-                    class="btn btn-primary d-inline-flex align-items-center gap-2 d-none"
+                    class="btn btn-primary d-inline-flex align-items-center gap-2 d-none" {# Initialement masqué #}
                     data-bordereau-analysis-target="submitButton"
                     data-controller="ripple">
                 <twig:UX:Icon name="{{ resolve_icon_name('action:analyser') }}" width="18px" height="18px" />
@@ -94,7 +95,7 @@
             {% else %}
                 {# ÉTAPE 1 : Sélection de la feuille. #}
                 <div class="card shadow-sm mb-4">
-                    <div class="card-header">
+                    <div class="card-header" data-bordereau-analysis-target="step1"> {# NOUVEAU : Cible pour l'étape 1 #}
                         <h6 class="m-0 fw-bold">Étape 1: Sélection de la feuille de calcul</h6>
                     </div>
                     <div class="card-body">
@@ -109,7 +110,7 @@
                                         </label>
                                     </div>
                                 {% endfor %}
-                                <button type="button" class="btn btn-primary mt-3" data-action="bordereau-analysis#showMappingStep">
+                                <button type="button" class="btn btn-primary mt-3" data-action="click->bordereau-analysis#showMappingStep">
                                     Valider et passer à l'étape 2
                                     <twig:UX:Icon name="lucide:arrow-right" class="ms-2" />
                                 </button>
@@ -180,6 +181,18 @@
                     </div>
                 </div>
             {% endif %}
+
+            {# NOUVEAU : ÉTAPE 3 : Résultats de l'analyse des avenants #}
+            <div class="card shadow-sm mb-4 d-none" data-bordereau-analysis-target="step3">
+                <div class="card-header">
+                    <h6 class="m-0 fw-bold">Étape 3: Résultats de l'analyse des avenants</h6>
+                </div>
+                <div class="card-body">
+                    <p>Voici le résultat de la comparaison de votre bordereau avec les données existantes.</p>
+                    <ul data-bordereau-analysis-target="analysisResultsList" class="list-group"></ul>
+                    <button type="button" class="btn btn-secondary mt-3" data-action="click->bordereau-analysis#showStep" data-step-number="2">Retour au mappage</button>
+                </div>
+            </div>
         </div>
 
         <div class="analysis-footer text-center">

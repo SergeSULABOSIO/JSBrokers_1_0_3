@@ -338,6 +338,9 @@ export default class extends Controller {
             case 'ui:bordereau.analysis-request':
                 this.handleBordereauAnalysisRequest(payload);
                 break;
+            case 'bordereau:submit-analysis': // NOUVEAU : Gère la soumission de l'analyse du bordereau
+                this._handleSubmitBordereauAnalysis(payload);
+                break;
             case 'ui:icon.request':
                 this.handleIconRequest(payload);
                 break;
@@ -1004,6 +1007,38 @@ export default class extends Controller {
         } catch (error) {
             console.error("[Cerveau] Erreur lors de la récupération de l'URL pour l'action sur le bordereau :", error);
             this._showNotification(error.message || "Erreur lors de la génération de l'analyse.", "error");
+        } finally {
+            this.broadcast('app:loading.stop');
+        }
+    }
+
+    /**
+     * NOUVEAU : Gère la soumission des données mappées pour l'analyse du bordereau au backend.
+     * @param {object} payload
+     * @param {string} payload.url - L'URL de l'API pour soumettre l'analyse.
+     * @param {object} payload.data - Les données à envoyer (sheetName, mappedColumns, sheetsData).
+     */
+    async _handleSubmitBordereauAnalysis(payload) {
+        if (!payload.url || !payload.data) {
+            console.error("[Cerveau] Demande de soumission d'analyse de bordereau reçue sans URL ou données.", payload);
+            this._showNotification("Impossible de soumettre l'analyse : URL ou données manquantes.", "error");
+            return;
+        }
+
+        try {
+            this._publishSelectionStatus("Soumission de l'analyse...");
+            this.broadcast('app:loading.start');
+            const response = await fetch(payload.url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload.data)
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || "Erreur lors de la soumission de l'analyse.");
+            this.broadcast('bordereau:analysis-completed', { analysisResults: result.analysisResults });
+        } catch (error) {
+            console.error("[Cerveau] Erreur lors de la soumission de l'analyse du bordereau :", error);
+            this._showNotification(error.message || "Erreur lors de la soumission de l'analyse.", "error");
         } finally {
             this.broadcast('app:loading.stop');
         }
