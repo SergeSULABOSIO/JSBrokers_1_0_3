@@ -12,13 +12,13 @@ export default class extends Controller {
     ];
 
     static values = {
-        bordereauId: Number, // NOUVEAU : ID du bordereau pour l'API
         sheetsData: Object,
         // NOUVEAU : On reçoit les chargements depuis le backend via le template Twig.
         chargements: Array, // [{id, nom}, ...]
         // NOUVEAU : On reçoit les types de revenu de la même manière.
         typeRevenus: Array, // [{id, nom}, ...]
-        mappingOptions: Object, // NOUVEAU : On reçoit les options de mappage système depuis le backend.
+        // NOUVEAU : On reçoit les options de mappage système depuis le backend.
+        mappingOptions: Object, // {key: label, ...}
         analysisResults: Object // NOUVEAU : Résultats de l'analyse des avenants
     };
 
@@ -26,14 +26,14 @@ export default class extends Controller {
         this.requiredMappings = new Set([
             'reference_police',
             'date_effet_avenant',
-            'date_expiration_avenant', 
-            'prime_ttc', // NOUVEAU : Ajout de la prime TTC
+            'date_expiration_avenant',
             'date_operation', // Nouveau champ obligatoire
             'risque',         // Nouveau champ obligatoire
             'nom_client',
             'commission_ht_assureur',
             'taxe_commission_assureur',
             'taux_commission' // Nouveau champ obligatoire
+            // NOUVEAU : Ajout de champs obligatoires pour l'étape 3
         ]);
         this.validationState = new Map(); // Stocke l'état de validation pour chaque colonne mappée
 
@@ -45,14 +45,11 @@ export default class extends Controller {
         this.addSystemOptions();
         // Initialise le feedback de mappage
         this.updateMappingStatusFeedback();
-
+        
         this.currentStep = 1; // NOUVEAU : Initialise l'étape actuelle
         if (this.sheetSelectionTargets.length === 1 && this.sheetsDataValue && Object.keys(this.sheetsDataValue).length === 1) {
             this.showStep(2); // Si une seule feuille, passe directement à l'étape 2
         }
-        // NOUVEAU : Écoute l'événement de complétion de l'analyse du Cerveau
-        document.addEventListener('bordereau:analysis-completed', this._handleAnalysisCompleted.bind(this));
-
         this.updateSubmitButtonState();
         this.updateSelectOptionsVisuals(); // Initialise la coloration des options
     }
@@ -200,6 +197,7 @@ export default class extends Controller {
 
         this.mappingContainerTargets.forEach(container => {
             const isTargetSheet = sheetName ? container.dataset.sheetName === sheetName : container.dataset.isFirst === 'true';
+            // NOUVEAU : Utilise style.display pour la flexibilité, car d-none peut être surchargé.
             container.style.display = isTargetSheet ? 'block' : 'none';
         });
     }
@@ -419,6 +417,186 @@ export default class extends Controller {
     }
 
     /**
+     * NOUVEAU : Soumet les données mappées au backend pour l'analyse.
+     */
+    submitAnalysis(event) { // Rendu synchrone pour que Stimulus le trouve toujours
+        event.preventDefault();
+        this._doSubmitAnalysis(); // Appelle la méthode asynchrone réelle
+    }
+
+    /**
+     * NOUVEAU : Méthode asynchrone interne pour gérer la logique de soumission.
+     */
+    async _doSubmitAnalysis() {
+        const activeForm = this.element.querySelector('.column-mapping-form:not([style*="display: none"])');
+        if (!activeForm) {
+            console.error("Aucun formulaire de mappage actif trouvé.");
+            return;
+        }
+
+        const mappedColumns = {};
+        const selects = activeForm.querySelectorAll('select[data-column-letter]');
+        selects.forEach(select => {
+            if (select.value) { // N'inclut que les colonnes mappées
+                mappedColumns[select.value] = select.dataset.columnLetter;
+            }
+        });
+
+        const selectedSheetName = activeForm.dataset.sheetName;
+        const payload = {
+            sheetName: selectedSheetName,
+            mappedColumns: mappedColumns,
+            sheetsData: this.sheetsDataValue // Envoyer toutes les données des feuilles pour que le backend puisse travailler avec
+        };
+
+        this.submitButtonTarget.disabled = true;
+        this.submitButtonTarget.textContent = "Analyse en cours...";
+        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('warning', 'Analyse en cours, veuillez patienter...');
+
+        try {
+            // Assumer qu'il y a une URL d'API pour soumettre l'analyse.
+            // Cette URL devrait être passée via un data-value au contrôleur.
+            // Pour l'instant, on va simuler une réponse.
+            // this.notifyCerveau('bordereau:submit-analysis', payload);
+
+            // Simulation d'une réponse backend
+            const simulatedResponse = await new Promise(resolve => setTimeout(() => {
+                resolve({
+                    analysisResults: [
+                        {
+                            type: "new",
+                            bordereau_line_info: {
+                                reference_police: "POL-NEW-001",
+                                date_effet_avenant: "2024-01-01",
+                                nom_client: "Nouveau Client A",
+                                commission_ht_assureur: 1500,
+                                taxe_commission_assureur: 240,
+                                taux_commission: 0.15
+                            },
+                            details: "Cet avenant n'existe pas dans la base de données de l'entreprise.",
+                            actions: [
+                                { label: "Ajouter cet avenant", event: "bordereau:add-new-avenant", payload: { /* ... data ... */ } }
+                            ]
+                        },
+                        {
+                            type: "discrepancy",
+                            bordereau_line_info: {
+                                reference_police: "POL-EXIST-002",
+                                date_effet_avenant: "2023-06-01",
+                                nom_client: "Client B",
+                                commission_ht_assureur: 2000,
+                                taxe_commission_assureur: 320,
+                                taux_commission: 0.16
+                            },
+                            database_info: {
+                                prime_ttc: 12000,
+                                commission_ttc: 2320
+                            },
+                            bordereau_values: {
+                                prime_ttc: 12500,
+                                commission_ttc: 2420
+                            },
+                            details: "Discrépance détectée sur les primes et commissions. Base: 2320, Bordereau: 2420.",
+                            actions: [
+                                { label: "Contester", event: "bordereau:dispute-avenant", payload: { /* ... data ... */ } },
+                                { label: "Modifier la base", event: "bordereau:update-database-avenant", payload: { /* ... data ... */ } }
+                            ]
+                        },
+                        {
+                            type: "match",
+                            bordereau_line_info: {
+                                reference_police: "POL-MATCH-003",
+                                date_effet_avenant: "2023-03-15",
+                                nom_client: "Client C",
+                                commission_ht_assureur: 1000,
+                                taxe_commission_assureur: 160,
+                                taux_commission: 0.16
+                            },
+                            details: "Cet avenant correspond aux données en base.",
+                            actions: []
+                        }
+                    ]
+                });
+            }, 1500));
+
+            this.analysisResultsValue = simulatedResponse.analysisResults; // Stocke les résultats
+            this.showStep(3); // Passe à l'étape 3
+        } catch (error) {
+            console.error("Erreur lors de la soumission de l'analyse:", error);
+            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('error', `Erreur lors de l'analyse: ${error.message}`);
+            this.submitButtonTarget.disabled = false;
+            this.submitButtonTarget.textContent = "Lancer l'analyse";
+        }
+    }
+
+    /**
+     * NOUVEAU : Rend les résultats de l'analyse des avenants.
+     */
+    renderAnalysisResults() {
+        if (!this.hasAnalysisResultsListTarget) return;
+
+        this.analysisResultsListTarget.innerHTML = ''; // Vide la liste précédente
+
+        if (!this.analysisResultsValue || this.analysisResultsValue.length === 0) {
+            this.analysisResultsListTarget.innerHTML = '<li class="list-group-item text-center text-muted">Aucun résultat d\'analyse à afficher.</li>';
+            return;
+        }
+
+        this.analysisResultsValue.forEach(result => {
+            const listItem = document.createElement('li');
+            listItem.classList.add('list-group-item', 'd-flex', 'flex-column', 'gap-2');
+
+            let statusClass = '';
+            let statusIcon = '';
+            if (result.type === 'new') {
+                statusClass = 'list-group-item-info';
+                statusIcon = '<i class="bi bi-plus-circle-fill text-info me-2"></i>';
+            } else if (result.type === 'discrepancy') {
+                statusClass = 'list-group-item-warning';
+                statusIcon = '<i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>';
+            } else if (result.type === 'match') {
+                statusClass = 'list-group-item-success';
+                statusIcon = '<i class="bi bi-check-circle-fill text-success me-2"></i>';
+            }
+
+            listItem.classList.add(statusClass);
+
+            let bordereauInfoHtml = Object.entries(result.bordereau_line_info || {}).map(([key, value]) => `<strong>${key.replace(/_/g, ' ')}:</strong> ${value}`).join(' | ');
+
+            let actionsHtml = result.actions.map(action =>
+                `<a href="#" class="btn btn-sm btn-outline-primary" data-action="click->bordereau-analysis#handleAnalysisAction" data-event-name="${action.event}" data-payload='${JSON.stringify(action.payload)}'>${action.label}</a>`
+            ).join(' ');
+
+            listItem.innerHTML = `
+                <div class="d-flex align-items-center">
+                    ${statusIcon}
+                    <h5 class="mb-0">${result.bordereau_line_info.reference_police || 'Avenant sans référence'}</h5>
+                </div>
+                <p class="mb-1 text-muted small">${bordereauInfoHtml}</p>
+                <p class="mb-2">${result.details}</p>
+                ${actionsHtml ? `<div class="d-flex gap-2">${actionsHtml}</div>` : ''}
+            `;
+            this.analysisResultsListTarget.appendChild(listItem);
+        });
+    }
+
+    /**
+     * NOUVEAU : Gère le clic sur un bouton d'action de l'étape 3.
+     * Pour l'instant, ne fait que logguer l'événement.
+     * @param {Event} event
+     */
+    handleAnalysisAction(event) {
+        event.preventDefault();
+        const button = event.currentTarget;
+        const eventName = button.dataset.eventName;
+        const payload = JSON.parse(button.dataset.payload || '{}');
+
+        console.log(`Action d'analyse déclenchée: ${eventName}`, payload);
+        // Ici, vous enverriez un événement au Cerveau pour gérer l'action réelle.
+        // this.notifyCerveau(eventName, payload);
+    }
+
+    /**
      * Met à jour l'apparence des options dans les selects pour indiquer celles déjà mappées.
      */
     updateSelectOptionsVisuals() {
@@ -438,18 +616,5 @@ export default class extends Controller {
                 }
             });
         });
-    }
-
-    /**
-     * NOUVEAU : Gère la réception des résultats d'analyse du Cerveau.
-     * @param {CustomEvent} event
-     */
-    _handleAnalysisCompleted(event) {
-        const { analysisResults } = event.detail;
-        this.analysisResultsValue = analysisResults;
-        this.showStep(3); // Passe à l'étape 3
-        this.submitButtonTarget.disabled = false;
-        this.submitButtonTarget.textContent = "Lancer l'analyse";
-        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('success', 'Analyse terminée avec succès.');
     }
 }
