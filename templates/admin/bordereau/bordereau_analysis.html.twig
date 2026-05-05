@@ -50,7 +50,7 @@
             {# NOUVEAU : Bouton "Lancer l'analyse" déplacé ici, masqué par défaut #}
             <button type="submit"
                     class="btn btn-primary d-inline-flex align-items-center gap-2 d-none" {# Initialement masqué #}
-                    data-bordereau-analysis-target="submitButton"
+                    data-bordereau-analysis-target="submitButton" data-action="click->bordereau-analysis#submitAnalysis"
                     data-controller="ripple">
                 <twig:UX:Icon name="{{ resolve_icon_name('action:analyser') }}" width="18px" height="18px" />
                 <span>Lancer l'analyse</span>
