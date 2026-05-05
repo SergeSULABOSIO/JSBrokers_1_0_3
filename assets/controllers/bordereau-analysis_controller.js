@@ -225,41 +225,51 @@ export default class extends Controller {
                     const date = new Date(value);
                     isValid = !isNaN(date.getTime());
                 }
-            } else if (mappingType === 'risque' || mappingType === 'taux_commission' || mappingType.startsWith('chargement_') || mappingType.startsWith('revenu_')) {
-            }
-            else { // commission_ht_assureur, taxe_commission_assureur et tous les chargements et revenus
+            } else if (mappingType === 'risque') { // Nouveau champ Risque
+                isValid = typeof value === 'string' && value.trim() !== '';
+            } else { // commission_ht_assureur, taxe_commission_assureur, taux_commission, chargements et revenus
                 // La validation pour les champs numériques reste la même.
                 if (value === null || value === undefined || String(value).trim() === '') {
                     isValid = false;
                 } else {
                     let valueStr = String(value).trim();
                     // NOUVEAU : Si la valeur est juste un tiret, on la traite comme zéro.
-                    if (valueStr === '-') {
+                    if (valueStr === '-') { // Common Excel placeholder for zero/empty
                         valueStr = '0';
                     }
-                    
-                    // --- Début du bloc de débogage ---
-                    // console.log(`--- Débogage pour la valeur: "${value}" (Ligne ${index + 2}) ---`);
-                    // console.log(`1. Chaîne initiale (après trim): "${valueStr}"`);
 
-                    // Étape 1 : Supprimer les espaces (y compris insécables) et les parenthèses pour les négatifs.
+                    // Remove all spaces (including non-breaking spaces) and parentheses
                     let cleanedValue = valueStr.replace(/[\s\u00A0()]/g, '');
-                    // console.log(`2. Après suppression des espaces/parenthèses: "${cleanedValue}"`);
 
-                    // Étape 2 : Supprimer les virgules utilisées comme séparateurs de milliers.
-                    // Ex: "81,392.14" -> "81392.14"
-                    cleanedValue = cleanedValue.replace(/,(?=\d{3})/g, '');
-                    // console.log(`3. Après suppression des virgules de milliers: "${cleanedValue}"`);
+                    // Heuristic for decimal/thousand separators:
+                    // Count dots and commas.
+                    const dotCount = (cleanedValue.match(/\./g) || []).length;
+                    const commaCount = (cleanedValue.match(/,/g) || []).length;
 
-                    // Étape 3 : Remplacer la virgule décimale par un point.
-                    // Ex: "1035,81" -> "1035.81"
-                    cleanedValue = cleanedValue.replace(',', '.');
-                    // console.log(`4. Valeur nettoyée finale: "${cleanedValue}"`);
-                    // --- Fin du bloc de débogage ---
+                    if (commaCount > 0 && dotCount > 0) {
+                        // Ambiguous case: both dot and comma are present.
+                        // Assume the LAST one is the decimal separator.
+                        const lastDotIndex = cleanedValue.lastIndexOf('.');
+                        const lastCommaIndex = cleanedValue.lastIndexOf(',');
+
+                        if (lastCommaIndex > lastDotIndex) {
+                            // Comma is the decimal separator (e.g., "1.234,56")
+                            cleanedValue = cleanedValue.replace(/\./g, ''); // Remove all dots (thousand separators)
+                            cleanedValue = cleanedValue.replace(',', '.'); // Replace decimal comma with dot
+                        } else {
+                            // Dot is the decimal separator (e.g., "1,234.56")
+                            cleanedValue = cleanedValue.replace(/,/g, ''); // Remove all commas (thousand separators)
+                            // Dot is already the decimal separator for parseFloat
+                        }
+                    } else if (commaCount > 0) {
+                        // Only commas present, assume comma is decimal (e.g., "1234,56")
+                        cleanedValue = cleanedValue.replace(',', '.');
+                    }
+                    // If only dots present, assume dot is decimal (e.g., "1234.56") - no change needed for parseFloat.
+                    // If no dots or commas, it's an integer.
 
                     const parsedValue = parseFloat(cleanedValue);
                     isValid = !isNaN(parsedValue) && isFinite(parsedValue);
-
                 }
             }
 
