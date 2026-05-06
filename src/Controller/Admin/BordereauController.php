@@ -33,7 +33,7 @@ use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
-use Symfony\Component\Serializer\SerializerInterface; 
+use Symfony\Component\Serializer\SerializerInterface;
 use App\Repository\AvenantRepository; // NOUVEAU
 use Symfony\Contracts\Translation\TranslatorInterface;
 
@@ -165,7 +165,7 @@ class BordereauController extends AbstractController
         ];
         $error = null;
         $excelDocument = null;
-    
+
         // Étape 1: Trouver le premier document de type Excel parmi les documents attachés.
         $allowedExtensions = ['xlsx', 'xls', 'ods'];
         foreach ($bordereau->getDocuments() as $doc) {
@@ -177,20 +177,20 @@ class BordereauController extends AbstractController
                 }
             }
         }
-    
+
         if (!$excelDocument) {
             $error = "Aucun fichier Excel (.xlsx, .xls, .ods) n'est attaché à ce bordereau. Veuillez retourner à l'édition pour y attacher un fichier valide.";
         } else {
             $filePath = $params->get('kernel.project_dir') . '/public/uploads/documents/' . $excelDocument->getNomFichierStocke();
-    
+
             try {
                 $spreadsheet = IOFactory::load($filePath);
                 $sheetNames = $spreadsheet->getSheetNames();
-    
+
                 if (empty($sheetNames)) {
                     $error = "Le fichier Excel ne contient aucune feuille de calcul. L'analyse est impossible.";
                 }
-    
+
                 foreach ($sheetNames as $sheetName) {
                     $worksheet = $spreadsheet->getSheetByName($sheetName);
                     if ($worksheet) {
@@ -200,20 +200,20 @@ class BordereauController extends AbstractController
                             // Si la feuille est vide, on ne l'ajoute pas à l'analyse.
                             continue;
                         }
-    
+
                         $highestColumn = $worksheet->getHighestColumn(1); // On se base sur la première ligne pour les en-têtes
                         $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn);
-    
+
                         // NOUVEAU: Lire toutes les données de la feuille
                         $sheetData = $worksheet->toArray(null, true, false, true); // Changed formatData to false
                         $headers = array_shift($sheetData) ?: []; // La première ligne est l'en-tête
-    
+
                         $columns = [];
                         for ($col = 1; $col <= $highestColumnIndex; ++$col) {
                             $colLetter = Coordinate::stringFromColumnIndex($col);
                             $columns[$colLetter] = $headers[$colLetter] ?? null;
                         }
-    
+
                         $viewData['sheets'][] = [
                             'sheetName' => $sheetName,
                             'columns' => $columns,
@@ -222,11 +222,10 @@ class BordereauController extends AbstractController
                         ];
                     }
                 }
-    
+
                 if (empty($viewData['sheets']) && !$error) {
                     $error = "Aucune feuille de calcul avec des données n'a été trouvée dans le fichier.";
                 }
-    
             } catch (ReaderException $e) {
                 $error = "Une erreur est survenue lors de la lecture du fichier Excel : " . $e->getMessage();
             }
@@ -236,7 +235,7 @@ class BordereauController extends AbstractController
         $chargements = $chargementRepository->findBy(['entreprise' => $entreprise]);
 
         // On ne garde que les champs nécessaires pour le frontend (id, nom)
-        $chargementsData = array_map(function(Chargement $chargement) {
+        $chargementsData = array_map(function (Chargement $chargement) {
             return [
                 'id' => $chargement->getId(),
                 'nom' => $chargement->getNom(),
@@ -248,14 +247,14 @@ class BordereauController extends AbstractController
         $typeRevenus = $typeRevenuRepository->findBy(['entreprise' => $entreprise]);
 
         // On ne garde que les champs nécessaires pour le frontend (id, nom)
-        $typeRevenusData = array_map(function(TypeRevenu $typeRevenu) {
+        $typeRevenusData = array_map(function (TypeRevenu $typeRevenu) {
             return [
                 'id' => $typeRevenu->getId(),
                 'nom' => $typeRevenu->getNom(),
             ];
         }, $typeRevenus);
         $viewData['typeRevenus'] = $typeRevenusData;
-    
+
         return $this->render('admin/bordereau/bordereau_analysis.html.twig', [
             'bordereau' => $bordereau,
             'entreprise' => $entreprise,
@@ -274,10 +273,44 @@ class BordereauController extends AbstractController
         $payload = json_decode($request->getContent(), true);
         // dump('Payload reçu:', $payload);
 
-        // Retourne un tableau de test comme demandé.
-        $analysisResults = ["La République Démocratique du Congo"];
-        // dump('Final analysisResults (count):', count($analysisResults));
-        // dump('--- Fin submitAnalysisApi ---');
+        $sheetName = $payload['sheetName'] ?? null;
+        $mappedColumns = $payload['mappedColumns'] ?? [];
+        $sheetsData = $payload['sheetsData'] ?? [];
+        // dump('Extracted from payload:', ['sheetName' => $sheetName, 'mappedColumns' => $mappedColumns, 'sheetsDataKeys' => array_keys($sheetsData)]);
+
+        if (!$sheetName || !isset($sheetsData[$sheetName])) {
+            return $this->json(['error' => 'Nom de feuille ou données de feuille manquantes.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $selectedSheetData = $sheetsData[$sheetName] ?? []; // CORRECTION: Accéder directement aux données de la feuille
+        $analysisResults = [];
+        // dump('Selected Sheet Data (first 5 rows):', array_slice($selectedSheetData, 0, 5));
+        // dump('Total rows in selectedSheetData:', count($selectedSheetData));
+
+        // --- OPTIMISATION : Début ---
+        // 1. Extraire toutes les références de police du payload en une seule fois.
+        $policeReferences = [];
+        $referencePoliceColumn = $mappedColumns['reference_police'] ?? null;
+        if ($referencePoliceColumn) {
+            foreach ($selectedSheetData as $rowData) {
+                if (!empty($rowData[$referencePoliceColumn])) {
+                    $policeReferences[] = $rowData[$referencePoliceColumn];
+                }
+            }
+        }
+        $policeReferences = array_unique($policeReferences);
+        // dump('Unique Police References to fetch:', $policeReferences);
+
+        // 2. Exécuter UNE SEULE requête pour récupérer tous les avenants concernés.
+        $allExistingAvenants = $this->avenantRepository->findBy(['referencePolice' => $policeReferences, 'entreprise' => $entreprise]);
+        // dump('Total Avenants found in DB:', count($allExistingAvenants));
+
+        $analysisResults[] = [
+            'type' => 'match', // Exemple, la logique complète déterminera le type
+            'bordereau_line_info' => "45454545454545",
+            'details' => "Ligne XXX: Cet avenant correspond aux données en base.",
+            'actions' => []
+        ];
 
         return $this->json(['analysisResults' => $analysisResults]);
     }
