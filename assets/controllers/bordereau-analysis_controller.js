@@ -6,7 +6,7 @@ import { Controller } from '@hotwired/stimulus';
  * Etape 2: Mappage des colonnes de la feuille sélectionnée.
  */
 export default class extends Controller {
-    static targets = [
+    static targets = [ // NOUVEAU : Ajout de la cible pour le bouton de retour
         "sheetSelection", "step2", "mappingContainer", "mappingStatusFeedback",
         "mappingSelect", "analysisResult", "submitButton", "columnNameText", "step1", "step3", "analysisResultsList"
     ];
@@ -55,10 +55,10 @@ export default class extends Controller {
         this.updateSubmitButtonState();
         // NOUVEAU : Écoute l'événement de complétion de l'analyse du Cerveau
         this.boundHandleAnalysisCompleted = this._handleAnalysisCompleted.bind(this);
-        document.addEventListener('bordereau:analysis-completed', this.boundHandleAnalysisCompleted);
+        this.element.addEventListener('bordereau:analysis-completed', this.boundHandleAnalysisCompleted);
         // NOUVEAU : Écoute l'événement d'échec de l'analyse du Cerveau
         this.boundHandleAnalysisFailed = this._handleAnalysisFailed.bind(this);
-        document.addEventListener('bordereau:analysis-failed', this.boundHandleAnalysisFailed);
+        this.element.addEventListener('bordereau:analysis-failed', this.boundHandleAnalysisFailed);
         this.updateSelectOptionsVisuals(); // Initialise la coloration des options
     }
 
@@ -181,6 +181,8 @@ export default class extends Controller {
      * @param {string} [sheetName=null] - Le nom de la feuille à afficher pour l'étape 2.
      */
     showStep(stepNumber, sheetName = null) {
+        // Si l'événement est un clic, on récupère le numéro d'étape depuis le data-attribute
+        const targetStep = (typeof stepNumber === 'object') ? parseInt(stepNumber.currentTarget.dataset.stepNumber) : stepNumber;
         this.currentStep = stepNumber;
         this.step1Target.classList.add('d-none');
         this.step2Target.classList.add('d-none');
@@ -193,7 +195,7 @@ export default class extends Controller {
             this.step1Target.classList.remove('d-none');
         } else if (stepNumber === 2) {
             this.step2Target.classList.remove('d-none');
-            this._showMappingUI(sheetName);
+            this._showMappingUI(sheetName || this.sheetSelectionTargets.find(radio => radio.checked)?.value);
         } else if (stepNumber === 3) {
             this.step3Target.classList.remove('d-none');
             this.renderAnalysisResults();
@@ -480,7 +482,7 @@ export default class extends Controller {
 
         // NOUVEAU : Notifier le Cerveau pour qu'il gère la soumission de l'analyse
         try {
-            this.dispatch('cerveau:event', {
+            this.element.dispatchEvent(new CustomEvent('cerveau:event', {
                 detail: {
                     type: 'bordereau:submit-analysis',
                     source: 'bordereau-analysis_controller',
@@ -491,7 +493,7 @@ export default class extends Controller {
                     timestamp: Date.now()
                 },
                 bubbles: true
-            });
+            }));
         } catch (error) {
             console.error("Erreur lors de la soumission de l'analyse:", error);
             this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('error', `Erreur lors de l'analyse: ${error.message}`);
