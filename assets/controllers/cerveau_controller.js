@@ -1039,6 +1039,10 @@ export default class extends Controller {
             console.log("[Cerveau] Réponse de l'API reçue. Statut:", response.status);
             const result = await response.json();
             if (!response.ok) throw new Error(result.error || "Erreur lors de la soumission de l'analyse.");
+            // NOUVEAU : Ajout d'un avertissement si l'API retourne un tableau analysisResults vide.
+            if (!result.analysisResults || result.analysisResults.length === 0) {
+                console.warn("[Cerveau] L'API de soumission d'analyse de bordereau a retourné une réponse vide pour 'analysisResults' malgré un statut 200 OK. Veuillez vérifier la logique backend ou le contenu du fichier Excel.");
+            }
             this.broadcast('bordereau:analysis-completed', { analysisResults: result.analysisResults });
             // NOUVEAU : Arrêter le chargement ici aussi en cas de succès
         } catch (error) {

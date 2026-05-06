@@ -200,6 +200,11 @@ class BordereauController extends AbstractController
                             // Si la feuille est vide, on ne l'ajoute pas à l'analyse.
                             continue;
                         }
+                        // NOUVEAU : Si la feuille ne contient que des en-têtes (highestRow == 1), on l'ignore aussi.
+                        if ($highestRow === 1) {
+                            // La feuille contient seulement la ligne d'en-tête, pas de données.
+                            continue;
+                        }
     
                         $highestColumn = $worksheet->getHighestColumn(1); // On se base sur la première ligne pour les en-têtes
                         $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn);
