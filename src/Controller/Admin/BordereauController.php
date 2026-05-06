@@ -288,6 +288,26 @@ class BordereauController extends AbstractController
         dump('Selected Sheet Data (first 5 rows):', array_slice($selectedSheetData, 0, 5));
         dump('Total rows in selectedSheetData:', count($selectedSheetData));
 
+        // --- OPTIMISATION : Début ---
+        // 1. Extraire toutes les références de police du payload en une seule fois.
+        $policeReferences = [];
+        $referencePoliceColumn = $mappedColumns['reference_police'] ?? null;
+        if ($referencePoliceColumn) {
+            foreach ($selectedSheetData as $rowData) {
+                if (!empty($rowData[$referencePoliceColumn])) {
+                    $policeReferences[] = $rowData[$referencePoliceColumn];
+                }
+            }
+        }
+        $policeReferences = array_unique($policeReferences);
+        dump('Unique Police References to fetch:', $policeReferences);
+
+        // 2. Exécuter UNE SEULE requête pour récupérer tous les avenants concernés.
+        $allExistingAvenants = $this->avenantRepository->findBy(['referencePolice' => $policeReferences, 'entreprise' => $entreprise]);
+        dump('Total Avenants found in DB:', count($allExistingAvenants));
+
+        // --- OPTIMISATION : Fin ---
+
         foreach ($selectedSheetData as $rowIndex => $rowData) {
             // NOUVEAU : Vérifier si la ligne est entièrement vide (toutes les cellules sont null ou chaînes vides)
             $isRowEffectivelyEmpty = true;
@@ -327,12 +347,17 @@ class BordereauController extends AbstractController
                 continue;
             }
 
-            // Find existing Avenants for this police reference and entreprise
-            $existingAvenants = $this->avenantRepository->findBy([
-                'referencePolice' => $referencePolice,
-                'entreprise' => $entreprise
-            ]);
-            dump("Ligne " . ($rowIndex + 2) . " - Existing Avenants found:", count($existingAvenants));
+            // --- OPTIMISATION : Remplacement de la requête dans la boucle ---
+            // On filtre le tableau déjà chargé en mémoire au lieu de requêter la base.
+            $existingAvenants = array_filter($allExistingAvenants, function($avenant) use ($referencePolice) {
+                /** @var \App\Entity\Avenant $avenant */
+                return $avenant->getReferencePolice() === $referencePolice;
+            });
+            // Re-index array keys
+            $existingAvenants = array_values($existingAvenants);
+            dump("Ligne " . ($rowIndex + 2) . " - Existing Avenants found (from memory):", count($existingAvenants));
+            // --- Fin du remplacement ---
+
 
             if (empty($existingAvenants)) {
                 $analysisResults[] = [
