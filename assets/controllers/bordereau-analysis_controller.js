@@ -56,17 +56,17 @@ export default class extends Controller {
         this.updateSubmitButtonState();
         // NOUVEAU : Écoute l'événement de complétion de l'analyse du Cerveau
         this.boundHandleAnalysisCompleted = this._handleAnalysisCompleted.bind(this);
-        this.element.addEventListener('bordereau:analysis-completed', this.boundHandleAnalysisCompleted);
+        document.addEventListener('bordereau:analysis-completed', this.boundHandleAnalysisCompleted);
         // NOUVEAU : Écoute l'événement d'échec de l'analyse du Cerveau
         this.boundHandleAnalysisFailed = this._handleAnalysisFailed.bind(this);
-        this.element.addEventListener('bordereau:analysis-failed', this.boundHandleAnalysisFailed);
+        document.addEventListener('bordereau:analysis-failed', this.boundHandleAnalysisFailed);
         this.updateSelectOptionsVisuals(); // Initialise la coloration des options
     }
 
     disconnect() {
         // Nettoie les écouteurs d'événements pour éviter les fuites de mémoire
-        this.element.removeEventListener('bordereau:analysis-completed', this.boundHandleAnalysisCompleted);
-        this.element.removeEventListener('bordereau:analysis-failed', this.boundHandleAnalysisFailed);
+        document.removeEventListener('bordereau:analysis-completed', this.boundHandleAnalysisCompleted);
+        document.removeEventListener('bordereau:analysis-failed', this.boundHandleAnalysisFailed);
     }
 
     /**
