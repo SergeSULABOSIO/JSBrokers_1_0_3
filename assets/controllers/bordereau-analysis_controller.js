@@ -12,14 +12,15 @@ export default class extends Controller {
     ];
 
     static values = {
+        bordereauId: Number, // NOUVEAU : ID du bordereau pour l'API
         sheetsData: Object,
         // NOUVEAU : On reçoit les chargements depuis le backend via le template Twig.
         chargements: Array, // [{id, nom}, ...]
         // NOUVEAU : On reçoit les types de revenu de la même manière.
         typeRevenus: Array, // [{id, nom}, ...]
         // NOUVEAU : On reçoit les options de mappage système depuis le backend.
-        mappingOptions: Object, // {key: label, ...}
-        analysisResults: Array // CORRECTION : Doit être un tableau pour correspondre aux données reçues.
+        mappingOptions: Object,
+        analysisResults: Array
     };
 
     connect() {
@@ -28,7 +29,6 @@ export default class extends Controller {
             'date_effet_avenant',
             'date_expiration_avenant',
             'prime_ttc', // NOUVEAU : Ajout de la prime TTC
-            'bordereauId', // NOUVEAU : Ajout de l'ID du bordereau
             'date_operation', // Nouveau champ obligatoire
             'risque',         // Nouveau champ obligatoire
             'nom_client',
@@ -53,9 +53,19 @@ export default class extends Controller {
             this.showStep(2); // Si une seule feuille, passe directement à l'étape 2
         }
         this.updateSubmitButtonState();
+        // NOUVEAU : Écoute l'événement de complétion de l'analyse du Cerveau
+        this.boundHandleAnalysisCompleted = this._handleAnalysisCompleted.bind(this);
+        document.addEventListener('bordereau:analysis-completed', this.boundHandleAnalysisCompleted);
         // NOUVEAU : Écoute l'événement d'échec de l'analyse du Cerveau
-        document.addEventListener('bordereau:analysis-failed', this._handleAnalysisFailed.bind(this));
+        this.boundHandleAnalysisFailed = this._handleAnalysisFailed.bind(this);
+        document.addEventListener('bordereau:analysis-failed', this.boundHandleAnalysisFailed);
         this.updateSelectOptionsVisuals(); // Initialise la coloration des options
+    }
+
+    disconnect() {
+        // Nettoie les écouteurs d'événements pour éviter les fuites de mémoire
+        document.removeEventListener('bordereau:analysis-completed', this.boundHandleAnalysisCompleted);
+        document.removeEventListener('bordereau:analysis-failed', this.boundHandleAnalysisFailed);
     }
 
     /**
@@ -368,10 +378,21 @@ export default class extends Controller {
     getFeedbackHtml(type, message) {
         const icon = type === 'success'
             ? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-circle-fill me-1" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>'
-            : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-circle-fill me-1" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z"/></svg>';
+            : (type === 'warning'
+                ? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle-fill me-1" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg>'
+                : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-circle-fill me-1" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z"/></svg>');
+
+        let textColorClass = '';
+        if (type === 'success') {
+            textColorClass = 'text-success';
+        } else if (type === 'warning') {
+            textColorClass = 'text-white'; // Rendre le texte d'avertissement blanc
+        } else { // error
+            textColorClass = 'text-danger';
+        }
 
         return `
-            <span class="d-inline-flex align-items-center text-${type === 'success' ? 'success' : 'danger'} small">
+            <span class="d-inline-flex align-items-center ${textColorClass} small">
                 ${icon}
                 ${message}
             </span>
@@ -544,6 +565,30 @@ export default class extends Controller {
         console.log(`Action d'analyse déclenchée: ${eventName}`, payload);
         // Ici, vous enverriez un événement au Cerveau pour gérer l'action réelle.
         // this.notifyCerveau(eventName, payload);
+    }
+
+    /**
+     * NOUVEAU : Gère la réception des résultats d'analyse du Cerveau.
+     * @param {CustomEvent} event
+     */
+    _handleAnalysisCompleted(event) {
+        const { analysisResults } = event.detail;
+        this.analysisResultsValue = analysisResults;
+        this.showStep(3); // Passe à l'étape 3
+        this.submitButtonTarget.disabled = false;
+        this.submitButtonTarget.textContent = "Lancer l'analyse";
+        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('success', 'Analyse terminée avec succès.');
+    }
+
+    /**
+     * NOUVEAU : Gère la réception d'un échec d'analyse du Cerveau.
+     * @param {CustomEvent} event
+     */
+    _handleAnalysisFailed(event) {
+        const { errorMessage } = event.detail;
+        this.submitButtonTarget.disabled = false;
+        this.submitButtonTarget.textContent = "Lancer l'analyse";
+        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('error', `Échec de l'analyse: ${errorMessage}`);
     }
 
     /**
