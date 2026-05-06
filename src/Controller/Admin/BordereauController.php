@@ -339,7 +339,7 @@ class BordereauController extends AbstractController
                 // Get values from existing Avenant using Constante service
                 // Ensure Constante service is properly initialized and has access to the Avenant's related entities
                 $databasePrimeTTC = $this->constante->Avenant_getPrimeTTC($matchedAvenant);
-                $databaseCommissionTTC = $this->constante->Avenant_getCommissionTTC($matchedAvenant);
+                $databaseCommissionTTC = $this->constante->Avenant_getCommissionTTC($matchedAvenant); 
                 // For taux_commission, we might need to access Cotation directly if not available via Avenant_getCommissionTTC
                 $databaseTauxCommission = $matchedAvenant->getCotation() ? $matchedAvenant->getCotation()->tauxCommission : 0;
 
