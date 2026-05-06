@@ -48,6 +48,16 @@
                 <twig:UX:Icon name="lucide:printer" width="18px" height="18px" />
                 <span>Imprimer</span>
             </button>
+            {# NOUVEAU : Bouton pour retourner à l'étape de mappage, masqué par défaut #}
+            <button type="button"
+                    class="btn btn-secondary d-inline-flex align-items-center gap-2 d-none"
+                    data-bordereau-analysis-target="backToMappingButton"
+                    data-action="click->bordereau-analysis#showStep"
+                    data-step-number="2"
+                    data-controller="ripple">
+                <twig:UX:Icon name="lucide:arrow-left-circle" width="18px" height="18px" />
+                <span>Retour au mappage</span>
+            </button>
             {# NOUVEAU : Bouton "Lancer l'analyse" déplacé ici, masqué par défaut #}
             <button type="submit"
                     class="btn btn-primary d-inline-flex align-items-center gap-2 d-none" {# Initialement masqué #}
@@ -191,7 +201,7 @@
                 <div class="card-body">
                     <p>Voici le résultat de la comparaison de votre bordereau avec les données existantes.</p>
                     <ul data-bordereau-analysis-target="analysisResultsList" class="list-group"></ul>
-                    <button type="button" class="btn btn-secondary mt-3" data-action="click->bordereau-analysis#showStep" data-step-number="2" data-bordereau-analysis-target="backToMappingButton">Retour au mappage</button>
+                    {# Le bouton de retour a été déplacé dans la barre d'outils supérieure #}
                 </div>
             </div>
         </div>

@@ -274,7 +274,8 @@ class BordereauController extends AbstractController
         $payload = json_decode($request->getContent(), true);
         // dump('Payload reçu:', $payload);
 
-        $analysisResults = [];
+        // Retourne un tableau de test comme demandé.
+        $analysisResults = ["La République Démocratique du Congo"];
         // dump('Final analysisResults (count):', count($analysisResults));
         // dump('--- Fin submitAnalysisApi ---');
 
