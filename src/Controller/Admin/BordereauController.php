@@ -270,11 +270,14 @@ class BordereauController extends AbstractController
     public function submitAnalysisApi(Bordereau $bordereau, Request $request): JsonResponse
     {
         $entreprise = $this->getEntreprise();
+        dump('--- Début submitAnalysisApi ---');
         $payload = json_decode($request->getContent(), true);
+        dump('Payload reçu:', $payload);
 
         $sheetName = $payload['sheetName'] ?? null;
         $mappedColumns = $payload['mappedColumns'] ?? [];
         $sheetsData = $payload['sheetsData'] ?? [];
+        dump('Extracted from payload:', ['sheetName' => $sheetName, 'mappedColumns' => $mappedColumns, 'sheetsDataKeys' => array_keys($sheetsData)]);
 
         if (!$sheetName || !isset($sheetsData[$sheetName])) {
             return $this->json(['error' => 'Nom de feuille ou données de feuille manquantes.'], Response::HTTP_BAD_REQUEST);
@@ -282,6 +285,8 @@ class BordereauController extends AbstractController
 
         $selectedSheetData = $sheetsData[$sheetName]['data'] ?? [];
         $analysisResults = [];
+        dump('Selected Sheet Data (first 5 rows):', array_slice($selectedSheetData, 0, 5));
+        dump('Total rows in selectedSheetData:', count($selectedSheetData));
 
         foreach ($selectedSheetData as $rowIndex => $rowData) {
             // NOUVEAU : Vérifier si la ligne est entièrement vide (toutes les cellules sont null ou chaînes vides)
@@ -292,10 +297,12 @@ class BordereauController extends AbstractController
                     break;
                 }
             }
+            dump("Ligne " . ($rowIndex + 2) . " - Raw Data:", $rowData);
+            dump("Ligne " . ($rowIndex + 2) . " - isRowEffectivelyEmpty:", $isRowEffectivelyEmpty);
 
             // Si la ligne est vide, on ajoute un résultat spécifique et on passe à la suivante
             if ($isRowEffectivelyEmpty) {
-                $analysisResults[] = ['type' => 'empty_row', 'bordereau_line_info' => [], 'details' => "Ligne " . ($rowIndex + 2) . ": Cette ligne est vide.", 'actions' => []];
+                $analysisResults[] = ['type' => 'empty_row', 'bordereau_line_info' => ['original_row_data' => $rowData], 'details' => "Ligne " . ($rowIndex + 2) . ": Cette ligne est vide.", 'actions' => []];
                 continue;
             }
 
@@ -303,9 +310,12 @@ class BordereauController extends AbstractController
             foreach ($mappedColumns as $systemField => $excelColumnLetter) {
                 $value = $rowData[$excelColumnLetter] ?? null;
                 $bordereauLineInfo[$systemField] = $this->parseExcelValue($value, $systemField);
+                dump("Ligne " . ($rowIndex + 2) . " - Mapped Field '$systemField' (Excel Col '$excelColumnLetter'):", ['raw_value' => $value, 'parsed_value' => $bordereauLineInfo[$systemField]]);
             }
+            dump("Ligne " . ($rowIndex + 2) . " - Bordereau Line Info:", $bordereauLineInfo);
 
             $referencePolice = $bordereauLineInfo['reference_police'] ?? null;
+            dump("Ligne " . ($rowIndex + 2) . " - Reference Police:", $referencePolice);
             if (!$referencePolice) {
                 // If no police reference, we can't process this line for comparison
                 $analysisResults[] = [
@@ -322,13 +332,16 @@ class BordereauController extends AbstractController
                 'referencePolice' => $referencePolice,
                 'entreprise' => $entreprise
             ]);
+            dump("Ligne " . ($rowIndex + 2) . " - Existing Avenants found:", count($existingAvenants));
 
             if (empty($existingAvenants)) {
                 $analysisResults[] = [
                     'type' => 'new',
                     'bordereau_line_info' => $bordereauLineInfo,
                     'details' => "Ligne " . ($rowIndex + 2) . ": Cet avenant n'existe pas dans la base de données de l'entreprise.",
-                    'actions' => [
+                    'actions' => [ // NOUVEAU : Ajout des actions pour le type 'new'
+                        // Ces actions sont des exemples, à adapter selon votre besoin
+                        // Elles devraient déclencher un événement Stimulus pour ouvrir un formulaire de création pré-rempli
                         ['label' => 'Ajouter cet avenant', 'event' => 'bordereau:add-new-avenant', 'payload' => $bordereauLineInfo]
                     ]
                 ];
@@ -336,6 +349,7 @@ class BordereauController extends AbstractController
                 // For simplicity, we'll compare against the first found avenant.
                 // In a real scenario, you might need more sophisticated matching (e.g., by date, type).
                 $matchedAvenant = $existingAvenants[0];
+                dump("Ligne " . ($rowIndex + 2) . " - Matched Avenant (ID):", $matchedAvenant->getId());
                 $discrepancyFound = false;
 
                 // NOUVEAU : Hydratation complète de l'avenant trouvé en base
@@ -347,17 +361,21 @@ class BordereauController extends AbstractController
                 $bordereauCommissionHT = $bordereauLineInfo['commission_ht_assureur'] ?? 0;
                 $bordereauTaxeCommission = $bordereauLineInfo['taxe_commission_assureur'] ?? 0;
                 $bordereauCommissionTTC = $bordereauCommissionHT + $bordereauTaxeCommission;
-                $bordereauTauxCommission = $bordereauLineInfo['taux_commission'] ?? 0;
+                // Le taux de commission du bordereau est souvent un pourcentage (ex: 0.15 pour 15%)
+                $bordereauTauxCommission = ($bordereauLineInfo['taux_commission'] ?? 0);
+                dump("Ligne " . ($rowIndex + 2) . " - Bordereau Values:", ['prime_ttc' => $bordereauPrimeTTC, 'commission_ht' => $bordereauCommissionHT, 'taxe_commission' => $bordereauTaxeCommission, 'commission_ttc' => $bordereauCommissionTTC, 'taux_commission' => $bordereauTauxCommission]);
 
                 // Get values from existing Avenant using Constante service
                 // Les valeurs sont maintenant directement sur l'objet Avenant hydraté.
                 $databasePrimeTTC = $matchedAvenant->montantTTC ?? 0;
                 $databaseCommissionTTC = $this->constante->Avenant_getCommissionTTC($matchedAvenant); // Gardons le helper pour la commission TTC
-
                 // CORRECTION : Le taux de commission est sur la cotation liée à l'avenant.
-                $databaseTauxCommission = $matchedAvenant->getCotation() ? ($matchedAvenant->getCotation()->tauxCommission ?? 0) : 0;
+                // Assurez-vous que le taux est bien un float (ex: 0.15 pour 15%)
+                $databaseTauxCommission = $matchedAvenant->getCotation() ? ((float)($matchedAvenant->getCotation()->tauxCommission ?? 0)) : 0;
+                dump("Ligne " . ($rowIndex + 2) . " - Database Values:", ['prime_ttc' => $databasePrimeTTC, 'commission_ttc' => $databaseCommissionTTC, 'taux_commission' => $databaseTauxCommission]);
 
                 // Compare Prime TTC
+                dump("Ligne " . ($rowIndex + 2) . " - Comparing Prime TTC:", ['bordereau' => $bordereauPrimeTTC, 'database' => $databasePrimeTTC, 'diff' => abs($bordereauPrimeTTC - $databasePrimeTTC)]);
                 if (abs($bordereauPrimeTTC - $databasePrimeTTC) > 0.01) { // Use a small tolerance for float comparison
                     $discrepancyFound = true;
                     $details[] = "Prime TTC: Base=" . number_format($databasePrimeTTC, 2) . ", Bordereau=" . number_format($bordereauPrimeTTC, 2);
@@ -365,12 +383,14 @@ class BordereauController extends AbstractController
 
                 // Compare Commission TTC
                 if (abs($bordereauCommissionTTC - $databaseCommissionTTC) > 0.01) {
+                    dump("Ligne " . ($rowIndex + 2) . " - Comparing Commission TTC:", ['bordereau' => $bordereauCommissionTTC, 'database' => $databaseCommissionTTC, 'diff' => abs($bordereauCommissionTTC - $databaseCommissionTTC)]);
                     $discrepancyFound = true;
                     $details[] = "Commission TTC: Base=" . number_format($databaseCommissionTTC, 2) . ", Bordereau=" . number_format($bordereauCommissionTTC, 2);
                 }
 
                 // Compare Taux de commission
                 if (abs($bordereauTauxCommission - $databaseTauxCommission) > 0.0001) { // Small tolerance for percentage
+                    dump("Ligne " . ($rowIndex + 2) . " - Comparing Taux Commission:", ['bordereau' => $bordereauTauxCommission, 'database' => $databaseTauxCommission, 'diff' => abs($bordereauTauxCommission - $databaseTauxCommission)]);
                     $discrepancyFound = true;
                     $details[] = "Taux Commission: Base=" . number_format($databaseTauxCommission * 100, 2) . "%, Bordereau=" . number_format($bordereauTauxCommission * 100, 2) . "%";
                 }
@@ -395,6 +415,7 @@ class BordereauController extends AbstractController
                             ['label' => 'Modifier la base', 'event' => 'bordereau:update-database-avenant', 'payload' => ['avenantId' => $matchedAvenant->getId(), 'bordereauLine' => $bordereauLineInfo]]
                         ]
                     ];
+                    dump("Ligne " . ($rowIndex + 2) . " - Result: Discrepancy", $analysisResults[count($analysisResults) - 1]);
                 } else {
                     $analysisResults[] = [
                         'type' => 'match',
@@ -402,9 +423,12 @@ class BordereauController extends AbstractController
                         'details' => "Ligne " . ($rowIndex + 2) . ": Cet avenant correspond aux données en base.",
                         'actions' => []
                     ];
+                    dump("Ligne " . ($rowIndex + 2) . " - Result: Match", $analysisResults[count($analysisResults) - 1]);
                 }
             }
         }
+        dump('Final analysisResults (count):', count($analysisResults));
+        dump('--- Fin submitAnalysisApi ---');
 
         return $this->json(['analysisResults' => $analysisResults]);
     }
