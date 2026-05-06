@@ -28,7 +28,15 @@
 {% for sheet in viewData.sheets %}
     {% set sheets_data_json = sheets_data_json|merge({(sheet.sheetName): sheet.data}) %}
 {% endfor %}
-<body>
+<body
+    {{ stimulus_controller('cerveau') }}
+    data-controller="dialog-manager bordereau-analysis"
+    data-bordereau-analysis-sheets-data-value="{{ sheets_data_json|json_encode|e('html_attr') }}"
+    data-bordereau-analysis-chargements-value="{{ viewData.chargements|json_encode|e('html_attr') }}"
+    data-bordereau-analysis-mapping-options-value="{{ viewData.mapping_options|json_encode|e('html_attr') }}"
+    data-bordereau-analysis-type-revenus-value="{{ viewData.typeRevenus|json_encode|e('html_attr') }}"
+    data-bordereau-analysis-bordereau-id-value="{{ bordereau.id }}"
+>
 
     <div class="actions-bar sticky-top">
         <div class="d-flex justify-content-center align-items-center w-100 gap-2">
@@ -56,14 +64,7 @@
         </div>
     </div>
 
-    <div class="analysis-container"
-         data-controller="bordereau-analysis"
-         data-bordereau-analysis-sheets-data-value="{{ sheets_data_json|json_encode|e('html_attr') }}"
-         data-bordereau-analysis-chargements-value="{{ viewData.chargements|json_encode|e('html_attr') }}"
-         data-bordereau-analysis-mapping-options-value="{{ viewData.mapping_options|json_encode|e('html_attr') }}"
-         data-bordereau-analysis-type-revenus-value="{{ viewData.typeRevenus|json_encode|e('html_attr') }}"
-         data-bordereau-analysis-bordereau-id-value="{{ bordereau.id }}"
-    >
+    <div class="analysis-container">
         <div class="analysis-header">
             <div class="text-center mb-4">
                 {% if entreprise and entreprise.thumbnail %}
