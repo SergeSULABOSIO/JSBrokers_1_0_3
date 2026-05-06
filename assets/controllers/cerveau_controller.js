@@ -1041,7 +1041,6 @@ export default class extends Controller {
             if (!response.ok) throw new Error(result.error || "Erreur lors de la soumission de l'analyse.");
             this.broadcast('bordereau:analysis-completed', { analysisResults: result.analysisResults });
             // NOUVEAU : Arrêter le chargement ici aussi en cas de succès
-            this.broadcast('app:loading.stop');
         } catch (error) {
             console.error("[Cerveau] Erreur lors de la soumission de l'analyse du bordereau :", error);
             console.error("[Cerveau] Erreur lors de la soumission de l'analyse du bordereau :", error);
