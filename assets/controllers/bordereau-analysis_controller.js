@@ -185,7 +185,7 @@ export default class extends Controller {
     showStep(stepNumber, sheetName = null) {
         // Si l'événement est un clic, on récupère le numéro d'étape depuis le data-attribute
         const targetStep = (typeof stepNumber === 'object') ? parseInt(stepNumber.currentTarget.dataset.stepNumber) : stepNumber;
-        this.currentStep = stepNumber;
+        this.currentStep = targetStep;
         this.step1Target.classList.add('d-none');
         this.step2Target.classList.add('d-none');
         this.step3Target.classList.add('d-none');
@@ -195,13 +195,13 @@ export default class extends Controller {
         this.backToMappingButtonTarget.classList.add('d-none');
         this.mappingStatusFeedbackTarget.classList.add('d-none');
 
-        if (stepNumber === 1) {
+        if (targetStep === 1) {
             this.step1Target.classList.remove('d-none');
-        } else if (stepNumber === 2) {
+        } else if (targetStep === 2) {
             this.step2Target.classList.remove('d-none');
             this.submitButtonTarget.classList.remove('d-none'); // Affiche "Lancer l'analyse"
             this._showMappingUI(sheetName || this.sheetSelectionTargets.find(radio => radio.checked)?.value);
-        } else if (stepNumber === 3) {
+        } else if (targetStep === 3) {
             this.step3Target.classList.remove('d-none');
             this.backToMappingButtonTarget.classList.remove('d-none'); // Affiche "Retour au mappage"
             this.renderAnalysisResults();
@@ -542,7 +542,9 @@ export default class extends Controller {
                 statusIcon = '<i class="bi bi-check-circle-fill text-success me-2"></i>';
             }
 
-            listItem.classList.add(statusClass);
+            if (statusClass) {
+                listItem.classList.add(statusClass);
+            }
 
             let bordereauInfoHtml = Object.entries(result.bordereau_line_info || {}).map(([key, value]) => `<strong>${key.replace(/_/g, ' ')}:</strong> ${value}`).join(' | ');
 
