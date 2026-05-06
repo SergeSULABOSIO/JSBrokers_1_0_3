@@ -65,8 +65,8 @@ export default class extends Controller {
 
     disconnect() {
         // Nettoie les écouteurs d'événements pour éviter les fuites de mémoire
-        document.removeEventListener('bordereau:analysis-completed', this.boundHandleAnalysisCompleted);
-        document.removeEventListener('bordereau:analysis-failed', this.boundHandleAnalysisFailed);
+        this.element.removeEventListener('bordereau:analysis-completed', this.boundHandleAnalysisCompleted);
+        this.element.removeEventListener('bordereau:analysis-failed', this.boundHandleAnalysisFailed);
     }
 
     /**
@@ -471,7 +471,7 @@ export default class extends Controller {
             }
         });
 
-        const selectedSheetName = activeForm.dataset.sheetName;
+        const selectedSheetName = activeForm.closest('[data-bordereau-analysis-target="mappingContainer"]').dataset.sheetName;
         const payload = {
             sheetName: selectedSheetName,
             mappedColumns: mappedColumns,
