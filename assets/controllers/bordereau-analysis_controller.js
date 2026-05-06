@@ -24,6 +24,7 @@ export default class extends Controller {
     };
 
     connect() {
+        console.log("[BordereauAnalysisController] Connecté.");
         this.requiredMappings = new Set([
             'reference_police',
             'date_effet_avenant',
@@ -457,6 +458,7 @@ export default class extends Controller {
     async _doSubmitAnalysis() {
         const activeForm = this.element.querySelector('.column-mapping-form:not([style*="display: none"])');
         if (!activeForm) {
+            console.error("[BordereauAnalysisController] Aucun formulaire de mappage actif trouvé.");
             console.error("Aucun formulaire de mappage actif trouvé.");
             return;
         }
@@ -480,6 +482,7 @@ export default class extends Controller {
         this.submitButtonTarget.textContent = "Analyse en cours...";
         this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('warning', 'Analyse en cours, veuillez patienter...');
 
+        console.log("[BordereauAnalysisController] Préparation du payload pour l'analyse...", payload);
         // NOUVEAU : Notifier le Cerveau pour qu'il gère la soumission de l'analyse
         try {
             this.element.dispatchEvent(new CustomEvent('cerveau:event', {
@@ -492,9 +495,11 @@ export default class extends Controller {
                     },
                     timestamp: Date.now()
                 },
-                bubbles: true
+                bubbles: true // L'événement doit remonter pour être intercepté par le Cerveau
             }));
+            console.log("[BordereauAnalysisController] Événement 'bordereau:submit-analysis' envoyé au Cerveau.");
         } catch (error) {
+            console.error("[BordereauAnalysisController] Erreur lors de la soumission de l'analyse:", error);
             console.error("Erreur lors de la soumission de l'analyse:", error);
             this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('error', `Erreur lors de l'analyse: ${error.message}`);
             this.submitButtonTarget.disabled = false;
@@ -575,6 +580,7 @@ export default class extends Controller {
      */
     _handleAnalysisCompleted(event) {
         const { analysisResults } = event.detail;
+        console.log("[BordereauAnalysisController] Reçu 'bordereau:analysis-completed' du Cerveau. Résultats:", analysisResults);
         this.analysisResultsValue = analysisResults;
         this.showStep(3); // Passe à l'étape 3
         this.submitButtonTarget.disabled = false;
@@ -588,6 +594,7 @@ export default class extends Controller {
      */
     _handleAnalysisFailed(event) {
         const { errorMessage } = event.detail;
+        console.error("[BordereauAnalysisController] Reçu 'bordereau:analysis-failed' du Cerveau. Erreur:", errorMessage);
         this.submitButtonTarget.disabled = false;
         this.submitButtonTarget.textContent = "Lancer l'analyse";
         this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('error', `Échec de l'analyse: ${errorMessage}`);
