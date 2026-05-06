@@ -283,7 +283,7 @@ class BordereauController extends AbstractController
             return $this->json(['error' => 'Nom de feuille ou données de feuille manquantes.'], Response::HTTP_BAD_REQUEST);
         }
 
-        $selectedSheetData = $sheetsData[$sheetName]['data'] ?? [];
+        $selectedSheetData = $sheetsData[$sheetName] ?? []; // CORRECTION: Accéder directement aux données de la feuille
         $analysisResults = [];
         dump('Selected Sheet Data (first 5 rows):', array_slice($selectedSheetData, 0, 5));
         dump('Total rows in selectedSheetData:', count($selectedSheetData));
