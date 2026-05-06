@@ -341,9 +341,6 @@ export default class extends Controller {
             case 'bordereau:submit-analysis': // NOUVEAU : Gère la soumission de l'analyse du bordereau
                 this._handleSubmitBordereauAnalysis(payload);
                 break;
-            case 'bordereau:analysis-failed': // NOUVEAU : Gère l'échec de l'analyse du bordereau
-                // Cet événement est géré directement par le contrôleur bordereau-analysis_controller.js
-                break;
             case 'ui:icon.request':
                 this.handleIconRequest(payload);
                 break;
@@ -1044,6 +1041,8 @@ export default class extends Controller {
         } catch (error) {
             console.error("[Cerveau] Erreur lors de la soumission de l'analyse du bordereau :", error);
             this._showNotification(error.message || "Erreur lors de la soumission de l'analyse.", "error");
+            // NOUVEAU : Notifier l'échec à l'interface d'analyse
+            this.broadcast('bordereau:analysis-failed', { errorMessage: error.message || "Une erreur inconnue est survenue." });
         } finally {
             this.broadcast('app:loading.stop');
         }

@@ -327,6 +327,9 @@ class BordereauController extends AbstractController
                 // In a real scenario, you might need more sophisticated matching (e.g., by date, type).
                 $matchedAvenant = $existingAvenants[0];
                 $discrepancyFound = false;
+
+                // NOUVEAU : Hydratation complète de l'avenant trouvé en base
+                $this->loadCalculatedValues(null, $matchedAvenant);
                 $details = [];
 
                 // Calculate values from bordereau line
@@ -337,11 +340,12 @@ class BordereauController extends AbstractController
                 $bordereauTauxCommission = $bordereauLineInfo['taux_commission'] ?? 0;
 
                 // Get values from existing Avenant using Constante service
-                // Ensure Constante service is properly initialized and has access to the Avenant's related entities
-                $databasePrimeTTC = $this->constante->Avenant_getPrimeTTC($matchedAvenant);
-                $databaseCommissionTTC = $this->constante->Avenant_getCommissionTTC($matchedAvenant); 
-                // For taux_commission, we might need to access Cotation directly if not available via Avenant_getCommissionTTC
-                $databaseTauxCommission = $matchedAvenant->getCotation() ? $matchedAvenant->getCotation()->tauxCommission : 0;
+                // Les valeurs sont maintenant directement sur l'objet Avenant hydraté.
+                $databasePrimeTTC = $matchedAvenant->montantTTC ?? 0;
+                $databaseCommissionTTC = $this->constante->Avenant_getCommissionTTC($matchedAvenant); // Gardons le helper pour la commission TTC
+
+                // CORRECTION : Le taux de commission est sur la cotation liée à l'avenant.
+                $databaseTauxCommission = $matchedAvenant->getCotation() ? ($matchedAvenant->getCotation()->tauxCommission ?? 0) : 0;
 
                 // Compare Prime TTC
                 if (abs($bordereauPrimeTTC - $databasePrimeTTC) > 0.01) { // Use a small tolerance for float comparison
