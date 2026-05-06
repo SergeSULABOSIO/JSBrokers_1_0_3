@@ -200,11 +200,6 @@ class BordereauController extends AbstractController
                             // Si la feuille est vide, on ne l'ajoute pas à l'analyse.
                             continue;
                         }
-                        // NOUVEAU : Si la feuille ne contient que des en-têtes (highestRow == 1), on l'ignore aussi.
-                        if ($highestRow === 1) {
-                            // La feuille contient seulement la ligne d'en-tête, pas de données.
-                            continue;
-                        }
     
                         $highestColumn = $worksheet->getHighestColumn(1); // On se base sur la première ligne pour les en-têtes
                         $highestColumnIndex = Coordinate::columnIndexFromString($highestColumn);
@@ -289,8 +284,18 @@ class BordereauController extends AbstractController
         $analysisResults = [];
 
         foreach ($selectedSheetData as $rowIndex => $rowData) {
-            // Skip empty rows
-            if (empty(array_filter($rowData))) {
+            // NOUVEAU : Vérifier si la ligne est entièrement vide (toutes les cellules sont null ou chaînes vides)
+            $isRowEffectivelyEmpty = true;
+            foreach ($rowData as $cellValue) {
+                if ($cellValue !== null && $cellValue !== '') {
+                    $isRowEffectivelyEmpty = false;
+                    break;
+                }
+            }
+
+            // Si la ligne est vide, on ajoute un résultat spécifique et on passe à la suivante
+            if ($isRowEffectivelyEmpty) {
+                $analysisResults[] = ['type' => 'empty_row', 'bordereau_line_info' => [], 'details' => "Ligne " . ($rowIndex + 2) . ": Cette ligne est vide.", 'actions' => []];
                 continue;
             }
 
