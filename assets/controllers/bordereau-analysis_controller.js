@@ -232,10 +232,15 @@ export default class extends Controller {
         this.step3Target.classList.add('d-none');
 
         // Cache les boutons de la barre d'outils par défaut
-        this.submitButtonTarget.classList.add('d-none');
-        this.backToMappingButtonTarget.classList.add('d-none');
-        // NOUVEAU : Cacher le feedback quand on change d'étape
-        this.mappingStatusFeedbackTarget.classList.add('d-none');
+        if (this.hasSubmitButtonTarget) this.submitButtonTarget.classList.add('d-none');
+        if (this.hasBackToMappingButtonTarget) this.backToMappingButtonTarget.classList.add('d-none');
+        
+        // Ne pas afficher de message dans la barre d'outils lors du retour au mapping
+        if (targetStep === 2 && this.currentStep === 3) {
+            if (this.hasMappingStatusFeedbackTarget) this.mappingStatusFeedbackTarget.innerHTML = '';
+        } else if (this.hasMappingStatusFeedbackTarget) {
+            this.mappingStatusFeedbackTarget.classList.add('d-none');
+        }
 
         if (targetStep === 1) {
             this.step1Target.classList.remove('d-none');
@@ -669,8 +674,10 @@ export default class extends Controller {
      * @param {boolean} isLoading
      */
     toggleProgressBar(isLoading) {
-        if (this.hasProgressBarContainerTarget) {
-            this.progressBarContainerTarget.style.display = isLoading ? 'block' : 'none';
+        // On cherche le conteneur global de la barre de progression
+        const globalProgressBar = document.getElementById('global-progress-bar-container');
+        if (globalProgressBar) {
+            globalProgressBar.style.display = isLoading ? 'block' : 'none';
         }
     }
 
