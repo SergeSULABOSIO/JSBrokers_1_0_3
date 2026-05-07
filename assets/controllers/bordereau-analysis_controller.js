@@ -8,7 +8,7 @@ import { Controller } from '@hotwired/stimulus';
 export default class extends Controller {
     static targets = [ // NOUVEAU : Ajout de la cible pour le bouton de retour
         "sheetSelection", "step2", "mappingContainer", "mappingStatusFeedback",
-        "mappingSelect", "analysisResult", "submitButton", "columnNameText", "step1", "step3", "analysisResultsList", "progressBar",
+        "mappingSelect", "analysisResult", "submitButton", "columnNameText", "step1", "step3", "analysisResultsList", "progressBar", "progressBarContainer",
         "backToMappingButton"
     ];
 
@@ -21,7 +21,10 @@ export default class extends Controller {
         typeRevenus: Array, // [{id, nom}, ...]
         // NOUVEAU : On reçoit les options de mappage système depuis le backend.
         mappingOptions: Object,
-        analysisResults: Array
+        analysisResults: Array,
+        selectedSheetName: String, // NOUVEAU : Pour la restauration de l'état
+        mappedColumns: Object,     // NOUVEAU : Pour la restauration de l'état
+        currentAnalysisStep: Number, // NOUVEAU : Pour la restauration de l'état
     };
 
     connect() {
@@ -51,7 +54,10 @@ export default class extends Controller {
         this.updateMappingStatusFeedback();
         
         this.currentStep = 1; // NOUVEAU : Initialise l'étape actuelle
-        if (this.sheetSelectionTargets.length === 1 && this.sheetsDataValue && Object.keys(this.sheetsDataValue).length === 1) {
+        // NOUVEAU : Restauration de l'état de l'analyse
+        if (this.currentAnalysisStepValue > 0) {
+            this._restoreAnalysisState();
+        } else if (this.sheetSelectionTargets.length === 1 && this.sheetsDataValue && Object.keys(this.sheetsDataValue).length === 1) {
             this.showStep(2); // Si une seule feuille, passe directement à l'étape 2
         }
         this.updateSubmitButtonState();
@@ -68,6 +74,39 @@ export default class extends Controller {
         // Nettoie les écouteurs d'événements pour éviter les fuites de mémoire
         document.removeEventListener('bordereau:analysis-completed', this.boundHandleAnalysisCompleted);
         document.removeEventListener('bordereau:analysis-failed', this.boundHandleAnalysisFailed);
+    }
+
+    /**
+     * NOUVEAU : Restaure l'état de l'analyse du bordereau depuis les données du backend.
+     */
+    _restoreAnalysisState() {
+        // Restaurer la sélection de la feuille
+        if (this.selectedSheetNameValue) {
+            const selectedSheetInput = this.sheetSelectionTargets.find(radio => radio.value === this.selectedSheetNameValue);
+            if (selectedSheetInput) {
+                selectedSheetInput.checked = true;
+            }
+        }
+
+        // Restaurer le mappage des colonnes
+        if (this.mappedColumnsValue && Object.keys(this.mappedColumnsValue).length > 0) {
+            // Attendre que les options de mappage soient ajoutées avant de restaurer
+            requestAnimationFrame(() => {
+                this.mappingSelectTargets.forEach(select => {
+                    const columnLetter = select.dataset.columnLetter;
+                    const mappedSystemField = Object.keys(this.mappedColumnsValue).find(key => this.mappedColumnsValue[key] === columnLetter);
+                    if (mappedSystemField) {
+                        select.value = mappedSystemField;
+                        this.performValidation(select); // Valider la colonne restaurée
+                    }
+                });
+                this.updateSelectOptionsVisuals();
+                this.updateSubmitButtonState();
+            });
+        }
+
+        // Naviguer vers l'étape sauvegardée
+        this.showStep(this.currentAnalysisStepValue, this.selectedSheetNameValue);
     }
 
     /**
@@ -160,6 +199,7 @@ export default class extends Controller {
     validateColumn(event) {
         const selectElement = event.currentTarget;
         this.performValidation(selectElement);
+        this._saveAnalysisStateToBordereau(); // Sauvegarder l'état après chaque modification de mappage
     }
 
     /**
@@ -175,6 +215,7 @@ export default class extends Controller {
         }
         const selectedSheetName = selectedSheetInput.value;
         this.showStep(2, selectedSheetName);
+        this._saveAnalysisStateToBordereau(); // Sauvegarder l'état après la sélection de la feuille
     }
 
     /**
@@ -215,14 +256,22 @@ export default class extends Controller {
      */
     _showMappingUI(sheetName = null) {
         // NOUVEAU : On affiche le bouton "Lancer l'analyse" et le feedback dans la barre d'outils
-        // car on entre dans l'étape de mappage.
-        this.mappingStatusFeedbackTarget.classList.remove('d-none');
+        // car on entre dans l'étape de mappage. (Removed as per user request)
+        // this.mappingStatusFeedbackTarget.classList.remove('d-none');
 
         this.mappingContainerTargets.forEach(container => {
             const isTargetSheet = sheetName ? container.dataset.sheetName === sheetName : container.dataset.isFirst === 'true';
             // NOUVEAU : Utilise style.display pour la flexibilité, car d-none peut être surchargé.
             container.style.display = isTargetSheet ? 'block' : 'none';
         });
+
+        // NOUVEAU : Si on a restauré un état, on doit s'assurer que la feuille sélectionnée est bien affichée
+        if (this.selectedSheetNameValue && sheetName === this.selectedSheetNameValue) {
+            const selectedSheetInput = this.sheetSelectionTargets.find(radio => radio.value === this.selectedSheetNameValue);
+            if (selectedSheetInput) {
+                selectedSheetInput.checked = true;
+            }
+        }
     }
 
     /**
@@ -332,7 +381,7 @@ export default class extends Controller {
         });
 
         if (invalidRows.length === 0) {
-            resultCell.innerHTML = this.getFeedbackHtml('success', 'Données valides !');
+            resultCell.innerHTML = this.getFeedbackHtml('success', 'Données valides !', true);
             this.validationState.set(columnLetter, true);
         } else {
             const message = `Lignes invalides: ${invalidRows.slice(0, 5).join(', ')}${invalidRows.length > 5 ? '...' : ''}`;
@@ -383,13 +432,18 @@ export default class extends Controller {
      * @param {'success'|'error'} type
      * @param {string} message
      * @returns {string}
+     * @param {boolean} [includeIcon=true] - NOUVEAU : Permet de contrôler l'affichage de l'icône.
+     * @returns {string}
      */
-    getFeedbackHtml(type, message) {
-        const icon = type === 'success'
-            ? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-circle-fill me-1" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>'
-            : (type === 'warning'
-                ? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle-fill me-1" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg>'
-                : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-circle-fill me-1" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z"/></svg>');
+    getFeedbackHtml(type, message, includeIcon = true) {
+        let iconHtml = '';
+        if (includeIcon) {
+            iconHtml = type === 'success'
+                ? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-check-circle-fill me-1" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>'
+                : (type === 'warning'
+                    ? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle-fill me-1" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg>'
+                    : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-circle-fill me-1" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z"/></svg>');
+        }
 
         let textColorClass = '';
         if (type === 'success') {
@@ -401,7 +455,7 @@ export default class extends Controller {
         }
 
         // Le CSS pour .actions-bar override la couleur pour le feedback de la toolbar.
-        return `<span class="d-inline-flex align-items-center small ${textColorClass}">${icon} ${message}</span>`;
+        return `<span class="d-inline-flex align-items-center small ${textColorClass}">${iconHtml} ${message}</span>`;
     }
 
     /**
@@ -482,7 +536,7 @@ export default class extends Controller {
 
         this.submitButtonTarget.disabled = true;
         this.submitButtonTarget.textContent = "Analyse en cours...";
-        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('warning', 'Analyse en cours...');
+        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('warning', 'Analyse en cours...', false); // No icon for toolbar feedback
         this.toggleProgressBar(true);
         console.log("[BordereauAnalysisController] Préparation du payload pour l'analyse...", payload);
         // NOUVEAU : Notifier le Cerveau pour qu'il gère la soumission de l'analyse
@@ -503,7 +557,7 @@ export default class extends Controller {
         } catch (error) {
             console.error("[BordereauAnalysisController] Erreur lors de la soumission de l'analyse:", error);
             console.error("Erreur lors de la soumission de l'analyse:", error);
-            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('error', `Erreur lors de l'analyse: ${error.message}`);
+            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('error', `Erreur lors de l'analyse: ${error.message}`, false); // No icon for toolbar feedback
             this.submitButtonTarget.disabled = false;
             this.toggleProgressBar(false);
             this.submitButtonTarget.textContent = "Lancer l'analyse";
@@ -590,9 +644,10 @@ export default class extends Controller {
         this.showStep(3); // Passe à l'étape 3
         this.submitButtonTarget.disabled = false;
         this.submitButtonTarget.textContent = "Lancer l'analyse";
-        this.mappingStatusFeedbackTarget.classList.remove('d-none'); // S'assurer que le feedback est visible
-        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('success', 'Analyse terminée avec succès.');
+        this.mappingStatusFeedbackTarget.classList.remove('d-none'); // Ensure feedback is visible
+        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('success', 'Analyse terminée avec succès.', false); // No icon for toolbar feedback
         this.toggleProgressBar(false);
+        this._saveAnalysisStateToBordereau(); // Sauvegarder l'état après la complétion de l'analyse
     }
 
     /**
@@ -604,8 +659,8 @@ export default class extends Controller {
         console.error("[BordereauAnalysisController] Reçu 'bordereau:analysis-failed' du Cerveau. Erreur:", errorMessage);
         this.submitButtonTarget.disabled = false;
         this.submitButtonTarget.textContent = "Lancer l'analyse";
-        this.mappingStatusFeedbackTarget.classList.remove('d-none'); // S'assurer que le feedback est visible
-        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('error', `Échec de l'analyse: ${errorMessage}`);
+        this.mappingStatusFeedbackTarget.classList.remove('d-none'); // Ensure feedback is visible
+        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('error', `Échec de l'analyse: ${errorMessage}`, false); // No icon for toolbar feedback
         this.toggleProgressBar(false);
     }
 
@@ -614,8 +669,44 @@ export default class extends Controller {
      * @param {boolean} isLoading
      */
     toggleProgressBar(isLoading) {
-        if (this.hasProgressBarTarget) {
-            this.progressBarTarget.parentElement.style.display = isLoading ? 'block' : 'none';
+        if (this.hasProgressBarContainerTarget) {
+            this.progressBarContainerTarget.style.display = isLoading ? 'block' : 'none';
+        }
+    }
+
+    /**
+     * NOUVEAU : Sauvegarde l'état actuel de l'analyse du bordereau en base de données.
+     * Cette méthode est appelée automatiquement lors des changements d'étape ou de mappage.
+     */
+    async _saveAnalysisStateToBordereau() {
+        const selectedSheetInput = this.sheetSelectionTargets.find(radio => radio.checked);
+        const selectedSheetName = selectedSheetInput ? selectedSheetInput.value : null;
+
+        const mappedColumns = {};
+        const activeMappingContainer = this.element.querySelector('.column-mapping-form:not([style*="display: none"])');
+        if (activeMappingContainer) {
+            const selects = activeMappingContainer.querySelectorAll('select[data-column-letter]');
+            selects.forEach(select => {
+                if (select.value) {
+                    mappedColumns[select.value] = select.dataset.columnLetter;
+                }
+            });
+        }
+
+        const payload = {
+            selectedSheetName: selectedSheetName,
+            mappedColumns: mappedColumns,
+            currentAnalysisStep: this.currentStep,
+        };
+
+        try {
+            this.element.dispatchEvent(new CustomEvent('cerveau:event', {
+                detail: { type: 'bordereau:save-analysis-state', source: 'bordereau-analysis_controller', payload: { url: `/admin/bordereau/api/save-analysis-state/${this.bordereauIdValue}`, data: payload }, timestamp: Date.now() },
+                bubbles: true
+            }));
+            console.log("[BordereauAnalysisController] Événement 'bordereau:save-analysis-state' envoyé au Cerveau.");
+        } catch (error) {
+            console.error("[BordereauAnalysisController] Erreur lors de l'envoi de l'événement de sauvegarde de l'état de l'analyse:", error);
         }
     }
 

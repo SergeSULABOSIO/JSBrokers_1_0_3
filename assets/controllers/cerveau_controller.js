@@ -342,6 +342,10 @@ export default class extends Controller {
                 console.log("[Cerveau] Reçu 'bordereau:submit-analysis'. Délégation à _handleSubmitBordereauAnalysis.");
                 this._handleSubmitBordereauAnalysis(payload);
                 break;
+            case 'bordereau:save-analysis-state': // NOUVEAU : Gère la sauvegarde de l'état de l'analyse du bordereau
+                console.log("[Cerveau] Reçu 'bordereau:save-analysis-state'. Délégation à _handleSaveBordereauAnalysisState.");
+                this._handleSaveBordereauAnalysisState(payload);
+                break;
             case 'ui:icon.request':
                 this.handleIconRequest(payload);
                 break;
@@ -1053,6 +1057,35 @@ export default class extends Controller {
             this.broadcast('bordereau:analysis-failed', { errorMessage: error.message || "Une erreur inconnue est survenue." });
         } finally {
             this.broadcast('app:loading.stop');
+        }
+    }
+
+    /**
+     * NOUVEAU : Gère la sauvegarde de l'état de l'analyse du bordereau au backend.
+     * @param {object} payload
+     * @param {string} payload.url - L'URL de l'API pour sauvegarder l'état.
+     * @param {object} payload.data - Les données à envoyer (selectedSheetName, mappedColumns, currentAnalysisStep).
+     */
+    async _handleSaveBordereauAnalysisState(payload) {
+        if (!payload.url || !payload.data) {
+            console.error("[Cerveau] Demande de sauvegarde de l'état de l'analyse de bordereau reçue sans URL ou données.", payload);
+            this._showNotification("Impossible de sauvegarder l'état de l'analyse : URL ou données manquantes.", "error");
+            return;
+        }
+
+        try {
+            console.log("[Cerveau] Sauvegarde de l'état de l'analyse du bordereau à l'API:", payload.url, payload.data);
+            const response = await fetch(payload.url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload.data)
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.message || "Erreur lors de la sauvegarde de l'état de l'analyse.");
+            console.log("[Cerveau] État de l'analyse du bordereau sauvegardé avec succès:", result.message);
+        } catch (error) {
+            console.error("[Cerveau] Erreur lors de la sauvegarde de l'état de l'analyse du bordereau :", error);
+            // Pas de notification à l'utilisateur pour une sauvegarde en arrière-plan, juste un log.
         }
     }
 }
