@@ -1628,7 +1628,7 @@ textarea:hover,
 }
 
 /* NOUVEAU : Forcer la couleur blanche pour tous les feedbacks dans la barre d'outils */
-.actions-bar [data-bordereau-analysis-target="mappingStatusFeedback"] span {
+.actions-bar [data-bordereau-analysis-target="mappingStatusFeedback"] {
     color: white !important;
 }
 

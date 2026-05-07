@@ -38,6 +38,10 @@
 >
 
     <div class="actions-bar sticky-top">
+        {# NOUVEAU : Barre de progression pour l'analyse #}
+        <div class="toolbar-progress-bar-container mt-2">
+            <div class="toolbar-progress-bar" data-bordereau-analysis-target="progressBar"></div>
+        </div>
         <div class="d-flex justify-content-center align-items-center w-100 gap-2">
             {# Le bouton de retour ferme simplement la fenêtre, comme dans note_preview #}
             <button class="btn btn-light d-inline-flex align-items-center gap-2" data-controller="ripple" onclick="window.close()">
@@ -68,12 +72,8 @@
             </button>
         </div>
         {# NOUVEAU : Le feedback est déplacé ici, masqué par défaut #}
-        <div data-bordereau-analysis-target="mappingStatusFeedback" class="text-white small p-2 mt-2 mb-0 d-none" role="alert">
+        <div data-bordereau-analysis-target="mappingStatusFeedback" class="text-white small mt-2 mb-0 d-none" role="alert">
             Chargement du statut de mappage...
-        </div>
-        {# NOUVEAU : Barre de progression pour l'analyse #}
-        <div class="toolbar-progress-bar-container mt-2">
-            <div class="toolbar-progress-bar" data-bordereau-analysis-target="progressBar"></div>
         </div>
     </div>
 
