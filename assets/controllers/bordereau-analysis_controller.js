@@ -54,23 +54,22 @@ export default class extends Controller {
         // NOUVEAU : On ajoute les options de mappage système.
         this.addSystemOptions();
         // Initialise le feedback de mappage
-        this.updateMappingStatusFeedback();
         
         this.currentStep = 1; // NOUVEAU : Initialise l'étape actuelle
         // NOUVEAU : Restauration de l'état de l'analyse
         if (this.currentAnalysisStepValue > 0) {
             this._restoreAnalysisState();
         } else if (this.sheetSelectionTargets.length === 1 && this.sheetsDataValue && Object.keys(this.sheetsDataValue).length === 1) {
-            this.showStep(2); // Si une seule feuille, passe directement à l'étape 2
+            this.showStep(2); // If only one sheet, go directly to step 2
         }
-        this.updateSubmitButtonState();
-        // NOUVEAU : Écoute l'événement de complétion de l'analyse du Cerveau
         this.boundHandleAnalysisCompleted = this._handleAnalysisCompleted.bind(this);
         document.addEventListener('bordereau:analysis-completed', this.boundHandleAnalysisCompleted);
         // NOUVEAU : Écoute l'événement d'échec de l'analyse du Cerveau
         this.boundHandleAnalysisFailed = this._handleAnalysisFailed.bind(this);
         document.addEventListener('bordereau:analysis-failed', this.boundHandleAnalysisFailed);
-        this.updateSelectOptionsVisuals(); // Initialise la coloration des options
+
+        // Call a method to finalize connection setup, ensuring all initial values are processed
+        this.afterConnect();
     }
 
     disconnect() {
@@ -80,9 +79,20 @@ export default class extends Controller {
     }
 
     /**
+     * NOUVEAU : Méthode appelée après la connexion et l'initialisation des valeurs.
+     * Gère les mises à jour initiales de l'UI si aucune restauration n'a eu lieu.
+     */
+    afterConnect() {
+        this.updateMappingStatusFeedback();
+        this.updateSubmitButtonState();
+        this.updateSelectOptionsVisuals();
+    }
+
+    /**
      * NOUVEAU : Restaure l'état de l'analyse du bordereau depuis les données du backend.
      */
     _restoreAnalysisState() {
+        this.isRestoring = true; // Set flag to prevent premature saving
         console.log("[BordereauAnalysisController] _restoreAnalysisState: Début de la restauration.");
         // 1. Restaurer la sélection de la feuille (UI)
         if (this.selectedSheetNameValue) {
@@ -276,7 +286,9 @@ export default class extends Controller {
             this.backToMappingButtonTarget.classList.remove('d-none'); // Affiche "Retour au mappage"
             this.renderAnalysisResults();
         }
-        this._saveAnalysisStateToBordereau(); // Sauvegarder l'état après chaque changement d'étape
+        if (!this.isRestoring) { // Only save if not currently restoring
+            this._saveAnalysisStateToBordereau(); // Save state after each step change
+        }
     }
     /**
      * Logique d'affichage de l'étape 2.
