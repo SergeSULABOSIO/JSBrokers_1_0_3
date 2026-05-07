@@ -53,7 +53,9 @@ export default class extends Controller {
         this.addTypeRevenuOptions();
         // NOUVEAU : On ajoute les options de mappage système.
         this.addSystemOptions();
-        
+        // NOUVEAU : Initialise le drapeau pour la restauration
+        this.isRestoring = false;
+
         this.currentStep = 1; // NOUVEAU : Initialise l'étape actuelle
         // NOUVEAU : Restauration de l'état de l'analyse
         if (this.currentAnalysisStepValue > 0) {
@@ -62,15 +64,16 @@ export default class extends Controller {
             this.showStep(2); // If only one sheet, go directly to step 2
         }
         // NOUVEAU : Écoute l'événement de complétion de l'analyse du Cerveau
-        // NOUVEAU : Écoute l'événement de complétion de l'analyse du Cerveau
         this.boundHandleAnalysisCompleted = this._handleAnalysisCompleted.bind(this);
         document.addEventListener('bordereau:analysis-completed', this.boundHandleAnalysisCompleted);
         // NOUVEAU : Écoute l'événement d'échec de l'analyse du Cerveau
         this.boundHandleAnalysisFailed = this._handleAnalysisFailed.bind(this);
         document.addEventListener('bordereau:analysis-failed', this.boundHandleAnalysisFailed);
 
-        // Call a method to finalize connection setup, ensuring all initial values are processed
-        this.afterConnect();
+        // NOUVEAU : On ne met à jour l'UI qu'une fois la restauration potentielle terminée.
+        if (!this.isRestoring) {
+            this.afterConnect();
+        }
     }
 
     disconnect() {
@@ -139,16 +142,12 @@ export default class extends Controller {
                 } else {
                     console.warn("[BordereauAnalysisController] _restoreAnalysisState: Aucun conteneur de mappage actif trouvé pour restaurer les selects.");
                 }
-                // After restoring all selects, update the submit button state and visuals
-                this.isRestoring = false; // Reset flag after restoration is complete
-                this.updateSubmitButtonState();
-                this.updateSelectOptionsVisuals();
+                // NOUVEAU : On finalise la restauration et met à jour l'UI
+                this.finalizeRestoration();
             });
         } else {
-            // If there are no mapped columns to restore, still update the button state and visuals
-            this.updateSubmitButtonState();
-            this.updateSelectOptionsVisuals();
-            this.isRestoring = false; // Reset flag even if no columns to restore
+            // NOUVEAU : On finalise même s'il n'y a rien à restaurer
+            this.finalizeRestoration();
         }
         console.log("[BordereauAnalysisController] _restoreAnalysisState: Fin de la restauration.");
     }
@@ -296,8 +295,9 @@ export default class extends Controller {
             this.backToMappingButtonTarget.classList.remove('d-none'); // Affiche "Retour au mappage"
             this.renderAnalysisResults();
         }
-        // NOUVEAU : Sauvegarde l'état après chaque changement d'étape, sauf si une restauration est en cours.
-        // Cela évite d'écraser l'état restauré avec un état intermédiaire vide.
+        // NOUVEAU : La sauvegarde est maintenant conditionnelle pour éviter les "race conditions".
+        // On ne sauvegarde que si le contrôleur n'est pas en train de restaurer son état.
+        // Cela empêche une sauvegarde prématurée avec un état vide d'écraser les données persistées.
         if (!this.isRestoring) {
             this._saveAnalysisStateToBordereau(); // Save state after each step change
         }
