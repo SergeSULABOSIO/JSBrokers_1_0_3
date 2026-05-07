@@ -168,10 +168,6 @@ class BordereauController extends AbstractController
             'analysisResults' => $bordereau->getAnalysisResults(), // NOUVEAU : Pour la restauration de l'état
             'currentAnalysisStep' => $bordereau->getCurrentAnalysisStep(), // NOUVEAU : Pour la restauration de l'état
         ];
-        dump('showAnalysis: Données de restauration passées au template:', [
-            'selectedSheetName' => $bordereau->getSelectedSheetName(),
-            'mappedColumns' => $bordereau->getMappedColumns(), 'analysisResults' => $bordereau->getAnalysisResults(), 'currentAnalysisStep' => $bordereau->getCurrentAnalysisStep()
-        ]);
         $error = null;
         $excelDocument = null;
 
@@ -269,6 +265,11 @@ class BordereauController extends AbstractController
             'entreprise' => $entreprise,
             'invite' => $invite, // NOUVEAU : On passe l'invité au template.
             'viewData' => $viewData, // Contient maintenant les chargements
+            // NOUVEAU : On passe les données de restauration directement au template
+            'selectedSheetName' => $bordereau->getSelectedSheetName(),
+            'mappedColumns' => $bordereau->getMappedColumns(),
+            'analysisResults' => $bordereau->getAnalysisResults(),
+            'currentAnalysisStep' => $bordereau->getCurrentAnalysisStep(),
             'error' => $error,
         ]);
     }
