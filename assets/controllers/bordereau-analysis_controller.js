@@ -21,7 +21,7 @@ export default class extends Controller {
         typeRevenus: Array, // [{id, nom}, ...]
         // NOUVEAU : On reçoit les options de mappage système depuis le backend.
         mappingOptions: Object,
-        analysisResults: Array,
+        analysisResults: Array, // NOUVEAU : Pour la restauration de l'état
         selectedSheetName: String, // NOUVEAU : Pour la restauration de l'état
         mappedColumns: Object,     // NOUVEAU : Pour la restauration de l'état
         currentAnalysisStep: Number, // NOUVEAU : Pour la restauration de l'état
@@ -86,6 +86,11 @@ export default class extends Controller {
             if (selectedSheetInput) {
                 selectedSheetInput.checked = true;
             }
+        }
+
+        // Restaurer les résultats de l'analyse si l'étape est 3
+        if (this.currentAnalysisStepValue === 3 && this.analysisResultsValue) {
+            this.analysisResults = this.analysisResultsValue;
         }
 
         // Restaurer le mappage des colonnes
@@ -704,6 +709,7 @@ export default class extends Controller {
             selectedSheetName: selectedSheetName,
             mappedColumns: mappedColumns,
             currentAnalysisStep: this.currentStep,
+            analysisResults: this.currentStep === 3 ? this.analysisResultsValue : null, // Sauvegarder les résultats si à l'étape 3
         };
 
         try {

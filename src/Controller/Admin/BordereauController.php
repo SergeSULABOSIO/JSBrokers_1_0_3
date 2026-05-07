@@ -165,6 +165,7 @@ class BordereauController extends AbstractController
             // NOUVEAU : Données de l'analyse du bordereau
             'selectedSheetName' => $bordereau->getSelectedSheetName(),
             'mappedColumns' => $bordereau->getMappedColumns(),
+            'analysisResults' => $bordereau->getAnalysisResults(), // NOUVEAU : Pour la restauration de l'état
             'currentAnalysisStep' => $bordereau->getCurrentAnalysisStep(),
         ];
         $error = null;
@@ -352,10 +353,12 @@ class BordereauController extends AbstractController
         $selectedSheetName = $payload['selectedSheetName'] ?? null;
         $mappedColumns = $payload['mappedColumns'] ?? null;
         $currentAnalysisStep = $payload['currentAnalysisStep'] ?? null;
+        $analysisResults = $payload['analysisResults'] ?? null; // NOUVEAU : Pour la restauration de l'état
 
         $bordereau->setSelectedSheetName($selectedSheetName);
         $bordereau->setMappedColumns($mappedColumns);
         $bordereau->setCurrentAnalysisStep($currentAnalysisStep);
+        $bordereau->setAnalysisResults($analysisResults); // NOUVEAU : Pour la restauration de l'état
 
         $this->em->persist($bordereau);
         $this->em->flush();
