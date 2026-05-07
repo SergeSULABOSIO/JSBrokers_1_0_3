@@ -166,8 +166,12 @@ class BordereauController extends AbstractController
             'selectedSheetName' => $bordereau->getSelectedSheetName(),
             'mappedColumns' => $bordereau->getMappedColumns(),
             'analysisResults' => $bordereau->getAnalysisResults(), // NOUVEAU : Pour la restauration de l'état
-            'currentAnalysisStep' => $bordereau->getCurrentAnalysisStep(),
+            'currentAnalysisStep' => $bordereau->getCurrentAnalysisStep(), // NOUVEAU : Pour la restauration de l'état
         ];
+        dump('showAnalysis: Données de restauration passées au template:', [
+            'selectedSheetName' => $bordereau->getSelectedSheetName(),
+            'mappedColumns' => $bordereau->getMappedColumns(), 'analysisResults' => $bordereau->getAnalysisResults(), 'currentAnalysisStep' => $bordereau->getCurrentAnalysisStep()
+        ]);
         $error = null;
         $excelDocument = null;
 
@@ -349,6 +353,7 @@ class BordereauController extends AbstractController
     public function saveAnalysisState(Bordereau $bordereau, Request $request): JsonResponse
     {
         $payload = json_decode($request->getContent(), true);
+        dump('saveAnalysisState: Payload reçu du frontend:', $payload);
 
         $selectedSheetName = $payload['selectedSheetName'] ?? null;
         $mappedColumns = $payload['mappedColumns'] ?? null;
@@ -359,6 +364,10 @@ class BordereauController extends AbstractController
         $bordereau->setMappedColumns($mappedColumns);
         $bordereau->setCurrentAnalysisStep($currentAnalysisStep);
         $bordereau->setAnalysisResults($analysisResults); // NOUVEAU : Pour la restauration de l'état
+        dump('saveAnalysisState: Bordereau mis à jour avant persistance:', [
+            'selectedSheetName' => $bordereau->getSelectedSheetName(),
+            'mappedColumns' => $bordereau->getMappedColumns(), 'analysisResults' => $bordereau->getAnalysisResults(), 'currentAnalysisStep' => $bordereau->getCurrentAnalysisStep()
+        ]);
 
         $this->em->persist($bordereau);
         $this->em->flush();
