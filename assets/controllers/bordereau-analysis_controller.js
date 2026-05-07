@@ -80,38 +80,47 @@ export default class extends Controller {
      * NOUVEAU : Restaure l'état de l'analyse du bordereau depuis les données du backend.
      */
     _restoreAnalysisState() {
-        // Restaurer la sélection de la feuille
+        // 1. Restaurer la sélection de la feuille (UI)
         if (this.selectedSheetNameValue) {
             const selectedSheetInput = this.sheetSelectionTargets.find(radio => radio.value === this.selectedSheetNameValue);
             if (selectedSheetInput) {
                 selectedSheetInput.checked = true;
             }
         }
-
-        // Restaurer les résultats de l'analyse si l'étape est 3
+    
+        // 2. Restaurer les résultats de l'analyse si l'étape est 3 (Data)
         if (this.currentAnalysisStepValue === 3 && this.analysisResultsValue) {
             this.analysisResults = this.analysisResultsValue;
         }
-
-        // Restaurer le mappage des colonnes
+    
+        // 3. Naviguer vers l'étape sauvegardée (UI - rend le conteneur de mappage visible si étape 2)
+        // C'est crucial de faire cela AVANT de tenter de restaurer les selects du mappage,
+        // car les selects doivent être visibles pour que leur valeur soit correctement définie et validée.
+        this.showStep(this.currentAnalysisStepValue, this.selectedSheetNameValue);
+    
+        // 4. Restaurer le mappage des colonnes (UI - doit se faire après que le conteneur soit visible)
         if (this.mappedColumnsValue && Object.keys(this.mappedColumnsValue).length > 0) {
-            // Attendre que les options de mappage soient ajoutées avant de restaurer
+            // Attendre que le DOM soit mis à jour après showStep
             requestAnimationFrame(() => {
-                this.mappingSelectTargets.forEach(select => {
-                    const columnLetter = select.dataset.columnLetter;
-                    const mappedSystemField = Object.keys(this.mappedColumnsValue).find(key => this.mappedColumnsValue[key] === columnLetter);
-                    if (mappedSystemField) {
-                        select.value = mappedSystemField;
-                        this.performValidation(select); // Valider la colonne restaurée
-                    }
-                });
-                this.updateSelectOptionsVisuals();
-                this.updateSubmitButtonState();
+                // On doit cibler uniquement les selects du conteneur de mappage ACTIF.
+                // `this.mappingSelectTargets` contient TOUS les selects, même ceux des conteneurs cachés.
+                // Il faut trouver le conteneur actif et ensuite ses selects.
+                const activeMappingContainer = this.element.querySelector('.column-mapping-form:not([style*="display: none"])');
+                if (activeMappingContainer) {
+                    const selectsInActiveContainer = activeMappingContainer.querySelectorAll('select[data-column-letter]');
+                    selectsInActiveContainer.forEach(select => {
+                        const columnLetter = select.dataset.columnLetter;
+                        const mappedSystemField = Object.keys(this.mappedColumnsValue).find(key => this.mappedColumnsValue[key] === columnLetter);
+                        if (mappedSystemField) {
+                            select.value = mappedSystemField;
+                            this.performValidation(select); // Valider la colonne restaurée
+                        }
+                    });
+                    this.updateSelectOptionsVisuals();
+                    this.updateSubmitButtonState();
+                }
             });
         }
-
-        // Naviguer vers l'étape sauvegardée
-        this.showStep(this.currentAnalysisStepValue, this.selectedSheetNameValue);
     }
 
     /**
@@ -219,8 +228,7 @@ export default class extends Controller {
             return;
         }
         const selectedSheetName = selectedSheetInput.value;
-        this.showStep(2, selectedSheetName);
-        this._saveAnalysisStateToBordereau(); // Sauvegarder l'état après la sélection de la feuille
+        this.showStep(2, selectedSheetName); // showStep appellera _saveAnalysisStateToBordereau()
     }
 
     /**
@@ -228,10 +236,10 @@ export default class extends Controller {
      * @param {number} stepNumber - Le numéro de l'étape à afficher (1, 2 ou 3).
      * @param {string} [sheetName=null] - Le nom de la feuille à afficher pour l'étape 2.
      */
-    showStep(stepNumber, sheetName = null) {
+    showStep(stepNumber, sheetName = null) { // Renamed parameter from stepNumber to targetStep for clarity
         // Si l'événement est un clic, on récupère le numéro d'étape depuis le data-attribute
-        const targetStep = (typeof stepNumber === 'object') ? parseInt(stepNumber.currentTarget.dataset.stepNumber) : stepNumber;
-        this.currentStep = targetStep;
+        this.currentStep = (typeof stepNumber === 'object') ? parseInt(stepNumber.currentTarget.dataset.stepNumber) : stepNumber;
+
         this.step1Target.classList.add('d-none');
         this.step2Target.classList.add('d-none');
         this.step3Target.classList.add('d-none');
@@ -239,26 +247,25 @@ export default class extends Controller {
         // Cache les boutons de la barre d'outils par défaut
         if (this.hasSubmitButtonTarget) this.submitButtonTarget.classList.add('d-none');
         if (this.hasBackToMappingButtonTarget) this.backToMappingButtonTarget.classList.add('d-none');
-        
-        // Ne pas afficher de message dans la barre d'outils lors du retour au mapping
-        if (targetStep === 2 && this.currentStep === 3) {
+
+        // Clear feedback message when changing steps, especially when going to step 2
+        if (this.hasMappingStatusFeedbackTarget) {
             if (this.hasMappingStatusFeedbackTarget) this.mappingStatusFeedbackTarget.innerHTML = '';
-        } else if (this.hasMappingStatusFeedbackTarget) {
             this.mappingStatusFeedbackTarget.classList.add('d-none');
         }
 
-        if (targetStep === 1) {
+        if (this.currentStep === 1) {
             this.step1Target.classList.remove('d-none');
-        } else if (targetStep === 2) {
+        } else if (this.currentStep === 2) {
             this.step2Target.classList.remove('d-none');
             this.submitButtonTarget.classList.remove('d-none'); // Affiche "Lancer l'analyse"
             this.mappingStatusFeedbackTarget.classList.remove('d-none'); // Affiche le conteneur de feedback
-            this._showMappingUI(sheetName || this.sheetSelectionTargets.find(radio => radio.checked)?.value);
-        } else if (targetStep === 3) {
+        } else if (this.currentStep === 3) {
             this.step3Target.classList.remove('d-none');
             this.backToMappingButtonTarget.classList.remove('d-none'); // Affiche "Retour au mappage"
             this.renderAnalysisResults();
         }
+        this._saveAnalysisStateToBordereau(); // Sauvegarder l'état après chaque changement d'étape
     }
     /**
      * Logique d'affichage de l'étape 2.
