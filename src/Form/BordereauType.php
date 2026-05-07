@@ -65,32 +65,6 @@ class BordereauType extends AbstractType
                 'input' => 'datetime_immutable',
                 'html5' => true,
             ])
-            // Ligne 5: Statut (HTML enrichi)
-            ->add('statut', ChoiceType::class, [
-                'label' => 'Statut',
-                'expanded' => true,
-                'required' => true,
-                'label_html' => true,
-                'choices' => [
-                    'À vérifier' => Bordereau::STATUT_A_VERIFIER,
-                    'Contesté' => Bordereau::STATUT_CONTESTE,
-                    'Validé' => Bordereau::STATUT_VALIDE,
-                    'Payé' => Bordereau::STATUT_PAYE,
-                    'Partiellement Payé' => Bordereau::STATUT_PARTIELLEMENT_PAYE,
-                    'Annulé' => Bordereau::STATUT_ANNULE,
-                ],
-                'choice_label' => function ($choice, $key, $value) {
-                    $descriptions = [
-                        Bordereau::STATUT_A_VERIFIER => 'Reçu, en attente de vérification par le courtier.',
-                        Bordereau::STATUT_CONTESTE => 'Le courtier a signalé une anomalie.',
-                        Bordereau::STATUT_VALIDE => 'Vérifié et conforme, en attente de paiement.',
-                        Bordereau::STATUT_PAYE => 'L\'assureur a payé la totalité de la commission.',
-                        Bordereau::STATUT_PARTIELLEMENT_PAYE => 'Un paiement partiel de la commission a été reçu.',
-                        Bordereau::STATUT_ANNULE => 'Le bordereau a été annulé.',
-                    ];
-                    return '<div><strong>' . $key . '</strong><div class="text-muted small">' . ($descriptions[$value] ?? '') . '</div></div>';
-                },
-            ])
             // Ligne 6: Période début (6/12) et Période fin (6/12)
             ->add('periodeDebut', DateTimeType::class, [
                 'label' => "Période Début",

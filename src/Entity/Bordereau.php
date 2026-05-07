@@ -30,8 +30,16 @@ class Bordereau implements OwnerAwareInterface // Implémente OwnerAwareInterfac
     public const STATUT_PAYE = 3;             // L'assureur a payé la totalité
     public const STATUT_PARTIELLEMENT_PAYE = 4; // Paiement partiel reçu
     public const STATUT_ANNULE = 5;           // Le bordereau a été annulé par l'assureur
+    
+    // NOUVEAU : Statuts spécifiques au processus d'analyse du bordereau
+    public const STATUT_EN_ATTENTE_ANALYSE = 10;
+    public const STATUT_SELECTION_FEUILLE_EN_COURS = 11;
+    public const STATUT_MAPPAGE_EN_COURS = 12;
+    public const STATUT_MAPPAGE_COMPLET = 13;
+    public const STATUT_MAPPAGE_INCOMPLET = 14;
+    public const STATUT_ANALYSE_TERMINEE = 15;
+    public const STATUT_INCONNU = 99;
     public const TYPE_BOREDERAU_PRODUCTION = 0;
-
     #[ORM\Column(length: 255)]
     #[Groups(['list:read'])]
     private ?string $nom = null;
@@ -96,9 +104,9 @@ class Bordereau implements OwnerAwareInterface // Implémente OwnerAwareInterfac
     private Collection $operations;
 
     // NOUVEAU : Le statut actuel du bordereau.
-    #[ORM\Column]
     #[Groups(['list:read'])]
-    private ?int $statut = self::STATUT_A_VERIFIER;
+    // L'attribut 'statut' est maintenant calculé et non stocké en base de données.
+    public ?int $statut = null;
  
     // NOUVEAU : Attributs calculés pour l'affichage et l'analyse
     #[Groups(['list:read'])]
@@ -285,7 +293,7 @@ class Bordereau implements OwnerAwareInterface // Implémente OwnerAwareInterfac
         return $this->periodeFin;
     }
 
-    public function setPeriodeFin(\DateTimeImmutable $periodeFin): static
+    public function setPeriodeFin(?\DateTimeImmutable $periodeFin): static
     {
         $this->periodeFin = $periodeFin;
 
@@ -297,7 +305,7 @@ class Bordereau implements OwnerAwareInterface // Implémente OwnerAwareInterfac
         return $this->statut;
     }
 
-    public function setStatut(int $statut): static
+    public function setStatut(?int $statut): static
     {
         $this->statut = $statut;
 
