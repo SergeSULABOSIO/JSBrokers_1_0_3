@@ -125,8 +125,6 @@ export default class extends Controller {
                             this.performValidation(select); // Valider la colonne restaurée
                         }
                     });
-                    this.updateSelectOptionsVisuals();
-                    this.updateSubmitButtonState();
                 } else {
                     console.warn("[BordereauAnalysisController] _restoreAnalysisState: Aucun conteneur de mappage actif trouvé pour restaurer les selects.");
                 }
