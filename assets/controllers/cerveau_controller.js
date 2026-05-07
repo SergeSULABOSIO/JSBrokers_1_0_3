@@ -1074,6 +1074,7 @@ export default class extends Controller {
         }
 
         try {
+            this.broadcast('app:loading.start'); // Activate global loading indicator
             console.log("[Cerveau] Sauvegarde de l'état de l'analyse du bordereau à l'API:", payload.url, payload.data);
             const response = await fetch(payload.url, {
                 method: 'POST',
@@ -1085,7 +1086,9 @@ export default class extends Controller {
             console.log("[Cerveau] État de l'analyse du bordereau sauvegardé avec succès:", result.message);
         } catch (error) {
             console.error("[Cerveau] Erreur lors de la sauvegarde de l'état de l'analyse du bordereau :", error);
-            // Pas de notification à l'utilisateur pour une sauvegarde en arrière-plan, juste un log.
+            // No user notification for background save, just log.
+        } finally {
+            this.broadcast('app:loading.stop'); // Deactivate global loading indicator
         }
     }
 }
