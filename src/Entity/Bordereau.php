@@ -143,6 +143,10 @@ class Bordereau implements OwnerAwareInterface // Implémente OwnerAwareInterfac
     #[Groups(['list:read'])]
     private ?int $currentAnalysisStep = null;
 
+    #[ORM\Column(type: 'json', nullable: true)]
+    #[Groups(['list:read'])]
+    private ?array $analysisResults = null;
+
 
     public function __construct()
     {
@@ -410,6 +414,18 @@ class Bordereau implements OwnerAwareInterface // Implémente OwnerAwareInterfac
     public function setCurrentAnalysisStep(?int $currentAnalysisStep): static
     {
         $this->currentAnalysisStep = $currentAnalysisStep;
+
+        return $this;
+    }
+
+    public function getAnalysisResults(): ?array
+    {
+        return $this->analysisResults;
+    }
+
+    public function setAnalysisResults(?array $analysisResults): static
+    {
+        $this->analysisResults = $analysisResults;
 
         return $this;
     }
