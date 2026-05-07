@@ -308,7 +308,7 @@ class BordereauController extends AbstractController
         $analysisResults[] = [
             'type' => 'new', // Exemple, la logique complète déterminera le type
             'bordereau_line_info' => [
-                'reference_police' => 'JUSTE UN TEST',
+                'reference_police' => '20147878-2026-JUSTE UN TEST-1145000',
                 'date_effet_avenant' => 'XXXX',
                 'date_expiration_avenant' => 'XXXX',
                 'date_operation' => 'XXXX',

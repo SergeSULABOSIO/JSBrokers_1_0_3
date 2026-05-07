@@ -395,11 +395,13 @@ export default class extends Controller {
         if (type === 'success') {
             textColorClass = 'text-success';
         } else if (type === 'warning') {
-            textColorClass = 'text-white'; // Rendre le texte d'avertissement blanc
+            textColorClass = 'text-warning'; // Rendre le texte d'avertissement jaune pour les feedbacks hors toolbar
+        } else { // error
+            textColorClass = 'text-danger';
         }
 
-        // NOUVEAU : On ne met plus de classe de couleur, le CSS s'en charge.
-        return `<span class="d-inline-flex align-items-center small">${icon} ${message}</span>`;
+        // Le CSS pour .actions-bar override la couleur pour le feedback de la toolbar.
+        return `<span class="d-inline-flex align-items-center small ${textColorClass}">${icon} ${message}</span>`;
     }
 
     /**
