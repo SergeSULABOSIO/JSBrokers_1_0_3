@@ -53,7 +53,6 @@ export default class extends Controller {
         this.addTypeRevenuOptions();
         // NOUVEAU : On ajoute les options de mappage système.
         this.addSystemOptions();
-        // Initialise le feedback de mappage
         
         this.currentStep = 1; // NOUVEAU : Initialise l'étape actuelle
         // NOUVEAU : Restauration de l'état de l'analyse
@@ -62,6 +61,8 @@ export default class extends Controller {
         } else if (this.sheetSelectionTargets.length === 1 && this.sheetsDataValue && Object.keys(this.sheetsDataValue).length === 1) {
             this.showStep(2); // If only one sheet, go directly to step 2
         }
+        // NOUVEAU : Écoute l'événement de complétion de l'analyse du Cerveau
+        // NOUVEAU : Écoute l'événement de complétion de l'analyse du Cerveau
         this.boundHandleAnalysisCompleted = this._handleAnalysisCompleted.bind(this);
         document.addEventListener('bordereau:analysis-completed', this.boundHandleAnalysisCompleted);
         // NOUVEAU : Écoute l'événement d'échec de l'analyse du Cerveau
@@ -138,7 +139,16 @@ export default class extends Controller {
                 } else {
                     console.warn("[BordereauAnalysisController] _restoreAnalysisState: Aucun conteneur de mappage actif trouvé pour restaurer les selects.");
                 }
+                // After restoring all selects, update the submit button state and visuals
+                this.isRestoring = false; // Reset flag after restoration is complete
+                this.updateSubmitButtonState();
+                this.updateSelectOptionsVisuals();
             });
+        } else {
+            // If there are no mapped columns to restore, still update the button state and visuals
+            this.updateSubmitButtonState();
+            this.updateSelectOptionsVisuals();
+            this.isRestoring = false; // Reset flag even if no columns to restore
         }
         console.log("[BordereauAnalysisController] _restoreAnalysisState: Fin de la restauration.");
     }
@@ -286,7 +296,9 @@ export default class extends Controller {
             this.backToMappingButtonTarget.classList.remove('d-none'); // Affiche "Retour au mappage"
             this.renderAnalysisResults();
         }
-        if (!this.isRestoring) { // Only save if not currently restoring
+        // NOUVEAU : Sauvegarde l'état après chaque changement d'étape, sauf si une restauration est en cours.
+        // Cela évite d'écraser l'état restauré avec un état intermédiaire vide.
+        if (!this.isRestoring) {
             this._saveAnalysisStateToBordereau(); // Save state after each step change
         }
     }
