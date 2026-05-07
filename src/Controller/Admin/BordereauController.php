@@ -305,22 +305,35 @@ class BordereauController extends AbstractController
         $allExistingAvenants = $this->avenantRepository->findBy(['referencePolice' => $policeReferences, 'entreprise' => $entreprise]);
         // dump('Total Avenants found in DB:', count($allExistingAvenants));
 
+        // Données de ligne de bordereau statiques pour l'exemple
+        $hardcodedBordereauLineInfo = [
+            'reference_police' => '20147878-2026-JUSTE UN TEST-1145000',
+            'date_effet_avenant' => 'XXXX',
+            'date_expiration_avenant' => 'XXXX',
+            'date_operation' => 'XXXX',
+            'risque' => 'RC AUTO / MOTOR TPL',
+            'prime_ttc' => 10000,
+            'nom_client' => 'BGFIBank RDC SA',
+            'commission_ht_assureur' => 1000,
+            'taxe_commission_assureur' => 160,
+            'taux_commission' => 10.45,
+        ];
+
         $analysisResults[] = [
             'type' => 'new', // Exemple, la logique complète déterminera le type
-            'bordereau_line_info' => [
-                'reference_police' => '20147878-2026-JUSTE UN TEST-1145000',
-                'date_effet_avenant' => 'XXXX',
-                'date_expiration_avenant' => 'XXXX',
-                'date_operation' => 'XXXX',
-                'risque' => 'RC AUTO / MOTOR TPL',
-                'prime_ttc' => 10000,
-                'nom_client' => 'BGFIBank RDC SA',
-                'commission_ht_assureur' => 1000,
-                'taxe_commission_assureur' => 160,
-                'taux_commission' => 10.45,
-            ],
+            'bordereau_line_info' => $hardcodedBordereauLineInfo,
             'details' => "Ligne n°1: Cet avenant ne correspond à aucun enregistrement en base. Il faut donc l'ajouter en base",
-            'actions' => []
+            'actions' => [
+                ['label' => 'Ajouter cet avenant', 'event' => 'bordereau:add-new-avenant', 'payload' => $hardcodedBordereauLineInfo],
+                ['label' => 'Contester', 'event' => 'bordereau:dispute-avenant', 'payload' => [
+                    'avenantId' => 'PLACEHOLDER_AVENANT_ID', // Remplacez par un ID réel si disponible
+                    'bordereauLine' => $hardcodedBordereauLineInfo
+                ]],
+                ['label' => 'Modifier la base', 'event' => 'bordereau:update-database-avenant', 'payload' => [
+                    'avenantId' => 'PLACEHOLDER_AVENANT_ID', // Remplacez par un ID réel si disponible
+                    'bordereauLine' => $hardcodedBordereauLineInfo
+                ]]
+            ],
         ];
 
         return $this->json(['analysisResults' => $analysisResults]);
