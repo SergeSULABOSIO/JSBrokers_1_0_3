@@ -236,30 +236,31 @@ export default class extends Controller {
      * @param {number} stepNumber - Le numéro de l'étape à afficher (1, 2 ou 3).
      * @param {string} [sheetName=null] - Le nom de la feuille à afficher pour l'étape 2.
      */
-    showStep(stepNumber, sheetName = null) { // Renamed parameter from stepNumber to targetStep for clarity
+    showStep(stepNumber, sheetName = null) {
         // Si l'événement est un clic, on récupère le numéro d'étape depuis le data-attribute
         this.currentStep = (typeof stepNumber === 'object') ? parseInt(stepNumber.currentTarget.dataset.stepNumber) : stepNumber;
-
+    
         this.step1Target.classList.add('d-none');
         this.step2Target.classList.add('d-none');
         this.step3Target.classList.add('d-none');
-
+    
         // Cache les boutons de la barre d'outils par défaut
         if (this.hasSubmitButtonTarget) this.submitButtonTarget.classList.add('d-none');
         if (this.hasBackToMappingButtonTarget) this.backToMappingButtonTarget.classList.add('d-none');
-
+    
         // Clear feedback message when changing steps, especially when going to step 2
         if (this.hasMappingStatusFeedbackTarget) {
-            if (this.hasMappingStatusFeedbackTarget) this.mappingStatusFeedbackTarget.innerHTML = '';
+            this.mappingStatusFeedbackTarget.innerHTML = '';
             this.mappingStatusFeedbackTarget.classList.add('d-none');
         }
-
+    
         if (this.currentStep === 1) {
             this.step1Target.classList.remove('d-none');
         } else if (this.currentStep === 2) {
             this.step2Target.classList.remove('d-none');
             this.submitButtonTarget.classList.remove('d-none'); // Affiche "Lancer l'analyse"
             this.mappingStatusFeedbackTarget.classList.remove('d-none'); // Affiche le conteneur de feedback
+            this._showMappingUI(sheetName || this.sheetSelectionTargets.find(radio => radio.checked)?.value);
         } else if (this.currentStep === 3) {
             this.step3Target.classList.remove('d-none');
             this.backToMappingButtonTarget.classList.remove('d-none'); // Affiche "Retour au mappage"
@@ -272,9 +273,6 @@ export default class extends Controller {
      * @param {string} sheetName - Le nom de la feuille à afficher. Si null, la première sera affichée.
      */
     _showMappingUI(sheetName = null) {
-        // NOUVEAU : On affiche le bouton "Lancer l'analyse" et le feedback dans la barre d'outils
-        // car on entre dans l'étape de mappage. (Removed as per user request)
-        // this.mappingStatusFeedbackTarget.classList.remove('d-none');
 
         this.mappingContainerTargets.forEach(container => {
             const isTargetSheet = sheetName ? container.dataset.sheetName === sheetName : container.dataset.isFirst === 'true';
