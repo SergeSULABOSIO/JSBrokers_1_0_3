@@ -1606,6 +1606,33 @@ textarea:hover,
     margin-bottom: 1rem;
 }
 
+/* NOUVEAU : Styles pour la barre de progression dans la barre d'outils */
+.toolbar-progress-bar-container {
+    width: 100%;
+    height: 5px;
+    background-color: transparent; /* Le conteneur est transparent */
+    overflow: hidden; /* Cache l'animation qui dépasse */
+    display: none; /* Caché par défaut */
+}
+
+.toolbar-progress-bar {
+    width: 100%;
+    height: 100%;
+    background-color: #0047AB; /* Bleu Cobalt */
+    animation: toolbar-progress-animation 1.5s infinite linear;
+}
+
+@keyframes toolbar-progress-animation {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* NOUVEAU : Forcer la couleur blanche pour tous les feedbacks dans la barre d'outils */
+.actions-bar [data-bordereau-analysis-target="mappingStatusFeedback"] span {
+    color: white !important;
+}
+
+
 /* Vous pouvez ajouter des styles spécifiques pour les listes de résultats si nécessaire */
 
 /* NOUVEAU : Styles pour les étapes de l'analyse de bordereau */
