@@ -306,9 +306,20 @@ class BordereauController extends AbstractController
         // dump('Total Avenants found in DB:', count($allExistingAvenants));
 
         $analysisResults[] = [
-            'type' => 'match', // Exemple, la logique complète déterminera le type
-            'bordereau_line_info' => "45454545454545",
-            'details' => "Ligne XXX: Cet avenant correspond aux données en base.",
+            'type' => 'new', // Exemple, la logique complète déterminera le type
+            'bordereau_line_info' => [
+                'reference_police' => 'JUSTE UN TEST',
+                'date_effet_avenant' => 'XXXX',
+                'date_expiration_avenant' => 'XXXX',
+                'date_operation' => 'XXXX',
+                'risque' => 'RC AUTO / MOTOR TPL',
+                'prime_ttc' => 10000,
+                'nom_client' => 'BGFIBank RDC SA',
+                'commission_ht_assureur' => 1000,
+                'taxe_commission_assureur' => 160,
+                'taux_commission' => 10.45,
+            ],
+            'details' => "Ligne n°1: Cet avenant ne correspond à aucun enregistrement en base. Il faut donc l'ajouter en base",
             'actions' => []
         ];
 
