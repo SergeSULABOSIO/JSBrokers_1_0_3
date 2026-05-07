@@ -162,6 +162,10 @@ class BordereauController extends AbstractController
             ],
             'chargements' => [], // Initialisation
             'typeRevenus' => [], // NOUVEAU : Initialisation pour les types de revenu
+            // NOUVEAU : Données de l'analyse du bordereau
+            'selectedSheetName' => $bordereau->getSelectedSheetName(),
+            'mappedColumns' => $bordereau->getMappedColumns(),
+            'currentAnalysisStep' => $bordereau->getCurrentAnalysisStep(),
         ];
         $error = null;
         $excelDocument = null;
@@ -339,6 +343,25 @@ class BordereauController extends AbstractController
         return $this->json(['analysisResults' => $analysisResults]);
     }
 
+    // NOUVEAU : Route pour enregistrer l'état de l'analyse du bordereau
+    #[Route('/api/save-analysis-state/{id}', name: 'api.save_analysis_state', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    public function saveAnalysisState(Bordereau $bordereau, Request $request): JsonResponse
+    {
+        $payload = json_decode($request->getContent(), true);
+
+        $selectedSheetName = $payload['selectedSheetName'] ?? null;
+        $mappedColumns = $payload['mappedColumns'] ?? null;
+        $currentAnalysisStep = $payload['currentAnalysisStep'] ?? null;
+
+        $bordereau->setSelectedSheetName($selectedSheetName);
+        $bordereau->setMappedColumns($mappedColumns);
+        $bordereau->setCurrentAnalysisStep($currentAnalysisStep);
+
+        $this->em->persist($bordereau);
+        $this->em->flush();
+
+        return $this->json(['message' => 'État de l\'analyse enregistré avec succès.']);
+    }
     /**
      * Helper to parse and convert Excel values based on expected system field type.
      * @param mixed $value

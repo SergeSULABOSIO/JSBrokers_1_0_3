@@ -122,6 +122,16 @@ class Bordereau implements OwnerAwareInterface // Implémente OwnerAwareInterfac
     #[Groups(['list:read'])]
     public ?float $solde = null;
    
+    // NOUVEAU : Champs pour stocker l'état de l'analyse du bordereau
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $selectedSheetName = null;
+
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $mappedColumns = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $currentAnalysisStep = null;
+
 
     public function __construct()
     {
@@ -353,6 +363,42 @@ class Bordereau implements OwnerAwareInterface // Implémente OwnerAwareInterfac
     public function setUpdatedAt(?\DateTimeImmutable $updatedAt): static
     {
         $this->updatedAt = $updatedAt;
+
+        return $this;
+    }
+
+    public function getSelectedSheetName(): ?string
+    {
+        return $this->selectedSheetName;
+    }
+
+    public function setSelectedSheetName(?string $selectedSheetName): static
+    {
+        $this->selectedSheetName = $selectedSheetName;
+
+        return $this;
+    }
+
+    public function getMappedColumns(): ?array
+    {
+        return $this->mappedColumns;
+    }
+
+    public function setMappedColumns(?array $mappedColumns): static
+    {
+        $this->mappedColumns = $mappedColumns;
+
+        return $this;
+    }
+
+    public function getCurrentAnalysisStep(): ?int
+    {
+        return $this->currentAnalysisStep;
+    }
+
+    public function setCurrentAnalysisStep(?int $currentAnalysisStep): static
+    {
+        $this->currentAnalysisStep = $currentAnalysisStep;
 
         return $this;
     }

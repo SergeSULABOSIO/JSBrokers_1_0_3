@@ -1618,18 +1618,24 @@ textarea:hover,
 .toolbar-progress-bar {
     width: 100%;
     height: 100%;
-    background-color: #0047AB; /* Bleu Cobalt */
+    background: linear-gradient(90deg, #0047AB 0%, #e9ecef 50%, #0047AB 100%); /* Bleu Cobalt et gris clair */
+    background-size: 200% 100%;
     animation: toolbar-progress-animation 1.5s infinite linear;
 }
 
 @keyframes toolbar-progress-animation {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
 }
 
 /* NOUVEAU : Forcer la couleur blanche pour tous les feedbacks dans la barre d'outils */
 .actions-bar [data-bordereau-analysis-target="mappingStatusFeedback"] {
     color: white !important;
+    font-size: 1.2em; /* Augmenter la taille de 20% (1em * 1.2 = 1.2em) */
+    display: flex; /* Utiliser flexbox pour aligner le texte sans icône */
+    align-items: center;
+    justify-content: center;
+    gap: 0; /* Pas d'espace pour les icônes */
 }
 
 
