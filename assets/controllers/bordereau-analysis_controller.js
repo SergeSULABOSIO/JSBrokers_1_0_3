@@ -8,7 +8,7 @@ import { Controller } from '@hotwired/stimulus';
 export default class extends Controller {
     static targets = [ // NOUVEAU : Ajout de la cible pour le bouton de retour
         "sheetSelection", "step2", "mappingContainer", "mappingStatusFeedback",
-        "mappingSelect", "analysisResult", "submitButton", "columnNameText", "step1", "step3", "analysisResultsList",
+        "mappingSelect", "analysisResult", "submitButton", "columnNameText", "step1", "step3", "analysisResultsList", "progressBar",
         "backToMappingButton"
     ];
 
@@ -193,6 +193,7 @@ export default class extends Controller {
         // Cache les boutons de la barre d'outils par défaut
         this.submitButtonTarget.classList.add('d-none');
         this.backToMappingButtonTarget.classList.add('d-none');
+        // NOUVEAU : Cacher le feedback quand on change d'étape
         this.mappingStatusFeedbackTarget.classList.add('d-none');
 
         if (targetStep === 1) {
@@ -200,6 +201,7 @@ export default class extends Controller {
         } else if (targetStep === 2) {
             this.step2Target.classList.remove('d-none');
             this.submitButtonTarget.classList.remove('d-none'); // Affiche "Lancer l'analyse"
+            this.mappingStatusFeedbackTarget.classList.remove('d-none'); // Affiche le conteneur de feedback
             this._showMappingUI(sheetName || this.sheetSelectionTargets.find(radio => radio.checked)?.value);
         } else if (targetStep === 3) {
             this.step3Target.classList.remove('d-none');
@@ -214,7 +216,6 @@ export default class extends Controller {
     _showMappingUI(sheetName = null) {
         // NOUVEAU : On affiche le bouton "Lancer l'analyse" et le feedback dans la barre d'outils
         // car on entre dans l'étape de mappage.
-        this.submitButtonTarget.classList.remove('d-none');
         this.mappingStatusFeedbackTarget.classList.remove('d-none');
 
         this.mappingContainerTargets.forEach(container => {
@@ -395,16 +396,10 @@ export default class extends Controller {
             textColorClass = 'text-success';
         } else if (type === 'warning') {
             textColorClass = 'text-white'; // Rendre le texte d'avertissement blanc
-        } else { // error
-            textColorClass = 'text-danger';
         }
 
-        return `
-            <span class="d-inline-flex align-items-center ${textColorClass} small">
-                ${icon}
-                ${message}
-            </span>
-        `;
+        // NOUVEAU : On ne met plus de classe de couleur, le CSS s'en charge.
+        return `<span class="d-inline-flex align-items-center small">${icon} ${message}</span>`;
     }
 
     /**
@@ -485,8 +480,8 @@ export default class extends Controller {
 
         this.submitButtonTarget.disabled = true;
         this.submitButtonTarget.textContent = "Analyse en cours...";
-        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('warning', 'Analyse en cours, veuillez patienter...');
-
+        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('warning', 'Analyse en cours...');
+        this.toggleProgressBar(true);
         console.log("[BordereauAnalysisController] Préparation du payload pour l'analyse...", payload);
         // NOUVEAU : Notifier le Cerveau pour qu'il gère la soumission de l'analyse
         try {
@@ -508,6 +503,7 @@ export default class extends Controller {
             console.error("Erreur lors de la soumission de l'analyse:", error);
             this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('error', `Erreur lors de l'analyse: ${error.message}`);
             this.submitButtonTarget.disabled = false;
+            this.toggleProgressBar(false);
             this.submitButtonTarget.textContent = "Lancer l'analyse";
         }
     }
@@ -592,7 +588,9 @@ export default class extends Controller {
         this.showStep(3); // Passe à l'étape 3
         this.submitButtonTarget.disabled = false;
         this.submitButtonTarget.textContent = "Lancer l'analyse";
+        this.mappingStatusFeedbackTarget.classList.remove('d-none'); // S'assurer que le feedback est visible
         this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('success', 'Analyse terminée avec succès.');
+        this.toggleProgressBar(false);
     }
 
     /**
@@ -604,7 +602,19 @@ export default class extends Controller {
         console.error("[BordereauAnalysisController] Reçu 'bordereau:analysis-failed' du Cerveau. Erreur:", errorMessage);
         this.submitButtonTarget.disabled = false;
         this.submitButtonTarget.textContent = "Lancer l'analyse";
+        this.mappingStatusFeedbackTarget.classList.remove('d-none'); // S'assurer que le feedback est visible
         this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('error', `Échec de l'analyse: ${errorMessage}`);
+        this.toggleProgressBar(false);
+    }
+
+    /**
+     * NOUVEAU : Affiche ou cache la barre de progression.
+     * @param {boolean} isLoading
+     */
+    toggleProgressBar(isLoading) {
+        if (this.hasProgressBarTarget) {
+            this.progressBarTarget.parentElement.style.display = isLoading ? 'block' : 'none';
+        }
     }
 
     /**
