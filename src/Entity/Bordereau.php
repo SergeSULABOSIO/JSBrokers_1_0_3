@@ -124,12 +124,15 @@ class Bordereau implements OwnerAwareInterface // Implémente OwnerAwareInterfac
    
     // NOUVEAU : Champs pour stocker l'état de l'analyse du bordereau
     #[ORM\Column(length: 255, nullable: true)]
+    #[Groups(['list:read'])]
     private ?string $selectedSheetName = null;
 
     #[ORM\Column(type: 'json', nullable: true)]
+    #[Groups(['list:read'])]
     private ?array $mappedColumns = null;
 
     #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
     private ?int $currentAnalysisStep = null;
 
 
