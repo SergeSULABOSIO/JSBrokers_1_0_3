@@ -58,6 +58,7 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
         this.addSystemOptions();
 
         this.isRestoring = false;
+        this.isConnecting = true; // Nouveau drapeau: true pendant la connexion initiale
         this.currentStep = 1;
 
         console.log("[BordereauAnalysis] 3. connect() - Mise en place des écouteurs d'événements.");
@@ -83,6 +84,7 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
             console.log("[BordereauAnalysis] 5. connect() - Une seule feuille détectée. Passage automatique à l'étape 2.");
             this.showStep(2);
         }
+        this.isConnecting = false; // Le drapeau est remis à false une fois la logique de connect() terminée
         console.log("[BordereauAnalysis] 6. connect() - Fin de la connexion.");
     }
 
@@ -271,7 +273,9 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
     validateColumn(event) {
         const selectElement = event.currentTarget;
         this.performValidation(selectElement);
-        this._saveAnalysisStateToBordereau(); // Sauvegarder l'état après chaque modification de mappage
+        if (!this.isRestoring) { // Ne sauvegarde que si le contrôleur n'est pas en cours de restauration
+            this._saveAnalysisStateToBordereau(); // Sauvegarder l'état après chaque modification de mappage
+        }
     }
 
     /**
