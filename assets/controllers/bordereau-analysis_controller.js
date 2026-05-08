@@ -5,7 +5,7 @@ import { Controller } from '@hotwired/stimulus';
  * Etape 1: Sélection de la feuille Excel.
  * Etape 2: Mappage des colonnes de la feuille sélectionnée.
  */
-export default class extends Controller {
+export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
     static targets = [ // NOUVEAU : Ajout de la cible pour le bouton de retour
         "sheetSelection", "step2", "mappingContainer", "mappingStatusFeedback", "mappingForm",
         "mappingSelect", "analysisResult", "submitButton", "columnNameText", "step1", "step3", "analysisResultsList", "progressBar", "progressBarContainer",
@@ -38,7 +38,7 @@ export default class extends Controller {
             'date_expiration_avenant',
             'prime_ttc', // NOUVEAU : Ajout de la prime TTC
             'date_operation', // Nouveau champ obligatoire
-            'risque',         // Nouveau champ obligatoire
+            'risque', // Nouveau champ obligatoire
             'nom_client',
             'commission_ht_assureur',
             'taxe_commission_assureur',
@@ -55,7 +55,7 @@ export default class extends Controller {
         this.addSystemOptions();
         // NOUVEAU : Initialise le drapeau pour la restauration
         this.isRestoring = false;
-
+        
         this.currentStep = 1; // NOUVEAU : Initialise l'étape actuelle
         // NOUVEAU : Restauration de l'état de l'analyse
         if (this.currentAnalysisStepValue > 0) {
@@ -146,7 +146,7 @@ export default class extends Controller {
                         if (mappedSystemField) {
                             select.value = mappedSystemField;
                             console.log(`[BordereauAnalysisController] _restoreAnalysisState: Mappage restauré: Colonne '${columnLetter}' -> Champ système '${mappedSystemField}'.`);
-                            this.performValidation(select); // Valider la colonne restaurée
+                            this.performValidation(select); // Valider la colonne restaurée pour mettre à jour l'état de validation interne
                             this.updateSelectOptionsVisuals(); // Ensure visuals are updated after validation
                         }
                     });
@@ -154,6 +154,7 @@ export default class extends Controller {
                     console.warn("[BordereauAnalysisController] _restoreAnalysisState: Aucun conteneur de mappage actif trouvé pour restaurer les selects.");
                 }
                 this.finalizeRestoration();
+                this.updateSelectOptionsVisuals(); // Appel final pour garantir la cohérence visuelle
             });
         } else {
             // NOUVEAU : On finalise même s'il n'y a rien à restaurer
@@ -276,7 +277,7 @@ export default class extends Controller {
      * @param {string} [sheetName=null] - Le nom de la feuille à afficher pour l'étape 2.
      */
     showStep(stepNumber, sheetName = null) {
-        // Si l'événement est un clic, on récupère le numéro d'étape depuis le data-attribute
+        // Si l'événement est un clic, on récupère le numéro d'étape depuis le data-attribute.
         this.currentStep = (typeof stepNumber === 'object') ? parseInt(stepNumber.currentTarget.dataset.stepNumber) : stepNumber;
     
         this.step1Target.classList.add('d-none');
@@ -311,6 +312,7 @@ export default class extends Controller {
         if (!this.isRestoring) {
             this._saveAnalysisStateToBordereau(); // Save state after each step change
         }
+        this.updateSelectOptionsVisuals();
     }
     /**
      * Logique d'affichage de l'étape 2.
@@ -572,8 +574,7 @@ export default class extends Controller {
      */
     async _doSubmitAnalysis() {
         const activeForm = this.element.querySelector('.column-mapping-form:not([style*="display: none"])');
-        if (!activeForm) {
-            console.error("[BordereauAnalysisController] Aucun formulaire de mappage actif trouvé.");
+        if (!activeForm) {;
             console.error("Aucun formulaire de mappage actif trouvé.");
             return;
         }
@@ -592,9 +593,9 @@ export default class extends Controller {
             mappedColumns: mappedColumns,
             sheetsData: this.sheetsDataValue // Envoyer toutes les données des feuilles pour que le backend puisse travailler avec
         };
-        if (this.hasSubmitButtonTarget) {
+
         this.submitButtonTarget.disabled = true;
-        this.submitButtonTarget.textContent = "Analyse en cours..."; // Mettre à jour le texte du bouton
+        this.submitButtonTarget.textContent = "Analyse en cours...";
         this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('warning', 'Analyse en cours...', false); // Mettre à jour le feedback
         this.toggleProgressBar(true);
         console.log("[BordereauAnalysisController] Préparation du payload pour l'analyse...", payload);
@@ -614,14 +615,13 @@ export default class extends Controller {
             }));
             console.log("[BordereauAnalysisController] Événement 'bordereau:submit-analysis' envoyé au Cerveau.");
         } catch (error) {
-            console.error("[BordereauAnalysisController] Erreur lors de la soumission de l'analyse:", error);
             console.error("Erreur lors de la soumission de l'analyse:", error);
             this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('error', `Erreur lors de l'analyse: ${error.message}`, false); // No icon for toolbar feedback
             this.submitButtonTarget.disabled = false;
-        }
             this.toggleProgressBar(false);
-            this.submitButtonTarget.textContent = "Lancer l'analyse";
+            this.submitButtonTarget.textContent = "Lancer l'analyse"; // Réinitialiser le texte du bouton
         }
+
     }
 
     /**
@@ -699,13 +699,13 @@ export default class extends Controller {
      */
     _handleAnalysisCompleted(event) {
         const { analysisResults } = event.detail;
-        console.log("[BordereauAnalysisController] Reçu 'bordereau:analysis-completed' du Cerveau. Résultats:", analysisResults);
         this.analysisResultsValue = analysisResults; // Affecter correctement à la valeur statique
-        this.showStep(3); // Passe à l'étape 3
+        this.showStep(3); // Passer à l'étape 3 pour afficher les résultats
         this.submitButtonTarget.disabled = false;
         this.submitButtonTarget.textContent = "Lancer l'analyse"; // Réinitialiser le texte du bouton
         this.mappingStatusFeedbackTarget.classList.remove('d-none'); // Ensure feedback is visible
         this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('success', 'Analyse terminée avec succès.', false); // No icon for toolbar feedback
+        this.submitButtonTarget.textContent = "Lancer l'analyse";
         this.toggleProgressBar(false);
         this._saveAnalysisStateToBordereau(); // Sauvegarder l'état après la complétion de l'analyse
     }
@@ -716,9 +716,7 @@ export default class extends Controller {
      */
     _handleAnalysisFailed(event) {
         const { errorMessage } = event.detail;
-        console.error("[BordereauAnalysisController] Reçu 'bordereau:analysis-failed' du Cerveau. Erreur:", errorMessage);
         this.submitButtonTarget.disabled = false; // Réactiver le bouton
-        this.submitButtonTarget.textContent = "Lancer l'analyse"; // Réinitialiser le texte du bouton
         this.mappingStatusFeedbackTarget.classList.remove('d-none'); // Ensure feedback is visible
         this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('error', `Échec de l'analyse: ${errorMessage}`, false); // No icon for toolbar feedback
         this.toggleProgressBar(false);
@@ -739,7 +737,7 @@ export default class extends Controller {
      * NOUVEAU : Sauvegarde l'état actuel de l'analyse du bordereau en base de données.
      * Cette méthode est appelée automatiquement lors des changements d'étape ou de mappage.
      */
-    async _saveAnalysisStateToBordereau() {
+    _saveAnalysisStateToBordereau() {
         const selectedSheetInput = this.sheetSelectionTargets.find(radio => radio.checked);
         const selectedSheetName = selectedSheetInput ? selectedSheetInput.value : null;
 
@@ -758,7 +756,8 @@ export default class extends Controller {
             selectedSheetName: selectedSheetName,
             mappedColumns: mappedColumns,
             currentAnalysisStep: this.currentStep,
-            analysisResults: this.currentStep === 3 ? this.analysisResultsValue : null, // Sauvegarder les résultats si à l'étape 3
+            // CORRECTION : On ne sauvegarde les résultats que si on est à l'étape 3. Sinon, on envoie null pour les effacer.
+            analysisResults: this.currentStep === 3 ? this.analysisResultsValue : null,
         };
         console.log("[BordereauAnalysisController] _saveAnalysisStateToBordereau: Payload envoyé au serveur:", payload);
         this.toggleProgressBar(true); // Activate local progress bar for save request

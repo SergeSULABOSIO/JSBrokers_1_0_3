@@ -309,11 +309,29 @@ class BordereauController extends AbstractController
         // 6. Construire un tableau `$analysisResults` avec les données dynamiques.
         //
         // Pour l'instant, le code en dur est conservé à titre d'exemple mais doit être remplacé.
+        // NOUVEAU : Remplacement par un exemple unique et réaliste pour les tests.
         $analysisResults[] = [
-            'type' => 'new', // Exemple
-            'bordereau_line_info' => [ 'reference_police' => 'POLICE_EXEMPLE_001' /* ... autres données de la ligne ... */ ],
-            'details' => "Ligne n°1: Cet avenant ne correspond à aucun enregistrement. Il faut donc l'ajouter.",
-            'actions' => [ /* ... actions possibles ... */ ],
+            'type' => 'discrepancy', // Type d'anomalie
+            'bordereau_line_info' => [
+                'reference_police' => 'POL-2024-007',
+                'nom_client' => 'Société Générale',
+                'risque' => 'Incendie - Bâtiment Principal',
+                'date_effet_avenant' => '01/01/2025',
+                'date_expiration_avenant' => '31/12/2025',
+                'prime_ttc' => '1500.00',
+                'commission_ht_assureur' => '150.00',
+                'taxe_commission_assureur' => '28.50',
+                'taux_commission' => '10.00',
+                'date_operation' => '15/05/2024',
+            ],
+            'details' => "Ligne n°2: Anomalie(s) détectée(s) - Prime TTC (Excel: 1500.00, DB: 1450.00), Date d'effet (Excel: 01/01/2025, DB: 15/01/2025)",
+            'actions' => [
+                [
+                    'label' => 'Mettre à jour',
+                    'event' => 'bordereau:update-entity',
+                    'payload' => ['avenant_id' => 123, 'excel_data' => [ 'prime_ttc' => '1500.00' ]]
+                ]
+            ],
         ];
 
         return $this->json(['analysisResults' => $analysisResults]);
