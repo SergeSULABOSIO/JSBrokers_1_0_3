@@ -121,6 +121,8 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
         // 2. Restaurer les résultats de l'analyse si l'étape est 3 (Data)
         if (this.currentAnalysisStepValue === 3 && this.analysisResultsValue) {
             console.log("[BordereauAnalysisController] _restoreAnalysisState() - Résultats d'analyse restaurés.", this.analysisResultsValue);
+            // CORRECTION : Forcer le rendu des résultats qui sont déjà en mémoire.
+            this.renderAnalysisResults();
         }
     
         // 3. Naviguer vers l'étape sauvegardée (UI - rend le conteneur de mappage visible si étape 2)
@@ -128,8 +130,6 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
         // car les selects doivent être visibles pour que leur valeur soit correctement définie et validée.
         this.showStep(this.currentAnalysisStepValue, this.selectedSheetNameValue);
         console.log(`[BordereauAnalysisController] _restoreAnalysisState() - Navigation vers l'étape ${this.currentAnalysisStepValue}.`);
-    
-        console.log(`[BordereauAnalysisController] _restoreAnalysisState: Navigation vers l'étape ${this.currentAnalysisStepValue}.`);
         // 4. Restaurer le mappage des colonnes (UI - doit se faire après que le conteneur soit visible)
         if (this.mappedColumnsValue && Object.keys(this.mappedColumnsValue).length > 0) {
             console.log("[BordereauAnalysisController] _restoreAnalysisState: Tentative de restauration du mappage des colonnes.", this.mappedColumnsValue);
