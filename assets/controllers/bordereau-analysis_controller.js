@@ -119,7 +119,7 @@ export default class extends Controller {
     
         // 2. Restaurer les résultats de l'analyse si l'étape est 3 (Data)
         if (this.currentAnalysisStepValue === 3 && this.analysisResultsValue) {
-            this.analysisResults = this.analysisResultsValue;
+            // L'affectation est inutile. La valeur est déjà disponible via this.analysisResultsValue.
             console.log("[BordereauAnalysisController] _restoreAnalysisState: Résultats d'analyse restaurés.", this.analysisResultsValue);
         }
     
@@ -157,7 +157,7 @@ export default class extends Controller {
             });
         } else {
             // NOUVEAU : On finalise même s'il n'y a rien à restaurer
-            this.finalizeRestoration();
+            requestAnimationFrame(() => this.finalizeRestoration()); // Toujours utiliser requestAnimationFrame pour la cohérence
         }
         console.log("[BordereauAnalysisController] _restoreAnalysisState: Fin de la restauration.");
     }
@@ -556,7 +556,7 @@ export default class extends Controller {
         }
 
         this.mappingStatusFeedbackTarget.innerHTML = message;
-        this.updateSelectOptionsVisuals(); // Met à jour la coloration des options
+        // Appel redondant supprimé. La mise à jour se fait déjà aux moments clés.
     }
 
     /**
@@ -594,8 +594,8 @@ export default class extends Controller {
         };
         if (this.hasSubmitButtonTarget) {
         this.submitButtonTarget.disabled = true;
-        this.submitButtonTarget.textContent = "Analyse en cours...";
-        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('warning', 'Analyse en cours...', false); // No icon for toolbar feedback
+        this.submitButtonTarget.textContent = "Analyse en cours..."; // Mettre à jour le texte du bouton
+        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('warning', 'Analyse en cours...', false); // Mettre à jour le feedback
         this.toggleProgressBar(true);
         console.log("[BordereauAnalysisController] Préparation du payload pour l'analyse...", payload);
         // NOUVEAU : Notifier le Cerveau pour qu'il gère la soumission de l'analyse
@@ -700,10 +700,10 @@ export default class extends Controller {
     _handleAnalysisCompleted(event) {
         const { analysisResults } = event.detail;
         console.log("[BordereauAnalysisController] Reçu 'bordereau:analysis-completed' du Cerveau. Résultats:", analysisResults);
-        this.analysisResultsValue = analysisResults;
+        this.analysisResultsValue = analysisResults; // Affecter correctement à la valeur statique
         this.showStep(3); // Passe à l'étape 3
         this.submitButtonTarget.disabled = false;
-        this.submitButtonTarget.textContent = "Lancer l'analyse";
+        this.submitButtonTarget.textContent = "Lancer l'analyse"; // Réinitialiser le texte du bouton
         this.mappingStatusFeedbackTarget.classList.remove('d-none'); // Ensure feedback is visible
         this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('success', 'Analyse terminée avec succès.', false); // No icon for toolbar feedback
         this.toggleProgressBar(false);
@@ -717,8 +717,8 @@ export default class extends Controller {
     _handleAnalysisFailed(event) {
         const { errorMessage } = event.detail;
         console.error("[BordereauAnalysisController] Reçu 'bordereau:analysis-failed' du Cerveau. Erreur:", errorMessage);
-        this.submitButtonTarget.disabled = false;
-        this.submitButtonTarget.textContent = "Lancer l'analyse";
+        this.submitButtonTarget.disabled = false; // Réactiver le bouton
+        this.submitButtonTarget.textContent = "Lancer l'analyse"; // Réinitialiser le texte du bouton
         this.mappingStatusFeedbackTarget.classList.remove('d-none'); // Ensure feedback is visible
         this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('error', `Échec de l'analyse: ${errorMessage}`, false); // No icon for toolbar feedback
         this.toggleProgressBar(false);

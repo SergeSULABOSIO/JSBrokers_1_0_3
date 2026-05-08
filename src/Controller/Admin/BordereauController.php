@@ -296,54 +296,24 @@ class BordereauController extends AbstractController
         $analysisResults = [];
         // dump('Selected Sheet Data (first 5 rows):', array_slice($selectedSheetData, 0, 5));
         // dump('Total rows in selectedSheetData:', count($selectedSheetData));
-
-        // --- OPTIMISATION : Début ---
-        // 1. Extraire toutes les références de police du payload en une seule fois.
-        $policeReferences = [];
-        $referencePoliceColumn = $mappedColumns['reference_police'] ?? null;
-        if ($referencePoliceColumn) {
-            foreach ($selectedSheetData as $rowData) {
-                if (!empty($rowData[$referencePoliceColumn])) {
-                    $policeReferences[] = $rowData[$referencePoliceColumn];
-                }
-            }
-        }
-        $policeReferences = array_unique($policeReferences);
-        // dump('Unique Police References to fetch:', $policeReferences);
-
-        // 2. Exécuter UNE SEULE requête pour récupérer tous les avenants concernés.
-        $allExistingAvenants = $this->avenantRepository->findBy(['referencePolice' => $policeReferences, 'entreprise' => $entreprise]);
-        // dump('Total Avenants found in DB:', count($allExistingAvenants));
-
-        // Données de ligne de bordereau statiques pour l'exemple
-        $hardcodedBordereauLineInfo = [
-            'reference_police' => '20147878-2026-JUSTE UN TEST-1145000',
-            'date_effet_avenant' => 'XXXX',
-            'date_expiration_avenant' => 'XXXX',
-            'date_operation' => 'XXXX',
-            'risque' => 'RC AUTO / MOTOR TPL',
-            'prime_ttc' => 10000,
-            'nom_client' => 'BGFIBank RDC SA',
-            'commission_ht_assureur' => 1000,
-            'taxe_commission_assureur' => 160,
-            'taux_commission' => 10.45,
-        ];
-
+        
+        // TODO: Implémenter la logique métier réelle ici pour comparer les données Excel avec la base de données.
+        // Cette section retourne actuellement des résultats d'analyse codés en dur.
+        // La logique devrait :
+        // 1. Parcourir chaque ligne de `$selectedSheetData`.
+        // 2. Pour chaque ligne, extraire les valeurs en utilisant le mappage `$mappedColumns`.
+        // 3. Utiliser la référence de police extraite pour rechercher un avenant correspondant en base de données.
+        //    (L'optimisation consistant à tout charger en une fois est une bonne approche).
+        // 4. Comparer les autres champs (dates, montants) entre la ligne Excel et l'avenant trouvé.
+        // 5. En fonction de la comparaison, déterminer le type de résultat ('new', 'discrepancy', 'match').
+        // 6. Construire un tableau `$analysisResults` avec les données dynamiques.
+        //
+        // Pour l'instant, le code en dur est conservé à titre d'exemple mais doit être remplacé.
         $analysisResults[] = [
-            'type' => 'new', // Exemple, la logique complète déterminera le type
-            'bordereau_line_info' => $hardcodedBordereauLineInfo,
-            'details' => "Ligne n°1: Cet avenant ne correspond à aucun enregistrement en base. Il faut donc l'ajouter en base",
-            'actions' => [
-                ['label' => 'Ajouter cet avenant', 'event' => 'bordereau:add-new-avenant', 'payload' => $hardcodedBordereauLineInfo],
-                ['label' => 'Contester', 'event' => 'bordereau:dispute-avenant', 'payload' => [
-                    'avenantId' => 'PLACEHOLDER_AVENANT_ID', // Remplacez par un ID réel si disponible
-                    'bordereauLine' => $hardcodedBordereauLineInfo
-                ]],
-                ['label' => 'Modifier la base', 'event' => 'bordereau:update-database-avenant', 'payload' => [
-                    'avenantId' => 'PLACEHOLDER_AVENANT_ID', // Remplacez par un ID réel si disponible
-                    'bordereauLine' => $hardcodedBordereauLineInfo
-                ]]
-            ],
+            'type' => 'new', // Exemple
+            'bordereau_line_info' => [ 'reference_police' => 'POLICE_EXEMPLE_001' /* ... autres données de la ligne ... */ ],
+            'details' => "Ligne n°1: Cet avenant ne correspond à aucun enregistrement. Il faut donc l'ajouter.",
+            'actions' => [ /* ... actions possibles ... */ ],
         ];
 
         return $this->json(['analysisResults' => $analysisResults]);
