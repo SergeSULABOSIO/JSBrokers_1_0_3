@@ -1023,72 +1023,81 @@ export default class extends Controller {
      * @param {string} payload.url - L'URL de l'API pour soumettre l'analyse.
      * @param {object} payload.data - Les données à envoyer (sheetName, mappedColumns, sheetsData).
      */
-    async _handleSubmitBordereauAnalysis(payload) {
+    _handleSubmitBordereauAnalysis(payload) {
         if (!payload.url || !payload.data) {
-            console.error("[Cerveau] Demande de soumission d'analyse de bordereau reçue sans URL ou données.", payload);
             console.error("[Cerveau] Demande de soumission d'analyse de bordereau reçue sans URL ou données.", payload);
             this._showNotification("Impossible de soumettre l'analyse : URL ou données manquantes.", "error");
             return;
         }
 
-        try {
-            console.log("[Cerveau] Soumission de l'analyse du bordereau à l'API:", payload.url, payload.data);
-            this._publishSelectionStatus("Soumission de l'analyse...");
-            this.broadcast('app:loading.start');
-            const response = await fetch(payload.url, {
+        console.log("[Cerveau] _handleSubmitBordereauAnalysis() - Soumission de l'analyse à l'API:", payload.url, payload.data);
+        this._publishSelectionStatus("Soumission de l'analyse...");
+        this.broadcast('app:loading.start'); // Active la barre de progression globale
+
+        fetch(payload.url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload.data)
+            })
+            .then(response => {
+                console.log("[Cerveau] _handleSubmitBordereauAnalysis() - Réponse de l'API reçue. Statut:", response.status);
+                if (!response.ok) {
+                    return response.json().then(err => { throw new Error(err.error || "Erreur lors de la soumission de l'analyse.") });
+                }
+                return response.json();
+            })
+            .then(result => {
+                if (!result.analysisResults || result.analysisResults.length === 0) {
+                    console.warn("[Cerveau] _handleSubmitBordereauAnalysis() - L'API a retourné une réponse vide pour 'analysisResults' malgré un statut 200 OK.");
+                }
+                console.log("[Cerveau] _handleSubmitBordereauAnalysis() - Succès. Diffusion de 'bordereau:analysis-completed'.");
+                this.broadcast('bordereau:analysis-completed', { analysisResults: result.analysisResults });
+            })
+            .catch(error => {
+                console.error("[Cerveau] _handleSubmitBordereauAnalysis() - Erreur lors de la soumission de l'analyse:", error);
+                this._showNotification(error.message || "Erreur lors de la soumission de l'analyse.", "error");
+                this.broadcast('bordereau:analysis-failed', { errorMessage: error.message || "Une erreur inconnue est survenue." });
+            })
+            .finally(() => {
+                console.log("[Cerveau] _handleSubmitBordereauAnalysis() - Fin de l'opération. Désactivation de la barre de progression.");
+                this.broadcast('app:loading.stop');
             });
-            console.log("[Cerveau] Réponse de l'API reçue. Statut:", response.status);
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error || "Erreur lors de la soumission de l'analyse.");
-            // NOUVEAU : Ajout d'un avertissement si l'API retourne un tableau analysisResults vide.
-            if (!result.analysisResults || result.analysisResults.length === 0) {
-                console.warn("[Cerveau] L'API de soumission d'analyse de bordereau a retourné une réponse vide pour 'analysisResults' malgré un statut 200 OK. Veuillez vérifier la logique backend ou le contenu du fichier Excel.");
-            }
-            this.broadcast('bordereau:analysis-completed', { analysisResults: result.analysisResults });
-            // NOUVEAU : Arrêter le chargement ici aussi en cas de succès
-        } catch (error) {
-            console.error("[Cerveau] Erreur lors de la soumission de l'analyse du bordereau :", error);
-            console.error("[Cerveau] Erreur lors de la soumission de l'analyse du bordereau :", error);
-            this._showNotification(error.message || "Erreur lors de la soumission de l'analyse.", "error");
-            // NOUVEAU : Notifier l'échec à l'interface d'analyse
-            this.broadcast('bordereau:analysis-failed', { errorMessage: error.message || "Une erreur inconnue est survenue." });
-        } finally {
-            this.broadcast('app:loading.stop');
-        }
     }
 
     /**
-     * NOUVEAU : Gère la sauvegarde de l'état de l'analyse du bordereau au backend.
+     * Gère la sauvegarde de l'état de l'analyse du bordereau au backend.
      * @param {object} payload
      * @param {string} payload.url - L'URL de l'API pour sauvegarder l'état.
      * @param {object} payload.data - Les données à envoyer (selectedSheetName, mappedColumns, currentAnalysisStep).
      */
-    async _handleSaveBordereauAnalysisState(payload) {
+    _handleSaveBordereauAnalysisState(payload) {
         if (!payload.url || !payload.data) {
             console.error("[Cerveau] Demande de sauvegarde de l'état de l'analyse de bordereau reçue sans URL ou données.", payload);
             this._showNotification("Impossible de sauvegarder l'état de l'analyse : URL ou données manquantes.", "error");
             return;
         }
 
-        try {
-            this.broadcast('app:loading.start'); // Activate global loading indicator
-            console.log("[Cerveau] Sauvegarde de l'état de l'analyse du bordereau à l'API:", payload.url, payload.data);
-            const response = await fetch(payload.url, {
+        console.log("[Cerveau] _handleSaveBordereauAnalysisState() - Sauvegarde de l'état à l'API:", payload.url, payload.data);
+        fetch(payload.url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload.data)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw new Error(err.message || "Erreur lors de la sauvegarde de l'état.") });
+                }
+                return response.json();
+            })
+            .then(result => {
+                console.log("[Cerveau] _handleSaveBordereauAnalysisState() - État sauvegardé avec succès:", result.message);
+            })
+            .catch(error => {
+                console.error("[Cerveau] _handleSaveBordereauAnalysisState() - Erreur lors de la sauvegarde de l'état:", error);
+            })
+            .finally(() => {
+                console.log("[Cerveau] _handleSaveBordereauAnalysisState() - Fin de l'opération. Désactivation de la barre de progression.");
+                this.broadcast('app:loading.stop');
             });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.message || "Erreur lors de la sauvegarde de l'état de l'analyse.");
-            console.log("[Cerveau] État de l'analyse du bordereau sauvegardé avec succès:", result.message);
-        } catch (error) {
-            console.error("[Cerveau] Erreur lors de la sauvegarde de l'état de l'analyse du bordereau :", error);
-            // No user notification for background save, just log.
-        } finally {
-            this.broadcast('app:loading.stop'); // Deactivate global loading indicator
-        }
     }
 }
