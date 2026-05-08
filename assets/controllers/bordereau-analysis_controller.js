@@ -827,3 +827,4 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
             this.toggleProgressBar(false); // Désactive la barre de progression locale
         }
     }
+}
