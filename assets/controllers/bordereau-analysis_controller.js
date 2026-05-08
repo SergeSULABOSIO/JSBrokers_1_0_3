@@ -62,15 +62,6 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
         this.currentStep = 1;
 
         console.log("[BordereauAnalysis] 3. connect() - Mise en place des écouteurs d'événements.");
-        this.boundHandleAnalysisCompleted = this._handleAnalysisCompleted.bind(this);
-        document.addEventListener('bordereau:analysis-completed', this.boundHandleAnalysisCompleted);
-        this.boundHandleAnalysisFailed = this._handleAnalysisFailed.bind(this);
-        document.addEventListener('bordereau:analysis-failed', this.boundHandleAnalysisFailed);
-        // NOUVEAU: Écouteurs pour la complétion de la sauvegarde de l'état
-        this.boundHandleSaveStateCompleted = this._handleSaveStateCompleted.bind(this);
-        document.addEventListener('bordereau:save-state-completed', this.boundHandleSaveStateCompleted);
-        this.boundHandleSaveStateFailed = this._handleSaveStateFailed.bind(this);
-        document.addEventListener('bordereau:save-state-failed', this.boundHandleSaveStateFailed);
 
         // Étape 1: Chargement initial comme si rien n'était à restaurer.
         console.log("[BordereauAnalysis] 4. connect() - Exécution du chargement initial de l'UI (état par défaut).");
@@ -90,10 +81,6 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
 
     disconnect() {
         console.log("[BordereauAnalysis] disconnect() - Nettoyage des écouteurs.");
-        document.removeEventListener('bordereau:analysis-completed', this.boundHandleAnalysisCompleted);
-        document.removeEventListener('bordereau:analysis-failed', this.boundHandleAnalysisFailed);
-        document.removeEventListener('bordereau:save-state-completed', this.boundHandleSaveStateCompleted);
-        document.removeEventListener('bordereau:save-state-failed', this.boundHandleSaveStateFailed);
     }
 
     /**
@@ -613,80 +600,11 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
         this.toggleProgressBar(true);
         console.log("[BordereauAnalysisController] submitAnalysis() - Préparation du payload pour l'analyse...", payload);
         // NOUVEAU : Notifier le Cerveau pour qu'il gère la soumission de l'analyse
-        try {
-            this.element.dispatchEvent(new CustomEvent('cerveau:event', {
-                detail: {
-                    type: 'bordereau:submit-analysis',
-                    source: 'bordereau-analysis_controller',
-                    payload: {
-                        url: `/admin/bordereau/api/submit-analysis/${this.bordereauIdValue}`,
-                        data: payload
-                    },
-                    timestamp: Date.now()
-                },
-                bubbles: true // L'événement doit remonter pour être intercepté par le Cerveau
-            }));
-            console.log("[BordereauAnalysis] submitAnalysis() - Événement 'bordereau:submit-analysis' envoyé au Cerveau.");
-        } catch (error) {
-            console.error("[BordereauAnalysis] submitAnalysis() - Erreur lors de l'envoi de l'événement au cerveau:", error);
-            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('error', `Erreur lors de l'analyse: ${error.message}`, false); // No icon for toolbar feedback
-            this.submitButtonTarget.disabled = false;
-            this.toggleProgressBar(false);
-            this.submitButtonTarget.textContent = "Lancer l'analyse"; // Réinitialiser le texte du bouton
-        }
-    }
-
-    /**
-     * Rend les résultats de l'analyse des avenants.
-     */
-    renderAnalysisResults() {
-        if (!this.hasAnalysisResultsListTarget) return;
-
-        this.analysisResultsListTarget.innerHTML = ''; // Vide la liste précédente
-
-        if (!this.analysisResultsValue || this.analysisResultsValue.length === 0) {
-            this.analysisResultsListTarget.innerHTML = '<li class="list-group-item text-center text-muted">Aucun résultat d\'analyse à afficher.</li>';
-            return;
-        }
-
-        this.analysisResultsValue.forEach(result => {
-            const listItem = document.createElement('li');
-            listItem.classList.add('list-group-item', 'd-flex', 'flex-column', 'gap-2');
-
-            let statusClass = '';
-            let statusIcon = '';
-            if (result.type === 'new') {
-                statusClass = 'list-group-item-info';
-                statusIcon = '<i class="bi bi-plus-circle-fill text-info me-2"></i>';
-            } else if (result.type === 'discrepancy') {
-                statusClass = 'list-group-item-warning';
-                statusIcon = '<i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>';
-            } else if (result.type === 'match') {
-                statusClass = 'list-group-item-success';
-                statusIcon = '<i class="bi bi-check-circle-fill text-success me-2"></i>';
-            }
-
-            if (statusClass) {
-                listItem.classList.add(statusClass);
-            }
-
-            let bordereauInfoHtml = Object.entries(result.bordereau_line_info || {}).map(([key, value]) => `<strong>${key.replace(/_/g, ' ')}:</strong> ${value}`).join(' | ');
-
-            let actionsHtml = result.actions.map(action =>
-                `<a href="#" class="btn btn-sm btn-outline-primary" data-action="click->bordereau-analysis#handleAnalysisAction" data-event-name="${action.event}" data-payload='${JSON.stringify(action.payload)}'>${action.label}</a>`
-            ).join(' ');
-
-            listItem.innerHTML = `
-                <div class="d-flex align-items-center">
-                    ${statusIcon}
-                    <h5 class="mb-0">${result.bordereau_line_info.reference_police || 'Avenant sans référence'}</h5>
-                </div>
-                <p class="mb-1 text-muted small">${bordereauInfoHtml}</p>
-                <p class="mb-2">${result.details}</p>
-                ${actionsHtml ? `<div class="d-flex gap-2">${actionsHtml}</div>` : ''}
-            `;
-            this.analysisResultsListTarget.appendChild(listItem);
+        this._handleSubmitBordereauAnalysisLocal({
+            url: `/admin/bordereau/api/submit-analysis/${this.bordereauIdValue}`,
+            data: payload
         });
+        console.log("[BordereauAnalysis] submitAnalysis() - Appel direct de _handleSubmitBordereauAnalysisLocal.");
     }
 
     /**
@@ -706,10 +624,10 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
 
     /**
      * Gère la réception des résultats d'analyse du Cerveau.
-     * @param {CustomEvent} event
+     * @param {object} payload - Le payload contenant les résultats d'analyse.
      */
-    _handleAnalysisCompleted(event) {
-        const { analysisResults } = event.detail;
+    _handleAnalysisCompleted(payload) {
+        const { analysisResults } = payload;
         console.log("[BordereauAnalysis] _handleAnalysisCompleted() - Analyse terminée. Résultats reçus:", analysisResults);
         this.analysisResultsValue = analysisResults; // Affecter correctement à la valeur statique
         this.showStep(3); // Passer à l'étape 3 pour afficher les résultats
@@ -724,10 +642,10 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
 
     /**
      * Gère la réception d'un échec d'analyse du Cerveau.
-     * @param {CustomEvent} event
+     * @param {object} payload - Le payload contenant le message d'erreur.
      */
-    _handleAnalysisFailed(event) {
-        const { errorMessage } = event.detail;
+    _handleAnalysisFailed(payload) {
+        const { errorMessage } = payload;
         console.error("[BordereauAnalysis] _handleAnalysisFailed() - Échec de l'analyse:", errorMessage);
         this.submitButtonTarget.disabled = false; // Réactiver le bouton
         this.mappingStatusFeedbackTarget.classList.remove('d-none'); // Ensure feedback is visible
@@ -770,35 +688,31 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
             // CORRECTION : On ne sauvegarde les résultats que si on est à l'étape 3. Sinon, on envoie null pour les effacer.
             analysisResults: this.currentStep === 3 ? this.analysisResultsValue : null,
         };
-        console.log("[BordereauAnalysis] _saveAnalysisStateToBordereau() - Sauvegarde de l'état. Activation de la barre de progression. Payload:", payload);
-        this.toggleProgressBar(true); // Activate local progress bar for save request
+        console.log("[BordereauAnalysis] _saveAnalysisStateToBordereau() - Sauvegarde de l'état. Payload:", payload);
+        // this.toggleProgressBar(true); // Activate local progress bar for save request
 
-        try {
-            this.element.dispatchEvent(new CustomEvent('cerveau:event', {
-                detail: { type: 'bordereau:save-analysis-state', source: 'bordereau-analysis_controller', payload: { url: `/admin/bordereau/api/save-analysis-state/${this.bordereauIdValue}`, data: payload }, timestamp: Date.now() },
-                bubbles: true
-            }));
-            console.log("[BordereauAnalysis] _saveAnalysisStateToBordereau() - Événement 'bordereau:save-analysis-state' envoyé au Cerveau.");
-        } catch (error) {
-            console.error("[BordereauAnalysis] _saveAnalysisStateToBordereau() - Erreur lors de l'envoi de l'événement de sauvegarde:", error);
-        }
+        this._handleSaveBordereauAnalysisStateLocal({
+            url: `/admin/bordereau/api/save-analysis-state/${this.bordereauIdValue}`,
+            data: payload
+        });
+        console.log("[BordereauAnalysis] _saveAnalysisStateToBordereau() - Appel direct de _handleSaveBordereauAnalysisStateLocal.");
     }
 
     /**
      * NOUVEAU: Gère la réception de la complétion de la sauvegarde de l'état du bordereau.
-     * @param {CustomEvent} event
+     * @param {object} payload - Le payload contenant le message de succès.
      */
-    _handleSaveStateCompleted(event) {
-        console.log("[BordereauAnalysis] _handleSaveStateCompleted() - Sauvegarde de l'état terminée.", event.detail.message);
+    _handleSaveStateCompleted(payload) {
+        console.log("[BordereauAnalysis] _handleSaveStateCompleted() - Sauvegarde de l'état terminée.", payload.message);
         this.toggleProgressBar(false);
     }
 
     /**
      * NOUVEAU: Gère la réception d'un échec de la sauvegarde de l'état du bordereau.
-     * @param {CustomEvent} event
+     * @param {object} payload - Le payload contenant le message d'erreur.
      */
-    _handleSaveStateFailed(event) {
-        console.error("[BordereauAnalysis] _handleSaveStateFailed() - Échec de la sauvegarde de l'état:", event.detail.errorMessage);
+    _handleSaveStateFailed(payload) {
+        console.error("[BordereauAnalysis] _handleSaveStateFailed() - Échec de la sauvegarde de l'état:", payload.errorMessage);
         this.toggleProgressBar(false);
     }
 
@@ -823,4 +737,93 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
             });
         });
     }
-}
+
+    /**
+     * NOUVEAU : Gère la soumission des données mappées pour l'analyse du bordereau au backend.
+     * Copie de _handleSubmitBordereauAnalysis du Cerveau, adaptée pour l'autonomie.
+     * @param {object} payload
+     * @param {string} payload.url - L'URL de l'API pour soumettre l'analyse.
+     * @param {object} payload.data - Les données à envoyer (sheetName, mappedColumns, sheetsData).
+     */
+    async _handleSubmitBordereauAnalysisLocal(payload) {
+        if (!payload.url || !payload.data) {
+            console.error("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Demande de soumission d'analyse de bordereau reçue sans URL ou données.", payload);
+            // Directly call local error handler
+            this._handleAnalysisFailed({ errorMessage: "Impossible de soumettre l'analyse : URL ou données manquantes." });
+            return;
+        }
+
+        console.log("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Soumission de l'analyse à l'API:", payload.url, payload.data);
+        // Use local progress bar and feedback
+        this.toggleProgressBar(true); // Active la barre de progression locale
+        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('warning', 'Analyse en cours...', false); // Mettre à jour le feedback
+
+        try {
+            const response = await fetch(payload.url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload.data)
+            });
+            console.log("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Réponse de l'API reçue. Statut:", response.status);
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || "Erreur lors de la soumission de l'analyse.");
+            }
+            const result = await response.json();
+            if (!result.analysisResults || result.analysisResults.length === 0) {
+                console.warn("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - L'API a retourné une réponse vide pour 'analysisResults' malgré un statut 200 OK.");
+            }
+            console.log("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Succès. Appel de _handleAnalysisCompleted.");
+            // Directly call local completion handler
+            this._handleAnalysisCompleted({ analysisResults: result.analysisResults });
+        } catch (error) {
+            console.error("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Erreur lors de la soumission de l'analyse:", error);
+            // Directly call local error handler
+            this._handleAnalysisFailed({ errorMessage: error.message || "Erreur lors de la soumission de l'analyse." });
+        } finally {
+            console.log("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Fin de l'opération. Désactivation de la barre de progression.");
+            this.toggleProgressBar(false); // Désactive la barre de progression locale
+        }
+    }
+
+    /**
+     * NOUVEAU : Gère la sauvegarde de l'état de l'analyse du bordereau au backend.
+     * Copie de _handleSaveBordereauAnalysisState du Cerveau, adaptée pour l'autonomie.
+     * @param {object} payload
+     * @param {string} payload.url - L'URL de l'API pour sauvegarder l'état.
+     * @param {object} payload.data - Les données à envoyer (selectedSheetName, mappedColumns, currentAnalysisStep).
+     */
+    async _handleSaveBordereauAnalysisStateLocal(payload) {
+        if (!payload.url || !payload.data) {
+            console.error("[BordereauAnalysis] _handleSaveBordereauAnalysisStateLocal() - Demande de sauvegarde de l'état de l'analyse de bordereau reçue sans URL ou données.", payload);
+            // Directly call local error handler
+            this._handleSaveStateFailed({ errorMessage: "Impossible de sauvegarder l'état de l'analyse : URL ou données manquantes." });
+            return;
+        }
+
+        console.log("[BordereauAnalysis] _handleSaveBordereauAnalysisStateLocal() - Sauvegarde de l'état à l'API:", payload.url, payload.data);
+        this.toggleProgressBar(true); // Active la barre de progression locale
+
+        try {
+            const response = await fetch(payload.url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload.data)
+            });
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.message || "Erreur lors de la sauvegarde de l'état.");
+            }
+            const result = await response.json();
+            console.log("[BordereauAnalysis] _handleSaveBordereauAnalysisStateLocal() - État sauvegardé avec succès:", result.message);
+            // Directly call local completion handler
+            this._handleSaveStateCompleted({ message: result.message });
+        } catch (error) {
+            console.error("[BordereauAnalysis] _handleSaveBordereauAnalysisStateLocal() - Erreur lors de la sauvegarde de l'état:", error);
+            // Directly call local error handler
+            this._handleSaveStateFailed({ errorMessage: error.message || "Une erreur inconnue est survenue lors de la sauvegarde de l'état." });
+        } finally {
+            console.log("[BordereauAnalysis] _handleSaveBordereauAnalysisStateLocal() - Fin de l'opération. Désactivation de la barre de progression.");
+            this.toggleProgressBar(false); // Désactive la barre de progression locale
+        }
+    }
