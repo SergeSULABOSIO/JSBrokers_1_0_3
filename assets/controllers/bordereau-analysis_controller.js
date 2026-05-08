@@ -65,6 +65,11 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
         document.addEventListener('bordereau:analysis-completed', this.boundHandleAnalysisCompleted);
         this.boundHandleAnalysisFailed = this._handleAnalysisFailed.bind(this);
         document.addEventListener('bordereau:analysis-failed', this.boundHandleAnalysisFailed);
+        // NOUVEAU: Écouteurs pour la complétion de la sauvegarde de l'état
+        this.boundHandleSaveStateCompleted = this._handleSaveStateCompleted.bind(this);
+        document.addEventListener('bordereau:save-state-completed', this.boundHandleSaveStateCompleted);
+        this.boundHandleSaveStateFailed = this._handleSaveStateFailed.bind(this);
+        document.addEventListener('bordereau:save-state-failed', this.boundHandleSaveStateFailed);
 
         // Étape 1: Chargement initial comme si rien n'était à restaurer.
         console.log("[BordereauAnalysis] 4. connect() - Exécution du chargement initial de l'UI (état par défaut).");
@@ -85,6 +90,8 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
         console.log("[BordereauAnalysis] disconnect() - Nettoyage des écouteurs.");
         document.removeEventListener('bordereau:analysis-completed', this.boundHandleAnalysisCompleted);
         document.removeEventListener('bordereau:analysis-failed', this.boundHandleAnalysisFailed);
+        document.removeEventListener('bordereau:save-state-completed', this.boundHandleSaveStateCompleted);
+        document.removeEventListener('bordereau:save-state-failed', this.boundHandleSaveStateFailed);
     }
 
     /**
@@ -771,6 +778,24 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
         } catch (error) {
             console.error("[BordereauAnalysis] _saveAnalysisStateToBordereau() - Erreur lors de l'envoi de l'événement de sauvegarde:", error);
         }
+    }
+
+    /**
+     * NOUVEAU: Gère la réception de la complétion de la sauvegarde de l'état du bordereau.
+     * @param {CustomEvent} event
+     */
+    _handleSaveStateCompleted(event) {
+        console.log("[BordereauAnalysis] _handleSaveStateCompleted() - Sauvegarde de l'état terminée.", event.detail.message);
+        this.toggleProgressBar(false);
+    }
+
+    /**
+     * NOUVEAU: Gère la réception d'un échec de la sauvegarde de l'état du bordereau.
+     * @param {CustomEvent} event
+     */
+    _handleSaveStateFailed(event) {
+        console.error("[BordereauAnalysis] _handleSaveStateFailed() - Échec de la sauvegarde de l'état:", event.detail.errorMessage);
+        this.toggleProgressBar(false);
     }
 
     /**
