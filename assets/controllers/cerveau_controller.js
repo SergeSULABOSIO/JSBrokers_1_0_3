@@ -1091,9 +1091,11 @@ export default class extends Controller {
             })
             .then(result => {
                 console.log("[Cerveau] _handleSaveBordereauAnalysisState() - État sauvegardé avec succès:", result.message);
+                this.broadcast('bordereau:save-state-completed', { message: result.message }); // NOUVEAU: Événement spécifique pour la complétion de la sauvegarde
             })
             .catch(error => {
                 console.error("[Cerveau] _handleSaveBordereauAnalysisState() - Erreur lors de la sauvegarde de l'état:", error);
+                this.broadcast('bordereau:save-state-failed', { errorMessage: error.message || "Une erreur inconnue est survenue lors de la sauvegarde de l'état." }); // NOUVEAU: Événement spécifique pour l'échec de la sauvegarde
             })
             .finally(() => {
                 console.log("[Cerveau] _handleSaveBordereauAnalysisState() - Fin de l'opération. Désactivation de la barre de progression.");
