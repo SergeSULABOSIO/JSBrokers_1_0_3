@@ -162,11 +162,6 @@ class BordereauController extends AbstractController
             ],
             'chargements' => [], // Initialisation
             'typeRevenus' => [], // NOUVEAU : Initialisation pour les types de revenu
-            // NOUVEAU : Données de l'analyse du bordereau
-            'selectedSheetName' => $bordereau->getSelectedSheetName(),
-            'mappedColumns' => $bordereau->getMappedColumns(),
-            'analysisResults' => $bordereau->getAnalysisResults(), // NOUVEAU : Pour la restauration de l'état
-            'currentAnalysisStep' => $bordereau->getCurrentAnalysisStep(), // NOUVEAU : Pour la restauration de l'état
         ];
         $error = null;
         $excelDocument = null;
@@ -260,6 +255,13 @@ class BordereauController extends AbstractController
         }, $typeRevenus);
         $viewData['typeRevenus'] = $typeRevenusData;
 
+        // DUMP pour le débogage : Vérifier les valeurs avant de les envoyer au template.
+        dump([
+            'selectedSheetName_from_entity' => $bordereau->getSelectedSheetName(),
+            'mappedColumns_from_entity' => $bordereau->getMappedColumns(),
+            'analysisResults_from_entity' => $bordereau->getAnalysisResults(),
+            'currentAnalysisStep_from_entity' => $bordereau->getCurrentAnalysisStep(),
+        ]);
         return $this->render('admin/bordereau/bordereau_analysis.html.twig', [
             'bordereau' => $bordereau,
             'entreprise' => $entreprise,
