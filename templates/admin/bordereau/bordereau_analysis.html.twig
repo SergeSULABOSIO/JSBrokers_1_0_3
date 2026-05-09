@@ -35,6 +35,11 @@
     data-bordereau-analysis-mapping-options-value="{{ viewData.mapping_options|json_encode|e('html_attr') }}"
     data-bordereau-analysis-type-revenus-value="{{ viewData.typeRevenus|json_encode|e('html_attr') }}"
     data-bordereau-analysis-bordereau-id-value="{{ bordereau.id }}"
+    {# CORRECTION : Ajout des valeurs de restauration pour le contrôleur Stimulus #}
+    data-bordereau-analysis-selected-sheet-name-value="{{ selectedSheetName|default('') }}"
+    data-bordereau-analysis-mapped-columns-value="{{ mappedColumns|json_encode|e('html_attr') }}"
+    data-bordereau-analysis-analysis-results-value="{{ analysisResults|json_encode|e('html_attr') }}"
+    data-bordereau-analysis-current-analysis-step-value="{{ currentAnalysisStep|default(0) }}"
 >
 
     <div class="actions-bar sticky-top">
