@@ -267,10 +267,10 @@ class BordereauController extends AbstractController
             'entreprise' => $entreprise,
             'invite' => $invite, // NOUVEAU : On passe l'invité au template.
             'viewData' => $viewData, // Contient maintenant les chargements
-            // NOUVEAU : On passe les données de restauration directement au template
+            // CORRECTION : S'assurer que les types sont corrects (objet vide ou tableau vide au lieu de null)
             'selectedSheetName' => $bordereau->getSelectedSheetName(),
-            'mappedColumns' => $bordereau->getMappedColumns(),
-            'analysisResults' => $bordereau->getAnalysisResults(),
+            'mappedColumns' => $bordereau->getMappedColumns() ?? new \stdClass(),
+            'analysisResults' => $bordereau->getAnalysisResults() ?? [],
             'currentAnalysisStep' => $bordereau->getCurrentAnalysisStep(),
             'error' => $error,
         ]);
