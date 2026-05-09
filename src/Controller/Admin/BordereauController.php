@@ -269,7 +269,7 @@ class BordereauController extends AbstractController
             'viewData' => $viewData, // Contient maintenant les chargements
             // CORRECTION : S'assurer que les types sont corrects (objet vide ou tableau vide au lieu de null)
             'selectedSheetName' => $bordereau->getSelectedSheetName(),
-            'mappedColumns' => $bordereau->getMappedColumns() ?? new \stdClass(),
+            'mappedColumns' => (object)($bordereau->getMappedColumns() ?: []),
             'analysisResults' => $bordereau->getAnalysisResults() ?? [],
             'currentAnalysisStep' => $bordereau->getCurrentAnalysisStep(),
             'error' => $error,
