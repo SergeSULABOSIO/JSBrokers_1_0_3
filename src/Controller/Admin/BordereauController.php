@@ -290,51 +290,104 @@ class BordereauController extends AbstractController
         $sheetsData = $payload['sheetsData'] ?? [];
         // dump('Extracted from payload:', ['sheetName' => $sheetName, 'mappedColumns' => $mappedColumns, 'sheetsDataKeys' => array_keys($sheetsData)]);
 
-        if (!$sheetName || !isset($sheetsData[$sheetName])) {
+        $refPoliceColumn = array_search('reference_police', $mappedColumns);
+
+        if (!$sheetName || !isset($sheetsData[$sheetName]) || !$refPoliceColumn) {
             return $this->json(['error' => 'Nom de feuille ou données de feuille manquantes.'], Response::HTTP_BAD_REQUEST);
         }
 
         $selectedSheetData = $sheetsData[$sheetName] ?? []; // CORRECTION: Accéder directement aux données de la feuille
         $analysisResults = [];
-        // dump('Selected Sheet Data (first 5 rows):', array_slice($selectedSheetData, 0, 5));
-        // dump('Total rows in selectedSheetData:', count($selectedSheetData));
-        
-        // TODO: Implémenter la logique métier réelle ici pour comparer les données Excel avec la base de données.
-        // Cette section retourne actuellement des résultats d'analyse codés en dur.
-        // La logique devrait :
-        // 1. Parcourir chaque ligne de `$selectedSheetData`.
-        // 2. Pour chaque ligne, extraire les valeurs en utilisant le mappage `$mappedColumns`.
-        // 3. Utiliser la référence de police extraite pour rechercher un avenant correspondant en base de données.
-        //    (L'optimisation consistant à tout charger en une fois est une bonne approche).
-        // 4. Comparer les autres champs (dates, montants) entre la ligne Excel et l'avenant trouvé.
-        // 5. En fonction de la comparaison, déterminer le type de résultat ('new', 'discrepancy', 'match').
-        // 6. Construire un tableau `$analysisResults` avec les données dynamiques.
-        //
-        // Pour l'instant, le code en dur est conservé à titre d'exemple mais doit être remplacé.
-        // NOUVEAU : Remplacement par un exemple unique et réaliste pour les tests.
-        $analysisResults[] = [
-            'type' => 'discrepancy', // Type d'anomalie
-            'bordereau_line_info' => [
-                'reference_police' => 'POL-2024-007',
-                'nom_client' => 'Société Générale',
-                'risque' => 'Incendie - Bâtiment Principal',
-                'date_effet_avenant' => '01/01/2025',
-                'date_expiration_avenant' => '31/12/2025',
-                'prime_ttc' => '1500.00',
-                'commission_ht_assureur' => '150.00',
-                'taxe_commission_assureur' => '28.50',
-                'taux_commission' => '10.00',
-                'date_operation' => '15/05/2024',
-            ],
-            'details' => "Ligne n°2: Anomalie(s) détectée(s) - Prime TTC (Excel: 1500.00, DB: 1450.00), Date d'effet (Excel: 01/01/2025, DB: 15/01/2025)",
-            'actions' => [
-                [
-                    'label' => 'Mettre à jour',
-                    'event' => 'bordereau:update-entity',
-                    'payload' => ['avenant_id' => 123, 'excel_data' => [ 'prime_ttc' => '1500.00' ]]
-                ]
-            ],
-        ];
+
+        // --- ÉTAPE 1: Extraire toutes les références de police du fichier Excel ---
+        $policeReferences = array_map(fn ($row) => $row[$refPoliceColumn] ?? null, $selectedSheetData);
+        $policeReferences = array_filter(array_unique($policeReferences)); // Garder les références uniques et non vides
+
+        // --- ÉTAPE 2: Récupérer tous les avenants correspondants en une seule requête ---
+        $avenantsFromDb = $this->avenantRepository->findBy(['referencePolice' => $policeReferences]);
+
+        // --- ÉTAPE 3: Hydrater les avenants et les stocker dans une map pour un accès rapide ---
+        $avenantsMap = [];
+        foreach ($avenantsFromDb as $avenant) {
+            $this->loadCalculatedValues(null, $avenant); // Hydratation des valeurs calculées
+            $avenantsMap[$avenant->getReferencePolice()] = $avenant;
+        }
+
+        // --- ÉTAPE 4: Parcourir chaque ligne du bordereau et comparer ---
+        foreach ($selectedSheetData as $rowIndex => $row) {
+            $refPolice = $row[$refPoliceColumn] ?? null;
+            if (!$refPolice) continue; // Ignorer les lignes sans référence de police
+
+            $avenant = $avenantsMap[$refPolice] ?? null;
+            $lineData = []; // Pour stocker les données extraites de la ligne Excel
+            $discrepancies = [];
+
+            // Extraire toutes les données mappées de la ligne Excel
+            foreach ($mappedColumns as $systemField => $excelColumn) {
+                $lineData[$systemField] = $this->parseExcelValue($row[$excelColumn] ?? null, $systemField);
+            }
+
+            if (!$avenant) {
+                // CAS 1: Nouvel avenant, non trouvé en base de données
+                $analysisResults[] = [
+                    'type' => 'new',
+                    'bordereau_line_info' => $lineData,
+                    'details' => "Ligne n°" . ($rowIndex + 2) . ": Nouvel avenant détecté.",
+                    'actions' => [
+                        ['label' => 'Créer l\'avenant', 'event' => 'bordereau:create-entity', 'payload' => ['excel_data' => $lineData]]
+                    ],
+                ];
+                continue;
+            }
+
+            // CAS 2: Avenant trouvé, on compare les champs
+            $comparisons = [
+                'prime_ttc' => ['getter' => 'montantTTC', 'formatter' => fn ($v) => number_format($v, 2, '.', '')],
+                'date_effet_avenant' => ['getter' => 'startingAt', 'formatter' => fn ($v) => $v ? $v->format('Y-m-d') : null],
+                'date_expiration_avenant' => ['getter' => 'endingAt', 'formatter' => fn ($v) => $v ? $v->format('Y-m-d') : null],
+                'taux_commission' => ['getter' => 'tauxCommission', 'formatter' => fn ($v) => number_format($v, 2, '.', '')],
+            ];
+
+            foreach ($comparisons as $field => $config) {
+                if (isset($lineData[$field])) {
+                    $excelValue = $lineData[$field];
+                    $dbValue = $avenant->{$config['getter']};
+
+                    // Formater les deux valeurs pour une comparaison fiable
+                    $formattedExcelValue = $config['formatter']($excelValue);
+                    $formattedDbValue = $config['formatter']($dbValue);
+
+                    if ($formattedExcelValue !== $formattedDbValue) {
+                        $discrepancies[] = sprintf(
+                            "%s (Excel: %s, DB: %s)",
+                            $this->translator->trans($field, [], 'messages'), // Traduire le nom du champ
+                            is_object($excelValue) && $excelValue instanceof \DateTimeInterface ? $excelValue->format('d/m/Y') : $excelValue,
+                            is_object($dbValue) && $dbValue instanceof \DateTimeInterface ? $dbValue->format('d/m/Y') : $dbValue
+                        );
+                    }
+                }
+            }
+
+            if (!empty($discrepancies)) {
+                // CAS 2a: Des anomalies ont été trouvées
+                $analysisResults[] = [
+                    'type' => 'discrepancy',
+                    'bordereau_line_info' => $lineData,
+                    'details' => "Ligne n°" . ($rowIndex + 2) . ": Anomalie(s) détectée(s) - " . implode(', ', $discrepancies),
+                    'actions' => [
+                        ['label' => 'Mettre à jour', 'event' => 'bordereau:update-entity', 'payload' => ['avenant_id' => $avenant->getId(), 'excel_data' => $lineData]]
+                    ],
+                ];
+            } else {
+                // CAS 2b: Aucune anomalie, tout correspond
+                $analysisResults[] = [
+                    'type' => 'match',
+                    'bordereau_line_info' => $lineData,
+                    'details' => "Ligne n°" . ($rowIndex + 2) . ": Correspondance parfaite avec les données existantes.",
+                    'actions' => [],
+                ];
+            }
+        }
 
         return $this->json(['analysisResults' => $analysisResults]);
     }
