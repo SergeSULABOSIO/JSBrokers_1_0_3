@@ -608,6 +608,52 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
     }
 
     /**
+     * Rend les résultats de l'analyse des avenants dans la liste de l'étape 3.
+     */
+    renderAnalysisResults() {
+        if (!this.hasAnalysisResultsListTarget) return;
+
+        this.analysisResultsListTarget.innerHTML = ''; // Vide la liste précédente
+
+        if (!this.analysisResultsValue || this.analysisResultsValue.length === 0) {
+            this.analysisResultsListTarget.innerHTML = '<li class="list-group-item text-center text-muted">Aucun résultat d\'analyse à afficher.</li>';
+            return;
+        }
+
+        this.analysisResultsValue.forEach(result => {
+            const listItem = document.createElement('li');
+            listItem.classList.add('list-group-item', 'd-flex', 'flex-column', 'gap-2');
+
+            let statusClass = '';
+            let statusIcon = '';
+            if (result.type === 'new') {
+                statusClass = 'list-group-item-info';
+                statusIcon = '<twig:UX:Icon name="lucide:plus-circle" class="text-info me-2" />';
+            } else if (result.type === 'discrepancy') {
+                statusClass = 'list-group-item-warning';
+                statusIcon = '<twig:UX:Icon name="lucide:alert-triangle" class="text-warning me-2" />';
+            } else if (result.type === 'match') {
+                statusClass = 'list-group-item-success';
+                statusIcon = '<twig:UX:Icon name="lucide:check-circle" class="text-success me-2" />';
+            }
+
+            if (statusClass) listItem.classList.add(statusClass);
+
+            let bordereauInfoHtml = Object.entries(result.bordereau_line_info || {}).map(([key, value]) => `<strong>${key.replace(/_/g, ' ')}:</strong> ${value}`).join(' | ');
+
+            let actionsHtml = (result.actions || []).map(action =>
+                `<a href="#" class="btn btn-sm btn-outline-primary" data-action="click->bordereau-analysis#handleAnalysisAction" data-event-name="${action.event}" data-payload='${JSON.stringify(action.payload)}'>${action.label}</a>`
+            ).join(' ');
+
+            listItem.innerHTML = `
+                <div class="d-flex align-items-center"><h5 class="mb-0">${result.bordereau_line_info.reference_police || 'Avenant sans référence'}</h5></div>
+                <p class="mb-1 text-muted small">${bordereauInfoHtml}</p>
+                <p class="mb-2">${result.details}</p>
+                ${actionsHtml ? `<div class="d-flex gap-2">${actionsHtml}</div>` : ''}`;
+            this.analysisResultsListTarget.appendChild(listItem);
+        });
+    }
+    /**
      * Gère le clic sur un bouton d'action de l'étape 3.
      * @param {Event} event
      */
