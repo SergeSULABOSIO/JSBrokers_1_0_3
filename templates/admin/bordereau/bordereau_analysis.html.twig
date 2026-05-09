@@ -95,7 +95,7 @@
             <hr>
             <div class="row align-items-center">
                 <div class="col">
-                    <h4 class="mt-2 mb-0">{{ entreprise.nom|default('Votre Entreprise') }}</h4>
+                    <h2>{{ entreprise.nom|default('Votre Entreprise') }}</h2>
                     <p class="text-muted">{{ entreprise.adresse|default('') }}</p>
                 </div>
                 <div class="col text-end">
@@ -218,7 +218,9 @@
         <div class="analysis-footer text-center">
             <p class="mb-1 fw-bold">{{ entreprise.nom|default('Votre Entreprise') }}</p>
             <p class="text-muted small fst-italic mb-0">
-                {{ entreprise.adresse|default('') }}
+                {{ entreprise.adresse|default('') }}<br>
+                Tel: {{ entreprise.telephone|default('N/A') }} / Site web: {{ entreprise.siteweb|default('N/A') }}<br>
+                RCCM: {{ entreprise.rccm|default('N/A') }} / ID.NAT: {{ entreprise.idnat|default('N/A') }} / N° Impôt: {{ entreprise.numimpot|default('N/A') }}
             </p>
         </div>
     </div>
