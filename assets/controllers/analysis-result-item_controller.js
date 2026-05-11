@@ -1,11 +1,11 @@
-import { Controller } from '@hotwired/stimulus';
+import BaseController from './base_controller.js';
 
 /**
  * @class AnalysisResultItemController
  * @description Gère l'affichage et les interactions d'une seule ligne de résultat d'analyse.
  * Ce composant est autonome et gère son propre état (déplié/replié) et ses actions.
  */
-export default class extends Controller {
+export default class extends BaseController {
     static targets = [
         "detailsPanel",
         "chevronIcon",
@@ -16,6 +16,7 @@ export default class extends Controller {
 
     static values = {
         actions: Array,
+        bordereauId: Number, // NOUVEAU : Pour créer un requesterId unique
         iconPrefix: String, // Préfixe unique pour les requêtes d'icônes
     };
 
@@ -26,6 +27,10 @@ export default class extends Controller {
         // Lier les gestionnaires d'événements pour les infobulles
         this.boundShowTooltip = this.showTooltip.bind(this);
         this.boundHideTooltip = this.hideTooltip.bind(this);
+
+        // NOUVEAU : Écouteur pour la réception du HTML de l'icône.
+        this.boundHandleIconLoaded = this.handleIconLoaded.bind(this);
+        document.addEventListener('analysis:icon.loaded', this.boundHandleIconLoaded);
 
         this.actionButtonTargets.forEach(button => {
             button.addEventListener('mouseenter', this.boundShowTooltip);
@@ -40,6 +45,7 @@ export default class extends Controller {
             button.removeEventListener('mouseenter', this.boundShowTooltip);
             button.removeEventListener('mouseleave', this.boundHideTooltip);
         });
+        document.removeEventListener('analysis:icon.loaded', this.boundHandleIconLoaded);
         if (this.tooltipElement) {
             this.tooltipElement.remove();
         }
@@ -56,16 +62,46 @@ export default class extends Controller {
 
         this.actionButtonTargets.forEach((button, index) => {
             const label = button.dataset.tooltipText;
-            const iconName = actionIconMap[label] || 'lucide:help-circle';
-            const iconContainer = this.actionIconTargets[index];
-
-            // Utilise un template pour injecter l'icône de manière sécurisée
-            const iconHtml = `<twig:UX:Icon name="${iconName}" width="16px" height="16px" />`;
-            const template = document.createElement('template');
-            template.innerHTML = iconHtml;
-            iconContainer.innerHTML = ''; // Vider avant d'ajouter
-            iconContainer.appendChild(template.content.firstChild);
+            const iconAlias = actionIconMap[label] || 'lucide:help-circle';
+            
+            // NOUVEAU : On envoie un événement au contrôleur parent pour demander l'icône.
+            this.dispatch('analysis:icon.request', {
+                iconName: iconAlias,
+                iconSize: 16, // Taille adaptée pour un bouton d'action
+                // On crée un ID de demandeur unique et valide.
+                requesterId: `${this.iconPrefixValue}-action-${index}`
+            });
         });
+    }
+
+    /**
+     * NOUVEAU : Gère la réception du HTML de l'icône et l'injecte.
+     * @param {CustomEvent} event
+     */
+    handleIconLoaded(event) {
+        const { html, requesterId } = event.detail;
+
+        // On vérifie si l'événement nous est bien destiné.
+        if (!requesterId || !requesterId.startsWith(this.iconPrefixValue)) {
+            return;
+        }
+
+        // On extrait l'index du bouton depuis le requesterId.
+        const parts = requesterId.split('-');
+        const buttonIndex = parseInt(parts[parts.length - 1], 10);
+
+        // On cible le bon conteneur d'icône.
+        const targetElement = this.actionIconTargets[buttonIndex];
+
+        if (targetElement && html && !html.trim().startsWith('<!--')) {
+            targetElement.innerHTML = ''; // Vider avant d'ajouter
+            // On utilise un <template> pour parser le HTML de manière sûre.
+            const template = document.createElement('template');
+            template.innerHTML = html.trim();
+            if (template.content.firstChild) {
+                targetElement.appendChild(template.content.firstChild);
+            }
+        }
     }
 
     /**
@@ -102,6 +138,8 @@ export default class extends Controller {
             eventName: button.dataset.eventName,
             payload: JSON.parse(button.dataset.payload)
         });
+        // NOUVEAU : On notifie le cerveau de l'action.
+        this.notifyCerveau(button.dataset.eventName, JSON.parse(button.dataset.payload));
     }
 
     // Les méthodes showTooltip et hideTooltip sont copiées de collection_controller.js
