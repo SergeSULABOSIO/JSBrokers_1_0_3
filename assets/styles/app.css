@@ -1645,6 +1645,75 @@ textarea:hover,
 
 /* Vous pouvez ajouter des styles spécifiques pour les listes de résultats si nécessaire */
 
+/* ================================================================== */
+/* SECTION 7: COMPOSANT D'ITEM DE RÉSULTAT D'ANALYSE                */
+/* ================================================================== */
+
+.analysis-item {
+    border-width: 1px 1px 1px 4px !important; /* Bordure gauche plus épaisse */
+    border-style: solid !important;
+    margin-bottom: 0.75rem;
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+.analysis-item:hover {
+    box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,.1);
+}
+
+.analysis-item-header {
+    cursor: pointer;
+    position: relative; /* Pour le positionnement des actions */
+}
+
+.analysis-item-header .chevron-icon {
+    transition: transform 0.3s ease;
+    color: #6c757d;
+}
+
+.analysis-item-header .chevron-icon.is-rotated {
+    transform: rotate(180deg);
+}
+
+.analysis-item-details {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    background-color: #f8f9fa; /* Fond légèrement différent pour les détails */
+    border-top: 1px solid #e9ecef;
+}
+
+.analysis-item-details.is-open {
+    max-height: 500px; /* Hauteur suffisante pour le contenu */
+}
+
+.analysis-item-actions {
+    display: flex;
+    gap: 0.5rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.analysis-item-actions.is-visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.analysis-item-actions .btn {
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.analysis-item-actions .btn:hover {
+    transform: translateY(-1px);
+    background-color: #e9ecef;
+}
+
 /* NOUVEAU : Styles pour les étapes de l'analyse de bordereau */
 .step-content {
     padding: 1rem;
