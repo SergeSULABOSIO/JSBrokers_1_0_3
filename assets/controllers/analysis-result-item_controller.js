@@ -11,7 +11,7 @@ export default class extends BaseController {
         "chevronIcon",
         "actionsContainer",
         "actionButton",
-        "actionIcon" // Note: This will become an array `actionIconTargets` because of multiple elements in the template
+        "actionIcon"
     ];
 
     static values = {
