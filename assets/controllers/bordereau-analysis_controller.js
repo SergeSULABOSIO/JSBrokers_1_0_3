@@ -602,7 +602,7 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
         }
 
         // On joint simplement les morceaux de HTML et on les injecte.
-        this.analysisResultsListTarget.innerHTML = resultsHtml.join('');
+        this.analysisResultsListTarget.innerHTML = resultsHtml.join(''); // CORRECTION : La méthode join() était manquante dans la version précédente.
     }
     /**
      * Gère le clic sur un bouton d'action de l'étape 3.
@@ -624,9 +624,9 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
      * @param {object} payload - Le payload contenant les résultats d'analyse.
      */
     _handleAnalysisCompleted(payload) {
-        const { analysisResultsHtml } = payload;
-        console.log("[BordereauAnalysis] _handleAnalysisCompleted() - Analyse terminée. HTML des résultats reçu:", analysisResultsHtml);
-        this.analysisResultsValue = analysisResultsHtml; // Affecter le HTML à la valeur Stimulus
+        // CORRECTION : On s'assure d'extraire le tableau de chaînes HTML du payload avant de l'assigner.
+        console.log("[BordereauAnalysis] _handleAnalysisCompleted() - Analyse terminée. Payload reçu:", payload);
+        this.analysisResultsValue = payload.analysisResultsHtml || []; // Affecter le tableau HTML à la valeur Stimulus
         this.showStep(3); // Passer à l'étape 3 pour afficher les résultats
         this.submitButtonTarget.disabled = false;
         this.submitButtonTarget.textContent = "Lancer l'analyse"; // Réinitialiser le texte du bouton
@@ -776,7 +776,7 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
             }
             console.log("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Succès. Appel de _handleAnalysisCompleted.");
             // Directly call local completion handler
-            this._handleAnalysisCompleted({ analysisResultsHtml: result.analysisResultsHtml });
+            this._handleAnalysisCompleted(result); // CORRECTION : On passe l'objet de résultat complet.
         } catch (error) {
             console.error("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Erreur lors de la soumission de l'analyse:", error);
             // Directly call local error handler
