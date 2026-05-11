@@ -40,9 +40,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         // NOUVEAU : Initialisation du cache pour les icônes des résultats d'analyse.
         this.iconCache = new Map();
         this.boundHandleIconRequest = this.handleIconRequest.bind(this);
-        this.boundHandleIconLoaded = this.handleIconLoaded.bind(this);
+        // CORRECTION : Le contrôleur ne doit plus écouter les réponses du cerveau.
         this.element.addEventListener('analysis:icon.request', this.boundHandleIconRequest);
-        document.addEventListener('app:icon.loaded', this.boundHandleIconLoaded);
 
         this.requiredMappings = new Set([
             'reference_police',
@@ -89,8 +88,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
     disconnect() {
         console.log("[BordereauAnalysis] disconnect() - Nettoyage des écouteurs.");
-        this.element.removeEventListener('analysis:icon.request', this.boundHandleIconRequest);
-        document.removeEventListener('app:icon.loaded', this.boundHandleIconLoaded);
+        this.element.removeEventListener('analysis:icon.request', this.boundHandleIconRequest); // On ne nettoie que l'écouteur local.
     }
 
     /**
@@ -103,52 +101,46 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
     }
 
     /**
-     * NOUVEAU : Gère les demandes d'icônes venant des items de résultat.
+     * Gère les demandes d'icônes venant des items de résultat.
+     * Si l'icône est en cache, elle est renvoyée immédiatement.
+     * Sinon, une requête fetch est lancée pour la récupérer depuis le serveur.
      * @param {CustomEvent} event
      */
-    handleIconRequest(event) {
+    async handleIconRequest(event) {
         const { iconName, requesterId, iconSize } = event.detail;
         if (!iconName || !requesterId) return;
 
         if (this.iconCache.has(iconName)) {
             // Si l'icône est en cache, on la renvoie directement.
             this.dispatch('analysis:icon.loaded', {
-                html: this.iconCache.get(iconName),
-                requesterId: requesterId,
-                iconName: iconName
+                html: this.iconCache.get(iconName), // HTML de l'icône
+                requesterId: requesterId,           // ID de l'élément demandeur
+                iconName: iconName                  // Nom de l'icône (pour le cache)
             });
         } else {
-            // Sinon, on la demande au cerveau.
-            this.notifyCerveau('ui:icon.request', {
-                iconName: iconName,
-                iconSize: iconSize,
-                requesterId: requesterId // On transmet l'ID de l'enfant qui a demandé
-            });
-        }
-    }
+            // Sinon, on la récupère depuis le serveur.
+            const url = `/api/icon/api/get-icon?name=${encodeURIComponent(iconName)}&size=${iconSize}`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`Icon fetch failed with status ${response.status}`);
+                
+                const html = await response.text();
+                
+                // On met en cache si la réponse est valide.
+                if (html && !html.trim().startsWith('<!--')) {
+                    this.iconCache.set(iconName, html);
+                }
 
-    /**
-     * NOUVEAU : Gère la réception des icônes depuis le cerveau.
-     * @param {CustomEvent} event
-     */
-    handleIconLoaded(event) {
-        const { iconName, html, requesterId } = event.detail;
+                // On diffuse l'événement à l'enfant qui a fait la demande.
+                this.dispatch('analysis:icon.loaded', { html, requesterId, iconName });
 
-        // On ne met en cache et on ne diffuse que si l'icône est valide et que la requête vient d'un de nos enfants.
-        if (requesterId && requesterId.startsWith(this.bordereauIdValue)) {
-            if (html && !html.trim().startsWith('<!--')) {
-                this.iconCache.set(iconName, html);
+            } catch (error) {
+                console.error(`[BordereauAnalysis] Failed to fetch icon '${iconName}':`, error);
+                // On envoie quand même une réponse pour ne pas bloquer l'UI.
+                this.dispatch('analysis:icon.loaded', { html: `<!-- error -->`, requesterId, iconName });
             }
-            // On relaie l'événement (avec le HTML ou l'erreur) à l'enfant qui l'a demandé.
-            this.dispatch('analysis:icon.loaded', {
-                html: html,
-                requesterId: requesterId,
-                iconName: iconName
-            });
         }
     }
-
-
 
     /**
      * Finalise le processus de restauration en mettant à jour l'UI.

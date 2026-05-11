@@ -15,7 +15,7 @@ class IconController extends AbstractController
     {
     }
 
-    #[Route('/api/get-icon', name: 'api_get_icon', methods: ['GET'])]
+    #[Route('/get-icon', name: 'get_icon', methods: ['GET'])]
     public function getIcon(Request $request): Response
     {
         $alias = $request->query->get('name');
