@@ -30,7 +30,7 @@ export default class extends BaseController {
 
         // NOUVEAU : Écouteur pour la réception du HTML de l'icône.
         this.boundHandleIconLoaded = this.handleIconLoaded.bind(this);
-        document.addEventListener('analysis:icon.loaded', this.boundHandleIconLoaded);
+        this.element.addEventListener('analysis:icon.loaded', this.boundHandleIconLoaded);
 
         this.actionButtonTargets.forEach(button => {
             button.addEventListener('mouseenter', this.boundShowTooltip);
@@ -45,7 +45,7 @@ export default class extends BaseController {
             button.removeEventListener('mouseenter', this.boundShowTooltip);
             button.removeEventListener('mouseleave', this.boundHideTooltip);
         });
-        document.removeEventListener('analysis:icon.loaded', this.boundHandleIconLoaded);
+        this.element.removeEventListener('analysis:icon.loaded', this.boundHandleIconLoaded);
         if (this.tooltipElement) {
             this.tooltipElement.remove();
         }
@@ -56,13 +56,13 @@ export default class extends BaseController {
      */
     loadActionIcons() {
         const actionIconMap = {
-            'Créer l\'avenant': 'lucide:plus-circle',
-            'Mettre à jour': 'lucide:edit'
+            'Créer l\'avenant': 'action:add',
+            'Mettre à jour': 'action:edit'
         };
 
         this.actionButtonTargets.forEach((button, index) => {
             const label = button.dataset.tooltipText;
-            const iconAlias = actionIconMap[label] || 'lucide:help-circle';
+            const iconAlias = actionIconMap[label] || 'action:information';
             
             // NOUVEAU : On envoie un événement au contrôleur parent pour demander l'icône.
             this.dispatch('analysis:icon.request', {
