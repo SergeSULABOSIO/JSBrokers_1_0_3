@@ -11,7 +11,7 @@ export default class extends BaseController {
         "chevronIcon",
         "actionsContainer",
         "actionButton",
-        "actionIcon"
+        "actionIcon" // Note: This will become an array `actionIconTargets` because of multiple elements in the template
     ];
 
     static values = {
@@ -91,7 +91,7 @@ export default class extends BaseController {
         const buttonIndex = parseInt(parts[parts.length - 1], 10);
 
         // On cible le bon conteneur d'icône.
-        const targetElement = this.actionIconTargets[buttonIndex];
+        const targetElement = this.actionIconTargets[buttonIndex]; // CORRECTION: Utiliser le tableau `actionIconTargets`
 
         if (targetElement && html && !html.trim().startsWith('<!--')) {
             targetElement.innerHTML = ''; // Vider avant d'ajouter
