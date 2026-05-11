@@ -570,36 +570,25 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
     /**
      * Soumet les données mappées au backend pour l'analyse.
      */
-    submitAnalysis(event) {
+    async submitAnalysis(event) {
         event.preventDefault();
-        const activeForm = this.element.querySelector('.column-mapping-form:not([style*="display: none"])'); // CORRECTION: Utiliser activeForm
-        if (!activeForm) {;
-            console.error("Aucun formulaire de mappage actif trouvé.");
-            return;
-        }
-
-        const mappedColumns = {};
-        const selects = activeForm.querySelectorAll('select[data-column-letter]');
-        selects.forEach(select => {
-            if (select.value) { // N'inclut que les colonnes mappées
-                mappedColumns[select.value] = select.dataset.columnLetter;
-            }
-        });
-
-        // CORRECTION : Récupérer le nom de la feuille de manière plus fiable en se basant sur le radio bouton coché.
-        // Cela évite les erreurs si `activeForm` n'est pas trouvé ou si le contexte est perdu.
-        const selectedSheetInput = this.sheetSelectionTargets.find(radio => radio.checked);
-        if (!selectedSheetInput) {
-            console.error("Impossible de soumettre : aucune feuille n'est sélectionnée.");
-            this._handleAnalysisFailed({ errorMessage: "Aucune feuille sélectionnée." });
-            return;
-        }
 
         console.log("[BordereauAnalysis] submitAnalysis() - Lancement de l'analyse. Activation de la barre de progression.");
         this.submitButtonTarget.disabled = true;
         this.submitButtonTarget.textContent = "Analyse en cours...";
         this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('warning', 'Analyse en cours...', false); // Mettre à jour le feedback
         this.toggleProgressBar(true);
+
+        // ÉTAPE 1: Sauvegarder l'état actuel et attendre la confirmation.
+        // La méthode _saveAnalysisStateToBordereau retourne maintenant une promesse.
+        const saveSuccess = await this._saveAnalysisStateToBordereau();
+
+        if (!saveSuccess) {
+            // Si la sauvegarde échoue, on arrête le processus. L'erreur est déjà affichée.
+            return;
+        }
+
+        // ÉTAPE 2: Lancer l'analyse uniquement si la sauvegarde a réussi.
         // On appelle directement la méthode locale qui va faire un fetch sur l'API.
         // Le payload est vide car le backend a déjà toutes les informations nécessaires.
         this._handleSubmitBordereauAnalysisLocal({ url: `/admin/bordereau/api/submit-analysis/${this.bordereauIdValue}` });
@@ -710,7 +699,7 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
     /**
      * Sauvegarde l'état actuel de l'analyse du bordereau en base de données.
      */
-    _saveAnalysisStateToBordereau() {
+    async _saveAnalysisStateToBordereau() {
         const selectedSheetInput = this.sheetSelectionTargets.find(radio => radio.checked);
         const selectedSheetName = selectedSheetInput ? selectedSheetInput.value : null;
 
@@ -734,12 +723,11 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
         };
         console.log("[BordereauAnalysis] _saveAnalysisStateToBordereau() - Sauvegarde de l'état. Payload:", payload);
         // this.toggleProgressBar(true); // Activate local progress bar for save request
-
-        this._handleSaveBordereauAnalysisStateLocal({
+        // On retourne maintenant la promesse pour pouvoir l'attendre (await)
+        return this._handleSaveBordereauAnalysisStateLocal({
             url: `/admin/bordereau/api/save-analysis-state/${this.bordereauIdValue}`,
             data: payload
         });
-        console.log("[BordereauAnalysis] _saveAnalysisStateToBordereau() - Appel direct de _handleSaveBordereauAnalysisStateLocal.");
     }
 
     /**
@@ -844,21 +832,22 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
             this._handleSaveStateFailed({ errorMessage: "Impossible de sauvegarder l'état de l'analyse : URL ou données manquantes." });
             return;
         }
-
+    
         console.log("[BordereauAnalysis] _handleSaveBordereauAnalysisStateLocal() - Sauvegarde de l'état à l'API:", payload.url, payload.data);
-        this.toggleProgressBar(true); // Active la barre de progression locale
-
+        // On n'active plus la barre de progression ici pour éviter qu'elle clignote.
+        // Elle est déjà activée par la méthode appelante (submitAnalysis).
+    
         try {
             const response = await fetch(payload.url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload.data)
             });
+            const result = await response.json(); // Toujours essayer de parser le JSON
+
             if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.message || "Erreur lors de la sauvegarde de l'état.");
+                throw new Error(result.message || "Erreur lors de la sauvegarde de l'état.");
             }
-            const result = await response.json();
             console.log("[BordereauAnalysis] _handleSaveBordereauAnalysisStateLocal() - État sauvegardé avec succès:", result.message);
             // Directly call local completion handler
             this._handleSaveStateCompleted({ message: result.message });
@@ -866,9 +855,10 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
             console.error("[BordereauAnalysis] _handleSaveBordereauAnalysisStateLocal() - Erreur lors de la sauvegarde de l'état:", error);
             // Directly call local error handler
             this._handleSaveStateFailed({ errorMessage: error.message || "Une erreur inconnue est survenue lors de la sauvegarde de l'état." });
+            return false; // Retourne false en cas d'échec
         } finally {
             console.log("[BordereauAnalysis] _handleSaveBordereauAnalysisStateLocal() - Fin de l'opération. Désactivation de la barre de progression.");
-            this.toggleProgressBar(false); // Désactive la barre de progression locale
+            // On ne désactive plus la barre de progression ici. Elle sera désactivée à la fin de l'analyse complète.
         }
     }
 }

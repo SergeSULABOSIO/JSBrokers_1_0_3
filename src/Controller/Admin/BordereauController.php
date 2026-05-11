@@ -286,6 +286,12 @@ class BordereauController extends AbstractController
         $sheetName = $bordereau->getSelectedSheetName();
         $mappedColumns = $bordereau->getMappedColumns() ?: [];
 
+        // DUMP pour le débogage, comme suggéré.
+        dump([
+            'sheetName from DB' => $sheetName,
+            'mappedColumns from DB' => $mappedColumns
+        ]);
+
         $refPoliceColumn = array_search('reference_police', $mappedColumns);
 
         if (!$sheetName || !$refPoliceColumn) {
