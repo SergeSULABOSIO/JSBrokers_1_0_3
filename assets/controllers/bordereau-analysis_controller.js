@@ -119,7 +119,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             });
         } else {
             // Sinon, on la récupère depuis le serveur.
-            const url = `/api/icon/api/get-icon?name=${encodeURIComponent(iconName)}&size=${iconSize}`;
+            const url = `/api/icon/get-icon?name=${encodeURIComponent(iconName)}&size=${iconSize}`;
             try {
                 const response = await fetch(url);
                 if (!response.ok) throw new Error(`Icon fetch failed with status ${response.status}`);
