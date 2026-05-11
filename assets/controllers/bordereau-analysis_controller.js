@@ -594,25 +594,15 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
             this._handleAnalysisFailed({ errorMessage: "Aucune feuille sélectionnée." });
             return;
         }
-        const selectedSheetName = selectedSheetInput.value;
-        const payload = {
-            sheetName: selectedSheetName,
-            mappedColumns: mappedColumns,
-            sheetsData: this.sheetsDataValue // Envoyer toutes les données des feuilles pour que le backend puisse travailler avec
-        };
 
         console.log("[BordereauAnalysis] submitAnalysis() - Lancement de l'analyse. Activation de la barre de progression.");
         this.submitButtonTarget.disabled = true;
         this.submitButtonTarget.textContent = "Analyse en cours...";
         this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('warning', 'Analyse en cours...', false); // Mettre à jour le feedback
         this.toggleProgressBar(true);
-        console.log("[BordereauAnalysisController] submitAnalysis() - Préparation du payload pour l'analyse...", payload);
-        // NOUVEAU : Notifier le Cerveau pour qu'il gère la soumission de l'analyse
-        this._handleSubmitBordereauAnalysisLocal({
-            url: `/admin/bordereau/api/submit-analysis/${this.bordereauIdValue}`,
-            data: payload
-        });
-        console.log("[BordereauAnalysis] submitAnalysis() - Appel direct de _handleSubmitBordereauAnalysisLocal.");
+        // On appelle directement la méthode locale qui va faire un fetch sur l'API.
+        // Le payload est vide car le backend a déjà toutes les informations nécessaires.
+        this._handleSubmitBordereauAnalysisLocal({ url: `/admin/bordereau/api/submit-analysis/${this.bordereauIdValue}` });
     }
 
     /**
@@ -797,17 +787,17 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
      * Copie de _handleSubmitBordereauAnalysis du Cerveau, adaptée pour l'autonomie.
      * @param {object} payload
      * @param {string} payload.url - L'URL de l'API pour soumettre l'analyse.
-     * @param {object} payload.data - Les données à envoyer (sheetName, mappedColumns, sheetsData).
+     * @param {object} [payload.data={}] - Les données à envoyer.
      */
     async _handleSubmitBordereauAnalysisLocal(payload) {
-        if (!payload.url || !payload.data) {
+        if (!payload.url) {
             console.error("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Demande de soumission d'analyse de bordereau reçue sans URL ou données.", payload);
             // Directly call local error handler
             this._handleAnalysisFailed({ errorMessage: "Impossible de soumettre l'analyse : URL ou données manquantes." });
             return;
         }
 
-        console.log("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Soumission de l'analyse à l'API:", payload.url, payload.data);
+        console.log("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Soumission de l'analyse à l'API:", payload.url);
         // Use local progress bar and feedback
         this.toggleProgressBar(true); // Active la barre de progression locale
         this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('warning', 'Analyse en cours...', false); // Mettre à jour le feedback
@@ -816,7 +806,7 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
             const response = await fetch(payload.url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload.data)
+                body: JSON.stringify(payload.data || {}) // Envoyer un objet vide si data n'est pas fourni
             });
             console.log("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Réponse de l'API reçue. Statut:", response.status);
             if (!response.ok) {
