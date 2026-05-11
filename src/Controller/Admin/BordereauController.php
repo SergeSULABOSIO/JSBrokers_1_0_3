@@ -292,9 +292,11 @@ class BordereauController extends AbstractController
             'mappedColumns from DB' => $mappedColumns
         ]);
 
-        $refPoliceColumn = array_search('reference_police', $mappedColumns);
+        // CORRECTION : On vérifie si la CLÉ 'reference_police' existe, au lieu de chercher sa VALEUR.
+        // Si elle existe, on récupère la lettre de la colonne associée.
+        $refPoliceColumn = array_key_exists('reference_police', $mappedColumns) ? $mappedColumns['reference_police'] : null;
 
-        if (!$sheetName || !$refPoliceColumn) {
+        if (empty($sheetName) || empty($refPoliceColumn)) {
             return $this->json(['error' => 'Le nom de la feuille ou le mappage de la colonne "N° de Police" est manquant. Veuillez retourner à l\'étape de mappage.'], Response::HTTP_BAD_REQUEST);
         }
 
