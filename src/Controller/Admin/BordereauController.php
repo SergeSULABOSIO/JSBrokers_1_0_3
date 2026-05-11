@@ -263,22 +263,33 @@ class BordereauController extends AbstractController
             'currentAnalysisStep_from_entity' => $bordereau->getCurrentAnalysisStep(),
         ]);
 
-        // Ensure analysisResults is an array of strings for Stimulus to render correctly.
-        // This handles cases where JSON deserialization might produce stdClass objects
-        // from what were originally strings. It attempts to extract the string content
-        // if the item is an object, otherwise it uses the item as is (assuming it's a string).
-        $analysisResultsForTemplate = array_map(function ($item) {
+        // NOUVEAU: DUMP pour inspecter la structure des données brutes
+        $rawAnalysisResults = $bordereau->getAnalysisResults() ?? [];
+        dump("1. Données brutes de 'analysisResults' depuis l'entité:", $rawAnalysisResults);
+
+        $analysisResultsForTemplate = array_map(function ($item) use ($bordereau) {
+            // NOUVEAU: DUMP pour inspecter chaque item individuellement
+            dump("2. Traitement d'un item dans array_map:", ['item' => $item, 'type' => gettype($item)]);
+
+            if (is_string($item)) {
+                return $item;
+            }
             if (is_array($item) && isset($item[0]) && is_string($item[0])) {
-                // Case where the item is an array like ['<li ...>...</li>']
-                return $item[0];
-            } elseif (is_object($item)) {
-                // Attempt to find a string property within the object. A common case is '0' for simple arrays.
-                // Or 'html' if the structure was changed to wrap the HTML string.
+                return $item[0]; // Cas ['<li>...</li>']
+            }
+            if (is_object($item)) {
+                // Gère les objets stdClass venant du JSON
                 return (string) ($item->{'0'} ?? (property_exists($item, 'html') ? $item->html : ''));
             }
-            // Case where the item is already a string or can be safely cast to one.
-            return (string) $item; // Ensure it's a string if it's not an object.
-        }, $bordereau->getAnalysisResults() ?? []);
+            // Pour tout autre cas (tableau vide, tableau non conforme, etc.), on retourne null pour le filtrer plus tard.
+            return null;
+        }, $rawAnalysisResults);
+
+        // NOUVEAU: On filtre tous les éléments qui n'ont pas pu être convertis en chaîne (ceux qui sont `null`).
+        $analysisResultsForTemplate = array_filter($analysisResultsForTemplate, fn ($value) => $value !== null);
+
+        dump("3. Résultats finaux après mappage et filtrage:", $analysisResultsForTemplate);
+
         return $this->render('admin/bordereau/bordereau_analysis.html.twig', [
             'bordereau' => $bordereau,
             'entreprise' => $entreprise,
