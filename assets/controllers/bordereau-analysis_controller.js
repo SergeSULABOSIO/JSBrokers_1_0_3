@@ -586,7 +586,15 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
             }
         });
 
-        const selectedSheetName = activeForm.closest('[data-bordereau-analysis-target="mappingContainer"]').dataset.sheetName;
+        // CORRECTION : Récupérer le nom de la feuille de manière plus fiable en se basant sur le radio bouton coché.
+        // Cela évite les erreurs si `activeForm` n'est pas trouvé ou si le contexte est perdu.
+        const selectedSheetInput = this.sheetSelectionTargets.find(radio => radio.checked);
+        if (!selectedSheetInput) {
+            console.error("Impossible de soumettre : aucune feuille n'est sélectionnée.");
+            this._handleAnalysisFailed({ errorMessage: "Aucune feuille sélectionnée." });
+            return;
+        }
+        const selectedSheetName = selectedSheetInput.value;
         const payload = {
             sheetName: selectedSheetName,
             mappedColumns: mappedColumns,
