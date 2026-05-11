@@ -469,12 +469,16 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
      * Met à jour l'état (activé/désactivé) du bouton de soumission.
      */
     updateSubmitButtonState() {
-        // NOUVEAU : Si une sauvegarde est en cours, le bouton est TOUJOURS désactivé.
         if (this.isSaving) {
             if (this.hasSubmitButtonTarget) this.submitButtonTarget.disabled = true;
             return; // On arrête ici, la sauvegarde a la priorité.
         }
 
+        const activeForm = this.element.querySelector('.column-mapping-form:not([style*="display: none"])');
+        if (!activeForm) {
+            if (this.hasSubmitButtonTarget) this.submitButtonTarget.disabled = true;
+            return;
+        }
         const selects = activeForm.querySelectorAll('select[data-column-letter]');
         const mappedTypes = new Set();
         let allValid = true;
