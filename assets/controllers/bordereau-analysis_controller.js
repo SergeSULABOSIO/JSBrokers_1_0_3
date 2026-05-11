@@ -40,8 +40,9 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         // NOUVEAU : Initialisation du cache pour les icônes des résultats d'analyse.
         this.iconCache = new Map();
         this.boundHandleIconRequest = this.handleIconRequest.bind(this);
-        // CORRECTION : Le contrôleur ne doit plus écouter les réponses du cerveau.
-        this.element.addEventListener('analysis:icon.request', this.boundHandleIconRequest);
+        // CORRECTION : On écoute sur `document` pour intercepter les événements des enfants
+        // qui sont injectés dynamiquement et ne sont pas des descendants directs.
+        document.addEventListener('analysis:icon.request', this.boundHandleIconRequest);
 
         this.requiredMappings = new Set([
             'reference_police',
@@ -88,7 +89,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
     disconnect() {
         console.log("[BordereauAnalysis] disconnect() - Nettoyage des écouteurs.");
-        this.element.removeEventListener('analysis:icon.request', this.boundHandleIconRequest); // On ne nettoie que l'écouteur local.
+        document.removeEventListener('analysis:icon.request', this.boundHandleIconRequest);
     }
 
     /**
@@ -108,6 +109,12 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      */
     async handleIconRequest(event) {
         const { iconName, requesterId, iconSize } = event.detail;
+
+        // SÉCURITÉ : On ne traite que les requêtes qui proviennent de nos enfants.
+        // Le requesterId doit commencer par l'ID du bordereau pour être valide.
+        if (!requesterId || !requesterId.startsWith(this.bordereauIdValue)) {
+            return;
+        }
         if (!iconName || !requesterId) return;
 
         if (this.iconCache.has(iconName)) {
