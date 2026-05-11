@@ -60,6 +60,7 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
         this.isRestoring = false;
         this.isConnecting = true; // Nouveau drapeau: true pendant la connexion initiale
         this.currentStep = 1;
+        this.isSaving = false; // NOUVEAU : Le "feu de signalisation" pour la sauvegarde.
 
         console.log("[BordereauAnalysis] 3. connect() - Mise en place des écouteurs d'événements.");
 
@@ -468,10 +469,10 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
      * Met à jour l'état (activé/désactivé) du bouton de soumission.
      */
     updateSubmitButtonState() {
-        const activeForm = this.element.querySelector('.column-mapping-form:not([style*="display: none"])');
-        if (!activeForm) {
+        // NOUVEAU : Si une sauvegarde est en cours, le bouton est TOUJOURS désactivé.
+        if (this.isSaving) {
             if (this.hasSubmitButtonTarget) this.submitButtonTarget.disabled = true;
-            return;
+            return; // On arrête ici, la sauvegarde a la priorité.
         }
 
         const selects = activeForm.querySelectorAll('select[data-column-letter]');
@@ -571,24 +572,12 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
      * Soumet les données mappées au backend pour l'analyse.
      */
     async submitAnalysis(event) {
-        event.preventDefault();
-
         console.log("[BordereauAnalysis] submitAnalysis() - Lancement de l'analyse. Activation de la barre de progression.");
         this.submitButtonTarget.disabled = true;
         this.submitButtonTarget.textContent = "Analyse en cours...";
         this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('warning', 'Analyse en cours...', false); // Mettre à jour le feedback
         this.toggleProgressBar(true);
 
-        // ÉTAPE 1: Sauvegarder l'état actuel et attendre la confirmation.
-        // La méthode _saveAnalysisStateToBordereau retourne maintenant une promesse.
-        const saveSuccess = await this._saveAnalysisStateToBordereau();
-
-        if (!saveSuccess) {
-            // Si la sauvegarde échoue, on arrête le processus. L'erreur est déjà affichée.
-            return;
-        }
-
-        // ÉTAPE 2: Lancer l'analyse uniquement si la sauvegarde a réussi.
         // On appelle directement la méthode locale qui va faire un fetch sur l'API.
         // Le payload est vide car le backend a déjà toutes les informations nécessaires.
         this._handleSubmitBordereauAnalysisLocal({ url: `/admin/bordereau/api/submit-analysis/${this.bordereauIdValue}` });
@@ -722,7 +711,12 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
             analysisResults: this.currentStep === 3 ? this.analysisResultsValue : null,
         };
         console.log("[BordereauAnalysis] _saveAnalysisStateToBordereau() - Sauvegarde de l'état. Payload:", payload);
-        // this.toggleProgressBar(true); // Activate local progress bar for save request
+
+        // NOUVEAU : On passe le feu au rouge.
+        this.isSaving = true;
+        // On met à jour l'état du bouton immédiatement pour le désactiver.
+        this.updateSubmitButtonState();
+
         // On retourne maintenant la promesse pour pouvoir l'attendre (await)
         return this._handleSaveBordereauAnalysisStateLocal({
             url: `/admin/bordereau/api/save-analysis-state/${this.bordereauIdValue}`,
@@ -858,7 +852,11 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
             return false; // Retourne false en cas d'échec
         } finally {
             console.log("[BordereauAnalysis] _handleSaveBordereauAnalysisStateLocal() - Fin de l'opération. Désactivation de la barre de progression.");
-            // On ne désactive plus la barre de progression ici. Elle sera désactivée à la fin de l'analyse complète.
+            
+            // NOUVEAU : On passe le feu au vert.
+            this.isSaving = false;
+            // On réévalue l'état du bouton. S'il doit être actif, il le deviendra.
+            this.updateSubmitButtonState();
         }
     }
 }
