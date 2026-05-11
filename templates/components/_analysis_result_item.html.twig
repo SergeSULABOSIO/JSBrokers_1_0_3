@@ -16,11 +16,13 @@
 
         <div class="d-flex justify-content-between align-items-center">
             {# Titre principal avec icône de statut #}
-            <h5 class="mb-0 d-flex align-items-center gap-2">
-                <twig:UX:Icon name="{{ status_config.icon }}" class="{{ status_config.icon_class }}" width="20px" height="20px" />
-                <span class="fw-bold">{{ result.bordereau_line_info.reference_police|default('Avenant sans référence') }}</span>
-                <twig:UX:Icon name="lucide:chevron-down" class="chevron-icon" data-analysis-result-item-target="chevronIcon" />
-            </h5>
+            <div class="analysis-item-title-wrapper">
+                <h5 class="mb-0 d-flex align-items-center gap-2">
+                    <twig:UX:Icon name="{{ status_config.icon }}" class="{{ status_config.icon_class }}" width="20px" height="20px" />
+                    <span class="fw-bold">{{ result.bordereau_line_info.reference_police|default('Avenant sans référence') }}</span>
+                    <twig:UX:Icon name="lucide:chevron-down" class="chevron-icon" data-analysis-result-item-target="chevronIcon" width="18px" height="18px" />
+                </h5>
+            </div>
 
             {# Conteneur pour les boutons d'action contextuels #}
             <div class="analysis-item-actions" data-analysis-result-item-target="actionsContainer">
