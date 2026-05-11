@@ -256,21 +256,9 @@ class BordereauController extends AbstractController
         $viewData['typeRevenus'] = $typeRevenusData;
 
         // DUMP pour le débogage : Vérifier les valeurs avant de les envoyer au template.
-        dump([
-            'selectedSheetName_from_entity' => $bordereau->getSelectedSheetName(),
-            'mappedColumns_from_entity' => $bordereau->getMappedColumns(),
-            'analysisResults_from_entity' => $bordereau->getAnalysisResults(),
-            'currentAnalysisStep_from_entity' => $bordereau->getCurrentAnalysisStep(),
-        ]);
-
-        // NOUVEAU: DUMP pour inspecter la structure des données brutes
         $rawAnalysisResults = $bordereau->getAnalysisResults() ?? [];
-        dump("1. Données brutes de 'analysisResults' depuis l'entité:", $rawAnalysisResults);
 
         $analysisResultsForTemplate = array_map(function ($item) use ($bordereau) {
-            // NOUVEAU: DUMP pour inspecter chaque item individuellement
-            dump("2. Traitement d'un item dans array_map:", ['item' => $item, 'type' => gettype($item)]);
-
             if (is_string($item)) {
                 return $item;
             }
@@ -287,8 +275,6 @@ class BordereauController extends AbstractController
 
         // NOUVEAU: On filtre tous les éléments qui n'ont pas pu être convertis en chaîne (ceux qui sont `null`).
         $analysisResultsForTemplate = array_filter($analysisResultsForTemplate, fn ($value) => $value !== null);
-
-        dump("3. Résultats finaux après mappage et filtrage:", $analysisResultsForTemplate);
 
         return $this->render('admin/bordereau/bordereau_analysis.html.twig', [
             'bordereau' => $bordereau,
