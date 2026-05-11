@@ -426,7 +426,17 @@ class BordereauController extends AbstractController
             }
         }
 
-        return $this->json(['analysisResults' => $analysisResults]);
+        // NOUVEAU : Rendre chaque résultat en HTML via le composant Twig
+        $analysisResultsHtml = [];
+        foreach ($analysisResults as $index => $result) {
+            $analysisResultsHtml[] = $this->renderView('components/_analysis_result_item.html.twig', [
+                'result' => $result,
+                'bordereau_id' => $bordereau->getId(),
+                'loop' => ['index' => $index] // Simuler la variable loop de Twig
+            ]);
+        }
+
+        return $this->json(['analysisResultsHtml' => $analysisResultsHtml]);
     }
 
     // NOUVEAU : Route pour enregistrer l'état de l'analyse du bordereau

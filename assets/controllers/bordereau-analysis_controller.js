@@ -593,45 +593,16 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
     renderAnalysisResults() {
         if (!this.hasAnalysisResultsListTarget) return;
 
-        this.analysisResultsListTarget.innerHTML = ''; // Vide la liste précédente
+        // La valeur `analysisResultsValue` contient maintenant un tableau de chaînes HTML
+        const resultsHtml = this.analysisResultsValue;
 
-        if (!this.analysisResultsValue || this.analysisResultsValue.length === 0) {
+        if (!resultsHtml || resultsHtml.length === 0) {
             this.analysisResultsListTarget.innerHTML = '<li class="list-group-item text-center text-muted">Aucun résultat d\'analyse à afficher.</li>';
             return;
         }
 
-        this.analysisResultsValue.forEach(result => {
-            const listItem = document.createElement('li');
-            listItem.classList.add('list-group-item', 'd-flex', 'flex-column', 'gap-2');
-
-            let statusClass = '';
-            let statusIcon = '';
-            if (result.type === 'new') {
-                statusClass = 'list-group-item-info';
-                statusIcon = '<twig:UX:Icon name="lucide:plus-circle" class="text-info me-2" />';
-            } else if (result.type === 'discrepancy') {
-                statusClass = 'list-group-item-warning';
-                statusIcon = '<twig:UX:Icon name="lucide:alert-triangle" class="text-warning me-2" />';
-            } else if (result.type === 'match') {
-                statusClass = 'list-group-item-success';
-                statusIcon = '<twig:UX:Icon name="lucide:check-circle" class="text-success me-2" />';
-            }
-
-            if (statusClass) listItem.classList.add(statusClass);
-
-            let bordereauInfoHtml = Object.entries(result.bordereau_line_info || {}).map(([key, value]) => `<strong>${key.replace(/_/g, ' ')}:</strong> ${value}`).join(' | ');
-
-            let actionsHtml = (result.actions || []).map(action =>
-                `<a href="#" class="btn btn-sm btn-outline-primary" data-action="click->bordereau-analysis#handleAnalysisAction" data-event-name="${action.event}" data-payload='${JSON.stringify(action.payload)}'>${action.label}</a>`
-            ).join(' ');
-
-            listItem.innerHTML = `
-                <div class="d-flex align-items-center"><h5 class="mb-0">${result.bordereau_line_info.reference_police || 'Avenant sans référence'}</h5></div>
-                <p class="mb-1 text-muted small">${bordereauInfoHtml}</p>
-                <p class="mb-2">${result.details}</p>
-                ${actionsHtml ? `<div class="d-flex gap-2">${actionsHtml}</div>` : ''}`;
-            this.analysisResultsListTarget.appendChild(listItem);
-        });
+        // On joint simplement les morceaux de HTML et on les injecte.
+        this.analysisResultsListTarget.innerHTML = resultsHtml.join('');
     }
     /**
      * Gère le clic sur un bouton d'action de l'étape 3.
@@ -653,9 +624,9 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
      * @param {object} payload - Le payload contenant les résultats d'analyse.
      */
     _handleAnalysisCompleted(payload) {
-        const { analysisResults } = payload;
-        console.log("[BordereauAnalysis] _handleAnalysisCompleted() - Analyse terminée. Résultats reçus:", analysisResults);
-        this.analysisResultsValue = analysisResults; // Affecter correctement à la valeur statique
+        const { analysisResultsHtml } = payload;
+        console.log("[BordereauAnalysis] _handleAnalysisCompleted() - Analyse terminée. HTML des résultats reçu:", analysisResultsHtml);
+        this.analysisResultsValue = analysisResultsHtml; // Affecter le HTML à la valeur Stimulus
         this.showStep(3); // Passer à l'étape 3 pour afficher les résultats
         this.submitButtonTarget.disabled = false;
         this.submitButtonTarget.textContent = "Lancer l'analyse"; // Réinitialiser le texte du bouton
@@ -800,12 +771,12 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
                 throw new Error(err.error || "Erreur lors de la soumission de l'analyse.");
             }
             const result = await response.json();
-            if (!result.analysisResults || result.analysisResults.length === 0) {
-                console.warn("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - L'API a retourné une réponse vide pour 'analysisResults' malgré un statut 200 OK.");
+            if (!result.analysisResultsHtml || result.analysisResultsHtml.length === 0) {
+                console.warn("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - L'API a retourné une réponse vide pour 'analysisResultsHtml' malgré un statut 200 OK.");
             }
             console.log("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Succès. Appel de _handleAnalysisCompleted.");
             // Directly call local completion handler
-            this._handleAnalysisCompleted({ analysisResults: result.analysisResults });
+            this._handleAnalysisCompleted({ analysisResultsHtml: result.analysisResultsHtml });
         } catch (error) {
             console.error("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Erreur lors de la soumission de l'analyse:", error);
             // Directly call local error handler

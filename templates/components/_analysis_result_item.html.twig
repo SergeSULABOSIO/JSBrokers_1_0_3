@@ -1,0 +1,52 @@
+{# templates/components/_analysis_result_item.html.twig #}
+{% set status_config = {
+    'new': { 'class': 'border-info', 'icon': 'lucide:plus-circle', 'icon_class': 'text-info' },
+    'discrepancy': { 'class': 'border-warning', 'icon': 'lucide:alert-triangle', 'icon_class': 'text-warning' },
+    'match': { 'class': 'border-success', 'icon': 'lucide:check-circle', 'icon_class': 'text-success' }
+}[result.type] %}
+
+<li class="analysis-item list-group-item p-0 {{ status_config.class }}"
+    data-controller="analysis-result-item"
+    data-analysis-result-item-actions-value="{{ result.actions|json_encode|e('html_attr') }}"
+    data-analysis-result-item-icon-prefix-value="{{ bordereau_id }}-{{ loop.index }}-"
+>
+    {# Ligne 1: La barre de titre cliquable pour l'accordéon #}
+    <div class="analysis-item-header p-3"
+         data-action="click->analysis-result-item#toggleDetails mouseenter->analysis-result-item#showActions mouseleave->analysis-result-item#hideActions">
+
+        <div class="d-flex justify-content-between align-items-center">
+            {# Titre principal avec icône de statut #}
+            <h5 class="mb-0 d-flex align-items-center gap-2">
+                <twig:UX:Icon name="{{ status_config.icon }}" class="{{ status_config.icon_class }}" width="20px" height="20px" />
+                <span class="fw-bold">{{ result.bordereau_line_info.reference_police|default('Avenant sans référence') }}</span>
+                <twig:UX:Icon name="lucide:chevron-down" class="chevron-icon" data-analysis-result-item-target="chevronIcon" />
+            </h5>
+
+            {# Conteneur pour les boutons d'action contextuels #}
+            <div class="analysis-item-actions" data-analysis-result-item-target="actionsContainer">
+                {% for action in result.actions %}
+                    <button class="btn btn-sm btn-light p-1"
+                            data-action="click->analysis-result-item#handleAction"
+                            data-event-name="{{ action.event }}"
+                            data-payload="{{ action.payload|json_encode|e('html_attr') }}"
+                            data-analysis-result-item-target="actionButton"
+                            data-tooltip-text="{{ action.label }}">
+                        {# La cible pour l'icône qui sera chargée dynamiquement #}
+                        <span class="button-icon" data-analysis-result-item-target="actionIcon"></span>
+                    </button>
+                {% endfor %}
+            </div>
+        </div>
+
+        {# Ligne 2: Le texte de synthèse #}
+        <p class="mb-0 mt-1 text-muted small">{{ result.details }}</p>
+    </div>
+
+    {# Contenu détaillé (accordéon), caché par défaut #}
+    <div class="analysis-item-details" data-analysis-result-item-target="detailsPanel">
+        <div class="p-3">
+            <p class="mb-1 small fst-italic"><strong>Détails de la ligne du bordereau :</strong></p>
+            <p class="mb-0 text-muted small">{{ result.bordereau_line_info|map((value, key) => "<strong>" ~ key|replace({'_': ' '})|title ~ ":</strong> " ~ value)|join(' | ')|raw }}</p>
+        </div>
+    </div>
+</li>
