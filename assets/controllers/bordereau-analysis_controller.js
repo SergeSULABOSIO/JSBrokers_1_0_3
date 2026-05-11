@@ -41,7 +41,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         this.iconCache = new Map();
         this.boundHandleIconRequest = this.handleIconRequest.bind(this);
         this.boundHandleIconLoaded = this.handleIconLoaded.bind(this);
-        document.addEventListener('analysis:icon.request', this.boundHandleIconRequest);
+        this.element.addEventListener('analysis:icon.request', this.boundHandleIconRequest);
         document.addEventListener('app:icon.loaded', this.boundHandleIconLoaded);
 
         this.requiredMappings = new Set([
@@ -89,7 +89,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
     disconnect() {
         console.log("[BordereauAnalysis] disconnect() - Nettoyage des écouteurs.");
-        document.removeEventListener('analysis:icon.request', this.boundHandleIconRequest);
+        this.element.removeEventListener('analysis:icon.request', this.boundHandleIconRequest);
         document.removeEventListener('app:icon.loaded', this.boundHandleIconLoaded);
     }
 
@@ -114,7 +114,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             // Si l'icône est en cache, on la renvoie directement.
             this.dispatch('analysis:icon.loaded', {
                 html: this.iconCache.get(iconName),
-                requesterId: requesterId
+                requesterId: requesterId,
+                iconName: iconName
             });
         } else {
             // Sinon, on la demande au cerveau.
@@ -141,16 +142,13 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             // On relaie l'événement (avec le HTML ou l'erreur) à l'enfant qui l'a demandé.
             this.dispatch('analysis:icon.loaded', {
                 html: html,
-                requesterId: requesterId
+                requesterId: requesterId,
+                iconName: iconName
             });
         }
     }
 
-    dispatch(name, detail) {
-        this.element.dispatchEvent(new CustomEvent(name, {
-            bubbles: true, detail
-        }));
-    }
+
 
     /**
      * Finalise le processus de restauration en mettant à jour l'UI.
