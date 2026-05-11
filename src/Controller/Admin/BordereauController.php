@@ -268,11 +268,15 @@ class BordereauController extends AbstractController
         // from what were originally strings. It attempts to extract the string content
         // if the item is an object, otherwise it uses the item as is (assuming it's a string).
         $analysisResultsForTemplate = array_map(function ($item) {
-            if (is_object($item)) {
+            if (is_array($item) && isset($item[0]) && is_string($item[0])) {
+                // Case where the item is an array like ['<li ...>...</li>']
+                return $item[0];
+            } elseif (is_object($item)) {
                 // Attempt to find a string property within the object. A common case is '0' for simple arrays.
                 // Or 'html' if the structure was changed to wrap the HTML string.
                 return (string) ($item->{'0'} ?? (property_exists($item, 'html') ? $item->html : ''));
             }
+            // Case where the item is already a string or can be safely cast to one.
             return (string) $item; // Ensure it's a string if it's not an object.
         }, $bordereau->getAnalysisResults() ?? []);
         return $this->render('admin/bordereau/bordereau_analysis.html.twig', [
