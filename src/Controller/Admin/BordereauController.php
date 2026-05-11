@@ -278,25 +278,54 @@ class BordereauController extends AbstractController
 
     // NOUVEAU : Route pour soumettre l'analyse du bordereau
     #[Route('/api/submit-analysis/{id}', name: 'api.submit_analysis', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
-    public function submitAnalysisApi(Bordereau $bordereau, Request $request): JsonResponse
+    public function submitAnalysisApi(Bordereau $bordereau, Request $request, ParameterBagInterface $params): JsonResponse
     {
         $entreprise = $this->getEntreprise();
-        // dump('--- Début submitAnalysisApi ---');
-        $payload = json_decode($request->getContent(), true);
-        // dump('Payload reçu:', $payload);
 
-        $sheetName = $payload['sheetName'] ?? null;
-        $mappedColumns = $payload['mappedColumns'] ?? [];
-        $sheetsData = $payload['sheetsData'] ?? [];
-        // dump('Extracted from payload:', ['sheetName' => $sheetName, 'mappedColumns' => $mappedColumns, 'sheetsDataKeys' => array_keys($sheetsData)]);
+        // Récupérer les informations depuis l'entité Bordereau, qui a été sauvegardée
+        $sheetName = $bordereau->getSelectedSheetName();
+        $mappedColumns = $bordereau->getMappedColumns() ?: [];
 
         $refPoliceColumn = array_search('reference_police', $mappedColumns);
 
-        if (!$sheetName || !isset($sheetsData[$sheetName]) || !$refPoliceColumn) {
-            return $this->json(['error' => 'Nom de feuille ou données de feuille manquantes.'], Response::HTTP_BAD_REQUEST);
+        if (!$sheetName || !$refPoliceColumn) {
+            return $this->json(['error' => 'Le nom de la feuille ou le mappage de la colonne "N° de Police" est manquant. Veuillez retourner à l\'étape de mappage.'], Response::HTTP_BAD_REQUEST);
         }
 
-        $selectedSheetData = $sheetsData[$sheetName] ?? []; // CORRECTION: Accéder directement aux données de la feuille
+        // Relire le fichier Excel pour obtenir les données de la feuille sélectionnée
+        $excelDocument = null;
+        $allowedExtensions = ['xlsx', 'xls', 'ods'];
+        foreach ($bordereau->getDocuments() as $doc) {
+            if ($doc->getNomFichierStocke()) {
+                $extension = pathinfo($doc->getNomFichierStocke(), PATHINFO_EXTENSION);
+                if (in_array(strtolower($extension), $allowedExtensions)) {
+                    $excelDocument = $doc;
+                    break;
+                }
+            }
+        }
+
+        if (!$excelDocument) {
+            return $this->json(['error' => "Aucun fichier Excel valide n'est attaché à ce bordereau."], Response::HTTP_BAD_REQUEST);
+        }
+
+        $filePath = $params->get('kernel.project_dir') . '/public/uploads/documents/' . $excelDocument->getNomFichierStocke();
+        $selectedSheetData = [];
+
+        try {
+            $spreadsheet = IOFactory::load($filePath);
+            $worksheet = $spreadsheet->getSheetByName($sheetName);
+            if ($worksheet) {
+                $sheetDataWithHeader = $worksheet->toArray(null, true, false, true);
+                array_shift($sheetDataWithHeader); // Retirer la ligne d'en-tête
+                $selectedSheetData = $sheetDataWithHeader;
+            } else {
+                return $this->json(['error' => "La feuille '$sheetName' n'a pas été trouvée dans le fichier Excel."], Response::HTTP_BAD_REQUEST);
+            }
+        } catch (ReaderException $e) {
+            return $this->json(['error' => "Erreur lors de la lecture du fichier Excel : " . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
         $analysisResults = [];
 
         // --- ÉTAPE 1: Extraire toutes les références de police du fichier Excel ---
