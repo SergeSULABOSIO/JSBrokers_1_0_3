@@ -258,23 +258,19 @@ class BordereauController extends AbstractController
         // DUMP pour le débogage : Vérifier les valeurs avant de les envoyer au template.
         $rawAnalysisResults = $bordereau->getAnalysisResults() ?? [];
 
-        $analysisResultsForTemplate = array_map(function ($item) use ($bordereau) {
-            if (is_string($item)) {
-                return $item;
+        // CORRECTION : Si les résultats sont des données structurées (objets/tableaux),
+        // on les transforme en HTML en utilisant le même template que lors de l'analyse initiale.
+        // Cela garantit que la restauration de l'état fonctionne correctement.
+        $analysisResultsForTemplate = [];
+        if (!empty($rawAnalysisResults) && (is_array($rawAnalysisResults[0]) || is_object($rawAnalysisResults[0]))) {
+            foreach ($rawAnalysisResults as $index => $result) {
+                $analysisResultsForTemplate[] = $this->renderView('components/_analysis_result_item.html.twig', [
+                    'result' => (array) $result, // On s'assure que c'est un tableau pour Twig
+                    'bordereau_id' => $bordereau->getId(),
+                    'loop' => ['index' => $index] // Simuler la variable loop de Twig
+                ]);
             }
-            if (is_array($item) && isset($item[0]) && is_string($item[0])) {
-                return $item[0]; // Cas ['<li>...</li>']
-            }
-            if (is_object($item)) {
-                // Gère les objets stdClass venant du JSON
-                return (string) ($item->{'0'} ?? (property_exists($item, 'html') ? $item->html : ''));
-            }
-            // Pour tout autre cas (tableau vide, tableau non conforme, etc.), on retourne null pour le filtrer plus tard.
-            return null;
-        }, $rawAnalysisResults);
-
-        // NOUVEAU: On filtre tous les éléments qui n'ont pas pu être convertis en chaîne (ceux qui sont `null`).
-        $analysisResultsForTemplate = array_filter($analysisResultsForTemplate, fn ($value) => $value !== null);
+        }
 
         return $this->render('admin/bordereau/bordereau_analysis.html.twig', [
             'bordereau' => $bordereau,
