@@ -1,11 +1,11 @@
-import { Controller } from '@hotwired/stimulus';
+import BaseController from './base_controller.js';
 /**
  * @class BordereauAnalysisController
  * @description Gère l'interface de l'analyse de bordereau en deux étapes.
  * Etape 1: Sélection de la feuille Excel.
  * Etape 2: Mappage des colonnes de la feuille sélectionnée.
  */
-export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
+export default class extends BaseController { // NOUVEAU : Ajout du bouton de retour
     static targets = [ // NOUVEAU : Ajout de la cible pour le bouton de retour
         "sheetSelection", "step2", "mappingContainer", "mappingStatusFeedback", "mappingForm",
         "mappingSelect", "analysisResult", "submitButton", "columnNameText", "step1", "step3", "analysisResultsList", "progressBar", "progressBarContainer",
@@ -36,6 +36,13 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
             analysisResults: this.analysisResultsValue
         });
         console.groupEnd();
+
+        // NOUVEAU : Initialisation du cache pour les icônes des résultats d'analyse.
+        this.iconCache = new Map();
+        this.boundHandleIconRequest = this.handleIconRequest.bind(this);
+        this.boundHandleIconLoaded = this.handleIconLoaded.bind(this);
+        document.addEventListener('analysis:icon.request', this.boundHandleIconRequest);
+        document.addEventListener('app:icon.loaded', this.boundHandleIconLoaded);
 
         this.requiredMappings = new Set([
             'reference_police',
@@ -82,6 +89,8 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
 
     disconnect() {
         console.log("[BordereauAnalysis] disconnect() - Nettoyage des écouteurs.");
+        document.removeEventListener('analysis:icon.request', this.boundHandleIconRequest);
+        document.removeEventListener('app:icon.loaded', this.boundHandleIconLoaded);
     }
 
     /**
@@ -91,6 +100,56 @@ export default class extends Controller { // NOUVEAU : Ajout du bouton de retour
         this.updateMappingStatusFeedback();
         this.updateSubmitButtonState();
         this.updateSelectOptionsVisuals();
+    }
+
+    /**
+     * NOUVEAU : Gère les demandes d'icônes venant des items de résultat.
+     * @param {CustomEvent} event
+     */
+    handleIconRequest(event) {
+        const { iconName, requesterId, iconSize } = event.detail;
+        if (!iconName || !requesterId) return;
+
+        if (this.iconCache.has(iconName)) {
+            // Si l'icône est en cache, on la renvoie directement.
+            this.dispatch('analysis:icon.loaded', {
+                html: this.iconCache.get(iconName),
+                requesterId: requesterId
+            });
+        } else {
+            // Sinon, on la demande au cerveau.
+            this.notifyCerveau('ui:icon.request', {
+                iconName: iconName,
+                iconSize: iconSize,
+                requesterId: requesterId // On transmet l'ID de l'enfant qui a demandé
+            });
+        }
+    }
+
+    /**
+     * NOUVEAU : Gère la réception des icônes depuis le cerveau.
+     * @param {CustomEvent} event
+     */
+    handleIconLoaded(event) {
+        const { iconName, html, requesterId } = event.detail;
+
+        // On ne met en cache et on ne diffuse que si l'icône est valide et que la requête vient d'un de nos enfants.
+        if (requesterId && requesterId.startsWith(this.bordereauIdValue)) {
+            if (html && !html.trim().startsWith('<!--')) {
+                this.iconCache.set(iconName, html);
+            }
+            // On relaie l'événement (avec le HTML ou l'erreur) à l'enfant qui l'a demandé.
+            this.dispatch('analysis:icon.loaded', {
+                html: html,
+                requesterId: requesterId
+            });
+        }
+    }
+
+    dispatch(name, detail) {
+        this.element.dispatchEvent(new CustomEvent(name, {
+            bubbles: true, detail
+        }));
     }
 
     /**
