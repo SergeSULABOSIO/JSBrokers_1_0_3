@@ -262,6 +262,19 @@ class BordereauController extends AbstractController
             'analysisResults_from_entity' => $bordereau->getAnalysisResults(),
             'currentAnalysisStep_from_entity' => $bordereau->getCurrentAnalysisStep(),
         ]);
+
+        // Ensure analysisResults is an array of strings for Stimulus to render correctly.
+        // This handles cases where JSON deserialization might produce stdClass objects
+        // from what were originally strings. It attempts to extract the string content
+        // if the item is an object, otherwise it uses the item as is (assuming it's a string).
+        $analysisResultsForTemplate = array_map(function ($item) {
+            if (is_object($item)) {
+                // Attempt to find a string property within the object. A common case is '0' for simple arrays.
+                // Or 'html' if the structure was changed to wrap the HTML string.
+                return (string) ($item->{'0'} ?? (property_exists($item, 'html') ? $item->html : ''));
+            }
+            return (string) $item; // Ensure it's a string if it's not an object.
+        }, $bordereau->getAnalysisResults() ?? []);
         return $this->render('admin/bordereau/bordereau_analysis.html.twig', [
             'bordereau' => $bordereau,
             'entreprise' => $entreprise,
@@ -270,7 +283,7 @@ class BordereauController extends AbstractController
             // CORRECTION : S'assurer que les types sont corrects (objet vide ou tableau vide au lieu de null)
             'selectedSheetName' => $bordereau->getSelectedSheetName(),
             'mappedColumns' => (object)($bordereau->getMappedColumns() ?: []),
-            'analysisResults' => $bordereau->getAnalysisResults() ?? [],
+            'analysisResults' => $analysisResultsForTemplate,
             'currentAnalysisStep' => $bordereau->getCurrentAnalysisStep(),
             'error' => $error,
         ]);
