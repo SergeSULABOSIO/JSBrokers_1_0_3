@@ -1665,6 +1665,12 @@ textarea:hover,
     position: relative; /* Pour le positionnement des actions */
 }
 
+/* NOUVEAU : Conteneur pour le titre pour qu'il ne prenne pas toute la largeur */
+.analysis-item-title-wrapper {
+    flex-grow: 1; /* Prend l'espace disponible */
+    min-width: 0; /* Empêche le dépassement si le titre est très long */
+}
+
 .analysis-item-header .chevron-icon {
     transition: transform 0.3s ease;
     color: #6c757d;
@@ -1690,6 +1696,8 @@ textarea:hover,
     display: flex;
     gap: 0.5rem;
     opacity: 0;
+    flex-shrink: 0; /* Empêche le conteneur de se réduire */
+    min-width: 80px; /* Assure une largeur minimale pour être visible */
     visibility: hidden;
     transition: opacity 0.2s ease, visibility 0.2s ease;
 }
