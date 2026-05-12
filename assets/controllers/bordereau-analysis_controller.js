@@ -121,14 +121,15 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         if (this.iconCache.has(iconName)) {
             // Si l'icône est en cache, on la renvoie directement.
-            this.dispatch('analysis:icon.loaded', {
+            console.log(`%c[Parent] 1b. Icône '${iconName}' trouvée en cache. Renvoi immédiat.`, 'color: green;');
+            document.dispatchEvent(new CustomEvent('analysis:icon.loaded', { bubbles: true, detail: {
                 html: this.iconCache.get(iconName), // HTML de l'icône
                 iconName: iconName,                 // Nom de l'icône (pour le cache)
                 requesterId: requesterId,           // ID de l'élément demandeur
-            });
+            } }));
         } else {
             // Sinon, on la récupère depuis le serveur.
-            const url = `/api/icon/get-icon?name=${encodeURIComponent(iconName)}&size=${iconSize}`;
+            const url = `/api/icon/api/get-icon?name=${encodeURIComponent(iconName)}&size=${iconSize}`;
             try {
                 const response = await fetch(url);
                 if (!response.ok) throw new Error(`Icon fetch failed with status ${response.status}`);
