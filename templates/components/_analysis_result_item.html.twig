@@ -58,12 +58,18 @@
                                 {% if 'date' in key|lower and value is iterable and value.date is defined %}
                                     {{ value.date|date('d/m/Y') }}
                                 {# 2. Traiter les pourcentages #}
-                                {% elseif 'taux' in key|lower and value is numeric %}
-                                    {{ value|number_format(2, ',', ' ') }} %
-                                {# 3. Traiter les autres valeurs numériques #}
-                                {% elseif value is numeric %}
-                                    {{ value|number_format(2, ',', ' ') }}
-                                {# 4. Afficher le reste tel quel #}
+                                {% elseif 'taux' in key|lower %}
+                                    {# Conversion sûre en float avant formatage #}
+                                    {{ value|float|number_format(2, ',', ' ') }} %
+                                {# 3. Traiter les montants monétaires et chargements par leur nom #}
+                                {% elseif key|lower starts with 'chargement' or
+                                          key|lower == 'prime_ttc' or
+                                          key|lower == 'revenu 1' or
+                                          key|lower == 'commission ht assureur' or
+                                          key|lower == 'taxe commission assureur' %}
+                                    {# Conversion sûre en float avant formatage #}
+                                    {{ value|float|number_format(2, ',', ' ') }}
+                                {# 4. Afficher le reste tel quel (Risque, Reference Police, etc.) #}
                                 {% else %}
                                     {{ value }}
                                 {% endif %}
