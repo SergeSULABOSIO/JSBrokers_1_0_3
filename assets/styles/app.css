@@ -1650,7 +1650,7 @@ textarea:hover,
 /* ================================================================== */
 
 .analysis-item {
-    border-width: 1px 1px 1px 4px !important; /* Bordure gauche plus épaisse */
+    border-width: 1px 1px 1px 3px !important; /* Bordure gauche affinée */
     border-style: solid !important;
     margin-bottom: 0.75rem;
     transition: box-shadow 0.2s ease-in-out;
@@ -1737,4 +1737,22 @@ textarea:hover,
 .analysis-item-actions .btn .analysis-action-svg-icon {
     color: #198754; /* Vert de succès de Bootstrap pour la couleur de l'icône */
     /* L'aspect "gras" est obtenu par la couleur vive et la taille déjà augmentée du bouton/icône. */
+}
+
+/* NOUVEAU : Grille pour les détails de la ligne de bordereau */
+.analysis-details-grid .row {
+    padding: 0.35rem 0.5rem;
+    border-radius: 4px;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+/* Style zébré pour une meilleure lisibilité */
+.analysis-details-grid .row:nth-child(odd) {
+    background-color: #f8f9fa;
+}
+
+.analysis-details-grid .row:hover {
+    background-color: #e9ecef;
+    font-weight: bold;
 }

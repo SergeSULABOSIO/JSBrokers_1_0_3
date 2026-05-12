@@ -47,8 +47,16 @@
     {# Contenu détaillé (accordéon), caché par défaut #}
     <div class="analysis-item-details" data-analysis-result-item-target="detailsPanel">
         <div class="p-3">
-            <p class="mb-1 small fst-italic"><strong>Détails de la ligne du bordereau :</strong></p>
-            <p class="mb-0 text-muted small">{{ result.bordereau_line_info|map((value, key) => "<strong>" ~ key|replace({'_': ' '})|title ~ ":</strong> " ~ value)|join(' | ')|raw }}</p>
+            <p class="mb-2 small fst-italic"><strong>Détails de la ligne du bordereau :</strong></p>
+            <div class="analysis-details-grid small text-muted">
+                {% for key, value in result.bordereau_line_info %}
+                    <div class="row">
+                        <div class="col-md-5"><strong>{{ key|replace({'_': ' '})|title }}</strong></div>
+                        {# CORRECTION : On formate les dates pour une meilleure lisibilité #}
+                        <div class="col-md-7">{{ value is instanceof('DateTime') or value is instanceof('DateTimeImmutable') ? value|date('d/m/Y') : value }}</div>
+                    </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
 </li>
