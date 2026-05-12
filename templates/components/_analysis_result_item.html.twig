@@ -53,7 +53,7 @@
                     <div class="row">
                         <div class="col-md-5"><strong>{{ key|replace({'_': ' '})|title }}</strong></div>
                         {# CORRECTION : On formate les dates pour une meilleure lisibilité #}
-                        <div class="col-md-7">{{ value is instanceof('DateTime') or value is instanceof('DateTimeImmutable') ? value|date('d/m/Y') : value }}</div>
+                        <div class="col-md-7">{{ value is same as(false) or value is same as(true) or value is not iterable ? value : (value.date is defined ? value|date('d/m/Y') : value) }}</div>
                     </div>
                 {% endfor %}
             </div>
