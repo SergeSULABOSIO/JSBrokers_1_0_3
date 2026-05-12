@@ -366,22 +366,25 @@ class BordereauController extends AbstractController
             if (!$refPolice) continue; // Ignorer les lignes sans référence de police
 
             $avenant = $avenantsMap[$refPolice] ?? null;
-            $lineData = []; // Pour stocker les données extraites de la ligne Excel
+            $rawLineData = []; // Pour stocker les données brutes extraites de la ligne Excel (utilisées dans le payload)
+            $formattedLineData = []; // Pour stocker les données formatées pour l'affichage
             $discrepancies = [];
 
             // Extraire toutes les données mappées de la ligne Excel
             foreach ($mappedColumns as $systemField => $excelColumn) {
-                $lineData[$systemField] = $this->parseExcelValue($row[$excelColumn] ?? null, $systemField);
+                $rawValue = $this->parseExcelValue($row[$excelColumn] ?? null, $systemField);
+                $rawLineData[$systemField] = $rawValue;
+                $formattedLineData[$systemField] = $this->formatValueForDisplay($rawValue, $systemField);
             }
 
             if (!$avenant) {
                 // CAS 1: Nouvel avenant, non trouvé en base de données
                 $analysisResults[] = [
                     'type' => 'new',
-                    'bordereau_line_info' => $lineData,
+                    'bordereau_line_info' => $formattedLineData, // Formaté pour l'affichage
                     'details' => "Ligne n°" . ($rowIndex + 2) . ": Nouvel avenant détecté.",
                     'actions' => [
-                        ['label' => 'Créer l\'avenant', 'event' => 'bordereau:create-entity', 'payload' => ['excel_data' => $lineData]]
+                        ['label' => 'Créer l\'avenant', 'event' => 'bordereau:create-entity', 'payload' => ['excel_data' => $rawLineData]] // Brut pour le payload
                     ],
                 ];
                 continue;
@@ -396,8 +399,8 @@ class BordereauController extends AbstractController
             ];
 
             foreach ($comparisons as $field => $config) {
-                if (isset($lineData[$field])) {
-                    $excelValue = $lineData[$field];
+                if (isset($rawLineData[$field])) { // Comparaison sur les données brutes
+                    $excelValue = $rawLineData[$field];
                     $dbValue = $avenant->{$config['getter']};
 
                     // Formater les deux valeurs pour une comparaison fiable
@@ -407,9 +410,9 @@ class BordereauController extends AbstractController
                     if ($formattedExcelValue !== $formattedDbValue) {
                         $discrepancies[] = sprintf(
                             "%s (Excel: %s, DB: %s)",
-                            $this->translator->trans($field, [], 'messages'), // Traduire le nom du champ
-                            is_object($excelValue) && $excelValue instanceof \DateTimeInterface ? $excelValue->format('d/m/Y') : $excelValue,
-                            is_object($dbValue) && $dbValue instanceof \DateTimeInterface ? $dbValue->format('d/m/Y') : $dbValue
+                            $this->translator->trans($field, [], 'messages'),
+                            $this->formatValueForDisplay($excelValue, $field), // Formaté pour l'affichage dans le message
+                            $this->formatValueForDisplay($dbValue, $field)     // Formaté pour l'affichage dans le message
                         );
                     }
                 }
@@ -419,28 +422,37 @@ class BordereauController extends AbstractController
                 // CAS 2a: Des anomalies ont été trouvées
                 $analysisResults[] = [
                     'type' => 'discrepancy',
-                    'bordereau_line_info' => $lineData,
+                    'bordereau_line_info' => $formattedLineData, // Formaté pour l'affichage
                     'details' => "Ligne n°" . ($rowIndex + 2) . ": Anomalie(s) détectée(s) - " . implode(', ', $discrepancies),
                     'actions' => [
-                        ['label' => 'Mettre à jour', 'event' => 'bordereau:update-entity', 'payload' => ['avenant_id' => $avenant->getId(), 'excel_data' => $lineData]]
+                        ['label' => 'Mettre à jour', 'event' => 'bordereau:update-entity', 'payload' => ['avenant_id' => $avenant->getId(), 'excel_data' => $rawLineData]] // Brut pour le payload
                     ],
                 ];
             } else {
                 // CAS 2b: Aucune anomalie, tout correspond
                 $analysisResults[] = [
                     'type' => 'match',
-                    'bordereau_line_info' => $lineData,
+                    'bordereau_line_info' => $formattedLineData, // Formaté pour l'affichage
                     'details' => "Ligne n°" . ($rowIndex + 2) . ": Correspondance parfaite avec les données existantes.",
                     'actions' => [],
                 ];
             }
         }
 
+        // Sauvegarder les résultats d'analyse bruts dans l'entité Bordereau
+        $bordereau->setAnalysisResults($analysisResults);
+        $this->em->persist($bordereau);
+        $this->em->flush();
+
         // NOUVEAU : Rendre chaque résultat en HTML via le composant Twig
         $analysisResultsHtml = [];
         foreach ($analysisResults as $index => $result) {
+            // Créer une copie du résultat pour le rendu afin d'éviter de modifier l'original
+            $resultForRendering = $result;
+            // Le 'bordereau_line_info' dans $result est déjà formaté ici.
+            // Le 'payload' dans $result['actions'] contient toujours les données brutes.
             $analysisResultsHtml[] = $this->renderView('components/_analysis_result_item.html.twig', [
-                'result' => $result,
+                'result' => $resultForRendering,
                 'bordereau_id' => $bordereau->getId(),
                 'loop' => ['index' => $index] // Simuler la variable loop de Twig
             ]);
@@ -474,62 +486,5 @@ class BordereauController extends AbstractController
         $this->em->flush();
 
         return $this->json(['message' => 'État de l\'analyse enregistré avec succès.']);
-    }
-    /**
-     * Helper to parse and convert Excel values based on expected system field type.
-     * @param mixed $value
-     * @param string $systemField
-     * @return mixed
-     */
-    private function parseExcelValue($value, string $systemField)
-    {
-        if ($value === null || $value === '') {
-            return null;
-        }
-
-        switch ($systemField) {
-            case 'date_effet_avenant':
-            case 'date_expiration_avenant':
-            case 'date_operation':
-                // Attempt to parse date. PhpSpreadsheet often converts dates to numbers.
-                if (is_numeric($value)) {
-                    try {
-                        // Excel date format (days since 1900-01-01)
-                        return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value);
-                    } catch (\Exception $e) {
-                        // Fallback if conversion fails
-                        return null;
-                    }
-                } elseif (is_string($value)) {
-                    try {
-                        // Try common date formats
-                        return new DateTimeImmutable($value);
-                    } catch (\Exception $e) {
-                        return null;
-                    }
-                }
-                return null;
-            case 'prime_ttc':
-            case 'commission_ht_assureur':
-            case 'taxe_commission_assureur':
-            case 'taux_commission':
-                // Convert to float, handling common string representations (e.g., "1 234,56", "1.234.567,89")
-                if (is_string($value)) {
-                    // Remove spaces, replace comma with dot for float conversion
-                    $cleanedValue = str_replace([' ', "\u{00A0}"], '', $value); // Also remove non-breaking spaces
-                    $cleanedValue = str_replace(',', '.', $cleanedValue);
-                    // Handle cases like "1.234.567,89" -> "1234567.89"
-                    if (substr_count($cleanedValue, '.') > 1) {
-                        $lastDotPos = strrpos($cleanedValue, '.');
-                        if ($lastDotPos !== false) {
-                            $cleanedValue = str_replace('.', '', substr($cleanedValue, 0, $lastDotPos)) . substr($cleanedValue, $lastDotPos);
-                        }
-                    }
-                    return (float) $cleanedValue;
-                }
-                return (float) $value;
-            default:
-                return $value;
-        }
     }
 }

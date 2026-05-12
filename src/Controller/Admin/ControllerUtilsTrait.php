@@ -49,6 +49,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\SerializerInterface;
+use DateTimeImmutable;
 use Symfony\Component\Form\FormInterface;
 
 /**
@@ -948,5 +949,93 @@ trait ControllerUtilsTrait
 
         // On retourne le tableau de données prêt à être sérialisé.
         return ['entity' => $entity, 'entityType' => $entityType, 'entityCanvas' => $entityCanvas];
+    }
+
+    /**
+     * Helper to parse and convert Excel values based on expected system field type.
+     * This method is now part of the trait for reusability.
+     *
+     * @param mixed $value
+     * @param string $systemField
+     * @return mixed
+     */
+    protected function parseExcelValue($value, string $systemField)
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        switch ($systemField) {
+            case 'date_effet_avenant':
+            case 'date_expiration_avenant':
+            case 'date_operation':
+                // Attempt to parse date. PhpSpreadsheet often converts dates to numbers.
+                if (is_numeric($value)) {
+                    try {
+                        // Excel date format (days since 1900-01-01)
+                        return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value);
+                    } catch (\Exception $e) {
+                        // Fallback if conversion fails
+                        return null;
+                    }
+                } elseif (is_string($value)) {
+                    try {
+                        // Try common date formats
+                        return new DateTimeImmutable($value);
+                    } catch (\Exception $e) {
+                        return null;
+                    }
+                }
+                return null;
+            case 'prime_ttc':
+            case 'commission_ht_assureur':
+            case 'taxe_commission_assureur':
+            case 'taux_commission':
+                // Convert to float, handling common string representations (e.g., "1 234,56", "1.234.567,89")
+                if (is_string($value)) {
+                    // Remove spaces, replace comma with dot for float conversion
+                    $cleanedValue = str_replace([' ', "\u{00A0}"], '', $value); // Also remove non-breaking spaces
+                    $cleanedValue = str_replace(',', '.', $cleanedValue);
+                    // Handle cases like "1.234.567,89" -> "1234567.89"
+                    if (substr_count($cleanedValue, '.') > 1) {
+                        $lastDotPos = strrpos($cleanedValue, '.');
+                        if ($lastDotPos !== false) {
+                            $cleanedValue = str_replace('.', '', substr($cleanedValue, 0, $lastDotPos)) . substr($cleanedValue, $lastDotPos);
+                        }
+                    }
+                    return (float) $cleanedValue;
+                }
+                return (float) $value;
+            default:
+                return $value;
+        }
+    }
+
+    /**
+     * Formate une valeur pour l'affichage en fonction de sa clé (nom de champ).
+     * Cette méthode est maintenant protégée pour être accessible par les contrôleurs utilisant le trait.
+     *
+     * @param mixed $value La valeur à formater (peut être string, int, float, DateTimeImmutable).
+     * @param string $key La clé du champ (ex: 'date_operation', 'prime_ttc', 'taux_commission').
+     * @return string La valeur formatée sous forme de chaîne.
+     */
+    protected function formatValueForDisplay(mixed $value, string $key): string
+    {
+        if ($value === null || $value === '') {
+            return 'N/A';
+        }
+
+        // Dates
+        if (str_contains(strtolower($key), 'date') && ($value instanceof \DateTimeInterface)) {
+            return $value->format('d/m/Y');
+        }
+
+        // Pourcentages ou montants monétaires (y compris les chargements)
+        if ((str_contains(strtolower($key), 'taux') || str_starts_with(strtolower($key), 'chargement') ||
+             in_array(strtolower($key), ['prime_ttc', 'revenu 1', 'commission_ht_assureur', 'taxe_commission_assureur'])) && is_numeric($value)) {
+            return number_format($value, 2, ',', ' ') . (str_contains(strtolower($key), 'taux') ? ' %' : '');
+        }
+
+        return (string) $value;
     }
 }
