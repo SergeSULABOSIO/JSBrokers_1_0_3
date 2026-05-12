@@ -1030,6 +1030,16 @@ trait ControllerUtilsTrait
             return $value->format('d/m/Y');
         }
 
+        // NOUVEAU : Tentative de conversion des chaînes en date si la clé suggère une date.
+        // Cela corrige l'erreur "Object of class DateTime could not be converted to string"
+        // lorsque l'on compare une chaîne de date (Excel) avec un objet DateTime (DB).
+        if (str_contains(strtolower($key), 'date') && is_string($value)) {
+            try {
+                $date = new \DateTimeImmutable($value);
+                return $date->format('d/m/Y');
+            } catch (\Exception $e) { /* La conversion a échoué, on continue... */ }
+        }
+
         // Pourcentages ou montants monétaires (y compris les chargements)
         if ((str_contains(strtolower($key), 'taux') || str_starts_with(strtolower($key), 'chargement') ||
              in_array(strtolower($key), ['prime_ttc', 'revenu 1', 'commission_ht_assureur', 'taxe_commission_assureur'])) && is_numeric($value)) {
