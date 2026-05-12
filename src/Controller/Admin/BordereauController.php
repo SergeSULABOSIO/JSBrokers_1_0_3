@@ -16,6 +16,7 @@ use App\Repository\EntrepriseRepository;
 use App\Repository\InviteRepository;
 use App\Repository\ChargementRepository;
 use App\Services\Canvas\CalculationProvider;
+use App\Services\ServiceMonnaies;
 use App\Services\CanvasBuilder;
 use App\Services\JSBDynamicSearchService;
 use DateTimeImmutable;
@@ -57,7 +58,8 @@ class BordereauController extends AbstractController
         private SerializerInterface $serializer,
         private CalculationProvider $calculationProvider,
         CanvasBuilder $canvasBuilder, // Inject CanvasBuilder without property promotion
-        private AvenantRepository $avenantRepository // NOUVEAU : Ajout du repository Avenant
+        private AvenantRepository $avenantRepository, // NOUVEAU : Ajout du repository Avenant
+        private ServiceMonnaies $serviceMonnaies // NOUVEAU : Pour la monnaie d'affichage
     ) {
         // Assign the injected CanvasBuilder to the property declared in the trait
         $this->canvasBuilder = $canvasBuilder;
@@ -163,6 +165,7 @@ class BordereauController extends AbstractController
             'chargements' => [], // Initialisation
             'typeRevenus' => [], // NOUVEAU : Initialisation pour les types de revenu
         ];
+        $viewData['display_currency_code'] = $this->serviceMonnaies->getCodeMonnaieAffichage();
         // NOUVEAU : Définition statique des formats pour chaque champ système.
         // C'est cette carte qui dictera le formatage dans Twig.
         $viewData['system_field_formats'] = [
@@ -264,6 +267,18 @@ class BordereauController extends AbstractController
             ];
         }, $typeRevenus);
         $viewData['typeRevenus'] = $typeRevenusData;
+
+        // NOUVEAU : Enrichir la carte des formats avec les chargements et revenus
+        foreach ($chargementsData as $chargement) {
+            // La clé doit correspondre à la valeur utilisée dans le <select> du mappage
+            $key = 'chargement_' . $chargement['id'];
+            $viewData['system_field_formats'][$key] = 'number';
+        }
+        foreach ($typeRevenusData as $revenu) {
+            $key = 'revenu_' . $revenu['id'];
+            $viewData['system_field_formats'][$key] = 'number';
+        }
+
 
         // DUMP pour le débogage : Vérifier les valeurs avant de les envoyer au template.
         $rawAnalysisResults = $bordereau->getAnalysisResults() ?? [];

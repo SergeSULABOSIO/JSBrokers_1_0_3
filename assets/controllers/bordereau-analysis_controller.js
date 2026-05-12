@@ -22,7 +22,6 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         // NOUVEAU : On reçoit les options de mappage système depuis le backend.
         mappingOptions: Object,
         analysisResults: Array, // NOUVEAU : Pour la restauration de l'état
-        systemFieldFormats: Object, // NOUVEAU : Formats des champs système
         analysisResultsHtml: Array, // NOUVEAU : HTML des résultats pour la restauration
         selectedSheetName: String, // NOUVEAU : Pour la restauration de l'état,
         mappedColumns: Object,     // NOUVEAU : Pour la restauration de l'état
@@ -37,8 +36,6 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             mappedColumns: this.mappedColumnsValue,
             analysisResults: this.analysisResultsValue, // Données brutes
             analysisResultsHtml: this.analysisResultsHtmlValue // HTML
-            analysisResultsHtml: this.analysisResultsHtmlValue, // HTML
-            systemFieldFormats: this.systemFieldFormatsValue
         });
         console.groupEnd();
 
