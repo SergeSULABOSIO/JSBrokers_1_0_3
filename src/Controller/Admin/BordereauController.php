@@ -163,6 +163,16 @@ class BordereauController extends AbstractController
             'chargements' => [], // Initialisation
             'typeRevenus' => [], // NOUVEAU : Initialisation pour les types de revenu
         ];
+        // NOUVEAU : Définition statique des formats pour chaque champ système.
+        // C'est cette carte qui dictera le formatage dans Twig.
+        $viewData['system_field_formats'] = [
+            'reference_police' => 'text',
+            'date_effet_avenant' => 'date',
+            'date_expiration_avenant' => 'date',
+            'date_operation' => 'date',
+            'prime_ttc' => 'number',
+            'taux_commission' => 'number', // Les taux sont aussi des nombres
+        ];
         $error = null;
         $excelDocument = null;
 
@@ -265,7 +275,7 @@ class BordereauController extends AbstractController
         if (!empty($rawAnalysisResults) && (isset($rawAnalysisResults[0])) && (is_array($rawAnalysisResults[0]) || is_object($rawAnalysisResults[0]))) {
             foreach ($rawAnalysisResults as $index => $result) {
                 $analysisResultsHtmlForTemplate[] = $this->renderView('components/_analysis_result_item.html.twig', [
-                    'result' => (array) $result, // On s'assure que c'est un tableau pour Twig
+                    'result' => (array) $result,
                     'bordereau_id' => $bordereau->getId(),
                     'loop' => ['index' => $index] // Simuler la variable loop de Twig
                 ]);
@@ -368,21 +378,21 @@ class BordereauController extends AbstractController
 
             $avenant = $avenantsMap[$refPolice] ?? null;
             $rawLineData = []; // Pour stocker les données brutes extraites de la ligne Excel (utilisées dans le payload)
-            $formattedLineData = []; // Pour stocker les données formatées pour l'affichage
             $discrepancies = [];
 
             // Extraire toutes les données mappées de la ligne Excel
             foreach ($mappedColumns as $systemField => $excelColumn) {
                 $rawValue = $this->parseExcelValue($row[$excelColumn] ?? null, $systemField);
                 $rawLineData[$systemField] = $rawValue;
-                $formattedLineData[$systemField] = $this->formatValueForDisplay($rawValue, $systemField);
+                // SUPPRESSION : Le formatage se fait maintenant dans Twig.
+                // $formattedLineData[$systemField] = $this->formatValueForDisplay($rawValue, $systemField);
             }
 
             if (!$avenant) {
                 // CAS 1: Nouvel avenant, non trouvé en base de données
                 $analysisResults[] = [
                     'type' => 'new',
-                    'bordereau_line_info' => $formattedLineData, // Formaté pour l'affichage
+                    'bordereau_line_info' => $rawLineData, // On envoie les données brutes
                     'details' => "Ligne n°" . ($rowIndex + 2) . ": Nouvel avenant détecté.",
                     'actions' => [
                         ['label' => 'Créer l\'avenant', 'event' => 'bordereau:create-entity', 'payload' => ['excel_data' => $rawLineData]] // Brut pour le payload
@@ -412,8 +422,8 @@ class BordereauController extends AbstractController
                         $discrepancies[] = sprintf(
                             "%s (Excel: %s, DB: %s)",
                             $this->translator->trans($field, [], 'messages'),
-                            $this->formatValueForDisplay($excelValue, $field), // Formaté pour l'affichage dans le message
-                            $this->formatValueForDisplay($dbValue, $field)     // Formaté pour l'affichage dans le message
+                            $this->formatValueForDisplay($excelValue, $field), // On garde le formatage pour le message de détail
+                            $this->formatValueForDisplay($dbValue, $field)
                         );
                     }
                 }
@@ -423,7 +433,7 @@ class BordereauController extends AbstractController
                 // CAS 2a: Des anomalies ont été trouvées
                 $analysisResults[] = [
                     'type' => 'discrepancy',
-                    'bordereau_line_info' => $formattedLineData, // Formaté pour l'affichage
+                    'bordereau_line_info' => $rawLineData, // On envoie les données brutes
                     'details' => "Ligne n°" . ($rowIndex + 2) . ": Anomalie(s) détectée(s) - " . implode(', ', $discrepancies),
                     'actions' => [
                         ['label' => 'Mettre à jour', 'event' => 'bordereau:update-entity', 'payload' => ['avenant_id' => $avenant->getId(), 'excel_data' => $rawLineData]] // Brut pour le payload
@@ -433,7 +443,7 @@ class BordereauController extends AbstractController
                 // CAS 2b: Aucune anomalie, tout correspond
                 $analysisResults[] = [
                     'type' => 'match',
-                    'bordereau_line_info' => $formattedLineData, // Formaté pour l'affichage
+                    'bordereau_line_info' => $rawLineData, // On envoie les données brutes
                     'details' => "Ligne n°" . ($rowIndex + 2) . ": Correspondance parfaite avec les données existantes.",
                     'actions' => [],
                 ];
@@ -449,17 +459,21 @@ class BordereauController extends AbstractController
         $analysisResultsHtml = [];
         foreach ($analysisResults as $index => $result) {
             // Créer une copie du résultat pour le rendu afin d'éviter de modifier l'original
-            $resultForRendering = $result;
-            // Le 'bordereau_line_info' dans $result est déjà formaté ici.
-            // Le 'payload' dans $result['actions'] contient toujours les données brutes.
+            // $resultForRendering = $result;
+            // Le 'bordereau_line_info' contient maintenant des données brutes.
+            // Le formatage se fera dans le template Twig.
             $analysisResultsHtml[] = $this->renderView('components/_analysis_result_item.html.twig', [
-                'result' => $resultForRendering,
+                'result' => $result,
                 'bordereau_id' => $bordereau->getId(),
                 'loop' => ['index' => $index] // Simuler la variable loop de Twig
             ]);
         }
 
-        return $this->json(['analysisResultsHtml' => $analysisResultsHtml]);
+        // On retourne les résultats bruts (pour la sauvegarde) et le HTML pré-rendu (pour l'affichage)
+        return $this->json([
+            'analysisResults' => $analysisResults,
+            'analysisResultsHtml' => $analysisResultsHtml
+        ]);
     }
 
     // NOUVEAU : Route pour enregistrer l'état de l'analyse du bordereau
