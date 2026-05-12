@@ -18,6 +18,19 @@ export default class extends Controller {
         });
         this.element.dispatchEvent(event);
     }
+
+    /**
+     * NOUVEAU : Diffuse un événement personnalisé depuis l'élément du contrôleur.
+     * Permet une communication locale entre contrôleurs enfants et parents.
+     * @param {string} name - Le nom de l'événement (ex: 'mon-controleur:action').
+     * @param {object} [detail={}] - Les données à attacher à l'événement.
+     */
+    dispatch(name, detail = {}) {
+        this.element.dispatchEvent(new CustomEvent(name, {
+            bubbles: true,
+            detail
+        }));
+    }
 }
 
 /**
