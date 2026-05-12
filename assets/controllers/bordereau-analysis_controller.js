@@ -248,8 +248,9 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         this.chargementsValue.forEach(chargement => {
             const option = document.createElement('option');
-            // La valeur sera préfixée pour être facilement identifiable lors de la soumission.
-            option.value = `chargement_${chargement.id}`;
+            // NOUVEAU : La valeur inclut maintenant l'ID et le nom "slugifié" pour correspondre au backend.
+            const slug = chargement.nom.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
+            option.value = `chargement_${chargement.id}_${slug}`;
             option.textContent = chargement.nom;
             optgroup.appendChild(option);
         });
@@ -274,8 +275,9 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         this.typeRevenusValue.forEach(revenu => {
             const option = document.createElement('option');
-            // La valeur sera préfixée pour être facilement identifiable lors de la soumission.
-            option.value = `revenu_${revenu.id}`;
+            // NOUVEAU : La valeur inclut maintenant l'ID et le nom "slugifié".
+            const slug = revenu.nom.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
+            option.value = `revenu_${revenu.id}_${slug}`;
             option.textContent = revenu.nom;
             optgroup.appendChild(option);
         });

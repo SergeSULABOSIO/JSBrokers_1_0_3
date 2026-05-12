@@ -60,7 +60,11 @@
             <div class="analysis-details-grid small text-muted mb-3">
                 {% for key, value in result.bordereau_line_info %}
                     <div class="row">
-                        <div class="col-md-6"><strong>{{ key|replace({'_': ' '})|title }}</strong></div>
+                        <div class="col-md-6">
+                            {# NOUVEAU : Remplacer les underscores par des espaces et capitaliser pour un meilleur affichage #}
+                            {# ex: 'chargement_1_Prime_Nette' devient 'Chargement 1 Prime Nette' #}
+                            <strong>{{ key|replace({'_': ' '})|title }}</strong>
+                        </div>
                         <div class="col-md-6">
                             {% if value is not null and value is not same as('') %}
                                 {# NOUVEAU : Logique de formatage enrichie #}

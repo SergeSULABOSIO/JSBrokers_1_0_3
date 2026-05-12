@@ -271,11 +271,15 @@ class BordereauController extends AbstractController
         // NOUVEAU : Enrichir la carte des formats avec les chargements et revenus
         foreach ($chargementsData as $chargement) {
             // La clé doit correspondre à la valeur utilisée dans le <select> du mappage
-            $key = 'chargement_' . $chargement['id'];
+            // NOUVEAU : Ajout du nom "slugifié" pour une meilleure lisibilité
+            $slug = str_replace(' ', '_', preg_replace('/[^a-zA-Z0-9\s]/', '', $chargement['nom']));
+            $key = 'chargement_' . $chargement['id'] . '_' . $slug;
             $viewData['system_field_formats'][$key] = 'number';
         }
         foreach ($typeRevenusData as $revenu) {
-            $key = 'revenu_' . $revenu['id'];
+            // NOUVEAU : Ajout du nom "slugifié"
+            $slug = str_replace(' ', '_', preg_replace('/[^a-zA-Z0-9\s]/', '', $revenu['nom']));
+            $key = 'revenu_' . $revenu['id'] . '_' . $slug;
             $viewData['system_field_formats'][$key] = 'number';
         }
 
