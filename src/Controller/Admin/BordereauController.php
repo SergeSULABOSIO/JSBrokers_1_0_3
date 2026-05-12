@@ -295,7 +295,8 @@ class BordereauController extends AbstractController
             foreach ($rawAnalysisResults as $index => $result) {
                 $analysisResultsHtmlForTemplate[] = $this->renderView('components/_analysis_result_item.html.twig', [
                     'result' => (array) $result,
-                    'bordereau_id' => $bordereau->getId(),
+                    'bordereau_id' => $bordereau->getId(), // NOUVEAU : On passe la carte des formats pour un rendu cohérent.
+                    'viewData' => $viewData,
                     'loop' => ['index' => $index] // Simuler la variable loop de Twig
                 ]);
             }
