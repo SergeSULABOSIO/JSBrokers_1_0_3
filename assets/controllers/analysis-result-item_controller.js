@@ -68,7 +68,7 @@ export default class extends BaseController {
             console.log(`%c[Enfant ${this.iconPrefixValue}] 1. Envoi de 'analysis:icon.request' pour l'icône '${iconAlias}'`, 'color: blue;');
             this.dispatch('analysis:icon.request', {
                 iconName: iconAlias,
-                iconSize: 16, // Taille adaptée pour un bouton d'action
+                iconSize: 21, // Taille augmentée de 30% pour une meilleure visibilité
                 // On crée un ID de demandeur unique et valide.
                 requesterId: `${this.iconPrefixValue}-action-${index}`
             });
@@ -103,6 +103,7 @@ export default class extends BaseController {
             const template = document.createElement('template');
             template.innerHTML = html.trim();
             if (template.content.firstChild) {
+                template.content.firstChild.classList.add('analysis-action-svg-icon'); // Ajoute une classe spécifique à l'icône SVG
                 targetElement.appendChild(template.content.firstChild);
             }
         }
