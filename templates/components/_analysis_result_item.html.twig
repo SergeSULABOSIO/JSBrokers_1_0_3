@@ -56,12 +56,12 @@
                             {% if value is not null and value != '' %}
                                 {# 1. Traiter les dates (qui sont souvent des objets/tableaux avec une clé 'date') #}
                                 {% if 'date' in key|lower and value is iterable and value.date is defined %}
-                                    {{ value|date('d/m/Y') }}
+                                    {{ value.date|date('d/m/Y') }}
                                 {# 2. Traiter les pourcentages #}
-                                {% elseif 'taux' in key|lower and value is number %}
+                                {% elseif 'taux' in key|lower and value is numeric %}
                                     {{ value|number_format(2, ',', ' ') }} %
                                 {# 3. Traiter les autres valeurs numériques #}
-                                {% elseif value is number %}
+                                {% elseif value is numeric %}
                                     {{ value|number_format(2, ',', ' ') }}
                                 {# 4. Afficher le reste tel quel #}
                                 {% else %}
