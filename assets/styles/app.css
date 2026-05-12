@@ -1709,8 +1709,8 @@ textarea:hover,
 
 .analysis-item-actions .btn {
     border-radius: 50%;
-    width: 42px; /* Taille augmentée de 30% */
-    height: 42px; /* Taille augmentée de 30% */
+    min-width: 42px; /* Taille minimale pour l'icône seule */
+    height: 42px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
