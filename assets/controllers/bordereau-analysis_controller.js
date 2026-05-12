@@ -108,12 +108,14 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * @param {CustomEvent} event
      */
     async handleIconRequest(event) {
+        console.log(`%c[Parent] 1. Reçu 'analysis:icon.request'`, 'color: orange;', event.detail);
         const { iconName, requesterId, iconSize } = event.detail;
 
         // SÉCURITÉ : On ne traite que les requêtes qui proviennent de nos enfants.
         // Le requesterId doit commencer par l'ID du bordereau pour être valide.
         if (!requesterId || !requesterId.startsWith(this.bordereauIdValue)) {
-            return;
+            console.warn(`%c[Parent] 1a. Rejeté : requesterId (${requesterId}) ne correspond pas à l'ID du bordereau (${this.bordereauIdValue}).`, 'color: red;');
+            return; // On ne traite pas la requête si elle ne vient pas d'un enfant légitime.
         }
         if (!iconName || !requesterId) return;
 
@@ -121,8 +123,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             // Si l'icône est en cache, on la renvoie directement.
             this.dispatch('analysis:icon.loaded', {
                 html: this.iconCache.get(iconName), // HTML de l'icône
+                iconName: iconName,                 // Nom de l'icône (pour le cache)
                 requesterId: requesterId,           // ID de l'élément demandeur
-                iconName: iconName                  // Nom de l'icône (pour le cache)
             });
         } else {
             // Sinon, on la récupère depuis le serveur.
@@ -139,12 +141,12 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 }
 
                 // On diffuse l'événement à l'enfant qui a fait la demande.
-                this.dispatch('analysis:icon.loaded', { html, requesterId, iconName });
+                this.dispatch('analysis:icon.loaded', { html, requesterId, iconName: iconName });
 
             } catch (error) {
                 console.error(`[BordereauAnalysis] Failed to fetch icon '${iconName}':`, error);
                 // On envoie quand même une réponse pour ne pas bloquer l'UI.
-                this.dispatch('analysis:icon.loaded', { html: `<!-- error -->`, requesterId, iconName });
+                this.dispatch('analysis:icon.loaded', { html: `<!-- error -->`, requesterId, iconName: iconName });
             }
         }
     }
