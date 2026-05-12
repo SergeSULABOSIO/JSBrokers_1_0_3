@@ -38,7 +38,8 @@
     {# CORRECTION : Ajout des valeurs de restauration pour le contrôleur Stimulus #}
     data-bordereau-analysis-selected-sheet-name-value="{{ selectedSheetName|default('') }}"
     data-bordereau-analysis-mapped-columns-value="{{ mappedColumns|json_encode|e('html_attr') }}"
-    data-bordereau-analysis-analysis-results-value="{{ analysisResults|json_encode|e('html_attr') }}"
+    data-bordereau-analysis-analysis-results-value="{{ analysisResults|json_encode|e('html_attr') }}" {# Données brutes pour la sauvegarde #}
+    data-bordereau-analysis-analysis-results-html-value="{{ analysisResultsHtml|json_encode|e('html_attr') }}" {# HTML pour l'affichage #}
     data-bordereau-analysis-current-analysis-step-value="{{ currentAnalysisStep|default(0) }}"
 >
 

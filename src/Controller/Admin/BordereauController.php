@@ -261,10 +261,10 @@ class BordereauController extends AbstractController
         // CORRECTION : Si les résultats sont des données structurées (objets/tableaux),
         // on les transforme en HTML en utilisant le même template que lors de l'analyse initiale.
         // Cela garantit que la restauration de l'état fonctionne correctement.
-        $analysisResultsForTemplate = [];
-        if (!empty($rawAnalysisResults) && (is_array($rawAnalysisResults[0]) || is_object($rawAnalysisResults[0]))) {
+        $analysisResultsHtmlForTemplate = [];
+        if (!empty($rawAnalysisResults) && (isset($rawAnalysisResults[0])) && (is_array($rawAnalysisResults[0]) || is_object($rawAnalysisResults[0]))) {
             foreach ($rawAnalysisResults as $index => $result) {
-                $analysisResultsForTemplate[] = $this->renderView('components/_analysis_result_item.html.twig', [
+                $analysisResultsHtmlForTemplate[] = $this->renderView('components/_analysis_result_item.html.twig', [
                     'result' => (array) $result, // On s'assure que c'est un tableau pour Twig
                     'bordereau_id' => $bordereau->getId(),
                     'loop' => ['index' => $index] // Simuler la variable loop de Twig
@@ -279,8 +279,9 @@ class BordereauController extends AbstractController
             'viewData' => $viewData, // Contient maintenant les chargements
             // CORRECTION : S'assurer que les types sont corrects (objet vide ou tableau vide au lieu de null)
             'selectedSheetName' => $bordereau->getSelectedSheetName(),
-            'mappedColumns' => (object)($bordereau->getMappedColumns() ?: []),
-            'analysisResults' => $analysisResultsForTemplate,
+            'mappedColumns' => (object) ($bordereau->getMappedColumns() ?: []),
+            'analysisResults' => $rawAnalysisResults, // On passe les données brutes pour la sauvegarde
+            'analysisResultsHtml' => $analysisResultsHtmlForTemplate, // On passe le HTML pour l'affichage
             'currentAnalysisStep' => $bordereau->getCurrentAnalysisStep(),
             'error' => $error,
         ]);
@@ -471,11 +472,18 @@ class BordereauController extends AbstractController
         $selectedSheetName = $payload['selectedSheetName'] ?? null;
         $mappedColumns = $payload['mappedColumns'] ?? null;
         $currentAnalysisStep = $payload['currentAnalysisStep'] ?? null;
-        $analysisResults = $payload['analysisResults'] ?? null; // NOUVEAU : Pour la restauration de l'état
+        // CORRECTION : On ne sauvegarde plus le HTML, mais les données brutes.
+        // Le frontend envoie maintenant 'analysisResults' (données brutes) et 'analysisResultsHtml' (pour l'affichage).
+        // On ne persiste que 'analysisResults'.
+        $analysisResults = $payload['analysisResults'] ?? null;
 
         $bordereau->setSelectedSheetName($selectedSheetName);
         $bordereau->setMappedColumns($mappedColumns);
         $bordereau->setCurrentAnalysisStep($currentAnalysisStep);
+        // Si on n'est pas à l'étape 3, on s'assure de vider les résultats pour éviter de restaurer un état incohérent.
+        if ($currentAnalysisStep !== 3) {
+            $analysisResults = null;
+        }
         $bordereau->setAnalysisResults($analysisResults); // NOUVEAU : Pour la restauration de l'état
         dump('saveAnalysisState: Bordereau mis à jour avant persistance:', [
             'selectedSheetName' => $bordereau->getSelectedSheetName(),
