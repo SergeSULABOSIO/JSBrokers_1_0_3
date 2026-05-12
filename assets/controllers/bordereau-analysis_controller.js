@@ -22,7 +22,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         // NOUVEAU : On reçoit les options de mappage système depuis le backend.
         mappingOptions: Object,
         analysisResults: Array, // NOUVEAU : Pour la restauration de l'état
-        selectedSheetName: String, // NOUVEAU : Pour la restauration de l'état
+        analysisResultsHtml: Array, // NOUVEAU : HTML des résultats pour la restauration
+        selectedSheetName: String, // NOUVEAU : Pour la restauration de l'état,
         mappedColumns: Object,     // NOUVEAU : Pour la restauration de l'état
         currentAnalysisStep: Number, // NOUVEAU : Pour la restauration de l'état
     };
@@ -33,7 +34,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             currentAnalysisStep: this.currentAnalysisStepValue,
             selectedSheetName: this.selectedSheetNameValue,
             mappedColumns: this.mappedColumnsValue,
-            analysisResults: this.analysisResultsValue
+            analysisResults: this.analysisResultsValue, // Données brutes
+            analysisResultsHtml: this.analysisResultsHtmlValue // HTML
         });
         console.groupEnd();
 
@@ -183,10 +185,10 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         }
     
         // 2. Restaurer les résultats de l'analyse si l'étape est 3 (Data)
-        if (this.currentAnalysisStepValue === 3 && this.analysisResultsValue) {
-            console.log("2. Résultats d'analyse restaurés (en mémoire):", this.analysisResultsValue);
+        if (this.currentAnalysisStepValue === 3 && this.analysisResultsHtmlValue) {
+            console.log("2. Résultats d'analyse HTML restaurés (en mémoire):", this.analysisResultsHtmlValue);
             // CORRECTION : Forcer le rendu des résultats qui sont déjà en mémoire.
-            this.renderAnalysisResults();
+            this.renderAnalysisResults(this.analysisResultsHtmlValue);
             console.log("-> Le rendu des résultats a été déclenché.");
         } else {
             console.log("2. Résultats d'analyse non restaurés (pas à l'étape 3 ou données vides).");
@@ -377,7 +379,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         } else if (this.currentStep === 3) {
             this.step3Target.classList.remove('d-none');
             this.backToMappingButtonTarget.classList.remove('d-none'); // Affiche "Retour au mappage"
-            this.renderAnalysisResults();
+            this.renderAnalysisResults(this.analysisResultsHtmlValue);
         }
 
         if (!this.isRestoring) {
@@ -650,20 +652,21 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
     /**
      * Rend les résultats de l'analyse des avenants dans la liste de l'étape 3.
+     * @param {string[]} [resultsHtml=null] - Le HTML à rendre. Si null, utilise la valeur du contrôleur.
      */
-    renderAnalysisResults() {
+    renderAnalysisResults(resultsHtml = null) {
         if (!this.hasAnalysisResultsListTarget) return;
 
-        // La valeur `analysisResultsValue` contient maintenant un tableau de chaînes HTML
-        const resultsHtml = this.analysisResultsValue;
+        // Utilise le HTML fourni ou celui stocké dans le contrôleur
+        const finalResultsHtml = resultsHtml || this.analysisResultsHtmlValue;
 
-        if (!resultsHtml || resultsHtml.length === 0) {
+        if (!finalResultsHtml || finalResultsHtml.length === 0) {
             this.analysisResultsListTarget.innerHTML = '<li class="list-group-item text-center text-muted">Aucun résultat d\'analyse à afficher.</li>';
             return;
         }
 
         // On joint simplement les morceaux de HTML et on les injecte.
-        this.analysisResultsListTarget.innerHTML = resultsHtml.join(''); // CORRECTION : La méthode join() était manquante dans la version précédente.
+        this.analysisResultsListTarget.innerHTML = finalResultsHtml.join('');
     }
     /**
      * Gère le clic sur un bouton d'action de l'étape 3.
@@ -687,7 +690,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
     _handleAnalysisCompleted(payload) {
         // CORRECTION : On s'assure d'extraire le tableau de chaînes HTML du payload avant de l'assigner.
         console.log("[BordereauAnalysis] _handleAnalysisCompleted() - Analyse terminée. Payload reçu:", payload);
-        this.analysisResultsValue = payload.analysisResultsHtml || []; // Affecter le tableau HTML à la valeur Stimulus
+        this.analysisResultsValue = payload.analysisResults || []; // Données brutes
+        this.analysisResultsHtmlValue = payload.analysisResultsHtml || []; // HTML
         this.showStep(3); // Passer à l'étape 3 pour afficher les résultats
         this.submitButtonTarget.disabled = false;
         this.submitButtonTarget.textContent = "Lancer l'analyse"; // Réinitialiser le texte du bouton
@@ -743,8 +747,9 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             selectedSheetName: selectedSheetName,
             mappedColumns: mappedColumns,
             currentAnalysisStep: this.currentStep,
-            // CORRECTION : On ne sauvegarde les résultats que si on est à l'étape 3. Sinon, on envoie null pour les effacer.
+            // CORRECTION : On sauvegarde les données brutes, pas le HTML.
             analysisResults: this.currentStep === 3 ? this.analysisResultsValue : null,
+            analysisResultsHtml: this.currentStep === 3 ? this.analysisResultsHtmlValue : null, // Pour info, non persisté
         };
         console.log("[BordereauAnalysis] _saveAnalysisStateToBordereau() - Sauvegarde de l'état. Payload:", payload);
 
@@ -834,10 +839,12 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             const result = await response.json();
             if (!result.analysisResultsHtml || result.analysisResultsHtml.length === 0) {
                 console.warn("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - L'API a retourné une réponse vide pour 'analysisResultsHtml' malgré un statut 200 OK.");
+                // On s'assure que les deux valeurs sont des tableaux vides pour éviter les erreurs.
+                result.analysisResults = [];
+                result.analysisResultsHtml = [];
             }
             console.log("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Succès. Appel de _handleAnalysisCompleted.");
-            // Directly call local completion handler
-            this._handleAnalysisCompleted(result); // CORRECTION : On passe l'objet de résultat complet.
+            this._handleAnalysisCompleted(result);
         } catch (error) {
             console.error("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Erreur lors de la soumission de l'analyse:", error);
             // Directly call local error handler
