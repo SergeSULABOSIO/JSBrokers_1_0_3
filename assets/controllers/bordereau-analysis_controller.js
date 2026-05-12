@@ -326,9 +326,10 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
     validateColumn(event) {
         const selectElement = event.currentTarget;
         this.performValidation(selectElement);
-        if (!this.isRestoring) { // Ne sauvegarde que si le contrôleur n'est pas en cours de restauration
-            this._saveAnalysisStateToBordereau(); // Sauvegarder l'état après chaque modification de mappage
-        }
+        // OPTIMISATION : L'appel à la sauvegarde est retiré.
+        // La sauvegarde se fera désormais uniquement lors du changement d'étape ou de la soumission,
+        // ce qui réduit considérablement les écritures en base de données.
+        // if (!this.isRestoring) { this._saveAnalysisStateToBordereau(); }
     }
 
     /**
@@ -351,10 +352,10 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * @param {number|Event} stepNumber - Le numéro de l'étape à afficher (1, 2 ou 3) ou l'événement de clic.
      * @param {string} [sheetName=null] - Le nom de la feuille à afficher pour l'étape 2.
      */
-    showStep(stepNumber, sheetName = null) {
+    async showStep(stepNumber, sheetName = null) {
         // Si l'événement est un clic, on récupère le numéro d'étape depuis le data-attribute.
         const previousStep = this.currentStep;
-        this.currentStep = (typeof stepNumber === 'object') ? parseInt(stepNumber.currentTarget.dataset.stepNumber) : stepNumber;
+        this.currentStep = (typeof stepNumber === 'object' && stepNumber.currentTarget) ? parseInt(stepNumber.currentTarget.dataset.stepNumber) : stepNumber;
         console.log(`[BordereauAnalysis] showStep() - Transition de l'étape ${previousStep} vers ${this.currentStep}. Feuille: ${sheetName || 'N/A'}. Restauration en cours: ${this.isRestoring}`);
 
         this.step1Target.classList.add('d-none');
@@ -385,7 +386,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         }
 
         if (!this.isRestoring) {
-            this._saveAnalysisStateToBordereau(); // Save state after each step change
+            // OPTIMISATION : On ne sauvegarde que le numéro de l'étape, pas tout le mappage.
+            await this._saveAnalysisStateToBordereau('step_only');
         }
         this.updateSelectOptionsVisuals();
     }
@@ -730,29 +732,36 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
     /**
      * Sauvegarde l'état actuel de l'analyse du bordereau en base de données.
      */
-    async _saveAnalysisStateToBordereau() {
-        const selectedSheetInput = this.sheetSelectionTargets.find(radio => radio.checked);
-        const selectedSheetName = selectedSheetInput ? selectedSheetInput.value : null;
+    async _saveAnalysisStateToBordereau(saveLevel = 'full') {
+        let payload = {
+            currentAnalysisStep: this.currentStep,
+        };
 
-        const mappedColumns = {};
-        const activeMappingContainer = this.element.querySelector('.column-mapping-form:not([style*="display: none"])');
-        if (activeMappingContainer) {
-            const selects = activeMappingContainer.querySelectorAll('select[data-column-letter]');
-            selects.forEach(select => {
-                if (select.value) {
-                    mappedColumns[select.value] = select.dataset.columnLetter;
-                }
-            });
+        // OPTIMISATION : On n'ajoute les données complètes que si une sauvegarde complète est demandée.
+        if (saveLevel === 'full') {
+            const selectedSheetInput = this.sheetSelectionTargets.find(radio => radio.checked);
+            const selectedSheetName = selectedSheetInput ? selectedSheetInput.value : null;
+
+            const mappedColumns = {};
+            const activeMappingContainer = this.element.querySelector('.column-mapping-form:not([style*="display: none"])');
+            if (activeMappingContainer) {
+                const selects = activeMappingContainer.querySelectorAll('select[data-column-letter]');
+                selects.forEach(select => {
+                    if (select.value) {
+                        mappedColumns[select.value] = select.dataset.columnLetter;
+                    }
+                });
+            }
+
+            payload = {
+                ...payload,
+                selectedSheetName: selectedSheetName,
+                mappedColumns: mappedColumns,
+                analysisResults: this.currentStep === 3 ? this.analysisResultsValue : null,
+                analysisResultsHtml: this.currentStep === 3 ? this.analysisResultsHtmlValue : null, // Pour info, non persisté
+            };
         }
 
-        const payload = {
-            selectedSheetName: selectedSheetName,
-            mappedColumns: mappedColumns,
-            currentAnalysisStep: this.currentStep,
-            // CORRECTION : On sauvegarde les données brutes, pas le HTML.
-            analysisResults: this.currentStep === 3 ? this.analysisResultsValue : null,
-            analysisResultsHtml: this.currentStep === 3 ? this.analysisResultsHtmlValue : null, // Pour info, non persisté
-        };
         console.log("[BordereauAnalysis] _saveAnalysisStateToBordereau() - Sauvegarde de l'état. Payload:", payload);
 
         // NOUVEAU : On passe le feu au rouge.
@@ -864,7 +873,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * @param {string} payload.url - L'URL de l'API pour sauvegarder l'état.
      * @param {object} payload.data - Les données à envoyer (selectedSheetName, mappedColumns, currentAnalysisStep).
      */
-    async _handleSaveBordereauAnalysisStateLocal(payload) {
+    async _handleSaveBordereauAnalysisStateLocal(payload, saveLevel = 'full') {
         if (!payload.url || !payload.data) {
             console.error("[BordereauAnalysis] _handleSaveBordereauAnalysisStateLocal() - Demande de sauvegarde de l'état de l'analyse de bordereau reçue sans URL ou données.", payload);
             // Directly call local error handler

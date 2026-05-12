@@ -440,9 +440,9 @@ class BordereauController extends AbstractController
                     if ($formattedExcelValue !== $formattedDbValue) {
                         $discrepancies[] = sprintf(
                             "%s (Excel: %s, DB: %s)",
-                            $this->translator->trans($field, [], 'messages'),
-                            $this->formatValueForDisplay($excelValue, $field), // On garde le formatage pour le message de détail
-                            $this->formatValueForDisplay($dbValue, $field)
+                            $this->translator->trans($field, [], 'messages'), // ex: "Date d'effet"
+                            $this->formatValueForDisplay($excelValue, $field), // ex: "15/01/2024"
+                            $this->formatValueForDisplay($dbValue, $field)     // ex: "10/01/2024"
                         );
                     }
                 }
@@ -502,22 +502,25 @@ class BordereauController extends AbstractController
         $payload = json_decode($request->getContent(), true);
         dump('saveAnalysisState: Payload reçu du frontend:', $payload);
 
-        $selectedSheetName = $payload['selectedSheetName'] ?? null;
-        $mappedColumns = $payload['mappedColumns'] ?? null;
-        $currentAnalysisStep = $payload['currentAnalysisStep'] ?? null;
-        // CORRECTION : On ne sauvegarde plus le HTML, mais les données brutes.
-        // Le frontend envoie maintenant 'analysisResults' (données brutes) et 'analysisResultsHtml' (pour l'affichage).
-        // On ne persiste que 'analysisResults'.
-        $analysisResults = $payload['analysisResults'] ?? null;
-
-        $bordereau->setSelectedSheetName($selectedSheetName);
-        $bordereau->setMappedColumns($mappedColumns);
-        $bordereau->setCurrentAnalysisStep($currentAnalysisStep);
-        // Si on n'est pas à l'étape 3, on s'assure de vider les résultats pour éviter de restaurer un état incohérent.
-        if ($currentAnalysisStep !== 3) {
-            $analysisResults = null;
+        // OPTIMISATION : On ne met à jour que les champs présents dans le payload.
+        if (array_key_exists('selectedSheetName', $payload)) {
+            $bordereau->setSelectedSheetName($payload['selectedSheetName']);
         }
-        $bordereau->setAnalysisResults($analysisResults); // NOUVEAU : Pour la restauration de l'état
+        if (array_key_exists('mappedColumns', $payload)) {
+            $bordereau->setMappedColumns($payload['mappedColumns']);
+        }
+        if (array_key_exists('currentAnalysisStep', $payload)) {
+            $bordereau->setCurrentAnalysisStep($payload['currentAnalysisStep']);
+        }
+        if (array_key_exists('analysisResults', $payload)) {
+            $analysisResults = $payload['analysisResults'];
+            // Si on n'est pas à l'étape 3, on s'assure de vider les résultats pour éviter de restaurer un état incohérent.
+            if (($payload['currentAnalysisStep'] ?? $bordereau->getCurrentAnalysisStep()) !== 3) {
+                $analysisResults = null;
+            }
+            $bordereau->setAnalysisResults($analysisResults);
+        }
+
         dump('saveAnalysisState: Bordereau mis à jour avant persistance:', [
             'selectedSheetName' => $bordereau->getSelectedSheetName(),
             'mappedColumns' => $bordereau->getMappedColumns(), 'analysisResults' => $bordereau->getAnalysisResults(), 'currentAnalysisStep' => $bordereau->getCurrentAnalysisStep()
