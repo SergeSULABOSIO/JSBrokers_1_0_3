@@ -40,6 +40,7 @@
     data-bordereau-analysis-mapped-columns-value="{{ mappedColumns|json_encode|e('html_attr') }}"
     data-bordereau-analysis-analysis-results-value="{{ analysisResults|json_encode|e('html_attr') }}" {# Données brutes pour la sauvegarde #}
     data-bordereau-analysis-analysis-results-html-value="{{ analysisResultsHtml|json_encode|e('html_attr') }}" {# HTML pour l'affichage #}
+    data-bordereau-analysis-system-field-formats-value="{{ viewData.system_field_formats|json_encode|e('html_attr') }}" {# NOUVEAU : Formats des champs système #}
     data-bordereau-analysis-current-analysis-step-value="{{ currentAnalysisStep|default(0) }}"
 >
 

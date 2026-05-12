@@ -48,14 +48,24 @@
     <div class="analysis-item-details" data-analysis-result-item-target="detailsPanel">
         <div class="p-3">
             <p class="mb-2 small fst-italic"><strong>Détails de la ligne du bordereau :</strong></p>
+            {# NOUVEAU : La carte des formats est maintenant passée directement depuis le contrôleur parent #}
+            {% set system_formats = viewData.system_field_formats ?? {} %}
             <div class="analysis-details-grid small text-muted mb-3">
                 {% for key, value in result.bordereau_line_info %}
                     <div class="row">
                         <div class="col-md-6"><strong>{{ key|replace({'_': ' '})|title }}</strong></div>
                         <div class="col-md-6">
                             {% if value is not null and value != '' %}
-                                {# 1. Traiter les dates (qui sont souvent des objets/tableaux avec une clé 'date') #}
-                                {{ value }}
+                                {# NOUVEAU : Logique de formatage simplifiée basée sur la carte des formats statique #}
+                                {% set format = system_formats[key] ?? 'text' %}
+
+                                {% if format == 'date' and value.date is defined %}
+                                    {{ value.date|date('d/m/Y') }}
+                                {% elseif format == 'number' %}
+                                    {{ value|number_format(2, ',', ' ') }}
+                                {% else %}
+                                    {{ value }}
+                                {% endif %}
                             {% else %}
                                 N/A
                             {% endif %}
