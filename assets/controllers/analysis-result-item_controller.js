@@ -30,7 +30,7 @@ export default class extends BaseController {
 
         // NOUVEAU : Écouteur pour la réception du HTML de l'icône.
         this.boundHandleIconLoaded = this.handleIconLoaded.bind(this);
-        this.element.addEventListener('analysis:icon.loaded', this.boundHandleIconLoaded);
+        document.addEventListener('analysis:icon.loaded', this.boundHandleIconLoaded);
 
         this.actionButtonTargets.forEach(button => {
             button.addEventListener('mouseenter', this.boundShowTooltip);
@@ -45,7 +45,7 @@ export default class extends BaseController {
             button.removeEventListener('mouseenter', this.boundShowTooltip);
             button.removeEventListener('mouseleave', this.boundHideTooltip);
         });
-        this.element.removeEventListener('analysis:icon.loaded', this.boundHandleIconLoaded);
+        document.removeEventListener('analysis:icon.loaded', this.boundHandleIconLoaded);
         if (this.tooltipElement) {
             this.tooltipElement.remove();
         }

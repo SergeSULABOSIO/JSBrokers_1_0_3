@@ -122,11 +122,13 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         if (this.iconCache.has(iconName)) {
             // Si l'icône est en cache, on la renvoie directement.
             console.log(`%c[Parent] 1b. Icône '${iconName}' trouvée en cache. Renvoi immédiat.`, 'color: green;');
-            document.dispatchEvent(new CustomEvent('analysis:icon.loaded', { bubbles: true, detail: {
-                html: this.iconCache.get(iconName), // HTML de l'icône
-                iconName: iconName,                 // Nom de l'icône (pour le cache)
-                requesterId: requesterId,           // ID de l'élément demandeur
-            } }));
+            document.dispatchEvent(new CustomEvent('analysis:icon.loaded', {
+                bubbles: true, detail: {
+                    html: this.iconCache.get(iconName), // HTML de l'icône
+                    iconName: iconName,                 // Nom de l'icône (pour le cache)
+                    requesterId: requesterId,           // ID de l'élément demandeur
+                }
+            }));
         } else {
             // Sinon, on la récupère depuis le serveur.
             const url = `/api/icon/api/get-icon?name=${encodeURIComponent(iconName)}&size=${iconSize}`;
@@ -142,12 +144,12 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 }
 
                 // On diffuse l'événement à l'enfant qui a fait la demande.
-                this.dispatch('analysis:icon.loaded', { html, requesterId, iconName: iconName });
+                document.dispatchEvent(new CustomEvent('analysis:icon.loaded', { bubbles: true, detail: { html, requesterId, iconName: iconName } }));
 
             } catch (error) {
                 console.error(`[BordereauAnalysis] Failed to fetch icon '${iconName}':`, error);
                 // On envoie quand même une réponse pour ne pas bloquer l'UI.
-                this.dispatch('analysis:icon.loaded', { html: `<!-- error -->`, requesterId, iconName: iconName });
+                document.dispatchEvent(new CustomEvent('analysis:icon.loaded', { bubbles: true, detail: { html: `<!-- error -->`, requesterId, iconName: iconName } }));
             }
         }
     }
