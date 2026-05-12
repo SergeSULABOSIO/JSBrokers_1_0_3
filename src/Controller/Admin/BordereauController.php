@@ -438,12 +438,21 @@ class BordereauController extends AbstractController
                     $formattedExcelValue = $config['formatter']($excelValue);
                     $formattedDbValue = $config['formatter']($dbValue);
 
+                    // DUMP : Ajout de traces pour le débogage
+                    dump("Comparaison pour le champ: $field", [
+                        'excel_brut' => $excelValue,
+                        'db_brut' => $dbValue,
+                        'excel_formate_comparaison' => $formattedExcelValue,
+                        'db_formate_comparaison' => $formattedDbValue,
+                        'sont_differents' => $formattedExcelValue !== $formattedDbValue
+                    ]);
+
                     if ($formattedExcelValue !== $formattedDbValue) {
                         $discrepancies[] = sprintf(
                             "%s (Excel: %s, DB: %s)",
                             $this->translator->trans($field, [], 'messages'), // ex: "Date d'effet"
-                            $this->formatValueForDisplay($excelValue, $field), // ex: "15/01/2024"
-                            $this->formatValueForDisplay($dbValue, $field)     // ex: "10/01/2024"
+                            (string) $this->formatValueForDisplay($excelValue, $field), // ex: "15/01/2024"
+                            (string) $this->formatValueForDisplay($dbValue, $field)     // ex: "10/01/2024"
                         );
                     }
                 }

@@ -1025,8 +1025,9 @@ trait ControllerUtilsTrait
             return 'N/A';
         }
 
-        // Dates
-        if (str_contains(strtolower($key), 'date') && ($value instanceof \DateTimeInterface)) {
+        // CORRECTION : On vérifie d'abord si la valeur est un objet date, INDÉPENDAMMENT de la clé.
+        // C'est la correction la plus importante pour éviter l'erreur.
+        if ($value instanceof \DateTimeInterface) {
             return $value->format('d/m/Y');
         }
 
