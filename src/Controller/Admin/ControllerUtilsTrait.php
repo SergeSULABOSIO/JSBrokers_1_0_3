@@ -1026,7 +1026,8 @@ trait ControllerUtilsTrait
         }
 
         // CORRECTION : On vérifie d'abord si la valeur est un objet date, INDÉPENDAMMENT de la clé.
-        // C'est la correction la plus importante pour éviter l'erreur.
+        // C'est la correction la plus importante pour éviter l'erreur "Object of class DateTime could not be converted to string".
+        // Cette vérification doit avoir lieu avant toute autre, car un objet DateTime n'est pas "numeric" et ne contient pas forcément "date" dans sa clé.
         if ($value instanceof \DateTimeInterface) {
             return $value->format('d/m/Y');
         }
