@@ -423,10 +423,20 @@ class BordereauController extends AbstractController
 
             // CAS 2: Avenant trouvé, on compare les champs
             $comparisons = [
-                'prime_ttc' => ['getter' => 'montantTTC', 'formatter' => fn ($v) => number_format($v, 2, '.', '')],
-                'date_effet_avenant' => ['getter' => 'startingAt', 'formatter' => fn ($v) => $v ? $v->format('Y-m-d') : null],
-                'date_expiration_avenant' => ['getter' => 'endingAt', 'formatter' => fn ($v) => $v ? $v->format('Y-m-d') : null],
-                'taux_commission' => ['getter' => 'tauxCommission', 'formatter' => fn ($v) => number_format($v, 2, '.', '')],
+                'prime_ttc' => ['getter' => 'montantTTC', 'formatter' => fn ($v) => (string) number_format($v, 2, '.', '')],
+                'date_effet_avenant' => [
+                    'getter'    => 'startingAt',
+                    'formatter' => fn ($v) => $v instanceof \DateTimeInterface
+                        ? $v->format('Y-m-d')
+                        : (is_string($v) ? $v : null)
+                ],
+                'date_expiration_avenant' => [
+                    'getter'    => 'endingAt',
+                    'formatter' => fn ($v) => $v instanceof \DateTimeInterface
+                        ? $v->format('Y-m-d')
+                        : (is_string($v) ? $v : null)
+                ],
+                'taux_commission' => ['getter' => 'tauxCommission', 'formatter' => fn ($v) => (string) number_format($v, 2, '.', '')],
             ];
 
             foreach ($comparisons as $field => $config) {
