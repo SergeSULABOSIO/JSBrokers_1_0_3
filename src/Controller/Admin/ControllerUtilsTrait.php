@@ -973,7 +973,8 @@ trait ControllerUtilsTrait
                 if (is_numeric($value)) {
                     try {
                         // Excel date format (days since 1900-01-01)
-                        return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value);
+                        $dateObj = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value);
+                        return $dateObj instanceof \DateTimeInterface ? $dateObj->format('Y-m-d') : null;
                     } catch (\Exception $e) {
                         // Fallback if conversion fails
                         return null;
@@ -981,7 +982,8 @@ trait ControllerUtilsTrait
                 } elseif (is_string($value)) {
                     try {
                         // Try common date formats
-                        return new DateTimeImmutable($value);
+                        $dateObj = new \DateTimeImmutable($value);
+                        return $dateObj->format('Y-m-d');
                     } catch (\Exception $e) {
                         return null;
                     }
