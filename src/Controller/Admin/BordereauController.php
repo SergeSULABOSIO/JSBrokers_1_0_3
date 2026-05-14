@@ -375,7 +375,9 @@ class BordereauController extends AbstractController
             return $this->json(['error' => "Erreur lors de la lecture du fichier Excel : " . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
-        $analysisResults = [];
+        // Initialisation des deux tableaux distincts
+        $analysisResultsToStore = [];
+        $analysisResultsForDisplay = [];
 
         // --- ÉTAPE 1: Extraire toutes les références de police du fichier Excel ---
         $policeReferences = array_map(fn ($row) => $row[$refPoliceColumn] ?? null, $selectedSheetData);
@@ -410,7 +412,13 @@ class BordereauController extends AbstractController
 
             if (!$avenant) {
                 // CAS 1: Nouvel avenant, non trouvé en base de données
-                $analysisResults[] = [
+                $analysisResultsToStore[] = [
+                    'type'             => 'new',
+                    'row_index'        => $rowIndex,
+                    'reference_police' => $refPolice,
+                    'avenant_id'       => null,
+                ];
+                $analysisResultsForDisplay[] = [
                     'type' => 'new',
                     'bordereau_line_info' => $rawLineData, // On envoie les données brutes
                     'details' => "Ligne n°" . ($rowIndex + 2) . ": Nouvel avenant détecté.",
@@ -418,6 +426,7 @@ class BordereauController extends AbstractController
                         ['label' => 'Créer l\'avenant', 'event' => 'bordereau:create-entity', 'payload' => ['excel_data' => $rawLineData]] // Brut pour le payload
                     ],
                 ];
+
                 continue;
             }
 
@@ -467,7 +476,13 @@ class BordereauController extends AbstractController
 
             if (!empty($discrepancies)) {
                 // CAS 2a: Des anomalies ont été trouvées
-                $analysisResults[] = [
+                $analysisResultsToStore[] = [
+                    'type'             => 'discrepancy',
+                    'row_index'        => $rowIndex,
+                    'reference_police' => $refPolice,
+                    'avenant_id'       => $avenant->getId(),
+                ];
+                $analysisResultsForDisplay[] = [
                     'type' => 'discrepancy',
                     'bordereau_line_info' => $rawLineData, // On envoie les données brutes
                     'details' => "Ligne n°" . ($rowIndex + 2) . ": Anomalie(s) détectée(s) - " . implode(', ', $discrepancies),
@@ -475,25 +490,33 @@ class BordereauController extends AbstractController
                         ['label' => 'Mettre à jour', 'event' => 'bordereau:update-entity', 'payload' => ['avenant_id' => $avenant->getId(), 'excel_data' => $rawLineData]] // Brut pour le payload
                     ],
                 ];
+
             } else {
                 // CAS 2b: Aucune anomalie, tout correspond
-                $analysisResults[] = [
+                $analysisResultsToStore[] = [
+                    'type'             => 'match',
+                    'row_index'        => $rowIndex,
+                    'reference_police' => $refPolice,
+                    'avenant_id'       => $avenant->getId(),
+                ];
+                $analysisResultsForDisplay[] = [
                     'type' => 'match',
                     'bordereau_line_info' => $rawLineData, // On envoie les données brutes
                     'details' => "Ligne n°" . ($rowIndex + 2) . ": Correspondance parfaite avec les données existantes.",
                     'actions' => [],
                 ];
+
             }
         }
 
         // Sauvegarder les résultats d'analyse bruts dans l'entité Bordereau
-        $bordereau->setAnalysisResults($analysisResults);
+        $bordereau->setAnalysisResults($analysisResultsToStore);
         $this->em->persist($bordereau);
         $this->em->flush();
 
         // NOUVEAU : Rendre chaque résultat en HTML via le composant Twig
         $analysisResultsHtml = [];
-        foreach ($analysisResults as $index => $result) {
+        foreach ($analysisResultsForDisplay as $index => $result) {
             // Créer une copie du résultat pour le rendu afin d'éviter de modifier l'original
             // $resultForRendering = $result;
             // Le 'bordereau_line_info' contient maintenant des données brutes.
@@ -507,8 +530,8 @@ class BordereauController extends AbstractController
 
         // On retourne les résultats bruts (pour la sauvegarde) et le HTML pré-rendu (pour l'affichage)
         return $this->json([
-            'analysisResults' => $analysisResults,
-            'analysisResultsHtml' => $analysisResultsHtml
+            'analysisResults'     => $analysisResultsToStore,
+            'analysisResultsHtml' => $analysisResultsHtml,
         ]);
     }
 
