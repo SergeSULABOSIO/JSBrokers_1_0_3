@@ -287,19 +287,104 @@ class BordereauController extends AbstractController
         // DUMP pour le débogage : Vérifier les valeurs avant de les envoyer au template.
         $rawAnalysisResults = $bordereau->getAnalysisResults() ?? [];
 
-        // CORRECTION : Si les résultats sont des données structurées (objets/tableaux),
-        // on les transforme en HTML en utilisant le même template que lors de l'analyse initiale.
-        // Cela garantit que la restauration de l'état fonctionne correctement.
-        $analysisResultsHtmlForTemplate = [];
-        if (!empty($rawAnalysisResults) && (isset($rawAnalysisResults[0])) && (is_array($rawAnalysisResults[0]) || is_object($rawAnalysisResults[0]))) {
-            foreach ($rawAnalysisResults as $index => $result) {
-                $analysisResultsHtmlForTemplate[] = $this->renderView('components/_analysis_result_item.html.twig', [
-                    'result' => (array) $result,
-                    'bordereau_id' => $bordereau->getId(), // NOUVEAU : On passe la carte des formats pour un rendu cohérent.
-                    'viewData' => $viewData,
-                    'loop' => ['index' => $index] // Simuler la variable loop de Twig
-                ]);
+        // Étape 2: Préparer les données Excel pour la reconstruction
+        $excelDataByRowIndex = [];
+        if (!empty($rawAnalysisResults) && $bordereau->getSelectedSheetName()) {
+            foreach ($viewData['sheets'] as $sheet) {
+                if ($sheet['sheetName'] === $bordereau->getSelectedSheetName()) {
+                    foreach ($sheet['data'] as $rowIndex => $row) {
+                        $excelDataByRowIndex[$rowIndex] = $row;
+                    }
+                    break;
+                }
             }
+        }
+
+        // Étape 3: Préparer les avenants pour la reconstruction
+        $avenantIdsToLoad = array_filter(
+            array_column($rawAnalysisResults, 'avenant_id')
+        );
+        $avenantsForRestoration = [];
+        if (!empty($avenantIdsToLoad)) {
+            $loadedAvenants = $this->avenantRepository->findBy(['id' => $avenantIdsToLoad]);
+            foreach ($loadedAvenants as $av) {
+                $avenantsForRestoration[$av->getId()] = $av;
+            }
+        }
+
+        // Étape 4: Reconstruire le HTML pour chaque résultat
+        $analysisResultsHtmlForTemplate = [];
+        $mappedColumns = $bordereau->getMappedColumns() ?: [];
+
+        foreach ($rawAnalysisResults as $index => $storedResult) {
+            $rowIndex    = $storedResult['row_index'] ?? null;
+            $avenantId   = $storedResult['avenant_id'] ?? null;
+            $type        = $storedResult['type'] ?? 'match';
+
+            // Reconstruire rawLineData depuis la ligne Excel
+            $rawLineData = [];
+            if ($rowIndex !== null && isset($excelDataByRowIndex[$rowIndex])) {
+                $excelRow = $excelDataByRowIndex[$rowIndex];
+                foreach ($mappedColumns as $systemField => $excelColumn) {
+                    $rawLineData[$systemField] = $this->parseExcelValue(
+                        $excelRow[$excelColumn] ?? null,
+                        $systemField
+                    );
+                }
+            }
+
+            // Reconstruire details et actions selon le type
+            switch ($type) {
+                case 'new':
+                    $details = "Ligne n°" . ($rowIndex + 2) . ": Nouvel avenant détecté.";
+                    $actions = [
+                        [
+                            'label'   => 'Créer l\'avenant',
+                            'event'   => 'bordereau:create-entity',
+                            'payload' => ['excel_data' => $rawLineData]
+                        ]
+                    ];
+                    break;
+
+                case 'discrepancy':
+                    $avenant = $avenantId ? ($avenantsForRestoration[$avenantId] ?? null) : null;
+                    $details = "Ligne n°" . ($rowIndex + 2) . ": Anomalie(s) détectée(s).";
+                    $actions = $avenant ? [
+                        [
+                            'label'   => 'Mettre à jour',
+                            'event'   => 'bordereau:update-entity',
+                            'payload' => [
+                                'avenant_id' => $avenant->getId(),
+                                'excel_data' => $rawLineData
+                            ]
+                        ]
+                    ] : [];
+                    break;
+
+                case 'match':
+                default:
+                    $details = "Ligne n°" . ($rowIndex + 2)
+                               . ": Correspondance parfaite avec les données existantes.";
+                    $actions = [];
+                    break;
+            }
+
+            // Construire le résultat complet pour le rendu
+            $resultForRendering = [
+                'type'                => $type,
+                'bordereau_line_info' => $rawLineData,
+                'details'             => $details,
+                'actions'             => $actions,
+            ];
+
+            $analysisResultsHtmlForTemplate[] = $this->renderView(
+                'components/_analysis_result_item.html.twig',
+                [
+                    'result'       => $resultForRendering,
+                    'bordereau_id' => $bordereau->getId(),
+                    'loop'         => ['index' => $index]
+                ]
+            );
         }
 
         return $this->render('admin/bordereau/bordereau_analysis.html.twig', [
