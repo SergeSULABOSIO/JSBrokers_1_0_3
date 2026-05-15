@@ -8,8 +8,8 @@ import BaseController from './base_controller.js';
 export default class extends BaseController { // NOUVEAU : Ajout du bouton de retour
     static targets = [ // NOUVEAU : Ajout de la cible pour le bouton de retour
         "sheetSelection", "step2", "mappingContainer", "mappingStatusFeedback", "mappingForm",
-        "mappingSelect", "analysisResult", "submitButton", "columnNameText", "step1", "step3", "analysisResultsList", "progressBar", "progressBarContainer", "analysisSummary",
-        "backToMappingButton"
+        "mappingSelect", "analysisResult", "submitButton", "columnNameText", "step1", "step3", "analysisResultsList", "progressBar", "progressBarContainer", "analysisSummary", "validateButton",
+        "backToMappingButton",
     ];
 
     static values = {
@@ -47,6 +47,10 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         // CORRECTION : On écoute sur `document` pour intercepter les événements des enfants
         // qui sont injectés dynamiquement et ne sont pas des descendants directs.
         document.addEventListener('analysis:icon.request', this.boundHandleIconRequest);
+
+        // NOUVEAU : Écoute la résolution des items pour activer le bouton Valider
+        this.boundHandleItemResolved = this._handleItemResolved.bind(this);
+        document.addEventListener('cerveau:event', this.boundHandleItemResolved);
 
         this.requiredMappings = new Set([
             'reference_police',
@@ -94,6 +98,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
     disconnect() {
         console.log("[BordereauAnalysis] disconnect() - Nettoyage des écouteurs.");
         document.removeEventListener('analysis:icon.request', this.boundHandleIconRequest);
+        document.removeEventListener('cerveau:event', this.boundHandleItemResolved);
     }
 
     /**
@@ -385,6 +390,9 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this.step3Target.classList.remove('d-none');
             this.backToMappingButtonTarget.classList.remove('d-none'); // Affiche "Retour au mappage"
             this.renderAnalysisSummary(this.analysisStatsValue);
+            // Initialiser l'état du bouton Valider dès l'affichage de l'étape 3
+            // (utile en cas de restauration où tous les items seraient déjà résolus)
+            this._updateValidateButtonState();
             this.renderAnalysisResults(this.analysisResultsHtmlValue);
         }
 
@@ -708,6 +716,121 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         this.submitButtonTarget.textContent = "Lancer l'analyse";
         this.toggleProgressBar(false);
         this._saveAnalysisStateToBordereau(); // Sauvegarder l'état après la complétion de l'analyse
+    }
+
+    /**
+     * Réagit à la résolution d'un item d'analyse.
+     * Réévalue si tous les items actionnables sont résolus
+     * pour activer ou non le bouton "Valider".
+     * @param {CustomEvent} event
+     */
+    _handleItemResolved(event) {
+        if (event.detail?.type !== 'bordereau:item.resolved') return;
+
+        console.log('[BordereauAnalysis] _handleItemResolved() - Item résolu détecté. Réévaluation du bouton Valider.');
+        this._updateValidateButtonState();
+    }
+
+    /**
+     * Évalue si le bouton "Valider le bordereau" doit être actif.
+     * Le bouton s'active quand tous les items de type new et discrepancy
+     * sont marqués comme résolus (data-resolved="true").
+     */
+    _updateValidateButtonState() {
+        if (!this.hasValidateButtonTarget) return;
+
+        // Récupérer tous les items de la liste
+        const allItems = this.analysisResultsListTarget.querySelectorAll(
+            '[data-controller="analysis-result-item"]'
+        );
+
+        if (allItems.length === 0) return;
+
+        let totalActionable  = 0; // new + discrepancy
+        let totalResolved    = 0; // parmi les actionnables, ceux marqués résolus
+
+        allItems.forEach(item => {
+            // Les items warning et match ne comptent pas
+            const isWarning = item.classList.contains('border-danger')
+                && item.dataset.resolved !== 'true'
+                && !item.classList.contains('border-success');
+
+            // On détecte le type par la classe de bordure initiale
+            // (border-info = new, border-warning = discrepancy)
+            const isActionable =
+                item.classList.contains('border-info') ||
+                item.classList.contains('border-warning') ||
+                item.dataset.resolved === 'true'; // Un item résolu a changé en border-success
+
+            if (isActionable) {
+                totalActionable++;
+                if (item.dataset.resolved === 'true') {
+                    totalResolved++;
+                }
+            }
+        });
+
+        const allResolved = totalActionable > 0 && totalResolved === totalActionable;
+
+        console.log(`[BordereauAnalysis] _updateValidateButtonState() - Actionnables: ${totalActionable}, Résolus: ${totalResolved}, Tous résolus: ${allResolved}`);
+
+        // Afficher et activer/désactiver le bouton Valider
+        this.validateButtonTarget.classList.remove('d-none');
+        this.validateButtonTarget.disabled = !allResolved;
+    }
+
+    /**
+     * Déclenche la validation finale du bordereau.
+     * Appelé au clic sur le bouton "Valider le bordereau".
+     */
+    async validateBordereau() {
+        if (!confirm(
+            'Confirmez-vous la validation de ce bordereau ?\n\n' +
+            'Cette action signifie que tous les écarts ont été traités ' +
+            'et que le bordereau est conforme.'
+        )) return;
+
+        this.validateButtonTarget.disabled = true;
+        this.toggleProgressBar(true);
+        this.mappingStatusFeedbackTarget.classList.remove('d-none');
+        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+            'warning', 'Validation en cours...', false
+        );
+
+        try {
+            const response = await fetch(
+                `/admin/bordereau/api/validate/${this.bordereauIdValue}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                }
+            );
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || 'Erreur lors de la validation.');
+            }
+
+            // Succès : feedback visuel et désactivation définitive du bouton
+            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+                'success', '✓ Bordereau validé avec succès !', false
+            );
+            this.validateButtonTarget.textContent = '✓ Bordereau validé';
+            this.validateButtonTarget.disabled = true;
+
+            // TODO: Ultérieurement, rediriger vers la page du bordereau
+            //       ou afficher une modale de confirmation avec récapitulatif.
+
+        } catch (error) {
+            console.error('[BordereauAnalysis] validateBordereau() - Erreur:', error);
+            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+                'error', `Échec de la validation : ${error.message}`, false
+            );
+            this.validateButtonTarget.disabled = false;
+        } finally {
+            this.toggleProgressBar(false);
+        }
     }
 
     /**

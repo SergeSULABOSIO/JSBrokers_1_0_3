@@ -78,6 +78,17 @@
                 <twig:UX:Icon name="{{ resolve_icon_name('action:analyser') }}" width="18px" height="18px" />
                 <span>Lancer l'analyse</span>
             </button>
+            {# NOUVEAU : Bouton "Valider le bordereau", masqué par défaut,
+               s'active quand tous les résultats new et discrepancy sont traités #}
+            <button type="button"
+                    class="btn btn-success d-inline-flex align-items-center gap-2 d-none"
+                    data-bordereau-analysis-target="validateButton"
+                    data-action="click->bordereau-analysis#validateBordereau"
+                    data-controller="ripple"
+                    disabled>
+                <twig:UX:Icon name="{{ resolve_icon_name('action:completed') }}" width="18px" height="18px" />
+                <span>Valider le bordereau</span>
+            </button>
         </div>
         {# NOUVEAU : Le feedback est déplacé ici, masqué par défaut #}
         <div data-bordereau-analysis-target="mappingStatusFeedback" class="text-white small mt-2 mb-0 d-none" role="alert">
