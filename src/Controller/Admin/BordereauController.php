@@ -850,4 +850,78 @@ class BordereauController extends AbstractController
 
         return $this->json(['message' => 'État de l\'analyse enregistré avec succès.']);
     }
+
+    /**
+     * SIMULATION : Simule le traitement d'une ligne d'analyse (new ou discrepancy).
+     * Cette route sera remplacée par la vraie logique métier ultérieurement.
+     *
+     * TODO: Remplacer cette simulation par la vraie logique métier :
+     *   - Pour type "new"         : créer réellement l'avenant en base
+     *   - Pour type "discrepancy" : mettre à jour réellement l'avenant en base
+     *
+     * @Route("/admin/bordereau/api/simulate-action/{bordereauId}", methods=["POST"])
+     */
+    #[Route('/admin/bordereau/api/simulate-action/{bordereauId}', name: 'admin_bordereau_api_simulate_action', methods: ['POST'])]
+    public function simulateAnalysisAction(
+        int $bordereauId,
+        Request $request
+    ): JsonResponse {
+        // Récupérer le bordereau pour vérifier qu'il existe
+        $bordereau = $this->bordereauRepository->find($bordereauId);
+        if (!$bordereau) {
+            return $this->json(['success' => false, 'message' => 'Bordereau introuvable.'], 404);
+        }
+
+        $data = json_decode($request->getContent(), true);
+        $actionType  = $data['action_type'] ?? null;  // 'new' ou 'discrepancy'
+        $rowIndex    = $data['row_index'] ?? null;
+        $refPolice   = $data['reference_police'] ?? null;
+
+        // TODO: Ici sera insérée la vraie logique métier selon $actionType :
+        //   - Si 'new'         : créer l'avenant depuis $data['excel_data']
+        //   - Si 'discrepancy' : mettre à jour l'avenant $data['avenant_id']
+        //                        avec les données de $data['excel_data']
+        // Pour l'instant, on simule un succès immédiat.
+
+        return $this->json([
+            'success'          => true,
+            'message'          => sprintf(
+                'Simulation : ligne n°%s (police %s) traitée avec succès.',
+                ($rowIndex + 2),
+                $refPolice
+            ),
+            'resolved_row_index' => $rowIndex,
+        ]);
+    }
+
+    /**
+     * Valide le bordereau après que tous les résultats ont été traités.
+     * Change le statut vers STATUT_VALIDE.
+     *
+     * @Route("/admin/bordereau/api/validate/{bordereauId}", methods=["POST"])
+     */
+    #[Route('/admin/bordereau/api/validate/{bordereauId}', name: 'admin_bordereau_api_validate', methods: ['POST'])]
+    public function validateBordereau(
+        int $bordereauId
+    ): JsonResponse {
+        $bordereau = $this->bordereauRepository->find($bordereauId);
+        if (!$bordereau) {
+            return $this->json(['success' => false, 'message' => 'Bordereau introuvable.'], 404);
+        }
+
+        // Changer le statut vers VALIDE
+        $bordereau->setCurrentAnalysisStep(Bordereau::STATUT_ANALYSE_TERMINEE);
+        $bordereau->setUpdatedAt(new \DateTimeImmutable());
+        $this->em->flush();
+
+        // TODO: Ici seront ajoutées ultérieurement :
+        //   - La notification au comptable (MailerInterface déjà injecté)
+        //   - La création d'un enregistrement d'historique de validation
+        //   - Le déclenchement du workflow de paiement des commissions
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Le bordereau a été validé avec succès.',
+        ]);
+    }
 }

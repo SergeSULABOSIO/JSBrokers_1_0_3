@@ -15,8 +15,8 @@ export default class extends BaseController {
     ];
 
     static values = {
-        actions: Array,
-        bordereauId: Number, // NOUVEAU : Pour créer un requesterId unique
+        actions:     Array,
+        bordereauId: Number,
         iconPrefix: String, // Préfixe unique pour les requêtes d'icônes
     };
 
