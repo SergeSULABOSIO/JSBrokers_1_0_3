@@ -844,8 +844,28 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             });
             console.log("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Réponse de l'API reçue. Statut:", response.status);
             if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.error || "Erreur lors de la soumission de l'analyse.");
+                let errorMessage = `Erreur serveur (code ${response.status}).`;
+                const contentType = response.headers.get('content-type') || '';
+
+                if (contentType.includes('application/json')) {
+                    // Le serveur a retourné un JSON d'erreur structuré (cas nominal)
+                    try {
+                        const err = await response.json();
+                        errorMessage = err.error || err.message || errorMessage;
+                    } catch (parseError) {
+                        // Le Content-Type est JSON mais le corps est malformé
+                        errorMessage = `Erreur serveur (code ${response.status}) — réponse inattendue du serveur.`;
+                    }
+                } else if (contentType.includes('text/html')) {
+                    // Le serveur a retourné une page HTML (erreur Symfony, exception non catchée)
+                    errorMessage = `Erreur interne du serveur (code ${response.status}). `
+                                 + `Veuillez réessayer ou contacter l'administrateur si le problème persiste.`;
+                } else {
+                    // Tout autre type de réponse inattendue
+                    errorMessage = `Réponse inattendue du serveur (code ${response.status}, type: ${contentType || 'inconnu'}).`;
+                }
+
+                throw new Error(errorMessage);
             }
             const result = await response.json();
             if (!result.analysisResultsHtml || result.analysisResultsHtml.length === 0) {
