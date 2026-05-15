@@ -1,9 +1,14 @@
 {# templates/components/_analysis_result_item.html.twig #}
 {% set status_config = {
-    'new': { 'class': 'border-info', 'icon': 'lucide:plus-circle', 'icon_class': 'text-info' },
-    'discrepancy': { 'class': 'border-warning', 'icon': 'lucide:alert-triangle', 'icon_class': 'text-warning' },
-    'match': { 'class': 'border-success', 'icon': 'lucide:check-circle', 'icon_class': 'text-success' }
-}[result.type] %}
+    'new':         { 'class': 'border-info',    'icon': 'lucide:plus-circle',    'icon_class': 'text-info' },
+    'discrepancy': { 'class': 'border-warning',  'icon': 'lucide:alert-triangle', 'icon_class': 'text-warning' },
+    'match':       { 'class': 'border-success',  'icon': 'lucide:check-circle',   'icon_class': 'text-success' },
+    'warning':     { 'class': 'border-danger',   'icon': 'lucide:alert-octagon',  'icon_class': 'text-danger' }
+}[result.type] ?? {
+    'class':      'border-secondary',
+    'icon':       'lucide:help-circle',
+    'icon_class': 'text-secondary'
+} %}
 
 <li class="analysis-item list-group-item p-0 {{ status_config.class }}"
     data-controller="analysis-result-item"
@@ -19,7 +24,13 @@
             <div class="analysis-item-title-wrapper">
                 <h5 class="mb-0 d-flex align-items-center gap-2">
                     <twig:UX:Icon name="{{ status_config.icon }}" class="{{ status_config.icon_class }}" width="20px" height="20px" />
-                    <span class="fw-bold">{{ result.bordereau_line_info.reference_police|default('Avenant sans référence') }}</span>
+                    <span class="fw-bold">
+                        {% if result.type == 'warning' %}
+                            Données obsolètes — Analyse requise
+                        {% else %}
+                            {{ result.bordereau_line_info.reference_police|default('Avenant sans référence') }}
+                        {% endif %}
+                    </span>
                     <twig:UX:Icon name="lucide:chevron-down" class="chevron-icon" data-analysis-result-item-target="chevronIcon" width="18px" height="18px" />
                 </h5>
             </div>
@@ -51,41 +62,50 @@
     </div>
 
     {# Contenu détaillé (accordéon), caché par défaut #}
-    <div class="analysis-item-details" data-analysis-result-item-target="detailsPanel">
-        <div class="p-3">
-            <p class="mb-2 small fst-italic"><strong>Détails de la ligne du bordereau :</strong></p>
-            {# NOUVEAU : La carte des formats est maintenant passée directement depuis le contrôleur parent #}
-            {% set currency_code = viewData.display_currency_code ?? '' %}
-            {% set system_formats = viewData.system_field_formats ?? {} %}
-            <div class="analysis-details-grid small text-muted mb-3">
-                {% for key, value in result.bordereau_line_info %}
-                    <div class="row">
-                        <div class="col-md-6">
-                            {# NOUVEAU : Remplacer les underscores par des espaces et capitaliser pour un meilleur affichage #}
-                            {# ex: 'chargement_1_Prime_Nette' devient 'Chargement 1 Prime Nette' #}
-                            <strong>{{ key|replace({'_': ' '})|title }}</strong>
-                        </div>
-                        <div class="col-md-6">
-                            {% if value is not null and value is not same as('') %}
-                                {# NOUVEAU : Logique de formatage enrichie #}
-                                {% set format = system_formats[key] ?? 'text' %}
-
-                                {% if format == 'date' and value.date is defined %}
-                                    {# Formatage de la date en français avec l'heure #}
-                                    {{ value.date|format_datetime('full', 'short', locale='fr') }}
-                                {% elseif format == 'number' %}
-                                    {# Formatage monétaire avec code de devise #}
-                                    {{ currency_code }} {{ value|number_format(2, ',', ' ') }}
+    {# Pour le type warning, bordereau_line_info est vide, on n'affiche pas le panneau #}
+    {% if result.type != 'warning' and result.bordereau_line_info is not empty %}
+        <div class="analysis-item-details" data-analysis-result-item-target="detailsPanel">
+            <div class="p-3">
+                <p class="mb-2 small fst-italic"><strong>Détails de la ligne du bordereau :</strong></p>
+                {# NOUVEAU : La carte des formats est maintenant passée directement depuis le contrôleur parent #}
+                {% set currency_code = viewData.display_currency_code ?? '' %}
+                {% set system_formats = viewData.system_field_formats ?? {} %}
+                <div class="analysis-details-grid small text-muted mb-3">
+                    {% for key, value in result.bordereau_line_info %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                {# NOUVEAU : Remplacer les underscores par des espaces et capitaliser pour un meilleur affichage #}
+                                {# ex: 'chargement_1_Prime_Nette' devient 'Chargement 1 Prime Nette' #}
+                                <strong>{{ key|replace({'_': ' '})|title }}</strong>
+                            </div>
+                            <div class="col-md-6">
+                                {% if value is not null and value is not same as('') %}
+                                    {# NOUVEAU : Logique de formatage enrichie #}
+                                    {% set format = system_formats[key] ?? 'text' %}
+                                    {% if format == 'date' %}
+                                        {% if value.date is defined %}
+                                            {# Objet DateTime sérialisé par Twig (données venant de la DB) #}
+                                            {{ value.date|format_datetime('full', 'short', locale='fr') }}
+                                        {% elseif value is not null and value is not same as('') %}
+                                            {# String Y-m-d retournée par parseExcelValue() après refactorisation #}
+                                            {{ value|date('d/m/Y') }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    {% elseif format == 'number' %}
+                                        {# Formatage monétaire avec code de devise #}
+                                        {{ currency_code }} {{ value|number_format(2, ',', ' ') }}
+                                    {% else %}
+                                        {{ value }}
+                                    {% endif %}
                                 {% else %}
-                                    {{ value }}
+                                    N/A
                                 {% endif %}
-                            {% else %}
-                                N/A
-                            {% endif %}
+                            </div>
                         </div>
-                    </div>
-                {% endfor %}
+                    {% endfor %}
+                </div>
             </div>
         </div>
-    </div>
+    {% endif %}
 </li>
