@@ -8,7 +8,7 @@ import BaseController from './base_controller.js';
 export default class extends BaseController { // NOUVEAU : Ajout du bouton de retour
     static targets = [ // NOUVEAU : Ajout de la cible pour le bouton de retour
         "sheetSelection", "step2", "mappingContainer", "mappingStatusFeedback", "mappingForm",
-        "mappingSelect", "analysisResult", "submitButton", "columnNameText", "step1", "step3", "analysisResultsList", "progressBar", "progressBarContainer",
+        "mappingSelect", "analysisResult", "submitButton", "columnNameText", "step1", "step3", "analysisResultsList", "progressBar", "progressBarContainer", "analysisSummary",
         "backToMappingButton"
     ];
 
@@ -25,6 +25,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         analysisResultsHtml: Array, // NOUVEAU : HTML des résultats pour la restauration
         selectedSheetName: String, // NOUVEAU : Pour la restauration de l'état,
         mappedColumns: Object,     // NOUVEAU : Pour la restauration de l'état
+        analysisStats: Object,
         currentAnalysisStep: Number, // NOUVEAU : Pour la restauration de l'état
     };
 
@@ -35,7 +36,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             selectedSheetName: this.selectedSheetNameValue,
             mappedColumns: this.mappedColumnsValue,
             analysisResults: this.analysisResultsValue, // Données brutes
-            analysisResultsHtml: this.analysisResultsHtmlValue // HTML
+            analysisResultsHtml: this.analysisResultsHtmlValue, // HTML
+            analysisStats: this.analysisStatsValue
         });
         console.groupEnd();
 
@@ -382,6 +384,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         } else if (this.currentStep === 3) {
             this.step3Target.classList.remove('d-none');
             this.backToMappingButtonTarget.classList.remove('d-none'); // Affiche "Retour au mappage"
+            this.renderAnalysisSummary(this.analysisStatsValue);
             this.renderAnalysisResults(this.analysisResultsHtmlValue);
         }
 
@@ -695,6 +698,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         // CORRECTION : On s'assure d'extraire le tableau de chaînes HTML du payload avant de l'assigner.
         console.log("[BordereauAnalysis] _handleAnalysisCompleted() - Analyse terminée. Payload reçu:", payload);
         this.analysisResultsValue = payload.analysisResults || []; // Données brutes
+        this.analysisStatsValue = payload.stats || {};
         this.analysisResultsHtmlValue = payload.analysisResultsHtml || []; // HTML
         this.showStep(3); // Passer à l'étape 3 pour afficher les résultats
         this.submitButtonTarget.disabled = false;
@@ -704,6 +708,107 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         this.submitButtonTarget.textContent = "Lancer l'analyse";
         this.toggleProgressBar(false);
         this._saveAnalysisStateToBordereau(); // Sauvegarder l'état après la complétion de l'analyse
+    }
+
+    /**
+     * Affiche le bloc de synthèse des résultats d'analyse.
+     * @param {object} stats - Les statistiques calculées par le serveur.
+     */
+    renderAnalysisSummary(stats) {
+        if (!this.hasAnalysisSummaryTarget) return;
+
+        if (!stats || stats.total === 0) {
+            this.analysisSummaryTarget.innerHTML = '';
+            return;
+        }
+
+        const matchPct       = stats.total > 0 ? Math.round((stats.match / stats.total) * 100) : 0;
+        const formatNumber   = (n) => new Intl.NumberFormat('fr-FR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(n || 0);
+
+        // Détermine la couleur de la barre de progression selon le % de conformité
+        let progressClass = 'bg-danger';
+        if (matchPct >= 80) progressClass = 'bg-success';
+        else if (matchPct >= 50) progressClass = 'bg-warning';
+
+        this.analysisSummaryTarget.innerHTML = `
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-body p-3">
+                    <h6 class="fw-bold mb-3 text-muted text-uppercase small">
+                        Récapitulatif de l'analyse
+                    </h6>
+
+                    <!-- Compteurs par type -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-3">
+                            <div class="text-center p-2 rounded" style="background:#f0fff4; border:1px solid #198754">
+                                <div class="fw-bold fs-4 text-success">${stats.match}</div>
+                                <div class="small text-muted">Conformes</div>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="text-center p-2 rounded" style="background:#fff8e1; border:1px solid #ffc107">
+                                <div class="fw-bold fs-4 text-warning">${stats.discrepancy}</div>
+                                <div class="small text-muted">Anomalies</div>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="text-center p-2 rounded" style="background:#e8f4fd; border:1px solid #0d6efd">
+                                <div class="fw-bold fs-4 text-primary">${stats.new}</div>
+                                <div class="small text-muted">Nouveaux</div>
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <div class="text-center p-2 rounded" style="background:#f8f9fa; border:1px solid #6c757d">
+                                <div class="fw-bold fs-4 text-secondary">${stats.total}</div>
+                                <div class="small text-muted">Total</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Barre de conformité -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>Taux de conformité</span>
+                            <span class="fw-bold">${matchPct}%</span>
+                        </div>
+                        <div class="progress" style="height:8px; border-radius:4px;">
+                            <div class="progress-bar ${progressClass}"
+                                 role="progressbar"
+                                 style="width:${matchPct}%"
+                                 aria-valuenow="${matchPct}"
+                                 aria-valuemin="0"
+                                 aria-valuemax="100">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Totaux financiers -->
+                    <div class="row g-2 pt-2 border-top">
+                        <div class="col-md-4">
+                            <div class="small text-muted">Primes TTC (bordereau)</div>
+                            <div class="fw-bold" style="color:#0047AB">
+                                ${formatNumber(stats.total_prime_ttc)}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="small text-muted">Commissions HT</div>
+                            <div class="fw-bold text-success">
+                                ${formatNumber(stats.total_commission_ht)}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="small text-muted">Commissions TTC</div>
+                            <div class="fw-bold text-success">
+                                ${formatNumber(stats.total_commission_ttc)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     /**

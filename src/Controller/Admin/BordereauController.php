@@ -315,6 +315,7 @@ class BordereauController extends AbstractController
         // Étape 4: Reconstruire le HTML pour chaque résultat
         $analysisResultsHtmlForTemplate = [];
         $mappedColumns = $bordereau->getMappedColumns() ?: [];
+        $allReconstructedLineData = []; // Pour le calcul des stats
 
         foreach ($rawAnalysisResults as $index => $storedResult) {
             $rowIndex    = $storedResult['row_index'] ?? null;
@@ -332,6 +333,7 @@ class BordereauController extends AbstractController
                     );
                 }
             }
+            $allReconstructedLineData[] = $rawLineData;
 
             // --- VÉRIFICATION D'INTÉGRITÉ ---
             // On s'assure que la ligne retrouvée via row_index correspond bien
@@ -434,6 +436,30 @@ class BordereauController extends AbstractController
             );
         }
 
+        // Calcul des statistiques pour la restauration
+        $stats = [
+            'total'       => count($rawAnalysisResults),
+            'match'       => count(array_filter($rawAnalysisResults, fn($r) => $r['type'] === 'match')),
+            'discrepancy' => count(array_filter($rawAnalysisResults, fn($r) => $r['type'] === 'discrepancy')),
+            'new'         => count(array_filter($rawAnalysisResults, fn($r) => $r['type'] === 'new')),
+            'total_prime_ttc'      => 0.0,
+            'total_commission_ht'  => 0.0,
+            'total_taxe'           => 0.0,
+            'total_commission_ttc' => 0.0,
+        ];
+
+        // Les totaux financiers sont reconstruits depuis les rawLineData
+        // (disponibles dans la boucle de reconstruction précédente)
+        // Additionner directement depuis $reconstructedLineData accumulés
+        foreach ($allReconstructedLineData as $lineInfo) {
+            $stats['total_prime_ttc']     += (float)($lineInfo['prime_ttc'] ?? 0);
+            $stats['total_commission_ht'] += (float)($lineInfo['commission_ht_assureur'] ?? 0);
+            $stats['total_taxe']          += (float)($lineInfo['taxe_commission_assureur'] ?? 0);
+        }
+        $stats['total_commission_ttc'] = round(
+            $stats['total_commission_ht'] + $stats['total_taxe'], 2
+        );
+
         return $this->render('admin/bordereau/bordereau_analysis.html.twig', [
             'bordereau' => $bordereau,
             'entreprise' => $entreprise,
@@ -444,6 +470,7 @@ class BordereauController extends AbstractController
             'mappedColumns' => (object) ($bordereau->getMappedColumns() ?: []),
             'analysisResults' => $rawAnalysisResults, // On passe les données brutes pour la sauvegarde
             'analysisResultsHtml' => $analysisResultsHtmlForTemplate, // On passe le HTML pour l'affichage
+            'analysisStats' => $stats,
             'currentAnalysisStep' => $bordereau->getCurrentAnalysisStep(),
             'error' => $error,
         ]);
@@ -641,6 +668,32 @@ class BordereauController extends AbstractController
             }
         }
 
+        // Calcul des statistiques de synthèse
+        $stats = [
+            'total'       => count($analysisResultsToStore),
+            'match'       => count(array_filter($analysisResultsToStore, fn($r) => $r['type'] === 'match')),
+            'discrepancy' => count(array_filter($analysisResultsToStore, fn($r) => $r['type'] === 'discrepancy')),
+            'new'         => count(array_filter($analysisResultsToStore, fn($r) => $r['type'] === 'new')),
+        ];
+
+        // Calcul des totaux financiers depuis $analysisResultsForDisplay
+        // (qui contient bordereau_line_info avec les données Excel)
+        $totalPrimeTTC = 0.0;
+        $totalCommissionHT = 0.0;
+        $totalTaxe = 0.0;
+
+        foreach ($analysisResultsForDisplay as $result) {
+            $lineInfo = $result['bordereau_line_info'] ?? [];
+            $totalPrimeTTC     += (float)($lineInfo['prime_ttc'] ?? 0);
+            $totalCommissionHT += (float)($lineInfo['commission_ht_assureur'] ?? 0);
+            $totalTaxe         += (float)($lineInfo['taxe_commission_assureur'] ?? 0);
+        }
+
+        $stats['total_prime_ttc']      = round($totalPrimeTTC, 2);
+        $stats['total_commission_ht']  = round($totalCommissionHT, 2);
+        $stats['total_taxe']           = round($totalTaxe, 2);
+        $stats['total_commission_ttc'] = round($totalCommissionHT + $totalTaxe, 2);
+
         // Sauvegarder les résultats d'analyse bruts dans l'entité Bordereau
         $bordereau->setAnalysisResults($analysisResultsToStore);
         $this->em->persist($bordereau);
@@ -664,6 +717,7 @@ class BordereauController extends AbstractController
         return $this->json([
             'analysisResults'     => $analysisResultsToStore,
             'analysisResultsHtml' => $analysisResultsHtml,
+            'stats'               => $stats,
         ]);
     }
 

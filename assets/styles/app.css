@@ -1756,3 +1756,23 @@ textarea:hover,
     background-color: #e9ecef;
     font-weight: bold;
 }
+
+/* NOUVEAU : Récapitulatif de synthèse de l'analyse */
+.analysis-summary-card {
+    border-radius: 10px;
+}
+
+.analysis-summary-counter {
+    border-radius: 8px;
+    transition: transform 0.2s ease;
+}
+
+.analysis-summary-counter:hover {
+    transform: translateY(-2px);
+}
+
+.analysis-conformity-bar {
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+}
