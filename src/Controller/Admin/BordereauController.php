@@ -333,6 +333,53 @@ class BordereauController extends AbstractController
                 }
             }
 
+            // --- VÉRIFICATION D'INTÉGRITÉ ---
+            // On s'assure que la ligne retrouvée via row_index correspond bien
+            // à la même référence de police que celle stockée dans le résumé.
+            // Si ce n'est pas le cas, le fichier Excel a changé depuis l'analyse.
+
+            $policeFromExcel = $rawLineData['reference_police'] ?? null;
+            $policeFromStore = $storedResult['reference_police'] ?? null;
+
+            $fileHasChanged = false;
+
+            // Cas 1 : La ligne Excel est introuvable (fichier supprimé ou row_index invalide)
+            if ($rowIndex === null || !isset($excelDataByRowIndex[$rowIndex])) {
+                $fileHasChanged = true;
+            }
+
+            // Cas 2 : La ligne existe mais ne correspond plus à la même police
+            if (!$fileHasChanged && $policeFromExcel !== $policeFromStore) {
+                $fileHasChanged = true;
+            }
+
+            // Si le fichier a changé, on court-circuite le switch et on affiche
+            // un avertissement à la place des données potentiellement incorrectes
+            if ($fileHasChanged) {
+                $resultForRendering = [
+                    'type'                => 'warning',
+                    'bordereau_line_info' => [],
+                    'details'             => "⚠️ Police n°" . $policeFromStore
+                                             . " (ligne n°" . ($rowIndex !== null ? $rowIndex + 2 : '?') . ")"
+                                             . ": Les données ont changé depuis la dernière analyse."
+                                             . " Veuillez relancer l'analyse pour obtenir des résultats à jour.",
+                    'actions'             => [],
+                ];
+
+                $analysisResultsHtmlForTemplate[] = $this->renderView(
+                    'components/_analysis_result_item.html.twig',
+                    [
+                        'result'       => $resultForRendering,
+                        'bordereau_id' => $bordereau->getId(),
+                        'loop'         => ['index' => $index]
+                    ]
+                );
+
+                // On passe immédiatement à l'élément suivant sans exécuter le switch
+                continue;
+            }
+            // --- FIN VÉRIFICATION D'INTÉGRITÉ ---
+
             // Reconstruire details et actions selon le type
             switch ($type) {
                 case 'new':
