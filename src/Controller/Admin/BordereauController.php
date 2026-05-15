@@ -396,6 +396,49 @@ class BordereauController extends AbstractController
                     break;
 
                 case 'discrepancy':
+                    // Calcul des écarts financiers pour les résultats discrepancy
+                    $financialGaps = [];
+
+                    $financialFields = [
+                        'prime_ttc'               => 'Prime TTC',
+                        'commission_ht_assureur'  => 'Commission HT',
+                        'taxe_commission_assureur'=> 'Taxe commission',
+                        'taux_commission'         => 'Taux commission (%)',
+                    ];
+
+                    // On a besoin de la map des getters pour récupérer les valeurs de la DB
+                    $comparisonsForGaps = [
+                        'prime_ttc' => ['getter' => 'montantTTC'],
+                        'commission_ht_assureur' => ['getter' => 'montantHT'], // Note: le getter peut varier, à ajuster si besoin
+                        'taxe_commission_assureur' => ['getter' => 'taxeAssureurMontant'], // idem
+                        'taux_commission' => ['getter' => 'tauxCommission'],
+                    ];
+
+                    foreach ($financialFields as $field => $label) {
+                        $excelValue = isset($rawLineData[$field])
+                            ? (float)$rawLineData[$field]
+                            : null;
+
+                        $dbValue = null;
+                        if (isset($comparisonsForGaps[$field])) {
+                            $getter = $comparisonsForGaps[$field]['getter'];
+                            $raw = method_exists($avenant, 'get' . ucfirst($getter)) ? $avenant->{'get' . ucfirst($getter)}() : null;
+                            $dbValue = $raw !== null ? (float)$raw : null;
+                        }
+
+                        if ($excelValue !== null && $dbValue !== null) {
+                            $gap = round($excelValue - $dbValue, 2);
+                            $financialGaps[$field] = [
+                                'label'       => $label,
+                                'excel_value' => $excelValue,
+                                'db_value'    => $dbValue,
+                                'gap'         => $gap,
+                                'gap_class'   => $gap > 0 ? 'text-success' : ($gap < 0 ? 'text-danger' : 'text-muted'),
+                                'gap_sign'    => $gap > 0 ? '+' : '',
+                            ];
+                        }
+                    }
+
                     $avenant = $avenantId ? ($avenantsForRestoration[$avenantId] ?? null) : null;
                     $details = "Ligne n°" . ($rowIndex + 2) . ": Anomalie(s) détectée(s).";
                     $actions = $avenant ? [
@@ -408,6 +451,7 @@ class BordereauController extends AbstractController
                             ]
                         ]
                     ] : [];
+                    $resultForRendering['financial_gaps'] = $financialGaps; // Ajouter les écarts au résultat
                     break;
 
                 case 'match':
@@ -424,6 +468,7 @@ class BordereauController extends AbstractController
                 'bordereau_line_info' => $rawLineData,
                 'details'             => $details,
                 'actions'             => $actions,
+                'financial_gaps'      => $financialGaps ?? [], // Assurer que la clé existe toujours
             ];
 
             $analysisResultsHtmlForTemplate[] = $this->renderView(
@@ -635,18 +680,66 @@ class BordereauController extends AbstractController
 
             if (!empty($discrepancies)) {
                 // CAS 2a: Des anomalies ont été trouvées
+                // Calcul des écarts financiers pour les résultats discrepancy
+                $financialGaps = [];
+
+                $financialFields = [
+                    'prime_ttc'               => 'Prime TTC',
+                    'commission_ht_assureur'  => 'Commission HT',
+                    'taxe_commission_assureur'=> 'Taxe commission',
+                    'taux_commission'         => 'Taux commission (%)',
+                ];
+
+                foreach ($financialFields as $field => $label) {
+                    $excelValue = isset($rawLineData[$field])
+                        ? (float)$rawLineData[$field]
+                        : null;
+
+                    $dbValue = null;
+                    if (isset($comparisons[$field])) {
+                        $getter = $comparisons[$field]['getter'];
+                        $raw = method_exists($avenant, 'get' . ucfirst($getter))
+                            ? $avenant->{'get' . ucfirst($getter)}()
+                            : null;
+                        $dbValue = $raw !== null ? (float)$raw : null;
+                    }
+
+                    if ($excelValue !== null && $dbValue !== null) {
+                        $gap = round($excelValue - $dbValue, 2);
+                        $financialGaps[$field] = [
+                            'label'       => $label,
+                            'excel_value' => $excelValue,
+                            'db_value'    => $dbValue,
+                            'gap'         => $gap,
+                            'gap_class'   => $gap > 0 ? 'text-success' : ($gap < 0 ? 'text-danger' : 'text-muted'),
+                            'gap_sign'    => $gap > 0 ? '+' : '',
+                        ];
+                    }
+                }
+
                 $analysisResultsToStore[] = [
                     'type'             => 'discrepancy',
                     'row_index'        => $rowIndex,
                     'reference_police' => $refPolice,
                     'avenant_id'       => $avenant->getId(),
                 ];
+                // Ajouter financial_gaps au résultat pour display
                 $analysisResultsForDisplay[] = [
-                    'type' => 'discrepancy',
-                    'bordereau_line_info' => $rawLineData, // On envoie les données brutes
-                    'details' => "Ligne n°" . ($rowIndex + 2) . ": Anomalie(s) détectée(s) - " . implode(', ', $discrepancies),
-                    'actions' => [
-                        ['label' => 'Mettre à jour', 'event' => 'bordereau:update-entity', 'payload' => ['avenant_id' => $avenant->getId(), 'excel_data' => $rawLineData]] // Brut pour le payload
+                    'type'                => 'discrepancy',
+                    'bordereau_line_info' => $rawLineData,
+                    'details'             => "Ligne n°" . ($rowIndex + 2)
+                                             . ": Anomalie(s) détectée(s) - "
+                                             . implode(', ', $discrepancies),
+                    'financial_gaps'      => $financialGaps,  // NOUVEAU
+                    'actions'             => [
+                        [
+                            'label'   => 'Mettre à jour',
+                            'event'   => 'bordereau:update-entity',
+                            'payload' => [
+                                'avenant_id' => $avenant->getId(),
+                                'excel_data' => $rawLineData
+                            ]
+                        ]
                     ],
                 ];
 
