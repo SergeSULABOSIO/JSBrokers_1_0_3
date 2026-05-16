@@ -912,4 +912,120 @@ class BordereauController extends AbstractController
             'message' => 'Le bordereau a été validé avec succès.',
         ]);
     }
+
+    /**
+     * Génère et télécharge le rapport PDF de l'analyse du bordereau.
+     * N'inclut que les résultats discrepancy et new (les match ne sont pas actionnables).
+     */
+    #[Route('/api/export-analysis-pdf/{id}', name: 'api.export_analysis_pdf', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function exportAnalysisPdf(
+        Bordereau $bordereau,
+        ParameterBagInterface $params
+    ): Response {
+        $analysisResults = $bordereau->getAnalysisResults() ?? [];
+
+        if (empty($analysisResults)) {
+            return $this->json([
+                'error' => 'Aucun résultat d\'analyse disponible. Lancez l\'analyse avant d\'exporter.'
+            ], 400);
+        }
+
+        // Filtrer : exclure les match et warning du rapport
+        $reportableResults = array_filter(
+            $analysisResults,
+            fn($r) => in_array($r['type'] ?? '', ['discrepancy', 'new'])
+        );
+
+        // Statistiques pour le récapitulatif
+        $stats = [
+            'total'       => count($analysisResults),
+            'match'       => count(array_filter($analysisResults, fn($r) => ($r['type'] ?? '') === 'match')),
+            'discrepancy' => count(array_filter($analysisResults, fn($r) => ($r['type'] ?? '') === 'discrepancy')),
+            'new'         => count(array_filter($analysisResults, fn($r) => ($r['type'] ?? '') === 'new')),
+        ];
+        $stats['conformity_rate'] = $stats['total'] > 0
+            ? round(($stats['match'] / $stats['total']) * 100, 1)
+            : 0;
+
+        // Reconstruire les données des lignes pour le PDF depuis le fichier Excel
+        $mappedColumns   = $bordereau->getMappedColumns() ?: [];
+        $selectedSheet   = $bordereau->getSelectedSheetName();
+        $enrichedResults = [];
+
+        if (!empty($reportableResults) && !empty($mappedColumns) && !empty($selectedSheet)) {
+            $sheetData = $this->_loadSheetData($bordereau, $selectedSheet, $params);
+
+            if (is_array($sheetData)) {
+                // Indexer par row_index pour accès rapide
+                $rowsByIndex = array_values($sheetData);
+
+                foreach ($reportableResults as $stored) {
+                    $rowIndex  = $stored['row_index'] ?? null;
+                    $lineData  = [];
+
+                    if ($rowIndex !== null && isset($rowsByIndex[$rowIndex])) {
+                        $row = $rowsByIndex[$rowIndex];
+                        foreach ($mappedColumns as $systemField => $excelColumn) {
+                            $lineData[$systemField] = $this->parseExcelValue(
+                                $row[$excelColumn] ?? null,
+                                $systemField
+                            );
+                        }
+                    }
+
+                    $enrichedResults[] = array_merge($stored, ['line_data' => $lineData]);
+                }
+            }
+        } else {
+            foreach ($reportableResults as $stored) {
+                $enrichedResults[] = array_merge($stored, ['line_data' => []]);
+            }
+        }
+
+        // Rendre le template HTML du rapport
+        $html = $this->renderView('admin/bordereau/pdf/analysis_report.html.twig', [
+            'bordereau'       => $bordereau,
+            'entreprise'      => $this->getEntreprise(),
+            'results'         => $enrichedResults,
+            'stats'           => $stats,
+            'generatedAt'     => new \DateTimeImmutable(),
+            'mappingOptions'  => [
+                'reference_police'          => 'N° de Police',
+                'date_effet_avenant'        => 'Date d\'effet',
+                'date_expiration_avenant'   => 'Date d\'expiration',
+                'date_operation'            => 'Date d\'opération',
+                'prime_ttc'                 => 'Prime TTC',
+                'nom_client'                => 'Assuré',
+                'commission_ht_assureur'    => 'Commission HT',
+                'taxe_commission_assureur'  => 'Taxe commission',
+                'taux_commission'           => 'Taux commission (%)',
+            ],
+        ]);
+
+        // Générer le PDF avec Dompdf
+        $dompdf = new \Dompdf\Dompdf();
+        $dompdf->getOptions()->setChroot(
+            $params->get('kernel.project_dir') . '/public'
+        );
+        $dompdf->getOptions()->setIsRemoteEnabled(false);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'landscape'); // Paysage pour les tableaux larges
+        $dompdf->render();
+
+        // Nom du fichier
+        $filename = sprintf(
+            'rapport-analyse-%s-%s.pdf',
+            $bordereau->getReference(),
+            (new \DateTimeImmutable())->format('Y-m-d')
+        );
+
+        return new Response(
+            $dompdf->output(),
+            200,
+            [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ]
+        );
+    }
 }

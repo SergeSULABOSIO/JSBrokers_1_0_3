@@ -9,7 +9,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
     static targets = [ // NOUVEAU : Ajout de la cible pour le bouton de retour
         "sheetSelection", "step2", "mappingContainer", "mappingStatusFeedback", "mappingForm",
         "mappingSelect", "analysisResult", "submitButton", "columnNameText", "step1", "step3", "analysisResultsList", "progressBar", "progressBarContainer", "analysisSummary", "validateButton",
-        "backToMappingButton",
+        "backToMappingButton", "exportPdfButton",
     ];
 
     static values = {
@@ -373,6 +373,11 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         if (this.hasSubmitButtonTarget) this.submitButtonTarget.classList.add('d-none');
         if (this.hasBackToMappingButtonTarget) this.backToMappingButtonTarget.classList.add('d-none');
     
+        // Masquer le bouton d'export PDF hors de l'étape 3
+        if (this.hasExportPdfButtonTarget) {
+            this.exportPdfButtonTarget.style.display = 'none';
+        }
+
         // Clear feedback message when changing steps, especially when going to step 2
         if (this.hasMappingStatusFeedbackTarget) {
             this.mappingStatusFeedbackTarget.innerHTML = '';
@@ -394,6 +399,10 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             // (utile en cas de restauration où tous les items seraient déjà résolus)
             this._updateValidateButtonState();
             this.renderAnalysisResults(this.analysisResultsHtmlValue);
+            // Afficher le bouton d'export PDF
+            if (this.hasExportPdfButtonTarget) {
+                this.exportPdfButtonTarget.style.removeProperty('display');
+            }
         }
 
         if (!this.isRestoring) {
