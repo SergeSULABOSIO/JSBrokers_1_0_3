@@ -76,6 +76,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         this.isConnecting = true; // Nouveau drapeau: true pendant la connexion initiale
         this.currentStep = 1;
         this.isSaving = false; // NOUVEAU : Le "feu de signalisation" pour la sauvegarde.
+        this._pendingSaveTimeout = null; // Identifiant pour le debounce des sauvegardes
 
         console.log("[BordereauAnalysis] 3. connect() - Mise en place des écouteurs d'événements.");
 
@@ -822,7 +823,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('success', 'Analyse terminée avec succès.', false); // No icon for toolbar feedback
         this.submitButtonTarget.textContent = "Lancer l'analyse";
         this.toggleProgressBar(false);
-        this._saveAnalysisStateToBordereau(); // Sauvegarder l'état après la complétion de l'analyse
+        this._saveAnalysisStateToBordereau('step_only'); // Sauvegarder uniquement l'étape (les résultats sont déjà en base)
     }
 
     /**
@@ -1117,31 +1118,51 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             const selectedSheetName = selectedSheetInput ? selectedSheetInput.value : null;
 
             const mappedColumns = {};
-            const activeMappingContainer = this.element.querySelector('.column-mapping-form:not([style*="display: none"])');
-            if (activeMappingContainer) {
-                const selects = activeMappingContainer.querySelectorAll('select[data-column-letter]');
-                selects.forEach(select => {
-                    if (select.value) {
-                        mappedColumns[select.value] = select.dataset.columnLetter;
-                    }
-                });
+            // CORRECTION 5 : On ne lit le mappage que si on est à l'étape 2
+            if (this.currentStep === 2) {
+                const activeMappingContainer = this.element.querySelector('.column-mapping-form:not([style*="display: none"])');
+                if (activeMappingContainer) {
+                    const selects = activeMappingContainer.querySelectorAll('select[data-column-letter]');
+                    selects.forEach(select => {
+                        if (select.value) {
+                            mappedColumns[select.value] = select.dataset.columnLetter;
+                        }
+                    });
+                }
             }
 
             payload = {
                 ...payload,
                 selectedSheetName: selectedSheetName,
-                mappedColumns: mappedColumns,
+                // CORRECTION 5 : Ne pas envoyer mappedColumns si on n'est pas à l'étape 2
+                ...(this.currentStep === 2 ? { mappedColumns } : {}),
                 analysisResults: this.currentStep === 3 ? this.analysisResultsValue : null,
-                analysisResultsHtml: this.currentStep === 3 ? this.analysisResultsHtmlValue : null, // Pour info, non persisté
             };
         }
 
         console.log("[BordereauAnalysis] _saveAnalysisStateToBordereau() - Sauvegarde de l'état. Payload:", payload);
 
-        // NOUVEAU : On passe le feu au rouge.
-        this.isSaving = true;
-        // On met à jour l'état du bouton immédiatement pour le désactiver.
-        this.updateSubmitButtonState();
+        // CORRECTION 4 : Annuler toute sauvegarde step_only en attente
+        if (saveLevel === 'step_only') {
+            if (this._pendingSaveTimeout) {
+                clearTimeout(this._pendingSaveTimeout);
+            }
+            return new Promise(resolve => {
+                this._pendingSaveTimeout = setTimeout(async () => {
+                    this._pendingSaveTimeout = null;
+                    resolve(await this._handleSaveBordereauAnalysisStateLocal({
+                        url: `/admin/bordereau/api/save-analysis-state/${this.bordereauIdValue}`,
+                        data: payload
+                    }));
+                }, 300); // Debounce de 300ms
+            });
+        }
+
+        // CORRECTION 3 : On ne passe le feu au rouge que pour les sauvegardes complètes
+        if (saveLevel === 'full') {
+            this.isSaving = true;
+            this.updateSubmitButtonState();
+        }
 
         // On retourne maintenant la promesse pour pouvoir l'attendre (await)
         return this._handleSaveBordereauAnalysisStateLocal({
@@ -1232,10 +1253,11 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         } finally {
             console.log("[BordereauAnalysis] _handleSaveBordereauAnalysisStateLocal() - Fin de l'opération. Désactivation de la barre de progression.");
             
-            // NOUVEAU : On passe le feu au vert.
-            this.isSaving = false;
-            // On réévalue l'état du bouton. S'il doit être actif, il le deviendra.
-            this.updateSubmitButtonState();
+            // CORRECTION 3 : On remet le feu au vert uniquement si on l'avait passé au rouge
+            if (this.isSaving) {
+                this.isSaving = false;
+                this.updateSubmitButtonState();
+            }
         }
     }
 }

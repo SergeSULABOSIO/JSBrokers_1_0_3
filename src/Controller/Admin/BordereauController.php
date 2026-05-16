@@ -806,7 +806,11 @@ class BordereauController extends AbstractController
             $bordereau->setSelectedSheetName($payload['selectedSheetName']);
         }
         if (array_key_exists('mappedColumns', $payload)) {
-            $bordereau->setMappedColumns($payload['mappedColumns']);
+            // CORRECTION 5 : Protection contre l'écrasement par un tableau vide
+            $newMappedColumns = $payload['mappedColumns'];
+            if (!empty($newMappedColumns) || empty($bordereau->getMappedColumns())) {
+                $bordereau->setMappedColumns($newMappedColumns);
+            }
         }
         if (array_key_exists('currentAnalysisStep', $payload)) {
             $bordereau->setCurrentAnalysisStep($payload['currentAnalysisStep']);
