@@ -656,12 +656,46 @@ class BordereauController extends AbstractController
             }
 
             if (!empty($discrepancies)) {
+                // Calcul des écarts financiers pour l'affichage
+                $financialGaps = [];
+                $financialFields = [
+                    'prime_ttc'               => 'Prime TTC',
+                    'commission_ht_assureur'  => 'Commission HT',
+                    'taxe_commission_assureur'=> 'Taxe commission',
+                    'taux_commission'         => 'Taux commission (%)',
+                ];
+
+                foreach ($financialFields as $field => $label) {
+                    $excelValue = isset($rawLineData[$field]) ? (float)$rawLineData[$field] : null;
+                    $dbValue = null;
+                    
+                    // On récupère la valeur DB correspondante via le getter configuré
+                    if (isset($comparisons[$field])) {
+                        $getter = $comparisons[$field]['getter'];
+                        $raw = $avenant->{'get' . ucfirst($getter)}();
+                        $dbValue = $raw !== null ? (float)$raw : null;
+                    }
+
+                    if ($excelValue !== null && $dbValue !== null) {
+                        $gap = round($excelValue - $dbValue, 2);
+                        $financialGaps[$field] = [
+                            'label'       => $label,
+                            'excel_value' => $excelValue,
+                            'db_value'    => $dbValue,
+                            'gap'         => $gap,
+                            'gap_class'   => $gap > 0 ? 'text-success' : ($gap < 0 ? 'text-danger' : 'text-muted'),
+                            'gap_sign'    => $gap > 0 ? '+' : '',
+                        ];
+                    }
+                }
+
                 $chunkResultsToStore[] = [
                     'type' => 'discrepancy', 'row_index' => $rowIndex, 'reference_police' => $refPolice, 'avenant_id' => $avenant->getId(),
                 ];
                 $chunkResultsForDisplay[] = [
                     'type' => 'discrepancy', 'bordereau_line_info' => $rawLineData,
                     'details' => "Ligne n°" . ($rowIndex + 2) . ": Anomalie(s) - " . implode(', ', $discrepancies),
+                    'financial_gaps' => $financialGaps,
                     'actions' => [['label' => 'Mettre à jour', 'event' => 'bordereau:update-entity', 'payload' => ['avenant_id' => $avenant->getId(), 'excel_data' => $rawLineData]]],
                 ];
             } else {
@@ -679,15 +713,45 @@ class BordereauController extends AbstractController
         $chunkHtml = [];
         foreach ($chunkResultsForDisplay as $i => $result) {
             $chunkHtml[] = $this->renderView('components/_analysis_result_item.html.twig', [
-                'result' => $result, 'bordereau_id' => $bordereau->getId(), 'loop' => ['index' => $offset + $i],
+                'result' => $result, 
+                'bordereau_id' => $bordereau->getId(), 
+                'loop' => ['index' => $offset + $i],
+                'viewData' => [
+                    'display_currency_code' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    'system_field_formats' => [
+                        'prime_ttc' => 'number',
+                        'taux_commission' => 'number',
+                        'commission_ht_assureur' => 'number',
+                        'taxe_commission_assureur' => 'number',
+                    ]
+                ]
             ]);
         }
 
         $isLastChunk = ($offset + $chunkSize) >= $totalRows;
         $accumulated = $sessionData['accumulatedResults'] ?? [];
         $accumulated = array_merge($accumulated, $chunkResultsToStore);
+        $stats = null;
 
         if ($isLastChunk) {
+            // Calcul des statistiques de synthèse finales
+            $stats = [
+                'total'       => count($accumulated),
+                'match'       => count(array_filter($accumulated, fn($r) => $r['type'] === 'match')),
+                'discrepancy' => count(array_filter($accumulated, fn($r) => $r['type'] === 'discrepancy')),
+                'new'         => count(array_filter($accumulated, fn($r) => $r['type'] === 'new')),
+                'total_prime_ttc'      => 0.0,
+                'total_commission_ht'  => 0.0,
+                'total_taxe'           => 0.0,
+            ];
+
+            foreach ($allRows as $row) {
+                $stats['total_prime_ttc']     += (float)($this->parseExcelValue($row[$mappedColumns['prime_ttc'] ?? ''] ?? 0, 'prime_ttc'));
+                $stats['total_commission_ht'] += (float)($this->parseExcelValue($row[$mappedColumns['commission_ht_assureur'] ?? ''] ?? 0, 'commission_ht_assureur'));
+                $stats['total_taxe']          += (float)($this->parseExcelValue($row[$mappedColumns['taxe_commission_assureur'] ?? ''] ?? 0, 'taxe_commission_assureur'));
+            }
+            $stats['total_commission_ttc'] = round($stats['total_commission_ht'] + $stats['total_taxe'], 2);
+
             $bordereau->setAnalysisResults($accumulated);
             $bordereau->setCurrentAnalysisStep(3);
             $bordereau->setUpdatedAt(new \DateTimeImmutable());
@@ -702,6 +766,7 @@ class BordereauController extends AbstractController
         return $this->json([
             'chunkResultsHtml' => $chunkHtml, 'chunkResultsStore' => $chunkResultsToStore,
             'processedCount' => $offset + count($chunk), 'totalRows' => $totalRows, 'isLastChunk' => $isLastChunk,
+            'stats' => $stats
         ]);
     }
 
