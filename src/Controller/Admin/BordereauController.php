@@ -525,293 +525,216 @@ class BordereauController extends AbstractController
     #[Route('/api/submit-analysis/{id}', name: 'api.submit_analysis', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
     public function submitAnalysisApi(Bordereau $bordereau, Request $request, ParameterBagInterface $params): JsonResponse
     {
-        $entreprise = $this->getEntreprise();
+        $mode = $request->query->get('mode', 'init');
 
-        // Récupérer les informations depuis l'entité Bordereau, qui a été sauvegardée
-        $sheetName = $bordereau->getSelectedSheetName();
+        return match($mode) {
+            'init'    => $this->_handleAnalysisInit($bordereau, $request, $params),
+            'process' => $this->_handleAnalysisProcess($bordereau, $request, $params),
+            default   => $this->json(['error' => 'Mode inconnu.'], 400),
+        };
+    }
+
+    /**
+     * Initialise l'analyse : lit le fichier Excel, prépare les données,
+     * et retourne le nombre total de lignes à traiter.
+     */
+    private function _handleAnalysisInit(Bordereau $bordereau, Request $request, ParameterBagInterface $params): JsonResponse
+    {
+        $sheetName     = $bordereau->getSelectedSheetName();
         $mappedColumns = $bordereau->getMappedColumns() ?: [];
-
-        // DUMP pour le débogage, comme suggéré.
-        dump([
-            'sheetName from DB' => $sheetName,
-            'mappedColumns from DB' => $mappedColumns
-        ]);
-
-        // CORRECTION : On vérifie si la CLÉ 'reference_police' existe, au lieu de chercher sa VALEUR.
-        // Si elle existe, on récupère la lettre de la colonne associée.
-        $refPoliceColumn = array_key_exists('reference_police', $mappedColumns) ? $mappedColumns['reference_police'] : null;
+        $refPoliceColumn = $mappedColumns['reference_police'] ?? null;
 
         if (empty($sheetName) || empty($refPoliceColumn)) {
-            return $this->json(['error' => 'Le nom de la feuille ou le mappage de la colonne "N° de Police" est manquant. Veuillez retourner à l\'étape de mappage.'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'Le nom de la feuille ou le mappage "N° de Police" est manquant.'], 400);
         }
 
-        // Relire le fichier Excel pour obtenir les données de la feuille sélectionnée
-        $excelDocument = null;
-        $allowedExtensions = ['xlsx', 'xls', 'ods'];
-        foreach ($bordereau->getDocuments() as $doc) {
-            if ($doc->getNomFichierStocke()) {
-                $extension = pathinfo($doc->getNomFichierStocke(), PATHINFO_EXTENSION);
-                if (in_array(strtolower($extension), $allowedExtensions)) {
-                    $excelDocument = $doc;
-                    break;
-                }
-            }
+        $selectedSheetData = $this->_loadSheetData($bordereau, $sheetName, $params);
+        if ($selectedSheetData instanceof JsonResponse) {
+            return $selectedSheetData;
         }
 
-        if (!$excelDocument) {
-            return $this->json(['error' => "Aucun fichier Excel valide n'est attaché à ce bordereau."], Response::HTTP_BAD_REQUEST);
-        }
-
-        $filePath = $params->get('kernel.project_dir') . '/public/uploads/documents/' . $excelDocument->getNomFichierStocke();
-        $selectedSheetData = [];
-
-        try {
-            $spreadsheet = IOFactory::load($filePath);
-            $worksheet = $spreadsheet->getSheetByName($sheetName);
-            if ($worksheet) {
-                $sheetDataWithHeader = $worksheet->toArray(null, true, false, true);
-                array_shift($sheetDataWithHeader); // Retirer la ligne d'en-tête
-                $selectedSheetData = $sheetDataWithHeader;
-            } else {
-                return $this->json(['error' => "La feuille '$sheetName' n'a pas été trouvée dans le fichier Excel."], Response::HTTP_BAD_REQUEST);
-            }
-        } catch (ReaderException $e) {
-            return $this->json(['error' => "Erreur lors de la lecture du fichier Excel : " . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
-
-        // Initialisation des deux tableaux distincts
-        $analysisResultsToStore = [];
-        $analysisResultsForDisplay = [];
-
-        // --- ÉTAPE 1: Extraire toutes les références de police du fichier Excel ---
-        $policeReferences = array_map(fn ($row) => $row[$refPoliceColumn] ?? null, $selectedSheetData);
-        $policeReferences = array_filter(array_unique($policeReferences)); // Garder les références uniques et non vides
-
-        // --- ÉTAPE 2: Récupérer tous les avenants correspondants en une seule requête ---
+        $policeReferences = array_filter(array_unique(
+            array_map(fn($row) => $row[$refPoliceColumn] ?? null, $selectedSheetData)
+        ));
         $avenantsFromDb = $this->avenantRepository->findBy(['referencePolice' => $policeReferences]);
-
-        // --- ÉTAPE 3: Hydrater les avenants et les stocker dans une map pour un accès rapide ---
         $avenantsMap = [];
         foreach ($avenantsFromDb as $avenant) {
-            $this->loadCalculatedValues(null, $avenant); // Hydratation des valeurs calculées
-            $avenantsMap[$avenant->getReferencePolice()] = $avenant;
+            $this->loadCalculatedValues(null, $avenant);
+            $avenantsMap[$avenant->getReferencePolice()] = $avenant->getId();
         }
 
-        // --- ÉTAPE 4: Parcourir chaque ligne du bordereau et comparer ---
-        foreach ($selectedSheetData as $rowIndex => $row) {
-            $refPolice = $row[$refPoliceColumn] ?? null;
-            if (!$refPolice) continue; // Ignorer les lignes sans référence de police
+        $sessionKey = 'bordereau_analysis_' . $bordereau->getId();
+        $request->getSession()->set($sessionKey, [
+            'rows'          => array_values($selectedSheetData),
+            'avenantsMap'   => $avenantsMap,
+            'mappedColumns' => $mappedColumns,
+            'totalRows'     => count($selectedSheetData),
+        ]);
 
-            $avenant = $avenantsMap[$refPolice] ?? null;
-            $rawLineData = []; // Pour stocker les données brutes extraites de la ligne Excel (utilisées dans le payload)
+        return $this->json([
+            'totalRows' => count($selectedSheetData),
+            'chunkSize' => 10,
+        ]);
+    }
+
+    /**
+     * Traite un lot de 10 lignes et retourne les résultats partiels.
+     */
+    private function _handleAnalysisProcess(Bordereau $bordereau, Request $request, ParameterBagInterface $params): JsonResponse
+    {
+        $body   = json_decode($request->getContent(), true);
+        $offset = (int)($body['offset'] ?? 0);
+        $chunkSize = 10;
+
+        $sessionKey  = 'bordereau_analysis_' . $bordereau->getId();
+        $sessionData = $request->getSession()->get($sessionKey);
+
+        if (!$sessionData) {
+            return $this->json(['error' => 'Session d\'analyse expirée ou introuvable. Veuillez relancer l\'analyse.'], 400);
+        }
+
+        $allRows       = $sessionData['rows'];
+        $mappedColumns = $sessionData['mappedColumns'];
+        $totalRows     = $sessionData['totalRows'];
+        $refPoliceColumn = $mappedColumns['reference_police'];
+
+        $chunk = array_slice($allRows, $offset, $chunkSize);
+
+        $chunkPoliceRefs = array_filter(array_unique(
+            array_map(fn($row) => $row[$refPoliceColumn] ?? null, $chunk)
+        ));
+        $chunkAvenants = $this->avenantRepository->findBy(['referencePolice' => $chunkPoliceRefs]);
+        $chunkAvenantsMap = [];
+        foreach ($chunkAvenants as $avenant) {
+            $this->loadCalculatedValues(null, $avenant);
+            $chunkAvenantsMap[$avenant->getReferencePolice()] = $avenant;
+        }
+
+        $chunkResultsToStore  = [];
+        $chunkResultsForDisplay = [];
+
+        foreach ($chunk as $chunkIndex => $row) {
+            $rowIndex  = $offset + $chunkIndex;
+            $refPolice = $row[$refPoliceColumn] ?? null;
+            if (!$refPolice) continue;
+
+            $avenant     = $chunkAvenantsMap[$refPolice] ?? null;
+            $rawLineData = [];
             $discrepancies = [];
 
-            // Extraire toutes les données mappées de la ligne Excel
             foreach ($mappedColumns as $systemField => $excelColumn) {
-                $rawValue = $this->parseExcelValue($row[$excelColumn] ?? null, $systemField);
-                $rawLineData[$systemField] = $rawValue;
-                // SUPPRESSION : Le formatage se fait maintenant dans Twig.
-                // $formattedLineData[$systemField] = $this->formatValueForDisplay($rawValue, $systemField);
+                $rawLineData[$systemField] = $this->parseExcelValue($row[$excelColumn] ?? null, $systemField);
             }
 
             if (!$avenant) {
-                // CAS 1: Nouvel avenant, non trouvé en base de données
-                $analysisResultsToStore[] = [
-                    'type'             => 'new',
-                    'row_index'        => $rowIndex,
-                    'reference_police' => $refPolice,
-                    'avenant_id'       => null,
+                $chunkResultsToStore[] = [
+                    'type' => 'new', 'row_index' => $rowIndex, 'reference_police' => $refPolice, 'avenant_id' => null,
                 ];
-                $analysisResultsForDisplay[] = [
-                    'type' => 'new',
-                    'bordereau_line_info' => $rawLineData, // On envoie les données brutes
+                $chunkResultsForDisplay[] = [
+                    'type' => 'new', 'bordereau_line_info' => $rawLineData,
                     'details' => "Ligne n°" . ($rowIndex + 2) . ": Nouvel avenant détecté.",
-                    'actions' => [
-                        ['label' => 'Créer l\'avenant', 'event' => 'bordereau:create-entity', 'payload' => ['excel_data' => $rawLineData]] // Brut pour le payload
-                    ],
+                    'actions' => [['label' => 'Créer l\'avenant', 'event' => 'bordereau:create-entity', 'payload' => ['excel_data' => $rawLineData]]],
                 ];
-
                 continue;
             }
 
-            // CAS 2: Avenant trouvé, on compare les champs
             $comparisons = [
-                'prime_ttc' => ['getter' => 'montantTTC', 'formatter' => fn ($v) => (string) number_format($v, 2, '.', '')],
-                'date_effet_avenant' => [
-                    'getter'    => 'startingAt',
-                    'formatter' => fn ($v) => $v instanceof \DateTimeInterface
-                        ? $v->format('Y-m-d')
-                        : (is_string($v) ? $v : null)
-                ],
-                'date_expiration_avenant' => [
-                    'getter'    => 'endingAt',
-                    'formatter' => fn ($v) => $v instanceof \DateTimeInterface
-                        ? $v->format('Y-m-d')
-                        : (is_string($v) ? $v : null)
-                ],
-                'taux_commission' => ['getter' => 'tauxCommission', 'formatter' => fn ($v) => (string) number_format($v, 2, '.', '')],
+                'prime_ttc'           => ['getter' => 'montantTTC',      'formatter' => fn($v) => number_format((float)$v, 2, '.', '')],
+                'date_effet_avenant'  => ['getter' => 'startingAt',      'formatter' => fn($v) => $v instanceof \DateTimeInterface ? $v->format('Y-m-d') : (is_string($v) ? $v : null)],
+                'date_expiration_avenant' => ['getter' => 'endingAt',    'formatter' => fn($v) => $v instanceof \DateTimeInterface ? $v->format('Y-m-d') : (is_string($v) ? $v : null)],
+                'taux_commission'     => ['getter' => 'tauxCommission',  'formatter' => fn($v) => number_format((float)$v, 2, '.', '')],
             ];
 
             foreach ($comparisons as $field => $config) {
-                if (isset($rawLineData[$field])) { // Comparaison sur les données brutes
+                if (isset($rawLineData[$field])) {
                     $excelValue = $rawLineData[$field];
                     $dbValue = $avenant->{$config['getter']};
-
-                    // Formater les deux valeurs pour une comparaison fiable
-                    $formattedExcelValue = $config['formatter']($excelValue);
-                    $formattedDbValue = $config['formatter']($dbValue);
-
-                    if ($formattedExcelValue !== $formattedDbValue) {
-                        // DUMP : Ajout de traces JUSTE AVANT le sprintf pour voir les valeurs finales.
-                        dump("Anomalie détectée pour le champ: $field", [
-                            'valeur_excel_formatee_display' => $this->formatValueForDisplay($excelValue, $field),
-                            'valeur_db_formatee_display' => $this->formatValueForDisplay($dbValue, $field)
-                        ]);
-
-                        $discrepancies[] = sprintf(
-                            "%s (Excel: %s, DB: %s)",
-                            $this->translator->trans($field, [], 'messages'), // ex: "Date d'effet"
-                            (string) $this->formatValueForDisplay($excelValue, $field), // ex: "15/01/2024"
-                            (string) $this->formatValueForDisplay($dbValue, $field)     // ex: "10/01/2024"
-                        );
+                    if ($config['formatter']($excelValue) !== $config['formatter']($dbValue)) {
+                        $discrepancies[] = sprintf("%s (Excel: %s, DB: %s)", $this->translator->trans($field, [], 'messages'), (string)$this->formatValueForDisplay($excelValue, $field), (string)$this->formatValueForDisplay($dbValue, $field));
                     }
                 }
             }
 
             if (!empty($discrepancies)) {
-                // CAS 2a: Des anomalies ont été trouvées
-                // Calcul des écarts financiers pour les résultats discrepancy
-                $financialGaps = [];
-
-                $financialFields = [
-                    'prime_ttc'               => 'Prime TTC',
-                    'commission_ht_assureur'  => 'Commission HT',
-                    'taxe_commission_assureur'=> 'Taxe commission',
-                    'taux_commission'         => 'Taux commission (%)',
+                $chunkResultsToStore[] = [
+                    'type' => 'discrepancy', 'row_index' => $rowIndex, 'reference_police' => $refPolice, 'avenant_id' => $avenant->getId(),
                 ];
-
-                foreach ($financialFields as $field => $label) {
-                    $excelValue = isset($rawLineData[$field])
-                        ? (float)$rawLineData[$field]
-                        : null;
-
-                    $dbValue = null;
-                    if (isset($comparisons[$field])) {
-                        $getter = $comparisons[$field]['getter'];
-                        $raw = method_exists($avenant, 'get' . ucfirst($getter))
-                            ? $avenant->{'get' . ucfirst($getter)}()
-                            : null;
-                        $dbValue = $raw !== null ? (float)$raw : null;
-                    }
-
-                    if ($excelValue !== null && $dbValue !== null) {
-                        $gap = round($excelValue - $dbValue, 2);
-                        $financialGaps[$field] = [
-                            'label'       => $label,
-                            'excel_value' => $excelValue,
-                            'db_value'    => $dbValue,
-                            'gap'         => $gap,
-                            'gap_class'   => $gap > 0 ? 'text-success' : ($gap < 0 ? 'text-danger' : 'text-muted'),
-                            'gap_sign'    => $gap > 0 ? '+' : '',
-                        ];
-                    }
-                }
-
-                $analysisResultsToStore[] = [
-                    'type'             => 'discrepancy',
-                    'row_index'        => $rowIndex,
-                    'reference_police' => $refPolice,
-                    'avenant_id'       => $avenant->getId(),
+                $chunkResultsForDisplay[] = [
+                    'type' => 'discrepancy', 'bordereau_line_info' => $rawLineData,
+                    'details' => "Ligne n°" . ($rowIndex + 2) . ": Anomalie(s) - " . implode(', ', $discrepancies),
+                    'actions' => [['label' => 'Mettre à jour', 'event' => 'bordereau:update-entity', 'payload' => ['avenant_id' => $avenant->getId(), 'excel_data' => $rawLineData]]],
                 ];
-                // Ajouter financial_gaps au résultat pour display
-                $analysisResultsForDisplay[] = [
-                    'type'                => 'discrepancy',
-                    'bordereau_line_info' => $rawLineData,
-                    'details'             => "Ligne n°" . ($rowIndex + 2)
-                                             . ": Anomalie(s) détectée(s) - "
-                                             . implode(', ', $discrepancies),
-                    'financial_gaps'      => $financialGaps,  // NOUVEAU
-                    'actions'             => [
-                        [
-                            'label'   => 'Mettre à jour',
-                            'event'   => 'bordereau:update-entity',
-                            'payload' => [
-                                'avenant_id' => $avenant->getId(),
-                                'excel_data' => $rawLineData
-                            ]
-                        ]
-                    ],
-                ];
-
             } else {
-                // CAS 2b: Aucune anomalie, tout correspond
-                $analysisResultsToStore[] = [
-                    'type'             => 'match',
-                    'row_index'        => $rowIndex,
-                    'reference_police' => $refPolice,
-                    'avenant_id'       => $avenant->getId(),
+                $chunkResultsToStore[] = [
+                    'type' => 'match', 'row_index' => $rowIndex, 'reference_police' => $refPolice, 'avenant_id' => $avenant->getId(),
                 ];
-                $analysisResultsForDisplay[] = [
-                    'type' => 'match',
-                    'bordereau_line_info' => $rawLineData, // On envoie les données brutes
-                    'details' => "Ligne n°" . ($rowIndex + 2) . ": Correspondance parfaite avec les données existantes.",
+                $chunkResultsForDisplay[] = [
+                    'type' => 'match', 'bordereau_line_info' => $rawLineData,
+                    'details' => "Ligne n°" . ($rowIndex + 2) . ": Correspondance parfaite.",
                     'actions' => [],
                 ];
-
             }
         }
 
-        // Calcul des statistiques de synthèse
-        $stats = [
-            'total'       => count($analysisResultsToStore),
-            'match'       => count(array_filter($analysisResultsToStore, fn($r) => $r['type'] === 'match')),
-            'discrepancy' => count(array_filter($analysisResultsToStore, fn($r) => $r['type'] === 'discrepancy')),
-            'new'         => count(array_filter($analysisResultsToStore, fn($r) => $r['type'] === 'new')),
-        ];
-
-        // Calcul des totaux financiers depuis $analysisResultsForDisplay
-        // (qui contient bordereau_line_info avec les données Excel)
-        $totalPrimeTTC = 0.0;
-        $totalCommissionHT = 0.0;
-        $totalTaxe = 0.0;
-
-        foreach ($analysisResultsForDisplay as $result) {
-            $lineInfo = $result['bordereau_line_info'] ?? [];
-            $totalPrimeTTC     += (float)($lineInfo['prime_ttc'] ?? 0);
-            $totalCommissionHT += (float)($lineInfo['commission_ht_assureur'] ?? 0);
-            $totalTaxe         += (float)($lineInfo['taxe_commission_assureur'] ?? 0);
-        }
-
-        $stats['total_prime_ttc']      = round($totalPrimeTTC, 2);
-        $stats['total_commission_ht']  = round($totalCommissionHT, 2);
-        $stats['total_taxe']           = round($totalTaxe, 2);
-        $stats['total_commission_ttc'] = round($totalCommissionHT + $totalTaxe, 2);
-
-        // Sauvegarder les résultats d'analyse bruts dans l'entité Bordereau
-        $bordereau->setAnalysisResults($analysisResultsToStore);
-        $this->em->persist($bordereau);
-        $this->em->flush();
-
-        // NOUVEAU : Rendre chaque résultat en HTML via le composant Twig
-        $analysisResultsHtml = [];
-        foreach ($analysisResultsForDisplay as $index => $result) {
-            // Créer une copie du résultat pour le rendu afin d'éviter de modifier l'original
-            // $resultForRendering = $result;
-            // Le 'bordereau_line_info' contient maintenant des données brutes.
-            // Le formatage se fera dans le template Twig.
-            $analysisResultsHtml[] = $this->renderView('components/_analysis_result_item.html.twig', [
-                'result' => $result,
-                'bordereau_id' => $bordereau->getId(),
-                'loop' => ['index' => $index] // Simuler la variable loop de Twig
+        $chunkHtml = [];
+        foreach ($chunkResultsForDisplay as $i => $result) {
+            $chunkHtml[] = $this->renderView('components/_analysis_result_item.html.twig', [
+                'result' => $result, 'bordereau_id' => $bordereau->getId(), 'loop' => ['index' => $offset + $i],
             ]);
         }
 
-        // On retourne les résultats bruts (pour la sauvegarde) et le HTML pré-rendu (pour l'affichage)
+        $isLastChunk = ($offset + $chunkSize) >= $totalRows;
+        $accumulated = $sessionData['accumulatedResults'] ?? [];
+        $accumulated = array_merge($accumulated, $chunkResultsToStore);
+
+        if ($isLastChunk) {
+            $bordereau->setAnalysisResults($accumulated);
+            $bordereau->setCurrentAnalysisStep(3);
+            $bordereau->setUpdatedAt(new \DateTimeImmutable());
+            $this->em->persist($bordereau);
+            $this->em->flush();
+            $request->getSession()->remove($sessionKey);
+        } else {
+            $sessionData['accumulatedResults'] = $accumulated;
+            $request->getSession()->set($sessionKey, $sessionData);
+        }
+
         return $this->json([
-            'analysisResults'     => $analysisResultsToStore,
-            'analysisResultsHtml' => $analysisResultsHtml,
-            'stats'               => $stats,
+            'chunkResultsHtml' => $chunkHtml, 'chunkResultsStore' => $chunkResultsToStore,
+            'processedCount' => $offset + count($chunk), 'totalRows' => $totalRows, 'isLastChunk' => $isLastChunk,
         ]);
+    }
+
+    /**
+     * Lit le fichier Excel d'un bordereau et retourne les données de la feuille.
+     */
+    private function _loadSheetData(Bordereau $bordereau, string $sheetName, ParameterBagInterface $params): array|JsonResponse
+    {
+        $allowedExtensions = ['xlsx', 'xls', 'ods'];
+        $excelDocument = null;
+
+        foreach ($bordereau->getDocuments() as $doc) {
+            if ($doc->getNomFichierStocke()) {
+                $ext = pathinfo($doc->getNomFichierStocke(), PATHINFO_EXTENSION);
+                if (in_array(strtolower($ext), $allowedExtensions)) {
+                    $excelDocument = $doc; break;
+                }
+            }
+        }
+
+        if (!$excelDocument) return $this->json(['error' => "Aucun fichier Excel valide n'est attaché."], 400);
+
+        $filePath = $params->get('kernel.project_dir') . '/public/uploads/documents/' . $excelDocument->getNomFichierStocke();
+
+        try {
+            $spreadsheet = IOFactory::load($filePath);
+            $worksheet   = $spreadsheet->getSheetByName($sheetName);
+            if (!$worksheet) return $this->json(['error' => "Feuille '$sheetName' introuvable."], 400);
+            $data = $worksheet->toArray(null, true, false, true);
+            array_shift($data); return $data;
+        } catch (ReaderException $e) {
+            return $this->json(['error' => "Erreur lecture Excel : " . $e->getMessage()], 500);
+        }
     }
 
     // NOUVEAU : Route pour enregistrer l'état de l'analyse du bordereau

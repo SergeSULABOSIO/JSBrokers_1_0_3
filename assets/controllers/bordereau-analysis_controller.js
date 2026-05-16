@@ -952,9 +952,29 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      */
     toggleProgressBar(isLoading) {
         // Use the local progress bar targets defined in this controller
-        if (this.hasProgressBarContainerTarget) {
-            this.progressBarContainerTarget.style.display = isLoading ? 'block' : 'none';
+        if (!this.hasProgressBarContainerTarget) return;
+        this.progressBarContainerTarget.style.display = isLoading ? 'block' : 'none';
+        if (isLoading) {
+            this.progressBarTarget.style.animation = 'none';
+            this.progressBarTarget.style.backgroundSize = '100% 100%';
+            this.progressBarTarget.style.width = '0%';
+            this.progressBarTarget.style.background = '#0047AB';
+            this.progressBarTarget.style.transition = 'width 0.3s ease';
+        } else {
+            this.progressBarTarget.style.animation = '';
+            this.progressBarTarget.style.width = '100%';
+            this.progressBarTarget.style.background = '';
+            this.progressBarTarget.style.transition = '';
         }
+    }
+
+    /**
+     * Met à jour le pourcentage de la barre de progression.
+     */
+    _updateProgressBarPercentage(percentage) {
+        if (!this.hasProgressBarTarget) return;
+        this.progressBarTarget.style.width = `${percentage}%`;
+        console.log(`[BordereauAnalysis] _updateProgressBarPercentage() - ${percentage}%`);
     }
 
     /**
