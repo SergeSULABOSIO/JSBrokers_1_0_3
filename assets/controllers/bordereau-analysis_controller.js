@@ -652,17 +652,110 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
     /**
      * Soumet les données mappées au backend pour l'analyse.
+     * Point d'entrée de l'analyse par lots.
+     * Lance l'initialisation puis enchaîne les lots séquentiellement.
      */
     async submitAnalysis(event) {
-        console.log("[BordereauAnalysis] submitAnalysis() - Lancement de l'analyse. Activation de la barre de progression.");
+        console.log("[BordereauAnalysis] submitAnalysis() - Lancement de l'analyse par lots.");
+
+        // Désactiver le bouton et préparer l'UI
         this.submitButtonTarget.disabled = true;
         this.submitButtonTarget.textContent = "Analyse en cours...";
-        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('warning', 'Analyse en cours...', false); // Mettre à jour le feedback
         this.toggleProgressBar(true);
+        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+            'warning', 'Initialisation de l\'analyse...', false
+        );
 
-        // On appelle directement la méthode locale qui va faire un fetch sur l'API.
-        // Le payload est vide car le backend a déjà toutes les informations nécessaires.
-        this._handleSubmitBordereauAnalysisLocal({ url: `/admin/bordereau/api/submit-analysis/${this.bordereauIdValue}` });
+        // Réinitialiser les résultats accumulés
+        this._accumulatedResultsHtml  = [];
+        this._accumulatedResultsStore = [];
+
+        const baseUrl = `/admin/bordereau/api/submit-analysis/${this.bordereauIdValue}`;
+
+        try {
+            // --- ÉTAPE 1 : Init — compter les lignes ---
+            const initResponse = await fetch(`${baseUrl}?mode=init`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+
+            if (!initResponse.ok) {
+                const err = await this._parseErrorResponse(initResponse);
+                throw new Error(err);
+            }
+
+            const initData = await initResponse.json();
+            const totalRows = initData.totalRows || 0;
+            const chunkSize = initData.chunkSize || 10;
+
+            if (totalRows === 0) {
+                this._handleAnalysisCompleted({
+                    analysisResults:     [],
+                    analysisResultsHtml: [],
+                });
+                return;
+            }
+
+            console.log(`[BordereauAnalysis] submitAnalysis() - ${totalRows} lignes à traiter par lots de ${chunkSize}.`);
+            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+                'warning', `0 / ${totalRows} lignes analysées...`, false
+            );
+
+            // --- ÉTAPE 2 : Traiter les lots séquentiellement ---
+            let offset = 0;
+            while (offset < totalRows) {
+                const processResponse = await fetch(`${baseUrl}?mode=process`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ offset })
+                });
+
+                if (!processResponse.ok) {
+                    const err = await this._parseErrorResponse(processResponse);
+                    throw new Error(err);
+                }
+
+                const processData = await processResponse.json();
+
+                // Accumuler les résultats de ce lot
+                this._accumulatedResultsHtml  = this._accumulatedResultsHtml.concat(
+                    processData.chunkResultsHtml || []
+                );
+                this._accumulatedResultsStore = this._accumulatedResultsStore.concat(
+                    processData.chunkResultsStore || []
+                );
+
+                // Mettre à jour la barre de progression (mode déterminé)
+                const processed  = processData.processedCount || (offset + chunkSize);
+                const percentage = Math.min(Math.round((processed / totalRows) * 100), 100);
+                this._updateProgressBarPercentage(percentage);
+
+                // Mettre à jour le feedback texte
+                this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+                    'warning',
+                    `${Math.min(processed, totalRows)} / ${totalRows} lignes analysées...`,
+                    false
+                );
+
+                console.log(`[BordereauAnalysis] submitAnalysis() - Lot traité : ${processed}/${totalRows} (${percentage}%)`);
+
+                if (processData.isLastChunk) break;
+                offset += chunkSize;
+            }
+
+            // --- ÉTAPE 3 : Tout est traité ---
+            this._handleAnalysisCompleted({
+                analysisResults:     this._accumulatedResultsStore,
+                analysisResultsHtml: this._accumulatedResultsHtml,
+            });
+
+        } catch (error) {
+            console.error("[BordereauAnalysis] submitAnalysis() - Erreur:", error);
+            this._handleAnalysisFailed({ errorMessage: error.message });
+        } finally {
+            this.toggleProgressBar(false);
+        }
     }
 
     /**
@@ -970,11 +1063,30 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
     /**
      * Met à jour le pourcentage de la barre de progression.
+     * @param {number} percentage - Valeur entre 0 et 100.
      */
     _updateProgressBarPercentage(percentage) {
         if (!this.hasProgressBarTarget) return;
         this.progressBarTarget.style.width = `${percentage}%`;
         console.log(`[BordereauAnalysis] _updateProgressBarPercentage() - ${percentage}%`);
+    }
+
+    /**
+     * Parse une réponse HTTP en erreur et retourne un message lisible.
+     * @param {Response} response
+     * @returns {Promise<string>}
+     */
+    async _parseErrorResponse(response) {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            try {
+                const err = await response.json();
+                return err.error || err.message || `Erreur serveur (${response.status})`;
+            } catch {
+                return `Erreur serveur (${response.status}) — réponse JSON malformée.`;
+            }
+        }
+        return `Erreur interne du serveur (${response.status}). Veuillez réessayer.`;
     }
 
     /**
@@ -1064,75 +1176,6 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         });
     }
 
-    /**
-     * NOUVEAU : Gère la soumission des données mappées pour l'analyse du bordereau au backend.
-     * Copie de _handleSubmitBordereauAnalysis du Cerveau, adaptée pour l'autonomie.
-     * @param {object} payload
-     * @param {string} payload.url - L'URL de l'API pour soumettre l'analyse.
-     * @param {object} [payload.data={}] - Les données à envoyer.
-     */
-    async _handleSubmitBordereauAnalysisLocal(payload) {
-        if (!payload.url) {
-            console.error("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Demande de soumission d'analyse de bordereau reçue sans URL ou données.", payload);
-            // Directly call local error handler
-            this._handleAnalysisFailed({ errorMessage: "Impossible de soumettre l'analyse : URL ou données manquantes." });
-            return;
-        }
-
-        console.log("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Soumission de l'analyse à l'API:", payload.url);
-        // Use local progress bar and feedback
-        this.toggleProgressBar(true); // Active la barre de progression locale
-        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('warning', 'Analyse en cours...', false); // Mettre à jour le feedback
-
-        try {
-            const response = await fetch(payload.url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload.data || {}) // Envoyer un objet vide si data n'est pas fourni
-            });
-            console.log("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Réponse de l'API reçue. Statut:", response.status);
-            if (!response.ok) {
-                let errorMessage = `Erreur serveur (code ${response.status}).`;
-                const contentType = response.headers.get('content-type') || '';
-
-                if (contentType.includes('application/json')) {
-                    // Le serveur a retourné un JSON d'erreur structuré (cas nominal)
-                    try {
-                        const err = await response.json();
-                        errorMessage = err.error || err.message || errorMessage;
-                    } catch (parseError) {
-                        // Le Content-Type est JSON mais le corps est malformé
-                        errorMessage = `Erreur serveur (code ${response.status}) — réponse inattendue du serveur.`;
-                    }
-                } else if (contentType.includes('text/html')) {
-                    // Le serveur a retourné une page HTML (erreur Symfony, exception non catchée)
-                    errorMessage = `Erreur interne du serveur (code ${response.status}). `
-                                 + `Veuillez réessayer ou contacter l'administrateur si le problème persiste.`;
-                } else {
-                    // Tout autre type de réponse inattendue
-                    errorMessage = `Réponse inattendue du serveur (code ${response.status}, type: ${contentType || 'inconnu'}).`;
-                }
-
-                throw new Error(errorMessage);
-            }
-            const result = await response.json();
-            if (!result.analysisResultsHtml || result.analysisResultsHtml.length === 0) {
-                console.warn("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - L'API a retourné une réponse vide pour 'analysisResultsHtml' malgré un statut 200 OK.");
-                // On s'assure que les deux valeurs sont des tableaux vides pour éviter les erreurs.
-                result.analysisResults = [];
-                result.analysisResultsHtml = [];
-            }
-            console.log("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Succès. Appel de _handleAnalysisCompleted.");
-            this._handleAnalysisCompleted(result);
-        } catch (error) {
-            console.error("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Erreur lors de la soumission de l'analyse:", error);
-            // Directly call local error handler
-            this._handleAnalysisFailed({ errorMessage: error.message || "Erreur lors de la soumission de l'analyse." });
-        } finally {
-            console.log("[BordereauAnalysis] _handleSubmitBordereauAnalysisLocal() - Fin de l'opération. Désactivation de la barre de progression.");
-            this.toggleProgressBar(false); // Désactive la barre de progression locale
-        }
-    }
 
     /**
      * NOUVEAU : Gère la sauvegarde de l'état de l'analyse du bordereau au backend.
