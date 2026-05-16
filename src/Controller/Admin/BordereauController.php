@@ -656,34 +656,34 @@ class BordereauController extends AbstractController
             }
 
             if (!empty($discrepancies)) {
-                // Calcul des écarts financiers pour l'affichage
+                // Calcul des écarts financiers pour les résultats discrepancy
                 $financialGaps = [];
-                $financialFields = [
-                    'prime_ttc'               => 'Prime TTC',
-                    'commission_ht_assureur'  => 'Commission HT',
-                    'taxe_commission_assureur'=> 'Taxe commission',
-                    'taux_commission'         => 'Taux commission (%)',
+                $financialFieldsConfig = [
+                    'prime_ttc'               => ['label' => 'Prime TTC',          'getter' => 'getMontantTTC'],
+                    'commission_ht_assureur'  => ['label' => 'Commission HT',      'getter' => 'getMontantHT'],
+                    'taxe_commission_assureur'=> ['label' => 'Taxe commission',     'getter' => 'getTaxeAssureurMontant'],
+                    'taux_commission'         => ['label' => 'Taux commission (%)', 'getter' => 'getTauxCommission'],
                 ];
 
-                foreach ($financialFields as $field => $label) {
+                foreach ($financialFieldsConfig as $field => $config) {
                     $excelValue = isset($rawLineData[$field]) ? (float)$rawLineData[$field] : null;
-                    $dbValue = null;
-                    
-                    // On récupère la valeur DB correspondante via le getter configuré
-                    if (isset($comparisons[$field])) {
-                        $getter = $comparisons[$field]['getter'];
-                        $raw = $avenant->{'get' . ucfirst($getter)}();
+                    $dbValue    = null;
+
+                    if (method_exists($avenant, $config['getter'])) {
+                        $raw     = $avenant->{$config['getter']}();
                         $dbValue = $raw !== null ? (float)$raw : null;
                     }
 
                     if ($excelValue !== null && $dbValue !== null) {
                         $gap = round($excelValue - $dbValue, 2);
                         $financialGaps[$field] = [
-                            'label'       => $label,
+                            'label'       => $config['label'],
                             'excel_value' => $excelValue,
                             'db_value'    => $dbValue,
                             'gap'         => $gap,
-                            'gap_class'   => $gap > 0 ? 'text-success' : ($gap < 0 ? 'text-danger' : 'text-muted'),
+                            'gap_class'   => $gap > 0
+                                ? 'text-success'
+                                : ($gap < 0 ? 'text-danger' : 'text-muted'),
                             'gap_sign'    => $gap > 0 ? '+' : '',
                         ];
                     }
