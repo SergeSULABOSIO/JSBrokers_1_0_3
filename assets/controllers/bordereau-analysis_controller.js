@@ -668,6 +668,15 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
     async submitAnalysis(event) {
         console.log("[BordereauAnalysis] submitAnalysis() - Lancement de l'analyse par lots.");
 
+        try {
+            // CORRECTION : Avant de lancer l'analyse, on force une sauvegarde complète 
+            // pour synchroniser le mappage de l'UI vers la base de données.
+            // Le backend lit la configuration depuis l'entité, c'est donc indispensable.
+            await this._saveAnalysisStateToBordereau('full');
+        } catch (error) {
+            return; // L'erreur est déjà gérée par _handleSaveStateFailed
+        }
+
         // Désactiver le bouton et préparer l'UI
         this.submitButtonTarget.disabled = true;
         this.submitButtonTarget.textContent = "Analyse en cours...";
@@ -1108,6 +1117,13 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * Sauvegarde l'état actuel de l'analyse du bordereau en base de données.
      */
     async _saveAnalysisStateToBordereau(saveLevel = 'full') {
+        // CORRECTION : Si on lance une sauvegarde complète (prioritaire), on annule 
+        // toute sauvegarde debouncée en attente pour éviter des requêtes concurrentes inutiles.
+        if (saveLevel === 'full' && this._pendingSaveTimeout) {
+            clearTimeout(this._pendingSaveTimeout);
+            this._pendingSaveTimeout = null;
+        }
+
         let payload = {
             currentAnalysisStep: this.currentStep,
         };
@@ -1153,7 +1169,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                     resolve(await this._handleSaveBordereauAnalysisStateLocal({
                         url: `/admin/bordereau/api/save-analysis-state/${this.bordereauIdValue}`,
                         data: payload
-                    }));
+                    }, 'step_only'));
                 }, 300); // Debounce de 300ms
             });
         }
@@ -1168,7 +1184,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         return this._handleSaveBordereauAnalysisStateLocal({
             url: `/admin/bordereau/api/save-analysis-state/${this.bordereauIdValue}`,
             data: payload
-        });
+        }, 'full');
     }
 
     /**
