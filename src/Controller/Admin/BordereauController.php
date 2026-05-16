@@ -842,10 +842,8 @@ class BordereauController extends AbstractController
      * TODO: Remplacer cette simulation par la vraie logique métier :
      *   - Pour type "new"         : créer réellement l'avenant en base
      *   - Pour type "discrepancy" : mettre à jour réellement l'avenant en base
-     *
-     * @Route("/admin/bordereau/api/simulate-action/{bordereauId}", methods=["POST"])
      */
-    #[Route('/admin/bordereau/api/simulate-action/{bordereauId}', name: 'admin_bordereau_api_simulate_action', methods: ['POST'])]
+    #[Route('/api/simulate-action/{bordereauId}', name: 'api.simulate_action', methods: ['POST'])]
     public function simulateAnalysisAction(
         int $bordereauId,
         Request $request
@@ -881,10 +879,8 @@ class BordereauController extends AbstractController
     /**
      * Valide le bordereau après que tous les résultats ont été traités.
      * Change le statut vers STATUT_VALIDE.
-     *
-     * @Route("/admin/bordereau/api/validate/{bordereauId}", methods=["POST"])
      */
-    #[Route('/admin/bordereau/api/validate/{bordereauId}', name: 'admin_bordereau_api_validate', methods: ['POST'])]
+    #[Route('/api/validate/{bordereauId}', name: 'api.validate', methods: ['POST'])]
     public function validateBordereau(
         int $bordereauId
     ): JsonResponse {
