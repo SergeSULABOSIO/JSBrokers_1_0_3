@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Rapport d'analyse — {{ bordereau.reference }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10px;
+            color: #212529;
+            background: #ffffff;
+        }
+
+        /* EN-TÊTE */
+        .report-header {
+            background-color: #0047AB;
+            color: white;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+        }
+        .report-header-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+        .report-header-subtitle {
+            font-size: 11px;
+            opacity: 0.85;
+        }
+        .report-header-meta {
+            font-size: 9px;
+            opacity: 0.7;
+            margin-top: 6px;
+        }
+
+        /* RÉCAPITULATIF */
+        .summary-section {
+            margin: 0 20px 16px 20px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-left: 4px solid #0047AB;
+            border-radius: 4px;
+        }
+        .summary-title {
+            font-size: 11px;
+            font-weight: bold;
+            color: #0047AB;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        .summary-grid {
+            display: table;
+            width: 100%;
+        }
+        .summary-grid-row {
+            display: table-row;
+        }
+        .summary-cell {
+            display: table-cell;
+            width: 25%;
+            padding: 6px 8px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .summary-value {
+            font-size: 20px;
+            font-weight: bold;
+            display: block;
+        }
+        .summary-label {
+            font-size: 9px;
+            color: #6c757d;
+            text-transform: uppercase;
+            display: block;
+        }
+        .text-success { color: #198754; }
+        .text-warning { color: #e69500; }
+        .text-primary { color: #0047AB; }
+        .text-secondary { color: #6c757d; }
+
+        /* SECTIONS DE RÉSULTATS */
+        .results-section {
+            margin: 0 20px 16px 20px;
+        }
+        .section-title {
+            font-size: 12px;
+            font-weight: bold;
+            padding: 6px 10px;
+            border-radius: 4px 4px 0 0;
+            color: white;
+            margin-bottom: 0;
+        }
+        .section-title-discrepancy { background-color: #e69500; }
+        .section-title-new { background-color: #0047AB; }
+
+        /* TABLEAUX */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9px;
+        }
+        thead th {
+            background-color: #e9ecef;
+            color: #495057;
+            font-weight: bold;
+            padding: 5px 6px;
+            text-align: left;
+            border: 1px solid #dee2e6;
+            white-space: nowrap;
+        }
+        tbody td {
+            padding: 4px 6px;
+            border: 1px solid #dee2e6;
+            vertical-align: top;
+        }
+        tbody tr:nth-child(even) td {
+            background-color: #f8f9fa;
+        }
+
+        /* PIED DE PAGE */
+        .report-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 6px 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            font-size: 8px;
+            color: #6c757d;
+        }
+        .footer-left { float: left; }
+        .footer-right { float: right; }
+
+        .confidential-badge {
+            display: inline-block;
+            background: #dc3545;
+            color: white;
+            font-size: 7px;
+            padding: 1px 5px;
+            border-radius: 2px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-left: 8px;
+        }
+
+        .no-results {
+            padding: 12px;
+            color: #6c757d;
+            font-style: italic;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="report-header">
+    <div class="report-header-title">
+        Rapport d'analyse de bordereau
+        <span class="confidential-badge">Confidentiel</span>
+    </div>
+    <div class="report-header-subtitle">
+        {{ entreprise.nom ?? 'Entreprise' }} — Bordereau {{ bordereau.reference }}
+        — Période : {{ bordereau.periodeDebut ? bordereau.periodeDebut|date('d/m/Y') : 'N/A' }} au {{ bordereau.periodeFin ? bordereau.periodeFin|date('d/m/Y') : 'N/A' }}
+    </div>
+    <div class="report-header-meta">
+        Généré le {{ generatedAt|date('d/m/Y à H:i') }} — Assureur : {{ bordereau.assureur ? bordereau.assureur.nom : 'Non renseigné' }}
+    </div>
+</div>
+
+<div class="summary-section">
+    <div class="summary-title">Récapitulatif de l'analyse</div>
+    <div class="summary-grid">
+        <div class="summary-grid-row">
+            <div class="summary-cell"><span class="summary-value text-success">{{ stats.match }}</span><span class="summary-label">Conformes</span></div>
+            <div class="summary-cell"><span class="summary-value text-warning">{{ stats.discrepancy }}</span><span class="summary-label">Anomalies</span></div>
+            <div class="summary-cell"><span class="summary-value text-primary">{{ stats.new }}</span><span class="summary-label">Nouveaux</span></div>
+            <div class="summary-cell"><span class="summary-value text-secondary">{{ stats.total }}</span><span class="summary-label">Total lignes</span></div>
+        </div>
+    </div>
+    <div style="margin-top:8px; font-size:9px; color:#6c757d;">
+        Taux de conformité : <strong style="color:{% if stats.conformity_rate >= 80 %}#198754{% elseif stats.conformity_rate >= 50 %}#e69500{% else %}#dc3545{% endif %};">{{ stats.conformity_rate }}%</strong>
+        — Ce rapport liste uniquement les <strong>{{ stats.discrepancy + stats.new }}</strong> ligne(s) nécessitant une action.
+    </div>
+</div>
+
+{% set discrepancyResults = results|filter(r => r.type == 'discrepancy') %}
+{% if discrepancyResults|length > 0 %}
+<div class="results-section">
+    <div class="section-title section-title-discrepancy">⚠ Anomalies détectées ({{ discrepancyResults|length }})</div>
+    <table>
+        <thead>
+            <tr><th>Ligne</th><th>N° Police</th><th>Assuré</th><th>Date effet</th><th>Date expiration</th><th>Prime TTC</th><th>Commission HT</th><th>Taux (%)</th></tr>
+        </thead>
+        <tbody>
+            {% for result in discrepancyResults %}
+            <tr>
+                <td>{{ result.row_index + 2 }}</td>
+                <td><strong>{{ result.reference_police }}</strong></td>
+                <td>{{ result.line_data.nom_client ?? '—' }}</td>
+                <td>{{ result.line_data.date_effet_avenant ?? '—' }}</td>
+                <td>{{ result.line_data.date_expiration_avenant ?? '—' }}</td>
+                <td>{{ result.line_data.prime_ttc is defined ? result.line_data.prime_ttc|number_format(2, ',', ' ') : '—' }}</td>
+                <td>{{ result.line_data.commission_ht_assureur is defined ? result.line_data.commission_ht_assureur|number_format(2, ',', ' ') : '—' }}</td>
+                <td>{{ result.line_data.taux_commission ?? '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% set newResults = results|filter(r => r.type == 'new') %}
+{% if newResults|length > 0 %}
+<div class="results-section">
+    <div class="section-title section-title-new">+ Nouveaux avenants à créer ({{ newResults|length }})</div>
+    <table>
+        <thead>
+            <tr><th>Ligne</th><th>N° Police</th><th>Assuré</th><th>Date effet</th><th>Date expiration</th><th>Prime TTC</th><th>Commission HT</th><th>Taux (%)</th></tr>
+        </thead>
+        <tbody>
+            {% for result in newResults %}
+            <tr>
+                <td>{{ result.row_index + 2 }}</td>
+                <td><strong>{{ result.reference_police }}</strong></td>
+                <td>{{ result.line_data.nom_client ?? '—' }}</td>
+                <td>{{ result.line_data.date_effet_avenant ?? '—' }}</td>
+                <td>{{ result.line_data.date_expiration_avenant ?? '—' }}</td>
+                <td>{{ result.line_data.prime_ttc is defined ? result.line_data.prime_ttc|number_format(2, ',', ' ') : '—' }}</td>
+                <td>{{ result.line_data.commission_ht_assureur is defined ? result.line_data.commission_ht_assureur|number_format(2, ',', ' ') : '—' }}</td>
+                <td>{{ result.line_data.taux_commission ?? '—' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% if results|length == 0 %}<div class="results-section"><p class="no-results">Aucune anomalie détectée.</p></div>{% endif %}
+
+<div class="report-footer">
+    <span class="footer-left">{{ entreprise.nom ?? '' }} — Document confidentiel</span>
+    <span class="footer-right">Généré le {{ generatedAt|date('d/m/Y à H:i') }}</span>
+</div>
+
+</body>
+</html>

@@ -78,6 +78,14 @@
                 <twig:UX:Icon name="{{ resolve_icon_name('action:analyser') }}" width="18px" height="18px" />
                 <span>Lancer l'analyse</span>
             </button>
+            {# NOUVEAU : Bouton d'export PDF, visible uniquement à l'étape 3 #}
+            <a href="{{ path('admin.bordereau.api.export_analysis_pdf', {'id': bordereau.id}) }}"
+               class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
+               data-bordereau-analysis-target="exportPdfButton"
+               style="display:none !important;">
+                <twig:UX:Icon name="{{ resolve_icon_name('action:download') }}" width="18px" height="18px" />
+                <span>Exporter PDF</span>
+            </a>
             {# NOUVEAU : Bouton "Valider le bordereau", masqué par défaut,
                s'active quand tous les résultats new et discrepancy sont traités #}
             <button type="button"
