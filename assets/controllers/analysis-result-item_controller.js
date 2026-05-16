@@ -134,17 +134,109 @@ export default class extends BaseController {
 
     /**
      * Gère le clic sur un bouton d'action.
-     * Pour l'instant, affiche simplement les informations dans la console.
+     * Lance la simulation du traitement de la ligne.
      */
-    handleAction(event) {
-        event.stopPropagation(); // Empêche le déclenchement de toggleDetails
+    async handleAction(event) {
+        event.stopPropagation();
         const button = event.currentTarget;
-        console.log("Action cliquée :", {
-            eventName: button.dataset.eventName,
-            payload: JSON.parse(button.dataset.payload)
+        const eventName = button.dataset.eventName;
+        const payload   = JSON.parse(button.dataset.payload || '{}');
+
+        console.log('[AnalysisResultItem] handleAction() - Action cliquée:', {
+            eventName,
+            payload
         });
-        // NOUVEAU : On notifie le cerveau de l'action.
-        this.notifyCerveau(button.dataset.eventName, JSON.parse(button.dataset.payload));
+
+        // Désactiver tous les boutons de cet item pendant le traitement
+        this.actionButtonTargets.forEach(btn => btn.disabled = true);
+
+        try {
+            // Appel à la route de simulation
+            // TODO: Quand la vraie logique métier sera implémentée, cette URL
+            //       pointera vers la même route mais le serveur effectuera
+            //       réellement la création ou la mise à jour en base.
+            const bordereauId = this.bordereauIdValue;
+            const response = await fetch(
+                `/admin/bordereau/api/simulate-action/${bordereauId}`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action_type:       payload.avenant_id ? 'discrepancy' : 'new',
+                        avenant_id:        payload.avenant_id ?? null,
+                        excel_data:        payload.excel_data ?? {},
+                        row_index:         payload.row_index ?? null,
+                        reference_police:  payload.reference_police ?? null,
+                    })
+                }
+            );
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.message || 'Erreur lors du traitement.');
+            }
+
+            console.log('[AnalysisResultItem] handleAction() - Succès:', result.message);
+
+            // Marquer visuellement cet item comme résolu
+            this._markAsResolved(result.message);
+
+            // Notifier le contrôleur parent qu'un item est résolu
+            // pour qu'il puisse réévaluer le bouton "Valider"
+            this.notifyCerveau('bordereau:item.resolved', {
+                bordereauId: bordereauId
+            });
+
+        } catch (error) {
+            console.error('[AnalysisResultItem] handleAction() - Erreur:', error);
+            // Réactiver les boutons en cas d'erreur
+            this.actionButtonTargets.forEach(btn => btn.disabled = false);
+            // Afficher un feedback d'erreur sur l'item
+            this._showActionError(error.message);
+        }
+    }
+
+    /**
+     * Marque visuellement un item comme résolu après une action réussie.
+     * @param {string} message - Message de confirmation du serveur.
+     */
+    _markAsResolved(message) {
+        // Changer la couleur de la bordure gauche de l'item
+        this.element.classList.remove('border-info', 'border-warning', 'border-danger');
+        this.element.classList.add('border-success', 'analysis-item-resolved');
+
+        // Remplacer le texte de détails par un message de succès
+        const detailsText = this.element.querySelector('.analysis-item-header p');
+        if (detailsText) {
+            detailsText.innerHTML = `<span class="text-success fw-bold">✓ Traité — ${message}</span>`;
+        }
+
+        // Masquer les boutons d'action (inutiles après traitement)
+        this.actionsContainerTarget.style.display = 'none';
+
+        // Ajouter un badge "Résolu" dans le titre
+        const titleWrapper = this.element.querySelector('.analysis-item-title-wrapper h5');
+        if (titleWrapper) {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-success ms-2 small';
+            badge.textContent = 'Résolu';
+            titleWrapper.appendChild(badge);
+        }
+
+        // Marquer l'élément DOM comme résolu pour le comptage
+        this.element.dataset.resolved = 'true';
+    }
+
+    /**
+     * Affiche un message d'erreur sur l'item en cas d'échec de l'action.
+     * @param {string} message
+     */
+    _showActionError(message) {
+        const detailsText = this.element.querySelector('.analysis-item-header p');
+        if (detailsText) {
+            detailsText.innerHTML = `<span class="text-danger small">⚠ Erreur : ${message} — Veuillez réessayer.</span>`;
+        }
     }
 
     // Les méthodes showTooltip et hideTooltip sont copiées de collection_controller.js
