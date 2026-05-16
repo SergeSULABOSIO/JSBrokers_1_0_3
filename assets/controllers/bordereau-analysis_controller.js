@@ -669,6 +669,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         // Réinitialiser les résultats accumulés
         this._accumulatedResultsHtml  = [];
         this._accumulatedResultsStore = [];
+        let finalStats = {};
 
         const baseUrl = `/admin/bordereau/api/submit-analysis/${this.bordereauIdValue}`;
 
@@ -740,7 +741,10 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
                 console.log(`[BordereauAnalysis] submitAnalysis() - Lot traité : ${processed}/${totalRows} (${percentage}%)`);
 
-                if (processData.isLastChunk) break;
+                if (processData.isLastChunk) {
+                    finalStats = processData.stats || {};
+                    break;
+                }
                 offset += chunkSize;
             }
 
@@ -748,6 +752,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this._handleAnalysisCompleted({
                 analysisResults:     this._accumulatedResultsStore,
                 analysisResultsHtml: this._accumulatedResultsHtml,
+                stats:               finalStats
             });
 
         } catch (error) {
