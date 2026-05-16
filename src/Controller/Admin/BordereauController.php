@@ -383,75 +383,67 @@ class BordereauController extends AbstractController
             // --- FIN VÉRIFICATION D'INTÉGRITÉ ---
 
             // Reconstruire details et actions selon le type
+            $financialGaps = []; // Initialiser ici pour être sûr qu'elle existe toujours
             switch ($type) {
                 case 'new':
                     $details = "Ligne n°" . ($rowIndex + 2) . ": Nouvel avenant détecté.";
                     $actions = [
                         [
                             'label'   => 'Créer l\'avenant',
-                            'event'   => 'bordereau:create-entity',
+                            'event'   => 'bordereau:create-avenant', // Renommé pour plus de clarté
                             'payload' => ['excel_data' => $rawLineData]
                         ]
                     ];
                     break;
 
                 case 'discrepancy':
-                    // Calcul des écarts financiers pour les résultats discrepancy
-                    $financialGaps = [];
-
-                    $financialFields = [
-                        'prime_ttc'               => 'Prime TTC',
-                        'commission_ht_assureur'  => 'Commission HT',
-                        'taxe_commission_assureur'=> 'Taxe commission',
-                        'taux_commission'         => 'Taux commission (%)',
-                    ];
-
-                    // On a besoin de la map des getters pour récupérer les valeurs de la DB
-                    $comparisonsForGaps = [
-                        'prime_ttc' => ['getter' => 'montantTTC'],
-                        'commission_ht_assureur' => ['getter' => 'montantHT'], // Note: le getter peut varier, à ajuster si besoin
-                        'taxe_commission_assureur' => ['getter' => 'taxeAssureurMontant'], // idem
-                        'taux_commission' => ['getter' => 'tauxCommission'],
-                    ];
-
-                    foreach ($financialFields as $field => $label) {
-                        $excelValue = isset($rawLineData[$field])
-                            ? (float)$rawLineData[$field]
-                            : null;
-
-                        $dbValue = null;
-                        if (isset($comparisonsForGaps[$field])) {
-                            $getter = $comparisonsForGaps[$field]['getter'];
-                            $raw = method_exists($avenant, 'get' . ucfirst($getter)) ? $avenant->{'get' . ucfirst($getter)}() : null;
-                            $dbValue = $raw !== null ? (float)$raw : null;
-                        }
-
-                        if ($excelValue !== null && $dbValue !== null) {
-                            $gap = round($excelValue - $dbValue, 2);
-                            $financialGaps[$field] = [
-                                'label'       => $label,
-                                'excel_value' => $excelValue,
-                                'db_value'    => $dbValue,
-                                'gap'         => $gap,
-                                'gap_class'   => $gap > 0 ? 'text-success' : ($gap < 0 ? 'text-danger' : 'text-muted'),
-                                'gap_sign'    => $gap > 0 ? '+' : '',
-                            ];
-                        }
-                    }
-
+                    // 1. D'abord récupérer l'avenant depuis la map de restauration
                     $avenant = $avenantId ? ($avenantsForRestoration[$avenantId] ?? null) : null;
+
+                    // 2. Construire les actions (dépendent de $avenant)
                     $details = "Ligne n°" . ($rowIndex + 2) . ": Anomalie(s) détectée(s).";
                     $actions = $avenant ? [
                         [
                             'label'   => 'Mettre à jour',
-                            'event'   => 'bordereau:update-entity',
+                            'event'   => 'bordereau:update-avenant', // Renommé pour plus de clarté
                             'payload' => [
                                 'avenant_id' => $avenant->getId(),
                                 'excel_data' => $rawLineData
                             ]
                         ]
                     ] : [];
-                    $resultForRendering['financial_gaps'] = $financialGaps; // Ajouter les écarts au résultat
+
+                    // 3. Calculer les écarts financiers (dépendent de $avenant)
+                    if ($avenant) {
+                        $financialFieldsConfig = [
+                            'prime_ttc'               => ['label' => 'Prime TTC',           'getter' => 'getMontantTTC'],
+                            'commission_ht_assureur'  => ['label' => 'Commission HT',       'getter' => 'getMontantHT'],
+                            'taxe_commission_assureur'=> ['label' => 'Taxe commission',      'getter' => 'getTaxeAssureurMontant'],
+                            'taux_commission'         => ['label' => 'Taux commission (%)',  'getter' => 'getTauxCommission'],
+                        ];
+
+                        foreach ($financialFieldsConfig as $field => $config) {
+                            $excelValue = isset($rawLineData[$field]) ? (float)$rawLineData[$field] : null;
+                            $dbValue    = null;
+
+                            if (method_exists($avenant, $config['getter'])) {
+                                $raw     = $avenant->{$config['getter']}();
+                                $dbValue = $raw !== null ? (float)$raw : null;
+                            }
+
+                            if ($excelValue !== null && $dbValue !== null) {
+                                $gap = round($excelValue - $dbValue, 2);
+                                $financialGaps[$field] = [
+                                    'label'       => $config['label'],
+                                    'excel_value' => $excelValue,
+                                    'db_value'    => $dbValue,
+                                    'gap'         => $gap,
+                                    'gap_class'   => $gap > 0 ? 'text-success' : ($gap < 0 ? 'text-danger' : 'text-muted'),
+                                    'gap_sign'    => $gap > 0 ? '+' : '',
+                                ];
+                            }
+                        }
+                    }
                     break;
 
                 case 'match':
@@ -633,7 +625,7 @@ class BordereauController extends AbstractController
                 $chunkResultsForDisplay[] = [
                     'type' => 'new', 'bordereau_line_info' => $rawLineData,
                     'details' => "Ligne n°" . ($rowIndex + 2) . ": Nouvel avenant détecté.",
-                    'actions' => [['label' => 'Créer l\'avenant', 'event' => 'bordereau:create-entity', 'payload' => ['excel_data' => $rawLineData]]],
+                    'actions' => [['label' => 'Créer l\'avenant', 'event' => 'bordereau:create-avenant', 'payload' => ['excel_data' => $rawLineData]]],
                 ];
                 continue;
             }
@@ -696,7 +688,7 @@ class BordereauController extends AbstractController
                     'type' => 'discrepancy', 'bordereau_line_info' => $rawLineData,
                     'details' => "Ligne n°" . ($rowIndex + 2) . ": Anomalie(s) - " . implode(', ', $discrepancies),
                     'financial_gaps' => $financialGaps,
-                    'actions' => [['label' => 'Mettre à jour', 'event' => 'bordereau:update-entity', 'payload' => ['avenant_id' => $avenant->getId(), 'excel_data' => $rawLineData]]],
+                    'actions' => [['label' => 'Mettre à jour', 'event' => 'bordereau:update-avenant', 'payload' => ['avenant_id' => $avenant->getId(), 'excel_data' => $rawLineData]]],
                 ];
             } else {
                 $chunkResultsToStore[] = [
