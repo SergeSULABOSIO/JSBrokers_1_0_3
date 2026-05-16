@@ -289,4 +289,24 @@ class Avenant
 
         return $this;
     }
+
+    public function getMontantHT(): ?float
+    {
+        return $this->montantHT;
+    }
+
+    public function getMontantTTC(): ?float
+    {
+        return $this->montantTTC;
+    }
+
+    public function getTaxeAssureurMontant(): ?float
+    {
+        return $this->taxeAssureurMontant;
+    }
+
+    public function getTauxCommission(): ?float
+    {
+        return $this->tauxCommission;
+    }
 }
