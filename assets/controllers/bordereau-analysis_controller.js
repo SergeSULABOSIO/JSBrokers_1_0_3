@@ -77,6 +77,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         this.currentStep = 1;
         this.isSaving = false; // NOUVEAU : Le "feu de signalisation" pour la sauvegarde.
         this._pendingSaveTimeout = null; // Identifiant pour le debounce des sauvegardes
+        // Timeout de debounce dédié à la sauvegarde automatique du mappage
+        this._pendingMappingSaveTimeout = null;
 
         console.log("[BordereauAnalysis] 3. connect() - Mise en place des écouteurs d'événements.");
 
