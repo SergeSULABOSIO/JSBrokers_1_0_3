@@ -100,6 +100,11 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         console.log("[BordereauAnalysis] disconnect() - Nettoyage des écouteurs.");
         document.removeEventListener('analysis:icon.request', this.boundHandleIconRequest);
         document.removeEventListener('cerveau:event', this.boundHandleItemResolved);
+        // Annuler toute sauvegarde de mappage en attente
+        if (this._pendingMappingSaveTimeout) {
+            clearTimeout(this._pendingMappingSaveTimeout);
+            this._pendingMappingSaveTimeout = null;
+        }
     }
 
     /**
@@ -327,17 +332,149 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
     }
     /**
      * Action déclenchée lorsqu'un select de mappage est modifié.
+     * Valide la colonne puis planifie une sauvegarde silencieuse
+     * du mappage via un debounce de 800ms.
      * @param {Event} event
      */
-    // La méthode validateColumn est appelée lorsque l'utilisateur change une sélection.
-    // Elle doit maintenant aussi mettre à jour le feedback et la coloration des options.
     validateColumn(event) {
         const selectElement = event.currentTarget;
         this.performValidation(selectElement);
-        // OPTIMISATION : L'appel à la sauvegarde est retiré.
-        // La sauvegarde se fera désormais uniquement lors du changement d'étape ou de la soumission,
-        // ce qui réduit considérablement les écritures en base de données.
-        // if (!this.isRestoring) { this._saveAnalysisStateToBordereau(); }
+
+        // Pendant la restauration ou une sauvegarde full en cours :
+        // on ne planifie aucune sauvegarde automatique.
+        if (this.isRestoring || this.isSaving) {
+            return;
+        }
+
+        // Vérifier qu'au moins un champ obligatoire est mappé
+        // avant de juger utile de déclencher une requête réseau.
+        if (!this._hasMappingDataWorthSaving()) {
+            return;
+        }
+
+        // Annuler le timeout précédent (debounce)
+        if (this._pendingMappingSaveTimeout) {
+            clearTimeout(this._pendingMappingSaveTimeout);
+        }
+
+        // Planifier la sauvegarde 800ms après le dernier changement
+        this._pendingMappingSaveTimeout = setTimeout(async () => {
+            this._pendingMappingSaveTimeout = null;
+
+            // Double vérification au moment de l'exécution
+            if (this.isRestoring || this.isSaving) {
+                return;
+            }
+
+            console.log("[BordereauAnalysis] validateColumn() debounce - Sauvegarde automatique du mappage.");
+            await this._saveMappingOnly();
+
+        }, 800);
+    }
+
+    /**
+     * Vérifie si le mappage actuel contient au moins un champ obligatoire
+     * pour justifier une requête réseau de sauvegarde.
+     * @returns {boolean}
+     */
+    _hasMappingDataWorthSaving() {
+        const activeMappingContainer = this.element.querySelector(
+            '.column-mapping-form:not([style*="display: none"])'
+        );
+        if (!activeMappingContainer) return false;
+
+        const selects = activeMappingContainer.querySelectorAll(
+            'select[data-column-letter]'
+        );
+
+        for (const select of selects) {
+            if (select.value && this.requiredMappings.has(select.value)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Sauvegarde silencieuse et légère du mappage des colonnes uniquement.
+     * Utilisée exclusivement par le debounce de validateColumn().
+     * - Ne modifie PAS isSaving (pas de blocage du bouton)
+     * - N'affiche AUCUN feedback visible à l'utilisateur
+     * - Ne touche PAS à la barre de progression
+     * - En cas d'échec : log silencieux uniquement, pas d'alerte
+     */
+    async _saveMappingOnly() {
+        // Lire la feuille sélectionnée
+        const selectedSheetInput = this.sheetSelectionTargets.find(
+            radio => radio.checked
+        );
+        const selectedSheetName = selectedSheetInput
+            ? selectedSheetInput.value
+            : null;
+
+        // Lire le mappage depuis le formulaire actif
+        const mappedColumns = {};
+        const activeMappingContainer = this.element.querySelector(
+            '.column-mapping-form:not([style*="display: none"])'
+        );
+        if (activeMappingContainer) {
+            const selects = activeMappingContainer.querySelectorAll(
+                'select[data-column-letter]'
+            );
+            selects.forEach(select => {
+                if (select.value) {
+                    mappedColumns[select.value] = select.dataset.columnLetter;
+                }
+            });
+        }
+
+        // Sécurité : ne jamais envoyer un mappage vide
+        if (Object.keys(mappedColumns).length === 0) {
+            console.log("[BordereauAnalysis] _saveMappingOnly() - Mappage vide, sauvegarde annulée.");
+            return;
+        }
+
+        const payload = {
+            currentAnalysisStep: this.currentStep,
+            selectedSheetName:   selectedSheetName,
+            mappedColumns:       mappedColumns,
+            // analysisResults intentionnellement absent :
+            // non pertinent pour une sauvegarde de mappage en cours d'étape 2
+        };
+
+        console.log("[BordereauAnalysis] _saveMappingOnly() - Payload:", payload);
+
+        try {
+            const response = await fetch(
+                `/admin/bordereau/api/save-analysis-state/${this.bordereauIdValue}`,
+                {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body:    JSON.stringify(payload)
+                }
+            );
+
+            if (!response.ok) {
+                // Échec silencieux : le travail est toujours dans le DOM,
+                // la prochaine interaction retentera automatiquement.
+                const err = await this._parseErrorResponse(response);
+                console.warn("[BordereauAnalysis] _saveMappingOnly() - Échec silencieux:", err);
+                return;
+            }
+
+            const result = await response.json();
+            console.log(
+                "[BordereauAnalysis] _saveMappingOnly() - Mappage sauvegardé silencieusement.",
+                result.message
+            );
+
+        } catch (error) {
+            // Erreur réseau : échec silencieux
+            console.warn(
+                "[BordereauAnalysis] _saveMappingOnly() - Erreur réseau silencieuse:",
+                error.message
+            );
+        }
     }
 
     /**
@@ -357,61 +494,110 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
     /**
      * Gère la transition entre les étapes de l'analyse.
-     * @param {number|Event} stepNumber - Le numéro de l'étape à afficher (1, 2 ou 3) ou l'événement de clic.
-     * @param {string} [sheetName=null] - Le nom de la feuille à afficher pour l'étape 2.
+     * Applique la visibilité stricte de chaque bouton selon l'étape.
+     * @param {number|Event} stepNumber
+     * @param {string} [sheetName=null]
      */
     async showStep(stepNumber, sheetName = null) {
-        // Si l'événement est un clic, on récupère le numéro d'étape depuis le data-attribute.
         const previousStep = this.currentStep;
-        this.currentStep = (typeof stepNumber === 'object' && stepNumber.currentTarget) ? parseInt(stepNumber.currentTarget.dataset.stepNumber) : stepNumber;
-        console.log(`[BordereauAnalysis] showStep() - Transition de l'étape ${previousStep} vers ${this.currentStep}. Feuille: ${sheetName || 'N/A'}. Restauration en cours: ${this.isRestoring}`);
+        this.currentStep = (
+            typeof stepNumber === 'object' && stepNumber.currentTarget
+        )
+            ? parseInt(stepNumber.currentTarget.dataset.stepNumber)
+            : stepNumber;
 
+        console.log(
+            `[BordereauAnalysis] showStep() - Transition étape ${previousStep} → ${this.currentStep}.`,
+            `Feuille: ${sheetName || 'N/A'}. Restauration: ${this.isRestoring}`
+        );
+
+        // --- 1. Masquer tous les contenus d'étape ---
         this.step1Target.classList.add('d-none');
         this.step2Target.classList.add('d-none');
         this.step3Target.classList.add('d-none');
-    
-        // Cache les boutons de la barre d'outils par défaut
-        if (this.hasSubmitButtonTarget) this.submitButtonTarget.classList.add('d-none');
-        if (this.hasBackToMappingButtonTarget) this.backToMappingButtonTarget.classList.add('d-none');
-    
-        // Masquer le bouton d'export PDF hors de l'étape 3
+
+        // --- 2. Masquer TOUS les boutons de la barre d'outils ---
+        // Principe : on repart de zéro à chaque transition.
+        // Seuls les boutons pertinents à l'étape seront réaffichés.
+        if (this.hasSubmitButtonTarget) {
+            this.submitButtonTarget.classList.add('d-none');
+        }
+        if (this.hasBackToMappingButtonTarget) {
+            this.backToMappingButtonTarget.classList.add('d-none');
+        }
+        if (this.hasValidateButtonTarget) {
+            this.validateButtonTarget.classList.add('d-none');
+        }
         if (this.hasExportPdfButtonTarget) {
-            this.exportPdfButtonTarget.style.display = 'none';
+            this.exportPdfButtonTarget.classList.add('d-none');
         }
 
-        // Clear feedback message when changing steps, especially when going to step 2
+        // --- 3. Réinitialiser le feedback ---
         if (this.hasMappingStatusFeedbackTarget) {
             this.mappingStatusFeedbackTarget.innerHTML = '';
             this.mappingStatusFeedbackTarget.classList.add('d-none');
         }
-    
+
+        // --- 4. Afficher le contenu et les boutons de l'étape active ---
         if (this.currentStep === 1) {
+
+            // ÉTAPE 1 : aucun bouton de barre d'outils visible
             this.step1Target.classList.remove('d-none');
+
         } else if (this.currentStep === 2) {
+
+            // ÉTAPE 2 : uniquement "Lancer l'analyse"
             this.step2Target.classList.remove('d-none');
-            this.submitButtonTarget.classList.remove('d-none'); // Affiche "Lancer l'analyse"
-            this.mappingStatusFeedbackTarget.classList.remove('d-none'); // Affiche le conteneur de feedback
-            this._showMappingUI(sheetName || this.sheetSelectionTargets.find(radio => radio.checked)?.value);
-        } else if (this.currentStep === 3) {
-            this.step3Target.classList.remove('d-none');
-            this.backToMappingButtonTarget.classList.remove('d-none'); // Affiche "Retour au mappage"
-            this.renderAnalysisSummary(this.analysisStatsValue);
-            // Initialiser l'état du bouton Valider dès l'affichage de l'étape 3
-            // (utile en cas de restauration où tous les items seraient déjà résolus)
-            this._updateValidateButtonState();
-            this.renderAnalysisResults(this.analysisResultsHtmlValue);
-            // Afficher le bouton d'export PDF
-            if (this.hasExportPdfButtonTarget) {
-                this.exportPdfButtonTarget.style.removeProperty('display');
+
+            if (this.hasSubmitButtonTarget) {
+                this.submitButtonTarget.classList.remove('d-none');
             }
+            if (this.hasMappingStatusFeedbackTarget) {
+                this.mappingStatusFeedbackTarget.classList.remove('d-none');
+            }
+
+            this._showMappingUI(
+                sheetName ||
+                this.sheetSelectionTargets.find(radio => radio.checked)?.value
+            );
+
+        } else if (this.currentStep === 3) {
+
+            // ÉTAPE 3 : "Retour au mappage" + "Exporter PDF" toujours visibles
+            // "Valider" : visible mais son état actif/inactif est géré par
+            //             _updateValidateButtonState()
+            this.step3Target.classList.remove('d-none');
+
+            if (this.hasBackToMappingButtonTarget) {
+                this.backToMappingButtonTarget.classList.remove('d-none');
+            }
+            if (this.hasExportPdfButtonTarget) {
+                this.exportPdfButtonTarget.classList.remove('d-none');
+            }
+
+            // Le bouton Valider est rendu visible ici mais désactivé par défaut.
+            // _updateValidateButtonState() décidera s'il doit être actif.
+            if (this.hasValidateButtonTarget) {
+                this.validateButtonTarget.classList.remove('d-none');
+                this.validateButtonTarget.disabled = true; // Désactivé jusqu'à évaluation
+            }
+
+            // Rendre le récapitulatif et les résultats
+            this.renderAnalysisSummary(this.analysisStatsValue);
+            this.renderAnalysisResults(this.analysisResultsHtmlValue);
+
+            // Évaluer l'état réel du bouton Valider
+            this._updateValidateButtonState();
         }
 
+        // --- 5. Sauvegarde de l'étape (sauf pendant la restauration) ---
         if (!this.isRestoring) {
             // OPTIMISATION : On ne sauvegarde que le numéro de l'étape, pas tout le mappage.
             await this._saveAnalysisStateToBordereau('step_only');
         }
         this.updateSelectOptionsVisuals();
     }
+
     /**
      * Logique d'affichage de l'étape 2.
      * @param {string} sheetName - Le nom de la feuille à afficher. Si null, la première sera affichée.
@@ -820,19 +1006,35 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * @param {object} payload - Le payload contenant les résultats d'analyse.
      */
     _handleAnalysisCompleted(payload) {
-        // CORRECTION : On s'assure d'extraire le tableau de chaînes HTML du payload avant de l'assigner.
-        console.log("[BordereauAnalysis] _handleAnalysisCompleted() - Analyse terminée. Payload reçu:", payload);
-        this.analysisResultsValue = payload.analysisResults || []; // Données brutes
-        this.analysisStatsValue = payload.stats || {};
-        this.analysisResultsHtmlValue = payload.analysisResultsHtml || []; // HTML
-        this.showStep(3); // Passer à l'étape 3 pour afficher les résultats
-        this.submitButtonTarget.disabled = false;
-        this.submitButtonTarget.textContent = "Lancer l'analyse"; // Réinitialiser le texte du bouton
-        this.mappingStatusFeedbackTarget.classList.remove('d-none'); // Ensure feedback is visible
-        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('success', 'Analyse terminée avec succès.', false); // No icon for toolbar feedback
-        this.submitButtonTarget.textContent = "Lancer l'analyse";
+        console.log("[BordereauAnalysis] _handleAnalysisCompleted() - Analyse terminée.", payload);
+
+        // Mettre à jour les données en mémoire
+        this.analysisResultsValue     = payload.analysisResults     || [];
+        this.analysisStatsValue       = payload.stats               || {};
+        this.analysisResultsHtmlValue = payload.analysisResultsHtml || [];
+
+        // Réinitialiser l'état du bouton "Lancer l'analyse" AVANT showStep
+        // pour qu'il soit propre si l'utilisateur revient à l'étape 2
+        if (this.hasSubmitButtonTarget) {
+            this.submitButtonTarget.disabled = false;
+            this.submitButtonTarget.textContent = "Lancer l'analyse";
+        }
+
+        // Passer à l'étape 3 — showStep gère la visibilité de tous les boutons
+        this.showStep(3);
+
+        // Feedback de succès (après showStep car showStep vide le feedback)
+        if (this.hasMappingStatusFeedbackTarget) {
+            this.mappingStatusFeedbackTarget.classList.remove('d-none');
+            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+                'success', 'Analyse terminée avec succès.', false
+            );
+        }
+
         this.toggleProgressBar(false);
-        this._saveAnalysisStateToBordereau('step_only'); // Sauvegarder uniquement l'étape (les résultats sont déjà en base)
+
+        // Sauvegarder uniquement l'étape (les résultats sont déjà en base)
+        this._saveAnalysisStateToBordereau('step_only');
     }
 
     /**
@@ -891,8 +1093,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         console.log(`[BordereauAnalysis] _updateValidateButtonState() - Actionnables: ${totalActionable}, Résolus: ${totalResolved}, Tous résolus: ${allResolved}`);
 
-        // Afficher et activer/désactiver le bouton Valider
-        this.validateButtonTarget.classList.remove('d-none');
+        // Activer ou désactiver le bouton Valider
+        // (sa visibilité est gérée exclusivement par showStep())
         this.validateButtonTarget.disabled = !allResolved;
     }
 
