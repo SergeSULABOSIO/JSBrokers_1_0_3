@@ -1846,3 +1846,8 @@ textarea:hover,
         opacity: 1;
     }
 }
+
+/* NOUVEAU : Bloc des actions en lot */
+.batch-actions-block {
+    border-style: dashed !important;
+}
