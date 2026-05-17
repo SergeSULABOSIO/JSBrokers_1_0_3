@@ -877,6 +877,79 @@ class BordereauController extends AbstractController
     }
 
     /**
+     * SIMULATION : Traite en lot plusieurs lignes d'analyse en une seule requête.
+     * Reçoit un tableau d'actions à simuler et retourne le résultat pour chacune.
+     *
+     * TODO: Remplacer cette simulation par la vraie logique métier :
+     *   - Pour chaque item de type 'new'         : créer réellement l'avenant en base
+     *   - Pour chaque item de type 'discrepancy' : mettre à jour réellement l'avenant
+     */
+    #[Route('/api/simulate-batch-action/{bordereauId}', name: 'api.simulate_batch_action', methods: ['POST'])]
+    public function simulateBatchAction(
+        int $bordereauId,
+        Request $request
+    ): JsonResponse {
+        $bordereau = $this->bordereauRepository->find($bordereauId);
+        if (!$bordereau) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Bordereau introuvable.'
+            ], 404);
+        }
+
+        $body  = json_decode($request->getContent(), true);
+        $items = $body['items'] ?? []; // Tableau des actions à traiter
+
+        if (empty($items)) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Aucun élément à traiter.'
+            ], 400);
+        }
+
+        $results = [];
+
+        foreach ($items as $item) {
+            $actionType    = $item['action_type']      ?? null;
+            $rowIndex      = $item['row_index']         ?? null;
+            $refPolice     = $item['reference_police']  ?? null;
+            $avenantId     = $item['avenant_id']        ?? null;
+
+            // TODO: Ici sera insérée la vraie logique métier selon $actionType :
+            //   - Si 'new'         : créer l'avenant depuis $item['excel_data']
+            //   - Si 'discrepancy' : mettre à jour l'avenant $avenantId
+            //                        avec les données de $item['excel_data']
+            // Pour l'instant, on simule un succès immédiat pour chaque item.
+
+            $results[] = [
+                'success'          => true,
+                'row_index'        => $rowIndex,
+                'reference_police' => $refPolice,
+                'message'          => sprintf(
+                    'Simulation : ligne n°%s (police %s) traitée avec succès.',
+                    ($rowIndex !== null ? $rowIndex + 2 : '?'),
+                    $refPolice ?? '—'
+                ),
+            ];
+        }
+
+        $successCount = count(array_filter($results, fn($r) => $r['success']));
+        $failCount    = count($results) - $successCount;
+
+        return $this->json([
+            'success'       => $failCount === 0,
+            'results'       => $results,
+            'successCount'  => $successCount,
+            'failCount'     => $failCount,
+            'message'       => sprintf(
+                '%d élément(s) traité(s) avec succès%s.',
+                $successCount,
+                $failCount > 0 ? ", $failCount en échec" : ''
+            ),
+        ]);
+    }
+
+    /**
      * Valide le bordereau après que tous les résultats ont été traités.
      * Change le statut vers STATUT_VALIDE.
      */

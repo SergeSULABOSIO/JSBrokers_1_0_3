@@ -10,6 +10,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         "sheetSelection", "step2", "mappingContainer", "mappingStatusFeedback", "mappingForm",
         "mappingSelect", "analysisResult", "submitButton", "columnNameText", "step1", "step3", "analysisResultsList", "progressBar", "progressBarContainer", "analysisSummary", "validateButton",
         "backToMappingButton", "exportPdfButton",
+        "batchActionsBlock",
     ];
 
     static values = {
@@ -987,6 +988,12 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         // On joint simplement les morceaux de HTML et on les injecte.
         this.analysisResultsListTarget.innerHTML = finalResultsHtml.join('');
+
+        // Rendre le bloc d'actions en lot après injection des résultats dans le DOM
+        // Utiliser requestAnimationFrame pour s'assurer que le DOM est à jour
+        requestAnimationFrame(() => {
+            this.renderBatchActionsBlock();
+        });
     }
     /**
      * Gère le clic sur un bouton d'action de l'étape 3.
@@ -1050,6 +1057,9 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         console.log('[BordereauAnalysis] _handleItemResolved() - Item résolu détecté. Réévaluation du bouton Valider.');
         this._updateValidateButtonState();
+
+        // Réévaluer le bloc d'actions en lot
+        this.renderBatchActionsBlock();
     }
 
     /**
@@ -1254,6 +1264,188 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             </div>
         `;
     }
+
+    /**
+     * Rend le bloc des actions en lot sous le récapitulatif.
+     * Analyse les items actuellement affichés dans la liste pour déterminer
+     * quels boutons en lot sont pertinents.
+     */
+    renderBatchActionsBlock() {
+        if (!this.hasBatchActionsBlockTarget) return;
+
+        const allItems = this.analysisResultsListTarget
+            ? this.analysisResultsListTarget.querySelectorAll(
+                '[data-controller="analysis-result-item"]'
+              )
+            : [];
+
+        // Compter les items actionnables non résolus par type
+        let pendingNew         = 0;
+        let pendingDiscrepancy = 0;
+
+        allItems.forEach(item => {
+            if (item.dataset.resolved === 'true') return;
+            if (item.classList.contains('border-info'))    pendingNew++;
+            if (item.classList.contains('border-warning')) pendingDiscrepancy++;
+        });
+
+        const hasNew         = pendingNew > 0;
+        const hasDiscrepancy = pendingDiscrepancy > 0;
+        const hasBoth        = hasNew && hasDiscrepancy;
+        const hasAny         = hasNew || hasDiscrepancy;
+
+        // Si rien à traiter, masquer le bloc entier
+        if (!hasAny) {
+            this.batchActionsBlockTarget.innerHTML = '';
+            this.batchActionsBlockTarget.classList.add('d-none');
+            return;
+        }
+
+        // Construire les boutons contextuels
+        const btnCreate = hasNew ? `
+            <button type="button"
+                    class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-2"
+                    data-action="click->bordereau-analysis#batchCreate">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="16"/>
+                    <line x1="8" y1="12" x2="16" y2="12"/>
+                </svg>
+                Créer tous les avenants
+                <span class="badge bg-primary rounded-pill">${pendingNew}</span>
+            </button>
+        ` : '';
+
+        const btnUpdate = hasDiscrepancy ? `
+            <button type="button"
+                    class="btn btn-sm btn-outline-warning d-inline-flex align-items-center gap-2"
+                    data-action="click->bordereau-analysis#batchUpdate">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+                Mettre à jour tous les avenants
+                <span class="badge bg-warning text-dark rounded-pill">${pendingDiscrepancy}</span>
+            </button>
+        ` : '';
+
+        const btnAll = hasBoth ? `
+            <button type="button"
+                    class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-2"
+                    data-action="click->bordereau-analysis#batchAll">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Tout traiter
+                <span class="badge bg-secondary rounded-pill">${pendingNew + pendingDiscrepancy}</span>
+            </button>
+        ` : '';
+
+        this.batchActionsBlockTarget.innerHTML = `
+            <div class="d-flex align-items-center gap-2 flex-wrap p-3
+                        rounded border border-dashed mb-3"
+                 style="border-color:#dee2e6; background:#fafbfc;">
+                <span class="small text-muted fw-bold me-1">Actions en lot :</span>
+                ${btnCreate}
+                ${btnUpdate}
+                ${btnAll}
+            </div>
+        `;
+        this.batchActionsBlockTarget.classList.remove('d-none');
+    }
+
+    /**
+     * Exécute une action en lot sur un ensemble d'items.
+     */
+    async _executeBatchAction(batchType) {
+        const allItems = this.analysisResultsListTarget
+            ? this.analysisResultsListTarget.querySelectorAll(
+                '[data-controller="analysis-result-item"]'
+              )
+            : [];
+
+        const itemsToProcess = [];
+        allItems.forEach(item => {
+            if (item.dataset.resolved === 'true') return;
+            const isNew = item.classList.contains('border-info');
+            const isDiscrepancy = item.classList.contains('border-warning');
+            const shouldProcess = batchType === 'all' || (batchType === 'new' && isNew) || (batchType === 'discrepancy' && isDiscrepancy);
+            if (!shouldProcess) return;
+            const firstActionButton = item.querySelector('[data-analysis-result-item-target="actionButton"]');
+            if (!firstActionButton) return;
+            let payload = {};
+            try { payload = JSON.parse(firstActionButton.dataset.payload || '{}'); } catch { return; }
+            itemsToProcess.push({
+                action_type: isNew ? 'new' : 'discrepancy',
+                avenant_id: payload.avenant_id ?? null,
+                excel_data: payload.excel_data ?? {},
+                row_index: payload.row_index ?? null,
+                reference_police: payload.reference_police ?? null,
+                _domElement: item,
+            });
+        });
+
+        if (itemsToProcess.length === 0) return;
+
+        this.mappingStatusFeedbackTarget.classList.remove('d-none');
+        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('warning', `Traitement en lot de ${itemsToProcess.length} élément(s)...`, false);
+        this.toggleProgressBar(true);
+
+        const serializableItems = itemsToProcess.map(({ _domElement, ...rest }) => rest);
+
+        try {
+            const response = await fetch(`/admin/bordereau/api/simulate-batch-action/${this.bordereauIdValue}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: serializableItems })
+            });
+
+            if (!response.ok) {
+                const err = await this._parseErrorResponse(response);
+                throw new Error(err);
+            }
+
+            const result = await response.json();
+            result.results.forEach(itemResult => {
+                if (!itemResult.success) return;
+                const matchingItem = itemsToProcess.find(i => i.row_index === itemResult.row_index);
+                if (!matchingItem?._domElement) return;
+                const domEl = matchingItem._domElement;
+                domEl.classList.remove('border-info', 'border-warning', 'border-danger');
+                domEl.classList.add('border-success', 'analysis-item-resolved');
+                domEl.dataset.resolved = 'true';
+                const detailsText = domEl.querySelector('.analysis-item-header p');
+                if (detailsText) detailsText.innerHTML = `<span class="text-success fw-bold">✓ Traité en lot — ${itemResult.message}</span>`;
+                const actionsContainer = domEl.querySelector('[data-analysis-result-item-target="actionsContainer"]');
+                if (actionsContainer) actionsContainer.style.display = 'none';
+                const titleWrapper = domEl.querySelector('.analysis-item-title-wrapper h5');
+                if (titleWrapper && !titleWrapper.querySelector('.badge')) {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-success ms-2 small';
+                    badge.textContent = 'Résolu';
+                    titleWrapper.appendChild(badge);
+                }
+            });
+
+            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(result.failCount > 0 ? 'error' : 'success', `${result.successCount} élément(s) traité(s) avec succès.`, false);
+            this.renderBatchActionsBlock();
+            this._updateValidateButtonState();
+        } catch (error) {
+            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('error', `Échec du traitement : ${error.message}`, false);
+        } finally {
+            this.toggleProgressBar(false);
+        }
+    }
+
+    async batchCreate() { await this._executeBatchAction('new'); }
+    async batchUpdate() { await this._executeBatchAction('discrepancy'); }
+    async batchAll() { await this._executeBatchAction('all'); }
 
     /**
      * Gère la réception d'un échec d'analyse du Cerveau.
