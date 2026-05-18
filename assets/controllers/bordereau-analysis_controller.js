@@ -1007,6 +1007,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 console.log(`[BordereauAnalysis] submitAnalysis() - Lot traité : ${processed}/${totalRows} (${percentage}%)`);
 
                 if (processData.isLastChunk) {
+                    // Final stats are already calculated and returned by the backend
                     finalStats = processData.stats || {};
                     break;
                 }
@@ -1020,6 +1021,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 // Pass the final stats from the last chunk
                 stats:               finalStats
             });
+
+
 
         } catch (error) {
             console.error("[BordereauAnalysis] submitAnalysis() - Erreur:", error);
@@ -1081,6 +1084,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this.submitButtonTarget.textContent = "Lancer l'analyse";
         }
 
+        
         // Passer à l'étape 3 — showStep gère la visibilité de tous les boutons
         this.showStep(3);
         this.renderAnalysisSummary(payload.stats); // Render summary with final stats
