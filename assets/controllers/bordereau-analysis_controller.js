@@ -28,6 +28,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         mappedColumns: Object,     // NOUVEAU : Pour la restauration de l'état
         analysisStats: Object,
         currentAnalysisStep: Number, // NOUVEAU : Pour la restauration de l'état
+        isBulkProcessing: Boolean, // NOUVEAU : Pour gérer l'état de traitement en lot
     };
 
     connect() {
@@ -76,6 +77,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         this.isRestoring = false;
         this.isConnecting = true; // Nouveau drapeau: true pendant la connexion initiale
         this.currentStep = 1;
+        this.isBulkProcessingValue = false; // Initialiser le drapeau de traitement en lot
         this.isSaving = false; // NOUVEAU : Le "feu de signalisation" pour la sauvegarde.
         this._pendingSaveTimeout = null; // Identifiant pour le debounce des sauvegardes
         // Timeout de debounce dédié à la sauvegarde automatique du mappage
@@ -340,6 +342,10 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * @param {Event} event
      */
     validateColumn(event) {
+        if (this.isBulkProcessingValue) { // NOUVEAU : Ne pas valider pendant un traitement en lot
+            return;
+        }
+
         const selectElement = event.currentTarget;
         this.performValidation(selectElement);
 
@@ -407,6 +413,11 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * - En cas d'échec : log silencieux uniquement, pas d'alerte
      */
     async _saveMappingOnly() {
+        // NOUVEAU : Ne pas sauvegarder le mappage si un traitement en lot est en cours
+        if (this.isBulkProcessingValue) {
+            return;
+        }
+
         // Lire la feuille sélectionnée
         const selectedSheetInput = this.sheetSelectionTargets.find(
             radio => radio.checked
@@ -502,6 +513,10 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * @param {string} [sheetName=null]
      */
     async showStep(stepNumber, sheetName = null) {
+        if (this.isBulkProcessingValue) { // NOUVEAU : Empêcher les transitions d'étape pendant le traitement en lot
+            return;
+        }
+
         const previousStep = this.currentStep;
         this.currentStep = (
             typeof stepNumber === 'object' && stepNumber.currentTarget
@@ -579,9 +594,11 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
             if (this.hasBackToMappingButtonTarget) {
                 this.backToMappingButtonTarget.classList.remove('d-none');
+                this.backToMappingButtonTarget.disabled = this.isBulkProcessingValue; // NOUVEAU
             }
             if (this.hasExportPdfButtonTarget) {
                 this.exportPdfButtonTarget.classList.remove('d-none');
+                this.exportPdfButtonTarget.disabled = this.isBulkProcessingValue; // NOUVEAU
             }
             // Afficher les boutons en lot uniquement si des items actionnables existent.
             // L'état actif/inactif sera géré par _updateBulkButtonsState().
@@ -870,6 +887,11 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * Lance l'initialisation puis enchaîne les lots séquentiellement.
      */
     async submitAnalysis(event) {
+        if (this.isBulkProcessingValue) { // NOUVEAU : Empêcher l'analyse pendant un traitement en lot
+            console.warn("[BordereauAnalysis] submitAnalysis() - Impossible de lancer l'analyse pendant un traitement en lot.");
+            return;
+        }
+
         console.log("[BordereauAnalysis] submitAnalysis() - Lancement de l'analyse par lots.");
 
         try {
@@ -1165,6 +1187,11 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * Appelé au clic sur le bouton "Valider le bordereau".
      */
     async validateBordereau() {
+        if (this.isBulkProcessingValue) { // NOUVEAU : Empêcher la validation pendant un traitement en lot
+            console.warn("[BordereauAnalysis] validateBordereau() - Impossible de valider pendant un traitement en lot.");
+            return;
+        }
+
         if (!confirm(
             'Confirmez-vous la validation de ce bordereau ?\n\n' +
             'Cette action signifie que tous les écarts ont été traités ' +
@@ -1604,6 +1631,11 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         )) return;
 
         if (this.hasBulkCreateButtonTarget) {
+            // NOUVEAU : Désactiver tous les boutons pertinents au début du traitement en lot
+            this.isBulkProcessingValue = true;
+            this.toggleProgressBar(true);
+            this._updateBulkButtonsState();
+            this._updateValidateButtonState();
             this.bulkCreateButtonTarget.disabled = true;
             this.bulkCreateButtonTarget.querySelector('span').textContent = 'Création en cours...';
         }
@@ -1612,17 +1644,28 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             '[data-controller="analysis-result-item"]'
         );
 
+        const itemsToProcess = Array.from(allItems).filter(item =>
+            item.classList.contains('border-info') && item.dataset.resolved !== 'true'
+        );
+
+        const totalItemsToProcess = itemsToProcess.length;
+        if (totalItemsToProcess === 0) {
+            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('info', 'Aucun nouvel avenant à créer.', false);
+            this.toggleProgressBar(false);
+            this.isBulkProcessingValue = false;
+            this._updateBulkButtonsState();
+            this._updateValidateButtonState();
+            return;
+        }
         let processed = 0;
         let errors    = 0;
 
-        for (const itemElement of allItems) {
-            // On ne traite que les items "new" non encore résolus
-            if (
-                !itemElement.classList.contains('border-info') ||
-                itemElement.dataset.resolved === 'true'
-            ) {
-                continue;
-            }
+        this.mappingStatusFeedbackTarget.classList.remove('d-none');
+        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+            'warning', `Traitement en lot... 0/${totalItemsToProcess}. Veuillez patienter.`, false
+        );
+
+        for (const itemElement of itemsToProcess) {
 
             // Récupérer le bouton "Créer l'avenant" de cet item
             const actionButton = itemElement.querySelector(
@@ -1666,6 +1709,12 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                     error
                 );
                 errors++;
+            } finally { // NOUVEAU : Mettre à jour la barre de progression et le feedback après chaque item
+                const percentage = Math.round((processed / totalItemsToProcess) * 100);
+                this._updateProgressBarPercentage(percentage);
+                this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+                    'warning', `Traitement en lot... ${processed}/${totalItemsToProcess}. Veuillez patienter.`, false
+                );
             }
         }
 
@@ -1702,6 +1751,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             processed,
             errors
         });
+        this.toggleProgressBar(false); // NOUVEAU : Masquer la barre de progression
+        this.isBulkProcessingValue = false; // NOUVEAU : Réinitialiser le drapeau
     }
 
     /**
@@ -1714,6 +1765,11 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         )) return;
 
         if (this.hasBulkUpdateButtonTarget) {
+            // NOUVEAU : Désactiver tous les boutons pertinents au début du traitement en lot
+            this.isBulkProcessingValue = true;
+            this.toggleProgressBar(true);
+            this._updateBulkButtonsState();
+            this._updateValidateButtonState();
             this.bulkUpdateButtonTarget.disabled = true;
             this.bulkUpdateButtonTarget.querySelector('span').textContent = 'Mise à jour en cours...';
         }
@@ -1722,17 +1778,28 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             '[data-controller="analysis-result-item"]'
         );
 
+        const itemsToProcess = Array.from(allItems).filter(item =>
+            item.classList.contains('border-warning') && item.dataset.resolved !== 'true'
+        );
+
+        const totalItemsToProcess = itemsToProcess.length;
+        if (totalItemsToProcess === 0) {
+            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('info', 'Aucune anomalie à mettre à jour.', false);
+            this.toggleProgressBar(false);
+            this.isBulkProcessingValue = false;
+            this._updateBulkButtonsState();
+            this._updateValidateButtonState();
+            return;
+        }
         let processed = 0;
         let errors    = 0;
 
-        for (const itemElement of allItems) {
-            // On ne traite que les items "discrepancy" non encore résolus
-            if (
-                !itemElement.classList.contains('border-warning') ||
-                itemElement.dataset.resolved === 'true'
-            ) {
-                continue;
-            }
+        this.mappingStatusFeedbackTarget.classList.remove('d-none');
+        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+            'warning', `Traitement en lot... 0/${totalItemsToProcess}. Veuillez patienter.`, false
+        );
+
+        for (const itemElement of itemsToProcess) {
 
             const actionButton = itemElement.querySelector(
                 '[data-action="click->analysis-result-item#handleAction"]'
@@ -1775,6 +1842,12 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                     error
                 );
                 errors++;
+            } finally { // NOUVEAU : Mettre à jour la barre de progression et le feedback après chaque item
+                const percentage = Math.round((processed / totalItemsToProcess) * 100);
+                this._updateProgressBarPercentage(percentage);
+                this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+                    'warning', `Traitement en lot... ${processed}/${totalItemsToProcess}. Veuillez patienter.`, false
+                );
             }
         }
 
@@ -1807,6 +1880,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             processed,
             errors
         });
+        this.toggleProgressBar(false); // NOUVEAU : Masquer la barre de progression
+        this.isBulkProcessingValue = false; // NOUVEAU : Réinitialiser le drapeau
     }
 
     /**
@@ -1877,6 +1952,11 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
     async _saveAnalysisStateToBordereau(saveLevel = 'full') {
         // CORRECTION : Si on lance une sauvegarde complète (prioritaire), on annule 
         // toute sauvegarde debouncée en attente pour éviter des requêtes concurrentes inutiles.
+        // NOUVEAU : Ne pas sauvegarder l'état si un traitement en lot est en cours
+        if (this.isBulkProcessingValue) {
+            console.warn("[BordereauAnalysis] _saveAnalysisStateToBordereau() - Sauvegarde annulée : traitement en lot en cours.");
+            return;
+        }
         if (saveLevel === 'full' && this._pendingSaveTimeout) {
             clearTimeout(this._pendingSaveTimeout);
             this._pendingSaveTimeout = null;
