@@ -97,6 +97,28 @@
                 <twig:UX:Icon name="{{ resolve_icon_name('action:completed') }}" width="18px" height="18px" />
                 <span>Valider le bordereau</span>
             </button>
+
+            {# NOUVEAU : Bouton "Créer tous les avenants", visible uniquement à l'étape 3 #}
+            <button type="button"
+                    class="btn btn-info d-inline-flex align-items-center gap-2 d-none"
+                    data-bordereau-analysis-target="bulkCreateButton"
+                    data-action="click->bordereau-analysis#bulkCreateAll"
+                    data-controller="ripple"
+                    disabled>
+                <twig:UX:Icon name="{{ resolve_icon_name('action:add') }}" width="18px" height="18px" />
+                <span>Créer tous les avenants</span>
+            </button>
+
+            {# NOUVEAU : Bouton "Mettre à jour tous les avenants", visible uniquement à l'étape 3 #}
+            <button type="button"
+                    class="btn btn-warning d-inline-flex align-items-center gap-2 d-none"
+                    data-bordereau-analysis-target="bulkUpdateButton"
+                    data-action="click->bordereau-analysis#bulkUpdateAll"
+                    data-controller="ripple"
+                    disabled>
+                <twig:UX:Icon name="{{ resolve_icon_name('action:edit') }}" width="18px" height="18px" />
+                <span>Mettre à jour tous les avenants</span>
+            </button>
         </div>
         {# NOUVEAU : Le feedback est déplacé ici, masqué par défaut #}
         <div data-bordereau-analysis-target="mappingStatusFeedback" class="text-white small mt-2 mb-0 d-none" role="alert">
