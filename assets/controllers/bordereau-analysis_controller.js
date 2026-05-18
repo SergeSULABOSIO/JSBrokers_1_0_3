@@ -1017,6 +1017,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this._handleAnalysisCompleted({
                 analysisResults:     this._accumulatedResultsStore,
                 analysisResultsHtml: this._accumulatedResultsHtml,
+                // Pass the final stats from the last chunk
                 stats:               finalStats
             });
 
@@ -1082,6 +1083,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         // Passer à l'étape 3 — showStep gère la visibilité de tous les boutons
         this.showStep(3);
+        this.renderAnalysisSummary(payload.stats); // Render summary with final stats
 
         // Feedback de succès (après showStep car showStep vide le feedback)
         if (this.hasMappingStatusFeedbackTarget) {
@@ -1109,6 +1111,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         console.log('[BordereauAnalysis] _handleItemResolved() - Item résolu détecté. Réévaluation du bouton Valider.');
         this._updateValidateButtonState();
         this._updateBulkButtonsState();
+        this._recalculateAndRenderStatsFromDom(); // Recalculate and render stats
     }
 
     /**
@@ -1465,6 +1468,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
                 this._markItemAsResolved(itemElement, result.message);
                 processed++;
+                this._recalculateAndRenderStatsFromDom(); // Update stats after each item
 
             } catch (error) {
                 console.error(
@@ -1598,6 +1602,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
                 this._markItemAsResolved(itemElement, result.message);
                 processed++;
+                this._recalculateAndRenderStatsFromDom(); // Update stats after each item
 
             } catch (error) {
                 console.error(
@@ -1700,6 +1705,62 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         if (!this.hasProgressBarTarget) return;
         this.progressBarTarget.style.width = `${percentage}%`;
         console.log(`[BordereauAnalysis] _updateProgressBarPercentage() - ${percentage}%`);
+    }
+
+    /**
+     * NOUVEAU : Recalcule les statistiques d'analyse en parcourant les éléments du DOM
+     * et met à jour le récapitulatif.
+     * Cette méthode est utilisée pour les mises à jour en temps réel après des actions individuelles
+     * ou des traitements en lot.
+     */
+    _recalculateAndRenderStatsFromDom() {
+        if (!this.hasAnalysisResultsListTarget) return;
+
+        const allItems = this.analysisResultsListTarget.querySelectorAll(
+            '[data-controller="analysis-result-item"]'
+        );
+
+        let total = 0;
+        let match = 0;
+        let discrepancy = 0;
+        let newItems = 0;
+        let total_prime_ttc = 0.0;
+        let total_commission_ht = 0.0;
+        let total_taxe = 0.0;
+
+        allItems.forEach(itemElement => {
+            total++;
+            const isResolved = itemElement.dataset.resolved === 'true';
+            const itemType = isResolved
+                ? 'match' // Resolved items are considered 'match' for stats purposes
+                : (itemElement.classList.contains('border-info') ? 'new' :
+                   (itemElement.classList.contains('border-warning') ? 'discrepancy' : 'match')); // Default to match if no specific border
+
+            switch (itemType) {
+                case 'match':
+                    match++;
+                    break;
+                case 'discrepancy':
+                    discrepancy++;
+                    break;
+                case 'new':
+                    newItems++;
+                    break;
+            }
+
+            // Extract financial data from the item's data-value
+            const bordereauLineInfo = JSON.parse(itemElement.dataset.analysisResultItemBordereauLineInfoValue || '{}');
+            total_prime_ttc     += parseFloat(bordereauLineInfo.prime_ttc || 0);
+            total_commission_ht += parseFloat(bordereauLineInfo.commission_ht_assureur || 0);
+            total_taxe          += parseFloat(bordereauLineInfo.taxe_commission_assureur || 0);
+        });
+
+        const total_commission_ttc = total_commission_ht + total_taxe;
+
+        const newStats = { total, match, discrepancy, new: newItems, total_prime_ttc, total_commission_ht, total_taxe, total_commission_ttc };
+
+        this.analysisStatsValue = newStats; // Update the Stimulus value
+        this.renderAnalysisSummary(newStats); // Render the updated summary
     }
 
     /**

@@ -723,6 +723,7 @@ class BordereauController extends AbstractController
         $isLastChunk = ($offset + $chunkSize) >= $totalRows;
         $accumulated = $sessionData['accumulatedResults'] ?? [];
         $accumulated = array_merge($accumulated, $chunkResultsToStore);
+        $sessionData['accumulatedResults'] = $accumulated; // Update accumulated results in session data
         $stats = null;
 
         if ($isLastChunk) {
