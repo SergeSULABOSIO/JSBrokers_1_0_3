@@ -10,6 +10,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         "sheetSelection", "step2", "mappingContainer", "mappingStatusFeedback", "mappingForm",
         "mappingSelect", "analysisResult", "submitButton", "columnNameText", "step1", "step3", "analysisResultsList", "progressBar", "progressBarContainer", "analysisSummary", "validateButton",
         "backToMappingButton", "exportPdfButton",
+        "backToMappingButton", "exportPdfButton", "bulkCreateButton", "bulkUpdateButton",
         "batchActionsBlock",
     ];
 
@@ -534,6 +535,12 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         if (this.hasExportPdfButtonTarget) {
             this.exportPdfButtonTarget.classList.add('d-none');
         }
+        if (this.hasBulkCreateButtonTarget) {
+            this.bulkCreateButtonTarget.classList.add('d-none');
+        }
+        if (this.hasBulkUpdateButtonTarget) {
+            this.bulkUpdateButtonTarget.classList.add('d-none');
+        }
 
         // --- 3. Réinitialiser le feedback ---
         if (this.hasMappingStatusFeedbackTarget) {
@@ -577,6 +584,14 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             if (this.hasExportPdfButtonTarget) {
                 this.exportPdfButtonTarget.classList.remove('d-none');
             }
+            // Afficher les boutons en lot uniquement si des items actionnables existent.
+            // L'état actif/inactif sera géré par _updateBulkButtonsState().
+            if (this.hasBulkCreateButtonTarget) {
+                this.bulkCreateButtonTarget.classList.remove('d-none');
+            }
+            if (this.hasBulkUpdateButtonTarget) {
+                this.bulkUpdateButtonTarget.classList.remove('d-none');
+            }
 
             // Le bouton Valider est rendu visible ici mais désactivé par défaut.
             // _updateValidateButtonState() décidera s'il doit être actif.
@@ -591,6 +606,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
             // Évaluer l'état réel du bouton Valider
             this._updateValidateButtonState();
+            this._updateBulkButtonsState();
         }
 
         // --- 5. Sauvegarde de l'étape (sauf pendant la restauration) ---
@@ -1057,6 +1073,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         console.log('[BordereauAnalysis] _handleItemResolved() - Item résolu détecté. Réévaluation du bouton Valider.');
         this._updateValidateButtonState();
+        this._updateBulkButtonsState();
 
         // Réévaluer le bloc d'actions en lot
         this.renderBatchActionsBlock();
@@ -1510,6 +1527,253 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
     async batchAll() {
         console.log('[BordereauAnalysis] batchAll() - Traitement en lot de tous les items actionnables.');
         await this._executeBatchAction('all');
+    }
+
+    /**
+     * Helper method to mark a single item as resolved visually.
+     * @param {HTMLElement} itemElement - The DOM element of the analysis result item.
+     * @param {string} message - The message to display in the details.
+     */
+    _markItemAsResolved(itemElement, message) {
+        itemElement.classList.remove('border-info', 'border-warning', 'border-danger');
+        itemElement.classList.add('border-success', 'analysis-item-resolved');
+        itemElement.dataset.resolved = 'true';
+
+        const detailsText = itemElement.querySelector('.analysis-item-header p');
+        if (detailsText) {
+            detailsText.innerHTML = `<span class="text-success fw-bold">✓ Traité en lot — ${message}</span>`;
+        }
+
+        const actionsContainer = itemElement.querySelector(
+            '[data-analysis-result-item-target="actionsContainer"]'
+        );
+        if (actionsContainer) {
+            actionsContainer.style.display = 'none';
+        }
+
+        const titleWrapper = itemElement.querySelector('.analysis-item-title-wrapper h5');
+        if (titleWrapper && !titleWrapper.querySelector('.badge.bg-success')) {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-success ms-2 small';
+            badge.textContent = 'Résolu';
+            titleWrapper.appendChild(badge);
+        }
+    }
+
+    /**
+     * Traite en lot tous les items de type "new" non encore résolus.
+     * Désactive le bouton pendant le traitement pour éviter les doubles clics.
+     */
+    async bulkCreateAll() {
+        if (!confirm(
+            'Confirmez-vous la création en lot de tous les nouveaux avenants ?\n\n' +
+            'Cette action traitera tous les items "Nouvel avenant détecté".'
+        )) return;
+
+        if (this.hasBulkCreateButtonTarget) {
+            this.bulkCreateButtonTarget.disabled = true;
+            this.bulkCreateButtonTarget.querySelector('span').textContent = 'Création en cours...';
+        }
+
+        const allItems = this.analysisResultsListTarget.querySelectorAll(
+            '[data-controller="analysis-result-item"]'
+        );
+
+        let processed = 0;
+        let errors    = 0;
+
+        for (const itemElement of allItems) {
+            // On ne traite que les items "new" non encore résolus
+            if (
+                !itemElement.classList.contains('border-info') ||
+                itemElement.dataset.resolved === 'true'
+            ) {
+                continue;
+            }
+
+            // Récupérer le bouton "Créer l'avenant" de cet item
+            const actionButton = itemElement.querySelector(
+                '[data-action="click->analysis-result-item#handleAction"]'
+            );
+            if (!actionButton) continue;
+
+            const payload = JSON.parse(actionButton.dataset.payload || '{}');
+            const bordereauId = actionButton.closest('[data-analysis-result-item-bordereau-id-value]')
+                ?.dataset?.analysisResultItemBordereauIdValue
+                || this.bordereauIdValue;
+
+            try {
+                const response = await fetch(
+                    `/admin/bordereau/api/simulate-action/${bordereauId}`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action_type:       'new',
+                            avenant_id:        null,
+                            excel_data:        payload.excel_data ?? {},
+                            row_index:         payload.row_index ?? null,
+                            reference_police:  payload.reference_police ?? null,
+                        })
+                    }
+                );
+
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || 'Erreur lors du traitement.');
+                }
+
+                this._markItemAsResolved(itemElement, result.message);
+                processed++;
+
+            } catch (error) {
+                console.error(
+                    `[BordereauAnalysis] bulkCreateAll() — Erreur sur item:`,
+                    error
+                );
+                errors++;
+            }
+        }
+
+        console.log(
+            `[BordereauAnalysis] bulkCreateAll() — Terminé. ` +
+            `Traités: ${processed}, Erreurs: ${errors}`
+        );
+
+        // Rétablir le libellé du bouton
+        if (this.hasBulkCreateButtonTarget) {
+            this.bulkCreateButtonTarget.querySelector('span').textContent =
+                'Créer tous les avenants';
+        }
+
+        // Réévaluer l'état de tous les boutons
+        this._updateBulkButtonsState();
+        this._updateValidateButtonState();
+
+        // Feedback dans la barre d'outils
+        if (this.hasMappingStatusFeedbackTarget) {
+            this.mappingStatusFeedbackTarget.classList.remove('d-none');
+            const msg = errors > 0
+                ? `${processed} avenant(s) créé(s), ${errors} erreur(s).`
+                : `${processed} avenant(s) créé(s) avec succès.`;
+            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+                errors > 0 ? 'warning' : 'success', msg, false
+            );
+        }
+
+        // Notifier le Cerveau pour réévaluation globale
+        this.notifyCerveau('bordereau:bulk.completed', {
+            bordereauId: this.bordereauIdValue,
+            type: 'new',
+            processed,
+            errors
+        });
+    }
+
+    /**
+     * Traite en lot tous les items de type "discrepancy" non encore résolus.
+     */
+    async bulkUpdateAll() {
+        if (!confirm(
+            'Confirmez-vous la mise à jour en lot de tous les avenants en anomalie ?\n\n' +
+            'Cette action traitera tous les items "Anomalie(s) détectée(s)".'
+        )) return;
+
+        if (this.hasBulkUpdateButtonTarget) {
+            this.bulkUpdateButtonTarget.disabled = true;
+            this.bulkUpdateButtonTarget.querySelector('span').textContent = 'Mise à jour en cours...';
+        }
+
+        const allItems = this.analysisResultsListTarget.querySelectorAll(
+            '[data-controller="analysis-result-item"]'
+        );
+
+        let processed = 0;
+        let errors    = 0;
+
+        for (const itemElement of allItems) {
+            // On ne traite que les items "discrepancy" non encore résolus
+            if (
+                !itemElement.classList.contains('border-warning') ||
+                itemElement.dataset.resolved === 'true'
+            ) {
+                continue;
+            }
+
+            const actionButton = itemElement.querySelector(
+                '[data-action="click->analysis-result-item#handleAction"]'
+            );
+            if (!actionButton) continue;
+
+            const payload = JSON.parse(actionButton.dataset.payload || '{}');
+            const bordereauId = actionButton.closest('[data-analysis-result-item-bordereau-id-value]')
+                ?.dataset?.analysisResultItemBordereauIdValue
+                || this.bordereauIdValue;
+
+            try {
+                const response = await fetch(
+                    `/admin/bordereau/api/simulate-action/${bordereauId}`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action_type:       'discrepancy',
+                            avenant_id:        payload.avenant_id ?? null,
+                            excel_data:        payload.excel_data ?? {},
+                            row_index:         payload.row_index ?? null,
+                            reference_police:  payload.reference_police ?? null,
+                        })
+                    }
+                );
+
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || 'Erreur lors du traitement.');
+                }
+
+                this._markItemAsResolved(itemElement, result.message);
+                processed++;
+
+            } catch (error) {
+                console.error(
+                    `[BordereauAnalysis] bulkUpdateAll() — Erreur sur item:`,
+                    error
+                );
+                errors++;
+            }
+        }
+
+        console.log(
+            `[BordereauAnalysis] bulkUpdateAll() — Terminé. ` +
+            `Traités: ${processed}, Erreurs: ${errors}`
+        );
+
+        if (this.hasBulkUpdateButtonTarget) {
+            this.bulkUpdateButtonTarget.querySelector('span').textContent =
+                'Mettre à jour tous les avenants';
+        }
+
+        this._updateBulkButtonsState();
+        this._updateValidateButtonState();
+
+        if (this.hasMappingStatusFeedbackTarget) {
+            this.mappingStatusFeedbackTarget.classList.remove('d-none');
+            const msg = errors > 0
+                ? `${processed} avenant(s) mis à jour, ${errors} erreur(s).`
+                : `${processed} avenant(s) mis à jour avec succès.`;
+            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+                errors > 0 ? 'warning' : 'success', msg, false
+            );
+        }
+
+        this.notifyCerveau('bordereau:bulk.completed', {
+            bordereauId: this.bordereauIdValue,
+            type: 'discrepancy',
+            processed,
+            errors
+        });
     }
 
     /**
