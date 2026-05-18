@@ -1673,14 +1673,25 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this.progressBarTarget.style.width = '0%';
             this.progressBarTarget.style.background = '#0047AB';
             this.progressBarTarget.style.transition = 'width 0.3s ease';
+            // Force reflow to ensure the initial state is rendered before updates
+            void this.progressBarTarget.offsetWidth;
         } else {
-            this.progressBarTarget.style.animation = '';
+            // Ensure it reaches 100% before hiding, and animate it
             this.progressBarTarget.style.width = '100%';
-            this.progressBarTarget.style.background = '';
-            this.progressBarTarget.style.transition = '';
+            // Add a temporary transition to ensure the 100% animation plays
+            this.progressBarTarget.style.transition = 'width 0.3s ease';
+
+            const hideBar = () => {
+                this.progressBarContainerTarget.style.display = 'none';
+                this.progressBarTarget.style.animation = ''; // Reset animation
+                this.progressBarTarget.style.background = ''; // Reset background
+                this.progressBarTarget.style.transition = ''; // Clear transition
+                this.progressBarTarget.removeEventListener('transitionend', hideBar);
+            };
+            // Listen for the end of the transition to hide the container
+            this.progressBarTarget.addEventListener('transitionend', hideBar, { once: true });
         }
     }
-
     /**
      * Met à jour le pourcentage de la barre de progression.
      * @param {number} percentage - Valeur entre 0 et 100.
