@@ -9,7 +9,6 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
     static targets = [ // NOUVEAU : Ajout de la cible pour le bouton de retour
         "sheetSelection", "step2", "mappingContainer", "mappingStatusFeedback", "mappingForm",
         "mappingSelect", "analysisResult", "submitButton", "columnNameText", "step1", "step3", "analysisResultsList", "progressBar", "progressBarContainer", "analysisSummary", "validateButton",
-        "backToMappingButton", "exportPdfButton",
         "backToMappingButton", "exportPdfButton", "bulkCreateButton", "bulkUpdateButton",
         "batchActionsBlock",
     ];
@@ -1077,6 +1076,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         // Réévaluer le bloc d'actions en lot
         this.renderBatchActionsBlock();
+
     }
 
     /**
@@ -1125,6 +1125,39 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         // Activer ou désactiver le bouton Valider
         // (sa visibilité est gérée exclusivement par showStep())
         this.validateButtonTarget.disabled = !allResolved;
+    }
+
+    /**
+     * Évalue si les boutons de traitement en lot doivent être actifs.
+     * - bulkCreateButton  : actif s'il reste au moins un item "new" non résolu
+     * - bulkUpdateButton  : actif s'il reste au moins un item "discrepancy" non résolu
+     */
+    _updateBulkButtonsState() {
+        if (!this.hasAnalysisResultsListTarget) return;
+    
+        const allItems = this.analysisResultsListTarget.querySelectorAll(
+            '[data-controller="analysis-result-item"]'
+        );
+    
+        let pendingNew         = 0;
+        let pendingDiscrepancy = 0;
+    
+        allItems.forEach(item => {
+            if (item.dataset.resolved === 'true') return; // Déjà traité
+    
+            if (item.classList.contains('border-info')) {
+                pendingNew++;
+            } else if (item.classList.contains('border-warning')) {
+                pendingDiscrepancy++;
+            }
+        });
+    
+        if (this.hasBulkCreateButtonTarget) {
+            this.bulkCreateButtonTarget.disabled = (pendingNew === 0);
+        }
+        if (this.hasBulkUpdateButtonTarget) {
+            this.bulkUpdateButtonTarget.disabled = (pendingDiscrepancy === 0);
+        }
     }
 
     /**
