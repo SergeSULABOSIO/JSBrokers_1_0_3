@@ -44,6 +44,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         // NOUVEAU : Initialisation du cache pour les icônes des résultats d'analyse.
         this.iconCache = new Map();
+        // NOUVEAU : Suivi des requêtes en cours pour éviter les doublons (Request Collapsing)
+        this.inFlightIcons = new Map();
         this.boundHandleIconRequest = this.handleIconRequest.bind(this);
         // CORRECTION : On écoute sur `document` pour intercepter les événements des enfants
         // qui sont injectés dynamiquement et ne sont pas des descendants directs.
@@ -138,39 +140,58 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         }
         if (!iconName || !requesterId) return;
 
+        // 1. Vérifier le cache (icônes déjà téléchargées)
         if (this.iconCache.has(iconName)) {
-            // Si l'icône est en cache, on la renvoie directement.
             console.log(`%c[Parent] 1b. Icône '${iconName}' trouvée en cache. Renvoi immédiat.`, 'color: green;');
-            document.dispatchEvent(new CustomEvent('analysis:icon.loaded', {
-                bubbles: true, detail: {
-                    html: this.iconCache.get(iconName), // HTML de l'icône
-                    iconName: iconName,                 // Nom de l'icône (pour le cache)
-                    requesterId: requesterId,           // ID de l'élément demandeur
-                }
-            }));
-        } else {
-            // Sinon, on la récupère depuis le serveur.
+            this._dispatchIconLoaded(this.iconCache.get(iconName), requesterId, iconName);
+            return;
+        }
+
+        // 2. Vérifier si une requête est déjà en cours pour cette icône
+        if (this.inFlightIcons.has(iconName)) {
+            console.log(`%c[Parent] 1c. Icône '${iconName}' déjà en cours de téléchargement. Mise en attente...`, 'color: blue;');
+            try {
+                const html = await this.inFlightIcons.get(iconName);
+                this._dispatchIconLoaded(html, requesterId, iconName);
+            } catch (error) {
+                this._dispatchIconLoaded('<!-- error -->', requesterId, iconName);
+            }
+            return;
+        }
+
+        // 3. Lancer une nouvelle requête unique
+        const fetchPromise = (async () => {
             const url = `/api/icon/api/get-icon?name=${encodeURIComponent(iconName)}&size=${iconSize}`;
             try {
                 const response = await fetch(url);
-                if (!response.ok) throw new Error(`Icon fetch failed with status ${response.status}`);
-                
+                if (!response.ok) throw new Error(`Status ${response.status}`);
                 const html = await response.text();
-                
-                // On met en cache si la réponse est valide.
+
                 if (html && !html.trim().startsWith('<!--')) {
                     this.iconCache.set(iconName, html);
                 }
-
-                // On diffuse l'événement à l'enfant qui a fait la demande.
-                document.dispatchEvent(new CustomEvent('analysis:icon.loaded', { bubbles: true, detail: { html, requesterId, iconName: iconName } }));
-
+                return html;
             } catch (error) {
                 console.error(`[BordereauAnalysis] Failed to fetch icon '${iconName}':`, error);
-                // On envoie quand même une réponse pour ne pas bloquer l'UI.
-                document.dispatchEvent(new CustomEvent('analysis:icon.loaded', { bubbles: true, detail: { html: `<!-- error -->`, requesterId, iconName: iconName } }));
+                return '<!-- error -->';
+            } finally {
+                this.inFlightIcons.delete(iconName); // Nettoyage une fois terminé
             }
-        }
+        })();
+
+        this.inFlightIcons.set(iconName, fetchPromise);
+        const finalHtml = await fetchPromise;
+        this._dispatchIconLoaded(finalHtml, requesterId, iconName);
+    }
+
+    /**
+     * Helper pour envoyer l'événement de chargement d'icône.
+     */
+    _dispatchIconLoaded(html, requesterId, iconName) {
+        document.dispatchEvent(new CustomEvent('analysis:icon.loaded', {
+            bubbles: true,
+            detail: { html, requesterId, iconName }
+        }));
     }
 
     /**
