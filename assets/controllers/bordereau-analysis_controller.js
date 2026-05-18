@@ -1265,10 +1265,11 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         `;
     }
 
-    /**
+        /**
      * Rend le bloc des actions en lot sous le récapitulatif.
      * Analyse les items actuellement affichés dans la liste pour déterminer
      * quels boutons en lot sont pertinents.
+     * Appelé après chaque rendu des résultats et après chaque résolution d'item.
      */
     renderBatchActionsBlock() {
         if (!this.hasBatchActionsBlockTarget) return;
@@ -1362,6 +1363,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
     /**
      * Exécute une action en lot sur un ensemble d'items.
+     * @param {'new'|'discrepancy'|'all'} batchType
      */
     async _executeBatchAction(batchType) {
         const allItems = this.analysisResultsListTarget
@@ -1371,35 +1373,55 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             : [];
 
         const itemsToProcess = [];
+
         allItems.forEach(item => {
             if (item.dataset.resolved === 'true') return;
-            const isNew = item.classList.contains('border-info');
+
+            const isNew         = item.classList.contains('border-info');
             const isDiscrepancy = item.classList.contains('border-warning');
-            const shouldProcess = batchType === 'all' || (batchType === 'new' && isNew) || (batchType === 'discrepancy' && isDiscrepancy);
+
+            const shouldProcess =
+                batchType === 'all'
+                || (batchType === 'new'         && isNew)
+                || (batchType === 'discrepancy' && isDiscrepancy);
+
             if (!shouldProcess) return;
+
             const firstActionButton = item.querySelector('[data-analysis-result-item-target="actionButton"]');
             if (!firstActionButton) return;
+
             let payload = {};
-            try { payload = JSON.parse(firstActionButton.dataset.payload || '{}'); } catch { return; }
+            try {
+                payload = JSON.parse(firstActionButton.dataset.payload || '{}');
+            } catch {
+                return;
+            }
+
             itemsToProcess.push({
-                action_type: isNew ? 'new' : 'discrepancy',
-                avenant_id: payload.avenant_id ?? null,
-                excel_data: payload.excel_data ?? {},
-                row_index: payload.row_index ?? null,
-                reference_police: payload.reference_police ?? null,
-                _domElement: item,
+                action_type:       isNew ? 'new' : 'discrepancy',
+                avenant_id:        payload.avenant_id        ?? null,
+                excel_data:        payload.excel_data         ?? {},
+                row_index:         payload.row_index          ?? null,
+                reference_police:  payload.reference_police   ?? null,
+                _domElement:       item,
             });
         });
 
-        if (itemsToProcess.length === 0) return;
+        if (itemsToProcess.length === 0) {
+            console.log('[BordereauAnalysis] _executeBatchAction() - Aucun item à traiter.');
+            return;
+        }
 
         this.mappingStatusFeedbackTarget.classList.remove('d-none');
-        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('warning', `Traitement en lot de ${itemsToProcess.length} élément(s)...`, false);
+        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+            'warning',
+            `Traitement en lot de ${itemsToProcess.length} élément(s)...`,
+            false
+        );
         this.toggleProgressBar(true);
 
-        const serializableItems = itemsToProcess.map(({ _domElement, ...rest }) => rest);
-
         try {
+            const serializableItems = itemsToProcess.map(({ _domElement, ...rest }) => rest);
             const response = await fetch(`/admin/bordereau/api/simulate-batch-action/${this.bordereauIdValue}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1412,18 +1434,31 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             }
 
             const result = await response.json();
+
+            console.log('[BordereauAnalysis] _executeBatchAction() - Résultat:', result);
+
             result.results.forEach(itemResult => {
                 if (!itemResult.success) return;
                 const matchingItem = itemsToProcess.find(i => i.row_index === itemResult.row_index);
                 if (!matchingItem?._domElement) return;
                 const domEl = matchingItem._domElement;
+
                 domEl.classList.remove('border-info', 'border-warning', 'border-danger');
                 domEl.classList.add('border-success', 'analysis-item-resolved');
                 domEl.dataset.resolved = 'true';
+
                 const detailsText = domEl.querySelector('.analysis-item-header p');
-                if (detailsText) detailsText.innerHTML = `<span class="text-success fw-bold">✓ Traité en lot — ${itemResult.message}</span>`;
+                if (detailsText) {
+                    detailsText.innerHTML = `
+                        <span class="text-success fw-bold">
+                            ✓ Traité en lot — ${itemResult.message}
+                        </span>
+                    `;
+                }
+
                 const actionsContainer = domEl.querySelector('[data-analysis-result-item-target="actionsContainer"]');
                 if (actionsContainer) actionsContainer.style.display = 'none';
+
                 const titleWrapper = domEl.querySelector('.analysis-item-title-wrapper h5');
                 if (titleWrapper && !titleWrapper.querySelector('.badge')) {
                     const badge = document.createElement('span');
@@ -1433,19 +1468,49 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 }
             });
 
-            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(result.failCount > 0 ? 'error' : 'success', `${result.successCount} élément(s) traité(s) avec succès.`, false);
+            const msg = result.failCount > 0
+                ? `${result.successCount} traité(s), ${result.failCount} en échec.`
+                : `${result.successCount} élément(s) traité(s) avec succès.`;
+
+            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+                result.failCount > 0 ? 'error' : 'success', msg, false
+            );
+
             this.renderBatchActionsBlock();
             this._updateValidateButtonState();
         } catch (error) {
-            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('error', `Échec du traitement : ${error.message}`, false);
+            console.error('[BordereauAnalysis] _executeBatchAction() - Erreur:', error);
+            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+                'error', `Échec du traitement en lot : ${error.message}`, false
+            );
         } finally {
             this.toggleProgressBar(false);
         }
     }
 
-    async batchCreate() { await this._executeBatchAction('new'); }
-    async batchUpdate() { await this._executeBatchAction('discrepancy'); }
-    async batchAll() { await this._executeBatchAction('all'); }
+    /**
+     * Crée tous les avenants de type "new" non résolus en une seule requête.
+     */
+    async batchCreate() {
+        console.log('[BordereauAnalysis] batchCreate() - Création en lot des nouveaux avenants.');
+        await this._executeBatchAction('new');
+    }
+
+    /**
+     * Met à jour tous les avenants de type "discrepancy" non résolus en une seule requête.
+     */
+    async batchUpdate() {
+        console.log('[BordereauAnalysis] batchUpdate() - Mise à jour en lot des avenants en anomalie.');
+        await this._executeBatchAction('discrepancy');
+    }
+
+    /**
+     * Traite en lot tous les items actionnables (new + discrepancy) non résolus.
+     */
+    async batchAll() {
+        console.log('[BordereauAnalysis] batchAll() - Traitement en lot de tous les items actionnables.');
+        await this._executeBatchAction('all');
+    }
 
     /**
      * Gère la réception d'un échec d'analyse du Cerveau.

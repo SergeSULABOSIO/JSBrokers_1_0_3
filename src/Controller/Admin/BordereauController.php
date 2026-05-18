@@ -883,12 +883,16 @@ class BordereauController extends AbstractController
      * TODO: Remplacer cette simulation par la vraie logique métier :
      *   - Pour chaque item de type 'new'         : créer réellement l'avenant en base
      *   - Pour chaque item de type 'discrepancy' : mettre à jour réellement l'avenant
+     *
+     * @Route("/admin/bordereau/api/simulate-batch-action/{bordereauId}", methods=["POST"])
      */
-    #[Route('/api/simulate-batch-action/{bordereauId}', name: 'api.simulate_batch_action', methods: ['POST'])]
-    public function simulateBatchAction(
-        int $bordereauId,
-        Request $request
-    ): JsonResponse {
+    #[Route(
+        '/api/simulate-batch-action/{bordereauId}',
+        name: 'admin_bordereau_api_simulate_batch_action',
+        methods: ['POST']
+    )]
+    public function simulateBatchAnalysisAction(int $bordereauId, Request $request): JsonResponse
+    {
         $bordereau = $this->bordereauRepository->find($bordereauId);
         if (!$bordereau) {
             return $this->json([
