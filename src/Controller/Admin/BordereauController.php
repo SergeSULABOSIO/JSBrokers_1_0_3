@@ -362,9 +362,9 @@ class BordereauController extends AbstractController
                     'type'                => 'warning',
                     'bordereau_line_info' => [],
                     'details'             => "⚠️ Police n°" . $policeFromStore
-                                             . " (ligne n°" . ($rowIndex !== null ? $rowIndex + 2 : '?') . ")"
-                                             . ": Les données ont changé depuis la dernière analyse."
-                                             . " Veuillez relancer l'analyse pour obtenir des résultats à jour.",
+                        . " (ligne n°" . ($rowIndex !== null ? $rowIndex + 2 : '?') . ")"
+                        . ": Les données ont changé depuis la dernière analyse."
+                        . " Veuillez relancer l'analyse pour obtenir des résultats à jour.",
                     'actions'             => [],
                 ];
 
@@ -418,7 +418,7 @@ class BordereauController extends AbstractController
                         $financialFieldsConfig = [
                             'prime_ttc'               => ['label' => 'Prime TTC',           'getter' => 'getMontantTTC'],
                             'commission_ht_assureur'  => ['label' => 'Commission HT',       'getter' => 'getMontantHT'],
-                            'taxe_commission_assureur'=> ['label' => 'Taxe commission',      'getter' => 'getTaxeAssureurMontant'],
+                            'taxe_commission_assureur' => ['label' => 'Taxe commission',      'getter' => 'getTaxeAssureurMontant'],
                             'taux_commission'         => ['label' => 'Taux commission (%)',  'getter' => 'getTauxCommission'],
                         ];
 
@@ -449,7 +449,7 @@ class BordereauController extends AbstractController
                 case 'match':
                 default:
                     $details = "Ligne n°" . ($rowIndex + 2)
-                               . ": Correspondance parfaite avec les données existantes.";
+                        . ": Correspondance parfaite avec les données existantes.";
                     $actions = [];
                     break;
             }
@@ -494,7 +494,8 @@ class BordereauController extends AbstractController
             $stats['total_taxe']          += (float)($lineInfo['taxe_commission_assureur'] ?? 0);
         }
         $stats['total_commission_ttc'] = round(
-            $stats['total_commission_ht'] + $stats['total_taxe'], 2
+            $stats['total_commission_ht'] + $stats['total_taxe'],
+            2
         );
 
         return $this->render('admin/bordereau/bordereau_analysis.html.twig', [
@@ -519,7 +520,7 @@ class BordereauController extends AbstractController
     {
         $mode = $request->query->get('mode', 'init');
 
-        return match($mode) {
+        return match ($mode) {
             'init'    => $this->_handleAnalysisInit($bordereau, $request, $params),
             'process' => $this->_handleAnalysisProcess($bordereau, $request, $params),
             default   => $this->json(['error' => 'Mode inconnu.'], 400),
@@ -620,10 +621,14 @@ class BordereauController extends AbstractController
 
             if (!$avenant) {
                 $chunkResultsToStore[] = [
-                    'type' => 'new', 'row_index' => $rowIndex, 'reference_police' => $refPolice, 'avenant_id' => null,
+                    'type' => 'new',
+                    'row_index' => $rowIndex,
+                    'reference_police' => $refPolice,
+                    'avenant_id' => null,
                 ];
                 $chunkResultsForDisplay[] = [
-                    'type' => 'new', 'bordereau_line_info' => $rawLineData,
+                    'type' => 'new',
+                    'bordereau_line_info' => $rawLineData,
                     'details' => "Ligne n°" . ($rowIndex + 2) . ": Nouvel avenant détecté.",
                     'actions' => [['label' => 'Créer l\'avenant', 'event' => 'bordereau:create-avenant', 'payload' => ['excel_data' => $rawLineData]]],
                 ];
@@ -653,7 +658,7 @@ class BordereauController extends AbstractController
                 $financialFieldsConfig = [
                     'prime_ttc'               => ['label' => 'Prime TTC',          'getter' => 'getMontantTTC'],
                     'commission_ht_assureur'  => ['label' => 'Commission HT',      'getter' => 'getMontantHT'],
-                    'taxe_commission_assureur'=> ['label' => 'Taxe commission',     'getter' => 'getTaxeAssureurMontant'],
+                    'taxe_commission_assureur' => ['label' => 'Taxe commission',     'getter' => 'getTaxeAssureurMontant'],
                     'taux_commission'         => ['label' => 'Taux commission (%)', 'getter' => 'getTauxCommission'],
                 ];
 
@@ -682,20 +687,28 @@ class BordereauController extends AbstractController
                 }
 
                 $chunkResultsToStore[] = [
-                    'type' => 'discrepancy', 'row_index' => $rowIndex, 'reference_police' => $refPolice, 'avenant_id' => $avenant->getId(),
+                    'type' => 'discrepancy',
+                    'row_index' => $rowIndex,
+                    'reference_police' => $refPolice,
+                    'avenant_id' => $avenant->getId(),
                 ];
                 $chunkResultsForDisplay[] = [
-                    'type' => 'discrepancy', 'bordereau_line_info' => $rawLineData,
+                    'type' => 'discrepancy',
+                    'bordereau_line_info' => $rawLineData,
                     'details' => "Ligne n°" . ($rowIndex + 2) . ": Anomalie(s) - " . implode(', ', $discrepancies),
                     'financial_gaps' => $financialGaps,
                     'actions' => [['label' => 'Mettre à jour', 'event' => 'bordereau:update-avenant', 'payload' => ['avenant_id' => $avenant->getId(), 'excel_data' => $rawLineData]]],
                 ];
             } else {
                 $chunkResultsToStore[] = [
-                    'type' => 'match', 'row_index' => $rowIndex, 'reference_police' => $refPolice, 'avenant_id' => $avenant->getId(),
+                    'type' => 'match',
+                    'row_index' => $rowIndex,
+                    'reference_police' => $refPolice,
+                    'avenant_id' => $avenant->getId(),
                 ];
                 $chunkResultsForDisplay[] = [
-                    'type' => 'match', 'bordereau_line_info' => $rawLineData,
+                    'type' => 'match',
+                    'bordereau_line_info' => $rawLineData,
                     'details' => "Ligne n°" . ($rowIndex + 2) . ": Correspondance parfaite.",
                     'actions' => [],
                 ];
@@ -705,8 +718,8 @@ class BordereauController extends AbstractController
         $chunkHtml = [];
         foreach ($chunkResultsForDisplay as $i => $result) {
             $chunkHtml[] = $this->renderView('components/_analysis_result_item.html.twig', [
-                'result' => $result, 
-                'bordereau_id' => $bordereau->getId(), 
+                'result' => $result,
+                'bordereau_id' => $bordereau->getId(),
                 'loop' => ['index' => $offset + $i],
                 'viewData' => [
                     'display_currency_code' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
@@ -735,13 +748,16 @@ class BordereauController extends AbstractController
                 'new'         => count(array_filter($accumulated, fn($r) => $r['type'] === 'new')),
                 'total_prime_ttc'      => 0.0,
                 'total_commission_ht'  => 0.0,
-                'total_taxe'           => 0.0,
+                'total_taxe'           => 0.0, // Initialize total_taxe
             ];
 
-            foreach ($allRows as $row) {
-                $stats['total_prime_ttc']     += (float)($this->parseExcelValue($row[$mappedColumns['prime_ttc'] ?? ''] ?? 0, 'prime_ttc'));
-                $stats['total_commission_ht'] += (float)($this->parseExcelValue($row[$mappedColumns['commission_ht_assureur'] ?? ''] ?? 0, 'commission_ht_assureur'));
-                $stats['total_taxe']          += (float)($this->parseExcelValue($row[$mappedColumns['taxe_commission_assureur'] ?? ''] ?? 0, 'taxe_commission_assureur'));
+            // Recalculate financial totals from the original raw data for all processed rows
+            // This ensures stats are consistent with the full dataset, not just the current chunk
+            foreach (array_slice($allRows, 0, $offset + count($chunk)) as $row) {
+                // Ensure mappedColumns keys exist before accessing
+                $stats['total_prime_ttc']     += (float)($this->parseExcelValue($row[$mappedColumns['prime_ttc']] ?? 0, 'prime_ttc'));
+                $stats['total_commission_ht'] += (float)($this->parseExcelValue($row[$mappedColumns['commission_ht_assureur']] ?? 0, 'commission_ht_assureur'));
+                $stats['total_taxe']          += (float)($this->parseExcelValue($row[$mappedColumns['taxe_commission_assureur']] ?? 0, 'taxe_commission_assureur'));
             }
             $stats['total_commission_ttc'] = round($stats['total_commission_ht'] + $stats['total_taxe'], 2);
 
@@ -750,15 +766,16 @@ class BordereauController extends AbstractController
             $bordereau->setUpdatedAt(new \DateTimeImmutable());
             $this->em->persist($bordereau);
             $this->em->flush();
-            $request->getSession()->remove($sessionKey);
-        } else {
-            $sessionData['accumulatedResults'] = $accumulated;
-            $request->getSession()->set($sessionKey, $sessionData);
         }
 
+        // Always update session data and return stats
+        $request->getSession()->set($sessionKey, $sessionData);
         return $this->json([
-            'chunkResultsHtml' => $chunkHtml, 'chunkResultsStore' => $chunkResultsToStore,
-            'processedCount' => $offset + count($chunk), 'totalRows' => $totalRows, 'isLastChunk' => $isLastChunk,
+            'chunkResultsHtml' => $chunkHtml,
+            'chunkResultsStore' => $chunkResultsToStore,
+            'processedCount' => $offset + count($chunk),
+            'totalRows' => $totalRows,
+            'isLastChunk' => $isLastChunk,
             'stats' => $stats
         ]);
     }
@@ -775,7 +792,8 @@ class BordereauController extends AbstractController
             if ($doc->getNomFichierStocke()) {
                 $ext = pathinfo($doc->getNomFichierStocke(), PATHINFO_EXTENSION);
                 if (in_array(strtolower($ext), $allowedExtensions)) {
-                    $excelDocument = $doc; break;
+                    $excelDocument = $doc;
+                    break;
                 }
             }
         }
@@ -789,7 +807,8 @@ class BordereauController extends AbstractController
             $worksheet   = $spreadsheet->getSheetByName($sheetName);
             if (!$worksheet) return $this->json(['error' => "Feuille '$sheetName' introuvable."], 400);
             $data = $worksheet->toArray(null, true, false, true);
-            array_shift($data); return $data;
+            array_shift($data);
+            return $data;
         } catch (ReaderException $e) {
             return $this->json(['error' => "Erreur lecture Excel : " . $e->getMessage()], 500);
         }
@@ -827,7 +846,9 @@ class BordereauController extends AbstractController
 
         dump('saveAnalysisState: Bordereau mis à jour avant persistance:', [
             'selectedSheetName' => $bordereau->getSelectedSheetName(),
-            'mappedColumns' => $bordereau->getMappedColumns(), 'analysisResults' => $bordereau->getAnalysisResults(), 'currentAnalysisStep' => $bordereau->getCurrentAnalysisStep()
+            'mappedColumns' => $bordereau->getMappedColumns(),
+            'analysisResults' => $bordereau->getAnalysisResults(),
+            'currentAnalysisStep' => $bordereau->getCurrentAnalysisStep()
         ]);
 
         $this->em->persist($bordereau);
