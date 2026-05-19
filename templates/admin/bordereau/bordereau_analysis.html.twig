@@ -45,84 +45,94 @@
     data-bordereau-analysis-current-analysis-step-value="{{ currentAnalysisStep|default(0) }}"
 >
 
-    <div class="actions-bar sticky-top">
-        {# NOUVEAU : Barre de progression pour l'analyse #}
+    <div class="actions-bar sticky-top d-flex flex-column">
+
+        {# Barre principale : titre gauche + actions droite #}
+        <div class="d-flex align-items-center justify-content-between w-100 px-3 py-2">
+
+            {# Bloc titre — gauche #}
+            <div class="d-flex align-items-center gap-2 toolbar-title">
+                <twig:UX:Icon name="lucide:file-search" width="18px" height="18px" 
+                              class="text-white opacity-75" 
+                              data-bordereau-analysis-target="toolbarTitleIconPrepare" />
+                <twig:UX:Icon name="lucide:file-check" width="18px" height="18px" 
+                              class="text-white opacity-75 d-none" 
+                              data-bordereau-analysis-target="toolbarTitleIconSuccess" />
+                <span class="fw-bold text-white text-truncate" style="max-width: 280px;">
+                    Analyse — {{ bordereau.reference }}
+                </span>
+            </div>
+
+            {# Bloc actions — droite #}
+            <div class="d-flex align-items-center gap-2" data-bordereau-analysis-target="actionsBlock">
+                {# ── ÉTAPE 2 : Retour + Lancer l'analyse ── #}
+                <button type="button"
+                        class="btn btn-secondary d-inline-flex align-items-center gap-2 d-none"
+                        data-bordereau-analysis-target="backToMappingButton"
+                        data-action="click->bordereau-analysis#showStep"
+                        data-step-number="1"
+                        data-controller="ripple">
+                    <twig:UX:Icon name="lucide:arrow-left-circle" width="18px" height="18px" />
+                    <span>Retour</span>
+                </button>
+
+                <button type="submit"
+                        class="btn btn-primary d-inline-flex align-items-center gap-2 d-none"
+                        data-bordereau-analysis-target="submitButton"
+                        data-action="click->bordereau-analysis#submitAnalysis"
+                        data-controller="ripple">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:analyser') }}" width="18px" height="18px" />
+                    <span>Lancer l'analyse</span>
+                </button>
+
+                {# ── ÉTAPE 3 : Valider + Retour au mappage ── #}
+                <button type="button"
+                        class="btn btn-success d-inline-flex align-items-center gap-2 d-none"
+                        data-bordereau-analysis-target="validateButton"
+                        data-action="click->bordereau-analysis#validateBordereau"
+                        data-controller="ripple">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:completed') }}" width="18px" height="18px" />
+                    <span>Valider le bordereau</span>
+                </button>
+
+                <button type="button"
+                        class="btn btn-secondary d-inline-flex align-items-center gap-2 d-none"
+                        data-bordereau-analysis-target="backToMappingButton"
+                        data-action="click->bordereau-analysis#showStep"
+                        data-step-number="2"
+                        data-controller="ripple">
+                    <twig:UX:Icon name="lucide:arrow-left-circle" width="18px" height="18px" />
+                    <span>Retour au mappage</span>
+                </button>
+
+                {# ── Dropdown "options" ── #}
+                <div class="dropdown">
+                    <button class="btn btn-icon d-inline-flex align-items-center justify-content-center"
+                            data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="Plus d'options">
+                        <twig:UX:Icon name="lucide:more-vertical" width="18px" height="18px" class="text-white" />
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow" data-bordereau-analysis-target="optionsMenu">
+                        <li><button class="dropdown-item d-inline-flex align-items-center gap-2" onclick="window.print()"><twig:UX:Icon name="lucide:printer" width="16px" height="16px" /><span>Imprimer</span></button></li>
+                        <li data-bordereau-analysis-target="exportPdfItem" class="d-none"><a href="{{ path('admin.bordereau.api.export_analysis_pdf', {'id': bordereau.id}) }}" class="dropdown-item d-inline-flex align-items-center gap-2"><twig:UX:Icon name="{{ resolve_icon_name('action:download') }}" width="16px" height="16px" /><span>Exporter le rapport PDF</span></a></li>
+                        <li data-bordereau-analysis-target="bulkDivider" class="d-none"><hr class="dropdown-divider"></li>
+                        <li data-bordereau-analysis-target="bulkCreateItem" class="d-none"><button class="dropdown-item d-inline-flex align-items-center gap-2" data-action="click->bordereau-analysis#bulkCreateAll"><twig:UX:Icon name="{{ resolve_icon_name('action:add') }}" width="16px" height="16px" /><span>Créer tous les avenants</span></button></li>
+                        <li data-bordereau-analysis-target="bulkUpdateItem" class="d-none"><button class="dropdown-item d-inline-flex align-items-center gap-2" data-action="click->bordereau-analysis#bulkUpdateAll"><twig:UX:Icon name="{{ resolve_icon_name('action:edit') }}" width="16px" height="16px" /><span>Mettre à jour tous les avenants</span></button></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><button class="dropdown-item d-inline-flex align-items-center gap-2" onclick="window.close()"><twig:UX:Icon name="lucide:x-circle" width="16px" height="16px" /><span>Fermer</span></button></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        {# Barre de progression #}
         <div class="toolbar-progress-bar-container" data-bordereau-analysis-target="progressBarContainer">
             <div class="toolbar-progress-bar" data-bordereau-analysis-target="progressBar"></div>
         </div>
-        <div class="d-flex justify-content-center align-items-center w-100 gap-2">
-            {# Le bouton de retour ferme simplement la fenêtre, comme dans note_preview #}
-            <button class="btn btn-light d-inline-flex align-items-center gap-2" data-controller="ripple" onclick="window.close()">
-                <twig:UX:Icon name="lucide:arrow-left" width="18px" height="18px" />
-                <span>Retour</span>
-            </button>
-            <button class="btn btn-secondary d-inline-flex align-items-center gap-2" data-controller="ripple" onclick="window.print()">
-                <twig:UX:Icon name="lucide:printer" width="18px" height="18px" />
-                <span>Imprimer</span>
-            </button>
-            {# NOUVEAU : Bouton pour retourner à l'étape de mappage, masqué par défaut #}
-            <button type="button"
-                    class="btn btn-secondary d-inline-flex align-items-center gap-2 d-none"
-                    data-bordereau-analysis-target="backToMappingButton"
-                    data-action="click->bordereau-analysis#showStep"
-                    data-step-number="2"
-                    data-controller="ripple">
-                <twig:UX:Icon name="lucide:arrow-left-circle" width="18px" height="18px" />
-                <span>Retour au mappage</span>
-            </button>
-            {# NOUVEAU : Bouton "Lancer l'analyse" déplacé ici, masqué par défaut #}
-            <button type="submit"
-                    class="btn btn-primary d-inline-flex align-items-center gap-2 d-none" {# Initialement masqué #}
-                    data-bordereau-analysis-target="submitButton" data-action="click->bordereau-analysis#submitAnalysis"
-                    data-controller="ripple">
-                <twig:UX:Icon name="{{ resolve_icon_name('action:analyser') }}" width="18px" height="18px" />
-                <span>Lancer l'analyse</span>
-            </button>
-            {# NOUVEAU : Bouton d'export PDF, visible uniquement à l'étape 3 #}
-            <a href="{{ path('admin.bordereau.api.export_analysis_pdf', {'id': bordereau.id}) }}"
-               class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
-               data-bordereau-analysis-target="exportPdfButton"
-               style="display:none !important;">
-                <twig:UX:Icon name="{{ resolve_icon_name('action:download') }}" width="18px" height="18px" />
-                <span>Exporter PDF</span>
-            </a>
-            {# NOUVEAU : Bouton "Valider le bordereau", masqué par défaut,
-               s'active quand tous les résultats new et discrepancy sont traités #}
-            <button type="button"
-                    class="btn btn-success d-inline-flex align-items-center gap-2 d-none"
-                    data-bordereau-analysis-target="validateButton"
-                    data-action="click->bordereau-analysis#validateBordereau"
-                    data-controller="ripple"
-                    disabled>
-                <twig:UX:Icon name="{{ resolve_icon_name('action:completed') }}" width="18px" height="18px" />
-                <span>Valider le bordereau</span>
-            </button>
 
-            {# NOUVEAU : Bouton "Créer tous les avenants", visible uniquement à l'étape 3 #}
-            <button type="button"
-                    class="btn btn-info d-inline-flex align-items-center gap-2 d-none"
-                    data-bordereau-analysis-target="bulkCreateButton"
-                    data-action="click->bordereau-analysis#bulkCreateAll"
-                    data-controller="ripple"
-                    disabled>
-                <twig:UX:Icon name="{{ resolve_icon_name('action:add') }}" width="18px" height="18px" />
-                <span>Créer tous les avenants</span>
-            </button>
-
-            {# NOUVEAU : Bouton "Mettre à jour tous les avenants", visible uniquement à l'étape 3 #}
-            <button type="button"
-                    class="btn btn-warning d-inline-flex align-items-center gap-2 d-none"
-                    data-bordereau-analysis-target="bulkUpdateButton"
-                    data-action="click->bordereau-analysis#bulkUpdateAll"
-                    data-controller="ripple"
-                    disabled>
-                <twig:UX:Icon name="{{ resolve_icon_name('action:edit') }}" width="18px" height="18px" />
-                <span>Mettre à jour tous les avenants</span>
-            </button>
-        </div>
-        {# NOUVEAU : Le feedback est déplacé ici, masqué par défaut #}
-        <div data-bordereau-analysis-target="mappingStatusFeedback" class="text-white small mt-2 mb-0 d-none" role="alert">
-            Chargement du statut de mappage...
+        {# Feedback #}
+        <div data-bordereau-analysis-target="mappingStatusFeedback"
+             class="small mt-1 mb-1 text-center d-none"
+             role="status" aria-live="polite">
         </div>
     </div>
 
