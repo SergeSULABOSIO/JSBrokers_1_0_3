@@ -1633,15 +1633,32 @@ textarea:hover,
 }
 
 /* NOUVEAU : Forcer la couleur blanche pour tous les feedbacks dans la barre d'outils */
+/* Feedback de la barre d'outils : 3 couleurs autorisées uniquement */
 .actions-bar [data-bordereau-analysis-target="mappingStatusFeedback"] {
-    color: white !important;
-    font-size: 1.2em; /* Augmenter la taille de 20% (1em * 1.2 = 1.2em) */
-    display: flex; /* Utiliser flexbox pour aligner le texte sans icône */
+    font-size: 0.9rem;
+    display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0; /* Pas d'espace pour les icônes */
+    gap: 0;
 }
 
+.toolbar-feedback-info    { color: #ced4da; }   /* gris clair */
+.toolbar-feedback-error   { color: #ff6b6b; }   /* rouge clair */
+.toolbar-feedback-warning { color: #ffc107; }   /* jaune Bootstrap */
+
+.toolbar-title {
+    min-width: 0;
+}
+
+.btn-icon {
+    background: transparent;
+    border: none;
+    padding: 5px;
+    color: white;
+}
+.btn-icon:hover {
+    background: rgba(255,255,255,0.1);
+}
 
 /* Vous pouvez ajouter des styles spécifiques pour les listes de résultats si nécessaire */
 

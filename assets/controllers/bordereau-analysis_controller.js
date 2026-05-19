@@ -9,7 +9,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
     static targets = [ // NOUVEAU : Ajout de la cible pour le bouton de retour
         "sheetSelection", "step2", "mappingContainer", "mappingStatusFeedback", "mappingForm",
         "mappingSelect", "analysisResult", "submitButton", "columnNameText", "step1", "step3", "analysisResultsList", "progressBar", "progressBarContainer", "analysisSummary", "validateButton",
-        "backToMappingButton", "exportPdfButton", "bulkCreateButton", "bulkUpdateButton"
+        "backToMappingButton", "actionsBlock", "optionsMenu", "exportPdfItem", "bulkCreateItem", "bulkUpdateItem", "bulkDivider",
+        "toolbarTitleIconPrepare", "toolbarTitleIconSuccess"
     ];
 
     static values = {
@@ -560,26 +561,27 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         if (this.hasSubmitButtonTarget) {
             this.submitButtonTarget.classList.add('d-none');
         }
-        if (this.hasBackToMappingButtonTarget) {
-            this.backToMappingButtonTarget.classList.add('d-none');
-        }
+        this.backToMappingButtonTargets.forEach(btn => btn.classList.add('d-none'));
         if (this.hasValidateButtonTarget) {
             this.validateButtonTarget.classList.add('d-none');
         }
-        if (this.hasExportPdfButtonTarget) {
-            this.exportPdfButtonTarget.classList.add('d-none');
-        }
-        if (this.hasBulkCreateButtonTarget) {
-            this.bulkCreateButtonTarget.classList.add('d-none');
-        }
-        if (this.hasBulkUpdateButtonTarget) {
-            this.bulkUpdateButtonTarget.classList.add('d-none');
-        }
+        if (this.hasExportPdfItemTarget) this.exportPdfItemTarget.classList.add('d-none');
+        if (this.hasBulkCreateItemTarget) this.bulkCreateItemTarget.classList.add('d-none');
+        if (this.hasBulkUpdateItemTarget) this.bulkUpdateItemTarget.classList.add('d-none');
+        if (this.hasBulkDividerTarget) this.bulkDividerTarget.classList.add('d-none');
 
         // --- 3. Réinitialiser le feedback ---
         if (this.hasMappingStatusFeedbackTarget) {
             this.mappingStatusFeedbackTarget.innerHTML = '';
             this.mappingStatusFeedbackTarget.classList.add('d-none');
+        }
+
+        // --- 4. Mise à jour de l'icône du titre ---
+        if (this.hasToolbarTitleIconPrepareTarget) {
+            this.toolbarTitleIconPrepareTarget.classList.toggle('d-none', this.currentStep === 3);
+        }
+        if (this.hasToolbarTitleIconSuccessTarget) {
+            this.toolbarTitleIconSuccessTarget.classList.toggle('d-none', this.currentStep !== 3);
         }
 
         // --- 4. Afficher le contenu et les boutons de l'étape active ---
@@ -596,44 +598,33 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             if (this.hasSubmitButtonTarget) {
                 this.submitButtonTarget.classList.remove('d-none');
             }
-            if (this.hasMappingStatusFeedbackTarget) {
-                this.mappingStatusFeedbackTarget.classList.remove('d-none');
-            }
+            this.backToMappingButtonTargets.forEach(btn => {
+                if (parseInt(btn.dataset.stepNumber) === 1) btn.classList.remove('d-none');
+            });
 
             this._showMappingUI(
                 sheetName ||
                 this.sheetSelectionTargets.find(radio => radio.checked)?.value
             );
 
+            if (this.hasMappingStatusFeedbackTarget) {
+                this.mappingStatusFeedbackTarget.classList.remove('d-none');
+            }
+
         } else if (this.currentStep === 3) {
 
-            // ÉTAPE 3 : "Retour au mappage" + "Exporter PDF" toujours visibles
-            // "Valider" : visible mais son état actif/inactif est géré par
-            //             _updateValidateButtonState()
+            // ÉTAPE 3
             this.step3Target.classList.remove('d-none');
 
-            if (this.hasBackToMappingButtonTarget) {
-                this.backToMappingButtonTarget.classList.remove('d-none');
-                this.backToMappingButtonTarget.disabled = this.isBulkProcessingValue; // NOUVEAU
-            }
-            if (this.hasExportPdfButtonTarget) {
-                this.exportPdfButtonTarget.classList.remove('d-none');
-                this.exportPdfButtonTarget.disabled = this.isBulkProcessingValue; // NOUVEAU
-            }
-            // Afficher les boutons en lot uniquement si des items actionnables existent.
-            // L'état actif/inactif sera géré par _updateBulkButtonsState().
-            if (this.hasBulkCreateButtonTarget) {
-                this.bulkCreateButtonTarget.classList.remove('d-none');
-            }
-            if (this.hasBulkUpdateButtonTarget) {
-                this.bulkUpdateButtonTarget.classList.remove('d-none');
-            }
+            this.backToMappingButtonTargets.forEach(btn => {
+                if (parseInt(btn.dataset.stepNumber) === 2) {
+                    btn.classList.remove('d-none');
+                    btn.disabled = this.isBulkProcessingValue;
+                }
+            });
 
-            // Le bouton Valider est rendu visible ici mais désactivé par défaut.
-            // _updateValidateButtonState() décidera s'il doit être actif.
-            if (this.hasValidateButtonTarget) {
-                this.validateButtonTarget.classList.remove('d-none');
-                this.validateButtonTarget.disabled = true; // Désactivé jusqu'à évaluation
+            if (this.hasExportPdfItemTarget) {
+                this.exportPdfItemTarget.classList.remove('d-none');
             }
 
             // Rendre le récapitulatif et les résultats
@@ -846,16 +837,21 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                     : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-circle-fill me-1" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z"/></svg>');
         }
 
-        let textColorClass = '';
-        if (type === 'success') {
-            textColorClass = 'text-success';
-        } else if (type === 'warning') {
-            textColorClass = 'text-warning'; // Rendre le texte d'avertissement jaune pour les feedbacks hors toolbar
-        } else { // error
-            textColorClass = 'text-danger';
+        // 3 couleurs uniquement dans la barre d'outils sombre
+        const colorMap = {
+            'success': 'toolbar-feedback-info',    // confirmation → gris clair (pas de vert)
+            'warning': 'toolbar-feedback-warning', // avertissement → jaune
+            'error':   'toolbar-feedback-error',   // erreur → rouge clair
+            'info':    'toolbar-feedback-info',    // information → gris clair
+        };
+        const textColorClass = colorMap[type] ?? 'toolbar-feedback-info';
+
+        // Update accessibility attributes
+        if (this.hasMappingStatusFeedbackTarget) {
+            this.mappingStatusFeedbackTarget.role = (type === 'error') ? 'alert' : 'status';
+            this.mappingStatusFeedbackTarget.setAttribute('aria-live', (type === 'error') ? 'assertive' : 'polite');
         }
 
-        // Le CSS pour .actions-bar override la couleur pour le feedback de la toolbar.
         return `<span class="d-inline-flex align-items-center small ${textColorClass}">${iconHtml} ${message}</span>`;
     }
 
@@ -1161,15 +1157,13 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         console.log(`[BordereauAnalysis] _updateValidateButtonState() - Actionnables: ${totalActionable}, Résolus: ${totalResolved}, Tous résolus: ${allResolved}`);
 
-        // Activer ou désactiver le bouton Valider
-        // (sa visibilité est gérée exclusivement par showStep())
-        this.validateButtonTarget.disabled = !allResolved;
+        // On affiche le bouton seulement quand il est actionnable — jamais disabled
+        this.validateButtonTarget.classList.toggle('d-none', !allResolved);
     }
 
     /**
      * Évalue si les boutons de traitement en lot doivent être actifs.
-     * - bulkCreateButton  : actif s'il reste au moins un item "new" non résolu
-     * - bulkUpdateButton  : actif s'il reste au moins un item "discrepancy" non résolu
+     * Les items du dropdown sont masqués quand il n'y a rien à traiter.
      */
     _updateBulkButtonsState() {
         if (!this.hasAnalysisResultsListTarget) return;
@@ -1191,11 +1185,15 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             }
         });
     
-        if (this.hasBulkCreateButtonTarget) {
-            this.bulkCreateButtonTarget.disabled = (pendingNew === 0);
+        if (this.hasBulkCreateItemTarget) {
+            this.bulkCreateItemTarget.classList.toggle('d-none', pendingNew === 0);
         }
-        if (this.hasBulkUpdateButtonTarget) {
-            this.bulkUpdateButtonTarget.disabled = (pendingDiscrepancy === 0);
+        if (this.hasBulkUpdateItemTarget) {
+            this.bulkUpdateItemTarget.classList.toggle('d-none', pendingDiscrepancy === 0);
+        }
+        // Masquer le séparateur si les deux items en lot sont cachés
+        if (this.hasBulkDividerTarget) {
+            this.bulkDividerTarget.classList.toggle('d-none', pendingNew === 0 && pendingDiscrepancy === 0);
         }
     }
 
@@ -1400,14 +1398,13 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             'Cette action traitera tous les items "Nouvel avenant détecté".'
         )) return;
 
-        if (this.hasBulkCreateButtonTarget) {
+        if (this.hasBulkCreateItemTarget) {
             // NOUVEAU : Désactiver tous les boutons pertinents au début du traitement en lot
             this.isBulkProcessingValue = true;
             this.toggleProgressBar(true);
             this._updateBulkButtonsState();
             this._updateValidateButtonState();
-            this.bulkCreateButtonTarget.disabled = true;
-            this.bulkCreateButtonTarget.querySelector('span').textContent = 'Création en cours...';
+            this.bulkCreateItemTarget.querySelector('button').disabled = true;
         }
 
         const allItems = this.analysisResultsListTarget.querySelectorAll(
@@ -1495,9 +1492,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         );
 
         // Rétablir le libellé du bouton
-        if (this.hasBulkCreateButtonTarget) {
-            this.bulkCreateButtonTarget.querySelector('span').textContent =
-                'Créer tous les avenants';
+        if (this.hasBulkCreateItemTarget) {
+            this.bulkCreateItemTarget.querySelector('button').disabled = false;
         }
 
         // Réévaluer l'état de tous les boutons
@@ -1535,14 +1531,13 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             'Cette action traitera tous les items "Anomalie(s) détectée(s)".'
         )) return;
 
-        if (this.hasBulkUpdateButtonTarget) {
+        if (this.hasBulkUpdateItemTarget) {
             // NOUVEAU : Désactiver tous les boutons pertinents au début du traitement en lot
             this.isBulkProcessingValue = true;
             this.toggleProgressBar(true);
             this._updateBulkButtonsState();
             this._updateValidateButtonState();
-            this.bulkUpdateButtonTarget.disabled = true;
-            this.bulkUpdateButtonTarget.querySelector('span').textContent = 'Mise à jour en cours...';
+            this.bulkUpdateItemTarget.querySelector('button').disabled = true;
         }
 
         const allItems = this.analysisResultsListTarget.querySelectorAll(
@@ -1628,9 +1623,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             `Traités: ${processed}, Erreurs: ${errors}`
         );
 
-        if (this.hasBulkUpdateButtonTarget) {
-            this.bulkUpdateButtonTarget.querySelector('span').textContent =
-                'Mettre à jour tous les avenants';
+        if (this.hasBulkUpdateItemTarget) {
+            this.bulkUpdateItemTarget.querySelector('button').disabled = false;
         }
 
         this._updateBulkButtonsState();
@@ -1666,6 +1660,13 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         this.submitButtonTarget.disabled = false; // Réactiver le bouton
         this.mappingStatusFeedbackTarget.classList.remove('d-none'); // Ensure feedback is visible
         this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('error', `Échec de l'analyse: ${errorMessage}`, false); // No icon for toolbar feedback
+        
+        // Update accessibility attributes for error
+        if (this.hasMappingStatusFeedbackTarget) {
+            this.mappingStatusFeedbackTarget.role = "alert";
+            this.mappingStatusFeedbackTarget.setAttribute('aria-live', 'assertive');
+        }
+
         this.toggleProgressBar(false);
     }
 
