@@ -1660,6 +1660,14 @@ textarea:hover,
     background: rgba(255,255,255,0.1);
 }
 
+/* Options de barre d'outils : Sobriété au survol */
+.actions-bar .dropdown-item:hover {
+    background-color: #f8f9fa !important; /* Gris très clair */
+    font-weight: normal !important;        /* Pas de gras au survol */
+    color: #212529 !important;             /* Couleur texte standard Bootstrap */
+    transition: background-color 0.2s ease;
+}
+
 /* Vous pouvez ajouter des styles spécifiques pour les listes de résultats si nécessaire */
 
 /* ================================================================== */
