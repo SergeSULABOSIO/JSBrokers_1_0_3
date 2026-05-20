@@ -17,6 +17,7 @@ use App\Repository\InviteRepository;
 use App\Repository\ChargementRepository;
 use App\Services\Canvas\CalculationProvider;
 use App\Services\ServiceMonnaies;
+use App\Service\AvenantActionService;
 use App\Services\CanvasBuilder;
 use App\Services\JSBDynamicSearchService;
 use DateTimeImmutable;
@@ -59,7 +60,8 @@ class BordereauController extends AbstractController
         private CalculationProvider $calculationProvider,
         CanvasBuilder $canvasBuilder, // Inject CanvasBuilder without property promotion
         private AvenantRepository $avenantRepository, // NOUVEAU : Ajout du repository Avenant
-        private ServiceMonnaies $serviceMonnaies // NOUVEAU : Pour la monnaie d'affichage
+        private ServiceMonnaies $serviceMonnaies, // NOUVEAU : Pour la monnaie d'affichage
+        private AvenantActionService $avenantActionService // NOUVEAU : Service pour traiter les actions
     ) {
         // Assign the injected CanvasBuilder to the property declared in the trait
         $this->canvasBuilder = $canvasBuilder;
@@ -878,24 +880,30 @@ class BordereauController extends AbstractController
 
         $data = json_decode($request->getContent(), true);
         $actionType  = $data['action_type'] ?? null;  // 'new' ou 'discrepancy'
-        $rowIndex    = $data['row_index'] ?? null;
-        $refPolice   = $data['reference_police'] ?? null;
+        $excelData   = $data['excel_data'] ?? [];
+        $invite      = $this->getInvite();
 
-        // TODO: Ici sera insérée la vraie logique métier selon $actionType :
-        //   - Si 'new'         : créer l'avenant depuis $data['excel_data']
-        //   - Si 'discrepancy' : mettre à jour l'avenant $data['avenant_id']
-        //                        avec les données de $data['excel_data']
-        // Pour l'instant, on simule un succès immédiat.
+        try {
+            if ($actionType === 'new') {
+                $avenant = $this->avenantActionService->createFromBordereauLine($excelData, $bordereau, $invite);
+                $message = sprintf('Ligne n°%s : Avenant n°%s créé avec succès.', ($data['row_index'] + 2), $avenant->getReferencePolice());
+            } elseif ($actionType === 'discrepancy') {
+                $avenant = $this->avenantRepository->find($data['avenant_id']);
+                if (!$avenant) throw new \Exception("Avenant introuvable.");
+                $this->avenantActionService->updateFromBordereauLine($avenant, $excelData, $bordereau);
+                $message = sprintf('Ligne n°%s : Avenant n°%s mis à jour avec succès.', ($data['row_index'] + 2), $avenant->getReferencePolice());
+            } else {
+                return $this->json(['success' => false, 'message' => 'Action inconnue.'], 400);
+            }
 
-        return $this->json([
-            'success'          => true,
-            'message'          => sprintf(
-                'Simulation : ligne n°%s (police %s) traitée avec succès.',
-                ($rowIndex + 2),
-                $refPolice
-            ),
-            'resolved_row_index' => $rowIndex,
-        ]);
+            return $this->json([
+                'success' => true,
+                'message' => $message,
+                'resolved_row_index' => $data['row_index'],
+            ]);
+        } catch (\Exception $e) {
+            return $this->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -925,6 +933,7 @@ class BordereauController extends AbstractController
 
         $body  = json_decode($request->getContent(), true);
         $items = $body['items'] ?? []; // Tableau des actions à traiter
+        $invite = $this->getInvite();
 
         if (empty($items)) {
             return $this->json([
@@ -938,25 +947,35 @@ class BordereauController extends AbstractController
         foreach ($items as $item) {
             $actionType    = $item['action_type']      ?? null;
             $rowIndex      = $item['row_index']         ?? null;
-            $refPolice     = $item['reference_police']  ?? null;
             $avenantId     = $item['avenant_id']        ?? null;
+            $excelData     = $item['excel_data']        ?? [];
 
-            // TODO: Ici sera insérée la vraie logique métier selon $actionType :
-            //   - Si 'new'         : créer l'avenant depuis $item['excel_data']
-            //   - Si 'discrepancy' : mettre à jour l'avenant $avenantId
-            //                        avec les données de $item['excel_data']
-            // Pour l'instant, on simule un succès immédiat pour chaque item.
+            try {
+                if ($actionType === 'new') {
+                    $avenant = $this->avenantActionService->createFromBordereauLine($excelData, $bordereau, $invite);
+                    $msg = sprintf('Ligne n°%s : Avenant n°%s créé.', ($rowIndex + 2), $avenant->getReferencePolice());
+                } elseif ($actionType === 'discrepancy') {
+                    $avenant = $this->avenantRepository->find($avenantId);
+                    if (!$avenant) throw new \Exception("Avenant introuvable.");
+                    $this->avenantActionService->updateFromBordereauLine($avenant, $excelData, $bordereau);
+                    $msg = sprintf('Ligne n°%s : Avenant n°%s mis à jour.', ($rowIndex + 2), $avenant->getReferencePolice());
+                } else {
+                    throw new \Exception("Action inconnue.");
+                }
 
-            $results[] = [
-                'success'          => true,
-                'row_index'        => $rowIndex,
-                'reference_police' => $refPolice,
-                'message'          => sprintf(
-                    'Simulation : ligne n°%s (police %s) traitée avec succès.',
-                    ($rowIndex !== null ? $rowIndex + 2 : '?'),
-                    $refPolice ?? '—'
-                ),
-            ];
+                $results[] = [
+                    'success'          => true,
+                    'row_index'        => $rowIndex,
+                    'reference_police' => $avenant->getReferencePolice(),
+                    'message'          => $msg,
+                ];
+            } catch (\Exception $e) {
+                $results[] = [
+                    'success'   => false,
+                    'row_index' => $rowIndex,
+                    'message'   => $e->getMessage(),
+                ];
+            }
         }
 
         $successCount = count(array_filter($results, fn($r) => $r['success']));
