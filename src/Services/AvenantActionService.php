@@ -10,6 +10,7 @@ use App\Entity\Cotation;
 use App\Entity\Invite;
 use App\Entity\Piste;
 use App\Entity\RevenuPourCourtier;
+use App\Entity\Risque;
 use App\Entity\Tranche;
 use App\Entity\TypeRevenu;
 use App\Repository\ChargementRepository;
@@ -58,8 +59,33 @@ class AvenantActionService
 
         // ÉTAPE 2 — Résolution du Risque
         $risque = null;
-        if (!empty($excelData['risque'])) {
-            $risque = $this->risqueRepository->findOneBy(['nomComplet' => $excelData['risque']]);
+        $risqueRawValue = $excelData['risque'] ?? null;
+
+        if (!empty($risqueRawValue)) {
+            $searchValue = trim($risqueRawValue);
+
+            // Tentative 1 : Match exact sur le nom complet
+            $risque = $this->risqueRepository->findOneBy(['nomComplet' => $searchValue]);
+
+            // Tentative 2 : Recherche si la valeur Excel est présente dans la liste des codes (abréviations)
+            if (!$risque) {
+                $risque = $this->risqueRepository->createQueryBuilder('r')
+                    ->where('r.code LIKE :val')
+                    ->setParameter('val', '%' . $searchValue . '%')
+                    ->setMaxResults(1)
+                    ->getQuery()
+                    ->getOneOrNullResult();
+            }
+
+            // Tentative 3 : Création automatique si le risque n'existe pas encore
+            if (!$risque) {
+                $risque = new Risque();
+                $risque->setNomComplet($searchValue);
+                $risque->setCode($searchValue);
+                $risque->setBranche(Risque::BRANCHE_IARD_OU_NON_VIE); // Valeur par défaut IARD
+                $risque->setImposable(true); // Par défaut imposable
+                $this->em->persist($risque);
+            }
         }
 
         // ÉTAPE 3 — Résolution ou création de la Piste
