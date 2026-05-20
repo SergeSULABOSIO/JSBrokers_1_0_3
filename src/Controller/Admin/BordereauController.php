@@ -591,6 +591,10 @@ class BordereauController extends AbstractController
         $allRows       = $sessionData['rows'];
         $mappedColumns = $sessionData['mappedColumns'];
         $totalRows     = $sessionData['totalRows'];
+        // Ensure 'reference_police' is mapped and available
+        if (!isset($mappedColumns['reference_police'])) {
+            return $this->json(['error' => 'Le mappage pour "N° de Police" est manquant dans la session.'], 400);
+        }
         $refPoliceColumn = $mappedColumns['reference_police'];
 
         $chunk = array_slice($allRows, $offset, $chunkSize);

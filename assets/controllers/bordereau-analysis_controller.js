@@ -685,7 +685,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this.updateSubmitButtonState();
             return;
         }
-
+ 
         const sheetData = this.sheetsDataValue[sheetName];
         if (!sheetData) {
             return;
@@ -769,11 +769,11 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         });
 
         if (invalidRows.length === 0) {
-            resultCell.innerHTML = this.getFeedbackHtml('success', 'Données valides !', true);
+            resultCell.innerHTML = this.getFeedbackHtml('success', 'Données valides !', true, false); //
             this.validationState.set(columnLetter, true);
         } else {
             const message = `Lignes invalides: ${invalidRows.slice(0, 5).join(', ')}${invalidRows.length > 5 ? '...' : ''}`;
-            resultCell.innerHTML = this.getFeedbackHtml('error', message);
+            resultCell.innerHTML = this.getFeedbackHtml('error', message, true, false); //
             this.validationState.set(columnLetter, false);
         }
         
@@ -827,7 +827,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * @param {boolean} [includeIcon=true] - NOUVEAU : Permet de contrôler l'affichage de l'icône.
      * @returns {string}
      */
-    getFeedbackHtml(type, message, includeIcon = true) {
+    getFeedbackHtml(type, message, includeIcon = true, isToolbarFeedback = false) {
         let iconHtml = '';
         if (includeIcon) {
             iconHtml = type === 'success'
@@ -836,15 +836,27 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                     ? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle-fill me-1" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg>'
                     : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-circle-fill me-1" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z"/></svg>');
         }
-
-        // 3 couleurs uniquement dans la barre d'outils sombre
-        const colorMap = {
-            'success': 'toolbar-feedback-info',    // confirmation → gris clair (pas de vert)
-            'warning': 'toolbar-feedback-warning', // avertissement → jaune
-            'error':   'toolbar-feedback-error',   // erreur → rouge clair
-            'info':    'toolbar-feedback-info',    // information → gris clair
-        };
-        const textColorClass = colorMap[type] ?? 'toolbar-feedback-info';
+        
+        let textColorClass;
+        if (isToolbarFeedback) {
+            // 3 couleurs uniquement dans la barre d'outils sombre
+            const toolbarColorMap = {
+                'success': 'toolbar-feedback-info',    // confirmation → gris clair (pas de vert)
+                'warning': 'toolbar-feedback-warning', // avertissement → jaune
+                'error':   'toolbar-feedback-error',   // erreur → rouge clair
+                'info':    'toolbar-feedback-info',    // information → gris clair
+            };
+            textColorClass = toolbarColorMap[type] ?? 'toolbar-feedback-info';
+        } else {
+            // Couleurs standard pour le contenu principal (fond clair)
+            const regularColorMap = {
+                'success': 'text-success',
+                'warning': 'text-warning',
+                'error':   'text-danger',
+                'info':    'text-info',
+            };
+            textColorClass = regularColorMap[type] ?? 'text-secondary';
+        }
 
         // Update accessibility attributes
         if (this.hasMappingStatusFeedbackTarget) {
@@ -923,7 +935,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         this.submitButtonTarget.disabled = true;
         this.submitButtonTarget.textContent = "Analyse en cours...";
         this.toggleProgressBar(true);
-        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml( //
             'warning', 'Initialisation de l\'analyse...', false
         );
 
@@ -960,7 +972,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             }
 
             console.log(`[BordereauAnalysis] submitAnalysis() - ${totalRows} lignes à traiter par lots de ${chunkSize}.`);
-            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml( //
                 'warning', `0 / ${totalRows} lignes analysées...`, false
             );
 
@@ -995,7 +1007,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
                 // Mettre à jour le feedback texte
                 this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
-                    'warning',
+                    'warning', //
                     `${Math.min(processed, totalRows)} / ${totalRows} lignes analysées...`,
                     false
                 );
@@ -1088,7 +1100,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         // Feedback de succès (après showStep car showStep vide le feedback)
         if (this.hasMappingStatusFeedbackTarget) {
             this.mappingStatusFeedbackTarget.classList.remove('d-none');
-            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml( //
                 'success', 'Analyse terminée avec succès.', false
             );
         }
@@ -1215,7 +1227,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         this.validateButtonTarget.disabled = true;
         this.toggleProgressBar(true);
-        this.mappingStatusFeedbackTarget.classList.remove('d-none');
+        this.mappingStatusFeedbackTarget.classList.remove('d-none'); //
         this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
             'warning', 'Validation en cours...', false
         );
@@ -1237,7 +1249,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
             // Succès : feedback visuel et désactivation définitive du bouton
             this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
-                'success', '✓ Bordereau validé avec succès !', false
+                'success', '✓ Bordereau validé avec succès !', false, true //
             );
             this.validateButtonTarget.textContent = '✓ Bordereau validé';
             this.validateButtonTarget.disabled = true;
@@ -1248,7 +1260,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         } catch (error) {
             console.error('[BordereauAnalysis] validateBordereau() - Erreur:', error);
             this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
-                'error', `Échec de la validation : ${error.message}`, false
+                'error', `Échec de la validation : ${error.message}`, false, true //
             );
             this.validateButtonTarget.disabled = false;
         } finally {
@@ -1412,7 +1424,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         const totalItemsToProcess = itemsToProcess.length;
         if (totalItemsToProcess === 0) {
-            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('info', 'Aucun nouvel avenant à créer.', false);
+            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('info', 'Aucun nouvel avenant à créer.', false, true); //
             this.toggleProgressBar(false);
             this.isBulkProcessingValue = false;
             this._updateBulkButtonsState();
@@ -1423,7 +1435,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         let errors    = 0;
 
         this.mappingStatusFeedbackTarget.classList.remove('d-none');
-        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml( //
             'warning', `Traitement en lot... 0/${totalItemsToProcess}. Veuillez patienter.`, false
         );
 
@@ -1476,7 +1488,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 const percentage = Math.round((processed / totalItemsToProcess) * 100);
                 this._updateProgressBarPercentage(percentage);
                 this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
-                    'warning', `Traitement en lot... ${processed}/${totalItemsToProcess}. Veuillez patienter.`, false
+                    'warning', `Traitement en lot... ${processed}/${totalItemsToProcess}. Veuillez patienter.`, false, true //
                 );
             }
         }
@@ -1500,7 +1512,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this.mappingStatusFeedbackTarget.classList.remove('d-none');
             const msg = errors > 0
                 ? `${processed} avenant(s) créé(s), ${errors} erreur(s).`
-                : `${processed} avenant(s) créé(s) avec succès.`;
+                : `${processed} avenant(s) créé(s) avec succès.`; //
             this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
                 errors > 0 ? 'warning' : 'success', msg, false
             );
@@ -1545,7 +1557,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         const totalItemsToProcess = itemsToProcess.length;
         if (totalItemsToProcess === 0) {
-            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('info', 'Aucune anomalie à mettre à jour.', false);
+            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('info', 'Aucune anomalie à mettre à jour.', false, true); //
             this.toggleProgressBar(false);
             this.isBulkProcessingValue = false;
             this._updateBulkButtonsState();
@@ -1556,7 +1568,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         let errors    = 0;
 
         this.mappingStatusFeedbackTarget.classList.remove('d-none');
-        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml( //
             'warning', `Traitement en lot... 0/${totalItemsToProcess}. Veuillez patienter.`, false
         );
 
@@ -1608,7 +1620,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 const percentage = Math.round((processed / totalItemsToProcess) * 100);
                 this._updateProgressBarPercentage(percentage);
                 this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
-                    'warning', `Traitement en lot... ${processed}/${totalItemsToProcess}. Veuillez patienter.`, false
+                    'warning', `Traitement en lot... ${processed}/${totalItemsToProcess}. Veuillez patienter.`, false, true //
                 );
             }
         }
@@ -1629,7 +1641,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this.mappingStatusFeedbackTarget.classList.remove('d-none');
             const msg = errors > 0
                 ? `${processed} avenant(s) mis à jour, ${errors} erreur(s).`
-                : `${processed} avenant(s) mis à jour avec succès.`;
+                : `${processed} avenant(s) mis à jour avec succès.`; //
             this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
                 errors > 0 ? 'warning' : 'success', msg, false
             );
