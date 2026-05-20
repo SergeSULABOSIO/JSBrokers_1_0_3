@@ -26,6 +26,7 @@ class RisqueType extends AbstractType
             ])
             ->add('code', TextType::class, [
                 'label' => "Code",
+                'help' => "Vous pouvez saisir plusieurs abréviations séparées par une virgule (,) ou un point-virgule (;).",
                 'attr' => [
                     'placeholder' => "Code",
                 ],

@@ -23,7 +23,7 @@ class Risque
     #[Groups(['list:read'])]
     private ?int $id = null;
 
-    #[ORM\Column(length: 6)]
+    #[ORM\Column(length: 255)]
     #[Groups(['list:read'])]
     private ?string $code = null;
 
