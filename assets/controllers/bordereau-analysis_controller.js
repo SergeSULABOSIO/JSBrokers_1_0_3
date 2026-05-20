@@ -906,6 +906,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         }
 
         this.mappingStatusFeedbackTarget.innerHTML = message;
+        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('info', message, false, true);
         // Appel redondant supprimé. La mise à jour se fait déjà aux moments clés.
     }
 
