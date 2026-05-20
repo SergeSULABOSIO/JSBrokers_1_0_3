@@ -17,7 +17,6 @@ use App\Repository\InviteRepository;
 use App\Repository\ChargementRepository;
 use App\Services\Canvas\CalculationProvider;
 use App\Services\ServiceMonnaies;
-use App\Service\AvenantActionService;
 use App\Services\CanvasBuilder;
 use App\Services\JSBDynamicSearchService;
 use DateTimeImmutable;
@@ -37,6 +36,7 @@ use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\SerializerInterface;
 use App\Repository\AvenantRepository; // NOUVEAU
+use App\Services\AvenantActionService;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[Route("/admin/bordereau", name: 'admin.bordereau.')]
