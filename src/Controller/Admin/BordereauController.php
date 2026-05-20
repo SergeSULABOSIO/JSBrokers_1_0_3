@@ -902,11 +902,17 @@ class BordereauController extends AbstractController
             return $this->json(['success' => false, 'message' => 'Bordereau introuvable.'], 404);
         }
 
-        $raw         = json_decode($request->getContent(), true);
-        $data        = $raw['payload'] ?? $raw; // compatibilité Stimulus wrapping
-        $actionType  = $data['action_type'] ?? null;  // 'new' ou 'discrepancy'
-        $excelData   = $data['excel_data'] ?? [];
-        $rowIndex    = isset($data['row_index']) ? (int)$data['row_index'] : null;
+        $raw = json_decode($request->getContent(), true);
+
+        // Diagnostic de la structure reçue
+        dump('simulateAnalysisAction - Payload Brut:', $raw);
+
+        // Résolution du payload (compatibilité Stimulus wrapping)
+        $data        = $raw['payload'] ?? $raw;
+        $actionType  = $data['action_type'] ?? ($raw['action_type'] ?? null);
+        $excelData   = $data['excel_data'] ?? ($raw['excel_data'] ?? []);
+        // On vérifie row_index dans le payload, puis à la racine si absent
+        $rowIndex    = isset($data['row_index']) ? (int)$data['row_index'] : (isset($raw['row_index']) ? (int)$raw['row_index'] : null);
 
         if ($rowIndex === null) {
             return $this->json(['success' => false, 'message' => 'Index de ligne manquant.'], 400);
@@ -965,9 +971,13 @@ class BordereauController extends AbstractController
             ], 404);
         }
 
-        $raw   = json_decode($request->getContent(), true);
+        $raw = json_decode($request->getContent(), true);
+
+        // Diagnostic pour le traitement par lot
+        dump('simulateBatchAnalysisAction - Payload Brut:', $raw);
+
         $body  = $raw['payload'] ?? $raw;
-        $items = $body['items'] ?? [];
+        $items = $body['items'] ?? ($raw['items'] ?? []);
         $invite = $this->getInvite();
 
         if (empty($items)) {
