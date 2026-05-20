@@ -59,7 +59,7 @@ class AvenantActionService
         // ÉTAPE 2 — Résolution du Risque
         $risque = null;
         if (!empty($excelData['risque'])) {
-            $risque = $this->risqueRepository->findOneBy(['nomComplet' => $excelData['risque'], 'entreprise' => $entreprise]);
+            $risque = $this->risqueRepository->findOneBy(['nomComplet' => $excelData['risque']]);
         }
 
         // ÉTAPE 3 — Résolution ou création de la Piste
@@ -68,7 +68,8 @@ class AvenantActionService
         $piste = $this->pisteRepository->findOneBy([
             'client' => $client,
             'exercice' => $exercice,
-            'risque' => $risque
+            'risque' => $risque,
+            'entreprise' => $entreprise,
         ]);
 
         if (!$piste) {
@@ -87,7 +88,8 @@ class AvenantActionService
         // ÉTAPE 4 — Résolution ou création de la Cotation
         $cotation = $this->cotationRepository->findOneBy([
             'piste' => $piste,
-            'assureur' => $assureur
+            'assureur' => $assureur,
+            'entreprise' => $entreprise,
         ]);
 
         $endingAt = $this->createDate($excelData['date_expiration_avenant'] ?? null);
