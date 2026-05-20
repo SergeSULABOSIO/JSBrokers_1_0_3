@@ -393,11 +393,14 @@ class BordereauController extends AbstractController
                         [
                             'label'   => 'Créer l\'avenant',
                             'event'   => 'bordereau:create-avenant', // Renommé pour plus de clarté
-                            'payload' => ['excel_data' => $rawLineData,
-                                          'row_index'  => $rowIndex]
+                            'payload' => [
+                                'excel_data' => $rawLineData,
+                                'row_index'  => $rowIndex
+                            ]
                         ]
                     ];
                     break;
+
 
                 case 'discrepancy':
                     // 1. D'abord récupérer l'avenant depuis la map de restauration
@@ -638,7 +641,14 @@ class BordereauController extends AbstractController
                     'type' => 'new',
                     'bordereau_line_info' => $rawLineData,
                     'details' => "Ligne n°" . ($rowIndex + 2) . ": Nouvel avenant détecté.",
-                    'actions' => [['label' => 'Créer l\'avenant', 'event' => 'bordereau:create-avenant', 'payload' => ['excel_data' => $rawLineData]]],
+                    'actions' => [[
+                        'label' => 'Créer l\'avenant',
+                        'event' => 'bordereau:create-avenant',
+                        'payload' => [
+                            'excel_data' => $rawLineData,
+                            'row_index'  => $rowIndex
+                        ]
+                    ]],
                 ];
                 continue;
             }
@@ -705,7 +715,15 @@ class BordereauController extends AbstractController
                     'bordereau_line_info' => $rawLineData,
                     'details' => "Ligne n°" . ($rowIndex + 2) . ": Anomalie(s) - " . implode(', ', $discrepancies),
                     'financial_gaps' => $financialGaps,
-                    'actions' => [['label' => 'Mettre à jour', 'event' => 'bordereau:update-avenant', 'payload' => ['avenant_id' => $avenant->getId(), 'excel_data' => $rawLineData]]],
+                    'actions' => [[
+                        'label' => 'Mettre à jour',
+                        'event' => 'bordereau:update-avenant',
+                        'payload' => [
+                            'avenant_id' => $avenant->getId(),
+                            'excel_data' => $rawLineData,
+                            'row_index'  => $rowIndex
+                        ]
+                    ]],
                 ];
             } else {
                 $chunkResultsToStore[] = [
