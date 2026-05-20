@@ -51,16 +51,23 @@
         <div class="d-flex align-items-center justify-content-between w-100 px-3 py-2">
 
             {# Bloc titre — gauche #}
-            <div class="d-flex align-items-center gap-2 toolbar-title">
-                <twig:UX:Icon name="lucide:file-search" width="18px" height="18px" 
-                              class="text-white opacity-75" 
-                              data-bordereau-analysis-target="toolbarTitleIconPrepare" />
-                <twig:UX:Icon name="lucide:file-check" width="18px" height="18px" 
-                              class="text-white opacity-75 d-none" 
-                              data-bordereau-analysis-target="toolbarTitleIconSuccess" />
-                <span class="fw-bold text-white text-truncate" style="max-width: 280px;">
-                    Analyse — {{ bordereau.reference }}
-                </span>
+            <div class="d-flex align-items-start gap-2 toolbar-title py-1">
+                <div class="mt-1">
+                    <twig:UX:Icon name="lucide:file-search" width="20px" height="20px" 
+                                  class="text-white opacity-75" 
+                                  data-bordereau-analysis-target="toolbarTitleIconPrepare" />
+                    <twig:UX:Icon name="lucide:file-check" width="20px" height="20px" 
+                                  class="text-white opacity-75 d-none" 
+                                  data-bordereau-analysis-target="toolbarTitleIconSuccess" />
+                </div>
+                <div class="d-flex flex-column">
+                    <span class="fw-bold text-white text-truncate lh-sm" style="max-width: 320px;">
+                        Analyse de Bordereau — {{ bordereau.nom }}
+                    </span>
+                    <span class="text-white opacity-50 small text-truncate lh-1" style="max-width: 320px;">
+                        Assureur : {{ bordereau.assureur ? bordereau.assureur.nom : 'Non renseigné' }}
+                    </span>
+                </div>
             </div>
 
             {# Bloc actions — droite #}
