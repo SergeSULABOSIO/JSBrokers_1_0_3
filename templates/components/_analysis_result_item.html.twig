@@ -16,14 +16,34 @@
     data-analysis-result-item-bordereau-id-value="{{ bordereau_id }}"
     data-analysis-result-item-icon-prefix-value="{{ bordereau_id }}-{{ loop.index }}-"
 >
-    {# Ligne 1: La barre de titre cliquable pour l'accordéon #}
+    {# AMÉLIORATION 1 : Bandeau de statut visuel #}
+    <div class="analysis-item-status-bar analysis-item-status-bar--{{ result.type }}">
+        <twig:UX:Icon name="{{ status_config.icon }}" width="14px" height="14px" aria-hidden="true" />
+        <span class="analysis-item-status-label">
+            {% if result.type == 'new' %}Nouvel avenant à créer
+            {% elseif result.type == 'discrepancy' %}Anomalie détectée
+            {% elseif result.type == 'match' %}Conforme
+            {% else %}Vérification requise
+            {% endif %}
+        </span>
+        {% if result.type == 'discrepancy' and result.financial_gaps is defined and result.financial_gaps is not empty %}
+            {% set gaps_count = result.financial_gaps|filter(g => g.gap != 0)|length %}
+            {% if gaps_count > 0 %}
+                <span class="analysis-item-gaps-badge">
+                    {{ gaps_count }} champ{{ gaps_count > 1 ? 's' : '' }} en écart
+                </span>
+            {% endif %}
+        {% endif %}
+    </div>
+
+    {# AMÉLIORATION 2 : Restructuration de l'en-tête cliquable #}
     <div class="analysis-item-header p-3"
          data-action="click->analysis-result-item#toggleDetails mouseenter->analysis-result-item#showActions mouseleave->analysis-result-item#hideActions">
 
-        <div class="d-flex justify-content-between align-items-center">
-            {# Titre principal avec icône de statut #}
-            <div class="analysis-item-title-wrapper">
-                <h5 class="mb-0 d-flex align-items-center gap-2">
+        <div class="d-flex align-items-start gap-3">
+            {# Colonne gauche : Titre principal avec icône de statut #}
+            <div class="analysis-item-title-wrapper flex-grow-1 min-w-0">
+                <h5 class="mb-1 d-flex align-items-center gap-2">
                     <twig:UX:Icon name="{{ status_config.icon }}" class="{{ status_config.icon_class }}" width="20px" height="20px" />
                     <span class="fw-bold">
                         {% if result.type == 'warning' %}
@@ -34,9 +54,11 @@
                     </span>
                     <twig:UX:Icon name="lucide:chevron-down" class="chevron-icon" data-analysis-result-item-target="chevronIcon" width="18px" height="18px" />
                 </h5>
+                {# Ligne 2: Le texte de synthèse (requis par _markAsResolved) #}
+                <p class="mb-0 text-muted small">{{ result.details }}</p>
             </div>
 
-            {# Conteneur pour les boutons d'action contextuels #}
+            {# Colonne droite : Conteneur pour les boutons d'action contextuels #}
             <div class="analysis-item-actions" data-analysis-result-item-target="actionsContainer">
                 {% set action_count = result.actions|length %}
                 {% for action in result.actions %}
@@ -49,10 +71,10 @@
                             })|json_encode|e('html_attr') }}"
                             data-analysis-result-item-target="actionButton"
                             data-tooltip-text="{{ action.label }}"
+                            aria-label="{{ action.label }}"
                     >
                         {# La cible pour l'icône qui sera chargée dynamiquement #}
                         <span class="button-icon" data-analysis-result-item-target="actionIcon"></span>
-                        {# NOUVEAU : Afficher le texte seulement si moins de 3 boutons #}
                         {% if action_count < 3 %}
                             <span class="button-label ms-1">{{ action.label }}</span>
                         {% endif %}
@@ -60,62 +82,106 @@
                 {% endfor %}
             </div>
         </div>
-
-        {# Ligne 2: Le texte de synthèse #}
-        <p class="mb-0 mt-1 text-muted small">{{ result.details }}</p>
     </div>
 
     {# Contenu détaillé (accordéon), caché par défaut #}
-    {# Pour le type warning, bordereau_line_info est vide, on n'affiche pas le panneau #}
     {% if result.type != 'warning' and result.bordereau_line_info is not empty %}
         <div class="analysis-item-details" data-analysis-result-item-target="detailsPanel">
             <div class="p-3">
-                <p class="mb-2 small fst-italic"><strong>Détails de la ligne du bordereau :</strong></p>
-                {# NOUVEAU : La carte des formats est maintenant passée directement depuis le contrôleur parent #}
                 {% set currency_code = viewData.display_currency_code ?? '' %}
                 {% set system_formats = viewData.system_field_formats ?? {} %}
-                <div class="analysis-details-grid small text-muted mb-3">
-                    {% for key, value in result.bordereau_line_info %}
-                        <div class="row">
-                            <div class="col-md-6">
-                                {# NOUVEAU : Remplacer les underscores par des espaces et capitaliser pour un meilleur affichage #}
-                                {# ex: 'chargement_1_Prime_Nette' devient 'Chargement 1 Prime Nette' #}
-                                <strong>{{ key|replace({'_': ' '})|title }}</strong>
-                            </div>
-                            <div class="col-md-6">
-                                {% if value is not null and value is not same as('') %}
-                                    {# NOUVEAU : Logique de formatage enrichie #}
-                                    {% set format = system_formats[key] ?? 'text' %}
-                                    {% if format == 'date' %}
-                                        {% if value.date is defined %}
-                                            {# Objet DateTime sérialisé par Twig (données venant de la DB) #}
-                                            {{ value.date|format_datetime('full', 'short', locale='fr') }}
-                                        {% elseif value is not null and value is not same as('') %}
-                                            {# String Y-m-d retournée par parseExcelValue() après refactorisation #}
-                                            {{ value|date('d/m/Y') }}
-                                        {% else %}
-                                            N/A
-                                        {% endif %}
-                                    {% elseif format == 'number' %}
-                                        {# Formatage monétaire avec code de devise #}
-                                        {{ currency_code }} {{ value|number_format(2, ',', ' ') }}
-                                    {% else %}
-                                        {{ value }}
-                                    {% endif %}
-                                {% else %}
-                                    N/A
-                                {% endif %}
-                            </div>
-                        </div>
-                    {% endfor %}
-                </div>
 
-                {# NOUVEAU : Tableau des écarts financiers pour les résultats discrepancy #}
-                {% if result.type == 'discrepancy' and result.financial_gaps is defined
-                    and result.financial_gaps is not empty %}
+                {# AMÉLIORATION 3 : Regroupement sémantique des détails #}
+                {% set id_fields        = ['reference_police', 'nom_client', 'risque'] %}
+                {% set date_fields      = ['date_effet_avenant', 'date_expiration_avenant', 'date_operation'] %}
+                {% set financial_fields = ['prime_ttc', 'commission_ht_assureur', 'taxe_commission_assureur', 'taux_commission'] %}
+
+                {# GROUPE 1 — Identification #}
+                {% set grp = {} %}
+                {% for k, v in result.bordereau_line_info %}{% if k in id_fields %}{% set grp = grp|merge({(k): v}) %}{% endif %}{% endfor %}
+                {% if grp is not empty %}
+                    <p class="analysis-details-group-title">
+                        <twig:UX:Icon name="lucide:contact" width="13px" height="13px" aria-hidden="true" /> Identification
+                    </p>
+                    <div class="analysis-details-grid small text-muted mb-2">
+                        {% for key, value in grp %}
+                            <div class="row">
+                                <div class="col-md-6"><strong>{{ key|replace({'_': ' '})|title }}</strong></div>
+                                <div class="col-md-6">
+                                    {% if value is not null and value is not same as('') %}
+                                        {% set format = system_formats[key] ?? 'text' %}
+                                        {% if format == 'date' %}
+                                            {% if value.date is defined %}{{ value.date|format_datetime('full', 'short', locale='fr') }}{% elseif value is not null and value is not same as('') %}{{ value|date('d/m/Y') }}{% else %}N/A{% endif %}
+                                        {% elseif format == 'number' %}{{ currency_code }} {{ value|number_format(2, ',', ' ') }}{% else %}{{ value }}{% endif %}
+                                    {% else %}N/A{% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {# GROUPE 2 — Dates #}
+                {% set grp = {} %}
+                {% for k, v in result.bordereau_line_info %}{% if k in date_fields %}{% set grp = grp|merge({(k): v}) %}{% endif %}{% endfor %}
+                {% if grp is not empty %}
+                    <p class="analysis-details-group-title">
+                        <twig:UX:Icon name="lucide:calendar" width="13px" height="13px" aria-hidden="true" /> Dates
+                    </p>
+                    <div class="analysis-details-grid small text-muted mb-2">
+                        {% for key, value in grp %}
+                            <div class="row">
+                                <div class="col-md-6"><strong>{{ key|replace({'_': ' '})|title }}</strong></div>
+                                <div class="col-md-6">
+                                    {% if value is not null and value is not same as('') %}
+                                        {% set format = system_formats[key] ?? 'text' %}
+                                        {% if format == 'date' %}
+                                            {% if value.date is defined %}{{ value.date|format_datetime('full', 'short', locale='fr') }}{% elseif value is not null and value is not same as('') %}{{ value|date('d/m/Y') }}{% else %}N/A{% endif %}
+                                        {% elseif format == 'number' %}{{ currency_code }} {{ value|number_format(2, ',', ' ') }}{% else %}{{ value }}{% endif %}
+                                    {% else %}N/A{% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {# GROUPE 3 — Données financières #}
+                {% set grp = {} %}
+                {% for k, v in result.bordereau_line_info %}{% if k in financial_fields %}{% set grp = grp|merge({(k): v}) %}{% endif %}{% endfor %}
+                {% for k, v in result.bordereau_line_info %}{% if k not in id_fields and k not in date_fields and k not in financial_fields %}{% set grp = grp|merge({(k): v}) %}{% endif %}{% endfor %}
+                {% if grp is not empty %}
+                    <p class="analysis-details-group-title">
+                        <twig:UX:Icon name="lucide:banknote" width="13px" height="13px" aria-hidden="true" /> Données financières
+                    </p>
+                    <div class="analysis-details-grid small text-muted mb-2">
+                        {% for key, value in grp %}
+                            <div class="row">
+                                <div class="col-md-6"><strong>{{ key|replace({'_': ' '})|title }}</strong></div>
+                                <div class="col-md-6">
+                                    {% if value is not null and value is not same as('') %}
+                                        {% set format = system_formats[key] ?? 'text' %}
+                                        {% if format == 'date' %}
+                                            {% if value.date is defined %}{{ value.date|format_datetime('full', 'short', locale='fr') }}{% elseif value is not null and value is not same as('') %}{{ value|date('d/m/Y') }}{% else %}N/A{% endif %}
+                                        {% elseif format == 'number' %}{{ currency_code }} {{ value|number_format(2, ',', ' ') }}{% else %}{{ value }}{% endif %}
+                                    {% else %}N/A{% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {# AMÉLIORATION 4 : Tableau des écarts financiers #}
+                {% if result.type == 'discrepancy' and result.financial_gaps is defined and result.financial_gaps is not empty %}
+                    {% set real_gaps = result.financial_gaps|filter(g => g.gap != 0) %}
                     <div class="mt-3">
-                        <p class="mb-2 small fst-italic">
+                        <p class="mb-2 small fst-italic d-flex align-items-center gap-2">
                             <strong>Analyse des écarts financiers :</strong>
+                            {% if real_gaps|length == 0 %}
+                                <span class="badge bg-success">Aucun écart financier</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">
+                                    {{ real_gaps|length }} écart{{ real_gaps|length > 1 ? 's' : '' }}
+                                </span>
+                            {% endif %}
                         </p>
                         <div class="table-responsive">
                             <table class="table table-sm table-bordered mb-0"
@@ -123,34 +189,30 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th class="text-muted fw-normal">Champ</th>
-                                        <th class="text-center text-muted fw-normal">
-                                            Valeur DB (attendue)
-                                        </th>
-                                        <th class="text-center text-muted fw-normal">
-                                            Valeur bordereau (reçue)
-                                        </th>
-                                        <th class="text-center text-muted fw-normal">Écart</th>
+                                        <th class="text-end text-muted fw-normal">Valeur DB (attendue)</th>
+                                        <th class="text-end text-muted fw-normal">Valeur bordereau (reçue)</th>
+                                        <th class="text-end text-muted fw-normal">Écart</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for field, gap in result.financial_gaps %}
-                                        <tr class="{{ gap.gap != 0 ? 'table-warning' : '' }}">
+                                    {# 1. Lignes EN ÉCART (surlignées) #}
+                                    {% for field, gap in result.financial_gaps %}{% if gap.gap != 0 %}
+                                        <tr class="table-warning">
                                             <td class="fw-bold">{{ gap.label }}</td>
-                                            <td class="text-center">
-                                                {{ gap.db_value|number_format(2, ',', ' ') }}
-                                            </td>
-                                            <td class="text-center">
-                                                {{ gap.excel_value|number_format(2, ',', ' ') }}
-                                            </td>
-                                            <td class="text-center fw-bold {{ gap.gap_class }}">
-                                                {% if gap.gap != 0 %}
-                                                    {{ gap.gap_sign }}{{ gap.gap|number_format(2, ',', ' ') }}
-                                                {% else %}
-                                                    <span class="text-muted">—</span>
-                                                {% endif %}
-                                            </td>
+                                            <td class="text-end">{{ gap.db_value|number_format(2, ',', ' ') }}</td>
+                                            <td class="text-end fw-bold">{{ gap.excel_value|number_format(2, ',', ' ') }}</td>
+                                            <td class="text-end fw-bold {{ gap.gap_class }}">{{ gap.gap_sign }}{{ gap.gap|number_format(2, ',', ' ') }}</td>
                                         </tr>
-                                    {% endfor %}
+                                    {% endif %}{% endfor %}
+                                    {# 2. Lignes SANS ÉCART (grisées) #}
+                                    {% for field, gap in result.financial_gaps %}{% if gap.gap == 0 %}
+                                        <tr class="analysis-gap-row-zero">
+                                            <td class="text-muted">{{ gap.label }}</td>
+                                            <td class="text-end text-muted">{{ gap.db_value|number_format(2, ',', ' ') }}</td>
+                                            <td class="text-end text-muted">{{ gap.excel_value|number_format(2, ',', ' ') }}</td>
+                                            <td class="text-end text-muted">—</td>
+                                        </tr>
+                                    {% endif %}{% endfor %}
                                 </tbody>
                             </table>
                         </div>
