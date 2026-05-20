@@ -393,7 +393,8 @@ class BordereauController extends AbstractController
                         [
                             'label'   => 'Créer l\'avenant',
                             'event'   => 'bordereau:create-avenant', // Renommé pour plus de clarté
-                            'payload' => ['excel_data' => $rawLineData]
+                            'payload' => ['excel_data' => $rawLineData,
+                                          'row_index'  => $rowIndex]
                         ]
                     ];
                     break;
@@ -409,7 +410,8 @@ class BordereauController extends AbstractController
                             'label'   => 'Mettre à jour',
                             'event'   => 'bordereau:update-avenant', // Renommé pour plus de clarté
                             'payload' => [
-                                'avenant_id' => $avenant->getId(),
+                                'avenant_id' => $avenant->getId(), // L'ID de l'avenant existant
+                                'row_index'  => $rowIndex, // L'index de la ligne dans le fichier Excel
                                 'excel_data' => $rawLineData
                             ]
                         ]
@@ -891,11 +893,15 @@ class BordereauController extends AbstractController
             if ($actionType === 'new') {
                 $avenant = $this->avenantActionService->createFromBordereauLine($excelData, $bordereau, $invite);
                 $message = sprintf('Ligne n°%s : Avenant n°%s créé avec succès.', ($data['row_index'] + 2), $avenant->getReferencePolice());
+                // Mettre à jour le résultat stocké en base : passer de 'new' à 'match'
+                $this->_markAnalysisResultAsMatch($bordereau, $data['row_index'], $avenant->getId(), $avenant->getReferencePolice());
             } elseif ($actionType === 'discrepancy') {
                 $avenant = $this->avenantRepository->find($data['avenant_id']);
                 if (!$avenant) throw new \Exception("Avenant introuvable.");
                 $this->avenantActionService->updateFromBordereauLine($avenant, $excelData, $bordereau);
                 $message = sprintf('Ligne n°%s : Avenant n°%s mis à jour avec succès.', ($data['row_index'] + 2), $avenant->getReferencePolice());
+                // Mettre à jour le résultat stocké en base : passer de 'discrepancy' à 'match'
+                $this->_markAnalysisResultAsMatch($bordereau, $data['row_index'], $avenant->getId(), $avenant->getReferencePolice());
             } else {
                 return $this->json(['success' => false, 'message' => 'Action inconnue.'], 400);
             }
@@ -958,11 +964,13 @@ class BordereauController extends AbstractController
                 if ($actionType === 'new') {
                     $avenant = $this->avenantActionService->createFromBordereauLine($excelData, $bordereau, $invite);
                     $msg = sprintf('Ligne n°%s : Avenant n°%s créé.', ($rowIndex + 2), $avenant->getReferencePolice());
+                    $this->_markAnalysisResultAsMatch($bordereau, $rowIndex, $avenant->getId(), $avenant->getReferencePolice());
                 } elseif ($actionType === 'discrepancy') {
                     $avenant = $this->avenantRepository->find($avenantId);
                     if (!$avenant) throw new \Exception("Avenant introuvable.");
                     $this->avenantActionService->updateFromBordereauLine($avenant, $excelData, $bordereau);
                     $msg = sprintf('Ligne n°%s : Avenant n°%s mis à jour.', ($rowIndex + 2), $avenant->getReferencePolice());
+                    $this->_markAnalysisResultAsMatch($bordereau, $rowIndex, $avenant->getId(), $avenant->getReferencePolice());
                 } else {
                     throw new \Exception("Action inconnue.");
                 }
@@ -1141,5 +1149,30 @@ class BordereauController extends AbstractController
                 'Content-Disposition' => 'attachment; filename="' . $filename . '"',
             ]
         );
+    }
+
+    /**
+     * Met à jour une entrée dans analysisResults du bordereau pour la marquer comme 'match'.
+     * Appelé après qu'un avenant a été créé ou mis à jour depuis l'étape 3.
+     */
+    private function _markAnalysisResultAsMatch(
+        Bordereau $bordereau,
+        int $rowIndex,
+        int $avenantId,
+        string $referencePolice
+    ): void {
+        $results = $bordereau->getAnalysisResults() ?? [];
+        foreach ($results as &$result) {
+            if (($result['row_index'] ?? null) === $rowIndex) {
+                $result['type']              = 'match';
+                $result['avenant_id']        = $avenantId;
+                $result['reference_police']  = $referencePolice;
+                break;
+            }
+        }
+        unset($result);
+        $bordereau->setAnalysisResults($results);
+        $bordereau->setUpdatedAt(new \DateTimeImmutable());
+        $this->em->flush();
     }
 }
