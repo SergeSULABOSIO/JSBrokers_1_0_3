@@ -59,7 +59,7 @@ class AvenantActionService
         // ÉTAPE 2 — Résolution du Risque
         $risque = null;
         if (!empty($excelData['risque'])) {
-            $risque = $this->risqueRepository->findOneBy(['nom' => $excelData['risque'], 'entreprise' => $entreprise]);
+            $risque = $this->risqueRepository->findOneBy(['nomComplet' => $excelData['risque'], 'entreprise' => $entreprise]);
         }
 
         // ÉTAPE 3 — Résolution ou création de la Piste
@@ -67,7 +67,6 @@ class AvenantActionService
         $exercice = (int)$startingAt->format('Y');
         $piste = $this->pisteRepository->findOneBy([
             'client' => $client,
-            'assureur' => $assureur,
             'exercice' => $exercice,
             'risque' => $risque
         ]);
