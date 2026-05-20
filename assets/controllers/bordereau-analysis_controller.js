@@ -936,7 +936,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         this.submitButtonTarget.textContent = "Analyse en cours...";
         this.toggleProgressBar(true);
         this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml( //
-            'warning', 'Initialisation de l\'analyse...', false
+            'warning', 'Initialisation de l\'analyse...', false, true
         );
 
         // Réinitialiser les résultats accumulés
@@ -973,7 +973,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
             console.log(`[BordereauAnalysis] submitAnalysis() - ${totalRows} lignes à traiter par lots de ${chunkSize}.`);
             this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml( //
-                'warning', `0 / ${totalRows} lignes analysées...`, false
+                'warning', `0 / ${totalRows} lignes analysées...`, false, true
             );
 
             // --- ÉTAPE 2 : Traiter les lots séquentiellement ---
@@ -1009,7 +1009,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
                     'warning', //
                     `${Math.min(processed, totalRows)} / ${totalRows} lignes analysées...`,
-                    false
+                    false,
+                    true
                 );
 
                 console.log(`[BordereauAnalysis] submitAnalysis() - Lot traité : ${processed}/${totalRows} (${percentage}%)`);
@@ -1101,11 +1102,9 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         if (this.hasMappingStatusFeedbackTarget) {
             this.mappingStatusFeedbackTarget.classList.remove('d-none');
             this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml( //
-                'success', 'Analyse terminée avec succès.', false
+                'success', 'Analyse terminée avec succès.', false, true
             );
         }
-
-        this.toggleProgressBar(false);
 
         // Sauvegarder uniquement l'étape (les résultats sont déjà en base)
         this._saveAnalysisStateToBordereau('step_only');
@@ -1229,14 +1228,14 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         this.toggleProgressBar(true);
         this.mappingStatusFeedbackTarget.classList.remove('d-none'); //
         this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
-            'warning', 'Validation en cours...', false
+            'warning', 'Validation en cours...', false, true
         );
 
         try {
             const response = await fetch(
                 `/admin/bordereau/api/validate/${this.bordereauIdValue}`,
                 {
-                    method: 'POST',
+                    method:  'POST',
                     headers: { 'Content-Type': 'application/json' }
                 }
             );
@@ -1405,12 +1404,12 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             'Cette action traitera tous les items "Nouvel avenant détecté".'
         )) return;
 
+        this.isBulkProcessingValue = true;
+        this.toggleProgressBar(true);
+        this._updateBulkButtonsState();
+        this._updateValidateButtonState();
+
         if (this.hasBulkCreateItemTarget) {
-            // NOUVEAU : Désactiver tous les boutons pertinents au début du traitement en lot
-            this.isBulkProcessingValue = true;
-            this.toggleProgressBar(true);
-            this._updateBulkButtonsState();
-            this._updateValidateButtonState();
             this.bulkCreateItemTarget.querySelector('button').disabled = true;
         }
 
@@ -1427,106 +1426,78 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('info', 'Aucun nouvel avenant à créer.', false, true); //
             this.toggleProgressBar(false);
             this.isBulkProcessingValue = false;
-            this._updateBulkButtonsState();
-            this._updateValidateButtonState();
             return;
         }
-        let processed = 0;
-        let errors    = 0;
 
-        this.mappingStatusFeedbackTarget.classList.remove('d-none');
-        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml( //
-            'warning', `Traitement en lot... 0/${totalItemsToProcess}. Veuillez patienter.`, false
-        );
+        try {
+            let processed = 0;
+            let errors    = 0;
 
-        for (const itemElement of itemsToProcess) {
-
-            // Récupérer le bouton "Créer l'avenant" de cet item
-            const actionButton = itemElement.querySelector(
-                '[data-action="click->analysis-result-item#handleAction"]'
+            this.mappingStatusFeedbackTarget.classList.remove('d-none');
+            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml( //
+                'warning', `Traitement en lot... 0/${totalItemsToProcess}. Veuillez patienter.`, false, true
             );
-            if (!actionButton) continue;
 
-            const payload = JSON.parse(actionButton.dataset.payload || '{}');
-            const bordereauId = actionButton.closest('[data-analysis-result-item-bordereau-id-value]')
-                ?.dataset?.analysisResultItemBordereauIdValue
-                || this.bordereauIdValue;
+            for (const itemElement of itemsToProcess) {
+                const actionButton = itemElement.querySelector('[data-action="click->analysis-result-item#handleAction"]');
+                if (!actionButton) continue;
 
-            try {
-                const response = await fetch(
-                    `/admin/bordereau/api/simulate-action/${bordereauId}`,
-                    {
-                        method: 'POST',
+                const payload = JSON.parse(actionButton.dataset.payload || '{}');
+                const bordereauId = actionButton.closest('[data-analysis-result-item-bordereau-id-value]')
+                    ?.dataset?.analysisResultItemBordereauIdValue
+                    || this.bordereauIdValue;
+
+                try {
+                    const response = await fetch(`/admin/bordereau/api/simulate-action/${bordereauId}`, {
+                        method:  'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            action_type:       'new',
-                            avenant_id:        null,
-                            excel_data:        payload.excel_data ?? {},
-                            row_index:         payload.row_index ?? null,
-                            reference_police:  payload.reference_police ?? null,
+                        body:    JSON.stringify({
+                            action_type:      'new',
+                            avenant_id:       null,
+                            excel_data:       payload.excel_data ?? {},
+                            row_index:        payload.row_index ?? null,
+                            reference_police: payload.reference_police ?? null,
                         })
-                    }
-                );
+                    });
 
-                const result = await response.json();
+                    const result = await response.json();
+                    if (!response.ok || !result.success) throw new Error(result.message || 'Erreur lors du traitement.');
 
-                if (!response.ok || !result.success) {
-                    throw new Error(result.message || 'Erreur lors du traitement.');
+                    this._markItemAsResolved(itemElement, result.message);
+                    processed++;
+                    this._recalculateAndRenderStatsFromDom();
+                } catch (error) {
+                    console.error(`[BordereauAnalysis] bulkCreateAll() — Erreur sur item:`, error);
+                    errors++;
+                } finally {
+                    const percentage = Math.round((processed / totalItemsToProcess) * 100);
+                    this._updateProgressBarPercentage(percentage);
+                    this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+                        'warning', `Traitement en lot... ${processed}/${totalItemsToProcess}. Veuillez patienter.`, false, true
+                    );
                 }
+            }
 
-                this._markItemAsResolved(itemElement, result.message);
-                processed++;
-                this._recalculateAndRenderStatsFromDom(); // Update stats after each item
-
-            } catch (error) {
-                console.error(
-                    `[BordereauAnalysis] bulkCreateAll() — Erreur sur item:`,
-                    error
-                );
-                errors++;
-            } finally { // NOUVEAU : Mettre à jour la barre de progression et le feedback après chaque item
-                const percentage = Math.round((processed / totalItemsToProcess) * 100);
-                this._updateProgressBarPercentage(percentage);
+            if (this.hasMappingStatusFeedbackTarget) {
+                const msg = errors > 0
+                    ? `${processed} avenant(s) créé(s), ${errors} erreur(s).`
+                    : `${processed} avenant(s) créé(s) avec succès.`;
                 this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
-                    'warning', `Traitement en lot... ${processed}/${totalItemsToProcess}. Veuillez patienter.`, false, true //
+                    errors > 0 ? 'warning' : 'success', msg, false, true
                 );
             }
+
+            this.notifyCerveau('bordereau:bulk.completed', { bordereauId: this.bordereauIdValue, type: 'new', processed, errors });
+
+        } catch (error) {
+            console.error("[BordereauAnalysis] bulkCreateAll() - Erreur globale:", error);
+        } finally {
+            this.toggleProgressBar(false);
+            this.isBulkProcessingValue = false;
+            if (this.hasBulkCreateItemTarget) this.bulkCreateItemTarget.querySelector('button').disabled = false;
+            this._updateBulkButtonsState();
+            this._updateValidateButtonState();
         }
-
-        console.log(
-            `[BordereauAnalysis] bulkCreateAll() — Terminé. ` +
-            `Traités: ${processed}, Erreurs: ${errors}`
-        );
-
-        // Rétablir le libellé du bouton
-        if (this.hasBulkCreateItemTarget) {
-            this.bulkCreateItemTarget.querySelector('button').disabled = false;
-        }
-
-        // Réévaluer l'état de tous les boutons
-        this._updateBulkButtonsState();
-        this._updateValidateButtonState();
-
-        // Feedback dans la barre d'outils
-        if (this.hasMappingStatusFeedbackTarget) {
-            this.mappingStatusFeedbackTarget.classList.remove('d-none');
-            const msg = errors > 0
-                ? `${processed} avenant(s) créé(s), ${errors} erreur(s).`
-                : `${processed} avenant(s) créé(s) avec succès.`; //
-            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
-                errors > 0 ? 'warning' : 'success', msg, false
-            );
-        }
-
-        // Notifier le Cerveau pour réévaluation globale
-        this.notifyCerveau('bordereau:bulk.completed', {
-            bordereauId: this.bordereauIdValue,
-            type: 'new',
-            processed,
-            errors
-        });
-        this.toggleProgressBar(false); // NOUVEAU : Masquer la barre de progression
-        this.isBulkProcessingValue = false; // NOUVEAU : Réinitialiser le drapeau
     }
 
     /**
@@ -1538,12 +1509,12 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             'Cette action traitera tous les items "Anomalie(s) détectée(s)".'
         )) return;
 
+        this.isBulkProcessingValue = true;
+        this.toggleProgressBar(true);
+        this._updateBulkButtonsState();
+        this._updateValidateButtonState();
+
         if (this.hasBulkUpdateItemTarget) {
-            // NOUVEAU : Désactiver tous les boutons pertinents au début du traitement en lot
-            this.isBulkProcessingValue = true;
-            this.toggleProgressBar(true);
-            this._updateBulkButtonsState();
-            this._updateValidateButtonState();
             this.bulkUpdateItemTarget.querySelector('button').disabled = true;
         }
 
@@ -1560,101 +1531,78 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('info', 'Aucune anomalie à mettre à jour.', false, true); //
             this.toggleProgressBar(false);
             this.isBulkProcessingValue = false;
-            this._updateBulkButtonsState();
-            this._updateValidateButtonState();
             return;
         }
-        let processed = 0;
-        let errors    = 0;
 
-        this.mappingStatusFeedbackTarget.classList.remove('d-none');
-        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml( //
-            'warning', `Traitement en lot... 0/${totalItemsToProcess}. Veuillez patienter.`, false
-        );
+        try {
+            let processed = 0;
+            let errors    = 0;
 
-        for (const itemElement of itemsToProcess) {
-
-            const actionButton = itemElement.querySelector(
-                '[data-action="click->analysis-result-item#handleAction"]'
+            this.mappingStatusFeedbackTarget.classList.remove('d-none');
+            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml( //
+                'warning', `Traitement en lot... 0/${totalItemsToProcess}. Veuillez patienter.`, false, true
             );
-            if (!actionButton) continue;
 
-            const payload = JSON.parse(actionButton.dataset.payload || '{}');
-            const bordereauId = actionButton.closest('[data-analysis-result-item-bordereau-id-value]')
-                ?.dataset?.analysisResultItemBordereauIdValue
-                || this.bordereauIdValue;
+            for (const itemElement of itemsToProcess) {
+                const actionButton = itemElement.querySelector('[data-action="click->analysis-result-item#handleAction"]');
+                if (!actionButton) continue;
 
-            try {
-                const response = await fetch(
-                    `/admin/bordereau/api/simulate-action/${bordereauId}`,
-                    {
-                        method: 'POST',
+                const payload = JSON.parse(actionButton.dataset.payload || '{}');
+                const bordereauId = actionButton.closest('[data-analysis-result-item-bordereau-id-value]')
+                    ?.dataset?.analysisResultItemBordereauIdValue
+                    || this.bordereauIdValue;
+
+                try {
+                    const response = await fetch(`/admin/bordereau/api/simulate-action/${bordereauId}`, {
+                        method:  'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            action_type:       'discrepancy',
-                            avenant_id:        payload.avenant_id ?? null,
-                            excel_data:        payload.excel_data ?? {},
-                            row_index:         payload.row_index ?? null,
-                            reference_police:  payload.reference_police ?? null,
+                        body:    JSON.stringify({
+                            action_type:      'discrepancy',
+                            avenant_id:       payload.avenant_id ?? null,
+                            excel_data:       payload.excel_data ?? {},
+                            row_index:        payload.row_index ?? null,
+                            reference_police: payload.reference_police ?? null,
                         })
-                    }
-                );
+                    });
 
-                const result = await response.json();
+                    const result = await response.json();
+                    if (!response.ok || !result.success) throw new Error(result.message || 'Erreur lors du traitement.');
 
-                if (!response.ok || !result.success) {
-                    throw new Error(result.message || 'Erreur lors du traitement.');
+                    this._markItemAsResolved(itemElement, result.message);
+                    processed++;
+                    this._recalculateAndRenderStatsFromDom();
+                } catch (error) {
+                    console.error(`[BordereauAnalysis] bulkUpdateAll() — Erreur sur item:`, error);
+                    errors++;
+                } finally {
+                    const percentage = Math.round((processed / totalItemsToProcess) * 100);
+                    this._updateProgressBarPercentage(percentage);
+                    this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+                        'warning', `Traitement en lot... ${processed}/${totalItemsToProcess}. Veuillez patienter.`, false, true
+                    );
                 }
+            }
 
-                this._markItemAsResolved(itemElement, result.message);
-                processed++;
-                this._recalculateAndRenderStatsFromDom(); // Update stats after each item
-
-            } catch (error) {
-                console.error(
-                    `[BordereauAnalysis] bulkUpdateAll() — Erreur sur item:`,
-                    error
-                );
-                errors++;
-            } finally { // NOUVEAU : Mettre à jour la barre de progression et le feedback après chaque item
-                const percentage = Math.round((processed / totalItemsToProcess) * 100);
-                this._updateProgressBarPercentage(percentage);
+            if (this.hasMappingStatusFeedbackTarget) {
+                const msg = errors > 0
+                    ? `${processed} avenant(s) mis à jour, ${errors} erreur(s).`
+                    : `${processed} avenant(s) mis à jour avec succès.`;
                 this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
-                    'warning', `Traitement en lot... ${processed}/${totalItemsToProcess}. Veuillez patienter.`, false, true //
+                    errors > 0 ? 'warning' : 'success', msg, false, true
                 );
             }
+
+            this.notifyCerveau('bordereau:bulk.completed', { bordereauId: this.bordereauIdValue, type: 'discrepancy', processed, errors });
+
+        } catch (error) {
+            console.error("[BordereauAnalysis] bulkUpdateAll() - Erreur globale:", error);
+        } finally {
+            this.toggleProgressBar(false);
+            this.isBulkProcessingValue = false;
+            if (this.hasBulkUpdateItemTarget) this.bulkUpdateItemTarget.querySelector('button').disabled = false;
+            this._updateBulkButtonsState();
+            this._updateValidateButtonState();
         }
-
-        console.log(
-            `[BordereauAnalysis] bulkUpdateAll() — Terminé. ` +
-            `Traités: ${processed}, Erreurs: ${errors}`
-        );
-
-        if (this.hasBulkUpdateItemTarget) {
-            this.bulkUpdateItemTarget.querySelector('button').disabled = false;
-        }
-
-        this._updateBulkButtonsState();
-        this._updateValidateButtonState();
-
-        if (this.hasMappingStatusFeedbackTarget) {
-            this.mappingStatusFeedbackTarget.classList.remove('d-none');
-            const msg = errors > 0
-                ? `${processed} avenant(s) mis à jour, ${errors} erreur(s).`
-                : `${processed} avenant(s) mis à jour avec succès.`; //
-            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
-                errors > 0 ? 'warning' : 'success', msg, false
-            );
-        }
-
-        this.notifyCerveau('bordereau:bulk.completed', {
-            bordereauId: this.bordereauIdValue,
-            type: 'discrepancy',
-            processed,
-            errors
-        });
-        this.toggleProgressBar(false); // NOUVEAU : Masquer la barre de progression
-        this.isBulkProcessingValue = false; // NOUVEAU : Réinitialiser le drapeau
     }
 
     /**
@@ -1666,15 +1614,13 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         console.error("[BordereauAnalysis] _handleAnalysisFailed() - Échec de l'analyse:", errorMessage);
         this.submitButtonTarget.disabled = false; // Réactiver le bouton
         this.mappingStatusFeedbackTarget.classList.remove('d-none'); // Ensure feedback is visible
-        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('error', `Échec de l'analyse: ${errorMessage}`, false); // No icon for toolbar feedback
+        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('error', `Échec de l'analyse: ${errorMessage}`, false, true); // No icon for toolbar feedback
         
         // Update accessibility attributes for error
         if (this.hasMappingStatusFeedbackTarget) {
             this.mappingStatusFeedbackTarget.role = "alert";
             this.mappingStatusFeedbackTarget.setAttribute('aria-live', 'assertive');
         }
-
-        this.toggleProgressBar(false);
     }
 
     /**
@@ -1683,32 +1629,36 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
     toggleProgressBar(isLoading) {
         // Use the local progress bar targets defined in this controller
         if (!this.hasProgressBarContainerTarget) return;
-        this.progressBarContainerTarget.style.display = isLoading ? 'block' : 'none';
+
         if (isLoading) {
+            this.progressBarContainerTarget.style.display = 'block';
             this.progressBarTarget.style.animation = 'none';
             this.progressBarTarget.style.backgroundSize = '100% 100%';
             this.progressBarTarget.style.width = '0%';
             this.progressBarTarget.style.background = '#0047AB';
-            this.progressBarTarget.style.transition = 'width 0.3s ease';
+            this.progressBarTarget.style.transition = 'none';
             // Force reflow to ensure the initial state is rendered before updates
             void this.progressBarTarget.offsetWidth;
+            this.progressBarTarget.style.transition = 'width 0.3s ease';
         } else {
             // Ensure it reaches 100% before hiding, and animate it
-            this.progressBarTarget.style.width = '100%';
-            // Add a temporary transition to ensure the 100% animation plays
             this.progressBarTarget.style.transition = 'width 0.3s ease';
+            this.progressBarTarget.style.width = '100%';
 
             const hideBar = () => {
                 this.progressBarContainerTarget.style.display = 'none';
-                this.progressBarTarget.style.animation = ''; // Reset animation
-                this.progressBarTarget.style.background = ''; // Reset background
-                this.progressBarTarget.style.transition = ''; // Clear transition
+                this.progressBarTarget.style.animation = '';
+                this.progressBarTarget.style.background = '';
+                this.progressBarTarget.style.transition = '';
                 this.progressBarTarget.removeEventListener('transitionend', hideBar);
             };
-            // Listen for the end of the transition to hide the container
+
+            // Listen for the end of the transition to hide the container, with safety timeout
             this.progressBarTarget.addEventListener('transitionend', hideBar, { once: true });
+            setTimeout(() => { if (this.progressBarContainerTarget.style.display !== 'none') hideBar(); }, 500);
         }
     }
+
     /**
      * Met à jour le pourcentage de la barre de progression.
      * @param {number} percentage - Valeur entre 0 et 100.
