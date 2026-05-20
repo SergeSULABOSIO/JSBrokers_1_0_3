@@ -642,17 +642,17 @@ class BordereauController extends AbstractController
             }
 
             $comparisons = [
-                'prime_ttc'           => ['getter' => 'montantTTC',      'formatter' => fn($v) => number_format((float)$v, 2, '.', '')],
-                'date_effet_avenant'  => ['getter' => 'startingAt',      'formatter' => fn($v) => $v instanceof \DateTimeInterface ? $v->format('Y-m-d') : (is_string($v) ? $v : null)],
-                'date_expiration_avenant' => ['getter' => 'endingAt',    'formatter' => fn($v) => $v instanceof \DateTimeInterface ? $v->format('Y-m-d') : (is_string($v) ? $v : null)],
-                'taux_commission'     => ['getter' => 'tauxCommission',  'formatter' => fn($v) => number_format((float)$v, 2, '.', '')],
+                'prime_ttc'           => ['getter' => 'getMontantTTC',      'formatter' => fn($v) => number_format((float)$v, 2, '.', '')],
+                'date_effet_avenant'  => ['getter' => 'getStartingAt',      'formatter' => fn($v) => $v instanceof \DateTimeInterface ? $v->format('Y-m-d') : (is_string($v) ? $v : null)],
+                'date_expiration_avenant' => ['getter' => 'getEndingAt',    'formatter' => fn($v) => $v instanceof \DateTimeInterface ? $v->format('Y-m-d') : (is_string($v) ? $v : null)],
+                'taux_commission'     => ['getter' => 'getTauxCommission',  'formatter' => fn($v) => number_format((float)$v, 2, '.', '')],
             ];
 
             foreach ($comparisons as $field => $config) {
                 if (isset($rawLineData[$field])) {
                     $excelValue = $rawLineData[$field];
-                    $dbValue = $avenant->{$config['getter']};
-                    if ($config['formatter']($excelValue) !== $config['formatter']($dbValue)) {
+                    $dbValue = $avenant->{$config['getter']}();
+                    if ($dbValue !== null && $config['formatter']($excelValue) !== $config['formatter']($dbValue)) {
                         $discrepancies[] = sprintf("%s (Excel: %s, DB: %s)", $this->translator->trans($field, [], 'messages'), (string)$this->formatValueForDisplay($excelValue, $field), (string)$this->formatValueForDisplay($dbValue, $field));
                     }
                 }
