@@ -902,7 +902,8 @@ class BordereauController extends AbstractController
             return $this->json(['success' => false, 'message' => 'Bordereau introuvable.'], 404);
         }
 
-        $data = json_decode($request->getContent(), true);
+        $raw         = json_decode($request->getContent(), true);
+        $data        = $raw['payload'] ?? $raw; // compatibilité Stimulus wrapping
         $actionType  = $data['action_type'] ?? null;  // 'new' ou 'discrepancy'
         $excelData   = $data['excel_data'] ?? [];
         $rowIndex    = isset($data['row_index']) ? (int)$data['row_index'] : null;
@@ -964,8 +965,9 @@ class BordereauController extends AbstractController
             ], 404);
         }
 
-        $body  = json_decode($request->getContent(), true);
-        $items = $body['items'] ?? []; // Tableau des actions à traiter
+        $raw   = json_decode($request->getContent(), true);
+        $body  = $raw['payload'] ?? $raw;
+        $items = $body['items'] ?? [];
         $invite = $this->getInvite();
 
         if (empty($items)) {
