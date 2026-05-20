@@ -905,7 +905,6 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             }
         }
 
-        this.mappingStatusFeedbackTarget.innerHTML = message;
         this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('info', message, false, true);
         // Appel redondant supprimé. La mise à jour se fait déjà aux moments clés.
     }
@@ -1631,6 +1630,14 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         // Use the local progress bar targets defined in this controller
         if (!this.hasProgressBarContainerTarget) return;
 
+        // Annuler toute fermeture programmée pour éviter les conflits (race condition).
+        // Si une action précédente (ex: sauvegarde) a fini et planifié la fermeture,
+        // on l'annule car on vient de demander un nouvel affichage.
+        if (this._progressBarTimeout) {
+            clearTimeout(this._progressBarTimeout);
+            this._progressBarTimeout = null;
+        }
+
         if (isLoading) {
             this.progressBarContainerTarget.style.display = 'block';
             this.progressBarTarget.style.animation = 'none';
@@ -1642,21 +1649,23 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             void this.progressBarTarget.offsetWidth;
             this.progressBarTarget.style.transition = 'width 0.3s ease';
         } else {
+            // Si la barre n'est pas affichée, inutile de lancer la séquence de fermeture
+            if (this.progressBarContainerTarget.style.display === 'none') return;
+
             // Ensure it reaches 100% before hiding, and animate it
             this.progressBarTarget.style.transition = 'width 0.3s ease';
             this.progressBarTarget.style.width = '100%';
 
-            const hideBar = () => {
-                this.progressBarContainerTarget.style.display = 'none';
-                this.progressBarTarget.style.animation = '';
-                this.progressBarTarget.style.background = '';
-                this.progressBarTarget.style.transition = '';
-                this.progressBarTarget.removeEventListener('transitionend', hideBar);
-            };
-
-            // Listen for the end of the transition to hide the container, with safety timeout
-            this.progressBarTarget.addEventListener('transitionend', hideBar, { once: true });
-            setTimeout(() => { if (this.progressBarContainerTarget.style.display !== 'none') hideBar(); }, 500);
+            // On planifie la fermeture effective après la transition visuelle (0.3s)
+            this._progressBarTimeout = setTimeout(() => {
+                if (this.hasProgressBarContainerTarget) {
+                    this.progressBarContainerTarget.style.display = 'none';
+                    this.progressBarTarget.style.animation = '';
+                    this.progressBarTarget.style.background = '';
+                    this.progressBarTarget.style.transition = '';
+                }
+                this._progressBarTimeout = null;
+            }, 500);
         }
     }
 
