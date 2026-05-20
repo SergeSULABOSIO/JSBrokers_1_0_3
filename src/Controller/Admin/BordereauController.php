@@ -905,21 +905,26 @@ class BordereauController extends AbstractController
         $data = json_decode($request->getContent(), true);
         $actionType  = $data['action_type'] ?? null;  // 'new' ou 'discrepancy'
         $excelData   = $data['excel_data'] ?? [];
+        $rowIndex    = isset($data['row_index']) ? (int)$data['row_index'] : null;
+
+        if ($rowIndex === null) {
+            return $this->json(['success' => false, 'message' => 'Index de ligne manquant.'], 400);
+        }
         $invite      = $this->getInvite();
 
         try {
             if ($actionType === 'new') {
                 $avenant = $this->avenantActionService->createFromBordereauLine($excelData, $bordereau, $invite);
-                $message = sprintf('Ligne n°%s : Avenant n°%s créé avec succès.', ($data['row_index'] + 2), $avenant->getReferencePolice());
+                $message = sprintf('Ligne n°%s : Avenant n°%s créé avec succès.', ($rowIndex + 2), $avenant->getReferencePolice());
                 // Mettre à jour le résultat stocké en base : passer de 'new' à 'match'
-                $this->_markAnalysisResultAsMatch($bordereau, $data['row_index'], $avenant->getId(), $avenant->getReferencePolice());
+                $this->_markAnalysisResultAsMatch($bordereau, $rowIndex, $avenant->getId(), $avenant->getReferencePolice());
             } elseif ($actionType === 'discrepancy') {
                 $avenant = $this->avenantRepository->find($data['avenant_id']);
                 if (!$avenant) throw new \Exception("Avenant introuvable.");
                 $this->avenantActionService->updateFromBordereauLine($avenant, $excelData, $bordereau);
-                $message = sprintf('Ligne n°%s : Avenant n°%s mis à jour avec succès.', ($data['row_index'] + 2), $avenant->getReferencePolice());
+                $message = sprintf('Ligne n°%s : Avenant n°%s mis à jour avec succès.', ($rowIndex + 2), $avenant->getReferencePolice());
                 // Mettre à jour le résultat stocké en base : passer de 'discrepancy' à 'match'
-                $this->_markAnalysisResultAsMatch($bordereau, $data['row_index'], $avenant->getId(), $avenant->getReferencePolice());
+                $this->_markAnalysisResultAsMatch($bordereau, $rowIndex, $avenant->getId(), $avenant->getReferencePolice());
             } else {
                 return $this->json(['success' => false, 'message' => 'Action inconnue.'], 400);
             }
@@ -927,7 +932,7 @@ class BordereauController extends AbstractController
             return $this->json([
                 'success' => true,
                 'message' => $message,
-                'resolved_row_index' => $data['row_index'],
+                'resolved_row_index' => $rowIndex,
             ]);
         } catch (\Exception $e) {
             return $this->json(['success' => false, 'message' => $e->getMessage()], 500);
@@ -974,11 +979,13 @@ class BordereauController extends AbstractController
 
         foreach ($items as $item) {
             $actionType    = $item['action_type']      ?? null;
-            $rowIndex      = $item['row_index']         ?? null;
+            $rowIndex      = isset($item['row_index']) ? (int)$item['row_index'] : null;
             $avenantId     = $item['avenant_id']        ?? null;
             $excelData     = $item['excel_data']        ?? [];
 
             try {
+                if ($rowIndex === null) throw new \Exception("Index de ligne manquant.");
+
                 if ($actionType === 'new') {
                     $avenant = $this->avenantActionService->createFromBordereauLine($excelData, $bordereau, $invite);
                     $msg = sprintf('Ligne n°%s : Avenant n°%s créé.', ($rowIndex + 2), $avenant->getReferencePolice());
