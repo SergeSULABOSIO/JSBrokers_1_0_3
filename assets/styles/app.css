@@ -1741,7 +1741,8 @@ textarea:hover,
 }
 
 .analysis-item-details.is-open {
-    max-height: 500px; /* Hauteur suffisante pour le contenu */
+    /* Augmentation de la hauteur max pour éviter de tronquer le contenu (clipping) */
+    max-height: 1000px; 
 }
 
 .analysis-item-actions {
