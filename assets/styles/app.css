@@ -60,6 +60,11 @@ a:active {
     background-color: #e0f9ee;
 }
 
+/* NOUVEAU : Couleur Bleu Cobalt JS Brokers */
+.bg-cobalt {
+    background-color: #0047AB !important;
+}
+
 .cacherComposant {
     display: none;
 }
@@ -1829,6 +1834,25 @@ textarea:hover,
 /* NOUVEAU : Récapitulatif de synthèse de l'analyse */
 .analysis-summary-card {
     border-radius: 10px;
+}
+
+/* CORRECTION : Annulation des styles conflictuels de interactive-menu.css pour la barre de conformité */
+.analysis-summary-card .progress {
+    background-color: #e9ecef;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.analysis-summary-card .progress-bar {
+    position: relative !important;
+    display: flex !important;
+    top: auto !important;
+    left: auto !important;
+    height: 100% !important;
+    z-index: 1 !important;
+    animation: none !important;
+    box-shadow: none !important;
 }
 
 .analysis-summary-counter {

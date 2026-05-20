@@ -1274,13 +1274,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             maximumFractionDigits: 2
         }).format(n || 0);
 
-        // Détermine la couleur de la barre de progression selon le % de conformité
-        let progressClass = 'bg-danger';
-        if (matchPct >= 80) progressClass = 'bg-success';
-        else if (matchPct >= 50) progressClass = 'bg-warning';
-
         this.analysisSummaryTarget.innerHTML = `
-            <div class="card mb-4 border-0 shadow-sm">
+            <div class="card mb-4 border-0 shadow-sm analysis-summary-card">
                 <div class="card-body p-3">
                     <h6 class="fw-bold mb-3 text-muted text-uppercase small">
                         Récapitulatif de l'analyse
@@ -1320,8 +1315,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                             <span>Taux de conformité</span>
                             <span class="fw-bold">${matchPct}%</span>
                         </div>
-                        <div class="progress" style="height:8px; border-radius:4px;">
-                            <div class="progress-bar ${progressClass}"
+                        <div class="progress">
+                            <div class="progress-bar bg-cobalt"
                                  role="progressbar"
                                  style="width:${matchPct}%"
                                  aria-valuenow="${matchPct}"
