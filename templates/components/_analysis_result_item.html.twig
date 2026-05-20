@@ -87,7 +87,8 @@
     {# Contenu détaillé (accordéon), caché par défaut #}
     {% if result.type != 'warning' and result.bordereau_line_info is not empty %}
         <div class="analysis-item-details" data-analysis-result-item-target="detailsPanel">
-            <div class="p-3">
+            {# Augmentation de la gouttière basse (pb-4) pour éviter l'effet "collé" à la bordure #}
+            <div class="p-3 pb-4">
                 {% set currency_code = viewData.display_currency_code ?? '' %}
                 {% set system_formats = viewData.system_field_formats ?? {} %}
 
