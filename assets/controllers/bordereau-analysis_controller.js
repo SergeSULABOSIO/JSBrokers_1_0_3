@@ -7,7 +7,7 @@ import BaseController from './base_controller.js';
  */
 export default class extends BaseController { // NOUVEAU : Ajout du bouton de retour
     static targets = [ // NOUVEAU : Ajout de la cible pour le bouton de retour
-        "sheetSelection", "step2", "mappingContainer", "mappingStatusFeedback", "mappingForm",
+        "sheetSelection", "step2", "mappingContainer", "mappingStatusFeedback", "toastBody", "toastContainer", "mappingForm",
         "mappingSelect", "analysisResult", "submitButton", "columnNameText", "step1", "step3", "analysisResultsList", "progressBar", "progressBarContainer", "analysisSummary", "validateButton",
         "backToMappingButton", "actionsBlock", "optionsMenu", "exportPdfItem", "bulkCreateItem", "bulkUpdateItem", "bulkDivider",
         "toolbarTitleIconPrepare", "toolbarTitleIconSuccess"
@@ -101,6 +101,15 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         }
         this.isConnecting = false; // Le drapeau est remis à false une fois la logique de connect() terminée
         console.log("[BordereauAnalysis] 6. connect() - Fin de la connexion.");
+    }
+
+    // Initialisation de l'instance Bootstrap Toast pour le feedback
+    _toastInstance = null;
+    if (this.hasMappingStatusFeedbackTarget) {
+        this._toastInstance = new bootstrap.Toast(
+            this.mappingStatusFeedbackTarget,
+            { autohide: false }
+        );
     }
 
     disconnect() {
@@ -607,10 +616,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 this.sheetSelectionTargets.find(radio => radio.checked)?.value
             );
 
-            if (this.hasMappingStatusFeedbackTarget) {
-                this.mappingStatusFeedbackTarget.classList.remove('d-none');
-            }
-
+            // The toast will be shown by updateMappingStatusFeedback()
         } else if (this.currentStep === 3) {
 
             // ÉTAPE 3
@@ -838,13 +844,12 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         }
         
         let textColorClass;
-        if (isToolbarFeedback) {
-            // 3 couleurs uniquement dans la barre d'outils sombre
-            const toolbarColorMap = {
-                'success': 'toolbar-feedback-info',    // confirmation → gris clair (pas de vert)
-                'warning': 'toolbar-feedback-warning', // avertissement → jaune
-                'error':   'toolbar-feedback-error',   // erreur → rouge clair
-                'info':    'toolbar-feedback-info',    // information → gris clair
+        if (isToolbarFeedback) { // This branch is now unused for mappingStatusFeedbackTarget
+            const toolbarColorMap = { // This map is now effectively unused for mappingStatusFeedbackTarget
+                'success': 'toolbar-feedback-info',
+                'warning': 'toolbar-feedback-warning',
+                'error':   'toolbar-feedback-error',
+                'info':    'toolbar-feedback-info',
             };
             textColorClass = toolbarColorMap[type] ?? 'toolbar-feedback-info';
         } else {
@@ -856,12 +861,6 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 'info':    'text-info',
             };
             textColorClass = regularColorMap[type] ?? 'text-secondary';
-        }
-
-        // Update accessibility attributes
-        if (this.hasMappingStatusFeedbackTarget) {
-            this.mappingStatusFeedbackTarget.role = (type === 'error') ? 'alert' : 'status';
-            this.mappingStatusFeedbackTarget.setAttribute('aria-live', (type === 'error') ? 'assertive' : 'polite');
         }
 
         return `<span class="d-inline-flex align-items-center small ${textColorClass}">${iconHtml} ${message}</span>`;
@@ -905,8 +904,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             }
         }
 
-        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('info', message, false, true);
-        // Appel redondant supprimé. La mise à jour se fait déjà aux moments clés.
+        this._showToast('info', message);
     }
 
     /**
@@ -934,10 +932,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         // Désactiver le bouton et préparer l'UI
         this.submitButtonTarget.disabled = true;
         this.submitButtonTarget.textContent = "Analyse en cours...";
-        this.toggleProgressBar(true);
-        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml( //
-            'warning', 'Initialisation de l\'analyse...', false, true
-        );
+        this.toggleProgressBar(true); // Show progress bar
+        this._showToast('warning', 'Initialisation de l\'analyse...');
 
         // Réinitialiser les résultats accumulés
         this._accumulatedResultsHtml  = [];
@@ -972,9 +968,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             }
 
             console.log(`[BordereauAnalysis] submitAnalysis() - ${totalRows} lignes à traiter par lots de ${chunkSize}.`);
-            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml( //
-                'warning', `0 / ${totalRows} lignes analysées...`, false, true
-            );
+            this._showToast('warning', `0 / ${totalRows} lignes analysées...`);
 
             // --- ÉTAPE 2 : Traiter les lots séquentiellement ---
             let offset = 0;
@@ -1005,13 +999,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 const percentage = Math.min(Math.round((processed / totalRows) * 100), 100);
                 this._updateProgressBarPercentage(percentage);
 
-                // Mettre à jour le feedback texte
-                this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
-                    'warning', //
-                    `${Math.min(processed, totalRows)} / ${totalRows} lignes analysées...`,
-                    false,
-                    true
-                );
+                this._showToast('warning', `${Math.min(processed, totalRows)} / ${totalRows} lignes analysées...`);
 
                 console.log(`[BordereauAnalysis] submitAnalysis() - Lot traité : ${processed}/${totalRows} (${percentage}%)`);
 
@@ -1226,10 +1214,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         this.validateButtonTarget.disabled = true;
         this.toggleProgressBar(true);
-        this.mappingStatusFeedbackTarget.classList.remove('d-none'); //
-        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
-            'warning', 'Validation en cours...', false, true
-        );
+        this._showToast('warning', 'Validation en cours...');
 
         try {
             const response = await fetch(
@@ -1423,7 +1408,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         const totalItemsToProcess = itemsToProcess.length;
         if (totalItemsToProcess === 0) {
-            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('info', 'Aucun nouvel avenant à créer.', false, true); //
+            this._showToast('info', 'Aucun nouvel avenant à créer.');
             this.toggleProgressBar(false);
             this.isBulkProcessingValue = false;
             return;
@@ -1433,9 +1418,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             let processed = 0;
             let errors    = 0;
 
-            this.mappingStatusFeedbackTarget.classList.remove('d-none');
-            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml( //
-                'warning', `Traitement en lot... 0/${totalItemsToProcess}. Veuillez patienter.`, false, true
+            this._showToast('warning', `Traitement en lot... 0/${totalItemsToProcess}. Veuillez patienter.`
             );
 
             for (const itemElement of itemsToProcess) {
@@ -1472,20 +1455,14 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 } finally {
                     const percentage = Math.round((processed / totalItemsToProcess) * 100);
                     this._updateProgressBarPercentage(percentage);
-                    this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
-                        'warning', `Traitement en lot... ${processed}/${totalItemsToProcess}. Veuillez patienter.`, false, true
-                    );
+                    this._showToast('warning', `Traitement en lot... ${processed}/${totalItemsToProcess}. Veuillez patienter.`);
                 }
             }
 
-            if (this.hasMappingStatusFeedbackTarget) {
-                const msg = errors > 0
-                    ? `${processed} avenant(s) créé(s), ${errors} erreur(s).`
-                    : `${processed} avenant(s) créé(s) avec succès.`;
-                this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
-                    errors > 0 ? 'warning' : 'success', msg, false, true
-                );
-            }
+            const msg = errors > 0
+                ? `${processed} avenant(s) créé(s), ${errors} erreur(s).`
+                : `${processed} avenant(s) créé(s) avec succès.`;
+            this._showToast(errors > 0 ? 'warning' : 'success', msg, true);
 
             this.notifyCerveau('bordereau:bulk.completed', { bordereauId: this.bordereauIdValue, type: 'new', processed, errors });
 
@@ -1528,7 +1505,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         const totalItemsToProcess = itemsToProcess.length;
         if (totalItemsToProcess === 0) {
-            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('info', 'Aucune anomalie à mettre à jour.', false, true); //
+            this._showToast('info', 'Aucune anomalie à mettre à jour.');
             this.toggleProgressBar(false);
             this.isBulkProcessingValue = false;
             return;
@@ -1538,9 +1515,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             let processed = 0;
             let errors    = 0;
 
-            this.mappingStatusFeedbackTarget.classList.remove('d-none');
-            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml( //
-                'warning', `Traitement en lot... 0/${totalItemsToProcess}. Veuillez patienter.`, false, true
+            this._showToast('warning', `Traitement en lot... 0/${totalItemsToProcess}. Veuillez patienter.`
             );
 
             for (const itemElement of itemsToProcess) {
@@ -1577,20 +1552,14 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 } finally {
                     const percentage = Math.round((processed / totalItemsToProcess) * 100);
                     this._updateProgressBarPercentage(percentage);
-                    this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
-                        'warning', `Traitement en lot... ${processed}/${totalItemsToProcess}. Veuillez patienter.`, false, true
-                    );
+                    this._showToast('warning', `Traitement en lot... ${processed}/${totalItemsToProcess}. Veuillez patienter.`);
                 }
             }
 
-            if (this.hasMappingStatusFeedbackTarget) {
-                const msg = errors > 0
-                    ? `${processed} avenant(s) mis à jour, ${errors} erreur(s).`
-                    : `${processed} avenant(s) mis à jour avec succès.`;
-                this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
-                    errors > 0 ? 'warning' : 'success', msg, false, true
-                );
-            }
+            const msg = errors > 0
+                ? `${processed} avenant(s) mis à jour, ${errors} erreur(s).`
+                : `${processed} avenant(s) mis à jour avec succès.`;
+            this._showToast(errors > 0 ? 'warning' : 'success', msg, true);
 
             this.notifyCerveau('bordereau:bulk.completed', { bordereauId: this.bordereauIdValue, type: 'discrepancy', processed, errors });
 
@@ -1612,15 +1581,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
     _handleAnalysisFailed(payload) {
         const { errorMessage } = payload;
         console.error("[BordereauAnalysis] _handleAnalysisFailed() - Échec de l'analyse:", errorMessage);
-        this.submitButtonTarget.disabled = false; // Réactiver le bouton
-        this.mappingStatusFeedbackTarget.classList.remove('d-none'); // Ensure feedback is visible
-        this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml('error', `Échec de l'analyse: ${errorMessage}`, false, true); // No icon for toolbar feedback
-        
-        // Update accessibility attributes for error
-        if (this.hasMappingStatusFeedbackTarget) {
-            this.mappingStatusFeedbackTarget.role = "alert";
-            this.mappingStatusFeedbackTarget.setAttribute('aria-live', 'assertive');
-        }
+        this.submitButtonTarget.disabled = false;
+        this._showToast('error', `Échec de l'analyse: ${errorMessage}`);
     }
 
     /**
