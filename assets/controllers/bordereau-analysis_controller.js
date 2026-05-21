@@ -1660,13 +1660,16 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         if (isLoading) {
             this.progressBarContainerTarget.style.display = 'block';
-            this.progressBarTarget.style.animation = 'none';
-            this.progressBarTarget.style.backgroundSize = '100% 100%';
-            this.progressBarTarget.style.width = '0%';
-            this.progressBarTarget.style.background = '#0047AB';
             this.progressBarTarget.style.transition = 'none';
-            // Force reflow to ensure the initial state is rendered before updates
+            this.progressBarTarget.style.width = '10%'; // Donne un feedback immédiat
+            this.progressBarTarget.style.background = '#0047AB';
+            
+            // Force le rendu navigateur
             void this.progressBarTarget.offsetWidth;
+            
+            // Active l'animation de pulse/shimmer pour montrer que c'est "vivant"
+            this.progressBarTarget.style.animation = 'toolbar-progress-animation 1.5s infinite linear';
+            this.progressBarTarget.style.backgroundSize = '200% 100%';
             this.progressBarTarget.style.transition = 'width 0.3s ease';
         } else {
             // Si la barre n'est pas affichée, inutile de lancer la séquence de fermeture

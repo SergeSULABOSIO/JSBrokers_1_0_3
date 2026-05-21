@@ -201,7 +201,7 @@ export default class extends BaseController {
         } catch (error) {
             console.error('[AnalysisResultItem] handleAction() - Erreur:', error);
             // Réactiver les boutons en cas d'erreur
-            this.actionButtonTargets.forEach(btn => btn.disabled = false);
+            this.actionButtonTargets.forEach(btn => { if(btn) btn.disabled = false; });
             // Afficher un feedback d'erreur sur l'item
             this._showActionError(error.message);
 
