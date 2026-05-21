@@ -18,6 +18,8 @@ export default class extends BaseController {
         actions:     Array,
         bordereauId: Number,
         iconPrefix: String, // Préfixe unique pour les requêtes d'icônes
+        idEntreprise: Number,
+        idInvite: Number,
     };
 
     connect() {
@@ -167,6 +169,8 @@ export default class extends BaseController {
                         excel_data:        payload.excel_data ?? {},
                         row_index:         payload.row_index ?? null,
                         reference_police:  payload.reference_police ?? null,
+                        idEntreprise:      this.idEntrepriseValue,
+                        idInvite:          this.idInviteValue,
                     })
                 }
             );
