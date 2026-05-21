@@ -232,7 +232,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         } else {
             console.log("1. Feuille non restaurée: 'selectedSheetNameValue' est vide.");
         }
-    
+
         // 2. Restaurer les résultats de l'analyse si l'étape est 3 (Data)
         if (this.currentAnalysisStepValue === 3 && this.analysisResultsHtmlValue) {
             console.log("2. Résultats d'analyse HTML restaurés (en mémoire):", this.analysisResultsHtmlValue);
@@ -242,7 +242,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         } else {
             console.log("2. Résultats d'analyse non restaurés (pas à l'étape 3 ou données vides).");
         }
-    
+
         // 3. Naviguer vers l'étape sauvegardée (UI - rend le conteneur de mappage visible si étape 2)
         // C'est crucial de faire cela AVANT de tenter de restaurer les selects du mappage,
         // car les selects doivent être visibles pour que leur valeur soit correctement définie et validée.
@@ -481,8 +481,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         const payload = {
             currentAnalysisStep: this.currentStep,
-            selectedSheetName:   selectedSheetName,
-            mappedColumns:       mappedColumns,
+            selectedSheetName: selectedSheetName,
+            mappedColumns: mappedColumns,
             // analysisResults intentionnellement absent :
             // non pertinent pour une sauvegarde de mappage en cours d'étape 2
         };
@@ -493,9 +493,9 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             const response = await fetch(
                 `/admin/bordereau/api/save-analysis-state/${this.bordereauIdValue}`,
                 {
-                    method:  'POST',
+                    method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body:    JSON.stringify(payload)
+                    body: JSON.stringify(payload)
                 }
             );
 
@@ -695,7 +695,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this.updateSubmitButtonState();
             return;
         }
- 
+
         const sheetData = this.sheetsDataValue[sheetName];
         if (!sheetData) {
             return;
@@ -786,7 +786,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             resultCell.innerHTML = this.getFeedbackHtml('error', message, true, false); //
             this.validationState.set(columnLetter, false);
         }
-        
+
         // Si la colonne est mappée et valide, on met le nom en gras
         if (mappingType && this.validationState.get(columnLetter)) {
             columnNameTextElement.classList.add('fw-bold');
@@ -846,14 +846,14 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                     ? '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-exclamation-triangle-fill me-1" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg>'
                     : '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x-circle-fill me-1" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z"/></svg>');
         }
-        
+
         let textColorClass;
-        if (isToolbarFeedback) { // This branch is now unused for mappingStatusFeedbackTarget
-            const toolbarColorMap = { // This map is now effectively unused for mappingStatusFeedbackTarget
+        if (isToolbarFeedback) {
+            const toolbarColorMap = {
                 'success': 'toolbar-feedback-info',
                 'warning': 'toolbar-feedback-warning',
-                'error':   'toolbar-feedback-error',
-                'info':    'toolbar-feedback-info',
+                'error': 'toolbar-feedback-error',
+                'info': 'toolbar-feedback-info',
             };
             textColorClass = toolbarColorMap[type] ?? 'toolbar-feedback-info';
         } else {
@@ -861,8 +861,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             const regularColorMap = {
                 'success': 'text-success',
                 'warning': 'text-warning',
-                'error':   'text-danger',
-                'info':    'text-info',
+                'error': 'text-danger',
+                'info': 'text-info',
             };
             textColorClass = regularColorMap[type] ?? 'text-secondary';
         }
@@ -936,11 +936,11 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         // Désactiver le bouton et préparer l'UI
         this.submitButtonTarget.disabled = true;
         this.submitButtonTarget.textContent = "Analyse en cours...";
-        this.toggleProgressBar(true); // Show progress bar
+        this.toggleProgressBar(true);
         this._showToast('warning', 'Initialisation de l\'analyse...');
 
         // Réinitialiser les résultats accumulés
-        this._accumulatedResultsHtml  = [];
+        this._accumulatedResultsHtml = [];
         this._accumulatedResultsStore = [];
         let finalStats = {};
 
@@ -965,7 +965,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
             if (totalRows === 0) {
                 this._handleAnalysisCompleted({
-                    analysisResults:     [],
+                    analysisResults: [],
                     analysisResultsHtml: [],
                 });
                 return;
@@ -991,7 +991,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 const processData = await processResponse.json();
 
                 // Accumuler les résultats de ce lot
-                this._accumulatedResultsHtml  = this._accumulatedResultsHtml.concat(
+                this._accumulatedResultsHtml = this._accumulatedResultsHtml.concat(
                     processData.chunkResultsHtml || []
                 );
                 this._accumulatedResultsStore = this._accumulatedResultsStore.concat(
@@ -999,7 +999,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 );
 
                 // Mettre à jour la barre de progression (mode déterminé)
-                const processed  = processData.processedCount || (offset + chunkSize);
+                const processed = processData.processedCount || (offset + chunkSize);
                 const percentage = Math.min(Math.round((processed / totalRows) * 100), 100);
                 this._updateProgressBarPercentage(percentage);
 
@@ -1017,10 +1017,10 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
             // --- ÉTAPE 3 : Tout est traité ---
             this._handleAnalysisCompleted({
-                analysisResults:     this._accumulatedResultsStore,
+                analysisResults: this._accumulatedResultsStore,
                 analysisResultsHtml: this._accumulatedResultsHtml,
                 // Pass the final stats from the last chunk
-                stats:               finalStats
+                stats: finalStats
             });
 
 
@@ -1074,8 +1074,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         console.log("[BordereauAnalysis] _handleAnalysisCompleted() - Analyse terminée.", payload);
 
         // Mettre à jour les données en mémoire
-        this.analysisResultsValue     = payload.analysisResults     || [];
-        this.analysisStatsValue       = payload.stats               || {};
+        this.analysisResultsValue = payload.analysisResults || [];
+        this.analysisStatsValue = payload.stats || {};
         this.analysisResultsHtmlValue = payload.analysisResultsHtml || [];
 
         // Réinitialiser l'état du bouton "Lancer l'analyse" AVANT showStep
@@ -1085,7 +1085,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this.submitButtonTarget.textContent = "Lancer l'analyse";
         }
 
-        
+
         // Passer à l'étape 3 — showStep gère la visibilité de tous les boutons
         this.showStep(3);
         this.renderAnalysisSummary(payload.stats); // Render summary with final stats
@@ -1127,8 +1127,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         if (allItems.length === 0) return;
 
-        let totalActionable  = 0; // new + discrepancy
-        let totalResolved    = 0; // parmi les actionnables, ceux marqués résolus
+        let totalActionable = 0; // new + discrepancy
+        let totalResolved = 0; // parmi les actionnables, ceux marqués résolus
 
         allItems.forEach(item => {
             // Les items warning et match ne comptent pas
@@ -1165,24 +1165,24 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      */
     _updateBulkButtonsState() {
         if (!this.hasAnalysisResultsListTarget) return;
-    
+
         const allItems = this.analysisResultsListTarget.querySelectorAll(
             '[data-controller="analysis-result-item"]'
         );
-    
-        let pendingNew         = 0;
+
+        let pendingNew = 0;
         let pendingDiscrepancy = 0;
-    
+
         allItems.forEach(item => {
             if (item.dataset.resolved === 'true') return; // Déjà traité
-    
+
             if (item.classList.contains('border-info')) {
                 pendingNew++;
             } else if (item.classList.contains('border-warning')) {
                 pendingDiscrepancy++;
             }
         });
-    
+
         if (this.hasBulkCreateItemTarget) {
             this.bulkCreateItemTarget.classList.toggle('d-none', pendingNew === 0);
         }
@@ -1219,7 +1219,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             const response = await fetch(
                 `/admin/bordereau/api/validate/${this.bordereauIdValue}`,
                 {
-                    method:  'POST',
+                    method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 }
             );
@@ -1230,18 +1230,14 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 throw new Error(result.message || 'Erreur lors de la validation.');
             }
 
+            // Succès : feedback visuel
             this._showToast('success', '✓ Bordereau validé avec succès !', true);
             this.validateButtonTarget.textContent = '✓ Bordereau validé';
             this.validateButtonTarget.disabled = true;
 
-            // TODO: Ultérieurement, rediriger vers la page du bordereau
-            //       ou afficher une modale de confirmation avec récapitulatif.
-
         } catch (error) {
             console.error('[BordereauAnalysis] validateBordereau() - Erreur:', error);
-            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
-                'error', `Échec de la validation : ${error.message}`, false, true //
-            );
+            this._showToast('error', `Échec de la validation : ${error.message}`);
             this.validateButtonTarget.disabled = false;
         } finally {
             this.toggleProgressBar(false);
@@ -1260,8 +1256,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             return;
         }
 
-        const matchPct       = stats.total > 0 ? Math.round((stats.match / stats.total) * 100) : 0;
-        const formatNumber   = (n) => new Intl.NumberFormat('fr-FR', {
+        const matchPct = stats.total > 0 ? Math.round((stats.match / stats.total) * 100) : 0;
+        const formatNumber = (n) => new Intl.NumberFormat('fr-FR', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         }).format(n || 0);
@@ -1412,7 +1408,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         try {
             let processed = 0;
-            let errors    = 0;
+            let errors = 0;
 
             this._showToast('warning', `Traitement en lot... 0/${totalItemsToProcess}. Veuillez patienter.`
             );
@@ -1428,13 +1424,13 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
                 try {
                     const response = await fetch(`/admin/bordereau/api/simulate-action/${bordereauId}`, {
-                        method:  'POST',
+                        method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body:    JSON.stringify({
-                            action_type:      'new',
-                            avenant_id:       null,
-                            excel_data:       payload.excel_data ?? {},
-                            row_index:        payload.row_index ?? null,
+                        body: JSON.stringify({
+                            action_type: 'new',
+                            avenant_id: null,
+                            excel_data: payload.excel_data ?? {},
+                            row_index: payload.row_index ?? null,
                             reference_police: payload.reference_police ?? null,
                         })
                     });
@@ -1509,7 +1505,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         try {
             let processed = 0;
-            let errors    = 0;
+            let errors = 0;
 
             this._showToast('warning', `Traitement en lot... 0/${totalItemsToProcess}. Veuillez patienter.`
             );
@@ -1525,13 +1521,13 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
                 try {
                     const response = await fetch(`/admin/bordereau/api/simulate-action/${bordereauId}`, {
-                        method:  'POST',
+                        method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body:    JSON.stringify({
-                            action_type:      'discrepancy',
-                            avenant_id:       payload.avenant_id ?? null,
-                            excel_data:       payload.excel_data ?? {},
-                            row_index:        payload.row_index ?? null,
+                        body: JSON.stringify({
+                            action_type: 'discrepancy',
+                            avenant_id: payload.avenant_id ?? null,
+                            excel_data: payload.excel_data ?? {},
+                            row_index: payload.row_index ?? null,
                             reference_police: payload.reference_police ?? null,
                         })
                     });
@@ -1664,7 +1660,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             const itemType = isResolved
                 ? 'match' // Resolved items are considered 'match' for stats purposes
                 : (itemElement.classList.contains('border-info') ? 'new' :
-                   (itemElement.classList.contains('border-warning') ? 'discrepancy' : 'match')); // Default to match if no specific border
+                    (itemElement.classList.contains('border-warning') ? 'discrepancy' : 'match')); // Default to match if no specific border
 
             switch (itemType) {
                 case 'match':
@@ -1680,9 +1676,9 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
             // Extract financial data from the item's data-value
             const bordereauLineInfo = JSON.parse(itemElement.dataset.analysisResultItemBordereauLineInfoValue || '{}');
-            total_prime_ttc     += parseFloat(bordereauLineInfo.prime_ttc || 0);
+            total_prime_ttc += parseFloat(bordereauLineInfo.prime_ttc || 0);
             total_commission_ht += parseFloat(bordereauLineInfo.commission_ht_assureur || 0);
-            total_taxe          += parseFloat(bordereauLineInfo.taxe_commission_assureur || 0);
+            total_taxe += parseFloat(bordereauLineInfo.taxe_commission_assureur || 0);
         });
 
         const total_commission_ttc = total_commission_ht + total_taxe;
@@ -1845,11 +1841,11 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this._handleSaveStateFailed({ errorMessage: "Impossible de sauvegarder l'état de l'analyse : URL ou données manquantes." });
             return;
         }
-    
+
         console.log("[BordereauAnalysis] _handleSaveBordereauAnalysisStateLocal() - Sauvegarde de l'état à l'API:", payload.url, payload.data);
         // On n'active plus la barre de progression ici pour éviter qu'elle clignote.
         // Elle est déjà activée par la méthode appelante (submitAnalysis).
-    
+
         try {
             const response = await fetch(payload.url, {
                 method: 'POST',
@@ -1871,12 +1867,65 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             return false; // Retourne false en cas d'échec
         } finally {
             console.log("[BordereauAnalysis] _handleSaveBordereauAnalysisStateLocal() - Fin de l'opération. Désactivation de la barre de progression.");
-            
+
             // CORRECTION 3 : On remet le feu au vert uniquement si on l'avait passé au rouge
             if (this.isSaving) {
                 this.isSaving = false;
                 this.updateSubmitButtonState();
             }
         }
+    }
+
+    /**
+     * Affiche un message de feedback dans le composant Toast Bootstrap 5.
+     * Remplace l'affichage inline dans la toolbar.
+     *
+     * @param {'success'|'warning'|'error'|'info'} type
+     * @param {string} message - Texte du message (HTML autorisé)
+     * @param {boolean} [autoHide=false] - Si true, le toast se ferme automatiquement après 4s
+     */
+    _showToast(type, message, autoHide = false) {
+        if (!this._toastInstance || !this.hasToastBodyTarget) return;
+
+        // Mapping type → classes Bootstrap + couleur de fond du toast
+        const toastConfig = {
+            success: { bg: 'text-bg-success', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>' },
+            warning: { bg: 'text-bg-warning', icon: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg>' },
+            error:   { bg: 'text-bg-danger',  icon: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293z"/></svg>' },
+            info:    { bg: 'bg-dark',         icon: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2"/></svg>' },
+        };
+
+        const config = toastConfig[type] ?? toastConfig.info;
+
+        // Retirer les anciennes classes de couleur du toast
+        this.mappingStatusFeedbackTarget.classList.remove(
+            'text-bg-success', 'text-bg-warning', 'text-bg-danger', 'bg-dark'
+        );
+        this.mappingStatusFeedbackTarget.classList.add(config.bg);
+
+        // Injecter le contenu dans le corps du toast
+        this.toastBodyTarget.innerHTML = `
+            <span class="flex-shrink-0">${config.icon}</span>
+            <span>${message}</span>
+        `;
+
+        // Configurer l'auto-masquage
+        if (autoHide) {
+            this.mappingStatusFeedbackTarget.dataset.bsAutohide = 'true';
+            this.mappingStatusFeedbackTarget.dataset.bsDelay    = '4000';
+            // Recréer l'instance avec autohide activé
+            this._toastInstance = new bootstrap.Toast(
+                this.mappingStatusFeedbackTarget,
+                { autohide: true, delay: 4000 }
+            );
+        } else {
+            this.mappingStatusFeedbackTarget.dataset.bsAutohide = 'false';
+            this._toastInstance = new bootstrap.Toast(
+                this.mappingStatusFeedbackTarget,
+                { autohide: false }
+            );
+        }
+
+        this._toastInstance.show();
     }
 }
