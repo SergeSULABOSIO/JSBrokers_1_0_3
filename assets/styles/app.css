@@ -1834,9 +1834,28 @@ textarea:hover,
 /* NOUVEAU : Récapitulatif de synthèse de l'analyse */
 .analysis-summary-card {
     border-radius: 10px;
+    overflow: hidden; /* Assure que le header gradient respecte les coins arrondis */
+    animation: fadeIn 0.25s ease-in-out;
 }
 
-/* CORRECTION : Annulation des styles conflictuels de interactive-menu.css pour la barre de conformité */
+/* Compteurs — animation d'entrée décalée pour chaque colonne */
+.analysis-summary-card .analysis-summary-counter {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.analysis-summary-card .analysis-summary-counter:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Barre de conformité — override des styles de .progress Bootstrap qui créent des conflits */
+.analysis-summary-card .analysis-conformity-bar {
+    height: 8px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+}
 .analysis-summary-card .progress {
     background-color: #e9ecef;
     height: 8px;

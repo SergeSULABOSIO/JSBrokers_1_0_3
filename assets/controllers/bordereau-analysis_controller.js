@@ -1270,79 +1270,110 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             maximumFractionDigits: 2
         }).format(n || 0);
 
+        // Calcul de la couleur de la barre selon le taux de conformité (règle métier JSB)
+        const barColor = matchPct >= 80 ? '#198754' : (matchPct >= 50 ? '#e69500' : '#dc3545');
+
         this.analysisSummaryTarget.innerHTML = `
-            <div class="card mb-4 border-0 shadow-sm analysis-summary-card">
+            <div class="analysis-summary-card card border-0 shadow-sm mb-4">
+
+                <!-- EN-TÊTE DE LA CARTE -->
+                <div class="card-header d-flex align-items-center justify-content-between py-2 px-3"
+                     style="background: linear-gradient(135deg, #0047AB 0%, #003380 100%); border-bottom: none; border-radius: calc(var(--bs-border-radius) - 1px) calc(var(--bs-border-radius) - 1px) 0 0;">
+                    <div class="d-flex align-items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="white" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        <span class="fw-bold text-white small text-uppercase" style="letter-spacing: 0.5px;">
+                            Récapitulatif de l'analyse
+                        </span>
+                    </div>
+                    <span class="badge rounded-pill text-white fw-bold"
+                          style="background-color: rgba(255,255,255,0.2); font-size: 0.75rem;">
+                        ${stats.total} ligne${stats.total > 1 ? 's' : ''}
+                    </span>
+                </div>
+
                 <div class="card-body p-3">
-                    <h6 class="fw-bold mb-3 text-muted text-uppercase small">
-                        Récapitulatif de l'analyse
-                    </h6>
 
-                    <!-- Compteurs par type -->
+                    <!-- COMPTEURS PAR TYPE -->
                     <div class="row g-2 mb-3">
+                        <!-- Conformes -->
                         <div class="col-3">
-                            <div class="text-center p-2 rounded" style="background:#f0fff4; border:1px solid #198754">
-                                <div class="fw-bold fs-4 text-success">${stats.match}</div>
-                                <div class="small text-muted">Conformes</div>
+                            <div class="analysis-summary-counter text-center p-2 rounded-3"
+                                 style="background-color: #f0fff4; border: 1px solid #c3e6cb;">
+                                <div class="d-flex align-items-center justify-content-center gap-1 mb-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="#198754" viewBox="0 0 16 16" aria-hidden="true"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>
+                                    <span class="fw-bold" style="font-size: 1.5rem; color: #198754; line-height: 1;">${stats.match}</span>
+                                </div>
+                                <div class="small fw-semibold" style="color: #198754; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.4px;">Conformes</div>
                             </div>
                         </div>
+                        <!-- Anomalies -->
                         <div class="col-3">
-                            <div class="text-center p-2 rounded" style="background:#fff8e1; border:1px solid #ffc107">
-                                <div class="fw-bold fs-4 text-warning">${stats.discrepancy}</div>
-                                <div class="small text-muted">Anomalies</div>
+                            <div class="analysis-summary-counter text-center p-2 rounded-3"
+                                 style="background-color: #fff8e1; border: 1px solid #ffe082;">
+                                <div class="d-flex align-items-center justify-content-center gap-1 mb-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="#e69500" viewBox="0 0 16 16" aria-hidden="true"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg>
+                                    <span class="fw-bold" style="font-size: 1.5rem; color: #e69500; line-height: 1;">${stats.discrepancy}</span>
+                                </div>
+                                <div class="small fw-semibold" style="color: #e69500; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.4px;">Anomalies</div>
                             </div>
                         </div>
+                        <!-- Nouveaux -->
                         <div class="col-3">
-                            <div class="text-center p-2 rounded" style="background:#e8f4fd; border:1px solid #0d6efd">
-                                <div class="fw-bold fs-4 text-primary">${stats.new}</div>
-                                <div class="small text-muted">Nouveaux</div>
+                            <div class="analysis-summary-counter text-center p-2 rounded-3"
+                                 style="background-color: #e8f0fb; border: 1px solid #b3c9f0;">
+                                <div class="d-flex align-items-center justify-content-center gap-1 mb-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="#0047AB" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/></svg>
+                                    <span class="fw-bold" style="font-size: 1.5rem; color: #0047AB; line-height: 1;">${stats.new}</span>
+                                </div>
+                                <div class="small fw-semibold" style="color: #0047AB; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.4px;">Nouveaux</div>
                             </div>
                         </div>
+                        <!-- Total -->
                         <div class="col-3">
-                            <div class="text-center p-2 rounded" style="background:#f8f9fa; border:1px solid #6c757d">
-                                <div class="fw-bold fs-4 text-secondary">${stats.total}</div>
-                                <div class="small text-muted">Total</div>
+                            <div class="analysis-summary-counter text-center p-2 rounded-3"
+                                 style="background-color: #f8f9fa; border: 1px solid #dee2e6;">
+                                <div class="d-flex align-items-center justify-content-center gap-1 mb-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="#6c757d" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 10.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5zm0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5z"/><path d="M3 0h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2zm0 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3z"/></svg>
+                                    <span class="fw-bold" style="font-size: 1.5rem; color: #6c757d; line-height: 1;">${stats.total}</span>
+                                </div>
+                                <div class="small fw-semibold" style="color: #6c757d; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.4px;">Total</div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Barre de conformité -->
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between small text-muted mb-1">
-                            <span>Taux de conformité</span>
-                            <span class="fw-bold">${matchPct}%</span>
+                    <!-- BARRE DE CONFORMITÉ avec couleur dynamique -->
+                    <div class="mb-3 p-2 rounded-2" style="background-color: #f8f9fa;">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small text-muted fw-semibold">Taux de conformité</span>
+                            <span class="fw-bold small" style="color: ${barColor};">${matchPct} %</span>
                         </div>
-                        <div class="progress">
-                            <div class="progress-bar bg-cobalt"
-                                 role="progressbar"
-                                 style="width:${matchPct}%"
-                                 aria-valuenow="${matchPct}"
-                                 aria-valuemin="0"
-                                 aria-valuemax="100">
-                            </div>
+                        <div class="analysis-conformity-bar">
+                            <div style="height: 100%; width: ${matchPct}%; background-color: ${barColor}; border-radius: 4px; transition: width 0.4s ease;"></div>
                         </div>
                     </div>
 
-                    <!-- Totaux financiers -->
-                    <div class="row g-2 pt-2 border-top">
-                        <div class="col-md-4">
-                            <div class="small text-muted">Primes TTC (bordereau)</div>
-                            <div class="fw-bold" style="color:#0047AB">
+                    <!-- TOTAUX FINANCIERS -->
+                    <div class="row g-0 border rounded-2 overflow-hidden">
+                        <div class="col-md-4 p-2 text-center" style="border-right: 1px solid #dee2e6;">
+                            <div class="small text-muted mb-1" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.4px;">Primes TTC</div>
+                            <div class="fw-bold" style="color: #0047AB; font-size: 1rem;">
                                 ${formatNumber(stats.total_prime_ttc)}
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="small text-muted">Commissions HT</div>
-                            <div class="fw-bold text-success">
+                        <div class="col-md-4 p-2 text-center" style="border-right: 1px solid #dee2e6;">
+                            <div class="small text-muted mb-1" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.4px;">Commissions HT</div>
+                            <div class="fw-bold text-success" style="font-size: 1rem;">
                                 ${formatNumber(stats.total_commission_ht)}
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="small text-muted">Commissions TTC</div>
-                            <div class="fw-bold text-success">
+                        <div class="col-md-4 p-2 text-center">
+                            <div class="small text-muted mb-1" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.4px;">Commissions TTC</div>
+                            <div class="fw-bold text-success" style="font-size: 1rem;">
                                 ${formatNumber(stats.total_commission_ttc)}
                             </div>
                         </div>
                     </div>
+
                 </div>
             </div>
         `;
