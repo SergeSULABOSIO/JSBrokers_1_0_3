@@ -580,10 +580,10 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         if (this.hasBulkUpdateItemTarget) this.bulkUpdateItemTarget.classList.add('d-none');
         if (this.hasBulkDividerTarget) this.bulkDividerTarget.classList.add('d-none');
 
-        // --- 3. Fermer le toast existant lors des transitions d'étape ---
-        // sauf à l'étape 2 où le feedback de mappage doit rester visible.
-        if (this._toastInstance && this.currentStep !== 2) {
-            this._toastInstance.hide();
+        // --- 3. Réinitialiser le feedback ---
+        if (this.hasMappingStatusFeedbackTarget) {
+            this.mappingStatusFeedbackTarget.innerHTML = '';
+            this.mappingStatusFeedbackTarget.classList.add('d-none');
         }
 
         // --- 4. Mise à jour de l'icône du titre ---
@@ -1227,7 +1227,6 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 throw new Error(result.message || 'Erreur lors de la validation.');
             }
 
-            // Succès : feedback visuel
             this._showToast('success', '✓ Bordereau validé avec succès !', true);
             this.validateButtonTarget.textContent = '✓ Bordereau validé';
             this.validateButtonTarget.disabled = true;
@@ -1237,7 +1236,9 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         } catch (error) {
             console.error('[BordereauAnalysis] validateBordereau() - Erreur:', error);
-            this._showToast('error', `Échec de la validation : ${error.message}`);
+            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
+                'error', `Échec de la validation : ${error.message}`, false, true //
+            );
             this.validateButtonTarget.disabled = false;
         } finally {
             this.toggleProgressBar(false);
