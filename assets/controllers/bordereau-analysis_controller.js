@@ -1890,7 +1890,12 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * @param {boolean} [autoHide=false] - Si true, le toast se ferme automatiquement après 4s
      */
     _showToast(type, message, autoHide = false) {
-        if (!this.element.isConnected || !this.hasToastContainerTarget) return;
+        if (!this.element.isConnected || !this.hasToastContainerTarget) {
+            return;
+        }
+
+        // Éviter les mises à jour visuelles si le message est strictement identique au précédent
+        if (this._lastToastMessage === message && this._lastToastType === type) return;
 
         // Mapping type → classes Bootstrap + couleur de fond du toast
         const toastConfig = {
@@ -1902,12 +1907,14 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         const config = toastConfig[type] ?? toastConfig.info;
         
-        // Determine the close button class based on background color for visibility
+        // Déterminer la classe du bouton de fermeture selon la couleur de fond
         const closeButtonClass = (config.bg === 'text-bg-dark' || config.bg === 'text-bg-success' || config.bg === 'text-bg-danger') ? 'btn-close-white' : '';
+        
+        // Générer un ID unique pour éviter les conflits d'instances Bootstrap
+        const toastId = `jsb-toast-${Date.now()}`;
 
-        // Dynamically create the toast HTML
         const toastHTML = `
-            <div id="jsb-analysis-toast" class="toast align-items-center ${config.bg} bg-opacity-75 border border-secondary p-2 m-1" role="alert" aria-live="assertive" aria-atomic="true">
+            <div id="${toastId}" class="toast align-items-center ${config.bg} bg-opacity-75 border border-secondary p-2 m-1" role="alert" aria-live="assertive" aria-atomic="true">
                 <div class="d-flex">
                     <div class="toast-body">
                         <span class="flex-shrink-0">${config.icon}</span>
@@ -1918,33 +1925,27 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             </div>
         `;
 
-        // Retirer les anciennes classes de couleur du toast
-        feedbackTarget.classList.remove(
-            'text-bg-success', 'text-bg-warning', 'text-bg-danger', 'text-bg-dark'
-        );
-        feedbackTarget.classList.add(config.bg);
+        // Append the toast to the toast container
+        this.toastContainerTarget.insertAdjacentHTML('beforeend', toastHTML);
+        const newToastEl = document.getElementById(toastId);
 
-        // Injecter le contenu dans le corps du toast
-        bodyTarget.innerHTML = `
-            <span class="flex-shrink-0">${config.icon}</span>
-            <span>${message}</span>
-        `;
-
-        // Configurer l'auto-masquage
         try {
-            // NOUVEAU : Réutilisation de l'instance via getInstance() au lieu de dispose() systématique.
-            // Cela empêche Bootstrap de planter si une transition est déjà en cours sur cet élément.
-            let toast = Toast.getInstance(feedbackTarget);
-            if (!toast) {
-                toast = new Toast(feedbackTarget, { autohide: autoHide, delay: 4000 });
-            }
-            
+            const toast = new Toast(newToastEl, {
+                autohide: autoHide,
+                delay: 4000
+            });
+
+            // Nettoyer le DOM après la fermeture pour ne pas saturer la page
+            newToastEl.addEventListener('hidden.bs.toast', () => {
+                newToastEl.remove();
+            });
+
             toast.show();
-            this._toastInstance = toast;
+            
+            this._lastToastMessage = message;
+            this._lastToastType = type;
         } catch (e) {
-            console.error("[BordereauAnalysis] _showToast() - Erreur lors de la création ou de l'affichage du Toast Bootstrap:", e);
-            // Fallback: log the message to console if toast fails
-            console.log(`[BordereauAnalysis] Toast Fallback: Type: ${type}, Message: ${message}`);
+            console.warn("[BordereauAnalysis] _showToast() - Erreur Bootstrap:", e);
         }
     }
 }
