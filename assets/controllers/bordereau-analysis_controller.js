@@ -878,8 +878,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         const activeForm = this.element.querySelector('.column-mapping-form:not([style*="display: none"])');
         if (!activeForm) return;
 
-        const mappedRequiredCount = new Set();
-        const mappedOptionalCount = new Set();
+        const mappedRequiredTypes = new Set(); // Stocke les noms des champs système obligatoires mappés
+        const mappedOptionalTypes = new Set(); // Stocke les noms des champs système optionnels mappés
         const totalOptionalCount = this.chargementsValue.length + this.typeRevenusValue.length;
 
         const selects = activeForm.querySelectorAll('select[data-column-letter]');
@@ -887,25 +887,32 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             const mappingType = select.value;
             if (mappingType) {
                 if (this.requiredMappings.has(mappingType)) {
-                    mappedRequiredCount.add(mappingType);
+                    mappedRequiredTypes.add(mappingType);
                 } else if (mappingType.startsWith('chargement_') || mappingType.startsWith('revenu_')) {
-                    mappedOptionalCount.add(mappingType);
+                    mappedOptionalTypes.add(mappingType);
                 }
             }
         });
 
-        const requiredMapped = mappedRequiredCount.size;
-        const requiredRemaining = this.requiredMappings.size - requiredMapped;
-        const optionalMapped = mappedOptionalCount.size;
+        const requiredMappedCount = mappedRequiredTypes.size;
+        const requiredRemainingCount = this.requiredMappings.size - requiredMappedCount;
+        const optionalMappedCount = mappedOptionalTypes.size;
 
         let message = ``;
 
-        if (requiredRemaining > 0) {
-            message += `Il reste <strong>${requiredRemaining}</strong> champ(s) obligatoire(s) à mapper.`;
+        if (requiredRemainingCount > 0) {
+            // Obtenir les noms des champs obligatoires non mappés
+            const unmappedRequiredFields = [...this.requiredMappings].filter(
+                requiredField => !mappedRequiredTypes.has(requiredField)
+            );
+            // Mapper les noms de champs système à leurs noms d'affichage
+            const unmappedDisplayNames = unmappedRequiredFields.map(field => this.mappingOptionsValue[field] || field);
+
+            message += `Il reste <strong>${requiredRemainingCount}</strong> champ(s) obligatoire(s) à mapper : <em>${unmappedDisplayNames.join(', ')}</em>.`;
         } else {
             message += `Tous les champs obligatoires (<strong>${this.requiredMappings.size}/${this.requiredMappings.size}</strong>) sont mappés.`;
             if (totalOptionalCount > 0) {
-                message += ` Vous avez mappé <strong>${optionalMapped}</strong> champ(s) optionnel(s) sur <strong>${totalOptionalCount}</strong> disponible(s).`;
+                message += ` Vous avez mappé <strong>${optionalMappedCount}</strong> champ(s) optionnel(s) sur <strong>${totalOptionalCount}</strong> disponible(s).`;
             }
         }
 
