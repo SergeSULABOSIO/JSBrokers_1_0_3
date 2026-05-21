@@ -104,10 +104,10 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         }
 
         // Initialisation de l'instance Bootstrap Toast pour le feedback
-        this._toastInstance = null;
+        this._toastInstance = null; // Ensure it's null initially
         if (this.hasMappingStatusFeedbackTarget) {
-            this._toastInstance = Toast.getOrCreateInstance(
-                this.mappingStatusFeedbackTarget,
+            // Create the Toast instance once and manage its visibility and content.
+            this._toastInstance = new Toast(this.mappingStatusFeedbackTarget,
                 { autohide: false }
             );
         }
@@ -1905,31 +1905,21 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         const config = toastConfig[type] ?? toastConfig.info;
 
         // Retirer les anciennes classes de couleur du toast
+        // Ensure to remove all possible background classes to apply the new one correctly.
         this.mappingStatusFeedbackTarget.classList.remove(
-            'text-bg-success', 'text-bg-warning', 'text-bg-danger', 'bg-dark'
+            'text-bg-success', 'text-bg-warning', 'text-bg-danger', 'text-bg-dark'
         );
         this.mappingStatusFeedbackTarget.classList.add(config.bg);
 
         // Injecter le contenu dans le corps du toast
         this.toastBodyTarget.innerHTML = `
             <span class="flex-shrink-0">${config.icon}</span>
-            <span>${message}</span>
+            <span class="flex-grow-1">${message}</span>
         `;
 
         // Configurer l'auto-masquage
-        if (autoHide) {
-            this.mappingStatusFeedbackTarget.dataset.bsAutohide = 'true';
-            this.mappingStatusFeedbackTarget.dataset.bsDelay    = '4000';
-            
-            // Pour changer les options dynamiquement (autohide), on dispose l'ancienne instance
-            if (this._toastInstance) this._toastInstance.dispose();
-            this._toastInstance = new Toast(this.mappingStatusFeedbackTarget, { autohide: true, delay: 4000 });
-        } else {
-            this.mappingStatusFeedbackTarget.dataset.bsAutohide = 'false';
-            
-            if (this._toastInstance) this._toastInstance.dispose();
-            this._toastInstance = new Toast(this.mappingStatusFeedbackTarget, { autohide: false });
-        }
+        // Update autohide option using updateConfig (Bootstrap 5.2+)
+        this._toastInstance.updateConfig({ autohide: autoHide, delay: 4000 });
 
         this._toastInstance.show();
     }
