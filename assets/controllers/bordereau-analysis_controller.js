@@ -87,28 +87,21 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         this._pendingSaveTimeout = null; // Identifiant pour le debounce des sauvegardes
         // Timeout de debounce dédié à la sauvegarde automatique du mappage
         this._pendingMappingSaveTimeout = null;
+        this._toastInstance = null; // Initialisation propre au début
 
         console.log("[BordereauAnalysis] 3. connect() - Mise en place des écouteurs d'événements.");
 
-        // Étape 1: Chargement initial comme si rien n'était à restaurer.
-        console.log("[BordereauAnalysis] 4. connect() - Exécution du chargement initial de l'UI (état par défaut).");
-        this.afterConnect();
-
-        // Étape 2: Si des données de restauration existent, on les applique.
+        // Étape 1: Restauration ou initialisation de l'étape par défaut.
         if (this.currentAnalysisStepValue > 0) {
-            console.log(`%c[BordereauAnalysis] 5. connect() - Données de restauration détectées (étape ${this.currentAnalysisStepValue}). Lancement du processus...`, "color: blue; font-weight: bold;");
+            console.log(`%c[BordereauAnalysis] 4. connect() - Données de restauration détectées (étape ${this.currentAnalysisStepValue}). Lancement du processus...`, "color: blue; font-weight: bold;");
             this._restoreAnalysisState();
         } else if (this.sheetSelectionTargets.length === 1 && this.sheetsDataValue && Object.keys(this.sheetsDataValue).length === 1) {
-            console.log("[BordereauAnalysis] 5. connect() - Une seule feuille détectée. Passage automatique à l'étape 2.");
+            console.log("[BordereauAnalysis] 4. connect() - Une seule feuille détectée. Passage automatique à l'étape 2.");
             this.showStep(2);
+        } else {
+            console.log("[BordereauAnalysis] 4. connect() - Exécution du chargement initial de l'UI (état par défaut).");
+            this.afterConnect();
         }
-
-        // Initialisation de l'instance Bootstrap Toast pour le feedback
-        this.afterConnect();
-
-        // Initialisation de l'instance Bootstrap Toast pour le feedback
-        this._toastInstance = null; // Initialiser à null
-
         this.isConnecting = false; // Le drapeau est remis à false une fois la logique de connect() terminée
         console.log("[BordereauAnalysis] 6. connect() - Fin de la connexion.");
     }
@@ -1889,7 +1882,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * @param {boolean} [autoHide=false] - Si true, le toast se ferme automatiquement après 4s
      */
     _showToast(type, message, autoHide = false) {
-        if (!this.hasToastBodyTarget) return;
+        if (!this.hasToastBodyTarget || !this.hasMappingStatusFeedbackTarget) return;
 
         // Mapping type → classes Bootstrap + couleur de fond du toast
         const toastConfig = {
