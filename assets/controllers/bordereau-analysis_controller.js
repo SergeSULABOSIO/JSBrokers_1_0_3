@@ -580,10 +580,13 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         if (this.hasBulkUpdateItemTarget) this.bulkUpdateItemTarget.classList.add('d-none');
         if (this.hasBulkDividerTarget) this.bulkDividerTarget.classList.add('d-none');
 
-        // --- 3. Réinitialiser le feedback ---
-        if (this.hasMappingStatusFeedbackTarget) {
-            this.mappingStatusFeedbackTarget.innerHTML = '';
-            this.mappingStatusFeedbackTarget.classList.add('d-none');
+        this.step2Target.classList.add('d-none');
+        this.step3Target.classList.add('d-none');
+
+        // --- 3. Fermer le toast existant lors des transitions d'étape ---
+        // sauf à l'étape 2 où le feedback de mappage doit rester visible.
+        if (this._toastInstance && this.currentStep !== 2) {
+            this._toastInstance.hide();
         }
 
         // --- 4. Mise à jour de l'icône du titre ---
