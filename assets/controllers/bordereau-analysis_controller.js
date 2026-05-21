@@ -1890,17 +1890,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * @param {boolean} [autoHide=false] - Si true, le toast se ferme automatiquement après 4s
      */
     _showToast(type, message, autoHide = false) {
-        if (!this.element.isConnected) return;
-
-        // MISSION : Cibler le feedback du conteneur de mappage ACTIF (cas multi-feuilles)
-        // On évite d'utiliser les getters globaux Stimulus qui retournent toujours la première feuille.
-        const activeForm = this.element.querySelector('.column-mapping-form:not([style*="display: none"])');
-        if (!activeForm) return;
-
-        const feedbackTarget = activeForm.querySelector('[data-bordereau-analysis-target="mappingStatusFeedback"]');
-        const bodyTarget = activeForm.querySelector('[data-bordereau-analysis-target="toastBody"]');
-
-        if (!feedbackTarget || !bodyTarget) return;
+        if (!this.element.isConnected || !this.hasToastContainerTarget) return;
 
         // Mapping type → classes Bootstrap + couleur de fond du toast
         const toastConfig = {
@@ -1911,11 +1901,22 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         };
 
         const config = toastConfig[type] ?? toastConfig.info;
+        
+        // Determine the close button class based on background color for visibility
+        const closeButtonClass = (config.bg === 'text-bg-dark' || config.bg === 'text-bg-success' || config.bg === 'text-bg-danger') ? 'btn-close-white' : '';
 
-        // Éviter les mises à jour inutiles si le message est rigoureusement identique
-        if (this._lastToastMessage === message && this._lastToastType === type) return;
-        this._lastToastMessage = message;
-        this._lastToastType = type;
+        // Dynamically create the toast HTML
+        const toastHTML = `
+            <div id="jsb-analysis-toast" class="toast align-items-center ${config.bg} bg-opacity-75 border border-secondary p-2 m-1" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <span class="flex-shrink-0">${config.icon}</span>
+                        <span>${message}</span>
+                    </div>
+                    <button type="button" class="btn-close ${closeButtonClass} me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        `;
 
         // Retirer les anciennes classes de couleur du toast
         feedbackTarget.classList.remove(
