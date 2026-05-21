@@ -16,8 +16,8 @@
     data-analysis-result-item-bordereau-id-value="{{ bordereau_id }}"
     data-analysis-result-item-bordereau-line-info-value="{{ result.bordereau_line_info|json_encode|e('html_attr') }}"
     data-analysis-result-item-icon-prefix-value="{{ bordereau_id }}-{{ loop.index }}-"
-    data-analysis-result-item-id-entreprise-value="{{ idEntreprise }}"
-    data-analysis-result-item-id-invite-value="{{ idInvite }}"
+    data-analysis-result-item-id-entreprise-value="{{ idEntreprise is defined ? idEntreprise : app.request.get('idEntreprise') }}"
+    data-analysis-result-item-id-invite-value="{{ idInvite is defined ? idInvite : app.request.get('idInvite') }}"
 >
     {# AMÉLIORATION 1 : Bandeau de statut visuel #}
     <div class="analysis-item-status-bar analysis-item-status-bar--{{ result.type }}">

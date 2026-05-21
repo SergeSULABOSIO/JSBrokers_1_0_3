@@ -29,6 +29,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         analysisStats: Object,
         currentAnalysisStep: Number, // NOUVEAU : Pour la restauration de l'état
         isBulkProcessing: Boolean, // NOUVEAU : Pour gérer l'état de traitement en lot
+        idEntreprise: Number,
+        idInvite: Number,
     };
 
     connect() {
@@ -1432,6 +1434,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                             excel_data: payload.excel_data ?? {},
                             row_index: payload.row_index ?? null,
                             reference_police: payload.reference_police ?? null,
+                            idEntreprise: this.idEntrepriseValue,
+                            idInvite: this.idInviteValue,
                         })
                     });
 
@@ -1529,6 +1533,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                             excel_data: payload.excel_data ?? {},
                             row_index: payload.row_index ?? null,
                             reference_police: payload.reference_police ?? null,
+                            idEntreprise: this.idEntrepriseValue,
+                            idInvite: this.idInviteValue,
                         })
                     });
 
