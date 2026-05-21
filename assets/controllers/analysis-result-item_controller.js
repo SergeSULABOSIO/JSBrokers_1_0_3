@@ -82,12 +82,10 @@ export default class extends BaseController {
      * @param {CustomEvent} event
      */
     handleIconLoaded(event) {
-        console.log(`%c[Enfant ${this.iconPrefixValue}] 2. Reçu 'analysis:icon.loaded'`, 'color: green;', event.detail);
         const { html, requesterId } = event.detail;
 
         // On vérifie si l'événement nous est bien destiné.
         if (!requesterId || !requesterId.startsWith(this.iconPrefixValue)) {
-            console.log(`%c[Enfant ${this.iconPrefixValue}] 2a. Ignoré : requesterId (${requesterId}) ne correspond pas.`, 'color: gray;');
             return;
         }
 
@@ -96,7 +94,6 @@ export default class extends BaseController {
         const buttonIndex = parseInt(parts[parts.length - 1], 10);
 
         // On cible le bon conteneur d'icône.
-        console.log(`%c[Enfant ${this.iconPrefixValue}] 3. Injection de l'icône dans la cible n°${buttonIndex}`, 'color: green;');
         const targetElement = this.actionIconTargets[buttonIndex]; // CORRECTION: Utiliser le tableau `actionIconTargets`
 
         if (targetElement && html && !html.trim().startsWith('<!--')) {
