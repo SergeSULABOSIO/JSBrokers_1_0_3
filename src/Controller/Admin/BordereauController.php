@@ -997,21 +997,13 @@ class BordereauController extends AbstractController
 
         if ($actionType === 'new') {
             $avenant = $this->avenantActionService->createFromBordereauLine($excelData, $bordereau, $invite);
-            
-            // --- SÉCURISATION DE L'ENTREPRISE (Fix Erreur 1048) ---
-            if (method_exists($avenant, 'setEntreprise')) {
-                $avenant->setEntreprise($entreprise);
-            }
-            
-            if (method_exists($avenant, 'getCotation') && ($cotation = $avenant->getCotation())) {
-                if (method_exists($cotation, 'setEntreprise')) $cotation->setEntreprise($entreprise);
-                $this->em->persist($cotation);
-            }
 
-            $this->em->persist($avenant);
+            // NOUVEAU : Propagation exhaustive de l'entreprise et de l'invité
+            $this->propagateAuditInfo($avenant, $entreprise, $invite);
+
             $this->em->flush();
-
             $this->_markAnalysisResultAsMatch($bordereau, $rowIndex, $avenant->getId(), $avenant->getReferencePolice());
+
             return [
                 'success' => true,
                 'message' => sprintf('Ligne n°%s : Avenant créé avec succès.', $rowIndex + 2),
@@ -1034,6 +1026,40 @@ class BordereauController extends AbstractController
         }
 
         throw new \Exception("Action d'analyse inconnue.");
+    }
+
+    /**
+     * Sécurise toute la cascade d'objets en injectant l'entreprise et l'invité.
+     * Indispensable pour éviter les erreurs SQL 1048 lors de la création en masse.
+     */
+    private function propagateAuditInfo(object $entity, $entreprise, $invite): void
+    {
+        if (method_exists($entity, 'setEntreprise')) $entity->setEntreprise($entreprise);
+        if (method_exists($entity, 'setInvite')) $entity->setInvite($invite);
+        $this->em->persist($entity);
+
+        // 1. Si c'est un Avenant, on descend vers la Cotation
+        if ($entity instanceof \App\Entity\Avenant && ($cotation = $entity->getCotation())) {
+            $this->propagateAuditInfo($cotation, $entreprise, $invite);
+        }
+
+        // 2. Si c'est une Cotation, on descend vers Piste, Revenus et Chargements
+        if ($entity instanceof \App\Entity\Cotation) {
+            if ($piste = $entity->getPiste()) {
+                $this->propagateAuditInfo($piste, $entreprise, $invite);
+            }
+            foreach ($entity->getRevenus() as $rev) {
+                $this->propagateAuditInfo($rev, $entreprise, $invite);
+            }
+            foreach ($entity->getChargements() as $chg) {
+                $this->propagateAuditInfo($chg, $entreprise, $invite);
+            }
+        }
+
+        // 3. Si c'est une Piste, on descend vers le Client
+        if ($entity instanceof \App\Entity\Piste && ($client = $entity->getClient())) {
+            $this->propagateAuditInfo($client, $entreprise, $invite);
+        }
     }
 
     /**
