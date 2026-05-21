@@ -909,7 +909,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             }
         }
 
-        this._showToast('info', message);
+        this._showToast('info', message, false, true); // Force show for user mapping feedback
     }
 
     /**
@@ -1889,13 +1889,13 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * @param {string} message - Texte du message (HTML autorisé)
      * @param {boolean} [autoHide=false] - Si true, le toast se ferme automatiquement après 4s
      */
-    _showToast(type, message, autoHide = false) {
+    _showToast(type, message, autoHide = false, forceShow = false) {
         if (!this.element.isConnected || !this.hasToastContainerTarget) {
             return;
         }
 
         // Éviter les mises à jour visuelles si le message est strictement identique au précédent
-        if (this._lastToastMessage === message && this._lastToastType === type) return;
+        if (!forceShow && this._lastToastMessage === message && this._lastToastType === type) return;
 
         // Mapping type → classes Bootstrap + couleur de fond du toast
         const toastConfig = {
