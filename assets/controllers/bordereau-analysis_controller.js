@@ -1896,7 +1896,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * @param {string} message - Texte du message (HTML autorisé)
      * @param {boolean} [autoHide=false] - Si true, le toast se ferme automatiquement après 4s
      */
-    _showToast(type, message, autoHide = false, forceShow = false) {
+    _showToast(type, message, autoHide = true, forceShow = false) {
         if (!this.element.isConnected || !this.hasToastContainerTarget) {
             return;
         }
