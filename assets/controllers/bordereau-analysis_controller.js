@@ -203,7 +203,9 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      */
     finalizeRestoration() {
         this.isRestoring = false; // Réinitialise le drapeau
-        this.updateMappingStatusFeedback();
+        // updateSubmitButtonState appellera updateMappingStatusFeedback
+        // de manière sécurisée car isRestoring est maintenant à false.
+        // On évite ainsi un double appel synchrone qui fait planter Bootstrap Toast.
         this.updateSubmitButtonState();
     }
 
@@ -872,15 +874,16 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * Met à jour le paragraphe de feedback sur l'état du mappage.
      */
     updateMappingStatusFeedback() {
-        if (!this.hasMappingStatusFeedbackTarget) {
-            return;
-        }
+        // MISSION : Ne calculer le feedback que pour la feuille ACTUELLEMENT visible
+        const activeForm = this.element.querySelector('.column-mapping-form:not([style*="display: none"])');
+        if (!activeForm) return;
 
         const mappedRequiredCount = new Set();
         const mappedOptionalCount = new Set();
         const totalOptionalCount = this.chargementsValue.length + this.typeRevenusValue.length;
 
-        this.mappingSelectTargets.forEach(select => {
+        const selects = activeForm.querySelectorAll('select[data-column-letter]');
+        selects.forEach(select => {
             const mappingType = select.value;
             if (mappingType) {
                 if (this.requiredMappings.has(mappingType)) {
@@ -1887,7 +1890,17 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * @param {boolean} [autoHide=false] - Si true, le toast se ferme automatiquement après 4s
      */
     _showToast(type, message, autoHide = false) {
-        if (!this.element.isConnected || !this.hasToastBodyTarget || !this.hasMappingStatusFeedbackTarget) return;
+        if (!this.element.isConnected) return;
+
+        // MISSION : Cibler le feedback du conteneur de mappage ACTIF (cas multi-feuilles)
+        // On évite d'utiliser les getters globaux Stimulus qui retournent toujours la première feuille.
+        const activeForm = this.element.querySelector('.column-mapping-form:not([style*="display: none"])');
+        if (!activeForm) return;
+
+        const feedbackTarget = activeForm.querySelector('[data-bordereau-analysis-target="mappingStatusFeedback"]');
+        const bodyTarget = activeForm.querySelector('[data-bordereau-analysis-target="toastBody"]');
+
+        if (!feedbackTarget || !bodyTarget) return;
 
         // Mapping type → classes Bootstrap + couleur de fond du toast
         const toastConfig = {
@@ -1899,29 +1912,34 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         const config = toastConfig[type] ?? toastConfig.info;
 
-        // S'assurer que les éléments cibles sont valides avant de tenter de manipuler leur classList ou de créer une instance Toast.
-        if (!this.mappingStatusFeedbackTarget || !this.toastBodyTarget) {
-            console.warn("[BordereauAnalysis] _showToast() - Cibles de toast manquantes ou invalides. Impossible d'afficher le toast.");
-            return;
-        }
+        // Éviter les mises à jour inutiles si le message est rigoureusement identique
+        if (this._lastToastMessage === message && this._lastToastType === type) return;
+        this._lastToastMessage = message;
+        this._lastToastType = type;
 
         // Retirer les anciennes classes de couleur du toast
-        this.mappingStatusFeedbackTarget.classList.remove(
+        feedbackTarget.classList.remove(
             'text-bg-success', 'text-bg-warning', 'text-bg-danger', 'text-bg-dark'
         );
-        this.mappingStatusFeedbackTarget.classList.add(config.bg);
+        feedbackTarget.classList.add(config.bg);
 
         // Injecter le contenu dans le corps du toast
-        this.toastBodyTarget.innerHTML = `
+        bodyTarget.innerHTML = `
             <span class="flex-shrink-0">${config.icon}</span>
             <span>${message}</span>
         `;
 
         // Configurer l'auto-masquage
         try {
-            if (this._toastInstance) this._toastInstance.dispose(); // Dispose previous instance
-            this._toastInstance = new Toast(this.mappingStatusFeedbackTarget, { autohide: autoHide, delay: 4000 });
-            this._toastInstance.show();
+            // NOUVEAU : Réutilisation de l'instance via getInstance() au lieu de dispose() systématique.
+            // Cela empêche Bootstrap de planter si une transition est déjà en cours sur cet élément.
+            let toast = Toast.getInstance(feedbackTarget);
+            if (!toast) {
+                toast = new Toast(feedbackTarget, { autohide: autoHide, delay: 4000 });
+            }
+            
+            toast.show();
+            this._toastInstance = toast;
         } catch (e) {
             console.error("[BordereauAnalysis] _showToast() - Erreur lors de la création ou de l'affichage du Toast Bootstrap:", e);
             // Fallback: log the message to console if toast fails
