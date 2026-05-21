@@ -47,9 +47,9 @@ export default class extends Controller {
         // Ajout du toast au conteneur
         this.element.insertAdjacentHTML('beforeend', toastHTML);
 
-        const newToastEl = this.element.lastElementChild;
+        const newToastEl = this.element.lastElementChild; //
         const toast = new Toast(newToastEl, {
-            delay: 4000 // Le toast disparaît après 4 secondes
+            delay: 10000 // Le toast disparaît après 10 secondes
         });
 
         // Supprimer le toast du DOM une fois qu'il est caché pour garder le HTML propre

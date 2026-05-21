@@ -1938,8 +1938,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         try {
             const toast = new Toast(newToastEl, {
-                autohide: autoHide,
-                delay: 4000
+                autohide: autoHide, //
+                delay: 10000 // Le toast disparaît après 10 secondes
             });
 
             // Nettoyer le DOM après la fermeture pour ne pas saturer la page
