@@ -99,17 +99,18 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             console.log("[BordereauAnalysis] 5. connect() - Une seule feuille détectée. Passage automatique à l'étape 2.");
             this.showStep(2);
         }
+
+        // Initialisation de l'instance Bootstrap Toast pour le feedback
+        this._toastInstance = null;
+        if (this.hasMappingStatusFeedbackTarget) {
+            this._toastInstance = new bootstrap.Toast(
+                this.mappingStatusFeedbackTarget,
+                { autohide: false }
+            );
+        }
+
         this.isConnecting = false; // Le drapeau est remis à false une fois la logique de connect() terminée
         console.log("[BordereauAnalysis] 6. connect() - Fin de la connexion.");
-    }
-
-    // Initialisation de l'instance Bootstrap Toast pour le feedback
-    _toastInstance = null;
-    if (this.hasMappingStatusFeedbackTarget) {
-        this._toastInstance = new bootstrap.Toast(
-            this.mappingStatusFeedbackTarget,
-            { autohide: false }
-        );
     }
 
     disconnect() {
@@ -579,10 +580,10 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         if (this.hasBulkUpdateItemTarget) this.bulkUpdateItemTarget.classList.add('d-none');
         if (this.hasBulkDividerTarget) this.bulkDividerTarget.classList.add('d-none');
 
-        // --- 3. Réinitialiser le feedback ---
-        if (this.hasMappingStatusFeedbackTarget) {
-            this.mappingStatusFeedbackTarget.innerHTML = '';
-            this.mappingStatusFeedbackTarget.classList.add('d-none');
+        // --- 3. Fermer le toast existant lors des transitions d'étape ---
+        // sauf à l'étape 2 où le feedback de mappage doit rester visible.
+        if (this._toastInstance && this.currentStep !== 2) {
+            this._toastInstance.hide();
         }
 
         // --- 4. Mise à jour de l'icône du titre ---
@@ -1086,13 +1087,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         this.showStep(3);
         this.renderAnalysisSummary(payload.stats); // Render summary with final stats
 
-        // Feedback de succès (après showStep car showStep vide le feedback)
-        if (this.hasMappingStatusFeedbackTarget) {
-            this.mappingStatusFeedbackTarget.classList.remove('d-none');
-            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml( //
-                'success', 'Analyse terminée avec succès.', false, true
-            );
-        }
+        // Feedback de succès
+        this._showToast('success', 'Analyse terminée avec succès.', true);
 
         // Sauvegarder uniquement l'étape (les résultats sont déjà en base)
         this._saveAnalysisStateToBordereau('step_only');
@@ -1231,10 +1227,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 throw new Error(result.message || 'Erreur lors de la validation.');
             }
 
-            // Succès : feedback visuel et désactivation définitive du bouton
-            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
-                'success', '✓ Bordereau validé avec succès !', false, true //
-            );
+            // Succès : feedback visuel
+            this._showToast('success', '✓ Bordereau validé avec succès !', true);
             this.validateButtonTarget.textContent = '✓ Bordereau validé';
             this.validateButtonTarget.disabled = true;
 
@@ -1243,9 +1237,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         } catch (error) {
             console.error('[BordereauAnalysis] validateBordereau() - Erreur:', error);
-            this.mappingStatusFeedbackTarget.innerHTML = this.getFeedbackHtml(
-                'error', `Échec de la validation : ${error.message}`, false, true //
-            );
+            this._showToast('error', `Échec de la validation : ${error.message}`);
             this.validateButtonTarget.disabled = false;
         } finally {
             this.toggleProgressBar(false);
