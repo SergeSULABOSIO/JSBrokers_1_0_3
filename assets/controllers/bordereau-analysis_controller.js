@@ -1899,6 +1899,12 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         const config = toastConfig[type] ?? toastConfig.info;
 
+        // S'assurer que les éléments cibles sont valides avant de tenter de manipuler leur classList ou de créer une instance Toast.
+        if (!this.mappingStatusFeedbackTarget || !this.toastBodyTarget) {
+            console.warn("[BordereauAnalysis] _showToast() - Cibles de toast manquantes ou invalides. Impossible d'afficher le toast.");
+            return;
+        }
+
         // Retirer les anciennes classes de couleur du toast
         this.mappingStatusFeedbackTarget.classList.remove(
             'text-bg-success', 'text-bg-warning', 'text-bg-danger', 'text-bg-dark'
@@ -1912,8 +1918,14 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         `;
 
         // Configurer l'auto-masquage
-        if (this._toastInstance) this._toastInstance.dispose(); // Dispose previous instance
-        this._toastInstance = new Toast(this.mappingStatusFeedbackTarget, { autohide: autoHide, delay: 4000 });
-        this._toastInstance.show();
+        try {
+            if (this._toastInstance) this._toastInstance.dispose(); // Dispose previous instance
+            this._toastInstance = new Toast(this.mappingStatusFeedbackTarget, { autohide: autoHide, delay: 4000 });
+            this._toastInstance.show();
+        } catch (e) {
+            console.error("[BordereauAnalysis] _showToast() - Erreur lors de la création ou de l'affichage du Toast Bootstrap:", e);
+            // Fallback: log the message to console if toast fails
+            console.log(`[BordereauAnalysis] Toast Fallback: Type: ${type}, Message: ${message}`);
+        }
     }
 }
