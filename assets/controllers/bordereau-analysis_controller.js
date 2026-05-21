@@ -916,7 +916,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             }
         }
 
-        this._showToast('info', message, false, true); // Force show for user mapping feedback
+        this._showToast('info', message, true, true); // Force show for user mapping feedback
     }
 
     /**
