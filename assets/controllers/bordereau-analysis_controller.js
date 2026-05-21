@@ -1,4 +1,5 @@
 import BaseController from './base_controller.js';
+import { Toast } from 'bootstrap';
 /**
  * @class BordereauAnalysisController
  * @description Gère l'interface de l'analyse de bordereau en deux étapes.
@@ -105,7 +106,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         // Initialisation de l'instance Bootstrap Toast pour le feedback
         this._toastInstance = null;
         if (this.hasMappingStatusFeedbackTarget) {
-            this._toastInstance = new bootstrap.Toast(
+            this._toastInstance = Toast.getOrCreateInstance(
                 this.mappingStatusFeedbackTarget,
                 { autohide: false }
             );
@@ -1919,17 +1920,15 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         if (autoHide) {
             this.mappingStatusFeedbackTarget.dataset.bsAutohide = 'true';
             this.mappingStatusFeedbackTarget.dataset.bsDelay    = '4000';
-            // Recréer l'instance avec autohide activé
-            this._toastInstance = new bootstrap.Toast(
-                this.mappingStatusFeedbackTarget,
-                { autohide: true, delay: 4000 }
-            );
+            
+            // Pour changer les options dynamiquement (autohide), on dispose l'ancienne instance
+            if (this._toastInstance) this._toastInstance.dispose();
+            this._toastInstance = new Toast(this.mappingStatusFeedbackTarget, { autohide: true, delay: 4000 });
         } else {
             this.mappingStatusFeedbackTarget.dataset.bsAutohide = 'false';
-            this._toastInstance = new bootstrap.Toast(
-                this.mappingStatusFeedbackTarget,
-                { autohide: false }
-            );
+            
+            if (this._toastInstance) this._toastInstance.dispose();
+            this._toastInstance = new Toast(this.mappingStatusFeedbackTarget, { autohide: false });
         }
 
         this._toastInstance.show();
