@@ -67,7 +67,6 @@
                             data-action="click->analysis-result-item#handleAction"
                             data-event-name="{{ action.event }}"
                             data-payload="{{ action.payload|merge({
-                                'row_index':        result.row_index ?? null,
                                 'reference_police': result.bordereau_line_info.reference_police ?? null
                             })|json_encode|e('html_attr') }}"
                             data-analysis-result-item-target="actionButton"

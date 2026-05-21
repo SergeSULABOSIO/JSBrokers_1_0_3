@@ -362,6 +362,7 @@ class BordereauController extends AbstractController
             if ($fileHasChanged) {
                 $resultForRendering = [
                     'type'                => 'warning',
+                    'row_index'           => $rowIndex,
                     'bordereau_line_info' => [],
                     'details'             => "⚠️ Police n°" . $policeFromStore
                         . " (ligne n°" . ($rowIndex !== null ? $rowIndex + 2 : '?') . ")"
@@ -464,6 +465,7 @@ class BordereauController extends AbstractController
             // Construire le résultat complet pour le rendu
             $resultForRendering = [
                 'type'                => $type,
+                'row_index'           => $rowIndex,
                 'bordereau_line_info' => $rawLineData,
                 'details'             => $details,
                 'actions'             => $actions,
@@ -639,6 +641,7 @@ class BordereauController extends AbstractController
                 ];
                 $chunkResultsForDisplay[] = [
                     'type' => 'new',
+                    'row_index' => $rowIndex,
                     'bordereau_line_info' => $rawLineData,
                     'details' => "Ligne n°" . ($rowIndex + 2) . ": Nouvel avenant détecté.",
                     'actions' => [[
@@ -712,6 +715,7 @@ class BordereauController extends AbstractController
                 ];
                 $chunkResultsForDisplay[] = [
                     'type' => 'discrepancy',
+                    'row_index' => $rowIndex,
                     'bordereau_line_info' => $rawLineData,
                     'details' => "Ligne n°" . ($rowIndex + 2) . ": Anomalie(s) - " . implode(', ', $discrepancies),
                     'financial_gaps' => $financialGaps,
@@ -734,6 +738,7 @@ class BordereauController extends AbstractController
                 ];
                 $chunkResultsForDisplay[] = [
                     'type' => 'match',
+                    'row_index' => $rowIndex,
                     'bordereau_line_info' => $rawLineData,
                     'details' => "Ligne n°" . ($rowIndex + 2) . ": Correspondance parfaite.",
                     'actions' => [],
