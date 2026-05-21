@@ -104,13 +104,10 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         }
 
         // Initialisation de l'instance Bootstrap Toast pour le feedback
-        this._toastInstance = null; // Ensure it's null initially
-        if (this.hasMappingStatusFeedbackTarget) {
-            // Create the Toast instance once and manage its visibility and content.
-            this._toastInstance = new Toast(this.mappingStatusFeedbackTarget,
-                { autohide: false }
-            );
-        }
+        this.afterConnect();
+
+        // Initialisation de l'instance Bootstrap Toast pour le feedback
+        this._toastInstance = null; // Initialiser à null
 
         this.isConnecting = false; // Le drapeau est remis à false une fois la logique de connect() terminée
         console.log("[BordereauAnalysis] 6. connect() - Fin de la connexion.");
