@@ -819,7 +819,12 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         const hasAllRequired = [...this.requiredMappings].every(type => mappedTypes.has(type));
         if (this.hasSubmitButtonTarget) this.submitButtonTarget.disabled = !(hasAllRequired && allValid);
-        this.updateMappingStatusFeedback(); // Met à jour le feedback après chaque validation
+
+        // Ne pas déclencher de feedback visuel (Toast) pendant la connexion ou la restauration
+        // pour éviter de saturer le moteur de rendu Bootstrap et causer des erreurs.
+        if (!this.isConnecting && !this.isRestoring) {
+            this.updateMappingStatusFeedback();
+        }
     }
 
     /**
@@ -1882,7 +1887,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * @param {boolean} [autoHide=false] - Si true, le toast se ferme automatiquement après 4s
      */
     _showToast(type, message, autoHide = false) {
-        if (!this.hasToastBodyTarget || !this.hasMappingStatusFeedbackTarget) return;
+        if (!this.element.isConnected || !this.hasToastBodyTarget || !this.hasMappingStatusFeedbackTarget) return;
 
         // Mapping type → classes Bootstrap + couleur de fond du toast
         const toastConfig = {
