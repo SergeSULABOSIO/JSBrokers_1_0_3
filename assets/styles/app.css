@@ -1956,3 +1956,42 @@ textarea:hover,
 .batch-actions-block {
     border-style: dashed !important;
 }
+
+/* ================================================================== */
+/* SECTION 8: TOAST DE FEEDBACK (analyse bordereau)                   */
+/* ================================================================== */
+
+/* Conteneur : déjà géré par Bootstrap .toast-container */
+
+/* Toast JSB — surcharges de style */
+#jsb-analysis-toast {
+    min-width: 320px;
+    max-width: 480px;
+    font-size: 0.9rem;
+    border-radius: 10px;
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.25) !important;
+}
+
+#jsb-analysis-toast .toast-body {
+    padding: 0.75rem 1rem;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+/* Couleur du bouton de fermeture sur fond sombre */
+#jsb-analysis-toast.text-bg-success .btn-close,
+#jsb-analysis-toast.text-bg-danger .btn-close,
+#jsb-analysis-toast.bg-dark .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+/* Animation d'entrée */
+#jsb-analysis-toast.showing,
+#jsb-analysis-toast.show {
+    animation: toast-slide-in 0.25s ease-out;
+}
+
+@keyframes toast-slide-in {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}

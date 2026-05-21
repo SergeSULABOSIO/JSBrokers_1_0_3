@@ -143,11 +143,6 @@
             <div class="toolbar-progress-bar" data-bordereau-analysis-target="progressBar"></div>
         </div>
 
-        {# Feedback #}
-        <div data-bordereau-analysis-target="mappingStatusFeedback"
-             class="small mt-1 mb-1 text-center d-none"
-             role="status" aria-live="polite">
-        </div>
     </div>
 
     <div class="analysis-container">
@@ -297,5 +292,31 @@
     </div>
 
     {# Le script Bootstrap est déjà inclus via importmap dans le <head> #}
+
+    {# ── TOAST FEEDBACK (feedback utilisateur flottant) ── #}
+    <div class="toast-container position-fixed bottom-0 end-0 p-3"
+         style="z-index: 1100;"
+         data-bordereau-analysis-target="toastContainer">
+
+        <div id="jsb-analysis-toast"
+             class="toast align-items-center border-0 shadow"
+             role="status"
+             aria-live="polite"
+             aria-atomic="true"
+             data-bs-autohide="false"
+             data-bordereau-analysis-target="mappingStatusFeedback">
+
+            <div class="d-flex">
+                <div class="toast-body d-flex align-items-center gap-2"
+                     data-bordereau-analysis-target="toastBody">
+                    {# Contenu injecté dynamiquement par le contrôleur Stimulus #}
+                </div>
+                <button type="button"
+                        class="btn-close btn-close-white me-2 m-auto"
+                        data-bs-dismiss="toast"
+                        aria-label="Fermer"></button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
