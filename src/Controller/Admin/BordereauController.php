@@ -923,10 +923,29 @@ class BordereauController extends AbstractController
             return $this->json(['success' => false, 'message' => 'Index de ligne manquant.'], 400);
         }
         $invite      = $this->getInvite();
+        $entreprise  = $bordereau->getEntreprise();
 
         try {
             if ($actionType === 'new') {
                 $avenant = $this->avenantActionService->createFromBordereauLine($excelData, $bordereau, $invite);
+                
+                // --- CORRECTION ERREUR 1 & 2 : Persistance et Entreprise ---
+                if (method_exists($avenant, 'setEntreprise')) {
+                    $avenant->setEntreprise($entreprise);
+                }
+                
+                // Si l'avenant est lié à une cotation, on s'assure qu'elle a aussi l'entreprise
+                if (method_exists($avenant, 'getCotation') && $avenant->getCotation()) {
+                    $cotation = $avenant->getCotation();
+                    if (method_exists($cotation, 'setEntreprise')) {
+                        $cotation->setEntreprise($entreprise);
+                    }
+                    $this->em->persist($cotation);
+                }
+
+                $this->em->persist($avenant);
+                $this->em->flush(); // On flush ici pour générer l'ID de l'avenant
+
                 $message = sprintf('Ligne n°%s : Avenant n°%s créé avec succès.', ($rowIndex + 2), $avenant->getReferencePolice());
                 // Mettre à jour le résultat stocké en base : passer de 'new' à 'match'
                 $this->_markAnalysisResultAsMatch($bordereau, $rowIndex, $avenant->getId(), $avenant->getReferencePolice());
@@ -984,6 +1003,7 @@ class BordereauController extends AbstractController
         $body  = $raw['payload'] ?? $raw;
         $items = $body['items'] ?? ($raw['items'] ?? []);
         $invite = $this->getInvite();
+        $entreprise = $bordereau->getEntreprise();
 
         if (empty($items)) {
             return $this->json([
@@ -1005,6 +1025,22 @@ class BordereauController extends AbstractController
 
                 if ($actionType === 'new') {
                     $avenant = $this->avenantActionService->createFromBordereauLine($excelData, $bordereau, $invite);
+                    
+                    // --- CORRECTION ERREUR 1 & 2 : Persistance et Entreprise ---
+                    if (method_exists($avenant, 'setEntreprise')) {
+                        $avenant->setEntreprise($entreprise);
+                    }
+                    if (method_exists($avenant, 'getCotation') && $avenant->getCotation()) {
+                        $cotation = $avenant->getCotation();
+                        if (method_exists($cotation, 'setEntreprise')) {
+                            $cotation->setEntreprise($entreprise);
+                        }
+                        $this->em->persist($cotation);
+                    }
+                    
+                    $this->em->persist($avenant);
+                    $this->em->flush(); // Nécessaire pour obtenir l'ID avant de marquer le résultat
+
                     $msg = sprintf('Ligne n°%s : Avenant n°%s créé.', ($rowIndex + 2), $avenant->getReferencePolice());
                     $this->_markAnalysisResultAsMatch($bordereau, $rowIndex, $avenant->getId(), $avenant->getReferencePolice());
                 } elseif ($actionType === 'discrepancy') {
