@@ -149,6 +149,9 @@ export default class extends BaseController {
         // Désactiver tous les boutons de cet item pendant le traitement
         this.actionButtonTargets.forEach(btn => btn.disabled = true);
 
+        // NOUVEAU : Notifier le parent du début de l'opération (pour barre de progression)
+        this.dispatch('action:start', { bubbles: true });
+
         try {
             // Appel à la route de simulation
             // TODO: Quand la vraie logique métier sera implémentée, cette URL
@@ -189,12 +192,24 @@ export default class extends BaseController {
                 bordereauId: bordereauId
             });
 
+            // NOUVEAU : Notifier le parent de la réussite (pour Toast individuel)
+            this.dispatch('action:completed', { 
+                bubbles: true, 
+                detail: { success: true, message: result.message } 
+            });
+
         } catch (error) {
             console.error('[AnalysisResultItem] handleAction() - Erreur:', error);
             // Réactiver les boutons en cas d'erreur
             this.actionButtonTargets.forEach(btn => btn.disabled = false);
             // Afficher un feedback d'erreur sur l'item
             this._showActionError(error.message);
+
+            // NOUVEAU : Notifier le parent de l'échec (pour Toast individuel)
+            this.dispatch('action:completed', { 
+                bubbles: true, 
+                detail: { success: false, message: error.message } 
+            });
         }
     }
 

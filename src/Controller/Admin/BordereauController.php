@@ -907,64 +907,16 @@ class BordereauController extends AbstractController
             return $this->json(['success' => false, 'message' => 'Bordereau introuvable.'], 404);
         }
 
-        $raw = json_decode($request->getContent(), true);
-
-        // Diagnostic de la structure reçue
-        dump('simulateAnalysisAction - Payload Brut:', $raw);
-
-        // Résolution du payload (compatibilité Stimulus wrapping)
-        $data        = $raw['payload'] ?? $raw;
-        $actionType  = $data['action_type'] ?? ($raw['action_type'] ?? null);
-        $excelData   = $data['excel_data'] ?? ($raw['excel_data'] ?? []);
-        // On vérifie row_index dans le payload, puis à la racine si absent
-        $rowIndex    = isset($data['row_index']) ? (int)$data['row_index'] : (isset($raw['row_index']) ? (int)$raw['row_index'] : null);
-
-        if ($rowIndex === null) {
-            return $this->json(['success' => false, 'message' => 'Index de ligne manquant.'], 400);
-        }
-        $invite      = $this->getInvite();
-        $entreprise  = $bordereau->getEntreprise();
+        $raw  = json_decode($request->getContent(), true);
+        $data = $raw['payload'] ?? $raw;
 
         try {
-            if ($actionType === 'new') {
-                $avenant = $this->avenantActionService->createFromBordereauLine($excelData, $bordereau, $invite);
-                
-                // --- CORRECTION ERREUR 1 & 2 : Persistance et Entreprise ---
-                if (method_exists($avenant, 'setEntreprise')) {
-                    $avenant->setEntreprise($entreprise);
-                }
-                
-                // Si l'avenant est lié à une cotation, on s'assure qu'elle a aussi l'entreprise
-                if (method_exists($avenant, 'getCotation') && $avenant->getCotation()) {
-                    $cotation = $avenant->getCotation();
-                    if (method_exists($cotation, 'setEntreprise')) {
-                        $cotation->setEntreprise($entreprise);
-                    }
-                    $this->em->persist($cotation);
-                }
-
-                $this->em->persist($avenant);
-                $this->em->flush(); // On flush ici pour générer l'ID de l'avenant
-
-                $message = sprintf('Ligne n°%s : Avenant n°%s créé avec succès.', ($rowIndex + 2), $avenant->getReferencePolice());
-                // Mettre à jour le résultat stocké en base : passer de 'new' à 'match'
-                $this->_markAnalysisResultAsMatch($bordereau, $rowIndex, $avenant->getId(), $avenant->getReferencePolice());
-            } elseif ($actionType === 'discrepancy') {
-                $avenant = $this->avenantRepository->find($data['avenant_id']);
-                if (!$avenant) throw new \Exception("Avenant introuvable.");
-                $this->avenantActionService->updateFromBordereauLine($avenant, $excelData, $bordereau);
-                $message = sprintf('Ligne n°%s : Avenant n°%s mis à jour avec succès.', ($rowIndex + 2), $avenant->getReferencePolice());
-                // Mettre à jour le résultat stocké en base : passer de 'discrepancy' à 'match'
-                $this->_markAnalysisResultAsMatch($bordereau, $rowIndex, $avenant->getId(), $avenant->getReferencePolice());
-            } else {
-                return $this->json(['success' => false, 'message' => 'Action inconnue.'], 400);
+            $result = $this->doProcessAnalysisAction($bordereau, $data);
+            if (!$result['success']) {
+                return $this->json($result, 400);
             }
 
-            return $this->json([
-                'success' => true,
-                'message' => $message,
-                'resolved_row_index' => $rowIndex,
-            ]);
+            return $this->json($result);
         } catch (\Exception $e) {
             return $this->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
@@ -994,75 +946,25 @@ class BordereauController extends AbstractController
                 'message' => 'Bordereau introuvable.'
             ], 404);
         }
-
-        $raw = json_decode($request->getContent(), true);
-
-        // Diagnostic pour le traitement par lot
-        dump('simulateBatchAnalysisAction - Payload Brut:', $raw);
-
+        $raw   = json_decode($request->getContent(), true);
         $body  = $raw['payload'] ?? $raw;
         $items = $body['items'] ?? ($raw['items'] ?? []);
-        $invite = $this->getInvite();
-        $entreprise = $bordereau->getEntreprise();
 
-        if (empty($items)) {
-            return $this->json([
-                'success' => false,
-                'message' => 'Aucun élément à traiter.'
-            ], 400);
-        }
+        if (empty($items)) return $this->json(['success' => false, 'message' => 'Aucun élément à traiter.'], 400);
 
         $results = [];
-
         foreach ($items as $item) {
-            $actionType    = $item['action_type']      ?? null;
-            $rowIndex      = isset($item['row_index']) ? (int)$item['row_index'] : null;
-            $avenantId     = $item['avenant_id']        ?? null;
-            $excelData     = $item['excel_data']        ?? [];
-
             try {
-                if ($rowIndex === null) throw new \Exception("Index de ligne manquant.");
-
-                if ($actionType === 'new') {
-                    $avenant = $this->avenantActionService->createFromBordereauLine($excelData, $bordereau, $invite);
-                    
-                    // --- CORRECTION ERREUR 1 & 2 : Persistance et Entreprise ---
-                    if (method_exists($avenant, 'setEntreprise')) {
-                        $avenant->setEntreprise($entreprise);
-                    }
-                    if (method_exists($avenant, 'getCotation') && $avenant->getCotation()) {
-                        $cotation = $avenant->getCotation();
-                        if (method_exists($cotation, 'setEntreprise')) {
-                            $cotation->setEntreprise($entreprise);
-                        }
-                        $this->em->persist($cotation);
-                    }
-                    
-                    $this->em->persist($avenant);
-                    $this->em->flush(); // Nécessaire pour obtenir l'ID avant de marquer le résultat
-
-                    $msg = sprintf('Ligne n°%s : Avenant n°%s créé.', ($rowIndex + 2), $avenant->getReferencePolice());
-                    $this->_markAnalysisResultAsMatch($bordereau, $rowIndex, $avenant->getId(), $avenant->getReferencePolice());
-                } elseif ($actionType === 'discrepancy') {
-                    $avenant = $this->avenantRepository->find($avenantId);
-                    if (!$avenant) throw new \Exception("Avenant introuvable.");
-                    $this->avenantActionService->updateFromBordereauLine($avenant, $excelData, $bordereau);
-                    $msg = sprintf('Ligne n°%s : Avenant n°%s mis à jour.', ($rowIndex + 2), $avenant->getReferencePolice());
-                    $this->_markAnalysisResultAsMatch($bordereau, $rowIndex, $avenant->getId(), $avenant->getReferencePolice());
-                } else {
-                    throw new \Exception("Action inconnue.");
-                }
-
+                $res = $this->doProcessAnalysisAction($bordereau, $item);
                 $results[] = [
-                    'success'          => true,
-                    'row_index'        => $rowIndex,
-                    'reference_police' => $avenant->getReferencePolice(),
-                    'message'          => $msg,
+                    'success'          => $res['success'],
+                    'row_index'        => $res['resolved_row_index'] ?? null,
+                    'message'          => $res['message']
                 ];
             } catch (\Exception $e) {
                 $results[] = [
                     'success'   => false,
-                    'row_index' => $rowIndex,
+                    'row_index' => $item['row_index'] ?? null,
                     'message'   => $e->getMessage(),
                 ];
             }
@@ -1072,16 +974,66 @@ class BordereauController extends AbstractController
         $failCount    = count($results) - $successCount;
 
         return $this->json([
-            'success'       => $failCount === 0,
-            'results'       => $results,
-            'successCount'  => $successCount,
-            'failCount'     => $failCount,
-            'message'       => sprintf(
-                '%d élément(s) traité(s) avec succès%s.',
-                $successCount,
-                $failCount > 0 ? ", $failCount en échec" : ''
-            ),
+            'success' => $failCount === 0,
+            'results' => $results,
+            'message' => sprintf('%d élément(s) traité(s) avec succès%s.', $successCount, $failCount > 0 ? ", $failCount en échec" : ''),
         ]);
+    }
+
+    /**
+     * Méthode centralisée (DRY) pour traiter une action d'analyse.
+     * Sécurise l'assignation de l'entreprise pour éviter les violations d'intégrité.
+     */
+    private function doProcessAnalysisAction(Bordereau $bordereau, array $data): array
+    {
+        $actionType = $data['action_type'] ?? null;
+        $excelData  = $data['excel_data'] ?? [];
+        $rowIndex   = isset($data['row_index']) ? (int)$data['row_index'] : null;
+        
+        if ($rowIndex === null) throw new \Exception("Index de ligne manquant.");
+        
+        $invite     = $this->getInvite();
+        $entreprise = $this->getEntreprise(); // Plus fiable que de le prendre du bordereau
+
+        if ($actionType === 'new') {
+            $avenant = $this->avenantActionService->createFromBordereauLine($excelData, $bordereau, $invite);
+            
+            // --- SÉCURISATION DE L'ENTREPRISE (Fix Erreur 1048) ---
+            if (method_exists($avenant, 'setEntreprise')) {
+                $avenant->setEntreprise($entreprise);
+            }
+            
+            if (method_exists($avenant, 'getCotation') && ($cotation = $avenant->getCotation())) {
+                if (method_exists($cotation, 'setEntreprise')) $cotation->setEntreprise($entreprise);
+                $this->em->persist($cotation);
+            }
+
+            $this->em->persist($avenant);
+            $this->em->flush();
+
+            $this->_markAnalysisResultAsMatch($bordereau, $rowIndex, $avenant->getId(), $avenant->getReferencePolice());
+            return [
+                'success' => true,
+                'message' => sprintf('Ligne n°%s : Avenant créé avec succès.', $rowIndex + 2),
+                'resolved_row_index' => $rowIndex
+            ];
+        } 
+        
+        if ($actionType === 'discrepancy') {
+            $avenant = $this->avenantRepository->find($data['avenant_id'] ?? null);
+            if (!$avenant) throw new \Exception("Avenant introuvable.");
+            
+            $this->avenantActionService->updateFromBordereauLine($avenant, $excelData, $bordereau);
+            $this->_markAnalysisResultAsMatch($bordereau, $rowIndex, $avenant->getId(), $avenant->getReferencePolice());
+            
+            return [
+                'success' => true,
+                'message' => sprintf('Ligne n°%s : Avenant mis à jour avec succès.', $rowIndex + 2),
+                'resolved_row_index' => $rowIndex
+            ];
+        }
+
+        throw new \Exception("Action d'analyse inconnue.");
     }
 
     /**

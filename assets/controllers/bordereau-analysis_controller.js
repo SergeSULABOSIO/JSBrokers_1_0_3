@@ -59,6 +59,12 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         this.boundHandleItemResolved = this._handleItemResolved.bind(this);
         document.addEventListener('cerveau:event', this.boundHandleItemResolved);
 
+        // NOUVEAU : Écoute les actions individuelles venant des items
+        this.boundHandleItemActionStart = this._handleItemActionStart.bind(this);
+        this.boundHandleItemActionCompleted = this._handleItemActionCompleted.bind(this);
+        this.element.addEventListener('analysis-result-item:action:start', this.boundHandleItemActionStart);
+        this.element.addEventListener('analysis-result-item:action:completed', this.boundHandleItemActionCompleted);
+
         this.requiredMappings = new Set([
             'reference_police',
             'date_effet_avenant',
@@ -110,11 +116,32 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         console.log("[BordereauAnalysis] disconnect() - Nettoyage des écouteurs.");
         document.removeEventListener('analysis:icon.request', this.boundHandleIconRequest);
         document.removeEventListener('cerveau:event', this.boundHandleItemResolved);
+        this.element.removeEventListener('analysis-result-item:action:start', this.boundHandleItemActionStart);
+        this.element.removeEventListener('analysis-result-item:action:completed', this.boundHandleItemActionCompleted);
+
         // Annuler toute sauvegarde de mappage en attente
         if (this._pendingMappingSaveTimeout) {
             clearTimeout(this._pendingMappingSaveTimeout);
             this._pendingMappingSaveTimeout = null;
         }
+    }
+
+    /**
+     * Gère le début d'une action manuelle sur un item.
+     */
+    _handleItemActionStart() {
+        if (this.isBulkProcessingValue) return;
+        this.toggleProgressBar(true);
+    }
+
+    /**
+     * Gère la fin d'une action manuelle sur un item.
+     */
+    _handleItemActionCompleted(event) {
+        if (this.isBulkProcessingValue) return; // Règle : pas de toast individuel en lot
+        this.toggleProgressBar(false);
+        const { success, message } = event.detail;
+        this._showToast(success ? 'success' : 'error', message, true);
     }
 
     /**
@@ -1449,9 +1476,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             let processed = 0;
             let errors = 0;
 
-            this._showToast('warning', `Traitement en lot... 0/${totalItemsToProcess}. Veuillez patienter.`
-            );
-
+            // Note : Pas de toast répétitif ici, la barre de progression suffit pour le lot.
+            
             for (const itemElement of itemsToProcess) {
                 const actionButton = itemElement.querySelector('[data-action="click->analysis-result-item#handleAction"]');
                 if (!actionButton) continue;
@@ -1488,12 +1514,11 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 } finally {
                     const percentage = Math.round((processed / totalItemsToProcess) * 100);
                     this._updateProgressBarPercentage(percentage);
-                    this._showToast('warning', `Traitement en lot... ${processed}/${totalItemsToProcess}. Veuillez patienter.`);
                 }
             }
 
             const msg = errors > 0
-                ? `${processed} avenant(s) créé(s), ${errors} erreur(s).`
+                ? `Traitement terminé : ${processed} avenant(s) créé(s), ${errors} erreur(s).`
                 : `${processed} avenant(s) créé(s) avec succès.`;
             this._showToast(errors > 0 ? 'warning' : 'success', msg, true);
 
@@ -1548,9 +1573,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             let processed = 0;
             let errors = 0;
 
-            this._showToast('warning', `Traitement en lot... 0/${totalItemsToProcess}. Veuillez patienter.`
-            );
-
+            // Pas de toast répétitif pendant le lot.
+            
             for (const itemElement of itemsToProcess) {
                 const actionButton = itemElement.querySelector('[data-action="click->analysis-result-item#handleAction"]');
                 if (!actionButton) continue;
@@ -1587,12 +1611,11 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 } finally {
                     const percentage = Math.round((processed / totalItemsToProcess) * 100);
                     this._updateProgressBarPercentage(percentage);
-                    this._showToast('warning', `Traitement en lot... ${processed}/${totalItemsToProcess}. Veuillez patienter.`);
                 }
             }
 
             const msg = errors > 0
-                ? `${processed} avenant(s) mis à jour, ${errors} erreur(s).`
+                ? `Traitement terminé : ${processed} avenant(s) mis à jour, ${errors} erreur(s).`
                 : `${processed} avenant(s) mis à jour avec succès.`;
             this._showToast(errors > 0 ? 'warning' : 'success', msg, true);
 
