@@ -150,6 +150,7 @@ export default class extends BaseController {
         this.actionButtonTargets.forEach(btn => btn.disabled = true);
 
         // NOUVEAU : Notifier le parent du début de l'opération (pour barre de progression)
+        console.log('[AnalysisResultItem] handleAction() - Dispatching action:start');
         this.dispatch('action:start', { bubbles: true });
 
         try {
@@ -193,12 +194,14 @@ export default class extends BaseController {
             });
 
             // NOUVEAU : Notifier le parent de la réussite (pour Toast individuel)
+            console.log('[AnalysisResultItem] handleAction() - Dispatching action:completed (success)');
             this.dispatch('action:completed', { 
                 bubbles: true, 
                 detail: { success: true, message: result.message } 
             });
 
         } catch (error) {
+            console.log('[AnalysisResultItem] handleAction() - Dispatching action:completed (error)');
             console.error('[AnalysisResultItem] handleAction() - Erreur:', error);
             // Réactiver les boutons en cas d'erreur
             this.actionButtonTargets.forEach(btn => { if(btn) btn.disabled = false; });

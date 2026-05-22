@@ -131,6 +131,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      */
     _handleItemActionStart() {
         if (this.isBulkProcessingValue) return;
+        console.log('[BordereauAnalysis] _handleItemActionStart() - Event received, toggling progress bar ON');
         this.toggleProgressBar(true);
     }
 
@@ -138,6 +139,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * Gère la fin d'une action manuelle sur un item.
      */
     _handleItemActionCompleted(event) {
+        console.log('[BordereauAnalysis] _handleItemActionCompleted() - Event received, toggling progress bar OFF and showing toast');
         if (this.isBulkProcessingValue) return; // Règle : pas de toast individuel en lot
         this.toggleProgressBar(false);
         const { success, message } = event.detail;
@@ -1659,6 +1661,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         }
 
         if (isLoading) {
+            console.log('[BordereauAnalysis] toggleProgressBar(true) - Displaying progress bar');
             this.progressBarContainerTarget.style.display = 'block';
             this.progressBarTarget.style.transition = 'none';
             this.progressBarTarget.style.width = '10%'; // Donne un feedback immédiat
@@ -1671,6 +1674,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this.progressBarTarget.style.animation = 'toolbar-progress-animation 1.5s infinite linear';
             this.progressBarTarget.style.backgroundSize = '200% 100%';
             this.progressBarTarget.style.transition = 'width 0.3s ease';
+            
         } else {
             // Si la barre n'est pas affichée, inutile de lancer la séquence de fermeture
             if (this.progressBarContainerTarget.style.display === 'none') return;
@@ -1679,6 +1683,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this.progressBarTarget.style.transition = 'width 0.3s ease';
             this.progressBarTarget.style.width = '100%';
 
+            console.log('[BordereauAnalysis] toggleProgressBar(false) - Hiding progress bar');
             // On planifie la fermeture effective après la transition visuelle (0.3s)
             this._progressBarTimeout = setTimeout(() => {
                 if (this.hasProgressBarContainerTarget) {
@@ -1954,6 +1959,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * @param {boolean} [autoHide=false] - Si true, le toast se ferme automatiquement après 4s
      */
     _showToast(type, message, autoHide = true, forceShow = false) {
+        console.log(`[BordereauAnalysis] _showToast() - Type: ${type}, Message: ${message}, ForceShow: ${forceShow}`);
         if (!this.element.isConnected || !this.hasToastContainerTarget) {
             return;
         }
