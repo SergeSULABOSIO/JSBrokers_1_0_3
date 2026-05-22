@@ -1443,6 +1443,32 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
     }
 
     /**
+     * Helper to update the text and disabled state of an action button.
+     * @param {HTMLElement} itemElement - The DOM element of the analysis result item.
+     * @param {boolean} processing - True if processing, false to restore.
+     * @param {string} type - 'new' or 'discrepancy'.
+     */
+    _updateActionButtonState(itemElement, processing, type) {
+        const actionButton = itemElement.querySelector('[data-analysis-result-item-target="actionButton"]');
+        if (!actionButton) return;
+
+        const buttonLabelSpan = actionButton.querySelector('.button-label');
+        if (!buttonLabelSpan) return;
+
+        if (processing) {
+            actionButton.disabled = true;
+            if (type === 'new') {
+                buttonLabelSpan.textContent = 'En cours de création...';
+            } else if (type === 'discrepancy') {
+                buttonLabelSpan.textContent = 'En cours de modification...';
+            }
+        } else {
+            actionButton.disabled = false;
+            buttonLabelSpan.textContent = actionButton.dataset.originalLabel;
+        }
+    }
+
+    /**
      * Traite en lot tous les items de type "new" non encore résolus.
      * Désactive le bouton pendant le traitement pour éviter les doubles clics.
      */
@@ -1476,6 +1502,9 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this.isBulkProcessingValue = false;
             return;
         }
+
+        // Set buttons to processing state
+        itemsToProcess.forEach(itemElement => this._updateActionButtonState(itemElement, true, 'new'));
 
         try {
             let processed = 0;
@@ -1537,6 +1566,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             if (this.hasBulkCreateItemTarget) this.bulkCreateItemTarget.querySelector('button').disabled = false;
             this._updateBulkButtonsState();
             this._updateValidateButtonState();
+            // Restore original button text for all items that were processed (even if failed)
+            itemsToProcess.forEach(itemElement => this._updateActionButtonState(itemElement, false, 'new'));
         }
     }
 
@@ -1573,6 +1604,9 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this.isBulkProcessingValue = false;
             return;
         }
+
+        // Set buttons to processing state
+        itemsToProcess.forEach(itemElement => this._updateActionButtonState(itemElement, true, 'discrepancy'));
 
         try {
             let processed = 0;
@@ -1634,6 +1668,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             if (this.hasBulkUpdateItemTarget) this.bulkUpdateItemTarget.querySelector('button').disabled = false;
             this._updateBulkButtonsState();
             this._updateValidateButtonState();
+            // Restore original button text for all items that were processed (even if failed)
+            itemsToProcess.forEach(itemElement => this._updateActionButtonState(itemElement, false, 'discrepancy'));
         }
     }
 
