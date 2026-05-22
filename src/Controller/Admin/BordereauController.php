@@ -1001,8 +1001,8 @@ class BordereauController extends AbstractController
 
             // Propagation exhaustive et récursive de l'entreprise et de l'invité sur tout le graph d'objets (Fix SQL 1048)
             $this->propagateAuditInfo($avenant, $entreprise, $invite);
-
             $this->em->flush();
+
             $this->_markAnalysisResultAsMatch($bordereau, $rowIndex, $avenant->getId(), $avenant->getReferencePolice());
 
             return [
@@ -1017,6 +1017,10 @@ class BordereauController extends AbstractController
             if (!$avenant) throw new \Exception("Avenant introuvable.");
             
             $this->avenantActionService->updateFromBordereauLine($avenant, $excelData, $bordereau);
+            
+            // NOUVEAU : On sécurise aussi les éventuelles nouvelles entités créées lors d'une mise à jour (ex: Note, Paiement)
+            $this->propagateAuditInfo($avenant, $entreprise, $invite);
+            
             $this->_markAnalysisResultAsMatch($bordereau, $rowIndex, $avenant->getId(), $avenant->getReferencePolice());
             
             return [
@@ -1031,93 +1035,27 @@ class BordereauController extends AbstractController
 
     /**
      * Sécurise toute la cascade d'objets en injectant l'entreprise et l'invité.
-     * Indispensable pour éviter les erreurs SQL 1048 lors de la création en masse.
+     * Utilise le UnitOfWork de Doctrine pour intercepter TOUTES les entités découvertes via cascade.
      */
-    private function propagateAuditInfo(?object $entity, $entreprise, $invite, ?\SplObjectStorage $seen = null): void
+    private function propagateAuditInfo(?object $entity, $entreprise, $invite): void
     {
         if (!$entity || !$entreprise) return;
 
-        // Protection contre les boucles infinies dans les relations bidirectionnelles
-        $seen = $seen ?? new \SplObjectStorage();
-        if ($seen->contains($entity)) return;
-        $seen->attach($entity);
-
-        if (method_exists($entity, 'setEntreprise')) $entity->setEntreprise($entreprise);
-        if (method_exists($entity, 'setInvite')) $entity->setInvite($invite);
+        // 1. On demande à Doctrine de persister l'entité racine (déclenche la cascade persist)
         $this->em->persist($entity);
 
-        // 1. Avenant -> Cotation et Documents
-        if ($entity instanceof \App\Entity\Avenant) {
-            if ($cotation = $entity->getCotation()) {
-                $this->propagateAuditInfo($cotation, $entreprise, $invite, $seen);
-            }
-            foreach ($entity->getDocuments() as $doc) {
-                $this->propagateAuditInfo($doc, $entreprise, $invite, $seen);
-            }
-        }
+        // 2. On récupère toutes les entités que Doctrine s'apprête à insérer (scheduled insertions)
+        // Cela inclut l'entité racine et tous les enfants découverts par cascade (Tranches, Revenus, Articles, etc.)
+        $uow = $this->em->getUnitOfWork();
+        $insertions = $uow->getScheduledEntityInsertions();
 
-        // 2. Cotation -> Piste, Assureur, Revenus, Chargements, Tranches, Taches et Documents
-        if ($entity instanceof \App\Entity\Cotation) {
-            if ($piste = $entity->getPiste()) {
-                $this->propagateAuditInfo($piste, $entreprise, $invite, $seen);
+        foreach ($insertions as $entityToAudit) {
+            if (method_exists($entityToAudit, 'setEntreprise')) {
+                $entityToAudit->setEntreprise($entreprise);
             }
-            if ($assureur = $entity->getAssureur()) {
-                $this->propagateAuditInfo($assureur, $entreprise, $invite, $seen);
+            if (method_exists($entityToAudit, 'setInvite')) {
+                $entityToAudit->setInvite($invite);
             }
-            foreach ($entity->getRevenus() as $rev) {
-                $this->propagateAuditInfo($rev, $entreprise, $invite, $seen);
-            }
-            foreach ($entity->getChargements() as $chg) {
-                $this->propagateAuditInfo($chg, $entreprise, $invite, $seen);
-            }
-            // Tranches de paiement (très important pour les nouveaux avenants)
-            if (method_exists($entity, 'getTranches')) {
-                foreach ($entity->getTranches() as $tranche) {
-                    $this->propagateAuditInfo($tranche, $entreprise, $invite, $seen);
-                }
-            }
-            foreach ($entity->getTaches() as $tache) {
-                $this->propagateAuditInfo($tache, $entreprise, $invite, $seen);
-            }
-            foreach ($entity->getDocuments() as $doc) {
-                $this->propagateAuditInfo($doc, $entreprise, $invite, $seen);
-            }
-        }
-
-        // 3. Piste -> Client, Risque, Taches et Documents
-        if ($entity instanceof \App\Entity\Piste) {
-            if ($client = $entity->getClient()) {
-                $this->propagateAuditInfo($client, $entreprise, $invite, $seen);
-            }
-            if ($risque = $entity->getRisque()) {
-                $this->propagateAuditInfo($risque, $entreprise, $invite, $seen);
-            }
-            foreach ($entity->getTaches() as $tache) {
-                $this->propagateAuditInfo($tache, $entreprise, $invite, $seen);
-            }
-            foreach ($entity->getDocuments() as $doc) {
-                $this->propagateAuditInfo($doc, $entreprise, $invite, $seen);
-            }
-        }
-
-        // 4. Client -> Contacts et Documents
-        if ($entity instanceof \App\Entity\Client) {
-            foreach ($entity->getContacts() as $contact) {
-                $this->propagateAuditInfo($contact, $entreprise, $invite, $seen);
-            }
-            foreach ($entity->getDocuments() as $doc) {
-                $this->propagateAuditInfo($doc, $entreprise, $invite, $seen);
-            }
-        }
-
-        // 5. Revenu et TypeRevenu
-        if ($entity instanceof \App\Entity\RevenuPourCourtier && ($typeRevenu = $entity->getTypeRevenu())) {
-            $this->propagateAuditInfo($typeRevenu, $entreprise, $invite, $seen);
-        }
-
-        // 6. Chargement et Type de Chargement
-        if ($entity instanceof \App\Entity\ChargementPourPrime && ($chargement = $entity->getType())) {
-            $this->propagateAuditInfo($chargement, $entreprise, $invite, $seen);
         }
     }
 
