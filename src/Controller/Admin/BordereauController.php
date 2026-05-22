@@ -1054,18 +1054,44 @@ class BordereauController extends AbstractController
 
         // 3. On récupère maintenant la liste exhaustive des entités prêtes à être insérées
         $insertions = $uow->getScheduledEntityInsertions();
+        $updates = $uow->getScheduledEntityUpdates();
+        $allScheduled = array_merge($insertions, $updates);
 
-        foreach ($insertions as $entityToAudit) {
-            // On vérifie si l'entreprise est déjà définie pour ne pas écraser une valeur spécifique
-            if (method_exists($entityToAudit, 'setEntreprise') && 
-                (!method_exists($entityToAudit, 'getEntreprise') || null === $entityToAudit->getEntreprise())) {
-                $entityToAudit->setEntreprise($entreprise);
+        // DIAGNOSTIC : On dump les informations pour voir ce que Doctrine a découvert
+        if (function_exists('dump')) {
+            dump("--- DEBUT PROPAGATION AUDIT ---");
+            dump("Entité racine : " . get_class($entity));
+            dump("Total entités détectées (insert/update) : " . count($allScheduled));
+        }
+
+        foreach ($allScheduled as $entityToAudit) {
+            $className = get_class($entityToAudit);
+            
+            // Vérification pour l'Entreprise
+            if (method_exists($entityToAudit, 'setEntreprise')) {
+                $currentE = method_exists($entityToAudit, 'getEntreprise') ? $entityToAudit->getEntreprise() : null;
+                
+                if (null === $currentE) {
+                    if (function_exists('dump')) dump("-> Injection Entreprise dans : " . $className);
+                    $entityToAudit->setEntreprise($entreprise);
+                }
+            } else {
+                // Si l'entité n'a pas de setEntreprise mais qu'elle est dans le graph, 
+                // c'est peut-être elle qui cause l'erreur SQL si son champ est NOT NULL en base.
+                if (function_exists('dump')) dump("!! ATTENTION : Aucune méthode setEntreprise sur " . $className);
             }
-            if (method_exists($entityToAudit, 'setInvite') && 
-                (!method_exists($entityToAudit, 'setInvite') || null === $entityToAudit->getInvite())) {
-                $entityToAudit->setInvite($invite);
+
+            // Vérification pour l'Invité (Correction du bug de typo setInvite -> getInvite)
+            if (method_exists($entityToAudit, 'setInvite')) {
+                $currentI = method_exists($entityToAudit, 'getInvite') ? $entityToAudit->getInvite() : null;
+                
+                if (null === $currentI) {
+                    if (function_exists('dump')) dump("-> Injection Invite dans : " . $className);
+                    $entityToAudit->setInvite($invite);
+                }
             }
         }
+        if (function_exists('dump')) dump("--- FIN PROPAGATION AUDIT ---");
     }
 
     /**
