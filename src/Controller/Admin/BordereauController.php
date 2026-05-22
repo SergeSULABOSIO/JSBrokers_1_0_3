@@ -992,13 +992,14 @@ class BordereauController extends AbstractController
         
         if ($rowIndex === null) throw new \Exception("Index de ligne manquant.");
         
-        $invite     = $this->getInvite();
-        $entreprise = $this->getEntreprise(); // Plus fiable que de le prendre du bordereau
+        // On sécurise la récupération de l'entreprise et de l'invité en utilisant le bordereau comme source de vérité.
+        $entreprise = $this->getEntreprise() ?? $bordereau->getEntreprise();
+        $invite     = $this->getInvite()     ?? $bordereau->getInvite();
 
         if ($actionType === 'new') {
             $avenant = $this->avenantActionService->createFromBordereauLine($excelData, $bordereau, $invite);
 
-            // NOUVEAU : Propagation exhaustive de l'entreprise et de l'invité
+            // Propagation exhaustive et récursive de l'entreprise et de l'invité sur tout le graph d'objets (Fix SQL 1048)
             $this->propagateAuditInfo($avenant, $entreprise, $invite);
 
             $this->em->flush();
@@ -1032,46 +1033,91 @@ class BordereauController extends AbstractController
      * Sécurise toute la cascade d'objets en injectant l'entreprise et l'invité.
      * Indispensable pour éviter les erreurs SQL 1048 lors de la création en masse.
      */
-    private function propagateAuditInfo(object $entity, $entreprise, $invite): void
+    private function propagateAuditInfo(?object $entity, $entreprise, $invite, ?\SplObjectStorage $seen = null): void
     {
+        if (!$entity || !$entreprise) return;
+
+        // Protection contre les boucles infinies dans les relations bidirectionnelles
+        $seen = $seen ?? new \SplObjectStorage();
+        if ($seen->contains($entity)) return;
+        $seen->attach($entity);
+
         if (method_exists($entity, 'setEntreprise')) $entity->setEntreprise($entreprise);
         if (method_exists($entity, 'setInvite')) $entity->setInvite($invite);
         $this->em->persist($entity);
 
-        // 1. Si c'est un Avenant, on descend vers la Cotation
-        if ($entity instanceof \App\Entity\Avenant && ($cotation = $entity->getCotation())) {
-            $this->propagateAuditInfo($cotation, $entreprise, $invite);
+        // 1. Avenant -> Cotation et Documents
+        if ($entity instanceof \App\Entity\Avenant) {
+            if ($cotation = $entity->getCotation()) {
+                $this->propagateAuditInfo($cotation, $entreprise, $invite, $seen);
+            }
+            foreach ($entity->getDocuments() as $doc) {
+                $this->propagateAuditInfo($doc, $entreprise, $invite, $seen);
+            }
         }
 
-        // 2. Si c'est une Cotation, on descend vers Piste, Revenus et Chargements
+        // 2. Cotation -> Piste, Assureur, Revenus, Chargements, Tranches, Taches et Documents
         if ($entity instanceof \App\Entity\Cotation) {
             if ($piste = $entity->getPiste()) {
-                $this->propagateAuditInfo($piste, $entreprise, $invite);
+                $this->propagateAuditInfo($piste, $entreprise, $invite, $seen);
+            }
+            if ($assureur = $entity->getAssureur()) {
+                $this->propagateAuditInfo($assureur, $entreprise, $invite, $seen);
             }
             foreach ($entity->getRevenus() as $rev) {
-                $this->propagateAuditInfo($rev, $entreprise, $invite);
+                $this->propagateAuditInfo($rev, $entreprise, $invite, $seen);
             }
             foreach ($entity->getChargements() as $chg) {
-                $this->propagateAuditInfo($chg, $entreprise, $invite);
+                $this->propagateAuditInfo($chg, $entreprise, $invite, $seen);
+            }
+            // Tranches de paiement (très important pour les nouveaux avenants)
+            if (method_exists($entity, 'getTranches')) {
+                foreach ($entity->getTranches() as $tranche) {
+                    $this->propagateAuditInfo($tranche, $entreprise, $invite, $seen);
+                }
+            }
+            foreach ($entity->getTaches() as $tache) {
+                $this->propagateAuditInfo($tache, $entreprise, $invite, $seen);
+            }
+            foreach ($entity->getDocuments() as $doc) {
+                $this->propagateAuditInfo($doc, $entreprise, $invite, $seen);
             }
         }
 
-        // 3. Si c'est une Piste, on descend vers le Client
-        if ($entity instanceof \App\Entity\Piste && ($client = $entity->getClient())) {
-            $this->propagateAuditInfo($client, $entreprise, $invite);
-        }
-        // 4. Si c'est une Piste, on descend vers le Risque
-        if ($entity instanceof \App\Entity\Piste && ($risque = $entity->getRisque())) {
-            $this->propagateAuditInfo($risque, $entreprise, $invite);
+        // 3. Piste -> Client, Risque, Taches et Documents
+        if ($entity instanceof \App\Entity\Piste) {
+            if ($client = $entity->getClient()) {
+                $this->propagateAuditInfo($client, $entreprise, $invite, $seen);
+            }
+            if ($risque = $entity->getRisque()) {
+                $this->propagateAuditInfo($risque, $entreprise, $invite, $seen);
+            }
+            foreach ($entity->getTaches() as $tache) {
+                $this->propagateAuditInfo($tache, $entreprise, $invite, $seen);
+            }
+            foreach ($entity->getDocuments() as $doc) {
+                $this->propagateAuditInfo($doc, $entreprise, $invite, $seen);
+            }
         }
 
-        // 5. Si c'est un RevenuPourCourtier, on descend vers le TypeRevenu
-        if ($entity instanceof \App\Entity\RevenuPourCourtier && ($typeRevenu = $entity->getTypeRevenu())) {
-            $this->propagateAuditInfo($typeRevenu, $entreprise, $invite);
+        // 4. Client -> Contacts et Documents
+        if ($entity instanceof \App\Entity\Client) {
+            foreach ($entity->getContacts() as $contact) {
+                $this->propagateAuditInfo($contact, $entreprise, $invite, $seen);
+            }
+            foreach ($entity->getDocuments() as $doc) {
+                $this->propagateAuditInfo($doc, $entreprise, $invite, $seen);
+            }
         }
-        // 6. Si c'est un ChargementPourPrime, on descend vers le Chargement
+
+        // 5. Revenu et TypeRevenu
+        if ($entity instanceof \App\Entity\RevenuPourCourtier && ($typeRevenu = $entity->getTypeRevenu())) {
+            $this->propagateAuditInfo($typeRevenu, $entreprise, $invite, $seen);
+        }
+
+        // 6. Chargement et Type de Chargement
         if ($entity instanceof \App\Entity\ChargementPourPrime && ($chargement = $entity->getType())) {
-            $this->propagateAuditInfo($chargement, $entreprise, $invite);
+            $this->propagateAuditInfo($chargement, $entreprise, $invite, $seen);
         }
     }
 

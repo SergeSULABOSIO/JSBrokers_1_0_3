@@ -62,8 +62,11 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         // NOUVEAU : Écoute les actions individuelles venant des items
         this.boundHandleItemActionStart = this._handleItemActionStart.bind(this);
         this.boundHandleItemActionCompleted = this._handleItemActionCompleted.bind(this);
-        this.element.addEventListener('analysis-result-item:action:start', this.boundHandleItemActionStart);
-        this.element.addEventListener('analysis-result-item:action:completed', this.boundHandleItemActionCompleted);
+        
+        // CORRECTION : Puisque BaseController.dispatch n'ajoute pas de préfixe automatique, 
+        // nous devons écouter les noms d'événements tels qu'ils sont émis : "action:start" et "action:completed".
+        this.element.addEventListener('action:start', this.boundHandleItemActionStart);
+        this.element.addEventListener('action:completed', this.boundHandleItemActionCompleted);
 
         this.requiredMappings = new Set([
             'reference_police',
@@ -116,8 +119,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         console.log("[BordereauAnalysis] disconnect() - Nettoyage des écouteurs.");
         document.removeEventListener('analysis:icon.request', this.boundHandleIconRequest);
         document.removeEventListener('cerveau:event', this.boundHandleItemResolved);
-        this.element.removeEventListener('analysis-result-item:action:start', this.boundHandleItemActionStart);
-        this.element.removeEventListener('analysis-result-item:action:completed', this.boundHandleItemActionCompleted);
+        this.element.removeEventListener('action:start', this.boundHandleItemActionStart);
+        this.element.removeEventListener('action:completed', this.boundHandleItemActionCompleted);
 
         // Annuler toute sauvegarde de mappage en attente
         if (this._pendingMappingSaveTimeout) {
