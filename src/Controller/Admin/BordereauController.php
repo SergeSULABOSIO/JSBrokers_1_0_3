@@ -1060,6 +1060,19 @@ class BordereauController extends AbstractController
         if ($entity instanceof \App\Entity\Piste && ($client = $entity->getClient())) {
             $this->propagateAuditInfo($client, $entreprise, $invite);
         }
+        // 4. Si c'est une Piste, on descend vers le Risque
+        if ($entity instanceof \App\Entity\Piste && ($risque = $entity->getRisque())) {
+            $this->propagateAuditInfo($risque, $entreprise, $invite);
+        }
+
+        // 5. Si c'est un RevenuPourCourtier, on descend vers le TypeRevenu
+        if ($entity instanceof \App\Entity\RevenuPourCourtier && ($typeRevenu = $entity->getTypeRevenu())) {
+            $this->propagateAuditInfo($typeRevenu, $entreprise, $invite);
+        }
+        // 6. Si c'est un ChargementPourPrime, on descend vers le Chargement
+        if ($entity instanceof \App\Entity\ChargementPourPrime && ($chargement = $entity->getType())) {
+            $this->propagateAuditInfo($chargement, $entreprise, $invite);
+        }
     }
 
     /**
