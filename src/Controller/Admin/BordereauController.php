@@ -1044,16 +1044,25 @@ class BordereauController extends AbstractController
         // 1. On demande à Doctrine de persister l'entité racine (déclenche la cascade persist)
         $this->em->persist($entity);
 
-        // 2. On récupère toutes les entités que Doctrine s'apprête à insérer (scheduled insertions)
-        // Cela inclut l'entité racine et tous les enfants découverts par cascade (Tranches, Revenus, Articles, etc.)
         $uow = $this->em->getUnitOfWork();
+
+        // 2. CRUCIAL : On force le calcul des ChangeSets.
+        // Cette instruction déclenche la découverte récursive de toutes les entités 
+        // liées via 'cascade: persist'. Sans cela, getScheduledEntityInsertions() 
+        // ne contient souvent que l'entité racine au moment de l'appel.
+        $uow->computeChangeSets();
+
+        // 3. On récupère maintenant la liste exhaustive des entités prêtes à être insérées
         $insertions = $uow->getScheduledEntityInsertions();
 
         foreach ($insertions as $entityToAudit) {
-            if (method_exists($entityToAudit, 'setEntreprise')) {
+            // On vérifie si l'entreprise est déjà définie pour ne pas écraser une valeur spécifique
+            if (method_exists($entityToAudit, 'setEntreprise') && 
+                (!method_exists($entityToAudit, 'getEntreprise') || null === $entityToAudit->getEntreprise())) {
                 $entityToAudit->setEntreprise($entreprise);
             }
-            if (method_exists($entityToAudit, 'setInvite')) {
+            if (method_exists($entityToAudit, 'setInvite') && 
+                (!method_exists($entityToAudit, 'setInvite') || null === $entityToAudit->getInvite())) {
                 $entityToAudit->setInvite($invite);
             }
         }
