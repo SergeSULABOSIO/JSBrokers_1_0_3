@@ -91,6 +91,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         this.isRestoring = false;
         this.isConnecting = true; // Nouveau drapeau: true pendant la connexion initiale
         this.currentStep = 1;
+        this._initialToastShown = false; // Nouveau drapeau pour le toast initial
         this.isBulkProcessingValue = false; // Initialiser le drapeau de traitement en lot
         this.isSaving = false; // NOUVEAU : Le "feu de signalisation" pour la sauvegarde.
         this._pendingSaveTimeout = null; // Identifiant pour le debounce des sauvegardes
@@ -111,6 +112,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             console.log("[BordereauAnalysis] 4. connect() - Exécution du chargement initial de l'UI (état par défaut).");
             this.afterConnect();
         }
+        // Le drapeau est remis à false une fois la logique de connect() terminée
         this.isConnecting = false; // Le drapeau est remis à false une fois la logique de connect() terminée
         console.log("[BordereauAnalysis] 6. connect() - Fin de la connexion.");
     }
@@ -156,6 +158,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         this.updateMappingStatusFeedback();
         this.updateSubmitButtonState();
         this.updateSelectOptionsVisuals();
+        this._showWelcomeToast(); // Afficher le toast de bienvenue après la connexion initiale
     }
 
     /**
@@ -239,6 +242,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         // de manière sécurisée car isRestoring est maintenant à false.
         // On évite ainsi un double appel synchrone qui fait planter Bootstrap Toast.
         this.updateSubmitButtonState();
+        this._showWelcomeToast(); // Afficher le toast de bienvenue après la restauration
     }
 
     /**
@@ -550,6 +554,32 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
     }
 
     /**
+     * Affiche un toast de bienvenue spécifique à l'étape actuelle.
+     * S'assure qu'il n'est affiché qu'une seule fois au chargement initial.
+     */
+    _showWelcomeToast() {
+        if (this._initialToastShown) return; // S'assurer qu'il n'est affiché qu'une seule fois
+
+        let title = '';
+        let message = '';
+        switch (this.currentStep) {
+            case 1:
+                title = 'Bienvenue !';
+                message = 'Veuillez sélectionner la feuille de calcul contenant les données à analyser.';
+                break;
+            case 2:
+                title = 'Étape 2 : Mappage des colonnes';
+                message = 'Associez les colonnes de votre fichier aux champs système. Tous les champs obligatoires doivent être mappés et valides.';
+                break;
+            case 3:
+                title = 'Étape 3 : Résultats de l\'analyse';
+                message = 'Vérifiez les avenants détectés et traitez les anomalies ou les nouveaux éléments.';
+                break;
+        }
+        this._showToast('info', `<strong>${title}</strong><br>${message}`, true, true);
+        this._initialToastShown = true;
+    }
+    /**
      * Affiche l'étape 2 (mappage) et sélectionne le bon tableau de mappage
      * en fonction de la feuille choisie à l'étape 1.
      */
@@ -854,9 +884,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         const hasAllRequired = [...this.requiredMappings].every(type => mappedTypes.has(type));
         if (this.hasSubmitButtonTarget) this.submitButtonTarget.disabled = !(hasAllRequired && allValid);
 
-        // Ne pas déclencher de feedback visuel (Toast) pendant la connexion ou la restauration
-        // pour éviter de saturer le moteur de rendu Bootstrap et causer des erreurs.
-        if (!this.isConnecting && !this.isRestoring) {
+        // Ne pas déclencher de feedback visuel (Toast) si le toast initial n'a pas encore été affiché.
+        if (this._initialToastShown) {
             this.updateMappingStatusFeedback();
         }
     }
@@ -948,7 +977,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             }
         }
 
-        this._showToast('info', message, true, true); // Force show for user mapping feedback
+        this._showToast('info', message, true, true);
     }
 
     /**
