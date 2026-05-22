@@ -65,13 +65,15 @@ class AvenantActionService
             $searchValue = trim($risqueRawValue);
 
             // Tentative 1 : Match exact sur le nom complet
-            $risque = $this->risqueRepository->findOneBy(['nomComplet' => $searchValue]);
+            $risque = $this->risqueRepository->findOneBy(['nomComplet' => $searchValue, 'entreprise' => $entreprise]);
 
             // Tentative 2 : Recherche si la valeur Excel est présente dans la liste des codes (abréviations)
             if (!$risque) {
                 $risque = $this->risqueRepository->createQueryBuilder('r')
                     ->where('r.code LIKE :val')
+                    ->andWhere('r.entreprise = :entreprise')
                     ->setParameter('val', '%' . $searchValue . '%')
+                    ->setParameter('entreprise', $entreprise)
                     ->setMaxResults(1)
                     ->getQuery()
                     ->getOneOrNullResult();
@@ -84,6 +86,8 @@ class AvenantActionService
                 $risque->setCode($searchValue);
                 $risque->setBranche(Risque::BRANCHE_IARD_OU_NON_VIE); // Valeur par défaut IARD
                 $risque->setImposable(true); // Par défaut imposable
+                $risque->setEntreprise($entreprise);
+                $risque->setInvite($invite);
                 $this->em->persist($risque);
             }
         }
@@ -189,7 +193,6 @@ class AvenantActionService
         $avenant->setInvite($invite);
         $this->em->persist($avenant);
 
-        $this->em->flush();
         return $avenant;
     }
 
@@ -244,7 +247,6 @@ class AvenantActionService
             }
         }
 
-        $this->em->flush();
         return $avenant;
     }
 
