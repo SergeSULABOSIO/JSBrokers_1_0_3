@@ -12,6 +12,7 @@ export default class extends BaseController {
         "actionsContainer",
         "actionButton",
         "actionIcon"
+        // "buttonLabel" // This target is not strictly necessary if we query for it within the button.
     ];
 
     static values = {
@@ -139,6 +140,7 @@ export default class extends BaseController {
         event.stopPropagation();
         const button = event.currentTarget;
         const eventName = button.dataset.eventName;
+        const originalLabel = button.dataset.originalLabel;
         const payload   = JSON.parse(button.dataset.payload || '{}');
 
         console.log('[AnalysisResultItem] handleAction() - Action cliquée:', {
@@ -148,6 +150,16 @@ export default class extends BaseController {
 
         // Désactiver tous les boutons de cet item pendant le traitement
         this.actionButtonTargets.forEach(btn => btn.disabled = true);
+
+        // Change button text to "Processing..."
+        const buttonLabelSpan = button.querySelector('.button-label');
+        if (buttonLabelSpan) {
+            if (payload.avenant_id) { // Discrepancy -> Update
+                buttonLabelSpan.textContent = 'En cours de modification...';
+            } else { // New -> Create
+                buttonLabelSpan.textContent = 'En cours de création...';
+            }
+        }
 
         // NOUVEAU : Notifier le parent du début de l'opération (pour barre de progression)
         console.log('[AnalysisResultItem] handleAction() - Envoi de action:start');
@@ -203,8 +215,6 @@ export default class extends BaseController {
         } catch (error) {
             console.log('[AnalysisResultItem] handleAction() - Envoi de action:completed (error)');
             console.error('[AnalysisResultItem] handleAction() - Erreur:', error);
-            // Réactiver les boutons en cas d'erreur
-            this.actionButtonTargets.forEach(btn => { if(btn) btn.disabled = false; });
             // Afficher un feedback d'erreur sur l'item
             this._showActionError(error.message);
 
@@ -213,6 +223,9 @@ export default class extends BaseController {
                 success: false, 
                 message: error.message 
             });
+        } finally {
+            // Re-enable buttons and restore original text
+            this.actionButtonTargets.forEach(btn => { if(btn) btn.disabled = false; });
         }
     }
 
