@@ -598,6 +598,9 @@ class BordereauController extends AbstractController
         $allRows       = $sessionData['rows'];
         $mappedColumns = $sessionData['mappedColumns'];
         $totalRows     = $sessionData['totalRows'];
+        // Initialiser ou récupérer les totaux financiers cumulés
+        $financialTotals = $sessionData['financialTotals'] ?? ['prime_ttc' => 0.0, 'commission_ht' => 0.0, 'taxe' => 0.0];
+
         // Ensure 'reference_police' is mapped and available
         if (!isset($mappedColumns['reference_police'])) {
             return $this->json(['error' => 'Le mappage pour "N° de Police" est manquant dans la session.'], 400);
@@ -767,6 +770,7 @@ class BordereauController extends AbstractController
         $isLastChunk = ($offset + $chunkSize) >= $totalRows;
         $accumulated = $sessionData['accumulatedResults'] ?? [];
         $accumulated = array_merge($accumulated, $chunkResultsToStore);
+        $sessionData['financialTotals'] = $financialTotals;
         $sessionData['accumulatedResults'] = $accumulated; // Update accumulated results in session data
         $stats = null;
 
@@ -777,19 +781,10 @@ class BordereauController extends AbstractController
                 'match'       => count(array_filter($accumulated, fn($r) => $r['type'] === 'match')),
                 'discrepancy' => count(array_filter($accumulated, fn($r) => $r['type'] === 'discrepancy')),
                 'new'         => count(array_filter($accumulated, fn($r) => $r['type'] === 'new')),
-                'total_prime_ttc'      => 0.0,
-                'total_commission_ht'  => 0.0,
-                'total_taxe'           => 0.0, // Initialize total_taxe
+                'total_prime_ttc'      => round($financialTotals['prime_ttc'], 2),
+                'total_commission_ht'  => round($financialTotals['commission_ht'], 2),
+                'total_taxe'           => round($financialTotals['taxe'], 2),
             ];
-
-            // Recalculate financial totals from the original raw data for all processed rows
-            // This ensures stats are consistent with the full dataset, not just the current chunk
-            foreach (array_slice($allRows, 0, $offset + count($chunk)) as $row) {
-                // Ensure mappedColumns keys exist before accessing
-                $stats['total_prime_ttc']     += (float)($this->parseExcelValue($row[$mappedColumns['prime_ttc']] ?? 0, 'prime_ttc'));
-                $stats['total_commission_ht'] += (float)($this->parseExcelValue($row[$mappedColumns['commission_ht_assureur']] ?? 0, 'commission_ht_assureur'));
-                $stats['total_taxe']          += (float)($this->parseExcelValue($row[$mappedColumns['taxe_commission_assureur']] ?? 0, 'taxe_commission_assureur'));
-            }
             $stats['total_commission_ttc'] = round($stats['total_commission_ht'] + $stats['total_taxe'], 2);
 
             $bordereau->setAnalysisResults($accumulated);
