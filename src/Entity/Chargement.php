@@ -70,6 +70,7 @@ class Chargement
     public const FONCTION_FRONTING = 2;
     public const FONCTION_FRAIS_ADMIN = 3;
     public const FONCTION_TAXE = 4;
+    public const SYSTEM_ADJUSTMENT_CHARGEMENT_NAME = "Frais Admin (Ajustement Bordereau)";
 
 
     public function __construct()
