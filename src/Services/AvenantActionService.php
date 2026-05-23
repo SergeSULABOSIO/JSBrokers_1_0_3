@@ -153,6 +153,7 @@ class AvenantActionService
                     $rpc->setMontantFlatExceptionel($val);
                     $rpc->setEntreprise($entreprise);
                     $rpc->setInvite($invite);
+                    $cotation->addRevenu($rpc);
                     $this->em->persist($rpc);
                 }
             } elseif (str_starts_with($key, 'chargement_')) {
@@ -165,27 +166,14 @@ class AvenantActionService
                     $cpp->setMontantFlatExceptionel($val);
                     $cpp->setEntreprise($entreprise);
                     $cpp->setInvite($invite);
+                    $cotation->addChargement($cpp);
                     $this->em->persist($cpp);
                 }
             }
         }
 
-        // ÉTAPE 6.5 — Gérer l'écart de Prime TTC avec un chargement "Frais Admin"
-        $totalExplicitChargements = 0.0;
-        foreach ($cotation->getChargements() as $cpp) {
-            // Exclure les chargements d'ajustement système déjà créés pour éviter de les compter deux fois
-            if ($cpp->getNom() !== Chargement::SYSTEM_ADJUSTMENT_CHARGEMENT_NAME) {
-                $totalExplicitChargements += $cpp->getMontantFlatExceptionel() ?? 0.0;
-            }
-        }
-        $excelPrimeTTC = (float)($excelData['prime_ttc'] ?? 0);
-        $ecart = round($excelPrimeTTC - $totalExplicitChargements, 2);
-
-        if ($ecart !== 0.0) {
-            $this->createOrUpdateSystemAdjustmentChargement(
-                $cotation, $entreprise, $invite, $ecart
-            );
-        }
+        // ÉTAPE 6.5 — Balancement de la Prime TTC (Ajustement Frais Admin)
+        $this->balancePrimeTTC($cotation, $excelData, $entreprise, $invite);
 
         // ÉTAPE 7 — Tranche unique
         $tranche = new Tranche();
@@ -216,6 +204,26 @@ class AvenantActionService
     }
 
     /**
+     * Calcule l'écart et crée/met à jour le chargement d'ajustement.
+     */
+    private function balancePrimeTTC(Cotation $cotation, array $excelData, Entreprise $entreprise, Invite $invite): void
+    {
+        $totalExplicitChargements = 0.0;
+        foreach ($cotation->getChargements() as $cpp) {
+            // Exclure les chargements d'ajustement système déjà créés pour éviter de les compter deux fois
+            if ($cpp->getNom() !== Chargement::SYSTEM_ADJUSTMENT_CHARGEMENT_NAME) {
+                $totalExplicitChargements += $cpp->getMontantFlatExceptionel() ?? 0.0;
+            }
+        }
+        $excelPrimeTTC = (float)($excelData['prime_ttc'] ?? 0);
+        $ecart = round($excelPrimeTTC - $totalExplicitChargements, 2);
+
+        $this->createOrUpdateSystemAdjustmentChargement(
+            $cotation, $entreprise, $invite, $ecart
+        );
+    }
+
+    /**
      * Scénario B : Mise à jour de l'existant.
      */
     public function updateFromBordereauLine(Avenant $avenant, array $excelData, Bordereau $bordereau): Avenant
@@ -229,9 +237,7 @@ class AvenantActionService
         
         $cotation = $avenant->getCotation();
 
-        // Collecter les IDs des chargements explicitement mappés dans Excel
         $explicitlyMappedChargementTypeIds = [];
-        $totalExplicitChargements = 0.0;
 
         // Mise à jour Prime TTC via Tranche
         if (isset($excelData['date_effet_avenant'])) {
@@ -283,7 +289,6 @@ class AvenantActionService
                 foreach ($cotation->getChargements() as $cpp) {
                     if ($cpp->getType()->getId() === $typeId && $cpp->getNom() !== Chargement::SYSTEM_ADJUSTMENT_CHARGEMENT_NAME) {
                         $cpp->setMontantFlatExceptionel($val);
-                        $totalExplicitChargements += $val;
                         $cppFound = true;
                         break;
                     }
@@ -298,8 +303,8 @@ class AvenantActionService
                     $cpp->setMontantFlatExceptionel($val);
                     $cpp->setEntreprise($bordereau->getEntreprise());
                     $cpp->setInvite($bordereau->getInvite());
+                    $cotation->addChargement($cpp);
                     $this->em->persist($cpp);
-                    $totalExplicitChargements += $val;
                 }
             } elseif (str_starts_with($key, 'revenu_')) {
                 $typeId = (int)explode('_', $key)[1];
@@ -320,13 +325,8 @@ class AvenantActionService
             }
         }
 
-        // Gérer l'écart de Prime TTC avec un chargement "Frais Admin"
-        $excelPrimeTTC = (float)($excelData['prime_ttc'] ?? 0);
-        $ecart = round($excelPrimeTTC - $totalExplicitChargements, 2);
-
-        $this->createOrUpdateSystemAdjustmentChargement(
-            $cotation, $bordereau->getEntreprise(), $bordereau->getInvite(), $ecart
-        );
+        // Recalcul de l'écart après mise à jour et nettoyage
+        $this->balancePrimeTTC($cotation, $excelData, $bordereau->getEntreprise(), $bordereau->getInvite());
 
         // Mise à jour Taux de commission sur le revenu Assureur
         if (isset($excelData['taux_commission'])) {
