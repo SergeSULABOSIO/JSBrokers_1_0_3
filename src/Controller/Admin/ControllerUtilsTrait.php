@@ -965,52 +965,71 @@ trait ControllerUtilsTrait
             return null;
         }
 
+        // Détection des champs numériques (fixes ou dynamiques comme chargements/revenus)
+        $isNumericField = str_starts_with($systemField, 'chargement_') || 
+                          str_starts_with($systemField, 'revenu_') ||
+                          in_array($systemField, ['prime_ttc', 'commission_ht_assureur', 'taxe_commission_assureur', 'taux_commission']);
+
+        if ($isNumericField) {
+            if (is_string($value)) {
+                $cleanedValue = str_replace([' ', "\u{00A0}"], '', $value);
+                $cleanedValue = str_replace(',', '.', $cleanedValue);
+                if (substr_count($cleanedValue, '.') > 1) {
+                    $lastDotPos = strrpos($cleanedValue, '.');
+                    if ($lastDotPos !== false) {
+                        $cleanedValue = str_replace('.', '', substr($cleanedValue, 0, $lastDotPos)) . substr($cleanedValue, $lastDotPos);
+                    }
+                }
+                return (float) $cleanedValue;
+            }
+            return (float) $value;
+        }
+
         switch ($systemField) {
             case 'date_effet_avenant':
             case 'date_expiration_avenant':
             case 'date_operation':
-                // Attempt to parse date. PhpSpreadsheet often converts dates to numbers.
                 if (is_numeric($value)) {
                     try {
-                        // Excel date format (days since 1900-01-01)
                         $dateObj = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value);
                         return $dateObj instanceof \DateTimeInterface ? $dateObj->format('Y-m-d') : null;
-                    } catch (\Exception $e) {
-                        // Fallback if conversion fails
-                        return null;
-                    }
+                    } catch (\Exception $e) { return null; }
                 } elseif (is_string($value)) {
                     try {
-                        // Try common date formats
                         $dateObj = new \DateTimeImmutable($value);
                         return $dateObj->format('Y-m-d');
-                    } catch (\Exception $e) {
-                        return null;
-                    }
+                    } catch (\Exception $e) { return null; }
                 }
                 return null;
-            case 'prime_ttc':
-            case 'commission_ht_assureur':
-            case 'taxe_commission_assureur':
-            case 'taux_commission':
-                // Convert to float, handling common string representations (e.g., "1 234,56", "1.234.567,89")
-                if (is_string($value)) {
-                    // Remove spaces, replace comma with dot for float conversion
-                    $cleanedValue = str_replace([' ', "\u{00A0}"], '', $value); // Also remove non-breaking spaces
-                    $cleanedValue = str_replace(',', '.', $cleanedValue);
-                    // Handle cases like "1.234.567,89" -> "1234567.89"
-                    if (substr_count($cleanedValue, '.') > 1) {
-                        $lastDotPos = strrpos($cleanedValue, '.');
-                        if ($lastDotPos !== false) {
-                            $cleanedValue = str_replace('.', '', substr($cleanedValue, 0, $lastDotPos)) . substr($cleanedValue, $lastDotPos);
-                        }
-                    }
-                    return (float) $cleanedValue;
-                }
-                return (float) $value;
             default:
                 return $value;
         }
+    }
+
+    /**
+     * Reconstruit les données système à partir d'une ligne Excel brute et des colonnes mappées.
+     * Gère l'agrégation (somme) si plusieurs colonnes sont mappées à un même champ système.
+     */
+    protected function reconstructRawLineData(array $row, array $mappedColumns): array
+    {
+        $rawLineData = [];
+        foreach ($mappedColumns as $systemField => $excelColumns) {
+            // Si c'est un tableau, on itère et on somme les valeurs numériques
+            if (is_array($excelColumns)) {
+                $sum = 0.0;
+                foreach ($excelColumns as $col) {
+                    $val = $this->parseExcelValue($row[$col] ?? null, $systemField);
+                    if (is_numeric($val)) {
+                        $sum += (float)$val;
+                    }
+                }
+                $rawLineData[$systemField] = $sum;
+            } else {
+                // Comportement standard 1:1
+                $rawLineData[$systemField] = $this->parseExcelValue($row[$excelColumns] ?? null, $systemField);
+            }
+        }
+        return $rawLineData;
     }
 
     /**

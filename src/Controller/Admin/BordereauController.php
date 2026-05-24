@@ -4,21 +4,24 @@ namespace App\Controller\Admin;
 
 use App\Constantes\Constante;
 use App\Controller\Admin\ControllerUtilsTrait;
-use App\Entity\TypeRevenu;
-use App\Entity\Chargement;
 use App\Entity\Bordereau;
+use App\Entity\Chargement;
+use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Traits\HandleChildAssociationTrait;
+use App\Entity\TypeRevenu;
 use App\Form\BordereauType;
+use App\Repository\AvenantRepository; // NOUVEAU
 use App\Repository\BordereauRepository;
-use App\Repository\TypeRevenuRepository;
+use App\Repository\ChargementRepository;
 use App\Repository\EntrepriseRepository;
 use App\Repository\InviteRepository;
-use App\Repository\ChargementRepository;
+use App\Repository\TypeRevenuRepository;
+use App\Services\AvenantActionService;
 use App\Services\Canvas\CalculationProvider;
-use App\Services\ServiceMonnaies;
 use App\Services\CanvasBuilder;
 use App\Services\JSBDynamicSearchService;
+use App\Services\ServiceMonnaies;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
@@ -35,8 +38,6 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\SerializerInterface;
-use App\Repository\AvenantRepository; // NOUVEAU
-use App\Services\AvenantActionService;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 #[Route("/admin/bordereau", name: 'admin.bordereau.')]
@@ -325,16 +326,9 @@ class BordereauController extends AbstractController
             $type        = $storedResult['type'] ?? 'match';
 
             // Reconstruire rawLineData depuis la ligne Excel
-            $rawLineData = [];
-            if ($rowIndex !== null && isset($excelDataByRowIndex[$rowIndex])) {
-                $excelRow = $excelDataByRowIndex[$rowIndex];
-                foreach ($mappedColumns as $systemField => $excelColumn) {
-                    $rawLineData[$systemField] = $this->parseExcelValue(
-                        $excelRow[$excelColumn] ?? null,
-                        $systemField
-                    );
-                }
-            }
+            $rawLineData = ($rowIndex !== null && isset($excelDataByRowIndex[$rowIndex])) 
+                ? $this->reconstructRawLineData($excelDataByRowIndex[$rowIndex], $mappedColumns)
+                : [];
             $allReconstructedLineData[] = $rawLineData;
 
             // --- VÉRIFICATION D'INTÉGRITÉ ---
@@ -555,8 +549,11 @@ class BordereauController extends AbstractController
             return $selectedSheetData;
         }
 
+        // Sécurisation de la colonne de référence (on prend la première si tableau)
+        $refCol = is_array($refPoliceColumn) ? ($refPoliceColumn[0] ?? null) : $refPoliceColumn;
+
         $policeReferences = array_filter(array_unique(
-            array_map(fn($row) => $row[$refPoliceColumn] ?? null, $selectedSheetData)
+            array_map(fn($row) => $row[$refCol] ?? null, $selectedSheetData)
         ));
         $avenantsFromDb = $this->avenantRepository->findBy(['referencePolice' => $policeReferences]);
         $avenantsMap = [];
@@ -605,12 +602,15 @@ class BordereauController extends AbstractController
         if (!isset($mappedColumns['reference_police'])) {
             return $this->json(['error' => 'Le mappage pour "N° de Police" est manquant dans la session.'], 400);
         }
+        
+        // Sécurisation de la colonne de référence pour l'indexation
         $refPoliceColumn = $mappedColumns['reference_police'];
+        $refColForMatch = is_array($refPoliceColumn) ? ($refPoliceColumn[0] ?? null) : $refPoliceColumn;
 
         $chunk = array_slice($allRows, $offset, $chunkSize);
 
         $chunkPoliceRefs = array_filter(array_unique(
-            array_map(fn($row) => $row[$refPoliceColumn] ?? null, $chunk)
+            array_map(fn($row) => $row[$refColForMatch] ?? null, $chunk)
         ));
         $chunkAvenants = $this->avenantRepository->findBy(['referencePolice' => $chunkPoliceRefs]);
         $chunkAvenantsMap = [];
@@ -624,16 +624,12 @@ class BordereauController extends AbstractController
 
         foreach ($chunk as $chunkIndex => $row) {
             $rowIndex  = $offset + $chunkIndex;
-            $refPolice = $row[$refPoliceColumn] ?? null;
+            $refPolice = $row[$refColForMatch] ?? null;
             if (!$refPolice) continue;
 
             $avenant     = $chunkAvenantsMap[$refPolice] ?? null;
-            $rawLineData = [];
+            $rawLineData = $this->reconstructRawLineData($row, $mappedColumns);
             $discrepancies = [];
-
-            foreach ($mappedColumns as $systemField => $excelColumn) {
-                $rawLineData[$systemField] = $this->parseExcelValue($row[$excelColumn] ?? null, $systemField);
-            }
 
             if (!$avenant) {
                 $chunkResultsToStore[] = [
@@ -1032,7 +1028,7 @@ class BordereauController extends AbstractController
      * Sécurise toute la cascade d'objets en injectant l'entreprise et l'invité.
      * Utilise le UnitOfWork de Doctrine pour intercepter TOUTES les entités découvertes via cascade.
      */
-    private function propagateAuditInfo(?object $entity, $entreprise, $invite): void
+    private function propagateAuditInfo(?object $entity, Entreprise $entreprise, Invite $invite): void
     {
         if (!$entity || !$entreprise) return;
 
@@ -1166,17 +1162,9 @@ class BordereauController extends AbstractController
 
                 foreach ($reportableResults as $stored) {
                     $rowIndex  = $stored['row_index'] ?? null;
-                    $lineData  = [];
-
-                    if ($rowIndex !== null && isset($rowsByIndex[$rowIndex])) {
-                        $row = $rowsByIndex[$rowIndex];
-                        foreach ($mappedColumns as $systemField => $excelColumn) {
-                            $lineData[$systemField] = $this->parseExcelValue(
-                                $row[$excelColumn] ?? null,
-                                $systemField
-                            );
-                        }
-                    }
+                    $lineData = ($rowIndex !== null && isset($rowsByIndex[$rowIndex]))
+                        ? $this->reconstructRawLineData($rowsByIndex[$rowIndex], $mappedColumns)
+                        : [];
 
                     $enrichedResults[] = array_merge($stored, ['line_data' => $lineData]);
                 }
