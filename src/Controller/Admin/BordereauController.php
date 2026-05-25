@@ -417,28 +417,51 @@ class BordereauController extends AbstractController
 
                     // 3. Calculer les écarts financiers (dépendent de $avenant)
                     if ($avenant) {
+                        // Hydratation forcée pour garantir l'accès aux attributs publics calculés
+                        $this->loadCalculatedValues(null, $avenant);
+
+                        // Calcul des sommes Excel
+                        $sumChargementsExcel = 0.0;
+                        $sumRevenusExcel = 0.0;
+                        foreach ($rawLineData as $key => $val) {
+                            if (str_starts_with($key, 'chargement_')) $sumChargementsExcel += (float)$val;
+                            if (str_starts_with($key, 'revenu_')) $sumRevenusExcel += (float)$val;
+                        }
+
+                        // Récupération des ajustements système en base pour une comparaison équitable
+                        $dbAdjPrime = 0.0;
+                        foreach ($avenant->getCotation()->getChargements() as $cpp) {
+                            if ($cpp->getNom() === \App\Entity\Chargement::SYSTEM_ADJUSTMENT_CHARGEMENT_NAME) {
+                                $dbAdjPrime = (float)($cpp->getMontantFlatExceptionel() ?? 0.0);
+                            }
+                        }
+                        $dbAdjRevenu = 0.0;
+                        foreach ($avenant->getCotation()->getRevenus() as $rpc) {
+                            if ($rpc->getNom() === \App\Entity\TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME) {
+                                $dbAdjRevenu = (float)($rpc->getMontantFlatExceptionel() ?? 0.0);
+                            }
+                        }
+
                         $financialFieldsConfig = [
-                            'prime_ttc'               => ['label' => 'Prime TTC',           'getter' => 'getMontantTTC'],
-                            'commission_ht_assureur'  => ['label' => 'Commission HT',       'getter' => 'getMontantHT'],
-                            'taxe_commission_assureur' => ['label' => 'Taxe commission',      'getter' => 'getTaxeAssureurMontant'],
-                            'taux_commission'         => ['label' => 'Taux commission (%)',  'getter' => 'getTauxCommission'],
+                            'prime_totale'  => [
+                                'label' => 'Prime TTC Totale',
+                                'excel' => round($sumChargementsExcel + $dbAdjPrime, 2),
+                                'db'    => round((float)($avenant->primeTotale ?? 0), 2)
+                            ],
+                            'commission_ht' => [
+                                'label' => 'Commission HT Totale',
+                                'excel' => round($sumRevenusExcel + $dbAdjRevenu, 2),
+                                'db'    => round((float)($avenant->montantHT ?? 0), 2)
+                            ],
                         ];
 
                         foreach ($financialFieldsConfig as $field => $config) {
-                            $excelValue = isset($rawLineData[$field]) ? (float)$rawLineData[$field] : null;
-                            $dbValue    = null;
-
-                            if (method_exists($avenant, $config['getter'])) {
-                                $raw     = $avenant->{$config['getter']}();
-                                $dbValue = $raw !== null ? (float)$raw : null;
-                            }
-
-                            if ($excelValue !== null && $dbValue !== null) {
-                                $gap = round($excelValue - $dbValue, 2);
+                            $gap = round($config['excel'] - $config['db'], 2);
+                            if ($gap !== 0.0) {
                                 $financialGaps[$field] = [
                                     'label'       => $config['label'],
-                                    'excel_value' => $excelValue,
-                                    'db_value'    => $dbValue,
+                                    'excel_value' => $config['excel'],
+                                    'db_value'    => $config['db'],
                                     'gap'         => $gap,
                                     'gap_class'   => $gap > 0 ? 'text-success' : ($gap < 0 ? 'text-danger' : 'text-muted'),
                                     'gap_sign'    => $gap > 0 ? '+' : '',
@@ -491,10 +514,18 @@ class BordereauController extends AbstractController
         // Les totaux financiers sont reconstruits depuis les rawLineData
         // (disponibles dans la boucle de reconstruction précédente)
         // Additionner directement depuis $reconstructedLineData accumulés
-        foreach ($allReconstructedLineData as $lineInfo) {
-            $stats['total_prime_ttc']     += (float)($lineInfo['prime_ttc'] ?? 0);
-            $stats['total_commission_ht'] += (float)($lineInfo['commission_ht_assureur'] ?? 0);
-            $stats['total_taxe']          += (float)($lineInfo['taxe_commission_assureur'] ?? 0);
+        foreach ($allReconstructedLineData as $lineData) {
+            $linePrime = 0.0;
+            $lineComHT = 0.0;
+            $lineTaxe  = 0.0;
+            foreach ($lineData as $key => $val) {
+                if (str_starts_with($key, 'chargement_')) $linePrime += (float)$val;
+                if (str_starts_with($key, 'revenu_')) $lineComHT += (float)$val;
+                if ($key === 'taxe_commission_assureur') $lineTaxe += (float)$val;
+            }
+            $stats['total_prime_ttc']     += $linePrime;
+            $stats['total_commission_ht'] += $lineComHT;
+            $stats['total_taxe']          += $lineTaxe;
         }
         $stats['total_commission_ttc'] = round(
             $stats['total_commission_ht'] + $stats['total_taxe'],
@@ -655,97 +686,93 @@ class BordereauController extends AbstractController
                 continue;
             }
 
-            // CORRECTION : Les comparaisons sont désormais basées sur les règles métier réelles.
-            // - Prime TTC : Σ(chargement_XX Excel) vs montantTTC de l'avenant en base
-            // - Commission HT : Σ(revenu_XX Excel) vs montantHT de l'avenant en base
-            // - Taux commission : comparaison directe avec division par 100
-            // - commission_ht_assureur et taxe_commission_assureur ne sont PAS des critères
-            //   de discrepancy structurelle — elles indiquent uniquement la part encaissable
-            //   maintenant et sont conservées pour information dans bordereau_line_info.
-
+            // ÉVALUATION DES ÉCARTS STRUCTURELS
+            // On ne compare plus les montants partiels (encaissables) mais les indicateurs de totaux.
+            
             $sumChargements = 0.0;
             $sumRevenus = 0.0;
             foreach ($rawLineData as $key => $value) {
-                if (str_starts_with($key, 'chargement_')) {
-                    $sumChargements += (float)$value;
+                if (str_starts_with($key, 'chargement_')) $sumChargements += (float)$value;
+                if (str_starts_with($key, 'revenu_')) $sumRevenus += (float)$value;
+            }
+
+            // Récupération des montants d'ajustement système existants en base
+            $dbAdjPrime = 0.0;
+            foreach ($avenant->getCotation()->getChargements() as $cpp) {
+                if ($cpp->getNom() === \App\Entity\Chargement::SYSTEM_ADJUSTMENT_CHARGEMENT_NAME) {
+                    $dbAdjPrime = (float)($cpp->getMontantFlatExceptionel() ?? 0.0);
                 }
-                if (str_starts_with($key, 'revenu_')) {
-                    $sumRevenus += (float)$value;
+            }
+            $dbAdjRevenu = 0.0;
+            foreach ($avenant->getCotation()->getRevenus() as $rpc) {
+                if ($rpc->getNom() === \App\Entity\TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME) {
+                    $dbAdjRevenu = (float)($rpc->getMontantFlatExceptionel() ?? 0.0);
                 }
             }
 
+            // On met à jour les totaux de session pour les stats finales
+            $financialTotals['prime_ttc']    += $sumChargements;
+            $financialTotals['commission_ht'] += $sumRevenus;
+            $financialTotals['taxe']          += (float)($rawLineData['taxe_commission_assureur'] ?? 0);
+
             $comparisons = [
-                'prime_ttc' => [
-                    'excel_value' => round($sumChargements, 2),
-                    'db_value'    => $avenant->getMontantTTC() !== null
-                        ? round((float)$avenant->getMontantTTC(), 2)
-                        : null,
-                    'label'       => 'Prime TTC',
+                'prime_totale' => [
+                    'excel_total' => round($sumChargements + $dbAdjPrime, 2),
+                    'db_total'    => round((float)($avenant->primeTotale ?? 0), 2),
+                    'label'       => 'Prime TTC Totale',
                 ],
                 'commission_ht' => [
-                    'excel_value' => round($sumRevenus, 2),
-                    'db_value'    => $avenant->getMontantHT() !== null
-                        ? round((float)$avenant->getMontantHT(), 2)
-                        : null,
-                    'label'       => 'Commission HT',
-                ],
-                'taux_commission' => [
-                    'excel_value' => isset($rawLineData['taux_commission'])
-                        ? round((float)$rawLineData['taux_commission'] / 100, 4)
-                        : null,
-                    'db_value'    => $avenant->getTauxCommission() !== null
-                        ? round((float)$avenant->getTauxCommission(), 4)
-                        : null,
-                    'label'       => 'Taux commission',
+                    'excel_total' => round($sumRevenus + $dbAdjRevenu, 2),
+                    'db_total'    => round((float)($avenant->montantHT ?? 0), 2),
+                    'label'       => 'Commission HT Totale',
                 ],
             ];
 
             foreach ($comparisons as $field => $comp) {
-                if ($comp['excel_value'] === null || $comp['db_value'] === null) {
-                    continue; // Impossible de comparer, on ignore
-                }
-                if ($comp['excel_value'] !== $comp['db_value']) {
+                if ($comp['excel_total'] !== $comp['db_total']) {
                     $discrepancies[] = sprintf(
                         "%s (Excel: %s, DB: %s)",
                         $comp['label'],
-                        number_format($comp['excel_value'], 2, ',', ' '),
-                        number_format($comp['db_value'], 2, ',', ' ')
+                        number_format($comp['excel_total'], 2, ',', ' '),
+                        number_format($comp['db_total'], 2, ',', ' ')
                     );
                 }
             }
 
             if (!empty($discrepancies)) {
-                // Calcul des écarts financiers pour les résultats discrepancy
+                // Préparation des écarts financiers pour l'affichage Twig
                 $financialGaps = [];
-                $financialFieldsConfig = [
-                    'prime_ttc'               => ['label' => 'Prime TTC',          'getter' => 'getMontantTTC'],
-                    'commission_ht_assureur'  => ['label' => 'Commission HT',      'getter' => 'getMontantHT'],
-                    'taxe_commission_assureur' => ['label' => 'Taxe commission',     'getter' => 'getTaxeAssureurMontant'],
-                    'taux_commission'         => ['label' => 'Taux commission (%)', 'getter' => 'getTauxCommission'],
-                ];
+                
+                // On réutilise la structure de comparisons pour peupler financialGaps
+                foreach ($comparisons as $field => $config) {
+                    $excelValue = $config['excel_total'];
+                    $dbValue    = $config['db_total'];
+                    $gap        = round($excelValue - $dbValue, 2);
 
-                foreach ($financialFieldsConfig as $field => $config) {
-                    $excelValue = isset($rawLineData[$field]) ? (float)$rawLineData[$field] : null;
-                    $dbValue    = null;
+                    $financialGaps[$field] = [
+                        'label'       => $config['label'],
+                        'excel_value' => $excelValue,
+                        'db_value'    => $dbValue,
+                        'gap'         => $gap,
+                        'gap_class'   => $gap > 0 ? 'text-success' : ($gap < 0 ? 'text-danger' : 'text-muted'),
+                        'gap_sign'    => $gap > 0 ? '+' : '',
+                    ];
+                }
 
-                    if (method_exists($avenant, $config['getter'])) {
-                        $raw     = $avenant->{$config['getter']}();
-                        $dbValue = $raw !== null ? (float)$raw : null;
-                    }
+                // On garde quand même le taux de commission pour info visuelle s'il y a un écart
+                if (isset($rawLineData['taux_commission'])) {
+                    $excelValue = round((float)$rawLineData['taux_commission'], 2);
+                    $dbValue    = round((float)($avenant->tauxCommission ?? 0) * 100, 2);
+                    $gap        = round($excelValue - $dbValue, 2);
 
-                    if ($excelValue !== null && $dbValue !== null) {
-                        $gap = round($excelValue - $dbValue, 2);
-                        $financialGaps[$field] = [
-                            'label'       => $config['label'],
-                            'excel_value' => $excelValue,
-                            'db_value'    => $dbValue,
-                            'gap'         => $gap,
-                            'gap_class'   => $gap > 0
-                                ? 'text-success'
-                                : ($gap < 0 ? 'text-danger' : 'text-muted'),
-                            'gap_sign'    => $gap > 0 ? '+' : '',
-                        ];
-                    }
+                    $financialGaps['taux_commission'] = [
+                        'label'       => 'Taux commission (%)',
+                        'excel_value' => $excelValue,
+                        'db_value'    => $dbValue,
+                        'gap'         => $gap,
+                        'gap_class'   => $gap > 0 ? 'text-success' : ($gap < 0 ? 'text-danger' : 'text-muted'),
+                        'gap_sign'    => $gap > 0 ? '+' : '',
+                    ];
                 }
 
                 $chunkResultsToStore[] = [
