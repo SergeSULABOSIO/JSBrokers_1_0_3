@@ -175,6 +175,19 @@ class AvenantActionService
         // ÉTAPE 6.5 — Balancement de la Prime TTC (Ajustement Frais Admin)
         $this->balancePrimeTTC($cotation, $excelData, $entreprise, $invite);
 
+        // ÉTAPE 6.6 — Balancement de la Commission HT (Ajustement Écart Commission)
+        $this->balanceCommissionHT($cotation, $excelData, $entreprise, $invite);
+
+        // ÉTAPE 6.7 — Persistance du taux de commission
+        // CORRECTION : Division par 100 car Symfony stocke les pourcentages en valeur décimale.
+        if (isset($excelData['taux_commission'])) {
+            foreach ($cotation->getRevenus() as $rpc) {
+                if ($rpc->getTypeRevenu()->getRedevable() === TypeRevenu::REDEVABLE_ASSUREUR) {
+                    $rpc->setTauxExceptionel((float)$excelData['taux_commission'] / 100);
+                }
+            }
+        }
+
         // ÉTAPE 7 — Tranche unique
         $tranche = new Tranche();
         $tranche->setNom("Tranche unique - import bordereau");
@@ -328,11 +341,17 @@ class AvenantActionService
         // Recalcul de l'écart après mise à jour et nettoyage
         $this->balancePrimeTTC($cotation, $excelData, $bordereau->getEntreprise(), $bordereau->getInvite());
 
+        // Recalcul de l'écart commission après mise à jour
+        $this->balancePrimeTTC($cotation, $excelData, $bordereau->getEntreprise(), $bordereau->getInvite());
+
         // Mise à jour Taux de commission sur le revenu Assureur
         if (isset($excelData['taux_commission'])) {
             foreach ($cotation->getRevenus() as $rpc) {
                 if ($rpc->getTypeRevenu()->getRedevable() === TypeRevenu::REDEVABLE_ASSUREUR) {
-                    $rpc->setTauxExceptionel((float)$excelData['taux_commission']);
+                    // CORRECTION : Le taux Excel est en pourcentage (ex: 7.01 pour 7,01%).
+                    // Symfony stocke les pourcentages en valeur décimale (0–1).
+                    // On divise donc par 100 avant la persistance.
+                    $rpc->setTauxExceptionel((float)$excelData['taux_commission'] / 100);
                 }
             }
         }
@@ -377,6 +396,86 @@ class AvenantActionService
             $this->em->persist($systemAdjustmentCpp);
         }
         $systemAdjustmentCpp->setMontantFlatExceptionel($ecart);
+    }
+
+    /**
+     * Calcule l'écart entre la commission HT assureur (Excel) et la somme
+     * des revenus explicitement mappés, puis crée/met à jour un RevenuPourCourtier
+     * d'ajustement système pour absorber cet écart.
+     *
+     * Symétrique de balancePrimeTTC() côté chargements.
+     */
+    private function balanceCommissionHT(
+        Cotation $cotation,
+        array $excelData,
+        Entreprise $entreprise,
+        Invite $invite
+    ): void {
+        // Si la commission HT n'est pas dans les données Excel, rien à faire.
+        if (!isset($excelData['commission_ht_assureur'])) {
+            return;
+        }
+
+        $excelCommissionHT = (float)$excelData['commission_ht_assureur'];
+
+        // Sommer les revenus explicitement mappés (hors ajustement système).
+        $totalExplicitRevenus = 0.0;
+        foreach ($cotation->getRevenus() as $rpc) {
+            if ($rpc->getNom() !== TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME) {
+                // On utilise le montant flat exceptionnel pour les revenus mappés
+                $totalExplicitRevenus += $rpc->getMontantFlatExceptionel() ?? 0.0;
+            }
+        }
+
+        $ecart = round($excelCommissionHT - $totalExplicitRevenus, 2);
+
+        $this->createOrUpdateSystemAdjustmentRevenu(
+            $cotation, $entreprise, $invite, $ecart
+        );
+    }
+
+    /**
+     * Crée ou met à jour un RevenuPourCourtier d'ajustement système
+     * pour absorber l'écart entre la commission HT Excel et les revenus mappés.
+     */
+    private function createOrUpdateSystemAdjustmentRevenu(
+        Cotation $cotation,
+        Entreprise $entreprise,
+        Invite $invite,
+        float $ecart
+    ): void {
+        // Trouver le type de revenu de type REDEVABLE_ASSUREUR pour l'ajustement.
+        /**
+         * @var TypeRevenu $adjustmentType
+        */
+        $adjustmentType = $this->typeRevenuRepository->findOneBy([
+            'redevable' => TypeRevenu::REDEVABLE_ASSUREUR,
+            'entreprise' => $entreprise,
+        ]);
+
+        if (!$adjustmentType) {
+            throw new \RuntimeException(
+                "Aucun type de revenu de type REDEVABLE_ASSUREUR trouvé pour l'entreprise. " .
+                "Impossible de créer le revenu d'ajustement système."
+            );
+        }
+
+        // Chercher un revenu d'ajustement système existant sur cette cotation.
+        $systemAdjustmentRpc = $cotation->getRevenus()->filter(function($rpc) {
+            return $rpc->getNom() === TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME;
+        })->first();
+
+        if (!$systemAdjustmentRpc) {
+            $systemAdjustmentRpc = new RevenuPourCourtier();
+            $systemAdjustmentRpc->setTypeRevenu($adjustmentType);
+            $systemAdjustmentRpc->setCotation($cotation);
+            $systemAdjustmentRpc->setNom(TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME);
+            $systemAdjustmentRpc->setEntreprise($entreprise);
+            $systemAdjustmentRpc->setInvite($invite);
+            $cotation->addRevenu($systemAdjustmentRpc);
+            $this->em->persist($systemAdjustmentRpc);
+        }
+        $systemAdjustmentRpc->setMontantFlatExceptionel($ecart);
     }
 
     private function createDate($input): DateTimeImmutable
