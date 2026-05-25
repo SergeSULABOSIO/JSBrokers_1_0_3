@@ -445,12 +445,12 @@ class BordereauController extends AbstractController
                         $financialFieldsConfig = [
                             'prime_totale'  => [
                                 'label' => 'Prime TTC Totale',
-                                'excel' => round($sumChargementsExcel + $dbAdjPrime, 2),
+                                'excel' => round((float)($rawLineData['prime_ttc'] ?? ($sumChargementsExcel + $dbAdjPrime)), 2),
                                 'db'    => round((float)($avenant->primeTotale ?? 0), 2)
                             ],
                             'commission_ht' => [
                                 'label' => 'Commission HT Totale',
-                                'excel' => round($sumRevenusExcel + $dbAdjRevenu, 2),
+                                'excel' => round((float)($rawLineData['commission_ht_assureur'] ?? ($sumRevenusExcel + $dbAdjRevenu)), 2),
                                 'db'    => round((float)($avenant->montantHT ?? 0), 2)
                             ],
                         ];
@@ -722,7 +722,7 @@ class BordereauController extends AbstractController
                     'label'       => 'Prime TTC Totale',
                 ],
                 'commission_ht' => [
-                    'excel_total' => round($sumRevenus + $dbAdjRevenu, 2),
+                    'excel_total' => round((float)($rawLineData['commission_ht_assureur'] ?? 0), 2), // Use the explicit commission_ht_assureur from Excel
                     'db_total'    => round((float)($avenant->montantHT ?? 0), 2),
                     'label'       => 'Commission HT Totale',
                 ],

@@ -23,6 +23,7 @@ use App\Repository\RisqueRepository;
 use App\Repository\TypeRevenuRepository;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
+use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 
 /**
  * Service gérant les actions réelles sur les avenants à partir des données d'analyse de bordereau.
@@ -250,6 +251,7 @@ class AvenantActionService
         $cotation = $avenant->getCotation();
 
         $explicitlyMappedChargementTypeIds = [];
+        $explicitlyMappedRevenuTypeIds = [];
 
         // Mise à jour Prime TTC via Tranche
         if (isset($excelData['date_effet_avenant'])) {
@@ -287,16 +289,15 @@ class AvenantActionService
         // Mise à jour Revenus et Chargements
         foreach ($excelData as $key => $value) {
             $val = (float)$value;
-
             if (str_starts_with($key, 'chargement_')) {
                 $typeId = (int)explode('_', $key)[1];
                 $explicitlyMappedChargementTypeIds[] = $typeId;
-
                 $chargementType = $this->chargementRepository->find($typeId);
                 if (!$chargementType) {
+                    // Log or handle the case where a mapped chargement type is not found
+                    // For now, we skip it.
                     continue; // Type de chargement non trouvé, on passe
                 }
-
                 $cppFound = false;
                 foreach ($cotation->getChargements() as $cpp) {
                     if ($cpp->getType()->getId() === $typeId && $cpp->getNom() !== Chargement::SYSTEM_ADJUSTMENT_CHARGEMENT_NAME) {
@@ -320,11 +321,46 @@ class AvenantActionService
                 }
             } elseif (str_starts_with($key, 'revenu_')) {
                 $typeId = (int)explode('_', $key)[1];
+                $explicitlyMappedRevenuTypeIds[] = $typeId;
+                $typeRevenu = $this->typeRevenuRepository->find($typeId);
+
+                if (!$typeRevenu) {
+                    // Log or handle the case where a mapped revenue type is not found
+                    // For now, we skip it.
+                    continue;
+                }
+
+                $rpcFound = false;
                 foreach ($cotation->getRevenus() as $rpc) {
-                    if ($rpc->getTypeRevenu()->getId() === $typeId) {
+                    // Ensure we don't update the system adjustment revenue here
+                    if ($rpc->getTypeRevenu()->getId() === $typeId && $rpc->getNom() !== TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME) {
                         $rpc->setMontantFlatExceptionel($val);
+                        $rpcFound = true;
+                        break;
                     }
                 }
+
+                if (!$rpcFound) {
+                    // Create new RevenuPourCourtier if not found (new mapping in Excel)
+                    $rpc = new RevenuPourCourtier();
+                    $rpc->setTypeRevenu($typeRevenu);
+                    $rpc->setCotation($cotation);
+                    $rpc->setNom($typeRevenu->getNom()); // Use the name from TypeRevenu
+                    $rpc->setMontantFlatExceptionel($val);
+                    $rpc->setEntreprise($bordereau->getEntreprise());
+                    $rpc->setInvite($bordereau->getInvite());
+                    $cotation->addRevenu($rpc);
+                    $this->em->persist($rpc);
+                }
+            }
+        }
+
+        // Supprimer les RevenuPourCourtier qui étaient explicitement mappés mais ne le sont plus
+        // et qui ne sont pas des revenus d'ajustement système.
+        foreach ($cotation->getRevenus() as $rpc) {
+            if ($rpc->getTypeRevenu() && !in_array($rpc->getTypeRevenu()->getId(), $explicitlyMappedRevenuTypeIds) && $rpc->getNom() !== TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME) {
+                $cotation->removeRevenu($rpc);
+                $this->em->remove($rpc);
             }
         }
 
@@ -414,10 +450,16 @@ class AvenantActionService
         Entreprise $entreprise,
         Invite $invite
     ): void {
-        $tauxCommission = isset($excelData['taux_commission'])
-            ? (float)$excelData['taux_commission'] / 100
-            : null;
+        // Determine the target commission HT from Excel
+        // This is the authoritative value from the Excel file for comparison.
+        $targetCommissionHT = (float)($excelData['commission_ht_assureur'] ?? 0);
 
+        // If the explicit commission_ht_assureur is not provided or is zero,
+        // we fall back to calculating it from prime nette and taux commission.
+        // This ensures a target is always available.
+        $tauxCommission = isset($excelData['taux_commission']) ? (float)$excelData['taux_commission'] / 100 : null;
+
+        // ÉTAPE 1 — Resolution of Prime Nette
         // ÉTAPE 1 — Résolution de la Prime Nette
         // Priorité A : depuis les ChargementPourPrime de la cotation existante
         $primeNette = null;
@@ -447,20 +489,23 @@ class AvenantActionService
             }
             $primeNette = round($primeTTC - $totalAutresChargements, 2);
         }
-
-        // Fallback : ni Prime Nette trouvée ni prime_ttc disponible
-        // On crée l'ajustement à 0.0 et on laisse le courtier corriger manuellement
-        if ($primeNette === null || $tauxCommission === null) {
+        // If targetCommissionHT from Excel is 0 or not provided, and we have primeNette and tauxCommission,
+        // calculate the theoretical commission as a fallback target.
+        if ($targetCommissionHT === 0.0 && $primeNette !== null && $tauxCommission !== null) {
+            $targetCommissionHT = round($primeNette * $tauxCommission, 2);
+        } elseif ($targetCommissionHT === 0.0 && (!isset($excelData['commission_ht_assureur']) || $primeNette === null || $tauxCommission === null)) {
+            // If no explicit commission from Excel and no way to derive it,
+            // we cannot balance. Create adjustment with 0.0 and let manual correction happen.
             $this->createOrUpdateSystemAdjustmentRevenu(
                 $cotation, $entreprise, $invite, 0.0
             );
             return;
         }
 
-        // ÉTAPE 2 — Calcul de la commission théorique totale due
-        $commissionTheoriqueDue = round($primeNette * $tauxCommission, 2);
+        // The target for reconciliation is now $targetCommissionHT
 
-        // ÉTAPE 3 — Somme des revenus explicitement mappés (hors ajustement système)
+        // ÉTAPE 2 — Sum of explicitly mapped revenues (excluding the system adjustment one)
+        // This is now ÉTAPE 3 in the original code, but conceptually it's the sum of what's already there.
         $totalExplicitRevenus = 0.0;
         foreach ($cotation->getRevenus() as $rpc) {
             if ($rpc->getNom() !== TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME) {
@@ -468,8 +513,10 @@ class AvenantActionService
             }
         }
 
-        // ÉTAPE 4 — Calcul et persistance de l'écart
-        $ecart = round($commissionTheoriqueDue - $totalExplicitRevenus, 2);
+        // ÉTAPE 3 — Calculate the required adjustment
+        $ecart = round($targetCommissionHT - $totalExplicitRevenus, 2);
+
+        // ÉTAPE 4 — Create or update the system adjustment revenue
         $this->createOrUpdateSystemAdjustmentRevenu(
             $cotation, $entreprise, $invite, $ecart
         );
