@@ -1975,7 +1975,9 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      */
     _handleSaveStateCompleted(payload) {
         console.log("[BordereauAnalysis] _handleSaveStateCompleted() - Sauvegarde de l'état terminée.", payload.message);
-        this.toggleProgressBar(false);
+        // CORRECTION : On ne cache plus la barre de progression ici car cette méthode 
+        // est souvent appelée au sein d'un flux plus large (ex: submitAnalysis) 
+        // qui gère lui-même le cycle de vie de la barre de manière globale.
     }
 
     /**
@@ -1984,7 +1986,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      */
     _handleSaveStateFailed(payload) {
         console.error("[BordereauAnalysis] _handleSaveStateFailed() - Échec de la sauvegarde de l'état:", payload.errorMessage);
-        this.toggleProgressBar(false);
+        // CORRECTION : Idem ici. On laisse le soin à l'appelant (celui qui a démarré la barre)
+        // de la cacher en cas d'erreur s'il le juge nécessaire.
     }
 
     /**
@@ -2049,7 +2052,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             console.error("[BordereauAnalysis] _handleSaveBordereauAnalysisStateLocal() - Erreur lors de la sauvegarde de l'état:", error);
             // Directly call local error handler
             this._handleSaveStateFailed({ errorMessage: error.message || "Une erreur inconnue est survenue lors de la sauvegarde de l'état." });
-            return false; // Retourne false en cas d'échec
+            throw error; // RE-THROW : Important pour que submitAnalysis puisse catcher l'erreur et restaurer l'UI correctement.
         } finally {
             console.log("[BordereauAnalysis] _handleSaveBordereauAnalysisStateLocal() - Fin de l'opération. Désactivation de la barre de progression.");
 
