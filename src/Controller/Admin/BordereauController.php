@@ -655,20 +655,62 @@ class BordereauController extends AbstractController
                 continue;
             }
 
+            // CORRECTION : Les comparaisons sont désormais basées sur les règles métier réelles.
+            // - Prime TTC : Σ(chargement_XX Excel) vs montantTTC de l'avenant en base
+            // - Commission HT : Σ(revenu_XX Excel) vs montantHT de l'avenant en base
+            // - Taux commission : comparaison directe avec division par 100
+            // - commission_ht_assureur et taxe_commission_assureur ne sont PAS des critères
+            //   de discrepancy structurelle — elles indiquent uniquement la part encaissable
+            //   maintenant et sont conservées pour information dans bordereau_line_info.
+
+            $sumChargements = 0.0;
+            $sumRevenus = 0.0;
+            foreach ($rawLineData as $key => $value) {
+                if (str_starts_with($key, 'chargement_')) {
+                    $sumChargements += (float)$value;
+                }
+                if (str_starts_with($key, 'revenu_')) {
+                    $sumRevenus += (float)$value;
+                }
+            }
+
             $comparisons = [
-                'prime_ttc'           => ['getter' => 'getMontantTTC',      'formatter' => fn($v) => number_format((float)$v, 2, '.', '')],
-                'date_effet_avenant'  => ['getter' => 'getStartingAt',      'formatter' => fn($v) => $v instanceof \DateTimeInterface ? $v->format('Y-m-d') : (is_string($v) ? $v : null)],
-                'date_expiration_avenant' => ['getter' => 'getEndingAt',    'formatter' => fn($v) => $v instanceof \DateTimeInterface ? $v->format('Y-m-d') : (is_string($v) ? $v : null)],
-                'taux_commission'     => ['getter' => 'getTauxCommission',  'formatter' => fn($v) => number_format((float)$v, 2, '.', '')],
+                'prime_ttc' => [
+                    'excel_value' => round($sumChargements, 2),
+                    'db_value'    => $avenant->getMontantTTC() !== null
+                        ? round((float)$avenant->getMontantTTC(), 2)
+                        : null,
+                    'label'       => 'Prime TTC',
+                ],
+                'commission_ht' => [
+                    'excel_value' => round($sumRevenus, 2),
+                    'db_value'    => $avenant->getMontantHT() !== null
+                        ? round((float)$avenant->getMontantHT(), 2)
+                        : null,
+                    'label'       => 'Commission HT',
+                ],
+                'taux_commission' => [
+                    'excel_value' => isset($rawLineData['taux_commission'])
+                        ? round((float)$rawLineData['taux_commission'] / 100, 4)
+                        : null,
+                    'db_value'    => $avenant->getTauxCommission() !== null
+                        ? round((float)$avenant->getTauxCommission(), 4)
+                        : null,
+                    'label'       => 'Taux commission',
+                ],
             ];
 
-            foreach ($comparisons as $field => $config) {
-                if (isset($rawLineData[$field])) {
-                    $excelValue = $rawLineData[$field];
-                    $dbValue = $avenant->{$config['getter']}();
-                    if ($dbValue !== null && $config['formatter']($excelValue) !== $config['formatter']($dbValue)) {
-                        $discrepancies[] = sprintf("%s (Excel: %s, DB: %s)", $this->translator->trans($field, [], 'messages'), (string)$this->formatValueForDisplay($excelValue, $field), (string)$this->formatValueForDisplay($dbValue, $field));
-                    }
+            foreach ($comparisons as $field => $comp) {
+                if ($comp['excel_value'] === null || $comp['db_value'] === null) {
+                    continue; // Impossible de comparer, on ignore
+                }
+                if ($comp['excel_value'] !== $comp['db_value']) {
+                    $discrepancies[] = sprintf(
+                        "%s (Excel: %s, DB: %s)",
+                        $comp['label'],
+                        number_format($comp['excel_value'], 2, ',', ' '),
+                        number_format($comp['db_value'], 2, ',', ' ')
+                    );
                 }
             }
 

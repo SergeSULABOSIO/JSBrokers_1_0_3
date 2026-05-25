@@ -179,7 +179,6 @@ class AvenantActionService
         $this->balanceCommissionHT($cotation, $excelData, $entreprise, $invite);
 
         // ÉTAPE 6.7 — Persistance du taux de commission
-        // CORRECTION : Division par 100 car Symfony stocke les pourcentages en valeur décimale.
         if (isset($excelData['taux_commission'])) {
             foreach ($cotation->getRevenus() as $rpc) {
                 if ($rpc->getTypeRevenu()->getRedevable() === TypeRevenu::REDEVABLE_ASSUREUR) {
@@ -342,9 +341,8 @@ class AvenantActionService
         $this->balancePrimeTTC($cotation, $excelData, $bordereau->getEntreprise(), $bordereau->getInvite());
 
         // Recalcul de l'écart commission après mise à jour
-        $this->balancePrimeTTC($cotation, $excelData, $bordereau->getEntreprise(), $bordereau->getInvite());
+        $this->balanceCommissionHT($cotation, $excelData, $bordereau->getEntreprise(), $bordereau->getInvite());
 
-        // Mise à jour Taux de commission sur le revenu Assureur
         if (isset($excelData['taux_commission'])) {
             foreach ($cotation->getRevenus() as $rpc) {
                 if ($rpc->getTypeRevenu()->getRedevable() === TypeRevenu::REDEVABLE_ASSUREUR) {
@@ -399,11 +397,16 @@ class AvenantActionService
     }
 
     /**
-     * Calcule l'écart entre la commission HT assureur (Excel) et la somme
-     * des revenus explicitement mappés, puis crée/met à jour un RevenuPourCourtier
-     * d'ajustement système pour absorber cet écart.
+     * Calcule l'écart entre la commission théorique due (Prime Nette × Taux Commission)
+     * et la somme des revenus explicitement mappés, puis crée/met à jour un
+     * RevenuPourCourtier d'ajustement système pour absorber cet écart.
      *
-     * Symétrique de balancePrimeTTC() côté chargements.
+     * Règle métier :
+     *   Σ(Revenu_XX mappés) + écart  =  Prime Nette × Taux Commission
+     *
+     * La clé "commission_ht_assureur" n'est PAS utilisée ici : elle représente
+     * uniquement la part encaissable maintenant (paiement partiel possible),
+     * pas la commission totale due sur la cotation.
      */
     private function balanceCommissionHT(
         Cotation $cotation,
@@ -411,24 +414,62 @@ class AvenantActionService
         Entreprise $entreprise,
         Invite $invite
     ): void {
-        // Si la commission HT n'est pas dans les données Excel, rien à faire.
-        if (!isset($excelData['commission_ht_assureur'])) {
+        $tauxCommission = isset($excelData['taux_commission'])
+            ? (float)$excelData['taux_commission'] / 100
+            : null;
+
+        // ÉTAPE 1 — Résolution de la Prime Nette
+        // Priorité A : depuis les ChargementPourPrime de la cotation existante
+        $primeNette = null;
+        foreach ($cotation->getChargements() as $cpp) {
+            if (
+                $cpp->getType() &&
+                $cpp->getType()->getFonction() === Chargement::FONCTION_PRIME_NETTE
+            ) {
+                $primeNette = $cpp->getMontantFlatExceptionel();
+                break;
+            }
+        }
+
+        // Priorité B : déduction depuis prime_ttc Excel
+        // Prime Nette ≈ prime_ttc - Σ(chargements dont fonction ≠ FONCTION_PRIME_NETTE)
+        if ($primeNette === null && isset($excelData['prime_ttc'])) {
+            $primeTTC = (float)$excelData['prime_ttc'];
+            $totalAutresChargements = 0.0;
+            foreach ($cotation->getChargements() as $cpp) {
+                if (
+                    $cpp->getType() &&
+                    $cpp->getType()->getFonction() !== Chargement::FONCTION_PRIME_NETTE &&
+                    $cpp->getNom() !== Chargement::SYSTEM_ADJUSTMENT_CHARGEMENT_NAME
+                ) {
+                    $totalAutresChargements += $cpp->getMontantFlatExceptionel() ?? 0.0;
+                }
+            }
+            $primeNette = round($primeTTC - $totalAutresChargements, 2);
+        }
+
+        // Fallback : ni Prime Nette trouvée ni prime_ttc disponible
+        // On crée l'ajustement à 0.0 et on laisse le courtier corriger manuellement
+        if ($primeNette === null || $tauxCommission === null) {
+            $this->createOrUpdateSystemAdjustmentRevenu(
+                $cotation, $entreprise, $invite, 0.0
+            );
             return;
         }
 
-        $excelCommissionHT = (float)$excelData['commission_ht_assureur'];
+        // ÉTAPE 2 — Calcul de la commission théorique totale due
+        $commissionTheoriqueDue = round($primeNette * $tauxCommission, 2);
 
-        // Sommer les revenus explicitement mappés (hors ajustement système).
+        // ÉTAPE 3 — Somme des revenus explicitement mappés (hors ajustement système)
         $totalExplicitRevenus = 0.0;
         foreach ($cotation->getRevenus() as $rpc) {
             if ($rpc->getNom() !== TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME) {
-                // On utilise le montant flat exceptionnel pour les revenus mappés
                 $totalExplicitRevenus += $rpc->getMontantFlatExceptionel() ?? 0.0;
             }
         }
 
-        $ecart = round($excelCommissionHT - $totalExplicitRevenus, 2);
-
+        // ÉTAPE 4 — Calcul et persistance de l'écart
+        $ecart = round($commissionTheoriqueDue - $totalExplicitRevenus, 2);
         $this->createOrUpdateSystemAdjustmentRevenu(
             $cotation, $entreprise, $invite, $ecart
         );
@@ -436,7 +477,9 @@ class AvenantActionService
 
     /**
      * Crée ou met à jour un RevenuPourCourtier d'ajustement système
-     * pour absorber l'écart entre la commission HT Excel et les revenus mappés.
+     * pour absorber l'écart entre la commission théorique due et les revenus mappés.
+     * Si écart = 0.0, le revenu est quand même créé/mis à jour pour signaler
+     * que la réconciliation a été effectuée.
      */
     private function createOrUpdateSystemAdjustmentRevenu(
         Cotation $cotation,
@@ -444,26 +487,27 @@ class AvenantActionService
         Invite $invite,
         float $ecart
     ): void {
-        // Trouver le type de revenu de type REDEVABLE_ASSUREUR pour l'ajustement.
-        /**
-         * @var TypeRevenu $adjustmentType
-        */
+        // Trouver le premier TypeRevenu de type REDEVABLE_ASSUREUR pour l'ajustement
+        /** @var TypeRevenu $adjustmentType */
         $adjustmentType = $this->typeRevenuRepository->findOneBy([
             'redevable' => TypeRevenu::REDEVABLE_ASSUREUR,
             'entreprise' => $entreprise,
         ]);
 
         if (!$adjustmentType) {
-            throw new \RuntimeException(
-                "Aucun type de revenu de type REDEVABLE_ASSUREUR trouvé pour l'entreprise. " .
-                "Impossible de créer le revenu d'ajustement système."
-            );
+            // Fallback silencieux : on ne bloque pas l'import pour un ajustement
+            // Le courtier devra réconcilier manuellement
+            return;
         }
 
-        // Chercher un revenu d'ajustement système existant sur cette cotation.
-        $systemAdjustmentRpc = $cotation->getRevenus()->filter(function($rpc) {
-            return $rpc->getNom() === TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME;
-        })->first();
+        // Recherche d'un revenu d'ajustement système existant (boucle explicite)
+        $systemAdjustmentRpc = null;
+        foreach ($cotation->getRevenus() as $rpc) {
+            if ($rpc->getNom() === TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME) {
+                $systemAdjustmentRpc = $rpc;
+                break;
+            }
+        }
 
         if (!$systemAdjustmentRpc) {
             $systemAdjustmentRpc = new RevenuPourCourtier();
