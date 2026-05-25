@@ -293,7 +293,13 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                     const selectsInActiveContainer = activeMappingContainer.querySelectorAll('select[data-column-letter]');
                     selectsInActiveContainer.forEach(select => {
                         const columnLetter = select.dataset.columnLetter;
-                        const mappedSystemField = Object.keys(this.mappedColumnsValue).find(key => this.mappedColumnsValue[key] === columnLetter);
+                    const mappedSystemField = Object.keys(this.mappedColumnsValue).find(key => {
+                        const stored = this.mappedColumnsValue[key];
+                        // Compatibilité ascendante : supporte l'ancienne structure string ET la nouvelle tableau
+                        return Array.isArray(stored)
+                            ? stored.includes(columnLetter)
+                            : stored === columnLetter;
+                    });
                         if (mappedSystemField) {
                             select.value = mappedSystemField;
                             console.log(`   - Colonne '${columnLetter}' -> Mappée sur '${mappedSystemField}'.`);
@@ -499,7 +505,13 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             );
             selects.forEach(select => {
                 if (select.value) {
-                    mappedColumns[select.value] = select.dataset.columnLetter;
+                    const col = select.dataset.columnLetter;
+                    if (!mappedColumns[select.value]) {
+                        mappedColumns[select.value] = [];
+                    }
+                    if (!mappedColumns[select.value].includes(col)) {
+                        mappedColumns[select.value].push(col);
+                    }
                 }
             });
         }
@@ -991,6 +1003,28 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             return;
         }
 
+    // CORRECTION 2A : Annuler toutes les sauvegardes en attente
+    // pour éviter qu'elle interfère avec la sauvegarde full qui suit.
+    if (this._pendingSaveTimeout) {
+        clearTimeout(this._pendingSaveTimeout);
+        this._pendingSaveTimeout = null;
+    }
+    if (this._pendingMappingSaveTimeout) {
+        clearTimeout(this._pendingMappingSaveTimeout);
+        this._pendingMappingSaveTimeout = null;
+    }
+
+    // CORRECTION 2A : Forcer isSaving à false si un état incohérent persiste
+    // (cas où une sauvegarde step_only a échoué silencieusement)
+    this.isSaving = false;
+
+    // CORRECTION 2B : Feedback visuel IMMÉDIAT avant tout traitement asynchrone
+    // L'utilisateur voit instantanément que son clic a été pris en compte.
+    this.toggleProgressBar(true);
+    this._showToast('warning', 'Sauvegarde du mappage en cours...');
+    this.submitButtonTarget.disabled = true;
+    this.submitButtonTarget.textContent = "Analyse en cours...";
+
         console.log("[BordereauAnalysis] submitAnalysis() - Lancement de l'analyse par lots.");
 
         try {
@@ -999,13 +1033,14 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             // Le backend lit la configuration depuis l'entité, c'est donc indispensable.
             await this._saveAnalysisStateToBordereau('full');
         } catch (error) {
-            return; // L'erreur est déjà gérée par _handleSaveStateFailed
+            // CORRECTION 2B : En cas d'échec de la sauvegarde, on rétablit l'UI
+            this.toggleProgressBar(false);
+            this.submitButtonTarget.disabled = false;
+            this.submitButtonTarget.textContent = "Lancer l'analyse";
+            return;
         }
 
-        // Désactiver le bouton et préparer l'UI
-        this.submitButtonTarget.disabled = true;
-        this.submitButtonTarget.textContent = "Analyse en cours...";
-        this.toggleProgressBar(true);
+        // Mise à jour du toast après la sauvegarde réussie
         this._showToast('warning', 'Initialisation de l\'analyse...');
 
         // Réinitialiser les résultats accumulés
@@ -1882,7 +1917,13 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                     const selects = activeMappingContainer.querySelectorAll('select[data-column-letter]');
                     selects.forEach(select => {
                         if (select.value) {
-                            mappedColumns[select.value] = select.dataset.columnLetter;
+                            const col = select.dataset.columnLetter;
+                            if (!mappedColumns[select.value]) {
+                                mappedColumns[select.value] = [];
+                            }
+                            if (!mappedColumns[select.value].includes(col)) {
+                                mappedColumns[select.value].push(col);
+                            }
                         }
                     });
                 }
@@ -1960,8 +2001,10 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         this.mappingSelectTargets.forEach(select => {
             Array.from(select.options).forEach(option => {
                 option.classList.remove('mapped-option');
-                // Si l'option est sélectionnée ailleurs ET n'est pas l'option actuellement sélectionnée dans ce select
-                if (selectedValues.has(option.value) && option.value !== select.value) {
+                // On ne bloque que les champs optionnels (chargements et revenus)
+                // Les champs système obligatoires peuvent être mappés sur plusieurs colonnes
+                const isOptional = option.value.startsWith('chargement_') || option.value.startsWith('revenu_');
+                if (isOptional && selectedValues.has(option.value) && option.value !== select.value) {
                     option.classList.add('mapped-option');
                 }
             });

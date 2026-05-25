@@ -145,6 +145,8 @@ class AvenantActionService
             if ($val <= 0) continue;
 
             if (str_starts_with($key, 'revenu_')) {
+                // LOGIQUE PERSISTANCE REVENU COMMENTÉE POUR L'INSTANT
+                /*
                 $typeId = (int)explode('_', $key)[1];
                 if ($type = $this->typeRevenuRepository->find($typeId)) {
                     $rpc = new RevenuPourCourtier();
@@ -157,6 +159,7 @@ class AvenantActionService
                     $cotation->addRevenu($rpc);
                     $this->em->persist($rpc);
                 }
+                */
             } elseif (str_starts_with($key, 'chargement_')) {
                 $typeId = (int)explode('_', $key)[1];
                 if ($type = $this->chargementRepository->find($typeId)) {
@@ -339,6 +342,8 @@ class AvenantActionService
                     $this->em->persist($cpp);
                 }
             } elseif (str_starts_with($key, 'revenu_')) {
+                // LOGIQUE PERSISTANCE REVENU COMMENTÉE POUR L'INSTANT
+                /*
                 $typeId = (int)explode('_', $key)[1];
                 $explicitlyMappedRevenuTypeIds[] = $typeId;
                 $typeRevenu = $this->typeRevenuRepository->find($typeId);
@@ -371,17 +376,20 @@ class AvenantActionService
                     $cotation->addRevenu($rpc);
                     $this->em->persist($rpc);
                 }
+                */
             }
         }
 
         // Supprimer les RevenuPourCourtier qui étaient explicitement mappés mais ne le sont plus
         // et qui ne sont pas des revenus d'ajustement système.
+        /*
         foreach ($cotation->getRevenus() as $rpc) {
             if ($rpc->getTypeRevenu() && !in_array($rpc->getTypeRevenu()->getId(), $explicitlyMappedRevenuTypeIds) && $rpc->getNom() !== TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME) {
                 $cotation->removeRevenu($rpc);
                 $this->em->remove($rpc);
             }
         }
+        */
 
         // Supprimer les ChargementPourPrime qui étaient explicitement mappés mais ne le sont plus
         // et qui ne sont pas des chargements d'ajustement système.
