@@ -29,6 +29,8 @@ class TypeRevenu
     public const MODE_CALCUL_POURCENTAGE_CHARGEMENT = 0;
     public const MODE_CALCUL_MONTANT_FLAT = 1;
 
+    public const SYSTEM_ADJUSTMENT_REVENU_NAME = '[Ajustement système - Écart commission]';
+
     #[ORM\Column(nullable: true)]
     #[Groups(['list:read'])]
     private ?float $montantflat = null;
