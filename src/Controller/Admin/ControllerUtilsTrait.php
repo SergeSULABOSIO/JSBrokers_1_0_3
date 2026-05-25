@@ -966,9 +966,9 @@ trait ControllerUtilsTrait
         }
 
         // Détection des champs numériques (fixes ou dynamiques comme chargements/revenus)
-        $isNumericField = str_starts_with($systemField, 'chargement_') || 
-                          str_starts_with($systemField, 'revenu_') ||
-                          in_array($systemField, ['prime_ttc', 'commission_ht_assureur', 'taxe_commission_assureur', 'taux_commission']);
+        $isNumericField = str_starts_with($systemField, 'chargement_') ||
+            str_starts_with($systemField, 'revenu_') ||
+            in_array($systemField, ['prime_ttc', 'commission_ht_assureur', 'taxe_commission_assureur', 'taux_commission']);
 
         if ($isNumericField) {
             if (is_string($value)) {
@@ -993,12 +993,16 @@ trait ControllerUtilsTrait
                     try {
                         $dateObj = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value);
                         return $dateObj instanceof \DateTimeInterface ? $dateObj->format('Y-m-d') : null;
-                    } catch (\Exception $e) { return null; }
+                    } catch (\Exception $e) {
+                        return null;
+                    }
                 } elseif (is_string($value)) {
                     try {
                         $dateObj = new \DateTimeImmutable($value);
                         return $dateObj->format('Y-m-d');
-                    } catch (\Exception $e) { return null; }
+                    } catch (\Exception $e) {
+                        return null;
+                    }
                 }
                 return null;
             default:
@@ -1021,9 +1025,16 @@ trait ControllerUtilsTrait
                     $val = $this->parseExcelValue($row[$col] ?? null, $systemField);
                     if (is_numeric($val)) {
                         $sum += (float)$val;
+                    } elseif ($val !== null && $textValue === null) {
+                        // Pour les champs texte (référence, nom client), on prend la première valeur non nulle
+                        $textValue = $val;
                     }
                 }
-                $rawLineData[$systemField] = $sum;
+                // Si c'est un champ numérique, on retourne la somme ; sinon la première valeur texte
+                $isNumericField = str_starts_with($systemField, 'chargement_') ||
+                    str_starts_with($systemField, 'revenu_') ||
+                    in_array($systemField, ['prime_ttc', 'commission_ht_assureur', 'taxe_commission_assureur', 'taux_commission']);
+                $rawLineData[$systemField] = $isNumericField ? $sum : $textValue;
             } else {
                 // Comportement standard 1:1
                 $rawLineData[$systemField] = $this->parseExcelValue($row[$excelColumns] ?? null, $systemField);
@@ -1060,12 +1071,13 @@ trait ControllerUtilsTrait
             try {
                 $date = new \DateTimeImmutable($value);
                 return $date->format('d/m/Y');
-            } catch (\Exception $e) { /* La conversion a échoué, on continue... */ }
+            } catch (\Exception $e) { /* La conversion a échoué, on continue... */
+            }
         }
 
         // Pourcentages ou montants monétaires (y compris les chargements)
         if ((str_contains(strtolower($key), 'taux') || str_starts_with(strtolower($key), 'chargement') ||
-             in_array(strtolower($key), ['prime_ttc', 'revenu 1', 'commission_ht_assureur', 'taxe_commission_assureur'])) && is_numeric($value)) {
+            in_array(strtolower($key), ['prime_ttc', 'revenu 1', 'commission_ht_assureur', 'taxe_commission_assureur'])) && is_numeric($value)) {
             return number_format($value, 2, ',', ' ') . (str_contains(strtolower($key), 'taux') ? ' %' : '');
         }
 
