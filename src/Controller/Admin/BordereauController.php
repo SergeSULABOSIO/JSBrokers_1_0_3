@@ -419,38 +419,20 @@ class BordereauController extends AbstractController
                     if ($avenant) {
                         // Hydratation forcée pour garantir l'accès aux attributs publics calculés
                         $this->loadCalculatedValues(null, $avenant);
+                $cotation = $avenant->getCotation();
 
-                        // Calcul des sommes Excel
-                        $sumChargementsExcel = 0.0;
-                        $sumRevenusExcel = 0.0;
-                        foreach ($rawLineData as $key => $val) {
-                            if (str_starts_with($key, 'chargement_')) $sumChargementsExcel += (float)$val;
-                            if (str_starts_with($key, 'revenu_')) $sumRevenusExcel += (float)$val;
-                        }
-
-                        // Récupération des ajustements système en base pour une comparaison équitable
-                        $dbAdjPrime = 0.0;
-                        foreach ($avenant->getCotation()->getChargements() as $cpp) {
-                            if ($cpp->getNom() === \App\Entity\Chargement::SYSTEM_ADJUSTMENT_CHARGEMENT_NAME) {
-                                $dbAdjPrime = (float)($cpp->getMontantFlatExceptionel() ?? 0.0);
-                            }
-                        }
-                        $dbAdjRevenu = 0.0;
-                        foreach ($avenant->getCotation()->getRevenus() as $rpc) {
-                            if ($rpc->getNom() === \App\Entity\TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME) {
-                                $dbAdjRevenu = (float)($rpc->getMontantFlatExceptionel() ?? 0.0);
-                            }
-                        }
-
+                $targetPrime = $this->avenantActionService->calculateTargetPrimeTTC($rawLineData, $cotation);
+                $targetHT    = $this->avenantActionService->calculateTargetCommissionHT($rawLineData, $cotation);
+                
                         $financialFieldsConfig = [
                             'prime_totale'  => [
                                 'label' => 'Prime TTC Totale',
-                                'excel' => round((float)($rawLineData['prime_ttc'] ?? ($sumChargementsExcel + $dbAdjPrime)), 2),
+                        'excel' => round($targetPrime, 2),
                                 'db'    => round((float)($avenant->primeTotale ?? 0), 2)
                             ],
                             'commission_ht' => [
                                 'label' => 'Commission HT Totale',
-                                'excel' => round((float)($rawLineData['commission_ht_assureur'] ?? ($sumRevenusExcel + $dbAdjRevenu)), 2),
+                        'excel' => round($targetHT, 2),
                                 'db'    => round((float)($avenant->montantHT ?? 0), 2)
                             ],
                         ];
@@ -687,42 +669,22 @@ class BordereauController extends AbstractController
             }
 
             // ÉVALUATION DES ÉCARTS STRUCTURELS
-            // On ne compare plus les montants partiels (encaissables) mais les indicateurs de totaux.
-            
-            $sumChargements = 0.0;
-            $sumRevenus = 0.0;
-            foreach ($rawLineData as $key => $value) {
-                if (str_starts_with($key, 'chargement_')) $sumChargements += (float)$value;
-                if (str_starts_with($key, 'revenu_')) $sumRevenus += (float)$value;
-            }
-
-            // Récupération des montants d'ajustement système existants en base
-            $dbAdjPrime = 0.0;
-            foreach ($avenant->getCotation()->getChargements() as $cpp) {
-                if ($cpp->getNom() === \App\Entity\Chargement::SYSTEM_ADJUSTMENT_CHARGEMENT_NAME) {
-                    $dbAdjPrime = (float)($cpp->getMontantFlatExceptionel() ?? 0.0);
-                }
-            }
-            $dbAdjRevenu = 0.0;
-            foreach ($avenant->getCotation()->getRevenus() as $rpc) {
-                if ($rpc->getNom() === \App\Entity\TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME) {
-                    $dbAdjRevenu = (float)($rpc->getMontantFlatExceptionel() ?? 0.0);
-                }
-            }
+            $targetPrime = $this->avenantActionService->calculateTargetPrimeTTC($rawLineData, $avenant->getCotation());
+            $targetHT    = $this->avenantActionService->calculateTargetCommissionHT($rawLineData, $avenant->getCotation());
 
             // On met à jour les totaux de session pour les stats finales
-            $financialTotals['prime_ttc']    += $sumChargements;
-            $financialTotals['commission_ht'] += $sumRevenus;
+            $financialTotals['prime_ttc']    += $targetPrime;
+            $financialTotals['commission_ht'] += $targetHT;
             $financialTotals['taxe']          += (float)($rawLineData['taxe_commission_assureur'] ?? 0);
 
             $comparisons = [
                 'prime_totale' => [
-                    'excel_total' => round($sumChargements + $dbAdjPrime, 2),
+                    'excel_total' => round($targetPrime, 2),
                     'db_total'    => round((float)($avenant->primeTotale ?? 0), 2),
                     'label'       => 'Prime TTC Totale',
                 ],
                 'commission_ht' => [
-                    'excel_total' => round((float)($rawLineData['commission_ht_assureur'] ?? 0), 2), // Use the explicit commission_ht_assureur from Excel
+                    'excel_total' => round($targetHT, 2),
                     'db_total'    => round((float)($avenant->montantHT ?? 0), 2),
                     'label'       => 'Commission HT Totale',
                 ],
@@ -833,10 +795,9 @@ class BordereauController extends AbstractController
         }
 
         $isLastChunk = ($offset + $chunkSize) >= $totalRows;
-        $accumulated = $sessionData['accumulatedResults'] ?? [];
-        $accumulated = array_merge($accumulated, $chunkResultsToStore);
-        $sessionData['financialTotals'] = $financialTotals;
-        $sessionData['accumulatedResults'] = $accumulated; // Update accumulated results in session data
+        $accumulated = array_merge($sessionData['accumulatedResults'] ?? [], $chunkResultsToStore);
+        $sessionData['financialTotals']    = $financialTotals;
+        $sessionData['accumulatedResults'] = $accumulated;
         $stats = null;
 
         if ($isLastChunk) {
@@ -897,9 +858,16 @@ class BordereauController extends AbstractController
             $spreadsheet = IOFactory::load($filePath);
             $worksheet   = $spreadsheet->getSheetByName($sheetName);
             if (!$worksheet) return $this->json(['error' => "Feuille '$sheetName' introuvable."], 400);
-            $data = $worksheet->toArray(null, true, false, true);
-            array_shift($data);
-            return $data;
+            $allRows = $worksheet->toArray(null, true, false, true); // Correction CRUCIALE : indexer par lettre de colonne
+
+            array_shift($allRows); // Remove the header row
+
+            // Filter out any remaining empty rows from the data
+            $dataRows = array_filter($allRows, function($row) {
+                return !empty(array_filter($row, fn($cell) => $cell !== null && $cell !== ''));
+            });
+
+            return array_values($dataRows); // Re-index and return
         } catch (ReaderException $e) {
             return $this->json(['error' => "Erreur lecture Excel : " . $e->getMessage()], 500);
         }

@@ -221,6 +221,8 @@ class AvenantActionService
      */
     private function balancePrimeTTC(Cotation $cotation, array $excelData, Entreprise $entreprise, Invite $invite): void
     {
+        $targetPrimeTTC = $this->calculateTargetPrimeTTC($excelData, $cotation);
+        
         $totalExplicitChargements = 0.0;
         foreach ($cotation->getChargements() as $cpp) {
             // Exclure les chargements d'ajustement système déjà créés pour éviter de les compter deux fois
@@ -228,12 +230,100 @@ class AvenantActionService
                 $totalExplicitChargements += $cpp->getMontantFlatExceptionel() ?? 0.0;
             }
         }
-        $excelPrimeTTC = (float)($excelData['prime_ttc'] ?? 0);
-        $ecart = round($excelPrimeTTC - $totalExplicitChargements, 2);
+
+        $ecart = round($targetPrimeTTC - $totalExplicitChargements, 2);
 
         $this->createOrUpdateSystemAdjustmentChargement(
             $cotation, $entreprise, $invite, $ecart
         );
+    }
+
+    /**
+     * Détermine la Prime TTC cible pour une ligne.
+     * Priorité à la colonne 'prime_ttc' si mappée, sinon somme des chargements explicites + ajustement existant.
+     */
+    public function calculateTargetPrimeTTC(array $excelData, Cotation $cotation): float
+    {
+        if (isset($excelData['prime_ttc'])) {
+            return (float)$excelData['prime_ttc'];
+        }
+
+        // Fallback : Somme des chargements explicites de l'Excel + l'ajustement DB actuel
+        $sumExplicitExcel = 0.0;
+        foreach ($excelData as $key => $val) {
+            if (str_starts_with($key, 'chargement_')) {
+                $sumExplicitExcel += (float)$val;
+            }
+        }
+
+        $dbAdjPrime = 0.0;
+        foreach ($cotation->getChargements() as $cpp) {
+            if ($cpp->getNom() === Chargement::SYSTEM_ADJUSTMENT_CHARGEMENT_NAME) {
+                $dbAdjPrime = (float)($cpp->getMontantFlatExceptionel() ?? 0.0);
+                break;
+            }
+        }
+
+        return $sumExplicitExcel + $dbAdjPrime;
+    }
+
+    /**
+     * Détermine la Commission HT cible pour une ligne.
+     * Priorité à la colonne 'commission_ht_assureur' si mappée, sinon Prime Nette * Taux.
+     */
+    public function calculateTargetCommissionHT(array $excelData, Cotation $cotation): float
+    {
+        $targetHT = (float)($excelData['commission_ht_assureur'] ?? 0);
+        
+        if ($targetHT === 0.0) {
+            $primeNette = $this->getPrimeNette($excelData, $cotation);
+            $taux = isset($excelData['taux_commission']) ? (float)$excelData['taux_commission'] / 100 : null;
+            
+            if ($primeNette !== null && $taux !== null) {
+                $targetHT = round($primeNette * $taux, 2);
+            } else {
+                // Fallback ultime : Somme des revenus explicites de l'Excel + l'ajustement DB actuel
+                $sumExplicitExcel = 0.0;
+                foreach ($excelData as $key => $val) {
+                    if (str_starts_with($key, 'revenu_')) $sumExplicitExcel += (float)$val;
+                }
+                $dbAdjRevenu = 0.0;
+                foreach ($cotation->getRevenus() as $rpc) {
+                    if ($rpc->getNom() === TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME) {
+                        $dbAdjRevenu = (float)($rpc->getMontantFlatExceptionel() ?? 0.0);
+                        break;
+                    }
+                }
+                $targetHT = $sumExplicitExcel + $dbAdjRevenu;
+            }
+        }
+        
+        return $targetHT;
+    }
+
+    /**
+     * Résout la Prime Nette (soit depuis la DB, soit calculée par déduction TTC).
+     */
+    public function getPrimeNette(array $excelData, Cotation $cotation): ?float
+    {
+        foreach ($cotation->getChargements() as $cpp) {
+            if ($cpp->getType() && $cpp->getType()->getFonction() === Chargement::FONCTION_PRIME_NETTE) {
+                return $cpp->getMontantFlatExceptionel();
+            }
+        }
+
+        if (isset($excelData['prime_ttc'])) {
+            $totalAutresChargements = 0.0;
+            foreach ($cotation->getChargements() as $cpp) {
+                if ($cpp->getType() && $cpp->getType()->getFonction() !== Chargement::FONCTION_PRIME_NETTE && 
+                    $cpp->getNom() !== Chargement::SYSTEM_ADJUSTMENT_CHARGEMENT_NAME) {
+                    $totalAutresChargements += $cpp->getMontantFlatExceptionel() ?? 0.0;
+                }
+            }
+            return round((float)$excelData['prime_ttc'] - $totalAutresChargements, 2);
+        }
+
+        return null;
     }
 
     /**
@@ -450,62 +540,9 @@ class AvenantActionService
         Entreprise $entreprise,
         Invite $invite
     ): void {
-        // Determine the target commission HT from Excel
-        // This is the authoritative value from the Excel file for comparison.
-        $targetCommissionHT = (float)($excelData['commission_ht_assureur'] ?? 0);
+        $targetCommissionHT = $this->calculateTargetCommissionHT($excelData, $cotation);
 
-        // If the explicit commission_ht_assureur is not provided or is zero,
-        // we fall back to calculating it from prime nette and taux commission.
-        // This ensures a target is always available.
-        $tauxCommission = isset($excelData['taux_commission']) ? (float)$excelData['taux_commission'] / 100 : null;
-
-        // ÉTAPE 1 — Resolution of Prime Nette
-        // ÉTAPE 1 — Résolution de la Prime Nette
-        // Priorité A : depuis les ChargementPourPrime de la cotation existante
-        $primeNette = null;
-        foreach ($cotation->getChargements() as $cpp) {
-            if (
-                $cpp->getType() &&
-                $cpp->getType()->getFonction() === Chargement::FONCTION_PRIME_NETTE
-            ) {
-                $primeNette = $cpp->getMontantFlatExceptionel();
-                break;
-            }
-        }
-
-        // Priorité B : déduction depuis prime_ttc Excel
-        // Prime Nette ≈ prime_ttc - Σ(chargements dont fonction ≠ FONCTION_PRIME_NETTE)
-        if ($primeNette === null && isset($excelData['prime_ttc'])) {
-            $primeTTC = (float)$excelData['prime_ttc'];
-            $totalAutresChargements = 0.0;
-            foreach ($cotation->getChargements() as $cpp) {
-                if (
-                    $cpp->getType() &&
-                    $cpp->getType()->getFonction() !== Chargement::FONCTION_PRIME_NETTE &&
-                    $cpp->getNom() !== Chargement::SYSTEM_ADJUSTMENT_CHARGEMENT_NAME
-                ) {
-                    $totalAutresChargements += $cpp->getMontantFlatExceptionel() ?? 0.0;
-                }
-            }
-            $primeNette = round($primeTTC - $totalAutresChargements, 2);
-        }
-        // If targetCommissionHT from Excel is 0 or not provided, and we have primeNette and tauxCommission,
-        // calculate the theoretical commission as a fallback target.
-        if ($targetCommissionHT === 0.0 && $primeNette !== null && $tauxCommission !== null) {
-            $targetCommissionHT = round($primeNette * $tauxCommission, 2);
-        } elseif ($targetCommissionHT === 0.0 && (!isset($excelData['commission_ht_assureur']) || $primeNette === null || $tauxCommission === null)) {
-            // If no explicit commission from Excel and no way to derive it,
-            // we cannot balance. Create adjustment with 0.0 and let manual correction happen.
-            $this->createOrUpdateSystemAdjustmentRevenu(
-                $cotation, $entreprise, $invite, 0.0
-            );
-            return;
-        }
-
-        // The target for reconciliation is now $targetCommissionHT
-
-        // ÉTAPE 2 — Sum of explicitly mapped revenues (excluding the system adjustment one)
-        // This is now ÉTAPE 3 in the original code, but conceptually it's the sum of what's already there.
+        // ÉTAPE 2 — Sum of explicitly mapped revenues (excluding adjustment)
         $totalExplicitRevenus = 0.0;
         foreach ($cotation->getRevenus() as $rpc) {
             if ($rpc->getNom() !== TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME) {
