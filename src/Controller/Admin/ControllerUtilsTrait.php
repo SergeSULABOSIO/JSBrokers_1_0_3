@@ -1021,6 +1021,7 @@ trait ControllerUtilsTrait
             // Si c'est un tableau, on itère et on somme les valeurs numériques
             if (is_array($excelColumns)) {
                 $sum = 0.0;
+                $textValue = null; // Initialisation de $textValue
                 foreach ($excelColumns as $col) {
                     $val = $this->parseExcelValue($row[$col] ?? null, $systemField);
                     if (is_numeric($val)) {
