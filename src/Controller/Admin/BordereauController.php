@@ -422,20 +422,14 @@ class BordereauController extends AbstractController
                 $cotation = $avenant->getCotation();
 
                 $targetPrime = $this->avenantActionService->calculateTargetPrimeTTC($rawLineData, $cotation);
-                $targetHT    = $this->avenantActionService->calculateTargetCommissionHT($rawLineData, $cotation);
                 
                         $financialFieldsConfig = [
                             'prime_totale'  => [
                                 'label' => 'Prime TTC Totale',
                         'excel' => round($targetPrime, 2),
                                 'db'    => round((float)($avenant->primeTotale ?? 0), 2)
-                            ],
-                            'commission_ht' => [
-                                'label' => 'Commission HT Totale',
-                        'excel' => round($targetHT, 2),
-                                'db'    => round((float)($avenant->montantHT ?? 0), 2)
-                            ],
-                        ];
+                    ]
+                ];
 
                         foreach ($financialFieldsConfig as $field => $config) {
                             $gap = round($config['excel'] - $config['db'], 2);
@@ -670,11 +664,15 @@ class BordereauController extends AbstractController
 
             // ÉVALUATION DES ÉCARTS STRUCTURELS
             $targetPrime = $this->avenantActionService->calculateTargetPrimeTTC($rawLineData, $avenant->getCotation());
-            $targetHT    = $this->avenantActionService->calculateTargetCommissionHT($rawLineData, $avenant->getCotation());
 
             // On met à jour les totaux de session pour les stats finales
+            $sumRevenus = 0.0;
+            foreach ($rawLineData as $key => $val) {
+                if (str_starts_with($key, 'revenu_')) $sumRevenus += (float)$val;
+            }
+
             $financialTotals['prime_ttc']    += $targetPrime;
-            $financialTotals['commission_ht'] += $targetHT;
+            $financialTotals['commission_ht'] += $sumRevenus;
             $financialTotals['taxe']          += (float)($rawLineData['taxe_commission_assureur'] ?? 0);
 
             $comparisons = [
@@ -682,12 +680,7 @@ class BordereauController extends AbstractController
                     'excel_total' => round($targetPrime, 2),
                     'db_total'    => round((float)($avenant->primeTotale ?? 0), 2),
                     'label'       => 'Prime TTC Totale',
-                ],
-                'commission_ht' => [
-                    'excel_total' => round($targetHT, 2),
-                    'db_total'    => round((float)($avenant->montantHT ?? 0), 2),
-                    'label'       => 'Commission HT Totale',
-                ],
+                ]
             ];
 
             foreach ($comparisons as $field => $comp) {
@@ -713,22 +706,6 @@ class BordereauController extends AbstractController
 
                     $financialGaps[$field] = [
                         'label'       => $config['label'],
-                        'excel_value' => $excelValue,
-                        'db_value'    => $dbValue,
-                        'gap'         => $gap,
-                        'gap_class'   => $gap > 0 ? 'text-success' : ($gap < 0 ? 'text-danger' : 'text-muted'),
-                        'gap_sign'    => $gap > 0 ? '+' : '',
-                    ];
-                }
-
-                // On garde quand même le taux de commission pour info visuelle s'il y a un écart
-                if (isset($rawLineData['taux_commission'])) {
-                    $excelValue = round((float)$rawLineData['taux_commission'], 2);
-                    $dbValue    = round((float)($avenant->tauxCommission ?? 0) * 100, 2);
-                    $gap        = round($excelValue - $dbValue, 2);
-
-                    $financialGaps['taux_commission'] = [
-                        'label'       => 'Taux commission (%)',
                         'excel_value' => $excelValue,
                         'db_value'    => $dbValue,
                         'gap'         => $gap,

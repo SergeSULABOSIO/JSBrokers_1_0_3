@@ -176,18 +176,6 @@ class AvenantActionService
         // ÉTAPE 6.5 — Balancement de la Prime TTC (Ajustement Frais Admin)
         $this->balancePrimeTTC($cotation, $excelData, $entreprise, $invite);
 
-        // ÉTAPE 6.6 — Balancement de la Commission HT (Ajustement Écart Commission)
-        $this->balanceCommissionHT($cotation, $excelData, $entreprise, $invite);
-
-        // ÉTAPE 6.7 — Persistance du taux de commission
-        if (isset($excelData['taux_commission'])) {
-            foreach ($cotation->getRevenus() as $rpc) {
-                if ($rpc->getTypeRevenu()->getRedevable() === TypeRevenu::REDEVABLE_ASSUREUR) {
-                    $rpc->setTauxExceptionel((float)$excelData['taux_commission'] / 100);
-                }
-            }
-        }
-
         // ÉTAPE 7 — Tranche unique
         $tranche = new Tranche();
         $tranche->setNom("Tranche unique - import bordereau");
@@ -265,65 +253,6 @@ class AvenantActionService
         }
 
         return $sumExplicitExcel + $dbAdjPrime;
-    }
-
-    /**
-     * Détermine la Commission HT cible pour une ligne.
-     * Priorité à la colonne 'commission_ht_assureur' si mappée, sinon Prime Nette * Taux.
-     */
-    public function calculateTargetCommissionHT(array $excelData, Cotation $cotation): float
-    {
-        $targetHT = (float)($excelData['commission_ht_assureur'] ?? 0);
-        
-        if ($targetHT === 0.0) {
-            $primeNette = $this->getPrimeNette($excelData, $cotation);
-            $taux = isset($excelData['taux_commission']) ? (float)$excelData['taux_commission'] / 100 : null;
-            
-            if ($primeNette !== null && $taux !== null) {
-                $targetHT = round($primeNette * $taux, 2);
-            } else {
-                // Fallback ultime : Somme des revenus explicites de l'Excel + l'ajustement DB actuel
-                $sumExplicitExcel = 0.0;
-                foreach ($excelData as $key => $val) {
-                    if (str_starts_with($key, 'revenu_')) $sumExplicitExcel += (float)$val;
-                }
-                $dbAdjRevenu = 0.0;
-                foreach ($cotation->getRevenus() as $rpc) {
-                    if ($rpc->getNom() === TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME) {
-                        $dbAdjRevenu = (float)($rpc->getMontantFlatExceptionel() ?? 0.0);
-                        break;
-                    }
-                }
-                $targetHT = $sumExplicitExcel + $dbAdjRevenu;
-            }
-        }
-        
-        return $targetHT;
-    }
-
-    /**
-     * Résout la Prime Nette (soit depuis la DB, soit calculée par déduction TTC).
-     */
-    public function getPrimeNette(array $excelData, Cotation $cotation): ?float
-    {
-        foreach ($cotation->getChargements() as $cpp) {
-            if ($cpp->getType() && $cpp->getType()->getFonction() === Chargement::FONCTION_PRIME_NETTE) {
-                return $cpp->getMontantFlatExceptionel();
-            }
-        }
-
-        if (isset($excelData['prime_ttc'])) {
-            $totalAutresChargements = 0.0;
-            foreach ($cotation->getChargements() as $cpp) {
-                if ($cpp->getType() && $cpp->getType()->getFonction() !== Chargement::FONCTION_PRIME_NETTE && 
-                    $cpp->getNom() !== Chargement::SYSTEM_ADJUSTMENT_CHARGEMENT_NAME) {
-                    $totalAutresChargements += $cpp->getMontantFlatExceptionel() ?? 0.0;
-                }
-            }
-            return round((float)$excelData['prime_ttc'] - $totalAutresChargements, 2);
-        }
-
-        return null;
     }
 
     /**
@@ -466,20 +395,6 @@ class AvenantActionService
         // Recalcul de l'écart après mise à jour et nettoyage
         $this->balancePrimeTTC($cotation, $excelData, $bordereau->getEntreprise(), $bordereau->getInvite());
 
-        // Recalcul de l'écart commission après mise à jour
-        $this->balanceCommissionHT($cotation, $excelData, $bordereau->getEntreprise(), $bordereau->getInvite());
-
-        if (isset($excelData['taux_commission'])) {
-            foreach ($cotation->getRevenus() as $rpc) {
-                if ($rpc->getTypeRevenu()->getRedevable() === TypeRevenu::REDEVABLE_ASSUREUR) {
-                    // CORRECTION : Le taux Excel est en pourcentage (ex: 7.01 pour 7,01%).
-                    // Symfony stocke les pourcentages en valeur décimale (0–1).
-                    // On divise donc par 100 avant la persistance.
-                    $rpc->setTauxExceptionel((float)$excelData['taux_commission'] / 100);
-                }
-            }
-        }
-
         return $avenant;
     }
 
@@ -520,90 +435,6 @@ class AvenantActionService
             $this->em->persist($systemAdjustmentCpp);
         }
         $systemAdjustmentCpp->setMontantFlatExceptionel($ecart);
-    }
-
-    /**
-     * Calcule l'écart entre la commission théorique due (Prime Nette × Taux Commission)
-     * et la somme des revenus explicitement mappés, puis crée/met à jour un
-     * RevenuPourCourtier d'ajustement système pour absorber cet écart.
-     *
-     * Règle métier :
-     *   Σ(Revenu_XX mappés) + écart  =  Prime Nette × Taux Commission
-     *
-     * La clé "commission_ht_assureur" n'est PAS utilisée ici : elle représente
-     * uniquement la part encaissable maintenant (paiement partiel possible),
-     * pas la commission totale due sur la cotation.
-     */
-    private function balanceCommissionHT(
-        Cotation $cotation,
-        array $excelData,
-        Entreprise $entreprise,
-        Invite $invite
-    ): void {
-        $targetCommissionHT = $this->calculateTargetCommissionHT($excelData, $cotation);
-
-        // ÉTAPE 2 — Sum of explicitly mapped revenues (excluding adjustment)
-        $totalExplicitRevenus = 0.0;
-        foreach ($cotation->getRevenus() as $rpc) {
-            if ($rpc->getNom() !== TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME) {
-                $totalExplicitRevenus += $rpc->getMontantFlatExceptionel() ?? 0.0;
-            }
-        }
-
-        // ÉTAPE 3 — Calculate the required adjustment
-        $ecart = round($targetCommissionHT - $totalExplicitRevenus, 2);
-
-        // ÉTAPE 4 — Create or update the system adjustment revenue
-        $this->createOrUpdateSystemAdjustmentRevenu(
-            $cotation, $entreprise, $invite, $ecart
-        );
-    }
-
-    /**
-     * Crée ou met à jour un RevenuPourCourtier d'ajustement système
-     * pour absorber l'écart entre la commission théorique due et les revenus mappés.
-     * Si écart = 0.0, le revenu est quand même créé/mis à jour pour signaler
-     * que la réconciliation a été effectuée.
-     */
-    private function createOrUpdateSystemAdjustmentRevenu(
-        Cotation $cotation,
-        Entreprise $entreprise,
-        Invite $invite,
-        float $ecart
-    ): void {
-        // Trouver le premier TypeRevenu de type REDEVABLE_ASSUREUR pour l'ajustement
-        /** @var TypeRevenu $adjustmentType */
-        $adjustmentType = $this->typeRevenuRepository->findOneBy([
-            'redevable' => TypeRevenu::REDEVABLE_ASSUREUR,
-            'entreprise' => $entreprise,
-        ]);
-
-        if (!$adjustmentType) {
-            // Fallback silencieux : on ne bloque pas l'import pour un ajustement
-            // Le courtier devra réconcilier manuellement
-            return;
-        }
-
-        // Recherche d'un revenu d'ajustement système existant (boucle explicite)
-        $systemAdjustmentRpc = null;
-        foreach ($cotation->getRevenus() as $rpc) {
-            if ($rpc->getNom() === TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME) {
-                $systemAdjustmentRpc = $rpc;
-                break;
-            }
-        }
-
-        if (!$systemAdjustmentRpc) {
-            $systemAdjustmentRpc = new RevenuPourCourtier();
-            $systemAdjustmentRpc->setTypeRevenu($adjustmentType);
-            $systemAdjustmentRpc->setCotation($cotation);
-            $systemAdjustmentRpc->setNom(TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME);
-            $systemAdjustmentRpc->setEntreprise($entreprise);
-            $systemAdjustmentRpc->setInvite($invite);
-            $cotation->addRevenu($systemAdjustmentRpc);
-            $this->em->persist($systemAdjustmentRpc);
-        }
-        $systemAdjustmentRpc->setMontantFlatExceptionel($ecart);
     }
 
     private function createDate($input): DateTimeImmutable
