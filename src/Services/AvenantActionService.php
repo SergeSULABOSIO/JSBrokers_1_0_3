@@ -554,10 +554,13 @@ class AvenantActionService
         ]);
 
         if (!$fraisAdminType) {
-            // Gérer le cas où le type FONCTION_FRAIS_ADMIN n'existe pas
-            // Cela pourrait être une exception ou la création automatique d'un tel type
-            // Pour l'instant, on lance une exception pour signaler le problème.
-            throw new \RuntimeException("Le type de chargement 'Frais Admin' n'a pas été trouvé pour l'entreprise.");
+            // AMÉLIORATION : Créer le type de chargement système s'il manque au lieu de planter
+            $fraisAdminType = new Chargement();
+            $fraisAdminType->setNom("Frais d'administration (système)");
+            $fraisAdminType->setFonction(Chargement::FONCTION_FRAIS_ADMIN);
+            $fraisAdminType->setEntreprise($entreprise);
+            $fraisAdminType->setInvite($invite);
+            $this->em->persist($fraisAdminType);
         }
 
         // Chercher un chargement d'ajustement existant pour cette cotation
@@ -593,11 +596,16 @@ class AvenantActionService
         ]);
 
         if (!$systemTypeRevenu) {
-            throw new \RuntimeException(
-                "Le TypeRevenu d'ajustement système '"
-                . TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME
-                . "' est introuvable pour cette entreprise."
-            );
+            // CORRECTION : Créer le type s'il est manquant pour éviter l'erreur 500
+            $systemTypeRevenu = new TypeRevenu();
+            $systemTypeRevenu->setNom(TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME);
+            $systemTypeRevenu->setEntreprise($entreprise);
+            $systemTypeRevenu->setInvite($invite);
+            $systemTypeRevenu->setModeCalcul(TypeRevenu::MODE_CALCUL_MONTANT_FLAT);
+            $systemTypeRevenu->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR);
+            $systemTypeRevenu->setShared(false);
+            $systemTypeRevenu->setMultipayments(true);
+            $this->em->persist($systemTypeRevenu);
         }
 
         $systemAdjRpc = $cotation->getRevenus()->filter(
