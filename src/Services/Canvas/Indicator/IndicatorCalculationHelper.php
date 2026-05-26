@@ -620,21 +620,21 @@ class IndicatorCalculationHelper
                 $cotation = $revenu->getCotation();
                 $montantChargementPrime = $this->getCotationMontantChargementPrime($cotation, $typeRevenu);
 
-                if ($typeRevenu->isAppliquerPourcentageDuRisque()) {
-                    $risque = $this->getCotationRisque($cotation);
-                    if ($risque) {
-                        $montant += $montantChargementPrime * $risque->getPourcentageCommissionSpecifiqueHT();
-                    }
-                } else {
-                    if ($revenu->getTauxExceptionel() && $revenu->getTauxExceptionel() != 0) {
-                        $montant += $montantChargementPrime * $revenu->getTauxExceptionel();
-                    } elseif ($revenu->getMontantFlatExceptionel() && $revenu->getMontantFlatExceptionel() != 0) {
-                        $montant += $revenu->getMontantFlatExceptionel();
-                    } elseif ($typeRevenu->getPourcentage() && $typeRevenu->getPourcentage() != 0) {
-                        $montant += $montantChargementPrime * $typeRevenu->getPourcentage();
-                    } elseif ($typeRevenu->getMontantflat() && $typeRevenu->getMontantflat() != 0) {
-                        $montant += $typeRevenu->getMontantflat();
-                    }
+                // PRIORITÉ 1 : Exceptions sur l'instance de revenu (Overrule)
+                if ($revenu->getTauxExceptionel() && $revenu->getTauxExceptionel() != 0) {
+                    $montant = $montantChargementPrime * $revenu->getTauxExceptionel();
+                } elseif ($revenu->getMontantFlatExceptionel() && $revenu->getMontantFlatExceptionel() != 0) {
+                    $montant = $revenu->getMontantFlatExceptionel();
+                } 
+                // PRIORITÉ 2 : Valeurs par défaut du Type de Revenu
+                elseif ($typeRevenu->getPourcentage() && $typeRevenu->getPourcentage() != 0) {
+                    $montant = $montantChargementPrime * $typeRevenu->getPourcentage();
+                } elseif ($typeRevenu->getMontantflat() && $typeRevenu->getMontantflat() != 0) {
+                    $montant = $typeRevenu->getMontantflat();
+                }
+                // PRIORITÉ 3 : Logique dynamique par Risque
+                elseif ($typeRevenu->isAppliquerPourcentageDuRisque() && ($risque = $this->getCotationRisque($cotation))) {
+                    $montant = $montantChargementPrime * $risque->getPourcentageCommissionSpecifiqueHT();
                 }
             }
         }

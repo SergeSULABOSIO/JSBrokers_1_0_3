@@ -55,9 +55,9 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
             'retroCommissionReversee' => round($this->getRevenuRetroCommissionReversee($entity), 2),
             'retroCommissionSolde' => round($this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1, []) - $this->getRevenuRetroCommissionReversee($entity), 2),
             'taxeCourtierMontant' => round($this->calculationHelper->getRevenuMontantTaxeCourtier($entity), 2),
-            'taxeCourtierTaux' => $this->getTaxeTaux($entity, Taxe::REDEVABLE_COURTIER),
+            'taxeCourtierTaux' => round($this->getTaxeTaux($entity, Taxe::REDEVABLE_COURTIER) * 100, 2),
             'taxeAssureurMontant' => round($this->calculationHelper->getRevenuMontantTaxeAssureur($entity), 2),
-            'taxeAssureurTaux' => $this->getTaxeTaux($entity, Taxe::REDEVABLE_ASSUREUR),
+            'taxeAssureurTaux' => round($this->getTaxeTaux($entity, Taxe::REDEVABLE_ASSUREUR) * 100, 2),
             'estPartageable' => ($entity->getTypeRevenu() && $entity->getTypeRevenu()->isShared()) ? 'Oui' : 'Non',
             'taxeCourtierPayee' => round($this->getRevenuTaxePayee($entity, Taxe::REDEVABLE_COURTIER), 2),
             'taxeCourtierSolde' => round($this->calculationHelper->getRevenuMontantTaxeCourtier($entity) - $this->getRevenuTaxePayee($entity, Taxe::REDEVABLE_COURTIER), 2),
@@ -65,7 +65,7 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
             'taxeAssureurSolde' => round($this->calculationHelper->getRevenuMontantTaxeAssureur($entity) - $this->getRevenuTaxePayee($entity, Taxe::REDEVABLE_ASSUREUR), 2),
             'montantCalculeHT' => $montantHT,
             'partPartenaire' => round($this->getRevenuPartPartenaire($entity) * 100, 2), // CORRECTION: On multiplie par 100 pour l'affichage
-            'montantRetrocommission' => $this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1, []),
+            'retroCommission' => $this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1, []),
             'reserve' => $this->getReserveCourtier($entity),
         ];
     }
