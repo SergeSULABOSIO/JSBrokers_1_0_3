@@ -179,6 +179,9 @@ class AvenantActionService
         // ÉTAPE 6.5 — Balancement de la Prime TTC (Ajustement Frais Admin)
         $this->balancePrimeTTC($cotation, $excelData, $entreprise, $invite);
 
+        // ÉTAPE 6.6 — Balancement du Revenu HT (Commission courtier)
+        $this->balanceRevenuHT($cotation, $excelData, $entreprise, $invite);
+
         // ÉTAPE 7 — Tranche unique
         $tranche = new Tranche();
         $tranche->setNom("Tranche unique - import bordereau");
@@ -256,6 +259,132 @@ class AvenantActionService
         }
 
         return $sumExplicitExcel + $dbAdjPrime;
+    }
+
+    /**
+     * Calcule le revenu HT cible pour une ligne de bordereau.
+     *
+     * Priorité 1 : taux_commission × montant du chargement Prime Nette
+     *              (chargement dont type->getFonction() === Chargement::FONCTION_PRIME_NETTE)
+     * Priorité 2 : somme des colonnes revenu_{id}_{slug} si le taux est absent
+     * Priorité 3 : champ commission_ht_payable_now si présent
+     */
+    public function calculateTargetRevenuHT(array $excelData, ?Cotation $cotation): float
+    {
+        // Priorité 1 : taux × prime nette
+        if (isset($excelData['taux_commission'])) {
+            $tauxCommission = (float)$excelData['taux_commission'] / 100;
+
+            // Identifier le montant de la Prime Nette parmi les chargements de l'Excel
+            $primeNette = 0.0;
+            foreach ($excelData as $key => $val) {
+                if (!str_starts_with($key, 'chargement_')) continue;
+
+                $parts  = explode('_', $key, 3);
+                $typeId = isset($parts[1]) ? (int)$parts[1] : 0;
+                if ($typeId === 0) continue;
+
+                $chargementType = $this->chargementRepository->find($typeId);
+                if ($chargementType && $chargementType->getFonction() === Chargement::FONCTION_PRIME_NETTE) {
+                    $primeNette += (float)$val;
+                }
+            }
+
+            if ($primeNette > 0) {
+                return round($primeNette * $tauxCommission, 2);
+            }
+        }
+
+        // Priorité 2 : somme des colonnes revenu_ explicites
+        $sumExplicit = 0.0;
+        foreach ($excelData as $key => $val) {
+            if (str_starts_with($key, 'revenu_')) {
+                $sumExplicit += (float)$val;
+            }
+        }
+        if ($sumExplicit > 0) return round($sumExplicit, 2);
+
+        // Priorité 3 : commission_ht_payable_now
+        return round((float)($excelData['commission_ht_payable_now'] ?? 0), 2);
+    }
+
+    /**
+     * Crée ou met à jour les RevenuPourCourtier de la cotation
+     * en se basant sur les colonnes revenu_{id}_{slug} de l'Excel,
+     * puis applique un RevenuPourCourtier d'ajustement système pour absorber
+     * l'écart entre le revenu cible et la somme des revenus explicites.
+     */
+    private function balanceRevenuHT(
+        Cotation  $cotation,
+        array     $excelData,
+        Entreprise $entreprise,
+        Invite    $invite
+    ): void {
+        // 1. Calculer le revenu cible
+        $targetRevenuHT = $this->calculateTargetRevenuHT($excelData, $cotation);
+
+        // 2. Créer / mettre à jour les RevenuPourCourtier explicites
+        $explicitRevenuTypeIds = [];
+        $sumExplicit           = 0.0;
+
+        foreach ($excelData as $key => $val) {
+            if (!str_starts_with($key, 'revenu_')) continue;
+            $parts  = explode('_', $key, 3);
+            $typeId = isset($parts[1]) ? (int)$parts[1] : 0;
+            if ($typeId === 0) continue;
+
+            $typeRevenu = $this->typeRevenuRepository->find($typeId);
+            if (!$typeRevenu) continue;
+
+            $montant = (float)$val;
+            $explicitRevenuTypeIds[] = $typeId;
+            $sumExplicit += $montant;
+
+            $rpcFound = false;
+            foreach ($cotation->getRevenus() as $rpc) {
+                if (
+                    $rpc->getTypeRevenu()
+                    && $rpc->getTypeRevenu()->getId() === $typeId
+                    && $rpc->getNom() !== TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME
+                ) {
+                    $rpc->setMontantFlatExceptionel($montant);
+                    $rpcFound = true;
+                    break;
+                }
+            }
+
+            if (!$rpcFound) {
+                $rpc = new RevenuPourCourtier();
+                $rpc->setTypeRevenu($typeRevenu);
+                $rpc->setCotation($cotation);
+                $rpc->setNom($typeRevenu->getNom());
+                $rpc->setMontantFlatExceptionel($montant);
+                $rpc->setEntreprise($entreprise);
+                $rpc->setInvite($invite);
+                $cotation->addRevenu($rpc);
+                $this->em->persist($rpc);
+            }
+        }
+
+        // 3. Supprimer les RevenuPourCourtier explicites qui ne sont plus mappés
+        foreach ($cotation->getRevenus() as $rpc) {
+            if (!$rpc->getTypeRevenu()) continue;
+            $id = $rpc->getTypeRevenu()->getId();
+            if (
+                !in_array($id, $explicitRevenuTypeIds)
+                && $rpc->getNom() !== TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME
+            ) {
+                $cotation->removeRevenu($rpc);
+                $this->em->remove($rpc);
+            }
+        }
+
+        // 4. Calculer l'écart et appliquer l'ajustement système
+        // L'écart est ce qu'il reste à combler pour atteindre la commission cible
+        $ecart = round($targetRevenuHT - $sumExplicit, 2);
+        $this->createOrUpdateSystemAdjustmentRevenu(
+            $cotation, $entreprise, $invite, $ecart
+        );
     }
 
     /**
@@ -403,6 +532,9 @@ class AvenantActionService
         // Recalcul de l'écart après mise à jour et nettoyage
         $this->balancePrimeTTC($cotation, $excelData, $bordereau->getEntreprise(), $bordereau->getInvite());
 
+        // Recalcul du revenu HT après mise à jour
+        $this->balanceRevenuHT($cotation, $excelData, $bordereau->getEntreprise(), $bordereau->getInvite());
+
         return $avenant;
     }
 
@@ -443,6 +575,48 @@ class AvenantActionService
             $this->em->persist($systemAdjustmentCpp);
         }
         $systemAdjustmentCpp->setMontantFlatExceptionel($ecart);
+    }
+
+    /**
+     * Crée ou met à jour le RevenuPourCourtier d'ajustement système.
+     */
+    private function createOrUpdateSystemAdjustmentRevenu(
+        Cotation  $cotation,
+        Entreprise $entreprise,
+        Invite    $invite,
+        float     $ecart
+    ): void {
+        /** @var TypeRevenu $systemTypeRevenu */
+        $systemTypeRevenu = $this->typeRevenuRepository->findOneBy([
+            'nom'        => TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME,
+            'entreprise' => $entreprise,
+        ]);
+
+        if (!$systemTypeRevenu) {
+            throw new \RuntimeException(
+                "Le TypeRevenu d'ajustement système '"
+                . TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME
+                . "' est introuvable pour cette entreprise."
+            );
+        }
+
+        $systemAdjRpc = $cotation->getRevenus()->filter(
+            fn(RevenuPourCourtier $rpc) =>
+                $rpc->getNom() === TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME
+        )->first();
+
+        if (!$systemAdjRpc) {
+            $systemAdjRpc = new RevenuPourCourtier();
+            $systemAdjRpc->setTypeRevenu($systemTypeRevenu);
+            $systemAdjRpc->setCotation($cotation);
+            $systemAdjRpc->setNom(TypeRevenu::SYSTEM_ADJUSTMENT_REVENU_NAME);
+            $systemAdjRpc->setEntreprise($entreprise);
+            $systemAdjRpc->setInvite($invite);
+            $cotation->addRevenu($systemAdjRpc);
+            $this->em->persist($systemAdjRpc);
+        }
+
+        $systemAdjRpc->setMontantFlatExceptionel($ecart);
     }
 
     private function createDate($input): DateTimeImmutable
