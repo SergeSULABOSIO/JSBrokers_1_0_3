@@ -968,7 +968,7 @@ trait ControllerUtilsTrait
         // Détection des champs numériques (fixes ou dynamiques comme chargements/revenus)
         $isNumericField = str_starts_with($systemField, 'chargement_') ||
             str_starts_with($systemField, 'revenu_') ||
-            in_array($systemField, ['prime_ttc', 'commission_ht_assureur', 'taxe_commission_assureur', 'taux_commission']);
+            in_array($systemField, ['prime_ttc', 'commission_ht_payable_now', 'taxe_commission_payable_now', 'taux_commission']);
 
         if ($isNumericField) {
             if (is_string($value)) {
@@ -1034,7 +1034,7 @@ trait ControllerUtilsTrait
                 // Si c'est un champ numérique, on retourne la somme ; sinon la première valeur texte
                 $isNumericField = str_starts_with($systemField, 'chargement_') ||
                     str_starts_with($systemField, 'revenu_') ||
-                    in_array($systemField, ['prime_ttc', 'commission_ht_assureur', 'taxe_commission_assureur', 'taux_commission']);
+                    in_array($systemField, ['prime_ttc', 'commission_ht_payable_now', 'taxe_commission_payable_now', 'taux_commission']);
                 $rawLineData[$systemField] = $isNumericField ? $sum : $textValue;
             } else {
                 // Comportement standard 1:1
@@ -1078,7 +1078,7 @@ trait ControllerUtilsTrait
 
         // Pourcentages ou montants monétaires (y compris les chargements)
         if ((str_contains(strtolower($key), 'taux') || str_starts_with(strtolower($key), 'chargement') ||
-            in_array(strtolower($key), ['prime_ttc', 'revenu 1', 'commission_ht_assureur', 'taxe_commission_assureur'])) && is_numeric($value)) {
+            in_array(strtolower($key), ['prime_ttc', 'revenu 1', 'commission_ht_payable_now', 'taxe_commission_payable_now'])) && is_numeric($value)) {
             return number_format($value, 2, ',', ' ') . (str_contains(strtolower($key), 'taux') ? ' %' : '');
         }
 

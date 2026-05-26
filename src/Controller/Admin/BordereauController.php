@@ -161,8 +161,8 @@ class BordereauController extends AbstractController
                 'risque' => 'Risque', // Obligatoire
                 'prime_ttc' => 'Prime TTC', // NOUVEAU : Ajout de la prime TTC
                 'nom_client' => 'Assuré', // Obligatoire
-                'commission_ht_assureur' => 'Commission HT Payable', // Obligatoire
-                'taxe_commission_assureur' => 'Taxe sur commission payable', // Obligatoire
+                'commission_ht_payable_now' => 'Commission ht payable now', // Obligatoire
+                'taxe_commission_payable_now' => 'Taxe / Commission ht payable now', // Obligatoire
                 'taux_commission' => 'Taux de commission', // Obligatoire
             ],
             'chargements' => [], // Initialisation
@@ -497,7 +497,7 @@ class BordereauController extends AbstractController
             foreach ($lineData as $key => $val) {
                 if (str_starts_with($key, 'chargement_')) $linePrime += (float)$val;
                 if (str_starts_with($key, 'revenu_')) $lineComHT += (float)$val;
-                if ($key === 'taxe_commission_assureur') $lineTaxe += (float)$val;
+                if ($key === 'taxe_commission_payable_now') $lineTaxe += (float)$val;
             }
             $stats['total_prime_ttc']     += $linePrime;
             $stats['total_commission_ht'] += $lineComHT;
@@ -673,7 +673,7 @@ class BordereauController extends AbstractController
 
             $financialTotals['prime_ttc']    += $targetPrime;
             $financialTotals['commission_ht'] += $sumRevenus;
-            $financialTotals['taxe']          += (float)($rawLineData['taxe_commission_assureur'] ?? 0);
+            $financialTotals['taxe']          += (float)($rawLineData['taxe_commission_payable_now'] ?? 0);
 
             $comparisons = [
                 'prime_totale' => [
@@ -764,8 +764,8 @@ class BordereauController extends AbstractController
                     'system_field_formats' => [
                         'prime_ttc' => 'number',
                         'taux_commission' => 'number',
-                        'commission_ht_assureur' => 'number',
-                        'taxe_commission_assureur' => 'number',
+                        'commission_ht_payable_now' => 'number',
+                        'taxe_commission_payable_now' => 'number',
                     ]
                 ]
             ]);
@@ -1203,8 +1203,8 @@ class BordereauController extends AbstractController
                 'date_operation'            => 'Date d\'opération',
                 'prime_ttc'                 => 'Prime TTC',
                 'nom_client'                => 'Assuré',
-                'commission_ht_assureur'    => 'Commission HT',
-                'taxe_commission_assureur'  => 'Taxe commission',
+                'commission_ht_payable_now' => 'Commission ht payable now',
+                'taxe_commission_payable_now' => 'Taxe / Commission ht payable now',
                 'taux_commission'           => 'Taux commission (%)',
             ],
         ]);
