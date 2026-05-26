@@ -1476,9 +1476,9 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                             </div>
                         </div>
                         <div class="col-md-4 p-2 text-center">
-                            <div class="small text-muted mb-1" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.4px;">Commissions TTC</div>
+                            <div class="small text-muted mb-1" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.4px;">Com. HT Payable Now</div>
                             <div class="fw-bold text-success" style="font-size: 1rem;">
-                                ${formatNumber(stats.total_commission_ttc)}
+                                ${formatNumber(stats.total_com_payable_now)}
                             </div>
                         </div>
                     </div>
@@ -1842,6 +1842,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         let newItems = 0;
         let total_prime_ttc = 0.0;
         let total_commission_ht = 0.0;
+        let total_com_payable_now = 0.0;
         let total_taxe = 0.0;
 
         allItems.forEach(itemElement => {
@@ -1867,13 +1868,23 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             // Extract financial data from the item's data-value
             const bordereauLineInfo = JSON.parse(itemElement.dataset.analysisResultItemBordereauLineInfoValue || '{}');
             total_prime_ttc += parseFloat(bordereauLineInfo.prime_ttc || 0);
-            total_commission_ht += parseFloat(bordereauLineInfo.commission_ht_payable_now || 0);
+
+            // Recalculate HT (sum of revenues starting with 'revenu_')
+            let itemRevenuHT = 0;
+            for (const key in bordereauLineInfo) {
+                if (key.startsWith('revenu_')) {
+                    itemRevenuHT += parseFloat(bordereauLineInfo[key] || 0);
+                }
+            }
+            total_commission_ht += itemRevenuHT;
+
+            total_com_payable_now += parseFloat(bordereauLineInfo.commission_ht_payable_now || 0);
             total_taxe += parseFloat(bordereauLineInfo.taxe_commission_payable_now || 0);
         });
 
         const total_commission_ttc = total_commission_ht + total_taxe;
 
-        const newStats = { total, match, discrepancy, new: newItems, total_prime_ttc, total_commission_ht, total_taxe, total_commission_ttc };
+        const newStats = { total, match, discrepancy, new: newItems, total_prime_ttc, total_commission_ht, total_taxe, total_commission_ttc, total_com_payable_now };
 
         this.analysisStatsValue = newStats; // Update the Stimulus value
         this.renderAnalysisSummary(newStats); // Render the updated summary
