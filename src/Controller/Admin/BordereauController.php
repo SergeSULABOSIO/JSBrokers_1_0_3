@@ -421,28 +421,32 @@ class BordereauController extends AbstractController
                         $this->loadCalculatedValues(null, $avenant);
                 $cotation = $avenant->getCotation();
 
-                $targetPrime = $this->avenantActionService->calculateTargetPrimeTTC($rawLineData, $cotation);
+                $targetPrime    = $this->avenantActionService->calculateTargetPrimeTTC($rawLineData, $cotation);
+                $targetRevenuHT = $this->avenantActionService->calculateTargetRevenuHT($rawLineData, $cotation);
                 
                         $financialFieldsConfig = [
-                            'prime_totale'  => [
+                            'prime_totale' => [
                                 'label' => 'Prime TTC Totale',
-                        'excel' => round($targetPrime, 2),
-                                'db'    => round((float)($avenant->primeTotale ?? 0), 2)
-                    ]
-                ];
+                                'excel' => round($targetPrime, 2),
+                                'db'    => round((float)($avenant->primeTotale ?? 0), 2),
+                            ],
+                            'revenu_ht' => [
+                                'label' => 'Revenu HT (Commission)',
+                                'excel' => round($targetRevenuHT, 2),
+                                'db'    => round((float)($avenant->montantHT ?? 0), 2),
+                            ],
+                        ];
 
                         foreach ($financialFieldsConfig as $field => $config) {
                             $gap = round($config['excel'] - $config['db'], 2);
-                            if ($gap !== 0.0) {
-                                $financialGaps[$field] = [
-                                    'label'       => $config['label'],
-                                    'excel_value' => $config['excel'],
-                                    'db_value'    => $config['db'],
-                                    'gap'         => $gap,
-                                    'gap_class'   => $gap > 0 ? 'text-success' : ($gap < 0 ? 'text-danger' : 'text-muted'),
-                                    'gap_sign'    => $gap > 0 ? '+' : '',
-                                ];
-                            }
+                            $financialGaps[$field] = [
+                                'label'       => $config['label'],
+                                'excel_value' => $config['excel'],
+                                'db_value'    => $config['db'],
+                                'gap'         => $gap,
+                                'gap_class'   => $gap > 0 ? 'text-success' : ($gap < 0 ? 'text-danger' : 'text-muted'),
+                                'gap_sign'    => $gap > 0 ? '+' : '',
+                            ];
                         }
                     }
                     break;
@@ -667,14 +671,14 @@ class BordereauController extends AbstractController
             // ÉVALUATION DES ÉCARTS STRUCTURELS
             $targetPrime = $this->avenantActionService->calculateTargetPrimeTTC($rawLineData, $avenant->getCotation());
 
-            // On met à jour les totaux de session pour les stats finales
-            $sumRevenus = 0.0;
-            foreach ($rawLineData as $key => $val) {
-                if (str_starts_with($key, 'revenu_')) $sumRevenus += (float)$val;
-            }
+            $targetRevenuHT = $this->avenantActionService->calculateTargetRevenuHT(
+                $rawLineData,
+                $avenant->getCotation()
+            );
 
+            // On met à jour les totaux de session pour les stats finales
             $financialTotals['prime_ttc']    += $targetPrime;
-            $financialTotals['commission_ht'] += $sumRevenus;
+            $financialTotals['commission_ht'] += $targetRevenuHT;
             $financialTotals['taxe']          += (float)($rawLineData['taxe_commission_payable_now'] ?? 0);
             $financialTotals['com_payable_now'] += (float)($rawLineData['commission_ht_payable_now'] ?? 0);
 
@@ -683,6 +687,11 @@ class BordereauController extends AbstractController
                     'excel_total' => round($targetPrime, 2),
                     'db_total'    => round((float)($avenant->primeTotale ?? 0), 2),
                     'label'       => 'Prime TTC Totale',
+                ],
+                'revenu_ht' => [
+                    'excel_total' => round($targetRevenuHT, 2),
+                    'db_total'    => round((float)($avenant->montantHT ?? 0), 2),
+                    'label'       => 'Revenu HT (Commission)',
                 ]
             ];
 
