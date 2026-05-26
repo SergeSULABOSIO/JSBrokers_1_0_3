@@ -484,6 +484,7 @@ class BordereauController extends AbstractController
             'total_prime_ttc'      => 0.0,
             'total_commission_ht'  => 0.0,
             'total_taxe'           => 0.0,
+            'total_com_payable_now' => 0.0,
             'total_commission_ttc' => 0.0,
         ];
 
@@ -498,6 +499,7 @@ class BordereauController extends AbstractController
                 if (str_starts_with($key, 'chargement_')) $linePrime += (float)$val;
                 if (str_starts_with($key, 'revenu_')) $lineComHT += (float)$val;
                 if ($key === 'taxe_commission_payable_now') $lineTaxe += (float)$val;
+                if ($key === 'commission_ht_payable_now') $stats['total_com_payable_now'] += (float)$val;
             }
             $stats['total_prime_ttc']     += $linePrime;
             $stats['total_commission_ht'] += $lineComHT;
@@ -603,7 +605,7 @@ class BordereauController extends AbstractController
         $mappedColumns = $sessionData['mappedColumns'];
         $totalRows     = $sessionData['totalRows'];
         // Initialiser ou récupérer les totaux financiers cumulés
-        $financialTotals = $sessionData['financialTotals'] ?? ['prime_ttc' => 0.0, 'commission_ht' => 0.0, 'taxe' => 0.0];
+        $financialTotals = $sessionData['financialTotals'] ?? ['prime_ttc' => 0.0, 'commission_ht' => 0.0, 'taxe' => 0.0, 'com_payable_now' => 0.0];
 
         // Ensure 'reference_police' is mapped and available
         if (!isset($mappedColumns['reference_police'])) {
@@ -674,6 +676,7 @@ class BordereauController extends AbstractController
             $financialTotals['prime_ttc']    += $targetPrime;
             $financialTotals['commission_ht'] += $sumRevenus;
             $financialTotals['taxe']          += (float)($rawLineData['taxe_commission_payable_now'] ?? 0);
+            $financialTotals['com_payable_now'] += (float)($rawLineData['commission_ht_payable_now'] ?? 0);
 
             $comparisons = [
                 'prime_totale' => [
@@ -787,6 +790,7 @@ class BordereauController extends AbstractController
                 'total_prime_ttc'      => round($financialTotals['prime_ttc'], 2),
                 'total_commission_ht'  => round($financialTotals['commission_ht'], 2),
                 'total_taxe'           => round($financialTotals['taxe'], 2),
+                'total_com_payable_now' => round($financialTotals['com_payable_now'], 2),
             ];
             $stats['total_commission_ttc'] = round($stats['total_commission_ht'] + $stats['total_taxe'], 2);
 
