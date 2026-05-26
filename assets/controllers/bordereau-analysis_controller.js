@@ -76,8 +76,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             'date_operation', // Nouveau champ obligatoire
             'risque', // Nouveau champ obligatoire
             'nom_client',
-            'commission_ht_assureur',
-            'taxe_commission_assureur',
+            'commission_ht_payable_now',
+            'taxe_commission_payable_now',
             'taux_commission' // Nouveau champ obligatoire
             // NOUVEAU : Ajout de champs obligatoires pour l'étape 3
         ]);
@@ -1854,8 +1854,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             // Extract financial data from the item's data-value
             const bordereauLineInfo = JSON.parse(itemElement.dataset.analysisResultItemBordereauLineInfoValue || '{}');
             total_prime_ttc += parseFloat(bordereauLineInfo.prime_ttc || 0);
-            total_commission_ht += parseFloat(bordereauLineInfo.commission_ht_assureur || 0);
-            total_taxe += parseFloat(bordereauLineInfo.taxe_commission_assureur || 0);
+            total_commission_ht += parseFloat(bordereauLineInfo.commission_ht_payable_now || 0);
+            total_taxe += parseFloat(bordereauLineInfo.taxe_commission_payable_now || 0);
         });
 
         const total_commission_ttc = total_commission_ht + total_taxe;
