@@ -1177,35 +1177,24 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
     _handleAnalysisCompleted(payload) {
         console.log("[BordereauAnalysis] _handleAnalysisCompleted() - Analyse terminée.", payload);
 
-        // On stocke les stats dans une variable locale AVANT toute mise à jour
-        // de Stimulus value, car l'affectation de analysisStatsValue n'est pas
-        // garantie synchrone au moment où showStep(3) lira this.analysisStatsValue.
-        const finalStats = payload.stats || {};
-
+        // 1. Mise à jour des résultats dans les valeurs Stimulus
         this.analysisResultsValue = payload.analysisResults || [];
         this.analysisResultsHtmlValue = payload.analysisResultsHtml || [];
 
-        // CORRECTION : On NE met PAS à jour analysisStatsValue avant showStep(3).
-        // showStep(3) appelle renderAnalysisSummary(this.analysisStatsValue) en interne,
-        // on le laisse faire avec la valeur existante (même vide), puis on réécrit
-        // proprement avec les vraies stats via renderAnalysisSummary(finalStats).
-        // Cela évite le double rendu et garantit que les totaux s'affichent correctement.
-
-        // Réinitialiser l'état du bouton "Lancer l'analyse" AVANT showStep
-        // pour qu'il soit propre si l'utilisateur revient à l'étape 2
+        // 2. Réinitialisation visuelle du bouton de soumission
         if (this.hasSubmitButtonTarget) {
             this.submitButtonTarget.disabled = false;
             this.submitButtonTarget.textContent = "Lancer l'analyse";
         }
 
-
-        // Passer à l'étape 3 — showStep gère la visibilité de tous les boutons
+        // 3. Passage à l'étape 3 (cela déclenche le rendu du HTML via showStep)
         this.showStep(3);
 
-        // CORRECTION : Mise à jour de la valeur Stimulus ET rendu du récapitulatif
-        // APRÈS showStep(3), avec les stats finales réelles issues du backend.
-        this.analysisStatsValue = finalStats;
-        this.renderAnalysisSummary(finalStats);
+        // 4. MISSION : Correction de l'incohérence "0,00".
+        // On force le recalcul et le rendu des statistiques directement à partir du DOM
+        // qui vient d'être peuplé. C'est la méthode la plus fiable pour garantir
+        // l'exactitude des totaux financiers sans nécessiter de rafraîchissement.
+        this._recalculateAndRenderStatsFromDom();
 
         // Feedback de succès
         this._showToast('success', 'Analyse terminée avec succès.', true);
