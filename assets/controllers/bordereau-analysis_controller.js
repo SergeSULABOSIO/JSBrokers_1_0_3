@@ -89,7 +89,6 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         this.addSystemOptions();
 
         this.isRestoring = false;
-        this.isConnecting = true; // Nouveau drapeau: true pendant la connexion initiale
         this.currentStep = 1;
         this._initialToastShown = false; // Nouveau drapeau pour le toast initial
         this.isBulkProcessingValue = false; // Initialiser le drapeau de traitement en lot
@@ -113,7 +112,6 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this.afterConnect();
         }
         // Le drapeau est remis à false une fois la logique de connect() terminée
-        this.isConnecting = false; // Le drapeau est remis à false une fois la logique de connect() terminée
         console.log("[BordereauAnalysis] 6. connect() - Fin de la connexion.");
     }
 
@@ -158,7 +156,6 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         this.updateMappingStatusFeedback();
         this.updateSubmitButtonState();
         this.updateSelectOptionsVisuals();
-        this._showWelcomeToast(); // Afficher le toast de bienvenue après la connexion initiale
     }
 
     /**
@@ -266,10 +263,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         // 2. Restaurer les résultats de l'analyse si l'étape est 3 (Data)
         if (this.currentAnalysisStepValue === 3 && this.analysisResultsHtmlValue) {
-            console.log("2. Résultats d'analyse HTML restaurés (en mémoire):", this.analysisResultsHtmlValue);
-            // CORRECTION : Forcer le rendu des résultats qui sont déjà en mémoire.
-            this.renderAnalysisResults(this.analysisResultsHtmlValue);
-            console.log("-> Le rendu des résultats a été déclenché.");
+            console.log("2. Résultats d'analyse HTML en mémoire, rendu délégué à showStep(3).");
         } else {
             console.log("2. Résultats d'analyse non restaurés (pas à l'étape 3 ou données vides).");
         }
@@ -293,26 +287,29 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                     const selectsInActiveContainer = activeMappingContainer.querySelectorAll('select[data-column-letter]');
                     selectsInActiveContainer.forEach(select => {
                         const columnLetter = select.dataset.columnLetter;
-                    const mappedSystemField = Object.keys(this.mappedColumnsValue).find(key => {
-                        const stored = this.mappedColumnsValue[key];
-                        // Compatibilité ascendante : supporte l'ancienne structure string ET la nouvelle tableau
-                        return Array.isArray(stored)
-                            ? stored.includes(columnLetter)
-                            : stored === columnLetter;
-                    });
+                        const mappedSystemField = Object.keys(this.mappedColumnsValue).find(key => {
+                            const stored = this.mappedColumnsValue[key];
+                            // Compatibilité ascendante : supporte l'ancienne structure string ET la nouvelle tableau
+                            return Array.isArray(stored)
+                                ? stored.includes(columnLetter)
+                                : stored === columnLetter;
+                        });
                         if (mappedSystemField) {
                             select.value = mappedSystemField;
                             console.log(`   - Colonne '${columnLetter}' -> Mappée sur '${mappedSystemField}'.`);
                             this.performValidation(select); // Valider la colonne restaurée pour mettre à jour l'état de validation interne
-                            this.updateSelectOptionsVisuals(); // Ensure visuals are updated after validation
                         }
                     });
                 } else {
                     console.warn("Aucun conteneur de mappage actif trouvé pour restaurer les selects.");
                 }
-                this.finalizeRestoration();
-                this.updateSelectOptionsVisuals(); // Appel final pour garantir la cohérence visuelle
-                console.groupEnd();
+
+                // Deuxième frame : finaliser une fois les valeurs effectives dans le DOM
+                requestAnimationFrame(() => {
+                    this.updateSelectOptionsVisuals();
+                    this.finalizeRestoration();
+                    console.groupEnd();
+                });
             });
         } else {
             requestAnimationFrame(() => this.finalizeRestoration()); // Toujours utiliser requestAnimationFrame pour la cohérence
@@ -595,7 +592,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * Affiche l'étape 2 (mappage) et sélectionne le bon tableau de mappage
      * en fonction de la feuille choisie à l'étape 1.
      */
-    showMappingStep(event) {
+    async showMappingStep(event) {
         if (event) event.preventDefault(); // Empêche le comportement par défaut du bouton
         const selectedSheetInput = this.sheetSelectionTargets.find(radio => radio.checked);
         if (!selectedSheetInput) {
@@ -603,7 +600,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             return;
         }
         const selectedSheetName = selectedSheetInput.value;
-        this.showStep(2, selectedSheetName); // showStep appellera _saveAnalysisStateToBordereau()
+        await this.showStep(2, selectedSheetName); // showStep appellera _saveAnalysisStateToBordereau()
     }
 
     /**
@@ -648,9 +645,6 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         if (this.hasBulkCreateItemTarget) this.bulkCreateItemTarget.classList.add('d-none');
         if (this.hasBulkUpdateItemTarget) this.bulkUpdateItemTarget.classList.add('d-none');
         if (this.hasBulkDividerTarget) this.bulkDividerTarget.classList.add('d-none');
-
-        this.step2Target.classList.add('d-none');
-        this.step3Target.classList.add('d-none');
 
         // --- 3. Fermer le toast existant lors des transitions d'étape ---
         // sauf à l'étape 2 où le feedback de mappage doit rester visible.
@@ -729,8 +723,9 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      */
     _showMappingUI(sheetName = null) {
         console.log(`[BordereauAnalysis] _showMappingUI() - Affichage de l'UI de mappage pour la feuille: ${sheetName}`);
-        this.mappingContainerTargets.forEach(container => {
-            const isTargetSheet = sheetName ? container.dataset.sheetName === sheetName : container.dataset.isFirst === 'true';
+        const containers = this.mappingContainerTargets;
+        containers.forEach((container, index) => {
+            const isTargetSheet = sheetName ? container.dataset.sheetName === sheetName : index === 0;
             container.style.display = isTargetSheet ? 'block' : 'none';
         });
 
