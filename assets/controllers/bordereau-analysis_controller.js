@@ -1016,7 +1016,6 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
     // CORRECTION 2B : Feedback visuel IMMÉDIAT avant tout traitement asynchrone
     // L'utilisateur voit instantanément que son clic a été pris en compte.
     this.toggleProgressBar(true);
-    this._showToast('warning', 'Sauvegarde du mappage en cours...');
     this.submitButtonTarget.disabled = true;
     this.submitButtonTarget.textContent = "Analyse en cours...";
 
@@ -1024,20 +1023,26 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         try {
             // CORRECTION : Avant de lancer l'analyse, on force une sauvegarde complète 
-            // pour synchroniser le mappage de l'UI vers la base de données.
-            // Le backend lit la configuration depuis l'entité, c'est donc indispensable.
-            await this._saveAnalysisStateToBordereau('full');
+            // Si une sauvegarde de mappage est en attente (debounce #1 non écoulé),
+            // on l'exécute immédiatement et on attend sa complétion avant de continuer.
+            // Dans le cas nominal (debounce déjà écoulé), aucun appel réseau superflu.
+            if (this._pendingMappingSaveTimeout) {
+                clearTimeout(this._pendingMappingSaveTimeout);
+                this._pendingMappingSaveTimeout = null;
+                try {
+                    await this._saveMappingOnly();
+                } catch (error) {
+                    this.toggleProgressBar(false);
+                    this.submitButtonTarget.disabled = false;
+                    this.submitButtonTarget.textContent = "Lancer l'analyse";
+                    return;
+                }
+            }
         } catch (error) {
-            // CORRECTION 2B : En cas d'échec de la sauvegarde, on rétablit l'UI
-            this.toggleProgressBar(false);
-            this.submitButtonTarget.disabled = false;
-            this.submitButtonTarget.textContent = "Lancer l'analyse";
-            return;
+            // This catch block is for _saveMappingOnly() errors.
+            // The UI is already reset by the inner catch block.
         }
-
-        // Mise à jour du toast après la sauvegarde réussie
         this._showToast('warning', 'Initialisation de l\'analyse...');
-
         // Réinitialiser les résultats accumulés
         this._accumulatedResultsHtml = [];
         this._accumulatedResultsStore = [];
