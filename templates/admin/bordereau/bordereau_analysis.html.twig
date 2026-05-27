@@ -131,6 +131,7 @@
                         <li data-bordereau-analysis-target="bulkDivider" class="d-none"><hr class="dropdown-divider"></li>
                         <li data-bordereau-analysis-target="bulkCreateItem" class="d-none"><button class="dropdown-item d-inline-flex align-items-center gap-2" data-action="click->bordereau-analysis#bulkCreateAll"><twig:UX:Icon name="{{ resolve_icon_name('action:add') }}" width="16px" height="16px" /><span>Créer tous les avenants</span></button></li>
                         <li data-bordereau-analysis-target="bulkUpdateItem" class="d-none"><button class="dropdown-item d-inline-flex align-items-center gap-2" data-action="click->bordereau-analysis#bulkUpdateAll"><twig:UX:Icon name="{{ resolve_icon_name('action:edit') }}" width="16px" height="16px" /><span>Mettre à jour tous les avenants</span></button></li>
+                        <li data-bordereau-analysis-target="reanalyzeItem" class="d-none"><button class="dropdown-item d-inline-flex align-items-center gap-2" data-action="click->bordereau-analysis#submitAnalysis"><twig:UX:Icon name="lucide:refresh-cw" width="16px" height="16px" /><span>Relancer l'analyse</span></button></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><button class="dropdown-item d-inline-flex align-items-center gap-2" onclick="window.close()"><twig:UX:Icon name="lucide:x-circle" width="16px" height="16px" /><span>Fermer</span></button></li>
                     </ul>
