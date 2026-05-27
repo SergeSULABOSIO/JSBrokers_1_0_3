@@ -2024,6 +2024,7 @@ textarea:hover,
     gap: 0.75rem;
     min-width: 0; /* Permet les troncatures */
     max-width: 420px; /* Ne pas empiéter sur le bloc actions droite */
+    text-align: left;
 }
 
 .analysis-toolbar-ref {
