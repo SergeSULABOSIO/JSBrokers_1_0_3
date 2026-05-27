@@ -2014,3 +2014,79 @@ textarea:hover,
     from { transform: translateY(20px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
 }
+
+/* ================================================================== */
+/* SECTION : BARRE D'ANALYSE — BLOC TITRE BIBLIOGRAPHIQUE             */
+/* ================================================================== */
+.analysis-toolbar-title-block {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    min-width: 0; /* Permet les troncatures */
+    max-width: 420px; /* Ne pas empiéter sur le bloc actions droite */
+}
+
+.analysis-toolbar-ref {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.3px;
+    display: flex;
+    align-items: center;
+    line-height: 1.2; /* Adjust line height for better vertical alignment with icon */
+}
+
+.analysis-toolbar-ref .ux-icon { /* Target the SVG icon inside */
+    color: rgba(255,255,255,0.7);
+}
+
+.analysis-toolbar-name {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.65);
+    font-style: italic;
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2; /* Adjust line height */
+}
+
+.analysis-toolbar-meta {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.55);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    line-height: 1.2; /* Adjust line height */
+}
+
+.analysis-toolbar-meta .ux-icon { /* Target the SVG icon inside */
+    color: rgba(255,255,255,0.55);
+}
+
+.analysis-toolbar-badges {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    line-height: 1; /* Adjust line height */
+}
+
+.analysis-toolbar-badge-step {
+    background-color: rgba(255,255,255,0.15);
+    color: #ffffff;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    padding: 0.2em 0.7em;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.analysis-toolbar-badge-status {
+    border-radius: 20px;
+    font-size: 0.65rem;
+    padding: 0.2em 0.7em;
+    font-weight: 600;
+    white-space: nowrap;
+}
