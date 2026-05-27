@@ -2091,3 +2091,91 @@ textarea:hover,
     font-weight: 600;
     white-space: nowrap;
 }
+
+/* ================================================================== */
+/* SECTION 9: MOTEUR DE RECHERCHE — RÉSULTATS D'ANALYSE (ÉTAPE 3)     */
+/* ================================================================== */
+
+/* Conteneur flex du bloc recherche dans la toolbar sombre */
+.analysis-search-block {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+/* Groupe input + bouton */
+.analysis-search-input-group {
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: border-color 0.2s ease-in-out;
+}
+
+.analysis-search-input-group:focus-within {
+    border-color: #0047AB; /* Cobalt au focus */
+    box-shadow: 0 0 0 2px rgba(0, 71, 171, 0.35);
+}
+
+/* Champ de saisie sur fond sombre */
+.analysis-search-input {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    border: none !important;
+    color: #ffffff !important;
+    font-size: 0.82rem !important;
+    font-weight: normal !important; /* Surcharge le bold global de app.css */
+    padding: 0.35rem 0.65rem;
+    border-radius: 0 !important;
+}
+
+.analysis-search-input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+    font-style: italic;
+    font-weight: normal;
+}
+
+.analysis-search-input:focus {
+    background-color: rgba(255, 255, 255, 0.14) !important;
+    box-shadow: none !important;
+    color: #ffffff !important;
+}
+
+/* Supprime la croix native du navigateur sur input[type=search] si besoin */
+.analysis-search-input::-webkit-search-cancel-button {
+    filter: invert(1); /* La rend blanche sur fond sombre */
+    cursor: pointer;
+}
+
+/* Bouton loupe */
+.analysis-search-btn {
+    background-color: #0047AB;
+    border: none;
+    color: #ffffff;
+    padding: 0.35rem 0.65rem;
+    border-radius: 0 !important;
+    transition: background-color 0.2s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.analysis-search-btn:hover {
+    background-color: #003380; /* cobalt-dark */
+    color: #ffffff;
+}
+
+.analysis-search-btn:focus {
+    box-shadow: none;
+    outline: none;
+}
+
+/* Compteur de résultats sous le champ */
+.analysis-search-count {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-align: right;
+    padding-right: 2px;
+    display: block;
+    min-height: 1rem; /* Évite le saut de layout quand le texte apparaît */
+    transition: color 0.2s ease-in-out;
+}

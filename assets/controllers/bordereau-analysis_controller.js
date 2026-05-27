@@ -14,7 +14,10 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         "toolbarTitleIconPrepare", "toolbarTitleIconSuccess",
         "reanalyzeItem",
         "toolbarBadgeStep",
-        "toolbarBadgeStatus"
+        "toolbarBadgeStatus",
+        "searchBlock",       // conteneur global de la barre de recherche (affiché uniquement étape 3)
+        "searchInput",       // <input type="search"> de saisie du mot-clé
+        "searchResultCount"  // span affichant "X résultat(s) sur Y"
     ];
 
     static values = {
@@ -96,6 +99,11 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         this._initialToastShown = false; // Nouveau drapeau pour le toast initial
         this.isBulkProcessingValue = false; // Initialiser le drapeau de traitement en lot
         this.isSaving = false; // NOUVEAU : Le "feu de signalisation" pour la sauvegarde.
+
+        // État du moteur de recherche (étape 3 uniquement)
+        this._currentSearchTerm = '';   // dernier terme appliqué
+        this._totalItemCount    = 0;    // nb total d'items rendus (référence pour le compteur)
+
         this._pendingSaveTimeout = null; // Identifiant pour le debounce des sauvegardes
         // Timeout de debounce dédié à la sauvegarde automatique du mappage
         this._pendingMappingSaveTimeout = null;
@@ -690,6 +698,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this.validateButtonTarget.classList.add('d-none');
         }
         if (this.hasExportPdfItemTarget) this.exportPdfItemTarget.classList.add('d-none');
+        if (this.hasSearchBlockTarget)   this.searchBlockTarget.classList.add('d-none');
         if (this.hasBulkCreateItemTarget) this.bulkCreateItemTarget.classList.add('d-none');
         if (this.hasBulkUpdateItemTarget) this.bulkUpdateItemTarget.classList.add('d-none');
         if (this.hasBulkDividerTarget) this.bulkDividerTarget.classList.add('d-none');
@@ -748,6 +757,12 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             if (this.hasExportPdfItemTarget) {
                 this.exportPdfItemTarget.classList.remove('d-none');
             }
+            
+            // Afficher le bloc de recherche et réinitialiser le filtre
+            if (this.hasSearchBlockTarget) {
+                this.searchBlockTarget.classList.remove('d-none');
+            }
+            this._resetSearch(); // réinitialise le champ et remet tous les items visibles
             
             if (this.hasReanalyzeItemTarget) {
                 this.reanalyzeItemTarget.classList.remove('d-none');
@@ -1209,6 +1224,11 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         // On joint simplement les morceaux de HTML et on les injecte.
         this.analysisResultsListTarget.innerHTML = finalResultsHtml.join('');
+
+        // Ré-appliquer le filtre actif si un terme de recherche est en cours
+        if (this._currentSearchTerm) {
+            this._applySearch(this._currentSearchTerm);
+        }
     }
     /**
      * Gère le clic sur un bouton d'action de l'étape 3.
@@ -2202,6 +2222,108 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this._lastToastType = type;
         } catch (e) {
             console.warn("[BordereauAnalysis] _showToast() - Erreur Bootstrap:", e);
+        }
+    }
+
+    /**
+     * Déclencheur de la recherche.
+     * Appelé au clic sur le bouton de recherche OU à l'appui sur Enter dans le champ.
+     * @param {Event} event
+     */
+    triggerSearch(event) {
+        // Autoriser le déclenchement via Enter ou clic bouton
+        if (event.type === 'keydown' && event.key !== 'Enter') return;
+        event.preventDefault();
+        if (!this.hasSearchInputTarget) return;
+        this._currentSearchTerm = this.searchInputTarget.value.trim().toLowerCase();
+        this._applySearch(this._currentSearchTerm);
+    }
+
+    /**
+     * Applique le filtre sur les items déjà présents dans le DOM.
+     * Masque / affiche les <li> selon que les champs cibles contiennent le terme.
+     * Ne touche pas aux données Stimulus ni à la logique métier des boutons d'action.
+     * @param {string} term - Terme de recherche normalisé (toLowerCase, trim)
+     */
+    _applySearch(term) {
+        if (!this.hasAnalysisResultsListTarget) return;
+
+        const allItems = this.analysisResultsListTarget.querySelectorAll(
+            '[data-controller="analysis-result-item"]'
+        );
+
+        this._totalItemCount = allItems.length;
+        let visibleCount = 0;
+
+        allItems.forEach(itemEl => {
+            // Lire les champs indexés depuis le data-value déjà en place
+            const lineInfo = JSON.parse(
+                itemEl.dataset.analysisResultItemBordereauLineInfoValue || '{}'
+            );
+
+            const referencePolice = (lineInfo.reference_police || '').toLowerCase();
+            const nomClient       = (lineInfo.nom_client       || '').toLowerCase();
+            const risque          = (lineInfo.risque            || '').toLowerCase();
+
+            const matches = !term
+                || referencePolice.includes(term)
+                || nomClient.includes(term)
+                || risque.includes(term);
+
+            // Afficher / masquer sans toucher à la structure ni aux gestionnaires d'événements
+            itemEl.classList.toggle('d-none', !matches);
+            if (matches) visibleCount++;
+        });
+
+        this._updateSearchResultCount(visibleCount, this._totalItemCount, term);
+    }
+
+    /**
+     * Met à jour l'indicateur de résultats de recherche.
+     * @param {number} visible  - Nb d'items actuellement affichés
+     * @param {number} total    - Nb total d'items dans la liste
+     * @param {string} term     - Terme recherché (vide = pas de filtre actif)
+     */
+    _updateSearchResultCount(visible, total, term) {
+        if (!this.hasSearchResultCountTarget) return;
+
+        if (!term) {
+            // Pas de filtre actif : on cache le compteur
+            this.searchResultCountTarget.textContent = '';
+            this.searchResultCountTarget.classList.add('d-none');
+            return;
+        }
+
+        this.searchResultCountTarget.classList.remove('d-none');
+
+        if (visible === 0) {
+            this.searchResultCountTarget.textContent = 'Aucun résultat';
+            this.searchResultCountTarget.style.color = '#ff6b6b'; // toolbar-feedback-error
+        } else {
+            this.searchResultCountTarget.textContent =
+                `${visible} / ${total} résultat${visible > 1 ? 's' : ''}`;
+            this.searchResultCountTarget.style.color = '#ced4da'; // toolbar-feedback-info
+        }
+    }
+
+    /**
+     * Réinitialise le champ de recherche et rend tous les items visibles.
+     * Appelé à chaque entrée à l'étape 3 (showStep) et au clic sur la croix de reset.
+     */
+    _resetSearch() {
+        this._currentSearchTerm = '';
+        if (this.hasSearchInputTarget) {
+            this.searchInputTarget.value = '';
+        }
+        if (this.hasSearchResultCountTarget) {
+            this.searchResultCountTarget.textContent = '';
+            this.searchResultCountTarget.classList.add('d-none');
+        }
+        // Rendre tous les items visibles (lever d-none éventuellement posé par un filtre précédent)
+        if (this.hasAnalysisResultsListTarget) {
+            this.analysisResultsListTarget
+                .querySelectorAll('[data-controller="analysis-result-item"]')
+                .forEach(item => item.classList.remove('d-none'));
         }
     }
 }
