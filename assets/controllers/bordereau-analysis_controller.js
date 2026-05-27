@@ -12,7 +12,9 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         "mappingSelect", "analysisResult", "submitButton", "columnNameText", "step1", "step3", "analysisResultsList", "progressBar", "progressBarContainer", "analysisSummary", "validateButton",
         "backToMappingButton", "actionsBlock", "optionsMenu", "exportPdfItem", "bulkCreateItem", "bulkUpdateItem", "bulkDivider",
         "toolbarTitleIconPrepare", "toolbarTitleIconSuccess",
-        "reanalyzeItem"
+        "reanalyzeItem",
+        "toolbarBadgeStep",
+        "toolbarBadgeStatus"
     ];
 
     static values = {
@@ -114,6 +116,48 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         }
         // Le drapeau est remis à false une fois la logique de connect() terminée
         console.log("[BordereauAnalysis] 6. connect() - Fin de la connexion.");
+    }
+
+    /**
+     * Met à jour les badges bibliographiques de la barre d'outils
+     * en fonction de l'étape courante de l'analyse.
+     * Appelé à chaque transition de showStep() et après validateBordereau().
+     * @param {number} step - Le numéro de l'étape courante (1, 2, 3, ou 99 pour validé - constante STATUT_ANALYSE_TERMINEE)
+     */
+    _updateToolbarMeta(step) {
+        if (!this.hasToolbarBadgeStepTarget || !this.hasToolbarBadgeStatusTarget) return;
+
+        // --- Calcul du texte et des couleurs selon l'étape ---
+        const stepConfig = {
+            1: { stepText: 'Étape 1 · Sélection' },
+            2: { stepText: 'Étape 2 · Mappage' },
+            3: { stepText: 'Étape 3 · Résultats' },
+        };
+
+        // Valeur PHP Bordereau::STATUT_ANALYSE_TERMINEE = 99
+        // On détecte ce cas si step est supérieur à 3
+        const isValidated = step > 3;
+
+        const statusConfig = {
+            1: { bg: 'rgba(108,117,125,0.4)', color: '#ffffff',  text: 'En attente' },
+            2: { bg: 'rgba(255,193,7,0.3)',   color: '#ffc107',  text: 'En cours'   },
+            3: { bg: 'rgba(25,135,84,0.3)',   color: '#20c997',  text: 'Analysé'    },
+        };
+        const validatedStatus = { bg: 'rgba(0,71,171,0.4)', color: '#90b8ff', text: 'Validé' };
+
+        // Résolution des valeurs à appliquer
+        const resolvedStep   = isValidated ? 3 : (step || 1);
+        const stepCfg        = stepConfig[resolvedStep]  || stepConfig[1];
+        const statusCfg      = isValidated ? validatedStatus : (statusConfig[resolvedStep] || statusConfig[1]);
+
+        // --- Mise à jour du DOM ---
+        this.toolbarBadgeStepTarget.textContent = isValidated ? 'Analyse terminée' : stepCfg.stepText;
+
+        this.toolbarBadgeStatusTarget.textContent             = statusCfg.text;
+        this.toolbarBadgeStatusTarget.style.backgroundColor   = statusCfg.bg;
+        this.toolbarBadgeStatusTarget.style.color             = statusCfg.color;
+
+        console.log(`[BordereauAnalysis] _updateToolbarMeta() — Étape ${step} → badge "${this.toolbarBadgeStepTarget.textContent}" / statut "${statusCfg.text}"`);
     }
 
     disconnect() {
@@ -621,6 +665,9 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         )
             ? parseInt(stepNumber.currentTarget.dataset.stepNumber)
             : stepNumber;
+
+        // Mise à jour réactive des badges bibliographiques de la toolbar
+        this._updateToolbarMeta(this.currentStep);
 
         console.log(
             `[BordereauAnalysis] showStep() - Transition étape ${previousStep} → ${this.currentStep}.`,
@@ -1348,6 +1395,10 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this._showToast('success', '✓ Bordereau validé avec succès !', true);
             this.validateButtonTarget.textContent = '✓ Bordereau validé';
             this.validateButtonTarget.disabled = true;
+
+            // Bordereau::STATUT_ANALYSE_TERMINEE = 99
+            // On passe 99 pour signaler l'état "Validé" aux badges de la toolbar
+            this._updateToolbarMeta(99);
 
         } catch (error) {
             console.error('[BordereauAnalysis] validateBordereau() - Erreur:', error);

@@ -90,7 +90,8 @@
                         {% else %} {# Assuming currentAnalysisStep is Bordereau::STATUT_ANALYSE_TERMINEE #}
                             {% set stepText = 'Analyse terminée' %}
                         {% endif %}
-                        <span class="analysis-toolbar-badge-step me-2">{{ stepText }}</span>
+                        <span class="analysis-toolbar-badge-step me-2"
+                              data-bordereau-analysis-target="toolbarBadgeStep">{{ stepText }}</span>
 
                         {% set statusBgColor = '' %}
                         {% set statusTextColor = '' %}
@@ -113,7 +114,9 @@
                             {% set statusTextColor = '#90b8ff' %}
                             {% set statusText = 'Validé' %}
                         {% endif %}
-                        <span class="analysis-toolbar-badge-status" style="background-color: {{ statusBgColor }}; color: {{ statusTextColor }};">{{ statusText }}</span>
+                        <span class="analysis-toolbar-badge-status"
+                              data-bordereau-analysis-target="toolbarBadgeStatus"
+                              style="background-color: {{ statusBgColor }}; color: {{ statusTextColor }};">{{ statusText }}</span>
                     </div>
                 </div>
             </div>
