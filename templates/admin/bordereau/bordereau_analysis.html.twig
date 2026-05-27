@@ -121,6 +121,38 @@
                 </div>
             </div>
 
+            {# ── BLOC RECHERCHE — visible uniquement à l'étape 3 ── #}
+            <div class="analysis-search-block d-none mx-3 flex-grow-1"
+                 data-bordereau-analysis-target="searchBlock"
+                 style="max-width: 380px;">
+
+                <div class="input-group input-group-sm analysis-search-input-group">
+                    {# Champ de saisie #}
+                    <input type="search"
+                           class="form-control analysis-search-input"
+                           placeholder="Police, assuré, risque…"
+                           aria-label="Rechercher dans les résultats"
+                           data-bordereau-analysis-target="searchInput"
+                           data-action="keydown->bordereau-analysis#triggerSearch" />
+
+                    {# Bouton déclencheur #}
+                    <button class="btn analysis-search-btn"
+                            type="button"
+                            data-action="click->bordereau-analysis#triggerSearch"
+                            aria-label="Lancer la recherche">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15"
+                             fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.099zm-5.242 1.156a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11"/>
+                        </svg>
+                    </button>
+                </div>
+
+                {# Compteur de résultats (caché tant qu'aucune recherche n'est active) #}
+                <span class="analysis-search-count d-none mt-1"
+                      data-bordereau-analysis-target="searchResultCount"
+                      aria-live="polite"></span>
+            </div>
+
             {# Bloc actions — droite #}
             <div class="d-flex align-items-center gap-2" data-bordereau-analysis-target="actionsBlock">
                 {# ── ÉTAPE 2 : Retour + Lancer l'analyse ── #}
