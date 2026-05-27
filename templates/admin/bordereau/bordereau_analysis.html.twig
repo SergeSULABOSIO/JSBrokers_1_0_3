@@ -48,10 +48,10 @@
     <div class="actions-bar sticky-top d-flex flex-column">
 
         {# Barre principale : titre gauche + actions droite #}
-        <div class="d-flex align-items-center justify-content-between w-100 px-3 py-2">
+        <div class="d-flex align-items-center justify-content-between w-100 px-3 py-2"> {# Main container for toolbar #}
 
             {# Bloc titre — gauche #}
-            <div class="d-flex align-items-start gap-2 toolbar-title py-1">
+            <div class="analysis-toolbar-title-block toolbar-title py-1">
                 <div class="mt-1">
                     <twig:UX:Icon name="lucide:file-search" width="20px" height="20px" 
                                   class="text-white opacity-75" 
@@ -61,12 +61,60 @@
                                   data-bordereau-analysis-target="toolbarTitleIconSuccess" />
                 </div>
                 <div class="d-flex flex-column">
-                    <span class="fw-bold text-white text-truncate lh-sm" style="max-width: 320px;">
-                        Analyse de Bordereau — {{ bordereau.nom }}
-                    </span>
-                    <span class="text-white opacity-50 small text-truncate lh-1" style="max-width: 320px;">
-                        Assureur : {{ bordereau.assureur ? bordereau.assureur.nom : 'Non renseigné' }}
-                    </span>
+                    <div class="analysis-toolbar-ref">
+                        <twig:UX:Icon name="lucide:hash" width="16px" height="16px" class="text-white opacity-70 me-1" />
+                        {{ bordereau.reference }}
+                    </div>
+                    <div class="analysis-toolbar-name">
+                        {{ bordereau.nom }}
+                    </div>
+                    <hr class="dropdown-divider my-1" style="border-color: rgba(255,255,255,0.2);" />
+                    <div class="analysis-toolbar-meta">
+                        <twig:UX:Icon name="lucide:building-2" width="12px" height="12px" class="me-1" />
+                        {{ bordereau.assureur ? bordereau.assureur.nom : 'N/A' }}
+                        <span class="mx-1">·</span>
+                        <twig:UX:Icon name="lucide:calendar-range" width="12px" height="12px" class="me-1" />
+                        {{ bordereau.periodeDebut|date('d/m/Y') }} &rarr; {{ bordereau.periodeFin|date('d/m/Y') }}
+                        <span class="mx-1">·</span>
+                        <twig:UX:Icon name="lucide:inbox" width="12px" height="12px" class="me-1" />
+                        {{ bordereau.receivedAt ? bordereau.receivedAt|date('d/m/Y') : 'N/A' }}
+                    </div>
+                    <div class="analysis-toolbar-badges mt-1">
+                        {% set stepText = '' %}
+                        {% if currentAnalysisStep == 0 or currentAnalysisStep == 1 %}
+                            {% set stepText = 'Étape 1 · Sélection' %}
+                        {% elseif currentAnalysisStep == 2 %}
+                            {% set stepText = 'Étape 2 · Mappage' %}
+                        {% elseif currentAnalysisStep == 3 %}
+                            {% set stepText = 'Étape 3 · Résultats' %}
+                        {% else %} {# Assuming currentAnalysisStep is Bordereau::STATUT_ANALYSE_TERMINEE #}
+                            {% set stepText = 'Analyse terminée' %}
+                        {% endif %}
+                        <span class="analysis-toolbar-badge-step me-2">{{ stepText }}</span>
+
+                        {% set statusBgColor = '' %}
+                        {% set statusTextColor = '' %}
+                        {% set statusText = '' %}
+
+                        {% if currentAnalysisStep == 0 or currentAnalysisStep == 1 %}
+                            {% set statusBgColor = 'rgba(108,117,125,0.4)' %}
+                            {% set statusTextColor = '#ffffff' %}
+                            {% set statusText = 'En attente' %}
+                        {% elseif currentAnalysisStep == 2 %}
+                            {% set statusBgColor = 'rgba(255,193,7,0.3)' %}
+                            {% set statusTextColor = '#ffc107' %}
+                            {% set statusText = 'En cours' %}
+                        {% elseif currentAnalysisStep == 3 %}
+                            {% set statusBgColor = 'rgba(25,135,84,0.3)' %}
+                            {% set statusTextColor = '#20c997' %}
+                            {% set statusText = 'Analysé' %}
+                        {% else %} {# Assuming currentAnalysisStep is Bordereau::STATUT_ANALYSE_TERMINEE #}
+                            {% set statusBgColor = 'rgba(0,71,171,0.4)' %}
+                            {% set statusTextColor = '#90b8ff' %}
+                            {% set statusText = 'Validé' %}
+                        {% endif %}
+                        <span class="analysis-toolbar-badge-status" style="background-color: {{ statusBgColor }}; color: {{ statusTextColor }};">{{ statusText }}</span>
+                    </div>
                 </div>
             </div>
 
