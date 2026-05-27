@@ -11,7 +11,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         "sheetSelection", "step2", "mappingContainer", "mappingStatusFeedback", "toastBody", "toastContainer", "mappingForm",
         "mappingSelect", "analysisResult", "submitButton", "columnNameText", "step1", "step3", "analysisResultsList", "progressBar", "progressBarContainer", "analysisSummary", "validateButton",
         "backToMappingButton", "actionsBlock", "optionsMenu", "exportPdfItem", "bulkCreateItem", "bulkUpdateItem", "bulkDivider",
-        "toolbarTitleIconPrepare", "toolbarTitleIconSuccess"
+        "toolbarTitleIconPrepare", "toolbarTitleIconSuccess",
+        "reanalyzeItem"
     ];
 
     static values = {
@@ -645,6 +646,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         if (this.hasBulkCreateItemTarget) this.bulkCreateItemTarget.classList.add('d-none');
         if (this.hasBulkUpdateItemTarget) this.bulkUpdateItemTarget.classList.add('d-none');
         if (this.hasBulkDividerTarget) this.bulkDividerTarget.classList.add('d-none');
+        if (this.hasReanalyzeItemTarget) this.reanalyzeItemTarget.classList.add('d-none');
 
         // --- 3. Fermer le toast existant lors des transitions d'étape ---
         // sauf à l'étape 2 où le feedback de mappage doit rester visible.
@@ -698,6 +700,10 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
             if (this.hasExportPdfItemTarget) {
                 this.exportPdfItemTarget.classList.remove('d-none');
+            }
+            
+            if (this.hasReanalyzeItemTarget) {
+                this.reanalyzeItemTarget.classList.remove('d-none');
             }
 
             // Rendre le récapitulatif et les résultats
@@ -1016,8 +1022,10 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
     // CORRECTION 2B : Feedback visuel IMMÉDIAT avant tout traitement asynchrone
     // L'utilisateur voit instantanément que son clic a été pris en compte.
     this.toggleProgressBar(true);
-    this.submitButtonTarget.disabled = true;
-    this.submitButtonTarget.textContent = "Analyse en cours...";
+    if (this.hasSubmitButtonTarget) {
+        this.submitButtonTarget.disabled = true;
+        this.submitButtonTarget.textContent = "Analyse en cours...";
+    }
 
         console.log("[BordereauAnalysis] submitAnalysis() - Lancement de l'analyse par lots.");
 
