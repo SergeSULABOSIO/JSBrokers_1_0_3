@@ -712,6 +712,17 @@ class BordereauController extends AbstractController
                 }
             }
 
+            // Comparaison N° Avenant (champ textuel, hors écarts financiers)
+            if (array_key_exists('num_avenant', $rawLineData)) {
+                $excelNum = trim((string)($rawLineData['num_avenant'] ?? ''));
+                if ($excelNum === '') { $excelNum = '0'; }
+                $dbNum = trim((string)($avenant->getNumero() ?? ''));
+                if ($dbNum === '') { $dbNum = '0'; }
+                if ($excelNum !== $dbNum) {
+                    $discrepancies[] = sprintf("N° Avenant (Excel: %s, BD: %s)", $excelNum, $dbNum);
+                }
+            }
+
             if (!empty($discrepancies)) {
                 // Préparation des écarts financiers pour l'affichage Twig
                 $financialGaps = [];

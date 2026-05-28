@@ -325,8 +325,19 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         // 3. Naviguer vers l'étape sauvegardée (UI - rend le conteneur de mappage visible si étape 2)
         // C'est crucial de faire cela AVANT de tenter de restaurer les selects du mappage,
         // car les selects doivent être visibles pour que leur valeur soit correctement définie et validée.
-        this.showStep(this.currentAnalysisStepValue, this.selectedSheetNameValue);
-        console.log(`3. Navigation UI: Appel de showStep(${this.currentAnalysisStepValue}) pour afficher la bonne étape.`);
+        // Cas particulier : étape 1 + feuille unique → même comportement qu'au chargement initial (connect()).
+        const _isSingleSheet = this.sheetSelectionTargets.length === 1;
+        let _effectiveStep  = this.currentAnalysisStepValue;
+        let _effectiveSheet = this.selectedSheetNameValue;
+
+        if (_effectiveStep === 1 && _isSingleSheet) {
+            _effectiveStep  = 2;
+            _effectiveSheet = this.sheetSelectionTargets[0].value;
+            console.log("3. Auto-avancement : feuille unique détectée → passage forcé à l'étape 2.");
+        }
+
+        this.showStep(_effectiveStep, _effectiveSheet);
+        console.log(`3. Navigation UI: Appel de showStep(${_effectiveStep}) pour afficher la bonne étape.`);
 
         // 4. Restaurer le mappage des colonnes (UI - doit se faire après que le conteneur soit visible)
         if (this.mappedColumnsValue && Object.keys(this.mappedColumnsValue).length > 0) {
@@ -741,6 +752,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 sheetName ||
                 this.sheetSelectionTargets.find(radio => radio.checked)?.value
             );
+
+            this.updateSubmitButtonState(); // État correct dès l'affichage de l'étape 2
 
             // The toast will be shown by updateMappingStatusFeedback()
         } else if (this.currentStep === 3) {
