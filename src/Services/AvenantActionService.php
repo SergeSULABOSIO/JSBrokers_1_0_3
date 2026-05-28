@@ -118,26 +118,21 @@ class AvenantActionService
             $this->em->persist($piste);
         }
 
-        // ÉTAPE 4 — Résolution ou création de la Cotation
-        $cotation = $this->cotationRepository->findOneBy([
-            'piste' => $piste,
-            'assureur' => $assureur,
-            'entreprise' => $entreprise,
-        ]);
-
+        // ÉTAPE 4 — Création d'une nouvelle Cotation propre à cet avenant.
+        // On ne réutilise jamais une Cotation existante : chaque avenant importé depuis un
+        // bordereau doit avoir son propre conteneur financier (chargements, revenus, tranches)
+        // pour éviter toute contamination entre avenants d'une même police.
         $endingAt = $this->createDate($excelData['date_expiration_avenant'] ?? null);
 
-        if (!$cotation) {
-            $cotation = new Cotation();
-            $cotation->setNom("Cotation auto - " . ($excelData['reference_police'] ?? 'Import'));
-            $cotation->setPiste($piste);
-            $cotation->setAssureur($assureur);
-            $diff = $startingAt->diff($endingAt);
-            $cotation->setDuree($diff->days ?: 365);
-            $cotation->setEntreprise($entreprise);
-            $cotation->setInvite($invite);
-            $this->em->persist($cotation);
-        }
+        $cotation = new Cotation();
+        $cotation->setNom("Cotation auto - " . ($excelData['reference_police'] ?? 'Import'));
+        $cotation->setPiste($piste);
+        $cotation->setAssureur($assureur);
+        $diff = $startingAt->diff($endingAt);
+        $cotation->setDuree($diff->days ?: 365);
+        $cotation->setEntreprise($entreprise);
+        $cotation->setInvite($invite);
+        $this->em->persist($cotation);
 
         // ÉTAPE 5 & 6 — Chargements et Revenus
         foreach ($excelData as $key => $value) {
