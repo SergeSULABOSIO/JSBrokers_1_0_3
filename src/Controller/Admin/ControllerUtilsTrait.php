@@ -962,6 +962,9 @@ trait ControllerUtilsTrait
     protected function parseExcelValue($value, string $systemField)
     {
         if ($value === null || $value === '') {
+            if ($systemField === 'num_avenant') {
+                return '0';
+            }
             return null;
         }
 
@@ -1005,6 +1008,11 @@ trait ControllerUtilsTrait
                     }
                 }
                 return null;
+            case 'num_avenant':
+                if (is_float($value) && floor($value) == $value) {
+                    return (string)(int)$value; // 3.0 → "3"
+                }
+                return (string)$value;
             default:
                 return $value;
         }

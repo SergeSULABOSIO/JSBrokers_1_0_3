@@ -198,7 +198,11 @@ class AvenantActionService
         $avenant = new Avenant();
         $avenant->setCotation($cotation);
         $avenant->setReferencePolice($excelData['reference_police'] ?? null);
-        $avenant->setNumero($excelData['reference_police'] ?? null);
+        $avenant->setNumero(
+            isset($excelData['num_avenant']) && $excelData['num_avenant'] !== null && $excelData['num_avenant'] !== ''
+                ? (string)$excelData['num_avenant']
+                : ($excelData['reference_police'] ?? null)
+        );
         $avenant->setDescription("Avenant importé depuis bordereau " . $bordereau->getReference());
         $avenant->setStartingAt($startingAt);
         $avenant->setEndingAt($endingAt);
@@ -392,6 +396,9 @@ class AvenantActionService
      */
     public function updateFromBordereauLine(Avenant $avenant, array $excelData, Bordereau $bordereau): Avenant
     {
+        if (isset($excelData['num_avenant']) && $excelData['num_avenant'] !== null && $excelData['num_avenant'] !== '') {
+            $avenant->setNumero((string)$excelData['num_avenant']);
+        }
         if (isset($excelData['date_effet_avenant'])) {
             $avenant->setStartingAt($this->createDate($excelData['date_effet_avenant']));
         }
