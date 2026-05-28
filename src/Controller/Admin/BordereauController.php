@@ -183,7 +183,7 @@ class BordereauController extends AbstractController
             'prime_ttc' => 'number',
             'commission_ht_payable_now' => 'number',
             'taxe_commission_payable_now' => 'number',
-            'taux_commission' => 'number',
+            'taux_commission' => 'percent',
         ];
         $error = null;
         $excelDocument = null;
@@ -376,7 +376,8 @@ class BordereauController extends AbstractController
                     [
                         'result'       => $resultForRendering,
                         'bordereau_id' => $bordereau->getId(),
-                        'loop'         => ['index' => $index]
+                        'loop'         => ['index' => $index],
+                        'viewData'     => $viewData,
                     ]
                 );
 
@@ -480,7 +481,8 @@ class BordereauController extends AbstractController
                 [
                     'result'       => $resultForRendering,
                     'bordereau_id' => $bordereau->getId(),
-                    'loop'         => ['index' => $index]
+                    'loop'         => ['index' => $index],
+                    'viewData'     => $viewData,
                 ]
             );
         }
@@ -788,10 +790,17 @@ class BordereauController extends AbstractController
                 'viewData' => [
                     'display_currency_code' => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                     'system_field_formats' => [
-                        'prime_ttc' => 'number',
-                        'taux_commission' => 'number',
-                        'commission_ht_payable_now' => 'number',
+                        'num_avenant'                 => 'text',
+                        'reference_police'            => 'text',
+                        'nom_client'                  => 'text',
+                        'risque'                      => 'text',
+                        'date_effet_avenant'          => 'date',
+                        'date_expiration_avenant'     => 'date',
+                        'date_operation'              => 'date',
+                        'prime_ttc'                   => 'number',
+                        'commission_ht_payable_now'   => 'number',
                         'taxe_commission_payable_now' => 'number',
+                        'taux_commission'             => 'percent',
                     ]
                 ]
             ]);

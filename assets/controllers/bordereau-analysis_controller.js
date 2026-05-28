@@ -1,5 +1,5 @@
 import BaseController from './base_controller.js';
-import { Toast } from 'bootstrap';
+import { Toast, Modal } from 'bootstrap';
 /**
  * @class BordereauAnalysisController
  * @description Gère l'interface de l'analyse de bordereau en deux étapes.
@@ -17,7 +17,10 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         "toolbarBadgeStatus",
         "searchBlock",       // conteneur global de la barre de recherche (affiché uniquement étape 3)
         "searchInput",       // <input type="search"> de saisie du mot-clé
-        "searchResultCount"  // span affichant "X résultat(s) sur Y"
+        "searchResultCount", // span affichant "X résultat(s) sur Y"
+        "validationModal",          // modal Bootstrap de confirmation de validation
+        "factureButton",            // bouton "Facturer" (affiché post-validation uniquement)
+        "backToMappingDropdownItem" // item "Retour" dans le dropdown (affiché post-validation)
     ];
 
     static values = {
@@ -715,6 +718,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         if (this.hasBulkUpdateItemTarget) this.bulkUpdateItemTarget.classList.add('d-none');
         if (this.hasBulkDividerTarget) this.bulkDividerTarget.classList.add('d-none');
         if (this.hasReanalyzeItemTarget) this.reanalyzeItemTarget.classList.add('d-none');
+        if (this.hasFactureButtonTarget) this.factureButtonTarget.classList.add('d-none');
+        this.backToMappingDropdownItemTargets.forEach(el => el.classList.add('d-none'));
 
         // --- 3. Fermer le toast existant lors des transitions d'étape ---
         // sauf à l'étape 2 où le feedback de mappage doit rester visible.
@@ -789,6 +794,18 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             // Évaluer l'état réel du bouton Valider
             this._updateValidateButtonState();
             this._updateBulkButtonsState();
+
+        } else if (this.currentStep > 3) {
+
+            // BORDEREAU VALIDÉ (step = 99) — lecture seule, pas de bouton Valider
+            this.step3Target.classList.remove('d-none');
+            this.renderAnalysisSummary(this.analysisStatsValue);
+            this.renderAnalysisResults(this.analysisResultsHtmlValue);
+            if (this.hasFactureButtonTarget)  this.factureButtonTarget.classList.remove('d-none');
+            if (this.hasExportPdfItemTarget)  this.exportPdfItemTarget.classList.remove('d-none');
+            if (this.hasSearchBlockTarget)    this.searchBlockTarget.classList.remove('d-none');
+            this.backToMappingDropdownItemTargets.forEach(el => el.classList.remove('d-none'));
+            this._resetSearch();
         }
 
         // --- 5. Sauvegarde de l'étape (sauf pendant la restauration) ---
@@ -1348,7 +1365,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             }
         });
 
-        const allResolved = totalActionable > 0 && totalResolved === totalActionable;
+        const allResolved = allItems.length > 0 && totalResolved === totalActionable;
 
         console.log(`[BordereauAnalysis] _updateValidateButtonState() - Actionnables: ${totalActionable}, Résolus: ${totalResolved}, Tous résolus: ${allResolved}`);
 
@@ -1396,17 +1413,18 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * Déclenche la validation finale du bordereau.
      * Appelé au clic sur le bouton "Valider le bordereau".
      */
-    async validateBordereau() {
-        if (this.isBulkProcessingValue) { // NOUVEAU : Empêcher la validation pendant un traitement en lot
+    validateBordereau() {
+        if (this.isBulkProcessingValue) {
             console.warn("[BordereauAnalysis] validateBordereau() - Impossible de valider pendant un traitement en lot.");
             return;
         }
+        const modal = new Modal(this.validationModalTarget);
+        modal.show();
+    }
 
-        if (!confirm(
-            'Confirmez-vous la validation de ce bordereau ?\n\n' +
-            'Cette action signifie que tous les écarts ont été traités ' +
-            'et que le bordereau est conforme.'
-        )) return;
+    async confirmValidation() {
+        // Fermer le modal avant de lancer la requête
+        Modal.getInstance(this.validationModalTarget)?.hide();
 
         this.validateButtonTarget.disabled = true;
         this.toggleProgressBar(true);
@@ -1432,12 +1450,18 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this.validateButtonTarget.textContent = '✓ Bordereau validé';
             this.validateButtonTarget.disabled = true;
 
+            // Afficher "Facturer", déplacer "Retour" dans le dropdown
+            if (this.hasFactureButtonTarget) this.factureButtonTarget.classList.remove('d-none');
+            this.backToMappingButtonTargets.forEach(btn => {
+                if (parseInt(btn.dataset.stepNumber) === 2) btn.classList.add('d-none');
+            });
+            this.backToMappingDropdownItemTargets.forEach(el => el.classList.remove('d-none'));
+
             // Bordereau::STATUT_ANALYSE_TERMINEE = 99
-            // On passe 99 pour signaler l'état "Validé" aux badges de la toolbar
             this._updateToolbarMeta(99);
 
         } catch (error) {
-            console.error('[BordereauAnalysis] validateBordereau() - Erreur:', error);
+            console.error('[BordereauAnalysis] confirmValidation() - Erreur:', error);
             this._showToast('error', `Échec de la validation : ${error.message}`);
             this.validateButtonTarget.disabled = false;
         } finally {
