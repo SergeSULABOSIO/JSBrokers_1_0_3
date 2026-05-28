@@ -113,10 +113,11 @@
                                 <div class="col-md-6"><strong>{{ key|replace({'_': ' '})|title }}</strong></div>
                                 <div class="col-md-6">
                                     {% if value is not null and value is not same as('') %}
-                                        {% set format = system_formats[key] ?? 'text' %}
+                                        {% set _auto = (key matches '/^chargement_/') or (key matches '/^revenu_/') ? 'number' : 'text' %}
+                                        {% set format = system_formats[key] ?? _auto %}
                                         {% if format == 'date' %}
-                                            {% if value.date is defined %}{{ value.date|format_datetime('full', 'short', locale='fr') }}{% elseif value is not null and value is not same as('') %}{{ value|date('d/m/Y') }}{% else %}N/A{% endif %}
-                                        {% elseif format == 'number' %}{{ currency_code }} {{ value|number_format(2, ',', ' ') }}{% else %}{{ value }}{% endif %}
+                                            {% if value is not null and value is not same as('') %}{{ value|format_datetime(pattern='EEEE dd/MM/yyyy', locale='fr')|capitalize }}{% else %}N/A{% endif %}
+                                        {% elseif format == 'number' %}{{ currency_code }} {{ value|number_format(2, ',', ' ') }}{% elseif format == 'percent' %}{{ value|number_format(2, ',', ' ') }} %{% else %}{{ value }}{% endif %}
                                     {% else %}N/A{% endif %}
                                 </div>
                             </div>
@@ -137,10 +138,11 @@
                                 <div class="col-md-6"><strong>{{ key|replace({'_': ' '})|title }}</strong></div>
                                 <div class="col-md-6">
                                     {% if value is not null and value is not same as('') %}
-                                        {% set format = system_formats[key] ?? 'text' %}
+                                        {% set _auto = (key matches '/^chargement_/') or (key matches '/^revenu_/') ? 'number' : 'text' %}
+                                        {% set format = system_formats[key] ?? _auto %}
                                         {% if format == 'date' %}
-                                            {% if value.date is defined %}{{ value.date|format_datetime('full', 'short', locale='fr') }}{% elseif value is not null and value is not same as('') %}{{ value|date('d/m/Y') }}{% else %}N/A{% endif %}
-                                        {% elseif format == 'number' %}{{ currency_code }} {{ value|number_format(2, ',', ' ') }}{% else %}{{ value }}{% endif %}
+                                            {% if value is not null and value is not same as('') %}{{ value|format_datetime(pattern='EEEE dd/MM/yyyy', locale='fr')|capitalize }}{% else %}N/A{% endif %}
+                                        {% elseif format == 'number' %}{{ currency_code }} {{ value|number_format(2, ',', ' ') }}{% elseif format == 'percent' %}{{ value|number_format(2, ',', ' ') }} %{% else %}{{ value }}{% endif %}
                                     {% else %}N/A{% endif %}
                                 </div>
                             </div>
@@ -162,10 +164,11 @@
                                 <div class="col-md-6"><strong>{{ key|replace({'_': ' '})|title }}</strong></div>
                                 <div class="col-md-6">
                                     {% if value is not null and value is not same as('') %}
-                                        {% set format = system_formats[key] ?? 'text' %}
+                                        {% set _auto = (key matches '/^chargement_/') or (key matches '/^revenu_/') ? 'number' : 'text' %}
+                                        {% set format = system_formats[key] ?? _auto %}
                                         {% if format == 'date' %}
-                                            {% if value.date is defined %}{{ value.date|format_datetime('full', 'short', locale='fr') }}{% elseif value is not null and value is not same as('') %}{{ value|date('d/m/Y') }}{% else %}N/A{% endif %}
-                                        {% elseif format == 'number' %}{{ currency_code }} {{ value|number_format(2, ',', ' ') }}{% else %}{{ value }}{% endif %}
+                                            {% if value is not null and value is not same as('') %}{{ value|format_datetime(pattern='EEEE dd/MM/yyyy', locale='fr')|capitalize }}{% else %}N/A{% endif %}
+                                        {% elseif format == 'number' %}{{ currency_code }} {{ value|number_format(2, ',', ' ') }}{% elseif format == 'percent' %}{{ value|number_format(2, ',', ' ') }} %{% else %}{{ value }}{% endif %}
                                     {% else %}N/A{% endif %}
                                 </div>
                             </div>

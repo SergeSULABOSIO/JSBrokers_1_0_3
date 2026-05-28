@@ -174,17 +174,26 @@
                             data-action="click->bordereau-analysis#submitAnalysis"
                             data-controller="ripple">
                         <twig:UX:Icon name="{{ resolve_icon_name('action:analyser') }}" width="18px" height="18px" />
-                        <span>Lancer l'analyse</span>
+                        <span>Analyser</span>
                     </button>
 
-                    {# ── ÉTAPE 3 : Valider + Retour au mappage ── #}
+                    {# ── ÉTAPE 3 : Valider + Facturer (post-validation) + Retour au mappage ── #}
                     <button type="button"
                             class="btn btn-success d-inline-flex align-items-center gap-2 d-none"
                             data-bordereau-analysis-target="validateButton"
                             data-action="click->bordereau-analysis#validateBordereau"
                             data-controller="ripple">
                         <twig:UX:Icon name="{{ resolve_icon_name('action:completed') }}" width="18px" height="18px" />
-                        <span>Valider le bordereau</span>
+                        <span>Valider</span>
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-primary d-inline-flex align-items-center gap-2 d-none"
+                            data-bordereau-analysis-target="factureButton"
+                            data-controller="ripple"
+                            disabled>
+                        <twig:UX:Icon name="{{ resolve_icon_name('note') }}" width="18px" height="18px" />
+                        <span>Facturer</span>
                     </button>
 
                     <button type="button"
@@ -194,7 +203,7 @@
                             data-step-number="2"
                             data-controller="ripple">
                         <twig:UX:Icon name="lucide:arrow-left-circle" width="18px" height="18px" />
-                        <span>Retour au mappage</span>
+                        <span>Retour</span>
                     </button>
 
                     <a href="{{ path('admin.bordereau.api.export_analysis_pdf', {'id': bordereau.id}) }}" 
@@ -214,9 +223,11 @@
                         <ul class="dropdown-menu dropdown-menu-end shadow" data-bordereau-analysis-target="optionsMenu">
                             <li><button class="dropdown-item d-inline-flex align-items-center gap-2" onclick="window.print()"><twig:UX:Icon name="lucide:printer" width="16px" height="16px" /><span>Imprimer</span></button></li>
                             <li data-bordereau-analysis-target="bulkDivider" class="d-none"><hr class="dropdown-divider"></li>
-                            <li data-bordereau-analysis-target="bulkCreateItem" class="d-none"><button class="dropdown-item d-inline-flex align-items-center gap-2" data-action="click->bordereau-analysis#bulkCreateAll"><twig:UX:Icon name="{{ resolve_icon_name('action:add') }}" width="16px" height="16px" /><span>Créer tous les avenants</span></button></li>
-                            <li data-bordereau-analysis-target="bulkUpdateItem" class="d-none"><button class="dropdown-item d-inline-flex align-items-center gap-2" data-action="click->bordereau-analysis#bulkUpdateAll"><twig:UX:Icon name="{{ resolve_icon_name('action:edit') }}" width="16px" height="16px" /><span>Mettre à jour tous les avenants</span></button></li>
-                            <li data-bordereau-analysis-target="reanalyzeItem" class="d-none"><button class="dropdown-item d-inline-flex align-items-center gap-2" data-action="click->bordereau-analysis#submitAnalysis"><twig:UX:Icon name="lucide:refresh-cw" width="16px" height="16px" /><span>Relancer l'analyse</span></button></li>
+                            <li data-bordereau-analysis-target="bulkCreateItem" class="d-none"><button class="dropdown-item d-inline-flex align-items-center gap-2" data-action="click->bordereau-analysis#bulkCreateAll"><twig:UX:Icon name="{{ resolve_icon_name('action:add') }}" width="16px" height="16px" /><span>Tout créer</span></button></li>
+                            <li data-bordereau-analysis-target="bulkUpdateItem" class="d-none"><button class="dropdown-item d-inline-flex align-items-center gap-2" data-action="click->bordereau-analysis#bulkUpdateAll"><twig:UX:Icon name="{{ resolve_icon_name('action:edit') }}" width="16px" height="16px" /><span>Tout mettre à jour</span></button></li>
+                            <li data-bordereau-analysis-target="reanalyzeItem" class="d-none"><button class="dropdown-item d-inline-flex align-items-center gap-2" data-action="click->bordereau-analysis#submitAnalysis"><twig:UX:Icon name="lucide:refresh-cw" width="16px" height="16px" /><span>Réanalyser</span></button></li>
+                            <li data-bordereau-analysis-target="backToMappingDropdownItem" class="d-none"><hr class="dropdown-divider"></li>
+                            <li data-bordereau-analysis-target="backToMappingDropdownItem" class="d-none"><button class="dropdown-item d-inline-flex align-items-center gap-2" data-action="click->bordereau-analysis#showStep" data-step-number="2"><twig:UX:Icon name="lucide:arrow-left-circle" width="16px" height="16px" /><span>Retour</span></button></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><button class="dropdown-item d-inline-flex align-items-center gap-2" onclick="window.close()"><twig:UX:Icon name="lucide:x-circle" width="16px" height="16px" /><span>Fermer</span></button></li>
                         </ul>
@@ -406,5 +417,50 @@
             </div>
         </div>
     </div>
+
+    {# ── Modal de confirmation de validation du bordereau ── #}
+    <div class="modal fade"
+         id="jsb-validate-bordereau-modal"
+         tabindex="-1"
+         aria-labelledby="jsbValidateBordereauModalLabel"
+         aria-hidden="true"
+         data-bordereau-analysis-target="validationModal">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-0" style="background-color: #0047AB;">
+                    <div class="d-flex align-items-center gap-2">
+                        <twig:UX:Icon name="{{ resolve_icon_name('action:completed') }}" width="20px" height="20px" class="text-white" />
+                        <h5 class="modal-title text-white mb-0" id="jsbValidateBordereauModalLabel">
+                            Valider ce bordereau ?
+                        </h5>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body px-4 py-3">
+                    <p class="mb-2 fw-semibold" style="color: #212529;">En confirmant, vous attestez que :</p>
+                    <ul class="mb-3" style="color: #495057;">
+                        <li>Tous les écarts ont été traités <span class="text-muted">(avenants créés ou mis à jour)</span></li>
+                        <li>Les données sont conformes au fichier transmis par l'assureur</li>
+                    </ul>
+                    <div class="alert alert-warning d-flex align-items-start gap-2 py-2 mb-0" role="alert">
+                        <twig:UX:Icon name="lucide:triangle-alert" width="16px" height="16px" class="mt-1 flex-shrink-0" />
+                        <span class="small">Cette action est <strong>définitive</strong>. Le bordereau passera au statut <strong>Validé</strong> et sera prêt pour la facturation.</span>
+                    </div>
+                </div>
+                <div class="modal-footer border-top px-4 py-3">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                        Annuler
+                    </button>
+                    <button type="button"
+                            class="btn btn-success d-inline-flex align-items-center gap-2"
+                            data-action="click->bordereau-analysis#confirmValidation">
+                        <twig:UX:Icon name="{{ resolve_icon_name('action:completed') }}" width="16px" height="16px" />
+                        <span>Confirmer</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
