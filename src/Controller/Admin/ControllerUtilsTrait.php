@@ -1028,21 +1028,19 @@ trait ControllerUtilsTrait
         foreach ($mappedColumns as $systemField => $excelColumns) {
             // Si c'est un tableau, on itère et on somme les valeurs numériques
             if (is_array($excelColumns)) {
-                $sum = 0.0;
-                $textValue = null; // Initialisation de $textValue
-                foreach ($excelColumns as $col) {
-                    $val = $this->parseExcelValue($row[$col] ?? null, $systemField);
-                    if (is_numeric($val)) {
-                        $sum += (float)$val;
-                    } elseif ($val !== null && $textValue === null) {
-                        // Pour les champs texte (référence, nom client), on prend la première valeur non nulle
-                        $textValue = $val;
-                    }
-                }
-                // Si c'est un champ numérique, on retourne la somme ; sinon la première valeur texte
                 $isNumericField = str_starts_with($systemField, 'chargement_') ||
                     str_starts_with($systemField, 'revenu_') ||
                     in_array($systemField, ['prime_ttc', 'commission_ht_payable_now', 'taxe_commission_payable_now', 'taux_commission']);
+                $sum = 0.0;
+                $textValue = null;
+                foreach ($excelColumns as $col) {
+                    $val = $this->parseExcelValue($row[$col] ?? null, $systemField);
+                    if ($isNumericField && is_numeric($val)) {
+                        $sum += (float)$val;
+                    } elseif ($val !== null && $textValue === null) {
+                        $textValue = $val;
+                    }
+                }
                 $rawLineData[$systemField] = $isNumericField ? $sum : $textValue;
             } else {
                 // Comportement standard 1:1

@@ -578,7 +578,9 @@ class BordereauController extends AbstractController
         $avenantsMap = [];
         foreach ($avenantsFromDb as $avenant) {
             $this->loadCalculatedValues(null, $avenant);
-            $avenantsMap[$avenant->getReferencePolice()] = $avenant->getId();
+            $dbNum = trim((string)($avenant->getNumero() ?? ''));
+            if ($dbNum === '') $dbNum = '0';
+            $avenantsMap[$avenant->getReferencePolice() . '|||' . $dbNum] = $avenant->getId();
         }
 
         $sessionKey = 'bordereau_analysis_' . $bordereau->getId();
@@ -635,7 +637,9 @@ class BordereauController extends AbstractController
         $chunkAvenantsMap = [];
         foreach ($chunkAvenants as $avenant) {
             $this->loadCalculatedValues(null, $avenant);
-            $chunkAvenantsMap[$avenant->getReferencePolice()] = $avenant;
+            $dbNum = trim((string)($avenant->getNumero() ?? ''));
+            if ($dbNum === '') $dbNum = '0';
+            $chunkAvenantsMap[$avenant->getReferencePolice() . '|||' . $dbNum] = $avenant;
         }
 
         $chunkResultsToStore  = [];
@@ -646,7 +650,11 @@ class BordereauController extends AbstractController
             $refPolice = $row[$refColForMatch] ?? null;
             if (!$refPolice) continue;
 
-            $avenant     = $chunkAvenantsMap[$refPolice] ?? null;
+            $numAvenantColumn = $mappedColumns['num_avenant'] ?? null;
+            $numAvenantCol    = is_array($numAvenantColumn) ? ($numAvenantColumn[0] ?? null) : $numAvenantColumn;
+            $excelNum         = $numAvenantCol ? trim((string)($row[$numAvenantCol] ?? '')) : '';
+            if ($excelNum === '') $excelNum = '0';
+            $avenant     = $chunkAvenantsMap[$refPolice . '|||' . $excelNum] ?? null;
             $rawLineData = $this->reconstructRawLineData($row, $mappedColumns);
             $discrepancies = [];
 
@@ -709,17 +717,6 @@ class BordereauController extends AbstractController
                         number_format($comp['excel_total'], 2, ',', ' '),
                         number_format($comp['db_total'], 2, ',', ' ')
                     );
-                }
-            }
-
-            // Comparaison N° Avenant (champ textuel, hors écarts financiers)
-            if (array_key_exists('num_avenant', $rawLineData)) {
-                $excelNum = trim((string)($rawLineData['num_avenant'] ?? ''));
-                if ($excelNum === '') { $excelNum = '0'; }
-                $dbNum = trim((string)($avenant->getNumero() ?? ''));
-                if ($dbNum === '') { $dbNum = '0'; }
-                if ($excelNum !== $dbNum) {
-                    $discrepancies[] = sprintf("N° Avenant (Excel: %s, BD: %s)", $excelNum, $dbNum);
                 }
             }
 
