@@ -154,6 +154,7 @@ class BordereauController extends AbstractController
         $viewData = [
             'sheets' => [],
             'mapping_options' => [
+                'num_avenant' => 'N° Avenant', // Obligatoire
                 'reference_police' => 'N° de Police', // Obligatoire
                 'date_effet_avenant' => 'Date d\'effet', // Obligatoire
                 'date_expiration_avenant' => 'Date d\'expiration', // Obligatoire
@@ -172,12 +173,17 @@ class BordereauController extends AbstractController
         // NOUVEAU : Définition statique des formats pour chaque champ système.
         // C'est cette carte qui dictera le formatage dans Twig.
         $viewData['system_field_formats'] = [
+            'num_avenant' => 'text',
             'reference_police' => 'text',
+            'nom_client' => 'text',
+            'risque' => 'text',
             'date_effet_avenant' => 'date',
             'date_expiration_avenant' => 'date',
             'date_operation' => 'date',
             'prime_ttc' => 'number',
-            'taux_commission' => 'number', // Les taux sont aussi des nombres
+            'commission_ht_payable_now' => 'number',
+            'taxe_commission_payable_now' => 'number',
+            'taux_commission' => 'number',
         ];
         $error = null;
         $excelDocument = null;
@@ -1210,6 +1216,7 @@ class BordereauController extends AbstractController
             'stats'           => $stats,
             'generatedAt'     => new \DateTimeImmutable(),
             'mappingOptions'  => [
+                'num_avenant'               => 'N° Avenant',
                 'reference_police'          => 'N° de Police',
                 'date_effet_avenant'        => 'Date d\'effet',
                 'date_expiration_avenant'   => 'Date d\'expiration',

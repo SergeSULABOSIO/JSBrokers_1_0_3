@@ -96,7 +96,7 @@
                 {% set system_formats = viewData.system_field_formats ?? {} %}
 
                 {# AMÉLIORATION 3 : Regroupement sémantique des détails #}
-                {% set id_fields        = ['reference_police', 'nom_client', 'risque'] %}
+                {% set id_fields        = ['num_avenant', 'reference_police', 'nom_client', 'risque'] %}
                 {% set date_fields      = ['date_effet_avenant', 'date_expiration_avenant', 'date_operation'] %}
                 {% set financial_fields = ['prime_ttc', 'commission_ht_payable_now', 'taxe_commission_payable_now', 'taux_commission'] %}
 

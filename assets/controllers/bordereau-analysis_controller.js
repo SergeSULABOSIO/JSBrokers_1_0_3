@@ -75,6 +75,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         this.element.addEventListener('action:completed', this.boundHandleItemActionCompleted);
 
         this.requiredMappings = new Set([
+            'num_avenant',
             'reference_police',
             'date_effet_avenant',
             'date_expiration_avenant',
@@ -859,6 +860,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 }
             } else if (mappingType === 'risque') { // Nouveau champ Risque
                 isValid = typeof value === 'string' && value.trim() !== '';
+            } else if (mappingType === 'num_avenant') { // Numéro d'avenant : cellule vide → "0" côté backend, donc toujours valide
+                isValid = true;
             } else { // commission_ht_assureur, taxe_commission_assureur, taux_commission, chargements et revenus
                 // La validation pour les champs numériques reste la même.
                 if (value === null || value === undefined || String(value).trim() === '') {
