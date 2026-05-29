@@ -11,14 +11,16 @@
             </span>
             <input type="text"
                    class="form-control border-0 search-bar-input"
+                   aria-label="Rechercher dans la liste"
                    data-search-bar-target="simpleSearchInput"
                    data-action="keydown.enter->search-bar#submitSimpleSearch"
                    placeholder="Rechercher...">
         </div>
         {# NOUVEAU : Sélecteur pour le critère de recherche simple #}
-        <select 
-            class="form-select form-select-sm border-0 bg-light ms-2" 
+        <select
+            class="form-select form-select-sm border-0 bg-light ms-2"
             style="max-width: 200px;"
+            aria-label="Critère de recherche"
             data-search-bar-target="simpleSearchCriterion"
             data-action="change->search-bar#updateSimpleSearchPlaceholder"></select>
 

@@ -13,7 +13,7 @@
 >
     {# Sous-ensemble 1: Choix de l'attribut #}
     <div class="d-flex align-items-center">
-        <label for="attribute-select" class="form-label me-2 mb-0 small" style="color: gray;">Totaliser :</label>
+        <label for="attribute-select" class="form-label me-2 mb-0 small text-muted">Totaliser :</label>
         <select
             class="form-select form-select-sm text-secondary text-muted small"
             id="attribute-select"
@@ -31,9 +31,10 @@
     <div class="d-flex align-items-center gap-2">
         <span class="text-muted small">Total Global:</span>
         <span
-            class="small fw-bolder"
+            class="small fw-bolder text-muted"
             data-list-summary-target="globalTotal"
-            style="color: #6c757d;"
+            aria-live="polite"
+            aria-atomic="true"
         >
            0,00 $
         </span>
@@ -43,9 +44,10 @@
     <div class="d-flex align-items-center gap-2">
         <span class="text-muted small">Total Sélection:</span>
         <span
-            class="small fw-bold"
+            class="small fw-bold text-muted"
             data-list-summary-target="selectionTotal"
-            style="color: #6c757d;"
+            aria-live="polite"
+            aria-atomic="true"
         >
            0,00 $
         </span>

@@ -23,34 +23,38 @@
         <div class="d-flex align-items-center p-2">
             <div class="me-2">
                 {# NOUVEAU : On utilise la fonction `resolve_icon_name` pour gérer les alias d'icônes #}
-                <twig:UX:Icon 
-                    name="{{ resolve_icon_name(entityCanvas.parametres.icone | default('lucide:file-text')) }}" 
+                <twig:UX:Icon
+                    name="{{ resolve_icon_name(entityCanvas.parametres.icone | default('lucide:file-text')) }}"
                     style="width: 40px; height: 40px; color: #343a40;"
                     data-view-manager-target="rubriqueIcon"
+                    aria-hidden="true"
                 />
             </div>
             {# NOUVEAU : Ajout de min-width: 0 pour résoudre un bug de dépassement de flexbox qui empêchait le défilement des onglets. #}
             <div class="flex-grow-1" style="min-width: 0;">
-                <div class="rubrique-title" data-view-manager-target="rubriqueName">{{ entityCanvas.parametres.description | default('Rubrique') }}</div>
-                <div class="list-tabs-container" data-view-manager-target="tabsContainer">
-                    <button class="list-tab active" data-tab-id="principal" data-action="click->view-manager#switchTab">Principal</button>
+                <h2 class="rubrique-title" data-view-manager-target="rubriqueName">{{ entityCanvas.parametres.description | default('Rubrique') }}</h2>
+                <div class="list-tabs-container" role="tablist" aria-label="Onglets de navigation" data-view-manager-target="tabsContainer">
+                    <button class="list-tab active" role="tab" id="tab-principal" aria-selected="true" aria-controls="principal" data-tab-id="principal" data-action="click->view-manager#switchTab">Principal</button>
                 </div>
             </div>
         </div>
         <div class="p-2">{{ include("components/_toolbar.html.twig") }}</div>
         <div class="p-2 pt-0">{{ include('components/_search_bar.html.twig', {'entite_nom': entite_nom, 'searchCanvas': searchCanvas}) }}</div>
         <div class="p-2 pt-0">{{ include('components/_list_summary.html.twig') }}</div>
-        <div class="p-2 small text-muted" data-view-manager-target="display">Prêt.</div>
+        <div class="p-2 small text-muted" role="status" aria-live="polite" aria-atomic="true" data-view-manager-target="display">Prêt.</div>
     </div>
 
     {# ================================================================== #}
     {# SECTION 2 : ZONE DE CONTENU DYNAMIQUE (LISTES)                     #}
     {# ================================================================== #}
     <div class="flex-grow-1" style="overflow-y: auto;" data-view-manager-target="tabContentContainer">
-        <div 
+        <div
             id="principal" {# CORRECTION: L'ID doit être 'principal' pour correspondre à l'onglet et aux commandes du cerveau. #}
-            data-entity-name="{{ entite_nom }}" 
-            data-server-root-name="{{ serverRootName }}" 
+            role="tabpanel"
+            aria-labelledby="tab-principal"
+            tabindex="0"
+            data-entity-name="{{ entite_nom }}"
+            data-server-root-name="{{ serverRootName }}"
             data-can-add="true"
         >
             {# On utilise notre nouveau composant générique pour la liste principale #}

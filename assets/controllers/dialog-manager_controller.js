@@ -36,10 +36,11 @@ export default class extends Controller {
                             <span data-dialog-instance-target="titleIcon" class="me-2"></span>
                             <h5 class="modal-title mb-0" data-dialog-instance-target="title"><div class="skeleton-line" style="width: 250px; height: 24px;"></div></h5>
                         </div>
-                        <button type="button" class="btn-close" data-controller="ripple" data-action="click->dialog-instance#close" data-dialog-instance-target="closeButton" disabled></button> 
+                        <button type="button" class="btn-close" aria-label="Fermer" data-controller="ripple" data-action="click->dialog-instance#close" data-dialog-instance-target="closeButton" disabled></button>
                     </div>
-                    <div class="dialog-progress-container is-loading" data-dialog-instance-target="progressBarContainer"> 
-                        <div class="dialog-progress-bar" role="progressbar"></div>
+                    <div class="dialog-progress-container is-loading" data-dialog-instance-target="progressBarContainer"
+                         role="progressbar" aria-label="Chargement du contenu" aria-valuemin="0" aria-valuemax="100">
+                        <div class="dialog-progress-bar" aria-hidden="true"></div>
                     </div>
                     <div data-dialog-instance-target="content" class="modal-body p-0"> 
                         <div class="d-flex justify-content-center align-items-center h-100" style="min-height: 200px;">
@@ -49,7 +50,7 @@ export default class extends Controller {
                         </div>
                     </div>
                     <div class="modal-footer" data-dialog-instance-target="footer"> 
-                        <div class="feedback-container me-auto" data-dialog-instance-target="feedbackContainer"> 
+                        <div class="feedback-container me-auto" role="status" aria-live="polite" aria-atomic="true" data-dialog-instance-target="feedbackContainer">
                             <!-- Feedback message will be injected here -->
                         </div>
                         <button type="button" class="btn btn-secondary d-inline-flex align-items-center gap-2" data-controller="ripple" data-action="click->dialog-instance#close" data-dialog-instance-target="closeFooterButton">
@@ -112,14 +113,18 @@ export default class extends Controller {
         // 1. Crée un nouvel élément HTML pour la modale à partir du template
         const modalElement = this.createModalElement();
 
-        // NOUVEAU : On rend la liaison entre l'instance et sa modale parente infaillible
+        // On rend la liaison entre l'instance et sa modale parente infaillible
         // en utilisant des ID uniques pour éviter toute ambiguïté potentielle.
         const modalId = `modal-container-${detail.dialogId}`;
         modalElement.id = modalId;
 
         const instanceElement = modalElement.querySelector('[data-controller="dialog-instance"]');
-        // NOUVEAU: Assigner l'ID à l'élément pour un ciblage facile et pour le débogage
         instanceElement.id = detail.dialogId;
+
+        // Lie la modale à son titre pour les lecteurs d'écran (WCAG 4.1.2)
+        const titleId = `dialog-title-${detail.dialogId}`;
+        modalElement.setAttribute('aria-labelledby', titleId);
+        modalElement.querySelector('[data-dialog-instance-target="title"]').id = titleId;
 
         // On met à jour l'outlet pour qu'il cible l'ID unique de sa modale parente.
         instanceElement.setAttribute('data-dialog-instance-modal-outlet', `#${modalId}`);

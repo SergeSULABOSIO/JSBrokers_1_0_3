@@ -250,7 +250,7 @@ textarea:hover,
 
 .rubrique-title {
     font-weight: bold;
-    color: #000;
+    color: #343a40;
     font-size: 1.1rem;
     margin-bottom: 7px;
 }
@@ -275,8 +275,8 @@ textarea:hover,
     background: transparent; /* La piste est invisible */
 }
 .list-tabs-container::-webkit-scrollbar-thumb {
-    background-color: #0d6efd; /* NOUVEAU : Bleu cobalt */
-    border-radius: 1.5px; /* Ajusté pour la nouvelle épaisseur */
+    background-color: #0047AB;
+    border-radius: 1.5px;
 }
 .list-tabs-container::-webkit-scrollbar-thumb:hover {
     background-color: #0a58ca; /* NOUVEAU : Bleu cobalt plus foncé au survol */
@@ -294,14 +294,14 @@ textarea:hover,
 }
 
 .list-tab:hover {
-    border-bottom-color: #c6c6c8;
-    color: #000;
+    border-bottom-color: #dee2e6;
+    color: #212529;
 }
 
 .list-tab.active {
     font-weight: bold;
     color: #212529;
-    border-bottom-color: #000;
+    border-bottom-color: #0047AB;
 }
 
 /* --- 3.2 Barre d'outils contextuelle --- */
@@ -613,8 +613,12 @@ textarea:hover,
 .table-enhanced tbody td {
     color: #495057;
 }
+.list-row-primary {
+    font-weight: bold;
+    color: #0047AB;
+}
 .table-enhanced tbody tr.row-selected {
-    background-color: #e6f7ff;
+    background-color: #e8f0fb;
 }
 .table-enhanced tbody tr:hover {
     background-color: #f8f9fa;
@@ -748,8 +752,8 @@ textarea:hover,
 .empty-state-button-secondary:hover {
     transform: translateY(-2px); /* Léger mouvement vers le haut au survol */
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Ombre plus prononcée */
-    background-color: #5a6268; /* Gris plus foncé au survol */
-    border-color: #545b62;
+    background-color: #495057;
+    border-color: #495057;
 }
 
 /* Cible l'icône SVG à l'intérieur du bouton */
@@ -878,6 +882,7 @@ textarea:hover,
 /* --- Colonne de gauche (Attributs Calculés) --- */
 .calculated-attributes-column {
     /* Styles de base pour la colonne sombre */
+    border-top: 3px solid #0047AB;
     background-color: #212529;
     color: #e9ecef;
     padding: 1.5rem;
@@ -1041,6 +1046,11 @@ textarea:hover,
     color: #ffffff; /* Icône blanche au survol */
 }
 
+.attributes-toolbar-button:active {
+    background-color: rgba(255, 255, 255, 0.2);
+    transform: scale(0.97);
+}
+
 .attributes-toolbar-button:focus {
     box-shadow: none; /* Supprime l'ombre au focus */
 }
@@ -1073,7 +1083,7 @@ textarea:hover,
 
 /* NOUVEAU : Améliore l'UX en surlignant le bloc entier lorsque l'un de ses champs a le focus. */
 .form-column .mb-3:focus-within {
-    box-shadow: 0 0 0 1px var(--bs-primary), 0 1px 3px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 0 0 1px #0047AB, 0 0 0 3px rgba(0, 71, 171, 0.15), 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 /* STYLES POUR LE DÉFILEMENT DE FORMULAIRES (utilisé par le dialogue de recherche avancée) */
@@ -1205,11 +1215,17 @@ textarea:hover,
     justify-content: center;
 }
 
+@keyframes fadeInFeedback {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
 .feedback-container .feedback-message {
     padding: 10px 15px;
     border-radius: 5px;
     margin-bottom: 5px; /* Espace si plusieurs messages s'affichent */
     font-size: 0.9em;
+    animation: fadeInFeedback 0.2s ease;
     /* MODIFICATION : On passe en flexbox pour un meilleur contrôle */
     display: flex;
     flex-wrap: wrap; /* Permet au contenu de passer à la ligne */

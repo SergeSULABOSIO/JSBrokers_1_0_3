@@ -166,6 +166,10 @@ export default class extends Controller {
         // Activation du nouvel onglet
         this.activeTabId = newTabId;
         clickedTab.classList.add('active');
+        // Synchronise aria-selected sur tous les onglets (WCAG 4.1.2)
+        this.tabsContainerTarget.querySelectorAll('[role="tab"]').forEach(tab => {
+            tab.setAttribute('aria-selected', tab === clickedTab ? 'true' : 'false');
+        });
 
         let newContent = this.tabContentContainerTarget.querySelector(`#${this.activeTabId}`);
 
@@ -273,12 +277,20 @@ export default class extends Controller {
             entityName: collectionInfo.targetEntity
         });
         tab.textContent = collectionInfo.intitule;
+        // ARIA : pattern tablist/tab/tabpanel (WCAG 4.1.2)
+        tab.setAttribute('role', 'tab');
+        tab.setAttribute('id', `tab-${tabId}`);
+        tab.setAttribute('aria-selected', 'false');
+        tab.setAttribute('aria-controls', tabId);
         this.tabsContainerTarget.appendChild(tab);
 
-        // NOUVEAU : On prépare le conteneur de contenu en clonant le template
+        // On prépare le conteneur de contenu en clonant le template
         const contentContainer = this.collectionTabTemplateTarget.content.cloneNode(true).firstElementChild;
-        contentContainer.id = tabId; // On lui donne l'ID correspondant à l'onglet
-        contentContainer.style.display = 'none'; // On le cache par défaut
+        contentContainer.id = tabId;
+        contentContainer.style.display = 'none';
+        contentContainer.setAttribute('role', 'tabpanel');
+        contentContainer.setAttribute('aria-labelledby', `tab-${tabId}`);
+        contentContainer.setAttribute('tabindex', '0');
         this.tabContentContainerTarget.appendChild(contentContainer);
     }
 
