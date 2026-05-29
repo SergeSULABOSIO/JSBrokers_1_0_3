@@ -266,6 +266,16 @@ export default class extends Controller {
         contentElement.id = tabId;
         tabElement.dataset.tabContentId = tabId;
 
+        // ARIA : pattern tablist/tab/tabpanel (WCAG 4.1.2)
+        const tabAriaId = `tab-${entityType}-${entity.id}`;
+        tabElement.setAttribute('role', 'tab');
+        tabElement.setAttribute('id', tabAriaId);
+        tabElement.setAttribute('aria-selected', 'false');
+        tabElement.setAttribute('aria-controls', tabId);
+        contentElement.setAttribute('role', 'tabpanel');
+        contentElement.setAttribute('aria-labelledby', tabAriaId);
+        contentElement.setAttribute('tabindex', '0');
+
         // Ajouter les nouveaux éléments au DOM
         this.tabContainerTarget.appendChild(tabElement);
         this.tabContentContainerTarget.appendChild(contentElement);
@@ -303,12 +313,22 @@ export default class extends Controller {
         item.dataset.workspaceManagerTarget = "item"; // L'élément est une cible pour le contrôleur workspace-manager
         item.className = 'accordion-item';
         const title = document.createElement('div');
-        title.className = 'accordion-title'; // Ensure this class is set
-        title.dataset.action = 'click->workspace-manager#toggle'; // L'action appelle la méthode toggle de ce contrôleur
+        title.className = 'accordion-title';
+        title.dataset.action = 'click->workspace-manager#toggle';
         title.innerHTML = `<span class="accordion-toggle">+</span> ${attribute.intitule}`;
+
+        // ARIA : pattern button/region pour l'accordéon (WCAG 4.1.2)
+        const accordionId = `accordion-${entity.id}-${attribute.code}`;
+        const contentId = `accordion-content-${entity.id}-${attribute.code}`;
+        title.setAttribute('role', 'button');
+        title.setAttribute('tabindex', '0');
+        title.setAttribute('aria-expanded', 'false');
+        title.setAttribute('id', accordionId);
+        title.setAttribute('aria-controls', contentId);
 
         const content = document.createElement('div');
         content.className = 'accordion-content';
+        content.setAttribute('id', contentId);
 
         let contentValueElement; // NOUVEAU : Element qui va contenir la valeur et sur lequel on attachera le tooltip
 
@@ -602,7 +622,12 @@ export default class extends Controller {
             }
         });
 
-        // Activer l'onglet cliqué et son contenu [cite: 41, 44]
+        // Synchronise aria-selected sur tous les onglets (WCAG 4.1.2)
+        this.tabContainerTarget.querySelectorAll('[role="tab"]').forEach(tab => {
+            tab.setAttribute('aria-selected', tab === clickedTab ? 'true' : 'false');
+        });
+
+        // Activer l'onglet cliqué et son contenu
         clickedTab.classList.add('active');
         const activeContent = this.tabContentContainerTarget.querySelector(`#${clickedTab.dataset.tabContentId}`);
         if (activeContent) {
@@ -1075,9 +1100,11 @@ export default class extends Controller {
         if (isOpen) {
             content.classList.remove('open');
             toggleIcon.textContent = '+';
+            title.setAttribute('aria-expanded', 'false');
         } else {
             content.classList.add('open');
             toggleIcon.textContent = '-';
+            title.setAttribute('aria-expanded', 'true');
         }
     }
 }

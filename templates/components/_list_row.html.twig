@@ -43,7 +43,8 @@
                 data-list-manager-target="rowCheckbox" {# Cible pour le contrôleur de liste (tout cocher) #}
                 data-list-row-target="checkbox" {# Cible pour le contrôleur de ligne #}
                 data-action="change->list-manager#handleRowSelection" {# NOUVEAU : Notifie le parent list-manager #}
-                data-list-row-idobjet-value="{{ entity.id }}" {# CORRECTION: Utiliser le bon nom d'attribut pour l'ID #}
+                aria-label="Sélectionner l'élément #{{ entity.id }}"
+                data-list-row-idobjet-value="{{ entity.id }}"
                 {# On passe l'objet entier au contrôleur Stimulus pour l'événement double-clic #}
                 data-entity-type="{{entite_nom}}" 
                 data-entity='{{ entity|serialize('json', serialization_context)|e('html_attr') }}' 
@@ -60,7 +61,7 @@
         {% set col_principale = listeCanvas.colonne_principale %}
 
         {# Ligne 1: Texte principal #}
-        <div style="font-weight: bold; color: #0047AB;"> {# Bleu cobalt #}
+        <div class="list-row-primary">
             {# Icône #}
             {# CORRECTION : L'icône doit provenir du canvas de l'entité elle-même (entityCanvas) pour être correcte dans les collections. #}
             {% set icon_name = entityCanvas.parametres.icone|default(null) %}
@@ -115,7 +116,7 @@
     {# On n'affiche les colonnes numériques que si on n'est PAS dans une collection totalisable de dialogue #}
     {% if not (usage is defined and usage == 'dialog' and totalizableField is defined and totalizableField is not null) %}
         {% for colonne in listeCanvas.colonnes_numeriques %}
-            <td class="text-end" style="font-weight: bold; color: #495057;"> {# Gris foncé #}
+            <td class="text-end fw-bold">
                 <small>
                     {% set valeur_numerique = attribute(entity, colonne.attribut_code) %}
                     {{ colonne.attribut_unité }} {{ valeur_numerique | number_format(2, ',', ' ') }}
