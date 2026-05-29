@@ -141,9 +141,13 @@ export default class extends Controller {
         // Règle : "Supprimer" est visible dès qu'il y a au moins une sélection (unique ou multiple).
         this.toggleButton(this.btsupprimerTarget, canDelete);
 
-        // NOUVEAU : Gérer les actions spécifiques à l'entité
-        const specificActions = canvasParams.attribute_actions || [];
-        // Les actions spécifiques ne sont visibles que pour une sélection unique.
+        // Gérer les actions spécifiques à l'entité, avec filtrage conditionnel par état
+        const rawActions   = canvasParams.attribute_actions || [];
+        const entityData   = this.selectos[0]?.entity || {};
+        const specificActions = rawActions.filter(action => {
+            if (!action.condition) return true;
+            return entityData[action.condition.field] == action.condition.value;
+        });
         const canShowSpecificActions = selectionCount === 1 && specificActions.length > 0;
         this.updateSpecificActionButtons(canShowSpecificActions ? specificActions : []);
     }
@@ -258,43 +262,42 @@ export default class extends Controller {
             return;
         }
 
-        // On récupère l'ID de l'unique élément sélectionné
         const selectedId = this.selectos[0].id;
+        let separatorInserted = false;
 
         actions.forEach(action => {
-            // NOUVELLE LOGIQUE D'URL :
-            // Si l'URL contient le placeholder %id%, on le remplace.
-            // Sinon, on suppose que l'URL est déjà complète (cas où le PHP a déjà injecté l'ID).
+            if (action.condition && !separatorInserted) {
+                const sep = document.createElement('div');
+                sep.className = 'toolbar-separator';
+                sep.setAttribute('role', 'separator');
+                sep.setAttribute('aria-orientation', 'vertical');
+                this.specificActionsContainerTarget.appendChild(sep);
+                separatorInserted = true;
+            }
+
             const finalUrl = action.url.includes('%id%')
                 ? action.url.replace('%id%', selectedId)
                 : action.url;
 
             const button = document.createElement('button');
-            button.className = 'btn btn-default'; // Utilisation de la classe par défaut pour la cohérence
+            button.className = 'btn btn-default';
             button.setAttribute('type', 'button');
-            button.setAttribute('title', action.label); // Pour l'infobulle
-            button.setAttribute('data-controller', 'ripple'); // NOUVEAU : Ajout du contrôleur pour l'effet d'onde
-            // CORRECTION : On ne crée plus de div intermédiaire. Le bouton est vide pour l'instant.
+            button.setAttribute('title', action.label);
+            button.setAttribute('aria-label', action.label);
+            button.setAttribute('data-controller', 'ripple');
 
-            // NOUVELLE LOGIQUE : On utilise le cache.
             if (this.iconCache.has(action.icon)) {
-                // Si l'icône est en cache, on l'injecte directement.
-                // CORRECTION : On appelle handleIconLoaded pour insérer l'icône dans le bouton.
                 this.handleIconLoaded({ detail: { html: this.iconCache.get(action.icon), requesterId: `toolbar-specific-action-${action.icon.replace(/:/g, '--')}-${selectedId}`, iconName: action.icon } }, button);
             } else {
-                // Sinon (cas de fallback), on la demande au serveur.
-                // CORRECTION : L'ID de la requête est maintenant attaché au bouton lui-même.
                 button.id = `toolbar-specific-action-${action.icon.replace(/:/g, '--')}-${selectedId}`;
-                // CORRECTION : On demande une icône de 31px pour correspondre à la taille définie dans app.css pour .toolbar-icon.
                 const iconSize = 31;
                 this.notifyCerveau('ui:icon.request', { iconName: action.icon, iconSize: iconSize, requesterId: button.id });
             }
 
-            // On attache l'événement de clic
             button.addEventListener('click', () => {
                 this.notifyCerveau(action.event, {
-                    url: finalUrl, // Le cerveau reçoit l'URL finale à appeler
-                    selection: this.selectos // On passe la sélection complète
+                    url: finalUrl,
+                    selection: this.selectos
                 });
             });
             this.specificActionsContainerTarget.appendChild(button);
@@ -324,8 +327,9 @@ export default class extends Controller {
             tempDiv.innerHTML = html;
             const svgElement = tempDiv.querySelector('svg');
             if (svgElement) {
-                svgElement.classList.add('toolbar-icon'); // On ajoute la classe directement sur le SVG.
-                targetButton.innerHTML = ''; // On vide le bouton avant d'ajouter.
+                svgElement.classList.add('toolbar-icon');
+                svgElement.setAttribute('aria-hidden', 'true');
+                targetButton.innerHTML = '';
                 targetButton.appendChild(svgElement);
             }
         }

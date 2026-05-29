@@ -38,11 +38,40 @@ class BordereauFormCanvasProvider implements FormCanvasProviderInterface
             "attribute_actions" => [
                 [
                     "label" => "Analyser le bordereau",
-                    "icon" => "action:analyser", // Alias pour l'icône d'analyse
-                    "event" => "ui:bordereau.analysis-request", // Événement à envoyer au cerveau
-                    // On utilise un placeholder %id% que le JavaScript remplacera par l'ID de l'élément sélectionné.
-                    "url" => "/admin/bordereau/api/get-analysis-url/%id%"
-                ]
+                    "icon"  => "action:analyser",
+                    "event" => "ui:bordereau.analysis-request",
+                    "url"   => "/admin/bordereau/api/get-analysis-url/%id%",
+                ],
+                // Les quatre actions suivantes n'apparaissent que lorsque le bordereau
+                // est à l'étape STEP_NOTE_EMISE (= 20), c'est-à-dire qu'une note lui est liée.
+                [
+                    "label"     => "Éditer la note",
+                    "icon"      => "action:edit",
+                    "event"     => "ui:bordereau.edit-linked-note",
+                    "url"       => "/admin/bordereau/api/get-linked-note-context/%id%",
+                    "condition" => ["field" => "currentAnalysisStep", "value" => Bordereau::STEP_NOTE_EMISE],
+                ],
+                [
+                    "label"     => "Voir la note",
+                    "icon"      => "action:view",
+                    "event"     => "ui:note.preview-request",
+                    "url"       => "/admin/bordereau/api/get-linked-note-preview-url/%id%",
+                    "condition" => ["field" => "currentAnalysisStep", "value" => Bordereau::STEP_NOTE_EMISE],
+                ],
+                [
+                    "label"     => "Télécharger la note",
+                    "icon"      => "action:download",
+                    "event"     => "ui:note.preview-request",
+                    "url"       => "/admin/bordereau/api/get-linked-note-preview-url/%id%?download=1",
+                    "condition" => ["field" => "currentAnalysisStep", "value" => Bordereau::STEP_NOTE_EMISE],
+                ],
+                [
+                    "label"     => "Imprimer la note",
+                    "icon"      => "action:print",
+                    "event"     => "ui:note.preview-request",
+                    "url"       => "/admin/bordereau/api/get-linked-note-preview-url/%id%?print=1",
+                    "condition" => ["field" => "currentAnalysisStep", "value" => Bordereau::STEP_NOTE_EMISE],
+                ],
             ]
         ];
         $layout = $this->buildBordereauLayout($object, $isParentNew); // buildBordereauLayout ne prend plus idEntreprise

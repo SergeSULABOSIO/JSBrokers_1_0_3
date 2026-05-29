@@ -1,101 +1,126 @@
 {#
-    Ce template représente la barre d'outils contextuelle qui apparaît au-dessus d'une liste.
-    Il est piloté par le contrôleur Stimulus `toolbar` (anciennement `barre-outils`).
-
-    Fonctionnement :
-    - Ce contrôleur est "passif". Il ne contient pas de logique complexe.
-    - Chaque bouton est configuré pour notifier le "Cerveau" d'une action spécifique (ex: 'ui:toolbar.add-request')
-      en utilisant la méthode `notify` du contrôleur.
-    - Il écoute les événements `ui:selection.changed` émis par le Cerveau pour mettre à jour l'état de ses boutons
-      (ex: activer/désactiver les boutons "Modifier", "Supprimer" en fonction du nombre d'éléments sélectionnés).
+    Barre d'outils contextuelle au-dessus des listes.
+    Pilotée par le contrôleur Stimulus `toolbar`.
 #}
-<div 
-  class="context-toolbar d-flex align-items-center gap-1" 
+<div
+  class="context-toolbar d-flex align-items-center gap-1"
   role="toolbar"
+  aria-label="Barre d'outils de la liste"
   data-controller="toolbar"
   data-toolbar-entity-form-canvas-value="{{ entityFormCanvas|json_encode }}"
 >
-    <button 
-        data-action="click->toolbar#notify" 
+    {# Groupe 1 : Action destructrice (toujours visible) #}
+    <button
+        data-action="click->toolbar#notify"
         data-controller="ripple"
         data-toolbar-event-name-param="ui:toolbar.close-request"
-        data-toolbar-target="btquitter" 
+        data-toolbar-target="btquitter"
         class="btn btn-icon-danger"
+        type="button"
+        aria-label="Quitter la rubrique"
         title="Quitter">
-        <twig:UX:Icon name="{{ resolve_icon_name('hugeicons:logout-04') }}" class="toolbar-icon" />
+        <twig:UX:Icon name="{{ resolve_icon_name('hugeicons:logout-04') }}" class="toolbar-icon" aria-hidden="true" />
     </button>
-    <div class="toolbar-separator"></div>
-    <button 
-        data-controller="ripple"
-        data-action="click->toolbar#notify" 
-        data-toolbar-event-name-param="ui:toolbar.add-request"
-        data-toolbar-target="btajouter" 
-        class="btn btn-default"
-        title="Ajouter">
-        <twig:UX:Icon name="{{ resolve_icon_name('gridicons:add') }}" class="toolbar-icon" />
-    </button>
-    <button 
-        data-controller="ripple"
-        data-action="click->toolbar#notify" 
-        data-toolbar-event-name-param="ui:toolbar.edit-request"
-        data-toolbar-target="btmodifier" 
-        class="btn btn-default"
-        title="Modifier" style="display:none;">
-        <twig:UX:Icon name="{{ resolve_icon_name('tabler:edit') }}" class="toolbar-icon" />
-    </button>
-    {# NOUVEAU : Ajout du bouton Ouvrir #}
+
+    <div class="toolbar-separator" role="separator" aria-orientation="vertical"></div>
+
+    {# Groupe 2 : Actions CRUD (visibilité conditionnelle selon sélection) #}
+    <div class="d-flex align-items-center gap-1" role="group" aria-label="Actions sur la sélection">
+        <button
+            data-controller="ripple"
+            data-action="click->toolbar#notify"
+            data-toolbar-event-name-param="ui:toolbar.add-request"
+            data-toolbar-target="btajouter"
+            class="btn btn-default"
+            type="button"
+            aria-label="Ajouter un élément"
+            title="Ajouter">
+            <twig:UX:Icon name="{{ resolve_icon_name('gridicons:add') }}" class="toolbar-icon" aria-hidden="true" />
+        </button>
+        <button
+            data-controller="ripple"
+            data-action="click->toolbar#notify"
+            data-toolbar-event-name-param="ui:toolbar.edit-request"
+            data-toolbar-target="btmodifier"
+            class="btn btn-default"
+            type="button"
+            aria-label="Modifier l'élément sélectionné"
+            title="Modifier"
+            style="display:none;">
+            <twig:UX:Icon name="{{ resolve_icon_name('tabler:edit') }}" class="toolbar-icon" aria-hidden="true" />
+        </button>
+        <button
+            data-controller="ripple"
+            data-action="click->toolbar#notify"
+            data-toolbar-event-name-param="ui:toolbar.open-request"
+            data-toolbar-target="btouvrir"
+            class="btn btn-default"
+            type="button"
+            aria-label="Ouvrir l'élément sélectionné"
+            title="Ouvrir"
+            style="display:none;">
+            <twig:UX:Icon name="{{ resolve_icon_name('fad:open') }}" class="toolbar-icon" aria-hidden="true" />
+        </button>
+        <button
+            data-controller="ripple"
+            data-action="click->toolbar#notify"
+            data-toolbar-event-name-param="app:delete-request"
+            data-toolbar-target="btsupprimer"
+            class="btn btn-icon-danger"
+            type="button"
+            aria-label="Supprimer la sélection"
+            title="Supprimer"
+            style="display:none;">
+            <twig:UX:Icon name="{{ resolve_icon_name('fluent:delete-20-filled') }}" class="toolbar-icon" aria-hidden="true" />
+        </button>
+    </div>
+
+    {# Groupe 3 : Actions spécifiques à l'entité (injectées dynamiquement par toolbar_controller.js) #}
+    <div class="toolbar-separator" role="separator" aria-orientation="vertical" data-toolbar-target="specificActionsSeparator" style="display: none;"></div>
+    <div class="d-flex align-items-center gap-1" role="group" aria-label="Actions spécifiques" data-toolbar-target="specificActionsContainer">
+        {# Les boutons sont injectés ici par le contrôleur Stimulus #}
+    </div>
+
+    <div class="toolbar-separator" role="separator" aria-orientation="vertical"></div>
+
+    {# Groupe 4 : Navigation de liste (toujours visible) #}
+    <div class="d-flex align-items-center gap-1" role="group" aria-label="Navigation de la liste">
+        <button
+            data-controller="ripple"
+            data-action="click->toolbar#notify"
+            data-toolbar-event-name-param="ui:toolbar.select-all-request"
+            data-toolbar-target="bttoutcocher"
+            class="btn btn-default"
+            type="button"
+            aria-label="Sélectionner tout"
+            title="Sélectionner tout">
+            <twig:UX:Icon name="{{ resolve_icon_name('material-symbols:check-box') }}" class="toolbar-icon" aria-hidden="true" />
+        </button>
+        <button
+            data-controller="ripple"
+            data-action="click->toolbar#notify"
+            data-toolbar-event-name-param="ui:toolbar.refresh-request"
+            data-toolbar-target="btrecharger"
+            class="btn btn-default"
+            type="button"
+            aria-label="Actualiser la liste"
+            title="Actualiser">
+            <twig:UX:Icon name="{{ resolve_icon_name('ci:arrows-reload-01') }}" class="toolbar-icon" aria-hidden="true" />
+        </button>
+    </div>
+
+    <div class="toolbar-separator" role="separator" aria-orientation="vertical"></div>
+
+    {# Groupe 5 : Paramètres (toujours visible) #}
     <button
         data-controller="ripple"
         data-action="click->toolbar#notify"
-        data-toolbar-event-name-param="ui:toolbar.open-request"
-        data-toolbar-target="btouvrir"
-        class="btn btn-default"
-        title="Ouvrir" style="display:none;">
-        <twig:UX:Icon name="{{ resolve_icon_name('fad:open') }}" class="toolbar-icon" />
-    </button>
-    <button 
-        data-controller="ripple"
-        data-action="click->toolbar#notify" 
-        data-toolbar-event-name-param="app:delete-request"
-        data-toolbar-target="btsupprimer" 
-        class="btn btn-icon-danger"
-        title="Supprimer" style="display:none;">
-        <twig:UX:Icon name="{{ resolve_icon_name('fluent:delete-20-filled') }}" class="toolbar-icon" />
-    </button>
-
-    {# NOUVEAU : Séparateur et conteneur pour les actions spécifiques #}
-    <div class="toolbar-separator" data-toolbar-target="specificActionsSeparator" style="display: none;"></div>
-    <div class="d-flex gap-1" data-toolbar-target="specificActionsContainer">
-        <!-- Les boutons spécifiques seront injectés ici par le contrôleur Stimulus -->
-    </div>
-
-    <div class="toolbar-separator"></div>
-    <button 
-        data-controller="ripple"
-        data-action="click->toolbar#notify" 
-        data-toolbar-event-name-param="ui:toolbar.select-all-request"
-        data-toolbar-target="bttoutcocher" 
-        class="btn btn-default"
-        title="Sélectionner tout">
-        <twig:UX:Icon name="{{ resolve_icon_name('material-symbols:check-box') }}" class="toolbar-icon" />
-    </button>
-    <button 
-        data-controller="ripple"
-        data-action="click->toolbar#notify" 
-        data-toolbar-event-name-param="ui:toolbar.refresh-request"
-        data-toolbar-target="btrecharger"
-        class="btn btn-default"
-        title="Actualiser">
-        <twig:UX:Icon name="{{ resolve_icon_name('ci:arrows-reload-01') }}" class="toolbar-icon" />
-    </button>
-    <div class="toolbar-separator"></div>
-    <button 
-        data-controller="ripple"
-        data-action="click->toolbar#notify" 
         data-toolbar-event-name-param="ui:toolbar.settings-request"
         data-toolbar-target="btparametres"
         class="btn btn-default"
+        type="button"
+        aria-label="Paramètres de la rubrique"
         title="Paramètres">
-        <twig:UX:Icon name="{{ resolve_icon_name('material-symbols:settings') }}" class="toolbar-icon" />
+        <twig:UX:Icon name="{{ resolve_icon_name('material-symbols:settings') }}" class="toolbar-icon" aria-hidden="true" />
     </button>
 </div>

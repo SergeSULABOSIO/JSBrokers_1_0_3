@@ -23,11 +23,9 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
 
     public function getCanvas(object $object, ?int $idEntreprise): array
     {
-        // Debug : Vérifie si l'invité est bien présent sur la Note (injecté par l'initializer du Controller)
-        // dd($object, $object->getInvite(), $idEntreprise); 
-
         /** @var Note $object */
         $isParentNew = ($object->getId() === null);
+        $isBordereauNote = ($object->getBordereau() !== null);
 
         $parametres = [
             "titre_creation" => "Nouvelle Note",
@@ -36,6 +34,9 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/note/api/delete",
             "endpoint_form_url" => "/admin/note/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Fields in NoteType but absent from layout: must be suppressed so form_end(render_rest:true)
+            // doesn't render them as stray visible widgets at the bottom of the form.
+            "suppress_fields" => $isBordereauNote ? ['articles', 'bordereau'] : ['bordereau'],
             // NOUVEAU : Définition de la barre d'outils pour le volet des attributs.
             // Cette barre ne sera affichée qu'en mode édition.
             "attribute_actions" => [
@@ -113,9 +114,6 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
             ["colonnes" => [["champs" => [array_merge(['field_code' => 'partenaire'], $visibilityPartenaire)]]]],
             ["colonnes" => [["champs" => [array_merge(['field_code' => 'autoritefiscale'], $visibilityAutorite)]]]],
 
-            // NOUVEAU : Ajout du champ Bordereau. Il est conditionné par la présence d'un assureur.
-            ["colonnes" => [["champs" => [array_merge(['field_code' => 'bordereau'], $visibilityAssureur)]]]],
-
             // Ligne 3: le nom
             ["colonnes" => [["champs" => ["nom"]]]],
 
@@ -127,26 +125,31 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
 
         ];
 
-        $collections = [
-            [
-                'fieldName' => 'articles', 
-                'entityRouteName' => 'article', 
-                'formTitle' => 'Article', 
-                'parentFieldName' => 'note', 
-                'totalizableField' => 'montantArticle',
-                'disabled' => false
-            ],
-            [
-                'fieldName' => 'paiements',
-                'entityRouteName' => 'paiement',
-                'formTitle' => 'Paiement',
-                'parentFieldName' => 'note',
-                'totalizableField' => 'montantPaiement',
-                'secondaryField' => 'paidAt', // On veut afficher la date
-                'secondaryLabel' => ' * Date: le ', // Séparateur et préfixe
-                // Désactive si le solde est explicitement 0 ou moins (Note soldée)
-                'disabled' => ($object->solde !== null && (float)$object->solde <= 0)
-            ],
+        $isBordereauNote = $object->getBordereau() !== null;
+
+        $collections = [];
+
+        // Articles : masqués pour les notes de bordereau (montants déjà portés par le bordereau)
+        if (!$isBordereauNote) {
+            $collections[] = [
+                'fieldName'      => 'articles',
+                'entityRouteName'=> 'article',
+                'formTitle'      => 'Article',
+                'parentFieldName'=> 'note',
+                'totalizableField'=> 'montantArticle',
+                'disabled'       => false,
+            ];
+        }
+
+        $collections[] = [
+            'fieldName'      => 'paiements',
+            'entityRouteName'=> 'paiement',
+            'formTitle'      => 'Paiement',
+            'parentFieldName'=> 'note',
+            'totalizableField'=> 'montantPaiement',
+            'secondaryField' => 'paidAt',
+            'secondaryLabel' => ' * Date: le ',
+            'disabled'       => ($object->solde !== null && (float)$object->solde <= 0),
         ];
 
         $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);

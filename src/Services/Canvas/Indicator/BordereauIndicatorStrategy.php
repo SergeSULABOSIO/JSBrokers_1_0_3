@@ -3,6 +3,7 @@
 namespace App\Services\Canvas\Indicator;
 
 use App\Entity\Bordereau;
+use App\Repository\AvenantRepository;
 use App\Services\ServiceDates;
 use DateTimeImmutable;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
@@ -11,7 +12,8 @@ class BordereauIndicatorStrategy implements IndicatorCalculationStrategyInterfac
 {
     public function __construct(
         private ServiceDates $serviceDates,
-        private IndicatorCalculationHelper $indicatorCalculationHelper // Inject the helper
+        private IndicatorCalculationHelper $indicatorCalculationHelper,
+        private AvenantRepository $avenantRepository,
     ) {
     }
 
@@ -26,28 +28,25 @@ class BordereauIndicatorStrategy implements IndicatorCalculationStrategyInterfac
     public function calculate(object $entity): array
     {
         /** @var Bordereau $entity */
-        
-        // Calcul des montants HT et Taxe à partir des opérations
-        $totalMontantHT = 0.0;
-        $totalMontantTaxe = 0.0;
-        foreach ($entity->getOperations() as $operation) {
-            // Assurez-vous que l'opération a ses propres montants HT et Taxe
-            // NOUVEAU : On s'assure que les montants ne sont pas nuls avant l'addition.
-            $totalMontantHT += $operation->getMontantHT() ?? 0.0;
-            $totalMontantTaxe += $operation->getMontantTaxe() ?? 0.0;
-            // ou que ces derniers sont calculés et hydratés sur l'objet Operation.
-            // Pour l'instant, on suppose qu'ils sont directement accessibles.
-            $totalMontantHT += $operation->getMontantHT() ?? 0.0;
-            $totalMontantTaxe += $operation->getMontantTaxe() ?? 0.0;
-        }
+
+        $montants = $this->getMontantsFromAvenants($entity);
+        $totalMontantHT   = $montants['montantHT'];
+        $totalMontantTaxe = $montants['taxeAssureur'];
         $entity->montantCommissionHT = $totalMontantHT;
         $entity->montantTaxe = $totalMontantTaxe;
         $montantCommissionTTC = $totalMontantHT + $totalMontantTaxe;
+
+        $comHtPayableNow  = $entity->getMontantComHtPayableNow() ?? 0.0;
+        $taxePayableNow   = $entity->getMontantTaxePayableNow() ?? 0.0;
+        $comTtcPayableNow = round($comHtPayableNow + $taxePayableNow, 2);
+
         $montantEncaisse = $this->indicatorCalculationHelper->getBordereauMontantEncaisse($entity);
-        $solde = $montantCommissionTTC - $montantEncaisse;
+        $solde = $comTtcPayableNow - $montantEncaisse;
 
         // NOUVEAU : Calcul et hydratation du statut transitoire
         $entity->statut = $this->determineBordereauStatus($entity);
+
+        $isValidated = $entity->getCurrentAnalysisStep() === Bordereau::STATUT_ANALYSE_TERMINEE;
 
         return [
             'typeString' => $this->getBordereauTypeString($entity),
@@ -60,7 +59,36 @@ class BordereauIndicatorStrategy implements IndicatorCalculationStrategyInterfac
             'montantCommissionTTC' => $montantCommissionTTC,
             'montantEncaisse' => $montantEncaisse,
             'solde' => $solde,
+            'montantPayableDisplay' => $isValidated ? ($entity->getMontantPayableNow() ?? 0.0) : 0.0,
+            'comHtPayableNow'  => round($comHtPayableNow, 2),
+            'taxePayableNow'   => round($taxePayableNow, 2),
+            'comTtcPayableNow' => $comTtcPayableNow,
         ];
+    }
+
+    private function getMontantsFromAvenants(Bordereau $bordereau): array
+    {
+        $avenantIds = array_values(array_filter(array_unique(
+            array_column($bordereau->getAnalysisResults() ?? [], 'avenant_id')
+        )));
+
+        if (empty($avenantIds)) {
+            return ['montantHT' => 0.0, 'taxeAssureur' => 0.0];
+        }
+
+        $avenants = $this->avenantRepository->findBy(['id' => $avenantIds]);
+
+        $totalHT   = 0.0;
+        $totalTaxe = 0.0;
+        foreach ($avenants as $avenant) {
+            $cotation = $avenant->getCotation();
+            if ($cotation) {
+                $totalHT   += $this->indicatorCalculationHelper->getCotationMontantCommissionHt($cotation, -1, false);
+                $totalTaxe += $this->indicatorCalculationHelper->getCotationMontantTaxeAssureur($cotation, false);
+            }
+        }
+
+        return ['montantHT' => $totalHT, 'taxeAssureur' => $totalTaxe];
     }
 
     private function getBordereauTypeString(Bordereau $bordereau): string
@@ -104,12 +132,22 @@ class BordereauIndicatorStrategy implements IndicatorCalculationStrategyInterfac
             return Bordereau::STATUT_ANALYSE_TERMINEE;
         }
 
+        if ($currentStep === Bordereau::STATUT_ANALYSE_TERMINEE) {
+            return Bordereau::STATUT_VALIDE;
+        }
+
+        if ($currentStep === Bordereau::STEP_NOTE_EMISE) {
+            return Bordereau::STATUT_FACTURE;
+        }
+
         return Bordereau::STATUT_INCONNU;
     }
 
     private function getBordereauStatutString(Bordereau $bordereau): string
     {
         return match ($bordereau->statut) { // Utilise la propriété 'statut' calculée
+            Bordereau::STATUT_VALIDE => 'Validé',
+            Bordereau::STATUT_FACTURE => 'Facturé',
             Bordereau::STATUT_EN_ATTENTE_ANALYSE => 'Analyse non démarrée',
             Bordereau::STATUT_SELECTION_FEUILLE_EN_COURS => 'Feuille sélectionnée',
             Bordereau::STATUT_MAPPAGE_INCOMPLET => 'Mappage incomplet',

@@ -47,16 +47,28 @@ class BordereauEntityCanvasProvider implements EntityCanvasProviderInterface
 
     private function getSpecificIndicators(): array
     {
+        $currency = $this->serviceMonnaies->getCodeMonnaieAffichage();
+
         return [
-            ["group" => "Analyse du Bordereau", "code" => "typeString", "intitule" => "Type", "type" => "Calcul", "format" => "Texte", "description" => "Type de bordereau."],
-            ["group" => "Analyse du Bordereau", "code" => "statutString", "intitule" => "Statut", "type" => "Calcul", "format" => "Texte", "description" => "Statut actuel du bordereau."],
-            ["group" => "Analyse du Bordereau", "code" => "ageBordereau", "intitule" => "Âge (depuis réception)", "type" => "Calcul", "format" => "Texte", "description" => "Nombre de jours écoulés depuis la date de réception."],
-            ["group" => "Analyse du Bordereau", "code" => "nombreDocuments", "intitule" => "Nombre de documents", "type" => "Calcul", "format" => "Nombre", "description" => "Nombre de documents joints à ce bordereau."],
-            ["group" => "Analyse du Bordereau", "code" => "montantCommissionHT", "intitule" => "Montant HT", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant total des commissions HT."],
-            ["group" => "Analyse du Bordereau", "code" => "montantTaxe", "intitule" => "Montant Taxe", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant total des taxes."],
-            ["group" => "Analyse du Bordereau", "code" => "montantCommissionTTC", "intitule" => "Commission TTC", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant total des commissions TTC."],
-            ["group" => "Analyse du Bordereau", "code" => "montantEncaisse", "intitule" => "Montant Encaissé", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant total des paiements reçus."],
-            ["group" => "Analyse du Bordereau", "code" => "solde", "intitule" => "Solde", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Solde restant à encaisser."],
+            // ── Informations générales ──────────────────────────────────────
+            ["group" => "Informations générales", "code" => "typeString",      "intitule" => "Type",                  "type" => "Calcul", "format" => "Texte",     "description" => "Type de bordereau."],
+            ["group" => "Informations générales", "code" => "statutString",    "intitule" => "Statut",                "type" => "Calcul", "format" => "Texte",     "description" => "Statut actuel du bordereau."],
+            ["group" => "Informations générales", "code" => "ageBordereau",    "intitule" => "Âge (depuis réception)","type" => "Calcul", "format" => "Texte",     "description" => "Nombre de jours écoulés depuis la date de réception."],
+            ["group" => "Informations générales", "code" => "nombreDocuments", "intitule" => "Nombre de documents",   "type" => "Calcul", "format" => "Nombre",    "description" => "Nombre de documents joints à ce bordereau."],
+
+            // ── Montants issus du bordereau (lignes analysées) ──────────────
+            ["group" => "Montants du bordereau", "code" => "comHtPayableNow",  "intitule" => "Com. HT Payable Now",  "type" => "Calcul", "format" => "Monetaire", "unite" => $currency, "description" => "Somme des commissions HT payables issues des lignes du bordereau."],
+            ["group" => "Montants du bordereau", "code" => "taxePayableNow",   "intitule" => "Taxe Payable Now",     "type" => "Calcul", "format" => "Monetaire", "unite" => $currency, "description" => "Somme des taxes sur commission payables issues des lignes du bordereau."],
+            ["group" => "Montants du bordereau", "code" => "comTtcPayableNow", "intitule" => "Com. TTC Payable Now", "type" => "Calcul", "format" => "Monetaire", "unite" => $currency, "description" => "Total TTC payable (Com. HT + Taxe), issu des lignes du bordereau."],
+
+            // ── Encaissement ────────────────────────────────────────────────
+            ["group" => "Encaissement", "code" => "montantEncaisse", "intitule" => "Montant Encaissé", "type" => "Calcul", "format" => "Monetaire", "unite" => $currency, "description" => "Montant total des paiements reçus sur ce bordereau."],
+            ["group" => "Encaissement", "code" => "solde",           "intitule" => "Solde dû",         "type" => "Calcul", "format" => "Monetaire", "unite" => $currency, "description" => "Solde restant à encaisser (Com. TTC Payable Now − Encaissé)."],
+
+            // ── Récapitulatif des avenants liés ─────────────────────────────
+            ["group" => "Avenants liés", "code" => "montantCommissionHT",  "intitule" => "Montant HT",      "type" => "Calcul", "format" => "Monetaire", "unite" => $currency, "description" => "Somme des commissions HT calculée sur les avenants liés."],
+            ["group" => "Avenants liés", "code" => "montantTaxe",          "intitule" => "Montant Taxe",    "type" => "Calcul", "format" => "Monetaire", "unite" => $currency, "description" => "Somme des taxes calculée sur les avenants liés."],
+            ["group" => "Avenants liés", "code" => "montantCommissionTTC", "intitule" => "Commission TTC",  "type" => "Calcul", "format" => "Monetaire", "unite" => $currency, "description" => "Total TTC calculé sur les avenants liés (HT + Taxe)."],
         ];
     }
 }

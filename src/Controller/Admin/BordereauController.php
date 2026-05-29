@@ -146,6 +146,43 @@ class BordereauController extends AbstractController
         return $this->json(['analysisUrl' => $finalUrl]);
     }
 
+    #[Route('/api/get-linked-note-preview-url/{id}', name: 'api.get_linked_note_preview_url', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function getLinkedNotePreviewUrl(Bordereau $bordereau, Request $request): JsonResponse
+    {
+        $note = $bordereau->getNotes()->first();
+        if (!$note) {
+            return $this->json(['error' => 'Aucune note liée à ce bordereau.'], 404);
+        }
+
+        $params = ['id' => $note->getId()];
+        if ($request->query->get('download')) {
+            $url = $this->generateUrl('admin.note.download_pdf', $params, \Symfony\Component\Routing\Generator\UrlGeneratorInterface::ABSOLUTE_URL);
+        } else {
+            if ($request->query->get('print')) {
+                $params['print'] = 1;
+            }
+            $url = $this->generateUrl('admin.note.show_preview', $params, \Symfony\Component\Routing\Generator\UrlGeneratorInterface::ABSOLUTE_URL);
+        }
+
+        return $this->json(['previewUrl' => $url]);
+    }
+
+    #[Route('/api/get-linked-note-context/{id}', name: 'api.get_linked_note_context', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function getLinkedNoteContext(Bordereau $bordereau, Request $request): JsonResponse
+    {
+        $note = $bordereau->getNotes()->first();
+        if (!$note) {
+            return $this->json(['error' => 'Aucune note liée à ce bordereau.'], 404);
+        }
+
+        $idEntreprise = (int) $request->query->get('idEntreprise', 0);
+
+        return $this->json([
+            'note'       => $this->serializer->normalize($note, null, ['groups' => ['list:read']]),
+            'formCanvas' => $this->canvasBuilder->getEntityFormCanvas($note, $idEntreprise),
+        ]);
+    }
+
     #[Route('/analyse/{id}', name: 'show_analysis', methods: ['GET'])]
     public function showAnalysis(Bordereau $bordereau, ParameterBagInterface $params, ChargementRepository $chargementRepository, TypeRevenuRepository $typeRevenuRepository): Response
     {
@@ -522,18 +559,24 @@ class BordereauController extends AbstractController
             2
         );
 
+        // Notes liées à ce bordereau (pour affichage du badge post-validation)
+        $linkedNotesData = array_map(
+            fn($n) => ['id' => $n->getId(), 'reference' => $n->getReference(), 'nom' => $n->getNom()],
+            $bordereau->getNotes()->toArray()
+        );
+
         return $this->render('admin/bordereau/bordereau_analysis.html.twig', [
             'bordereau' => $bordereau,
             'entreprise' => $entreprise,
-            'invite' => $invite, // NOUVEAU : On passe l'invité au template.
-            'viewData' => $viewData, // Contient maintenant les chargements
-            // CORRECTION : S'assurer que les types sont corrects (objet vide ou tableau vide au lieu de null)
+            'invite' => $invite,
+            'viewData' => $viewData,
             'selectedSheetName' => $bordereau->getSelectedSheetName(),
             'mappedColumns' => (object) ($bordereau->getMappedColumns() ?: []),
-            'analysisResults' => $rawAnalysisResults, // On passe les données brutes pour la sauvegarde
-            'analysisResultsHtml' => $analysisResultsHtmlForTemplate, // On passe le HTML pour l'affichage
+            'analysisResults' => $rawAnalysisResults,
+            'analysisResultsHtml' => $analysisResultsHtmlForTemplate,
             'analysisStats' => $stats,
             'currentAnalysisStep' => $bordereau->getCurrentAnalysisStep(),
+            'linkedNotesData' => $linkedNotesData,
             'error' => $error,
         ]);
     }
@@ -661,6 +704,10 @@ class BordereauController extends AbstractController
             $discrepancies = [];
 
             if (!$avenant) {
+                // Inclure les lignes "new" dans le total payable même si l'avenant n'existe pas encore
+                $financialTotals['com_payable_now'] += (float)($rawLineData['commission_ht_payable_now'] ?? 0);
+                $financialTotals['taxe']            += (float)($rawLineData['taxe_commission_payable_now'] ?? 0);
+
                 $chunkResultsToStore[] = [
                     'type' => 'new',
                     'row_index' => $rowIndex,
@@ -828,6 +875,9 @@ class BordereauController extends AbstractController
 
             $bordereau->setAnalysisResults($accumulated);
             $bordereau->setCurrentAnalysisStep(3);
+            $bordereau->setMontantPayableNow(round($financialTotals['com_payable_now'] + $financialTotals['taxe'], 2));
+            $bordereau->setMontantComHtPayableNow(round($financialTotals['com_payable_now'], 2));
+            $bordereau->setMontantTaxePayableNow(round($financialTotals['taxe'], 2));
             $bordereau->setUpdatedAt(new \DateTimeImmutable());
             $this->em->persist($bordereau);
             $this->em->flush();
