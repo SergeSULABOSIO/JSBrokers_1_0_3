@@ -338,6 +338,9 @@ export default class extends Controller {
             case 'ui:bordereau.analysis-request':
                 this.handleBordereauAnalysisRequest(payload);
                 break;
+            case 'ui:bordereau.edit-linked-note':
+                this.handleBordereauEditLinkedNote(payload);
+                break;
             case 'bordereau:submit-analysis': // NOUVEAU : Gère la soumission de l'analyse du bordereau
                 console.log("[Cerveau] Reçu 'bordereau:submit-analysis'. Délégation à _handleSubmitBordereauAnalysis.");
                 this._handleSubmitBordereauAnalysis(payload);
@@ -1012,6 +1015,44 @@ export default class extends Controller {
         } catch (error) {
             console.error("[Cerveau] Erreur lors de la récupération de l'URL pour l'action sur le bordereau :", error);
             this._showNotification(error.message || "Erreur lors de la génération de l'analyse.", "error");
+        } finally {
+            this.broadcast('app:loading.stop');
+        }
+    }
+
+    /**
+     * Ouvre le dialogue d'édition de la Note liée à un bordereau.
+     * Récupère le contexte (entité + canvas) depuis le backend puis délègue à openDialogBox.
+     * @param {object} payload
+     * @param {string} payload.url - URL retournant { note, formCanvas }
+     */
+    async handleBordereauEditLinkedNote(payload) {
+        if (!payload.url) {
+            console.error("[Cerveau] handleBordereauEditLinkedNote() : URL manquante.", payload);
+            this._showNotification("Impossible d'ouvrir la note : URL manquante.", 'error');
+            return;
+        }
+        try {
+            this.broadcast('app:loading.start');
+            const url = new URL(payload.url, window.location.origin);
+            if (this.currentIdEntreprise) {
+                url.searchParams.set('idEntreprise', this.currentIdEntreprise);
+            }
+            const response = await fetch(url.toString());
+            if (!response.ok) throw new Error(`Erreur serveur ${response.status}`);
+            const { note, formCanvas } = await response.json();
+            this.openDialogBox({
+                entity:          note,
+                entityFormCanvas: formCanvas,
+                isCreationMode:  false,
+                context: {
+                    idEntreprise: this.currentIdEntreprise,
+                    idInvite:     this.currentIdInvite,
+                },
+            });
+        } catch (error) {
+            console.error("[Cerveau] handleBordereauEditLinkedNote() failed:", error);
+            this._showNotification(error.message || "Impossible d'ouvrir la note.", 'error');
         } finally {
             this.broadcast('app:loading.stop');
         }

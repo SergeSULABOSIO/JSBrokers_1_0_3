@@ -1,112 +1,133 @@
 {#
-    Ce template représente le menu contextuel qui apparaît lors d'un clic droit sur une liste.
-    Il est piloté par le contrôleur Stimulus `context-menu` (anciennement `list-element-context-menu`).
-
-    Fonctionnement :
-    - Ce contrôleur est "passif". Il est initialement caché.
-    - Il écoute un événement global (ex: `app:show.context-menu`) pour s'afficher à la position de la souris.
-    - Chaque option du menu (`<li>`) déclenche une action qui notifie le "Cerveau" d'une demande spécifique
-      (ex: 'ui:context-menu.add-request'). C'est ensuite le contrôleur de liste (`list-manager`) qui exécute l'action.
+    Menu contextuel (clic droit) sur la liste principale.
+    Piloté par le contrôleur Stimulus `context-menu`.
+    ARIA : role="menu" + role="menuitem" conformes au pattern WAI-ARIA Menu Button.
 #}
-<nav 
-    id="simpleContextMenu" 
-    class="context-menu text-secondary" 
-    data-controller="context-menu" 
-    data-context-menu-target="menu" 
+<nav
+    id="simpleContextMenu"
+    class="context-menu"
+    data-controller="context-menu"
+    data-context-menu-target="menu"
+    aria-label="Menu contextuel"
 >
-    <ul>
-        {# Option "Ajouter" #}
-        <li 
+    <ul role="menu" aria-label="Actions disponibles">
+
+        {# Ajouter #}
+        <li
+            role="menuitem"
+            tabindex="-1"
             data-context-menu-target="btAjouter"
             data-action="click->context-menu#notify"
-            data-context-menu-event-name-param="ui:toolbar.add-request" class="d-flex align-items-center gap-3"
+            data-context-menu-event-name-param="ui:toolbar.add-request"
         >
-            <span class="context-menu-icon"><twig:UX:Icon name="{{ resolve_icon_name('action:add') }}" style="width: 20px;" /></span>
+            <span class="context-menu-icon" aria-hidden="true"><twig:UX:Icon name="{{ resolve_icon_name('action:add') }}" style="width: 18px; height: 18px;" /></span>
             <span class="flex-grow-1">Ajouter</span>
-            <span class="context-menu-shortcut">A</span>
+            <span class="context-menu-shortcut" aria-label="Raccourci : A">A</span>
         </li>
-        {# Option "Ouvrir" #}
-        <li 
+
+        {# Ouvrir #}
+        <li
+            role="menuitem"
+            tabindex="-1"
             data-context-menu-target="btOuvrir"
             data-action="click->context-menu#notify"
-            data-context-menu-event-name-param="ui:toolbar.open-request" class="d-flex align-items-center gap-3"
+            data-context-menu-event-name-param="ui:toolbar.open-request"
         >
-            <span class="context-menu-icon"><twig:UX:Icon name="{{ resolve_icon_name('action:open') }}" style="width: 20px;" /></span>
+            <span class="context-menu-icon" aria-hidden="true"><twig:UX:Icon name="{{ resolve_icon_name('action:open') }}" style="width: 18px; height: 18px;" /></span>
             <span class="flex-grow-1">Ouvrir</span>
-            <span class="context-menu-shortcut">O</span>
+            <span class="context-menu-shortcut" aria-label="Raccourci : O">O</span>
         </li>
-        {# Option "Modifier" #}
-        <li 
-            data-context-menu-target="btModifier" 
+
+        {# Modifier #}
+        <li
+            role="menuitem"
+            tabindex="-1"
+            data-context-menu-target="btModifier"
             data-action="click->context-menu#notify"
-            data-context-menu-event-name-param="ui:toolbar.edit-request" class="d-flex align-items-center gap-3"
+            data-context-menu-event-name-param="ui:toolbar.edit-request"
         >
-            <span class="context-menu-icon"><twig:UX:Icon name="{{ resolve_icon_name('action:edit') }}" style="width: 20px;" /></span>
+            <span class="context-menu-icon" aria-hidden="true"><twig:UX:Icon name="{{ resolve_icon_name('action:edit') }}" style="width: 18px; height: 18px;" /></span>
             <span class="flex-grow-1">Modifier</span>
-            <span class="context-menu-shortcut">M</span>
+            <span class="context-menu-shortcut" aria-label="Raccourci : M">M</span>
         </li>
 
-        {# NOUVEAU : Séparateur et conteneur pour les actions spécifiques (Visualiser, Imprimer, etc.) #}
-        <li class="separator" data-context-menu-target="specificActionsSeparator" style="display: none;"></li>
-        <ul data-context-menu-target="specificActionsContainer" class="list-unstyled m-0 p-0">
-            <!-- Les actions spécifiques seront injectées ici par context-menu_controller.js -->
-        </ul>
+        {# Séparateur + actions spécifiques injectées dynamiquement #}
+        {# Note : la structure <li> > <ul> est valide — un <li> peut contenir n'importe quel contenu #}
+        <li role="separator" class="separator" data-context-menu-target="specificActionsSeparator" style="display: none;"></li>
+        <li class="specific-actions-wrapper p-0">
+            <ul role="group" aria-label="Actions spécifiques" data-context-menu-target="specificActionsContainer" class="list-unstyled m-0 p-0">
+                {# Les <li role="menuitem"> sont injectés ici par context-menu_controller.js #}
+            </ul>
+        </li>
 
-        {# Option "Tout Cocher" #}
-        <li 
-            data-context-menu-target="btToutCocher" 
+        {# Tout cocher #}
+        <li
+            role="menuitem"
+            tabindex="-1"
+            data-context-menu-target="btToutCocher"
             data-action="click->context-menu#notify"
-            data-context-menu-event-name-param="ui:toolbar.select-all-request" class="d-flex align-items-center gap-3"
+            data-context-menu-event-name-param="ui:toolbar.select-all-request"
         >
-            <span class="context-menu-icon"><twig:UX:Icon name="{{ resolve_icon_name('action:check') }}" style="width: 20px;" /></span>
-            <span class="flex-grow-1">Tout Cocher</span>
+            <span class="context-menu-icon" aria-hidden="true"><twig:UX:Icon name="{{ resolve_icon_name('action:check') }}" style="width: 18px; height: 18px;" /></span>
+            <span class="flex-grow-1">Tout cocher</span>
             <span class="context-menu-shortcut"></span>
         </li>
-        {# Option "Actualiser" #}
-        <li 
-            data-context-menu-target="btActualiser" 
+
+        {# Actualiser #}
+        <li
+            role="menuitem"
+            tabindex="-1"
+            data-context-menu-target="btActualiser"
             data-action="click->context-menu#notify"
-            data-context-menu-event-name-param="ui:toolbar.refresh-request" class="d-flex align-items-center gap-3"
+            data-context-menu-event-name-param="ui:toolbar.refresh-request"
         >
-            <span class="context-menu-icon"><twig:UX:Icon name="{{ resolve_icon_name('action:reload') }}" style="width: 20px;" /></span>
+            <span class="context-menu-icon" aria-hidden="true"><twig:UX:Icon name="{{ resolve_icon_name('action:reload') }}" style="width: 18px; height: 18px;" /></span>
             <span class="flex-grow-1">Actualiser</span>
-            <span class="context-menu-shortcut">R</span>
+            <span class="context-menu-shortcut" aria-label="Raccourci : R">R</span>
         </li>
 
-        {# Option "Supprimer" #}
+        {# Supprimer — variante danger #}
         <li
+            role="menuitem"
+            tabindex="-1"
+            class="is-danger"
             data-context-menu-target="btSupprimer"
             data-action="click->context-menu#notify"
-            data-context-menu-event-name-param="app:delete-request" class="d-flex align-items-center gap-3"
+            data-context-menu-event-name-param="app:delete-request"
         >
-            <span class="context-menu-icon"><twig:UX:Icon name="{{ resolve_icon_name('action:delete') }}" style="width: 20px;" /></span>
+            <span class="context-menu-icon" aria-hidden="true"><twig:UX:Icon name="{{ resolve_icon_name('action:delete') }}" style="width: 18px; height: 18px;" /></span>
             <span class="flex-grow-1">Supprimer</span>
-            <span class="context-menu-shortcut">S</span>
+            <span class="context-menu-shortcut" aria-label="Raccourci : S">S</span>
         </li>
 
-        {# Option "Séparateur" #}
-        <li class="separator"></li>
+        <li role="separator" class="separator"></li>
 
-        {# Option "Paramètre" #}
-        <li 
-            data-context-menu-target="btParametrer" 
+        {# Paramètres #}
+        <li
+            role="menuitem"
+            tabindex="-1"
+            data-context-menu-target="btParametrer"
             data-action="click->context-menu#notify"
-            data-context-menu-event-name-param="ui:toolbar.settings-request" class="d-flex align-items-center gap-3"
+            data-context-menu-event-name-param="ui:toolbar.settings-request"
         >
-            <span class="context-menu-icon"><twig:UX:Icon name="{{ resolve_icon_name('action:settings') }}" style="width: 20px;" /></span>
+            <span class="context-menu-icon" aria-hidden="true"><twig:UX:Icon name="{{ resolve_icon_name('action:settings') }}" style="width: 18px; height: 18px;" /></span>
             <span class="flex-grow-1">Paramètres</span>
             <span class="context-menu-shortcut"></span>
         </li>
 
-        {# Option "Quitter" #}
-        <li 
-            data-context-menu-target="btQuitter" 
+        {# Quitter — variante danger #}
+        <li
+            role="menuitem"
+            tabindex="-1"
+            class="is-danger"
+            data-context-menu-target="btQuitter"
             data-action="click->context-menu#notify"
-            data-context-menu-event-name-param="ui:toolbar.close-request" class="d-flex align-items-center gap-3"
+            data-context-menu-event-name-param="ui:toolbar.close-request"
         >
-            <span class="context-menu-icon"><twig:UX:Icon name="{{ resolve_icon_name('action:exit') }}" style="width: 20px;" /></span>
+            <span class="context-menu-icon" aria-hidden="true"><twig:UX:Icon name="{{ resolve_icon_name('action:exit') }}" style="width: 18px; height: 18px;" /></span>
             <span class="flex-grow-1">Quitter</span>
-            <span class="context-menu-shortcut">Q</span>
+            <span class="context-menu-shortcut" aria-label="Raccourci : Q">Q</span>
         </li>
+
     </ul>
 </nav>

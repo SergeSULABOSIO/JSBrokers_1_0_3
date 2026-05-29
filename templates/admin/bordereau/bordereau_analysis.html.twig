@@ -22,6 +22,22 @@
             .actions-bar { display: none !important; }
             .analysis-container { margin: 0; border: none; box-shadow: none; max-width: 100%; }
         }
+        .analysis-toolbar-badge-note {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(144,184,255,0.15);
+            color: #90b8ff;
+            font-size: 0.72rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            border: 1px solid rgba(144,184,255,0.3);
+            cursor: pointer;
+            transition: background 0.15s;
+            line-height: 1.4;
+        }
+        .analysis-toolbar-badge-note:hover {
+            background: rgba(144,184,255,0.3);
+        }
     </style>
 </head>
 {% set sheets_data_json = {} %}
@@ -35,6 +51,10 @@
     data-bordereau-analysis-mapping-options-value="{{ viewData.mapping_options|json_encode|e('html_attr') }}"
     data-bordereau-analysis-type-revenus-value="{{ viewData.typeRevenus|json_encode|e('html_attr') }}"
     data-bordereau-analysis-bordereau-id-value="{{ bordereau.id }}"
+    data-bordereau-analysis-id-entreprise-value="{{ invite.entreprise.id }}"
+    data-bordereau-analysis-id-invite-value="{{ invite.id }}"
+    data-bordereau-analysis-linked-notes-value="{{ linkedNotesData|json_encode|e('html_attr') }}"
+    data-bordereau-analysis-note-form-canvas-value="{{ {'parametres': {'titre_creation': ('Facturer — Bordereau ' ~ bordereau.reference), 'endpoint_submit_url': '/admin/note/api/submit', 'endpoint_delete_url': '/admin/note/api/delete', 'endpoint_form_url': '/admin/note/api/get-form', 'isCreationMode': true, 'icone': 'note'}}|json_encode|e('html_attr') }}"
     {# CORRECTION : Ajout des valeurs de restauration pour le contrôleur Stimulus #}
     data-bordereau-analysis-selected-sheet-name-value="{{ selectedSheetName|default('') }}"
     data-bordereau-analysis-mapped-columns-value="{{ mappedColumns|json_encode|e('html_attr') }}"
@@ -114,9 +134,18 @@
                             {% set statusTextColor = '#90b8ff' %}
                             {% set statusText = 'Validé' %}
                         {% endif %}
-                        <span class="analysis-toolbar-badge-status"
+                        <span class="analysis-toolbar-badge-status me-2"
                               data-bordereau-analysis-target="toolbarBadgeStatus"
                               style="background-color: {{ statusBgColor }}; color: {{ statusTextColor }};">{{ statusText }}</span>
+
+                        {# Badge note liée — affiché ici (côté titre) dès qu'une note est créée ou retrouvée en BD #}
+                        <button type="button"
+                                class="analysis-toolbar-badge-note d-none"
+                                data-bordereau-analysis-target="linkedNotesBadge"
+                                data-action="click->bordereau-analysis#openLinkedNoteDialog">
+                            <twig:UX:Icon name="{{ resolve_icon_name('note') }}" width="11px" height="11px" class="me-1" />
+                            <span data-bordereau-analysis-target="linkedNotesBadgeText">Note liée</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -190,11 +219,12 @@
                     <button type="button"
                             class="btn btn-primary d-inline-flex align-items-center gap-2 d-none"
                             data-bordereau-analysis-target="factureButton"
-                            data-controller="ripple"
-                            disabled>
+                            data-action="click->bordereau-analysis#createFacture"
+                            data-controller="ripple">
                         <twig:UX:Icon name="{{ resolve_icon_name('note') }}" width="18px" height="18px" />
                         <span>Facturer</span>
                     </button>
+
 
                     <button type="button"
                             class="btn btn-secondary d-inline-flex align-items-center gap-2 d-none"
@@ -228,6 +258,9 @@
                             <li data-bordereau-analysis-target="reanalyzeItem" class="d-none"><button class="dropdown-item d-inline-flex align-items-center gap-2" data-action="click->bordereau-analysis#submitAnalysis"><twig:UX:Icon name="lucide:refresh-cw" width="16px" height="16px" /><span>Réanalyser</span></button></li>
                             <li data-bordereau-analysis-target="backToMappingDropdownItem" class="d-none"><hr class="dropdown-divider"></li>
                             <li data-bordereau-analysis-target="backToMappingDropdownItem" class="d-none"><button class="dropdown-item d-inline-flex align-items-center gap-2" data-action="click->bordereau-analysis#showStep" data-step-number="2"><twig:UX:Icon name="lucide:arrow-left-circle" width="16px" height="16px" /><span>Retour</span></button></li>
+                            <li data-bordereau-analysis-target="noteActionsDivider" class="d-none"><hr class="dropdown-divider"></li>
+                            <li data-bordereau-analysis-target="editNoteItem" class="d-none"><button class="dropdown-item d-inline-flex align-items-center gap-2" data-action="click->bordereau-analysis#openLinkedNoteDialog"><twig:UX:Icon name="{{ resolve_icon_name('action:edit') }}" width="16px" height="16px" /><span>Éditer la note</span></button></li>
+                            <li data-bordereau-analysis-target="viewNoteItem" class="d-none"><button class="dropdown-item d-inline-flex align-items-center gap-2" data-action="click->bordereau-analysis#viewLinkedNote"><twig:UX:Icon name="{{ resolve_icon_name('action:view') }}" width="16px" height="16px" /><span>Voir la note</span></button></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><button class="dropdown-item d-inline-flex align-items-center gap-2" onclick="window.close()"><twig:UX:Icon name="lucide:x-circle" width="16px" height="16px" /><span>Fermer</span></button></li>
                         </ul>

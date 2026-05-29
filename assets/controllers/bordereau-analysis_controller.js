@@ -20,7 +20,12 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         "searchResultCount", // span affichant "X résultat(s) sur Y"
         "validationModal",          // modal Bootstrap de confirmation de validation
         "factureButton",            // bouton "Facturer" (affiché post-validation uniquement)
-        "backToMappingDropdownItem" // item "Retour" dans le dropdown (affiché post-validation)
+        "backToMappingDropdownItem", // item "Retour" dans le dropdown (affiché post-validation)
+        "linkedNotesBadge",          // conteneur du badge note liée
+        "linkedNotesBadgeText",      // span texte du badge note liée
+        "noteActionsDivider",        // séparateur dropdown (notes liées)
+        "editNoteItem",              // dropdown item "Éditer la note"
+        "viewNoteItem",              // dropdown item "Voir la note"
     ];
 
     static values = {
@@ -41,6 +46,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         isBulkProcessing: Boolean, // NOUVEAU : Pour gérer l'état de traitement en lot
         idEntreprise: Number,
         idInvite: Number,
+        noteFormCanvas: Object, // Canvas JSON pour le formulaire Note (facturation)
+        linkedNotes: Array,     // Notes déjà liées au bordereau [{id, reference, nom}]
     };
 
     connect() {
@@ -652,6 +659,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                 title = 'Étape 3 : Résultats de l\'analyse';
                 message = 'Vérifiez les avenants détectés et traitez les anomalies ou les nouveaux éléments.';
                 break;
+            default:
+                return; // Aucun toast pour les états non définis (ex : step=99 bordereau validé)
         }
         this._showToast('info', `<strong>${title}</strong><br>${message}`, true, true);
         this._initialToastShown = true;
@@ -720,6 +729,9 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         if (this.hasReanalyzeItemTarget) this.reanalyzeItemTarget.classList.add('d-none');
         if (this.hasFactureButtonTarget) this.factureButtonTarget.classList.add('d-none');
         this.backToMappingDropdownItemTargets.forEach(el => el.classList.add('d-none'));
+        if (this.hasNoteActionsDividerTarget) this.noteActionsDividerTarget.classList.add('d-none');
+        if (this.hasEditNoteItemTarget) this.editNoteItemTarget.classList.add('d-none');
+        if (this.hasViewNoteItemTarget) this.viewNoteItemTarget.classList.add('d-none');
 
         // --- 3. Fermer le toast existant lors des transitions d'étape ---
         // sauf à l'étape 2 où le feedback de mappage doit rester visible.
@@ -797,15 +809,28 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         } else if (this.currentStep > 3) {
 
-            // BORDEREAU VALIDÉ (step = 99) — lecture seule, pas de bouton Valider
+            // BORDEREAU VALIDÉ (step = 99) — lecture seule
             this.step3Target.classList.remove('d-none');
             this.renderAnalysisSummary(this.analysisStatsValue);
             this.renderAnalysisResults(this.analysisResultsHtmlValue);
-            if (this.hasFactureButtonTarget)  this.factureButtonTarget.classList.remove('d-none');
+            if (this.hasValidateButtonTarget) {
+                this.validateButtonTarget.classList.remove('d-none');
+                this.validateButtonTarget.disabled = true;
+                const span = this.validateButtonTarget.querySelector('span');
+                if (span) span.textContent = '✓ Bordereau validé';
+            }
             if (this.hasExportPdfItemTarget)  this.exportPdfItemTarget.classList.remove('d-none');
             if (this.hasSearchBlockTarget)    this.searchBlockTarget.classList.remove('d-none');
+            if (this.hasReanalyzeItemTarget)  this.reanalyzeItemTarget.classList.remove('d-none');
             this.backToMappingDropdownItemTargets.forEach(el => el.classList.remove('d-none'));
             this._resetSearch();
+
+            // Afficher le badge si des notes sont déjà liées, sinon le bouton Facturer
+            if (this.linkedNotesValue?.length > 0) {
+                this._renderLinkedNotesBadge(this.linkedNotesValue);
+            } else if (this.hasFactureButtonTarget) {
+                this.factureButtonTarget.classList.remove('d-none');
+            }
         }
 
         // --- 5. Sauvegarde de l'étape (sauf pendant la restauration) ---
@@ -1318,12 +1343,46 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
      * @param {CustomEvent} event
      */
     _handleItemResolved(event) {
-        if (event.detail?.type !== 'bordereau:item.resolved') return;
+        const { type, payload } = event.detail ?? {};
+
+        if (type === 'ui:dialog.content-request') {
+            // Le cerveau n'est pas présent sur cette page : on gère le fetch nous-mêmes.
+            this._handleDialogContentRequest(payload);
+            return;
+        }
+
+        if (type === 'ui:dialog.close-request') {
+            document.dispatchEvent(new CustomEvent('app:dialog.do-close', {
+                bubbles: true,
+                detail: { dialogId: payload.dialogId }
+            }));
+            return;
+        }
+
+        if (type === 'ui:icon.request') {
+            this._handleDialogIconRequest(payload);
+            return;
+        }
+
+        if (type === 'ui:note.preview-request') {
+            this._handleNotePreviewRequest(payload);
+            return;
+        }
+
+        if (type === 'app:entity.saved') {
+            if (payload?.originatorId === `bordereau-note-${this.bordereauIdValue}`) {
+                this._renderLinkedNotesBadge([payload.entity]);
+                if (this.hasFactureButtonTarget) this.factureButtonTarget.classList.add('d-none');
+            }
+            return;
+        }
+
+        if (type !== 'bordereau:item.resolved') return;
 
         console.log('[BordereauAnalysis] _handleItemResolved() - Item résolu détecté. Réévaluation du bouton Valider.');
         this._updateValidateButtonState();
         this._updateBulkButtonsState();
-        this._recalculateAndRenderStatsFromDom(); // Recalculate and render stats
+        this._recalculateAndRenderStatsFromDom();
     }
 
     /**
@@ -1447,7 +1506,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
             // Succès : feedback visuel
             this._showToast('success', '✓ Bordereau validé avec succès !', true);
-            this.validateButtonTarget.textContent = '✓ Bordereau validé';
+            const validateSpan = this.validateButtonTarget.querySelector('span');
+            if (validateSpan) validateSpan.textContent = '✓ Bordereau validé';
             this.validateButtonTarget.disabled = true;
 
             // Afficher "Facturer", déplacer "Retour" dans le dropdown
@@ -1572,21 +1632,21 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                     <!-- TOTAUX FINANCIERS -->
                     <div class="row g-0 border rounded-2 overflow-hidden">
                         <div class="col-md-4 p-2 text-center" style="border-right: 1px solid #dee2e6;">
-                            <div class="small text-muted mb-1" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.4px;">Primes TTC</div>
-                            <div class="fw-bold" style="color: #0047AB; font-size: 1rem;">
-                                ${formatNumber(stats.total_prime_ttc)}
-                            </div>
-                        </div>
-                        <div class="col-md-4 p-2 text-center" style="border-right: 1px solid #dee2e6;">
-                            <div class="small text-muted mb-1" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.4px;">Commissions HT</div>
-                            <div class="fw-bold text-success" style="font-size: 1rem;">
-                                ${formatNumber(stats.total_commission_ht)}
-                            </div>
-                        </div>
-                        <div class="col-md-4 p-2 text-center">
                             <div class="small text-muted mb-1" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.4px;">Com. HT Payable Now</div>
                             <div class="fw-bold text-success" style="font-size: 1rem;">
                                 ${formatNumber(stats.total_com_payable_now)}
+                            </div>
+                        </div>
+                        <div class="col-md-4 p-2 text-center" style="border-right: 1px solid #dee2e6;">
+                            <div class="small text-muted mb-1" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.4px;">Taxe Com. Payable Now</div>
+                            <div class="fw-bold text-success" style="font-size: 1rem;">
+                                ${formatNumber(stats.total_taxe)}
+                            </div>
+                        </div>
+                        <div class="col-md-4 p-2 text-center">
+                            <div class="small text-muted mb-1" style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.4px;">Com. TTC</div>
+                            <div class="fw-bold" style="color: #0047AB; font-size: 1rem;">
+                                ${formatNumber((stats.total_com_payable_now || 0) + (stats.total_taxe || 0))}
                             </div>
                         </div>
                     </div>
@@ -2364,6 +2424,161 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             this.analysisResultsListTarget
                 .querySelectorAll('[data-controller="analysis-result-item"]')
                 .forEach(item => item.classList.remove('d-none'));
+        }
+    }
+
+    /**
+     * Remplace le cerveau pour charger le contenu HTML d'une boîte de dialogue.
+     * Intercepte ui:dialog.content-request et répond avec ui:dialog.content-ready.
+     * @param {object} payload - Identique au payload traité par cerveau.handleDialogContentRequest.
+     */
+    async _handleDialogContentRequest(payload) {
+        const { dialogId, endpoint, entity, entityFormCanvas } = payload;
+
+        try {
+            let urlString = endpoint;
+            if (entity && entity.id) {
+                urlString += `/${entity.id}`;
+            }
+
+            const url = new URL(urlString, window.location.origin);
+            if (this.idEntrepriseValue) url.searchParams.set('idEntreprise', this.idEntrepriseValue);
+            if (this.idInviteValue)    url.searchParams.set('idInvite',    this.idInviteValue);
+
+            const response = await fetch(url.pathname + url.search);
+            if (!response.ok) throw new Error(`Erreur serveur ${response.status}`);
+
+            const html = await response.text();
+
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+            const contentRoot = tempDiv.querySelector('[data-icon-name]');
+            const icon = contentRoot ? contentRoot.dataset.iconName : null;
+
+            const isCreationMode = !(entity && entity.id);
+            const title = isCreationMode
+                ? (entityFormCanvas?.parametres?.titre_creation || 'Création')
+                : (entityFormCanvas?.parametres?.titre_modification || 'Modification #%id%').replace('%id%', entity.id);
+
+            document.dispatchEvent(new CustomEvent('ui:dialog.content-ready', {
+                bubbles: true,
+                detail: { dialogId, html, title, icon }
+            }));
+        } catch (error) {
+            document.dispatchEvent(new CustomEvent('ui:dialog.content-ready', {
+                bubbles: true,
+                detail: { dialogId, error: { message: error.message } }
+            }));
+        }
+    }
+
+    /**
+     * Ouvre le dialog de création de Note pré-rempli depuis ce bordereau.
+     * Dispatche app:boite-dialogue:init-request directement (page autonome, pas de cerveau).
+     */
+    createFacture() {
+        const bordereauId = this.bordereauIdValue;
+        document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
+            bubbles: true,
+            detail: {
+                entity: {},
+                entityFormCanvas: this.noteFormCanvasValue,
+                isCreationMode: true,
+                context: {
+                    originatorId: `bordereau-note-${bordereauId}`,
+                    idEntreprise: this.idEntrepriseValue,
+                    idInvite: this.idInviteValue
+                },
+                parentContext: { id: String(bordereauId), fieldName: 'bordereau' }
+            }
+        }));
+    }
+
+    /**
+     * Affiche le badge de note liée et masque le bouton Facturer.
+     * @param {Array} notes - Tableau de {id, reference, nom}
+     */
+    _renderLinkedNotesBadge(notes) {
+        this.savedNoteEntities = notes;
+        if (!this.hasLinkedNotesBadgeTarget) return;
+        const first = notes[0];
+        this.linkedNotesBadgeTextTarget.textContent = notes.length > 1
+            ? `${notes.length} notes liées`
+            : (first.reference || first.id);
+        this.linkedNotesBadgeTarget.classList.remove('d-none');
+        if (this.hasFactureButtonTarget) this.factureButtonTarget.classList.add('d-none');
+        if (this.hasNoteActionsDividerTarget) this.noteActionsDividerTarget.classList.remove('d-none');
+        if (this.hasEditNoteItemTarget) this.editNoteItemTarget.classList.remove('d-none');
+        if (this.hasViewNoteItemTarget) this.viewNoteItemTarget.classList.remove('d-none');
+    }
+
+    /**
+     * Rouvre le dialog de la note liée en mode édition.
+     */
+    openLinkedNoteDialog() {
+        const note = this.savedNoteEntities?.[0];
+        if (!note) return;
+        const editCanvas = {
+            parametres: {
+                ...this.noteFormCanvasValue.parametres,
+                isCreationMode: false,
+                titre_modification: `Note ${note.reference || note.id}`
+            }
+        };
+        document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
+            bubbles: true,
+            detail: {
+                entity: note,
+                entityFormCanvas: editCanvas,
+                isCreationMode: false,
+                context: {
+                    idEntreprise: this.idEntrepriseValue,
+                    idInvite: this.idInviteValue
+                }
+            }
+        }));
+    }
+
+    async viewLinkedNote() {
+        const note = this.savedNoteEntities?.[0];
+        if (!note) return;
+        await this._handleNotePreviewRequest({ url: `/admin/note/api/get-preview-url/${note.id}` });
+    }
+
+    async _handleNotePreviewRequest({ url }) {
+        if (!url) return;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) return;
+            const result = await response.json();
+            if (result.previewUrl) window.open(result.previewUrl, '_blank');
+        } catch (e) {
+            console.warn('[BordereauAnalysis] _handleNotePreviewRequest() failed:', e);
+        }
+    }
+
+    async _handleDialogIconRequest({ iconName, iconSize, requesterId }) {
+        if (this.iconCache.has(iconName)) {
+            document.dispatchEvent(new CustomEvent('app:icon.loaded', {
+                bubbles: true,
+                detail: { html: this.iconCache.get(iconName), requesterId, iconName }
+            }));
+            return;
+        }
+        try {
+            const url = `/api/icon/api/get-icon?name=${encodeURIComponent(iconName)}&size=${iconSize || 24}`;
+            const response = await fetch(url);
+            if (!response.ok) return;
+            const html = await response.text();
+            if (html && !html.trim().startsWith('<!--')) {
+                this.iconCache.set(iconName, html);
+            }
+            document.dispatchEvent(new CustomEvent('app:icon.loaded', {
+                bubbles: true,
+                detail: { html, requesterId, iconName }
+            }));
+        } catch (e) {
+            console.warn('[BordereauAnalysis] _handleDialogIconRequest() failed:', e);
         }
     }
 }

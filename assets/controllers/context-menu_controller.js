@@ -150,8 +150,13 @@ export default class extends Controller {
             }
         }
 
-        // NOUVEAU : Gérer les actions spécifiques
-        const specificActions = this.entityFormCanvas?.parametres?.attribute_actions || [];
+        // Gérer les actions spécifiques avec filtrage conditionnel par état
+        const rawActions  = this.entityFormCanvas?.parametres?.attribute_actions || [];
+        const entityData  = this.entities[0]?.entity || {};
+        const specificActions = rawActions.filter(action => {
+            if (!action.condition) return true;
+            return entityData[action.condition.field] == action.condition.value;
+        });
         const canShowSpecificActions = isSingleSelection && specificActions.length > 0;
         if (this.hasSpecificActionsContainerTarget) {
             this.updateSpecificActionButtons(canShowSpecificActions ? specificActions : []);
@@ -218,22 +223,30 @@ export default class extends Controller {
         if (actions.length === 0) return;
 
         const selectedId = this.entities[0].id;
+        let separatorInserted = false;
 
         actions.forEach(action => {
+            if (action.condition && !separatorInserted) {
+                const sep = document.createElement('li');
+                sep.setAttribute('role', 'separator');
+                sep.className = 'separator';
+                this.specificActionsContainerTarget.appendChild(sep);
+                separatorInserted = true;
+            }
+
             const finalUrl = action.url.includes('%id%') ? action.url.replace('%id%', selectedId) : action.url;
 
             const li = document.createElement('li');
-            // CORRECTION : Utilisation des mêmes classes que les autres options pour un alignement parfait.
-            li.className = 'd-flex align-items-center gap-3';
+            li.setAttribute('role', 'menuitem');
+            li.setAttribute('tabindex', '-1');
             li.setAttribute('data-action', 'click->context-menu#notify');
             li.setAttribute('data-context-menu-event-name-param', action.event);
-            // On stocke les données nécessaires directement sur l'élément <li>
             li.dataset.url = finalUrl;
             li.dataset.selection = JSON.stringify(this.entities);
 
             const iconSpan = document.createElement('span');
-            // CORRECTION : Utilisation de la bonne classe pour l'icône.
             iconSpan.className = 'context-menu-icon';
+            iconSpan.setAttribute('aria-hidden', 'true');
             iconSpan.id = `context-menu-icon-${action.icon.replace(':', '--')}-${crypto.randomUUID()}`;
             li.appendChild(iconSpan);
 
@@ -242,7 +255,6 @@ export default class extends Controller {
             labelSpan.textContent = action.label;
             li.appendChild(labelSpan);
 
-            // CORRECTION : Ajout du conteneur pour le raccourci, même s'il est vide, pour maintenir l'alignement.
             const shortcutSpan = document.createElement('span');
             shortcutSpan.className = 'context-menu-shortcut';
             li.appendChild(shortcutSpan);

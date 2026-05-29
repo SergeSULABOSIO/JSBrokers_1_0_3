@@ -24,6 +24,12 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
     public function calculate(object $entity): array
     {
         /** @var Note $entity */
+
+        // Note de bordereau : pas d'articles, montants issus du bordereau persisté
+        if ($entity->getArticles()->isEmpty() && $entity->getBordereau() !== null) {
+            return $this->calculateFromBordereau($entity);
+        }
+
         $montantTotal = round($this->getNoteMontantPayable($entity), 2);
         $montantTaxe = round($this->getNoteMontantTaxe($entity), 2);
         $montantHT = $montantTotal - $montantTaxe;
@@ -38,6 +44,39 @@ class NoteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'montantTaxe' => $montantTaxe,
             'nomTaxe' => $this->getNoteNomTaxe($entity),
             'tauxTaxe' => $this->getNoteTauxTaxe($entity, $montantHT),
+        ];
+    }
+
+    private function calculateFromBordereau(Note $note): array
+    {
+        $bordereau   = $note->getBordereau();
+        $montantHT   = round($bordereau->getMontantComHtPayableNow() ?? 0.0, 2);
+        $montantTaxe = round($bordereau->getMontantTaxePayableNow() ?? 0.0, 2);
+        $montantTotal = round($montantHT + $montantTaxe, 2);
+        $montantPaye  = round($this->getNoteMontantPaye($note), 2);
+        $solde        = round($montantTotal - $montantPaye, 2);
+
+        $tauxTaxe = ($montantHT > 0 && $montantTaxe > 0)
+            ? round(($montantTaxe / $montantHT) * 100, 2)
+            : 0.0;
+
+        $statutPaiement = match (true) {
+            $montantTotal == 0 && $montantPaye == 0 => 'N/A',
+            $montantPaye >= $montantTotal            => 'Payée',
+            $montantPaye > 0                         => 'Partiel',
+            default                                  => 'Impayée',
+        };
+
+        return [
+            'typeString'       => $this->getNoteTypeString($note),
+            'addressedToString'=> $this->calculationHelper->getNoteAddressedToString($note),
+            'montantTotal'     => $montantTotal,
+            'montantPaye'      => $montantPaye,
+            'solde'            => $solde,
+            'statutPaiement'   => $statutPaiement,
+            'montantTaxe'      => $montantTaxe,
+            'nomTaxe'          => 'Taxe',
+            'tauxTaxe'         => $tauxTaxe,
         ];
     }
 

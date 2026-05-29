@@ -52,13 +52,13 @@ export default class extends Controller {
                         <div class="feedback-container me-auto" data-dialog-instance-target="feedbackContainer"> 
                             <!-- Feedback message will be injected here -->
                         </div>
-                        <button type="button" class="btn btn-secondary" data-controller="ripple" data-action="click->dialog-instance#close" data-dialog-instance-target="closeFooterButton"> 
-                            <span class="button-icon" data-dialog-instance-target="closeIcon"></span>
+                        <button type="button" class="btn btn-secondary d-inline-flex align-items-center gap-2" data-controller="ripple" data-action="click->dialog-instance#close" data-dialog-instance-target="closeFooterButton">
+                            <span class="button-icon d-inline-flex" data-dialog-instance-target="closeIcon"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
                             <span class="button-text">Fermer</span>
                         </button>
-                        <button type="button" class="btn btn-primary" data-controller="ripple" data-action="click->dialog-instance#triggerSubmit" data-dialog-instance-target="submitButton"> 
+                        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2" data-controller="ripple" data-action="click->dialog-instance#triggerSubmit" data-dialog-instance-target="submitButton">
                             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="display: none;"></span>
-                            <span class="button-icon" data-dialog-instance-target="saveIcon"></span>
+                            <span class="button-icon d-inline-flex" data-dialog-instance-target="saveIcon"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg></span>
                             <span class="button-text">Enregistrer</span>
                         </button>
                     </div>

@@ -38,8 +38,10 @@ class Bordereau implements OwnerAwareInterface // Implémente OwnerAwareInterfac
     public const STATUT_MAPPAGE_COMPLET = 13;
     public const STATUT_MAPPAGE_INCOMPLET = 14;
     public const STATUT_ANALYSE_TERMINEE = 15;
+    public const STATUT_FACTURE = 3;              // Note de facturation émise
     public const STATUT_INCONNU = 99;
     public const TYPE_BOREDERAU_PRODUCTION = 0;
+    public const STEP_NOTE_EMISE = 20;            // currentAnalysisStep persisté → "Facturé"
     #[ORM\Column(length: 255)]
     #[Groups(['list:read'])]
     private ?string $nom = null;
@@ -146,6 +148,31 @@ class Bordereau implements OwnerAwareInterface // Implémente OwnerAwareInterfac
     #[ORM\Column(type: 'json', nullable: true)]
     #[Groups(['list:read'])]
     private ?array $analysisResults = null;
+
+    #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
+    private ?float $montantPayableNow = null;
+
+    #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
+    private ?float $montantComHtPayableNow = null;
+
+    #[ORM\Column(nullable: true)]
+    #[Groups(['list:read'])]
+    private ?float $montantTaxePayableNow = null;
+
+    // Propriété publique non-persistée, hydratée par CanvasBuilder pour l'affichage sur la liste
+    #[Groups(['list:read'])]
+    public ?float $montantPayableDisplay = null;
+
+    #[Groups(['list:read'])]
+    public ?float $comHtPayableNow = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxePayableNow = null;
+
+    #[Groups(['list:read'])]
+    public ?float $comTtcPayableNow = null;
 
 
     public function __construct()
@@ -426,6 +453,42 @@ class Bordereau implements OwnerAwareInterface // Implémente OwnerAwareInterfac
     public function setAnalysisResults(?array $analysisResults): static
     {
         $this->analysisResults = $analysisResults;
+
+        return $this;
+    }
+
+    public function getMontantPayableNow(): ?float
+    {
+        return $this->montantPayableNow;
+    }
+
+    public function setMontantPayableNow(?float $montantPayableNow): static
+    {
+        $this->montantPayableNow = $montantPayableNow;
+
+        return $this;
+    }
+
+    public function getMontantComHtPayableNow(): ?float
+    {
+        return $this->montantComHtPayableNow;
+    }
+
+    public function setMontantComHtPayableNow(?float $value): static
+    {
+        $this->montantComHtPayableNow = $value;
+
+        return $this;
+    }
+
+    public function getMontantTaxePayableNow(): ?float
+    {
+        return $this->montantTaxePayableNow;
+    }
+
+    public function setMontantTaxePayableNow(?float $value): static
+    {
+        $this->montantTaxePayableNow = $value;
 
         return $this;
     }

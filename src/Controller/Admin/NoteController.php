@@ -4,6 +4,7 @@ namespace App\Controller\Admin;
 
 use Dompdf\Dompdf;
 use Dompdf\Options;
+use App\Entity\Bordereau;
 use App\Entity\Note;
 use App\Entity\Invite;
 use App\Constantes\Constante;
@@ -80,16 +81,30 @@ class NoteController extends AbstractController
             Note::class,
             NoteType::class,
             $note,
-            function (Note $note, Invite $invite) {
+            function (Note $note, Invite $invite) use ($request) {
                 $note->setSignature((string)time());
-                $note->setReference("N" . time());
                 $note->setType(Note::TYPE_NOTE_DE_DEBIT);
                 $note->setInvite($invite);
                 $note->setAddressedTo(Note::TO_ASSUREUR);
                 $note->setValidated(false);
-                
-                // NOUVEAU : Initialisation de la date du jour au premier chargement
                 $note->setSentAt(new \DateTimeImmutable());
+
+                // Pré-remplissage depuis un bordereau parent (parentContext du dialog-instance)
+                $bordereauId = $request->query->get('parent_id');
+                $parentField = $request->query->get('parent_field_name');
+
+                if ($parentField === 'bordereau' && $bordereauId) {
+                    $bordereau = $this->em->find(Bordereau::class, (int)$bordereauId);
+                    if ($bordereau) {
+                        $note->setBordereau($bordereau);
+                        $note->setAssureur($bordereau->getAssureur());
+                        $note->setNom('Commission — Bordereau ' . $bordereau->getReference());
+                        $note->setReference('FACT-' . $bordereau->getReference());
+                        return; // référence déjà définie, on sort
+                    }
+                }
+
+                $note->setReference('N' . time());
             }
         );
     }
@@ -198,15 +213,13 @@ class NoteController extends AbstractController
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submitApi(Request $request): JsonResponse
     {
-        // NOUVEAU : On récupère l'invité connecté de manière sécurisée côté serveur
         $inviteConnecte = $this->getInvite();
 
         return $this->handleFormSubmission(
             $request,
             Note::class,
             NoteType::class,
-            function (Note $note) use ($inviteConnecte) {
-                // S'il s'agit d'une nouvelle note
+            function (Note $note) use ($inviteConnecte, $request) {
                 if (!$note->getId()) {
                     if (!$note->getReference()) {
                         $note->setReference("N" . time());
@@ -217,13 +230,29 @@ class NoteController extends AbstractController
                     if ($note->isValidated() === null) {
                         $note->setValidated(false);
                     }
-                    
-                    // NOUVEAU : On s'assure que la note est bien liée à l'utilisateur (et donc à l'entreprise) pour ne pas être orpheline
                     $note->setInvite($inviteConnecte);
-                    
-                    // NOUVEAU : Sécurité supplémentaire si la date n'est pas passée dans le POST
                     if (!$note->getSentAt()) {
                         $note->setSentAt(new \DateTimeImmutable());
+                    }
+
+                    // The 'bordereau' field is suppressed from the form layout (to avoid Twig double-render),
+                    // so the form binding sets it to null. Restore it from the parentContext sent by dialog-instance.
+                    if ($note->getBordereau() === null) {
+                        $bordereauId = $request->request->get('parent_id');
+                        $parentField = $request->request->get('parent_field_name');
+                        if ($parentField === 'bordereau' && $bordereauId) {
+                            $bordereau = $this->em->find(Bordereau::class, (int)$bordereauId);
+                            if ($bordereau) {
+                                $note->setBordereau($bordereau);
+                            }
+                        }
+                    }
+
+                    // Bordereau → passe au statut "Facturé" dans la même transaction
+                    if ($note->getBordereau() !== null) {
+                        $bordereau = $note->getBordereau();
+                        $bordereau->setCurrentAnalysisStep(Bordereau::STEP_NOTE_EMISE);
+                        $bordereau->setUpdatedAt(new \DateTimeImmutable());
                     }
                 }
             }

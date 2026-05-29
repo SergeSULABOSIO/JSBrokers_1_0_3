@@ -215,6 +215,18 @@ export default class extends Controller {
             });
         }
 
+        // Demander les icônes des boutons de pied de dialogue (save / close)
+        this.notifyCerveau('ui:icon.request', {
+            iconName: 'action:save',
+            iconSize: 16,
+            requesterId: this.dialogId + '-save'
+        });
+        this.notifyCerveau('ui:icon.request', {
+            iconName: 'action:close',
+            iconSize: 16,
+            requesterId: this.dialogId + '-close'
+        });
+
         // On remplace tout le contenu de la modale par le HTML reçu.
         this.contentTarget.innerHTML = html; 
 

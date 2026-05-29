@@ -72,6 +72,14 @@
                 {{ form_widget(form) }}
             {% endif %}
 
+            {# Suppress fields that are in the form type but intentionally absent from the canvas layout.
+               Calling setRendered() prevents form_end(render_rest:true) from rendering them as stray widgets. #}
+            {% if formCanvas.parametres.suppress_fields is defined %}
+                {% for suppressedField in formCanvas.parametres.suppress_fields %}
+                    {% if form[suppressedField] is defined %}{% do form[suppressedField].setRendered() %}{% endif %}
+                {% endfor %}
+            {% endif %}
+
             {{ form_end(form, {'render_rest': true}) }}
         </div>
     </div>
