@@ -12,9 +12,12 @@ use App\Form\NoteType;
 use App\Repository\NoteRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
+use App\Services\BordereauAnalysisPdfService;
 use App\Services\CanvasBuilder;
 use App\Services\ServiceMonnaies;
 use App\Services\Canvas\CalculationProvider;
+use setasign\Fpdi\Tcpdf\Fpdi;
+use setasign\Fpdi\PdfParser\StreamReader;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
@@ -45,6 +48,7 @@ class NoteController extends AbstractController
         private SerializerInterface $serializer, // Ajout de SerializerInterface
         private CalculationProvider $calculationProvider,
         private ServiceMonnaies $serviceMonnaies, // NOUVEAU : Injection du service des monnaies
+        private BordereauAnalysisPdfService $bordereauPdfService,
         CanvasBuilder $canvasBuilder
     ) {
         // Assign the injected CanvasBuilder to the property declared in the trait
@@ -204,10 +208,46 @@ class NoteController extends AbstractController
         $dompdf->loadHtml($html);
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
-        return new Response($dompdf->output(), 200, [
+        $notePdfString = $dompdf->output();
+
+        // 5. Si la note est liée à un bordereau, on annexe les lignes conformes en paysage
+        $bordereau = $note->getBordereau();
+        if ($bordereau !== null) {
+            $bordereauPdfString = $this->bordereauPdfService->generatePdfString($bordereau, matchOnly: true);
+            if ($bordereauPdfString !== null) {
+                $notePdfString = $this->mergePdfs($notePdfString, $bordereauPdfString);
+            }
+        }
+
+        return new Response($notePdfString, 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline; filename="note-' . $note->getReference() . '.pdf"',
         ]);
+    }
+
+    private function mergePdfs(string $notePdf, string $bordereauPdf): string
+    {
+        $fpdi = new Fpdi('P', 'mm', 'A4');
+        $fpdi->setPrintHeader(false);
+        $fpdi->setPrintFooter(false);
+
+        $count = $fpdi->setSourceFile(StreamReader::createByString($notePdf));
+        for ($i = 1; $i <= $count; $i++) {
+            $tpl  = $fpdi->importPage($i);
+            $size = $fpdi->getTemplateSize($tpl);
+            $fpdi->AddPage($size['width'] > $size['height'] ? 'L' : 'P', [$size['width'], $size['height']]);
+            $fpdi->useTemplate($tpl, 0, 0, $size['width'], $size['height'], true);
+        }
+
+        $count = $fpdi->setSourceFile(StreamReader::createByString($bordereauPdf));
+        for ($i = 1; $i <= $count; $i++) {
+            $tpl  = $fpdi->importPage($i);
+            $size = $fpdi->getTemplateSize($tpl);
+            $fpdi->AddPage($size['width'] > $size['height'] ? 'L' : 'P', [$size['width'], $size['height']]);
+            $fpdi->useTemplate($tpl, 0, 0, $size['width'], $size['height'], true);
+        }
+
+        return $fpdi->Output('', 'S');
     }
 
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]

@@ -165,13 +165,19 @@
 </head>
 <body>
 
+{% set matchOnly = matchOnly ?? false %}
+
 <div class="report-header">
     <div class="report-header-title">
-        Rapport d'analyse de bordereau
-        <span class="confidential-badge">Confidentiel</span>
+        {% if matchOnly %}
+            Détail bordereau — Affaires conformes
+        {% else %}
+            Rapport d'analyse de bordereau
+            <span class="confidential-badge">Confidentiel</span>
+        {% endif %}
     </div>
     <div class="report-header-subtitle">
-        {{ entreprise.nom ?? 'Entreprise' }} — Bordereau {{ bordereau.reference }}
+        {% if entreprise %}{{ entreprise.nom }} — {% endif %}Bordereau {{ bordereau.reference }}
         — Période : {{ bordereau.periodeDebut ? bordereau.periodeDebut|date('d/m/Y') : 'N/A' }} au {{ bordereau.periodeFin ? bordereau.periodeFin|date('d/m/Y') : 'N/A' }}
     </div>
     <div class="report-header-meta">
@@ -179,6 +185,7 @@
     </div>
 </div>
 
+{% if not matchOnly %}
 <div class="summary-section">
     <div class="summary-title">Récapitulatif de l'analyse</div>
     <div class="summary-grid">
@@ -194,6 +201,7 @@
         — Ce rapport liste uniquement les <strong>{{ stats.discrepancy + stats.new }}</strong> ligne(s) nécessitant une action.
     </div>
 </div>
+{% endif %}
 
 {% set discrepancyResults = results|filter(r => r.type == 'discrepancy') %}
 {% set newResults = results|filter(r => r.type == 'new') %}
@@ -243,7 +251,7 @@
                 <td>{{ result.line_data.taux_commission ?? '—' }}</td>
                 <td>{{ result.line_data.commission_ht_assureur is not null ? result.line_data.commission_ht_assureur|number_format(2, ',', ' ') : '—' }}</td>
                 <td>
-                    {% if result.line_data.commission_ht_assureur is not null and result.line_data.commission_ht_assureur > 0 and result.line_data.commission_ht_payable_now is defined %}
+                    {% if result.line_data.commission_ht_assureur is not null and result.line_data.commission_ht_assureur != 0 and result.line_data.commission_ht_payable_now is defined %}
                         {{ ((result.line_data.commission_ht_payable_now / result.line_data.commission_ht_assureur) * 100)|number_format(1, ',', ' ') }} %
                     {% else %}
                         —
@@ -311,7 +319,7 @@
                 <td>{{ result.line_data.taux_commission ?? '—' }}</td>
                 <td>{{ result.line_data.commission_ht_assureur is not null ? result.line_data.commission_ht_assureur|number_format(2, ',', ' ') : '—' }}</td>
                 <td>
-                    {% if result.line_data.commission_ht_assureur is not null and result.line_data.commission_ht_assureur > 0 and result.line_data.commission_ht_payable_now is defined %}
+                    {% if result.line_data.commission_ht_assureur is not null and result.line_data.commission_ht_assureur != 0 and result.line_data.commission_ht_payable_now is defined %}
                         {{ ((result.line_data.commission_ht_payable_now / result.line_data.commission_ht_assureur) * 100)|number_format(1, ',', ' ') }} %
                     {% else %}
                         —
@@ -379,7 +387,7 @@
                 <td>{{ result.line_data.taux_commission ?? '—' }}</td>
                 <td>{{ result.line_data.commission_ht_assureur is not null ? result.line_data.commission_ht_assureur|number_format(2, ',', ' ') : '—' }}</td>
                 <td>
-                    {% if result.line_data.commission_ht_assureur is not null and result.line_data.commission_ht_assureur > 0 and result.line_data.commission_ht_payable_now is defined %}
+                    {% if result.line_data.commission_ht_assureur is not null and result.line_data.commission_ht_assureur != 0 and result.line_data.commission_ht_payable_now is defined %}
                         {{ ((result.line_data.commission_ht_payable_now / result.line_data.commission_ht_assureur) * 100)|number_format(1, ',', ' ') }} %
                     {% else %}
                         —
@@ -407,7 +415,7 @@
 
 <div class="report-footer">
     <div class="footer-inner">
-        <span class="footer-left">{{ entreprise.nom ?? '' }} — Document confidentiel</span>
+        <span class="footer-left">{% if entreprise %}{{ entreprise.nom }} — {% endif %}Document confidentiel</span>
         <span class="footer-center"></span>
         <span class="footer-right">Généré le {{ generatedAt|date('d/m/Y à H:i') }}</span>
     </div>

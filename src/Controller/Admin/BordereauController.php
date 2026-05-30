@@ -18,6 +18,7 @@ use App\Repository\EntrepriseRepository;
 use App\Repository\InviteRepository;
 use App\Repository\TypeRevenuRepository;
 use App\Services\AvenantActionService;
+use App\Services\BordereauAnalysisPdfService;
 use App\Services\Canvas\CalculationProvider;
 use App\Services\CanvasBuilder;
 use App\Services\JSBDynamicSearchService;
@@ -62,7 +63,8 @@ class BordereauController extends AbstractController
         CanvasBuilder $canvasBuilder, // Inject CanvasBuilder without property promotion
         private AvenantRepository $avenantRepository, // NOUVEAU : Ajout du repository Avenant
         private ServiceMonnaies $serviceMonnaies, // NOUVEAU : Pour la monnaie d'affichage
-        private AvenantActionService $avenantActionService // NOUVEAU : Service pour traiter les actions
+        private AvenantActionService $avenantActionService, // NOUVEAU : Service pour traiter les actions
+        private BordereauAnalysisPdfService $bordereauPdfService,
     ) {
         // Assign the injected CanvasBuilder to the property declared in the trait
         $this->canvasBuilder = $canvasBuilder;
@@ -1251,108 +1253,26 @@ class BordereauController extends AbstractController
      * N'inclut que les résultats discrepancy et new (les match ne sont pas actionnables).
      */
     #[Route('/api/export-analysis-pdf/{id}', name: 'api.export_analysis_pdf', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
-    public function exportAnalysisPdf(
-        Bordereau $bordereau,
-        ParameterBagInterface $params
-    ): Response {
-        $analysisResults = $bordereau->getAnalysisResults() ?? [];
+    public function exportAnalysisPdf(Bordereau $bordereau): Response
+    {
+        $pdfString = $this->bordereauPdfService->generatePdfString($bordereau);
 
-        if (empty($analysisResults)) {
+        if ($pdfString === null) {
             return $this->json([
                 'error' => 'Aucun résultat d\'analyse disponible. Lancez l\'analyse avant d\'exporter.'
             ], 400);
         }
 
-        // Tous les types passent dans le rapport (match inclus)
-        $reportableResults = $analysisResults;
-
-        // Statistiques pour le récapitulatif
-        $stats = [
-            'total'       => count($analysisResults),
-            'match'       => count(array_filter($analysisResults, fn($r) => ($r['type'] ?? '') === 'match')),
-            'discrepancy' => count(array_filter($analysisResults, fn($r) => ($r['type'] ?? '') === 'discrepancy')),
-            'new'         => count(array_filter($analysisResults, fn($r) => ($r['type'] ?? '') === 'new')),
-        ];
-        $stats['conformity_rate'] = $stats['total'] > 0
-            ? round(($stats['match'] / $stats['total']) * 100, 1)
-            : 0;
-
-        // Reconstruire les données des lignes pour le PDF depuis le fichier Excel
-        $mappedColumns   = $bordereau->getMappedColumns() ?: [];
-        $selectedSheet   = $bordereau->getSelectedSheetName();
-        $enrichedResults = [];
-
-        if (!empty($reportableResults) && !empty($mappedColumns) && !empty($selectedSheet)) {
-            $sheetData = $this->_loadSheetData($bordereau, $selectedSheet, $params);
-
-            if (is_array($sheetData)) {
-                // Indexer par row_index pour accès rapide
-                $rowsByIndex = array_values($sheetData);
-
-                foreach ($reportableResults as $stored) {
-                    $rowIndex  = $stored['row_index'] ?? null;
-                    $lineData = ($rowIndex !== null && isset($rowsByIndex[$rowIndex]))
-                        ? $this->normalizeLineDataForPdf(
-                            $this->reconstructRawLineData($rowsByIndex[$rowIndex], $mappedColumns)
-                        )
-                        : [];
-
-                    $enrichedResults[] = array_merge($stored, ['line_data' => $lineData]);
-                }
-            }
-        } else {
-            foreach ($reportableResults as $stored) {
-                $enrichedResults[] = array_merge($stored, ['line_data' => []]);
-            }
-        }
-
-        // Rendre le template HTML du rapport
-        $html = $this->renderView('admin/bordereau/pdf/analysis_report.html.twig', [
-            'bordereau'       => $bordereau,
-            'entreprise'      => $this->getEntreprise(),
-            'results'         => $enrichedResults,
-            'stats'           => $stats,
-            'generatedAt'     => new \DateTimeImmutable(),
-            'mappingOptions'  => [
-                'num_avenant'               => 'N° Avenant',
-                'reference_police'          => 'N° de Police',
-                'date_effet_avenant'        => 'Date d\'effet',
-                'date_expiration_avenant'   => 'Date d\'expiration',
-                'date_operation'            => 'Date d\'opération',
-                'prime_ttc'                 => 'Prime TTC',
-                'nom_client'                => 'Assuré',
-                'commission_ht_payable_now' => 'Commission ht payable now',
-                'taxe_commission_payable_now' => 'Taxe / Commission ht payable now',
-                'taux_commission'           => 'Taux commission (%)',
-            ],
-        ]);
-
-        // Générer le PDF avec Dompdf
-        $dompdf = new \Dompdf\Dompdf();
-        $dompdf->getOptions()->setChroot(
-            $params->get('kernel.project_dir') . '/public'
-        );
-        $dompdf->getOptions()->setIsRemoteEnabled(false);
-        $dompdf->getOptions()->setIsPhpEnabled(true);
-        $dompdf->loadHtml($html);
-        $dompdf->setPaper('A4', 'landscape'); // Paysage pour les tableaux larges
-        $dompdf->render();
-
-        // Nom du fichier
         $filename = sprintf(
             'rapport-analyse-%s-%s.pdf',
             $bordereau->getReference(),
             (new \DateTimeImmutable())->format('Y-m-d')
         );
 
-        return new Response(
-            $dompdf->output(),
-            200,
-            [
-                'Content-Type'        => 'application/pdf',
-                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-            ]
-        );
+        return new Response($pdfString, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 
     /**
