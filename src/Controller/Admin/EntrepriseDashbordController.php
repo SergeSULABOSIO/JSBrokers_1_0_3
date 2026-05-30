@@ -8,14 +8,15 @@ use App\Entity\Utilisateur;
 use App\Form\RechercheDashBordType;
 use App\DTO\CriteresRechercheDashBordDTO;
 use App\Repository\EntrepriseRepository;
+use App\Services\DashboardDataProvider;
 use App\Services\JSBTableauDeBordBuilder;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 #[Route("/admin/entreprise_dashbord", name: 'admin.entreprise_dashboard.')]
@@ -24,7 +25,6 @@ class EntrepriseDashbordController extends AbstractController
 {
 
     public function __construct(
-        private UrlGeneratorInterface $urlGenerator,
         private TranslatorInterface $translator,
         private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
@@ -33,7 +33,7 @@ class EntrepriseDashbordController extends AbstractController
 
 
     #[Route('/{idEntreprise}', name: 'index', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function index($idEntreprise, Request $request, JSBTableauDeBordBuilder $jSBTableauDeBordBuilder)
+    public function index(int $idEntreprise, Request $request, JSBTableauDeBordBuilder $jSBTableauDeBordBuilder)
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
@@ -70,6 +70,25 @@ class EntrepriseDashbordController extends AbstractController
             'dashboard' => $jSBTableauDeBordBuilder->getDashboard(),
             'formulaire_recherche' => $formulaire_recherche,
             'nbFiltresAvancesActif' => $criteres->nbFiltresAvancesActif(),
+        ]);
+    }
+
+    #[Route('/workspace/{idEntreprise}', name: 'workspace', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadWorkspaceComponent(int $idEntreprise, DashboardDataProvider $provider): Response
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
+        return $this->render('components/_tableau_de_bord_component.html.twig', [
+            'utilisateur'     => $user,
+            'entreprise'      => $entreprise,
+            'paiementsTotaux' => $provider->getPaiementsTotaux($entreprise),
+            'policiesActives' => $provider->getPoliciesActives($entreprise),
+            'nbRenouvellements' => $provider->getNbRenouvellements30j($entreprise),
+            'renouvellements' => $provider->getRenouvellements30j($entreprise),
+            'parMois'         => $provider->getProductionParMois($entreprise),
+            'topAssureurs'    => $provider->getTopAssureurs($entreprise),
         ]);
     }
 }

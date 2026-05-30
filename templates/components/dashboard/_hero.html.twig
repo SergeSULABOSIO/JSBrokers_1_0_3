@@ -1,0 +1,12 @@
+<div class="db-hero rounded-3 p-4 mb-3 text-white" style="background: linear-gradient(135deg, #0047AB 0%, #003080 100%);">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <p class="mb-1 opacity-75 small text-uppercase fw-semibold">Revenus perçus {{ 'now'|date('Y') }}</p>
+            <h2 class="fw-bold mb-1">{{ paiementsTotaux|number_format(0, ',', ' ') }} $</h2>
+            <p class="mb-0 opacity-75 small">Total des paiements encaissés sur l'exercice en cours</p>
+        </div>
+        <div class="opacity-25">
+            <twig:UX:Icon name="healthicons:money-bag" style="width:80px;height:80px;" />
+        </div>
+    </div>
+</div>

@@ -793,7 +793,7 @@ trait ControllerUtilsTrait
         // Ce tableau était auparavant une constante dans EspaceDeTravailComponentController.
         // Le déplacer ici le rend accessible à tous les contrôleurs utilisant ce trait.
         return [
-            '_tableau_de_bord_component.html.twig' => 'App\Controller\Admin\EntrepriseDashbordController::index',
+            '_tableau_de_bord_component.html.twig' => 'App\Controller\Admin\EntrepriseDashbordController::loadWorkspaceComponent',
             // FINANCES
             '_view_manager.html.twig' => [
                 Monnaie::class => 'App\Controller\Admin\MonnaieController::index',

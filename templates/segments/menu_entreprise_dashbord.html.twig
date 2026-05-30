@@ -1,7 +1,7 @@
 {# Le nouveau Menu #}
 <div class="list-group mb-2">
-    {# <a href="{{ path('admin.entreprise.dashbord', {'id': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise.dashbord' ? 'active' : '' }}"> #}
-    <a href="{{ path('admin.entreprise.dashbord', {'id': entreprise.id})}}" class="text-secondary sensible {{ app.current_route starts with 'admin.entreprise.dashbord' ? 'bg-secondary text-white' : '' }} p-3 mb-2 shadow-sm">
+    {# <a href="{{ path('admin.entreprise_dashboard.index', {'idEntreprise': entreprise.id})}}" class="list-group-item list-group-item-action {{ app.current_route starts with 'admin.entreprise_dashboard.' ? 'active' : '' }}"> #}
+    <a href="{{ path('admin.entreprise_dashboard.index', {'idEntreprise': entreprise.id})}}" class="text-secondary sensible {{ app.current_route starts with 'admin.entreprise_dashboard.' ? 'bg-secondary text-white' : '' }} p-3 mb-2 shadow-sm">
         <div class="d-flex justify-content-between">
             <h6>
                 <strong>
