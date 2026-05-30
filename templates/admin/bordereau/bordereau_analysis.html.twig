@@ -25,18 +25,18 @@
         .analysis-toolbar-badge-note {
             display: inline-flex;
             align-items: center;
-            background: rgba(144,184,255,0.15);
-            color: #90b8ff;
+            background: rgba(0, 71, 171, 0.2);
+            color: rgba(255,255,255,0.65);
             font-size: 0.72rem;
             padding: 2px 8px;
             border-radius: 12px;
-            border: 1px solid rgba(144,184,255,0.3);
+            border: 1px solid rgba(0, 71, 171, 0.35);
             cursor: pointer;
             transition: background 0.15s;
             line-height: 1.4;
         }
         .analysis-toolbar-badge-note:hover {
-            background: rgba(144,184,255,0.3);
+            background: rgba(0, 71, 171, 0.35);
         }
     </style>
 </head>
@@ -127,11 +127,11 @@
                             {% set statusText = 'En cours' %}
                         {% elseif currentAnalysisStep == 3 %}
                             {% set statusBgColor = 'rgba(25,135,84,0.3)' %}
-                            {% set statusTextColor = '#20c997' %}
+                            {% set statusTextColor = '#d1e7dd' %}
                             {% set statusText = 'Analysé' %}
                         {% else %} {# Assuming currentAnalysisStep is Bordereau::STATUT_ANALYSE_TERMINEE #}
                             {% set statusBgColor = 'rgba(0,71,171,0.4)' %}
-                            {% set statusTextColor = '#90b8ff' %}
+                            {% set statusTextColor = 'rgba(255,255,255,0.65)' %}
                             {% set statusText = 'Validé' %}
                         {% endif %}
                         <span class="analysis-toolbar-badge-status me-2"
@@ -272,7 +272,9 @@
 
         {# Barre de progression #}
         <div class="toolbar-progress-bar-container" data-bordereau-analysis-target="progressBarContainer">
-            <div class="toolbar-progress-bar" data-bordereau-analysis-target="progressBar"></div>
+            <div class="toolbar-progress-bar" data-bordereau-analysis-target="progressBar"
+                 role="progressbar" aria-label="Traitement en cours"
+                 aria-valuemin="0" aria-valuemax="100"></div>
         </div>
 
     </div>
