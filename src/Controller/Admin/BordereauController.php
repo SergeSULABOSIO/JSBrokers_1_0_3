@@ -1215,6 +1215,38 @@ class BordereauController extends AbstractController
     }
 
     /**
+     * Normalise les clés dynamiques de line_data pour le rendu PDF.
+     * - Agrège les chargement_* de fonction PRIME_NETTE → 'prime_nette'
+     * - Agrège tous les revenu_* (commissions assureur) → 'commission_ht_assureur'
+     */
+    private function normalizeLineDataForPdf(array $lineData): array
+    {
+        $primeNette = 0.0;
+        foreach ($lineData as $key => $val) {
+            if (!str_starts_with($key, 'chargement_')) continue;
+            $parts  = explode('_', $key, 3);
+            $typeId = isset($parts[1]) ? (int)$parts[1] : 0;
+            if ($typeId === 0) continue;
+            $chargement = $this->chargementRepository->find($typeId);
+            if ($chargement && $chargement->getFonction() === Chargement::FONCTION_PRIME_NETTE) {
+                $primeNette += (float)$val;
+            }
+        }
+
+        $commissionHtAssureur = 0.0;
+        foreach ($lineData as $key => $val) {
+            if (str_starts_with($key, 'revenu_')) {
+                $commissionHtAssureur += (float)$val;
+            }
+        }
+
+        return array_merge($lineData, [
+            'prime_nette'            => $primeNette > 0 ? $primeNette : null,
+            'commission_ht_assureur' => $commissionHtAssureur > 0 ? $commissionHtAssureur : null,
+        ]);
+    }
+
+    /**
      * Génère et télécharge le rapport PDF de l'analyse du bordereau.
      * N'inclut que les résultats discrepancy et new (les match ne sont pas actionnables).
      */
@@ -1231,11 +1263,8 @@ class BordereauController extends AbstractController
             ], 400);
         }
 
-        // Filtrer : exclure les match et warning du rapport
-        $reportableResults = array_filter(
-            $analysisResults,
-            fn($r) => in_array($r['type'] ?? '', ['discrepancy', 'new'])
-        );
+        // Tous les types passent dans le rapport (match inclus)
+        $reportableResults = $analysisResults;
 
         // Statistiques pour le récapitulatif
         $stats = [
@@ -1263,7 +1292,9 @@ class BordereauController extends AbstractController
                 foreach ($reportableResults as $stored) {
                     $rowIndex  = $stored['row_index'] ?? null;
                     $lineData = ($rowIndex !== null && isset($rowsByIndex[$rowIndex]))
-                        ? $this->reconstructRawLineData($rowsByIndex[$rowIndex], $mappedColumns)
+                        ? $this->normalizeLineDataForPdf(
+                            $this->reconstructRawLineData($rowsByIndex[$rowIndex], $mappedColumns)
+                        )
                         : [];
 
                     $enrichedResults[] = array_merge($stored, ['line_data' => $lineData]);
@@ -1302,6 +1333,7 @@ class BordereauController extends AbstractController
             $params->get('kernel.project_dir') . '/public'
         );
         $dompdf->getOptions()->setIsRemoteEnabled(false);
+        $dompdf->getOptions()->setIsPhpEnabled(true);
         $dompdf->loadHtml($html);
         $dompdf->setPaper('A4', 'landscape'); // Paysage pour les tableaux larges
         $dompdf->render();
