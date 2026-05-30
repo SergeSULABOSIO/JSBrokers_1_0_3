@@ -1,0 +1,31 @@
+<div class="container-fluid px-3 py-2">
+
+    {# ── Filtres ── #}
+    <div class="row mb-3">
+        {{ include('admin/dashbord/segments/filtres.html.twig') }}
+    </div>
+
+    {# ── Layout 2 colonnes ── #}
+    <div class="row g-3">
+
+        {# ── Colonne gauche (65%) ── #}
+        <div class="col-lg-8">
+
+            {# Hero KPI #}
+            {{ include('components/dashboard/_hero.html.twig') }}
+
+            {# 3 KPI cards #}
+            {{ include('components/dashboard/_kpi_cards.html.twig') }}
+
+            {# Renouvellements #}
+            {{ include('components/dashboard/_renewals.html.twig') }}
+
+        </div>
+
+        {# ── Colonne droite (35%) ── #}
+        <div class="col-lg-4">
+            {{ include('components/dashboard/_sidebar.html.twig') }}
+        </div>
+
+    </div>
+</div>

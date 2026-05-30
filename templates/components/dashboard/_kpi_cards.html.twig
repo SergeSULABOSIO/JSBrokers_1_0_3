@@ -1,0 +1,42 @@
+<div class="row g-3 mb-3">
+
+    <div class="col-4">
+        <div class="card h-100 border-0 shadow-sm" style="border-left: 4px solid #0047AB !important;">
+            <div class="card-body py-3 px-3">
+                <div class="d-flex align-items-center mb-2">
+                    <twig:UX:Icon name="emojione-monotone:umbrella-with-rain-drops" style="width:20px;height:20px;color:#0047AB;" class="me-2 flex-shrink-0" />
+                    <span class="small text-muted">Polices actives</span>
+                </div>
+                <p class="fw-bold fs-4 mb-0" style="color:#0047AB;">{{ policiesActives }}</p>
+                <p class="small text-muted mb-0">En cours</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-4">
+        <div class="card h-100 border-0 shadow-sm" style="border-left: 4px solid #28a745 !important;">
+            <div class="card-body py-3 px-3">
+                <div class="d-flex align-items-center mb-2">
+                    <twig:UX:Icon name="healthicons:money-bag" style="width:20px;height:20px;color:#28a745;" class="me-2 flex-shrink-0" />
+                    <span class="small text-muted">Revenus encaissés</span>
+                </div>
+                <p class="fw-bold fs-5 mb-0" style="color:#28a745;">{{ paiementsTotaux|number_format(0, ',', ' ') }} $</p>
+                <p class="small text-muted mb-0">Paiements reçus</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-4">
+        <div class="card h-100 border-0 shadow-sm" style="border-left: 4px solid #fd7e14 !important;">
+            <div class="card-body py-3 px-3">
+                <div class="d-flex align-items-center mb-2">
+                    <twig:UX:Icon name="mdi:calendar-refresh" style="width:20px;height:20px;color:#fd7e14;" class="me-2 flex-shrink-0" />
+                    <span class="small text-muted">Renouvellements</span>
+                </div>
+                <p class="fw-bold fs-4 mb-0" style="color:#fd7e14;">{{ nbRenouvellements }}</p>
+                <p class="small text-muted mb-0">Dans les 30 jours</p>
+            </div>
+        </div>
+    </div>
+
+</div>
