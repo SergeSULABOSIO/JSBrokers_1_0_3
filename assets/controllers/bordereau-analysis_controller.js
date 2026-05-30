@@ -1575,7 +1575,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                         <!-- Conformes -->
                         <div class="col-3">
                             <div class="analysis-summary-counter text-center p-2 rounded-3"
-                                 style="background-color: #f0fff4; border: 1px solid #c3e6cb;">
+                                 style="background-color: #d1e7dd; border: 1px solid rgba(25, 135, 84, 0.25);">
                                 <div class="d-flex align-items-center justify-content-center gap-1 mb-1">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="#198754" viewBox="0 0 16 16" aria-hidden="true"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z"/></svg>
                                     <span class="fw-bold" style="font-size: 1.5rem; color: #198754; line-height: 1;">${stats.match}</span>
@@ -1586,7 +1586,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                         <!-- Anomalies -->
                         <div class="col-3">
                             <div class="analysis-summary-counter text-center p-2 rounded-3"
-                                 style="background-color: #fff8e1; border: 1px solid #ffe082;">
+                                 style="background-color: #fff3cd; border: 1px solid rgba(230, 149, 0, 0.4);">
                                 <div class="d-flex align-items-center justify-content-center gap-1 mb-1">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="#e69500" viewBox="0 0 16 16" aria-hidden="true"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg>
                                     <span class="fw-bold" style="font-size: 1.5rem; color: #e69500; line-height: 1;">${stats.discrepancy}</span>
@@ -1597,7 +1597,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
                         <!-- Nouveaux -->
                         <div class="col-3">
                             <div class="analysis-summary-counter text-center p-2 rounded-3"
-                                 style="background-color: #e8f0fb; border: 1px solid #b3c9f0;">
+                                 style="background-color: #e8f0fb; border: 1px solid rgba(0, 71, 171, 0.25);">
                                 <div class="d-flex align-items-center justify-content-center gap-1 mb-1">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="#0047AB" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/></svg>
                                     <span class="fw-bold" style="font-size: 1.5rem; color: #0047AB; line-height: 1;">${stats.new}</span>
@@ -2398,7 +2398,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
         if (visible === 0) {
             this.searchResultCountTarget.textContent = 'Aucun résultat';
-            this.searchResultCountTarget.style.color = '#ff6b6b'; // toolbar-feedback-error
+            this.searchResultCountTarget.style.color = '#dc3545';
         } else {
             this.searchResultCountTarget.textContent =
                 `${visible} / ${total} résultat${visible > 1 ? 's' : ''}`;

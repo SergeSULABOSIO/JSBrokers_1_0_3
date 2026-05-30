@@ -1732,7 +1732,7 @@ textarea:hover,
 }
 
 .toolbar-feedback-info    { color: #ced4da; }   /* gris clair */
-.toolbar-feedback-error   { color: #ff6b6b; }   /* rouge clair */
+.toolbar-feedback-error   { color: #dc3545; }
 .toolbar-feedback-warning { color: #ffc107; }   /* jaune Bootstrap */
 
 .toolbar-title {
