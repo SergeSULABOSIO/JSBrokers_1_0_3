@@ -15,6 +15,7 @@
 
         /* EN-TÊTE */
         .report-header {
+            margin-top: 4px;
             background-color: #0047AB;
             color: white;
             padding: 16px 20px;
@@ -94,48 +95,63 @@
         }
         .section-title-discrepancy { background-color: #e69500; }
         .section-title-new { background-color: #0047AB; }
+        .section-title-match { background-color: #198754; }
 
         /* TABLEAUX */
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 9px;
+            font-size: 8px;
         }
         thead th {
-            background-color: #e9ecef;
+            background-color: #e8f0fb;
             color: #495057;
             font-weight: bold;
-            padding: 5px 6px;
+            padding: 4px 5px;
             text-align: left;
             border: 1px solid #dee2e6;
-            white-space: nowrap;
         }
         tbody td {
-            padding: 4px 6px;
+            padding: 3px 5px;
             border: 1px solid #dee2e6;
             vertical-align: top;
         }
         tbody tr:nth-child(even) td {
             background-color: #f8f9fa;
         }
+        tfoot td {
+            padding: 4px 5px;
+            border: 1px solid #dee2e6;
+            background-color: #e8f0fb;
+            font-weight: bold;
+        }
+
+        .no-results {
+            padding: 12px;
+            color: #6c757d;
+            font-style: italic;
+            text-align: center;
+        }
 
         /* PIED DE PAGE */
         .report-footer {
             position: fixed;
-            bottom: 0;
+            bottom: 4px;
             left: 0;
             right: 0;
-            padding: 6px 20px;
+            padding: 4px 20px;
             background: #f8f9fa;
             border-top: 1px solid #dee2e6;
             font-size: 8px;
             color: #6c757d;
         }
-        .footer-left { float: left; }
-        .footer-right { float: right; }
+        .footer-inner  { display: table; width: 100%; }
+        .footer-left   { display: table-cell; text-align: left; width: 40%; }
+        .footer-center { display: table-cell; text-align: center; width: 20%; }
+        .footer-right  { display: table-cell; text-align: right; width: 40%; }
 
         .confidential-badge {
-            display: inline-block;
+            display: inline;
             background: #dc3545;
             color: white;
             font-size: 7px;
@@ -144,13 +160,6 @@
             font-weight: bold;
             text-transform: uppercase;
             margin-left: 8px;
-        }
-
-        .no-results {
-            padding: 12px;
-            color: #6c757d;
-            font-style: italic;
-            text-align: center;
         }
     </style>
 </head>
@@ -187,63 +196,231 @@
 </div>
 
 {% set discrepancyResults = results|filter(r => r.type == 'discrepancy') %}
+{% set newResults = results|filter(r => r.type == 'new') %}
+{% set matchResults = results|filter(r => r.type == 'match') %}
+
 {% if discrepancyResults|length > 0 %}
+{% set totalComHtPayable = 0 %}
+{% set totalTaxePayable = 0 %}
+{% set totalComHtAssureur = 0 %}
+{% for result in discrepancyResults %}
+    {% set totalComHtPayable  = totalComHtPayable + (result.line_data.commission_ht_payable_now|default(0)) %}
+    {% set totalTaxePayable   = totalTaxePayable + (result.line_data.taxe_commission_payable_now|default(0)) %}
+    {% set totalComHtAssureur = totalComHtAssureur + (result.line_data.commission_ht_assureur|default(0)) %}
+{% endfor %}
 <div class="results-section">
     <div class="section-title section-title-discrepancy">⚠ Anomalies détectées ({{ discrepancyResults|length }})</div>
     <table>
         <thead>
-            <tr><th>Ligne</th><th>N° Police</th><th>Assuré</th><th>Date effet</th><th>Date expiration</th><th>Prime TTC</th><th>Commission HT</th><th>Taux (%)</th></tr>
+            <tr>
+                <th scope="col">Ligne</th>
+                <th scope="col">N° de Police</th>
+                <th scope="col">Assuré</th>
+                <th scope="col">Risque</th>
+                <th scope="col">Date d'effet</th>
+                <th scope="col">Date d'expiration</th>
+                <th scope="col">Prime TTC</th>
+                <th scope="col">Prime Nette</th>
+                <th scope="col">Taux (%)</th>
+                <th scope="col">Com. HT</th>
+                <th scope="col">PoP (%)</th>
+                <th scope="col">Com. HT payable</th>
+                <th scope="col">Taxe Com. payable</th>
+                <th scope="col">Com. TTC payable</th>
+            </tr>
         </thead>
         <tbody>
             {% for result in discrepancyResults %}
             <tr>
-                <td>{{ result.row_index + 2 }}</td>
+                <td>{{ result.row_index + 1 }}</td>
                 <td><strong>{{ result.reference_police }}</strong></td>
                 <td>{{ result.line_data.nom_client ?? '—' }}</td>
+                <td>{{ result.line_data.risque ?? '—' }}</td>
                 <td>{{ result.line_data.date_effet_avenant ?? '—' }}</td>
                 <td>{{ result.line_data.date_expiration_avenant ?? '—' }}</td>
                 <td>{{ result.line_data.prime_ttc is defined ? result.line_data.prime_ttc|number_format(2, ',', ' ') : '—' }}</td>
-                <td>{{ result.line_data.commission_ht_assureur is defined ? result.line_data.commission_ht_assureur|number_format(2, ',', ' ') : '—' }}</td>
+                <td>{{ result.line_data.prime_nette is not null ? result.line_data.prime_nette|number_format(2, ',', ' ') : '—' }}</td>
                 <td>{{ result.line_data.taux_commission ?? '—' }}</td>
+                <td>{{ result.line_data.commission_ht_assureur is not null ? result.line_data.commission_ht_assureur|number_format(2, ',', ' ') : '—' }}</td>
+                <td>
+                    {% if result.line_data.commission_ht_assureur is not null and result.line_data.commission_ht_assureur > 0 and result.line_data.commission_ht_payable_now is defined %}
+                        {{ ((result.line_data.commission_ht_payable_now / result.line_data.commission_ht_assureur) * 100)|number_format(1, ',', ' ') }} %
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td>{{ result.line_data.commission_ht_payable_now is defined ? result.line_data.commission_ht_payable_now|number_format(2, ',', ' ') : '—' }}</td>
+                <td>{{ result.line_data.taxe_commission_payable_now is defined ? result.line_data.taxe_commission_payable_now|number_format(2, ',', ' ') : '—' }}</td>
+                <td>{{ ((result.line_data.commission_ht_payable_now|default(0)) + (result.line_data.taxe_commission_payable_now|default(0)))|number_format(2, ',', ' ') }}</td>
             </tr>
             {% endfor %}
         </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="11" style="text-align:right;">Total</td>
+                <td>{{ totalComHtPayable|number_format(2, ',', ' ') }}</td>
+                <td>{{ totalTaxePayable|number_format(2, ',', ' ') }}</td>
+                <td>{{ (totalComHtPayable + totalTaxePayable)|number_format(2, ',', ' ') }}</td>
+            </tr>
+        </tfoot>
     </table>
 </div>
 {% endif %}
 
-{% set newResults = results|filter(r => r.type == 'new') %}
 {% if newResults|length > 0 %}
+{% set totalComHtPayable = 0 %}
+{% set totalTaxePayable = 0 %}
+{% set totalComHtAssureur = 0 %}
+{% for result in newResults %}
+    {% set totalComHtPayable  = totalComHtPayable + (result.line_data.commission_ht_payable_now|default(0)) %}
+    {% set totalTaxePayable   = totalTaxePayable + (result.line_data.taxe_commission_payable_now|default(0)) %}
+    {% set totalComHtAssureur = totalComHtAssureur + (result.line_data.commission_ht_assureur|default(0)) %}
+{% endfor %}
 <div class="results-section">
     <div class="section-title section-title-new">+ Nouveaux avenants à créer ({{ newResults|length }})</div>
     <table>
         <thead>
-            <tr><th>Ligne</th><th>N° Police</th><th>Assuré</th><th>Date effet</th><th>Date expiration</th><th>Prime TTC</th><th>Commission HT</th><th>Taux (%)</th></tr>
+            <tr>
+                <th scope="col">Ligne</th>
+                <th scope="col">N° de Police</th>
+                <th scope="col">Assuré</th>
+                <th scope="col">Risque</th>
+                <th scope="col">Date d'effet</th>
+                <th scope="col">Date d'expiration</th>
+                <th scope="col">Prime TTC</th>
+                <th scope="col">Prime Nette</th>
+                <th scope="col">Taux (%)</th>
+                <th scope="col">Com. HT</th>
+                <th scope="col">PoP (%)</th>
+                <th scope="col">Com. HT payable</th>
+                <th scope="col">Taxe Com. payable</th>
+                <th scope="col">Com. TTC payable</th>
+            </tr>
         </thead>
         <tbody>
             {% for result in newResults %}
             <tr>
-                <td>{{ result.row_index + 2 }}</td>
+                <td>{{ result.row_index + 1 }}</td>
                 <td><strong>{{ result.reference_police }}</strong></td>
                 <td>{{ result.line_data.nom_client ?? '—' }}</td>
+                <td>{{ result.line_data.risque ?? '—' }}</td>
                 <td>{{ result.line_data.date_effet_avenant ?? '—' }}</td>
                 <td>{{ result.line_data.date_expiration_avenant ?? '—' }}</td>
                 <td>{{ result.line_data.prime_ttc is defined ? result.line_data.prime_ttc|number_format(2, ',', ' ') : '—' }}</td>
-                <td>{{ result.line_data.commission_ht_assureur is defined ? result.line_data.commission_ht_assureur|number_format(2, ',', ' ') : '—' }}</td>
+                <td>{{ result.line_data.prime_nette is not null ? result.line_data.prime_nette|number_format(2, ',', ' ') : '—' }}</td>
                 <td>{{ result.line_data.taux_commission ?? '—' }}</td>
+                <td>{{ result.line_data.commission_ht_assureur is not null ? result.line_data.commission_ht_assureur|number_format(2, ',', ' ') : '—' }}</td>
+                <td>
+                    {% if result.line_data.commission_ht_assureur is not null and result.line_data.commission_ht_assureur > 0 and result.line_data.commission_ht_payable_now is defined %}
+                        {{ ((result.line_data.commission_ht_payable_now / result.line_data.commission_ht_assureur) * 100)|number_format(1, ',', ' ') }} %
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td>{{ result.line_data.commission_ht_payable_now is defined ? result.line_data.commission_ht_payable_now|number_format(2, ',', ' ') : '—' }}</td>
+                <td>{{ result.line_data.taxe_commission_payable_now is defined ? result.line_data.taxe_commission_payable_now|number_format(2, ',', ' ') : '—' }}</td>
+                <td>{{ ((result.line_data.commission_ht_payable_now|default(0)) + (result.line_data.taxe_commission_payable_now|default(0)))|number_format(2, ',', ' ') }}</td>
             </tr>
             {% endfor %}
         </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="11" style="text-align:right;">Total</td>
+                <td>{{ totalComHtPayable|number_format(2, ',', ' ') }}</td>
+                <td>{{ totalTaxePayable|number_format(2, ',', ' ') }}</td>
+                <td>{{ (totalComHtPayable + totalTaxePayable)|number_format(2, ',', ' ') }}</td>
+            </tr>
+        </tfoot>
     </table>
 </div>
 {% endif %}
 
-{% if results|length == 0 %}<div class="results-section"><p class="no-results">Aucune anomalie détectée.</p></div>{% endif %}
+{% if matchResults|length > 0 %}
+{% set totalComHtPayable = 0 %}
+{% set totalTaxePayable = 0 %}
+{% set totalComHtAssureur = 0 %}
+{% for result in matchResults %}
+    {% set totalComHtPayable  = totalComHtPayable + (result.line_data.commission_ht_payable_now|default(0)) %}
+    {% set totalTaxePayable   = totalTaxePayable + (result.line_data.taxe_commission_payable_now|default(0)) %}
+    {% set totalComHtAssureur = totalComHtAssureur + (result.line_data.commission_ht_assureur|default(0)) %}
+{% endfor %}
+<div class="results-section">
+    <div class="section-title section-title-match">✓ Lignes conformes ({{ matchResults|length }})</div>
+    <table>
+        <thead>
+            <tr>
+                <th scope="col">Ligne</th>
+                <th scope="col">N° de Police</th>
+                <th scope="col">Assuré</th>
+                <th scope="col">Risque</th>
+                <th scope="col">Date d'effet</th>
+                <th scope="col">Date d'expiration</th>
+                <th scope="col">Prime TTC</th>
+                <th scope="col">Prime Nette</th>
+                <th scope="col">Taux (%)</th>
+                <th scope="col">Com. HT</th>
+                <th scope="col">PoP (%)</th>
+                <th scope="col">Com. HT payable</th>
+                <th scope="col">Taxe Com. payable</th>
+                <th scope="col">Com. TTC payable</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for result in matchResults %}
+            <tr>
+                <td>{{ result.row_index + 1 }}</td>
+                <td><strong>{{ result.reference_police }}</strong></td>
+                <td>{{ result.line_data.nom_client ?? '—' }}</td>
+                <td>{{ result.line_data.risque ?? '—' }}</td>
+                <td>{{ result.line_data.date_effet_avenant ?? '—' }}</td>
+                <td>{{ result.line_data.date_expiration_avenant ?? '—' }}</td>
+                <td>{{ result.line_data.prime_ttc is defined ? result.line_data.prime_ttc|number_format(2, ',', ' ') : '—' }}</td>
+                <td>{{ result.line_data.prime_nette is not null ? result.line_data.prime_nette|number_format(2, ',', ' ') : '—' }}</td>
+                <td>{{ result.line_data.taux_commission ?? '—' }}</td>
+                <td>{{ result.line_data.commission_ht_assureur is not null ? result.line_data.commission_ht_assureur|number_format(2, ',', ' ') : '—' }}</td>
+                <td>
+                    {% if result.line_data.commission_ht_assureur is not null and result.line_data.commission_ht_assureur > 0 and result.line_data.commission_ht_payable_now is defined %}
+                        {{ ((result.line_data.commission_ht_payable_now / result.line_data.commission_ht_assureur) * 100)|number_format(1, ',', ' ') }} %
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td>{{ result.line_data.commission_ht_payable_now is defined ? result.line_data.commission_ht_payable_now|number_format(2, ',', ' ') : '—' }}</td>
+                <td>{{ result.line_data.taxe_commission_payable_now is defined ? result.line_data.taxe_commission_payable_now|number_format(2, ',', ' ') : '—' }}</td>
+                <td>{{ ((result.line_data.commission_ht_payable_now|default(0)) + (result.line_data.taxe_commission_payable_now|default(0)))|number_format(2, ',', ' ') }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="11" style="text-align:right;">Total</td>
+                <td>{{ totalComHtPayable|number_format(2, ',', ' ') }}</td>
+                <td>{{ totalTaxePayable|number_format(2, ',', ' ') }}</td>
+                <td>{{ (totalComHtPayable + totalTaxePayable)|number_format(2, ',', ' ') }}</td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+{% endif %}
+
+{% if discrepancyResults|length == 0 and newResults|length == 0 and matchResults|length == 0 %}<div class="results-section"><p class="no-results">Aucune donnée disponible.</p></div>{% endif %}
 
 <div class="report-footer">
-    <span class="footer-left">{{ entreprise.nom ?? '' }} — Document confidentiel</span>
-    <span class="footer-right">Généré le {{ generatedAt|date('d/m/Y à H:i') }}</span>
+    <div class="footer-inner">
+        <span class="footer-left">{{ entreprise.nom ?? '' }} — Document confidentiel</span>
+        <span class="footer-center"></span>
+        <span class="footer-right">Généré le {{ generatedAt|date('d/m/Y à H:i') }}</span>
+    </div>
 </div>
+
+<script type="text/php">
+    if (isset($pdf)) {
+        $font = $fontMetrics->getFont("Arial", "normal");
+        $w    = $pdf->get_width();
+        $h    = $pdf->get_height();
+        $pdf->page_text($w / 2 - 20, $h - 12, "Page {PAGE_NUM} / {PAGE_COUNT}", $font, 7, [0.42, 0.46, 0.50]);
+    }
+</script>
 
 </body>
 </html>
