@@ -1,0 +1,217 @@
+{# Fragment liste notes — inclus par _block_notes.html.twig #}
+{% set _now = date() %}
+
+{# Résolution de l'inviteId courant #}
+{% if currentInviteId is not defined %}
+    {% set currentInviteId = '' %}
+    {% if utilisateur is defined %}
+        {% for inv in utilisateur.invites %}
+            {% if inv.entreprise is not null and inv.entreprise.id == entreprise.id %}
+                {% set currentInviteId = inv.id %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endif %}
+
+{# Compteurs par groupe (basés sur sentAt ?? createdAt) #}
+{% set countJ30    = 0 %}
+{% set countJ60    = 0 %}
+{% set countJ61plus = 0 %}
+{% for note in notes %}
+    {% set _baseDate = note.sentAt ?? note.createdAt %}
+    {% set _d = (_now|date('U') - _baseDate|date('U')) / 86400 %}
+    {% if _d <= 30 %}{% set countJ30 = countJ30 + 1 %}
+    {% elseif _d <= 60 %}{% set countJ60 = countJ60 + 1 %}
+    {% else %}{% set countJ61plus = countJ61plus + 1 %}
+    {% endif %}
+{% endfor %}
+
+{% if notes|length > 0 %}
+
+    {% if countJ30 == 0 %}
+    <p class="db-note-item text-muted small px-2 py-4 text-center" data-group="j30">
+        <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucune note dans les 30 derniers jours.
+    </p>
+    {% endif %}
+    {% if countJ60 == 0 %}
+    <p class="db-note-item text-muted small px-2 py-4 text-center" data-group="j60" style="display:none;">
+        <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucune note entre 31 et 60 jours.
+    </p>
+    {% endif %}
+    {% if countJ61plus == 0 %}
+    <p class="db-note-item text-muted small px-2 py-4 text-center" data-group="j61plus" style="display:none;">
+        <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucune note au-delà de 60 jours.
+    </p>
+    {% endif %}
+
+    {% for note in notes %}
+        {% set _baseDate = note.sentAt ?? note.createdAt %}
+        {% set _days = (_now|date('U') - _baseDate|date('U')) / 86400 %}
+        {% if _days <= 30 %}
+            {% set group    = 'j30' %}
+            {% set ageColor = '#198754' %}
+        {% elseif _days <= 60 %}
+            {% set group    = 'j60' %}
+            {% set ageColor = '#e69500' %}
+        {% else %}
+            {% set group    = 'j61plus' %}
+            {% set ageColor = '#dc3545' %}
+        {% endif %}
+
+        {# Statut paiement (basé sur solde calculé par CanvasBuilder) #}
+        {% if note.solde is not null and note.solde <= 0 %}
+            {% set statutLabel = 'Soldée' %}
+            {% set statutColor = '#198754' %}
+        {% elseif note.solde is not null and note.solde > 0 and note.montantPaye is not null and note.montantPaye > 0 %}
+            {% set statutLabel = 'Partielle' %}
+            {% set statutColor = '#e69500' %}
+        {% else %}
+            {% set statutLabel = 'En attente' %}
+            {% set statutColor = '#0047AB' %}
+        {% endif %}
+
+        {# Type Débit / Crédit #}
+        {% set typeLabel = note.type == 0 ? 'Débit' : (note.type == 1 ? 'Crédit' : '—') %}
+
+        {# Destinataire selon addressedTo #}
+        {% if note.addressedTo == 0 %}
+            {% set destNom  = note.client.nom ?? '—' %}
+            {% set destIcon = 'mdi:account' %}
+            {% set destType = 'Client' %}
+        {% elseif note.addressedTo == 1 %}
+            {% set destNom  = note.assureur.nom ?? '—' %}
+            {% set destIcon = 'wpf:security-checked' %}
+            {% set destType = 'Assureur' %}
+        {% elseif note.addressedTo == 2 %}
+            {% set destNom  = note.partenaire.nom ?? '—' %}
+            {% set destIcon = 'mdi:handshake-outline' %}
+            {% set destType = 'Partenaire' %}
+        {% else %}
+            {% set destNom  = '—' %}
+            {% set destIcon = 'mdi:account-question-outline' %}
+            {% set destType = '' %}
+        {% endif %}
+
+        {% set noteNom    = note.nom ?? note.reference ?? '#' ~ note.id %}
+        {% set noteRef    = note.reference ?? '—' %}
+        {% set isCreator  = (currentInviteId != '' and note.invite is not null and note.invite.id|default(0) == currentInviteId) %}
+        {% set searchText = (noteRef ~ '|' ~ (note.nom ?? '') ~ '|' ~ destNom)|lower %}
+
+        <details class="db-ass-details db-note-item"
+                 data-group="{{ group }}"
+                 data-search-text="{{ searchText|e }}"
+                 data-note-id="{{ note.id }}"
+                 data-entreprise-id="{{ entreprise.id }}"
+                 data-invite-id="{{ currentInviteId }}"
+                 data-is-creator="{{ isCreator ? '1' : '0' }}"
+                 data-note-nom="{{ noteNom|e }}"
+                 data-note-ref="{{ noteRef|e }}"
+                 data-note-montant="{{ note.montantTotal is not null ? note.montantTotal|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : '—' }}"
+                 data-note-solde="{{ note.solde is not null ? note.solde|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : '—' }}"
+                 data-note-statut="{{ statutLabel|e }}"
+                 oncontextmenu="dbNoteCtxOpen(event,this)"
+                 {% if group != 'j30' %}style="display:none;"{% endif %}>
+
+            <summary class="d-flex align-items-center gap-2 py-2 px-1">
+                <div class="db-ass-avatar rounded-circle d-flex align-items-center justify-content-center text-white"
+                     style="width:26px;height:26px;background:{{ ageColor }};flex-shrink:0;">
+                    <twig:UX:Icon name="mdi:file-document-outline" style="width:13px;height:13px;" />
+                </div>
+                <span class="small fw-semibold flex-grow-1 text-truncate"
+                      style="color:#212529;"
+                      data-note-tip
+                      data-note-tip-ref="{{ noteRef|e }}"
+                      data-note-tip-dest="{{ destNom|e }}"
+                      data-note-tip-type="{{ typeLabel }}"
+                      data-note-tip-statut="{{ statutLabel }}"
+                      data-note-tip-statut-color="{{ statutColor }}"
+                      data-note-tip-montant="{{ note.montantTotal is not null ? note.montantTotal|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : '—' }}"
+                      data-note-tip-solde="{{ note.solde is not null ? note.solde|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : '—' }}"
+                      data-note-tip-date="{{ _baseDate|date('d/m/Y') }}"
+                      data-note-tip-days="{{ _days|round(0, 'ceil') }}">{{ noteNom }}</span>
+                <span class="text-truncate" style="color:#6c757d;font-size:.65rem;flex-shrink:0;max-width:80px;">{{ destNom }}</span>
+                <span class="badge rounded-pill"
+                      style="background:{{ statutColor }};color:#fff;font-size:.58rem;flex-shrink:0;white-space:nowrap;">
+                    {{ statutLabel }}
+                </span>
+                <span class="badge rounded-pill"
+                      style="background:{{ ageColor }};color:#fff;font-size:.58rem;flex-shrink:0;">
+                    {{ _days|round(0, 'ceil') }}j
+                </span>
+                <twig:UX:Icon name="mdi:chevron-down" class="db-ass-chevron"
+                              style="width:14px;height:14px;color:#6c757d;" />
+            </summary>
+
+            <div class="px-2 py-2 bg-light rounded-bottom" style="font-size:.73rem;">
+
+                {# Type + Destinataire #}
+                <div class="d-flex gap-3 flex-wrap mb-2">
+                    <span style="color:#0047AB;">
+                        <twig:UX:Icon name="mdi:file-document-outline" style="width:11px;height:11px;" class="me-1" />
+                        <strong>{{ typeLabel }}</strong>
+                    </span>
+                    {% if destNom != '—' %}
+                    <span style="color:#495057;">
+                        <twig:UX:Icon name="{{ destIcon }}" style="width:11px;height:11px;" class="me-1" />
+                        {% if destType %}<span class="text-muted">{{ destType }} :</span>&nbsp;{% endif %}{{ destNom }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                {# Montants (disponibles après hydration CanvasBuilder) #}
+                {% if note.montantTotal is not null %}
+                <div class="d-flex gap-3 flex-wrap mb-2 pt-1" style="border-top:1px dashed #dee2e6;">
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="mdi:receipt-text-outline" style="width:11px;height:11px;" class="me-1" />
+                        Total&nbsp;:&nbsp;<strong>{{ note.montantTotal|number_format(0, ',', ' ') }}&nbsp;{{ deviseCode }}</strong>
+                    </span>
+                    {% if note.montantPaye is not null %}
+                    <span style="color:#198754;">
+                        <twig:UX:Icon name="mdi:cash-check" style="width:11px;height:11px;" class="me-1" />
+                        Payé&nbsp;:&nbsp;<strong>{{ note.montantPaye|number_format(0, ',', ' ') }}&nbsp;{{ deviseCode }}</strong>
+                    </span>
+                    {% endif %}
+                    {% if note.solde is not null %}
+                    <span style="color:{{ note.solde > 0 ? '#dc3545' : '#198754' }};">
+                        <twig:UX:Icon name="mdi:cash-minus" style="width:11px;height:11px;" class="me-1" />
+                        Solde&nbsp;:&nbsp;<strong>{{ note.solde|number_format(0, ',', ' ') }}&nbsp;{{ deviseCode }}</strong>
+                    </span>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {# Dates + Bordereau lié #}
+                <div class="d-flex gap-3 flex-wrap pt-1" style="border-top:1px solid #dee2e6;">
+                    {% if note.sentAt %}
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="mdi:file-send-outline" style="width:11px;height:11px;" class="me-1" />
+                        Envoyée le&nbsp;:&nbsp;<strong>{{ note.sentAt|date('d/m/Y') }}</strong>
+                    </span>
+                    {% endif %}
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="mdi:calendar-plus" style="width:11px;height:11px;" class="me-1" />
+                        Créée le&nbsp;:&nbsp;<strong>{{ note.createdAt|date('d/m/Y') }}</strong>
+                    </span>
+                    {% if note.bordereau %}
+                    <span style="color:#0047AB;">
+                        <twig:UX:Icon name="streamline-ultimate:notes-checklist-flip" style="width:11px;height:11px;" class="me-1" />
+                        {{ note.bordereau.nom ?? note.bordereau.reference ?? 'Bordereau lié' }}
+                    </span>
+                    {% endif %}
+                    {% if note.reference %}
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="mdi:identifier" style="width:11px;height:11px;" class="me-1" />
+                        {{ note.reference }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </details>
+    {% endfor %}
+
+{% else %}
+    <p class="text-muted small mb-0 px-2 py-3 text-center">Aucune note enregistrée.</p>
+{% endif %}

@@ -30,6 +30,9 @@ use DateTimeImmutable;
 
 class IndicatorCalculationHelper
 {
+    private array $claimsCache = [];
+    private array $commissionHtCache = [];
+
     public function __construct(
         private CotationRepository $cotationRepository,
         private NotificationSinistreRepository $notificationSinistreRepository,
@@ -146,9 +149,16 @@ class IndicatorCalculationHelper
 
     public function getCotationClaims(Cotation $cotation): array
     {
-        $ref = $this->getCotationReferencePolice($cotation);
-        if ($ref === 'Nulle') return [];
-        return $this->notificationSinistreRepository->findBy(['referencePolice' => $ref]);
+        $id = $cotation->getId();
+        if ($id === null) {
+            $ref = $this->getCotationReferencePolice($cotation);
+            return ($ref === 'Nulle') ? [] : $this->notificationSinistreRepository->findBy(['referencePolice' => $ref]);
+        }
+        if (!array_key_exists($id, $this->claimsCache)) {
+            $ref = $this->getCotationReferencePolice($cotation);
+            $this->claimsCache[$id] = ($ref === 'Nulle') ? [] : $this->notificationSinistreRepository->findBy(['referencePolice' => $ref]);
+        }
+        return $this->claimsCache[$id];
     }
 
     public function getCotationIndemnisationDue(Cotation $cotation): float
@@ -582,16 +592,28 @@ class IndicatorCalculationHelper
 
     public function getCotationMontantCommissionHt(?Cotation $cotation, $addressedTo, bool $onlySharable): float
     {
+        if (!$cotation) return 0.0;
+        $id = $cotation->getId();
+        if ($id !== null) {
+            $key = $id . ':' . $addressedTo . ':' . ($onlySharable ? '1' : '0');
+            if (!array_key_exists($key, $this->commissionHtCache)) {
+                $this->commissionHtCache[$key] = $this->computeCommissionHt($cotation, $addressedTo, $onlySharable);
+            }
+            return $this->commissionHtCache[$key];
+        }
+        return $this->computeCommissionHt($cotation, $addressedTo, $onlySharable);
+    }
+
+    private function computeCommissionHt(Cotation $cotation, $addressedTo, bool $onlySharable): float
+    {
         $montant = 0;
-        if ($cotation) {
-            foreach ($cotation->getRevenus() as $revenu) {
-                if ($onlySharable == true) {
-                    if ($revenu->getTypeRevenu()->isShared() == $onlySharable) {
-                        $montant += $this->getRevenuMontantHtAddressedTo($addressedTo, $revenu);
-                    }
-                } else {
+        foreach ($cotation->getRevenus() as $revenu) {
+            if ($onlySharable) {
+                if ($revenu->getTypeRevenu()->isShared() == $onlySharable) {
                     $montant += $this->getRevenuMontantHtAddressedTo($addressedTo, $revenu);
                 }
+            } else {
+                $montant += $this->getRevenuMontantHtAddressedTo($addressedTo, $revenu);
             }
         }
         return $montant;
@@ -713,6 +735,17 @@ class IndicatorCalculationHelper
             }
         }
         return $montant;
+    }
+
+    public function getNoteMontantTotal(?Note $note): float
+    {
+        if (!$note) return 0.0;
+        if ($note->getArticles()->isEmpty() && $note->getBordereau() !== null) {
+            $bordereau = $note->getBordereau();
+            return ($bordereau->getMontantComHtPayableNow() ?? 0.0)
+                 + ($bordereau->getMontantTaxePayableNow() ?? 0.0);
+        }
+        return $this->getNoteMontantPayable($note);
     }
 
     /**
@@ -1230,8 +1263,9 @@ class IndicatorCalculationHelper
     private function getPaiementCotation(Paiement $paiement): ?Cotation
     {
         if ($note = $paiement->getNote()) {
-            // Un paiement sur une note est lié à un article, qui est lié à une tranche, qui est liée à une cotation.
-            // On suppose ici qu'une note a au moins un article.
+            if ($note->getArticles()->isEmpty()) {
+                return null;
+            }
             return $note->getArticles()->first()?->getTranche()?->getCotation();
         }
         if ($offre = $paiement->getOffreIndemnisationSinistre()) {
@@ -1303,5 +1337,39 @@ class IndicatorCalculationHelper
             $totalEncaisse += $this->getNoteMontantPaye($note);
         }
         return $totalEncaisse;
+    }
+
+    public function preloadCotationRelations(array $cotations): void
+    {
+        $ids = array_values(array_filter(array_map(fn($c) => $c->getId(), $cotations)));
+        if (empty($ids)) return;
+        $this->em->createQuery(
+            'SELECT c, rev, ch, tr, p, cl, r
+             FROM App\Entity\Cotation c
+             LEFT JOIN c.revenus rev
+             LEFT JOIN c.chargements ch
+             LEFT JOIN c.tranches tr
+             LEFT JOIN c.piste p
+             LEFT JOIN p.client cl
+             LEFT JOIN p.risque r
+             WHERE c.id IN (:ids)'
+        )->setParameter('ids', $ids)->getResult();
+    }
+
+    public function preloadAvenantRelations(array $avenants): void
+    {
+        $cotationIds = array_values(array_filter(
+            array_map(fn($a) => $a->getCotation()?->getId(), $avenants)
+        ));
+        if (empty($cotationIds)) return;
+        $this->em->createQuery(
+            'SELECT c, p, cl, r, par
+             FROM App\Entity\Cotation c
+             LEFT JOIN c.piste p
+             LEFT JOIN p.client cl
+             LEFT JOIN p.risque r
+             LEFT JOIN p.partenaires par
+             WHERE c.id IN (:ids)'
+        )->setParameter('ids', $cotationIds)->getResult();
     }
 }

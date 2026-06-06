@@ -34,6 +34,7 @@ export default class extends Controller {
         idEntreprise: Number,
         idInvite: Number,
         context: Object,
+        watchIds: { type: Array, default: [] },
     };
 
     /**
@@ -91,6 +92,42 @@ export default class extends Controller {
             // On met à jour le total et le compteur
             this.updateTotal(data.totalValue, data.totalUnit);
             this.updateCount(data.itemCount);
+
+            if (data.defaultCreated) {
+                document.dispatchEvent(new CustomEvent('app:notification.show', {
+                    detail: {
+                        text: 'Une tranche par défaut (100 %) a été créée automatiquement. Vérifiez les détails et enregistrez si besoin.',
+                        type: 'warning'
+                    }
+                }));
+
+                // Ouvrir l'accordéon pour que la ligne soit visible après fermeture du dialogue
+                if (!this.contentPanelTarget.classList.contains('is-open')) {
+                    this.contentPanelTarget.classList.add('is-open');
+                    const icon = this.titleContentTarget.querySelector('.toggle-icon');
+                    if (icon) icon.textContent = '−';
+                }
+
+                // Ouvrir automatiquement le formulaire d'édition de la tranche créée
+                if (data.defaultItemId) {
+                    this.notifyCerveau('ui:toolbar.edit-request', {
+                        selection: [{ entity: { id: data.defaultItemId } }],
+                        formCanvas: {
+                            parametres: {
+                                titre_creation: this.itemTitleCreateValue,
+                                titre_modification: this.itemTitleEditValue,
+                                endpoint_form_url: this.itemFormUrlValue,
+                                endpoint_submit_url: this.itemSubmitUrlValue,
+                            }
+                        },
+                        context: { originatorId: this.element.id },
+                        parentContext: {
+                            id: this.parentEntityIdValue,
+                            fieldName: this.parentFieldNameValue
+                        }
+                    });
+                }
+            }
 
         } catch (error) {
             this.listContainerTarget.innerHTML = `<div class="alert alert-danger">Impossible de charger la liste: ${error.message}</div>`;
@@ -251,6 +288,8 @@ export default class extends Controller {
         // L'ID 'originatorId' est l'ID de l'élément HTML du contrôleur collection
         // qui a initié l'action. On ne rafraîchit que si c'est nous.
         if (event.detail.originatorId === this.element.id) {
+            this.load();
+        } else if (this.watchIdsValue.length > 0 && this.watchIdsValue.includes(event.detail.originatorId)) {
             this.load();
         }
     }

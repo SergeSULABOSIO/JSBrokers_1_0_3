@@ -2,6 +2,8 @@
 
 namespace App\Services\Canvas;
 
+use App\Entity\Avenant;
+use App\Entity\Cotation;
 use App\Entity\Entreprise;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
@@ -58,5 +60,22 @@ class CalculationProvider
     public function getIndicateursGlobaux(Entreprise $entreprise, bool $isBound, array $options = []): array
     {
         return $this->calculationHelper->getIndicateursGlobaux($entreprise, $isBound, $options);
+    }
+
+    public function batchPreload(array $items): void
+    {
+        if (empty($items)) return;
+        $first = reset($items);
+        $entityClass = ($first instanceof \Doctrine\Persistence\Proxy)
+            ? get_parent_class($first)
+            : get_class($first);
+
+        match (true) {
+            is_a($entityClass, Cotation::class, true)
+                => $this->calculationHelper->preloadCotationRelations($items),
+            is_a($entityClass, Avenant::class, true)
+                => $this->calculationHelper->preloadAvenantRelations($items),
+            default => null,
+        };
     }
 }

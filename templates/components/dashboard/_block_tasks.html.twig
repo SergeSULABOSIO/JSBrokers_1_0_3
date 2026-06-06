@@ -1,0 +1,240 @@
+{# ── Bonjour ── #}
+{% if utilisateur is defined %}
+<p class="small text-muted mb-2 px-1">
+    Bonjour, <strong>{{ utilisateur.prenom ?? utilisateur.email }}</strong>
+</p>
+{% endif %}
+
+{# ── Feedbacks ── #}
+<div class="card border-0 shadow-sm mb-3 db-dashboard-block">
+    <div class="card-header border-0 bg-white py-2 px-3 d-flex align-items-center gap-2">
+        <twig:UX:Icon name="mdi:comment-text-multiple-outline" style="width:14px;height:14px;color:#0047AB;" />
+        <span class="small fw-semibold flex-grow-1" style="color:#0047AB;">Feedbacks</span>
+        <small id="db-fb-last-update" class="text-muted" style="font-size:.68rem;"></small>
+    </div>
+    <div class="card-body p-2">
+        <div id="db-fb-list"
+             class="db-fb-scroll"
+             data-feedbacks-url="/admin/entreprise_dashbord/feedbacks-fragment/{{ entreprise.id }}">
+            {% include 'components/dashboard/_feedbacks_list.html.twig' with {'derniersFeedbacks': derniersFeedbacks} %}
+        </div>
+    </div>
+</div>
+
+{# ── Tâches ── #}
+{% set currentInviteId = '' %}
+{% for inv in utilisateur.invites %}
+    {% if inv.entreprise is not null and inv.entreprise.id == entreprise.id %}
+        {% set currentInviteId = inv.id %}
+    {% endif %}
+{% endfor %}
+{% set countUrgente = 0 %}
+{% set countPrioritaire = 0 %}
+{% set countFuture = 0 %}
+{% set _now = date() %}
+{% for tache in taches %}
+    {% set _due = tache.toBeEndedAt %}
+    {% if _due is null %}
+        {% set countFuture = countFuture + 1 %}
+    {% elseif _due < _now %}
+        {% set countUrgente = countUrgente + 1 %}
+    {% elseif _due|date('U') - _now|date('U') < 172800 %}
+        {% set countUrgente = countUrgente + 1 %}
+    {% elseif _due|date('U') - _now|date('U') < 604800 %}
+        {% set countPrioritaire = countPrioritaire + 1 %}
+    {% else %}
+        {% set countFuture = countFuture + 1 %}
+    {% endif %}
+{% endfor %}
+<div class="card border-0 shadow-sm mb-3 db-dashboard-block">
+    <div class="card-header border-0 bg-white py-2 px-3">
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <twig:UX:Icon name="hugeicons:task-02" style="width:14px;height:14px;color:#0047AB;" />
+            <span class="small fw-semibold" style="color:#0047AB;">Tâches</span>
+            <div class="ms-auto input-group input-group-sm" style="max-width:145px;">
+                <span class="input-group-text border-0 bg-light px-2">
+                    <twig:UX:Icon name="mdi:magnify" style="width:13px;height:13px;color:#6c757d;" />
+                </span>
+                <input type="search"
+                       aria-label="Filtrer les tâches"
+                       placeholder="Filtrer..."
+                       class="form-control form-control-sm border-0 bg-light"
+                       style="font-size:.72rem;"
+                       oninput="dbTaskSearch(this)">
+            </div>
+            <button class="db-task-new-btn ms-1"
+                    data-entreprise-id="{{ entreprise.id }}"
+                    data-invite-id="{{ currentInviteId }}"
+                    onclick="dbTaskNew(this)"
+                    title="Nouvelle tâche"
+                    aria-label="Nouvelle tâche">
+                <twig:UX:Icon name="gridicons:add" style="width:15px;height:15px;color:#0047AB;" />
+            </button>
+        </div>
+        <div class="d-flex gap-1" id="dbTaskToggleBar">
+            <button class="db-task-toggle active" data-mode="urgente"     onclick="dbTaskToggle(this)">Urgentes ({{ countUrgente }})</button>
+            <button class="db-task-toggle"        data-mode="prioritaire" onclick="dbTaskToggle(this)">Prioritaires ({{ countPrioritaire }})</button>
+            <button class="db-task-toggle"        data-mode="future"      onclick="dbTaskToggle(this)">Futures ({{ countFuture }})</button>
+        </div>
+    </div>
+    <div class="card-body p-2 db-tasks-scroll">
+        {% if taches|length > 0 %}
+            {% for tache in taches %}
+                {% set now = date() %}
+                {% set due = tache.toBeEndedAt %}
+                {% if due is null %}
+                    {% set prioBg = '#6c757d' %}{% set prioLabel = 'Non définie' %}{% set urgency = 'future' %}
+                {% elseif due < now %}
+                    {% set prioBg = '#dc3545' %}{% set prioLabel = 'Urgente' %}{% set urgency = 'urgente' %}
+                {% elseif due|date('U') - now|date('U') < 172800 %}
+                    {% set prioBg = '#e69500' %}{% set prioLabel = 'Haute' %}{% set urgency = 'urgente' %}
+                {% elseif due|date('U') - now|date('U') < 604800 %}
+                    {% set prioBg = '#0d6efd' %}{% set prioLabel = 'Moyenne' %}{% set urgency = 'prioritaire' %}
+                {% else %}
+                    {% set prioBg = '#198754' %}{% set prioLabel = 'Normale' %}{% set urgency = 'future' %}
+                {% endif %}
+
+                <details class="db-ass-details db-task-item"
+                         data-tache-id="{{ tache.id }}"
+                         data-entreprise-id="{{ entreprise.id }}"
+                         data-invite-id="{{ currentInviteId }}"
+                         data-urgency="{{ urgency }}"
+                         data-is-creator="{{ (currentInviteId != '' and tache.invite is not null and tache.invite.id|default(0) == currentInviteId) ? '1' : '0' }}"
+                         {% if urgency != 'urgente' %}style="display:none;"{% endif %}
+                         oncontextmenu="dbTaskCtxOpen(event,this)">
+                    <summary class="d-flex align-items-center gap-2 py-2 px-1">
+                        <div class="db-ass-avatar rounded-circle d-flex align-items-center justify-content-center text-white"
+                             style="width:26px;height:26px;background:{{ prioBg }};flex-shrink:0;">
+                            <twig:UX:Icon name="hugeicons:task-02" style="width:13px;height:13px;" />
+                        </div>
+                        <span class="db-task-label small fw-semibold flex-grow-1 text-truncate"
+                              style="color:#212529;" title="{{ tache.description|striptags }}">{{ tache.description|striptags }}</span>
+                        <span class="badge rounded-pill"
+                              style="background:{{ prioBg }};color:#fff;font-size:.58rem;flex-shrink:0;">
+                            {{ prioLabel }}
+                        </span>
+                        <twig:UX:Icon name="mdi:chevron-down" class="db-ass-chevron"
+                                      style="width:14px;height:14px;color:#6c757d;" />
+                    </summary>
+
+                    <div class="px-2 py-2 bg-light rounded-bottom" style="font-size:.73rem;">
+                        <p class="mb-2" style="color:#212529;word-break:break-word;">{{ tache.description|striptags }}</p>
+
+                        {% if tache.piste or tache.cotation or tache.notificationSinistre %}
+                        <div class="d-flex gap-3 flex-wrap mb-1">
+                            {% if tache.piste %}
+                                <span style="color:#6c757d;">
+                                    <twig:UX:Icon name="fluent:document-edit-16-regular" style="width:11px;height:11px;" class="me-1" />
+                                    Piste
+                                </span>
+                            {% elseif tache.cotation %}
+                                <span style="color:#6c757d;">
+                                    <twig:UX:Icon name="hugeicons:dollar-receive-02" style="width:11px;height:11px;" class="me-1" />
+                                    Cotation
+                                </span>
+                            {% elseif tache.notificationSinistre %}
+                                <span style="color:#6c757d;">
+                                    <twig:UX:Icon name="hugeicons:accident" style="width:11px;height:11px;" class="me-1" />
+                                    Sinistre
+                                </span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% set statutColor = (due is not null and due < now) ? '#dc3545' : '#198754' %}
+                        {% set statutLabel = (due is not null and due < now) ? 'En retard' : 'En cours' %}
+                        <div class="d-flex gap-3 flex-wrap pt-1" style="border-top:1px solid #dee2e6;">
+                            <span class="db-meta-chip"
+                                  data-meta-tip="{{ tache.executor ? tache.executor.nom|e : 'Aucun assignataire' }}"
+                                  style="color:#6c757d;">
+                                <twig:UX:Icon name="hugeicons:user-group" style="width:11px;height:11px;" class="me-1" />
+                                {{ tache.executor ? 1 : 0 }}
+                            </span>
+                            <span style="color:{{ statutColor }};">
+                                <twig:UX:Icon name="mdi:circle-slice-8" style="width:11px;height:11px;" class="me-1" />
+                                {{ statutLabel }}
+                            </span>
+                            {% if tache.createdAt %}
+                                <span style="color:#6c757d;">
+                                    <twig:UX:Icon name="mdi:calendar-plus" style="width:11px;height:11px;" class="me-1" />
+                                    {{ tache.createdAt|date('d/m/Y') }}
+                                </span>
+                            {% endif %}
+                            {% if tache.toBeEndedAt %}
+                                <span style="color:#6c757d;">
+                                    <twig:UX:Icon name="mdi:calendar-clock" style="width:11px;height:11px;" class="me-1" />
+                                    {{ tache.toBeEndedAt|date('d/m/Y') }}
+                                </span>
+                            {% endif %}
+                            {% set _fbTip = 'Aucun feedback' %}
+                            {% if tache.feedbacks|length > 0 %}
+                                {% set _fbLines = [] %}
+                                {% for fb in tache.feedbacks|slice(0, 5) %}
+                                    {% set _desc = fb.description|striptags %}
+                                    {% set _fbLine = (fb.invite ? fb.invite.nom : 'Anonyme') ~ ': ' ~ (_desc|slice(0, 55)) ~ (_desc|length > 55 ? '…' : '') %}
+                                    {% set _fbLines = _fbLines|merge([_fbLine]) %}
+                                {% endfor %}
+                                {% set _fbTip = _fbLines|join("\n─────────────────────\n") %}
+                                {% if tache.feedbacks|length > 5 %}
+                                    {% set _fbTip = _fbTip ~ "\n─────────────────────\n[PLUS]" %}
+                                {% endif %}
+                            {% endif %}
+                            <span data-fb-count="{{ tache.id }}"
+                                  class="db-meta-chip"
+                                  data-meta-tip="{{ _fbTip|e }}"
+                                  style="color:#6c757d;">
+                                <twig:UX:Icon name="mdi:comment-text-multiple-outline" style="width:11px;height:11px;" class="me-1" />
+                                {{ tache.feedbacks|length }}
+                            </span>
+                        </div>
+                    </div>
+                </details>
+            {% endfor %}
+        {% else %}
+            <p class="text-muted small mb-0 px-2 py-3 text-center">Aucune tâche en cours.</p>
+        {% endif %}
+    </div>
+</div>
+
+{# ── Menu contextuel tâches ── #}
+<meta id="db-task-csrf" content="{{ csrf_token('db-task-close') }}">
+<nav id="dbTaskCtxMenu" class="context-menu" style="display:none;"
+     onmousedown="event.stopPropagation()">
+    <ul role="menu" class="list-unstyled mb-0">
+        <li role="menuitem" tabindex="-1" id="dbTaskCtxEditItem"
+            class="d-flex align-items-center gap-2 px-3 py-2"
+            style="cursor:pointer;">
+            <span class="context-menu-icon" aria-hidden="true">
+                <twig:UX:Icon name="mdi:pencil-outline" style="width:16px;height:16px;" />
+            </span>
+            <span class="flex-grow-1">Modifier la tâche</span>
+        </li>
+        <li role="separator" class="separator"></li>
+        <li role="menuitem" tabindex="-1"
+            onclick="dbTaskCtxFeedback()"
+            class="d-flex align-items-center gap-2 px-3 py-2" style="cursor:pointer;">
+            <span class="context-menu-icon" aria-hidden="true">
+                <twig:UX:Icon name="mdi:comment-plus-outline" style="width:16px;height:16px;" />
+            </span>
+            <span class="flex-grow-1">Donner un feedback</span>
+        </li>
+        <li role="separator" class="separator"></li>
+        <li role="menuitem" tabindex="-1"
+            onclick="dbTaskCtxClose()"
+            class="d-flex align-items-center gap-2 px-3 py-2 is-danger" style="cursor:pointer;">
+            <span class="context-menu-icon" aria-hidden="true">
+                <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;" />
+            </span>
+            <span class="flex-grow-1">Clôturer</span>
+        </li>
+        <li role="separator" class="separator"></li>
+        <li role="menuitem" tabindex="-1" id="dbTaskCtxDeleteItem"
+            class="d-flex align-items-center gap-2 px-3 py-2 is-danger"
+            style="cursor:pointer;">
+            <span class="context-menu-icon" aria-hidden="true">
+                <twig:UX:Icon name="mdi:delete-outline" style="width:16px;height:16px;" />
+            </span>
+            <span class="flex-grow-1">Supprimer</span>
+        </li>
+    </ul>
+</nav>

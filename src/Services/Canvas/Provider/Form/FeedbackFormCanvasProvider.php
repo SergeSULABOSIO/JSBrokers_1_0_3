@@ -29,7 +29,7 @@ class FeedbackFormCanvasProvider implements FormCanvasProviderInterface
 
         $parametres = [
             "titre_creation" => "Nouveau Feedback",
-            "titre_modification" => "Modification du feedback #%id%",
+            "titre_modification" => "Modification du feedback #" . ($feedbackId ?: '?'),
             "endpoint_submit_url" => "/admin/feedback/api/submit",
             "endpoint_delete_url" => "/admin/feedback/api/delete",
             "endpoint_form_url" => "/admin/feedback/api/get-form",

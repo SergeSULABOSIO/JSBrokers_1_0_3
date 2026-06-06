@@ -240,6 +240,15 @@ class JSBDynamicSearchService
                 $qb->andWhere("{$currentAlias}.{$actualField} = :{$parameterName}")
                     ->setParameter($parameterName, $value);
             }
+            // CAS 4 : IS NULL OR égalité. Format : ['IS_NULL_OR_EQ' => $entity].
+            // Utilisé pour les champs optionnels où l'absence de valeur signifie "visible par tous".
+            elseif (is_array($value) && array_key_exists('IS_NULL_OR_EQ', $value)) {
+                $entity = $value['IS_NULL_OR_EQ'];
+                $qb->andWhere($qb->expr()->orX(
+                    $qb->expr()->isNull("{$currentAlias}.{$actualField}"),
+                    $qb->expr()->eq("{$currentAlias}.{$actualField}", ":{$parameterName}")
+                ))->setParameter($parameterName, $entity);
+            }
         }
     }
 }

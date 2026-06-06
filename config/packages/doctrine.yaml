@@ -25,6 +25,11 @@ doctrine:
         controller_resolver:
             auto_mapping: false
 
+when@dev:
+    doctrine:
+        orm:
+            auto_generate_proxy_classes: 3  # AUTOGENERATE_FILE_NOT_EXISTS — évite les race conditions rename() sur Windows
+
 when@test:
     doctrine:
         dbal:

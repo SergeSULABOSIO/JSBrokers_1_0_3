@@ -1,0 +1,27 @@
+{% set typeIcons = {0: 'mdi:handshake-outline', 1: 'mdi:phone-outline', 2: 'mdi:email-outline', 3: 'mdi:message-outline'} %}
+{% for fb in derniersFeedbacks %}
+    {% set typeIcon = typeIcons[fb.type] ?? 'mdi:chat-outline' %}
+    {% set desc = fb.description|striptags %}
+    {% set taskDesc = fb.tache ? (fb.tache.description|striptags) : null %}
+    <div class="db-fb-item" tabindex="0" role="button">
+        <div class="d-flex align-items-start gap-2">
+            <span class="db-fb-type-icon flex-shrink-0 pt-1">
+                <twig:UX:Icon name="{{ typeIcon }}" style="width:13px;height:13px;" />
+            </span>
+            <div class="flex-grow-1 min-w-0">
+                <div class="db-fb-meta">
+                    <span class="db-fb-author">{{ fb.invite ? fb.invite.nom : 'Anonyme' }}</span>
+                    <span class="db-fb-date">{{ fb.createdAt ? fb.createdAt|date('d/m/y') ~ ' à ' ~ fb.createdAt|date('H:i') : '' }}</span>
+                </div>
+                {% if taskDesc %}
+                    <div class="db-fb-task-ref text-truncate">
+                        <twig:UX:Icon name="mdi:checkbox-marked-circle-outline" style="width:10px;height:10px;" class="me-1" />{{ taskDesc|slice(0,50) }}{{ taskDesc|length > 50 ? '…' : '' }}
+                    </div>
+                {% endif %}
+                <div class="db-fb-desc"><strong>{{ desc|slice(0,90) }}{{ desc|length > 90 ? '…' : '' }}</strong></div>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <p class="text-muted text-center small py-3 mb-0">Aucun feedback récent</p>
+{% endfor %}

@@ -1,41 +1,66 @@
-<div class="mb-3">
-    <h6 class="fw-semibold mb-3" style="color:#0047AB;">
-        <twig:UX:Icon name="mdi:calendar-clock" style="width:18px;height:18px;" class="me-1" />
-        Renouvellements à venir
-        <span class="badge rounded-pill text-bg-secondary ms-1" style="font-size:.7rem;">30 jours</span>
-    </h6>
-
-    {% if renouvellements|length > 0 %}
-        <div class="row g-2">
-            {% for avenant in renouvellements %}
-                <div class="col-4">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body p-3">
-                            <p class="small fw-semibold mb-1 text-truncate"
-                               title="{{ avenant.cotation.piste.client.nom ?? '—' }}">
-                                {{ avenant.cotation.piste.client.nom ?? '—' }}
-                            </p>
-                            <p class="x-small text-muted mb-1 text-truncate">
-                                {{ avenant.description }}
-                            </p>
-                            <p class="x-small text-muted mb-2">
-                                <twig:UX:Icon name="mdi:shield" style="width:12px;height:12px;" class="me-1" />
-                                {{ avenant.cotation.assureur.nom ?? '—' }}
-                            </p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="small text-muted">
-                                    {{ avenant.endingAt|date('d/m/Y') }}
-                                </span>
-                                <span class="badge rounded-pill bg-warning text-dark" style="font-size:.65rem;">
-                                    Échéance
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
+{% set _now = date() %}
+{% set countJ30 = 0 %}
+{% set countJ60 = 0 %}
+{% set countJ61plus = 0 %}
+{% for avenant in renouvellements %}
+    {% set _diff = (avenant.endingAt|date('U') - _now|date('U')) / 86400 %}
+    {% if _diff <= 30 %}
+        {% set countJ30 = countJ30 + 1 %}
+    {% elseif _diff <= 60 %}
+        {% set countJ60 = countJ60 + 1 %}
     {% else %}
-        <p class="text-muted small">Aucun renouvellement dans les 30 prochains jours.</p>
+        {% set countJ61plus = countJ61plus + 1 %}
     {% endif %}
-</div>
+{% endfor %}
+
+<div class="px-3 pt-2 pb-2 bg-white">
+        <div class="d-flex align-items-center gap-2">
+            <div class="d-flex gap-1 flex-wrap" id="dbRenewToggleBar">
+                <button class="db-task-toggle active" data-mode="j30"     onclick="dbRenewToggle(this)" aria-pressed="true">≤ 30 jrs ({{ countJ30 }})</button>
+                <button class="db-task-toggle"        data-mode="j60"     onclick="dbRenewToggle(this)" aria-pressed="false">31-60 jrs ({{ countJ60 }})</button>
+                <button class="db-task-toggle"        data-mode="j61plus" onclick="dbRenewToggle(this)" aria-pressed="false">61+ jrs ({{ countJ61plus }})</button>
+            </div>
+            <div class="ms-auto input-group input-group-sm flex-shrink-0" role="search" style="max-width:130px;">
+                <span class="input-group-text border-0 bg-light px-2">
+                    <twig:UX:Icon name="mdi:magnify" style="width:13px;height:13px;color:#6c757d;" />
+                </span>
+                <input type="search"
+                       aria-label="Filtrer les renouvellements"
+                       placeholder="Filtrer..."
+                       class="form-control form-control-sm border-0 bg-light"
+                       style="font-size:.72rem;"
+                       oninput="dbRenewSearch(this)">
+            </div>
+        </div>
+    </div>
+    <div id="db-renew-list" class="card-body p-2 db-tasks-scroll"
+         data-renewals-url="/admin/entreprise_dashbord/renewals-fragment/{{ entreprise.id }}">
+        {% include 'components/dashboard/_renewals_list.html.twig' with {
+            'renouvellements': renouvellements,
+            'entreprise': entreprise,
+            'deviseCode': deviseCode
+        } %}
+    </div>
+
+<nav id="dbRenewCtxMenu" class="context-menu" aria-label="Menu contextuel renouvellement" style="display:none;"
+     onmousedown="event.stopPropagation()">
+    <ul role="menu" class="list-unstyled mb-0">
+        <li role="menuitem" tabindex="-1" id="dbRenewCtxPisteItem"
+            onclick="dbRenewCtxPiste()"
+            class="d-flex align-items-center gap-2 px-3 py-2" style="cursor:pointer;">
+            <span class="context-menu-icon" aria-hidden="true">
+                <twig:UX:Icon name="fluent:document-edit-16-regular" style="width:16px;height:16px;" />
+            </span>
+            <span class="flex-grow-1" id="dbRenewCtxPisteLabel">Créer une piste de renouvellement</span>
+        </li>
+        <li role="separator" class="separator"></li>
+        <li role="menuitem" tabindex="-1"
+            onclick="dbRenewCtxNoRenewal()"
+            class="d-flex align-items-center gap-2 px-3 py-2" style="cursor:pointer;">
+            <span class="context-menu-icon" aria-hidden="true">
+                <twig:UX:Icon name="mdi:cancel" style="width:16px;height:16px;" />
+            </span>
+            <span class="flex-grow-1">À ne pas renouveler</span>
+        </li>
+    </ul>
+</nav>

@@ -20,6 +20,7 @@ class PartenaireIndicatorStrategy implements IndicatorCalculationStrategyInterfa
     public function calculate(object $entity): array
     {
         /** @var Partenaire $entity */
+        if ($entity->getEntreprise() === null) return [];
         $stats = $this->calculationHelper->getIndicateursGlobaux($entity->getEntreprise(), false, ['partenaireCible' => $entity]);
 
         return [

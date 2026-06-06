@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use App\Entity\Invite;
 use App\Entity\Traits\AuditableTrait;
 use App\Repository\TacheRepository;
 use Doctrine\Common\Collections\{ArrayCollection, Collection};
@@ -64,6 +65,9 @@ class Tache
     #[ORM\ManyToOne(inversedBy: 'taches')]
     // #[Groups(['list:read'])]
     private ?OffreIndemnisationSinistre $offreIndemnisationSinistre = null;
+
+    #[ORM\ManyToOne(inversedBy: 'taches')]
+    private ?Invite $executor = null;
 
     // Attribut calculé pour afficher le contexte dans l'UI.
     #[Groups(['list:read'])]
@@ -220,6 +224,18 @@ class Tache
     public function setOffreIndemnisationSinistre(?OffreIndemnisationSinistre $offreIndemnisationSinistre): static
     {
         $this->offreIndemnisationSinistre = $offreIndemnisationSinistre;
+
+        return $this;
+    }
+
+    public function getExecutor(): ?Invite
+    {
+        return $this->executor;
+    }
+
+    public function setExecutor(?Invite $executor): static
+    {
+        $this->executor = $executor;
 
         return $this;
     }

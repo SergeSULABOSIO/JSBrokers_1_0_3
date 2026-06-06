@@ -1,0 +1,199 @@
+{# Fragment liste bordereaux — inclus par _block_bordereaux.html.twig et rechargé en AJAX #}
+{% set _now = date() %}
+
+{# Résolution de l'inviteId courant #}
+{% if currentInviteId is not defined %}
+    {% set currentInviteId = '' %}
+    {% if utilisateur is defined %}
+        {% for inv in utilisateur.invites %}
+            {% if inv.entreprise is not null and inv.entreprise.id == entreprise.id %}
+                {% set currentInviteId = inv.id %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endif %}
+
+{# Compteurs par groupe (basés sur receivedAt) #}
+{% set countJ30    = 0 %}
+{% set countJ60    = 0 %}
+{% set countJ61plus = 0 %}
+{% for b in bordereaux %}
+    {% set _d = (_now|date('U') - b.receivedAt|date('U')) / 86400 %}
+    {% if _d <= 30 %}{% set countJ30 = countJ30 + 1 %}
+    {% elseif _d <= 60 %}{% set countJ60 = countJ60 + 1 %}
+    {% else %}{% set countJ61plus = countJ61plus + 1 %}
+    {% endif %}
+{% endfor %}
+
+{# Mapping statut → label et couleur depuis currentAnalysisStep #}
+{% set statutLabels = {
+    0:  'À vérifier',
+    1:  'Contesté',
+    2:  'Validé',
+    3:  'Payé',
+    4:  'Part. payé',
+    5:  'Annulé',
+    10: 'En attente',
+    11: 'Sél. feuille',
+    12: 'Mappage',
+    13: 'Mappé',
+    14: 'Incomplet',
+    15: 'Analysé',
+    20: 'Facturé',
+    99: 'Inconnu'
+} %}
+{% set statutColors = {
+    0:  '#e69500',
+    1:  '#dc3545',
+    2:  '#198754',
+    3:  '#0047AB',
+    4:  '#fd7e14',
+    5:  '#6c757d',
+    10: '#6f42c1',
+    11: '#6f42c1',
+    12: '#6f42c1',
+    13: '#6f42c1',
+    14: '#6f42c1',
+    15: '#6f42c1',
+    20: '#0047AB',
+    99: '#adb5bd'
+} %}
+
+{% if bordereaux|length > 0 %}
+
+    {% if countJ30 == 0 %}
+    <p class="db-bord-item text-muted small px-2 py-4 text-center" data-group="j30">
+        <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucun bordereau dans les 30 derniers jours.
+    </p>
+    {% endif %}
+    {% if countJ60 == 0 %}
+    <p class="db-bord-item text-muted small px-2 py-4 text-center" data-group="j60" style="display:none;">
+        <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucun bordereau entre 31 et 60 jours.
+    </p>
+    {% endif %}
+    {% if countJ61plus == 0 %}
+    <p class="db-bord-item text-muted small px-2 py-4 text-center" data-group="j61plus" style="display:none;">
+        <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucun bordereau au-delà de 60 jours.
+    </p>
+    {% endif %}
+
+    {% for b in bordereaux %}
+        {% set _days = (_now|date('U') - b.receivedAt|date('U')) / 86400 %}
+        {% if _days <= 30 %}
+            {% set group    = 'j30' %}
+            {% set ageColor = '#198754' %}
+        {% elseif _days <= 60 %}
+            {% set group    = 'j60' %}
+            {% set ageColor = '#e69500' %}
+        {% else %}
+            {% set group    = 'j61plus' %}
+            {% set ageColor = '#dc3545' %}
+        {% endif %}
+
+        {% set step         = b.currentAnalysisStep %}
+        {% set statutCode   = step ?? 10 %}
+        {% set statutLabel  = statutLabels[statutCode] ?? 'Inconnu' %}
+        {% set statutColor  = statutColors[statutCode] ?? '#adb5bd' %}
+
+        {% set assureurNom  = b.assureur ? b.assureur.nom : '—' %}
+        {% set inviteNom    = b.invite ? b.invite.nom : '—' %}
+        {% set hasNote      = (step is not null and step == 20) %}
+        {% set isCreator    = (currentInviteId != '' and b.invite is not null and b.invite.id|default(0) == currentInviteId) %}
+
+        {% set periodeStr   = b.periodeDebut|date('d/m/Y') ~ ' → ' ~ b.periodeFin|date('d/m/Y') %}
+        {% set searchText   = (b.reference ~ '|' ~ b.nom ~ '|' ~ assureurNom)|lower %}
+
+        <details class="db-ass-details db-bord-item"
+                 data-group="{{ group }}"
+                 data-search-text="{{ searchText|e }}"
+                 data-bord-id="{{ b.id }}"
+                 data-entreprise-id="{{ entreprise.id }}"
+                 data-invite-id="{{ currentInviteId }}"
+                 data-is-creator="{{ isCreator ? '1' : '0' }}"
+                 data-has-note="{{ hasNote ? '1' : '0' }}"
+                 data-bord-nom="{{ b.nom|e }}"
+                 data-bord-ref="{{ b.reference|e }}"
+                 data-bord-assureur="{{ assureurNom|e }}"
+                 data-bord-statut="{{ statutLabel|e }}"
+                 data-bord-statut-code="{{ statutCode }}"
+                 data-bord-periode="{{ periodeStr|e }}"
+                 data-bord-recu="{{ b.receivedAt|date('d/m/Y') }}"
+                 data-bord-days="{{ _days|round(0, 'ceil') }}"
+                 oncontextmenu="dbBordCtxOpen(event,this)"
+                 {% if group != 'j30' %}style="display:none;"{% endif %}>
+
+            <summary class="d-flex align-items-center gap-2 py-2 px-1">
+                <div class="db-ass-avatar rounded-circle d-flex align-items-center justify-content-center text-white"
+                     style="width:26px;height:26px;background:{{ ageColor }};flex-shrink:0;">
+                    <twig:UX:Icon name="streamline-ultimate:notes-checklist-flip" style="width:13px;height:13px;" />
+                </div>
+                <span class="small fw-semibold flex-grow-1 text-truncate"
+                      style="color:#212529;"
+                      data-bord-tip
+                      data-bord-tip-ref="{{ b.reference|e }}"
+                      data-bord-tip-assureur="{{ assureurNom|e }}"
+                      data-bord-tip-statut="{{ statutLabel|e }}"
+                      data-bord-tip-statut-color="{{ statutColor }}"
+                      data-bord-tip-periode="{{ periodeStr|e }}"
+                      data-bord-tip-recu="{{ b.receivedAt|date('d/m/Y') }}"
+                      data-bord-tip-days="{{ _days|round(0, 'ceil') }}">{{ b.nom }}</span>
+                <span class="badge rounded-pill"
+                      style="background:{{ statutColor }};color:#fff;font-size:.58rem;flex-shrink:0;white-space:nowrap;">
+                    {{ statutLabel }}
+                </span>
+                <span class="badge rounded-pill"
+                      style="background:{{ ageColor }};color:#fff;font-size:.58rem;flex-shrink:0;">
+                    {{ _days|round(0, 'ceil') }}j
+                </span>
+                <twig:UX:Icon name="mdi:chevron-down" class="db-ass-chevron"
+                              style="width:14px;height:14px;color:#6c757d;" />
+            </summary>
+
+            <div class="px-2 py-2 bg-light rounded-bottom" style="font-size:.73rem;">
+                {# Assureur #}
+                <div class="d-flex gap-3 flex-wrap mb-2">
+                    <span style="color:#0047AB;">
+                        <twig:UX:Icon name="wpf:security-checked" style="width:11px;height:11px;" class="me-1" />
+                        <strong>{{ assureurNom }}</strong>
+                    </span>
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="hugeicons:mail-send-01" style="width:11px;height:11px;" class="me-1" />
+                        {{ inviteNom }}
+                    </span>
+                </div>
+
+                {# Période de couverture #}
+                <div class="mb-2" style="color:#495057;">
+                    <twig:UX:Icon name="mdi:calendar-range" style="width:11px;height:11px;" class="me-1" />
+                    {{ periodeStr }}
+                </div>
+
+                <div class="d-flex gap-3 flex-wrap pt-1" style="border-top:1px solid #dee2e6;">
+                    {# Référence #}
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="mdi:identifier" style="width:11px;height:11px;" class="me-1" />
+                        {{ b.reference }}
+                    </span>
+                    {# Reçu le #}
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="mdi:calendar-check" style="width:11px;height:11px;" class="me-1" />
+                        Reçu le&nbsp;: <strong>{{ b.receivedAt|date('d/m/Y') }}</strong>
+                    </span>
+                    {# Note liée si applicable #}
+                    {% if hasNote %}
+                    <span style="color:#0047AB;">
+                        <twig:UX:Icon name="fluent:document-edit-16-regular" style="width:11px;height:11px;" class="me-1" />
+                        Note émise
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </details>
+    {% endfor %}
+
+{% else %}
+    <p class="text-muted small mb-0 px-2 py-3 text-center">Aucun bordereau enregistré.</p>
+{% endif %}

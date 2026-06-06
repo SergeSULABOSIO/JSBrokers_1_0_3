@@ -25,15 +25,24 @@ class PaiementIndicatorStrategy implements IndicatorCalculationStrategyInterface
     {
         /** @var Paiement $entity */
         return [
-            'typePaiement' => $this->calculationHelper->getPaiementTypePaiement($entity), // Déjà existant
-            'contexte' => $this->calculationHelper->getPaiementContexte($entity), // Déjà existant
-            'referencePolice' => $this->calculationHelper->getPaiementReferencePolice($entity), // Déjà existant
-            'clientNom' => $this->calculationHelper->getPaiementClientNom($entity), // Déjà existant
-            'montantPaiement' => $this->calculationHelper->getPaiementMontantPaiement($entity), // Déjà existant
-            // NOUVEAU : Logique pour les lignes d'affichage
+            'typePaiement' => $this->calculationHelper->getPaiementTypePaiement($entity),
+            'contexte' => $this->calculationHelper->getPaiementContexte($entity),
+            'referencePolice' => $this->calculationHelper->getPaiementReferencePolice($entity),
+            'clientNom' => $this->calculationHelper->getPaiementClientNom($entity),
+            'montantPaiement' => $this->calculationHelper->getPaiementMontantPaiement($entity),
+            'soldeRestantDu' => $this->getSoldeRestantDu($entity),
             'ligne_principale' => $this->getLignePrincipale($entity),
             'ligne_secondaire' => $this->getLigneSecondaire($entity),
         ];
+    }
+
+    private function getSoldeRestantDu(Paiement $paiement): ?float
+    {
+        $note = $paiement->getNote();
+        if (!$note) return null;
+        $total = $this->calculationHelper->getNoteMontantTotal($note);
+        $paye  = $this->calculationHelper->getNoteMontantPaye($note);
+        return round($total - $paye, 2);
     }
 
     // NOUVEAU : Méthode pour générer la ligne principale

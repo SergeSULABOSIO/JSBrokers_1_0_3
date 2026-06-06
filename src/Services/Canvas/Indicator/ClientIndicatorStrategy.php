@@ -19,6 +19,7 @@ class ClientIndicatorStrategy implements IndicatorCalculationStrategyInterface
     public function calculate(object $entity): array
     {
         /** @var Client $entity */
+        if ($entity->getEntreprise() === null) return [];
         $stats = $this->calculationHelper->getIndicateursGlobaux($entity->getEntreprise(), false, ['clientCible' => $entity]);
 
         return [

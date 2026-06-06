@@ -3,12 +3,16 @@
 namespace App\Services\Canvas\Indicator;
 
 use App\Entity\Avenant;
+use App\Entity\Entreprise;
 use App\Repository\CotationRepository;
 use App\Services\ServiceDates;
 use DateTimeImmutable;
 
 class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
 {
+    /** @var array<int, array<string, array<array{id:int, startingAt:\DateTimeInterface}>>> */
+    private array $typeAffaireBatch = [];
+
     public function __construct(
         private ServiceDates $serviceDates,
         private IndicatorCalculationHelper $calculationHelper,
@@ -137,17 +141,33 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
         $piste = $cotation->getPiste();
         if (!$piste) return "Indéterminé (Piste manquante)";
 
-        $client = $piste->getClient();
-        $risque = $piste->getRisque();
+        $client     = $piste->getClient();
+        $risque     = $piste->getRisque();
         $startingAt = $avenant->getStartingAt();
 
         $missing = [];
         if (!$client) $missing[] = 'Client';
         if (!$risque) $missing[] = 'Risque';
         if (!$startingAt) $missing[] = 'Date d\'effet';
-
         if (!empty($missing)) return "Indéterminé (" . implode('/', $missing) . " manquant)";
 
+        $entreprise = $avenant->getEntreprise();
+        if ($entreprise !== null) {
+            $entId = $entreprise->getId();
+            if (!isset($this->typeAffaireBatch[$entId])) {
+                $this->loadTypeAffaireBatch($entreprise);
+            }
+            $key     = $client->getId() . ':' . $risque->getId();
+            $entries = $this->typeAffaireBatch[$entId][$key] ?? [];
+            foreach ($entries as $entry) {
+                if ($entry['id'] !== $avenant->getId() && $entry['startingAt'] < $startingAt) {
+                    return "Affaire existante";
+                }
+            }
+            return "Nouvelle affaire";
+        }
+
+        // Fallback (avenant sans entreprise directe — cas rare)
         $count = $this->cotationRepository->createQueryBuilder('c')
             ->select('count(a.id)')
             ->join('c.piste', 'p')
@@ -159,6 +179,29 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
             ->getQuery()->getSingleScalarResult();
 
         return ($count > 0) ? "Affaire existante" : "Nouvelle affaire";
+    }
+
+    private function loadTypeAffaireBatch(Entreprise $entreprise): void
+    {
+        $rows = $this->cotationRepository->createQueryBuilder('c')
+            ->select('cl.id AS clientId, r.id AS risqueId, a.id AS avenantId, a.startingAt AS startingAt')
+            ->join('c.piste', 'p')
+            ->join('p.invite', 'inv')
+            ->join('p.client', 'cl')
+            ->join('p.risque', 'r')
+            ->join('c.avenants', 'a')
+            ->where('inv.entreprise = :entreprise')
+            ->setParameter('entreprise', $entreprise)
+            ->andWhere('a.startingAt IS NOT NULL')
+            ->getQuery()
+            ->getResult();
+
+        $map = [];
+        foreach ($rows as $row) {
+            $key       = $row['clientId'] . ':' . $row['risqueId'];
+            $map[$key][] = ['id' => (int) $row['avenantId'], 'startingAt' => $row['startingAt']];
+        }
+        $this->typeAffaireBatch[$entreprise->getId()] = $map;
     }
 
     public function getAvenantStatutRenouvellementString(?Avenant $avenant): ?string

@@ -2,6 +2,7 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\Avenant;
 use App\Entity\Piste;
 use App\Entity\Invite;
 use App\Constantes\Constante;
@@ -10,6 +11,7 @@ use App\Repository\PisteRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use App\Services\CanvasBuilder;
+use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
@@ -38,6 +40,7 @@ class PisteController extends AbstractController
         private Constante $constante,
         private JSBDynamicSearchService $searchService,
         private SerializerInterface $serializer,
+        private IndicatorCalculationHelper $indicatorHelper,
         CanvasBuilder $canvasBuilder
     ) {
         $this->canvasBuilder = $canvasBuilder;
@@ -73,8 +76,32 @@ class PisteController extends AbstractController
             Piste::class,
             PisteType::class,
             $piste,
-            function (Piste $piste, Invite $invite) {
-                // Initialisation pour une nouvelle piste côté front-end si nécessaire
+            function (Piste $piste, Invite $invite) use ($request) {
+                $piste->setRenewalCondition(Piste::RENEWAL_CONDITION_RENEWABLE);
+
+                $idAvenant = (int) $request->query->get('idAvenant', 0);
+                if (!$idAvenant) return;
+
+                $avenant = $this->em->find(Avenant::class, $idAvenant);
+                if (!$avenant) return;
+
+                $src = $avenant->getCotation()?->getPiste();
+                if ($src) {
+                    $piste->setClient($src->getClient());
+                    $piste->setRisque($src->getRisque());
+                    $piste->setDescriptionDuRisque($src->getDescriptionDuRisque());
+                    $cotation = $avenant->getCotation();
+                    $piste->setPrimePotentielle($this->indicatorHelper->getCotationMontantPrimePayableParClient($cotation) ?: $src->getPrimePotentielle());
+                    $piste->setCommissionPotentielle($this->indicatorHelper->getCotationMontantCommissionTtc($cotation, -1, false) ?: $src->getCommissionPotentielle());
+                    $piste->setRenewalCondition($src->getRenewalCondition() ?? Piste::RENEWAL_CONDITION_RENEWABLE);
+                    foreach ($src->getPartenaires() as $partenaire) {
+                        $piste->addPartenaire($partenaire);
+                    }
+                    $piste->setNom(substr('Renouvellement — ' . $src->getNom(), 0, 255));
+                }
+
+                $piste->setTypeAvenant(Piste::AVENANT_RENOUVELLEMENT);
+                $piste->setExercice((int) date('Y'));
             }
         );
     }
@@ -89,19 +116,62 @@ class PisteController extends AbstractController
             $request,
             Piste::class,
             PisteType::class,
-            function (Piste $piste) use ($inviteConnecte) {
-                // Subtilité gérée ici : On assigne l'invité UNIQUEMENT s'il s'agit d'une création (pas d'ID)
+            function (Piste $piste) use ($inviteConnecte, $request) {
                 if (!$piste->getId()) {
                     $piste->setInvite($inviteConnecte);
+
+                    $idAvenant = (int) $request->request->get('idAvenant', 0);
+                    if ($idAvenant) {
+                        $avenant = $this->em->find(Avenant::class, $idAvenant);
+                        if ($avenant && $avenant->getEntreprise() === $piste->getEntreprise()) {
+                            $avenant->setPisteDeRenouvellement($piste);
+                            $piste->setAvenantDeBase($avenant);
+                        }
+                    }
                 }
             }
         );
+    }
+
+    #[Route('/api/close/{id}', name: 'api.close', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    public function closeApi(Piste $piste, Request $request): JsonResponse
+    {
+        if (!$this->isCsrfTokenValid('db-piste-close', $request->headers->get('X-CSRF-Token'))) {
+            return $this->json(['error' => 'Token invalide'], 403);
+        }
+        $piste->setClosed(true);
+        $this->em->flush();
+        return $this->json(['success' => true]);
     }
 
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]
     public function deleteApi(Piste $piste): Response
     {
         return $this->handleDeleteApi($piste);
+    }
+
+    #[Route('/api/set-not-renewable', name: 'api.set_not_renewable', methods: ['POST'])]
+    public function setNotRenewableApi(Request $request): JsonResponse
+    {
+        $avenantId = (int) $request->request->get('avenantId', 0);
+        if (!$avenantId) {
+            return $this->json(['success' => false, 'message' => 'avenantId manquant'], 400);
+        }
+
+        $avenant = $this->em->find(Avenant::class, $avenantId);
+        if (!$avenant) {
+            return $this->json(['success' => false, 'message' => 'Avenant introuvable'], 404);
+        }
+
+        $piste = $avenant->getCotation()?->getPiste();
+        if (!$piste) {
+            return $this->json(['success' => false, 'message' => 'Piste introuvable'], 404);
+        }
+
+        $piste->setRenewalCondition(Piste::RENEWAL_CONDITION_ONCE_OFF_AND_EXTENDABLE);
+        $this->em->flush();
+
+        return $this->json(['success' => true]);
     }
 
     #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]

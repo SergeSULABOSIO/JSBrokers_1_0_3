@@ -57,7 +57,7 @@ class PaiementType extends AbstractType
 
             if ($note) {
                 // 2. Calcul du montant par défaut (le solde de la note)
-                $payable = $this->calculationHelper->getNoteMontantPayable($note);
+                $payable = $this->calculationHelper->getNoteMontantTotal($note);
                 $paye = $this->calculationHelper->getNoteMontantPaye($note);
                 $solde = (float)($payable - $paye);
                 $defaultMontant = $solde > 0 ? $solde : 0;

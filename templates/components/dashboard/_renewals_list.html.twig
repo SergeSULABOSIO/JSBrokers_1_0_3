@@ -1,0 +1,156 @@
+{% set _now = date() %}
+{% set countJ30 = 0 %}
+{% set countJ60 = 0 %}
+{% set countJ61plus = 0 %}
+{% for avenant in renouvellements %}
+    {% set _diff = (avenant.endingAt|date('U') - _now|date('U')) / 86400 %}
+    {% if _diff <= 30 %}
+        {% set countJ30 = countJ30 + 1 %}
+    {% elseif _diff <= 60 %}
+        {% set countJ60 = countJ60 + 1 %}
+    {% else %}
+        {% set countJ61plus = countJ61plus + 1 %}
+    {% endif %}
+{% endfor %}
+
+{% if renouvellements|length > 0 %}
+    {% if countJ30 == 0 %}
+    <p class="db-renew-item text-muted small px-2 py-4 text-center" data-group="j30">
+        <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucun renouvellement critique dans les 30 prochains jours.
+    </p>
+    {% endif %}
+    {% if countJ60 == 0 %}
+    <p class="db-renew-item text-muted small px-2 py-4 text-center" data-group="j60" style="display:none;">
+        <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucun renouvellement entre 31 et 60 jours.
+    </p>
+    {% endif %}
+    {% if countJ61plus == 0 %}
+    <p class="db-renew-item text-muted small px-2 py-4 text-center" data-group="j61plus" style="display:none;">
+        <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucun renouvellement au-delà de 60 jours.
+    </p>
+    {% endif %}
+
+    {% for avenant in renouvellements %}
+        {% set _diff = (avenant.endingAt|date('U') - _now|date('U')) / 86400 %}
+        {% if _diff <= 30 %}
+            {% set group = 'j30' %}
+            {% set urgencyColor = '#dc3545' %}
+        {% elseif _diff <= 60 %}
+            {% set group = 'j60' %}
+            {% set urgencyColor = '#e69500' %}
+        {% else %}
+            {% set group = 'j61plus' %}
+            {% set urgencyColor = '#198754' %}
+        {% endif %}
+
+        {% set clientNom   = avenant.cotation.piste.client.nom ?? '—' %}
+        {% set assureurNom = avenant.cotation.assureur.nom ?? '—' %}
+        {% set risqueNom   = avenant.cotation.piste.risque.nomComplet ?? '—' %}
+        {% set searchText  = (clientNom ~ '|' ~ assureurNom ~ '|' ~ risqueNom)|lower %}
+
+        <details class="db-ass-details db-renew-item"
+                 data-group="{{ group }}"
+                 data-search-text="{{ searchText|e }}"
+                 data-avenant-id="{{ avenant.id }}"
+                 data-entreprise-id="{{ entreprise.id }}"
+                 data-piste-id="{{ avenant.pisteDeRenouvellement ? avenant.pisteDeRenouvellement.id : '' }}"
+                 oncontextmenu="dbRenewCtxOpen(event,this)"
+                 {% if group != 'j30' %}style="display:none;"{% endif %}>
+            <summary class="d-flex align-items-center gap-2 py-2 px-1">
+                <div class="db-ass-avatar rounded-circle d-flex align-items-center justify-content-center text-white"
+                     style="width:26px;height:26px;background:{{ urgencyColor }};flex-shrink:0;">
+                    <twig:UX:Icon name="fluent:document-edit-16-regular" style="width:13px;height:13px;" />
+                </div>
+                <span class="small fw-semibold flex-grow-1 text-truncate"
+                      style="color:#212529;"
+                      data-renew-tip
+                      data-renew-prime="{{ avenant.primeTotale is not null ? avenant.primeTotale|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : '—' }}"
+                      data-renew-comm="{{ avenant.montantTTC is not null ? avenant.montantTTC|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : '—' }}"
+                      data-renew-retro="{{ avenant.retroCommission is not null ? avenant.retroCommission|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : '—' }}"
+                      data-renew-reserve="{{ avenant.reserve is not null ? avenant.reserve|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : '—' }}"
+                      data-renew-periode="{{ avenant.startingAt|date('d/m/Y') }} – {{ avenant.endingAt|date('d/m/Y') }}"
+                      data-renew-risque="{{ risqueNom }}"
+                      data-renew-assureur="{{ assureurNom }}"
+                      data-renew-piste="{{ avenant.pisteDeRenouvellement ? avenant.pisteDeRenouvellement.nom : '' }}">{{ clientNom }}</span>
+                <span class="text-muted" style="font-size:.62rem;flex-shrink:0;white-space:nowrap;">
+                    {{ avenant.startingAt|date('d/m/Y') }} – {{ avenant.endingAt|date('d/m/Y') }}
+                </span>
+                <span class="badge rounded-pill db-renew-badge"
+                      style="background:{{ urgencyColor }};color:#fff;flex-shrink:0;">
+                    {{ _diff|round(0, 'ceil') }}j
+                </span>
+                <twig:UX:Icon name="mdi:chevron-down" class="db-ass-chevron"
+                              style="width:14px;height:14px;color:#6c757d;" />
+            </summary>
+
+            <div class="px-2 py-2 bg-light rounded-bottom" style="font-size:.73rem;">
+                <div class="mb-2">
+                    {% if avenant.cotation.piste %}
+                        <span style="color:#212529;">
+                            <twig:UX:Icon name="fluent:document-edit-16-regular" style="width:11px;height:11px;" class="me-1" />
+                            <strong>{{ avenant.cotation.piste.nom }}</strong>
+                        </span>
+                    {% else %}
+                        <span style="color:#adb5bd;font-style:italic;">
+                            <twig:UX:Icon name="mdi:account-question-outline" style="width:11px;height:11px;" class="me-1" />
+                            Aucune piste — dossier non attribué
+                        </span>
+                    {% endif %}
+                </div>
+                <div class="mb-2 pt-1" style="border-top:1px dashed #dee2e6;">
+                    {% if avenant.pisteDeRenouvellement %}
+                        <div class="d-flex align-items-start gap-1" style="color:#0047AB;">
+                            <twig:UX:Icon name="mdi:reload" style="width:11px;height:11px;margin-top:2px;flex-shrink:0;" />
+                            <div>
+                                <strong>{{ avenant.pisteDeRenouvellement.nom }}</strong>
+                                <span class="text-muted ms-1" style="font-size:.68rem;">
+                                    ({{ avenant.pisteDeRenouvellement.client.nom ?? '—' }})
+                                </span>
+                                {% if avenant.pisteDeRenouvellement.primePotentielle or avenant.pisteDeRenouvellement.commissionPotentielle %}
+                                <div class="d-flex gap-2 flex-wrap mt-1" style="font-size:.65rem;color:#6c757d;">
+                                    {% if avenant.pisteDeRenouvellement.primePotentielle %}
+                                    <span>Prime :&nbsp;<strong style="color:#0047AB;">{{ avenant.pisteDeRenouvellement.primePotentielle|number_format(0, ',', ' ') }}&nbsp;{{ deviseCode }}</strong></span>
+                                    {% endif %}
+                                    {% if avenant.pisteDeRenouvellement.commissionPotentielle %}
+                                    <span>Commission :&nbsp;<strong style="color:#198754;">{{ avenant.pisteDeRenouvellement.commissionPotentielle|number_format(0, ',', ' ') }}&nbsp;{{ deviseCode }}</strong></span>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <span style="color:#adb5bd;font-style:italic;">
+                            <twig:UX:Icon name="mdi:account-clock-outline" style="width:11px;height:11px;" class="me-1" />
+                            Aucun travail de renouvellement en cours
+                        </span>
+                    {% endif %}
+                </div>
+                <div class="d-flex gap-3 flex-wrap pt-1" style="border-top:1px solid #dee2e6;">
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="wpf:security-checked" style="width:11px;height:11px;" class="me-1" />
+                        {{ assureurNom }}
+                    </span>
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="ant-design:product-filled" style="width:11px;height:11px;" class="me-1" />
+                        {{ risqueNom }}
+                    </span>
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="mdi:calendar-clock" style="width:11px;height:11px;" class="me-1" />
+                        {{ avenant.endingAt|date('d/m/Y') }}
+                    </span>
+                    {% if avenant.description %}
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="fluent:text-description-16-filled" style="width:11px;height:11px;" class="me-1" />
+                        {{ avenant.description|striptags|slice(0, 80) }}{{ avenant.description|striptags|length > 80 ? '…' : '' }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </details>
+    {% endfor %}
+{% else %}
+    <p class="text-muted small mb-0 px-2 py-3 text-center">Aucun renouvellement prévu.</p>
+{% endif %}

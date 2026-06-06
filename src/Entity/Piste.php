@@ -98,12 +98,14 @@ class Piste implements OwnerAwareInterface
     private ?int $exercice = null;
 
     #[ORM\OneToOne(cascade: ['persist', 'remove'])]
-    #[Groups(['list:read'])]
     private ?Avenant $avenantDeBase = null;
 
     #[ORM\Column(nullable: true)]
     #[Groups(['list:read'])]
     private ?int $renewalCondition = null;
+
+    #[ORM\Column(options: ['default' => false])]
+    private bool $closed = false;
 
     public function __construct()
     {
@@ -394,6 +396,18 @@ class Piste implements OwnerAwareInterface
     public function setRenewalCondition(?int $renewalCondition): static
     {
         $this->renewalCondition = $renewalCondition;
+
+        return $this;
+    }
+
+    public function isClosed(): bool
+    {
+        return $this->closed;
+    }
+
+    public function setClosed(bool $closed): static
+    {
+        $this->closed = $closed;
 
         return $this;
     }

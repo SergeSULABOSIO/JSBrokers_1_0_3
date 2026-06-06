@@ -70,4 +70,9 @@ class CanvasBuilder
             $entity->{$key} = $value;
         }
     }
+
+    public function batchPreloadForCollection(array $items): void
+    {
+        $this->calculationProvider->batchPreload($items);
+    }
 }

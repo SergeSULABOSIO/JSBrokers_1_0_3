@@ -149,6 +149,11 @@ class Avenant
     #[Groups(['list:read'])]
     private ?int $renewalStatus = self::RENEWAL_STATUS_RUNNING;
 
+    #[ORM\ManyToOne(targetEntity: Piste::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    #[Groups(['list:read'])]
+    private ?Piste $pisteDeRenouvellement = null;
+
     public function __construct()
     {
         $this->documents = new ArrayCollection();
@@ -308,5 +313,16 @@ class Avenant
     public function getTauxCommission(): ?float
     {
         return $this->tauxCommission;
+    }
+
+    public function getPisteDeRenouvellement(): ?Piste
+    {
+        return $this->pisteDeRenouvellement;
+    }
+
+    public function setPisteDeRenouvellement(?Piste $pisteDeRenouvellement): static
+    {
+        $this->pisteDeRenouvellement = $pisteDeRenouvellement;
+        return $this;
     }
 }

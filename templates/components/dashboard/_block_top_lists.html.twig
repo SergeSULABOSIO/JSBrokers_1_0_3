@@ -1,0 +1,495 @@
+{% set currentInviteId = '' %}
+{% for inv in utilisateur.invites %}
+    {% if inv.entreprise is not null and inv.entreprise.id == entreprise.id %}
+        {% set currentInviteId = inv.id %}
+    {% endif %}
+{% endfor %}
+
+{# ── Top assureurs ── #}
+<details class="db-block-details card border-0 shadow-sm db-dashboard-block">
+    <summary class="d-flex align-items-center gap-2 px-3 py-2">
+        <twig:UX:Icon name="wpf:security-checked" style="width:14px;height:14px;color:#0047AB;" />
+        <span class="small fw-semibold" style="color:#0047AB;">Top assureurs</span>
+        <button class="db-block-add-btn ms-auto me-1"
+                data-entreprise-id="{{ entreprise.id }}"
+                data-invite-id="{{ currentInviteId }}"
+                onclick="event.stopPropagation(); dbBlockAdd(this, 'assureur', 'Nouvel assureur')"
+                title="Nouvel assureur" aria-label="Nouvel assureur">
+            <twig:UX:Icon name="gridicons:add" style="width:13px;height:13px;color:#0047AB;" />
+        </button>
+        <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron"
+                      style="width:15px;height:15px;color:#6c757d;" />
+    </summary>
+    <div class="card-body p-3">
+        {% if topAssureurs|length > 0 %}
+            {% for row in topAssureurs %}
+                {% if row.ratioSP < 80 %}
+                    {% set spColor = '#198754' %}{% set spLabel = 'Bon' %}
+                {% elseif row.ratioSP <= 100 %}
+                    {% set spColor = '#e69500' %}{% set spLabel = 'Risqué' %}
+                {% else %}
+                    {% set spColor = '#dc3545' %}{% set spLabel = 'Critique' %}
+                {% endif %}
+
+                <details class="db-ass-details">
+                    <summary class="d-flex align-items-center gap-2 py-2 px-2">
+                        <div class="db-ass-avatar rounded-circle d-flex align-items-center justify-content-center text-white"
+                             style="width:28px;height:28px;background:#0047AB;flex-shrink:0;">
+                            <twig:UX:Icon name="wpf:security-checked" style="width:14px;height:14px;" />
+                        </div>
+                        <span class="small fw-semibold flex-grow-1 text-truncate"
+                              style="color:#212529;" title="{{ row.nom }}">{{ row.nom }}</span>
+                        <span class="badge rounded-pill db-badge-market"
+                              style="background:#0d6efd;color:#fff;font-size:.6rem;flex-shrink:0;"
+                              title="Part de marché en primes TTC">
+                            {{ row.partMarche }} %
+                        </span>
+                        <span class="badge rounded-pill"
+                              style="background:#0047AB;color:#ffffff;font-size:.6rem;flex-shrink:0;">
+                            {{ row.nbPolices }} pol.
+                        </span>
+                        <twig:UX:Icon name="mdi:chevron-down" class="db-ass-chevron"
+                                      style="width:15px;height:15px;color:#6c757d;" />
+                    </summary>
+
+                    <table class="db-ass-table table table-sm table-borderless table-striped table-hover mb-0 mt-1" style="font-size:.73rem;">
+                        <tbody>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="hugeicons:user-group" style="width:12px;height:12px;" class="me-1" />
+                                    Clients
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#212529;">{{ row.nbClients }}</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="hugeicons:dollar-receive-02" style="width:12px;height:12px;" class="me-1" />
+                                    Primes TTC
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#198754;">{{ row.primesTotales|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="hugeicons:money-bag-02" style="width:12px;height:12px;" class="me-1" />
+                                    Commissions TTC
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#0d6efd;">{{ row.commissionsTtc|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="tabler:tax" style="width:12px;height:12px;" class="me-1" />
+                                    Taxe assureur
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#495057;">{{ row.taxeAssureur|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="tabler:tax" style="width:12px;height:12px;" class="me-1" />
+                                    Taxe courtier
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#495057;">{{ row.taxeCourtier|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="hugeicons:money-bag-01" style="width:12px;height:12px;" class="me-1" />
+                                    Rétrocommission
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#e69500;">{{ row.retrocommission|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="hugeicons:dollar-circle" style="width:12px;height:12px;" class="me-1" />
+                                    Réserve
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#495057;">{{ row.reserve|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="hugeicons:accident" style="width:12px;height:12px;" class="me-1" />
+                                    Sinistres indemnisés
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#dc3545;">{{ row.sinistresIndemnises|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr style="border-top:1px solid #dee2e6;">
+                                <td class="ps-2 pt-2 pb-1 fw-semibold" style="color:#212529;">
+                                    <twig:UX:Icon name="ant-design:dashboard-twotone" style="width:12px;height:12px;" class="me-1" />
+                                    Ratio S/P
+                                </td>
+                                <td class="text-end pt-2 pb-1 fw-bold" style="color:{{ spColor }};">
+                                    {{ row.ratioSP }} %
+                                    <span class="badge rounded-pill ms-1"
+                                          style="background:{{ spColor }};color:#fff;font-size:.58rem;vertical-align:middle;">
+                                        {{ spLabel }}
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </details>
+            {% endfor %}
+        {% else %}
+            <p class="text-muted small mb-0">Aucune donnée.</p>
+        {% endif %}
+    </div>
+</details>
+
+{# ── Top assurés ── #}
+<details class="db-block-details card border-0 shadow-sm mt-3 db-dashboard-block">
+    <summary class="d-flex align-items-center gap-2 px-3 py-2">
+        <twig:UX:Icon name="hugeicons:user-group" style="width:14px;height:14px;color:#198754;" />
+        <span class="small fw-semibold" style="color:#198754;">Top assurés</span>
+        <button class="db-block-add-btn ms-auto me-1"
+                data-entreprise-id="{{ entreprise.id }}"
+                data-invite-id="{{ currentInviteId }}"
+                onclick="event.stopPropagation(); dbBlockAdd(this, 'client', 'Nouveau client')"
+                title="Nouveau client" aria-label="Nouveau client">
+            <twig:UX:Icon name="gridicons:add" style="width:13px;height:13px;color:#0047AB;" />
+        </button>
+        <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron"
+                      style="width:15px;height:15px;color:#6c757d;" />
+    </summary>
+    <div class="card-body p-3">
+        {% if topAssures|length > 0 %}
+            {% for row in topAssures %}
+                {% if row.ratioSP < 80 %}
+                    {% set spColor = '#198754' %}{% set spLabel = 'Bon' %}
+                {% elseif row.ratioSP <= 100 %}
+                    {% set spColor = '#e69500' %}{% set spLabel = 'Risqué' %}
+                {% else %}
+                    {% set spColor = '#dc3545' %}{% set spLabel = 'Critique' %}
+                {% endif %}
+
+                <details class="db-ass-details">
+                    <summary class="d-flex align-items-center gap-2 py-2 px-2">
+                        <div class="db-ass-avatar rounded-circle d-flex align-items-center justify-content-center text-white"
+                             style="width:28px;height:28px;background:#198754;flex-shrink:0;">
+                            <twig:UX:Icon name="hugeicons:user-group" style="width:14px;height:14px;" />
+                        </div>
+                        <span class="small fw-semibold flex-grow-1 text-truncate"
+                              style="color:#212529;" title="{{ row.nom }}">{{ row.nom }}</span>
+                        <span class="badge rounded-pill db-badge-market"
+                              style="background:#0d6efd;color:#fff;font-size:.6rem;flex-shrink:0;"
+                              title="Part de marché en primes TTC">
+                            {{ row.partMarche }} %
+                        </span>
+                        <span class="badge rounded-pill"
+                              style="background:#198754;color:#ffffff;font-size:.6rem;flex-shrink:0;">
+                            {{ row.nbPolices }} pol.
+                        </span>
+                        <twig:UX:Icon name="mdi:chevron-down" class="db-ass-chevron"
+                                      style="width:15px;height:15px;color:#6c757d;" />
+                    </summary>
+
+                    <table class="db-ass-table table table-sm table-borderless table-striped table-hover mb-0 mt-1"
+                           style="font-size:.73rem;">
+                        <tbody>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="fluent:document-edit-16-regular" style="width:12px;height:12px;" class="me-1" />
+                                    Polices actives
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#212529;">{{ row.nbPolices }}</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="hugeicons:dollar-receive-02" style="width:12px;height:12px;" class="me-1" />
+                                    Primes TTC
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#198754;">{{ row.primesTotales|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="hugeicons:money-bag-02" style="width:12px;height:12px;" class="me-1" />
+                                    Commissions TTC
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#0d6efd;">{{ row.commissionsTtc|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="tabler:tax" style="width:12px;height:12px;" class="me-1" />
+                                    Taxe assureur
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#495057;">{{ row.taxeAssureur|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="tabler:tax" style="width:12px;height:12px;" class="me-1" />
+                                    Taxe courtier
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#495057;">{{ row.taxeCourtier|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="hugeicons:money-bag-01" style="width:12px;height:12px;" class="me-1" />
+                                    Rétrocommission
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#e69500;">{{ row.retrocommission|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="hugeicons:dollar-circle" style="width:12px;height:12px;" class="me-1" />
+                                    Réserve
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#495057;">{{ row.reserve|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="hugeicons:accident" style="width:12px;height:12px;" class="me-1" />
+                                    Sinistres indemnisés
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#dc3545;">{{ row.sinistresIndemnises|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr style="border-top:1px solid #dee2e6;">
+                                <td class="ps-2 pt-2 pb-1 fw-semibold" style="color:#212529;">
+                                    <twig:UX:Icon name="ant-design:dashboard-twotone" style="width:12px;height:12px;" class="me-1" />
+                                    Ratio S/P
+                                </td>
+                                <td class="text-end pt-2 pb-1 fw-bold" style="color:{{ spColor }};">
+                                    {{ row.ratioSP }} %
+                                    <span class="badge rounded-pill ms-1"
+                                          style="background:{{ spColor }};color:#fff;font-size:.58rem;vertical-align:middle;">
+                                        {{ spLabel }}
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </details>
+            {% endfor %}
+        {% else %}
+            <p class="text-muted small mb-0">Aucune donnée.</p>
+        {% endif %}
+    </div>
+</details>
+
+{# ── Top Risques ── #}
+<details class="db-block-details card border-0 shadow-sm mt-3 db-dashboard-block">
+    <summary class="d-flex align-items-center gap-2 px-3 py-2">
+        <twig:UX:Icon name="ant-design:product-filled" style="width:14px;height:14px;color:#e69500;" />
+        <span class="small fw-semibold" style="color:#e69500;">Top Risques</span>
+        <button class="db-block-add-btn ms-auto me-1"
+                data-entreprise-id="{{ entreprise.id }}"
+                data-invite-id="{{ currentInviteId }}"
+                onclick="event.stopPropagation(); dbBlockAdd(this, 'risque', 'Nouveau risque')"
+                title="Nouveau risque" aria-label="Nouveau risque">
+            <twig:UX:Icon name="gridicons:add" style="width:13px;height:13px;color:#0047AB;" />
+        </button>
+        <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron"
+                      style="width:15px;height:15px;color:#6c757d;" />
+    </summary>
+    <div class="card-body p-3">
+        {% if topRisques|length > 0 %}
+            {% for row in topRisques %}
+                {% if row.ratioSP < 80 %}
+                    {% set spColor = '#198754' %}{% set spLabel = 'Bon' %}
+                {% elseif row.ratioSP <= 100 %}
+                    {% set spColor = '#e69500' %}{% set spLabel = 'Risqué' %}
+                {% else %}
+                    {% set spColor = '#dc3545' %}{% set spLabel = 'Critique' %}
+                {% endif %}
+
+                <details class="db-ass-details db-risque">
+                    <summary class="d-flex align-items-center gap-2 py-2 px-2">
+                        <div class="db-ass-avatar rounded-circle d-flex align-items-center justify-content-center text-white"
+                             style="width:28px;height:28px;background:#e69500;flex-shrink:0;">
+                            <twig:UX:Icon name="ant-design:product-filled" style="width:14px;height:14px;" />
+                        </div>
+                        <span class="small fw-semibold flex-grow-1 text-truncate"
+                              style="color:#212529;" title="{{ row.nom }}">{{ row.nom }}</span>
+                        <span class="badge rounded-pill db-badge-market"
+                              style="background:#0d6efd;color:#fff;font-size:.6rem;flex-shrink:0;"
+                              title="Part de marché en primes TTC">
+                            {{ row.partMarche }} %
+                        </span>
+                        <span class="badge rounded-pill"
+                              style="background:#e69500;color:#ffffff;font-size:.6rem;flex-shrink:0;">
+                            {{ row.nbPolices }} pol.
+                        </span>
+                        <twig:UX:Icon name="mdi:chevron-down" class="db-ass-chevron"
+                                      style="width:15px;height:15px;color:#6c757d;" />
+                    </summary>
+
+                    <table class="db-ass-table table table-sm table-borderless table-striped table-hover mb-0 mt-1"
+                           style="font-size:.73rem;">
+                        <tbody>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="fluent:document-edit-16-regular" style="width:12px;height:12px;" class="me-1" />
+                                    Polices actives
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#212529;">{{ row.nbPolices }}</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="hugeicons:dollar-receive-02" style="width:12px;height:12px;" class="me-1" />
+                                    Primes TTC
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#198754;">{{ row.primesTotales|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="hugeicons:money-bag-02" style="width:12px;height:12px;" class="me-1" />
+                                    Commissions TTC
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#0d6efd;">{{ row.commissionsTtc|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="tabler:tax" style="width:12px;height:12px;" class="me-1" />
+                                    Taxe assureur
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#495057;">{{ row.taxeAssureur|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="tabler:tax" style="width:12px;height:12px;" class="me-1" />
+                                    Taxe courtier
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#495057;">{{ row.taxeCourtier|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="hugeicons:money-bag-01" style="width:12px;height:12px;" class="me-1" />
+                                    Rétrocommission
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#e69500;">{{ row.retrocommission|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="hugeicons:dollar-circle" style="width:12px;height:12px;" class="me-1" />
+                                    Réserve
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#495057;">{{ row.reserve|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="hugeicons:accident" style="width:12px;height:12px;" class="me-1" />
+                                    Sinistres indemnisés
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#dc3545;">{{ row.sinistresIndemnises|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr style="border-top:1px solid #dee2e6;">
+                                <td class="ps-2 pt-2 pb-1 fw-semibold" style="color:#212529;">
+                                    <twig:UX:Icon name="ant-design:dashboard-twotone" style="width:12px;height:12px;" class="me-1" />
+                                    Ratio S/P
+                                </td>
+                                <td class="text-end pt-2 pb-1 fw-bold" style="color:{{ spColor }};">
+                                    {{ row.ratioSP }} %
+                                    <span class="badge rounded-pill ms-1"
+                                          style="background:{{ spColor }};color:#fff;font-size:.58rem;vertical-align:middle;">
+                                        {{ spLabel }}
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </details>
+            {% endfor %}
+        {% else %}
+            <p class="text-muted small mb-0">Aucune donnée.</p>
+        {% endif %}
+    </div>
+</details>
+
+{# ── Top Intermédiaires ── #}
+<details class="db-block-details card border-0 shadow-sm mt-3 db-dashboard-block" id="db-top-intermediaires">
+    <summary class="d-flex align-items-center gap-2 px-3 py-2">
+        <twig:UX:Icon name="carbon:partnership" style="width:14px;height:14px;color:#495057;" />
+        <span class="small fw-semibold" style="color:#495057;">Top Intermédiaires</span>
+        <button class="db-block-add-btn ms-auto me-1"
+                data-entreprise-id="{{ entreprise.id }}"
+                data-invite-id="{{ currentInviteId }}"
+                onclick="event.stopPropagation(); dbBlockAdd(this, 'partenaire', 'Nouvel intermédiaire')"
+                title="Nouvel intermédiaire" aria-label="Nouvel intermédiaire">
+            <twig:UX:Icon name="gridicons:add" style="width:13px;height:13px;color:#0047AB;" />
+        </button>
+        <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron"
+                      style="width:15px;height:15px;color:#6c757d;" />
+    </summary>
+    <div class="card-body p-3">
+        {% if topIntermediaires|length > 0 %}
+            {% for row in topIntermediaires %}
+                <details class="db-ass-details db-intermediaire">
+                    <summary class="d-flex align-items-center gap-2 py-2 px-2">
+                        <div class="db-ass-avatar rounded-circle d-flex align-items-center justify-content-center text-white"
+                             style="width:28px;height:28px;background:#495057;flex-shrink:0;">
+                            <twig:UX:Icon name="carbon:partnership" style="width:14px;height:14px;" />
+                        </div>
+                        <span class="small fw-semibold flex-grow-1 text-truncate"
+                              style="color:#212529;" title="{{ row.nom }}">{{ row.nom }}</span>
+                        <span class="badge rounded-pill db-badge-market"
+                              style="background:#0d6efd;color:#fff;font-size:.6rem;flex-shrink:0;"
+                              title="Part des rétrocommissions">
+                            {{ row.partMarche }} %
+                        </span>
+                        <span class="badge rounded-pill"
+                              style="background:#495057;color:#ffffff;font-size:.6rem;flex-shrink:0;">
+                            {{ row.nbPolices }} pol.
+                        </span>
+                        <twig:UX:Icon name="mdi:chevron-down" class="db-ass-chevron"
+                                      style="width:15px;height:15px;color:#6c757d;" />
+                    </summary>
+
+                    <table class="db-ass-table table table-sm table-borderless table-striped table-hover mb-0 mt-1"
+                           style="font-size:.73rem;">
+                        <tbody>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="fluent:document-edit-16-regular" style="width:12px;height:12px;" class="me-1" />
+                                    Polices actives
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#212529;">{{ row.nbPolices }}</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="hugeicons:dollar-receive-02" style="width:12px;height:12px;" class="me-1" />
+                                    Primes TTC
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#198754;">{{ row.primesTotales|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="hugeicons:money-bag-02" style="width:12px;height:12px;" class="me-1" />
+                                    Commissions TTC
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#0d6efd;">{{ row.commissionsTtc|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="tabler:tax" style="width:12px;height:12px;" class="me-1" />
+                                    Taxe assureur
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#495057;">{{ row.taxeAssureur|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="tabler:tax" style="width:12px;height:12px;" class="me-1" />
+                                    Taxe courtier
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#495057;">{{ row.taxeCourtier|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                            <tr style="border-top:1px solid #dee2e6;">
+                                <td class="ps-2 pt-2 pb-1 fw-semibold" style="color:#212529;">
+                                    <twig:UX:Icon name="hugeicons:money-bag-01" style="width:12px;height:12px;" class="me-1" />
+                                    Rétrocommission
+                                </td>
+                                <td class="text-end pt-2 pb-1 fw-bold" style="color:#495057;">
+                                    {{ row.retrocommission|number_format(0, ',', ' ') }} $
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="ps-2 py-1" style="color:#6c757d;">
+                                    <twig:UX:Icon name="hugeicons:dollar-circle" style="width:12px;height:12px;" class="me-1" />
+                                    Réserve
+                                </td>
+                                <td class="text-end fw-semibold py-1" style="color:#495057;">{{ row.reserve|number_format(0, ',', ' ') }} $</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </details>
+            {% endfor %}
+        {% else %}
+            <p class="text-muted small mb-0">Aucune donnée.</p>
+        {% endif %}
+    </div>
+</details>
