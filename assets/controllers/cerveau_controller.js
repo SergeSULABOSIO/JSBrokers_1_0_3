@@ -62,6 +62,8 @@ export default class extends Controller {
         console.log(`[${++window.logSequence}] ${this.nomControleur} - Code: 1986 -  🧠 Cerveau prêt à orchestrer.`);
         this.boundHandleEvent = this.handleEvent.bind(this);
         document.addEventListener('cerveau:event', this.boundHandleEvent);
+        this.boundSyncContextFromDialog = this._syncContextFromDialog.bind(this);
+        document.addEventListener('app:boite-dialogue:init-request', this.boundSyncContextFromDialog);
     }
 
     /**
@@ -69,6 +71,7 @@ export default class extends Controller {
      */
     disconnect() {
         document.removeEventListener('cerveau:event', this.boundHandleEvent);
+        document.removeEventListener('app:boite-dialogue:init-request', this.boundSyncContextFromDialog);
     }
 
 
@@ -223,6 +226,9 @@ export default class extends Controller {
             case 'app:api.delete-request':
                 this._publishSelectionStatus('Suppression en cours...');
                 this._handleApiDeleteRequest(payload);
+                break;
+            case 'renew:set-not-renewable':
+                this._handleSetNotRenewable(payload);
                 break;
             case 'dialog:confirmation.request':
                 this._publishSelectionStatus('Attente de confirmation...');
@@ -422,6 +428,16 @@ export default class extends Controller {
 
 
     openDialogBox(payload) {
+        // Lazy-init : sur le dashboard, app:context.initialized n'est jamais émis,
+        // donc currentIdEntreprise/currentIdInvite restent null. On les récupère
+        // depuis le payload de la première dialog ouverte (ex: dbRenewCtxPiste).
+        if (!this.currentIdEntreprise && payload.context?.idEntreprise) {
+            this.currentIdEntreprise = payload.context.idEntreprise;
+        }
+        if (!this.currentIdInvite && payload.context?.idInvite) {
+            this.currentIdInvite = payload.context.idInvite;
+        }
+
         console.groupCollapsed(`[${++window.logSequence}] ${this.nomControleur} - handleEvent - EDITDIAL(1)`);
         console.log(`| Mode: ${payload.isCreationMode ? 'Création' : 'Édition'}`);
         console.log('| Entité:', payload.entity);
@@ -471,6 +487,23 @@ export default class extends Controller {
             searchCriteria: activeTabState.searchCriteria,
             formCanvas: activeTabState.activeTabFormCanvas
         });
+    }
+
+    /**
+     * Synchronise currentIdEntreprise/currentIdInvite depuis tout événement app:boite-dialogue:init-request.
+     * Nécessaire sur le dashboard où app:context.initialized n'est jamais émis :
+     * les dialogs ouverts directement (ex: dbRenewCtxPiste) bypassent openDialogBox,
+     * donc le lazy-init de openDialogBox ne suffit pas.
+     * @private
+     */
+    _syncContextFromDialog(event) {
+        const context = event.detail?.context;
+        if (!this.currentIdEntreprise && context?.idEntreprise) {
+            this.currentIdEntreprise = context.idEntreprise;
+        }
+        if (!this.currentIdInvite && context?.idInvite) {
+            this.currentIdInvite = context.idInvite;
+        }
     }
 
     /**
@@ -731,6 +764,29 @@ export default class extends Controller {
             });
     }
 
+    _handleSetNotRenewable(payload) {
+        const { avenantId } = payload;
+        if (!avenantId) {
+            this.broadcast('ui:confirmation.error', { error: 'ID avenant manquant.' });
+            return;
+        }
+        const fd = new FormData();
+        fd.append('avenantId', avenantId);
+        fetch('/admin/piste/api/set-not-renewable', { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    this.broadcast('ui:confirmation.close');
+                    document.dispatchEvent(new CustomEvent('app:dashboard.sidebar.reload'));
+                } else {
+                    this.broadcast('ui:confirmation.error', { error: data.message || 'Erreur lors de la mise à jour.' });
+                }
+            })
+            .catch(() => {
+                this.broadcast('ui:confirmation.error', { error: 'Erreur de communication avec le serveur.' });
+            });
+    }
+
     /**
      * Met à jour l'état de la sélection en ajoutant ou retirant un élément.
      * @param {object} selecto - L'objet de sélection d'une ligne.
@@ -882,6 +938,9 @@ export default class extends Controller {
                 }
                 if (context.idInvite) {
                     url.searchParams.set('idInvite', context.idInvite);
+                }
+                if (context.idAvenant) {
+                    url.searchParams.set('idAvenant', context.idAvenant);
                 }
             }
 

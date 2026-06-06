@@ -171,7 +171,7 @@ export default class extends Controller {
             dialogId: this.dialogId,
             endpoint: endpointUrl, // Utiliser l'endpoint potentiellement modifié
             entity: this.entity,
-            context: this.context,
+            context: this.userContext,
             entityFormCanvas: this.entityFormCanvas
         };
 
@@ -203,8 +203,14 @@ export default class extends Controller {
             });
             return;
         }
-        // Mettre à jour le titre de la modale
-        this.titleTarget.textContent = event.detail.title;
+        // Mettre à jour le titre de la modale.
+        // Le serveur renvoie toujours un titre précis (ex: "Modification de la tâche #5").
+        // Exception : contexte tableau de bord (_dbTaskId dans userContext) en mode création —
+        // on préfère alors le titre personnalisé défini dans entityFormCanvas.parametres.titre_creation.
+        const dashboardCreationTitle = (this.isCreateMode && this.userContext?._dbTaskId)
+            ? this.entityFormCanvas?.parametres?.titre_creation
+            : null;
+        this.titleTarget.textContent = dashboardCreationTitle || event.detail.title;
 
         // On ne demande l'icône du titre qu'une seule fois au premier chargement.
         if (this.hasTitleIconTarget && icon && !this.isTitleIconLoaded) {
@@ -412,9 +418,18 @@ export default class extends Controller {
             // On notifie le cerveau du succès. C'est lui qui décidera qui doit être rafraîchi.
             this.notifyCerveau('app:entity.saved', {
                 entity: result.entity,
-                originatorId: this.userContext.originatorId // On passe l'ID de la collection qui a initié l'action.
+                originatorId: this.userContext.originatorId,
+                userContext: this.userContext
             });
- 
+
+            // Dispatch direct depuis document pour le rechargement sidebar du tableau de bord.
+            if (this.userContext && this.userContext._dashboardReload) {
+                document.dispatchEvent(new CustomEvent('app:dashboard.sidebar.reload', {
+                    bubbles: false,
+                    detail: { userContext: this.userContext }
+                }));
+            }
+
             // On délègue la gestion du succès à une méthode dédiée.
             this.handleSuccessfulSubmit(result);
  

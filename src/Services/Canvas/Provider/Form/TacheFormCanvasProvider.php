@@ -28,7 +28,7 @@ class TacheFormCanvasProvider implements FormCanvasProviderInterface
 
         $parametres = [
             "titre_creation" => "Nouvelle tâche",
-            "titre_modification" => "Modification de la tâche #%id%",
+            "titre_modification" => "Modification de la tâche #" . ($object->getId() ?? '?'),
             "endpoint_submit_url" => "/admin/tache/api/submit",
             "endpoint_delete_url" => "/admin/tache/api/delete",
             "endpoint_form_url" => "/admin/tache/api/get-form",

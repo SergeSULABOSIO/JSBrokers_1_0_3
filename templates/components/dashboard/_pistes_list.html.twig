@@ -1,0 +1,178 @@
+{# Fragment liste pistes — inclus par _block_pistes.html.twig et rechargé en AJAX ── #}
+{% set _now = date() %}
+
+{# Résolution de l'inviteId courant (disponible si passé en contexte, sinon recalculé) #}
+{% if currentInviteId is not defined %}
+    {% set currentInviteId = '' %}
+    {% if utilisateur is defined %}
+        {% for inv in utilisateur.invites %}
+            {% if inv.entreprise is not null and inv.entreprise.id == entreprise.id %}
+                {% set currentInviteId = inv.id %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endif %}
+
+{# Compteurs pour chaque groupe (utilisés pour les messages "aucun") #}
+{% set countJ30    = 0 %}
+{% set countJ60    = 0 %}
+{% set countJ61plus = 0 %}
+{% for piste in pistes %}
+    {% set _d = (_now|date('U') - piste.createdAt|date('U')) / 86400 %}
+    {% if _d <= 30 %}{% set countJ30 = countJ30 + 1 %}
+    {% elseif _d <= 60 %}{% set countJ60 = countJ60 + 1 %}
+    {% else %}{% set countJ61plus = countJ61plus + 1 %}
+    {% endif %}
+{% endfor %}
+
+{% if pistes|length > 0 %}
+
+    {% if countJ30 == 0 %}
+    <p class="db-piste-item text-muted small px-2 py-4 text-center" data-group="j30">
+        <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucune piste ouverte dans les 30 derniers jours.
+    </p>
+    {% endif %}
+    {% if countJ60 == 0 %}
+    <p class="db-piste-item text-muted small px-2 py-4 text-center" data-group="j60" style="display:none;">
+        <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucune piste entre 31 et 60 jours.
+    </p>
+    {% endif %}
+    {% if countJ61plus == 0 %}
+    <p class="db-piste-item text-muted small px-2 py-4 text-center" data-group="j61plus" style="display:none;">
+        <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucune piste au-delà de 60 jours.
+    </p>
+    {% endif %}
+
+    {% for piste in pistes %}
+        {% set _days = (_now|date('U') - piste.createdAt|date('U')) / 86400 %}
+        {% if _days <= 30 %}
+            {% set group = 'j30' %}
+            {% set ageColor = '#198754' %}
+            {% set ageLabel = 'Récent' %}
+        {% elseif _days <= 60 %}
+            {% set group = 'j60' %}
+            {% set ageColor = '#e69500' %}
+            {% set ageLabel = 'Actif' %}
+        {% else %}
+            {% set group = 'j61plus' %}
+            {% set ageColor = '#dc3545' %}
+            {% set ageLabel = 'Ancien' %}
+        {% endif %}
+
+        {% set typeLabels = {
+            0: 'Nouvelle affaire',
+            1: 'Incorporation',
+            2: 'Prorogation',
+            3: 'Annulation',
+            4: 'Résiliation',
+            5: 'Renouvellement'
+        } %}
+        {% set statutLabel = typeLabels[piste.typeAvenant] ?? 'Nouvelle affaire' %}
+
+        {% set clientNom      = piste.client.nom ?? '—' %}
+        {% set risqueNom      = piste.risque ? piste.risque.nomComplet : '—' %}
+        {% set inviteNom      = piste.invite ? piste.invite.nom : '—' %}
+        {% set description    = piste.descriptionDuRisque ?? '' %}
+        {% set searchText     = (inviteNom ~ '|' ~ description ~ '|' ~ clientNom)|lower %}
+        {% set isCreator      = (currentInviteId != '' and piste.invite is not null and piste.invite.id|default(0) == currentInviteId) %}
+
+        <details class="db-ass-details db-piste-item"
+                 data-group="{{ group }}"
+                 data-search-text="{{ searchText|e }}"
+                 data-piste-id="{{ piste.id }}"
+                 data-entreprise-id="{{ entreprise.id }}"
+                 data-invite-id="{{ currentInviteId }}"
+                 data-is-creator="{{ isCreator ? '1' : '0' }}"
+                 data-piste-nom="{{ piste.nom|e }}"
+                 data-piste-client="{{ clientNom|e }}"
+                 data-piste-risque="{{ risqueNom|e }}"
+                 data-piste-description="{{ description|striptags|slice(0,120)|e }}"
+                 data-piste-statut="{{ statutLabel|e }}"
+                 data-piste-days="{{ _days|round(0, 'ceil') }}"
+                 data-piste-invite="{{ inviteNom|e }}"
+                 data-piste-prime="{{ piste.primePotentielle ? piste.primePotentielle|number_format(0, ',', ' ') : '—' }}"
+                 data-piste-commission="{{ piste.commissionPotentielle ? piste.commissionPotentielle|number_format(0, ',', ' ') : '—' }}"
+                 oncontextmenu="dbPisteCtxOpen(event,this)"
+                 {% if group != 'j30' %}style="display:none;"{% endif %}>
+
+            <summary class="d-flex align-items-center gap-2 py-2 px-1">
+                <div class="db-ass-avatar rounded-circle d-flex align-items-center justify-content-center text-white"
+                     style="width:26px;height:26px;background:{{ ageColor }};flex-shrink:0;">
+                    <twig:UX:Icon name="material-symbols:footprint" style="width:13px;height:13px;" />
+                </div>
+                <span class="small fw-semibold flex-grow-1 text-truncate"
+                      style="color:#212529;"
+                      data-piste-tip
+                      title="{{ piste.nom }}">{{ piste.nom }}</span>
+                <span class="text-muted" style="font-size:.62rem;flex-shrink:0;white-space:nowrap;">
+                    {{ statutLabel }}
+                </span>
+                <span class="badge rounded-pill"
+                      style="background:{{ ageColor }};color:#fff;font-size:.58rem;flex-shrink:0;">
+                    {{ _days|round(0, 'ceil') }}j
+                </span>
+                <twig:UX:Icon name="mdi:chevron-down" class="db-ass-chevron"
+                              style="width:14px;height:14px;color:#6c757d;" />
+            </summary>
+
+            <div class="px-2 py-2 bg-light rounded-bottom" style="font-size:.73rem;">
+                {# Client & risque #}
+                <div class="d-flex gap-3 flex-wrap mb-2">
+                    <span style="color:#0047AB;">
+                        <twig:UX:Icon name="hugeicons:user-group" style="width:11px;height:11px;" class="me-1" />
+                        <strong>{{ clientNom }}</strong>
+                    </span>
+                    {% if piste.risque %}
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="ant-design:product-filled" style="width:11px;height:11px;" class="me-1" />
+                        {{ risqueNom }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                {# Description du risque #}
+                {% if description %}
+                <p class="mb-2" style="color:#212529;word-break:break-word;">
+                    <twig:UX:Icon name="fluent:text-description-16-filled" style="width:11px;height:11px;" class="me-1" />
+                    {{ description|striptags|slice(0, 120) }}{{ description|striptags|length > 120 ? '…' : '' }}
+                </p>
+                {% endif %}
+
+                <div class="d-flex gap-3 flex-wrap pt-1" style="border-top:1px solid #dee2e6;">
+                    {# Gestionnaire #}
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="hugeicons:mail-send-01" style="width:11px;height:11px;" class="me-1" />
+                        {{ inviteNom }}
+                    </span>
+                    {# Date de création #}
+                    {% if piste.createdAt %}
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="mdi:calendar-plus" style="width:11px;height:11px;" class="me-1" />
+                        {{ piste.createdAt|date('d/m/Y') }}
+                    </span>
+                    {% endif %}
+                    {# Prime potentielle #}
+                    {% if piste.primePotentielle %}
+                    <span style="color:#0047AB;">
+                        <twig:UX:Icon name="hugeicons:money-bag-02" style="width:11px;height:11px;" class="me-1" />
+                        {{ piste.primePotentielle|number_format(0, ',', ' ') }}
+                    </span>
+                    {% endif %}
+                    {# Commission potentielle #}
+                    {% if piste.commissionPotentielle %}
+                    <span style="color:#198754;">
+                        <twig:UX:Icon name="hugeicons:dollar-receive-02" style="width:11px;height:11px;" class="me-1" />
+                        {{ piste.commissionPotentielle|number_format(0, ',', ' ') }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </details>
+    {% endfor %}
+
+{% else %}
+    <p class="text-muted small mb-0 px-2 py-3 text-center">Aucune piste en cours.</p>
+{% endif %}

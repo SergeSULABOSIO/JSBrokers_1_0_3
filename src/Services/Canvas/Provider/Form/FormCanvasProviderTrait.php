@@ -15,6 +15,7 @@ trait FormCanvasProviderTrait
             // Capture des options de rendu pour la ligne secondaire enrichie
             if (isset($config['secondaryField'])) $extraOptions['secondaryField'] = $config['secondaryField'];
             if (isset($config['secondaryLabel'])) $extraOptions['secondaryLabel'] = $config['secondaryLabel'];
+            if (isset($config['watchIds'])) $extraOptions['watchIds'] = $config['watchIds'];
 
             if (isset($config['totalizableField']) && !$isParentNew) {
                 $total = 0;

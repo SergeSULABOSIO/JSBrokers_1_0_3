@@ -19,6 +19,7 @@ class AssureurIndicatorStrategy implements IndicatorCalculationStrategyInterface
     public function calculate(object $entity): array
     {
         /** @var Assureur $entity */
+        if ($entity->getEntreprise() === null) return [];
         $stats = $this->calculationHelper->getIndicateursGlobaux($entity->getEntreprise(), false, ['assureurCible' => $entity]);
 
         return [

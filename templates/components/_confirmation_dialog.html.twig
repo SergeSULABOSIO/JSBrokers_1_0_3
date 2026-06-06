@@ -4,7 +4,7 @@
 <div data-controller="confirmation-dialog" class="modal fade" tabindex="-1" id="confirmation-dialog-modal" aria-labelledby="confirmation-dialog-title">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
+            <div class="modal-header bg-danger text-white" data-confirmation-dialog-target="header">
                 <h5 class="modal-title" id="confirmation-dialog-title" data-confirmation-dialog-target="title">Confirmation requise</h5>
                 <button type="button" class="btn-close btn-close-white" aria-label="Fermer" data-action="click->confirmation-dialog#close"></button>
             </div>
@@ -22,7 +22,7 @@
                 </ul>
             </div>
             {# NOUVEAU: Avertissement sur l'action irréversible #}
-            <div class="modal-body pt-1">
+            <div class="modal-body pt-1" data-confirmation-dialog-target="irreversibleAlert">
                 <div class="alert alert-warning d-flex align-items-center p-2" role="alert">
                     <twig:UX:Icon name="{{ resolve_icon_name('action:alert') }}" class="me-2 flex-shrink-0" style="width: 20px; height: 20px;" />
                     <div>

@@ -3,19 +3,92 @@
 namespace App\Services;
 
 use App\Entity\Avenant;
+use App\Entity\Bordereau;
 use App\Entity\Entreprise;
+use App\Entity\Tache;
+use App\Entity\Taxe;
+use App\Repository\TaxeRepository;
+use App\Services\Canvas\Provider\Entity\AvenantEntityCanvasProvider;
+use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
 
 class DashboardDataProvider
 {
-    private int $annee;
+    public function __construct(
+        private EntityManagerInterface $em,
+        private CanvasBuilder $canvasBuilder,
+        private TaxeRepository $taxeRepository,
+        private AvenantEntityCanvasProvider $avenantCanvasProvider,
+    ) {}
 
-    public function __construct(private EntityManagerInterface $em)
+    private array $cacheAvenantsActifs = [];
+
+    private function getAvenantsActifsHydrates(Entreprise $entreprise): array
     {
-        $this->annee = (int) date('Y');
+        $key = $entreprise->getId();
+        if (isset($this->cacheAvenantsActifs[$key])) {
+            return $this->cacheAvenantsActifs[$key];
+        }
+
+        $avenants = $this->em->createQuery(
+            'SELECT a, cot, ass, p, cl, r, par
+             FROM App\Entity\Avenant a
+             LEFT JOIN a.cotation cot
+             LEFT JOIN cot.assureur ass
+             LEFT JOIN cot.piste p
+             LEFT JOIN p.client cl
+             LEFT JOIN p.risque r
+             LEFT JOIN p.partenaires par
+             WHERE a.entreprise = :e AND a.renewalStatus = :status'
+        )
+        ->setParameter('e', $entreprise)
+        ->setParameter('status', Avenant::RENEWAL_STATUS_RUNNING)
+        ->getResult();
+
+        foreach ($avenants as $avenant) {
+            $this->canvasBuilder->loadAllCalculatedValues($avenant);
+        }
+
+        return $this->cacheAvenantsActifs[$key] = $avenants;
     }
 
-    public function getPaiementsTotaux(Entreprise $entreprise): float
+    public function getPrimesTotales(Entreprise $entreprise): float
+    {
+        $total = 0.0;
+        foreach ($this->getAvenantsActifsHydrates($entreprise) as $avenant) {
+            $total += (float) ($avenant->primeTotale ?? 0);
+        }
+        return $total;
+    }
+
+    public function getRetrocommissionsTotales(Entreprise $entreprise): float
+    {
+        $total = 0.0;
+        foreach ($this->getAvenantsActifsHydrates($entreprise) as $avenant) {
+            $total += (float) ($avenant->retroCommission ?? 0);
+        }
+        return $total;
+    }
+
+    public function getTaxesTotales(Entreprise $entreprise): float
+    {
+        $total = 0.0;
+        foreach ($this->getAvenantsActifsHydrates($entreprise) as $avenant) {
+            $total += (float) ($avenant->taxeCourtierMontant ?? 0);
+        }
+        return $total;
+    }
+
+    public function getCommissionsTotales(Entreprise $entreprise): float
+    {
+        $total = 0.0;
+        foreach ($this->getAvenantsActifsHydrates($entreprise) as $avenant) {
+            $total += (float) ($avenant->montantTTC ?? 0);
+        }
+        return $total;
+    }
+
+    public function getPaiementsTotaux(Entreprise $entreprise, \DateTimeImmutable $debut, \DateTimeImmutable $fin): float
     {
         $result = $this->em->createQuery(
             'SELECT SUM(p.montant) FROM App\Entity\Paiement p
@@ -23,8 +96,8 @@ class DashboardDataProvider
                AND p.paidAt >= :debut AND p.paidAt <= :fin'
         )
         ->setParameter('e', $entreprise)
-        ->setParameter('debut', new \DateTimeImmutable("01/01/{$this->annee} 00:00"))
-        ->setParameter('fin',   new \DateTimeImmutable("12/31/{$this->annee} 23:59"))
+        ->setParameter('debut', $debut)
+        ->setParameter('fin', $fin)
         ->getSingleScalarResult();
 
         return (float) ($result ?? 0);
@@ -61,43 +134,614 @@ class DashboardDataProvider
         ->getResult();
     }
 
-    public function getProductionParMois(Entreprise $entreprise): array
+    public function getAllRenouvellements(Entreprise $entreprise, int $maxDays = 365): array
     {
-        $rows = $this->em->createQuery(
-            'SELECT MONTH(p.paidAt) as mois, SUM(p.montant) as total
-             FROM App\Entity\Paiement p
-             WHERE p.entreprise = :e
-               AND YEAR(p.paidAt) = :annee
-             GROUP BY mois
-             ORDER BY mois ASC'
+        $avenants = $this->em->createQuery(
+            'SELECT a, c, ass, p, cl, r, pdr FROM App\Entity\Avenant a
+             JOIN a.cotation c
+             JOIN c.assureur ass
+             LEFT JOIN c.piste p
+             LEFT JOIN p.client cl
+             LEFT JOIN p.risque r
+             LEFT JOIN a.pisteDeRenouvellement pdr
+             WHERE a.entreprise = :e
+               AND a.endingAt BETWEEN :debut AND :fin
+               AND (p.renewalCondition IN (0, 1) OR p IS NULL OR p.renewalCondition IS NULL)
+               AND (pdr IS NULL OR NOT EXISTS (
+                   SELECT 1 FROM App\Entity\Avenant a2
+                   JOIN a2.cotation c2
+                   JOIN c2.piste p2
+                   WHERE p2 = pdr
+                   AND a2.renewalStatus NOT IN (0, 6)
+               ))
+             ORDER BY a.endingAt ASC'
         )
         ->setParameter('e', $entreprise)
-        ->setParameter('annee', $this->annee)
+        ->setParameter('debut', new \DateTimeImmutable('now'))
+        ->setParameter('fin',   new \DateTimeImmutable('+' . $maxDays . ' days'))
+        ->getResult();
+
+        foreach ($avenants as $avenant) {
+            $this->canvasBuilder->loadAllCalculatedValues($avenant);
+        }
+
+        return $avenants;
+    }
+
+    public function getProductionParMois(Entreprise $entreprise, \DateTimeImmutable $debut, \DateTimeImmutable $fin): array
+    {
+        $paiements = $this->em->createQuery(
+            'SELECT p.montant, p.paidAt FROM App\Entity\Paiement p
+             WHERE p.entreprise = :e
+               AND p.paidAt >= :debut AND p.paidAt <= :fin'
+        )
+        ->setParameter('e', $entreprise)
+        ->setParameter('debut', $debut)
+        ->setParameter('fin', $fin)
         ->getResult();
 
         $labels = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-        $data   = array_fill(0, 12, 0);
-        foreach ($rows as $row) {
-            $data[(int)$row['mois'] - 1] = (float)$row['total'];
+        $data   = array_fill(0, 12, 0.0);
+        foreach ($paiements as $p) {
+            $mois = (int) $p['paidAt']->format('n') - 1;
+            $data[$mois] += (float) $p['montant'];
         }
 
         return ['labels' => $labels, 'data' => $data];
     }
 
-    public function getTopAssureurs(Entreprise $entreprise): array
+    private function getAvenantsParAssureur(Entreprise $entreprise): array
     {
-        return $this->em->createQuery(
-            'SELECT ass.nom, COUNT(a.id) as nbPolices
-             FROM App\Entity\Avenant a
-             JOIN a.cotation c
-             JOIN c.assureur ass
-             WHERE a.entreprise = :e
-             GROUP BY ass.id
-             ORDER BY nbPolices DESC'
+        $grouped = [];
+        foreach ($this->getAvenantsActifsHydrates($entreprise) as $avenant) {
+            $assureur = $avenant->getCotation()?->getAssureur();
+            if (!$assureur) continue;
+            $assId = $assureur->getId();
+
+            if (!isset($grouped[$assId])) {
+                $grouped[$assId] = [
+                    'id'              => $assId,
+                    'nom'             => $assureur->getNom(),
+                    'nbPolices'       => 0,
+                    'clientIds'       => [],
+                    'primesTotales'   => 0.0,
+                    'commissionsTtc'  => 0.0,
+                    'taxeAssureur'    => 0.0,
+                    'taxeCourtier'    => 0.0,
+                    'retrocommission' => 0.0,
+                    'reserve'         => 0.0,
+                ];
+            }
+
+            $grouped[$assId]['nbPolices']++;
+            $clientId = $avenant->getCotation()->getPiste()?->getClient()?->getId();
+            if ($clientId) $grouped[$assId]['clientIds'][$clientId] = true;
+            $grouped[$assId]['primesTotales']   += (float) ($avenant->primeTotale ?? 0);
+            $grouped[$assId]['commissionsTtc']  += (float) ($avenant->montantTTC ?? 0);
+            $grouped[$assId]['taxeAssureur']     += (float) ($avenant->taxeAssureurMontant ?? 0);
+            $grouped[$assId]['taxeCourtier']     += (float) ($avenant->taxeCourtierMontant ?? 0);
+            $grouped[$assId]['retrocommission']  += (float) ($avenant->retroCommission ?? 0);
+            $grouped[$assId]['reserve']          += (float) ($avenant->reserve ?? 0);
+        }
+
+        foreach ($grouped as &$row) {
+            $row['nbClients'] = count($row['clientIds']);
+            unset($row['clientIds']);
+        }
+        unset($row);
+
+        return $grouped;
+    }
+
+    private function getSinistresParAssureur(Entreprise $entreprise): array
+    {
+        $rows = $this->em->createQuery(
+            'SELECT ass.id as assId,
+                    SUM(ois.montantPayable) as montantIndemnise
+             FROM App\Entity\NotificationSinistre ns
+             JOIN ns.assureur ass
+             LEFT JOIN ns.offreIndemnisationSinistres ois
+             WHERE ns.entreprise = :e
+             GROUP BY ass.id'
         )
         ->setParameter('e', $entreprise)
-        ->setMaxResults(3)
         ->getResult();
+
+        $indexed = [];
+        foreach ($rows as $row) {
+            $indexed[(int) $row['assId']] = (float) ($row['montantIndemnise'] ?? 0);
+        }
+        return $indexed;
+    }
+
+    public function getTopAssureursAvecIndicateurs(Entreprise $entreprise): array
+    {
+        $parAssureur = $this->getAvenantsParAssureur($entreprise);
+        $sinistres   = $this->getSinistresParAssureur($entreprise);
+        $totalPrimes = $this->getPrimesTotales($entreprise);
+
+        foreach ($parAssureur as &$row) {
+            $sin = $sinistres[$row['id']] ?? 0.0;
+            $row['sinistresIndemnises'] = $sin;
+            $row['ratioSP']   = $row['primesTotales'] > 0 ? round($sin / $row['primesTotales'] * 100, 1) : 0.0;
+            $row['partMarche'] = $totalPrimes > 0 ? round($row['primesTotales'] / $totalPrimes * 100, 1) : 0.0;
+        }
+        unset($row);
+
+        usort($parAssureur, fn($a, $b) => $b['primesTotales'] <=> $a['primesTotales']);
+
+        return $this->sliceAvecRestes(array_values($parAssureur));
+    }
+
+    private function getAvenantsParClient(Entreprise $entreprise): array
+    {
+        $grouped = [];
+        foreach ($this->getAvenantsActifsHydrates($entreprise) as $avenant) {
+            $client = $avenant->getCotation()?->getPiste()?->getClient();
+            if (!$client) continue;
+            $clientId = $client->getId();
+
+            if (!isset($grouped[$clientId])) {
+                $grouped[$clientId] = [
+                    'id'              => $clientId,
+                    'nom'             => $client->getNom(),
+                    'nbPolices'       => 0,
+                    'primesTotales'   => 0.0,
+                    'commissionsTtc'  => 0.0,
+                    'taxeAssureur'    => 0.0,
+                    'taxeCourtier'    => 0.0,
+                    'retrocommission' => 0.0,
+                    'reserve'         => 0.0,
+                ];
+            }
+
+            $grouped[$clientId]['nbPolices']++;
+            $grouped[$clientId]['primesTotales']   += (float) ($avenant->primeTotale ?? 0);
+            $grouped[$clientId]['commissionsTtc']  += (float) ($avenant->montantTTC ?? 0);
+            $grouped[$clientId]['taxeAssureur']     += (float) ($avenant->taxeAssureurMontant ?? 0);
+            $grouped[$clientId]['taxeCourtier']     += (float) ($avenant->taxeCourtierMontant ?? 0);
+            $grouped[$clientId]['retrocommission']  += (float) ($avenant->retroCommission ?? 0);
+            $grouped[$clientId]['reserve']          += (float) ($avenant->reserve ?? 0);
+        }
+
+        return $grouped;
+    }
+
+    private function getSinistresParClient(Entreprise $entreprise): array
+    {
+        $rows = $this->em->createQuery(
+            'SELECT cl.id as clientId,
+                    SUM(ois.montantPayable) as montantIndemnise
+             FROM App\Entity\NotificationSinistre ns
+             JOIN ns.assure cl
+             LEFT JOIN ns.offreIndemnisationSinistres ois
+             WHERE ns.entreprise = :e
+             GROUP BY cl.id'
+        )
+        ->setParameter('e', $entreprise)
+        ->getResult();
+
+        $indexed = [];
+        foreach ($rows as $row) {
+            $indexed[(int) $row['clientId']] = (float) ($row['montantIndemnise'] ?? 0);
+        }
+        return $indexed;
+    }
+
+    public function getTopAssuresAvecIndicateurs(Entreprise $entreprise): array
+    {
+        $parClient   = $this->getAvenantsParClient($entreprise);
+        $sinistres   = $this->getSinistresParClient($entreprise);
+        $totalPrimes = $this->getPrimesTotales($entreprise);
+
+        foreach ($parClient as &$row) {
+            $sin = $sinistres[$row['id']] ?? 0.0;
+            $row['sinistresIndemnises'] = $sin;
+            $row['ratioSP']   = $row['primesTotales'] > 0 ? round($sin / $row['primesTotales'] * 100, 1) : 0.0;
+            $row['partMarche'] = $totalPrimes > 0 ? round($row['primesTotales'] / $totalPrimes * 100, 1) : 0.0;
+        }
+        unset($row);
+
+        usort($parClient, fn($a, $b) => $b['primesTotales'] <=> $a['primesTotales']);
+
+        return $this->sliceAvecRestes(array_values($parClient));
+    }
+
+    private function sliceAvecRestes(array $sorted, int $top = 9): array
+    {
+        if (count($sorted) <= $top) {
+            return $sorted;
+        }
+
+        $topItems = array_slice($sorted, 0, $top);
+        $reste    = array_slice($sorted, $top);
+
+        $restes = [
+            'id'                => 0,
+            'nom'               => 'Les restes',
+            'nbPolices'         => 0,
+            'primesTotales'     => 0.0,
+            'commissionsTtc'    => 0.0,
+            'taxeAssureur'      => 0.0,
+            'taxeCourtier'      => 0.0,
+            'retrocommission'   => 0.0,
+            'reserve'           => 0.0,
+            'sinistresIndemnises' => 0.0,
+        ];
+
+        foreach ($reste as $r) {
+            foreach (['nbPolices', 'primesTotales', 'commissionsTtc', 'taxeAssureur',
+                      'taxeCourtier', 'retrocommission', 'reserve', 'sinistresIndemnises'] as $k) {
+                $restes[$k] += $r[$k] ?? 0;
+            }
+            foreach (['nbClients', 'nbAssureurs', 'nbAssures'] as $extra) {
+                if (isset($r[$extra])) {
+                    $restes[$extra] = ($restes[$extra] ?? 0) + $r[$extra];
+                }
+            }
+        }
+
+        $restes['ratioSP']    = $restes['primesTotales'] > 0
+            ? round($restes['sinistresIndemnises'] / $restes['primesTotales'] * 100, 1)
+            : 0.0;
+        $restes['partMarche'] = round(array_sum(array_column($reste, 'partMarche')), 1);
+
+        return array_merge($topItems, [$restes]);
+    }
+
+    private function getAvenantsParRisque(Entreprise $entreprise): array
+    {
+        $grouped = [];
+        foreach ($this->getAvenantsActifsHydrates($entreprise) as $avenant) {
+            $risque = $avenant->getCotation()?->getPiste()?->getRisque();
+            if (!$risque) continue;
+            $risqueId = $risque->getId();
+
+            if (!isset($grouped[$risqueId])) {
+                $grouped[$risqueId] = [
+                    'id'              => $risqueId,
+                    'nom'             => $risque->getNomComplet(),
+                    'nbPolices'       => 0,
+                    'primesTotales'   => 0.0,
+                    'commissionsTtc'  => 0.0,
+                    'taxeAssureur'    => 0.0,
+                    'taxeCourtier'    => 0.0,
+                    'retrocommission' => 0.0,
+                    'reserve'         => 0.0,
+                ];
+            }
+
+            $grouped[$risqueId]['nbPolices']++;
+            $grouped[$risqueId]['primesTotales']   += (float) ($avenant->primeTotale ?? 0);
+            $grouped[$risqueId]['commissionsTtc']  += (float) ($avenant->montantTTC ?? 0);
+            $grouped[$risqueId]['taxeAssureur']     += (float) ($avenant->taxeAssureurMontant ?? 0);
+            $grouped[$risqueId]['taxeCourtier']     += (float) ($avenant->taxeCourtierMontant ?? 0);
+            $grouped[$risqueId]['retrocommission']  += (float) ($avenant->retroCommission ?? 0);
+            $grouped[$risqueId]['reserve']          += (float) ($avenant->reserve ?? 0);
+        }
+
+        return $grouped;
+    }
+
+    private function getSinistresParRisque(Entreprise $entreprise): array
+    {
+        $rows = $this->em->createQuery(
+            'SELECT r.id as risqueId,
+                    SUM(ois.montantPayable) as montantIndemnise
+             FROM App\Entity\NotificationSinistre ns
+             JOIN ns.risque r
+             LEFT JOIN ns.offreIndemnisationSinistres ois
+             WHERE ns.entreprise = :e
+             GROUP BY r.id'
+        )
+        ->setParameter('e', $entreprise)
+        ->getResult();
+
+        $indexed = [];
+        foreach ($rows as $row) {
+            $indexed[(int) $row['risqueId']] = (float) ($row['montantIndemnise'] ?? 0);
+        }
+        return $indexed;
+    }
+
+    public function getTopRisquesAvecIndicateurs(Entreprise $entreprise): array
+    {
+        $parRisque   = $this->getAvenantsParRisque($entreprise);
+        $sinistres   = $this->getSinistresParRisque($entreprise);
+        $totalPrimes = $this->getPrimesTotales($entreprise);
+
+        foreach ($parRisque as &$row) {
+            $sin = $sinistres[$row['id']] ?? 0.0;
+            $row['sinistresIndemnises'] = $sin;
+            $row['ratioSP']   = $row['primesTotales'] > 0 ? round($sin / $row['primesTotales'] * 100, 1) : 0.0;
+            $row['partMarche'] = $totalPrimes > 0 ? round($row['primesTotales'] / $totalPrimes * 100, 1) : 0.0;
+        }
+        unset($row);
+
+        usort($parRisque, fn($a, $b) => $b['primesTotales'] <=> $a['primesTotales']);
+
+        return $this->sliceAvecRestes(array_values($parRisque));
+    }
+
+    private function getAvenantsParPartenaire(Entreprise $entreprise): array
+    {
+        $grouped = [];
+        foreach ($this->getAvenantsActifsHydrates($entreprise) as $avenant) {
+            $piste = $avenant->getCotation()?->getPiste();
+            if (!$piste) continue;
+            foreach ($piste->getPartenaires() as $partenaire) {
+                $parId = $partenaire->getId();
+                if (!isset($grouped[$parId])) {
+                    $grouped[$parId] = [
+                        'id'              => $parId,
+                        'nom'             => $partenaire->getNom(),
+                        'nbPolices'       => 0,
+                        'primesTotales'   => 0.0,
+                        'commissionsTtc'  => 0.0,
+                        'taxeAssureur'    => 0.0,
+                        'taxeCourtier'    => 0.0,
+                        'retrocommission' => 0.0,
+                        'reserve'         => 0.0,
+                    ];
+                }
+                $grouped[$parId]['nbPolices']++;
+                $grouped[$parId]['primesTotales']   += (float) ($avenant->primeTotale ?? 0);
+                $grouped[$parId]['commissionsTtc']  += (float) ($avenant->montantTTC ?? 0);
+                $grouped[$parId]['taxeAssureur']     += (float) ($avenant->taxeAssureurMontant ?? 0);
+                $grouped[$parId]['taxeCourtier']     += (float) ($avenant->taxeCourtierMontant ?? 0);
+                $grouped[$parId]['retrocommission']  += (float) ($avenant->retroCommission ?? 0);
+                $grouped[$parId]['reserve']          += (float) ($avenant->reserve ?? 0);
+            }
+        }
+
+        return $grouped;
+    }
+
+    public function getTopIntermediairesAvecIndicateurs(Entreprise $entreprise): array
+    {
+        $parPartenaire = $this->getAvenantsParPartenaire($entreprise);
+        $totalRetro    = $this->getRetrocommissionsTotales($entreprise);
+
+        foreach ($parPartenaire as &$row) {
+            $row['sinistresIndemnises'] = 0.0;
+            $row['ratioSP']   = 0.0;
+            $row['partMarche'] = $totalRetro > 0 ? round($row['retrocommission'] / $totalRetro * 100, 1) : 0.0;
+        }
+        unset($row);
+
+        usort($parPartenaire, fn($a, $b) => $b['retrocommission'] <=> $a['retrocommission']);
+
+        return $this->sliceAvecRestes(array_values($parPartenaire));
+    }
+
+    /**
+     * Total des paiements reçus sur les notes de commission (adressées au client ou à l'assureur),
+     * toutes années confondues — sert au calcul du solde restant dû.
+     */
+    private function getTotalEncaisseCommissions(Entreprise $entreprise): float
+    {
+        $result = $this->em->createQuery(
+            'SELECT COALESCE(SUM(p.montant), 0)
+             FROM App\Entity\Paiement p
+             JOIN p.note n
+             WHERE p.entreprise = :e
+               AND n.addressedTo IN (0, 1)'
+        )
+        ->setParameter('e', $entreprise)
+        ->getSingleScalarResult();
+
+        return (float) $result;
+    }
+
+    public function getRevenusPercusBreakdown(Entreprise $entreprise): array
+    {
+        $ttc               = 0.0;
+        $ht                = 0.0;
+        $taxeCourtierTotal = 0.0;
+        $taxeAssureurTotal = 0.0;
+        $retrocom          = 0.0;
+        $reserve           = 0.0;
+
+        foreach ($this->getAvenantsActifsHydrates($entreprise) as $avenant) {
+            $ttc               += (float) ($avenant->montantTTC          ?? 0);
+            $ht                += (float) ($avenant->montantHT           ?? 0);
+            $taxeCourtierTotal += (float) ($avenant->taxeCourtierMontant ?? 0);
+            $taxeAssureurTotal += (float) ($avenant->taxeAssureurMontant ?? 0);
+            $retrocom          += (float) ($avenant->retroCommission      ?? 0);
+            $reserve           += (float) ($avenant->reserve             ?? 0);
+        }
+
+        $pur = $ht - $taxeCourtierTotal;
+
+        $totalEncaisse = $this->getTotalEncaisseCommissions($entreprise);
+        $solde = max(0.0, $ttc - $totalEncaisse);
+
+        $taxeCourtierEntity = $this->taxeRepository->findOneBy([
+            'redevable'  => Taxe::REDEVABLE_COURTIER,
+            'entreprise' => $entreprise,
+        ]);
+        $taxeAssureurEntity = $this->taxeRepository->findOneBy([
+            'redevable'  => Taxe::REDEVABLE_ASSUREUR,
+            'entreprise' => $entreprise,
+        ]);
+
+        $desc = $this->getAvenantDescriptions();
+
+        return [
+            'ttc'          => round($ttc, 2),
+            'ht'           => round($ht, 2),
+            'taxeCourtier' => [
+                'montant'     => round($taxeCourtierTotal, 2),
+                'nom'         => $taxeCourtierEntity?->getCode() ?? 'Taxe courtier',
+                'description' => strip_tags($taxeCourtierEntity?->getDescription() ?? ''),
+                'taux'        => (float) ($taxeCourtierEntity?->getTauxIARD() ?? 0),
+                'tip'         => $this->buildTaxTip($taxeCourtierEntity, "Taxe réglementaire à votre charge, calculée sur votre commission.\nRetenue sur le Revenu TTC et reversée à l'administration fiscale."),
+            ],
+            'taxeAssureur' => [
+                'montant'     => round($taxeAssureurTotal, 2),
+                'nom'         => $taxeAssureurEntity?->getCode() ?? 'Taxe assureur',
+                'description' => strip_tags($taxeAssureurEntity?->getDescription() ?? ''),
+                'taux'        => (float) ($taxeAssureurEntity?->getTauxIARD() ?? 0),
+                'tip'         => $this->buildTaxTip($taxeAssureurEntity, "Taxe à la charge de l'assureur sur les primes, collectée par le courtier.\nReversée à l'administration fiscale."),
+            ],
+            'pur'         => round($pur, 2),
+            'retrocom'    => round($retrocom, 2),
+            'reserve'     => round($reserve, 2),
+            'solde'       => round($solde, 2),
+            'tipTTC'      => $desc['montantTTC']       ?? '',
+            'tipHT'       => $desc['montantHT']        ?? '',
+            'tipPur'      => $desc['montantPur']       ?? '',
+            'tipRetrocom' => $desc['retroCommission']  ?? '',
+            'tipReserve'  => $desc['reserve']          ?? '',
+            'tipSolde'    => $desc['solde_restant_du'] ?? '',
+        ];
+    }
+
+    private function buildTaxTip(?Taxe $taxe, string $fallback): string
+    {
+        if ($taxe === null) {
+            return $fallback;
+        }
+        $lines = [strip_tags($taxe->getDescription() ?? '')];
+        $taux = (float) ($taxe->getTauxIARD() ?? 0);
+        if ($taux > 0) {
+            $formatted = (fmod($taux, 1.0) === 0.0)
+                ? number_format($taux, 0)
+                : number_format($taux, 1, ',');
+            $lines[] = 'Taux : ' . $formatted . ' %';
+        }
+        foreach ($taxe->getAutoriteFiscales() as $autorite) {
+            $nom = $autorite->getNom() ?? '';
+            $abr = $autorite->getAbreviation() ?? '';
+            if ($nom) {
+                $lines[] = 'Autorité : ' . $nom . ($abr ? ' (' . $abr . ')' : '');
+            }
+        }
+        return implode("\n", array_filter($lines));
+    }
+
+    private function getAvenantDescriptions(): array
+    {
+        $map = [];
+        foreach ($this->avenantCanvasProvider->getCanvas()['liste'] ?? [] as $item) {
+            if (isset($item['code'], $item['description'])) {
+                $map[$item['code']] = $item['description'];
+            }
+        }
+        return $map;
+    }
+
+    public function getTachesNonCloses(Entreprise $entreprise, int $limit = 100): array
+    {
+        $taches = $this->em->createQuery(
+            'SELECT t FROM App\Entity\Tache t
+             WHERE t.entreprise = :e AND t.closed = false'
+        )
+        ->setParameter('e', $entreprise)
+        ->setMaxResults($limit)
+        ->getResult();
+
+        usort($taches, function (Tache $a, Tache $b) {
+            $aDate = $a->getToBeEndedAt();
+            $bDate = $b->getToBeEndedAt();
+            if ($aDate === null && $bDate === null) return 0;
+            if ($aDate === null) return 1;
+            if ($bDate === null) return -1;
+            return $aDate <=> $bDate;
+        });
+
+        return $taches;
+    }
+
+    public function getDerniersFeedbacks(Entreprise $entreprise, int $limit = 20): array
+    {
+        return $this->em->createQuery(
+            'SELECT f, t FROM App\Entity\Feedback f
+             LEFT JOIN f.tache t
+             WHERE f.entreprise = :e
+             ORDER BY f.createdAt DESC'
+        )
+        ->setParameter('e', $entreprise)
+        ->setMaxResults($limit)
+        ->getResult();
+    }
+
+    public function getPistesEnCours(Entreprise $entreprise, int $limit = 60): array
+    {
+        return $this->em->createQuery(
+            'SELECT p, cl, r, inv FROM App\Entity\Piste p
+             LEFT JOIN p.client cl
+             LEFT JOIN p.risque r
+             LEFT JOIN p.invite inv
+             WHERE p.entreprise = :e
+               AND p.closed = false
+               AND NOT EXISTS (
+                   SELECT a.id FROM App\Entity\Avenant a
+                   JOIN a.cotation c
+                   WHERE c.piste = p
+               )
+             ORDER BY p.createdAt DESC'
+        )
+        ->setParameter('e', $entreprise)
+        ->setMaxResults($limit)
+        ->getResult();
+    }
+
+    public function getDerniersEncaissements(Entreprise $entreprise, int $limit = 20): array
+    {
+        $paiements = $this->em->createQuery(
+            'SELECT p, n FROM App\Entity\Paiement p
+             LEFT JOIN p.note n
+             WHERE p.entreprise = :e
+             ORDER BY p.paidAt DESC'
+        )
+        ->setParameter('e', $entreprise)
+        ->setMaxResults($limit)
+        ->getResult();
+
+        foreach ($paiements as $paiement) {
+            if ($note = $paiement->getNote()) {
+                $this->canvasBuilder->loadAllCalculatedValues($note);
+            }
+        }
+
+        return $paiements;
+    }
+
+    public function getDerniersBordereaux(Entreprise $entreprise, int $limit = 40): array
+    {
+        return $this->em->createQuery(
+            'SELECT b, ass, inv FROM App\Entity\Bordereau b
+             LEFT JOIN b.assureur ass
+             LEFT JOIN b.invite inv
+             WHERE b.entreprise = :e
+             ORDER BY b.receivedAt DESC'
+        )
+        ->setParameter('e', $entreprise)
+        ->setMaxResults($limit)
+        ->getResult();
+    }
+
+    public function getDerniersNotes(Entreprise $entreprise, int $limit = 30): array
+    {
+        $notes = $this->em->createQuery(
+            'SELECT n, b, inv, cli, ass, par FROM App\Entity\Note n
+             LEFT JOIN n.bordereau b
+             LEFT JOIN n.invite inv
+             LEFT JOIN n.client cli
+             LEFT JOIN n.assureur ass
+             LEFT JOIN n.partenaire par
+             WHERE n.entreprise = :e
+             ORDER BY n.createdAt DESC'
+        )
+        ->setParameter('e', $entreprise)
+        ->setMaxResults($limit)
+        ->getResult();
+
+        foreach ($notes as $note) {
+            $this->canvasBuilder->loadAllCalculatedValues($note);
+        }
+        return $notes;
     }
 
     public function getNbRenouvellements30j(Entreprise $entreprise): int
@@ -113,5 +757,29 @@ class DashboardDataProvider
         ->getSingleScalarResult();
 
         return (int) ($result ?? 0);
+    }
+
+    public function getProductionMensuelle(Entreprise $entreprise): array
+    {
+        $year  = (int) date('Y');
+        $debut = new \DateTimeImmutable($year . '-01-01 00:00:00');
+        $fin   = new \DateTimeImmutable($year . '-12-31 23:59:59');
+
+        $rows = $this->em->createQuery(
+            'SELECT p.paidAt, p.montant FROM App\Entity\Paiement p
+             WHERE p.entreprise = :e
+               AND p.paidAt >= :debut AND p.paidAt <= :fin'
+        )
+        ->setParameter('e', $entreprise)
+        ->setParameter('debut', $debut)
+        ->setParameter('fin', $fin)
+        ->getResult();
+
+        $monthly = array_fill(1, 12, 0.0);
+        foreach ($rows as $row) {
+            $month = (int) $row['paidAt']->format('n');
+            $monthly[$month] += (float) ($row['montant'] ?? 0);
+        }
+        return $monthly;
     }
 }

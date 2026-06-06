@@ -11,13 +11,15 @@ import { Modal } from 'bootstrap';
  */
 export default class extends Controller {
     static targets = [
-        "title", 
-        "body", 
-        "confirmButton", 
-        "feedback", 
+        "title",
+        "body",
+        "confirmButton",
+        "feedback",
         "progressBarContainer",
-        "itemDetailsContainer", // NOUVEAU : Conteneur pour les détails
-        "itemList"              // NOUVEAU : Liste <ul> pour les éléments
+        "header",
+        "irreversibleAlert",
+        "itemDetailsContainer",
+        "itemList"
     ];
 
     connect() {
@@ -69,10 +71,27 @@ export default class extends Controller {
      * @param {object} payload.onConfirm - L'action à notifier au Cerveau en cas de confirmation.
      */
     open(payload) {
-        const { title, body, onConfirm, itemDescriptions } = payload;
+        const { title, body, onConfirm, itemDescriptions, headerClass, confirmClass, showIrreversible } = payload;
         this.titleTarget.innerHTML = title || 'Confirmation requise';
         this.bodyTarget.innerHTML = body || 'Êtes-vous sûr ?';
         this.onConfirmDetail = onConfirm;
+
+        // Couleur d'en-tête personnalisable (défaut : bg-danger text-white)
+        if (this.hasHeaderTarget) {
+            this._defaultHeaderClass = this._defaultHeaderClass || 'bg-danger text-white';
+            this.headerTarget.className = 'modal-header ' + (headerClass || this._defaultHeaderClass);
+        }
+
+        // Classe du bouton de confirmation personnalisable (défaut : btn btn-danger)
+        if (this.hasConfirmButtonTarget) {
+            const base = confirmClass || 'btn btn-danger';
+            this.confirmButtonTarget.className = base;
+        }
+
+        // Alerte "irréversible" masquable
+        if (this.hasIrreversibleAlertTarget) {
+            this.irreversibleAlertTarget.style.display = (showIrreversible === false) ? 'none' : '';
+        }
 
         // NOUVEAU : Gère l'affichage des descriptions des éléments concernés.
         if (itemDescriptions && itemDescriptions.length > 0) {
@@ -132,7 +151,7 @@ export default class extends Controller {
             button.disabled = true;
             spinner.style.display = 'inline-block';
             icon.style.display = 'none';
-            text.textContent = 'Suppression...';
+            text.textContent = 'En cours...';
         } else {
             button.disabled = false;
             spinner.style.display = 'none';
@@ -145,18 +164,30 @@ export default class extends Controller {
      * Ferme la modale.
      */
     close() {
-        this.toggleLoading(false); // S'assure que le bouton est réinitialisé en cas de fermeture manuelle
+        this.toggleLoading(false);
         this.toggleProgressBar(false);
         this.feedbackTarget.innerHTML = '';
+        this.onConfirmDetail = null;
 
-        // NOUVEAU : Réinitialise l'affichage des détails pour la prochaine ouverture.
-        if (this.hasItemDetailsContainerTarget) {
-            this.itemDetailsContainerTarget.style.display = 'none';
-            this.itemListTarget.innerHTML = '';
-        }
+        // Réinitialise les styles personnalisés APRÈS la fin de l'animation de fermeture,
+        // pour éviter que l'utilisateur voie brièvement l'en-tête rouge par défaut.
+        this.element.addEventListener('hidden.bs.modal', () => {
+            if (this.hasHeaderTarget) {
+                this.headerTarget.className = 'modal-header bg-danger text-white';
+            }
+            if (this.hasConfirmButtonTarget) {
+                this.confirmButtonTarget.className = 'btn btn-danger';
+            }
+            if (this.hasIrreversibleAlertTarget) {
+                this.irreversibleAlertTarget.style.display = '';
+            }
+            if (this.hasItemDetailsContainerTarget) {
+                this.itemDetailsContainerTarget.style.display = 'none';
+                this.itemListTarget.innerHTML = '';
+            }
+        }, { once: true });
 
         this.modal.hide();
-        this.onConfirmDetail = null;
     }
 
     /**

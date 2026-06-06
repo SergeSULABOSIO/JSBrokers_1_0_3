@@ -1,9 +1,13 @@
-<div class="container-fluid px-3 py-2">
+{% set currentInviteId = '' %}
+{% if utilisateur is defined %}
+    {% for inv in utilisateur.invites %}
+        {% if inv.entreprise is not null and inv.entreprise.id == entreprise.id %}
+            {% set currentInviteId = inv.id %}
+        {% endif %}
+    {% endfor %}
+{% endif %}
 
-    {# ── Filtres ── #}
-    <div class="row mb-3">
-        {{ include('admin/dashbord/segments/filtres.html.twig') }}
-    </div>
+<div class="container-fluid px-3 py-2">
 
     {# ── Layout 2 colonnes ── #}
     <div class="row g-3">
@@ -11,14 +15,172 @@
         {# ── Colonne gauche (65%) ── #}
         <div class="col-lg-8">
 
-            {# Hero KPI #}
-            {{ include('components/dashboard/_hero.html.twig') }}
+            {# Hero KPI + KPI cards — toujours visible, charge immédiatement #}
+            <div data-controller="lazy-block"
+                 data-lazy-block-url-value="/admin/entreprise_dashbord/block/kpis/{{ entreprise.id }}">
+                {# Skeleton hero : card avec cercle + lignes #}
+                <div class="db-skeleton-block mb-3 p-3 d-flex align-items-center gap-3" style="height:110px;">
+                    <div class="db-skel-circle" style="width:44px;height:44px;"></div>
+                    <div class="flex-grow-1 d-flex flex-column gap-2">
+                        <div class="db-skel-line" style="width:55%;"></div>
+                        <div class="db-skel-line" style="width:35%;height:1.1rem;"></div>
+                        <div class="db-skel-line" style="width:40%;height:.55rem;"></div>
+                    </div>
+                    <div class="d-flex flex-column gap-2 align-items-end" style="flex-shrink:0;">
+                        <div class="db-skel-line" style="width:70px;height:.9rem;"></div>
+                        <div class="db-skel-line" style="width:50px;height:.7rem;"></div>
+                    </div>
+                </div>
+                {# Skeleton carousel KPI : 4 mini-cartes côte à côte #}
+                <div class="db-skeleton-block mb-3 d-flex align-items-center gap-2 px-3" style="height:90px;overflow:hidden;">
+                    <div style="flex:0 0 175px;height:68px;background:rgba(0,0,0,0.06);border-radius:.4rem;"></div>
+                    <div style="flex:0 0 175px;height:68px;background:rgba(0,0,0,0.06);border-radius:.4rem;"></div>
+                    <div style="flex:0 0 175px;height:68px;background:rgba(0,0,0,0.06);border-radius:.4rem;"></div>
+                    <div style="flex:0 0 175px;height:68px;background:rgba(0,0,0,0.05);border-radius:.4rem;opacity:.6;"></div>
+                </div>
+            </div>
 
-            {# 3 KPI cards #}
-            {{ include('components/dashboard/_kpi_cards.html.twig') }}
+            {# Renouvellements — fermé par défaut, chargement différé #}
+            <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
+                <summary class="card-header border-0 bg-white py-2 px-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <twig:UX:Icon name="mdi:calendar-clock" style="width:14px;height:14px;color:#0047AB;" />
+                        <span class="small fw-semibold" style="color:#0047AB;">Renouvellements</span>
+                        <small id="db-renew-last-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
+                        <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron ms-auto" style="width:15px;height:15px;color:#6c757d;flex-shrink:0;" />
+                    </div>
+                </summary>
+                <div data-controller="lazy-block"
+                     data-lazy-block-url-value="/admin/entreprise_dashbord/block/renewals/{{ entreprise.id }}">
+                </div>
+            </details>
 
-            {# Renouvellements #}
-            {{ include('components/dashboard/_renewals.html.twig') }}
+            {# Pistes en cours — fermé par défaut, chargement différé #}
+            <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
+                <summary class="card-header border-0 bg-white py-2 px-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <twig:UX:Icon name="material-symbols:footprint" style="width:14px;height:14px;color:#0047AB;" />
+                        <span class="small fw-semibold" style="color:#0047AB;">Pistes</span>
+                        <small id="db-piste-last-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
+                        <button class="db-task-new-btn ms-auto"
+                                data-entreprise-id="{{ entreprise.id }}"
+                                data-invite-id="{{ currentInviteId }}"
+                                onclick="event.stopPropagation(); dbPisteNew(this)"
+                                title="Nouvelle piste"
+                                aria-label="Nouvelle piste">
+                            <twig:UX:Icon name="gridicons:add" style="width:15px;height:15px;color:#0047AB;" />
+                        </button>
+                        <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron" style="width:15px;height:15px;color:#6c757d;flex-shrink:0;" />
+                    </div>
+                </summary>
+                <div data-controller="lazy-block"
+                     data-lazy-block-url-value="/admin/entreprise_dashbord/block/pistes/{{ entreprise.id }}">
+                </div>
+            </details>
+
+            {# Derniers encaissements — fermé par défaut, chargement différé #}
+            <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
+                <summary class="card-header border-0 bg-white py-2 px-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <twig:UX:Icon name="mdi:cash-multiple" style="width:14px;height:14px;color:#0047AB;" />
+                        <span class="small fw-semibold" style="color:#0047AB;">Encaissements</span>
+                        <small id="db-encaiss-last-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
+                        <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron ms-auto" style="width:15px;height:15px;color:#6c757d;flex-shrink:0;" />
+                    </div>
+                </summary>
+                <div data-controller="lazy-block"
+                     data-lazy-block-url-value="/admin/entreprise_dashbord/block/encaissements/{{ entreprise.id }}">
+                </div>
+            </details>
+
+            {# Bordereaux — fermé par défaut, chargement différé #}
+            <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
+                <summary class="card-header border-0 bg-white py-2 px-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <twig:UX:Icon name="streamline-ultimate:notes-checklist-flip" style="width:14px;height:14px;color:#0047AB;" />
+                        <span class="small fw-semibold" style="color:#0047AB;">Bordereaux</span>
+                        <small id="db-bord-last-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
+                        <button class="db-task-new-btn ms-auto"
+                                data-entreprise-id="{{ entreprise.id }}"
+                                data-invite-id="{{ currentInviteId }}"
+                                onclick="event.stopPropagation(); dbBordNew(this)"
+                                title="Nouveau bordereau"
+                                aria-label="Nouveau bordereau">
+                            <twig:UX:Icon name="gridicons:add" style="width:15px;height:15px;color:#0047AB;" />
+                        </button>
+                        <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron" style="width:15px;height:15px;color:#6c757d;flex-shrink:0;" />
+                    </div>
+                </summary>
+                <div data-controller="lazy-block"
+                     data-lazy-block-url-value="/admin/entreprise_dashbord/block/bordereaux/{{ entreprise.id }}">
+                </div>
+            </details>
+
+            {# Notes — fermé par défaut, chargement différé #}
+            <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
+                <summary class="card-header border-0 bg-white py-2 px-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <twig:UX:Icon name="mdi:file-document-outline" style="width:14px;height:14px;color:#0047AB;" />
+                        <span class="small fw-semibold" style="color:#0047AB;">Notes</span>
+                        <small id="db-note-last-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
+                        <button class="db-task-new-btn ms-auto"
+                                data-entreprise-id="{{ entreprise.id }}"
+                                data-invite-id="{{ currentInviteId }}"
+                                onclick="event.stopPropagation(); dbNoteNew(this)"
+                                title="Nouvelle note"
+                                aria-label="Nouvelle note">
+                            <twig:UX:Icon name="gridicons:add" style="width:15px;height:15px;color:#0047AB;" />
+                        </button>
+                        <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron" style="width:15px;height:15px;color:#6c757d;flex-shrink:0;" />
+                    </div>
+                </summary>
+                <div data-controller="lazy-block"
+                     data-lazy-block-url-value="/admin/entreprise_dashbord/block/notes/{{ entreprise.id }}">
+                </div>
+            </details>
+
+            {# Production — ouvert par défaut, charge immédiatement #}
+            <details open class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
+                <summary class="card-header border-0 bg-white py-2 px-3" style="cursor:pointer;">
+                    <div class="d-flex align-items-center gap-2">
+                        <twig:UX:Icon name="mdi:chart-bar" style="width:14px;height:14px;color:#0047AB;" />
+                        <span class="small fw-semibold" style="color:#0047AB;">Production {{ 'now'|date('Y') }}</span>
+                        <small id="db-prod-last-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
+                        <div class="ms-auto d-flex gap-1" onclick="event.stopPropagation()">
+                            <button class="db-task-toggle active" data-mode="bar" onclick="dbProdToggleMode(this)" aria-pressed="true" title="Histogramme">
+                                <twig:UX:Icon name="mdi:chart-bar" style="width:12px;height:12px;" />
+                                Histogramme
+                            </button>
+                            <button class="db-task-toggle" data-mode="line" onclick="dbProdToggleMode(this)" aria-pressed="false" title="Courbe">
+                                <twig:UX:Icon name="mdi:chart-line" style="width:12px;height:12px;" />
+                                Courbe
+                            </button>
+                        </div>
+                        <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron" style="width:15px;height:15px;color:#6c757d;flex-shrink:0;" />
+                    </div>
+                </summary>
+                <div data-controller="lazy-block"
+                     data-lazy-block-url-value="/admin/entreprise_dashbord/block/production/{{ entreprise.id }}">
+                    {# Skeleton graphique : 12 barres verticales de hauteurs variées #}
+                    <div class="db-skeleton-block mb-3 p-3 d-flex flex-column" style="height:300px;">
+                        <div class="flex-grow-1 d-flex gap-1" style="align-items:flex-end;padding-bottom:.5rem;">
+                            <div class="db-skel-bar" style="height:62%;"></div>
+                            <div class="db-skel-bar" style="height:38%;"></div>
+                            <div class="db-skel-bar" style="height:75%;"></div>
+                            <div class="db-skel-bar" style="height:50%;"></div>
+                            <div class="db-skel-bar" style="height:88%;"></div>
+                            <div class="db-skel-bar" style="height:55%;"></div>
+                            <div class="db-skel-bar" style="height:42%;"></div>
+                            <div class="db-skel-bar" style="height:70%;"></div>
+                            <div class="db-skel-bar" style="height:58%;"></div>
+                            <div class="db-skel-bar" style="height:80%;"></div>
+                            <div class="db-skel-bar" style="height:45%;"></div>
+                            <div class="db-skel-bar" style="height:65%;"></div>
+                        </div>
+                        <div class="db-skel-line" style="width:100%;height:2px;opacity:.4;border-radius:0;"></div>
+                    </div>
+                </div>
+            </details>
 
         </div>
 

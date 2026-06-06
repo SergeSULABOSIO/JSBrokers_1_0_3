@@ -13,13 +13,13 @@
         <twig:ux:icon name="{{ resolve_icon_name('tache') }}" style="width: 35px;" />
     </div>
     <div class="item-text">
-        <div class="text-main">{{ item.description }}</div>
+        <div class="text-main">{{ item.description|striptags }}</div>
         <div class="text-secondary">
             <em>
                 {% if item.closed == true %}
-                    Clôturée par {{ item.executor.nom }}
+                    Clôturée par {{ item.executor ? item.executor.nom : 'tous les invités' }}
                 {% else %}
-                    Expire le : {{ item.toBeEndedAt|date('d/m/Y') }} - A exécuter par : {{ item.executor.nom }}
+                    Expire le : {{ item.toBeEndedAt|date('d/m/Y') }} - A exécuter par : {{ item.executor ? item.executor.nom : 'tous les invités' }}
                 {% endif %}
             </em>
         </div>

@@ -56,8 +56,8 @@ class TacheType extends AbstractType
             ])
             ->add('executor', InviteAutocompleteField::class, [
                 'label' => "Assignée à",
-                'required' => true,
-                'placeholder' => 'Chercher un utilisateur...',
+                'required' => false,
+                'placeholder' => 'Tous les invités (non assignée)',
             ])
             ->add('feedbacks', CollectionType::class, [
                 'label' => "Compte-rendu",

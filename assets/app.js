@@ -7,6 +7,7 @@ import './bootstrap.js';
  */
 import './styles/app.css';
 import './styles/interactive-menu.css';
+import { Chart } from 'chart.js';
 console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 
 /**
@@ -115,3 +116,2439 @@ export function saveCookie(nom, valeur) {
     dateExpiration.setDate(dateExpiration.getDate() + 7)
     document.cookie = nom + "=9111986" + valeur + "; expires=" + dateExpiration.toUTCString + "; path=/";
 }
+
+// ── Filtrage des tâches du tableau de bord (toggles Urgentes/Prioritaires/Futures) ──
+(function () {
+    var _activeMode = 'urgente';
+
+    function dbTaskApplyFilter() {
+        var searchInput = document.querySelector('[aria-label="Filtrer les tâches"]');
+        var q = searchInput ? searchInput.value.toLowerCase() : '';
+        document.querySelectorAll('.db-task-item').forEach(function (el) {
+            var matchMode   = el.dataset.urgency === _activeMode;
+            var label       = el.querySelector('.db-task-label');
+            var matchSearch = !q || (label && label.textContent.toLowerCase().indexOf(q) >= 0);
+            el.style.display = (matchMode && matchSearch) ? '' : 'none';
+        });
+    }
+
+    function dbTaskToggle(btn) {
+        _activeMode = btn.dataset.mode;
+        document.querySelectorAll('#dbTaskToggleBar .db-task-toggle').forEach(function (b) {
+            b.classList.toggle('active', b === btn);
+        });
+        dbTaskApplyFilter();
+    }
+
+    function dbTaskSearch(input) {
+        dbTaskApplyFilter();
+    }
+
+    function dbTaskNew(btn) {
+        var eid = btn.dataset.entrepriseId;
+        var iid = btn.dataset.inviteId;
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
+            detail: {
+                entityFormCanvas: {
+                    parametres: {
+                        titre_creation:      'Nouvelle tâche',
+                        endpoint_form_url:   '/admin/tache/api/get-form',
+                        endpoint_submit_url: '/admin/tache/api/submit'
+                    }
+                },
+                entity:         {},
+                isCreationMode: true,
+                context: { idEntreprise: parseInt(eid) || undefined, idInvite: parseInt(iid) || undefined, _dashboardReload: true }
+            }
+        }));
+        setTimeout(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+        }, 600);
+    }
+
+    function dbBlockAdd(btn, entityRouteName, entityTitle) {
+        var eid = btn.dataset.entrepriseId;
+        var iid = btn.dataset.inviteId;
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
+            detail: {
+                entityFormCanvas: {
+                    parametres: {
+                        titre_creation:      entityTitle,
+                        endpoint_form_url:   '/admin/' + entityRouteName + '/api/get-form',
+                        endpoint_submit_url: '/admin/' + entityRouteName + '/api/submit'
+                    }
+                },
+                entity:         {},
+                isCreationMode: true,
+                context: { idEntreprise: parseInt(eid) || undefined, idInvite: parseInt(iid) || undefined, _dashboardReload: true }
+            }
+        }));
+        setTimeout(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+        }, 600);
+    }
+
+    // Rechargement AJAX du sidebar après toute création depuis le tableau de bord
+    document.addEventListener('cerveau:event', function (e) {
+        if (e.detail.type !== 'app:entity.saved') return;
+        var uc = e.detail.payload && e.detail.payload.userContext;
+        if (!uc || !uc._dashboardReload) return;
+
+        var container = document.getElementById('db-sidebar-content');
+        if (!container) return;
+        var url = container.dataset.workspaceUrl;
+        if (!url) return;
+
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.text();
+            })
+            .then(function (html) {
+                var tmp = document.createElement('div');
+                tmp.innerHTML = html;
+                var newSidebar = tmp.querySelector('#db-sidebar-content');
+                if (!newSidebar) return;
+                container.innerHTML = newSidebar.innerHTML;
+                document.querySelectorAll('#dbTaskToggleBar .db-task-toggle').forEach(function (b) {
+                    b.classList.toggle('active', b.dataset.mode === _activeMode);
+                });
+                setTimeout(dbTaskApplyFilter, 30);
+                if (typeof window.initDbMetaTips === 'function') window.initDbMetaTips();
+                if (typeof window.initDbFeedbacks === 'function') window.initDbFeedbacks();
+            })
+            .catch(function (err) {
+                console.warn('[dashboard] sidebar reload failed:', err);
+            });
+    });
+
+    // Rechargement AJAX fiable via dispatch direct depuis document (double filet)
+    document.addEventListener('app:dashboard.sidebar.reload', function () {
+        var container = document.getElementById('db-sidebar-content');
+        if (!container) return;
+        var url = container.dataset.workspaceUrl;
+        if (!url) return;
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.text();
+            })
+            .then(function (html) {
+                var tmp = document.createElement('div');
+                tmp.innerHTML = html;
+                var ns = tmp.querySelector('#db-sidebar-content');
+                if (!ns) return;
+                container.innerHTML = ns.innerHTML;
+                document.querySelectorAll('#dbTaskToggleBar .db-task-toggle').forEach(function (b) {
+                    b.classList.toggle('active', b.dataset.mode === _activeMode);
+                });
+                setTimeout(dbTaskApplyFilter, 30);
+                if (typeof window.initDbMetaTips === 'function') window.initDbMetaTips();
+                if (typeof window.initDbFeedbacks === 'function') window.initDbFeedbacks();
+            })
+            .catch(function (err) {
+                console.warn('[dashboard] sidebar reload (direct) failed:', err);
+            });
+    });
+
+    window.dbTaskToggle      = dbTaskToggle;
+    window.dbTaskSearch      = dbTaskSearch;
+    window.dbTaskApplyFilter = dbTaskApplyFilter;
+    window.dbTaskNew         = dbTaskNew;
+    window.dbBlockAdd        = dbBlockAdd;
+}());
+
+// ── Renouvellements à venir (toggles + recherche + menu contextuel) ──────────
+(function () {
+    var _activeRenewMode = 'j30';
+    var _el  = null;
+    var _aid = null;
+    var _eid = null;
+    var _pid = null;
+
+    function dbRenewApplyFilter() {
+        var searchInput = document.querySelector('[aria-label="Filtrer les renouvellements"]');
+        var q = searchInput ? searchInput.value.toLowerCase() : '';
+        document.querySelectorAll('.db-renew-item').forEach(function (el) {
+            var matchMode   = el.dataset.group === _activeRenewMode;
+            var matchSearch = !q || (el.dataset.searchText || '').indexOf(q) >= 0;
+            el.style.display = (matchMode && matchSearch) ? '' : 'none';
+        });
+    }
+
+    function dbRenewToggle(btn) {
+        _activeRenewMode = btn.dataset.mode;
+        document.querySelectorAll('#dbRenewToggleBar .db-task-toggle').forEach(function (b) {
+            var isActive = b === btn;
+            b.classList.toggle('active', isActive);
+            b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+        dbRenewApplyFilter();
+    }
+
+    function dbRenewSearch() {
+        dbRenewApplyFilter();
+    }
+
+    function dbRenewCtxOpen(event, el) {
+        event.preventDefault();
+        event.stopPropagation();
+        _el  = el;
+        _aid = el.dataset.avenantId;
+        _eid = el.dataset.entrepriseId;
+        _pid = el.dataset.pisteId;
+
+        var menu = document.getElementById('dbRenewCtxMenu');
+        if (!menu) return;
+        var mw = 220, mh = 80;
+        var left = (event.clientX + mw > window.innerWidth)  ? window.innerWidth  - mw - 6 : event.clientX;
+        var top  = (event.clientY + mh > window.innerHeight) ? window.innerHeight - mh - 6 : event.clientY;
+        menu.style.left    = left + 'px';
+        menu.style.top     = top  + 'px';
+        menu.style.display = 'block';
+
+        var pisteLabel = document.getElementById('dbRenewCtxPisteLabel');
+        if (pisteLabel) {
+            pisteLabel.textContent = _pid ? 'Modifier la piste de renouvellement' : 'Créer une piste de renouvellement';
+        }
+
+        setTimeout(function () {
+            document.addEventListener('click', function hide() {
+                var m = document.getElementById('dbRenewCtxMenu');
+                if (m) m.style.display = 'none';
+                document.removeEventListener('click', hide);
+            }, { once: true });
+        }, 0);
+    }
+
+    function dbRenewCtxPiste() {
+        var menu = document.getElementById('dbRenewCtxMenu');
+        if (menu) menu.style.display = 'none';
+
+        var hasPiste = !!_pid;
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
+            detail: {
+                entityFormCanvas: {
+                    parametres: hasPiste ? {
+                        titre_modification:  'Modifier la piste de renouvellement',
+                        endpoint_form_url:   '/admin/piste/api/get-form',
+                        endpoint_submit_url: '/admin/piste/api/submit'
+                    } : {
+                        titre_creation:      'Nouvelle piste de renouvellement',
+                        endpoint_form_url:   '/admin/piste/api/get-form',
+                        endpoint_submit_url: '/admin/piste/api/submit'
+                    }
+                },
+                entity:         hasPiste ? { id: parseInt(_pid) } : {},
+                isCreationMode: !hasPiste,
+                context: {
+                    idEntreprise:     parseInt(_eid) || undefined,
+                    idAvenant:        !hasPiste && _aid ? parseInt(_aid) : undefined,
+                    _dashboardReload: true
+                }
+            }
+        }));
+        setTimeout(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+        }, 600);
+    }
+
+    function dbRenewCtxNoRenewal() {
+        var menu = document.getElementById('dbRenewCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_aid) return;
+
+        var tipEl    = _el ? _el.querySelector('[data-renew-tip]') : null;
+        var client   = tipEl ? esc(tipEl.textContent.trim())               : '—';
+        var risque   = tipEl ? esc(tipEl.dataset.renewRisque   || '—')     : '—';
+        var assureur = tipEl ? esc(tipEl.dataset.renewAssureur || '—')     : '—';
+        var periode  = tipEl ? esc(tipEl.dataset.renewPeriode  || '—')     : '—';
+
+        function esc(s) {
+            return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        var row = '<div class="d-flex gap-2 mb-1"><span class="text-muted" style="min-width:4.5rem;">';
+        var bodyHtml =
+            '<p class="mb-2">La piste liée à cet avenant sera marquée comme <strong>Temporaire non renouvellable</strong>. Elle disparaîtra du tableau des renouvellements à venir.</p>' +
+            '<div class="p-2 rounded small" style="background:#f8f9fa;border:1px solid #dee2e6;">' +
+                row + 'Client</span><strong>' + client + '</strong></div>' +
+                row + 'Risque</span><span>' + risque + '</span></div>' +
+                row + 'Assureur</span><span>' + assureur + '</span></div>' +
+                '<div class="d-flex gap-2"><span class="text-muted" style="min-width:4.5rem;">Période</span><span>' + periode + '</span></div>' +
+            '</div>';
+
+        document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
+            detail: {
+                title: 'Ne pas renouveler',
+                body: bodyHtml,
+                headerClass: 'bg-cobalt text-white',
+                confirmClass: 'btn btn-cobalt',
+                showIrreversible: false,
+                onConfirm: {
+                    type: 'renew:set-not-renewable',
+                    payload: { avenantId: _aid }
+                }
+            }
+        }));
+    }
+
+    window.dbRenewToggle         = dbRenewToggle;
+    window.dbRenewSearch         = dbRenewSearch;
+    window.dbRenewApplyFilter    = dbRenewApplyFilter;
+    window.dbRenewCtxOpen        = dbRenewCtxOpen;
+    window.dbRenewCtxPiste       = dbRenewCtxPiste;
+    window.dbRenewCtxNoRenewal   = dbRenewCtxNoRenewal;
+}());
+
+// ── Auto-refresh renouvellements (3 min) ─────────────────────────────────────
+(function () {
+    var _renewTimer    = null;
+    var _renewObserver = null;
+
+    function _renewPad(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function _renewSetStatus(txt) {
+        var el = document.getElementById('db-renew-last-update');
+        if (el) el.textContent = txt;
+    }
+
+    function refreshRenouvellements() {
+        var list = document.getElementById('db-renew-list');
+        if (!list) return;
+        var details = list.closest('details');
+        if (details && !details.open) return;
+        _renewSetStatus('Mise à jour en cours…');
+        fetch(list.dataset.renewalsUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.text();
+            })
+            .then(function (html) {
+                list.innerHTML = html;
+                var now = new Date();
+                _renewSetStatus('Dernière mise à jour à ' + _renewPad(now.getHours()) + ':' + _renewPad(now.getMinutes()));
+                window.dbRenewApplyFilter();
+            })
+            .catch(function (err) {
+                _renewSetStatus('Erreur de mise à jour');
+                console.warn('[dashboard] renouvellements refresh failed:', err);
+            });
+    }
+
+    function initDbRenouvellements() {
+        var list = document.getElementById('db-renew-list');
+        if (!list) return;
+        var now = new Date();
+        _renewSetStatus('Dernière mise à jour à ' + _renewPad(now.getHours()) + ':' + _renewPad(now.getMinutes()));
+        if (_renewTimer) clearInterval(_renewTimer);
+        _renewTimer = setInterval(refreshRenouvellements, 180000);
+    }
+
+    function _renewObserve() {
+        if (document.getElementById('db-renew-list')) { initDbRenouvellements(); return; }
+        if (_renewObserver) _renewObserver.disconnect();
+        _renewObserver = new MutationObserver(function (mutations, obs) {
+            if (document.getElementById('db-renew-list')) {
+                obs.disconnect();
+                _renewObserver = null;
+                initDbRenouvellements();
+            }
+        });
+        _renewObserver.observe(document.body, { childList: true, subtree: true });
+    }
+    _renewObserve();
+
+    window.refreshRenouvellements = refreshRenouvellements;
+}());
+
+// ── Derniers encaissements (toggles + recherche) ─────────────────────────────
+(function () {
+    var _activeCashMode = 'j30';
+
+    function dbCashApplyFilter() {
+        var searchInput = document.querySelector('[aria-label="Filtrer les encaissements"]');
+        var q = searchInput ? searchInput.value.toLowerCase() : '';
+        document.querySelectorAll('.db-enc-item').forEach(function (el) {
+            var matchMode   = el.dataset.group === _activeCashMode;
+            var matchSearch = !q || (el.dataset.searchText || '').indexOf(q) >= 0;
+            el.style.display = (matchMode && matchSearch) ? '' : 'none';
+        });
+    }
+
+    function dbCashToggle(btn) {
+        _activeCashMode = btn.dataset.mode;
+        document.querySelectorAll('#dbCashToggleBar .db-task-toggle').forEach(function (b) {
+            var isActive = b === btn;
+            b.classList.toggle('active', isActive);
+            b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+        dbCashApplyFilter();
+    }
+
+    function dbCashSearch() { dbCashApplyFilter(); }
+
+    window.dbCashToggle      = dbCashToggle;
+    window.dbCashSearch      = dbCashSearch;
+    window.dbCashApplyFilter = dbCashApplyFilter;
+}());
+
+// ── Auto-refresh encaissements (3 min) ──────────────────────────────────────
+(function () {
+    var _cashTimer    = null;
+    var _cashObserver = null;
+
+    function _cashPad(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function _cashSetStatus(txt) {
+        var el = document.getElementById('db-encaiss-last-update');
+        if (el) el.textContent = txt;
+    }
+
+    function refreshEncaissements() {
+        var list = document.getElementById('db-enc-list');
+        if (!list) return;
+        var details = list.closest('details');
+        if (details && !details.open) return;
+        _cashSetStatus('Mise à jour en cours…');
+        fetch(list.dataset.encaissementsUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.text();
+            })
+            .then(function (html) {
+                list.innerHTML = html;
+                var now = new Date();
+                _cashSetStatus('Dernière mise à jour à ' + _cashPad(now.getHours()) + ':' + _cashPad(now.getMinutes()));
+                window.dbCashApplyFilter();
+            })
+            .catch(function (err) {
+                _cashSetStatus('Erreur de mise à jour');
+                console.warn('[dashboard] encaissements refresh failed:', err);
+            });
+    }
+
+    function initDbCash() {
+        var list = document.getElementById('db-enc-list');
+        if (!list) return;
+        var now = new Date();
+        _cashSetStatus('Dernière mise à jour à ' + _cashPad(now.getHours()) + ':' + _cashPad(now.getMinutes()));
+        if (_cashTimer) clearInterval(_cashTimer);
+        _cashTimer = setInterval(refreshEncaissements, 180000);
+    }
+
+    function _cashObserve() {
+        if (document.getElementById('db-enc-list')) { initDbCash(); return; }
+        if (_cashObserver) _cashObserver.disconnect();
+        _cashObserver = new MutationObserver(function (mutations, obs) {
+            if (document.getElementById('db-enc-list')) {
+                obs.disconnect();
+                _cashObserver = null;
+                initDbCash();
+            }
+        });
+        _cashObserver.observe(document.body, { childList: true, subtree: true });
+    }
+    _cashObserve();
+
+    window.refreshEncaissements = refreshEncaissements;
+}());
+
+// ── Tooltip encaissements — data-cash-tip (suit la souris) ──────────────────
+(function () {
+    var _tip = null;
+    var _active = false;
+
+    function getOrCreate() {
+        if (!_tip) {
+            _tip = document.createElement('div');
+            _tip.id = 'db-cash-tip';
+            document.body.appendChild(_tip);
+        }
+        return _tip;
+    }
+
+    function buildContent(el) {
+        var ref      = el.dataset.cashRef      || '—';
+        var montant  = el.dataset.cashMontant  || '—';
+        var date     = el.dataset.cashDate     || '—';
+        var libelle  = el.dataset.cashLibelle  || '';
+        var noteNom  = el.dataset.cashNoteNom  || '';
+        var facture  = el.dataset.cashFacture  || '';
+        var solde    = el.dataset.cashSolde    || '';
+        var soldeDue = el.dataset.cashSoldeNegatif === 'true';
+        var sentAt   = el.dataset.cashSentAt   || '';
+
+        var rows = '<tr><td colspan="2" class="tip-section">Encaissement</td></tr>' +
+            '<tr><td>Référence</td><td>' + ref + '</td></tr>' +
+            '<tr><td>Montant</td><td>' + montant + '</td></tr>' +
+            '<tr><td>Encaissé le</td><td>' + date + '</td></tr>';
+
+        if (libelle) {
+            rows += '<tr><td colspan="2" class="tip-libelle">' + libelle + '</td></tr>';
+        }
+
+        if (noteNom) {
+            rows += '<tr><td colspan="2" class="tip-section">Note liée</td></tr>' +
+                '<tr><td>Note</td><td>' + noteNom + '</td></tr>';
+            if (facture) {
+                rows += '<tr><td>Facturé</td><td>' + facture + '</td></tr>';
+            }
+            if (solde) {
+                var soldeClass = soldeDue ? 'tip-solde-due' : 'tip-solde-ok';
+                rows += '<tr><td>Solde dû</td><td class="' + soldeClass + '">' + solde + '</td></tr>';
+            }
+            if (sentAt) {
+                rows += '<tr><td>Facturé le</td><td>' + sentAt + '</td></tr>';
+            }
+        } else {
+            rows += '<tr><td colspan="2" class="tip-section">Note liée</td></tr>' +
+                '<tr><td colspan="2" class="tip-note"><span class="tip-sinistre">✘ Paiement sinistre — aucune note</span></td></tr>';
+        }
+
+        return '<table>' + rows + '</table>';
+    }
+
+    function positionTip(mx, my) {
+        var t = _tip;
+        if (!t) return;
+        var offset = 10;
+        var left = mx - t.offsetWidth - offset;
+        var top  = my - t.offsetHeight - offset;
+        if (left < 8) left = mx + offset;
+        if (top < 8) top = my + offset;
+        t.style.left = left + 'px';
+        t.style.top  = top  + 'px';
+    }
+
+    document.addEventListener('mouseover', function (e) {
+        var el = e.target.closest ? e.target.closest('[data-cash-tip]') : null;
+        if (!el) return;
+        var details = el.closest('details');
+        if (details && details.open) return;
+        var t = getOrCreate();
+        t.innerHTML = buildContent(el);
+        t.style.display = 'block';
+        _active = true;
+    });
+    document.addEventListener('mouseout', function (e) {
+        var el = e.target.closest ? e.target.closest('[data-cash-tip]') : null;
+        if (el && !el.contains(e.relatedTarget)) {
+            if (_tip) _tip.style.display = 'none';
+            _active = false;
+        }
+    });
+    document.addEventListener('mousemove', function (e) {
+        if (_active) positionTip(e.clientX, e.clientY);
+    });
+}());
+
+// ── Feedbacks récents : auto-refresh toutes les 60 s ──────────────────────
+(function () {
+    var _fbTimer = null;
+    var _fbObserver = null;
+
+    function _fbPad(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function _fbSetStatus(text) {
+        var el = document.getElementById('db-fb-last-update');
+        if (el) el.textContent = text;
+    }
+
+    function refreshFeedbacks() {
+        var list = document.getElementById('db-fb-list');
+        if (!list) return;
+        var url = list.dataset.feedbacksUrl;
+        if (!url) return;
+
+        _fbSetStatus('Mise à jour en cours…');
+
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.text();
+            })
+            .then(function (html) {
+                list.innerHTML = html;
+                var now = new Date();
+                _fbSetStatus('Dernière mise à jour à ' + _fbPad(now.getHours()) + ':' + _fbPad(now.getMinutes()));
+            })
+            .catch(function (err) {
+                _fbSetStatus('Erreur de mise à jour');
+                console.warn('[dashboard] feedbacks refresh failed:', err);
+            });
+    }
+
+    function _fbInitSelection(list) {
+        list.addEventListener('click', function (e) {
+            var item = e.target.closest('.db-fb-item');
+            if (!item) return;
+            list.querySelectorAll('.db-fb-item--selected').forEach(function (el) {
+                el.classList.remove('db-fb-item--selected');
+            });
+            item.classList.add('db-fb-item--selected');
+        });
+        list.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            var item = e.target.closest('.db-fb-item');
+            if (!item) return;
+            e.preventDefault();
+            list.querySelectorAll('.db-fb-item--selected').forEach(function (el) {
+                el.classList.remove('db-fb-item--selected');
+            });
+            item.classList.add('db-fb-item--selected');
+        });
+    }
+
+    function initDbFeedbacks() {
+        var list = document.getElementById('db-fb-list');
+        if (!list) return;
+        var now = new Date();
+        _fbSetStatus('Dernière mise à jour à ' + _fbPad(now.getHours()) + ':' + _fbPad(now.getMinutes()));
+        if (_fbTimer) { clearInterval(_fbTimer); }
+        _fbTimer = setInterval(refreshFeedbacks, 60000);
+        _fbInitSelection(list);
+    }
+
+    function _fbObserve() {
+        if (document.getElementById('db-fb-list')) {
+            initDbFeedbacks();
+            return;
+        }
+        if (_fbObserver) { _fbObserver.disconnect(); }
+        _fbObserver = new MutationObserver(function (mutations, obs) {
+            if (document.getElementById('db-fb-list')) {
+                obs.disconnect();
+                _fbObserver = null;
+                initDbFeedbacks();
+            }
+        });
+        _fbObserver.observe(document.body, { childList: true, subtree: true });
+    }
+
+    _fbObserve();
+
+    window.initDbFeedbacks = initDbFeedbacks;
+}());
+
+// ── Hero : sélection des tuiles de ventilation ─────────────────────────────
+(function () {
+    function _heroInitSelection(details) {
+        details.addEventListener('click', function (e) {
+            var item = e.target.closest('.db-hero-metric');
+            if (!item) return;
+            details.querySelectorAll('.db-hero-metric--selected').forEach(function (el) {
+                el.classList.remove('db-hero-metric--selected');
+            });
+            item.classList.add('db-hero-metric--selected');
+        });
+        details.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            var item = e.target.closest('.db-hero-metric');
+            if (!item) return;
+            e.preventDefault();
+            details.querySelectorAll('.db-hero-metric--selected').forEach(function (el) {
+                el.classList.remove('db-hero-metric--selected');
+            });
+            item.classList.add('db-hero-metric--selected');
+        });
+    }
+
+    function initHeroMetrics() {
+        var details = document.querySelector('details.db-hero');
+        if (!details) return;
+        _heroInitSelection(details);
+    }
+
+    var _heroObserver = null;
+    function _heroObserve() {
+        if (document.querySelector('details.db-hero')) {
+            initHeroMetrics();
+            return;
+        }
+        if (_heroObserver) { _heroObserver.disconnect(); }
+        _heroObserver = new MutationObserver(function (mutations, obs) {
+            if (document.querySelector('details.db-hero')) {
+                obs.disconnect();
+                _heroObserver = null;
+                initHeroMetrics();
+            }
+        });
+        _heroObserver.observe(document.body, { childList: true, subtree: true });
+    }
+
+    _heroObserve();
+}());
+
+// ── Menu contextuel tâches du tableau de bord ──────────────────────────────
+(function () {
+    var _el  = null;
+    var _id  = null;
+    var _eid = null;
+    var _iid = null;
+    var _pendingDeleteEl = null;
+
+    function dbTaskCtxOpen(event, el) {
+        event.preventDefault();
+        event.stopPropagation();
+        _el  = el;
+        _id  = el.dataset.tacheId;
+        _eid = el.dataset.entrepriseId;
+        _iid = el.dataset.inviteId;
+
+        var menu = document.getElementById('dbTaskCtxMenu');
+        if (!menu) return;
+        var mw = 220, mh = 90;
+        var left = (event.clientX + mw > window.innerWidth)  ? window.innerWidth  - mw - 6 : event.clientX;
+        var top  = (event.clientY + mh > window.innerHeight) ? window.innerHeight - mh - 6 : event.clientY;
+        menu.style.left    = left + 'px';
+        menu.style.top     = top  + 'px';
+        menu.style.display = 'block';
+
+        var isCreator = el.dataset.isCreator === '1';
+
+        var deleteItem = document.getElementById('dbTaskCtxDeleteItem');
+        if (deleteItem) {
+            if (isCreator) {
+                deleteItem.style.opacity = '';
+                deleteItem.style.cursor  = 'pointer';
+                deleteItem.onclick = dbTaskCtxDelete;
+            } else {
+                deleteItem.style.opacity = '0.38';
+                deleteItem.style.cursor  = 'not-allowed';
+                deleteItem.onclick = null;
+            }
+        }
+
+        var editItem = document.getElementById('dbTaskCtxEditItem');
+        if (editItem) {
+            if (isCreator) {
+                editItem.style.opacity = '';
+                editItem.style.cursor  = 'pointer';
+                editItem.onclick = dbTaskCtxEdit;
+            } else {
+                editItem.style.opacity = '0.38';
+                editItem.style.cursor  = 'not-allowed';
+                editItem.onclick = null;
+            }
+        }
+
+        setTimeout(function () {
+            document.addEventListener('click', function hide() {
+                var m = document.getElementById('dbTaskCtxMenu');
+                if (m) m.style.display = 'none';
+                document.removeEventListener('click', hide);
+            }, { once: true });
+        }, 0);
+    }
+
+    function dbTaskCtxFeedback() {
+        var menu = document.getElementById('dbTaskCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_id) return;
+
+        var labelEl = _el && _el.querySelector('.db-task-label');
+        var taskName = labelEl ? labelEl.textContent.trim() : ('Tâche #' + _id);
+
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+
+        document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
+            detail: {
+                entityFormCanvas: {
+                    parametres: {
+                        titre_creation:      'Nouveau feedback — ' + taskName,
+                        endpoint_form_url:   '/admin/feedback/api/get-form',
+                        endpoint_submit_url: '/admin/feedback/api/submit'
+                    }
+                },
+                entity:         {},
+                isCreationMode: true,
+                parentContext:  { id: parseInt(_id), fieldName: 'tache' },
+                context:        { idEntreprise: parseInt(_eid), idInvite: parseInt(_iid) || undefined, _dbTaskId: _id, _dashboardReload: true }
+            }
+        }));
+
+        setTimeout(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+        }, 600);
+    }
+
+    function dbTaskCtxClose() {
+        var menu = document.getElementById('dbTaskCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_el || !_id) return;
+
+        var el   = _el;
+        var tid  = _id;
+        var csrf = '';
+        var csrfMeta = document.getElementById('db-task-csrf');
+        if (csrfMeta) csrf = csrfMeta.content;
+
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+
+        fetch('/admin/tache/api/close/' + tid, {
+            method:  'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type':     'application/json',
+                'X-CSRF-Token':     csrf
+            }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+            if (data.success) {
+                el.style.transition    = 'opacity .25s ease, max-height .3s ease';
+                el.style.overflow      = 'hidden';
+                el.style.maxHeight     = el.scrollHeight + 'px';
+                el.style.opacity       = '1';
+                requestAnimationFrame(function () {
+                    el.style.opacity       = '0';
+                    el.style.maxHeight     = '0';
+                    el.style.marginBottom  = '0';
+                    el.style.paddingBottom = '0';
+                    setTimeout(function () { el.remove(); }, 320);
+                });
+            }
+        })
+        .catch(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+        });
+    }
+
+    // Mise à jour du compteur feedbacks (contexte tableau de bord uniquement)
+    // Le Cerveau ne re-broadcaste pas app:entity.saved sur document ;
+    // on intercepte cerveau:event qui, lui, bulle jusqu'au document.
+    // Le champ _dbTaskId dans userContext identifie le contexte "tâche du tableau de bord"
+    // et distingue ce cas de l'ouverture du même formulaire depuis la rubrique Feedbacks.
+    document.addEventListener('cerveau:event', function (e) {
+        if (e.detail.type !== 'app:entity.saved') return;
+        var payload = e.detail.payload;
+        var tacheId = payload && payload.userContext && payload.userContext._dbTaskId;
+        if (!tacheId) return;
+        var span = document.querySelector('[data-fb-count="' + tacheId + '"]');
+        if (!span) return;
+        span.childNodes.forEach(function (n) {
+            if (n.nodeType === Node.TEXT_NODE && n.textContent.trim() !== '') {
+                var current = parseInt(n.textContent.trim()) || 0;
+                n.textContent = ' ' + (current + 1) + ' ';
+                if (span.dataset.metaTip !== undefined) {
+                    span.dataset.metaTip = (current + 1) + ' feedback(s)';
+                }
+            }
+        });
+    });
+
+    function dbTaskCtxDelete() {
+        var menu = document.getElementById('dbTaskCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_el || !_id) return;
+
+        var el = _el, tid = _id;
+        var labelEl = el.querySelector('.db-task-label');
+        var taskName = labelEl ? labelEl.textContent.trim() : ('Tâche #' + tid);
+        _pendingDeleteEl = el;
+
+        document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
+            detail: {
+                title: 'Supprimer la tâche',
+                body: 'Cette action est irréversible. La tâche et tous ses feedbacks seront définitivement supprimés.',
+                itemDescriptions: [taskName],
+                onConfirm: {
+                    type: 'app:db-task.delete-execute',
+                    payload: { id: tid }
+                }
+            }
+        }));
+    }
+
+    // Exécution réelle de la suppression après confirmation de l'utilisateur
+    document.addEventListener('cerveau:event', function (e) {
+        if (e.detail.type !== 'app:db-task.delete-execute') return;
+        var p = e.detail.payload;
+        var tid = p && p.id;
+        if (!tid) return;
+
+        var el = _pendingDeleteEl;
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+
+        fetch('/admin/tache/api/delete/' + tid, {
+            method: 'DELETE',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/json' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+            document.dispatchEvent(new CustomEvent('ui:confirmation.close'));
+            _pendingDeleteEl = null;
+            if (!el) return;
+            el.style.transition    = 'opacity .25s ease, max-height .3s ease';
+            el.style.overflow      = 'hidden';
+            el.style.maxHeight     = el.scrollHeight + 'px';
+            el.style.opacity       = '1';
+            requestAnimationFrame(function () {
+                el.style.opacity       = '0';
+                el.style.maxHeight     = '0';
+                el.style.marginBottom  = '0';
+                el.style.paddingBottom = '0';
+                setTimeout(function () { el.remove(); }, 320);
+            });
+        })
+        .catch(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+            document.dispatchEvent(new CustomEvent('ui:confirmation.error', {
+                detail: { error: 'La suppression a échoué.' }
+            }));
+            _pendingDeleteEl = null;
+        });
+    });
+
+    function dbTaskCtxEdit() {
+        var menu = document.getElementById('dbTaskCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_id) return;
+
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
+            detail: {
+                entityFormCanvas: {
+                    parametres: {
+                        titre_modification:  'Modifier la tâche',
+                        endpoint_form_url:   '/admin/tache/api/get-form',
+                        endpoint_submit_url: '/admin/tache/api/submit'
+                    }
+                },
+                entity:         { id: parseInt(_id) },
+                isCreationMode: false,
+                context: {
+                    idEntreprise:     parseInt(_eid),
+                    idInvite:         parseInt(_iid) || undefined,
+                    _dashboardReload: true
+                }
+            }
+        }));
+        setTimeout(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+        }, 600);
+    }
+
+    window.dbTaskCtxOpen     = dbTaskCtxOpen;
+    window.dbTaskCtxFeedback = dbTaskCtxFeedback;
+    window.dbTaskCtxClose    = dbTaskCtxClose;
+    window.dbTaskCtxDelete   = dbTaskCtxDelete;
+    window.dbTaskCtxEdit     = dbTaskCtxEdit;
+}());
+
+// ── Infobulles flottantes — tout élément portant data-meta-tip (délégation document) ──
+(function () {
+    var _tip = null;
+
+    function getOrCreateTip() {
+        if (!_tip) {
+            _tip = document.createElement('div');
+            _tip.id = 'db-meta-tip';
+            document.body.appendChild(_tip);
+        }
+        return _tip;
+    }
+
+    function escapeHtml(s) {
+        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function showDbMetaTip(chip) {
+        var txt = chip.dataset.metaTip;
+        if (!txt) return;
+        var tip = getOrCreateTip();
+        if (txt.indexOf('[PLUS]') !== -1) {
+            var parts = txt.split('[PLUS]');
+            tip.innerHTML = escapeHtml(parts[0]) + '<b>Pour plus d\'infos, consultez la liste des feedbacks</b>';
+        } else {
+            tip.textContent = txt;
+        }
+        tip.style.display = 'block';
+        var r = chip.getBoundingClientRect();
+        tip.style.left = (r.left + r.width / 2) + 'px';
+        tip.style.top  = r.top + 'px';
+        tip.style.transform = 'translateX(-50%) translateY(-100%)';
+        tip.style.marginTop = '-6px';
+        var tr = tip.getBoundingClientRect();
+        if (tr.right > window.innerWidth - 8) tip.style.left = (window.innerWidth - tr.width - 8) + 'px';
+        if (tr.left < 8) tip.style.left = (tr.width / 2 + 8) + 'px';
+        if (tr.top < 8) {
+            tip.style.top = (r.bottom + 6) + 'px';
+            tip.style.transform = 'translateX(-50%)';
+            tip.style.marginTop = '0';
+        }
+    }
+
+    function hideDbMetaTip() {
+        if (_tip) _tip.style.display = 'none';
+    }
+
+    document.addEventListener('mouseover', function (e) {
+        var chip = e.target.closest ? e.target.closest('[data-meta-tip]') : null;
+        if (!chip) return;
+        showDbMetaTip(chip);
+    });
+
+    document.addEventListener('mouseout', function (e) {
+        var chip = e.target.closest ? e.target.closest('[data-meta-tip]') : null;
+        if (!chip) return;
+        if (!chip.contains(e.relatedTarget)) hideDbMetaTip();
+    });
+
+    window.initDbMetaTips = function () {};
+}());
+
+// ── Tooltip financier renouvellements — data-renew-tip (suit la souris) ──
+(function () {
+    var _tip = null;
+    var _active = false;
+
+    function getOrCreate() {
+        if (!_tip) {
+            _tip = document.createElement('div');
+            _tip.id = 'db-renew-tip';
+            document.body.appendChild(_tip);
+        }
+        return _tip;
+    }
+
+    function buildContent(el) {
+        var prime    = el.dataset.renewPrime    || '—';
+        var comm     = el.dataset.renewComm     || '—';
+        var retro    = el.dataset.renewRetro    || '—';
+        var reserve  = el.dataset.renewReserve  || '—';
+        var periode  = el.dataset.renewPeriode  || '—';
+        var risque   = el.dataset.renewRisque   || '—';
+        var assureur = el.dataset.renewAssureur || '—';
+        var piste    = el.dataset.renewPiste;
+        var pisteHtml = piste
+            ? '<span class="tip-ok">✔ ' + piste + '</span>'
+            : '<span class="tip-nok">✘ Aucune piste en cours</span>';
+        return '<table>' +
+            '<tr><td colspan="2" class="tip-section">Couverture</td></tr>' +
+            '<tr><td>Période</td><td>' + periode + '</td></tr>' +
+            '<tr><td>Risque</td><td class="tip-risque">' + risque + '</td></tr>' +
+            '<tr><td>Assureur</td><td>' + assureur + '</td></tr>' +
+            '<tr><td colspan="2" class="tip-section">Indicateurs</td></tr>' +
+            '<tr><td>Prime</td><td>' + prime + '</td></tr>' +
+            '<tr><td>Commission</td><td>' + comm + '</td></tr>' +
+            '<tr><td>Rétrocommission</td><td>' + retro + '</td></tr>' +
+            '<tr><td>Réserve</td><td>' + reserve + '</td></tr>' +
+            '<tr><td colspan="2" class="tip-section">Renouvellement</td></tr>' +
+            '<tr><td colspan="2" class="tip-piste">' + pisteHtml + '</td></tr>' +
+            '</table>';
+    }
+
+    function positionTip(mx, my) {
+        var t = _tip;
+        if (!t) return;
+        var offset = 10;
+        var left = mx - t.offsetWidth - offset;
+        var top  = my - t.offsetHeight - offset;
+        if (left < 8) left = mx + offset;
+        if (top < 8) top = my + offset;
+        t.style.left = left + 'px';
+        t.style.top  = top  + 'px';
+    }
+
+    document.addEventListener('mouseover', function (e) {
+        var el = e.target.closest ? e.target.closest('[data-renew-tip]') : null;
+        if (!el) return;
+        var details = el.closest('details');
+        if (details && details.open) return;
+        var t = getOrCreate();
+        t.innerHTML = buildContent(el);
+        t.style.display = 'block';
+        _active = true;
+    });
+    document.addEventListener('mouseout', function (e) {
+        var el = e.target.closest ? e.target.closest('[data-renew-tip]') : null;
+        if (el && !el.contains(e.relatedTarget)) {
+            if (_tip) _tip.style.display = 'none';
+            _active = false;
+        }
+    });
+    document.addEventListener('mousemove', function (e) {
+        if (_active) positionTip(e.clientX, e.clientY);
+    });
+}());
+
+// ── Pistes en cours : toggles, recherche, tooltip, menu contextuel, auto-refresh ──
+(function () {
+    var _activePisteMode  = 'j30';
+    var _pisteTimer       = null;
+    var _pisteObserver    = null;
+    var _el  = null;
+    var _pid = null;
+    var _eid = null;
+    var _iid = null;
+    var _pendingDeleteEl  = null;
+    var _tipEl = null;
+    var _tipActive = false;
+
+    // ── Filtrage (mode + recherche) ──────────────────────────────────────────
+    function dbPisteApplyFilter() {
+        var searchInput = document.querySelector('[aria-label="Filtrer les pistes"]');
+        var q = searchInput ? searchInput.value.toLowerCase() : '';
+        document.querySelectorAll('.db-piste-item').forEach(function (el) {
+            var matchMode   = el.dataset.group === _activePisteMode;
+            var matchSearch = !q || (el.dataset.searchText || '').indexOf(q) >= 0;
+            el.style.display = (matchMode && matchSearch) ? '' : 'none';
+        });
+    }
+
+    function dbPisteToggle(btn) {
+        _activePisteMode = btn.dataset.mode;
+        document.querySelectorAll('#dbPisteToggleBar .db-task-toggle').forEach(function (b) {
+            var isActive = b === btn;
+            b.classList.toggle('active', isActive);
+            b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+        dbPisteApplyFilter();
+    }
+
+    function dbPisteSearch() { dbPisteApplyFilter(); }
+
+    // ── Auto-refresh toutes les 3 minutes ────────────────────────────────────
+    function _pistePad(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function _pisteSetStatus(text) {
+        var el = document.getElementById('db-piste-last-update');
+        if (el) el.textContent = text;
+    }
+
+    function refreshPistes() {
+        var list = document.getElementById('db-piste-list');
+        if (!list) return;
+        var details = list.closest('details');
+        if (details && !details.open) return;
+        var url = list.dataset.pistesUrl;
+        if (!url) return;
+        _pisteSetStatus('Mise à jour en cours…');
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.text();
+            })
+            .then(function (html) {
+                list.innerHTML = html;
+                var now = new Date();
+                _pisteSetStatus('Dernière mise à jour à ' + _pistePad(now.getHours()) + ':' + _pistePad(now.getMinutes()));
+                dbPisteApplyFilter();
+            })
+            .catch(function (err) {
+                _pisteSetStatus('Erreur de mise à jour');
+                console.warn('[dashboard] pistes refresh failed:', err);
+            });
+    }
+
+    function initDbPistes() {
+        var list = document.getElementById('db-piste-list');
+        if (!list) return;
+        var now = new Date();
+        _pisteSetStatus('Dernière mise à jour à ' + _pistePad(now.getHours()) + ':' + _pistePad(now.getMinutes()));
+        if (_pisteTimer) clearInterval(_pisteTimer);
+        _pisteTimer = setInterval(refreshPistes, 180000);
+    }
+
+    function _pisteObserve() {
+        if (document.getElementById('db-piste-list')) { initDbPistes(); return; }
+        if (_pisteObserver) _pisteObserver.disconnect();
+        _pisteObserver = new MutationObserver(function (mutations, obs) {
+            if (document.getElementById('db-piste-list')) {
+                obs.disconnect();
+                _pisteObserver = null;
+                initDbPistes();
+            }
+        });
+        _pisteObserver.observe(document.body, { childList: true, subtree: true });
+    }
+    _pisteObserve();
+
+    // ── Tooltip data-piste-tip (suit la souris) ──────────────────────────────
+    function _getOrCreateTip() {
+        if (!_tipEl) {
+            _tipEl = document.createElement('div');
+            _tipEl.id = 'db-piste-tip';
+            document.body.appendChild(_tipEl);
+        }
+        return _tipEl;
+    }
+
+    function _buildTipContent(details) {
+        var nom         = details.dataset.pisteNom         || '—';
+        var client      = details.dataset.pisteClient      || '—';
+        var risque      = details.dataset.pisteRisque      || '—';
+        var description = details.dataset.pisteDescription || '';
+        var statut      = details.dataset.pisteStatut      || '—';
+        var days        = details.dataset.pisteDays        || '—';
+        var invite      = details.dataset.pisteInvite      || '—';
+        var prime       = details.dataset.pistePrime       || '—';
+        var commission  = details.dataset.pisteCommission  || '—';
+
+        var rows = '<tr><td colspan="2" class="tip-section">Piste</td></tr>' +
+            '<tr><td>Nom</td><td><strong>' + nom + '</strong></td></tr>' +
+            '<tr><td>Client</td><td>' + client + '</td></tr>' +
+            '<tr><td>Risque</td><td class="tip-risque">' + risque + '</td></tr>' +
+            '<tr><td>Type</td><td>' + statut + '</td></tr>' +
+            '<tr><td>Âge</td><td>' + days + ' jour(s)</td></tr>';
+        if (description) {
+            rows += '<tr><td colspan="2" class="tip-libelle">' + description + '</td></tr>';
+        }
+        rows += '<tr><td colspan="2" class="tip-section">Potentiel</td></tr>' +
+            '<tr><td>Prime</td><td>' + prime + '</td></tr>' +
+            '<tr><td>Commission</td><td>' + commission + '</td></tr>' +
+            '<tr><td colspan="2" class="tip-section">Gestion</td></tr>' +
+            '<tr><td>Gestionnaire</td><td>' + invite + '</td></tr>';
+        return '<table>' + rows + '</table>';
+    }
+
+    function _positionTip(mx, my) {
+        var t = _tipEl;
+        if (!t) return;
+        var offset = 10;
+        var left = mx - t.offsetWidth - offset;
+        var top  = my - t.offsetHeight - offset;
+        if (left < 8) left = mx + offset;
+        if (top < 8) top = my + offset;
+        t.style.left = left + 'px';
+        t.style.top  = top  + 'px';
+    }
+
+    document.addEventListener('mouseover', function (e) {
+        var el = e.target.closest ? e.target.closest('[data-piste-tip]') : null;
+        if (!el) return;
+        var details = el.closest('details');
+        if (details && details.open) return;
+        if (!details) return;
+        var t = _getOrCreateTip();
+        t.innerHTML = _buildTipContent(details);
+        t.style.display = 'block';
+        _tipActive = true;
+    });
+    document.addEventListener('mouseout', function (e) {
+        var el = e.target.closest ? e.target.closest('[data-piste-tip]') : null;
+        if (el && !el.contains(e.relatedTarget)) {
+            if (_tipEl) _tipEl.style.display = 'none';
+            _tipActive = false;
+        }
+    });
+    document.addEventListener('mousemove', function (e) {
+        if (_tipActive) _positionTip(e.clientX, e.clientY);
+    });
+
+    // ── Menu contextuel ───────────────────────────────────────────────────────
+    function dbPisteCtxOpen(event, el) {
+        event.preventDefault();
+        event.stopPropagation();
+        _el  = el;
+        _pid = el.dataset.pisteId;
+        _eid = el.dataset.entrepriseId;
+        _iid = el.dataset.inviteId;
+
+        var menu = document.getElementById('dbPisteCtxMenu');
+        if (!menu) return;
+        var mw = 220, mh = 110;
+        var left = (event.clientX + mw > window.innerWidth)  ? window.innerWidth  - mw - 6 : event.clientX;
+        var top  = (event.clientY + mh > window.innerHeight) ? window.innerHeight - mh - 6 : event.clientY;
+        menu.style.left    = left + 'px';
+        menu.style.top     = top  + 'px';
+        menu.style.display = 'block';
+
+        var isCreator = el.dataset.isCreator === '1';
+
+        ['dbPisteCtxCloseItem', 'dbPisteCtxDeleteItem'].forEach(function (itemId) {
+            var item = document.getElementById(itemId);
+            if (!item) return;
+            if (isCreator) {
+                item.style.opacity = '';
+                item.style.cursor  = 'pointer';
+                item.onclick = itemId === 'dbPisteCtxCloseItem' ? dbPisteCtxClose : dbPisteCtxDelete;
+            } else {
+                item.style.opacity = '0.38';
+                item.style.cursor  = 'not-allowed';
+                item.onclick = null;
+            }
+        });
+
+        var editItem = document.getElementById('dbPisteCtxEditItem');
+        if (editItem) editItem.onclick = dbPisteCtxEdit;
+
+        setTimeout(function () {
+            document.addEventListener('click', function hide() {
+                var m = document.getElementById('dbPisteCtxMenu');
+                if (m) m.style.display = 'none';
+                document.removeEventListener('click', hide);
+            }, { once: true });
+        }, 0);
+    }
+
+    function dbPisteCtxEdit() {
+        var menu = document.getElementById('dbPisteCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_pid) return;
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
+            detail: {
+                entityFormCanvas: {
+                    parametres: {
+                        titre_modification:  'Modifier la piste',
+                        endpoint_form_url:   '/admin/piste/api/get-form',
+                        endpoint_submit_url: '/admin/piste/api/submit'
+                    }
+                },
+                entity:         { id: parseInt(_pid) },
+                isCreationMode: false,
+                context: {
+                    idEntreprise:     parseInt(_eid) || undefined,
+                    idInvite:         parseInt(_iid) || undefined,
+                    _dashboardReload: true
+                }
+            }
+        }));
+        setTimeout(function () { document.dispatchEvent(new CustomEvent('app:loading.stop')); }, 600);
+    }
+
+    var _pendingCloseEl = null;
+
+    function dbPisteCtxClose() {
+        var menu = document.getElementById('dbPisteCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_el || !_pid) return;
+
+        var nom = _el.dataset.pisteNom || ('Piste #' + _pid);
+        _pendingCloseEl = _el;
+
+        document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
+            detail: {
+                title: 'Clôturer la piste',
+                body: 'La piste sera marquée comme clôturée et n\'apparaîtra plus dans le tableau de bord.',
+                itemDescriptions: [nom],
+                onConfirm: {
+                    type: 'app:db-piste.close-execute',
+                    payload: { id: _pid }
+                }
+            }
+        }));
+    }
+
+    document.addEventListener('cerveau:event', function (e) {
+        if (e.detail.type !== 'app:db-piste.close-execute') return;
+        var p = e.detail.payload;
+        var pid = p && p.id;
+        if (!pid) return;
+
+        var el = _pendingCloseEl;
+        var csrf = '';
+        var csrfMeta = document.getElementById('db-piste-csrf');
+        if (csrfMeta) csrf = csrfMeta.content;
+
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+
+        fetch('/admin/piste/api/close/' + pid, {
+            method:  'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type':     'application/json',
+                'X-CSRF-Token':     csrf
+            }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+            document.dispatchEvent(new CustomEvent('ui:confirmation.close'));
+            _pendingCloseEl = null;
+            if (data.success && el) {
+                el.style.transition    = 'opacity .25s ease, max-height .3s ease';
+                el.style.overflow      = 'hidden';
+                el.style.maxHeight     = el.scrollHeight + 'px';
+                el.style.opacity       = '1';
+                requestAnimationFrame(function () {
+                    el.style.opacity       = '0';
+                    el.style.maxHeight     = '0';
+                    el.style.marginBottom  = '0';
+                    el.style.paddingBottom = '0';
+                    setTimeout(function () { el.remove(); }, 320);
+                });
+            }
+        })
+        .catch(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+            document.dispatchEvent(new CustomEvent('ui:confirmation.error', {
+                detail: { message: 'Une erreur est survenue.' }
+            }));
+        });
+    });
+
+    function dbPisteCtxDelete() {
+        var menu = document.getElementById('dbPisteCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_el || !_pid) return;
+
+        var nom  = _el.dataset.pisteNom || ('Piste #' + _pid);
+        _pendingDeleteEl = _el;
+
+        document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
+            detail: {
+                title: 'Supprimer la piste',
+                body: 'Cette action est irréversible. La piste et toutes ses données seront définitivement supprimées.',
+                itemDescriptions: [nom],
+                onConfirm: {
+                    type: 'app:db-piste.delete-execute',
+                    payload: { id: _pid }
+                }
+            }
+        }));
+    }
+
+    document.addEventListener('cerveau:event', function (e) {
+        if (e.detail.type !== 'app:db-piste.delete-execute') return;
+        var p = e.detail.payload;
+        var pid = p && p.id;
+        if (!pid) return;
+
+        var el = _pendingDeleteEl;
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+
+        fetch('/admin/piste/api/delete/' + pid, {
+            method: 'DELETE',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/json' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+            document.dispatchEvent(new CustomEvent('ui:confirmation.close'));
+            _pendingDeleteEl = null;
+            if (!el) return;
+            el.style.transition    = 'opacity .25s ease, max-height .3s ease';
+            el.style.overflow      = 'hidden';
+            el.style.maxHeight     = el.scrollHeight + 'px';
+            el.style.opacity       = '1';
+            requestAnimationFrame(function () {
+                el.style.opacity       = '0';
+                el.style.maxHeight     = '0';
+                el.style.marginBottom  = '0';
+                el.style.paddingBottom = '0';
+                setTimeout(function () { el.remove(); }, 320);
+            });
+        })
+        .catch(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+            document.dispatchEvent(new CustomEvent('ui:confirmation.error', {
+                detail: { error: 'La suppression a échoué.' }
+            }));
+            _pendingDeleteEl = null;
+        });
+    });
+
+    // ── Bouton "+" nouvelle piste ─────────────────────────────────────────────
+    function dbPisteNew(btn) {
+        var eid = btn.dataset.entrepriseId;
+        var iid = btn.dataset.inviteId;
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
+            detail: {
+                entityFormCanvas: {
+                    parametres: {
+                        titre_creation:      'Nouvelle piste',
+                        endpoint_form_url:   '/admin/piste/api/get-form',
+                        endpoint_submit_url: '/admin/piste/api/submit'
+                    }
+                },
+                entity:         {},
+                isCreationMode: true,
+                context: {
+                    idEntreprise:     parseInt(eid) || undefined,
+                    idInvite:         parseInt(iid) || undefined,
+                    _dashboardReload: true
+                }
+            }
+        }));
+        setTimeout(function () { document.dispatchEvent(new CustomEvent('app:loading.stop')); }, 600);
+    }
+
+    window.dbPisteToggle  = dbPisteToggle;
+    window.dbPisteSearch  = dbPisteSearch;
+    window.dbPisteCtxOpen = dbPisteCtxOpen;
+    window.dbPisteNew     = dbPisteNew;
+}());
+
+// ── Bloc Bordereaux ────────────────────────────────────────────────────────────
+(function () {
+    var _activeBordMode  = 'j30';
+    var _bordEl          = null;  // details element courant
+    var _bid             = null;  // bordereau id
+    var _beid            = null;  // entreprise id
+    var _biid            = null;  // invite id
+    var _bordTipEl       = null;
+    var _bordTipActive   = false;
+    var _bordPendingDel  = null;
+    var _bordTimer       = null;
+    var _bordObserver    = null;
+
+    // ── Filtre toggle + recherche ──────────────────────────────────────────────
+    function dbBordApplyFilter() {
+        var searchInput = document.querySelector('#db-bord-list input[type="search"]') ||
+                          document.querySelector('input[aria-label="Filtrer les bordereaux"]');
+        var q = searchInput ? searchInput.value.toLowerCase() : '';
+        document.querySelectorAll('.db-bord-item').forEach(function (el) {
+            var matchMode   = el.dataset.group === _activeBordMode;
+            var matchSearch = !q || (el.dataset.searchText || '').indexOf(q) >= 0;
+            el.style.display = (matchMode && matchSearch) ? '' : 'none';
+        });
+    }
+
+    function dbBordToggle(btn) {
+        _activeBordMode = btn.dataset.mode;
+        document.querySelectorAll('#dbBordToggleBar .db-task-toggle').forEach(function (b) {
+            var isActive = b === btn;
+            b.classList.toggle('active', isActive);
+            b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+        dbBordApplyFilter();
+    }
+
+    function dbBordSearch() { dbBordApplyFilter(); }
+
+    // ── Auto-refresh toutes les 3 minutes ─────────────────────────────────────
+    function _bordPad(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function _bordSetStatus(text) {
+        var el = document.getElementById('db-bord-last-update');
+        if (el) el.textContent = text;
+    }
+
+    function refreshBordereaux() {
+        var list = document.getElementById('db-bord-list');
+        if (!list) return;
+        var details = list.closest('details');
+        if (details && !details.open) return;
+        var url = list.dataset.bordereauUrl;
+        if (!url) return;
+
+        _bordSetStatus('Mise à jour en cours…');
+
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.text();
+            })
+            .then(function (html) {
+                list.innerHTML = html;
+                var now = new Date();
+                _bordSetStatus('Dernière mise à jour à ' + _bordPad(now.getHours()) + ':' + _bordPad(now.getMinutes()));
+                dbBordApplyFilter();
+            })
+            .catch(function (err) {
+                _bordSetStatus('Erreur de mise à jour');
+                console.warn('[dashboard] bordereaux refresh failed:', err);
+            });
+    }
+
+    function initDbBordereaux() {
+        var list = document.getElementById('db-bord-list');
+        if (!list) return;
+        var now = new Date();
+        _bordSetStatus('Dernière mise à jour à ' + _bordPad(now.getHours()) + ':' + _bordPad(now.getMinutes()));
+        if (_bordTimer) { clearInterval(_bordTimer); }
+        _bordTimer = setInterval(refreshBordereaux, 180000);
+        dbBordApplyFilter();
+    }
+
+    function _bordObserve() {
+        if (document.getElementById('db-bord-list')) {
+            initDbBordereaux();
+            return;
+        }
+        if (_bordObserver) { _bordObserver.disconnect(); }
+        _bordObserver = new MutationObserver(function (mutations, obs) {
+            if (document.getElementById('db-bord-list')) {
+                obs.disconnect();
+                _bordObserver = null;
+                initDbBordereaux();
+            }
+        });
+        _bordObserver.observe(document.body, { childList: true, subtree: true });
+    }
+    _bordObserve();
+
+    window.refreshBordereaux = refreshBordereaux;
+
+    // ── Tooltip data-bord-tip (suit la souris) ────────────────────────────────
+    function _getOrCreateBordTip() {
+        if (!_bordTipEl) {
+            _bordTipEl = document.createElement('div');
+            _bordTipEl.id = 'db-bord-tip';
+            document.body.appendChild(_bordTipEl);
+        }
+        return _bordTipEl;
+    }
+
+    function _buildBordTipContent(span) {
+        var ref     = span.dataset.bordTipRef      || '—';
+        var assur   = span.dataset.bordTipAssureur || '—';
+        var statut  = span.dataset.bordTipStatut   || '—';
+        var sColor  = span.dataset.bordTipStatutColor || '#adb5bd';
+        var periode = span.dataset.bordTipPeriode  || '—';
+        var recu    = span.dataset.bordTipRecu     || '—';
+        var days    = span.dataset.bordTipDays     || '—';
+
+        return '<table>' +
+            '<tr><td colspan="2" class="tip-section">Bordereau</td></tr>' +
+            '<tr><td>Référence</td><td><strong>' + ref + '</strong></td></tr>' +
+            '<tr><td>Assureur</td><td>' + assur + '</td></tr>' +
+            '<tr><td>Statut</td><td class="tip-statut" style="color:' + sColor + '">' + statut + '</td></tr>' +
+            '<tr><td colspan="2" class="tip-section">Période</td></tr>' +
+            '<tr><td>Couverture</td><td>' + periode + '</td></tr>' +
+            '<tr><td>Reçu le</td><td>' + recu + '</td></tr>' +
+            '<tr><td>Âge</td><td>' + days + ' jour(s)</td></tr>' +
+            '</table>';
+    }
+
+    function _positionBordTip(mx, my) {
+        var t = _bordTipEl;
+        if (!t) return;
+        var offset = 10;
+        var left = mx - t.offsetWidth - offset;
+        var top  = my - t.offsetHeight - offset;
+        if (left < 8) left = mx + offset;
+        if (top < 8) top = my + offset;
+        t.style.left = left + 'px';
+        t.style.top  = top  + 'px';
+    }
+
+    document.addEventListener('mouseover', function (e) {
+        var el = e.target.closest ? e.target.closest('[data-bord-tip]') : null;
+        if (!el) return;
+        var details = el.closest('details');
+        if (details && details.open) return;
+        var t = _getOrCreateBordTip();
+        t.innerHTML = _buildBordTipContent(el);
+        t.style.display = 'block';
+        _bordTipActive = true;
+    });
+    document.addEventListener('mouseout', function (e) {
+        var el = e.target.closest ? e.target.closest('[data-bord-tip]') : null;
+        if (el && !el.contains(e.relatedTarget)) {
+            if (_bordTipEl) _bordTipEl.style.display = 'none';
+            _bordTipActive = false;
+        }
+    });
+    document.addEventListener('mousemove', function (e) {
+        if (_bordTipActive) _positionBordTip(e.clientX, e.clientY);
+    });
+
+    // ── Menu contextuel ────────────────────────────────────────────────────────
+    function dbBordCtxOpen(event, el) {
+        event.preventDefault();
+        event.stopPropagation();
+        _bordEl = el;
+        _bid    = el.dataset.bordId;
+        _beid   = el.dataset.entrepriseId;
+        _biid   = el.dataset.inviteId;
+
+        var menu = document.getElementById('dbBordCtxMenu');
+        if (!menu) return;
+        var mw = 220, mh = 160;
+        var left = (event.clientX + mw > window.innerWidth)  ? window.innerWidth  - mw - 6 : event.clientX;
+        var top  = (event.clientY + mh > window.innerHeight) ? window.innerHeight - mh - 6 : event.clientY;
+        menu.style.left    = left + 'px';
+        menu.style.top     = top  + 'px';
+        menu.style.display = 'block';
+
+        var isCreator = el.dataset.isCreator === '1';
+        var hasNote   = el.dataset.hasNote   === '1';
+
+        var editItem   = document.getElementById('dbBordCtxEditItem');
+        var analyseItem = document.getElementById('dbBordCtxAnalyseItem');
+        var noteItem   = document.getElementById('dbBordCtxNoteItem');
+        var noteSep    = document.getElementById('dbBordCtxNoteSeparator');
+        var deleteItem = document.getElementById('dbBordCtxDeleteItem');
+
+        if (editItem)   editItem.onclick   = dbBordCtxEdit;
+        if (analyseItem) analyseItem.onclick = dbBordCtxAnalyse;
+
+        if (noteItem && noteSep) {
+            if (hasNote) {
+                noteItem.style.display  = '';
+                noteSep.style.display   = '';
+                noteItem.onclick = dbBordCtxNote;
+            } else {
+                noteItem.style.display  = 'none';
+                noteSep.style.display   = 'none';
+                noteItem.onclick = null;
+            }
+        }
+
+        if (deleteItem) {
+            if (isCreator) {
+                deleteItem.style.opacity = '';
+                deleteItem.style.cursor  = 'pointer';
+                deleteItem.onclick = dbBordCtxDelete;
+            } else {
+                deleteItem.style.opacity = '0.38';
+                deleteItem.style.cursor  = 'not-allowed';
+                deleteItem.onclick = null;
+            }
+        }
+
+        setTimeout(function () {
+            document.addEventListener('click', function hide() {
+                var m = document.getElementById('dbBordCtxMenu');
+                if (m) m.style.display = 'none';
+                document.removeEventListener('click', hide);
+            }, { once: true });
+        }, 0);
+    }
+
+    function dbBordCtxEdit() {
+        var menu = document.getElementById('dbBordCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_bid) return;
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
+            detail: {
+                entityFormCanvas: {
+                    parametres: {
+                        titre_modification:  'Modifier le bordereau',
+                        endpoint_form_url:   '/admin/bordereau/api/get-form',
+                        endpoint_submit_url: '/admin/bordereau/api/submit'
+                    }
+                },
+                entity:         { id: parseInt(_bid) },
+                isCreationMode: false,
+                context: {
+                    idEntreprise:     parseInt(_beid) || undefined,
+                    idInvite:         parseInt(_biid) || undefined,
+                    _dashboardReload: true
+                }
+            }
+        }));
+        setTimeout(function () { document.dispatchEvent(new CustomEvent('app:loading.stop')); }, 600);
+    }
+
+    function dbBordCtxAnalyse() {
+        var menu = document.getElementById('dbBordCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_bid) return;
+        window.location.href = '/admin/bordereau/analyse/' + _bid;
+    }
+
+    function dbBordCtxNote() {
+        var menu = document.getElementById('dbBordCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_bid) return;
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        fetch('/admin/bordereau/api/get-linked-note-preview-url/' + _bid, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+            if (data && data.previewUrl) {
+                window.location.href = data.previewUrl;
+            }
+        })
+        .catch(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+        });
+    }
+
+    function dbBordCtxDelete() {
+        var menu = document.getElementById('dbBordCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_bordEl || !_bid) return;
+
+        var nom = (_bordEl.dataset.bordNom || ('Bordereau #' + _bid));
+        _bordPendingDel = _bordEl;
+
+        document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
+            detail: {
+                title: 'Supprimer le bordereau',
+                body: 'Le bordereau sera définitivement supprimé. Cette action est irréversible.',
+                itemDescriptions: [nom],
+                showIrreversible: true,
+                onConfirm: {
+                    type: 'app:db-bord.delete-execute',
+                    payload: { id: _bid }
+                }
+            }
+        }));
+    }
+
+    document.addEventListener('cerveau:event', function (e) {
+        if (e.detail.type !== 'app:db-bord.delete-execute') return;
+        var p = e.detail.payload;
+        var bid = p && p.id;
+        if (!bid) return;
+
+        var elToRemove = _bordPendingDel;
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+
+        fetch('/admin/bordereau/api/delete/' + bid, {
+            method:  'DELETE',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+            document.dispatchEvent(new CustomEvent('ui:confirmation.close'));
+            if (elToRemove && elToRemove.parentNode) {
+                elToRemove.parentNode.removeChild(elToRemove);
+            }
+            _bordPendingDel = null;
+        })
+        .catch(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+            document.dispatchEvent(new CustomEvent('ui:confirmation.error', {
+                detail: { error: 'La suppression a échoué.' }
+            }));
+            _bordPendingDel = null;
+        });
+    });
+
+    // ── Bouton "+" nouveau bordereau ──────────────────────────────────────────
+    function dbBordNew(btn) {
+        var eid = btn.dataset.entrepriseId;
+        var iid = btn.dataset.inviteId;
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
+            detail: {
+                entityFormCanvas: {
+                    parametres: {
+                        titre_creation:      'Nouveau Bordereau',
+                        endpoint_form_url:   '/admin/bordereau/api/get-form',
+                        endpoint_submit_url: '/admin/bordereau/api/submit'
+                    }
+                },
+                isCreationMode: true,
+                context: {
+                    idEntreprise:     parseInt(eid) || undefined,
+                    idInvite:         parseInt(iid) || undefined,
+                    _dashboardReload: true
+                }
+            }
+        }));
+        setTimeout(function () { document.dispatchEvent(new CustomEvent('app:loading.stop')); }, 600);
+    }
+
+    window.dbBordToggle  = dbBordToggle;
+    window.dbBordSearch  = dbBordSearch;
+    window.dbBordCtxOpen = dbBordCtxOpen;
+    window.dbBordNew     = dbBordNew;
+}());
+
+// ── Bloc Notes ─────────────────────────────────────────────────────────────────
+(function () {
+    var _activeNoteMode = 'j30';
+    var _noteEl         = null;  // details element courant
+    var _nid            = null;  // note id
+    var _neid           = null;  // entreprise id
+    var _niid           = null;  // invite id
+    var _noteTipEl      = null;
+    var _noteTipActive  = false;
+    var _notePendingDel = null;
+    var _noteTimer      = null;
+    var _noteObserver   = null;
+
+    // ── Filtre toggle + recherche ──────────────────────────────────────────────
+    function dbNoteApplyFilter() {
+        var searchInput = document.querySelector('#db-note-list input[type="search"]') ||
+                          document.querySelector('input[aria-label="Filtrer les notes"]');
+        var q = searchInput ? searchInput.value.toLowerCase() : '';
+        document.querySelectorAll('.db-note-item').forEach(function (el) {
+            var matchMode   = el.dataset.group === _activeNoteMode;
+            var matchSearch = !q || (el.dataset.searchText || '').indexOf(q) >= 0;
+            el.style.display = (matchMode && matchSearch) ? '' : 'none';
+        });
+    }
+
+    function dbNoteToggle(btn) {
+        _activeNoteMode = btn.dataset.mode;
+        document.querySelectorAll('#dbNoteToggleBar .db-task-toggle').forEach(function (b) {
+            var isActive = b === btn;
+            b.classList.toggle('active', isActive);
+            b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+        dbNoteApplyFilter();
+    }
+
+    function dbNoteSearch() { dbNoteApplyFilter(); }
+
+    // ── Tooltip data-note-tip ─────────────────────────────────────────────────
+    function _getOrCreateNoteTip() {
+        if (!_noteTipEl) {
+            _noteTipEl = document.createElement('div');
+            _noteTipEl.id = 'db-note-tip';
+            document.body.appendChild(_noteTipEl);
+        }
+        return _noteTipEl;
+    }
+
+    function _buildNoteTipContent(span) {
+        var ref    = span.dataset.noteTipRef    || '—';
+        var dest   = span.dataset.noteTipDest   || '—';
+        var type   = span.dataset.noteTipType   || '—';
+        var statut = span.dataset.noteTipStatut || '—';
+        var sColor = span.dataset.noteTipStatutColor || '#adb5bd';
+        var mnt    = span.dataset.noteTipMontant || '—';
+        var solde  = span.dataset.noteTipSolde  || '—';
+        var date   = span.dataset.noteTipDate   || '—';
+        var days   = span.dataset.noteTipDays   || '—';
+
+        return '<table>' +
+            '<tr><td colspan="2" class="tip-section">Note</td></tr>' +
+            '<tr><td>Référence</td><td><strong>' + ref + '</strong></td></tr>' +
+            '<tr><td>Type</td><td>' + type + '</td></tr>' +
+            '<tr><td>Destinataire</td><td>' + dest + '</td></tr>' +
+            '<tr><td>Statut</td><td class="tip-statut" style="color:' + sColor + '">' + statut + '</td></tr>' +
+            '<tr><td colspan="2" class="tip-section">Finances</td></tr>' +
+            '<tr><td>Total</td><td><strong>' + mnt + '</strong></td></tr>' +
+            '<tr><td>Solde</td><td>' + solde + '</td></tr>' +
+            '<tr><td colspan="2" class="tip-section">Date</td></tr>' +
+            '<tr><td>Date</td><td>' + date + '</td></tr>' +
+            '<tr><td>Âge</td><td>' + days + ' jour(s)</td></tr>' +
+            '</table>';
+    }
+
+    function _positionNoteTip(mx, my) {
+        var t = _noteTipEl;
+        if (!t) return;
+        var offset = 10;
+        var left = mx - t.offsetWidth - offset;
+        var top  = my - t.offsetHeight - offset;
+        if (left < 8) left = mx + offset;
+        if (top < 8) top = my + offset;
+        t.style.left = left + 'px';
+        t.style.top  = top  + 'px';
+    }
+
+    document.addEventListener('mouseover', function (e) {
+        var el = e.target.closest ? e.target.closest('[data-note-tip]') : null;
+        if (!el) return;
+        var details = el.closest('details');
+        if (details && details.open) return;
+        var t = _getOrCreateNoteTip();
+        t.innerHTML = _buildNoteTipContent(el);
+        t.style.display = 'block';
+        _noteTipActive = true;
+    });
+    document.addEventListener('mouseout', function (e) {
+        var el = e.target.closest ? e.target.closest('[data-note-tip]') : null;
+        if (el && !el.contains(e.relatedTarget)) {
+            if (_noteTipEl) _noteTipEl.style.display = 'none';
+            _noteTipActive = false;
+        }
+    });
+    document.addEventListener('mousemove', function (e) {
+        if (_noteTipActive) _positionNoteTip(e.clientX, e.clientY);
+    });
+
+    // ── Menu contextuel ────────────────────────────────────────────────────────
+    function dbNoteCtxOpen(event, el) {
+        event.preventDefault();
+        event.stopPropagation();
+        _noteEl = el;
+        _nid    = el.dataset.noteId;
+        _neid   = el.dataset.entrepriseId;
+        _niid   = el.dataset.inviteId;
+
+        var menu = document.getElementById('dbNoteCtxMenu');
+        if (!menu) return;
+        var mw = 220, mh = 200;
+        var left = (event.clientX + mw > window.innerWidth)  ? window.innerWidth  - mw - 6 : event.clientX;
+        var top  = (event.clientY + mh > window.innerHeight) ? window.innerHeight - mh - 6 : event.clientY;
+        menu.style.left    = left + 'px';
+        menu.style.top     = top  + 'px';
+        menu.style.display = 'block';
+
+        var editItem       = document.getElementById('dbNoteCtxEditItem');
+        var previewItem    = document.getElementById('dbNoteCtxPreviewItem');
+        var downloadItem   = document.getElementById('dbNoteCtxDownloadItem');
+        var addPaiItem     = document.getElementById('dbNoteCtxAddPaiementItem');
+        var deleteItem     = document.getElementById('dbNoteCtxDeleteItem');
+
+        if (editItem)     editItem.onclick     = dbNoteCtxEdit;
+        if (previewItem)  previewItem.onclick  = dbNoteCtxPreview;
+        if (downloadItem) downloadItem.onclick = dbNoteCtxDownload;
+        if (addPaiItem)   addPaiItem.onclick   = dbNoteCtxAddPaiement;
+        if (deleteItem)   deleteItem.onclick   = dbNoteCtxDelete;
+
+        setTimeout(function () {
+            document.addEventListener('click', function hide() {
+                var m = document.getElementById('dbNoteCtxMenu');
+                if (m) m.style.display = 'none';
+                document.removeEventListener('click', hide);
+            }, { once: true });
+        }, 0);
+    }
+
+    function dbNoteCtxEdit() {
+        var menu = document.getElementById('dbNoteCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_nid) return;
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
+            detail: {
+                entityFormCanvas: {
+                    parametres: {
+                        titre_modification:  'Modifier la note',
+                        endpoint_form_url:   '/admin/note/api/get-form',
+                        endpoint_submit_url: '/admin/note/api/submit'
+                    }
+                },
+                entity:         { id: parseInt(_nid) },
+                isCreationMode: false,
+                context: {
+                    idEntreprise:     parseInt(_neid) || undefined,
+                    idInvite:         parseInt(_niid) || undefined,
+                    _dashboardReload: true
+                }
+            }
+        }));
+        setTimeout(function () { document.dispatchEvent(new CustomEvent('app:loading.stop')); }, 600);
+    }
+
+    function dbNoteCtxPreview() {
+        var menu = document.getElementById('dbNoteCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_nid) return;
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        fetch('/admin/note/api/get-preview-url/' + _nid, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+            if (data && data.previewUrl) {
+                window.location.href = data.previewUrl;
+            }
+        })
+        .catch(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+        });
+    }
+
+    function dbNoteCtxDownload() {
+        var menu = document.getElementById('dbNoteCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_nid) return;
+        window.location.href = '/admin/note/download-pdf/' + _nid;
+    }
+
+    function dbNoteCtxAddPaiement() {
+        var menu = document.getElementById('dbNoteCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_nid) return;
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
+            detail: {
+                entityFormCanvas: {
+                    parametres: {
+                        titre_creation:      'Ajouter un paiement',
+                        endpoint_form_url:   '/admin/paiement/api/get-form',
+                        endpoint_submit_url: '/admin/paiement/api/submit'
+                    }
+                },
+                isCreationMode: true,
+                parentContext: {
+                    id:        parseInt(_nid),
+                    fieldName: 'note'
+                },
+                context: {
+                    idEntreprise:     parseInt(_neid) || undefined,
+                    _dashboardReload: true
+                }
+            }
+        }));
+        setTimeout(function () { document.dispatchEvent(new CustomEvent('app:loading.stop')); }, 600);
+    }
+
+    function dbNoteCtxDelete() {
+        var menu = document.getElementById('dbNoteCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_noteEl || !_nid) return;
+
+        var nom = (_noteEl.dataset.noteNom || ('Note #' + _nid));
+        _notePendingDel = _noteEl;
+
+        document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
+            detail: {
+                title: 'Supprimer la note',
+                body: 'La note sera définitivement supprimée. Cette action est irréversible.',
+                itemDescriptions: [nom],
+                showIrreversible: true,
+                onConfirm: {
+                    type: 'app:db-note.delete-execute',
+                    payload: { id: _nid }
+                }
+            }
+        }));
+    }
+
+    document.addEventListener('cerveau:event', function (e) {
+        if (e.detail.type !== 'app:db-note.delete-execute') return;
+        var p = e.detail.payload;
+        var nid = p && p.id;
+        if (!nid) return;
+
+        var elToRemove = _notePendingDel;
+        var csrf = document.getElementById('db-note-csrf');
+        var csrfToken = csrf ? csrf.content : '';
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+
+        fetch('/admin/note/api/delete/' + nid, {
+            method:  'DELETE',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN':     csrfToken
+            }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+            document.dispatchEvent(new CustomEvent('ui:confirmation.close'));
+            if (elToRemove && elToRemove.parentNode) {
+                elToRemove.parentNode.removeChild(elToRemove);
+            }
+            _notePendingDel = null;
+        })
+        .catch(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+            document.dispatchEvent(new CustomEvent('ui:confirmation.error', {
+                detail: { error: 'La suppression a échoué.' }
+            }));
+            _notePendingDel = null;
+        });
+    });
+
+    // ── Bouton "+" nouvelle note ───────────────────────────────────────────────
+    function dbNoteNew(btn) {
+        var eid = btn.dataset.entrepriseId;
+        var iid = btn.dataset.inviteId;
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
+            detail: {
+                entityFormCanvas: {
+                    parametres: {
+                        titre_creation:      'Nouvelle Note',
+                        endpoint_form_url:   '/admin/note/api/get-form',
+                        endpoint_submit_url: '/admin/note/api/submit'
+                    }
+                },
+                isCreationMode: true,
+                context: {
+                    idEntreprise:     parseInt(eid) || undefined,
+                    idInvite:         parseInt(iid) || undefined,
+                    _dashboardReload: true
+                }
+            }
+        }));
+        setTimeout(function () { document.dispatchEvent(new CustomEvent('app:loading.stop')); }, 600);
+    }
+
+    // ── Auto-refresh toutes les 5 minutes ─────────────────────────────────────
+    function _notePad(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function _noteSetStatus(text) {
+        var el = document.getElementById('db-note-last-update');
+        if (el) el.textContent = text;
+    }
+
+    function refreshNotes() {
+        var list = document.getElementById('db-note-list');
+        if (!list) return;
+        var details = list.closest('details');
+        if (details && !details.open) return;
+        var url = list.dataset.notesUrl;
+        if (!url) return;
+
+        _noteSetStatus('Mise à jour en cours…');
+
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.text();
+            })
+            .then(function (html) {
+                list.innerHTML = html;
+                var now = new Date();
+                _noteSetStatus('Dernière mise à jour à ' + _notePad(now.getHours()) + ':' + _notePad(now.getMinutes()));
+                dbNoteApplyFilter();
+            })
+            .catch(function (err) {
+                _noteSetStatus('Erreur de mise à jour');
+                console.warn('[dashboard] notes refresh failed:', err);
+            });
+    }
+
+    function initDbNotes() {
+        var list = document.getElementById('db-note-list');
+        if (!list) return;
+        var now = new Date();
+        _noteSetStatus('Dernière mise à jour à ' + _notePad(now.getHours()) + ':' + _notePad(now.getMinutes()));
+        if (_noteTimer) { clearInterval(_noteTimer); }
+        _noteTimer = setInterval(refreshNotes, 300000);
+        dbNoteApplyFilter();
+    }
+
+    function _noteObserve() {
+        if (document.getElementById('db-note-list')) {
+            initDbNotes();
+            return;
+        }
+        if (_noteObserver) { _noteObserver.disconnect(); }
+        _noteObserver = new MutationObserver(function (mutations, obs) {
+            if (document.getElementById('db-note-list')) {
+                obs.disconnect();
+                _noteObserver = null;
+                initDbNotes();
+            }
+        });
+        _noteObserver.observe(document.body, { childList: true, subtree: true });
+    }
+    _noteObserve();
+
+    window.refreshNotes  = refreshNotes;
+    window.dbNoteToggle  = dbNoteToggle;
+    window.dbNoteSearch  = dbNoteSearch;
+    window.dbNoteCtxOpen = dbNoteCtxOpen;
+    window.dbNoteNew     = dbNoteNew;
+}());
+
+/* ══════════════════════════════════════════════════════
+   BLOC PRODUCTION — histogramme mensuel (Chart.js)
+   ══════════════════════════════════════════════════════ */
+(function () {
+    var _prodChart    = null;
+    var _prodMode     = 'bar';
+    var _prodCurrency = '€';
+    var _prodTimer    = null;
+    var _prodObserver = null;
+    var _prodTipEl    = null;
+
+    var MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+    var MONTHS_SHORT = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+
+    function _prodPad(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function _prodSetStatus(txt) {
+        var el = document.getElementById('db-prod-last-update');
+        if (el) el.textContent = txt;
+    }
+
+    function _prodFmt(val) {
+        var n = parseFloat(val) || 0;
+        return _prodCurrency + ' ' + n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function _getOrCreateProdTip() {
+        if (!_prodTipEl) {
+            _prodTipEl = document.createElement('div');
+            _prodTipEl.className = 'db-prod-tip';
+            document.body.appendChild(_prodTipEl);
+        }
+        return _prodTipEl;
+    }
+
+    function _prodExternalTooltip(context) {
+        var tooltip = context.tooltip;
+        var tip = _getOrCreateProdTip();
+
+        if (tooltip.opacity === 0) {
+            tip.style.display = 'none';
+            return;
+        }
+
+        var idx = tooltip.dataPoints && tooltip.dataPoints[0] ? tooltip.dataPoints[0].dataIndex : -1;
+        if (idx < 0) { tip.style.display = 'none'; return; }
+
+        var val = tooltip.dataPoints[0].raw;
+        var monthName = MONTHS[idx];
+        var year = (context.chart.canvas.closest('[data-prod-year]') || document.getElementById('db-prod-chart-wrapper') || {}).dataset
+            ? (document.getElementById('db-prod-chart-wrapper') || {}).dataset.prodYear || ''
+            : '';
+
+        tip.innerHTML =
+            '<div style="font-weight:600;color:#0047AB;margin-bottom:2px;">' + monthName + (year ? ' ' + year : '') + '</div>' +
+            '<div style="font-size:.82rem;">Encaissé : <strong>' + _prodFmt(val) + '</strong></div>';
+
+        var chartPos = context.chart.canvas.getBoundingClientRect();
+        var x = chartPos.left + window.scrollX + tooltip.caretX;
+        var y = chartPos.top  + window.scrollY + tooltip.caretY;
+
+        var offset = 12;
+        var left = x - tip.offsetWidth - offset;
+        var top  = y - tip.offsetHeight - offset;
+        if (left < 8) left = x + offset;
+        if (top  < 8) top  = y + offset;
+        tip.style.left    = left + 'px';
+        tip.style.top     = top  + 'px';
+        tip.style.display = 'block';
+    }
+
+    function _buildChartConfig(data, mode) {
+        var isLine = mode === 'line';
+        return {
+            type: mode,
+            data: {
+                labels: MONTHS_SHORT,
+                datasets: [{
+                    label: 'Encaissements',
+                    data: data,
+                    backgroundColor: isLine ? 'rgba(0,71,171,.12)' : 'rgba(0,71,171,.75)',
+                    borderColor: '#0047AB',
+                    borderWidth: isLine ? 2 : 1,
+                    borderRadius: isLine ? 0 : 5,
+                    pointBackgroundColor: '#0047AB',
+                    pointRadius: isLine ? 4 : 0,
+                    pointHoverRadius: isLine ? 6 : 0,
+                    hoverBackgroundColor: isLine ? 'rgba(0,71,171,.25)' : 'rgba(0,71,171,1)',
+                    fill: isLine,
+                    tension: isLine ? 0.35 : 0,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 800,
+                    easing: 'easeOutQuart',
+                    delay: function (ctx) {
+                        return ctx.type === 'data' ? ctx.dataIndex * 55 : 0;
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        enabled: false,
+                        external: _prodExternalTooltip,
+                        mode: 'index',
+                        intersect: false,
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 11 }, color: '#6c757d' }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0,0,0,.05)' },
+                        ticks: {
+                            font: { size: 11 },
+                            color: '#6c757d',
+                            callback: function (v) {
+                                if (v >= 1000) return _prodCurrency + ' ' + (v / 1000).toLocaleString('fr-FR') + 'k';
+                                return _prodCurrency + ' ' + v;
+                            }
+                        }
+                    }
+                },
+                onHover: function (event, elements, chart) {
+                    chart.canvas.style.cursor = elements.length ? 'pointer' : 'default';
+                }
+            }
+        };
+    }
+
+    function _createChart(data, mode) {
+        var canvas = document.getElementById('db-prod-chart');
+        if (!canvas) return;
+        if (_prodChart) { _prodChart.destroy(); _prodChart = null; }
+        _prodChart = new Chart(canvas, _buildChartConfig(data, mode));
+    }
+
+    function initDbProduction() {
+        var wrapper = document.getElementById('db-prod-chart-wrapper');
+        if (!wrapper) return;
+
+        _prodCurrency = wrapper.dataset.prodCurrency || '€';
+        var rawData   = JSON.parse(wrapper.dataset.prodMonthly || '[]');
+
+        _createChart(rawData, _prodMode);
+
+        var now = new Date();
+        _prodSetStatus('Dernière mise à jour à ' + _prodPad(now.getHours()) + ':' + _prodPad(now.getMinutes()));
+
+        if (_prodTimer) clearInterval(_prodTimer);
+        _prodTimer = setInterval(refreshProduction, 180000);
+    }
+
+    function refreshProduction() {
+        var wrapper = document.getElementById('db-prod-chart-wrapper');
+        if (!wrapper || !_prodChart) return;
+        var details = wrapper.closest('details');
+        if (details && !details.open) return;
+        var url = wrapper.dataset.prodUrl;
+        if (!url) return;
+
+        _prodSetStatus('Mise à jour en cours…');
+
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(function (json) {
+                _prodCurrency = json.currency || _prodCurrency;
+                _prodChart.data.datasets[0].data = json.monthly;
+                _prodChart.update('active');
+                var now = new Date();
+                _prodSetStatus('Dernière mise à jour à ' + _prodPad(now.getHours()) + ':' + _prodPad(now.getMinutes()));
+            })
+            .catch(function (err) {
+                _prodSetStatus('Erreur de mise à jour');
+                console.warn('[dashboard] production refresh failed:', err);
+            });
+    }
+
+    function dbProdToggleMode(btn) {
+        if (!btn) return;
+        var mode = btn.dataset.mode;
+        if (mode === _prodMode) return;
+        _prodMode = mode;
+
+        var bar = document.querySelector('.db-task-toggle[data-mode="bar"]');
+        var line = document.querySelector('.db-task-toggle[data-mode="line"]');
+        if (bar)  { bar.classList.toggle('active',  mode === 'bar');  bar.setAttribute('aria-pressed', mode === 'bar' ? 'true' : 'false'); }
+        if (line) { line.classList.toggle('active', mode === 'line'); line.setAttribute('aria-pressed', mode === 'line' ? 'true' : 'false'); }
+
+        var wrapper = document.getElementById('db-prod-chart-wrapper');
+        var data = _prodChart ? _prodChart.data.datasets[0].data : (wrapper ? JSON.parse(wrapper.dataset.prodMonthly || '[]') : []);
+        _createChart(data, _prodMode);
+    }
+
+    function _prodObserveDOM() {
+        if (document.getElementById('db-prod-chart-wrapper')) {
+            initDbProduction();
+            return;
+        }
+        if (_prodObserver) { _prodObserver.disconnect(); }
+        _prodObserver = new MutationObserver(function (mutations, obs) {
+            if (document.getElementById('db-prod-chart-wrapper')) {
+                obs.disconnect();
+                _prodObserver = null;
+                initDbProduction();
+            }
+        });
+        _prodObserver.observe(document.body, { childList: true, subtree: true });
+    }
+
+    document.addEventListener('mouseleave', function (e) {
+        if (_prodTipEl && e.target && e.target.closest && e.target.closest('#db-prod-chart')) {
+            _prodTipEl.style.display = 'none';
+        }
+    }, true);
+
+    _prodObserveDOM();
+
+    window.refreshProduction = refreshProduction;
+    window.dbProdToggleMode  = dbProdToggleMode;
+}());

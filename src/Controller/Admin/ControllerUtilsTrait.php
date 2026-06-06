@@ -88,7 +88,9 @@ trait ControllerUtilsTrait
     private function validateWorkspaceAccess(int $idEntreprise, int $idInvite): array
     {
         $entreprise = $this->entrepriseRepository->find($idEntreprise) ?? throw $this->createNotFoundException("L'entreprise n'a pas été trouvée pour générer le formulaire.");
-        $invite = $this->inviteRepository->find($idInvite) ?? throw $this->createNotFoundException("L'invité n'a pas été trouvé.");
+        $invite = $idInvite
+            ? ($this->inviteRepository->find($idInvite) ?? throw $this->createNotFoundException("L'invité n'a pas été trouvé."))
+            : $this->getInvite();
 
         if ($invite->getEntreprise()->getId() !== $entreprise->getId()) {
             throw $this->createAccessDeniedException("L'invité n'appartient pas à l'entreprise spécifiée.");
@@ -313,6 +315,9 @@ trait ControllerUtilsTrait
             $searchResult = $this->searchService->search($entityClass, $criteria, $entreprise, $parentContext);
             $data = $searchResult['data'];
 
+            // Preload batch avant le calcul des indicateurs (évite N×M lazy-loads pour Cotation/Avenant).
+            $this->canvasBuilder->batchPreloadForCollection($data);
+
             // CORRECTION : Charger les valeurs calculées pour chaque entité de la liste.
             // C'est le chaînon manquant qui empêchait les attributs comme 'compensation' d'être calculés.
             $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
@@ -411,6 +416,10 @@ trait ControllerUtilsTrait
             }
         }
 
+        // Preload batch des relations avant le calcul des indicateurs (entité existante uniquement).
+        if ($entity->getId() !== null) {
+            $this->canvasBuilder->batchPreloadForCollection([$entity]);
+        }
         // Hydratation avant la génération du canevas pour que le Provider
         // évalue correctement le solde (évite le solde NULL).
         $this->loadCalculatedValues(null, $entity);
@@ -589,7 +598,10 @@ trait ControllerUtilsTrait
             // les champs qui ne sont pas directement en base de données.
             $this->loadCalculatedValues(null, $entity);
 
-            $jsonEntity = $this->serializer->serialize($entity, 'json', ['groups' => 'list:read']);
+            $jsonEntity = $this->serializer->serialize($entity, 'json', [
+                'groups' => 'list:read',
+                'circular_reference_handler' => fn($object) => method_exists($object, 'getId') ? $object->getId() : null,
+            ]);
             return $this->json(['message' => 'Enregistrée avec succès!', 'entity' => json_decode($jsonEntity)]);
         }
 
@@ -657,6 +669,8 @@ trait ControllerUtilsTrait
         }
         $parentEntity = $this->findParentOrNew($parentEntityClass, $id);
 
+        // Preload batch des relations avant le calcul des indicateurs (évite N lazy-loads).
+        $this->canvasBuilder->batchPreloadForCollection([$parentEntity]);
         // Hydratation systématique pour maintenir l'état du bouton d'ajout.
         $this->loadCalculatedValues(null, $parentEntity);
 
@@ -673,6 +687,9 @@ trait ControllerUtilsTrait
             $totalUnit = '';
             $data = $parentEntity->{'get' . ucfirst($collectionName)}();
             $entityClass = $collectionMap[$collectionName];
+
+            // Preload inconditionnel — couvre totalizableField ET les collections sans champ totalisable.
+            $this->canvasBuilder->batchPreloadForCollection($data->toArray());
 
             if ($totalizableField) {
                 $total = 0;
@@ -713,6 +730,8 @@ trait ControllerUtilsTrait
         }
         $data = $parentEntity->$getter();
         $entityClass = $collectionMap[$collectionName];
+        // Preload des relations avant renderCollectionOrList (évite N×M lazy-loads).
+        $this->canvasBuilder->batchPreloadForCollection($data->toArray());
         return $this->renderCollectionOrList($usage, $entityClass, $parentEntity, $id, $data, $collectionName, $totalizableField, $secondaryField, $secondaryLabel);
     }
 

@@ -1,90 +1,87 @@
-{# ── Stat circulaire : taux de collecte ── #}
-<div class="card border-0 shadow-sm mb-3">
-    <div class="card-body text-center py-3">
-        <p class="small fw-semibold mb-2" style="color:#0047AB;">Encaissements {{ 'now'|date('Y') }}</p>
-
-        {% set total = paiementsTotaux %}
-        <div class="position-relative d-inline-block mb-2">
-            <canvas id="dbCollecteChart" width="110" height="110"></canvas>
-            <div class="position-absolute top-50 start-50 translate-middle text-center">
-                <span class="fw-bold" style="color:#0047AB;font-size:.9rem;">
-                    {{ total|number_format(0, ',', ' ') }} $
-                </span>
+<div id="db-sidebar-content" data-workspace-url="/admin/entreprise_dashbord/sidebar/{{ entreprise.id }}">
+    <div data-controller="lazy-block"
+         data-lazy-block-url-value="/admin/entreprise_dashbord/block/tasks/{{ entreprise.id }}">
+        {# Skeleton tasks header : titre + 3 lignes #}
+        <div class="db-skeleton-block mb-3 p-3 d-flex flex-column gap-3" style="height:180px;">
+            <div class="db-skel-line" style="width:45%;height:.9rem;"></div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="db-skel-circle" style="width:26px;height:26px;"></div>
+                <div class="flex-grow-1 d-flex flex-column gap-2">
+                    <div class="db-skel-line" style="width:70%;"></div>
+                    <div class="db-skel-line" style="width:35%;height:.55rem;"></div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="db-skel-circle" style="width:26px;height:26px;"></div>
+                <div class="flex-grow-1 d-flex flex-column gap-2">
+                    <div class="db-skel-line" style="width:55%;"></div>
+                    <div class="db-skel-line" style="width:35%;height:.55rem;"></div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="db-skel-circle" style="width:26px;height:26px;"></div>
+                <div class="flex-grow-1 d-flex flex-column gap-2">
+                    <div class="db-skel-line" style="width:62%;"></div>
+                    <div class="db-skel-line" style="width:35%;height:.55rem;"></div>
+                </div>
             </div>
         </div>
-        <script>
-        (function(){
-            var ctx = document.getElementById('dbCollecteChart');
-            if(ctx && typeof Chart !== 'undefined'){
-                new Chart(ctx, {
-                    type: 'doughnut',
-                    data: { datasets: [{ data: [{{ total }}, 1], backgroundColor: ['#0047AB','#e9ecef'], borderWidth: 0 }] },
-                    options: { cutout: '75%', plugins: { legend: { display: false }, tooltip: { enabled: false } }, animation: { duration: 600 } }
-                });
-            }
-        })();
-        </script>
-
-        {% if utilisateur is defined %}
-            <p class="small text-muted mb-0 mt-2">
-                Bonjour, <strong>{{ utilisateur.prenom ?? utilisateur.email }}</strong>
-            </p>
-        {% endif %}
-    </div>
-</div>
-
-{# ── Graphique mensuel ── #}
-<div class="card border-0 shadow-sm mb-3">
-    <div class="card-body p-3">
-        <p class="small fw-semibold mb-2" style="color:#0047AB;">Encaissements par mois</p>
-        <canvas id="dbParMoisChart" style="max-height:150px;"></canvas>
-        <script>
-        (function(){
-            var ctx = document.getElementById('dbParMoisChart');
-            if(ctx && typeof Chart !== 'undefined'){
-                new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: {{ parMois.labels|json_encode|raw }},
-                        datasets: [{
-                            data: {{ parMois.data|json_encode|raw }},
-                            backgroundColor: '#0047AB',
-                            borderRadius: 4
-                        }]
-                    },
-                    options: {
-                        plugins: { legend: { display: false } },
-                        scales: { y: { beginAtZero: true, ticks: { maxTicksLimit: 4 } } },
-                        animation: { duration: 600 }
-                    }
-                });
-            }
-        })();
-        </script>
-    </div>
-</div>
-
-{# ── Top assureurs ── #}
-<div class="card border-0 shadow-sm">
-    <div class="card-body p-3">
-        <p class="small fw-semibold mb-2" style="color:#0047AB;">Top assureurs</p>
-        {% if topAssureurs|length > 0 %}
-            {% for row in topAssureurs %}
-                <div class="d-flex justify-content-between align-items-center py-2 {% if not loop.last %}border-bottom{% endif %}">
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
-                             style="width:32px;height:32px;background:#0047AB;font-size:.75rem;flex-shrink:0;">
-                            {{ row.nom|first|upper }}
-                        </div>
-                        <span class="small text-truncate" style="max-width:100px;" title="{{ row.nom }}">{{ row.nom }}</span>
-                    </div>
-                    <span class="badge rounded-pill" style="background:#e8f0fb;color:#0047AB;">
-                        {{ row.nbPolices }} police{{ row.nbPolices > 1 ? 's' : '' }}
-                    </span>
+        {# Skeleton liste tâches : 5 lignes avec badge date #}
+        <div class="db-skeleton-block mb-3 p-3 d-flex flex-column gap-3" style="height:280px;">
+            <div class="d-flex align-items-center gap-2">
+                <div class="db-skel-circle" style="width:26px;height:26px;"></div>
+                <div class="flex-grow-1 d-flex flex-column gap-2">
+                    <div class="db-skel-line" style="width:65%;"></div>
+                    <div class="db-skel-line" style="width:35%;height:.55rem;"></div>
                 </div>
-            {% endfor %}
-        {% else %}
-            <p class="text-muted small mb-0">Aucune donnée.</p>
-        {% endif %}
+                <div class="db-skel-line" style="width:48px;height:.65rem;flex-shrink:0;"></div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="db-skel-circle" style="width:26px;height:26px;"></div>
+                <div class="flex-grow-1 d-flex flex-column gap-2">
+                    <div class="db-skel-line" style="width:50%;"></div>
+                    <div class="db-skel-line" style="width:35%;height:.55rem;"></div>
+                </div>
+                <div class="db-skel-line" style="width:48px;height:.65rem;flex-shrink:0;"></div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="db-skel-circle" style="width:26px;height:26px;"></div>
+                <div class="flex-grow-1 d-flex flex-column gap-2">
+                    <div class="db-skel-line" style="width:72%;"></div>
+                    <div class="db-skel-line" style="width:35%;height:.55rem;"></div>
+                </div>
+                <div class="db-skel-line" style="width:48px;height:.65rem;flex-shrink:0;"></div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="db-skel-circle" style="width:26px;height:26px;"></div>
+                <div class="flex-grow-1 d-flex flex-column gap-2">
+                    <div class="db-skel-line" style="width:45%;"></div>
+                    <div class="db-skel-line" style="width:35%;height:.55rem;"></div>
+                </div>
+                <div class="db-skel-line" style="width:48px;height:.65rem;flex-shrink:0;"></div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="db-skel-circle" style="width:26px;height:26px;"></div>
+                <div class="flex-grow-1 d-flex flex-column gap-2">
+                    <div class="db-skel-line" style="width:58%;"></div>
+                    <div class="db-skel-line" style="width:35%;height:.55rem;"></div>
+                </div>
+                <div class="db-skel-line" style="width:48px;height:.65rem;flex-shrink:0;"></div>
+            </div>
+        </div>
     </div>
+
+    {# Classements — fermé par défaut, chargement différé #}
+    <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
+        <summary class="card-header border-0 bg-white py-2 px-3">
+            <div class="d-flex align-items-center gap-2">
+                <twig:UX:Icon name="mdi:podium-gold" style="width:14px;height:14px;color:#0047AB;" />
+                <span class="small fw-semibold" style="color:#0047AB;">Classements</span>
+                <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron ms-auto" style="width:15px;height:15px;color:#6c757d;flex-shrink:0;" />
+            </div>
+        </summary>
+        <div data-controller="lazy-block"
+             data-lazy-block-url-value="/admin/entreprise_dashbord/block/top-lists/{{ entreprise.id }}">
+        </div>
+    </details>
 </div>

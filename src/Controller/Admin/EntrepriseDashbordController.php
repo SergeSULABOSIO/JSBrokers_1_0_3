@@ -10,7 +10,9 @@ use App\DTO\CriteresRechercheDashBordDTO;
 use App\Repository\EntrepriseRepository;
 use App\Services\DashboardDataProvider;
 use App\Services\JSBTableauDeBordBuilder;
+use App\Services\ServiceMonnaies;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -73,22 +75,241 @@ class EntrepriseDashbordController extends AbstractController
         ]);
     }
 
-    #[Route('/workspace/{idEntreprise}', name: 'workspace', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
-    public function loadWorkspaceComponent(int $idEntreprise, DashboardDataProvider $provider): Response
+    #[Route('/workspace/{idEntreprise}', name: 'workspace', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
+    public function loadWorkspaceComponent(int $idEntreprise): Response
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
 
         return $this->render('components/_tableau_de_bord_component.html.twig', [
-            'utilisateur'     => $user,
+            'utilisateur' => $user,
+            'entreprise'  => $entreprise,
+        ]);
+    }
+
+    #[Route('/block/kpis/{idEntreprise}', name: 'block_kpis', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadBlockKpis(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): Response
+    {
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $debut = new DateTimeImmutable("1/1/" . date('Y') . " 00:00");
+        $fin   = new DateTimeImmutable("12/31/" . date('Y') . " 23:59");
+
+        return $this->render('components/dashboard/_block_kpis.html.twig', [
+            'entreprise'       => $entreprise,
+            'paiementsTotaux'  => $provider->getPaiementsTotaux($entreprise, $debut, $fin),
+            'policiesActives'  => $provider->getPoliciesActives($entreprise),
+            'primesTotales'    => $provider->getPrimesTotales($entreprise),
+            'retrocommissions' => $provider->getRetrocommissionsTotales($entreprise),
+            'taxes'            => $provider->getTaxesTotales($entreprise),
+            'commissions'      => $provider->getCommissionsTotales($entreprise),
+            'revenusBreakdown' => $provider->getRevenusPercusBreakdown($entreprise),
+            'deviseCode'       => $serviceMonnaies->getCodeMonnaieAffichage() ?? '€',
+        ]);
+    }
+
+    #[Route('/block/renewals/{idEntreprise}', name: 'block_renewals', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadBlockRenewals(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): Response
+    {
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
+        return $this->render('components/dashboard/_renewals.html.twig', [
             'entreprise'      => $entreprise,
-            'paiementsTotaux' => $provider->getPaiementsTotaux($entreprise),
-            'policiesActives' => $provider->getPoliciesActives($entreprise),
-            'nbRenouvellements' => $provider->getNbRenouvellements30j($entreprise),
-            'renouvellements' => $provider->getRenouvellements30j($entreprise),
-            'parMois'         => $provider->getProductionParMois($entreprise),
-            'topAssureurs'    => $provider->getTopAssureurs($entreprise),
+            'renouvellements' => $provider->getAllRenouvellements($entreprise),
+            'deviseCode'      => $serviceMonnaies->getCodeMonnaieAffichage() ?? '€',
+        ]);
+    }
+
+    #[Route('/renewals-fragment/{idEntreprise}', name: 'renewals_fragment', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadRenewalsFragment(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): Response
+    {
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
+        return $this->render('components/dashboard/_renewals_list.html.twig', [
+            'entreprise'      => $entreprise,
+            'renouvellements' => $provider->getAllRenouvellements($entreprise),
+            'deviseCode'      => $serviceMonnaies->getCodeMonnaieAffichage() ?? '€',
+        ]);
+    }
+
+    #[Route('/block/encaissements/{idEntreprise}', name: 'block_encaissements', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadBlockEncaissements(int $idEntreprise, DashboardDataProvider $provider): Response
+    {
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
+        return $this->render('components/dashboard/_encaissements.html.twig', [
+            'entreprise'           => $entreprise,
+            'derniersEncaissements' => $provider->getDerniersEncaissements($entreprise),
+        ]);
+    }
+
+    #[Route('/encaissements-fragment/{idEntreprise}', name: 'encaissements_fragment', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadEncaissementsFragment(int $idEntreprise, DashboardDataProvider $provider): Response
+    {
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
+        return $this->render('components/dashboard/_encaissements_list.html.twig', [
+            'derniersEncaissements' => $provider->getDerniersEncaissements($entreprise),
+        ]);
+    }
+
+    #[Route('/block/tasks/{idEntreprise}', name: 'block_tasks', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadBlockTasks(int $idEntreprise, DashboardDataProvider $provider): Response
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
+        return $this->render('components/dashboard/_block_tasks.html.twig', [
+            'utilisateur'      => $user,
+            'entreprise'       => $entreprise,
+            'derniersFeedbacks' => $provider->getDerniersFeedbacks($entreprise),
+            'taches'           => $provider->getTachesNonCloses($entreprise),
+        ]);
+    }
+
+    #[Route('/block/top-lists/{idEntreprise}', name: 'block_top_lists', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadBlockTopLists(int $idEntreprise, DashboardDataProvider $provider): Response
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
+        return $this->render('components/dashboard/_block_top_lists.html.twig', [
+            'utilisateur'       => $user,
+            'entreprise'        => $entreprise,
+            'topAssureurs'      => $provider->getTopAssureursAvecIndicateurs($entreprise),
+            'topAssures'        => $provider->getTopAssuresAvecIndicateurs($entreprise),
+            'topRisques'        => $provider->getTopRisquesAvecIndicateurs($entreprise),
+            'topIntermediaires' => $provider->getTopIntermediairesAvecIndicateurs($entreprise),
+        ]);
+    }
+
+    #[Route('/sidebar/{idEntreprise}', name: 'sidebar', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadSidebarFragment(int $idEntreprise): Response
+    {
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
+        return $this->render('components/dashboard/_sidebar.html.twig', [
+            'entreprise' => $entreprise,
+        ]);
+    }
+
+    #[Route('/feedbacks-fragment/{idEntreprise}', name: 'feedbacks_fragment', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadFeedbacksFragment(int $idEntreprise, DashboardDataProvider $provider): Response
+    {
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        return $this->render('components/dashboard/_feedbacks_list.html.twig', [
+            'derniersFeedbacks' => $provider->getDerniersFeedbacks($entreprise),
+        ]);
+    }
+
+    #[Route('/block/pistes/{idEntreprise}', name: 'block_pistes', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadBlockPistes(int $idEntreprise, DashboardDataProvider $provider): Response
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        return $this->render('components/dashboard/_block_pistes.html.twig', [
+            'utilisateur' => $user,
+            'entreprise'  => $entreprise,
+            'pistes'      => $provider->getPistesEnCours($entreprise),
+        ]);
+    }
+
+    #[Route('/pistes-fragment/{idEntreprise}', name: 'pistes_fragment', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadPistesFragment(int $idEntreprise, DashboardDataProvider $provider): Response
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        return $this->render('components/dashboard/_pistes_list.html.twig', [
+            'utilisateur' => $user,
+            'entreprise'  => $entreprise,
+            'pistes'      => $provider->getPistesEnCours($entreprise),
+        ]);
+    }
+
+    #[Route('/block/bordereaux/{idEntreprise}', name: 'block_bordereaux', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadBlockBordereaux(int $idEntreprise, DashboardDataProvider $provider): Response
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        return $this->render('components/dashboard/_block_bordereaux.html.twig', [
+            'utilisateur' => $user,
+            'entreprise'  => $entreprise,
+            'bordereaux'  => $provider->getDerniersBordereaux($entreprise),
+        ]);
+    }
+
+    #[Route('/block/notes/{idEntreprise}', name: 'block_notes', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadBlockNotes(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): Response
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        return $this->render('components/dashboard/_block_notes.html.twig', [
+            'utilisateur' => $user,
+            'entreprise'  => $entreprise,
+            'notes'       => $provider->getDerniersNotes($entreprise),
+            'deviseCode'  => $serviceMonnaies->getCodeMonnaieAffichage() ?? '$',
+        ]);
+    }
+
+    #[Route('/notes-fragment/{idEntreprise}', name: 'notes_fragment', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadNotesFragment(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): Response
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        return $this->render('components/dashboard/_notes_list.html.twig', [
+            'utilisateur' => $user,
+            'entreprise'  => $entreprise,
+            'notes'       => $provider->getDerniersNotes($entreprise),
+            'deviseCode'  => $serviceMonnaies->getCodeMonnaieAffichage() ?? '$',
+        ]);
+    }
+
+    #[Route('/bordereaux-fragment/{idEntreprise}', name: 'bordereaux_fragment', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadBordereauFragment(int $idEntreprise, DashboardDataProvider $provider): Response
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        return $this->render('components/dashboard/_bordereaux_list.html.twig', [
+            'utilisateur' => $user,
+            'entreprise'  => $entreprise,
+            'bordereaux'  => $provider->getDerniersBordereaux($entreprise),
+        ]);
+    }
+
+    #[Route('/block/production/{idEntreprise}', name: 'block_production', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadBlockProduction(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): Response
+    {
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $monthly = $provider->getProductionMensuelle($entreprise);
+
+        return $this->render('components/dashboard/_block_production.html.twig', [
+            'entreprise'  => $entreprise,
+            'monthly'     => array_values($monthly),
+            'year'        => (int) date('Y'),
+            'deviseCode'  => $serviceMonnaies->getCodeMonnaieAffichage() ?? '€',
+            'prodDataUrl' => $this->generateUrl('admin.entreprise_dashboard.production_data', ['idEntreprise' => $idEntreprise]),
+        ]);
+    }
+
+    #[Route('/production-data/{idEntreprise}', name: 'production_data', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadProductionData(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): JsonResponse
+    {
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $monthly = $provider->getProductionMensuelle($entreprise);
+
+        return new JsonResponse([
+            'monthly'  => array_values($monthly),
+            'year'     => (int) date('Y'),
+            'currency' => $serviceMonnaies->getCodeMonnaieAffichage() ?? '€',
+            'total'    => array_sum($monthly),
         ]);
     }
 }

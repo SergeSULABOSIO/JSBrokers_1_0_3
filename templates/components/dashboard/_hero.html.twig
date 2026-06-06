@@ -1,12 +1,160 @@
-<div class="db-hero rounded-3 p-4 mb-3 text-white" style="background: linear-gradient(135deg, #0047AB 0%, #003080 100%);">
-    <div class="d-flex justify-content-between align-items-center">
+<details class="db-hero db-dashboard-block rounded-3 mb-3 text-white"
+         style="background: linear-gradient(135deg, #0047AB 0%, #003380 100%);">
+
+    <summary class="d-flex justify-content-between align-items-center p-4">
         <div>
-            <p class="mb-1 opacity-75 small text-uppercase fw-semibold">Revenus perçus {{ 'now'|date('Y') }}</p>
-            <h2 class="fw-bold mb-1">{{ paiementsTotaux|number_format(0, ',', ' ') }} $</h2>
-            <p class="mb-0 opacity-75 small">Total des paiements encaissés sur l'exercice en cours</p>
+            <p class="mb-1 small text-uppercase fw-semibold" style="opacity:.65;">Revenus perçus {{ 'now'|date('Y') }}</p>
+            <h2 class="fw-bold mb-1">{{ paiementsTotaux|number_format(2, ',', ' ') }} $</h2>
+            <p class="mb-0 small" style="opacity:.65;">Total des paiements encaissés sur l'exercice en cours</p>
         </div>
-        <div class="opacity-25">
-            <twig:UX:Icon name="healthicons:money-bag" style="width:80px;height:80px;" />
+        <div class="d-flex align-items-center gap-2">
+            <div class="opacity-25">
+                <twig:UX:Icon name="healthicons:money-bag" style="width:72px;height:72px;" />
+            </div>
+            <twig:UX:Icon name="mdi:chevron-down" class="db-hero-chevron" style="width:22px;height:22px;" />
+        </div>
+    </summary>
+
+    {% if revenusBreakdown is defined %}
+    <div class="px-4 pb-4" style="border-top:1px solid rgba(255,255,255,.15);">
+        <p class="db-hero-section-title mt-3 mb-2">Ventilation des revenus</p>
+
+        <div class="row g-2">
+
+            {# Ligne 1 : TTC / Réserve #}
+            <div class="col-6">
+                <div class="db-hero-metric" tabindex="0" role="button"
+                     data-meta-tip="{{ revenusBreakdown.tipTTC|e }}">
+                    <div class="d-flex align-items-start gap-2">
+                        <span class="db-hero-metric-icon flex-shrink-0">
+                            <twig:UX:Icon name="hugeicons:money-bag-02" style="width:14px;height:14px;" />
+                        </span>
+                        <div class="flex-grow-1">
+                            <span class="db-hero-metric-label">Revenu TTC</span>
+                            <span class="db-hero-metric-value">{{ revenusBreakdown.ttc|number_format(2, ',', ' ') }} $</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="db-hero-metric" tabindex="0" role="button"
+                     data-meta-tip="{{ revenusBreakdown.tipReserve|e }}">
+                    <div class="d-flex align-items-start gap-2">
+                        <span class="db-hero-metric-icon flex-shrink-0">
+                            <twig:UX:Icon name="hugeicons:wallet-02" style="width:14px;height:14px;" />
+                        </span>
+                        <div class="flex-grow-1">
+                            <span class="db-hero-metric-label">Réserve</span>
+                            <span class="db-hero-metric-value">{{ revenusBreakdown.reserve|number_format(2, ',', ' ') }} $</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Ligne 2 : HT / Taxe courtier #}
+            <div class="col-6">
+                <div class="db-hero-metric" tabindex="0" role="button"
+                     data-meta-tip="{{ revenusBreakdown.tipHT|e }}">
+                    <div class="d-flex align-items-start gap-2">
+                        <span class="db-hero-metric-icon flex-shrink-0">
+                            <twig:UX:Icon name="tdesign:bill-filled" style="width:14px;height:14px;" />
+                        </span>
+                        <div class="flex-grow-1">
+                            <span class="db-hero-metric-label">Revenu HT</span>
+                            <span class="db-hero-metric-value">{{ revenusBreakdown.ht|number_format(2, ',', ' ') }} $</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="db-hero-metric" tabindex="0" role="button"
+                     data-meta-tip="{{ revenusBreakdown.taxeCourtier.tip|e }}">
+                    <div class="d-flex align-items-start gap-2">
+                        <span class="db-hero-metric-icon flex-shrink-0">
+                            <twig:UX:Icon name="tabler:tax" style="width:14px;height:14px;" />
+                        </span>
+                        <div class="flex-grow-1">
+                            <span class="db-hero-metric-label">
+                                {{ revenusBreakdown.taxeCourtier.nom }}
+                                {% if revenusBreakdown.taxeCourtier.taux > 0 %}
+                                    {% set t = revenusBreakdown.taxeCourtier.taux %}
+                                    ({{ t == t|round(0, 'floor') ? t|number_format(0) : t|number_format(1, ',') }}&nbsp;%)
+                                {% endif %}
+                            </span>
+                            <span class="db-hero-metric-value">{{ revenusBreakdown.taxeCourtier.montant|number_format(2, ',', ' ') }} $</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Ligne 3 : Revenu Pur / Taxe assureur #}
+            <div class="col-6">
+                <div class="db-hero-metric" tabindex="0" role="button"
+                     data-meta-tip="{{ revenusBreakdown.tipPur|e }}">
+                    <div class="d-flex align-items-start gap-2">
+                        <span class="db-hero-metric-icon flex-shrink-0">
+                            <twig:UX:Icon name="hugeicons:money-bag-01" style="width:14px;height:14px;" />
+                        </span>
+                        <div class="flex-grow-1">
+                            <span class="db-hero-metric-label">Revenu Pur</span>
+                            <span class="db-hero-metric-value">{{ revenusBreakdown.pur|number_format(2, ',', ' ') }} $</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="db-hero-metric" tabindex="0" role="button"
+                     data-meta-tip="{{ revenusBreakdown.taxeAssureur.tip|e }}">
+                    <div class="d-flex align-items-start gap-2">
+                        <span class="db-hero-metric-icon flex-shrink-0">
+                            <twig:UX:Icon name="hugeicons:bank" style="width:14px;height:14px;" />
+                        </span>
+                        <div class="flex-grow-1">
+                            <span class="db-hero-metric-label">
+                                {{ revenusBreakdown.taxeAssureur.nom }}
+                                {% if revenusBreakdown.taxeAssureur.taux > 0 %}
+                                    {% set t = revenusBreakdown.taxeAssureur.taux %}
+                                    ({{ t == t|round(0, 'floor') ? t|number_format(0) : t|number_format(1, ',') }}&nbsp;%)
+                                {% endif %}
+                            </span>
+                            <span class="db-hero-metric-value">{{ revenusBreakdown.taxeAssureur.montant|number_format(2, ',', ' ') }} $</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Ligne 4 : Rétrocommission / Solde restant dû #}
+            <div class="col-6">
+                <div class="db-hero-metric" tabindex="0" role="button"
+                     data-meta-tip="{{ revenusBreakdown.tipRetrocom|e }}">
+                    <div class="d-flex align-items-start gap-2">
+                        <span class="db-hero-metric-icon flex-shrink-0">
+                            <twig:UX:Icon name="carbon:partnership" style="width:14px;height:14px;" />
+                        </span>
+                        <div class="flex-grow-1">
+                            <span class="db-hero-metric-label">Rétrocommission</span>
+                            <span class="db-hero-metric-value">{{ revenusBreakdown.retrocom|number_format(2, ',', ' ') }} $</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="db-hero-metric db-hero-solde" tabindex="0" role="button"
+                     data-meta-tip="{{ revenusBreakdown.tipSolde|e }}">
+                    <div class="d-flex align-items-start gap-2">
+                        <span class="db-hero-metric-icon flex-shrink-0">
+                            <twig:UX:Icon name="mdi:bank-outline" style="width:14px;height:14px;" />
+                        </span>
+                        <div class="flex-grow-1">
+                            <span class="db-hero-metric-label">Solde restant dû</span>
+                            <span class="db-hero-metric-value">{{ revenusBreakdown.solde|number_format(2, ',', ' ') }} $</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
-</div>
+    {% endif %}
+
+</details>

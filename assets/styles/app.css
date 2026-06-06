@@ -65,6 +65,20 @@ a:active {
     background-color: #0047AB !important;
 }
 
+.btn-cobalt {
+    background-color: #0047AB;
+    border-color: #0047AB;
+    color: #ffffff;
+}
+.btn-cobalt:hover, .btn-cobalt:focus {
+    background-color: #003380;
+    border-color: #003380;
+    color: #ffffff;
+}
+.btn-cobalt:focus {
+    box-shadow: 0 0 0 0.25rem rgba(0, 71, 171, 0.35);
+}
+
 .cacherComposant {
     display: none;
 }
@@ -845,16 +859,37 @@ textarea:hover,
 }
 
 .app-dialog .modal-header {
-    border-bottom: none;
-    flex-shrink: 0; /* Empêche l'en-tête de se réduire. */
+    border-bottom: 3px solid #0047AB;
+    flex-shrink: 0;
 }
 
-/* On garde un fond blanc pour le footer pour la cohérence */
 .app-dialog .modal-footer,
 #confirmation-dialog-modal .modal-footer {
-    background-color: #ffffff;
+    background-color: #f8f9fa;
     border-top: 1px solid #dee2e6;
-    flex-shrink: 0; /* Empêche le pied de page de se réduire. */
+    flex-shrink: 0;
+}
+
+/* 4.2 Barre de progression du dialog */
+.dialog-progress-container {
+    height: 3px;
+    background-color: #e9ecef;
+    overflow: hidden;
+    flex-shrink: 0;
+    display: none;
+}
+.dialog-progress-container.is-loading {
+    display: block;
+}
+.dialog-progress-bar {
+    width: 35%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent 0%, #0047AB 40%, #0047AB 60%, transparent 100%);
+    animation: dialogProgressSlide 1.4s infinite ease-in-out;
+}
+@keyframes dialogProgressSlide {
+    0%   { transform: translateX(-200%); }
+    100% { transform: translateX(500%); }
 }
 
 /* 2. On dit au corps de prendre tout l'espace restant et d'organiser les colonnes */
@@ -1119,7 +1154,7 @@ textarea:hover,
 
 :root {
   --sk-bg: #e9ecef;        /* Gris de base (Bootstrap-like) */
-  --sk-soft: #f2f2f2;      /* Couleur de transition douce */
+  --sk-soft: #f3f3f3;      /* Couleur de transition douce */
   --sk-light: #ffffff;     /* Le cœur du reflet (très brillant) */
 
   /* Couleurs pour le mode sombre */
@@ -2263,3 +2298,391 @@ textarea:hover,
     min-height: 1rem; /* Évite le saut de layout quand le texte apparaît */
     transition: color 0.2s ease-in-out;
 }
+
+/* ================================================================== */
+/* SECTION TABLEAU DE BORD — styles extraits des templates Twig        */
+/* ================================================================== */
+
+/* ── Squelettes de chargement ── */
+@keyframes db-skeleton-shimmer {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+.db-skeleton-block {
+    background: #e9ecef;
+    border-radius: 0.5rem;
+    position: relative;
+    overflow: hidden;
+}
+.db-skeleton-block::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.55) 50%,
+        transparent 100%
+    );
+    animation: db-skeleton-shimmer 1.5s ease-in-out infinite;
+}
+.db-skel-line {
+    height: .7rem;
+    border-radius: .35rem;
+    background: rgba(0, 0, 0, 0.07);
+}
+.db-skel-circle {
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.07);
+    flex-shrink: 0;
+}
+.db-skel-bar {
+    border-radius: .25rem .25rem 0 0;
+    background: rgba(0, 0, 0, 0.07);
+    align-self: flex-end;
+    flex: 1;
+}
+
+/* ── KPI Carousel ── */
+.kpi-carousel-wrapper {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #0047AB #f3f3f3;
+}
+.kpi-carousel-wrapper::-webkit-scrollbar { height: 4px; }
+.kpi-carousel-wrapper::-webkit-scrollbar-track { background: #f3f3f3; }
+.kpi-carousel-wrapper::-webkit-scrollbar-thumb { background: #0047AB; border-radius: 2px; }
+
+.kpi-carousel {
+    display: flex;
+    gap: 0.75rem;
+    padding-bottom: 0.25rem;
+}
+
+.kpi-card-slot {
+    flex: 0 0 210px;
+    width: 210px;
+}
+
+.kpi-card {
+    height: 115px;
+    border: 0 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    user-select: none;
+    border-radius: 0.5rem;
+    text-decoration: none;
+}
+.kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+}
+.kpi-card:active {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.10);
+}
+.kpi-card:focus-visible {
+    outline: 2px solid #0047AB;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px rgba(0, 71, 171, 0.30);
+}
+
+.kpi-tax-rate {
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(0, 0, 0, 0.07);
+    margin-left: 4px;
+    vertical-align: middle;
+}
+.kpi-card-slot--taxes {
+    flex: 0 0 240px;
+    width: 240px;
+}
+.kpi-card--taxes {
+    height: auto !important;
+    min-height: 115px;
+}
+
+/* ── Hero bloc "Revenus perçus" ── */
+details.db-hero { transition: box-shadow .2s ease; cursor: pointer; }
+details.db-hero:hover { box-shadow: 0 8px 28px rgba(0,0,0,.24) !important; }
+details.db-hero > summary { list-style: none; cursor: pointer; border-radius: .375rem; }
+details.db-hero > summary::-webkit-details-marker { display: none; }
+details.db-hero > summary:focus-visible { outline: 2px solid rgba(255,255,255,.55); outline-offset: 2px; }
+details.db-hero[open] > summary { border-radius: .375rem .375rem 0 0; }
+.db-hero-chevron { transition: transform .25s ease; opacity: .70; flex-shrink: 0; }
+details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
+.db-hero-metric { background: rgba(255,255,255,.09); border-radius: .375rem; padding: .5rem .75rem;
+    cursor: pointer; transition: background .15s ease, box-shadow .15s ease, transform .1s ease; }
+.db-hero-metric:hover { background: rgba(255,255,255,.16); box-shadow: 0 2px 8px rgba(0,0,0,.18); }
+.db-hero-metric:active { transform: scale(0.97); background: rgba(255,255,255,.22); }
+.db-hero-metric--selected { background: rgba(255,255,255,.22) !important; box-shadow: 0 0 0 2px rgba(255,255,255,.45); }
+.db-hero-metric:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255,255,255,.55); }
+.db-hero-metric-icon { color: rgba(255,255,255,.65); display: flex; }
+.db-hero-metric-label { display: block; font-size: .63rem; text-transform: uppercase;
+    letter-spacing: .045em; opacity: .60; margin-bottom: .15rem; }
+.db-hero-metric-value { display: block; font-size: .88rem; font-weight: 600; }
+.db-hero-section-title { font-size: .63rem; text-transform: uppercase;
+    letter-spacing: .06em; opacity: .50; font-weight: 600; margin: 0; }
+.db-hero-solde { border: 1px solid rgba(255,255,255,.28); }
+
+/* ── Renouvellements ── */
+.db-renew-badge {
+    transition: transform 0.18s ease, font-size 0.18s ease;
+    cursor: default;
+    font-size: .68rem;
+}
+.db-renew-badge:hover {
+    transform: scale(1.30);
+    font-size: .78rem;
+}
+
+/* ── Blocs details (top listes, renouvellements, encaissements) ── */
+.db-ass-details { border: 1px solid #e0e0e0; border-radius: .375rem; background: #fff; margin-bottom: .375rem; transition: box-shadow .15s ease, border-color .15s ease; }
+.db-ass-details:last-child { margin-bottom: 0; }
+.db-ass-details:hover { box-shadow: 0 1px 5px rgba(0,71,171,.09); border-color: #ced4da; }
+.db-ass-details[open] { border-color: #dee2e6; box-shadow: 0 2px 8px rgba(0,71,171,.10); }
+.db-ass-details > summary { list-style: none; cursor: pointer; border-radius: .375rem; transition: background .15s ease; }
+.db-ass-details > summary::-webkit-details-marker { display: none; }
+.db-ass-details > summary:hover { background: #f8f9fa; }
+.db-ass-details[open] > summary { border-radius: .375rem .375rem 0 0; background: #f8f9fa; border-bottom: 1px solid #dee2e6; }
+.db-ass-details > summary:focus-visible { outline: 2px solid rgba(0,71,171,.35); outline-offset: 2px; }
+.db-ass-chevron { transition: transform .25s ease; flex-shrink: 0; }
+.db-ass-details[open] > summary .db-ass-chevron { transform: rotate(180deg); }
+.db-ass-details[open] > summary .db-ass-avatar  { background: #003380 !important; }
+
+.db-ass-table { --bs-table-striped-bg: #f8f9fa; --bs-table-hover-bg: #e9ecef; }
+
+.db-badge-market { display:inline-flex; align-items:center; cursor:default;
+    transition: transform .15s ease, box-shadow .15s ease; }
+.db-badge-market:hover { transform: scale(1.25);
+    box-shadow: 0 2px 6px rgba(13,110,253,.25); }
+
+.db-ass-details[open].db-risque > summary .db-ass-avatar { background: #b37200 !important; }
+.db-ass-details[open].db-intermediaire > summary .db-ass-avatar { background: #343a40 !important; }
+
+/* ── Scrolls tâches et similaires ── */
+.db-tasks-scroll { max-height: 380px; overflow-y: auto;
+    scrollbar-width: thin; scrollbar-color: #ced4da #f8f9fa; }
+.db-tasks-scroll::-webkit-scrollbar { width: 5px; }
+.db-tasks-scroll::-webkit-scrollbar-track { background: #f8f9fa; }
+.db-tasks-scroll::-webkit-scrollbar-thumb { background: #ced4da; border-radius: 3px; }
+
+.db-piste-scroll { max-height: 340px; overflow-y: auto;
+    scrollbar-width: thin; scrollbar-color: #ced4da #f8f9fa; }
+.db-piste-scroll::-webkit-scrollbar { width: 5px; }
+.db-piste-scroll::-webkit-scrollbar-track { background: #f8f9fa; }
+.db-piste-scroll::-webkit-scrollbar-thumb { background: #ced4da; border-radius: 3px; }
+
+.db-bord-scroll { max-height: 340px; overflow-y: auto;
+    scrollbar-width: thin; scrollbar-color: #ced4da #f8f9fa; }
+.db-bord-scroll::-webkit-scrollbar { width: 5px; }
+.db-bord-scroll::-webkit-scrollbar-track { background: #f8f9fa; }
+.db-bord-scroll::-webkit-scrollbar-thumb { background: #ced4da; border-radius: 3px; }
+
+.db-note-scroll { max-height: 340px; overflow-y: auto;
+    scrollbar-width: thin; scrollbar-color: #ced4da #f8f9fa; }
+.db-note-scroll::-webkit-scrollbar { width: 5px; }
+.db-note-scroll::-webkit-scrollbar-track { background: #f8f9fa; }
+.db-note-scroll::-webkit-scrollbar-thumb { background: #ced4da; border-radius: 3px; }
+
+#db-note-tip {
+    position: fixed; z-index: 9999; pointer-events: none; display: none;
+    background: #1e2227; color: #e9ecef; border-radius: 6px;
+    font-size: .72rem; padding: 6px 0; min-width: 200px; max-width: 280px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.35);
+}
+#db-note-tip table { width: 100%; border-collapse: collapse; }
+#db-note-tip td { padding: 3px 10px; vertical-align: top; }
+#db-note-tip td:first-child { color: #adb5bd; white-space: nowrap; padding-right: 6px; }
+#db-note-tip .tip-section { color: #0d6efd; font-weight: 600; padding-top: 6px; padding-bottom: 2px; border-top: 1px solid #3d4349; font-size: .68rem; letter-spacing: .03em; text-transform: uppercase; }
+#db-note-tip .tip-section:first-child { border-top: none; padding-top: 3px; }
+#db-note-tip .tip-statut { font-weight: 600; }
+
+#db-bord-tip {
+    position: fixed; z-index: 9999; pointer-events: none; display: none;
+    background: #1e2227; color: #e9ecef; border-radius: 6px;
+    font-size: .72rem; padding: 6px 0; min-width: 200px; max-width: 280px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.35);
+}
+#db-bord-tip table { width: 100%; border-collapse: collapse; }
+#db-bord-tip td { padding: 3px 10px; vertical-align: top; }
+#db-bord-tip td:first-child { color: #adb5bd; white-space: nowrap; padding-right: 6px; }
+#db-bord-tip .tip-section { color: #0d6efd; font-weight: 600; padding-top: 6px; padding-bottom: 2px; border-top: 1px solid #3d4349; font-size: .68rem; letter-spacing: .03em; text-transform: uppercase; }
+#db-bord-tip .tip-section:first-child { border-top: none; padding-top: 3px; }
+#db-bord-tip .tip-statut { font-weight: 600; }
+
+#db-piste-tip {
+    position: fixed; z-index: 9999; pointer-events: none; display: none;
+    background: #1e2227; color: #e9ecef; border-radius: 6px;
+    font-size: .72rem; padding: 6px 0; min-width: 200px; max-width: 280px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.35);
+}
+#db-piste-tip table { width: 100%; border-collapse: collapse; }
+#db-piste-tip td { padding: 3px 10px; vertical-align: top; }
+#db-piste-tip td:first-child { color: #adb5bd; white-space: nowrap; padding-right: 6px; }
+#db-piste-tip .tip-section { color: #0d6efd; font-weight: 600; padding-top: 6px; padding-bottom: 2px; border-top: 1px solid #3d4349; font-size: .68rem; letter-spacing: .03em; text-transform: uppercase; }
+#db-piste-tip .tip-section:first-child { border-top: none; padding-top: 3px; }
+#db-piste-tip .tip-risque { color: #fbbf24; }
+#db-piste-tip .tip-libelle { color: #9ca3af; font-style: italic; font-size: .68rem; padding-top: 1px; padding-bottom: 3px; }
+
+/* ── Blocs details collapsibles (top listes) ── */
+.db-block-details > summary { list-style:none; cursor:pointer; border-radius:.375rem .375rem 0 0; transition: background .15s ease; }
+.db-block-details > summary::-webkit-details-marker { display:none; }
+.db-block-details > summary:hover { background:#f8f9fa; }
+.db-block-details > summary:focus-visible { outline:2px solid rgba(0,71,171,.35); outline-offset:2px; }
+.db-block-chevron { transition: transform .25s ease; flex-shrink:0; }
+.db-block-details[open] > summary .db-block-chevron { transform: rotate(180deg); }
+
+/* ── Toggles tâches ── */
+.db-task-toggle {
+    font-size:.63rem; padding:2px 9px; border-radius:20px; border:1px solid #dee2e6;
+    background:#f8f9fa; color:#6c757d; cursor:pointer; font-weight:500;
+    transition:background .15s, color .15s, border-color .15s, transform .18s ease, font-size .18s ease;
+    white-space:nowrap;
+}
+.db-task-toggle:hover  { background:#e9ecef; color:#212529; border-color:#ced4da; transform:scale(1.15); font-size:.72rem; }
+.db-task-toggle.active { background:#0047AB; color:#fff; border-color:#0047AB; }
+
+.db-task-new-btn {
+    padding:2px 5px; border:1px solid transparent; border-radius:4px;
+    background:transparent; line-height:1; flex-shrink:0; cursor:pointer;
+    transition:background .15s, border-color .15s;
+}
+.db-task-new-btn:hover { background:#e8f0fb; border-color:#0047AB; }
+
+.db-block-add-btn {
+    padding:2px 5px; border:1px solid transparent; border-radius:4px;
+    background:transparent; line-height:1; flex-shrink:0; cursor:pointer;
+    transition:background .15s, border-color .15s;
+}
+.db-block-add-btn:hover { background:#e8f0fb; border-color:#0047AB; }
+
+/* ── Bloc dashboard hover ── */
+.db-dashboard-block { transition: box-shadow .2s ease; }
+.db-dashboard-block:hover { box-shadow: 0 4px 16px rgba(0,71,171,.12) !important; }
+
+/* ── Meta chip ── */
+.db-meta-chip { display: inline-flex; align-items: center; cursor: default; }
+
+/* ── Feedbacks ── */
+.db-fb-scroll { max-height: 380px; overflow-y: auto; overflow-x: hidden;
+    scrollbar-width: thin; scrollbar-color: #ced4da #f8f9fa; }
+.db-fb-scroll::-webkit-scrollbar { width: 5px; }
+.db-fb-scroll::-webkit-scrollbar-track { background: #f8f9fa; }
+.db-fb-scroll::-webkit-scrollbar-thumb { background: #ced4da; border-radius: 3px; }
+.db-fb-item { padding: .45rem .625rem; border: 1px solid #e0e0e0; border-radius: .375rem;
+    background: #fff; margin-bottom: .375rem; cursor: pointer;
+    transition: box-shadow .15s ease, border-color .15s ease, background-color .15s ease, transform .1s ease; }
+.db-fb-item:last-child { margin-bottom: 0; }
+.db-fb-item:hover { box-shadow: 0 1px 5px rgba(0,71,171,.09); border-color: #ced4da; }
+.db-fb-item:active { transform: scale(0.985); background: #e8f0fb; border-color: #0047AB; }
+.db-fb-item--selected { background: #e8f0fb; border-color: #0047AB; box-shadow: 0 0 0 2px rgba(0,71,171,.15); }
+.db-fb-item--selected:hover { box-shadow: 0 0 0 2px rgba(0,71,171,.2); border-color: #0047AB; }
+.db-fb-item:focus-visible { outline: none; border-color: #0047AB; box-shadow: 0 0 0 3px rgba(0,71,171,.35); }
+.db-fb-type-icon { color: #6c757d; }
+.db-fb-meta { display:flex; justify-content:space-between; align-items:baseline; }
+.db-fb-author { font-size:.78rem; font-weight:600; color:#343a40; }
+.db-fb-date { font-size:.7rem; color:#6c757d; white-space:nowrap; }
+.db-fb-task-ref { font-size:.7rem; color:#0047AB; margin:.15rem 0; }
+.db-fb-desc { font-size:.75rem; color:#495057; line-height:1.3; }
+
+/* ── Infobulle méta (data-meta-tip) ── */
+#db-meta-tip {
+    position: fixed; z-index: 9999; pointer-events: none;
+    background: #212529; color: #fff;
+    padding: 4px 10px; border-radius: 6px;
+    font-size: .68rem; white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    transform: translateX(-50%) translateY(-100%);
+    margin-top: -6px;
+    display: none;
+    white-space: pre-wrap;
+    max-width: 280px;
+}
+
+/* ── Infobulle renouvellements (data-renew-tip) ── */
+#db-renew-tip {
+    position:fixed; z-index:9999; pointer-events:none;
+    background:#212529; color:#fff;
+    padding:8px 14px; border-radius:9px;
+    font-size:.68rem;
+    box-shadow:0 4px 18px rgba(0,0,0,.45);
+    display:none;
+    max-width:290px;
+}
+#db-renew-tip table { border-collapse:collapse; width:100%; min-width:230px; }
+#db-renew-tip td { padding:3px 0; vertical-align:top; }
+#db-renew-tip tr + tr td:not(.tip-section) { border-top:1px solid rgba(255,255,255,.06); }
+#db-renew-tip td.tip-section {
+    color:rgba(255,255,255,.38); font-size:.58rem;
+    text-transform:uppercase; letter-spacing:.09em;
+    padding-top:8px; padding-bottom:2px;
+    border-top:1px solid rgba(255,255,255,.13) !important;
+}
+#db-renew-tip tr:first-child td.tip-section { padding-top:0; border-top:none !important; }
+#db-renew-tip td:first-child:not(.tip-section):not(.tip-piste) { color:#9aa5b4; padding-right:16px; white-space:nowrap; }
+#db-renew-tip td:last-child:not(.tip-section):not(.tip-piste) { text-align:right; font-weight:600; letter-spacing:.02em; }
+#db-renew-tip .tip-risque { max-width:155px; word-break:break-word; text-align:right; font-weight:600; }
+#db-renew-tip .tip-piste { padding-top:4px; }
+#db-renew-tip .tip-ok  { color:#4ade80; }
+#db-renew-tip .tip-nok { color:#f87171; font-style:italic; font-weight:400; }
+
+/* ── Infobulle encaissements (data-cash-tip) ── */
+#db-cash-tip {
+    position:fixed; z-index:9999; pointer-events:none;
+    background:#212529; color:#fff;
+    padding:8px 14px; border-radius:9px;
+    font-size:.68rem;
+    box-shadow:0 4px 18px rgba(0,0,0,.45);
+    display:none;
+    max-width:290px;
+}
+#db-cash-tip table { border-collapse:collapse; width:100%; min-width:230px; }
+#db-cash-tip td { padding:3px 0; vertical-align:top; }
+#db-cash-tip tr + tr td:not(.tip-section) { border-top:1px solid rgba(255,255,255,.06); }
+#db-cash-tip td.tip-section {
+    color:rgba(255,255,255,.38); font-size:.58rem;
+    text-transform:uppercase; letter-spacing:.09em;
+    padding-top:8px; padding-bottom:2px;
+    border-top:1px solid rgba(255,255,255,.13) !important;
+}
+#db-cash-tip tr:first-child td.tip-section { padding-top:0; border-top:none !important; }
+#db-cash-tip td:first-child:not(.tip-section):not(.tip-note):not(.tip-libelle) { color:#9aa5b4; padding-right:16px; white-space:nowrap; }
+#db-cash-tip td:last-child:not(.tip-section):not(.tip-note):not(.tip-libelle) { text-align:right; font-weight:600; letter-spacing:.02em; }
+#db-cash-tip .tip-libelle { max-width:220px; word-break:break-word; font-style:italic; color:rgba(255,255,255,.65); padding-top:2px; }
+#db-cash-tip .tip-note { padding-top:4px; }
+#db-cash-tip .tip-solde-ok  { color:#4ade80; }
+#db-cash-tip .tip-solde-due { color:#f87171; }
+#db-cash-tip .tip-sinistre  { color:#f87171; font-style:italic; font-weight:400; }
+
+/* ── Bloc Production (histogramme mensuel) ── */
+#db-prod-chart-wrapper {
+    padding: .5rem .75rem 1rem;
+    position: relative;
+}
+#db-prod-chart {
+    max-height: 230px;
+    width: 100% !important;
+}
+.db-prod-tip {
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+    background: #fff;
+    border: 1px solid rgba(0,71,171,.18);
+    border-radius: 8px;
+    box-shadow: 0 4px 14px rgba(0,71,171,.18);
+    padding: .5rem .75rem;
+    font-size: .78rem;
+    color: #212529;
+    white-space: nowrap;
+    display: none;
+    min-width: 160px;
+}
+

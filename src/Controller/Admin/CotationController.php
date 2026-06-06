@@ -4,6 +4,7 @@ namespace App\Controller\Admin;
 
 use App\Constantes\Constante;
 use App\Entity\Cotation;
+use App\Entity\Tranche;
 use App\Form\CotationType;
 use App\Repository\CotationRepository;
 use App\Repository\InviteRepository;
@@ -79,7 +80,23 @@ class CotationController extends AbstractController
         return $this->handleFormSubmission(
             $request,
             Cotation::class,
-            CotationType::class
+            CotationType::class,
+            function (Cotation $cotation) {
+                if ($cotation->getId() === null && $cotation->getTranches()->isEmpty()) {
+                    $dateBase = new \DateTimeImmutable('today');
+                    $duree = $cotation->getDuree();
+                    $echeanceAt = $duree > 0 ? ($dateBase->modify('+' . $duree . ' months') ?: null) : null;
+                    $cotation->addTranche(
+                        (new Tranche())
+                            ->setNom('Tranche unique')
+                            ->setPourcentage(1.0)
+                            ->setPayableAt($dateBase)
+                            ->setEcheanceAt($echeanceAt)
+                            ->setEntreprise($cotation->getEntreprise())
+                            ->setInvite($cotation->getInvite())
+                    );
+                }
+            }
         );
     }
 
@@ -93,6 +110,51 @@ class CotationController extends AbstractController
     public function query(Request $request)
     {
         return $this->renderViewOrListComponent(Cotation::class, $request, true);
+    }
+
+    #[Route('/api/{id}/tranches/{usage}', name: 'api.get_cotation_tranches', methods: ['GET'])]
+    public function getCotationTranchesApi(int $id, string $usage = 'generic'): Response
+    {
+        $defaultCreated = false;
+        $tranche = null;
+
+        if ($id > 0) {
+            $cotation = $this->em->find(Cotation::class, $id);
+            if ($cotation && $cotation->getTranches()->isEmpty()) {
+                $dateEffet = new \DateTimeImmutable('today');
+                if (!$cotation->getAvenants()->isEmpty()) {
+                    $firstAvenant = $cotation->getAvenants()->first();
+                    if ($firstAvenant->getStartingAt()) {
+                        $dateEffet = $firstAvenant->getStartingAt();
+                    }
+                }
+                $duree = $cotation->getDuree();
+                $echeanceAt = ($duree > 0) ? ($dateEffet->modify('+' . $duree . ' months') ?: null) : null;
+
+                $tranche = (new Tranche())
+                    ->setNom('Tranche unique')
+                    ->setPourcentage(1.0)
+                    ->setPayableAt($dateEffet)
+                    ->setEcheanceAt($echeanceAt)
+                    ->setEntreprise($cotation->getEntreprise())
+                    ->setInvite($cotation->getInvite());
+                $cotation->addTranche($tranche);
+                $this->em->persist($tranche);
+                $this->em->flush();
+                $defaultCreated = true;
+            }
+        }
+
+        $response = $this->handleCollectionApiRequest($id, 'tranches', Cotation::class, $usage);
+
+        if ($defaultCreated && $response->getStatusCode() === 200) {
+            $data = json_decode($response->getContent(), true);
+            $data['defaultCreated'] = true;
+            $data['defaultItemId'] = $tranche->getId();
+            $response->setContent(json_encode($data));
+        }
+
+        return $response;
     }
 
     #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]

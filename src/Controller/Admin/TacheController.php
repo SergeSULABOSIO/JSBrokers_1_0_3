@@ -131,17 +131,29 @@ class TacheController extends AbstractController
     }
 
 
+    #[Route('/api/close/{id}', name: 'api.close', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    public function closeApi(Tache $tache, Request $request): Response
+    {
+        if (!$this->isCsrfTokenValid('db-task-close', $request->headers->get('X-CSRF-Token'))) {
+            return $this->json(['error' => 'Token invalide'], 403);
+        }
+        $tache->setClosed(true);
+        $this->em->flush();
+        return $this->json(['success' => true]);
+    }
+
+
 
     #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
     public function query(Request $request)
     {
         $idInvite = $request->attributes->get('idInvite');
         $invite = $this->inviteRepository->find($idInvite);
-        return $this->renderViewOrListComponent(Tache::class, $request, true, ['executor' => $invite]);
+        return $this->renderViewOrListComponent(Tache::class, $request, true, ['executor' => ['IS_NULL_OR_EQ' => $invite]]);
     }
 
 
-    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]
+    #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
     public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
     {
         return $this->handleCollectionApiRequest($id, $collectionName, Tache::class, $usage);

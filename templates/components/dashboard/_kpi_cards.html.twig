@@ -1,42 +1,132 @@
-<div class="row g-3 mb-3">
+{% set tcTaux = revenusBreakdown.taxeCourtier.taux %}
+{% set taTaux = revenusBreakdown.taxeAssureur.taux %}
 
-    <div class="col-4">
-        <div class="card h-100 border-0 shadow-sm" style="border-left: 4px solid #0047AB !important;">
-            <div class="card-body py-3 px-3">
-                <div class="d-flex align-items-center mb-2">
-                    <twig:UX:Icon name="emojione-monotone:umbrella-with-rain-drops" style="width:20px;height:20px;color:#0047AB;" class="me-2 flex-shrink-0" />
-                    <span class="small text-muted">Polices actives</span>
+<div class="kpi-carousel-wrapper mb-3">
+    <div class="kpi-carousel">
+
+        {# ── Polices actives ── #}
+        <div class="kpi-card-slot">
+            <div class="card kpi-card"
+                 tabindex="0"
+                 role="button"
+                 style="border-left: 4px solid #0047AB !important;"
+                 aria-label="Polices actives : {{ policiesActives }}">
+                <div class="card-body py-3 px-3 d-flex flex-column justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <twig:UX:Icon name="emojione-monotone:umbrella-with-rain-drops"
+                                      style="width:18px;height:18px;color:#0047AB;"
+                                      class="me-2 flex-shrink-0" />
+                        <span class="small text-muted">Polices actives</span>
+                    </div>
+                    <p class="fw-bold fs-4 mb-0" style="color:#0047AB;">{{ policiesActives }}</p>
+                    <p class="small text-muted mb-0">En cours</p>
                 </div>
-                <p class="fw-bold fs-4 mb-0" style="color:#0047AB;">{{ policiesActives }}</p>
-                <p class="small text-muted mb-0">En cours</p>
             </div>
         </div>
-    </div>
 
-    <div class="col-4">
-        <div class="card h-100 border-0 shadow-sm" style="border-left: 4px solid #28a745 !important;">
-            <div class="card-body py-3 px-3">
-                <div class="d-flex align-items-center mb-2">
-                    <twig:UX:Icon name="healthicons:money-bag" style="width:20px;height:20px;color:#28a745;" class="me-2 flex-shrink-0" />
-                    <span class="small text-muted">Revenus encaissés</span>
+        {# ── Primes TTC ── #}
+        <div class="kpi-card-slot">
+            <div class="card kpi-card"
+                 tabindex="0"
+                 role="button"
+                 style="border-left: 4px solid #198754 !important;"
+                 aria-label="Primes TTC : {{ primesTotales|number_format(0, ',', ' ') }} $">
+                <div class="card-body py-3 px-3 d-flex flex-column justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <twig:UX:Icon name="healthicons:money-bag"
+                                      style="width:18px;height:18px;color:#198754;"
+                                      class="me-2 flex-shrink-0" />
+                        <span class="small text-muted">Primes TTC</span>
+                    </div>
+                    <p class="fw-bold fs-5 mb-0" style="color:#198754;">{{ primesTotales|number_format(0, ',', ' ') }} $</p>
+                    <p class="small text-muted mb-0">Polices actives</p>
                 </div>
-                <p class="fw-bold fs-5 mb-0" style="color:#28a745;">{{ paiementsTotaux|number_format(0, ',', ' ') }} $</p>
-                <p class="small text-muted mb-0">Paiements reçus</p>
             </div>
         </div>
-    </div>
 
-    <div class="col-4">
-        <div class="card h-100 border-0 shadow-sm" style="border-left: 4px solid #fd7e14 !important;">
-            <div class="card-body py-3 px-3">
-                <div class="d-flex align-items-center mb-2">
-                    <twig:UX:Icon name="mdi:calendar-refresh" style="width:20px;height:20px;color:#fd7e14;" class="me-2 flex-shrink-0" />
-                    <span class="small text-muted">Renouvellements</span>
+        {# ── Commissions TTC ── #}
+        <div class="kpi-card-slot">
+            <div class="card kpi-card"
+                 tabindex="0"
+                 role="button"
+                 style="border-left: 4px solid #0d6efd !important;"
+                 aria-label="Commissions TTC : {{ commissions|number_format(0, ',', ' ') }} $">
+                <div class="card-body py-3 px-3 d-flex flex-column justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <twig:UX:Icon name="mdi:bank-transfer"
+                                      style="width:18px;height:18px;color:#0d6efd;"
+                                      class="me-2 flex-shrink-0" />
+                        <span class="small text-muted">Commissions TTC</span>
+                    </div>
+                    <p class="fw-bold fs-5 mb-0" style="color:#0d6efd;">{{ commissions|number_format(0, ',', ' ') }} $</p>
+                    <p class="small text-muted mb-0">Polices actives</p>
                 </div>
-                <p class="fw-bold fs-4 mb-0" style="color:#fd7e14;">{{ nbRenouvellements }}</p>
-                <p class="small text-muted mb-0">Dans les 30 jours</p>
             </div>
         </div>
-    </div>
 
+        {# ── Rétrocommission ── #}
+        <div class="kpi-card-slot">
+            <div class="card kpi-card"
+                 tabindex="0"
+                 role="button"
+                 style="border-left: 4px solid #e69500 !important;"
+                 aria-label="Rétrocommission : {{ retrocommissions|number_format(0, ',', ' ') }} $">
+                <div class="card-body py-3 px-3 d-flex flex-column justify-content-between">
+                    <div class="d-flex align-items-center">
+                        <twig:UX:Icon name="mdi:hand-coin"
+                                      style="width:18px;height:18px;color:#e69500;"
+                                      class="me-2 flex-shrink-0" />
+                        <span class="small text-muted">Rétrocommission</span>
+                    </div>
+                    <p class="fw-bold fs-5 mb-0" style="color:#e69500;">{{ retrocommissions|number_format(0, ',', ' ') }} $</p>
+                    <p class="small text-muted mb-0">Polices actives</p>
+                </div>
+            </div>
+        </div>
+
+        {# ── Taxes (groupées : courtier + assureur) ── #}
+        <div class="kpi-card-slot kpi-card-slot--taxes">
+            <div class="card kpi-card kpi-card--taxes"
+                 tabindex="0"
+                 role="region"
+                 style="border-left: 4px solid #6c757d !important;"
+                 aria-label="Taxes — Courtier : {{ revenusBreakdown.taxeCourtier.montant|number_format(0, ',', ' ') }} $ / Assureur : {{ revenusBreakdown.taxeAssureur.montant|number_format(0, ',', ' ') }} $">
+                <div class="card-body py-2 px-3 d-flex flex-column justify-content-between">
+
+                    <div class="d-flex align-items-center gap-1 mb-1">
+                        <twig:UX:Icon name="mdi:percent" style="width:14px;height:14px;color:#6c757d;" class="flex-shrink-0" />
+                        <span class="small fw-semibold" style="color:#6c757d;">Taxes</span>
+                    </div>
+
+                    <div class="d-flex align-items-center justify-content-between gap-1">
+                        <div class="d-flex align-items-center gap-1 overflow-hidden">
+                            <span class="text-truncate" style="font-size:.72rem;color:#6c757d;">{{ revenusBreakdown.taxeCourtier.nom }}</span>
+                            {% if tcTaux > 0 %}
+                                <span class="kpi-tax-rate" style="color:#6c757d;">{{ tcTaux == tcTaux|round ? tcTaux|number_format(0) : tcTaux|number_format(1, ',') }}%</span>
+                            {% endif %}
+                        </div>
+                        <span class="fw-bold" style="font-size:.82rem;color:#6c757d;flex-shrink:0;white-space:nowrap;">
+                            {{ revenusBreakdown.taxeCourtier.montant|number_format(0, ',', ' ') }} $
+                        </span>
+                    </div>
+
+                    <hr class="my-1" style="border-color:rgba(0,0,0,.10);">
+
+                    <div class="d-flex align-items-center justify-content-between gap-1">
+                        <div class="d-flex align-items-center gap-1 overflow-hidden">
+                            <span class="text-truncate" style="font-size:.72rem;color:#495057;">{{ revenusBreakdown.taxeAssureur.nom }}</span>
+                            {% if taTaux > 0 %}
+                                <span class="kpi-tax-rate" style="color:#495057;">{{ taTaux == taTaux|round ? taTaux|number_format(0) : taTaux|number_format(1, ',') }}%</span>
+                            {% endif %}
+                        </div>
+                        <span class="fw-bold" style="font-size:.82rem;color:#495057;flex-shrink:0;white-space:nowrap;">
+                            {{ revenusBreakdown.taxeAssureur.montant|number_format(0, ',', ' ') }} $
+                        </span>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
 </div>

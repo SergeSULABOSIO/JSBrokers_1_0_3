@@ -1,0 +1,149 @@
+{% set _now = date() %}
+{% set countJ30 = 0 %}
+{% set countJ60 = 0 %}
+{% set countJ61plus = 0 %}
+{% for p in derniersEncaissements %}
+    {% set _diff = (_now|date('U') - p.paidAt|date('U')) / 86400 %}
+    {% if _diff <= 30 %}
+        {% set countJ30 = countJ30 + 1 %}
+    {% elseif _diff <= 60 %}
+        {% set countJ60 = countJ60 + 1 %}
+    {% else %}
+        {% set countJ61plus = countJ61plus + 1 %}
+    {% endif %}
+{% endfor %}
+
+{% if derniersEncaissements|length > 0 %}
+    {% if countJ30 == 0 %}
+    <p class="db-enc-item text-muted small px-2 py-4 text-center" data-group="j30">
+        <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucun encaissement dans les 30 derniers jours.
+    </p>
+    {% endif %}
+    {% if countJ60 == 0 %}
+    <p class="db-enc-item text-muted small px-2 py-4 text-center" data-group="j60" style="display:none;">
+        <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucun encaissement entre 31 et 60 jours.
+    </p>
+    {% endif %}
+    {% if countJ61plus == 0 %}
+    <p class="db-enc-item text-muted small px-2 py-4 text-center" data-group="j61plus" style="display:none;">
+        <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucun encaissement au-delà de 60 jours.
+    </p>
+    {% endif %}
+
+    {% for p in derniersEncaissements %}
+        {% set _diff = (_now|date('U') - p.paidAt|date('U')) / 86400 %}
+        {% if _diff <= 30 %}
+            {% set group = 'j30' %}
+        {% elseif _diff <= 60 %}
+            {% set group = 'j60' %}
+        {% else %}
+            {% set group = 'j61plus' %}
+        {% endif %}
+
+        {% set ref      = p.note ? p.note.reference : (p.reference ?? '—') %}
+        {% set libelle  = (p.description ?? '')|striptags %}
+        {% set noteNom  = p.note ? (p.note.nom ?? '') : '' %}
+        {% set noteDesc = p.note ? (p.note.description ?? '') : '' %}
+        {% set searchText = (ref ~ '|' ~ libelle ~ '|' ~ noteNom ~ '|' ~ noteDesc)|lower %}
+
+        <details class="db-ass-details db-enc-item"
+                 data-group="{{ group }}"
+                 data-search-text="{{ searchText|e }}"
+                 {% if group != 'j30' %}style="display:none;"{% endif %}>
+            <summary class="d-flex align-items-center gap-2 py-2 px-1">
+                <div class="db-ass-avatar rounded-circle d-flex align-items-center justify-content-center text-white"
+                     style="width:26px;height:26px;background:#0047AB;flex-shrink:0;">
+                    <twig:UX:Icon name="mdi:cash" style="width:13px;height:13px;" />
+                </div>
+                <span class="small fw-semibold flex-grow-1 text-truncate" style="color:#212529;"
+                      data-cash-tip
+                      data-cash-ref="{{ ref|e }}"
+                      data-cash-montant="{{ p.montant|number_format(0, ',', ' ') ~ ' $' }}"
+                      data-cash-date="{{ p.paidAt|date('d/m/Y') }}"
+                      data-cash-libelle="{{ libelle|slice(0,80)|e }}"
+                      data-cash-note-nom="{{ noteNom|e }}"
+                      data-cash-facture="{{ p.note ? p.note.montantTotal|number_format(0,',', ' ') ~ ' $' : '' }}"
+                      data-cash-solde="{{ p.note ? p.note.solde|number_format(0,',', ' ') ~ ' $' : '' }}"
+                      data-cash-solde-negatif="{{ (p.note and p.note.solde > 0) ? 'true' : '' }}"
+                      data-cash-sent-at="{{ (p.note and p.note.sentAt) ? p.note.sentAt|date('d/m/Y') : '' }}">
+                    {{ ref }}
+                </span>
+                <span class="text-muted" style="font-size:.62rem;flex-shrink:0;white-space:nowrap;">
+                    {{ p.paidAt|date('d/m/Y') }}
+                </span>
+                <span class="fw-semibold small" style="color:#198754;flex-shrink:0;">
+                    {{ p.montant|number_format(0, ',', ' ') }}&nbsp;$
+                </span>
+                <twig:UX:Icon name="mdi:chevron-down" class="db-ass-chevron"
+                              style="width:14px;height:14px;color:#6c757d;" />
+            </summary>
+
+            <div class="px-2 py-2 bg-light rounded-bottom" style="font-size:.73rem;">
+
+                {# Libellé du paiement #}
+                {% if libelle %}
+                <div class="mb-2">
+                    <span style="color:#495057;">
+                        <twig:UX:Icon name="fluent:text-description-16-filled" style="width:11px;height:11px;" class="me-1" />
+                        {{ libelle }}
+                    </span>
+                </div>
+                {% endif %}
+
+                {# Note liée #}
+                <div class="mb-2 {% if libelle %}pt-1{% endif %}" {% if libelle %}style="border-top:1px dashed #dee2e6;"{% endif %}>
+                    {% if p.note %}
+                        <div style="color:#0047AB;">
+                            <twig:UX:Icon name="fluent:document-edit-16-regular" style="width:11px;height:11px;" class="me-1" />
+                            <strong>{{ noteNom }}</strong>
+                        </div>
+                        {% if noteDesc %}
+                        <div class="text-muted mt-1" style="padding-left:15px;">
+                            {{ noteDesc|striptags|slice(0, 120) }}{{ noteDesc|striptags|length > 120 ? '…' : '' }}
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <span style="color:#adb5bd;font-style:italic;">
+                            <twig:UX:Icon name="mdi:shield-alert-outline" style="width:11px;height:11px;" class="me-1" />
+                            Paiement sinistre — aucune note
+                        </span>
+                    {% endif %}
+                </div>
+
+                {# Données financières + dates (si note) #}
+                {% if p.note %}
+                <div class="d-flex gap-3 flex-wrap pt-1" style="border-top:1px dashed #dee2e6;">
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="mdi:receipt-text-outline" style="width:11px;height:11px;" class="me-1" />
+                        Facturé&nbsp;:&nbsp;<strong>{{ p.note.montantTotal|number_format(0, ',', ' ') }}&nbsp;$</strong>
+                    </span>
+                    <span style="color:#198754;">
+                        <twig:UX:Icon name="mdi:cash-check" style="width:11px;height:11px;" class="me-1" />
+                        Encaissé&nbsp;:&nbsp;<strong>{{ p.montant|number_format(0, ',', ' ') }}&nbsp;$</strong>
+                    </span>
+                    <span style="color:{{ p.note.solde > 0 ? '#dc3545' : '#198754' }};">
+                        <twig:UX:Icon name="mdi:cash-minus" style="width:11px;height:11px;" class="me-1" />
+                        Solde dû&nbsp;:&nbsp;<strong>{{ p.note.solde|number_format(0, ',', ' ') }}&nbsp;$</strong>
+                    </span>
+                    {% if p.note.sentAt %}
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="mdi:file-document-outline" style="width:11px;height:11px;" class="me-1" />
+                        Facturé le&nbsp;:&nbsp;<strong>{{ p.note.sentAt|date('d/m/Y') }}</strong>
+                    </span>
+                    {% endif %}
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="mdi:calendar-check" style="width:11px;height:11px;" class="me-1" />
+                        Encaissé le&nbsp;:&nbsp;<strong>{{ p.paidAt|date('d/m/Y') }}</strong>
+                    </span>
+                </div>
+                {% endif %}
+
+            </div>
+        </details>
+    {% endfor %}
+{% else %}
+    <p class="text-muted small mb-0 px-2 py-3 text-center">Aucun encaissement enregistré.</p>
+{% endif %}

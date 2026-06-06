@@ -1,0 +1,97 @@
+{# ── Calcul des compteurs par groupe ── #}
+{% set _now = date() %}
+{% set countJ30    = 0 %}
+{% set countJ60    = 0 %}
+{% set countJ61plus = 0 %}
+{% for b in bordereaux %}
+    {% set _days = (_now|date('U') - b.receivedAt|date('U')) / 86400 %}
+    {% if _days <= 30 %}
+        {% set countJ30 = countJ30 + 1 %}
+    {% elseif _days <= 60 %}
+        {% set countJ60 = countJ60 + 1 %}
+    {% else %}
+        {% set countJ61plus = countJ61plus + 1 %}
+    {% endif %}
+{% endfor %}
+
+{# ── Résolution de l'inviteId courant ── #}
+{% set currentInviteId = '' %}
+{% if utilisateur is defined %}
+    {% for inv in utilisateur.invites %}
+        {% if inv.entreprise is not null and inv.entreprise.id == entreprise.id %}
+            {% set currentInviteId = inv.id %}
+        {% endif %}
+    {% endfor %}
+{% endif %}
+
+<div class="px-3 pt-2 pb-2 bg-white">
+        <div class="d-flex align-items-center gap-2">
+            <div class="d-flex gap-1 flex-wrap" id="dbBordToggleBar">
+                <button class="db-task-toggle active" data-mode="j30"     onclick="dbBordToggle(this)" aria-pressed="true">≤ 30 jrs ({{ countJ30 }})</button>
+                <button class="db-task-toggle"        data-mode="j60"     onclick="dbBordToggle(this)" aria-pressed="false">31-60 jrs ({{ countJ60 }})</button>
+                <button class="db-task-toggle"        data-mode="j61plus" onclick="dbBordToggle(this)" aria-pressed="false">61+ jrs ({{ countJ61plus }})</button>
+            </div>
+            <div class="ms-auto input-group input-group-sm flex-shrink-0" role="search" style="max-width:130px;">
+                <span class="input-group-text border-0 bg-light px-2">
+                    <twig:UX:Icon name="hugeicons:search-01" style="width:13px;height:13px;color:#6c757d;" />
+                </span>
+                <input type="search"
+                       aria-label="Filtrer les bordereaux"
+                       placeholder="Réf., nom, assureur…"
+                       class="form-control form-control-sm border-0 bg-light"
+                       style="font-size:.72rem;"
+                       oninput="dbBordSearch()">
+            </div>
+        </div>
+    </div>
+    <div id="db-bord-list"
+         class="card-body p-2 db-bord-scroll"
+         data-bordereaux-url="/admin/entreprise_dashbord/bordereaux-fragment/{{ entreprise.id }}">
+        {% include 'components/dashboard/_bordereaux_list.html.twig' with {
+            'utilisateur':   utilisateur,
+            'entreprise':    entreprise,
+            'bordereaux':    bordereaux,
+            'currentInviteId': currentInviteId
+        } %}
+    </div>
+
+{# ── CSRF pour la suppression ── #}
+<meta id="db-bord-csrf" content="{{ csrf_token('db-bord-delete') }}">
+
+{# ── Menu contextuel bordereaux ── #}
+<nav id="dbBordCtxMenu" class="context-menu" aria-label="Menu contextuel bordereau" style="display:none;"
+     onmousedown="event.stopPropagation()">
+    <ul role="menu" class="list-unstyled mb-0">
+        <li role="menuitem" tabindex="-1" id="dbBordCtxEditItem"
+            class="d-flex align-items-center gap-2 px-3 py-2" style="cursor:pointer;">
+            <span class="context-menu-icon" aria-hidden="true">
+                <twig:UX:Icon name="tabler:edit" style="width:16px;height:16px;" />
+            </span>
+            <span class="flex-grow-1">Éditer le bordereau</span>
+        </li>
+        <li role="separator" class="separator"></li>
+        <li role="menuitem" tabindex="-1" id="dbBordCtxAnalyseItem"
+            class="d-flex align-items-center gap-2 px-3 py-2" style="cursor:pointer;">
+            <span class="context-menu-icon" aria-hidden="true">
+                <twig:UX:Icon name="boxicons:analyze-filled" style="width:16px;height:16px;" />
+            </span>
+            <span class="flex-grow-1">Analyser</span>
+        </li>
+        <li role="separator" class="separator" id="dbBordCtxNoteSeparator"></li>
+        <li role="menuitem" tabindex="-1" id="dbBordCtxNoteItem"
+            class="d-flex align-items-center gap-2 px-3 py-2" style="cursor:pointer;">
+            <span class="context-menu-icon" aria-hidden="true">
+                <twig:UX:Icon name="fluent:document-edit-16-regular" style="width:16px;height:16px;" />
+            </span>
+            <span class="flex-grow-1">Voir la note</span>
+        </li>
+        <li role="separator" class="separator"></li>
+        <li role="menuitem" tabindex="-1" id="dbBordCtxDeleteItem"
+            class="d-flex align-items-center gap-2 px-3 py-2 is-danger" style="cursor:pointer;">
+            <span class="context-menu-icon" aria-hidden="true">
+                <twig:UX:Icon name="fluent:delete-20-filled" style="width:16px;height:16px;" />
+            </span>
+            <span class="flex-grow-1">Supprimer</span>
+        </li>
+    </ul>
+</nav>

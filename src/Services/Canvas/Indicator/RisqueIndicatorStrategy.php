@@ -19,6 +19,7 @@ class RisqueIndicatorStrategy implements IndicatorCalculationStrategyInterface
     public function calculate(object $entity): array
     {
         /** @var Risque $entity */
+        if ($entity->getEntreprise() === null) return [];
         $stats = $this->calculationHelper->getIndicateursGlobaux($entity->getEntreprise(), false, ['risqueCible' => $entity]);
 
         return [
