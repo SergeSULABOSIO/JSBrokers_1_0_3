@@ -171,7 +171,11 @@ class NotificationSinistreIndicatorStrategy implements IndicatorCalculationStrat
 
     private function getNotificationSinistreIndiceCompletude(NotificationSinistre $sinistre): string
     {
-        $modelesAttendus = $this->getEntreprise()->getModelePieceSinistres();
+        $entreprise = $this->getEntreprise();
+        if (!method_exists($entreprise, 'getModelePieceSinistres')) {
+            return 'N/A';
+        }
+        $modelesAttendus = $entreprise->getModelePieceSinistres();
         $nombreAttendus = $modelesAttendus->count();
 
         if ($nombreAttendus === 0) {
@@ -217,7 +221,11 @@ class NotificationSinistreIndicatorStrategy implements IndicatorCalculationStrat
 
     private function getNotificationSinistreStatusDocumentsAttendus(NotificationSinistre $sinistre): string
     {
-        $modelesAttendus = $this->getEntreprise()->getModelePieceSinistres();
+        $entreprise = $this->getEntreprise();
+        if (!method_exists($entreprise, 'getModelePieceSinistres')) {
+            return 'N/A';
+        }
+        $modelesAttendus = $entreprise->getModelePieceSinistres();
         $nombreAttendus = $modelesAttendus->count();
 
         $typesFournis = [];

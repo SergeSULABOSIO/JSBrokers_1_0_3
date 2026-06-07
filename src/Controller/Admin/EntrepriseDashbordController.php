@@ -171,6 +171,7 @@ class EntrepriseDashbordController extends AbstractController
 
         return $this->render('components/dashboard/_sinistres_list.html.twig', [
             'derniersSinistres' => $provider->getDerniersSinistres($entreprise),
+            'entreprise'        => $entreprise,
         ]);
     }
 
@@ -186,6 +187,32 @@ class EntrepriseDashbordController extends AbstractController
             'entreprise'       => $entreprise,
             'derniersFeedbacks' => $provider->getDerniersFeedbacks($entreprise),
             'taches'           => $provider->getTachesNonCloses($entreprise),
+        ]);
+    }
+
+    #[Route('/block/users/{idEntreprise}', name: 'block_users', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadBlockUsers(int $idEntreprise): Response
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
+        return $this->render('components/dashboard/_block_users.html.twig', [
+            'utilisateur' => $user,
+            'entreprise'  => $entreprise,
+        ]);
+    }
+
+    #[Route('/users-fragment/{idEntreprise}', name: 'users_fragment', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadUsersFragment(int $idEntreprise): Response
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
+        return $this->render('components/dashboard/_users_list.html.twig', [
+            'utilisateur' => $user,
+            'entreprise'  => $entreprise,
         ]);
     }
 

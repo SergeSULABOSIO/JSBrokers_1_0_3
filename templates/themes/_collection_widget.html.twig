@@ -20,8 +20,8 @@
         {{ stimulus_controller('collection', stimulus_options) }} 
         class="collection-manager-accordion {{ isAccordionDisabled ? 'is-disabled' : '' }}"
         id="collection-{{ id }}"
-        data-collection-id-entreprise-value="{{ idEntreprise }}"
-        data-collection-id-invite-value="{{ idInvite }}"
+        data-collection-id-entreprise-value="{{ manager_options.idEntreprise|default('') }}"
+        data-collection-id-invite-value="{{ manager_options.idInvite|default('') }}"
     >
         {# TITRE DE L'ACCORDÉON #}
         <div class="accordion-title"

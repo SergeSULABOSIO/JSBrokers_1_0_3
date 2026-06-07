@@ -1,0 +1,115 @@
+{# ── Résolution de l'invite du user connecté ── #}
+{% set currentInvite = null %}
+{% for inv in entreprise.invites %}
+    {% if inv.utilisateur is not null and inv.utilisateur.email == app.user.email %}
+        {% set currentInvite = inv %}
+    {% endif %}
+{% endfor %}
+{% set isOwner = currentInvite is not null and currentInvite.proprietaire %}
+{% set displayName = utilisateur.prenom ?? utilisateur.nom ?? utilisateur.email %}
+{% set currentInviteId = currentInvite is not null ? currentInvite.id : '' %}
+
+<style>
+.db-users-current {
+    background: linear-gradient(135deg,#e9ecef 0%,#f8f9fa 100%);
+    transition: background .18s ease;
+    cursor: context-menu;
+}
+.db-users-current:hover {
+    background: #e9ecef;
+}
+.db-users-current:hover .db-users-avatar-inner {
+    background: #495057;
+}
+.db-users-member {
+    cursor: context-menu;
+    border-radius: .35rem;
+    transition: background .15s ease;
+}
+.db-users-member:hover {
+    background: #f8f9fa;
+}
+.db-users-member:hover .db-users-avatar-sm {
+    background: #dee2e6;
+}
+</style>
+
+{# ── Section : utilisateur connecté ── #}
+<div class="d-flex flex-column align-items-center py-3 px-2 mb-2 rounded db-users-current"
+     data-invite-id="{{ currentInviteId }}"
+     data-entreprise-id="{{ entreprise.id }}"
+     data-current-invite-id="{{ currentInviteId }}"
+     oncontextmenu="dbInviteCtxOpen(event,this)">
+
+    {# Avatar avec anneau gris #}
+    <div class="position-relative mb-2" style="
+        width:68px;height:68px;border-radius:50%;padding:3px;
+        background:linear-gradient(135deg,#495057 0%,#6c757d 100%);
+        flex-shrink:0;">
+        <div class="db-users-avatar-inner rounded-circle d-flex align-items-center justify-content-center"
+             style="width:62px;height:62px;background:#6c757d;transition:background .18s ease;">
+            <twig:UX:Icon name="mdi:user-circle" style="width:36px;height:36px;color:#fff;" aria-hidden="true" />
+        </div>
+        {% if isOwner %}
+            <span class="position-absolute d-flex align-items-center justify-content-center rounded-circle"
+                  style="width:20px;height:20px;background:#fff;border:2px solid #0047AB;bottom:0;right:0;">
+                <twig:UX:Icon name="ic:twotone-workspace-premium"
+                              style="width:11px;height:11px;color:#0047AB;" aria-hidden="true" />
+            </span>
+        {% endif %}
+    </div>
+
+    <div class="fw-semibold text-truncate db-invite-name"
+         style="font-size:.85rem;color:#212529;max-width:100%;text-align:center;">
+        {{ displayName }}
+    </div>
+    <div style="font-size:.72rem;color:#6c757d;text-align:center;">
+        {{ isOwner ? 'Propriétaire' : 'Collaborateur' }}
+    </div>
+</div>
+
+{# ── Section : autres membres (max 4) ── #}
+{% set otherInvites = [] %}
+{% for inv in entreprise.invites %}
+    {% if inv.utilisateur is null or inv.utilisateur.email != app.user.email %}
+        {% set otherInvites = otherInvites|merge([inv]) %}
+    {% endif %}
+{% endfor %}
+
+{% if otherInvites|length > 0 %}
+    <div class="d-flex flex-column gap-1 px-1">
+        {% for inv in otherInvites|slice(0, 4) %}
+            <div class="d-flex align-items-center gap-2 py-1 px-1 db-users-member"
+                 data-invite-id="{{ inv.id }}"
+                 data-entreprise-id="{{ entreprise.id }}"
+                 data-current-invite-id="{{ currentInviteId }}"
+                 oncontextmenu="dbInviteCtxOpen(event,this)">
+                <div class="db-users-avatar-sm d-flex align-items-center justify-content-center rounded-circle flex-shrink-0"
+                     style="width:28px;height:28px;background:#e9ecef;border:1px solid #dee2e6;transition:background .15s ease;">
+                    <twig:UX:Icon name="hugeicons:mail-send-01"
+                                  style="width:13px;height:13px;color:#6c757d;" aria-hidden="true" />
+                </div>
+                <span class="text-truncate flex-grow-1 small db-invite-name" style="color:#212529;">
+                    {{ inv.nom ?? (inv.utilisateur ? inv.utilisateur.email : '—') }}
+                </span>
+                <span class="badge rounded-pill flex-shrink-0"
+                      title="{{ inv.proprietaire ? 'Propriétaire' : 'Collaborateur' }}"
+                      style="background:{% if inv.proprietaire %}#0047AB{% else %}#6c757d{% endif %};
+                             color:#fff;font-size:.58rem;">
+                    {{ inv.proprietaire ? 'Prop.' : 'Collab.' }}
+                </span>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+{# ── Lien "Voir tous" ── #}
+<div class="pt-2 mt-1" style="border-top:1px solid #dee2e6;">
+    <a href="{{ path('app_espace_de_travail_component.index', {'idInvite': currentInvite is not null ? currentInvite.id : 0, 'idEntreprise': entreprise.id}) }}"
+       class="d-flex align-items-center justify-content-center gap-1 small text-decoration-none"
+       style="color:#0047AB;font-size:.75rem;"
+       onclick="sessionStorage.setItem('lastActiveState_{{ entreprise.id }}', JSON.stringify({component:'_view_manager_administration.html.twig',group:'Administration',entity:'Invite'}))">
+        Voir tous les membres
+        <twig:UX:Icon name="mdi:chevron-right" style="width:14px;height:14px;" aria-hidden="true" />
+    </a>
+</div>

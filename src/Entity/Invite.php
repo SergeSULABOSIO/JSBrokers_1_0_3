@@ -18,6 +18,7 @@ class Invite
 
     public const ACCESS_LECTURE = 0;
     public const ACCESS_ECRITURE = 1;
+    public const ACCESS_MODIFICATION = 2;
     public const ACCESS_SUPPRESSION = 3;
 
 

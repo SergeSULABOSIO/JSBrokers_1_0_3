@@ -178,6 +178,17 @@ class InviteController extends AbstractController
         return $this->handleDeleteApi($invite);
     }
 
+    #[Route('/api/resend-invitation/{id}', name: 'api.resend_invitation', methods: ['POST'])]
+    public function resendInvitation(Invite $invite): JsonResponse
+    {
+        try {
+            $this->dispatcher->dispatch(new InvitationEvent($invite));
+            return $this->json(['success' => true]);
+        } catch (\Throwable) {
+            return $this->json(['success' => false, 'message' => $this->translator->trans('invite_email_sending_error')], 500);
+        }
+    }
+
     #[Route('/api/{id}/{collectionName}/{usage?}', name: 'api.get_collection', requirements: ['id' => Requirement::DIGITS], defaults: ['usage' => 'generic'], methods: ['GET'])]
     public function getCollectionListApi(int $id, string $collectionName, string $usage): Response
     {
