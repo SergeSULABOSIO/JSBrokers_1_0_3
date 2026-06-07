@@ -2658,6 +2658,32 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 #db-cash-tip .tip-solde-due { color:#f87171; }
 #db-cash-tip .tip-sinistre  { color:#f87171; font-style:italic; font-weight:400; }
 
+/* ── Infobulle sinistres (data-sin-tip) ── */
+#db-sin-tip {
+    position:fixed; z-index:9999; pointer-events:none;
+    background:#212529; color:#fff;
+    padding:8px 14px; border-radius:9px;
+    font-size:.68rem;
+    box-shadow:0 4px 18px rgba(0,0,0,.45);
+    display:none;
+    max-width:300px;
+}
+#db-sin-tip table { border-collapse:collapse; width:100%; min-width:240px; }
+#db-sin-tip td { padding:3px 0; vertical-align:top; }
+#db-sin-tip tr + tr td:not(.tip-section) { border-top:1px solid rgba(255,255,255,.06); }
+#db-sin-tip td.tip-section {
+    color:rgba(255,255,255,.38); font-size:.58rem;
+    text-transform:uppercase; letter-spacing:.09em;
+    padding-top:8px; padding-bottom:2px;
+    border-top:1px solid rgba(255,255,255,.13) !important;
+}
+#db-sin-tip tr:first-child td.tip-section { padding-top:0; border-top:none !important; }
+#db-sin-tip td:first-child:not(.tip-section):not(.tip-libelle) { color:#9aa5b4; padding-right:16px; white-space:nowrap; }
+#db-sin-tip td:last-child:not(.tip-section):not(.tip-libelle) { text-align:right; font-weight:600; letter-spacing:.02em; }
+#db-sin-tip .tip-libelle { max-width:240px; word-break:break-word; font-style:italic; color:rgba(255,255,255,.65); padding-top:2px; }
+#db-sin-tip .tip-solde-ok  { color:#4ade80; }
+#db-sin-tip .tip-solde-due { color:#f87171; }
+
 /* ── Bloc Production (histogramme mensuel) ── */
 #db-prod-chart-wrapper {
     padding: .5rem .75rem 1rem;

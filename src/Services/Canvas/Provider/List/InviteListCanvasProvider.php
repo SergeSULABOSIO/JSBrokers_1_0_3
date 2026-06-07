@@ -21,10 +21,9 @@ class InviteListCanvasProvider implements ListCanvasProviderInterface
         return [
             "colonne_principale" => [
                 "titre_colonne" => "Invitations",
-                "texte_principal" => ["attribut_code" => "email", "icone" => "invite"],
+                "texte_principal" => ["attribut_code" => "nom", "icone" => "invite"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
-                    ["attribut_code" => "nom"],
                     ["attribut_prefixe" => "Statut: ", "attribut_code" => "status_string"],
                 ],
             ],

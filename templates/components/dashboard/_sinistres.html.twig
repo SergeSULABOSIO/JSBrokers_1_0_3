@@ -44,3 +44,24 @@
                 'derniersSinistres': derniersSinistres
             } %}
         </div>
+
+<nav id="dbSinCtxMenu" class="context-menu" aria-label="Menu contextuel sinistre" style="display:none;"
+     onmousedown="event.stopPropagation()">
+    <ul role="menu" class="list-unstyled mb-0">
+        <li role="menuitem" tabindex="-1" id="dbSinCtxEditItem"
+            class="d-flex align-items-center gap-2 px-3 py-2" style="cursor:pointer;">
+            <span class="context-menu-icon" aria-hidden="true">
+                <twig:UX:Icon name="tabler:edit" style="width:16px;height:16px;" />
+            </span>
+            <span class="flex-grow-1">Éditer le sinistre</span>
+        </li>
+        <li role="separator" class="separator"></li>
+        <li role="menuitem" tabindex="-1" id="dbSinCtxDeleteItem"
+            class="d-flex align-items-center gap-2 px-3 py-2 is-danger" style="cursor:pointer;">
+            <span class="context-menu-icon" aria-hidden="true">
+                <twig:UX:Icon name="fluent:delete-20-filled" style="width:16px;height:16px;" />
+            </span>
+            <span class="flex-grow-1">Supprimer</span>
+        </li>
+    </ul>
+</nav>

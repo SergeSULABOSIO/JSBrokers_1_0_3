@@ -1,10 +1,3 @@
-{# ── Bonjour ── #}
-{% if utilisateur is defined %}
-<p class="small text-muted mb-2 px-1">
-    Bonjour, <strong>{{ utilisateur.prenom ?? utilisateur.email }}</strong>
-</p>
-{% endif %}
-
 {# ── Feedbacks ── #}
 <div class="card border-0 shadow-sm mb-3 db-dashboard-block">
     <div class="card-header border-0 bg-white py-2 px-3 d-flex align-items-center gap-2">

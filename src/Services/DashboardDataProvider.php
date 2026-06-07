@@ -714,7 +714,7 @@ class DashboardDataProvider
     public function getDerniersSinistres(Entreprise $entreprise, int $limit = 25): array
     {
         $sinistres = $this->em->createQuery(
-            'SELECT s, ass, cli, ris
+            'SELECT s, inv, ass, cli, ris
              FROM App\Entity\NotificationSinistre s
              LEFT JOIN s.invite inv
              LEFT JOIN s.assureur ass
@@ -1239,7 +1239,8 @@ class DashboardDataProvider
                 $code = $ris ? trim(explode(',', $ris->getCode())[0]) : '—';
 
                 if (!isset($byRisque[$risId])) {
-                    $byRisque[$risId] = array_merge(['id' => $risId, 'nom' => $code], array_fill_keys($fields, 0.0));
+                    $label = $ris ? ($code . ' - ' . ($ris->getNomComplet() ?? $code)) : '—';
+                    $byRisque[$risId] = array_merge(['id' => $risId, 'nom' => $code, 'label' => $label], array_fill_keys($fields, 0.0));
                 }
                 if (!isset($byRisqueMonthly[$risId][$month])) {
                     $byRisqueMonthly[$risId][$month] = array_merge(['nom' => $code], array_fill_keys($fields, 0.0));

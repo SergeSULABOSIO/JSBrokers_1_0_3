@@ -84,7 +84,7 @@ class InviteIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
     private function getInviteStatusString(Invite $invite): string
     {
-        $user = $this->utilisateurRepository->findOneBy(['email' => $invite->getEmail()]);
+        $user = $invite->getUtilisateur();
 
         if (!$user) {
             return "Invitation envoyée";

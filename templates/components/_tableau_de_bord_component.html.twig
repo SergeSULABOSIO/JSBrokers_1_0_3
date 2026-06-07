@@ -143,10 +143,18 @@
             <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
                 <summary class="card-header border-0 bg-white py-2 px-3">
                     <div class="d-flex align-items-center gap-2">
-                        <twig:UX:Icon name="mdi:alert-circle-outline" style="width:14px;height:14px;color:#0047AB;" />
+                        <twig:UX:Icon name="hugeicons:accident" style="width:14px;height:14px;color:#0047AB;" />
                         <span class="small fw-semibold" style="color:#0047AB;">Sinistres</span>
                         <small id="db-sin-last-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
-                        <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron ms-auto" style="width:15px;height:15px;color:#6c757d;flex-shrink:0;" />
+                        <button class="db-task-new-btn ms-auto"
+                                data-entreprise-id="{{ entreprise.id }}"
+                                data-invite-id="{{ currentInviteId }}"
+                                onclick="event.stopPropagation(); dbSinistreNew(this)"
+                                title="Nouveau sinistre"
+                                aria-label="Nouveau sinistre">
+                            <twig:UX:Icon name="gridicons:add" style="width:15px;height:15px;color:#0047AB;" />
+                        </button>
+                        <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron" style="width:15px;height:15px;color:#6c757d;flex-shrink:0;" />
                     </div>
                 </summary>
                 <div data-controller="lazy-block"

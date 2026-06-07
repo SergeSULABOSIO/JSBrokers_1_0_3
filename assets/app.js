@@ -218,6 +218,7 @@ export function saveCookie(nom, valeur) {
                 setTimeout(dbTaskApplyFilter, 30);
                 if (typeof window.initDbMetaTips === 'function') window.initDbMetaTips();
                 if (typeof window.initDbFeedbacks === 'function') window.initDbFeedbacks();
+                if (typeof window.initDbUsers === 'function') window.initDbUsers();
             })
             .catch(function (err) {
                 console.warn('[dashboard] sidebar reload failed:', err);
@@ -247,6 +248,7 @@ export function saveCookie(nom, valeur) {
                 setTimeout(dbTaskApplyFilter, 30);
                 if (typeof window.initDbMetaTips === 'function') window.initDbMetaTips();
                 if (typeof window.initDbFeedbacks === 'function') window.initDbFeedbacks();
+                if (typeof window.initDbUsers === 'function') window.initDbUsers();
             })
             .catch(function (err) {
                 console.warn('[dashboard] sidebar reload (direct) failed:', err);
@@ -680,6 +682,100 @@ export function saveCookie(nom, valeur) {
     });
 }());
 
+// ── Tooltip sinistres — data-sin-tip (suit la souris) ───────────────────────
+(function () {
+    var _tip = null;
+    var _active = false;
+
+    function getOrCreate() {
+        if (!_tip) {
+            _tip = document.createElement('div');
+            _tip.id = 'db-sin-tip';
+            document.body.appendChild(_tip);
+        }
+        return _tip;
+    }
+
+    function buildContent(el) {
+        var ref       = el.dataset.sinRef       || '—';
+        var pol       = el.dataset.sinPol       || '';
+        var dateNotif = el.dataset.sinDateNotif || '';
+        var dateOccur = el.dataset.sinDateOccur || '';
+        var assure    = el.dataset.sinAssure    || '';
+        var assureur  = el.dataset.sinAssureur  || '';
+        var risque    = el.dataset.sinRisque    || '';
+        var lieu      = el.dataset.sinLieu      || '';
+        var desc      = el.dataset.sinDesc      || '';
+        var dommage   = el.dataset.sinDommage   || '';
+        var evalVal   = el.dataset.sinEval      || '';
+        var indemnise = el.dataset.sinIndemnise || '';
+        var solde     = el.dataset.sinSolde     || '';
+        var soldeOk   = el.dataset.sinSoldeOk   === 'true';
+
+        var rows = '<tr><td colspan="2" class="tip-section">Sinistre</td></tr>' +
+            '<tr><td>Référence</td><td>' + ref + (pol ? ' / ' + pol : '') + '</td></tr>';
+
+        if (dateNotif) rows += '<tr><td>Notifié le</td><td>' + dateNotif + '</td></tr>';
+        if (dateOccur) rows += '<tr><td>Survenu le</td><td>' + dateOccur + '</td></tr>';
+
+        if (assure || assureur || risque) {
+            rows += '<tr><td colspan="2" class="tip-section">Parties</td></tr>';
+            if (assure)   rows += '<tr><td>Assuré</td><td>' + assure + '</td></tr>';
+            if (assureur) rows += '<tr><td>Assureur</td><td>' + assureur + '</td></tr>';
+            if (risque)   rows += '<tr><td>Risque</td><td>' + risque + '</td></tr>';
+        }
+
+        if (lieu) rows += '<tr><td colspan="2" class="tip-libelle">' + lieu + '</td></tr>';
+        if (desc) rows += '<tr><td colspan="2" class="tip-libelle">' + desc + '</td></tr>';
+
+        if (dommage || evalVal || indemnise || solde) {
+            rows += '<tr><td colspan="2" class="tip-section">Financier</td></tr>';
+            if (dommage)   rows += '<tr><td>Dommage</td><td style="color:#f87171;">' + dommage + '</td></tr>';
+            if (evalVal)   rows += '<tr><td>Évaluation</td><td>' + evalVal + '</td></tr>';
+            if (indemnise) rows += '<tr><td>Indemnisé</td><td style="color:#4ade80;">' + indemnise + '</td></tr>';
+            if (solde) {
+                var soldeClass = soldeOk ? 'tip-solde-ok' : 'tip-solde-due';
+                rows += '<tr><td>Solde</td><td class="' + soldeClass + '">' + solde + '</td></tr>';
+            }
+        }
+
+        return '<table>' + rows + '</table>';
+    }
+
+    function positionTip(mx, my) {
+        var t = _tip;
+        if (!t) return;
+        var offset = 10;
+        var left = mx - t.offsetWidth - offset;
+        var top  = my - t.offsetHeight - offset;
+        if (left < 8) left = mx + offset;
+        if (top < 8)  top  = my + offset;
+        t.style.left = left + 'px';
+        t.style.top  = top  + 'px';
+    }
+
+    document.addEventListener('mouseover', function (e) {
+        var el = e.target.closest ? e.target.closest('[data-sin-tip]') : null;
+        if (!el) return;
+        var details = el.closest('details');
+        if (details && details.open) return;
+        var t = getOrCreate();
+        t.innerHTML = buildContent(el);
+        t.style.display = 'block';
+        _active = true;
+    });
+    document.addEventListener('mouseout', function (e) {
+        var el = e.target.closest ? e.target.closest('[data-sin-tip]') : null;
+        if (el && !el.contains(e.relatedTarget)) {
+            if (_tip) _tip.style.display = 'none';
+            _active = false;
+        }
+    });
+    document.addEventListener('mousemove', function (e) {
+        if (_active) positionTip(e.clientX, e.clientY);
+    });
+}());
+
 // ── Derniers sinistres (toggles + recherche) ─────────────────────────────
 (function () {
     var _activeSinMode = 'j30';
@@ -704,9 +800,34 @@ export function saveCookie(nom, valeur) {
         dbSinistreApplyFilter();
     }
 
+    function dbSinistreNew(btn) {
+        var eid = btn.dataset.entrepriseId;
+        var iid = btn.dataset.inviteId;
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
+            detail: {
+                entityFormCanvas: {
+                    parametres: {
+                        titre_creation:      'Nouveau sinistre',
+                        endpoint_form_url:   '/admin/notificationsinistre/api/get-form',
+                        endpoint_submit_url: '/admin/notificationsinistre/api/submit'
+                    }
+                },
+                isCreationMode: true,
+                context: {
+                    idEntreprise:     parseInt(eid) || undefined,
+                    idInvite:         parseInt(iid) || undefined,
+                    _dashboardReload: true
+                }
+            }
+        }));
+        setTimeout(function () { document.dispatchEvent(new CustomEvent('app:loading.stop')); }, 600);
+    }
+
     window.dbSinistreToggle      = dbSinistreToggle;
     window.dbSinistreSearch      = function () { dbSinistreApplyFilter(); };
     window.dbSinistreApplyFilter = dbSinistreApplyFilter;
+    window.dbSinistreNew         = dbSinistreNew;
 }());
 
 // ── Auto-refresh sinistres (3 min) ───────────────────────────────────────
@@ -770,6 +891,125 @@ export function saveCookie(nom, valeur) {
     _sinObserve();
 
     window.refreshSinistres = refreshSinistres;
+}());
+
+// ── Menu contextuel sinistres (clic droit) ──────────────────────────────────
+(function () {
+    var _sinEl         = null;
+    var _sid           = null;
+    var _seid          = null;
+    var _siid          = null;
+    var _sinPendingDel = null;
+
+    window.dbSinCtxOpen = function (event, el) {
+        event.preventDefault();
+        event.stopPropagation();
+        _sinEl = el;
+        _sid   = el.dataset.sinId;
+        _seid  = el.dataset.entrepriseId;
+        _siid  = el.dataset.inviteId;
+
+        var menu = document.getElementById('dbSinCtxMenu');
+        if (!menu) return;
+        var mw = 220, mh = 120;
+        var left = (event.clientX + mw > window.innerWidth)  ? window.innerWidth  - mw - 6 : event.clientX;
+        var top  = (event.clientY + mh > window.innerHeight) ? window.innerHeight - mh - 6 : event.clientY;
+        menu.style.left    = left + 'px';
+        menu.style.top     = top  + 'px';
+        menu.style.display = 'block';
+
+        var editItem   = document.getElementById('dbSinCtxEditItem');
+        var deleteItem = document.getElementById('dbSinCtxDeleteItem');
+        if (editItem)   editItem.onclick   = dbSinCtxEdit;
+        if (deleteItem) deleteItem.onclick = dbSinCtxDelete;
+
+        setTimeout(function () {
+            document.addEventListener('click', function hide() {
+                var m = document.getElementById('dbSinCtxMenu');
+                if (m) m.style.display = 'none';
+                document.removeEventListener('click', hide);
+            }, { once: true });
+        }, 0);
+    };
+
+    function dbSinCtxEdit() {
+        var menu = document.getElementById('dbSinCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_sid) return;
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
+            detail: {
+                entityFormCanvas: {
+                    parametres: {
+                        titre_modification:  'Modifier le sinistre',
+                        endpoint_form_url:   '/admin/notificationsinistre/api/get-form',
+                        endpoint_submit_url: '/admin/notificationsinistre/api/submit'
+                    }
+                },
+                entity:         { id: parseInt(_sid) },
+                isCreationMode: false,
+                context: {
+                    idEntreprise:     parseInt(_seid) || undefined,
+                    idInvite:         parseInt(_siid) || undefined,
+                    _dashboardReload: true
+                }
+            }
+        }));
+        setTimeout(function () { document.dispatchEvent(new CustomEvent('app:loading.stop')); }, 600);
+    }
+
+    function dbSinCtxDelete() {
+        var menu = document.getElementById('dbSinCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_sinEl || !_sid) return;
+
+        var ref    = _sinEl.dataset.sinRef    || ('Sinistre #' + _sid);
+        var assure = _sinEl.dataset.sinAssure || '';
+        _sinPendingDel = _sinEl;
+
+        document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
+            detail: {
+                title: 'Supprimer le sinistre',
+                body: 'Le sinistre sera définitivement supprimé. Cette action est irréversible.',
+                itemDescriptions: [ref + (assure ? ' — ' + assure : '')],
+                showIrreversible: true,
+                onConfirm: {
+                    type: 'app:db-sin.delete-execute',
+                    payload: { id: _sid }
+                }
+            }
+        }));
+    }
+
+    document.addEventListener('cerveau:event', function (e) {
+        if (e.detail.type !== 'app:db-sin.delete-execute') return;
+        var p = e.detail.payload;
+        if (!p || !p.id) return;
+
+        var elToRemove = _sinPendingDel;
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+
+        fetch('/admin/notificationsinistre/api/delete/' + p.id, {
+            method:  'DELETE',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+            document.dispatchEvent(new CustomEvent('ui:confirmation.close'));
+            if (elToRemove && elToRemove.parentNode) {
+                elToRemove.parentNode.removeChild(elToRemove);
+            }
+            _sinPendingDel = null;
+        })
+        .catch(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+            document.dispatchEvent(new CustomEvent('ui:confirmation.error', {
+                detail: { error: 'La suppression a échoué.' }
+            }));
+            _sinPendingDel = null;
+        });
+    });
 }());
 
 // ── Feedbacks récents : auto-refresh toutes les 60 s ──────────────────────
@@ -2873,6 +3113,63 @@ export function saveCookie(nom, valeur) {
         });
     }
 
+    function _createRisqueGroupChart(canvasId, items, mode) {
+        var canvas = document.getElementById(canvasId);
+        if (!canvas) return null;
+        var existing = Chart.getChart(canvas);
+        if (existing) existing.destroy();
+        var isLine  = mode === 'line';
+        var COLORS  = ['#0047AB', '#0d6efd', '#198754', '#e69500', '#003380', '#0a58ca'];
+        var bgColors = items.map(function (_, i) { return COLORS[i % COLORS.length] + (isLine ? '22' : 'BF'); });
+        var bdColors = items.map(function (_, i) { return COLORS[i % COLORS.length]; });
+        var tipLabels = items.map(function (i) { return i.label || i.nom; });
+        return new Chart(canvas, {
+            type: mode,
+            data: {
+                labels: items.map(function (i) { return i.nom; }),
+                datasets: [{
+                    label: 'Encaissements',
+                    data: items.map(function (i) { return i.encaissements; }),
+                    backgroundColor: bgColors,
+                    borderColor: bdColors,
+                    borderWidth: isLine ? 2 : 1,
+                    borderRadius: isLine ? 0 : 4,
+                    pointBackgroundColor: bdColors,
+                    pointRadius: isLine ? 4 : 0,
+                    pointHoverRadius: isLine ? 6 : 0,
+                    fill: isLine,
+                    tension: isLine ? 0.35 : 0,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: function (ctx) { return tipLabels[ctx[0].dataIndex]; }
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#6c757d', maxRotation: 30 } },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0,0,0,.05)' },
+                        ticks: {
+                            font: { size: 10 }, color: '#6c757d',
+                            callback: function (v) {
+                                if (v >= 1000) return _prodCurrency + ' ' + (v / 1000).toLocaleString('fr-FR') + 'k';
+                                return _prodCurrency + ' ' + v;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
     function _renderGroupTable(containerId, items, groupData) {
         var el = document.getElementById(containerId);
         if (!el) return;
@@ -3087,7 +3384,7 @@ export function saveCookie(nom, valeur) {
             if (risCanvas) risCanvas.style.display = isChart ? '' : 'none';
             if (risTbl)    risTbl.style.display    = isChart ? 'none' : '';
             if (isChart) {
-                _prodRisqueChart = _createGroupChart('db-prod-chart-risque', data.byRisque || [], mode, '#6f42c1');
+                _prodRisqueChart = _createRisqueGroupChart('db-prod-chart-risque', data.byRisque || [], mode);
             } else {
                 _renderRisqueDetailTable('db-prod-table-risque', data.byRisque || [], data);
             }
@@ -3122,4 +3419,205 @@ export function saveCookie(nom, valeur) {
     window.dbProdToggleMode       = dbProdToggleMode;
     window.dbProdToggleMonth      = dbProdToggleMonth;
     window.dbProdToggleAssureur   = dbProdToggleAssureur;
+}());
+
+// ── Menu contextuel invités du tableau de bord ──────────────────────────────
+(function () {
+    var _el              = null;
+    var _id              = null;  // id de l'invite ciblé
+    var _eid             = null;  // id de l'entreprise
+    var _iid             = null;  // id de l'invite du user connecté
+    var _pendingDeleteEl = null;
+
+    function dbInviteCtxOpen(event, el) {
+        event.preventDefault();
+        event.stopPropagation();
+        _el  = el;
+        _id  = el.dataset.inviteId;
+        _eid = el.dataset.entrepriseId;
+        _iid = el.dataset.currentInviteId;
+
+        var menu = document.getElementById('dbInviteCtxMenu');
+        if (!menu) return;
+        var mw = 230, mh = 140;
+        var left = (event.clientX + mw > window.innerWidth)  ? window.innerWidth  - mw - 6 : event.clientX;
+        var top  = (event.clientY + mh > window.innerHeight) ? window.innerHeight - mh - 6 : event.clientY;
+        menu.style.left    = left + 'px';
+        menu.style.top     = top  + 'px';
+        menu.style.display = 'block';
+
+        setTimeout(function () {
+            document.addEventListener('click', function hide() {
+                var m = document.getElementById('dbInviteCtxMenu');
+                if (m) m.style.display = 'none';
+                document.removeEventListener('click', hide);
+            }, { once: true });
+        }, 0);
+    }
+
+    function dbInviteCtxEdit() {
+        var menu = document.getElementById('dbInviteCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_id) return;
+
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
+            detail: {
+                entityFormCanvas: {
+                    parametres: {
+                        titre_modification:  'Modifier l\'invité',
+                        endpoint_form_url:   '/admin/invite/api/get-form',
+                        endpoint_submit_url: '/admin/invite/api/submit'
+                    }
+                },
+                entity:         { id: parseInt(_id) },
+                isCreationMode: false,
+                context: {
+                    idEntreprise:     parseInt(_eid),
+                    idInvite:         parseInt(_iid) || undefined,
+                    _dashboardReload: true
+                }
+            }
+        }));
+        setTimeout(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+        }, 600);
+    }
+
+    function dbInviteCtxResend() {
+        var menu = document.getElementById('dbInviteCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_id) return;
+
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        fetch('/admin/invite/api/resend-invitation/' + _id, {
+            method:  'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/json' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+        })
+        .catch(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+        });
+    }
+
+    function dbInviteCtxDelete() {
+        var menu = document.getElementById('dbInviteCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_el || !_id) return;
+
+        var el = _el;
+        var nameEl = el.querySelector('.db-invite-name');
+        var inviteName = nameEl ? nameEl.textContent.trim() : ('Invité #' + _id);
+        _pendingDeleteEl = el;
+
+        document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
+            detail: {
+                title: 'Supprimer l\'invité',
+                body: 'Cette action est irréversible. L\'invité sera définitivement supprimé.',
+                itemDescriptions: [inviteName],
+                onConfirm: {
+                    type: 'app:db-invite.delete-execute',
+                    payload: { id: _id }
+                }
+            }
+        }));
+    }
+
+    document.addEventListener('cerveau:event', function (e) {
+        if (e.detail.type !== 'app:db-invite.delete-execute') return;
+        var p   = e.detail.payload;
+        var iid = p && p.id;
+        if (!iid) return;
+
+        var el = _pendingDeleteEl;
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+
+        fetch('/admin/invite/api/delete/' + iid, {
+            method:  'DELETE',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/json' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+            document.dispatchEvent(new CustomEvent('ui:confirmation.close'));
+            _pendingDeleteEl = null;
+            document.dispatchEvent(new CustomEvent('app:dashboard.sidebar.reload'));
+        })
+        .catch(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+            document.dispatchEvent(new CustomEvent('ui:confirmation.error', {
+                detail: { error: 'La suppression a échoué.' }
+            }));
+            _pendingDeleteEl = null;
+        });
+    });
+
+    window.dbInviteCtxOpen   = dbInviteCtxOpen;
+    window.dbInviteCtxEdit   = dbInviteCtxEdit;
+    window.dbInviteCtxResend = dbInviteCtxResend;
+    window.dbInviteCtxDelete = dbInviteCtxDelete;
+}());
+
+// ── Équipe (users) : auto-refresh toutes les 3 minutes ──────────────────────
+(function () {
+    var _usersTimer    = null;
+    var _usersObserver = null;
+
+    function _usersPad(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function _usersSetStatus(text) {
+        var el = document.getElementById('db-users-last-update');
+        if (el) el.textContent = text;
+    }
+
+    function refreshUsers() {
+        var list = document.getElementById('db-users-list');
+        if (!list) return;
+        var url = list.dataset.usersUrl;
+        if (!url) return;
+        _usersSetStatus('Mise à jour en cours…');
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.text();
+            })
+            .then(function (html) {
+                list.innerHTML = html;
+                var now = new Date();
+                _usersSetStatus('Dernière mise à jour à ' + _usersPad(now.getHours()) + ':' + _usersPad(now.getMinutes()));
+            })
+            .catch(function (err) {
+                _usersSetStatus('Erreur de mise à jour');
+                console.warn('[dashboard] users refresh failed:', err);
+            });
+    }
+
+    function initDbUsers() {
+        var list = document.getElementById('db-users-list');
+        if (!list) return;
+        var now = new Date();
+        _usersSetStatus('Dernière mise à jour à ' + _usersPad(now.getHours()) + ':' + _usersPad(now.getMinutes()));
+        if (_usersTimer) clearInterval(_usersTimer);
+        _usersTimer = setInterval(refreshUsers, 180000);
+    }
+
+    function _usersObserve() {
+        if (document.getElementById('db-users-list')) { initDbUsers(); return; }
+        if (_usersObserver) _usersObserver.disconnect();
+        _usersObserver = new MutationObserver(function (mutations, obs) {
+            if (document.getElementById('db-users-list')) {
+                obs.disconnect();
+                _usersObserver = null;
+                initDbUsers();
+            }
+        });
+        _usersObserver.observe(document.body, { childList: true, subtree: true });
+    }
+    _usersObserve();
+
+    window.initDbUsers  = initDbUsers;
+    window.refreshUsers = refreshUsers;
 }());

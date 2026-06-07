@@ -1,0 +1,69 @@
+{# ── Résolution de l'invite du user connecté (pour le header) ── #}
+{% set currentInvite = null %}
+{% for inv in entreprise.invites %}
+    {% if inv.utilisateur is not null and inv.utilisateur.email == app.user.email %}
+        {% set currentInvite = inv %}
+    {% endif %}
+{% endfor %}
+{% set currentInviteId = currentInvite is not null ? currentInvite.id : '' %}
+
+<div class="card border-0 shadow-sm mb-3 db-dashboard-block">
+    <div class="card-header border-0 bg-white py-2 px-3 d-flex align-items-center gap-2">
+        <twig:UX:Icon name="hugeicons:user-group" style="width:14px;height:14px;color:#0047AB;" aria-hidden="true" />
+        <span class="small fw-semibold flex-grow-1" style="color:#0047AB;">Équipe</span>
+        <small id="db-users-last-update" class="text-muted" style="font-size:.68rem;"></small>
+        <span class="badge rounded-pill"
+              style="background:#0047AB;color:#fff;font-size:.62rem;"
+              aria-label="{{ entreprise.invites|length }} membres">
+            {{ entreprise.invites|length }}
+        </span>
+        <button class="db-block-add-btn"
+                data-entreprise-id="{{ entreprise.id }}"
+                data-invite-id="{{ currentInviteId }}"
+                onclick="dbBlockAdd(this, 'invite', 'Nouvel invité')"
+                title="Ajouter un invité"
+                aria-label="Ajouter un invité">
+            <twig:UX:Icon name="gridicons:add" aria-hidden="true" style="width:15px;height:15px;color:#0047AB;" />
+        </button>
+    </div>
+
+    <div class="card-body p-2"
+         id="db-users-list"
+         data-users-url="/admin/entreprise_dashbord/users-fragment/{{ entreprise.id }}">
+        {% include 'components/dashboard/_users_list.html.twig' %}
+    </div>
+</div>
+
+{# ── Menu contextuel invités ── #}
+<meta id="db-invite-csrf" content="{{ csrf_token('db-invite-delete') }}">
+<nav id="dbInviteCtxMenu" class="context-menu" aria-label="Menu contextuel invité" style="display:none;"
+     onmousedown="event.stopPropagation()">
+    <ul role="menu" class="list-unstyled mb-0">
+        <li role="menuitem" tabindex="-1" id="dbInviteCtxEditItem"
+            onclick="dbInviteCtxEdit()"
+            class="d-flex align-items-center gap-2 px-3 py-2" style="cursor:pointer;">
+            <span class="context-menu-icon" aria-hidden="true">
+                <twig:UX:Icon name="tabler:edit" style="width:16px;height:16px;" />
+            </span>
+            <span class="flex-grow-1">Éditer</span>
+        </li>
+        <li role="separator" class="separator"></li>
+        <li role="menuitem" tabindex="-1" id="dbInviteCtxResendItem"
+            onclick="dbInviteCtxResend()"
+            class="d-flex align-items-center gap-2 px-3 py-2" style="cursor:pointer;">
+            <span class="context-menu-icon" aria-hidden="true">
+                <twig:UX:Icon name="hugeicons:mail-send-01" style="width:16px;height:16px;" />
+            </span>
+            <span class="flex-grow-1">Envoyer l'invitation</span>
+        </li>
+        <li role="separator" class="separator"></li>
+        <li role="menuitem" tabindex="-1" id="dbInviteCtxDeleteItem"
+            onclick="dbInviteCtxDelete()"
+            class="d-flex align-items-center gap-2 px-3 py-2 is-danger" style="cursor:pointer;">
+            <span class="context-menu-icon" aria-hidden="true">
+                <twig:UX:Icon name="fluent:delete-20-filled" style="width:16px;height:16px;" />
+            </span>
+            <span class="flex-grow-1">Supprimer</span>
+        </li>
+    </ul>
+</nav>
