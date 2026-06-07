@@ -1,7 +1,32 @@
 <div id="db-prod-chart-wrapper"
      data-prod-url="{{ prodDataUrl }}"
+     data-prod-table-url="{{ tableDataUrl }}"
+     data-prod-group-url="{{ groupUrl }}"
      data-prod-monthly="{{ monthly|json_encode }}"
      data-prod-currency="{{ deviseCode }}"
      data-prod-year="{{ year }}">
+
+    {# ── Par mois ── #}
+    <div class="px-3 pt-3 pb-0" style="font-size:.72rem;font-weight:600;color:#495057;">Par mois</div>
+    <p class="px-3 mb-1" style="font-size:.68rem;color:#6c757d;">Évolution mensuelle des encaissements sur l'année en cours.</p>
     <canvas id="db-prod-chart"></canvas>
+
+    {# ── Par assureur ── #}
+    <div id="db-prod-assureur-wrap" style="display:none;">
+        <div class="px-3 pt-3 pb-0" style="font-size:.72rem;font-weight:600;color:#495057;border-top:1px solid #dee2e6;">Par assureur</div>
+        <p class="px-3 mb-1" style="font-size:.68rem;color:#6c757d;">Répartition de la production de l'année par compagnie d'assurance.</p>
+        <canvas id="db-prod-chart-assureur" style="max-height:200px;width:100%!important;padding:.5rem .75rem .5rem;"></canvas>
+        <div id="db-prod-table-assureur" class="db-prod-table-wrap" style="display:none;"></div>
+    </div>
+
+    {# ── Par partenaire ── #}
+    <div id="db-prod-partenaire-wrap" style="display:none;">
+        <div class="px-3 pt-3 pb-0" style="font-size:.72rem;font-weight:600;color:#495057;border-top:1px solid #dee2e6;">Par partenaire</div>
+        <p class="px-3 mb-1" style="font-size:.68rem;color:#6c757d;">Répartition de la production de l'année par partenaire commercial.</p>
+        <p id="db-prod-partenaire-msg" class="px-3 pb-2 mb-0" style="font-size:.68rem;color:#6c757d;display:none;">
+            100&nbsp;% de la production a été réalisée sans implication de partenaire commercial.
+        </p>
+        <canvas id="db-prod-chart-partenaire" style="max-height:200px;width:100%!important;padding:.5rem .75rem .5rem;"></canvas>
+        <div id="db-prod-table-partenaire" class="db-prod-table-wrap" style="display:none;"></div>
+    </div>
 </div>
