@@ -1,0 +1,167 @@
+{% set _now = date() %}
+{% set countJ30 = 0 %}
+{% set countJ60 = 0 %}
+{% set countJ61plus = 0 %}
+{% for s in derniersSinistres %}
+    {% if s.notifiedAt %}
+        {% set _diff = (_now|date('U') - s.notifiedAt|date('U')) / 86400 %}
+        {% if _diff <= 30 %}
+            {% set countJ30 = countJ30 + 1 %}
+        {% elseif _diff <= 60 %}
+            {% set countJ60 = countJ60 + 1 %}
+        {% else %}
+            {% set countJ61plus = countJ61plus + 1 %}
+        {% endif %}
+    {% else %}
+        {% set countJ61plus = countJ61plus + 1 %}
+    {% endif %}
+{% endfor %}
+
+{% if derniersSinistres|length > 0 %}
+    {% if countJ30 == 0 %}
+    <p class="db-sin-item text-muted small px-2 py-4 text-center" data-group="j30">
+        <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucun sinistre déclaré dans les 30 derniers jours.
+    </p>
+    {% endif %}
+    {% if countJ60 == 0 %}
+    <p class="db-sin-item text-muted small px-2 py-4 text-center" data-group="j60" style="display:none;">
+        <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucun sinistre déclaré entre 31 et 60 jours.
+    </p>
+    {% endif %}
+    {% if countJ61plus == 0 %}
+    <p class="db-sin-item text-muted small px-2 py-4 text-center" data-group="j61plus" style="display:none;">
+        <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucun sinistre au-delà de 60 jours.
+    </p>
+    {% endif %}
+
+    {% for s in derniersSinistres %}
+        {% if s.notifiedAt %}
+            {% set _diff = (_now|date('U') - s.notifiedAt|date('U')) / 86400 %}
+            {% if _diff <= 30 %}
+                {% set group = 'j30' %}
+            {% elseif _diff <= 60 %}
+                {% set group = 'j60' %}
+            {% else %}
+                {% set group = 'j61plus' %}
+            {% endif %}
+        {% else %}
+            {% set group = 'j61plus' %}
+        {% endif %}
+
+        {% set refSin     = s.referenceSinistre ?? '—' %}
+        {% set refPol     = s.referencePolice ?? '' %}
+        {% set assureurNom = s.assureur ? (s.assureur.nom ?? '') : '' %}
+        {% set assureNom  = s.assureNom ?? (s.assure ? (s.assure.nom ?? '') : '') %}
+        {% set risqueNom  = s.risque ? (s.risque.nom ?? '') : '' %}
+        {% set lieu       = (s.lieu ?? '')|striptags %}
+        {% set description = (s.descriptionDeFait ?? '')|striptags %}
+        {% set searchText = (refSin ~ '|' ~ refPol ~ '|' ~ assureurNom ~ '|' ~ assureNom ~ '|' ~ risqueNom)|lower %}
+
+        {% set soldeAVerser = s.compensationSoldeAverser ?? 0 %}
+        {% set compensation = s.compensation ?? 0 %}
+        {% set compensationVersee = s.compensationVersee ?? 0 %}
+
+        <details class="db-ass-details db-sin-item"
+                 data-group="{{ group }}"
+                 data-search-text="{{ searchText|e }}"
+                 {% if group != 'j30' %}style="display:none;"{% endif %}>
+            <summary class="d-flex align-items-center gap-2 py-2 px-1">
+                <div class="db-ass-avatar rounded-circle d-flex align-items-center justify-content-center text-white"
+                     style="width:26px;height:26px;background:#0047AB;flex-shrink:0;">
+                    <twig:UX:Icon name="mdi:alert-circle" style="width:13px;height:13px;" />
+                </div>
+                <span class="small fw-semibold flex-grow-1 text-truncate" style="color:#212529;">
+                    {{ refSin }}{% if refPol %}&nbsp;<span class="text-muted fw-normal" style="font-size:.7rem;">/ {{ refPol }}</span>{% endif %}
+                </span>
+                {% if assureurNom %}
+                <span class="text-muted text-truncate" style="font-size:.65rem;max-width:90px;flex-shrink:0;">
+                    {{ assureurNom }}
+                </span>
+                {% endif %}
+                <span class="text-muted" style="font-size:.62rem;flex-shrink:0;white-space:nowrap;">
+                    {{ s.notifiedAt ? s.notifiedAt|date('d/m/Y') : '—' }}
+                </span>
+                {% if s.dommage %}
+                <span class="fw-semibold small" style="color:#dc3545;flex-shrink:0;">
+                    {{ s.dommage|number_format(0, ',', ' ') }}&nbsp;$
+                </span>
+                {% endif %}
+                <twig:UX:Icon name="mdi:chevron-down" class="db-ass-chevron"
+                              style="width:14px;height:14px;color:#6c757d;" />
+            </summary>
+
+            <div class="px-2 py-2 bg-light rounded-bottom" style="font-size:.73rem;">
+
+                {# Assuré et type de risque #}
+                <div class="mb-2 d-flex gap-3 flex-wrap">
+                    {% if assureNom %}
+                    <span style="color:#0047AB;">
+                        <twig:UX:Icon name="mdi:account" style="width:11px;height:11px;" class="me-1" />
+                        <strong>{{ assureNom }}</strong>
+                    </span>
+                    {% endif %}
+                    {% if risqueNom %}
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="mdi:shield-outline" style="width:11px;height:11px;" class="me-1" />
+                        {{ risqueNom }}
+                    </span>
+                    {% endif %}
+                    {% if lieu %}
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="mdi:map-marker-outline" style="width:11px;height:11px;" class="me-1" />
+                        {{ lieu|slice(0, 60) }}{{ lieu|length > 60 ? '…' : '' }}
+                    </span>
+                    {% endif %}
+                </div>
+
+                {# Description #}
+                {% if description %}
+                <div class="mb-2 pt-1" style="border-top:1px dashed #dee2e6;">
+                    <span style="color:#495057;">
+                        <twig:UX:Icon name="fluent:text-description-16-filled" style="width:11px;height:11px;" class="me-1" />
+                        {{ description|slice(0, 120) }}{{ description|length > 120 ? '…' : '' }}
+                    </span>
+                </div>
+                {% endif %}
+
+                {# Données financières #}
+                <div class="d-flex gap-3 flex-wrap pt-1" style="border-top:1px dashed #dee2e6;">
+                    {% if s.occuredAt %}
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="mdi:calendar-alert" style="width:11px;height:11px;" class="me-1" />
+                        Survenu le&nbsp;:&nbsp;<strong>{{ s.occuredAt|date('d/m/Y') }}</strong>
+                    </span>
+                    {% endif %}
+                    {% if s.dommage %}
+                    <span style="color:#dc3545;">
+                        <twig:UX:Icon name="mdi:currency-usd-off" style="width:11px;height:11px;" class="me-1" />
+                        Dommage&nbsp;:&nbsp;<strong>{{ s.dommage|number_format(0, ',', ' ') }}&nbsp;$</strong>
+                    </span>
+                    {% endif %}
+                    {% if s.evaluationChiffree %}
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="mdi:calculator-variant-outline" style="width:11px;height:11px;" class="me-1" />
+                        Évalué&nbsp;:&nbsp;<strong>{{ s.evaluationChiffree|number_format(0, ',', ' ') }}&nbsp;$</strong>
+                    </span>
+                    {% endif %}
+                    {% if compensation > 0 %}
+                    <span style="color:#198754;">
+                        <twig:UX:Icon name="mdi:cash-check" style="width:11px;height:11px;" class="me-1" />
+                        Indemnisé&nbsp;:&nbsp;<strong>{{ compensationVersee|number_format(0, ',', ' ') }}&nbsp;$</strong>
+                    </span>
+                    <span style="color:{{ soldeAVerser > 0 ? '#dc3545' : '#198754' }};">
+                        <twig:UX:Icon name="mdi:cash-minus" style="width:11px;height:11px;" class="me-1" />
+                        Solde&nbsp;:&nbsp;<strong>{{ soldeAVerser|number_format(0, ',', ' ') }}&nbsp;$</strong>
+                    </span>
+                    {% endif %}
+                </div>
+
+            </div>
+        </details>
+    {% endfor %}
+{% else %}
+    <p class="text-muted small mb-0 px-2 py-3 text-center">Aucun sinistre enregistré.</p>
+{% endif %}
