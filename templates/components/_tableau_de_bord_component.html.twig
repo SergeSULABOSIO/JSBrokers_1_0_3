@@ -139,6 +139,21 @@
                 </div>
             </details>
 
+            {# Sinistres — fermé par défaut, chargement différé #}
+            <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
+                <summary class="card-header border-0 bg-white py-2 px-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <twig:UX:Icon name="mdi:alert-circle-outline" style="width:14px;height:14px;color:#0047AB;" />
+                        <span class="small fw-semibold" style="color:#0047AB;">Sinistres</span>
+                        <small id="db-sin-last-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
+                        <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron ms-auto" style="width:15px;height:15px;color:#6c757d;flex-shrink:0;" />
+                    </div>
+                </summary>
+                <div data-controller="lazy-block"
+                     data-lazy-block-url-value="/admin/entreprise_dashbord/block/sinistres/{{ entreprise.id }}">
+                </div>
+            </details>
+
             {# Production — ouvert par défaut, charge immédiatement #}
             <details open class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
                 <summary class="card-header border-0 bg-white py-2 px-3" style="cursor:pointer;">

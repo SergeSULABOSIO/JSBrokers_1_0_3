@@ -404,6 +404,36 @@ export function saveCookie(nom, valeur) {
     window.dbRenewCtxNoRenewal   = dbRenewCtxNoRenewal;
 }());
 
+// ── Dashboard request queue — séquentiel, déduplication, stagger 200 ms ─────
+(function () {
+    var _queue   = [];
+    var _active  = false;
+    var _pending = Object.create(null); // url → true
+
+    function _run() {
+        if (_active || !_queue.length) return;
+        _active = true;
+        var job = _queue.shift();
+        delete _pending[job.url];
+        fetch(job.url, job.opts)
+            .then(function (r) { job.resolve(r); })
+            .catch(function (e) { job.reject(e); })
+            .finally(function () {
+                _active = false;
+                setTimeout(_run, 200);
+            });
+    }
+
+    window.dbFetch = function (url, opts) {
+        if (_pending[url]) return Promise.resolve(null); // déjà en file
+        _pending[url] = true;
+        return new Promise(function (resolve, reject) {
+            _queue.push({ url: url, opts: opts || {}, resolve: resolve, reject: reject });
+            _run();
+        });
+    };
+}());
+
 // ── Auto-refresh renouvellements (3 min) ─────────────────────────────────────
 (function () {
     var _renewTimer    = null;
@@ -422,12 +452,14 @@ export function saveCookie(nom, valeur) {
         var details = list.closest('details');
         if (details && !details.open) return;
         _renewSetStatus('Mise à jour en cours…');
-        fetch(list.dataset.renewalsUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        dbFetch(list.dataset.renewalsUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function (r) {
+                if (!r) return;
                 if (!r.ok) throw new Error('HTTP ' + r.status);
                 return r.text();
             })
             .then(function (html) {
+                if (!html) return;
                 list.innerHTML = html;
                 var now = new Date();
                 _renewSetStatus('Dernière mise à jour à ' + _renewPad(now.getHours()) + ':' + _renewPad(now.getMinutes()));
@@ -514,12 +546,14 @@ export function saveCookie(nom, valeur) {
         var details = list.closest('details');
         if (details && !details.open) return;
         _cashSetStatus('Mise à jour en cours…');
-        fetch(list.dataset.encaissementsUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        dbFetch(list.dataset.encaissementsUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function (r) {
+                if (!r) return;
                 if (!r.ok) throw new Error('HTTP ' + r.status);
                 return r.text();
             })
             .then(function (html) {
+                if (!html) return;
                 list.innerHTML = html;
                 var now = new Date();
                 _cashSetStatus('Dernière mise à jour à ' + _cashPad(now.getHours()) + ':' + _cashPad(now.getMinutes()));
@@ -646,6 +680,98 @@ export function saveCookie(nom, valeur) {
     });
 }());
 
+// ── Derniers sinistres (toggles + recherche) ─────────────────────────────
+(function () {
+    var _activeSinMode = 'j30';
+
+    function dbSinistreApplyFilter() {
+        var searchInput = document.querySelector('[aria-label="Filtrer les sinistres"]');
+        var q = searchInput ? searchInput.value.toLowerCase() : '';
+        document.querySelectorAll('.db-sin-item').forEach(function (el) {
+            var matchMode   = el.dataset.group === _activeSinMode;
+            var matchSearch = !q || (el.dataset.searchText || '').indexOf(q) >= 0;
+            el.style.display = (matchMode && matchSearch) ? '' : 'none';
+        });
+    }
+
+    function dbSinistreToggle(btn) {
+        _activeSinMode = btn.dataset.mode;
+        document.querySelectorAll('#dbSinToggleBar .db-task-toggle').forEach(function (b) {
+            var isActive = b === btn;
+            b.classList.toggle('active', isActive);
+            b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+        dbSinistreApplyFilter();
+    }
+
+    window.dbSinistreToggle      = dbSinistreToggle;
+    window.dbSinistreSearch      = function () { dbSinistreApplyFilter(); };
+    window.dbSinistreApplyFilter = dbSinistreApplyFilter;
+}());
+
+// ── Auto-refresh sinistres (3 min) ───────────────────────────────────────
+(function () {
+    var _sinTimer    = null;
+    var _sinObserver = null;
+
+    function _sinPad(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function _sinSetStatus(txt) {
+        var el = document.getElementById('db-sin-last-update');
+        if (el) el.textContent = txt;
+    }
+
+    function refreshSinistres() {
+        var list = document.getElementById('db-sin-list');
+        if (!list) return;
+        var details = list.closest('details');
+        if (details && !details.open) return;
+        _sinSetStatus('Mise à jour en cours…');
+        dbFetch(list.dataset.sinistresUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) {
+                if (!r) return;
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.text();
+            })
+            .then(function (html) {
+                if (!html) return;
+                list.innerHTML = html;
+                var now = new Date();
+                _sinSetStatus('Dernière mise à jour à ' + _sinPad(now.getHours()) + ':' + _sinPad(now.getMinutes()));
+                window.dbSinistreApplyFilter();
+            })
+            .catch(function (err) {
+                _sinSetStatus('Erreur de mise à jour');
+                console.warn('[dashboard] sinistres refresh failed:', err);
+            });
+    }
+
+    function initDbSinistres() {
+        var list = document.getElementById('db-sin-list');
+        if (!list) return;
+        var now = new Date();
+        _sinSetStatus('Dernière mise à jour à ' + _sinPad(now.getHours()) + ':' + _sinPad(now.getMinutes()));
+        if (_sinTimer) clearInterval(_sinTimer);
+        _sinTimer = setInterval(refreshSinistres, 180000);
+    }
+
+    function _sinObserve() {
+        if (document.getElementById('db-sin-list')) { initDbSinistres(); return; }
+        if (_sinObserver) _sinObserver.disconnect();
+        _sinObserver = new MutationObserver(function (mutations, obs) {
+            if (document.getElementById('db-sin-list')) {
+                obs.disconnect();
+                _sinObserver = null;
+                initDbSinistres();
+            }
+        });
+        _sinObserver.observe(document.body, { childList: true, subtree: true });
+    }
+    _sinObserve();
+
+    window.refreshSinistres = refreshSinistres;
+}());
+
 // ── Feedbacks récents : auto-refresh toutes les 60 s ──────────────────────
 (function () {
     var _fbTimer = null;
@@ -666,12 +792,14 @@ export function saveCookie(nom, valeur) {
 
         _fbSetStatus('Mise à jour en cours…');
 
-        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        dbFetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function (r) {
+                if (!r) return;
                 if (!r.ok) throw new Error('HTTP ' + r.status);
                 return r.text();
             })
             .then(function (html) {
+                if (!html) return;
                 list.innerHTML = html;
                 var now = new Date();
                 _fbSetStatus('Dernière mise à jour à ' + _fbPad(now.getHours()) + ':' + _fbPad(now.getMinutes()));
@@ -1231,12 +1359,14 @@ export function saveCookie(nom, valeur) {
         var url = list.dataset.pistesUrl;
         if (!url) return;
         _pisteSetStatus('Mise à jour en cours…');
-        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        dbFetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function (r) {
+                if (!r) return;
                 if (!r.ok) throw new Error('HTTP ' + r.status);
                 return r.text();
             })
             .then(function (html) {
+                if (!html) return;
                 list.innerHTML = html;
                 var now = new Date();
                 _pisteSetStatus('Dernière mise à jour à ' + _pistePad(now.getHours()) + ':' + _pistePad(now.getMinutes()));
@@ -1634,12 +1764,14 @@ export function saveCookie(nom, valeur) {
 
         _bordSetStatus('Mise à jour en cours…');
 
-        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        dbFetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function (r) {
+                if (!r) return;
                 if (!r.ok) throw new Error('HTTP ' + r.status);
                 return r.text();
             })
             .then(function (html) {
+                if (!html) return;
                 list.innerHTML = html;
                 var now = new Date();
                 _bordSetStatus('Dernière mise à jour à ' + _bordPad(now.getHours()) + ':' + _bordPad(now.getMinutes()));
@@ -2271,12 +2403,14 @@ export function saveCookie(nom, valeur) {
 
         _noteSetStatus('Mise à jour en cours…');
 
-        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        dbFetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function (r) {
+                if (!r) return;
                 if (!r.ok) throw new Error('HTTP ' + r.status);
                 return r.text();
             })
             .then(function (html) {
+                if (!html) return;
                 list.innerHTML = html;
                 var now = new Date();
                 _noteSetStatus('Dernière mise à jour à ' + _notePad(now.getHours()) + ':' + _notePad(now.getMinutes()));
@@ -2500,12 +2634,14 @@ export function saveCookie(nom, valeur) {
 
         _prodSetStatus('Mise à jour en cours…');
 
-        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        dbFetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function (r) {
+                if (!r) return;
                 if (!r.ok) throw new Error('HTTP ' + r.status);
                 return r.json();
             })
             .then(function (json) {
+                if (!json) return;
                 _prodCurrency = json.currency || _prodCurrency;
                 _prodChart.data.datasets[0].data = json.monthly;
                 _prodChart.update('active');
@@ -2518,9 +2654,14 @@ export function saveCookie(nom, valeur) {
             });
 
         if (_prodMode === 'table' && _prodTableUrl && _prodTableEl) {
-            fetch(_prodTableUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+            dbFetch(_prodTableUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (r) {
+                    if (!r) return;
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.json();
+                })
                 .then(function (data) {
+                    if (!data) return;
                     _prodTableData = data;
                     _prodCurrency  = data.currency || _prodCurrency;
                     _renderProdTable(data);
@@ -2567,9 +2708,14 @@ export function saveCookie(nom, valeur) {
             } else {
                 _prodTableEl.innerHTML = '<div class="db-prod-table-spinner"><div class="spinner-border spinner-border-sm" style="color:#0047AB;"></div><span>Chargement…</span></div>';
                 if (_prodTableUrl) {
-                    fetch(_prodTableUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+                    dbFetch(_prodTableUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(function (r) {
+                            if (!r) return;
+                            if (!r.ok) throw new Error('HTTP ' + r.status);
+                            return r.json();
+                        })
                         .then(function (data) {
+                            if (!data) return;
                             _prodTableData = data;
                             _prodCurrency  = data.currency || _prodCurrency;
                             _renderProdTable(data);
@@ -2671,9 +2817,13 @@ export function saveCookie(nom, valeur) {
         if (_prodGroupData) { cb(_prodGroupData); return; }
         var wrapper = document.getElementById('db-prod-chart-wrapper');
         if (!wrapper || !wrapper.dataset.prodGroupUrl) return;
-        fetch(wrapper.dataset.prodGroupUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-            .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-            .then(function (data) { _prodGroupData = data; cb(data); })
+        dbFetch(wrapper.dataset.prodGroupUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) {
+                if (!r) return;
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(function (data) { if (data) { _prodGroupData = data; cb(data); } })
             .catch(function (err) { console.warn('[dashboard] production group failed:', err); });
     }
 
@@ -2797,7 +2947,7 @@ export function saveCookie(nom, valeur) {
             var sortedMonths = Object.keys(monthData).map(Number).sort(function(a,b){ return a-b; });
             sortedMonths.forEach(function(m) {
                 var mLabel = MONTHS_SHORT_FR[m - 1] || ('M' + m);
-                rows += '<tr class="db-prod-tr-assureur db-prod-tr-ass-month" data-ass-id="' + assId + '" hidden>'
+                rows += '<tr class="db-prod-tr-assureur db-prod-tr-ass-month" data-ass-id="' + assId + '">'
                       + '<td style="padding-left:1.5rem;">' + mLabel + '</td>'
                       + fmtCells(monthData[m])
                       + '</tr>';
@@ -2866,7 +3016,7 @@ export function saveCookie(nom, valeur) {
             var sortedMonths = Object.keys(monthData).map(Number).sort(function(a,b){ return a-b; });
             sortedMonths.forEach(function(m) {
                 var mLabel = MONTHS_SHORT_FR[m - 1] || ('M' + m);
-                rows += '<tr class="db-prod-tr-assureur db-prod-tr-ris-month" data-ris-id="' + risId + '" hidden>'
+                rows += '<tr class="db-prod-tr-assureur db-prod-tr-ris-month" data-ris-id="' + risId + '">'
                       + '<td style="padding-left:1.5rem;">' + mLabel + '</td>'
                       + fmtCells(monthData[m])
                       + '</tr>';

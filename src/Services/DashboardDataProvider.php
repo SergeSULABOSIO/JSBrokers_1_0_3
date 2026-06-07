@@ -711,6 +711,28 @@ class DashboardDataProvider
         return $paiements;
     }
 
+    public function getDerniersSinistres(Entreprise $entreprise, int $limit = 25): array
+    {
+        $sinistres = $this->em->createQuery(
+            'SELECT s, ass, cli, ris
+             FROM App\Entity\NotificationSinistre s
+             LEFT JOIN s.invite inv
+             LEFT JOIN s.assureur ass
+             LEFT JOIN s.assure cli
+             LEFT JOIN s.risque ris
+             WHERE inv.entreprise = :e
+             ORDER BY s.notifiedAt DESC'
+        )
+        ->setParameter('e', $entreprise)
+        ->setMaxResults($limit)
+        ->getResult();
+
+        foreach ($sinistres as $s) {
+            $this->canvasBuilder->loadAllCalculatedValues($s);
+        }
+        return $sinistres;
+    }
+
     public function getDerniersBordereaux(Entreprise $entreprise, int $limit = 40): array
     {
         return $this->em->createQuery(

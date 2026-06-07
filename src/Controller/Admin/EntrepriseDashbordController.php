@@ -153,6 +153,27 @@ class EntrepriseDashbordController extends AbstractController
         ]);
     }
 
+    #[Route('/block/sinistres/{idEntreprise}', name: 'block_sinistres', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadBlockSinistres(int $idEntreprise, DashboardDataProvider $provider): Response
+    {
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
+        return $this->render('components/dashboard/_sinistres.html.twig', [
+            'entreprise'        => $entreprise,
+            'derniersSinistres' => $provider->getDerniersSinistres($entreprise),
+        ]);
+    }
+
+    #[Route('/sinistres-fragment/{idEntreprise}', name: 'sinistres_fragment', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadSinistresFragment(int $idEntreprise, DashboardDataProvider $provider): Response
+    {
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
+        return $this->render('components/dashboard/_sinistres_list.html.twig', [
+            'derniersSinistres' => $provider->getDerniersSinistres($entreprise),
+        ]);
+    }
+
     #[Route('/block/tasks/{idEntreprise}', name: 'block_tasks', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
     public function loadBlockTasks(int $idEntreprise, DashboardDataProvider $provider): Response
     {
