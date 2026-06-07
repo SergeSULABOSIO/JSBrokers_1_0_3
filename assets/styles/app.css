@@ -2345,25 +2345,17 @@ textarea:hover,
 
 /* ── KPI Carousel ── */
 .kpi-carousel-wrapper {
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-    scrollbar-color: #0047AB #f3f3f3;
+    overflow: hidden;
 }
-.kpi-carousel-wrapper::-webkit-scrollbar { height: 4px; }
-.kpi-carousel-wrapper::-webkit-scrollbar-track { background: #f3f3f3; }
-.kpi-carousel-wrapper::-webkit-scrollbar-thumb { background: #0047AB; border-radius: 2px; }
 
 .kpi-carousel {
     display: flex;
     gap: 0.75rem;
-    padding-bottom: 0.25rem;
 }
 
 .kpi-card-slot {
-    flex: 0 0 210px;
-    width: 210px;
+    flex: 1 1 0;
+    min-width: 0;
 }
 
 .kpi-card {
@@ -2391,7 +2383,7 @@ textarea:hover,
 }
 
 .kpi-tax-rate {
-    font-size: 0.68rem;
+    font-size: 0.58rem;
     font-weight: 600;
     padding: 1px 5px;
     border-radius: 3px;
@@ -2400,8 +2392,8 @@ textarea:hover,
     vertical-align: middle;
 }
 .kpi-card-slot--taxes {
-    flex: 0 0 240px;
-    width: 240px;
+    flex: 1 1 0;
+    min-width: 0;
 }
 .kpi-card--taxes {
     height: auto !important;
@@ -2539,15 +2531,20 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 .db-block-chevron { transition: transform .25s ease; flex-shrink:0; }
 .db-block-details[open] > summary .db-block-chevron { transform: rotate(180deg); }
 
-/* ── Toggles tâches ── */
-.db-task-toggle {
-    font-size:.63rem; padding:2px 9px; border-radius:20px; border:1px solid #dee2e6;
-    background:#f8f9fa; color:#6c757d; cursor:pointer; font-weight:500;
-    transition:background .15s, color .15s, border-color .15s, transform .18s ease, font-size .18s ease;
-    white-space:nowrap;
+/* ── Segmented control Production ── */
+.db-prod-tabs {
+    display:inline-flex; align-items:center;
+    background:#f0f2f5; border-radius:20px; padding:3px; gap:0;
 }
-.db-task-toggle:hover  { background:#e9ecef; color:#212529; border-color:#ced4da; transform:scale(1.15); font-size:.72rem; }
-.db-task-toggle.active { background:#0047AB; color:#fff; border-color:#0047AB; }
+.db-task-toggle {
+    display:inline-flex; align-items:center; gap:4px;
+    font-size:.63rem; font-weight:500; padding:3px 10px; border-radius:16px;
+    border:none; background:transparent; color:#6c757d;
+    cursor:pointer; white-space:nowrap;
+    transition:background .2s, color .2s, box-shadow .2s;
+}
+.db-task-toggle:hover  { color:#212529; }
+.db-task-toggle.active { background:#fff; color:#212529; box-shadow:0 1px 3px rgba(0,0,0,.14); }
 
 .db-task-new-btn {
     padding:2px 5px; border:1px solid transparent; border-radius:4px;
@@ -2685,4 +2682,40 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     display: none;
     min-width: 160px;
 }
+
+/* ── Production : vue tableau ── */
+.db-prod-table-wrap { overflow-x: auto; padding: .5rem .75rem 1rem; }
+.db-prod-table { width: 100%; border-collapse: collapse; font-size: .75rem; }
+.db-prod-table th {
+    background: #0047AB; color: #fff; font-weight: 600;
+    padding: .4rem .55rem; text-align: right; white-space: nowrap;
+    position: sticky; top: 0; z-index: 1;
+}
+.db-prod-table th:first-child { text-align: left; }
+.db-prod-tr-month td {
+    background: #e8eef8; color: #0047AB; font-weight: 700;
+    padding: .42rem .55rem; cursor: pointer; white-space: nowrap;
+    border-top: 2px solid #c5d5ee;
+}
+.db-prod-tr-month td:first-child { text-align: left; }
+.db-prod-tr-month td:not(:first-child) { text-align: right; }
+.db-prod-tr-month:hover td { background: #d0def5; }
+.db-prod-tr-month .db-prod-chevron { display: inline-block; transition: transform .2s; margin-right: .25rem; }
+.db-prod-tr-month.collapsed .db-prod-chevron { transform: rotate(-90deg); }
+.db-prod-tr-assureur td {
+    padding: .32rem .55rem .32rem 1.5rem;
+    border-bottom: 1px solid #f0f0f0; white-space: nowrap;
+}
+.db-prod-tr-assureur td:first-child { text-align: left; color: #444; }
+.db-prod-tr-assureur td:not(:first-child) { text-align: right; color: #333; }
+.db-prod-tr-assureur:hover td { background: #f4f7ff; }
+.db-prod-tr-assureur:hover td:first-child { color: #0047AB; font-weight: 600; }
+.db-prod-tr-grand td {
+    background: #0047AB; color: #fff; font-weight: 700;
+    padding: .45rem .55rem; white-space: nowrap;
+    border-top: 2px solid #003a8c;
+}
+.db-prod-tr-grand td:first-child { text-align: left; }
+.db-prod-tr-grand td:not(:first-child) { text-align: right; }
+.db-prod-table-spinner { display: flex; align-items: center; justify-content: center; height: 180px; color: #0047AB; gap: .5rem; font-size: .82rem; }
 

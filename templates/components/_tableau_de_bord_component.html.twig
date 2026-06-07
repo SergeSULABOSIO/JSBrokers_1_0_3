@@ -146,19 +146,25 @@
                         <twig:UX:Icon name="mdi:chart-bar" style="width:14px;height:14px;color:#0047AB;" />
                         <span class="small fw-semibold" style="color:#0047AB;">Production {{ 'now'|date('Y') }}</span>
                         <small id="db-prod-last-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
-                        <div class="ms-auto d-flex gap-1" onclick="event.stopPropagation()">
-                            <button class="db-task-toggle active" data-mode="bar" onclick="dbProdToggleMode(this)" aria-pressed="true" title="Histogramme">
-                                <twig:UX:Icon name="mdi:chart-bar" style="width:12px;height:12px;" />
-                                Histogramme
-                            </button>
-                            <button class="db-task-toggle" data-mode="line" onclick="dbProdToggleMode(this)" aria-pressed="false" title="Courbe">
-                                <twig:UX:Icon name="mdi:chart-line" style="width:12px;height:12px;" />
-                                Courbe
-                            </button>
-                        </div>
-                        <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron" style="width:15px;height:15px;color:#6c757d;flex-shrink:0;" />
+                        <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron ms-auto" style="width:15px;height:15px;color:#6c757d;flex-shrink:0;" />
                     </div>
                 </summary>
+                <div class="px-3 pt-2 pb-2 bg-white border-bottom d-flex align-items-center gap-2">
+                    <div class="db-prod-tabs">
+                        <button class="db-task-toggle active" data-mode="bar"   onclick="dbProdToggleMode(this)" aria-pressed="true"  title="Histogramme">
+                            <twig:UX:Icon name="mdi:chart-bar"  style="width:12px;height:12px;" />
+                            Histogramme
+                        </button>
+                        <button class="db-task-toggle"        data-mode="line"  onclick="dbProdToggleMode(this)" aria-pressed="false" title="Courbe">
+                            <twig:UX:Icon name="mdi:chart-line" style="width:12px;height:12px;" />
+                            Courbe
+                        </button>
+                        <button class="db-task-toggle"        data-mode="table" onclick="dbProdToggleMode(this)" aria-pressed="false" title="Tableau">
+                            <twig:UX:Icon name="mdi:table"      style="width:12px;height:12px;" />
+                            Tableau
+                        </button>
+                    </div>
+                </div>
                 <div data-controller="lazy-block"
                      data-lazy-block-url-value="/admin/entreprise_dashbord/block/production/{{ entreprise.id }}">
                     {# Skeleton graphique : 12 barres verticales de hauteurs variées #}

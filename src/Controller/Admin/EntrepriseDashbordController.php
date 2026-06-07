@@ -291,11 +291,13 @@ class EntrepriseDashbordController extends AbstractController
         $monthly = $provider->getProductionMensuelle($entreprise);
 
         return $this->render('components/dashboard/_block_production.html.twig', [
-            'entreprise'  => $entreprise,
-            'monthly'     => array_values($monthly),
-            'year'        => (int) date('Y'),
-            'deviseCode'  => $serviceMonnaies->getCodeMonnaieAffichage() ?? '€',
-            'prodDataUrl' => $this->generateUrl('admin.entreprise_dashboard.production_data', ['idEntreprise' => $idEntreprise]),
+            'entreprise'   => $entreprise,
+            'monthly'      => array_values($monthly),
+            'year'         => (int) date('Y'),
+            'deviseCode'   => $serviceMonnaies->getCodeMonnaieAffichage() ?? '€',
+            'prodDataUrl'  => $this->generateUrl('admin.entreprise_dashboard.production_data',   ['idEntreprise' => $idEntreprise]),
+            'tableDataUrl' => $this->generateUrl('admin.entreprise_dashboard.production_table',  ['idEntreprise' => $idEntreprise]),
+            'groupUrl'     => $this->generateUrl('admin.entreprise_dashboard.production_group',  ['idEntreprise' => $idEntreprise]),
         ]);
     }
 
@@ -311,5 +313,23 @@ class EntrepriseDashbordController extends AbstractController
             'currency' => $serviceMonnaies->getCodeMonnaieAffichage() ?? '€',
             'total'    => array_sum($monthly),
         ]);
+    }
+
+    #[Route('/production-table/{idEntreprise}', name: 'production_table', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadProductionTableData(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): JsonResponse
+    {
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $data = $provider->getProductionTableData($entreprise);
+        $data['currency'] = $serviceMonnaies->getCodeMonnaieAffichage() ?? '€';
+        return new JsonResponse($data);
+    }
+
+    #[Route('/production-group/{idEntreprise}', name: 'production_group', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function productionGroup(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): JsonResponse
+    {
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $data = $provider->getProductionGroupData($entreprise);
+        $data['currency'] = $serviceMonnaies->getCodeMonnaieAffichage() ?? '€';
+        return new JsonResponse($data);
     }
 }

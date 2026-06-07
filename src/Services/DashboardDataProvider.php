@@ -8,6 +8,8 @@ use App\Entity\Entreprise;
 use App\Entity\Tache;
 use App\Entity\Taxe;
 use App\Repository\TaxeRepository;
+use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
+use App\Services\Canvas\Indicator\AvenantIndicatorStrategy;
 use App\Services\Canvas\Provider\Entity\AvenantEntityCanvasProvider;
 use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
@@ -19,6 +21,7 @@ class DashboardDataProvider
         private CanvasBuilder $canvasBuilder,
         private TaxeRepository $taxeRepository,
         private AvenantEntityCanvasProvider $avenantCanvasProvider,
+        private IndicatorCalculationHelper $calculationHelper,
     ) {}
 
     private array $cacheAvenantsActifs = [];
@@ -757,6 +760,369 @@ class DashboardDataProvider
         ->getSingleScalarResult();
 
         return (int) ($result ?? 0);
+    }
+
+    public function getProductionTableData(Entreprise $entreprise): array
+    {
+        $year  = (int) date('Y');
+        $debut = new \DateTimeImmutable($year . '-01-01 00:00:00');
+        $fin   = new \DateTimeImmutable($year . '-12-31 23:59:59');
+
+        $taxeCourtierEntity = $this->taxeRepository->findOneBy(['redevable' => Taxe::REDEVABLE_COURTIER, 'entreprise' => $entreprise]);
+        $taxeAssureurEntity = $this->taxeRepository->findOneBy(['redevable' => Taxe::REDEVABLE_ASSUREUR, 'entreprise' => $entreprise]);
+        $tauxAssureur = (float) ($taxeAssureurEntity?->getTauxIARD() ?? 0);
+        $tauxCourtier = (float) ($taxeCourtierEntity?->getTauxIARD() ?? 0);
+
+        // ── Étape 1 : Paiements de l'année sur notes de commission (TO_CLIENT=0, TO_ASSUREUR=1) ──
+        $paiements = $this->em->createQuery(
+            'SELECT p, n, ass
+             FROM App\Entity\Paiement p
+             JOIN p.note n
+             JOIN n.assureur ass
+             WHERE p.entreprise = :e
+               AND p.paidAt >= :debut AND p.paidAt <= :fin
+               AND n.addressedTo IN (0, 1)'
+        )
+        ->setParameter('e', $entreprise)
+        ->setParameter('debut', $debut)
+        ->setParameter('fin', $fin)
+        ->getResult();
+
+        // ── Étape 2 : Accumulation encaissements + collecte des notes uniques ──
+        $rows      = [];
+        $notesById = []; // [noteId => note]
+
+        foreach ($paiements as $p) {
+            $month  = (int) $p->getPaidAt()->format('n');
+            $note   = $p->getNote();
+            $noteId = $note->getId();
+            $ass    = $note->getAssureur();
+            $assId  = $ass?->getId() ?? 0;
+            $assNom = $ass?->getNom() ?? '—';
+
+            if (!isset($rows[$month][$assId])) {
+                $rows[$month][$assId] = [
+                    'nom'              => $assNom,
+                    'primeTtc'         => 0.0,
+                    'commissionPure'   => 0.0,
+                    'retrocommission'  => 0.0,
+                    'taxeAssureur'     => 0.0,
+                    'taxeCourtier'     => 0.0,
+                    'commissionTtc'    => 0.0,
+                    'encaissements'    => 0.0,
+                    'solde'            => 0.0,
+                ];
+            }
+            $rows[$month][$assId]['encaissements'] += (float) $p->getMontant();
+            $notesById[$noteId] = $note;
+        }
+
+        if (empty($notesById)) {
+            return [
+                'rows'             => [],
+                'monthTotals'      => [],
+                'grandTotals'      => ['primeTtc' => 0.0, 'commissionPure' => 0.0, 'retrocommission' => 0.0,
+                                       'taxeAssureur' => 0.0, 'taxeCourtier' => 0.0, 'commissionTtc' => 0.0,
+                                       'encaissements' => 0.0, 'solde' => 0.0],
+                'taxeAssureurNom'  => $taxeAssureurEntity?->getCode() ?? 'Taxe assureur',
+                'taxeAssureurTaux' => $tauxAssureur,
+                'taxeCourtierNom'  => $taxeCourtierEntity?->getCode() ?? 'Taxe courtier',
+                'taxeCourtierTaux' => $tauxCourtier,
+                'year'             => $year,
+            ];
+        }
+
+        // ── Étape 3 : Hydratation des Notes (fonctionne pour les 2 types : articles ET bordereau) ──
+        foreach ($notesById as $note) {
+            $this->canvasBuilder->loadAllCalculatedValues($note);
+        }
+
+        // Batch-load : articles → revenuFacture → cotation → avenants + piste → partenaires (pour retrocommission)
+        $ids = array_keys($notesById);
+        $this->em->createQuery(
+            'SELECT n, arts, rpc, cot, avs, piste, pars, cli, cpars, bord
+             FROM App\Entity\Note n
+             LEFT JOIN n.articles arts
+             LEFT JOIN arts.revenuFacture rpc
+             LEFT JOIN rpc.cotation cot
+             LEFT JOIN cot.avenants avs
+             LEFT JOIN cot.piste piste
+             LEFT JOIN piste.partenaires pars
+             LEFT JOIN piste.client cli
+             LEFT JOIN cli.partenaires cpars
+             LEFT JOIN n.bordereau bord
+             WHERE n.id IN (:ids)'
+        )
+        ->setParameter('ids', $ids)
+        ->getResult();
+
+        $seenAvenants = [];
+        foreach ($notesById as $note) {
+            foreach ($note->getArticles() as $article) {
+                $cot = $article->getRevenuFacture()?->getCotation();
+                if (!$cot) continue;
+                foreach ($cot->getAvenants() as $av) {
+                    $avId = $av->getId();
+                    if (!isset($seenAvenants[$avId])) {
+                        $this->canvasBuilder->loadAllCalculatedValues($av);
+                        $seenAvenants[$avId] = true;
+                    }
+                }
+            }
+        }
+
+        // Batch-load des avenants référencés dans analysisResults des bordereaux
+        $bordereauAvenantIds = [];
+        foreach ($notesById as $note) {
+            $bordereau = $note->getBordereau();
+            if (!$bordereau) continue;
+            foreach (array_filter(array_column($bordereau->getAnalysisResults() ?? [], 'avenant_id')) as $avId) {
+                $bordereauAvenantIds[(int) $avId] = true;
+            }
+        }
+        if (!empty($bordereauAvenantIds)) {
+            $this->em->createQuery(
+                'SELECT av, cot FROM App\Entity\Avenant av
+                 LEFT JOIN av.cotation cot
+                 WHERE av.id IN (:avIds)'
+            )->setParameter('avIds', array_keys($bordereauAvenantIds))->getResult();
+
+            foreach (array_keys($bordereauAvenantIds) as $avId) {
+                if (!isset($seenAvenants[$avId])) {
+                    $av = $this->em->find(\App\Entity\Avenant::class, $avId);
+                    if ($av) {
+                        $this->canvasBuilder->loadAllCalculatedValues($av);
+                        $seenAvenants[$avId] = true;
+                    }
+                }
+            }
+        }
+
+        // ── Étape 4 : Attribution des métriques financières par note (déduplication par note×mois) ──
+        $processedNoteMonth = [];
+        $seenPrimeTtc       = []; // [noteId_avenantId] pour éviter le double-comptage
+
+        foreach ($paiements as $p) {
+            $month  = (int) $p->getPaidAt()->format('n');
+            $note   = $p->getNote();
+            $noteId = $note->getId();
+            $ass    = $note->getAssureur();
+            $assId  = $ass?->getId() ?? 0;
+
+            // Chaque (note, mois) n'est traité qu'une seule fois
+            $key = $noteId . '_' . $month;
+            if (isset($processedNoteMonth[$key])) continue;
+            $processedNoteMonth[$key] = true;
+
+            // Métriques issues du canvas Note (fonctionnent pour articles ET bordereau)
+            $noteMontantTotal = (float) ($note->montantTotal ?? 0);
+
+            $metrics = AvenantIndicatorStrategy::computeProductionMetrics($noteMontantTotal, $tauxAssureur, $tauxCourtier);
+            $rows[$month][$assId]['commissionTtc']  += $noteMontantTotal;
+            $rows[$month][$assId]['commissionPure'] += $metrics['commissionPure'];
+            $rows[$month][$assId]['taxeAssureur']   += $metrics['taxeAssureur'];
+            $rows[$month][$assId]['taxeCourtier']   += $metrics['taxeCourtier'];
+
+            // Rétrocommission : taux partenaire × assiette produite (commission pure)
+            $tauxPart = 0.0;
+            foreach ($note->getArticles() as $art) {
+                $cot = $art->getRevenuFacture()?->getCotation();
+                if ($cot) {
+                    $partenaire = $this->calculationHelper->getCotationPartenaire($cot);
+                    $tauxPart = $partenaire ? (float) ($partenaire->getPart() ?? 0) : 0.0;
+                    break;
+                }
+            }
+            $rows[$month][$assId]['retrocommission'] += AvenantIndicatorStrategy::computeRetrocommission($metrics['commissionPure'], $tauxPart);
+
+            // Prime produite : navigation vers l'avenant (notes avec articles seulement)
+            foreach ($note->getArticles() as $article) {
+                if (!$article->getRevenuFacture()) continue;
+                $cot = $article->getRevenuFacture()?->getCotation();
+                if (!$cot) continue;
+                foreach ($cot->getAvenants() as $avenant) {
+                    $ptKey = $noteId . '_' . $avenant->getId();
+                    if (isset($seenPrimeTtc[$ptKey])) continue;
+                    $seenPrimeTtc[$ptKey] = true;
+                    $rows[$month][$assId]['primeTtc'] += AvenantIndicatorStrategy::computePrimeProduite(
+                        $noteMontantTotal,
+                        (float) ($avenant->montantTTC ?? 0),
+                        (float) ($avenant->primeTotale ?? 0)
+                    );
+                }
+            }
+
+            // Prime TTC via bordereau (notes sans articles — chemin via analysisResults)
+            if ($note->getArticles()->isEmpty()) {
+                $bordereau = $note->getBordereau();
+                if ($bordereau) {
+                    foreach (array_filter(array_column($bordereau->getAnalysisResults() ?? [], 'avenant_id')) as $avId) {
+                        $ptKey = $noteId . '_' . (int) $avId;
+                        if (isset($seenPrimeTtc[$ptKey])) continue;
+                        $seenPrimeTtc[$ptKey] = true;
+                        $av = $this->em->find(\App\Entity\Avenant::class, (int) $avId);
+                        if ($av) {
+                            $rows[$month][$assId]['primeTtc'] += (float) ($av->primeTotale ?? 0);
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Étape 5 : Solde = commissionTtc − encaissements ──
+        foreach ($rows as $month => $assureurs) {
+            foreach ($assureurs as $assId => &$data) {
+                $data['solde'] = $data['commissionTtc'] - $data['encaissements'];
+            }
+            unset($data);
+        }
+
+        // ── Étape 6 : Tri, totaux par mois, grand total ──
+        $zeroRow     = ['primeTtc' => 0.0, 'commissionPure' => 0.0, 'retrocommission' => 0.0,
+                        'taxeAssureur' => 0.0, 'taxeCourtier' => 0.0, 'commissionTtc' => 0.0,
+                        'encaissements' => 0.0, 'solde' => 0.0];
+        $grandTotals = $zeroRow;
+        $monthTotals = [];
+        $fields      = array_keys($zeroRow);
+
+        ksort($rows);
+        foreach ($rows as $month => $assureurs) {
+            uasort($assureurs, fn($a, $b) => strcmp($a['nom'], $b['nom']));
+            $rows[$month] = $assureurs;
+            $monthTotals[$month] = $zeroRow;
+            foreach ($assureurs as $ass) {
+                foreach ($fields as $f) {
+                    $monthTotals[$month][$f] += $ass[$f];
+                    $grandTotals[$f]         += $ass[$f];
+                }
+            }
+        }
+
+        return [
+            'rows'             => $rows,
+            'monthTotals'      => $monthTotals,
+            'grandTotals'      => $grandTotals,
+            'taxeAssureurNom'  => $taxeAssureurEntity?->getCode() ?? 'Taxe assureur',
+            'taxeAssureurTaux' => $tauxAssureur,
+            'taxeCourtierNom'  => $taxeCourtierEntity?->getCode() ?? 'Taxe courtier',
+            'taxeCourtierTaux' => $tauxCourtier,
+            'year'             => $year,
+        ];
+    }
+
+    public function getProductionGroupData(Entreprise $entreprise): array
+    {
+        $tableData = $this->getProductionTableData($entreprise);
+
+        $fields = ['primeTtc', 'commissionPure', 'retrocommission', 'taxeCourtier',
+                   'taxeAssureur', 'commissionTtc', 'encaissements', 'solde'];
+
+        $byAssureur        = [];
+        $byAssureurMonthly = [];
+        foreach ($tableData['rows'] as $month => $assureurs) {
+            foreach ($assureurs as $id => $metrics) {
+                if (!isset($byAssureur[$id])) {
+                    $byAssureur[$id] = array_merge(['id' => $id, 'nom' => $metrics['nom']], array_fill_keys($fields, 0.0));
+                }
+                foreach ($fields as $f) {
+                    $byAssureur[$id][$f] += $metrics[$f] ?? 0.0;
+                }
+                $byAssureurMonthly[$id][$month] = $metrics;
+            }
+        }
+        uasort($byAssureur, fn($a, $b) => $b['encaissements'] <=> $a['encaissements']);
+
+        return [
+            'byAssureur'        => array_values($byAssureur),
+            'byAssureurMonthly' => $byAssureurMonthly,
+            'byPartenaire'      => $this->getProductionParPartenaire($entreprise),
+            'taxeCourtierNom'   => $tableData['taxeCourtierNom'],
+            'taxeCourtierTaux'  => $tableData['taxeCourtierTaux'],
+            'taxeAssureurNom'   => $tableData['taxeAssureurNom'],
+            'taxeAssureurTaux'  => $tableData['taxeAssureurTaux'],
+        ];
+    }
+
+    private function getProductionParPartenaire(Entreprise $entreprise): array
+    {
+        $year  = (int) date('Y');
+        $debut = new \DateTimeImmutable($year . '-01-01 00:00:00');
+        $fin   = new \DateTimeImmutable($year . '-12-31 23:59:59');
+
+        $paiements = $this->em->createQuery(
+            'SELECT p, n
+             FROM App\Entity\Paiement p
+             JOIN p.note n
+             WHERE p.entreprise = :e
+               AND p.paidAt >= :debut AND p.paidAt <= :fin
+               AND n.addressedTo IN (0, 1)'
+        )
+        ->setParameter('e', $entreprise)
+        ->setParameter('debut', $debut)
+        ->setParameter('fin', $fin)
+        ->getResult();
+
+        if (empty($paiements)) return [];
+
+        $notesById   = [];
+        $noteEncaiss = [];
+        foreach ($paiements as $p) {
+            $note   = $p->getNote();
+            $noteId = $note->getId();
+            $notesById[$noteId] = $note;
+            $noteEncaiss[$noteId] = ($noteEncaiss[$noteId] ?? 0.0) + (float) $p->getMontant();
+        }
+
+        foreach ($notesById as $note) {
+            $this->canvasBuilder->loadAllCalculatedValues($note);
+        }
+
+        $ids = array_keys($notesById);
+        $this->em->createQuery(
+            'SELECT n, arts, rpc, cot, piste, pars
+             FROM App\Entity\Note n
+             LEFT JOIN n.articles arts
+             LEFT JOIN arts.revenuFacture rpc
+             LEFT JOIN rpc.cotation cot
+             LEFT JOIN cot.piste piste
+             LEFT JOIN piste.partenaires pars
+             WHERE n.id IN (:ids)'
+        )
+        ->setParameter('ids', $ids)
+        ->getResult();
+
+        $byPartenaire   = [];
+        $processedNotes = [];
+        foreach ($notesById as $noteId => $note) {
+            if (isset($processedNotes[$noteId])) continue;
+            $processedNotes[$noteId] = true;
+
+            $encaissements = $noteEncaiss[$noteId] ?? 0.0;
+            $montantTotal  = (float) ($note->montantTotal ?? 0);
+
+            $partFound = [];
+            foreach ($note->getArticles() as $art) {
+                $piste = $art->getRevenuFacture()?->getCotation()?->getPiste();
+                if (!$piste) continue;
+                foreach ($piste->getPartenaires() as $par) {
+                    $partFound[$par->getId()] = $par;
+                }
+            }
+
+            $targets = empty($partFound) ? ['__none__' => null] : $partFound;
+            foreach ($targets as $parId => $par) {
+                $nom = $par ? $par->getNom() : 'Sans partenaire';
+                if (!isset($byPartenaire[$parId])) {
+                    $byPartenaire[$parId] = ['nom' => $nom, 'encaissements' => 0.0,
+                                             'primeTtc' => 0.0, 'commissionTtc' => 0.0];
+                }
+                $byPartenaire[$parId]['encaissements'] += $encaissements;
+                $byPartenaire[$parId]['commissionTtc'] += $montantTotal;
+            }
+        }
+
+        uasort($byPartenaire, fn($a, $b) => $b['encaissements'] <=> $a['encaissements']);
+        return array_values($byPartenaire);
     }
 
     public function getProductionMensuelle(Entreprise $entreprise): array

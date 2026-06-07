@@ -220,4 +220,51 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
             default => "Inconnu",
         };
     }
+
+    /**
+     * Dérive les métriques de production à partir d'un montant TTC encaissé et des taux de taxe.
+     *
+     * Production HT = TTC / (1 + tauxAssureur/100)
+     * Taxe assureur = HT × tauxAssureur/100
+     * Taxe courtier = HT × tauxCourtier/100
+     * Commission pure = HT − Taxe courtier
+     */
+    public static function computeProductionMetrics(
+        float $productionTtc,
+        float $tauxAssureur,
+        float $tauxCourtier
+    ): array {
+        $ht = $tauxAssureur > 0.0
+            ? $productionTtc / (1.0 + $tauxAssureur / 100.0)
+            : $productionTtc;
+        $taxeAss = round($ht * $tauxAssureur / 100.0, 2);
+        $taxeCou = round($ht * $tauxCourtier / 100.0, 2);
+        return [
+            'taxeAssureur'   => $taxeAss,
+            'taxeCourtier'   => $taxeCou,
+            'commissionPure' => round($ht - $taxeCou, 2),
+        ];
+    }
+
+    /**
+     * Prime produite = prime TTC de l'avenant × (commission encaissée / commission TTC totale de l'avenant).
+     * Représente la portion de la prime correspondant à ce qui a été effectivement facturé/encaissé.
+     */
+    public static function computePrimeProduite(
+        float $productionTtc,
+        float $commissionTtcAvenant,
+        float $primeTtcAvenant
+    ): float {
+        if ($commissionTtcAvenant <= 0.0) return 0.0;
+        return round($primeTtcAvenant * ($productionTtc / $commissionTtcAvenant), 2);
+    }
+
+    /**
+     * Rétrocommission due au partenaire = taux partenaire (décimal) × assiette produite (commission pure).
+     * Le taux est la valeur de Partenaire::getPart() — facteur décimal (ex: 0.15 = 15 %).
+     */
+    public static function computeRetrocommission(float $commissionPure, float $tauxPartenaire): float
+    {
+        return round($commissionPure * $tauxPartenaire, 2);
+    }
 }
