@@ -2338,6 +2338,7 @@ export function saveCookie(nom, valeur) {
     var _prodGroupData      = null;
     var _prodAssureurChart  = null;
     var _prodPartenaireChart = null;
+    var _prodRisqueChart     = null;
 
     var MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
     var MONTHS_SHORT = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
@@ -2821,6 +2822,68 @@ export function saveCookie(nom, valeur) {
         subs.forEach(function (r) { r.hidden = isCollapsed; });
     }
 
+    function dbProdToggleRisque(trEl, risId) {
+        if (!trEl) return;
+        var isCollapsed = trEl.classList.toggle('collapsed');
+        document.querySelectorAll('.db-prod-tr-ris-month[data-ris-id="' + risId + '"]')
+            .forEach(function (r) { r.hidden = isCollapsed; });
+    }
+    window.dbProdToggleRisque = dbProdToggleRisque;
+
+    function _renderRisqueDetailTable(containerId, items, groupData) {
+        var el = document.getElementById(containerId);
+        if (!el) return;
+        if (!items || items.length === 0) {
+            el.innerHTML = '<p class="text-muted small text-center py-3 mb-0">Aucune donnée</p>';
+            return;
+        }
+        function _fmtTaxLabelR(nom, taux) {
+            if (!taux || taux <= 0) return nom;
+            var t = (taux % 1 === 0) ? Math.round(taux) : parseFloat(taux.toFixed(1));
+            return nom + ' (' + t + '%)';
+        }
+        var taxCou  = _fmtTaxLabelR((groupData && groupData.taxeCourtierNom) || 'Taxe courtier', (groupData && groupData.taxeCourtierTaux) || 0);
+        var taxAss  = _fmtTaxLabelR((groupData && groupData.taxeAssureurNom) || 'Taxe assureur', (groupData && groupData.taxeAssureurTaux) || 0);
+        var _fields = ['primeTtc','commissionPure','retrocommission','taxeCourtier','taxeAssureur','commissionTtc','encaissements','solde'];
+        var monthly = (groupData && groupData.byRisqueMonthly) || {};
+        var grand   = {};
+        _fields.forEach(function(f) { grand[f] = 0; });
+
+        function fmtCells(obj) {
+            return _fields.map(function(f) { return '<td>' + _prodFmt(obj[f] || 0) + '</td>'; }).join('');
+        }
+
+        var rows = '';
+        items.forEach(function (item) {
+            var risId = item.id;
+            _fields.forEach(function(f) { grand[f] += item[f] || 0; });
+            rows += '<tr class="db-prod-tr-month db-prod-tr-ass-head" data-ris-id="' + risId + '"'
+                  + ' onclick="dbProdToggleRisque(this,\'' + risId + '\')">'
+                  + '<td><span class="db-prod-chevron">▼</span>' + (item.nom || '—') + '</td>'
+                  + fmtCells(item) + '</tr>';
+
+            var monthData = monthly[risId] || {};
+            var sortedMonths = Object.keys(monthData).map(Number).sort(function(a,b){ return a-b; });
+            sortedMonths.forEach(function(m) {
+                var mLabel = MONTHS_SHORT_FR[m - 1] || ('M' + m);
+                rows += '<tr class="db-prod-tr-assureur db-prod-tr-ris-month" data-ris-id="' + risId + '" hidden>'
+                      + '<td style="padding-left:1.5rem;">' + mLabel + '</td>'
+                      + fmtCells(monthData[m])
+                      + '</tr>';
+            });
+        });
+
+        el.innerHTML = '<table class="db-prod-table">'
+            + '<thead><tr>'
+            + '<th style="min-width:130px;text-align:left;">Libellé</th>'
+            + '<th>Prime TTC</th><th>Commission pure</th><th>Rétrocommission</th>'
+            + '<th>' + taxCou + '</th><th>' + taxAss + '</th>'
+            + '<th>Commission totale</th><th>Encaissements</th><th>Solde dû</th>'
+            + '</tr></thead><tbody>' + rows + '</tbody>'
+            + '<tfoot><tr class="db-prod-tr-grand"><td>Total général</td>' + fmtCells(grand) + '</tr></tfoot>'
+            + '</table>';
+    }
+
     function _showProdGroup(mode) {
         var wrapper = document.getElementById('db-prod-chart-wrapper');
         if (!wrapper || !wrapper.dataset.prodGroupUrl) return;
@@ -2829,10 +2892,13 @@ export function saveCookie(nom, valeur) {
             var isChart   = mode === 'bar' || mode === 'line';
             var assWrap   = document.getElementById('db-prod-assureur-wrap');
             var parWrap   = document.getElementById('db-prod-partenaire-wrap');
+            var risWrap   = document.getElementById('db-prod-risque-wrap');
             var assCanvas = document.getElementById('db-prod-chart-assureur');
             var parCanvas = document.getElementById('db-prod-chart-partenaire');
+            var risCanvas = document.getElementById('db-prod-chart-risque');
             var assTbl    = document.getElementById('db-prod-table-assureur');
             var parTbl    = document.getElementById('db-prod-table-partenaire');
+            var risTbl    = document.getElementById('db-prod-table-risque');
             var parMsg    = document.getElementById('db-prod-partenaire-msg');
 
             // ── Assureur ──
@@ -2864,6 +2930,16 @@ export function saveCookie(nom, valeur) {
                 } else {
                     _renderGroupTable('db-prod-table-partenaire', realPar, data);
                 }
+            }
+
+            // ── Risque ──
+            if (risWrap)   risWrap.style.display   = '';
+            if (risCanvas) risCanvas.style.display = isChart ? '' : 'none';
+            if (risTbl)    risTbl.style.display    = isChart ? 'none' : '';
+            if (isChart) {
+                _prodRisqueChart = _createGroupChart('db-prod-chart-risque', data.byRisque || [], mode, '#6f42c1');
+            } else {
+                _renderRisqueDetailTable('db-prod-table-risque', data.byRisque || [], data);
             }
         });
     }

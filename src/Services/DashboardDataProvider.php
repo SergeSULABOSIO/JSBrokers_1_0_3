@@ -1032,15 +1032,259 @@ class DashboardDataProvider
         }
         uasort($byAssureur, fn($a, $b) => $b['encaissements'] <=> $a['encaissements']);
 
+        $risqueData = $this->getProductionParRisque($entreprise, $tableData);
+
         return [
             'byAssureur'        => array_values($byAssureur),
             'byAssureurMonthly' => $byAssureurMonthly,
             'byPartenaire'      => $this->getProductionParPartenaire($entreprise),
+            'byRisque'          => $risqueData['byRisque'],
+            'byRisqueMonthly'   => $risqueData['byRisqueMonthly'],
             'taxeCourtierNom'   => $tableData['taxeCourtierNom'],
             'taxeCourtierTaux'  => $tableData['taxeCourtierTaux'],
             'taxeAssureurNom'   => $tableData['taxeAssureurNom'],
             'taxeAssureurTaux'  => $tableData['taxeAssureurTaux'],
         ];
+    }
+
+    private function getProductionParRisque(Entreprise $entreprise, array $tableData): array
+    {
+        $year  = (int) date('Y');
+        $debut = new \DateTimeImmutable($year . '-01-01 00:00:00');
+        $fin   = new \DateTimeImmutable($year . '-12-31 23:59:59');
+        $tauxAssureur = $tableData['taxeAssureurTaux'];
+        $tauxCourtier = $tableData['taxeCourtierTaux'];
+
+        $paiements = $this->em->createQuery(
+            'SELECT p, n
+             FROM App\Entity\Paiement p
+             JOIN p.note n
+             WHERE p.entreprise = :e
+               AND p.paidAt >= :debut AND p.paidAt <= :fin
+               AND n.addressedTo IN (0, 1)'
+        )
+        ->setParameter('e', $entreprise)
+        ->setParameter('debut', $debut)
+        ->setParameter('fin', $fin)
+        ->getResult();
+
+        if (empty($paiements)) {
+            return ['byRisque' => [], 'byRisqueMonthly' => []];
+        }
+
+        $notesById = [];
+        foreach ($paiements as $p) {
+            $note = $p->getNote();
+            $notesById[$note->getId()] = $note;
+        }
+
+        foreach ($notesById as $note) {
+            $this->canvasBuilder->loadAllCalculatedValues($note);
+        }
+
+        $ids = array_keys($notesById);
+        // Batch-load chemin articles → avenants + piste → risque (avenants déjà canvas-chargés par getProductionTableData)
+        $this->em->createQuery(
+            'SELECT n, arts, rpc, cot, avs, piste, ris
+             FROM App\Entity\Note n
+             LEFT JOIN n.articles arts
+             LEFT JOIN arts.revenuFacture rpc
+             LEFT JOIN rpc.cotation cot
+             LEFT JOIN cot.avenants avs
+             LEFT JOIN cot.piste piste
+             LEFT JOIN piste.risque ris
+             WHERE n.id IN (:ids)'
+        )
+        ->setParameter('ids', $ids)
+        ->getResult();
+
+        // Batch-load avenants des bordereaux → cotation → piste → risque
+        $bordereauAvIds = [];
+        foreach ($notesById as $note) {
+            $bord = $note->getBordereau();
+            if (!$bord) continue;
+            foreach (array_filter(array_column($bord->getAnalysisResults() ?? [], 'avenant_id')) as $avId) {
+                $bordereauAvIds[(int) $avId] = true;
+            }
+        }
+        if (!empty($bordereauAvIds)) {
+            $this->em->createQuery(
+                'SELECT av, cot, piste, ris
+                 FROM App\Entity\Avenant av
+                 LEFT JOIN av.cotation cot
+                 LEFT JOIN cot.piste piste
+                 LEFT JOIN piste.risque ris
+                 WHERE av.id IN (:avIds)'
+            )
+            ->setParameter('avIds', array_keys($bordereauAvIds))
+            ->getResult();
+        }
+
+        // ── Étape 1 : pré-calcul des proportions par risque pour chaque note ──
+        // Proportion = primeProduite_du_risque / total_primeProduite_de_la_note
+        // Garantit que ∑ proportions = 1 → totaux cohérents avec les autres tableaux.
+        $noteRisqueProps    = []; // [noteId => [risId => float (0..1)]]
+        $noteRisqueEntities = []; // [noteId => [risId => Risque|null]]
+        $notePrimeTtcByRis  = []; // [noteId => [risId => float]] (primeTtc pré-calculée)
+
+        foreach ($notesById as $noteId => $note) {
+            $montantTotal   = (float) ($note->montantTotal ?? 0);
+            $primeByRis     = []; // risId => primeProduite
+            $risquesMap     = []; // risId => Risque entity
+            $seenAvs        = [];
+
+            // Chemin articles : prime via computePrimeProduite (même logique que getProductionTableData)
+            foreach ($note->getArticles() as $art) {
+                if (!$art->getRevenuFacture()) continue;
+                $cot = $art->getRevenuFacture()->getCotation();
+                if (!$cot) continue;
+                $ris   = $cot->getPiste()?->getRisque();
+                $risId = $ris ? $ris->getId() : '__none__';
+                $risquesMap[$risId] = $ris;
+                foreach ($cot->getAvenants() as $av) {
+                    if (isset($seenAvs[$av->getId()])) continue;
+                    $seenAvs[$av->getId()] = true;
+                    $prime = AvenantIndicatorStrategy::computePrimeProduite(
+                        $montantTotal,
+                        (float) ($av->montantTTC ?? 0),
+                        (float) ($av->primeTotale ?? 0)
+                    );
+                    $primeByRis[$risId] = ($primeByRis[$risId] ?? 0.0) + $prime;
+                }
+            }
+
+            // Chemin bordereau : prime directe (même logique que getProductionTableData)
+            if (empty($primeByRis)) {
+                $bord = $note->getBordereau();
+                if ($bord) {
+                    foreach (array_filter(array_column($bord->getAnalysisResults() ?? [], 'avenant_id')) as $avId) {
+                        if (isset($seenAvs[(int) $avId])) continue;
+                        $seenAvs[(int) $avId] = true;
+                        $av = $this->em->find(\App\Entity\Avenant::class, (int) $avId);
+                        if (!$av) continue;
+                        $ris   = $av->getCotation()?->getPiste()?->getRisque();
+                        $risId = $ris ? $ris->getId() : '__none__';
+                        $risquesMap[$risId] = $ris;
+                        $prime = (float) ($av->primeTotale ?? 0);
+                        $primeByRis[$risId] = ($primeByRis[$risId] ?? 0.0) + $prime;
+                    }
+                }
+            }
+
+            // Aucun risque trouvé → bucket neutre
+            if (empty($primeByRis)) {
+                $noteRisqueProps[$noteId]    = ['__none__' => 1.0];
+                $noteRisqueEntities[$noteId] = ['__none__' => null];
+                $notePrimeTtcByRis[$noteId]  = ['__none__' => 0.0];
+                continue;
+            }
+
+            // Calcul des proportions (∑ = 1)
+            $totalPrime = array_sum($primeByRis);
+            if ($totalPrime > 0.0) {
+                $props = array_map(fn($p) => $p / $totalPrime, $primeByRis);
+            } else {
+                // Primes nulles : répartition égale
+                $n     = count($primeByRis);
+                $props = array_fill_keys(array_keys($primeByRis), 1.0 / $n);
+            }
+
+            $noteRisqueProps[$noteId]    = $props;
+            $noteRisqueEntities[$noteId] = $risquesMap;
+            $notePrimeTtcByRis[$noteId]  = $primeByRis;
+        }
+
+        // ── Étape 2 : agrégation par paiement avec répartition proportionnelle ──
+        $fields             = ['primeTtc', 'commissionPure', 'retrocommission', 'taxeCourtier',
+                               'taxeAssureur', 'commissionTtc', 'encaissements', 'solde'];
+        $byRisque           = [];
+        $byRisqueMonthly    = [];
+        $processedNoteMonth = []; // [noteId_month_risId] anti-doublon métriques commission
+        $seenPrimeTtcRis    = []; // [noteId_risId] anti-doublon primeTtc
+
+        foreach ($paiements as $p) {
+            $month  = (int) $p->getPaidAt()->format('n');
+            $note   = $p->getNote();
+            $noteId = $note->getId();
+
+            $proportions     = $noteRisqueProps[$noteId]    ?? ['__none__' => 1.0];
+            $risquesEntities = $noteRisqueEntities[$noteId] ?? ['__none__' => null];
+            $primeTtcByRis   = $notePrimeTtcByRis[$noteId]  ?? ['__none__' => 0.0];
+            $montantTotal    = (float) ($note->montantTotal ?? 0);
+
+            foreach ($proportions as $risId => $proportion) {
+                $ris  = $risquesEntities[$risId] ?? null;
+                $code = $ris ? trim(explode(',', $ris->getCode())[0]) : '—';
+
+                if (!isset($byRisque[$risId])) {
+                    $byRisque[$risId] = array_merge(['id' => $risId, 'nom' => $code], array_fill_keys($fields, 0.0));
+                }
+                if (!isset($byRisqueMonthly[$risId][$month])) {
+                    $byRisqueMonthly[$risId][$month] = array_merge(['nom' => $code], array_fill_keys($fields, 0.0));
+                }
+
+                // Encaissements : proportionnels, accumulés par paiement
+                $enc = (float) $p->getMontant() * $proportion;
+                $byRisque[$risId]['encaissements']               += $enc;
+                $byRisqueMonthly[$risId][$month]['encaissements'] += $enc;
+
+                // Métriques commission : proportionnelles, une seule fois par (note, mois, risque)
+                $key = $noteId . '_' . $month . '_' . $risId;
+                if (!isset($processedNoteMonth[$key])) {
+                    $processedNoteMonth[$key] = true;
+
+                    $montantProportion = $montantTotal * $proportion;
+                    $metrics = AvenantIndicatorStrategy::computeProductionMetrics($montantProportion, $tauxAssureur, $tauxCourtier);
+
+                    $byRisque[$risId]['commissionTtc']  += $montantProportion;
+                    $byRisque[$risId]['commissionPure'] += $metrics['commissionPure'];
+                    $byRisque[$risId]['taxeAssureur']   += $metrics['taxeAssureur'];
+                    $byRisque[$risId]['taxeCourtier']   += $metrics['taxeCourtier'];
+
+                    $byRisqueMonthly[$risId][$month]['commissionTtc']  += $montantProportion;
+                    $byRisqueMonthly[$risId][$month]['commissionPure'] += $metrics['commissionPure'];
+                    $byRisqueMonthly[$risId][$month]['taxeAssureur']   += $metrics['taxeAssureur'];
+                    $byRisqueMonthly[$risId][$month]['taxeCourtier']   += $metrics['taxeCourtier'];
+
+                    $tauxPart = 0.0;
+                    foreach ($note->getArticles() as $art) {
+                        $cot = $art->getRevenuFacture()?->getCotation();
+                        if ($cot) {
+                            $partenaire = $this->calculationHelper->getCotationPartenaire($cot);
+                            $tauxPart   = $partenaire ? (float) ($partenaire->getPart() ?? 0) : 0.0;
+                            break;
+                        }
+                    }
+                    $retro = AvenantIndicatorStrategy::computeRetrocommission($metrics['commissionPure'], $tauxPart);
+                    $byRisque[$risId]['retrocommission']               += $retro;
+                    $byRisqueMonthly[$risId][$month]['retrocommission'] += $retro;
+                }
+
+                // PrimeTtc : une seule fois par (note, risque) — attribuée au premier mois rencontré
+                $ptKey = $noteId . '_' . $risId;
+                if (!isset($seenPrimeTtcRis[$ptKey])) {
+                    $seenPrimeTtcRis[$ptKey] = true;
+                    $prime = $primeTtcByRis[$risId] ?? 0.0;
+                    $byRisque[$risId]['primeTtc']               += $prime;
+                    $byRisqueMonthly[$risId][$month]['primeTtc'] += $prime;
+                }
+            }
+        }
+
+        foreach ($byRisque as &$r) {
+            $r['solde'] = $r['commissionTtc'] - $r['encaissements'];
+        }
+        unset($r);
+        foreach ($byRisqueMonthly as &$months) {
+            foreach ($months as &$m) {
+                $m['solde'] = $m['commissionTtc'] - $m['encaissements'];
+            }
+            unset($m);
+        }
+        unset($months);
+
+        uasort($byRisque, fn($a, $b) => $b['encaissements'] <=> $a['encaissements']);
+        return ['byRisque' => array_values($byRisque), 'byRisqueMonthly' => $byRisqueMonthly];
     }
 
     private function getProductionParPartenaire(Entreprise $entreprise): array
