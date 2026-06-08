@@ -39,17 +39,21 @@ export default class extends Controller {
     }
 
     adjustZIndex() {
-        const backdrops = document.querySelectorAll('.modal-backdrop.show');
-        if (backdrops.length <= 1) return;
+        // Tous les backdrops présents (avec ou sans .show) — le nouveau backdrop
+        // peut ne pas avoir .show au moment où shown.bs.modal est émis.
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        if (backdrops.length === 0) return;
 
-        const modals = Array.from(document.querySelectorAll('.modal.show'));
-        const maxZIndex = modals
+        // Z-index maximum parmi les autres modales déjà ouvertes.
+        // On part de 1055 (défaut Bootstrap) pour le premier dialogue.
+        const maxZIndex = Array.from(document.querySelectorAll('.modal.show'))
             .filter(modal => modal !== this.element)
             .reduce((max, modal) => {
-                const zIndex = parseInt(window.getComputedStyle(modal).zIndex, 10) || 0;
-                return Math.max(max, zIndex);
-            }, 1055); // 1055 est le z-index par défaut d'une modale Bootstrap
+                const z = parseInt(window.getComputedStyle(modal).zIndex, 10) || 0;
+                return Math.max(max, z);
+            }, 1055);
 
+        // Appliquer en style inline pour écraser la règle CSS des backdrops imbriqués.
         const myBackdrop = backdrops[backdrops.length - 1];
         myBackdrop.style.zIndex = maxZIndex + 1;
         this.element.style.zIndex = maxZIndex + 2;

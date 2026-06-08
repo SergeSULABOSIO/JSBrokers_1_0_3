@@ -36,7 +36,8 @@
                     data-action="mouseenter->workspace-manager#showItemDescription mouseleave->workspace-manager#clearDescription click->workspace-manager#loadComponent"
                     data-workspace-manager-component-name-param="{{ menu.colonne_1.tableau_de_bord.composant_twig }}"
                     data-workspace-manager-description-param="{{ menu.colonne_1.tableau_de_bord.description }}"
-                    data-workspace-manager-target="dashboardItem"  {# AJOUTEZ CETTE LIGNE #}
+                    data-workspace-manager-icon-param="{{ menu.colonne_1.tableau_de_bord.icone }}"
+                    data-workspace-manager-target="dashboardItem"
                 >
                     <twig:UX:Icon name="{{ resolve_icon_name(menu.colonne_1.tableau_de_bord.icone) }}" class="nav-icon" />
                     <span class="nav-text">{{ menu.colonne_1.tableau_de_bord.nom }}</span>
@@ -95,20 +96,25 @@
 
         {# COLONNE 3 : Espace de travail #}
         <div class="menu-col-3" data-workspace-manager-target="workspace">
-            {# NOUVEAU : On affiche directement le squelette au chargement initial. #}
-            {# Il sera remplacé par le composant chargé ou restauré. #}
-            <div class="workspace-skeleton">
-                <div class="skeleton-header">
-                    <div class="skeleton-icon"></div>
-                    <div style="flex-grow: 1;">
-                        <div class="skeleton-line" style="width: 40%; height: 24px;"></div>
-                        <div class="skeleton-line" style="width: 80%; margin-top: 10px;"></div>
+            {# Barre d'onglets — générée dynamiquement par workspace-manager_controller.js #}
+            <div class="workspace-tab-bar" role="tablist" aria-label="Onglets de travail"
+                 data-workspace-manager-target="workspaceTabBar"></div>
+            {# Zone de contenu des onglets #}
+            <div class="workspace-tab-panels" data-workspace-manager-target="workspaceTabPanels">
+                {# Squelette initial — supprimé dès le premier onglet créé #}
+                <div class="workspace-skeleton workspace-initial-skeleton">
+                    <div class="skeleton-header">
+                        <div class="skeleton-icon"></div>
+                        <div style="flex-grow: 1;">
+                            <div class="skeleton-line" style="width: 40%; height: 24px;"></div>
+                            <div class="skeleton-line" style="width: 80%; margin-top: 10px;"></div>
+                        </div>
                     </div>
+                    <div class="skeleton-line" style="height: 40px; width: 100%; margin-bottom: 1rem;"></div>
+                    <div class="skeleton-line" style="height: 40px; width: 100%; margin-bottom: 1rem;"></div>
+                    <div class="skeleton-line" style="height: 40px; width: 100%; margin-bottom: 1rem;"></div>
+                    <div class="skeleton-row" style="height: 300px;"></div>
                 </div>
-                <div class="skeleton-line" style="height: 40px; width: 100%; margin-bottom: 1rem;"></div>
-                <div class="skeleton-line" style="height: 40px; width: 100%; margin-bottom: 1rem;"></div>
-                <div class="skeleton-line" style="height: 40px; width: 100%; margin-bottom: 1rem;"></div>
-                <div class="skeleton-row" style="height: 300px;"></div>
             </div>
         </div>
 
@@ -137,9 +143,10 @@
                             role="button"
                             tabindex="0"
                             data-action="click->workspace-manager#loadComponent"
-                            data-workspace-manager-component-name-param="{{ rubrique_data.composant_twig }}" 
-                            data-workspace-manager-group-name-param="{{ group_name }}" 
+                            data-workspace-manager-component-name-param="{{ rubrique_data.composant_twig }}"
+                            data-workspace-manager-group-name-param="{{ group_name }}"
                             data-workspace-manager-entity-name-param="{{ rubrique_data.entity_name|default('') }}"
+                            data-workspace-manager-icon-param="{{ rubrique_data.icone|default('') }}"
                             data-workspace-manager-description-param=""
                         >
                             <twig:UX:Icon name="{{ resolve_icon_name(rubrique_data.icone) }}" class="rubrique-icon" />
@@ -157,6 +164,20 @@
             <span class="tab-item-icon"></span>
             <span class="tab-item-title" data-role="tab-title"></span>
             <button class="tab-item-close" data-action="click->workspace-manager#closeTab" aria-label="Fermer l'onglet">
+                <twig:UX:Icon name="{{ resolve_icon_name('action:close') }}" />
+            </button>
+        </div>
+    </template>
+
+    {# Template pour un onglet de l'espace de travail (col-3) #}
+    <template data-workspace-manager-target="workspaceTabTemplate">
+        <div class="workspace-tab-item" role="tab" tabindex="0" aria-selected="false"
+             data-action="click->workspace-manager#activateWorkspaceTab">
+            <span class="workspace-tab-icon"></span>
+            <span class="workspace-tab-title"></span>
+            <button class="workspace-tab-close" type="button"
+                    data-action="click->workspace-manager#closeWorkspaceTab"
+                    aria-label="Fermer l'onglet">
                 <twig:UX:Icon name="{{ resolve_icon_name('action:close') }}" />
             </button>
         </div>

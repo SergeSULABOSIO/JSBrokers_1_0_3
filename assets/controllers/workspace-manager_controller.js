@@ -17,7 +17,10 @@ export default class extends Controller {
         "tabContainer",
         "tabContentContainer",
         "tabTemplate",
-        "tabContentTemplate"
+        "tabContentTemplate",
+        "workspaceTabBar",
+        "workspaceTabPanels",
+        "workspaceTabTemplate"
     ];
 
 
@@ -28,16 +31,19 @@ export default class extends Controller {
 
     // Cible pour l'élément de menu actuellement actif
     activeNavItem = null;
-    // NOUVEAU : Cible pour le groupe de menu qui contient la rubrique active
     activeGroupNavItem = null;
     activeRubriqueItem = null;
-    // NOUVEAU : Mémorise l'état de la rubrique active (au-delà de l'élément DOM)
     activeRubriqueState = null;
+
+    // --- Gestion des onglets de l'espace de travail (col-3) ---
+    workspaceTabs = [];
+    activeWorkspaceTabId = null;
+    pendingWorkspaceTabId = null;
 
     connect() {
         this.nomControleur = "WorkspaceManager";
-        this.activeRubriqueState = null; // Initialisation
-        this.restoreLastState();
+        this.activeRubriqueState = null;
+        this._restoreWorkspaceTabsFromStorage();
 
         this.boundOpenTabInVisualization = this.openTabInVisualization.bind(this);
         document.addEventListener('app:liste-element:openned', this.boundOpenTabInVisualization);
@@ -61,6 +67,9 @@ export default class extends Controller {
 
         this.boundHandleLoadingStop = this.handleLoadingStop.bind(this);
         document.addEventListener('app:loading.stop', this.boundHandleLoadingStop);
+
+        this.boundHandleNavigateTo = this.handleNavigateTo.bind(this);
+        document.addEventListener('workspace:navigate-to', this.boundHandleNavigateTo);
     }
 
     /**
@@ -136,6 +145,7 @@ export default class extends Controller {
         document.removeEventListener('app:workspace.load-default', this.boundLoadDefault);
         document.removeEventListener('app:loading.start', this.boundHandleLoadingStart);
         document.removeEventListener('app:loading.stop', this.boundHandleLoadingStop);
+        document.removeEventListener('workspace:navigate-to', this.boundHandleNavigateTo);
     }
 
     /**
@@ -802,72 +812,44 @@ export default class extends Controller {
      */
     async loadComponent(event, options = {}) {
         const { isRestoration } = options;
-
-        // CORRECTION : On nettoie l'état des composants enfants si ce n'est PAS une restauration.
-        // Le `isRestoration` est `false` (ou `undefined`) lors d'un clic, ce qui déclenche le nettoyage.
-        // Il est `true` lors d'un F5, ce qui préserve l'état.
-        if (!isRestoration) {
-            // NOUVEAU : On affiche le squelette uniquement lors d'un clic, pas lors de la restauration initiale.
-            this._showWorkspaceSkeleton();
-            this._clearWorkspaceComponentStates();
-        }
-
-        // this._showWorkspaceSkeleton(); // DÉPLACÉ : L'appel est maintenant conditionnel (voir ci-dessus).
-
-        console.log(
-            `[${++window.logSequence}] [${this.nomControleur}] - loadComponent - Code: 100 - Données:`,
-            {
-                componentName: event.currentTarget.dataset.workspaceManagerComponentNameParam,
-                entityName: event.currentTarget.dataset.workspaceManagerEntityNameParam,
-                isRestoration: isRestoration
-            }
-        );
         const clickedElement = event.currentTarget;
 
-        // Si ce n'est PAS une restauration, on nettoie l'état.
-
-
         const componentName = clickedElement.dataset.workspaceManagerComponentNameParam;
-        const entityName = clickedElement.dataset.workspaceManagerEntityNameParam; // NOUVEAU : Récupérer le nom de l'entité
-
-        const groupName = clickedElement.dataset.workspaceManagerGroupNameParam;
-        const description = clickedElement.dataset.workspaceManagerDescriptionParam;
+        const entityName    = clickedElement.dataset.workspaceManagerEntityNameParam || '';
+        const groupName     = clickedElement.dataset.workspaceManagerGroupNameParam  || '';
+        const description   = clickedElement.dataset.workspaceManagerDescriptionParam || '';
+        const iconAlias     = clickedElement.dataset.workspaceManagerIconParam || '';
 
         if (!componentName) return;
 
-        // On détermine si l'élément cliqué est une rubrique (dans la colonne 2)
         const isRubrique = clickedElement.classList.contains('rubrique-item');
 
-        // On met à jour la colonne 2 (description) SEULEMENT si ce n'est PAS une rubrique.
+        // Mettre à jour col-2 (description) uniquement pour les items top-level (pas les rubriques)
         if (!isRubrique) {
             this.descriptionContainerTarget.innerHTML = `<div class="description-wrapper">${description}</div>`;
             this.rubriquesContainerTarget.style.display = 'none';
             this.descriptionContainerTarget.style.display = 'block';
         }
 
-        this.progressBarTarget.style.display = 'block';
+        // Récupérer le titre depuis le texte de l'élément cliqué
+        const title = (clickedElement.querySelector('.rubrique-text, .nav-text')?.textContent?.trim())
+                   || entityName || componentName;
 
-        // La sauvegarde de l'état est faite immédiatement après le clic.
-        // Le chargement effectif du contenu sera géré par handleComponentLoaded.
-        if (componentName) {
-            this.activeRubriqueState = {
-                component: componentName,
-                group: groupName || null,
-                entity: entityName || null // CORRECTION : Ajouter l'entityName à l'état sauvegardé
-            };
-            sessionStorage.setItem(`lastActiveState_${this.idEntrepriseValue}`, JSON.stringify(this.activeRubriqueState));
+        if (!isRestoration) {
+            // Créer un nouvel onglet (avec squelette) et définir pendingWorkspaceTabId
+            this.createWorkspaceTab({ componentName, entityName, groupName, title, iconAlias });
+        } else {
+            // Lors d'une restauration, le panneau existe déjà — on envoie juste l'événement Cerveau
+            this.progressBarTarget.style.display = 'block';
+            this.notifyCerveau('ui:component.load', {
+                componentName,
+                entityName,
+                idEntreprise: this.idEntrepriseValue,
+                idInvite: this.idInviteValue
+            });
         }
 
-        // Cet événement est spécifiquement destiné au Cerveau pour charger le composant
-        this.notifyCerveau('ui:component.load', {
-            componentName: componentName,
-            entityName: entityName, // NOUVEAU : Envoyer le nom de l'entité
-            idEntreprise: this.idEntrepriseValue,
-            idInvite: this.idInviteValue
-        });
         this.updateActiveState(clickedElement);
-
-        // NOUVEAU : Mettre à jour l'état du groupe actif en fonction de l'élément chargé.
         this.updateActiveGroupState(groupName);
     }
 
@@ -921,21 +903,26 @@ export default class extends Controller {
      * @param {CustomEvent} event 
      */
     handleComponentLoaded(event) {
-        console.log(`[${++window.logSequence}] [${this.nomControleur}] - handleComponentLoaded - Code: 100 - Données:`, event.detail);
         const { html, error } = event.detail;
 
-        if (error) {
-            // En cas d'erreur, on ne laisse pas le squelette affiché.
-            // On pourrait aussi afficher un message d'erreur plus élaboré.
-            this.workspaceTarget.innerHTML = '';
-            console.error("Erreur lors du chargement du composant via le Cerveau:", error);
-            this.workspaceTarget.innerHTML = `<div class="p-8 text-red-500">Impossible de charger le contenu : ${error}</div>`;
-        } else {
-            this.workspaceTarget.innerHTML = html;
-            this.notifyCerveau('app:navigation-rubrique:openned', {}); // Notify Cerveau that a rubrique has been opened
+        if (!this.pendingWorkspaceTabId) {
+            this.progressBarTarget.style.display = 'none';
+            return;
         }
 
+        const panel = this.workspaceTabPanelsTarget.querySelector(`[data-tab-id="${this.pendingWorkspaceTabId}"]`);
+        if (panel) {
+            if (error) {
+                panel.innerHTML = `<div class="p-4" style="color:#dc3545;">Impossible de charger le contenu : ${error}</div>`;
+            } else {
+                panel.innerHTML = html;
+                panel.dataset.loaded = 'true';
+            }
+        }
+
+        this.pendingWorkspaceTabId = null;
         this.progressBarTarget.style.display = 'none';
+        if (!error) this.notifyCerveau('app:navigation-rubrique:openned', {});
     }
 
     /**
@@ -1082,6 +1069,289 @@ export default class extends Controller {
                 searchInput.dispatchEvent(new Event('input', { bubbles: true }));
             }
         }
+    }
+
+    /**
+     * Ouvre un nouvel onglet workspace en réponse à l'événement `workspace:navigate-to`.
+     * Utilisé par les boutons "Voir plus" du tableau de bord pour éviter un rechargement de page.
+     * @param {CustomEvent} event - detail: { component, group, entity }
+     */
+    handleNavigateTo(event) {
+        const { component, group, entity } = event.detail;
+
+        // Chercher le rubrique element dans le template (contient tous les items avec leurs data-attrs)
+        const selector = `[data-workspace-manager-component-name-param='${component}'][data-workspace-manager-entity-name-param='${entity}']`;
+        const rubriqueEl = this.rubriquesTemplateTarget.content.querySelector(selector);
+
+        if (rubriqueEl) {
+            this.loadComponent({ currentTarget: rubriqueEl }, {});
+        } else {
+            // Fallback si l'élément n'est pas trouvé dans le template
+            this.createWorkspaceTab({
+                componentName: component,
+                entityName: entity,
+                groupName: group || '',
+                title: entity,
+                iconAlias: entity.toLowerCase()
+            });
+        }
+    }
+
+    // =========================================================================
+    // Gestion des onglets de l'espace de travail (col-3)
+    // =========================================================================
+
+    /**
+     * Crée un nouvel onglet dans la barre d'onglets de col-3 et son panneau associé.
+     * Le contenu est chargé de façon lazy (au premier `activateWorkspaceTab`).
+     */
+    createWorkspaceTab({ componentName, entityName, groupName, title, iconAlias }) {
+        const tabId = `ws-tab-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+        // --- Tab button ---
+        const tabEl = this.workspaceTabTemplateTarget.content.cloneNode(true).firstElementChild;
+        tabEl.dataset.tabId = tabId;
+        tabEl.dataset.componentName = componentName;
+        tabEl.dataset.entityName = entityName || '';
+        tabEl.dataset.groupName = groupName || '';
+        tabEl.querySelector('.workspace-tab-title').textContent = title || entityName || componentName;
+
+        if (iconAlias) {
+            const requesterId = `ws-icon-${tabId}`;
+            tabEl.querySelector('.workspace-tab-icon').id = requesterId;
+            this.notifyCerveau('ui:icon.request', { iconName: iconAlias, requesterId, iconSize: 16 });
+        }
+
+        // --- Tab panel ---
+        const panel = document.createElement('div');
+        panel.className = 'workspace-tab-panel';
+        panel.dataset.tabId = tabId;
+        panel.dataset.loaded = 'false';
+        panel.innerHTML = this._workspaceSkeletonHtml();
+
+        // Supprimer le squelette initial au premier onglet
+        const initialSkeleton = this.workspaceTabPanelsTarget.querySelector('.workspace-initial-skeleton');
+        if (initialSkeleton) initialSkeleton.remove();
+
+        this.workspaceTabBarTarget.appendChild(tabEl);
+        this.workspaceTabPanelsTarget.appendChild(panel);
+
+        this.workspaceTabs.push({ id: tabId, componentName, entityName: entityName || '', groupName: groupName || '', title: title || entityName || componentName, iconAlias: iconAlias || '' });
+
+        this.pendingWorkspaceTabId = tabId;
+        this._activateWorkspaceTabById(tabId);
+        this._saveWorkspaceTabsToStorage();
+    }
+
+    /**
+     * Gestionnaire d'événement : active l'onglet workspace cliqué.
+     */
+    activateWorkspaceTab(event) {
+        event.stopPropagation();
+        const tabEl = event.currentTarget;
+        const tabId = tabEl.dataset.tabId;
+        if (!tabId) return;
+        this._activateWorkspaceTabById(tabId);
+    }
+
+    /**
+     * Active un onglet workspace par son ID (interne, sans event).
+     */
+    _activateWorkspaceTabById(tabId) {
+        // Désactiver tous les tabs et panels
+        this.workspaceTabBarTarget.querySelectorAll('.workspace-tab-item').forEach(t => {
+            t.classList.remove('active');
+            t.setAttribute('aria-selected', 'false');
+        });
+        this.workspaceTabPanelsTarget.querySelectorAll('.workspace-tab-panel').forEach(p => {
+            p.classList.remove('active');
+        });
+
+        const tabEl = this.workspaceTabBarTarget.querySelector(`[data-tab-id="${tabId}"]`);
+        const panel = this.workspaceTabPanelsTarget.querySelector(`[data-tab-id="${tabId}"]`);
+        if (!tabEl || !panel) return;
+
+        tabEl.classList.add('active');
+        tabEl.setAttribute('aria-selected', 'true');
+        panel.classList.add('active');
+        this.activeWorkspaceTabId = tabId;
+
+        // Lazy load : charger le contenu si pas encore chargé
+        if (panel.dataset.loaded !== 'true') {
+            const tabData = this.workspaceTabs.find(t => t.id === tabId);
+            if (tabData) {
+                this.pendingWorkspaceTabId = tabId;
+                this.progressBarTarget.style.display = 'block';
+                this.notifyCerveau('ui:component.load', {
+                    componentName: tabData.componentName,
+                    entityName: tabData.entityName,
+                    idEntreprise: this.idEntrepriseValue,
+                    idInvite: this.idInviteValue
+                });
+            }
+        }
+
+        // Synchroniser le menu col-1/col-2 avec cet onglet
+        const tabData = this.workspaceTabs.find(t => t.id === tabId);
+        if (tabData) this._syncMenuWithTab(tabData);
+
+        this._saveWorkspaceTabsToStorage();
+    }
+
+    /**
+     * Gestionnaire d'événement : ferme l'onglet workspace ciblé.
+     */
+    closeWorkspaceTab(event) {
+        event.stopPropagation();
+        const tabEl = event.currentTarget.closest('.workspace-tab-item');
+        if (!tabEl) return;
+        const tabId = tabEl.dataset.tabId;
+
+        const panel = this.workspaceTabPanelsTarget.querySelector(`[data-tab-id="${tabId}"]`);
+        const wasActive = tabEl.classList.contains('active');
+
+        tabEl.remove();
+        if (panel) panel.remove();
+        this.workspaceTabs = this.workspaceTabs.filter(t => t.id !== tabId);
+
+        if (wasActive) {
+            const remaining = this.workspaceTabBarTarget.querySelectorAll('.workspace-tab-item');
+            if (remaining.length > 0) {
+                const lastId = remaining[remaining.length - 1].dataset.tabId;
+                this._activateWorkspaceTabById(lastId);
+            } else {
+                this.activeWorkspaceTabId = null;
+                this._saveWorkspaceTabsToStorage();
+            }
+        } else {
+            this._saveWorkspaceTabsToStorage();
+        }
+    }
+
+    /**
+     * Synchronise les états actifs de col-1/col-2 selon les métadonnées de l'onglet.
+     */
+    _syncMenuWithTab(tabData) {
+        this.updateActiveGroupState(tabData.groupName || null);
+
+        if (tabData.groupName) {
+            const groupEl = this.element.querySelector(`[data-workspace-manager-group-name-param='${tabData.groupName}']`);
+            if (groupEl) {
+                this.showGroupRubriques({ currentTarget: groupEl });
+                requestAnimationFrame(() => {
+                    const selector = `[data-workspace-manager-component-name-param='${tabData.componentName}'][data-workspace-manager-entity-name-param='${tabData.entityName}']`;
+                    const rubriqueEl = this.rubriquesContainerTarget.querySelector(selector);
+                    if (rubriqueEl) this.updateActiveState(rubriqueEl);
+                });
+            }
+        } else if (tabData.componentName) {
+            const el = this.element.querySelector(`[data-workspace-manager-component-name-param='${tabData.componentName}']`);
+            if (el) {
+                this.updateActiveState(el);
+                // Afficher la description dans col-2 pour les items de premier niveau (ex: Tableau de bord)
+                const description = el.dataset.workspaceManagerDescriptionParam;
+                if (description) {
+                    this.descriptionContainerTarget.innerHTML = `<div class="description-wrapper">${description}</div>`;
+                    this.rubriquesContainerTarget.style.display = 'none';
+                    this.descriptionContainerTarget.style.display = 'block';
+                }
+            }
+        }
+    }
+
+    /**
+     * Reconstruit le bouton d'onglet + panel vide (sans chargement) à partir des métadonnées.
+     * Utilisé lors de la restauration depuis le localStorage.
+     */
+    _createTabStructure(tabData) {
+        const tabEl = this.workspaceTabTemplateTarget.content.cloneNode(true).firstElementChild;
+        tabEl.dataset.tabId = tabData.id;
+        tabEl.dataset.componentName = tabData.componentName;
+        tabEl.dataset.entityName = tabData.entityName || '';
+        tabEl.dataset.groupName = tabData.groupName || '';
+        tabEl.querySelector('.workspace-tab-title').textContent = tabData.title || tabData.entityName || tabData.componentName;
+
+        if (tabData.iconAlias) {
+            const requesterId = `ws-icon-${tabData.id}`;
+            tabEl.querySelector('.workspace-tab-icon').id = requesterId;
+            this.notifyCerveau('ui:icon.request', { iconName: tabData.iconAlias, requesterId, iconSize: 16 });
+        }
+
+        const panel = document.createElement('div');
+        panel.className = 'workspace-tab-panel';
+        panel.dataset.tabId = tabData.id;
+        panel.dataset.loaded = 'false';
+        panel.innerHTML = this._workspaceSkeletonHtml();
+
+        this.workspaceTabBarTarget.appendChild(tabEl);
+        this.workspaceTabPanelsTarget.appendChild(panel);
+    }
+
+    /**
+     * Persiste les métadonnées des onglets en cours dans le localStorage.
+     */
+    _saveWorkspaceTabsToStorage() {
+        const state = { tabs: this.workspaceTabs, activeTabId: this.activeWorkspaceTabId };
+        localStorage.setItem(`workspaceTabs_${this.idEntrepriseValue}`, JSON.stringify(state));
+    }
+
+    /**
+     * Restaure les onglets depuis le localStorage au chargement de la page.
+     * Remplace l'ancienne méthode restoreLastState().
+     */
+    _restoreWorkspaceTabsFromStorage() {
+        const savedJSON = localStorage.getItem(`workspaceTabs_${this.idEntrepriseValue}`);
+
+        if (!savedJSON) {
+            this._openDefaultTab();
+            return;
+        }
+
+        let saved;
+        try { saved = JSON.parse(savedJSON); } catch { this._openDefaultTab(); return; }
+
+        const { tabs, activeTabId } = saved;
+        if (!tabs || tabs.length === 0) { this._openDefaultTab(); return; }
+
+        // Supprimer le squelette initial
+        const initialSkeleton = this.workspaceTabPanelsTarget.querySelector('.workspace-initial-skeleton');
+        if (initialSkeleton) initialSkeleton.remove();
+
+        // Reconstruire la barre d'onglets
+        this.workspaceTabs = tabs;
+        tabs.forEach(tabData => this._createTabStructure(tabData));
+
+        // Activer l'onglet précédemment actif (lazy-load déclenché automatiquement)
+        const targetId = (activeTabId && tabs.find(t => t.id === activeTabId)) ? activeTabId : tabs[tabs.length - 1].id;
+        this._activateWorkspaceTabById(targetId);
+    }
+
+    /**
+     * Ouvre l'onglet par défaut (tableau de bord).
+     */
+    _openDefaultTab() {
+        if (this.hasDashboardItemTarget) {
+            this.dashboardItemTarget.click();
+        }
+    }
+
+    /**
+     * Retourne le HTML du squelette de chargement pour un panneau d'onglet.
+     */
+    _workspaceSkeletonHtml() {
+        return `<div class="workspace-skeleton">
+            <div class="skeleton-header">
+                <div class="skeleton-icon"></div>
+                <div style="flex-grow:1;">
+                    <div class="skeleton-line" style="width:40%;height:24px;"></div>
+                    <div class="skeleton-line" style="width:80%;margin-top:10px;"></div>
+                </div>
+            </div>
+            <div class="skeleton-line" style="height:40px;width:100%;margin-bottom:1rem;"></div>
+            <div class="skeleton-line" style="height:40px;width:100%;margin-bottom:1rem;"></div>
+            <div class="skeleton-line" style="height:40px;width:100%;margin-bottom:1rem;"></div>
+            <div class="skeleton-row" style="height:300px;"></div>
+        </div>`;
     }
 
     /**

@@ -49,7 +49,7 @@
                         <small id="db-renew-last-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                         <button class="db-task-new-btn ms-auto"
                                 data-meta-tip="Voir tous les renouvellements à venir"
-                                onclick="event.stopPropagation(); sessionStorage.setItem('lastActiveState_{{ entreprise.id }}', JSON.stringify({component:'_view_manager_production.html.twig',group:'Production',entity:'Avenant'})); window.location.href='{{ path('app_espace_de_travail_component.index', {'idInvite': currentInviteId ?: 0, 'idEntreprise': entreprise.id}) }}';"
+                                onclick="event.stopPropagation(); document.dispatchEvent(new CustomEvent('workspace:navigate-to',{bubbles:true,detail:{component:'_view_manager_production.html.twig',group:'Production',entity:'Avenant'}}));"
                                 aria-label="Voir tous les renouvellements">
                             <twig:UX:Icon name="hugeicons:view" style="width:15px;height:15px;color:#0047AB;" />
                         </button>
@@ -78,7 +78,7 @@
                         </button>
                         <button class="db-task-new-btn"
                                 data-meta-tip="Voir toutes les pistes marketing"
-                                onclick="event.stopPropagation(); sessionStorage.setItem('lastActiveState_{{ entreprise.id }}', JSON.stringify({component:'_view_manager_marketing.html.twig',group:'Marketing',entity:'Piste'})); window.location.href='{{ path('app_espace_de_travail_component.index', {'idInvite': currentInviteId ?: 0, 'idEntreprise': entreprise.id}) }}';"
+                                onclick="event.stopPropagation(); document.dispatchEvent(new CustomEvent('workspace:navigate-to',{bubbles:true,detail:{component:'_view_manager_marketing.html.twig',group:'Marketing',entity:'Piste'}}));"
                                 aria-label="Voir toutes les pistes">
                             <twig:UX:Icon name="hugeicons:view" style="width:15px;height:15px;color:#0047AB;" />
                         </button>
@@ -99,7 +99,7 @@
                         <small id="db-encaiss-last-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                         <button class="db-task-new-btn ms-auto"
                                 data-meta-tip="Voir tous les encaissements"
-                                onclick="event.stopPropagation(); sessionStorage.setItem('lastActiveState_{{ entreprise.id }}', JSON.stringify({component:'_view_manager.html.twig',group:'Finances',entity:'Paiement'})); window.location.href='{{ path('app_espace_de_travail_component.index', {'idInvite': currentInviteId ?: 0, 'idEntreprise': entreprise.id}) }}';"
+                                onclick="event.stopPropagation(); document.dispatchEvent(new CustomEvent('workspace:navigate-to',{bubbles:true,detail:{component:'_view_manager.html.twig',group:'Finances',entity:'Paiement'}}));"
                                 aria-label="Voir tous les encaissements">
                             <twig:UX:Icon name="hugeicons:view" style="width:15px;height:15px;color:#0047AB;" />
                         </button>
@@ -128,7 +128,7 @@
                         </button>
                         <button class="db-task-new-btn"
                                 data-meta-tip="Voir tous les bordereaux de production"
-                                onclick="event.stopPropagation(); sessionStorage.setItem('lastActiveState_{{ entreprise.id }}', JSON.stringify({component:'_view_manager.html.twig',group:'Finances',entity:'Bordereau'})); window.location.href='{{ path('app_espace_de_travail_component.index', {'idInvite': currentInviteId ?: 0, 'idEntreprise': entreprise.id}) }}';"
+                                onclick="event.stopPropagation(); document.dispatchEvent(new CustomEvent('workspace:navigate-to',{bubbles:true,detail:{component:'_view_manager.html.twig',group:'Finances',entity:'Bordereau'}}));"
                                 aria-label="Voir tous les bordereaux">
                             <twig:UX:Icon name="hugeicons:view" style="width:15px;height:15px;color:#0047AB;" />
                         </button>
@@ -157,7 +157,7 @@
                         </button>
                         <button class="db-task-new-btn"
                                 data-meta-tip="Voir toutes les notes de débit"
-                                onclick="event.stopPropagation(); sessionStorage.setItem('lastActiveState_{{ entreprise.id }}', JSON.stringify({component:'_view_manager.html.twig',group:'Finances',entity:'Note'})); window.location.href='{{ path('app_espace_de_travail_component.index', {'idInvite': currentInviteId ?: 0, 'idEntreprise': entreprise.id}) }}';"
+                                onclick="event.stopPropagation(); document.dispatchEvent(new CustomEvent('workspace:navigate-to',{bubbles:true,detail:{component:'_view_manager.html.twig',group:'Finances',entity:'Note'}}));"
                                 aria-label="Voir toutes les notes">
                             <twig:UX:Icon name="hugeicons:view" style="width:15px;height:15px;color:#0047AB;" />
                         </button>
@@ -186,7 +186,7 @@
                         </button>
                         <button class="db-task-new-btn"
                                 data-meta-tip="Voir toutes les notifications de sinistre"
-                                onclick="event.stopPropagation(); sessionStorage.setItem('lastActiveState_{{ entreprise.id }}', JSON.stringify({component:'_view_manager_sinistre.html.twig',group:'Sinistre',entity:'NotificationSinistre'})); window.location.href='{{ path('app_espace_de_travail_component.index', {'idInvite': currentInviteId ?: 0, 'idEntreprise': entreprise.id}) }}';"
+                                onclick="event.stopPropagation(); document.dispatchEvent(new CustomEvent('workspace:navigate-to',{bubbles:true,detail:{component:'_view_manager_sinistre.html.twig',group:'Sinistre',entity:'NotificationSinistre'}}));"
                                 aria-label="Voir tous les sinistres">
                             <twig:UX:Icon name="hugeicons:view" style="width:15px;height:15px;color:#0047AB;" />
                         </button>
