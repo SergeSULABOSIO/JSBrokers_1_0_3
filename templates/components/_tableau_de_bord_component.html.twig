@@ -47,7 +47,14 @@
                         <twig:UX:Icon name="mdi:calendar-clock" style="width:14px;height:14px;color:#0047AB;" />
                         <span class="small fw-semibold" style="color:#0047AB;">Renouvellements</span>
                         <small id="db-renew-last-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
-                        <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron ms-auto" style="width:15px;height:15px;color:#6c757d;flex-shrink:0;" />
+                        <button class="db-task-new-btn ms-auto"
+                                data-controller="tooltip"
+                                data-tooltip-content="Voir tous les renouvellements à venir"
+                                onclick="event.stopPropagation(); sessionStorage.setItem('lastActiveState_{{ entreprise.id }}', JSON.stringify({component:'_view_manager_production.html.twig',group:'Production',entity:'Avenant'})); window.location.href='{{ path('app_espace_de_travail_component.index', {'idInvite': currentInviteId ?: 0, 'idEntreprise': entreprise.id}) }}';"
+                                aria-label="Voir tous les renouvellements">
+                            <twig:UX:Icon name="hugeicons:view" style="width:15px;height:15px;color:#0047AB;" />
+                        </button>
+                        <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron" style="width:15px;height:15px;color:#6c757d;flex-shrink:0;" />
                     </div>
                 </summary>
                 <div data-controller="lazy-block"
@@ -63,12 +70,20 @@
                         <span class="small fw-semibold" style="color:#0047AB;">Pistes</span>
                         <small id="db-piste-last-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                         <button class="db-task-new-btn ms-auto"
+                                data-controller="tooltip"
+                                data-tooltip-content="Créer une nouvelle piste"
                                 data-entreprise-id="{{ entreprise.id }}"
                                 data-invite-id="{{ currentInviteId }}"
                                 onclick="event.stopPropagation(); dbPisteNew(this)"
-                                title="Nouvelle piste"
                                 aria-label="Nouvelle piste">
                             <twig:UX:Icon name="gridicons:add" style="width:15px;height:15px;color:#0047AB;" />
+                        </button>
+                        <button class="db-task-new-btn"
+                                data-controller="tooltip"
+                                data-tooltip-content="Voir toutes les pistes marketing"
+                                onclick="event.stopPropagation(); sessionStorage.setItem('lastActiveState_{{ entreprise.id }}', JSON.stringify({component:'_view_manager_marketing.html.twig',group:'Marketing',entity:'Piste'})); window.location.href='{{ path('app_espace_de_travail_component.index', {'idInvite': currentInviteId ?: 0, 'idEntreprise': entreprise.id}) }}';"
+                                aria-label="Voir toutes les pistes">
+                            <twig:UX:Icon name="hugeicons:view" style="width:15px;height:15px;color:#0047AB;" />
                         </button>
                         <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron" style="width:15px;height:15px;color:#6c757d;flex-shrink:0;" />
                     </div>
@@ -85,7 +100,14 @@
                         <twig:UX:Icon name="mdi:cash-multiple" style="width:14px;height:14px;color:#0047AB;" />
                         <span class="small fw-semibold" style="color:#0047AB;">Encaissements</span>
                         <small id="db-encaiss-last-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
-                        <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron ms-auto" style="width:15px;height:15px;color:#6c757d;flex-shrink:0;" />
+                        <button class="db-task-new-btn ms-auto"
+                                data-controller="tooltip"
+                                data-tooltip-content="Voir tous les encaissements"
+                                onclick="event.stopPropagation(); sessionStorage.setItem('lastActiveState_{{ entreprise.id }}', JSON.stringify({component:'_view_manager.html.twig',group:'Finances',entity:'Paiement'})); window.location.href='{{ path('app_espace_de_travail_component.index', {'idInvite': currentInviteId ?: 0, 'idEntreprise': entreprise.id}) }}';"
+                                aria-label="Voir tous les encaissements">
+                            <twig:UX:Icon name="hugeicons:view" style="width:15px;height:15px;color:#0047AB;" />
+                        </button>
+                        <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron" style="width:15px;height:15px;color:#6c757d;flex-shrink:0;" />
                     </div>
                 </summary>
                 <div data-controller="lazy-block"
@@ -101,12 +123,20 @@
                         <span class="small fw-semibold" style="color:#0047AB;">Bordereaux</span>
                         <small id="db-bord-last-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                         <button class="db-task-new-btn ms-auto"
+                                data-controller="tooltip"
+                                data-tooltip-content="Créer un nouveau bordereau de production"
                                 data-entreprise-id="{{ entreprise.id }}"
                                 data-invite-id="{{ currentInviteId }}"
                                 onclick="event.stopPropagation(); dbBordNew(this)"
-                                title="Nouveau bordereau"
                                 aria-label="Nouveau bordereau">
                             <twig:UX:Icon name="gridicons:add" style="width:15px;height:15px;color:#0047AB;" />
+                        </button>
+                        <button class="db-task-new-btn"
+                                data-controller="tooltip"
+                                data-tooltip-content="Voir tous les bordereaux de production"
+                                onclick="event.stopPropagation(); sessionStorage.setItem('lastActiveState_{{ entreprise.id }}', JSON.stringify({component:'_view_manager.html.twig',group:'Finances',entity:'Bordereau'})); window.location.href='{{ path('app_espace_de_travail_component.index', {'idInvite': currentInviteId ?: 0, 'idEntreprise': entreprise.id}) }}';"
+                                aria-label="Voir tous les bordereaux">
+                            <twig:UX:Icon name="hugeicons:view" style="width:15px;height:15px;color:#0047AB;" />
                         </button>
                         <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron" style="width:15px;height:15px;color:#6c757d;flex-shrink:0;" />
                     </div>
@@ -124,12 +154,20 @@
                         <span class="small fw-semibold" style="color:#0047AB;">Notes</span>
                         <small id="db-note-last-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                         <button class="db-task-new-btn ms-auto"
+                                data-controller="tooltip"
+                                data-tooltip-content="Créer une nouvelle note de débit"
                                 data-entreprise-id="{{ entreprise.id }}"
                                 data-invite-id="{{ currentInviteId }}"
                                 onclick="event.stopPropagation(); dbNoteNew(this)"
-                                title="Nouvelle note"
                                 aria-label="Nouvelle note">
                             <twig:UX:Icon name="gridicons:add" style="width:15px;height:15px;color:#0047AB;" />
+                        </button>
+                        <button class="db-task-new-btn"
+                                data-controller="tooltip"
+                                data-tooltip-content="Voir toutes les notes de débit"
+                                onclick="event.stopPropagation(); sessionStorage.setItem('lastActiveState_{{ entreprise.id }}', JSON.stringify({component:'_view_manager.html.twig',group:'Finances',entity:'Note'})); window.location.href='{{ path('app_espace_de_travail_component.index', {'idInvite': currentInviteId ?: 0, 'idEntreprise': entreprise.id}) }}';"
+                                aria-label="Voir toutes les notes">
+                            <twig:UX:Icon name="hugeicons:view" style="width:15px;height:15px;color:#0047AB;" />
                         </button>
                         <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron" style="width:15px;height:15px;color:#6c757d;flex-shrink:0;" />
                     </div>
@@ -147,12 +185,20 @@
                         <span class="small fw-semibold" style="color:#0047AB;">Sinistres</span>
                         <small id="db-sin-last-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
                         <button class="db-task-new-btn ms-auto"
+                                data-controller="tooltip"
+                                data-tooltip-content="Déclarer un nouveau sinistre"
                                 data-entreprise-id="{{ entreprise.id }}"
                                 data-invite-id="{{ currentInviteId }}"
                                 onclick="event.stopPropagation(); dbSinistreNew(this)"
-                                title="Nouveau sinistre"
                                 aria-label="Nouveau sinistre">
                             <twig:UX:Icon name="gridicons:add" style="width:15px;height:15px;color:#0047AB;" />
+                        </button>
+                        <button class="db-task-new-btn"
+                                data-controller="tooltip"
+                                data-tooltip-content="Voir toutes les notifications de sinistre"
+                                onclick="event.stopPropagation(); sessionStorage.setItem('lastActiveState_{{ entreprise.id }}', JSON.stringify({component:'_view_manager_sinistre.html.twig',group:'Sinistre',entity:'NotificationSinistre'})); window.location.href='{{ path('app_espace_de_travail_component.index', {'idInvite': currentInviteId ?: 0, 'idEntreprise': entreprise.id}) }}';"
+                                aria-label="Voir tous les sinistres">
+                            <twig:UX:Icon name="hugeicons:view" style="width:15px;height:15px;color:#0047AB;" />
                         </button>
                         <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron" style="width:15px;height:15px;color:#6c757d;flex-shrink:0;" />
                     </div>
