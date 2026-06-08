@@ -45,12 +45,20 @@
             <twig:UX:Icon name="hugeicons:task-02" style="width:14px;height:14px;color:#0047AB;" />
             <span class="small fw-semibold" style="color:#0047AB;">Tâches</span>
             <button class="db-task-new-btn ms-auto"
+                    data-controller="tooltip"
+                    data-tooltip-content="Créer une nouvelle tâche"
                     data-entreprise-id="{{ entreprise.id }}"
                     data-invite-id="{{ currentInviteId }}"
                     onclick="dbTaskNew(this)"
-                    title="Nouvelle tâche"
                     aria-label="Nouvelle tâche">
                 <twig:UX:Icon name="gridicons:add" style="width:15px;height:15px;color:#0047AB;" />
+            </button>
+            <button class="db-task-new-btn"
+                    data-controller="tooltip"
+                    data-tooltip-content="Voir toutes les tâches"
+                    onclick="sessionStorage.setItem('lastActiveState_{{ entreprise.id }}', JSON.stringify({component:'_view_manager_marketing.html.twig',group:'Marketing',entity:'Tache'})); window.location.href='{{ path('app_espace_de_travail_component.index', {'idInvite': currentInviteId ?: 0, 'idEntreprise': entreprise.id}) }}';"
+                    aria-label="Voir toutes les tâches">
+                <twig:UX:Icon name="hugeicons:view" style="width:15px;height:15px;color:#0047AB;" />
             </button>
         </div>
         <div class="d-flex align-items-center gap-2">
