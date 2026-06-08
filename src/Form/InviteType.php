@@ -30,7 +30,7 @@ class InviteType extends AbstractType
                 'label' => "Email du collaborateur",
                 'help' => "Saisissez l'adresse email du collaborateur. S'il n'a pas de compte, une invitation lui sera envoyée.",
                 'mapped' => false, // Très important: ce champ n'est pas directement dans l'entité Invite.
-                'required' => true,
+                'required' => false,
                 'attr' => [
                     'placeholder' => "nom.prenom@email.com",
                 ],
