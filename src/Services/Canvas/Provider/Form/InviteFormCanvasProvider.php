@@ -53,7 +53,6 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
                 "couleur_fond" => "white",
                 "colonnes" => [
                     ["champs" => ["nom"]],
-                    ["champs" => ["email"]]
                 ]
             ],
             [
@@ -63,6 +62,10 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
                 ]
             ]
         ];
+
+        if ($isParentNew) {
+            $layout[0]["colonnes"][] = ["champs" => ["email"]];
+        }
 
         // Les collections de rôles ne sont affichées qu'en mode édition,
         // car elles nécessitent un ID parent pour fonctionner.
