@@ -1158,6 +1158,18 @@ export default class extends Controller {
      * Active un onglet workspace par son ID (interne, sans event).
      */
     _activateWorkspaceTabById(tabId) {
+        // Vider le panneau actuellement actif pour déconnecter ses contrôleurs Stimulus enfants
+        // (view-manager, list-manager, etc.) et éviter les interférences entre onglets.
+        // Ces contrôleurs écoutent tous des événements document-level : s'ils restent actifs
+        // simultanément, les broadcasts du Cerveau corrompent les listes de tous les panneaux.
+        if (this.activeWorkspaceTabId && this.activeWorkspaceTabId !== tabId) {
+            const currentPanel = this.workspaceTabPanelsTarget.querySelector(`[data-tab-id="${this.activeWorkspaceTabId}"]`);
+            if (currentPanel && currentPanel.dataset.loaded === 'true') {
+                currentPanel.innerHTML = this._workspaceSkeletonHtml();
+                currentPanel.dataset.loaded = 'false';
+            }
+        }
+
         // Désactiver tous les tabs et panels
         this.workspaceTabBarTarget.querySelectorAll('.workspace-tab-item').forEach(t => {
             t.classList.remove('active');
