@@ -18,8 +18,7 @@
             {{ entreprise.invites|length }}
         </span>
         <button class="db-block-add-btn"
-                data-controller="tooltip"
-                data-tooltip-content="Inviter un nouveau collaborateur"
+                data-meta-tip="Inviter un nouveau collaborateur"
                 data-entreprise-id="{{ entreprise.id }}"
                 data-invite-id="{{ currentInviteId }}"
                 onclick="dbBlockAdd(this, 'invite', 'Nouvel invité')"
@@ -27,8 +26,7 @@
             <twig:UX:Icon name="gridicons:add" aria-hidden="true" style="width:15px;height:15px;color:#0047AB;" />
         </button>
         <button class="db-block-add-btn"
-                data-controller="tooltip"
-                data-tooltip-content="Voir tous les membres de l'équipe"
+                data-meta-tip="Voir tous les membres de l'équipe"
                 onclick="sessionStorage.setItem('lastActiveState_{{ entreprise.id }}', JSON.stringify({component:'_view_manager_administration.html.twig',group:'Administration',entity:'Invite'})); window.location.href='{{ path('app_espace_de_travail_component.index', {'idInvite': currentInviteId ?: 0, 'idEntreprise': entreprise.id}) }}';"
                 aria-label="Voir tous les membres">
             <twig:UX:Icon name="hugeicons:view" aria-hidden="true" style="width:15px;height:15px;color:#0047AB;" />
