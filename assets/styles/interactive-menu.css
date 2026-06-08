@@ -216,9 +216,123 @@ html {
 /* Colonne 3 : Espace de travail */
 .menu-col-3 {
   flex-grow: 1;
-  height: 100%; /* S'assurer que la colonne a une hauteur définie */
-  overflow-y: auto; /* Afficher la barre de défilement verticale si nécessaire */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   transition: width 0.3s ease-in-out;
+}
+
+/* --- Barre d'onglets col-3 --- */
+.workspace-tab-bar {
+  display: flex;
+  flex-direction: row;
+  overflow-x: auto;
+  background-color: #f0f2f5;
+  border-bottom: 2px solid #dee2e6;
+  min-height: 44px;
+  align-items: flex-end;
+  flex-shrink: 0;
+  scrollbar-width: thin;
+}
+
+.workspace-tab-bar:empty {
+  display: none;
+}
+
+.workspace-tab-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px 6px;
+  background-color: #e2e5ea;
+  border: none;
+  border-top: 2px solid transparent;
+  border-right: 1px solid #dee2e6;
+  cursor: pointer;
+  font-size: 0.82rem;
+  color: #6c757d;
+  white-space: nowrap;
+  user-select: none;
+  border-radius: 4px 4px 0 0;
+  transition: background-color 0.15s, color 0.15s;
+  max-width: 200px;
+  font-family: inherit;
+}
+
+.workspace-tab-item:hover {
+  background-color: #d0d5dd;
+  color: #343a40;
+}
+
+.workspace-tab-item.active {
+  background-color: #ffffff;
+  border-top: 2px solid #0047AB;
+  color: #0047AB;
+  font-weight: 600;
+}
+
+.workspace-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.workspace-tab-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.workspace-tab-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  padding: 2px;
+  border-radius: 50%;
+  margin-left: 4px;
+  flex-shrink: 0;
+  cursor: pointer;
+  line-height: 0;
+  transition: background-color 0.15s;
+}
+
+.workspace-tab-close svg {
+  width: 14px;
+  height: 14px;
+  color: #adb5bd;
+  transition: color 0.15s;
+}
+
+.workspace-tab-item:hover .workspace-tab-close svg,
+.workspace-tab-item.active .workspace-tab-close svg {
+  color: #6c757d;
+}
+
+.workspace-tab-close:hover {
+  background-color: #f8d7da;
+}
+
+.workspace-tab-close:hover svg {
+  color: #842029;
+}
+
+/* --- Zone de panneaux col-3 --- */
+.workspace-tab-panels {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+}
+
+.workspace-tab-panel {
+  display: none;
+  min-height: 100%;
+}
+
+.workspace-tab-panel.active {
+  display: block;
 }
 
 .workspace-placeholder {
