@@ -1,7 +1,7 @@
 {# templates/components/dialog/_calculated_attributes.html.twig #}
 
 {# CORRECTION : On déplace le contrôleur tooltip ici pour qu'il englobe la barre d'outils ET les attributs #}
-<div class="col-auto calculated-attributes-column" style="width: 400px;" data-controller="tooltip">
+<div class="col-auto calculated-attributes-column" style="width: 400px;">
     {# NOUVEAU : Barre d'outils pour les attributs, visible uniquement en mode édition #}
     {% if not isCreationMode and formCanvas.parametres.attribute_actions is defined and formCanvas.parametres.attribute_actions is not empty %}
         <div class="attributes-toolbar">
@@ -11,8 +11,8 @@
                     {# CORRECTION : On retire 'btn-outline-light' pour supprimer la bordure #}
                     class="btn btn-sm attributes-toolbar-button"
                     data-controller="ripple" {# NOUVEAU : Ajout de l'effet d'onde #}
-                    data-action="mouseenter->tooltip#show mouseleave->tooltip#hide click->dialog-instance#handleAttributeAction"
-                    data-tooltip-content="{{ action.label }}"
+                    data-meta-tip="{{ action.label }}"
+                    data-action="click->dialog-instance#handleAttributeAction"
                     data-event-name="{{ action.event }}"
                     data-event-url="{{ action.url }}"
                     data-event-payload="{{ {id: entity.id}|json_encode }}"
@@ -62,8 +62,7 @@
 
                         {# On affiche l'élément de liste pour l'attribut courant #}
                             <li
-                                data-action="mouseenter->tooltip#show mouseleave->tooltip#hide"
-                                data-tooltip-content="{{ attr.description|default('Aucune description disponible.') }}"
+                                data-meta-tip="{{ attr.description|default('Aucune description disponible.') }}"
                             >
                                 <span class="attr-label">{{ attr.intitule }}:</span>
                                 <span class="attr-value">
