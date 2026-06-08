@@ -27,7 +27,7 @@
         </button>
         <button class="db-block-add-btn"
                 data-meta-tip="Voir tous les membres de l'équipe"
-                onclick="sessionStorage.setItem('lastActiveState_{{ entreprise.id }}', JSON.stringify({component:'_view_manager_administration.html.twig',group:'Administration',entity:'Invite'})); window.location.href='{{ path('app_espace_de_travail_component.index', {'idInvite': currentInviteId ?: 0, 'idEntreprise': entreprise.id}) }}';"
+                onclick="event.stopPropagation(); document.dispatchEvent(new CustomEvent('workspace:navigate-to',{bubbles:true,detail:{component:'_view_manager_administration.html.twig',group:'Administration',entity:'Invite'}}));"
                 aria-label="Voir tous les membres">
             <twig:UX:Icon name="hugeicons:view" aria-hidden="true" style="width:15px;height:15px;color:#0047AB;" />
         </button>
