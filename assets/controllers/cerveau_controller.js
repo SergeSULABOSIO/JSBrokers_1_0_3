@@ -60,6 +60,7 @@ export default class extends Controller {
         this.currentWorkspaceTabId = null; // Onglet workspace actif — sert à scopter tabsState et enrichir les broadcasts
 
         this.activeParentId = null; // NOUVEAU : Pour stocker l'ID du parent de l'onglet actif.
+        this._iconCache = new Map(); // cache partagé : clé = `${iconName}::${iconSize}`
         console.log(`[${++window.logSequence}] ${this.nomControleur} - Code: 1986 -  🧠 Cerveau prêt à orchestrer.`);
         this.boundHandleEvent = this.handleEvent.bind(this);
         document.addEventListener('cerveau:event', this.boundHandleEvent);
@@ -106,12 +107,13 @@ export default class extends Controller {
             case 'ui:component.load': // Utilisé pour charger une rubrique dans l'espace de travail
                 this.currentWorkspaceTabId = payload.workspaceTabId || null;
                 if (this.currentWorkspaceTabId) {
-                    this.tabsState[this.currentWorkspaceTabId] = {}; // Vide uniquement l'état de cet onglet workspace
+                    // On réinitialise l'état de cet onglet ET on y stocke le nom de la rubrique
+                    this.tabsState[this.currentWorkspaceTabId] = { __rubricName: payload.entityName || 'Inconnu' };
                 } else {
                     this.tabsState = {}; // Compat. si workspaceTabId absent
                 }
                 this.loadWorkspaceComponent(payload.componentName, payload.entityName, payload.idEntreprise, payload.idInvite);
-                this.displayState.rubricName = payload.entityName || 'Inconnu';
+                this.displayState.rubricName = payload.entityName || 'Inconnu'; // Fallback si pas de workspaceTabId
                 break;
             case 'ui:workspace-tab.switched': // Onglet workspace déjà chargé activé par l'utilisateur
                 this.currentWorkspaceTabId = payload.workspaceTabId || null;
@@ -309,22 +311,27 @@ export default class extends Controller {
                 break;
             // NOUVEAU : Stocke l'état initial d'un onglet nouvellement créé.
             case 'ui:tab.initialized':
-                const { tabId, state, elementId, serverRootName } = payload;
-                // On stocke l'état pour une restauration future, scopé par onglet workspace.
-                if (!this._getCurrentWsTabState()[tabId]) {
+                const { tabId, state, elementId, serverRootName, workspaceTabId: initWsId } = payload;
+                // Utiliser le workspaceTabId du payload si fourni : currentWorkspaceTabId peut déjà
+                // pointer vers un autre onglet si l'utilisateur a cliqué rapidement sur deux onglets.
+                const wsStateTarget = initWsId
+                    ? (this.tabsState[initWsId] || (this.tabsState[initWsId] = {}))
+                    : this._getCurrentWsTabState();
+                if (!wsStateTarget[tabId]) {
                     state.elementId = elementId;
                     state.serverRootName = serverRootName;
-                    this._getCurrentWsTabState()[tabId] = state;
+                    wsStateTarget[tabId] = state;
                 }
 
                 // Si l'onglet qui vient d'être initialisé est l'onglet actuellement actif,
                 // cela signifie qu'un nouvel onglet vient d'être chargé.
                 // On met donc à jour le contexte courant de l'application avec cet état initial.
                 if (this.activeTabId === tabId) {
-                    // console.log(`[${++window.logSequence}] 🧠 [Cerveau] L'onglet initialisé '${tabId}' est actif. Mise à jour du contexte courant.`);
-                    // L'onglet que nous attendions est enfin prêt.
-                    // On peut maintenant publier son état initial (vide) en toute sécurité.
-                    const activeTabState = this._getActiveTabState();
+                    // Utiliser wsStateTarget[tabId] directement plutôt que _getActiveTabState() :
+                    // _getActiveTabState() crée un état vide via currentWorkspaceTabId, qui peut pointer
+                    // vers un autre onglet workspace en cas de chargements concurrents, ce qui préempte
+                    // l'entrée et empêche le prochain ui:tab.initialized de stocker son serverRootName.
+                    const activeTabState = wsStateTarget[tabId];
 
                     this.displayState.selectionCount = activeTabState.selectionState.length;
                     this._publishSelectionStatus(); // Affiche "0 sélection(s)"
@@ -416,17 +423,17 @@ export default class extends Controller {
      * @private
      */
     async _loadTabContent(payload) {
-        const { tabId, url, tabName } = payload;
+        const { tabId, url, tabName, workspaceTabId } = payload;
         try {
             const response = await fetch(url);
             if (!response.ok) {
                 throw new Error(`Échec du chargement du contenu de l'onglet (statut ${response.status}).`);
             }
             const html = await response.text();
-            this.broadcast('view-manager:tab-content.loaded', { tabId, html, tabName });
+            this.broadcast('view-manager:tab-content.loaded', { tabId, html, tabName, workspaceTabId });
         } catch (error) {
             console.error(`[Cerveau] Erreur lors du chargement du contenu pour l'onglet ${tabId}:`, error);
-            this.broadcast('view-manager:tab-content.loaded', { tabId, html: `<div class="alert alert-danger m-3">${error.message}</div>`, tabName });
+            this.broadcast('view-manager:tab-content.loaded', { tabId, html: `<div class="alert alert-danger m-3">${error.message}</div>`, tabName, workspaceTabId });
         }
     }
 
@@ -542,6 +549,10 @@ export default class extends Controller {
      * @private
      */
     async loadWorkspaceComponent(componentName, entityName, idEntreprise, idInvite) {
+        // Capturer le workspaceTabId AVANT tout await : currentWorkspaceTabId peut changer
+        // si l'utilisateur clique sur un second onglet avant que la réponse arrive.
+        const workspaceTabId = this.currentWorkspaceTabId;
+
         // On construit l'URL avec les IDs dans le chemin, comme défini par la route Symfony
         let url = `/espacedetravail/api/load-component/${idInvite}/${idEntreprise}?component=${componentName}`;
         // On ajoute le paramètre 'entity' s'il est fourni
@@ -550,7 +561,7 @@ export default class extends Controller {
         }
 
         // LOG: Vérifier l'URL finale avant l'appel fetch
-        console.log(`[${++window.logSequence}] [Cerveau] Appel fetch vers l'URL: ${url}`);
+        console.log(`[${++window.logSequence}] [Cerveau] Appel fetch vers l'URL: ${url} (workspaceTabId: ${workspaceTabId})`);
 
         try {
             const response = await fetch(url);
@@ -559,12 +570,12 @@ export default class extends Controller {
             }
             const html = await response.text();
 
-            // On diffuse le HTML aux contrôleurs qui écoutent (ex: espace-de-travail)
-            this.broadcast('workspace:component.loaded', { html: html, error: null });
+            // On diffuse le HTML en incluant le workspaceTabId capturé au début de la requête
+            this.broadcast('workspace:component.loaded', { html: html, error: null, workspaceTabId });
 
         } catch (error) {
             console.error(`[Cerveau] Échec du chargement du composant '${componentName}':`, error);
-            this.broadcast('workspace:component.loaded', { html: null, error: error.message });
+            this.broadcast('workspace:component.loaded', { html: null, error: error.message, workspaceTabId });
         }
     }
 
@@ -577,7 +588,9 @@ export default class extends Controller {
     broadcast(eventName, detail = {}) {
         // Enrichit chaque broadcast avec l'onglet workspace courant pour que les contrôleurs
         // enfants (view-manager, etc.) puissent filtrer les événements qui ne les concernent pas.
-        const enrichedDetail = { ...detail, workspaceTabId: this.currentWorkspaceTabId };
+        // Le workspaceTabId fourni explicitement dans detail (ex: réponse à une requête async) prime
+        // sur this.currentWorkspaceTabId, qui peut avoir changé depuis l'envoi de la requête.
+        const enrichedDetail = { workspaceTabId: this.currentWorkspaceTabId, ...detail };
         console.groupCollapsed(`[${++window.logSequence}] - Code: 1986 - 🧠 Cerveau Émet 📤`, `"${eventName}"`);
         console.log(`| Detail:`, enrichedDetail);
         console.groupEnd();
@@ -708,7 +721,10 @@ export default class extends Controller {
 
         const timestamp = this.displayState.timestamp.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
         const selectionCount = this.displayState.selectionCount;
-        const rubricName = this.displayState.rubricName;
+        // Cherche le nom de la rubrique dans l'état de l'onglet workspace courant (isolé par onglet),
+        // avec fallback sur displayState.rubricName pour la compatibilité sans workspaceTabId.
+        const wsState = this.currentWorkspaceTabId ? this.tabsState[this.currentWorkspaceTabId] : null;
+        const rubricName = wsState?.__rubricName || this.displayState.rubricName || 'Inconnu';
         const tabName = this.displayState.activeTabName;
 
         let messageParts = [
@@ -1011,22 +1027,39 @@ export default class extends Controller {
         const { iconName, iconSize = 24, requesterId } = payload;
         if (!iconName) return;
 
-        // NOUVELLE APPROCHE : On passe les paramètres dans la query string pour une robustesse maximale.
-        // `encodeURIComponent` s'assure que les caractères spéciaux comme ':' sont correctement formatés
-        // pour être passés dans une URL.
-        const url = `/api/icon/api/get-icon?name=${encodeURIComponent(iconName)}&size=${iconSize}`;
-    
-        try {
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`Icon fetch failed with status ${response.status}`);
+        const cacheKey = `${iconName}::${iconSize}`;
+
+        // Cache hit : promesse en vol ou résolue — une seule requête réseau par clé
+        if (this._iconCache.has(cacheKey)) {
+            try {
+                const html = await this._iconCache.get(cacheKey);
+                this.broadcast('app:icon.loaded', { iconName, html, requesterId });
+            } catch {
+                this._iconCache.delete(cacheKey);
+                return this.handleIconRequest(payload);
             }
-            const html = await response.text();
-            this.broadcast('app:icon.loaded', {
-                iconName,
-                html,
-                requesterId // Pour que seule l'instance concernée réagisse
+            return;
+        }
+
+        const url = `/api/icon/api/get-icon?name=${encodeURIComponent(iconName)}&size=${iconSize}`;
+
+        // Stocker la promesse immédiatement → requêtes simultanées partagent ce fetch
+        const fetchPromise = fetch(url)
+            .then(r => {
+                if (!r.ok) throw new Error(`Icon fetch failed: ${r.status}`);
+                return r.text();
+            })
+            .catch(err => {
+                this._iconCache.delete(cacheKey); // ne pas cacher les erreurs
+                throw err;
             });
+
+        this._iconCache.set(cacheKey, fetchPromise);
+
+        try {
+            const html = await fetchPromise;
+            this._iconCache.set(cacheKey, Promise.resolve(html));
+            this.broadcast('app:icon.loaded', { iconName, html, requesterId });
         } catch (error) {
             console.error(`[Cerveau] Failed to fetch icon '${iconName}':`, error);
             this.broadcast('app:icon.loaded', {

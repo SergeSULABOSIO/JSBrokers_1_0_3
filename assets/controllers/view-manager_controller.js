@@ -27,7 +27,6 @@ export default class extends Controller {
      * S'exécute lorsque le contrôleur est connecté au DOM.
      */
     connect() {
-        console.log("ViewManager connecté avec idEntreprise:", this.idEntrepriseValue, "et idInvite:", this.idInviteValue);
         this.isLoadingValue = false; // Initialisation de l'état de chargement
         this.nomControleur = "VIEW-MANAGER";
         /**
@@ -40,6 +39,11 @@ export default class extends Controller {
          * @private
          */
         this.tabStates = {};
+        /**
+         * @property {HTMLElement[]} _tabQueue - File FIFO des demandes d'activation en attente.
+         * @private
+         */
+        this._tabQueue = [];
         /**
          * @property {number|null} collectionTabsParentId - L'ID de l'entité parente qui génère les onglets de collection.
          * @private
@@ -59,6 +63,7 @@ export default class extends Controller {
         // Détecter l'onglet workspace parent pour isoler les événements
         const workspacePanel = this.element.closest('[data-tab-id]');
         this.workspaceTabId = workspacePanel ? workspacePanel.dataset.tabId : null;
+        console.log(`[VIEW-MANAGER] connecté — idEntreprise: ${this.idEntrepriseValue}, idInvite: ${this.idInviteValue}, workspaceTabId: ${this.workspaceTabId}`);
 
         // MODIFIÉ : On ne notifie que le contexte global (ID entreprise/invité),
         // sans le formCanvas. C'est le list-manager qui sera responsable de notifier son propre contexte de formulaire.
@@ -103,7 +108,7 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `app:display.update`.
      */
     handleDisplayUpdate(event) {
-        if (this.workspaceTabId && event.detail.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
+        if (this.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
         const { html } = event.detail;
         if (!this.hasDisplayTarget || !html) return;
 
@@ -116,7 +121,7 @@ export default class extends Controller {
      */
     handleSelection(event) {
         // Ignorer les événements destinés à un autre onglet workspace
-        if (this.workspaceTabId && event.detail.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
+        if (this.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
         // RÔLE : Cette fonction est le "constructeur d'onglets de collection".
         // Elle ne s'exécute que si une sélection a lieu sur l'onglet principal.
         if (this.activeTabId !== 'principal') {
@@ -149,19 +154,45 @@ export default class extends Controller {
     }
 
     /**
-     * Gère le clic sur un onglet pour changer de vue.
+     * Gère le clic sur un onglet : aiguille vers _activateTab ou met en file d'attente.
      * @param {MouseEvent} event
      */
-    async switchTab(event) {
-        if (this.isLoadingValue) {
-            console.warn(`[${this.nomControleur}] Tentative de changement d'onglet pendant un chargement. Action ignorée.`);
-            return;
-        }
+    switchTab(event) {
         event.preventDefault();
         const clickedTab = event.currentTarget;
+        if (clickedTab.dataset.tabId === this.activeTabId) return;
+
+        if (this.isLoadingValue) {
+            this._tabQueue.push(clickedTab);
+            console.log(`[${this.nomControleur}] Onglet '${clickedTab.dataset.tabId}' mis en file d'attente (${this._tabQueue.length} en attente).`);
+            return;
+        }
+
+        this._activateTab(clickedTab);
+    }
+
+    /**
+     * Active un onglet : verrouille, affiche le contenu ou déclenche le fetch.
+     * Appelé par switchTab ou _processNextQueuedTab.
+     * @param {HTMLElement} clickedTab - Le bouton d'onglet à activer.
+     * @private
+     */
+    _activateTab(clickedTab) {
         const newTabId = clickedTab.dataset.tabId;
-        if (newTabId === this.activeTabId) return;
-        this.isLoadingValue = true; // Verrouille le changement d'onglet
+
+        // L'onglet a pu être supprimé du DOM (ex: _removeCollectionTabs) avant d'être dépilé.
+        if (!this.tabsContainerTarget.contains(clickedTab)) {
+            console.warn(`[${this.nomControleur}] L'onglet '${newTabId}' n'est plus dans le DOM. Ignoré.`);
+            this._processNextQueuedTab();
+            return;
+        }
+        // L'onglet a pu devenir actif entre-temps (ex: un autre chemin de code).
+        if (newTabId === this.activeTabId) {
+            this._processNextQueuedTab();
+            return;
+        }
+
+        this.isLoadingValue = true;
 
         // Désactivation de l'ancien onglet
         const oldTab = this.tabsContainerTarget.querySelector(`[data-tab-id="${this.activeTabId}"]`);
@@ -180,42 +211,47 @@ export default class extends Controller {
             tab.setAttribute('aria-selected', tab === clickedTab ? 'true' : 'false');
         });
 
-        let newContent = this.tabContentContainerTarget.querySelector(`#${this.activeTabId}`);
+        const newContent = this.tabContentContainerTarget.querySelector(`#${this.activeTabId}`);
 
-        // Si l'onglet cliqué est l'onglet principal, on se contente de l'afficher.
         if (newTabId === 'principal') {
-            console.log(`[${++window.logSequence}] [${this.nomControleur}] - switchTab - Affichage de l'onglet principal.`);
+            console.log(`[${++window.logSequence}] [${this.nomControleur}] - _activateTab - Affichage de l'onglet principal.`);
             newContent.style.display = 'block';
             this.isLoadingValue = false;
-            // Le contenu est déjà là, on peut notifier le changement de contexte immédiatement.
             this.notifyCerveau('ui:tab.context-changed', {
                 tabId: this.activeTabId,
                 tabName: clickedTab.textContent,
                 parentId: this.collectionTabsParentId,
             });
+            this._processNextQueuedTab();
         } else {
-            // Pour tout autre onglet (collection), on force le rechargement du contenu.
-            console.log(`[${++window.logSequence}] [${this.nomControleur}] - switchTab - Rechargement forcé pour l'onglet '${newTabId}'.`);
             const { tabId, collectionUrl } = clickedTab.dataset;
+            console.log(`[${++window.logSequence}] [VIEW-MANAGER:${this.workspaceTabId}] _activateTab → fetch tabId=${tabId} url=${collectionUrl}`);
 
             if (newContent && collectionUrl) {
-                newContent.style.display = 'block'; // On le rend visible
-                newContent.innerHTML = this._getListSkeletonHtml(); // On y met un squelette de chargement
-                // On notifie le cerveau pour qu'il fasse le fetch, en passant le nom de l'onglet pour plus tard.
-                this.notifyCerveau('app:tab-content.load-request', { 
-                    tabId, 
-                    url: collectionUrl, 
-                    tabName: clickedTab.textContent 
+                newContent.style.display = 'block';
+                newContent.innerHTML = this._getListSkeletonHtml();
+                this.notifyCerveau('app:tab-content.load-request', {
+                    tabId,
+                    url: collectionUrl,
+                    tabName: clickedTab.textContent,
+                    workspaceTabId: this.workspaceTabId
                 });
+                // isLoadingValue reste true ; libéré dans handleTabContentLoaded
             } else {
                 console.error(`[${this.nomControleur}] - Impossible de recharger l'onglet: conteneur ou URL manquant.`, { tabId, hasContent: !!newContent, hasUrl: !!collectionUrl });
-                this.isLoadingValue = false; // On libère le verrou en cas d'erreur.
+                this.isLoadingValue = false;
+                this._processNextQueuedTab();
             }
         }
+    }
 
-        // La notification 'ui:tab.context-changed' est maintenant déplacée.
-        // - Pour l'onglet 'principal', elle est envoyée immédiatement ci-dessus.
-        // - Pour les onglets de collection, elle sera envoyée dans 'handleTabContentLoaded' une fois le contenu chargé.
+    /**
+     * Dépile le prochain onglet en attente et l'active.
+     * @private
+     */
+    _processNextQueuedTab() {
+        if (this._tabQueue.length === 0) return;
+        this._activateTab(this._tabQueue.shift());
     }
     
     /**
@@ -223,9 +259,17 @@ export default class extends Controller {
      * @param {CustomEvent} event 
      */
     handleTabContentLoaded(event) {
-        if (this.workspaceTabId && event.detail.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
-        const { tabId, html, tabName } = event.detail;
-        console.log(`[${++window.logSequence}] [${this.nomControleur}] - handleTabContentLoaded - Code: 100 - Données:`, { tabId, html, tabName });
+        const { tabId, html, tabName, workspaceTabId: evtWsId } = event.detail;
+        console.log(`[${++window.logSequence}] [VIEW-MANAGER:${this.workspaceTabId}] handleTabContentLoaded — event.tabId=${tabId} | this.activeTabId=${this.activeTabId} | event.wsId=${evtWsId}`);
+        if (this.workspaceTabId && evtWsId && evtWsId !== this.workspaceTabId) {
+            console.log(`  → ignoré (workspaceTabId mismatch: ${evtWsId} !== ${this.workspaceTabId})`);
+            return;
+        }
+        // Guard : réponse obsolète ou cross-instance — le tabId ne correspond pas à l'onglet en attente
+        if (tabId !== this.activeTabId) {
+            console.log(`  → ignoré (stale guard: tabId=${tabId} !== activeTabId=${this.activeTabId})`);
+            return;
+        }
         const contentContainer = this.tabContentContainerTarget.querySelector(`#${tabId}`);
         if (contentContainer) {
             contentContainer.innerHTML = html;
@@ -236,7 +280,8 @@ export default class extends Controller {
                 parentId: this.collectionTabsParentId,
             });
         }
-        this.isLoadingValue = false; // Libère le verrou une fois le contenu injecté
+        this.isLoadingValue = false;
+        this._processNextQueuedTab();
     }
 
     /**
@@ -245,9 +290,15 @@ export default class extends Controller {
      */
     handleTabBecameActive(event) {
         if (!this.workspaceTabId || event.detail.workspaceTabId !== this.workspaceTabId) return;
+        // Récupère le texte réel du bouton d'onglet actif (ex: "Contacts", "Principal")
+        // plutôt que l'ID technique (ex: "collection-contacts-for-1").
+        const activeTabBtn = this.tabsContainerTarget.querySelector(`[data-tab-id="${this.activeTabId}"]`);
+        const tabName = activeTabBtn
+            ? activeTabBtn.textContent.trim()
+            : (this.activeTabId === 'principal' ? 'Principal' : this.activeTabId);
         this.notifyCerveau('ui:tab.context-changed', {
             tabId: this.activeTabId,
-            tabName: this.activeTabId === 'principal' ? 'Principal' : this.activeTabId,
+            tabName: tabName,
             parentId: this.collectionTabsParentId
         });
     }
