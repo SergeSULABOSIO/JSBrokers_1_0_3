@@ -20,8 +20,10 @@ export default class extends BaseController {
 
     connect() {
         this.nomControleur = "SEARCH_BAR";
-        this.boundHandleContextChanged = this.handleContextChanged.bind(this);
+        const workspacePanel = this.element.closest('[data-tab-id]');
+        this.workspaceTabId = workspacePanel ? workspacePanel.dataset.tabId : null;
 
+        this.boundHandleContextChanged = this.handleContextChanged.bind(this);
         document.addEventListener('app:context.changed', this.boundHandleContextChanged);
 
         // L'initialisation est minimale. Le rendu se fait via handleContextChanged.
@@ -45,6 +47,7 @@ export default class extends BaseController {
      * @param {CustomEvent} event 
      */
     handleContextChanged(event) {
+        if (this.workspaceTabId && event.detail.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
         const { searchCriteria, isTabSwitch } = event.detail;
 
         // On met à jour notre copie locale des critères

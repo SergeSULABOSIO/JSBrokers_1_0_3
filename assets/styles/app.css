@@ -903,10 +903,6 @@ textarea:hover,
     gap: 1rem; /* Gouttière entre les colonnes */
 }
 
-.modal-backdrop.show ~ .modal-backdrop.show {
-    z-index: 1069;
-}
-
 /* --- 4.3 Layout à deux colonnes --- */
 /*
 ===================================================================
