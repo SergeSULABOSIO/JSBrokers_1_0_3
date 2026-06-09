@@ -57,6 +57,7 @@ export default class extends Controller {
         };
 
         this.currentIdInvite = null;
+        this.currentWorkspaceTabId = null; // Onglet workspace actif — sert à scopter tabsState et enrichir les broadcasts
 
         this.activeParentId = null; // NOUVEAU : Pour stocker l'ID du parent de l'onglet actif.
         console.log(`[${++window.logSequence}] ${this.nomControleur} - Code: 1986 -  🧠 Cerveau prêt à orchestrer.`);
@@ -103,9 +104,17 @@ export default class extends Controller {
 
         switch (type) {
             case 'ui:component.load': // Utilisé pour charger une rubrique dans l'espace de travail
-                this.tabsState = {}; // On vide la mémoire des onglets lors du chargement d'une nouvelle rubrique
+                this.currentWorkspaceTabId = payload.workspaceTabId || null;
+                if (this.currentWorkspaceTabId) {
+                    this.tabsState[this.currentWorkspaceTabId] = {}; // Vide uniquement l'état de cet onglet workspace
+                } else {
+                    this.tabsState = {}; // Compat. si workspaceTabId absent
+                }
                 this.loadWorkspaceComponent(payload.componentName, payload.entityName, payload.idEntreprise, payload.idInvite);
                 this.displayState.rubricName = payload.entityName || 'Inconnu';
+                break;
+            case 'ui:workspace-tab.switched': // Onglet workspace déjà chargé activé par l'utilisateur
+                this.currentWorkspaceTabId = payload.workspaceTabId || null;
                 break;
             case 'app:context.initialized':
                 this._setApplicationContext(payload);
@@ -126,7 +135,7 @@ export default class extends Controller {
                 this.activeTabId = payload.tabId;
                 this.activeParentId = payload.parentId || null;
 
-                const storedState = this.tabsState[this.activeTabId];
+                const storedState = this._getCurrentWsTabState()[this.activeTabId];
                 if (storedState) {
                     this.displayState.selectionCount = storedState.selectionState.length;
                     this._publishSelectionStatus();
@@ -301,12 +310,11 @@ export default class extends Controller {
             // NOUVEAU : Stocke l'état initial d'un onglet nouvellement créé.
             case 'ui:tab.initialized':
                 const { tabId, state, elementId, serverRootName } = payload;
-                // On stocke l'état pour une restauration future.
-                if (!this.tabsState[tabId]) {
-                    state.elementId = elementId; // On mémorise l'ID de l'élément
-                    state.serverRootName = serverRootName; // On mémorise le nom racine pour l'URL
-                    this.tabsState[tabId] = state;
-                    // console.log(`[${++window.logSequence}] 🧠 [Cerveau] État initialisé et stocké pour le nouvel onglet '${tabId}'.`, this.tabsState[tabId]);
+                // On stocke l'état pour une restauration future, scopé par onglet workspace.
+                if (!this._getCurrentWsTabState()[tabId]) {
+                    state.elementId = elementId;
+                    state.serverRootName = serverRootName;
+                    this._getCurrentWsTabState()[tabId] = state;
                 }
 
                 // Si l'onglet qui vient d'être initialisé est l'onglet actuellement actif,
@@ -378,16 +386,25 @@ export default class extends Controller {
      */
     _getActiveTabState() {
         if (!this.activeTabId) {
-            // Fallback au cas où aucun onglet n'est actif, bien que cela ne devrait pas arriver en fonctionnement normal.
-            // console.warn("🧠 [Cerveau] _getActiveTabState a été appelé sans onglet actif. Retour d'un état vide temporaire.");
-            return { ...this._tabStateTemplate, selectionIds: new Set() }; // Retourne une nouvelle copie
+            return { ...this._tabStateTemplate, selectionIds: new Set() };
         }
-        if (!this.tabsState[this.activeTabId]) {
-            // console.log(`[${++window.logSequence}] 🧠 [Cerveau] Initialisation à la volée de l'état pour l'onglet '${this.activeTabId}'.`);
-            // Crée une copie du template.
-            this.tabsState[this.activeTabId] = { ...this._tabStateTemplate, selectionIds: new Set(), searchCriteria: {} };
+        const wsState = this._getCurrentWsTabState();
+        if (!wsState[this.activeTabId]) {
+            wsState[this.activeTabId] = { ...this._tabStateTemplate, selectionIds: new Set(), searchCriteria: {} };
         }
-        return this.tabsState[this.activeTabId];
+        return wsState[this.activeTabId];
+    }
+
+    /**
+     * Retourne le sous-dictionnaire d'état pour l'onglet workspace actuellement actif.
+     * Clé : currentWorkspaceTabId (ou '__global__' avant tout chargement de rubrique).
+     * @returns {Object}
+     * @private
+     */
+    _getCurrentWsTabState() {
+        const key = this.currentWorkspaceTabId || '__global__';
+        if (!this.tabsState[key]) this.tabsState[key] = {};
+        return this.tabsState[key];
     }
 
 
@@ -557,13 +574,15 @@ export default class extends Controller {
      * @param {object} [detail={}] - Le payload à inclure dans `event.detail`.
      * @private
      */
-    broadcast(eventName, detail) {
-        // NOUVEAU : Logging élégant et groupé pour les événements sortants.
+    broadcast(eventName, detail = {}) {
+        // Enrichit chaque broadcast avec l'onglet workspace courant pour que les contrôleurs
+        // enfants (view-manager, etc.) puissent filtrer les événements qui ne les concernent pas.
+        const enrichedDetail = { ...detail, workspaceTabId: this.currentWorkspaceTabId };
         console.groupCollapsed(`[${++window.logSequence}] - Code: 1986 - 🧠 Cerveau Émet 📤`, `"${eventName}"`);
-        console.log(`| Detail:`, detail);
+        console.log(`| Detail:`, enrichedDetail);
         console.groupEnd();
 
-        document.dispatchEvent(new CustomEvent(eventName, { bubbles: true, detail }));
+        document.dispatchEvent(new CustomEvent(eventName, { bubbles: true, detail: enrichedDetail }));
     }
 
     /**
@@ -572,11 +591,9 @@ export default class extends Controller {
      * @private
      */
     getActiveTabId() {
-        const viewManagerEl = document.querySelector('[data-controller="view-manager"]');
-        if (viewManagerEl && this.application.getControllerForElementAndIdentifier(viewManagerEl, 'view-manager')) {
-            return this.application.getControllerForElementAndIdentifier(viewManagerEl, 'view-manager').activeTabId;
-        }
-        return 'principal'; // Fallback sur la liste principale
+        // this.activeTabId est maintenu à jour via ui:tab.context-changed / handleTabBecameActive
+        // (y compris lors des switches entre onglets workspace).
+        return this.activeTabId || 'principal';
     }
 
     /**
@@ -587,7 +604,7 @@ export default class extends Controller {
      */
     _requestListRefresh(tabId = null, payload = {}) {
         const targetTabId = tabId || this.activeTabId;
-        const tabState = this.tabsState[targetTabId];
+        const tabState = this._getCurrentWsTabState()[targetTabId];
 
 
         // La logique de fetch est maintenant directement dans le cerveau.
@@ -894,7 +911,7 @@ export default class extends Controller {
 
         let parentFieldName = null;
         // Pour une collection, le nom du champ liant au parent est dans le formCanvas de l'onglet principal.
-        const principalState = this.tabsState['principal'];
+        const principalState = this._getCurrentWsTabState()['principal'];
         if (principalState) {
             parentFieldName = this._findParentFieldName(principalState.activeTabFormCanvas);
         }

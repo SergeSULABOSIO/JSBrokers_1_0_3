@@ -16,18 +16,22 @@ import { Modal } from 'bootstrap';
 export default class extends Controller {
     connect() {
         this.modal = new Modal(this.element);
+        this.boundPreAdjust = this.preAdjustZIndex.bind(this);
         this.boundAdjustZIndex = this.adjustZIndex.bind(this);
 
-        this.element.addEventListener('hidden.bs.modal', () => this.element.remove());
+        this.element.addEventListener('hidden.bs.modal', () => {
+            this._restoreRemainingBackdrops();
+            this.element.remove();
+        });
+        this.element.addEventListener('show.bs.modal', this.boundPreAdjust);
         this.element.addEventListener('shown.bs.modal', this.boundAdjustZIndex);
 
         this.show();
     }
 
     disconnect() {
+        this.element.removeEventListener('show.bs.modal', this.boundPreAdjust);
         this.element.removeEventListener('shown.bs.modal', this.boundAdjustZIndex);
-        // Pas besoin de cacher ou de détruire la modale ici, car 'hidden.bs.modal'
-        // déclenche déjà sa suppression du DOM.
     }
 
     show() {
@@ -38,24 +42,36 @@ export default class extends Controller {
         this.modal.hide();
     }
 
+    // Appelé sur 'show.bs.modal' (avant l'animation) : positionne la modale au-dessus
+    // des modales déjà ouvertes avant même que Bootstrap crée le backdrop.
+    preAdjustZIndex() {
+        const openCount = document.querySelectorAll('.modal.show').length;
+        this.element.style.zIndex = 1055 + openCount * 20;
+    }
+
+    // Appelé sur 'shown.bs.modal' (après l'animation) : réattribue les z-index à TOUTES
+    // les modales et backdrops ouverts dans l'ordre du DOM, et masque les backdrops
+    // inférieurs pour éviter l'effet "double opacité" qui rend le fond trop sombre.
     adjustZIndex() {
-        // Tous les backdrops présents (avec ou sans .show) — le nouveau backdrop
-        // peut ne pas avoir .show au moment où shown.bs.modal est émis.
-        const backdrops = document.querySelectorAll('.modal-backdrop');
-        if (backdrops.length === 0) return;
+        const allModals = Array.from(document.querySelectorAll('.modal.show'));
+        const allBackdrops = Array.from(document.querySelectorAll('.modal-backdrop'));
 
-        // Z-index maximum parmi les autres modales déjà ouvertes.
-        // On part de 1055 (défaut Bootstrap) pour le premier dialogue.
-        const maxZIndex = Array.from(document.querySelectorAll('.modal.show'))
-            .filter(modal => modal !== this.element)
-            .reduce((max, modal) => {
-                const z = parseInt(window.getComputedStyle(modal).zIndex, 10) || 0;
-                return Math.max(max, z);
-            }, 1055);
+        allModals.forEach((modal, i) => {
+            modal.style.zIndex = 1055 + i * 20;
+        });
+        allBackdrops.forEach((backdrop, i) => {
+            backdrop.style.zIndex = 1050 + i * 20;
+            // Seul le backdrop le plus haut est visible : les autres sont masqués
+            // pour ne pas cumuler les opacités et assombrir excessivement le fond.
+            backdrop.style.opacity = i === allBackdrops.length - 1 ? '' : '0';
+        });
+    }
 
-        // Appliquer en style inline pour écraser la règle CSS des backdrops imbriqués.
-        const myBackdrop = backdrops[backdrops.length - 1];
-        myBackdrop.style.zIndex = maxZIndex + 1;
-        this.element.style.zIndex = maxZIndex + 2;
+    // Appelé à la fermeture : restaure l'opacité du backdrop inférieur (si existant).
+    // À ce stade, Bootstrap a déjà supprimé le backdrop de CETTE modale du DOM.
+    _restoreRemainingBackdrops() {
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+            backdrop.style.opacity = '';
+        });
     }
 }

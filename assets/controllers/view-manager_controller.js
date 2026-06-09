@@ -56,6 +56,10 @@ export default class extends Controller {
          */
         this.parentEntityType = null;
 
+        // Détecter l'onglet workspace parent pour isoler les événements
+        const workspacePanel = this.element.closest('[data-tab-id]');
+        this.workspaceTabId = workspacePanel ? workspacePanel.dataset.tabId : null;
+
         // MODIFIÉ : On ne notifie que le contexte global (ID entreprise/invité),
         // sans le formCanvas. C'est le list-manager qui sera responsable de notifier son propre contexte de formulaire.
         this.notifyCerveau('app:context.initialized', {
@@ -72,13 +76,14 @@ export default class extends Controller {
         });
 
         this.boundHandleSelection = this.handleSelection.bind(this);
-        this.boundHandleDisplayUpdate = this.handleDisplayUpdate.bind(this); // NOUVEAU
-        // NOUVEAU : Écouteur pour la réponse du cerveau avec le contenu de l'onglet
+        this.boundHandleDisplayUpdate = this.handleDisplayUpdate.bind(this);
         this.boundHandleTabContentLoaded = this.handleTabContentLoaded.bind(this);
+        this.boundHandleTabBecameActive = this.handleTabBecameActive.bind(this);
 
-        document.addEventListener('app:context.changed', this.boundHandleSelection); // CORRIGÉ : On écoute le nouvel événement de contexte global.
-        document.addEventListener('app:display.update', this.boundHandleDisplayUpdate); // NOUVEAU
-        document.addEventListener('view-manager:tab-content.loaded', this.boundHandleTabContentLoaded); // NOUVEAU
+        document.addEventListener('app:context.changed', this.boundHandleSelection);
+        document.addEventListener('app:display.update', this.boundHandleDisplayUpdate);
+        document.addEventListener('view-manager:tab-content.loaded', this.boundHandleTabContentLoaded);
+        document.addEventListener('workspace:tab-became-active', this.boundHandleTabBecameActive);
     }
 
     /**
@@ -86,9 +91,10 @@ export default class extends Controller {
      * Nettoie les écouteurs pour éviter les fuites de mémoire.
      */
     disconnect() {
-        document.removeEventListener('app:context.changed', this.boundHandleSelection); // CORRIGÉ : On supprime l'écouteur pour le bon événement.
-        document.removeEventListener('app:display.update', this.boundHandleDisplayUpdate); // NOUVEAU
-        document.removeEventListener('view-manager:tab-content.loaded', this.boundHandleTabContentLoaded); // NOUVEAU
+        document.removeEventListener('app:context.changed', this.boundHandleSelection);
+        document.removeEventListener('app:display.update', this.boundHandleDisplayUpdate);
+        document.removeEventListener('view-manager:tab-content.loaded', this.boundHandleTabContentLoaded);
+        document.removeEventListener('workspace:tab-became-active', this.boundHandleTabBecameActive);
     }
 
 
@@ -97,6 +103,7 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `app:display.update`.
      */
     handleDisplayUpdate(event) {
+        if (this.workspaceTabId && event.detail.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
         const { html } = event.detail;
         if (!this.hasDisplayTarget || !html) return;
 
@@ -108,6 +115,8 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
     handleSelection(event) {
+        // Ignorer les événements destinés à un autre onglet workspace
+        if (this.workspaceTabId && event.detail.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
         // RÔLE : Cette fonction est le "constructeur d'onglets de collection".
         // Elle ne s'exécute que si une sélection a lieu sur l'onglet principal.
         if (this.activeTabId !== 'principal') {
@@ -214,6 +223,7 @@ export default class extends Controller {
      * @param {CustomEvent} event 
      */
     handleTabContentLoaded(event) {
+        if (this.workspaceTabId && event.detail.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
         const { tabId, html, tabName } = event.detail;
         console.log(`[${++window.logSequence}] [${this.nomControleur}] - handleTabContentLoaded - Code: 100 - Données:`, { tabId, html, tabName });
         const contentContainer = this.tabContentContainerTarget.querySelector(`#${tabId}`);
@@ -227,6 +237,19 @@ export default class extends Controller {
             });
         }
         this.isLoadingValue = false; // Libère le verrou une fois le contenu injecté
+    }
+
+    /**
+     * Quand l'onglet workspace parent redevient actif (après un switch), re-publie le
+     * contexte courant au Cerveau pour que la toolbar et les totaux se synchronisent.
+     */
+    handleTabBecameActive(event) {
+        if (!this.workspaceTabId || event.detail.workspaceTabId !== this.workspaceTabId) return;
+        this.notifyCerveau('ui:tab.context-changed', {
+            tabId: this.activeTabId,
+            tabName: this.activeTabId === 'principal' ? 'Principal' : this.activeTabId,
+            parentId: this.collectionTabsParentId
+        });
     }
 
     /**

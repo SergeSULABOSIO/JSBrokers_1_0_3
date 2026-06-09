@@ -43,6 +43,9 @@ export default class extends BaseController {
      */
     connect() {
         this.nomControleur = "LIST-MANAGER";
+        const workspacePanel = this.element.closest('[data-tab-id]');
+        this.workspaceTabId = workspacePanel ? workspacePanel.dataset.tabId : null;
+
         this.boundHandleGlobalSelectionUpdate = this.handleGlobalSelectionUpdate.bind(this);
         this.boundHandleListRefreshed = this.handleListRefreshed.bind(this);
         this.boundToggleAll = this.toggleAll.bind(this);
@@ -164,6 +167,7 @@ export default class extends BaseController {
      * Coche ou décoche toutes les cases de la liste et notifie le Cerveau avec l'état final.
      */
     toggleAll(event) {
+        if (event && event.detail && this.workspaceTabId && event.detail.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
         const isTriggeredByUser = event && this.hasSelectAllCheckboxTarget && event.currentTarget === this.selectAllCheckboxTarget;
         const totalRows = this.rowCheckboxTargets.length;
         const checkedRows = this.rowCheckboxTargets.filter(c => c.checked).length;
@@ -211,6 +215,7 @@ export default class extends BaseController {
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
     handleGlobalSelectionUpdate(event) {
+        if (this.workspaceTabId && event.detail.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
         const selectos = event.detail.selection || [];
         const selectionIds = new Set(selectos.map(s => String(s.id)));
         this.rowCheckboxTargets.forEach(checkbox => {
@@ -252,11 +257,8 @@ export default class extends BaseController {
      * @param {CustomEvent} event
      */
     handleLoadingStart(event) {
-        // CORRECTION : On rend la fonction robuste en fournissant un objet vide par défaut
-        // si event.detail est null ou undefined. Cela évite un crash.
+        if (this.workspaceTabId && event.detail?.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
         const { originatorId } = event.detail || {};
-        
-        // On ne réagit que si l'événement nous est destiné.
         if (originatorId === this.element.id) {
             this.donneesTarget.innerHTML = this._getListSkeletonHtml();
             // On s'assure que le conteneur de la liste est visible et que le message d'état vide est caché.
@@ -290,6 +292,7 @@ export default class extends BaseController {
      * @param {CustomEvent} event - L'événement `app:list.refreshed`.
      */
     handleListRefreshed(event) {
+        if (this.workspaceTabId && event.detail.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
         const { html, originatorId } = event.detail;
 
         if (originatorId && originatorId !== this.element.id) {

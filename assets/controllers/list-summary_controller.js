@@ -34,7 +34,9 @@ export default class extends Controller {
          */
         this.selectedIds = new Set();
 
-        // --- CORRECTION : Lier et activer l'écouteur d'événement ---
+        const workspacePanel = this.element.closest('[data-tab-id]');
+        this.workspaceTabId = workspacePanel ? workspacePanel.dataset.tabId : null;
+
         this.boundHandleContextChanged = this.handleContextChanged.bind(this);
         document.addEventListener('app:context.changed', this.boundHandleContextChanged);
     }
@@ -53,6 +55,7 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `app:context.changed`.
      */
     handleContextChanged(event) {
+        if (this.workspaceTabId && event.detail.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
         const { selection, numericAttributesAndValues } = event.detail;
         console.log(`${this.nomControleur} - Contexte reçu.`, { selection, numericAttributesAndValues });
 

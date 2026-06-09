@@ -59,6 +59,10 @@ export default class extends Controller {
         // CORRECTION : Définir le nom du contrôleur en premier pour que les événements envoyés depuis initialize() soient valides.
         this.nomControleur = "Toolbar";
 
+        // Isolation multi-onglets : détecte l'onglet workspace parent
+        const workspacePanel = this.element.closest('[data-tab-id]');
+        this.workspaceTabId = workspacePanel ? workspacePanel.dataset.tabId : null;
+
         this.selectos = [];
         this.activeFormCanvas = this.entityFormCanvasValue;
         
@@ -95,11 +99,10 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
     handleContextUpdate(event) {
-        // CORRECTION FINALE : On se fie entièrement au contexte envoyé par le cerveau.
-        // Le cerveau garantit maintenant que formCanvas est toujours présent.
+        if (this.workspaceTabId && event.detail.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
         const { selection, formCanvas } = event.detail;
         this.selectos = selection || [];
-        this.activeFormCanvas = formCanvas || {}; // On se protège avec un objet vide si jamais il est null.
+        this.activeFormCanvas = formCanvas || {};
         this.organizeButtons();
     }
 
