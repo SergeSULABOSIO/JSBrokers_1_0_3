@@ -99,7 +99,7 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
     handleContextUpdate(event) {
-        if (this.workspaceTabId && event.detail.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
+        if (this.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
         const { selection, formCanvas } = event.detail;
         this.selectos = selection || [];
         this.activeFormCanvas = formCanvas || {};

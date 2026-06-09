@@ -55,7 +55,7 @@ export default class extends Controller {
      * @param {CustomEvent} event - L'événement `app:context.changed`.
      */
     handleContextChanged(event) {
-        if (this.workspaceTabId && event.detail.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
+        if (this.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
         const { selection, numericAttributesAndValues } = event.detail;
         console.log(`${this.nomControleur} - Contexte reçu.`, { selection, numericAttributesAndValues });
 

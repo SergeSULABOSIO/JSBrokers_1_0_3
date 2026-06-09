@@ -47,7 +47,7 @@ export default class extends BaseController {
      * @param {CustomEvent} event 
      */
     handleContextChanged(event) {
-        if (this.workspaceTabId && event.detail.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
+        if (this.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
         const { searchCriteria, isTabSwitch } = event.detail;
 
         // On met à jour notre copie locale des critères

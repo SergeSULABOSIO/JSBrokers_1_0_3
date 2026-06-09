@@ -122,11 +122,18 @@ export default class extends BaseController {
         const tabId = isPrincipalTab ? 'principal' : this.element.id;
 
         // 3. Notifie le cerveau avec l'état initial.
+        // Chercher le panel workspace parent pour transmettre le workspaceTabId explicitement.
+        // Sans cela, Cerveau utilise currentWorkspaceTabId qui peut pointer vers un autre onglet
+        // si l'utilisateur a cliqué rapidement sur plusieurs onglets workspace.
+        const workspacePanel = this.element.closest('[data-tab-id]');
+        const workspaceTabId = workspacePanel ? workspacePanel.dataset.tabId : null;
+
         this.notifyCerveau('ui:tab.initialized', {
             tabId: tabId,
-            elementId: this.element.id, // On ajoute l'ID de l'élément pour le cerveau
-            serverRootName: this.serverRootNameValue, // On fournit le nom racine pour l'URL
-            state: initialState
+            elementId: this.element.id,
+            serverRootName: this.serverRootNameValue,
+            state: initialState,
+            workspaceTabId: workspaceTabId
         });
     }
 
@@ -167,7 +174,7 @@ export default class extends BaseController {
      * Coche ou décoche toutes les cases de la liste et notifie le Cerveau avec l'état final.
      */
     toggleAll(event) {
-        if (event && event.detail && this.workspaceTabId && event.detail.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
+        if (event && event.detail && this.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
         const isTriggeredByUser = event && this.hasSelectAllCheckboxTarget && event.currentTarget === this.selectAllCheckboxTarget;
         const totalRows = this.rowCheckboxTargets.length;
         const checkedRows = this.rowCheckboxTargets.filter(c => c.checked).length;
@@ -215,7 +222,7 @@ export default class extends BaseController {
      * @param {CustomEvent} event - L'événement `ui:selection.changed`.
      */
     handleGlobalSelectionUpdate(event) {
-        if (this.workspaceTabId && event.detail.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
+        if (this.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
         const selectos = event.detail.selection || [];
         const selectionIds = new Set(selectos.map(s => String(s.id)));
         this.rowCheckboxTargets.forEach(checkbox => {
@@ -257,7 +264,7 @@ export default class extends BaseController {
      * @param {CustomEvent} event
      */
     handleLoadingStart(event) {
-        if (this.workspaceTabId && event.detail?.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
+        if (this.workspaceTabId && event.detail?.workspaceTabId !== this.workspaceTabId) return;
         const { originatorId } = event.detail || {};
         if (originatorId === this.element.id) {
             this.donneesTarget.innerHTML = this._getListSkeletonHtml();
@@ -292,7 +299,7 @@ export default class extends BaseController {
      * @param {CustomEvent} event - L'événement `app:list.refreshed`.
      */
     handleListRefreshed(event) {
-        if (this.workspaceTabId && event.detail.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
+        if (this.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
         const { html, originatorId } = event.detail;
 
         if (originatorId && originatorId !== this.element.id) {

@@ -903,14 +903,18 @@ export default class extends Controller {
      * @param {CustomEvent} event 
      */
     handleComponentLoaded(event) {
-        const { html, error } = event.detail;
+        const { html, error, workspaceTabId } = event.detail;
 
-        if (!this.pendingWorkspaceTabId) {
+        // Router par workspaceTabId capturé au moment de la requête ; fallback sur
+        // pendingWorkspaceTabId pour la rétro-compatibilité si workspaceTabId est absent.
+        const targetTabId = workspaceTabId || this.pendingWorkspaceTabId;
+
+        if (!targetTabId) {
             this.progressBarTarget.style.display = 'none';
             return;
         }
 
-        const panel = this.workspaceTabPanelsTarget.querySelector(`[data-tab-id="${this.pendingWorkspaceTabId}"]`);
+        const panel = this.workspaceTabPanelsTarget.querySelector(`[data-tab-id="${targetTabId}"]`);
         if (panel) {
             if (error) {
                 panel.innerHTML = `<div class="p-4" style="color:#dc3545;">Impossible de charger le contenu : ${error}</div>`;
@@ -920,7 +924,10 @@ export default class extends Controller {
             }
         }
 
-        this.pendingWorkspaceTabId = null;
+        // Libérer pendingWorkspaceTabId uniquement si c'est bien lui qui vient de charger
+        if (targetTabId === this.pendingWorkspaceTabId) {
+            this.pendingWorkspaceTabId = null;
+        }
         this.progressBarTarget.style.display = 'none';
         if (!error) this.notifyCerveau('app:navigation-rubrique:openned', {});
     }
