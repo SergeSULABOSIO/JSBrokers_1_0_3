@@ -333,6 +333,7 @@ html {
 
 .workspace-tab-panel.active {
   display: block;
+  height: 100%;
 }
 
 .workspace-placeholder {

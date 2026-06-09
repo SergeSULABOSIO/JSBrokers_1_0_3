@@ -595,7 +595,9 @@ textarea:hover,
     height: 100%;
 }
 .table-scroll-wrapper {
-    overflow-y: auto;
+}
+thead.sticky-header {
+    z-index: 100;
 }
 .sticky-header th {
     position: sticky;
