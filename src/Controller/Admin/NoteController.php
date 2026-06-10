@@ -158,6 +158,30 @@ class NoteController extends AbstractController
         ]);
     }
 
+    #[Route('/workspace-apercu/{id}', name: 'workspace_content', methods: ['GET'])]
+    public function showWorkspaceContent(Note $note): JsonResponse
+    {
+        $this->canvasBuilder->loadAllCalculatedValues($note);
+        foreach ($note->getArticles() as $article) {
+            $this->canvasBuilder->loadAllCalculatedValues($article);
+        }
+        $entreprise = $this->getEntreprise();
+        $entityCanvas = $this->canvasBuilder->getEntityCanvas(Note::class);
+
+        $html = $this->renderView('admin/note/note_preview_workspace.html.twig', [
+            'note'         => $note,
+            'entreprise'   => $entreprise,
+            'entityCanvas' => $entityCanvas,
+            'monnaie'      => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+            'previewUrl'   => $this->generateUrl('admin.note.show_preview', ['id' => $note->getId()]),
+        ]);
+
+        return $this->json([
+            'html'  => $html,
+            'title' => $note->getTypeString() . ' — ' . $note->getReference(),
+        ]);
+    }
+
     #[Route('/download-pdf/{id}', name: 'download_pdf', methods: ['GET'])]
     public function downloadPdf(Note $note): Response
     {

@@ -250,14 +250,9 @@ export default class extends BaseController {
         const activeCriteria = Object.entries(criteria);
 
         if (activeCriteria.length === 0) {
-            this.summaryTarget.innerHTML = '<span>Recherche simple activée.</span>';
-            this.summaryContainerTarget.classList.add('text-muted');
-            this.summaryContainerTarget.classList.remove('text-dark', 'fw-bold');
+            this.summaryTarget.innerHTML = '';
             return;
         }
-
-        this.summaryContainerTarget.classList.remove('text-muted');
-        this.summaryContainerTarget.classList.add('text-dark', 'fw-bold');
 
         let summaryHtml = '';
         activeCriteria.forEach(([key, val]) => {
@@ -288,16 +283,13 @@ export default class extends BaseController {
             }
 
             summaryHtml += `
-            <span class="badge text-bg-secondary me-1 mb-1 d-inline-flex align-items-center">
-                ${text}
-                <button type="button" 
-                    class="btn-close btn-close-white ms-2"
-                    style="font-size: 0.9em;"
-                    style="font-size: 0.6em;"
-                    aria-label="Remove filter" 
+            <span class="jsb-filter-badge">
+                <span class="jsb-filter-badge__text">${text}</span>
+                <button type="button"
+                    class="jsb-filter-badge__remove"
+                    aria-label="Retirer le filtre ${displayName}"
                     data-action="click->search-bar#removeFilter"
-                    data-filter-key="${key}">
-                </button>
+                    data-filter-key="${key}">×</button>
             </span>
         `;
         });

@@ -60,6 +60,12 @@ export default class extends Controller {
         this.boundLoadDefault = this.loadDefaultComponent.bind(this);
         document.addEventListener('app:workspace.load-default', this.boundLoadDefault);
 
+        this.boundCloseActiveTab = this.closeActiveWorkspaceTab.bind(this);
+        document.addEventListener('app:workspace.close-active-tab', this.boundCloseActiveTab);
+
+        this.boundInjectHtml = this.injectHtmlInNewTab.bind(this);
+        document.addEventListener('app:workspace.inject-html', this.boundInjectHtml);
+
         // --- NOUVEAU : Gestion de la barre de progression pour l'actualisation de la liste ---
         // Écoute les ordres du Cerveau pour afficher/masquer la barre de progression.
         this.boundHandleLoadingStart = this.handleLoadingStart.bind(this);
@@ -143,6 +149,8 @@ export default class extends Controller {
         document.removeEventListener('app:icon.loaded', this.boundHandleIconLoaded);
         document.removeEventListener('workspace:component.loaded', this.boundHandleComponentLoaded);
         document.removeEventListener('app:workspace.load-default', this.boundLoadDefault);
+        document.removeEventListener('app:workspace.close-active-tab', this.boundCloseActiveTab);
+        document.removeEventListener('app:workspace.inject-html', this.boundInjectHtml);
         document.removeEventListener('app:loading.start', this.boundHandleLoadingStart);
         document.removeEventListener('app:loading.stop', this.boundHandleLoadingStop);
         document.removeEventListener('workspace:navigate-to', this.boundHandleNavigateTo);
@@ -1242,6 +1250,84 @@ export default class extends Controller {
         } else {
             this._saveWorkspaceTabsToStorage();
         }
+    }
+
+    /**
+     * Ferme l'onglet workspace actif (déclenché par le bouton "Quitter" de la toolbar).
+     * Si d'autres onglets existent, active le dernier. Sinon, charge le tableau de bord.
+     */
+    closeActiveWorkspaceTab() {
+        const activeTabEl = this.workspaceTabBarTarget.querySelector('.workspace-tab-item.active');
+        if (!activeTabEl) {
+            this.loadDefaultComponent();
+            return;
+        }
+        const tabId = activeTabEl.dataset.tabId;
+        const panel = this.workspaceTabPanelsTarget.querySelector(`[data-tab-id="${tabId}"]`);
+
+        activeTabEl.remove();
+        if (panel) panel.remove();
+        this.workspaceTabs = this.workspaceTabs.filter(t => t.id !== tabId);
+
+        const remaining = this.workspaceTabBarTarget.querySelectorAll('.workspace-tab-item');
+        if (remaining.length > 0) {
+            const lastId = remaining[remaining.length - 1].dataset.tabId;
+            this._activateWorkspaceTabById(lastId);
+        } else {
+            this.activeWorkspaceTabId = null;
+            this._saveWorkspaceTabsToStorage();
+            this.loadDefaultComponent();
+        }
+    }
+
+    /**
+     * Ouvre un contenu HTML pré-rendu dans un nouvel onglet workspace (onglet éphémère).
+     * Utilisé notamment pour l'aperçu d'une note dans la zone de travail.
+     * Dédoublonne les onglets via data-tab-key.
+     */
+    injectHtmlInNewTab(event) {
+        const { html, title, iconAlias, tabKey } = event.detail;
+
+        // Dédoublonnage : si un onglet portant cette clé existe déjà, l'activer
+        if (tabKey) {
+            const existing = this.workspaceTabBarTarget
+                .querySelector(`.workspace-tab-item[data-tab-key="${tabKey}"]`);
+            if (existing) {
+                this._activateWorkspaceTabById(existing.dataset.tabId);
+                return;
+            }
+        }
+
+        const tabId = `ws-tab-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+        // --- Onglet (clone depuis le template HTML) ---
+        const tabEl = this.workspaceTabTemplateTarget.content.cloneNode(true).firstElementChild;
+        tabEl.dataset.tabId = tabId;
+        if (tabKey) tabEl.dataset.tabKey = tabKey;
+        tabEl.querySelector('.workspace-tab-title').textContent = title || 'Aperçu';
+
+        if (iconAlias) {
+            const requesterId = `ws-icon-${tabId}`;
+            tabEl.querySelector('.workspace-tab-icon').id = requesterId;
+            this.notifyCerveau('ui:icon.request', { iconName: iconAlias, requesterId, iconSize: 16 });
+        }
+
+        // --- Panel pré-rempli (data-loaded=true évite le lazy-load) ---
+        const initialSkeleton = this.workspaceTabPanelsTarget
+            .querySelector('.workspace-initial-skeleton');
+        if (initialSkeleton) initialSkeleton.remove();
+
+        const panel = document.createElement('div');
+        panel.className = 'workspace-tab-panel';
+        panel.dataset.tabId = tabId;
+        panel.dataset.loaded = 'true';
+        panel.innerHTML = html;
+
+        this.workspaceTabBarTarget.appendChild(tabEl);
+        this.workspaceTabPanelsTarget.appendChild(panel);
+
+        // Onglet éphémère : non ajouté à workspaceTabs (pas persisté dans localStorage)
+        this._activateWorkspaceTabById(tabId);
     }
 
     /**

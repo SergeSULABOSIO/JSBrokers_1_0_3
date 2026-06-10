@@ -126,7 +126,7 @@ export default class extends Controller {
                 this._showNotification('Une erreur serveur est survenue. Veuillez réessayer.', 'error');
                 break;
             case 'ui:toolbar.close-request':
-                this.broadcast('app:workspace.load-default');
+                this.broadcast('app:workspace.close-active-tab');
                 break;
             case 'ui:tab.context-changed':
                 // NOUVEAU : Ajout pour gérer le changement de contexte d'onglet
@@ -148,7 +148,8 @@ export default class extends Controller {
                         numericAttributesAndValues: storedState.numericAttributesAndValues,
                         formCanvas: storedState.activeTabFormCanvas,
                         isTabSwitch: true,
-                        searchCriteria: storedState.searchCriteria || {}
+                        searchCriteria: storedState.searchCriteria || {},
+                        workspaceTabId: this.currentWorkspaceTabId,
                     });
                 } else {
                     // patiemment que l'événement 'ui:tab.initialized' arrive pour ce même onglet.
@@ -170,7 +171,7 @@ export default class extends Controller {
             case 'ui:pagination.page-changed': {
                 const pageState = this._getActiveTabState();
                 pageState.currentPage = payload.page;
-                this.broadcast('app:loading.start', { originatorId: pageState.elementId });
+                this.broadcast('app:loading.start', { originatorId: pageState.elementId, workspaceTabId: this.currentWorkspaceTabId });
                 this._requestListRefresh(this.activeTabId, {
                     criteria: pageState.searchCriteria || {},
                     parentContext: this._getParentContextForSearch(),
@@ -291,7 +292,7 @@ export default class extends Controller {
                 this.broadcast('app:loading.stop');
                 break;
             case 'ui:toolbar.select-all-request':
-                this.broadcast('app:list.toggle-all-request');
+                this.broadcast('app:list.toggle-all-request', { workspaceTabId: this.currentWorkspaceTabId });
                 break;
             case 'app:navigation-rubrique:openned':
                 this.broadcast('app:navigation-rubrique:openned', payload);
@@ -354,7 +355,8 @@ export default class extends Controller {
                         numericAttributesAndValues: activeTabState.numericAttributesAndValues,
                         formCanvas: activeTabState.activeTabFormCanvas,
                         isTabSwitch: true, // On signale que c'est un changement d'onglet
-                        searchCriteria: activeTabState.searchCriteria
+                        searchCriteria: activeTabState.searchCriteria,
+                        workspaceTabId: this.currentWorkspaceTabId,
                     });
                 }
                 break;
@@ -521,7 +523,8 @@ export default class extends Controller {
             contextMenuPosition: contextMenuPosition, // On passe la position (ou null)
             isTabSwitch: isTabSwitch,
             searchCriteria: activeTabState.searchCriteria,
-            formCanvas: activeTabState.activeTabFormCanvas
+            formCanvas: activeTabState.activeTabFormCanvas,
+            workspaceTabId: this.currentWorkspaceTabId,
         });
     }
 
@@ -666,6 +669,7 @@ export default class extends Controller {
                     html: data.html,
                     originatorId: tabState.elementId,
                     pagination: data.pagination || null,
+                    workspaceTabId: this.currentWorkspaceTabId,
                 });
 
                 // 3. CRUCIAL : On diffuse le nouveau contexte pour que la barre des totaux et la barre d'outils
@@ -674,7 +678,8 @@ export default class extends Controller {
                     selection: tabState.selectionState,
                     numericAttributesAndValues: tabState.numericAttributesAndValues,
                     formCanvas: tabState.activeTabFormCanvas,
-                    searchCriteria: tabState.searchCriteria
+                    searchCriteria: tabState.searchCriteria,
+                    workspaceTabId: this.currentWorkspaceTabId,
                 });
             })
             .catch(error => {
@@ -1099,18 +1104,26 @@ export default class extends Controller {
         }
 
         try {
-            this._publishSelectionStatus('Génération du document...');
+            this._publishSelectionStatus('Chargement de la note…');
             this.broadcast('app:loading.start');
-            const response = await fetch(payload.url);
+
+            // Extraire le noteId depuis l'URL de l'API (/admin/note/api/get-preview-url/{noteId})
+            const noteId = payload.url.split('/').at(-1);
+            const response = await fetch(`/admin/note/workspace-apercu/${noteId}`);
             const result = await response.json();
             if (!response.ok) throw result;
 
-            // Ouvre le lien de l'aperçu dans un nouvel onglet.
-            window.open(result.previewUrl, '_blank');
-            this._publishSelectionStatus('Document prêt.');
+            // Charger le contenu dans un nouvel onglet de la zone de travail principale.
+            this.broadcast('app:workspace.inject-html', {
+                html:      result.html,
+                title:     result.title,
+                iconAlias: 'note',
+                tabKey:    `note-preview-${noteId}`,
+            });
+            this._publishSelectionStatus('Note chargée.');
         } catch (error) {
-            console.error("[Cerveau] Erreur lors de la récupération de l'URL pour l'action sur la note :", error);
-            this._showNotification(error.message || "Erreur lors de la génération du document.", "error");
+            console.error("[Cerveau] Erreur lors du chargement de la note :", error);
+            this._showNotification(error.message || "Erreur lors du chargement de la note.", "error");
         } finally {
             this.broadcast('app:loading.stop');
         }

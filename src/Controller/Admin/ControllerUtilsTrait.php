@@ -387,6 +387,7 @@ trait ControllerUtilsTrait
 
         // S'assurer que le canevas de l'entité est chargé.
         $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
+        $this->canvasBuilder->batchPreloadForCollection($data);
         foreach ($data as $item) {
             $this->loadCalculatedValues($entityCanvas, $item);
         }

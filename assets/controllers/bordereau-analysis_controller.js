@@ -2548,10 +2548,15 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
     async _handleNotePreviewRequest({ url }) {
         if (!url) return;
         try {
-            const response = await fetch(url);
+            // Extraire le noteId depuis l'URL (/admin/note/api/get-preview-url/{noteId})
+            const noteId = url.split('/').at(-1);
+            const response = await fetch(`/admin/note/workspace-apercu/${noteId}`);
             if (!response.ok) return;
-            const result = await response.json();
-            if (result.previewUrl) window.open(result.previewUrl, '_blank');
+            const { html, title } = await response.json();
+            document.dispatchEvent(new CustomEvent('app:workspace.inject-html', {
+                bubbles: true,
+                detail: { html, title, iconAlias: 'note', tabKey: `note-preview-${noteId}` },
+            }));
         } catch (e) {
             console.warn('[BordereauAnalysis] _handleNotePreviewRequest() failed:', e);
         }

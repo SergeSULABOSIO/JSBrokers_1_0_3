@@ -540,53 +540,251 @@ textarea:hover,
     color: rgba(255, 255, 255, 0.75);
 }
 
-/* --- 3.4 Barre de recherche principale --- */
-/* STYLES POUR LA BARRE DE RECHERCHE */
-.search-bar-input {
-    font-size: 1.1rem;
-    background-color: transparent !important;
-    color: #212529;
-    font-style: normal;
-    font-weight: bold;
+/* --- 3.4 Moteur de recherche — jsb-search-bar --- */
+
+.jsb-search-bar { width: 100%; }
+
+.jsb-search-bar__row {
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    border: 1.5px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.625rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
-.search-bar-input::placeholder {
-    color: #adb5bd;
-    font-style: italic;
-    font-weight: normal;
+.jsb-search-bar__row:focus-within {
+    border-color: #0047AB;
+    box-shadow: 0 0 0 3px rgba(0, 71, 171, 0.15);
+}
+
+.jsb-search-bar__icon {
+    display: flex;
+    align-items: center;
+    color: #6c757d;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    margin-right: 0.5rem;
+    transition: color 0.2s ease;
+}
+.jsb-search-bar__row:focus-within .jsb-search-bar__icon { color: #0047AB; }
+
+.jsb-search-bar__input {
+    flex: 1;
+    border: none;
+    background: transparent;
     font-size: 0.95rem;
+    color: #212529;
+    padding: 0.375rem 0;
+    min-width: 0;
 }
-.search-bar-input:focus {
-    box-shadow: none !important;
-}
-.search-bar-row-1, .search-bar-row-2 {
-    font-size: 0.9rem;
-}
-.search-bar-row-2 {
-    line-height: 1.8;
-}
-.search-summary-icon {
-    width: 1.1em;
-    height: 1.1em;
+.jsb-search-bar__input:focus { outline: none; box-shadow: none; }
+.jsb-search-bar__input::placeholder { color: #adb5bd; font-style: italic; }
+
+.jsb-search-bar__divider {
+    width: 1px;
+    height: 1.25rem;
+    background: #dee2e6;
+    margin: 0 0.5rem;
+    flex-shrink: 0;
 }
 
-/* --- 3.5 Barre des totaux (sous les onglets) --- */
-/*
-===================================================================
- SECTION: STYLE POUR LA BARRE DES TOTAUX
-===================================================================
-*/
+.jsb-search-bar__criterion {
+    border: none;
+    background: transparent;
+    font-size: 0.85rem;
+    color: #495057;
+    padding: 0.25rem 0.375rem;
+    max-width: 180px;
+    cursor: pointer;
+}
+.jsb-search-bar__criterion:focus { outline: none; }
 
-/* NOUVEAU : Style pour la barre des totaux désactivée */
-.sticky-header .list-summary.is-disabled {
+.jsb-search-bar__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: 0.25rem;
+    flex-shrink: 0;
+}
+
+.jsb-search-bar__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border: 1px solid transparent;
+    background: transparent;
+    padding: 0.3rem 0.625rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #6c757d;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    min-height: 32px;
+}
+.jsb-search-bar__btn svg { width: 15px; height: 15px; }
+
+.jsb-search-bar__btn--advanced {
+    color: #0047AB;
+    border-color: rgba(0, 71, 171, 0.3);
+    background-color: #e8f0fb;
+}
+.jsb-search-bar__btn--advanced:hover {
+    background-color: #0047AB;
+    border-color: #0047AB;
+    color: #ffffff;
+}
+
+.jsb-search-bar__btn--reset:hover {
+    background-color: #e9ecef;
+    color: #212529;
+}
+
+.jsb-search-bar__btn-label { font-size: 0.8rem; }
+
+.jsb-search-bar__filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    padding-top: 0.375rem;
+    padding-left: 0.125rem;
+}
+.jsb-search-bar__filters:has(div:empty) { display: none; }
+
+.jsb-filter-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    background-color: #e8f0fb;
+    color: #0047AB;
+    border: 1px solid rgba(0, 71, 171, 0.25);
+    border-radius: 2rem;
+    padding: 0.2rem 0.5rem 0.2rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    line-height: 1.4;
+}
+.jsb-filter-badge__remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
     opacity: 0.65;
-    background-color: #e9ecef; /* Un fond gris léger, comme pour les accordéons désactivés */
-    pointer-events: none; /* Bloque toutes les interactions (clics, survol) */
-    cursor: not-allowed;
+    cursor: pointer;
+    padding: 0;
+    font-size: 1rem;
+    line-height: 1;
+    transition: opacity 0.15s, background-color 0.15s;
+}
+.jsb-filter-badge__remove:hover {
+    opacity: 1;
+    background-color: rgba(0, 71, 171, 0.18);
 }
 
-/* On s'assure que le curseur est correct sur les éléments enfants aussi */
-.sticky-header .list-summary.is-disabled * {
-    cursor: not-allowed;
+.jsb-search-dialog__header {
+    background-color: #0047AB;
+    color: #ffffff;
+}
+.jsb-search-dialog__header .modal-title {
+    display: flex;
+    align-items: center;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.jsb-btn-cobalt {
+    background-color: #0047AB;
+    border-color: #0047AB;
+    color: #ffffff;
+}
+.jsb-btn-cobalt:hover, .jsb-btn-cobalt:focus {
+    background-color: #003380;
+    border-color: #003380;
+    color: #ffffff;
+}
+
+/* --- 3.5 Barre des contrôles de liste (pagination + totaux) --- */
+
+.jsb-list-controls-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 25;
+    background: #ffffff;
+    border-bottom: 1px solid #dee2e6;
+    padding: 0.25rem 0.75rem;
+    min-height: 38px;
+}
+.jsb-list-controls-bar__pagination { flex: 1; min-width: 0; }
+.jsb-list-controls-bar__totals { flex-shrink: 0; }
+.jsb-list-controls-bar__display {
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    color: #6c757d;
+    white-space: nowrap;
+    padding: 0 0.25rem;
+}
+.jsb-list-controls-bar__sep {
+    width: 1px;
+    height: 1rem;
+    background: #dee2e6;
+    flex-shrink: 0;
+}
+
+.jsb-list-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+}
+.jsb-list-summary__label {
+    color: #6c757d;
+    font-size: 0.78rem;
+    white-space: nowrap;
+    margin-bottom: 0;
+}
+.jsb-list-summary__select {
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    background: transparent;
+    font-size: 0.78rem;
+    color: #495057;
+    padding: 0.125rem 0.375rem;
+    max-width: 160px;
+    cursor: pointer;
+}
+.jsb-list-summary__select:focus { outline: 2px solid #0047AB; outline-offset: 1px; }
+.jsb-list-summary__divider {
+    width: 1px;
+    height: 1rem;
+    background: #dee2e6;
+    flex-shrink: 0;
+}
+.jsb-list-summary__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    white-space: nowrap;
+}
+.jsb-list-summary__item-label { color: #6c757d; font-size: 0.78rem; }
+.jsb-list-summary__item-value {
+    color: #0047AB;
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+.jsb-list-summary.is-disabled {
+    opacity: 0.5;
+    pointer-events: none;
 }
 
 /* --- 3.6 Tableaux de données --- */
@@ -597,17 +795,8 @@ textarea:hover,
 .table-scroll-wrapper {
 }
 
-/* Barre de pagination sticky en haut de chaque liste */
-.jsb-pagination-bar {
-    position: sticky;
-    top: 0;
-    z-index: 25;
-    background: #fff;
-}
-
-/* Quand la barre de pagination est visible, le thead de la table doit se décaler
-   pour ne pas se superposer. La hauteur exacte est injectée via --jsb-pgbar-h par JS. */
-.list-manager-has-pagination thead.sticky-header th {
+/* Offset du thead quand la barre des contrôles est présente */
+.list-manager-has-controls thead.sticky-header th {
     top: var(--jsb-pgbar-h, 0px);
 }
 
@@ -1555,29 +1744,36 @@ thead.sticky-header {
 
 /* --- 5.2 Critères de recherche avancée --- */
 /* ================================================================== */
-/* NOUVEAU : Style pour le formulaire de recherche avancée          */
+/* Formulaire de recherche avancée — criterion blocks               */
 /* ================================================================== */
 
 .criterion-block {
-    border: 1px solid #e9ecef;
-    border-radius: 0.375rem;
-    margin-bottom: 1rem;
-    background-color: #f8f9fa;
-    /* NOUVEAU : Bordure gauche par défaut (inactive) */
-    border-left: 6px solid #adb5bd; /* Gris moyen */
-    transition: border-left-color 0.3s ease-in-out; /* Transition douce */
+    background: #ffffff;
+    border: 1px solid #dee2e6;
+    border-left: 4px solid #dee2e6;
+    border-radius: 0.5rem;
+    margin-bottom: 0.75rem;
+    transition: border-left-color 0.2s ease, background-color 0.2s ease;
 }
-
-/* NOUVEAU : Style pour un critère actif */
 .criterion-block.is-active {
-    border-left-color: #198754; /* Vert "success" de Bootstrap */
+    border-left-color: #0047AB;
+    background-color: #e8f0fb;
 }
 .criterion-block .criterion-header {
-    padding: 0.5rem 1rem;
-    background-color: #e9ecef; /* Fond de l'en-tête un peu plus foncé */
+    padding: 0.45rem 0.875rem;
+    background: transparent;
     border-bottom: 1px solid #dee2e6;
-    font-weight: 600; /* Police semi-bold pour le titre */
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #495057;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
+.criterion-block.is-active .criterion-header {
+    color: #0047AB;
+    border-bottom-color: rgba(0, 71, 171, 0.2);
+}
+.criterion-block > div:last-child { padding: 0.75rem; }
 
 /* --- 5.3 Boutons d'action contextuels (sur les lignes) --- */
 /*

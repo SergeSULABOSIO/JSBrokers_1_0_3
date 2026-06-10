@@ -15,6 +15,10 @@ export default class extends Controller {
      */
     static targets = ["globalTotal", "selectionTotal", "attributeSelector"];
 
+    static values = {
+        currencyCode: { type: String, default: 'EUR' }
+    };
+
     /**
      * Méthode du cycle de vie de Stimulus.
      * S'exécute lorsque le contrôleur est connecté au DOM.
@@ -37,6 +41,11 @@ export default class extends Controller {
         const workspacePanel = this.element.closest('[data-tab-id]');
         this.workspaceTabId = workspacePanel ? workspacePanel.dataset.tabId : null;
 
+        // Lecture directe depuis l'attribut HTML du list-manager parent.
+        // Bypasse le broadcast Cerveau initial qui peut être filtré par workspaceTabId
+        // si le panneau workspace est déjà dans le DOM avec un data-tab-id.
+        this._readInitialDataFromDom();
+
         this.boundHandleContextChanged = this.handleContextChanged.bind(this);
         document.addEventListener('app:context.changed', this.boundHandleContextChanged);
     }
@@ -57,12 +66,9 @@ export default class extends Controller {
     handleContextChanged(event) {
         if (this.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
         const { selection, numericAttributesAndValues } = event.detail;
-        console.log(`${this.nomControleur} - Contexte reçu.`, { selection, numericAttributesAndValues });
 
         const data = numericAttributesAndValues || {};
         const keys = Object.keys(data);
-        // CORRECTION : Vérification "bulletproof". On considère qu'il y a des données si l'objet n'est pas vide
-        // ET si ses clés sont des ID numériques valides (et non des index de tableau comme "0" provenant d'un schéma vide).
         const hasNumericData = keys.length > 0 && keys.every(key => /^[1-9]\d*$/.test(key));
         let numericAttributes = [];
 
@@ -113,6 +119,10 @@ export default class extends Controller {
             }
             // On essaie de restaurer la sélection précédente si l'option existe toujours.
             this.attributeSelectorTarget.value = currentValue;
+            // Si rien n'est sélectionné (premier chargement), on pré-sélectionne le premier attribut.
+            if (!this.attributeSelectorTarget.value) {
+                this.attributeSelectorTarget.value = attributes[0].code;
+            }
         }
     }
 
@@ -158,14 +168,63 @@ export default class extends Controller {
     }
 
     /**
+     * Lit les données numériques initiales directement depuis l'attribut HTML du list-manager parent,
+     * sans attendre le premier broadcast Cerveau (qui peut être filtré par workspaceTabId).
+     * @private
+     */
+    _readInitialDataFromDom() {
+        const listManagerEl = this.element.closest('[data-controller~="list-manager"]');
+        if (!listManagerEl) return;
+
+        const raw = listManagerEl.getAttribute('data-list-manager-numeric-attributes-and-values-value');
+        if (!raw) return;
+
+        try {
+            const decoded = this._decodeHtmlEntities(raw);
+            const parsed = JSON.parse(decoded || '{}');
+            const keys = Object.keys(parsed);
+            const hasData = keys.length > 0 && keys.every(k => /^[1-9]\d*$/.test(k));
+
+            if (hasData) {
+                this.numericData = parsed;
+                const model = Object.values(parsed)[0];
+                const numericAttributes = Object.entries(model).map(([code, details]) => ({
+                    code,
+                    intitule: details.description
+                }));
+                this.element.style.display = 'flex';
+                this.updateAttributeSelector(numericAttributes);
+                this.recalculate();
+            } else {
+                this.updateAttributeSelector([]);
+            }
+        } catch (e) {
+            console.error(`${this.nomControleur} - Erreur lecture DOM initiale.`, e);
+            this.updateAttributeSelector([]);
+        }
+    }
+
+    /**
+     * Décode les entités HTML d'une chaîne de caractères.
+     * @param {string} str La chaîne à décoder.
+     * @returns {string} La chaîne décodée.
+     * @private
+     */
+    _decodeHtmlEntities(str) {
+        if (!str) return str;
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = str;
+        return textarea.value;
+    }
+
+    /**
      * Formate une valeur en centimes en une chaîne de caractères monétaire.
      * @param {number} valueInCents - La valeur en centimes.
      * @returns {string} La valeur formatée (ex: "1 234,56 €").
      * @private
      */
     formatCurrency(valueInCents) {
-        // Note : La devise 'EUR' est utilisée par défaut pour un contexte francophone.
-        // Ceci pourrait être rendu dynamique via une configuration globale.
-        return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(valueInCents / 100);
+        const currency = this.currencyCodeValue || 'EUR';
+        return new Intl.NumberFormat('fr-FR', { style: 'currency', currency }).format(valueInCents / 100);
     }
 }

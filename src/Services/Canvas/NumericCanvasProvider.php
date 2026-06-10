@@ -20,6 +20,9 @@ class NumericCanvasProvider
     public function getAttributesAndValues($object): array
     {
         $entityClassName = get_class($object);
+        if ($object instanceof \Doctrine\Persistence\Proxy) {
+            $entityClassName = get_parent_class($object);
+        }
 
         foreach ($this->providers as $provider) {
             if ($provider->supports($entityClassName)) {

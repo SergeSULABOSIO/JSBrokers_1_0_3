@@ -1,55 +1,33 @@
-{#
-    Ce template représente la barre de résumé (ou de totaux) affichée sous la barre d'outils d'une liste.
-    Il est piloté par le contrôleur Stimulus `list-summary` (anciennement `totals-bar`).
-
-    Fonctionnement :
-    - Ce contrôleur est "passif". Il écoute les événements `ui:selection.changed` émis par le Cerveau.
-    - À la réception d'un événement, il met à jour la liste déroulante des attributs numériques disponibles
-      et recalcule les totaux (global et sélection) pour l'attribut actuellement sélectionné.
-#}
 <div
     data-controller="list-summary"
-    class="d-flex align-items-center justify-content-between mb-0 mt-2"
+    data-list-summary-currency-code-value="{{ display_currency_code()|default('EUR') }}"
+    class="jsb-list-summary"
+    role="region"
+    aria-label="Totaux de la liste"
 >
-    {# Sous-ensemble 1: Choix de l'attribut #}
-    <div class="d-flex align-items-center">
-        <label for="attribute-select" class="form-label me-2 mb-0 small text-muted">Totaliser :</label>
-        <select
-            class="form-select form-select-sm text-secondary text-muted small"
-            id="attribute-select"
-            style="width: auto;"
-            data-action="list-summary#recalculate"
-            data-list-summary-target="attributeSelector"
-        >
-           {# Les options sont peuplées dynamiquement par le contrôleur Stimulus. #}
-           {# On garde une option par défaut pour l'état initial. #}
-           <option value="">-- Choisir --</option>
-        </select>
-    </div>
-
-    {# Sous-ensemble 2: Total Global #}
-    <div class="d-flex align-items-center gap-2">
-        <span class="text-muted small">Total Global:</span>
-        <span
-            class="small fw-bolder text-muted"
+    <label class="jsb-list-summary__label" aria-hidden="true">Totaliser :</label>
+    <select
+        class="jsb-list-summary__select"
+        aria-label="Choisir l'attribut à totaliser"
+        data-action="list-summary#recalculate"
+        data-list-summary-target="attributeSelector"
+    >
+        <option value="">-- Choisir --</option>
+    </select>
+    <span class="jsb-list-summary__divider" aria-hidden="true"></span>
+    <span class="jsb-list-summary__item">
+        <span class="jsb-list-summary__item-label">Total</span>
+        <span class="jsb-list-summary__item-value"
             data-list-summary-target="globalTotal"
             aria-live="polite"
-            aria-atomic="true"
-        >
-           0,00 $
-        </span>
-    </div>
-
-    {# Sous-ensemble 3: Total de la Sélection #}
-    <div class="d-flex align-items-center gap-2">
-        <span class="text-muted small">Total Sélection:</span>
-        <span
-            class="small fw-bold text-muted"
+            aria-atomic="true">—</span>
+    </span>
+    <span class="jsb-list-summary__divider" aria-hidden="true"></span>
+    <span class="jsb-list-summary__item">
+        <span class="jsb-list-summary__item-label">Sélection</span>
+        <span class="jsb-list-summary__item-value"
             data-list-summary-target="selectionTotal"
             aria-live="polite"
-            aria-atomic="true"
-        >
-           0,00 $
-        </span>
-    </div>
+            aria-atomic="true">—</span>
+    </span>
 </div>
