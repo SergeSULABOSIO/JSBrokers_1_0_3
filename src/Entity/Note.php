@@ -193,6 +193,15 @@ class Note implements OwnerAwareInterface
         return $this->type;
     }
 
+    public function getTypeString(): string
+    {
+        return match ($this->type) {
+            self::TYPE_NOTE_DE_DEBIT  => 'Note de Débit',
+            self::TYPE_NOTE_DE_CREDIT => 'Note de Crédit',
+            default                   => 'Note',
+        };
+    }
+
     public function setType(int $type): static
     {
         $this->type = $type;
