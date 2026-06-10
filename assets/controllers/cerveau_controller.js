@@ -53,7 +53,8 @@ export default class extends Controller {
             activeTabFormCanvas: null,
             searchCriteria: {},
             elementId: null,
-            serverRootName: null
+            serverRootName: null,
+            currentPage: 1,
         };
 
         this.currentIdInvite = null;
@@ -166,6 +167,17 @@ export default class extends Controller {
             case 'dialog:search.open-request':
                 this.broadcast('dialog:search.open-request', payload); // Relay to search-bar-dialog
                 break;
+            case 'ui:pagination.page-changed': {
+                const pageState = this._getActiveTabState();
+                pageState.currentPage = payload.page;
+                this.broadcast('app:loading.start', { originatorId: pageState.elementId });
+                this._requestListRefresh(this.activeTabId, {
+                    criteria: pageState.searchCriteria || {},
+                    parentContext: this._getParentContextForSearch(),
+                    page: payload.page,
+                });
+                break;
+            }
             case 'ui:search.submitted': // NOUVEAU : Point d'entrée unique pour toute soumission de recherche
                 this._handleSearchRequest(payload.criteria);
                 break;
@@ -629,9 +641,8 @@ export default class extends Controller {
 
         fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, // On attend du JSON
-            // CORRECTION : On envoie le payload complet (criteria + parentContext)
-            body: JSON.stringify(payload),
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ ...payload, page: payload.page ?? tabState.currentPage ?? 1 }),
         })
             .then(response => {
                 const contentType = response.headers.get("content-type");
@@ -643,16 +654,19 @@ export default class extends Controller {
                 });
             })
             .then(data => {
-                // CORRECTION : Le flux de mise à jour après un rafraîchissement a été corrigé.
-
                 // 1. On met à jour l'état interne du cerveau avec les nouvelles données.
                 tabState.numericAttributesAndValues = data.numericAttributesAndValues || {};
+                if (data.pagination) tabState.currentPage = data.pagination.currentPage;
                 // La sélection est perdue après un rafraîchissement, on la réinitialise.
                 tabState.selectionState = [];
                 tabState.selectionIds.clear();
 
-                // 2. On diffuse l'événement pour que le list-manager mette à jour son contenu HTML.
-                this.broadcast('app:list.refreshed', { html: data.html, originatorId: tabState.elementId });
+                // 2. On diffuse l'événement pour que le list-manager mette à jour son contenu HTML et la pagination.
+                this.broadcast('app:list.refreshed', {
+                    html: data.html,
+                    originatorId: tabState.elementId,
+                    pagination: data.pagination || null,
+                });
 
                 // 3. CRUCIAL : On diffuse le nouveau contexte pour que la barre des totaux et la barre d'outils
                 // se mettent à jour avec les nouvelles informations (nouvelles données numériques et sélection vide).
@@ -893,6 +907,7 @@ export default class extends Controller {
     _handleSearchRequest(criteria = {}) {
         const activeState = this._getActiveTabState();
         activeState.searchCriteria = criteria;
+        activeState.currentPage = 1; // toute nouvelle recherche repart de la page 1
 
         // Notifie le début du chargement pour afficher le squelette et la barre de progression.
         this.broadcast('app:loading.start', { originatorId: activeState.elementId });
@@ -901,7 +916,8 @@ export default class extends Controller {
         const refreshPayload = {
             criteria: activeState.searchCriteria,
             // NOUVEAU : La logique complexe de recherche du contexte est maintenant dans sa propre fonction.
-            parentContext: this._getParentContextForSearch()
+            parentContext: this._getParentContextForSearch(),
+            page: 1,
         };
 
         // Log pour le débogage.

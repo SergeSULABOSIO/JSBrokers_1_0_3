@@ -333,10 +333,10 @@ textarea:hover,
 
 /* --- Base commune de tous les boutons toolbar --- */
 .context-toolbar .btn {
-    border-radius: 8px;
+    border-radius: 6px;
     border: none;
-    /* padding: 0.7rem garantit une zone cliquable ≥ 44px (31px icône + 2×11.2px) — WCAG 2.5.5 */
-    padding: 0.7rem;
+    /* padding: 0.4rem → zone cliquable ≈ 35px (22px icône + 2×6.4px) — compact mais utilisable */
+    padding: 0.4rem;
     line-height: 1;
     background-color: transparent;
     transition: background-color 0.15s ease-in-out, transform 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
@@ -398,8 +398,8 @@ textarea:hover,
 
 /* --- Icônes SVG dans les boutons toolbar --- */
 .toolbar-icon {
-    width: 31px;
-    height: 31px;
+    width: 22px;
+    height: 22px;
     display: block;
     transition: color 0.15s ease-in-out;
 }
@@ -596,6 +596,21 @@ textarea:hover,
 }
 .table-scroll-wrapper {
 }
+
+/* Barre de pagination sticky en haut de chaque liste */
+.jsb-pagination-bar {
+    position: sticky;
+    top: 0;
+    z-index: 25;
+    background: #fff;
+}
+
+/* Quand la barre de pagination est visible, le thead de la table doit se décaler
+   pour ne pas se superposer. La hauteur exacte est injectée via --jsb-pgbar-h par JS. */
+.list-manager-has-pagination thead.sticky-header th {
+    top: var(--jsb-pgbar-h, 0px);
+}
+
 thead.sticky-header {
     z-index: 100;
 }

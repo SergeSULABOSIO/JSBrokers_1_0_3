@@ -208,8 +208,24 @@ trait ControllerUtilsTrait
         string $collectionFieldName,
         ?string $totalizableField = null,
         ?string $secondaryField = null,
-        ?string $secondaryLabel = null
+        ?string $secondaryLabel = null,
+        int $page = 1,
+        int $limit = 20
     ): Response {
+        // Pagination pour les onglets génériques (non dialog).
+        $dataArray = ($data instanceof \Doctrine\Common\Collections\Collection) ? $data->toArray() : (array)$data;
+        $dataArray = array_reverse($dataArray); // derniers éléments (ID le plus élevé) en premier
+        $totalItems = count($dataArray);
+        if ($usage !== 'dialog') {
+            $data = array_slice($dataArray, ($page - 1) * $limit, $limit);
+        }
+        $paginationMeta = ($usage !== 'dialog') ? [
+            'currentPage'  => $page,
+            'totalPages'   => max(1, (int)ceil($totalItems / $limit)),
+            'totalItems'   => $totalItems,
+            'itemsPerPage' => $limit,
+        ] : ['currentPage' => 1, 'totalPages' => 1, 'totalItems' => $totalItems, 'itemsPerPage' => $totalItems ?: 20];
+
         $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
         foreach ($data as $item) {
             $this->loadCalculatedValues($entityCanvas, $item);
@@ -272,6 +288,7 @@ trait ControllerUtilsTrait
             'secondaryLabel' => $secondaryLabel,
             'totalizableFieldDetails' => $totalizableFieldDetails,
             'secondaryFieldDetails' => $secondaryFieldDetails,
+            'paginationMeta' => $paginationMeta,
         ];
 
         if ($usage === "dialog") {
@@ -304,15 +321,16 @@ trait ControllerUtilsTrait
             if (!$entreprise) {
                 return new JsonResponse(['error' => 'Entreprise non trouvée.'], Response::HTTP_BAD_REQUEST);
             }
-            // CORRECTION : Le payload contient maintenant 'criteria' et 'parentContext'.
+            // CORRECTION : Le payload contient maintenant 'criteria', 'parentContext' et 'page'.
             $payload = json_decode($request->getContent(), true) ?? [];
             $criteria = $payload['criteria'] ?? [];
             $criteria = array_merge($criteria, $extraCriteria);
             $parentContext = $payload['parentContext'] ?? null;
+            $page = max(1, (int)($payload['page'] ?? 1));
 
             // Appel du service de recherche refactorisé et sécurisé
             // CORRECTION : On passe le contexte du parent au service de recherche.
-            $searchResult = $this->searchService->search($entityClass, $criteria, $entreprise, $parentContext);
+            $searchResult = $this->searchService->search($entityClass, $criteria, $entreprise, $parentContext, $page, 20);
             $data = $searchResult['data'];
 
             // Preload batch avant le calcul des indicateurs (évite N×M lazy-loads pour Cotation/Avenant).
@@ -337,16 +355,34 @@ trait ControllerUtilsTrait
 
             // On retourne la réponse JSON structurée attendue par le Cerveau
             return new JsonResponse([
-                'html' => $html,
-                'numericAttributesAndValues' => $numericData
+                'html'                       => $html,
+                'numericAttributesAndValues' => $numericData,
+                'pagination'                 => [
+                    'currentPage'  => $searchResult['currentPage'],
+                    'totalPages'   => $searchResult['totalPages'],
+                    'totalItems'   => $searchResult['totalItems'],
+                    'itemsPerPage' => $searchResult['itemsPerPage'],
+                ],
             ]);
         }
         // CAS 2: C'est le chargement initial de la page, on rend le conteneur principal.
         else {
-            // NOUVEAU : On ne charge plus les données lors de l'affichage initial.
-            // La barre de recherche déclenchera le premier chargement.
-            $data = [];
             $template = 'components/_view_manager.html.twig';
+            // Chargement automatique de la première page (20 premiers éléments).
+            $entreprise = $this->entrepriseRepository->find($idEntreprise);
+            if ($entreprise) {
+                $searchResult = $this->searchService->search($entityClass, [], $entreprise, null, 1, 20);
+                $data = $searchResult['data'];
+                $paginationMeta = [
+                    'currentPage'  => 1,
+                    'totalPages'   => $searchResult['totalPages'],
+                    'totalItems'   => $searchResult['totalItems'],
+                    'itemsPerPage' => 20,
+                ];
+            } else {
+                $data = [];
+                $paginationMeta = ['currentPage' => 1, 'totalPages' => 0, 'totalItems' => 0, 'itemsPerPage' => 20];
+            }
         }
 
         // S'assurer que le canevas de l'entité est chargé.
@@ -378,6 +414,7 @@ trait ControllerUtilsTrait
             'idInvite' => $idInvite,
             'idEntreprise' => $idEntreprise,
             'mainListUrl' => $mainListUrl, // On passe l'URL au template
+            'paginationMeta' => $paginationMeta ?? ['currentPage' => 1, 'totalPages' => 0, 'totalItems' => 0, 'itemsPerPage' => 20],
         ];
 
         // dd("Paramètres - searchCanvas:", $parameters["searchCanvas"]);
@@ -661,12 +698,13 @@ trait ControllerUtilsTrait
      * @param string|null $usage Le contexte de rendu ('generic' ou 'dialog').
      * @return Response
      */
-    protected function handleCollectionApiRequest(int $id, string $collectionName, string $parentEntityClass, ?string $usage = "generic"): Response
+    protected function handleCollectionApiRequest(int $id, string $collectionName, string $parentEntityClass, ?string $usage = "generic", ?Request $request = null): Response
     {
         $collectionMap = $this->getCollectionMap();
         if (!isset($collectionMap[$collectionName])) {
             throw new NotFoundHttpException("La collection '$collectionName' n'existe pas ou n'est pas autorisée.");
         }
+        $page = ($request !== null) ? max(1, $request->query->getInt('page', 1)) : 1;
         $parentEntity = $this->findParentOrNew($parentEntityClass, $id);
 
         // Preload batch des relations avant le calcul des indicateurs (évite N lazy-loads).
@@ -713,7 +751,7 @@ trait ControllerUtilsTrait
                 }
             }
 
-            $html = $this->renderCollectionOrList('dialog', $entityClass, $parentEntity, $id, $data, $collectionName, $totalizableField, $secondaryField, $secondaryLabel)->getContent();
+            $html = $this->renderCollectionOrList('dialog', $entityClass, $parentEntity, $id, $data, $collectionName, $totalizableField, $secondaryField, $secondaryLabel, 1, PHP_INT_MAX)->getContent();
 
             return new JsonResponse([
                 'html' => $html,
@@ -732,7 +770,7 @@ trait ControllerUtilsTrait
         $entityClass = $collectionMap[$collectionName];
         // Preload des relations avant renderCollectionOrList (évite N×M lazy-loads).
         $this->canvasBuilder->batchPreloadForCollection($data->toArray());
-        return $this->renderCollectionOrList($usage, $entityClass, $parentEntity, $id, $data, $collectionName, $totalizableField, $secondaryField, $secondaryLabel);
+        return $this->renderCollectionOrList($usage, $entityClass, $parentEntity, $id, $data, $collectionName, $totalizableField, $secondaryField, $secondaryLabel, $page);
     }
 
     /**
