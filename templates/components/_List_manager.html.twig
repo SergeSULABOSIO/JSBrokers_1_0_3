@@ -13,18 +13,20 @@
     - `listeCanvas`: La configuration d'affichage de la liste (colonnes, titres).
     - `numericAttributes` (optionnel): Attributs numériques pour les totaux.
 #}
-<div 
+<div
         id="{{ listId | default('list-controller-' ~ random()) }}" {# CORRECTION : Utiliser un ID prédictible ou un fallback aléatoire. #}
-        data-controller="list-manager" 
-        data-list-manager-nbelements-value="{{ data|length }}" 
-        data-list-manager-entite-value="{{ entite_nom }}" 
-        data-list-manager-server-root-name-value="{{ serverRootName }}" 
-        data-list-manager-id-entreprise-value="{{ idEntreprise }}" 
-        data-list-manager-id-invite-value="{{ idInvite }}"  
-        data-list-manager-entity-form-canvas-value='{{ entityFormCanvas|json_encode|e('html_attr') }}' 
+        data-controller="list-manager"
+        data-list-manager-nbelements-value="{{ data|length }}"
+        data-list-manager-entite-value="{{ entite_nom }}"
+        data-list-manager-server-root-name-value="{{ serverRootName }}"
+        data-list-manager-id-entreprise-value="{{ idEntreprise }}"
+        data-list-manager-id-invite-value="{{ idInvite }}"
+        data-list-manager-entity-form-canvas-value='{{ entityFormCanvas|json_encode|e('html_attr') }}'
         data-list-manager-numeric-attributes-and-values-value='{{ numericAttributesAndValues|default({})|json_encode|e('html_attr') }}'
-        data-list-manager-list-url-value="{{ listUrl | default('') }}" {# CORRECTION : Ajout de l'URL unique pour la persistance #}
-    > 
+        data-list-manager-list-url-value="{{ listUrl | default('') }}"
+        data-list-manager-pagination-value='{{ paginationMeta|default({})|json_encode|e('html_attr') }}'
+    >
+        <div data-list-manager-target="paginationContainer" class="jsb-pagination-bar"></div>
         <div class="table-scroll-wrapper flex-grow-1" data-list-manager-target="listContainer">
             <table class="table table-hover table-sm table-enhanced" aria-label="Liste de {{ entite_nom }}">
                 <thead class="table-light sticky-header">

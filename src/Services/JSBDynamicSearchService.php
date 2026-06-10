@@ -68,7 +68,7 @@ class JSBDynamicSearchService
      * La logique de votre ancienne fonction "chercher".
      * Elle ne dépend plus de l'objet Request, mais d'un simple tableau.
      */
-    public function search(string $entityClass, array $criteria, Entreprise $entreprise, ?array $parentContext = null): array
+    public function search(string $entityClass, array $criteria, Entreprise $entreprise, ?array $parentContext = null, int $page = 1, int $limit = 20): array
     {
         $results = [];
         $status = [
@@ -104,6 +104,9 @@ class JSBDynamicSearchService
             // MISSION 2 : Trier les résultats par ID décroissant pour afficher les plus récents en premier.
             $qb->orderBy('e.id', 'DESC');
 
+            // Pagination : on applique l'offset et la limite avant d'exécuter la requête.
+            $qb->setFirstResult(($page - 1) * $limit)->setMaxResults($limit);
+
             // Exécuter la requête pour obtenir les résultats (objets Doctrine)
             $results = $qb->getQuery()->getResult(); // Renommé pour clarté
 
@@ -132,9 +135,12 @@ class JSBDynamicSearchService
         }
 
         return [
-            'status' => $status,
-            'data' => $results,
-            'totalItems' => $totalItems,
+            'status'      => $status,
+            'data'        => $results,
+            'totalItems'  => (int)$totalItems,
+            'currentPage' => $page,
+            'totalPages'  => max(1, (int)ceil((int)$totalItems / $limit)),
+            'itemsPerPage' => $limit,
         ];
     }
 

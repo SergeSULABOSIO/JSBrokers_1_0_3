@@ -16,9 +16,10 @@ export default class extends BaseController {
     static targets = [
         'donnees',
         'selectAllCheckbox',
-        'listContainer', // NOUVEAU
-        'emptyStateContainer', // NOUVEAU
+        'listContainer',
+        'emptyStateContainer',
         'rowCheckbox',
+        'paginationContainer',
     ];
 
     /**
@@ -33,8 +34,9 @@ export default class extends BaseController {
         idEntreprise: Number,
         idInvite: Number,
         entityFormCanvas: Object,
-        listUrl: String, // NOUVEAU : URL unique servant de clé pour le stockage
-        numericAttributesAndValues: String, // MODIFIÉ : On reçoit maintenant une chaîne JSON
+        listUrl: String,
+        numericAttributesAndValues: String,
+        pagination: Object,
     };
 
     /**
@@ -54,7 +56,13 @@ export default class extends BaseController {
         this.boundHandleLoadingStart = this.handleLoadingStart.bind(this);
         document.addEventListener('app:loading.start', this.boundHandleLoadingStart);
 
+        this.boundHandlePaginationClick = this._handlePaginationClick.bind(this);
+        this.element.addEventListener('click', this.boundHandlePaginationClick);
+        this.boundHandlePaginationJump = this._handlePaginationJump.bind(this);
+        this.element.addEventListener('change', this.boundHandlePaginationJump);
+
         this._initializeAndNotifyState();
+        this._renderPagination(this.paginationValue);
 
         document.addEventListener('app:context.changed', this.boundHandleGlobalSelectionUpdate);
         document.addEventListener('app:list.refreshed', this.boundHandleListRefreshed);
@@ -82,6 +90,8 @@ export default class extends BaseController {
         document.removeEventListener('app:list.toggle-all-request', this.boundToggleAll);
         this.element.removeEventListener('list-manager:context-menu-requested', this.boundHandleContextMenuRequest);
         document.removeEventListener('app:loading.start', this.boundHandleLoadingStart);
+        this.element.removeEventListener('click', this.boundHandlePaginationClick);
+        this.element.removeEventListener('change', this.boundHandlePaginationJump);
     }
 
     /**
@@ -300,7 +310,7 @@ export default class extends BaseController {
      */
     handleListRefreshed(event) {
         if (this.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
-        const { html, originatorId } = event.detail;
+        const { html, originatorId, pagination } = event.detail;
 
         if (originatorId && originatorId !== this.element.id) {
             this._logDebug("Demande de rafraîchissement ignorée (non destinée à cette liste).", { myId: this.element.id, originatorId: event.detail.originatorId });
@@ -313,6 +323,8 @@ export default class extends BaseController {
 
         this.listContainerTarget.classList.toggle('d-none', !hasRows);
         this.emptyStateContainerTarget.classList.toggle('d-none', hasRows);
+
+        if (pagination) this._renderPagination(pagination);
 
         this._postDataLoadActions();
     }
@@ -350,6 +362,82 @@ export default class extends BaseController {
     resetSearch() {
         this._logDebug("Demande de réinitialisation de la recherche reçue depuis l'état vide.");
         this.notifyCerveau('ui:search.reset-request', {});
+    }
+
+    /**
+     * Rend la barre de pagination dans le conteneur dédié.
+     * N'affiche rien s'il n'y a qu'une seule page ou si les métadonnées sont absentes.
+     * @param {object} meta - { currentPage, totalPages, totalItems, itemsPerPage }
+     * @private
+     */
+    _renderPagination(meta) {
+        if (!this.hasPaginationContainerTarget) return;
+        if (!meta || !meta.totalPages || (meta.totalPages <= 1 && meta.totalItems <= (meta.itemsPerPage || 20))) {
+            this.paginationContainerTarget.innerHTML = '';
+            this.element.classList.remove('list-manager-has-pagination');
+            return;
+        }
+        const { currentPage, totalPages, totalItems } = meta;
+        const iconPrev = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>`;
+        const iconNext = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>`;
+        this.paginationContainerTarget.innerHTML = `
+            <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white small gap-3">
+                <span class="text-muted text-nowrap">
+                    <strong style="color:#0047AB;">${totalItems}</strong>&nbsp;élément(s)
+                </span>
+                <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+                    <label class="d-flex align-items-center gap-1 text-muted mb-0" style="white-space:nowrap;">
+                        Page
+                        <input type="number"
+                               class="form-control form-control-sm text-center"
+                               style="width:52px;"
+                               min="1" max="${totalPages}" value="${currentPage}"
+                               data-pagination-jump-input
+                               aria-label="Aller à la page">
+                        / <strong>${totalPages}</strong>
+                    </label>
+                    <nav class="d-flex gap-1" aria-label="Navigation par page">
+                        <button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
+                                data-pagination-page="${currentPage - 1}"
+                                ${currentPage <= 1 ? 'disabled' : ''}
+                                aria-label="Page précédente">${iconPrev} Préc.</button>
+                        <button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
+                                data-pagination-page="${currentPage + 1}"
+                                ${currentPage >= totalPages ? 'disabled' : ''}
+                                aria-label="Page suivante">Suiv. ${iconNext}</button>
+                    </nav>
+                </div>
+            </div>`;
+        this.element.classList.add('list-manager-has-pagination');
+        requestAnimationFrame(() => {
+            const h = this.paginationContainerTarget.offsetHeight;
+            this.element.style.setProperty('--jsb-pgbar-h', `${h}px`);
+        });
+    }
+
+    /**
+     * Gère les clics sur les boutons de pagination via délégation d'événement.
+     * @param {Event} event
+     * @private
+     */
+    _handlePaginationClick(event) {
+        const btn = event.target.closest('[data-pagination-page]');
+        if (!btn || btn.disabled) return;
+        const page = parseInt(btn.dataset.paginationPage, 10);
+        if (isNaN(page) || page < 1) return;
+        this.notifyCerveau('ui:pagination.page-changed', { page });
+    }
+
+    _handlePaginationJump(event) {
+        const input = event.target.closest('[data-pagination-jump-input]');
+        if (!input) return;
+        const page = parseInt(input.value, 10);
+        const max  = parseInt(input.max, 10) || 1;
+        if (isNaN(page) || page < 1 || page > max) {
+            input.value = input.defaultValue;
+            return;
+        }
+        this.notifyCerveau('ui:pagination.page-changed', { page });
     }
 
     /**
