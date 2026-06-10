@@ -377,12 +377,17 @@ export default class extends BaseController {
             this.element.classList.remove('list-manager-has-pagination');
             return;
         }
-        const { currentPage, totalPages, totalItems } = meta;
+        const { currentPage, totalPages, totalItems, itemsPerPage } = meta;
+        const limit     = itemsPerPage || 20;
+        const rangeFrom = (currentPage - 1) * limit + 1;
+        const rangeTo   = Math.min(currentPage * limit, totalItems);
         const iconPrev = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>`;
         const iconNext = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>`;
         this.paginationContainerTarget.innerHTML = `
             <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white small gap-3">
                 <span class="text-muted text-nowrap">
+                    <strong style="color:#0047AB;">${rangeFrom}&nbsp;–&nbsp;${rangeTo}</strong>
+                    &nbsp;sur&nbsp;
                     <strong style="color:#0047AB;">${totalItems}</strong>&nbsp;élément(s)
                 </span>
                 <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
