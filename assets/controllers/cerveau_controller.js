@@ -1093,8 +1093,12 @@ export default class extends Controller {
 
     /**
      * Gère la demande de prévisualisation d'une note ou le téléchargement d'un PDF.
-     * @param {object} payload 
-     * @param {string} payload.url - L'URL à appeler pour obtenir le lien de l'aperçu.
+     * L'URL fournie peut pointer vers l'API Note (/admin/note/api/get-preview-url/{noteId})
+     * ou vers l'API Bordereau (/admin/bordereau/api/get-linked-note-preview-url/{bordereauId}).
+     * Dans les deux cas, on appelle d'abord l'API pour obtenir la vraie URL de prévisualisation
+     * (qui contient l'ID de la note), puis on charge le contenu workspace.
+     * @param {object} payload
+     * @param {string} payload.url - L'URL de l'API à appeler.
      */
     async handleNotePreviewRequest(payload) {
         if (!payload.url) {
@@ -1107,13 +1111,28 @@ export default class extends Controller {
             this._publishSelectionStatus('Chargement de la note…');
             this.broadcast('app:loading.start');
 
-            // Extraire le noteId depuis l'URL de l'API (/admin/note/api/get-preview-url/{noteId})
-            const noteId = payload.url.split('/').at(-1);
+            // 1. Appel de l'URL API pour obtenir la vraie previewUrl (contenant l'ID de la note)
+            const apiResponse = await fetch(payload.url);
+            const apiResult = await apiResponse.json();
+            if (!apiResponse.ok) throw apiResult;
+
+            const previewUrl = apiResult.previewUrl;
+            if (!previewUrl) throw new Error("URL de prévisualisation manquante.");
+
+            // 2. Si c'est un téléchargement PDF, ouvrir dans un nouvel onglet
+            if (previewUrl.includes('/download-pdf/')) {
+                window.open(previewUrl, '_blank');
+                this._publishSelectionStatus('Téléchargement en cours.');
+                return;
+            }
+
+            // 3. Extraire le noteId depuis la previewUrl (/admin/note/apercu/{noteId})
+            const noteId = previewUrl.split('/').filter(Boolean).at(-1).split('?')[0];
             const response = await fetch(`/admin/note/workspace-apercu/${noteId}`);
             const result = await response.json();
             if (!response.ok) throw result;
 
-            // Charger le contenu dans un nouvel onglet de la zone de travail principale.
+            // 4. Charger le contenu dans un nouvel onglet de la zone de travail principale.
             this.broadcast('app:workspace.inject-html', {
                 html:      result.html,
                 title:     result.title,
@@ -1131,8 +1150,9 @@ export default class extends Controller {
 
     /**
      * Gère la demande d'analyse d'un bordereau.
-     * @param {object} payload 
-     * @param {string} payload.url - L'URL à appeler pour obtenir le lien de l'analyse.
+     * Charge le contenu dans un onglet workspace au lieu d'ouvrir un nouvel onglet navigateur.
+     * @param {object} payload
+     * @param {string} payload.url - URL de type '/admin/bordereau/api/get-analysis-url/{id}' (l'ID est extrait)
      */
     async handleBordereauAnalysisRequest(payload) {
         if (!payload.url) {
@@ -1142,17 +1162,23 @@ export default class extends Controller {
         }
 
         try {
-            this._publishSelectionStatus("Génération de l'analyse...");
+            this._publishSelectionStatus("Chargement de l'analyse...");
             this.broadcast('app:loading.start');
-            const response = await fetch(payload.url);
+            const bordereauId = payload.url.split('/').at(-1);
+            const response = await fetch(`/admin/bordereau/workspace-apercu/${bordereauId}`);
             const result = await response.json();
             if (!response.ok) throw result;
 
-            window.open(result.analysisUrl, '_blank');
-            this._publishSelectionStatus('Analyse prête.');
+            this.broadcast('app:workspace.inject-html', {
+                html:      result.html,
+                title:     result.title,
+                iconAlias: 'bordereau',
+                tabKey:    `bordereau-analyse-${bordereauId}`,
+            });
+            this._publishSelectionStatus('Analyse chargée.');
         } catch (error) {
-            console.error("[Cerveau] Erreur lors de la récupération de l'URL pour l'action sur le bordereau :", error);
-            this._showNotification(error.message || "Erreur lors de la génération de l'analyse.", "error");
+            console.error("[Cerveau] Erreur lors du chargement de l'analyse bordereau :", error);
+            this._showNotification(error.message || "Erreur lors du chargement de l'analyse.", "error");
         } finally {
             this.broadcast('app:loading.stop');
         }

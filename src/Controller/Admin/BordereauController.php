@@ -188,6 +188,24 @@ class BordereauController extends AbstractController
     #[Route('/analyse/{id}', name: 'show_analysis', methods: ['GET'])]
     public function showAnalysis(Bordereau $bordereau, ParameterBagInterface $params, ChargementRepository $chargementRepository, TypeRevenuRepository $typeRevenuRepository): Response
     {
+        return $this->render('admin/bordereau/bordereau_analysis.html.twig',
+            $this->buildAnalysisTemplateData($bordereau, $params, $chargementRepository, $typeRevenuRepository)
+        );
+    }
+
+    #[Route('/workspace-apercu/{id}', name: 'workspace_apercu', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function showWorkspaceContent(Bordereau $bordereau, ParameterBagInterface $params, ChargementRepository $chargementRepository, TypeRevenuRepository $typeRevenuRepository): JsonResponse
+    {
+        $data = $this->buildAnalysisTemplateData($bordereau, $params, $chargementRepository, $typeRevenuRepository);
+        $html = $this->renderView('admin/bordereau/bordereau_analysis_workspace.html.twig', $data);
+        return $this->json([
+            'html'  => $html,
+            'title' => 'Analyse — ' . $bordereau->getReference(),
+        ]);
+    }
+
+    private function buildAnalysisTemplateData(Bordereau $bordereau, ParameterBagInterface $params, ChargementRepository $chargementRepository, TypeRevenuRepository $typeRevenuRepository): array
+    {
         $entreprise = $this->getEntreprise(); // Récupère l'entreprise courante
         $invite = $this->getInvite(); // NOUVEAU : On récupère l'invité courant.
         $viewData = [
@@ -567,20 +585,20 @@ class BordereauController extends AbstractController
             $bordereau->getNotes()->toArray()
         );
 
-        return $this->render('admin/bordereau/bordereau_analysis.html.twig', [
-            'bordereau' => $bordereau,
-            'entreprise' => $entreprise,
-            'invite' => $invite,
-            'viewData' => $viewData,
-            'selectedSheetName' => $bordereau->getSelectedSheetName(),
-            'mappedColumns' => (object) ($bordereau->getMappedColumns() ?: []),
-            'analysisResults' => $rawAnalysisResults,
+        return [
+            'bordereau'           => $bordereau,
+            'entreprise'          => $entreprise,
+            'invite'              => $invite,
+            'viewData'            => $viewData,
+            'selectedSheetName'   => $bordereau->getSelectedSheetName(),
+            'mappedColumns'       => (object) ($bordereau->getMappedColumns() ?: []),
+            'analysisResults'     => $rawAnalysisResults,
             'analysisResultsHtml' => $analysisResultsHtmlForTemplate,
-            'analysisStats' => $stats,
+            'analysisStats'       => $stats,
             'currentAnalysisStep' => $bordereau->getCurrentAnalysisStep(),
-            'linkedNotesData' => $linkedNotesData,
-            'error' => $error,
-        ]);
+            'linkedNotesData'     => $linkedNotesData,
+            'error'               => $error,
+        ];
     }
 
     // NOUVEAU : Route pour soumettre l'analyse du bordereau

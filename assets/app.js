@@ -2205,11 +2205,24 @@ export function saveCookie(nom, valeur) {
         setTimeout(function () { document.dispatchEvent(new CustomEvent('app:loading.stop')); }, 600);
     }
 
-    function dbBordCtxAnalyse() {
+    async function dbBordCtxAnalyse() {
         var menu = document.getElementById('dbBordCtxMenu');
         if (menu) menu.style.display = 'none';
         if (!_bid) return;
-        window.location.href = '/admin/bordereau/analyse/' + _bid;
+        try {
+            document.dispatchEvent(new CustomEvent('app:loading.start'));
+            const response = await fetch('/admin/bordereau/workspace-apercu/' + _bid);
+            if (!response.ok) return;
+            const { html, title } = await response.json();
+            document.dispatchEvent(new CustomEvent('app:workspace.inject-html', {
+                bubbles: true,
+                detail: { html, title, iconAlias: 'bordereau', tabKey: 'bordereau-analyse-' + _bid }
+            }));
+        } catch (e) {
+            console.error('[Analyser bordereau]', e);
+        } finally {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+        }
     }
 
     function dbBordCtxNote() {

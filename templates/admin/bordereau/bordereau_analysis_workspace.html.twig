@@ -1,0 +1,55 @@
+{# templates/admin/bordereau/bordereau_analysis_workspace.html.twig #}
+{# Partial injecté dans la zone workspace via app:workspace.inject-html — pas de DOCTYPE/html/head #}
+<style>
+    .bordereau-analysis-workspace { background-color: #f8f9fa; overflow-y: auto; }
+    .bordereau-analysis-workspace .analysis-container { max-width: 900px; margin: 2rem auto; background-color: #fff; border: 1px solid #dee2e6; box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15); }
+    .bordereau-analysis-workspace .analysis-header { padding: 2rem; border-bottom: 1px solid #dee2e6; }
+    .bordereau-analysis-workspace .analysis-body { padding: 2rem; }
+    .bordereau-analysis-workspace .analysis-footer { padding: 2rem; background-color: #f8f9fa; border-top: 1px solid #dee2e6; }
+    .bordereau-analysis-workspace .actions-bar { padding: 1rem; text-align: center; background-color: #343a40; }
+    @media print {
+        .bordereau-analysis-workspace .actions-bar { display: none !important; }
+        .bordereau-analysis-workspace .analysis-container { margin: 0; border: none; box-shadow: none; max-width: 100%; }
+    }
+    .analysis-toolbar-badge-note {
+        display: inline-flex;
+        align-items: center;
+        background: rgba(0, 71, 171, 0.2);
+        color: rgba(255,255,255,0.65);
+        font-size: 0.72rem;
+        padding: 2px 8px;
+        border-radius: 12px;
+        border: 1px solid rgba(0, 71, 171, 0.35);
+        cursor: pointer;
+        transition: background 0.15s;
+        line-height: 1.4;
+    }
+    .analysis-toolbar-badge-note:hover {
+        background: rgba(0, 71, 171, 0.35);
+    }
+</style>
+{% set sheets_data_json = {} %}
+{% for sheet in viewData.sheets %}
+    {% set sheets_data_json = sheets_data_json|merge({(sheet.sheetName): sheet.data}) %}
+{% endfor %}
+<div class="bordereau-analysis-workspace"
+    data-controller="dialog-manager bordereau-analysis"
+    data-bordereau-analysis-sheets-data-value="{{ sheets_data_json|json_encode|e('html_attr') }}"
+    data-bordereau-analysis-chargements-value="{{ viewData.chargements|json_encode|e('html_attr') }}"
+    data-bordereau-analysis-mapping-options-value="{{ viewData.mapping_options|json_encode|e('html_attr') }}"
+    data-bordereau-analysis-type-revenus-value="{{ viewData.typeRevenus|json_encode|e('html_attr') }}"
+    data-bordereau-analysis-bordereau-id-value="{{ bordereau.id }}"
+    data-bordereau-analysis-id-entreprise-value="{{ invite.entreprise.id }}"
+    data-bordereau-analysis-id-invite-value="{{ invite.id }}"
+    data-bordereau-analysis-linked-notes-value="{{ linkedNotesData|json_encode|e('html_attr') }}"
+    data-bordereau-analysis-note-form-canvas-value="{{ {'parametres': {'titre_creation': ('Facturer — Bordereau ' ~ bordereau.reference), 'endpoint_submit_url': '/admin/note/api/submit', 'endpoint_delete_url': '/admin/note/api/delete', 'endpoint_form_url': '/admin/note/api/get-form', 'isCreationMode': true, 'icone': 'note'}}|json_encode|e('html_attr') }}"
+    data-bordereau-analysis-selected-sheet-name-value="{{ selectedSheetName|default('') }}"
+    data-bordereau-analysis-mapped-columns-value="{{ mappedColumns|json_encode|e('html_attr') }}"
+    data-bordereau-analysis-analysis-results-value="{{ analysisResults|json_encode|e('html_attr') }}"
+    data-bordereau-analysis-analysis-results-html-value="{{ analysisResultsHtml|json_encode|e('html_attr') }}"
+    data-bordereau-analysis-analysis-stats-value="{{ analysisStats|default({})|json_encode|e('html_attr') }}"
+    data-bordereau-analysis-system-field-formats-value="{{ viewData.system_field_formats|json_encode|e('html_attr') }}"
+    data-bordereau-analysis-current-analysis-step-value="{{ currentAnalysisStep|default(0) }}"
+>
+{% include 'admin/bordereau/_bordereau_analysis_content.html.twig' %}
+</div>
