@@ -1,0 +1,234 @@
+{# templates/admin/note/note_preview_workspace.html.twig
+   Partial (sans html/head/body) — rendu dans un onglet de la zone de travail principale.
+   Les styles Bootstrap sont déjà disponibles sur la page parente.
+#}
+<style>
+    .invoice-container {
+        max-width: 800px;
+        margin: 1.5rem auto;
+        background-color: #fff;
+        border: 1px solid #dee2e6;
+        border-top: 4px solid #0047AB;
+        box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
+    }
+    .invoice-header {
+        padding: 2rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .invoice-body {
+        padding: 2rem;
+    }
+    .invoice-footer {
+        padding: 2rem;
+        background-color: #f8f9fa;
+        border-top: 2px solid #0047AB;
+    }
+    .note-preview-actions-bar {
+        padding: 0.75rem 1rem;
+        text-align: center;
+        background-color: #343a40;
+        border-bottom: 3px solid #0047AB;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    .invoice-type-heading {
+        color: #0047AB;
+    }
+    .invoice-container .table thead th {
+        text-align: right;
+        background-color: #e8f0fb;
+    }
+    .invoice-container .table tbody td {
+        text-align: right;
+    }
+    .invoice-container .table thead th:first-child,
+    .invoice-container .table tbody td:first-child {
+        text-align: left;
+    }
+    .invoice-container .total-section td {
+        font-weight: bold;
+    }
+    .payment-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.25rem 1.5rem;
+    }
+</style>
+
+<div class="note-preview-workspace">
+
+    <nav class="note-preview-actions-bar" aria-label="Actions du document">
+        <a href="{{ previewUrl }}"
+           target="_blank"
+           class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2"
+           aria-label="Ouvrir l'aperçu complet pour impression">
+            <twig:UX:Icon name="{{ resolve_icon_name('action:print') }}" width="16px" height="16px" aria-hidden="true" />
+            <span>Imprimer / Aperçu complet</span>
+        </a>
+        <a href="{{ path('admin.note.download_pdf', {id: note.id}) }}"
+           target="_blank"
+           class="btn btn-danger btn-sm d-inline-flex align-items-center gap-2"
+           aria-label="Télécharger {{ note.typeString }} {{ note.reference }} en PDF">
+            <twig:UX:Icon name="{{ resolve_icon_name('action:download') }}" width="16px" height="16px" aria-hidden="true" />
+            <span>Télécharger en PDF</span>
+        </a>
+    </nav>
+
+    <main aria-label="Aperçu de la note {{ note.reference }}">
+        {% set isBordereauNote = note.bordereau is not null %}
+        {% set hasNoArticles = note.articles is empty %}
+        <div class="invoice-container{% if isBordereauNote and hasNoArticles %} single-article-note{% endif %}">
+            <div class="invoice-header">
+                <div class="text-center mb-4">
+                    {% if entreprise and entreprise.thumbnail %}
+                        <img src="{{ asset('images/entreprises/' ~ entreprise.thumbnail) }}" alt="{{ entreprise.nom|default('Logo JS Brokers') }}" style="max-height: 80px;">
+                    {% else %}
+                        <img src="{{ asset('images/entreprises/logofav.png') }}" alt="Logo JS Brokers" style="max-height: 80px;">
+                    {% endif %}
+                </div>
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h1 class="h4 mt-2 mb-0">{{ entreprise.nom|default('Votre Entreprise') }}</h1>
+                        <p class="text-muted">{{ entreprise.adresse|default('') }}</p>
+                    </div>
+                    <div class="col text-end">
+                        <h2 class="invoice-type-heading">{{ note.typeString }}</h2>
+                        <p class="mb-1"><strong>Référence :</strong> {{ note.reference }}</p>
+                        <p class="mb-0"><strong>Date :</strong> {{ note.sentAt|date('d/m/Y') }}</p>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col">
+                        {% set destinataire = null %}
+                        {% if note.client %}{% set destinataire = note.client %}{% endif %}
+                        {% if note.assureur %}{% set destinataire = note.assureur %}{% endif %}
+                        {% if note.partenaire %}{% set destinataire = note.partenaire %}{% endif %}
+                        {% if note.autoritefiscale %}{% set destinataire = note.autoritefiscale %}{% endif %}
+
+                        {% if destinataire %}
+                            <p class="mb-1 text-muted small text-uppercase fw-semibold">Destinataire</p>
+                            <p class="mb-0 fw-bold">{{ destinataire.nom }}</p>
+                            {% if destinataire.adresse is defined and destinataire.adresse %}
+                                <p class="mb-0 text-muted">{{ destinataire.adresse }}</p>
+                            {% endif %}
+                            <p class="mb-0 text-muted small">
+                                {% if destinataire.rccm is defined and destinataire.rccm %}RCCM: {{ destinataire.rccm }} / {% endif %}
+                                {% if destinataire.idnat is defined and destinataire.idnat %}ID.NAT: {{ destinataire.idnat }} / {% endif %}
+                                {% if destinataire.numimpot is defined and destinataire.numimpot %}N° Impôt: {{ destinataire.numimpot }}{% endif %}
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="invoice-body">
+                <h3 class="h5">Détails de la note : {{ note.nom }}</h3>
+
+                {% if isBordereauNote and hasNoArticles %}
+                    {% set totalHT  = note.bordereau.montantComHtPayableNow %}
+                    {% set totalTTC = note.bordereau.montantPayableNow %}
+                    {% set totalTax = note.bordereau.montantTaxePayableNow %}
+                {% else %}
+                    {% set totalHT  = note.montantTotal - note.montantTaxe %}
+                    {% set totalTTC = note.montantTotal %}
+                    {% set totalTax = note.montantTaxe %}
+                {% endif %}
+
+                <table class="table mt-4">
+                    <caption class="visually-hidden">Détails des articles de la note {{ note.reference }}</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Article</th>
+                            <th scope="col">Quantité</th>
+                            <th scope="col">Prix Unitaire</th>
+                            <th scope="col">Montant</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if isBordereauNote and hasNoArticles %}
+                            <tr>
+                                <td>
+                                    <strong>Commission de courtage</strong><br>
+                                    <small class="text-muted">Bordereau {{ note.bordereau.reference }}</small>
+                                </td>
+                                <td>{{ 1|number_format(2, ',', ' ') }}</td>
+                                <td>{{ note.bordereau.montantPayableNow|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                                <td>{{ note.bordereau.montantPayableNow|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                            </tr>
+                        {% else %}
+                            {% for article in note.articles %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ article.revenuFacture.nom|default('Article') }}</strong><br>
+                                        <small class="text-muted">{{ article.description }}</small>
+                                    </td>
+                                    <td>{{ article.quantite|number_format(2, ',', ' ') }}</td>
+                                    <td>{{ article.valeurUnitaireHT|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                                    <td>{{ article.montantArticleHT|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                                </tr>
+                            {% endfor %}
+                        {% endif %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="total-section" role="presentation">
+                            <td colspan="3" class="text-end border-0"><strong>Total HT</strong></td>
+                            <td class="border-0">{{ totalHT|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                        </tr>
+
+                        {% if note.type != 1 and totalTax > 0 %}
+                            <tr role="presentation">
+                                <td colspan="3" class="text-end border-0">{{ note.nomTaxe }} ({{ note.tauxTaxe|number_format(2, ',', ' ') }}%)</td>
+                                <td class="border-0">{{ totalTax|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                            </tr>
+                        {% endif %}
+
+                        <tr class="total-section table-secondary" role="presentation">
+                            <td colspan="3" class="text-end border-0"><strong>Total TTC</strong></td>
+                            <td class="border-0">{{ totalTTC|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                        </tr>
+                        <tr role="presentation">
+                            <td colspan="4" class="text-end border-0 fst-italic text-muted pt-3">
+                                Arrêté la présente note à la somme de : {{ totalTTC|to_words(monnaie) }}.
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                {% if note.signedBy %}
+                    <div class="text-end mt-3 signatory-block">
+                        <p class="mb-0 fw-bold small">{{ note.signedBy }}</p>
+                        {% if note.titleSignedBy %}
+                            <p class="mb-0 text-muted small fst-italic">{{ note.titleSignedBy }}</p>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                {% if note.type != 1 and note.comptes is not empty %}
+                    <section class="mt-3" aria-label="Informations de paiement">
+                        <h4 class="h6 border-bottom pb-2">Informations de paiement</h4>
+                        {% for compte in note.comptes %}
+                            <div class="payment-grid mt-2">
+                                <p class="mb-0"><strong>Banque :</strong> {{ compte.banque }}</p>
+                                <p class="mb-0"><strong>Intitulé du compte :</strong> {{ compte.intitule }}</p>
+                                <p class="mb-0"><strong>Numéro de compte :</strong> {{ compte.numero }}</p>
+                                <p class="mb-0"><strong>Code SWIFT :</strong> {{ compte.codeSwift }}</p>
+                            </div>
+                        {% endfor %}
+                    </section>
+                {% endif %}
+            </div>
+
+            <footer class="invoice-footer text-center">
+                <p class="mb-1 fw-bold">{{ entreprise.nom|default('Votre Entreprise') }}</p>
+                <p class="text-muted small fst-italic mb-0">
+                    {{ entreprise.adresse|default('') }}<br>
+                    Tel: {{ entreprise.telephone|default('N/A') }} / Site web: {{ entreprise.siteweb|default('N/A') }}<br>
+                    RCCM: {{ entreprise.rccm|default('N/A') }} / ID.NAT: {{ entreprise.idnat|default('N/A') }} / N° Impôt: {{ entreprise.numimpot|default('N/A') }}
+                </p>
+            </footer>
+        </div>
+    </main>
+
+</div>

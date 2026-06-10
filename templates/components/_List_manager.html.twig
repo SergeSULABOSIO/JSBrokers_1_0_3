@@ -16,7 +16,7 @@
 <div
         id="{{ listId | default('list-controller-' ~ random()) }}" {# CORRECTION : Utiliser un ID prédictible ou un fallback aléatoire. #}
         data-controller="list-manager"
-        data-list-manager-nbelements-value="{{ data|length }}"
+        data-list-manager-nb-elements-value="{{ data|length }}"
         data-list-manager-entite-value="{{ entite_nom }}"
         data-list-manager-server-root-name-value="{{ serverRootName }}"
         data-list-manager-id-entreprise-value="{{ idEntreprise }}"
@@ -26,7 +26,18 @@
         data-list-manager-list-url-value="{{ listUrl | default('') }}"
         data-list-manager-pagination-value='{{ paginationMeta|default({})|json_encode|e('html_attr') }}'
     >
-        <div data-list-manager-target="paginationContainer" class="jsb-pagination-bar"></div>
+        {% if usage|default('generic') != 'dialog' %}
+        <div class="jsb-list-controls-bar" data-list-manager-target="controlsBar">
+            <div class="jsb-list-controls-bar__display"
+                 role="status" aria-live="polite" aria-atomic="true"
+                 data-view-manager-target="display">Prêt.</div>
+            <span class="jsb-list-controls-bar__sep" aria-hidden="true"></span>
+            <div data-list-manager-target="paginationContainer" class="jsb-list-controls-bar__pagination"></div>
+            <div class="jsb-list-controls-bar__totals">
+                {{ include('components/_list_summary.html.twig') }}
+            </div>
+        </div>
+        {% endif %}
         <div class="table-scroll-wrapper flex-grow-1" data-list-manager-target="listContainer">
             <table class="table table-hover table-sm table-enhanced" aria-label="Liste de {{ entite_nom }}">
                 <thead class="table-light sticky-header">

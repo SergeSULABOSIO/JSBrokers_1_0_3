@@ -44,7 +44,7 @@ trait CalculatedIndicatorsNumericProviderTrait
         foreach ($indicators as $code => $config) {
             // Check if the property exists on the object before trying to access it
             if (property_exists($object, $code)) {
-                $value = $object->$code ?? 0;
+                $value = isset($object->$code) ? $object->$code : 0;
                 $item = [
                     "description" => $config['description'],
                     "value" => $value,

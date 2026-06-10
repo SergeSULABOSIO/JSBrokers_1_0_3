@@ -112,7 +112,7 @@ export default class extends Controller {
         const { html } = event.detail;
         if (!this.hasDisplayTarget || !html) return;
 
-        this.displayTarget.innerHTML = html;
+        this.displayTargets.forEach(target => { target.innerHTML = html; });
     }
 
     /**
@@ -311,14 +311,11 @@ export default class extends Controller {
      * @private
      */
     notifyCerveau(type, payload = {}) {
-        console.log(`[${++window.logSequence}] ${this.nomControleur} - Notification du Cerveau sur le changement de contexte.`);
-        
-        this.dispatch('cerveau:event', {
-            type: type,
-            source: this.nomControleur,
-            payload: payload,
-            timestamp: Date.now()
+        const event = new CustomEvent('cerveau:event', {
+            bubbles: true,
+            detail: { type, source: this.nomControleur || 'Unknown', payload, timestamp: Date.now() }
         });
+        this.element.dispatchEvent(event);
     }
 
     // --- Méthodes privées d'aide ---

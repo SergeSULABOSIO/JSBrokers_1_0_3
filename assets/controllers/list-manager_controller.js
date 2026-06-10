@@ -20,6 +20,7 @@ export default class extends BaseController {
         'emptyStateContainer',
         'rowCheckbox',
         'paginationContainer',
+        'controlsBar',
     ];
 
     /**
@@ -61,7 +62,8 @@ export default class extends BaseController {
         this.boundHandlePaginationJump = this._handlePaginationJump.bind(this);
         this.element.addEventListener('change', this.boundHandlePaginationJump);
 
-        this._initializeAndNotifyState();
+        // Defer so child controllers (list-summary) connect and register listeners before the first broadcast.
+        requestAnimationFrame(() => this._initializeAndNotifyState());
         this._renderPagination(this.paginationValue);
 
         document.addEventListener('app:context.changed', this.boundHandleGlobalSelectionUpdate);
@@ -375,6 +377,7 @@ export default class extends BaseController {
         if (!meta || !meta.totalPages || (meta.totalPages <= 1 && meta.totalItems <= (meta.itemsPerPage || 20))) {
             this.paginationContainerTarget.innerHTML = '';
             this.element.classList.remove('list-manager-has-pagination');
+            requestAnimationFrame(() => this._updateControlsBarHeight());
             return;
         }
         const { currentPage, totalPages, totalItems, itemsPerPage } = meta;
@@ -384,7 +387,7 @@ export default class extends BaseController {
         const iconPrev = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>`;
         const iconNext = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>`;
         this.paginationContainerTarget.innerHTML = `
-            <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-white small gap-3">
+            <div class="d-flex align-items-center justify-content-between px-3 py-2 small gap-3">
                 <span class="text-muted text-nowrap">
                     <strong style="color:#0047AB;">${rangeFrom}&nbsp;–&nbsp;${rangeTo}</strong>
                     &nbsp;sur&nbsp;
@@ -414,10 +417,15 @@ export default class extends BaseController {
                 </div>
             </div>`;
         this.element.classList.add('list-manager-has-pagination');
-        requestAnimationFrame(() => {
-            const h = this.paginationContainerTarget.offsetHeight;
+        requestAnimationFrame(() => this._updateControlsBarHeight());
+    }
+
+    _updateControlsBarHeight() {
+        if (this.hasControlsBarTarget) {
+            const h = this.controlsBarTarget.offsetHeight;
             this.element.style.setProperty('--jsb-pgbar-h', `${h}px`);
-        });
+            this.element.classList.add('list-manager-has-controls');
+        }
     }
 
     /**

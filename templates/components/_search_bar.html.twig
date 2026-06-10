@@ -1,43 +1,61 @@
 {# templates/components/_search_bar.html.twig #}
-<div 
+<div
+    class="jsb-search-bar"
     data-controller="search-bar"
     data-search-bar-nom-entite-value="{{ entite_nom|default('') }}"
     data-search-bar-criteria-value="{{ searchCanvas|json_encode|e('html_attr') }}"
 >
-    <div class="search-bar-row-1 p-2 d-flex align-items-center bg-white rounded-top shadow">
-        <div class="input-group flex-grow-1">
-            <span class="input-group-text bg-transparent border-0 pe-2">
-                <twig:ux:icon name="{{ resolve_icon_name('lucide:search') }}" class="text-secondary search-summary-icon" />
-            </span>
-            <input type="text"
-                   class="form-control border-0 search-bar-input"
-                   aria-label="Rechercher dans la liste"
-                   data-search-bar-target="simpleSearchInput"
-                   data-action="keydown.enter->search-bar#submitSimpleSearch"
-                   placeholder="Rechercher...">
-        </div>
-        {# NOUVEAU : Sélecteur pour le critère de recherche simple #}
+    {# ── Ligne principale (pill) ── #}
+    <div class="jsb-search-bar__row">
+        <span class="jsb-search-bar__icon" aria-hidden="true">
+            <twig:ux:icon name="{{ resolve_icon_name('lucide:search') }}" />
+        </span>
+
+        <input
+            type="text"
+            class="jsb-search-bar__input"
+            aria-label="Rechercher dans la liste"
+            data-search-bar-target="simpleSearchInput"
+            data-action="keydown.enter->search-bar#submitSimpleSearch"
+            placeholder="Rechercher..."
+        >
+
+        <span class="jsb-search-bar__divider" aria-hidden="true"></span>
+
         <select
-            class="form-select form-select-sm border-0 bg-light ms-2"
-            style="max-width: 200px;"
+            class="jsb-search-bar__criterion"
             aria-label="Critère de recherche"
             data-search-bar-target="simpleSearchCriterion"
-            data-action="change->search-bar#updateSimpleSearchPlaceholder"></select>
+            data-action="change->search-bar#updateSimpleSearchPlaceholder"
+        ></select>
 
-        <div class="ms-3 d-flex align-items-center">
-            <button class="btn btn-sm btn-light" title="Recherche avancée" data-action="click->search-bar#openAdvancedSearch">
-                <twig:ux:icon name="{{ resolve_icon_name('lucide:sliders-horizontal') }}" class="search-summary-icon"/>
+        <div class="jsb-search-bar__actions">
+            <button
+                class="jsb-search-bar__btn jsb-search-bar__btn--advanced"
+                aria-label="Ouvrir la recherche avancée"
+                data-action="click->search-bar#openAdvancedSearch"
+            >
+                <twig:ux:icon name="{{ resolve_icon_name('lucide:sliders-horizontal') }}" aria-hidden="true" />
+                <span class="jsb-search-bar__btn-label">Avancée</span>
             </button>
-            <button class="btn btn-sm btn-light ms-1" title="Réinitialiser la recherche" data-action="click->search-bar#handleAdvancedSearchReset">
-                <twig:ux:icon name="{{ resolve_icon_name('lucide:rotate-cw') }}" class="search-summary-icon"/>
+            <button
+                class="jsb-search-bar__btn jsb-search-bar__btn--reset"
+                aria-label="Réinitialiser la recherche"
+                data-action="click->search-bar#handleAdvancedSearchReset"
+            >
+                <twig:ux:icon name="{{ resolve_icon_name('lucide:x') }}" aria-hidden="true" />
             </button>
         </div>
     </div>
 
-    <div class="search-bar-row-2 d-flex align-items-center p-2 bg-light rounded-bottom small text-muted" data-search-bar-target="summaryContainer">
-        <twig:ux:icon name="{{ resolve_icon_name('lucide:info') }}" class="me-2 flex-shrink-0 search-summary-icon align-middle-flex-item" style="width: 20px; height: 20px;" />
-        <div data-search-bar-target="summary" class="flex-grow-1">
-            <span>Recherche simple activée.</span>
-        </div>
+    {# ── Filtres actifs (masqué si vide via CSS :has) ── #}
+    <div
+        class="jsb-search-bar__filters"
+        data-search-bar-target="summaryContainer"
+        role="status"
+        aria-live="polite"
+        aria-label="Filtres actifs"
+    >
+        <div data-search-bar-target="summary"></div>
     </div>
 </div>

@@ -16,6 +16,8 @@ export default class extends BaseController {
 
     connect() {
         this.nomControleur = "SEARCH-BAR-DIALOG";
+        const workspacePanel = this.element.closest('.workspace-tab-panel');
+        this.workspaceTabId = workspacePanel?.dataset.tabId ?? null;
         this.modal = new Modal(this.advancedSearchModalTarget);
 
         this.boundOpenDialog = this.openDialog.bind(this);
@@ -33,7 +35,8 @@ export default class extends BaseController {
      * @param {CustomEvent} event L'événement contenant le HTML du formulaire.
      */
     openDialog(event) {
-        const { formHtml } = event.detail;
+        const { formHtml, workspaceTabId } = event.detail;
+        if (workspaceTabId && this.workspaceTabId && workspaceTabId !== this.workspaceTabId) return;
         this.advancedFormContainerTarget.innerHTML = formHtml;
         this.modal.show();
         // NOUVEAU : Attacher les écouteurs d'événements pour la mise à jour dynamique
