@@ -25,6 +25,31 @@
         top: 0;
         z-index: 10;
     }
+    /* Aligne le hover du <button> sur celui du lien <a> (a:hover global = gras) */
+    .soa-actions-bar .btn:hover { font-weight: bold; }
+    /* Feedback au clic : même convention que les toolbars de l'app */
+    .soa-actions-bar .btn { transition: transform .1s ease, background-color .15s ease; }
+    .soa-actions-bar .btn:active { transform: scale(0.97); }
+    /* Bouton cobalt (charte JS Brokers) : action principale de la barre */
+    .soa-actions-bar .btn-cobalt {
+        background-color: #0047AB;
+        border-color: #0047AB;
+        color: #ffffff;
+    }
+    .soa-actions-bar .btn-cobalt:hover {
+        background-color: #003380;
+        border-color: #003380;
+        color: #ffffff;
+    }
+    .soa-actions-bar .btn-cobalt:active {
+        background-color: #003380;
+        border-color: #003380;
+        color: #ffffff;
+    }
+    .soa-actions-bar .btn-cobalt:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 .25rem rgba(0, 71, 171, 0.35);
+    }
     .soa-header {
         padding: 1.75rem 2rem;
         background-color: #0047AB;
@@ -110,7 +135,7 @@
 
     <nav class="soa-actions-bar" aria-label="Actions du relevé de compte">
         <button type="button"
-                class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2 me-2"
+                class="btn btn-secondary btn-sm d-inline-flex align-items-center gap-2 me-2"
                 onclick="document.dispatchEvent(new CustomEvent('app:workspace.reload-active-tab'))"
                 aria-label="Actualiser les données du relevé de compte">
             <twig:UX:Icon name="{{ resolve_icon_name('action:refresh') }}" width="16px" height="16px" aria-hidden="true" />
@@ -118,7 +143,7 @@
         </button>
         <a href="{{ apercuUrl }}"
            target="_blank"
-           class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2"
+           class="btn btn-cobalt btn-sm d-inline-flex align-items-center gap-2"
            aria-label="Ouvrir l'aperçu client du relevé de compte (nouvelle fenêtre)">
             <twig:UX:Icon name="{{ resolve_icon_name('action:print') }}" width="16px" height="16px" aria-hidden="true" />
             <span>Aperçu client</span>
@@ -190,8 +215,8 @@
                         </thead>
                         <tbody>
                             {% set pctComm = client.montant_du|default(0) > 0 ? (client.montant_paye|default(0) / client.montant_du) : null %}
-                            {% set primePayeeAff = pctComm is not null ? (client.primeTotale|default(0) * pctComm) : client.primePayee|default(0) %}
-                            {% set primeSoldeAff = client.primeTotale|default(0) - primePayeeAff %}
+                            {% set primePayeeAff = client.primePayee|default(0) %}
+                            {% set primeSoldeAff = client.primeSoldeDue|default(0) %}
                             <tr>
                                 <td><strong>Primes d'assurance</strong></td>
                                 <td>{{ (client.primeTotale|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>

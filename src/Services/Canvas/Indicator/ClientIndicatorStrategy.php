@@ -39,10 +39,17 @@ class ClientIndicatorStrategy implements IndicatorCalculationStrategyInterface
         $taxeCourtierPayee = round($stats['taxe_courtier_payee'] + $bp['taxeCourtier'], 2);
         $taxeCourtierSolde = round($stats['taxe_courtier'] - $taxeCourtierPayee, 2);
 
-        // Indice de solvabilité : part des primes émises effectivement réglée par le client
-        $indiceSolvabilite = $stats['prime_totale'] > 0
-            ? round($stats['prime_totale_payee'] / $stats['prime_totale'] * 100, 2)
+        // Primes réglées : non persistées en BD, déduites du taux de règlement de la commission.
+        // L'assureur encaisse la prime TTC puis reverse la commission au prorata des encaissements
+        // (bordereaux ou articles) : commission payée à X % ⇒ prime réglée à X %.
+        $tauxReglement = $stats['commission_totale'] > 0
+            ? min(1.0, max(0.0, $commissionPayee / $stats['commission_totale']))
             : 0.0;
+        $primePayee = round($stats['prime_totale'] * $tauxReglement, 2);
+        $primeSolde = round($stats['prime_totale'] - $primePayee, 2);
+
+        // Indice de solvabilité : part des primes émises effectivement réglée par le client
+        $indiceSolvabilite = round($tauxReglement * 100, 2);
 
         return [
             'civiliteString' => $this->getClientCiviliteString($entity),
@@ -53,8 +60,8 @@ class ClientIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
             // Mapping des stats globales vers les attributs de l'entité
             'primeTotale' => round($stats['prime_totale'], 2),
-            'primePayee' => round($stats['prime_totale_payee'], 2),
-            'primeSoldeDue' => round($stats['prime_totale_solde'], 2),
+            'primePayee' => $primePayee,
+            'primeSoldeDue' => $primeSolde,
             'tauxCommission' => round($stats['taux_de_commission'], 2),
             'montantHT' => round($stats['commission_nette'], 2),
             'montantTTC' => round($stats['commission_totale'], 2),

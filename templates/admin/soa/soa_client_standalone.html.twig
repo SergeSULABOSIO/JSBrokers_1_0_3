@@ -209,8 +209,8 @@
                         </thead>
                         <tbody>
                             {% set pctComm = client.montant_du|default(0) > 0 ? (client.montant_paye|default(0) / client.montant_du) : null %}
-                            {% set primePayeeAff = pctComm is not null ? (client.primeTotale|default(0) * pctComm) : client.primePayee|default(0) %}
-                            {% set primeSoldeAff = client.primeTotale|default(0) - primePayeeAff %}
+                            {% set primePayeeAff = client.primePayee|default(0) %}
+                            {% set primeSoldeAff = client.primeSoldeDue|default(0) %}
                             <tr>
                                 <td><strong>Primes d'assurance</strong></td>
                                 <td>{{ (client.primeTotale|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>
