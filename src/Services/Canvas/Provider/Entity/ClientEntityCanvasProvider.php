@@ -98,6 +98,9 @@ class ClientEntityCanvasProvider implements EntityCanvasProviderInterface
             ["group" => "SINISTRALITE", "code" => "indemnisationSolde", "intitule" => "Indemnisation solde", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Solde dû au client ou aux victimes."],
             ["group" => "SINISTRALITE", "code" => "tauxSP", "intitule" => "Le taux S/P", "type" => "Calcul", "format" => "Pourcentage", "description" => "Rapport Sinistre sur Prime (S/P) pour le client."],
             ["group" => "SINISTRALITE", "code" => "tauxSPInterpretation", "intitule" => "Interprétation S/P", "type" => "Calcul", "format" => "Texte", "description" => "Analyse de la rentabilité technique du client."],
+
+            ["group" => "SOLVABILITE", "code" => "indiceSolvabilite", "intitule" => "Indice de solvabilité", "type" => "Calcul", "format" => "Pourcentage", "description" => "Part des primes émises effectivement réglée par le client."],
+            ["group" => "SOLVABILITE", "code" => "indiceSolvabiliteInterpretation", "intitule" => "Interprétation solvabilité", "type" => "Calcul", "format" => "Texte", "description" => "Analyse de la régularité de paiement du client."],
         ];
     }
 }

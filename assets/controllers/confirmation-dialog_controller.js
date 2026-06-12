@@ -33,12 +33,19 @@ export default class extends Controller {
 
         this.boundClose = this.close.bind(this);
         document.addEventListener('ui:confirmation.close', this.boundClose);
+
+        // À la fermeture (y compris via Échap ou clic sur le backdrop, sans passer
+        // par close()), restaure l'opacité des backdrops restants pour redonner
+        // l'assombrissement à la modale du dessous.
+        this.boundRestoreBackdrops = this._restoreRemainingBackdrops.bind(this);
+        this.element.addEventListener('hidden.bs.modal', this.boundRestoreBackdrops);
     }
 
     disconnect() {
         document.removeEventListener('ui:confirmation.request', this.boundHandleCerveauEvent);
         document.removeEventListener('ui:confirmation.close', this.boundClose);
         document.removeEventListener('ui:confirmation.error', this.boundHandleCerveauEvent); // NOUVEAU
+        this.element.removeEventListener('hidden.bs.modal', this.boundRestoreBackdrops);
     }
 
     /**
@@ -109,7 +116,41 @@ export default class extends Controller {
             this.itemDetailsContainerTarget.style.display = 'none';
         }
 
+        // Calcule dynamiquement le z-index pour passer au-dessus de toutes les
+        // modales ouvertes, quel que soit le niveau d'imbrication.
+        const maxZ = Math.max(
+            1055,
+            ...Array.from(document.querySelectorAll('.modal.show'))
+                .map(m => parseInt(window.getComputedStyle(m).zIndex, 10) || 0)
+        );
+        this.element.style.zIndex = maxZ + 20;
+
         this.modal.show();
+
+        // Le backdrop vient d'être créé par Bootstrap : c'est le dernier du DOM.
+        // On le place juste sous la confirmation, au-dessus des modales existantes,
+        // et on masque les backdrops inférieurs pour ne pas cumuler les opacités
+        // (cohérent avec modal_controller).
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach((backdrop, i) => {
+            if (i === backdrops.length - 1) {
+                backdrop.style.zIndex = maxZ + 10;
+                backdrop.style.opacity = '';
+            } else {
+                backdrop.style.opacity = '0';
+            }
+        });
+    }
+
+    /**
+     * Restaure l'opacité des backdrops restants après la fermeture de la modale.
+     * À ce stade, Bootstrap a déjà supprimé le backdrop de CETTE modale du DOM.
+     * @private
+     */
+    _restoreRemainingBackdrops() {
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+            backdrop.style.opacity = '';
+        });
     }
 
     /**

@@ -96,6 +96,7 @@ class SoaController extends AbstractController
                 $avenants = $cotation->getAvenants();
 
                 if ($avenants->isEmpty() && !$piste->isClosed()) {
+                    $this->canvasBuilder->loadAllCalculatedValues($cotation);
                     $cotationsEnCours[] = ['cotation' => $cotation, 'piste' => $piste];
                 } else {
                     foreach ($avenants as $avenant) {

@@ -53,7 +53,11 @@ export default class extends Controller {
     // les modales et backdrops ouverts dans l'ordre du DOM, et masque les backdrops
     // inférieurs pour éviter l'effet "double opacité" qui rend le fond trop sombre.
     adjustZIndex() {
-        const allModals = Array.from(document.querySelectorAll('.modal.show'));
+        // La modale de confirmation gère son propre z-index (toujours au sommet) :
+        // on l'exclut du ré-empilement basé sur l'ordre du DOM, car elle est dans
+        // base.html.twig AVANT les modales ajoutées dynamiquement au body.
+        const allModals = Array.from(document.querySelectorAll('.modal.show'))
+            .filter(modal => modal.id !== 'confirmation-dialog-modal');
         const allBackdrops = Array.from(document.querySelectorAll('.modal-backdrop'));
 
         allModals.forEach((modal, i) => {
@@ -65,6 +69,12 @@ export default class extends Controller {
             // pour ne pas cumuler les opacités et assombrir excessivement le fond.
             backdrop.style.opacity = i === allBackdrops.length - 1 ? '' : '0';
         });
+
+        // Si la confirmation est ouverte, elle reste au-dessus de la nouvelle pile.
+        const confirmation = document.querySelector('#confirmation-dialog-modal.show');
+        if (confirmation && allModals.length > 0) {
+            confirmation.style.zIndex = 1055 + (allModals.length - 1) * 20 + 20;
+        }
     }
 
     // Appelé à la fermeture : restaure l'opacité du backdrop inférieur (si existant).

@@ -39,6 +39,11 @@ class ClientIndicatorStrategy implements IndicatorCalculationStrategyInterface
         $taxeCourtierPayee = round($stats['taxe_courtier_payee'] + $bp['taxeCourtier'], 2);
         $taxeCourtierSolde = round($stats['taxe_courtier'] - $taxeCourtierPayee, 2);
 
+        // Indice de solvabilité : part des primes émises effectivement réglée par le client
+        $indiceSolvabilite = $stats['prime_totale'] > 0
+            ? round($stats['prime_totale_payee'] / $stats['prime_totale'] * 100, 2)
+            : 0.0;
+
         return [
             'civiliteString' => $this->getClientCiviliteString($entity),
             'groupeNom' => $entity->getGroupe() ? $entity->getGroupe()->getNom() : 'Aucun groupe',
@@ -83,6 +88,10 @@ class ClientIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'indemnisationSolde' => round($stats['sinistre_solde'], 2),
             'tauxSP' => round($stats['taux_sinistralite'], 2),
             'tauxSPInterpretation' => $this->calculationHelper->getInterpretationTauxSP($stats['taux_sinistralite']),
+
+            // Solvabilité
+            'indiceSolvabilite' => $indiceSolvabilite,
+            'indiceSolvabiliteInterpretation' => $this->calculationHelper->getInterpretationIndiceSolvabilite($indiceSolvabilite),
         ];
     }
 
