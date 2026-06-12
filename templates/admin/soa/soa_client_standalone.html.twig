@@ -72,6 +72,18 @@
             vertical-align: middle;
         }
         .soa-table tbody td:first-child { text-align: left; }
+        .soa-table .soa-circonstance {
+            text-align: left;
+            max-width: 230px;
+            white-space: normal;
+        }
+        .soa-circonstance-clamp {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
         .soa-table tbody tr:nth-child(even) { background-color: #f8f9fa; }
         .soa-table tfoot td {
             padding: .45rem .6rem;
@@ -471,6 +483,7 @@
                             <thead>
                                 <tr>
                                     <th scope="col">Réf. Sinistre</th>
+                                    <th scope="col" class="soa-circonstance">Circonstance</th>
                                     <th scope="col">Risque</th>
                                     <th scope="col">Date de survenance</th>
                                     <th scope="col">Évaluation</th>
@@ -482,6 +495,9 @@
                                 {% for sinistre in sinistres %}
                                     <tr>
                                         <td><strong>{{ sinistre.referenceSinistre|default('—') }}</strong></td>
+                                        <td class="soa-circonstance" title="{{ sinistre.descriptionDeFait|default('')|striptags }}">
+                                            <span class="soa-circonstance-clamp">{{ sinistre.descriptionDeFait ? sinistre.descriptionDeFait|striptags : '—' }}</span>
+                                        </td>
                                         <td>{{ sinistre.risque ? sinistre.risque.nomComplet : '—' }}</td>
                                         <td style="white-space:nowrap;">{{ sinistre.occuredAt ? sinistre.occuredAt|date('d/m/Y') : '—' }}</td>
                                         <td>{{ (sinistre.evaluationChiffree|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>
