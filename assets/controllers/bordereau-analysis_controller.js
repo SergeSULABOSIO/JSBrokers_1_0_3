@@ -1,5 +1,5 @@
 import BaseController from './base_controller.js';
-import { Toast, Modal } from 'bootstrap';
+import { Toast, Modal, Dropdown } from 'bootstrap';
 /**
  * @class BordereauAnalysisController
  * @description Gère l'interface de l'analyse de bordereau en deux étapes.
@@ -133,6 +133,13 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             console.log("[BordereauAnalysis] 4. connect() - Exécution du chargement initial de l'UI (état par défaut).");
             this.afterConnect();
         }
+        // Initialiser le dropdown ⋮ avec strategy:fixed pour qu'il s'affiche
+        // au-dessus des conteneurs overflow:hidden (menu-col-3, workspace-tab-panels)
+        const dropdownToggle = this.element.querySelector('[data-bs-toggle="dropdown"]');
+        if (dropdownToggle && !Dropdown.getInstance(dropdownToggle)) {
+            new Dropdown(dropdownToggle, { popperConfig: { strategy: 'fixed' } });
+        }
+
         // Le drapeau est remis à false une fois la logique de connect() terminée
         console.log("[BordereauAnalysis] 6. connect() - Fin de la connexion.");
     }
@@ -2539,23 +2546,55 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
         }));
     }
 
+    closeWorkspaceTab() {
+        document.dispatchEvent(new CustomEvent('app:workspace.close-active-tab'));
+    }
+
     async viewLinkedNote() {
         const note = this.savedNoteEntities?.[0];
         if (!note) return;
-        await this._handleNotePreviewRequest({ url: `/admin/note/api/get-preview-url/${note.id}` });
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        try {
+            const response = await fetch(`/admin/note/workspace-apercu/${note.id}`);
+            if (!response.ok) return;
+            const { html, title } = await response.json();
+            document.dispatchEvent(new CustomEvent('app:workspace.inject-html', {
+                bubbles: true,
+                detail: { html, title, iconAlias: 'note', tabKey: `note-preview-${note.id}`, loadUrl: `/admin/note/workspace-apercu/${note.id}` },
+            }));
+        } catch (e) {
+            console.warn('[BordereauAnalysis] viewLinkedNote() failed:', e);
+        } finally {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+        }
     }
 
     async _handleNotePreviewRequest({ url }) {
         if (!url) return;
         try {
-            // Extraire le noteId depuis l'URL (/admin/note/api/get-preview-url/{noteId})
-            const noteId = url.split('/').at(-1);
+            // 1. Appel de l'URL API pour obtenir la vraie previewUrl contenant l'ID de la note.
+            //    L'URL peut pointer vers l'API Note (/admin/note/api/get-preview-url/{noteId})
+            //    ou vers l'API Bordereau (/admin/bordereau/api/get-linked-note-preview-url/{bordereauId}).
+            const apiResponse = await fetch(url);
+            if (!apiResponse.ok) return;
+            const apiResult = await apiResponse.json();
+            const previewUrl = apiResult.previewUrl;
+            if (!previewUrl) return;
+
+            // 2. Téléchargement PDF : ouvrir dans un nouvel onglet navigateur
+            if (previewUrl.includes('/download-pdf/')) {
+                window.open(previewUrl, '_blank');
+                return;
+            }
+
+            // 3. Extraire le noteId depuis la previewUrl (/admin/note/apercu/{noteId})
+            const noteId = previewUrl.split('/').filter(Boolean).at(-1).split('?')[0];
             const response = await fetch(`/admin/note/workspace-apercu/${noteId}`);
             if (!response.ok) return;
             const { html, title } = await response.json();
             document.dispatchEvent(new CustomEvent('app:workspace.inject-html', {
                 bubbles: true,
-                detail: { html, title, iconAlias: 'note', tabKey: `note-preview-${noteId}` },
+                detail: { html, title, iconAlias: 'note', tabKey: `note-preview-${noteId}`, loadUrl: `/admin/note/workspace-apercu/${noteId}` },
             }));
         } catch (e) {
             console.warn('[BordereauAnalysis] _handleNotePreviewRequest() failed:', e);

@@ -1272,7 +1272,7 @@ class IndicatorCalculationHelper
             $sinistre = $offre->getNotificationSinistre();
             if ($sinistre && $sinistre->getReferencePolice()) {
                 // On utilise la méthode existante pour trouver la cotation via la référence de police.
-                return $this->cotationRepository->findOneByAvenantReference($sinistre->getReferencePolice());
+                return $this->cotationRepository->findOneByReferencePolice($sinistre->getReferencePolice());
             }
         }
         return null;

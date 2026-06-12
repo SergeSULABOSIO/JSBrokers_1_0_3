@@ -370,6 +370,12 @@ export default class extends Controller {
             case 'ui:note.preview-request':
                 this.handleNotePreviewRequest(payload);
                 break;
+            case 'ui:soa.view-request':
+                this.handleSoaViewRequest(payload);
+                break;
+            case 'ui:soa.copy-link-request':
+                this.handleSoaCopyLinkRequest(payload);
+                break;
             case 'ui:bordereau.analysis-request':
                 this.handleBordereauAnalysisRequest(payload);
                 break;
@@ -388,10 +394,6 @@ export default class extends Controller {
                 this.handleIconRequest(payload);
                 break;
             case 'ui:dialog.closed':
-                break;
-            // NOUVEAU : Gère la demande de prévisualisation d'une note.
-            case 'ui:note.preview-request':
-                this.handleNotePreviewRequest(payload);
                 break;
             default:
                 console.warn(`-> ATTENTION: Aucun gestionnaire défini pour l'événement "${type}".`);
@@ -1138,6 +1140,7 @@ export default class extends Controller {
                 title:     result.title,
                 iconAlias: 'note',
                 tabKey:    `note-preview-${noteId}`,
+                loadUrl:   `/admin/note/workspace-apercu/${noteId}`,
             });
             this._publishSelectionStatus('Note chargée.');
         } catch (error) {
@@ -1145,6 +1148,63 @@ export default class extends Controller {
             this._showNotification(error.message || "Erreur lors du chargement de la note.", "error");
         } finally {
             this.broadcast('app:loading.stop');
+        }
+    }
+
+    /**
+     * Ouvre le SOA d'un client dans un onglet de la zone de travail.
+     * @param {object} payload
+     * @param {string} payload.url - URL de type '/admin/soa/client/{id}/workspace'
+     */
+    async handleSoaViewRequest(payload) {
+        if (!payload.url) {
+            console.error('[Cerveau] handleSoaViewRequest() : URL manquante.', payload);
+            this._showNotification('Impossible de charger le SOA : URL manquante.', 'error');
+            return;
+        }
+        try {
+            this._publishSelectionStatus('Chargement du relevé de compte…');
+            this.broadcast('app:loading.start');
+
+            const response = await fetch(payload.url);
+            const result = await response.json();
+            if (!response.ok) throw result;
+
+            const clientId = payload.url.split('/').filter(Boolean).at(-2);
+            this.broadcast('app:workspace.inject-html', {
+                html:      result.html,
+                title:     result.title,
+                iconAlias: 'client',
+                tabKey:    `soa-client-${clientId}`,
+                loadUrl:   payload.url,
+            });
+            this._publishSelectionStatus('Relevé de compte chargé.');
+        } catch (error) {
+            console.error('[Cerveau] Erreur lors du chargement du SOA :', error);
+            this._showNotification(error.message || 'Erreur lors du chargement du relevé de compte.', 'error');
+        } finally {
+            this.broadcast('app:loading.stop');
+        }
+    }
+
+    /**
+     * Copie le lien standalone du SOA dans le presse-papiers.
+     * @param {object} payload
+     * @param {string} payload.url - URL de type '/admin/soa/client/{id}/apercu'
+     */
+    async handleSoaCopyLinkRequest(payload) {
+        if (!payload.url) {
+            console.error('[Cerveau] handleSoaCopyLinkRequest() : URL manquante.', payload);
+            this._showNotification('Impossible de copier le lien : URL manquante.', 'error');
+            return;
+        }
+        try {
+            const absoluteUrl = new URL(payload.url, window.location.origin).href;
+            await navigator.clipboard.writeText(absoluteUrl);
+            this._showNotification('Lien du relevé de compte copié dans le presse-papiers.', 'success');
+        } catch (error) {
+            console.error('[Cerveau] Erreur lors de la copie du lien SOA :', error);
+            this._showNotification('Impossible de copier le lien. Veuillez réessayer.', 'error');
         }
     }
 
@@ -1174,6 +1234,7 @@ export default class extends Controller {
                 title:     result.title,
                 iconAlias: 'bordereau',
                 tabKey:    `bordereau-analyse-${bordereauId}`,
+                loadUrl:   `/admin/bordereau/workspace-apercu/${bordereauId}`,
             });
             this._publishSelectionStatus('Analyse chargée.');
         } catch (error) {

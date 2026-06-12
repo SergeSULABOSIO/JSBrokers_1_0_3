@@ -2216,7 +2216,7 @@ export function saveCookie(nom, valeur) {
             const { html, title } = await response.json();
             document.dispatchEvent(new CustomEvent('app:workspace.inject-html', {
                 bubbles: true,
-                detail: { html, title, iconAlias: 'bordereau', tabKey: 'bordereau-analyse-' + _bid }
+                detail: { html, title, iconAlias: 'bordereau', tabKey: 'bordereau-analyse-' + _bid, loadUrl: '/admin/bordereau/workspace-apercu/' + _bid }
             }));
         } catch (e) {
             console.error('[Analyser bordereau]', e);

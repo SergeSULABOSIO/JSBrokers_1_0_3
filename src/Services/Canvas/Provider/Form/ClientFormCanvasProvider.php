@@ -33,7 +33,21 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/client/api/submit",
             "endpoint_delete_url" => "/admin/client/api/delete",
             "endpoint_form_url" => "/admin/client/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            "attribute_actions" => [
+                [
+                    "label" => "Voir le relevé de compte (SOA)",
+                    "icon"  => "action:view",
+                    "event" => "ui:soa.view-request",
+                    "url"   => "/admin/soa/client/%id%/workspace",
+                ],
+                [
+                    "label" => "Copier le lien du SOA",
+                    "icon"  => "action:copy",
+                    "event" => "ui:soa.copy-link-request",
+                    "url"   => "/admin/soa/client/%id%/apercu",
+                ],
+            ],
         ];
         $layout = $this->buildClientLayout($object, $isParentNew);
 
