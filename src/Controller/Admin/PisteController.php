@@ -3,8 +3,10 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Avenant;
+use App\Entity\Client;
 use App\Entity\Piste;
 use App\Entity\Invite;
+use App\Entity\Risque;
 use App\Constantes\Constante;
 use App\Form\PisteType;
 use App\Repository\PisteRepository;
@@ -79,6 +81,33 @@ class PisteController extends AbstractController
             function (Piste $piste, Invite $invite) use ($request) {
                 $piste->setRenewalCondition(Piste::RENEWAL_CONDITION_RENEWABLE);
 
+                // Pré-remplissage cross-selling (menu contextuel du SOA) : ?idClient=&idRisque=
+                $idClient = (int) $request->query->get('idClient', 0);
+                $idRisque = (int) $request->query->get('idRisque', 0);
+                if ($idClient || $idRisque) {
+                    $entreprise = $invite->getEntreprise();
+
+                    $client = $idClient ? $this->em->find(Client::class, $idClient) : null;
+                    if ($client && $client->getEntreprise() === $entreprise) {
+                        $piste->setClient($client);
+                    }
+
+                    $risque = $idRisque ? $this->em->find(Risque::class, $idRisque) : null;
+                    if ($risque && $risque->getEntreprise() === $entreprise) {
+                        $piste->setRisque($risque);
+                        if ($risque->getDescription() !== null) {
+                            $piste->setDescriptionDuRisque($risque->getDescription());
+                        }
+                    }
+
+                    $piste->setTypeAvenant(Piste::AVENANT_SOUSCRIPTION);
+                    $piste->setExercice((int) date('Y'));
+                    if ($piste->getRisque() && $piste->getClient()) {
+                        $piste->setNom(substr($piste->getRisque()->getNomComplet() . ' — ' . $piste->getClient()->getNom(), 0, 255));
+                    }
+                    return;
+                }
+
                 $idAvenant = (int) $request->query->get('idAvenant', 0);
                 if (!$idAvenant) return;
 
@@ -89,7 +118,9 @@ class PisteController extends AbstractController
                 if ($src) {
                     $piste->setClient($src->getClient());
                     $piste->setRisque($src->getRisque());
-                    $piste->setDescriptionDuRisque($src->getDescriptionDuRisque());
+                    if ($src->getDescriptionDuRisque() !== null) {
+                        $piste->setDescriptionDuRisque($src->getDescriptionDuRisque());
+                    }
                     $cotation = $avenant->getCotation();
                     $piste->setPrimePotentielle($this->indicatorHelper->getCotationMontantPrimePayableParClient($cotation) ?: $src->getPrimePotentielle());
                     $piste->setCommissionPotentielle($this->indicatorHelper->getCotationMontantCommissionTtc($cotation, -1, false) ?: $src->getCommissionPotentielle());

@@ -154,6 +154,8 @@ class SoaController extends AbstractController
         return [
             'client'           => $client,
             'entreprise'       => $entreprise,
+            'idEntreprise'     => $entreprise?->getId(),
+            'idInvite'         => $this->getInvite()->getId(),
             'monnaie'          => $this->serviceMonnaies->getCodeMonnaieAffichage(),
             'soaRef'           => 'SOA-' . $client->getId() . '-' . date('Y'),
             'soaDate'          => new \DateTimeImmutable(),
@@ -184,6 +186,7 @@ class SoaController extends AbstractController
 
         // Statut par risque : 'actif' (couvert ou en négociation) > 'policePerdue' > 'pisteFermee'
         $statuts = [];
+        $dernierePisteFermee = []; // risqueId => Piste fermée la plus récente (pour "Editer la piste")
         foreach ($client->getPistes() as $piste) {
             $risque = $piste->getRisque();
             if ($risque === null) {
@@ -207,6 +210,10 @@ class SoaController extends AbstractController
                 $statuts[$risqueId] = 'actif';
             } elseif (($statuts[$risqueId] ?? null) !== 'actif') {
                 $statuts[$risqueId] = $aUnAvenant ? 'policePerdue' : 'pisteFermee';
+                $existante = $dernierePisteFermee[$risqueId] ?? null;
+                if ($existante === null || $piste->getId() > $existante->getId()) {
+                    $dernierePisteFermee[$risqueId] = $piste;
+                }
             }
         }
 
@@ -220,6 +227,7 @@ class SoaController extends AbstractController
                 $aRelancer[] = [
                     'risque' => $risque,
                     'motif'  => $statut === 'policePerdue' ? 'Police perdue ou résiliée' : 'Piste(s) fermée(s) sans souscription',
+                    'piste'  => $dernierePisteFermee[$risque->getId()] ?? null,
                 ];
             }
         }

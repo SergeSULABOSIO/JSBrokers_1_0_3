@@ -1573,6 +1573,7 @@ thead.sticky-header {
     font-size: 0.85rem;
     line-height: 1.4;
     max-width: 250px;
+    overflow-wrap: anywhere;
     z-index: 1090; /* Au-dessus de tout */
     pointer-events: none;
     opacity: 0;
@@ -2698,8 +2699,8 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     box-shadow: 0 4px 16px rgba(0,0,0,.35);
 }
 #db-note-tip table { width: 100%; border-collapse: collapse; }
-#db-note-tip td { padding: 3px 10px; vertical-align: top; }
-#db-note-tip td:first-child { color: #adb5bd; white-space: nowrap; padding-right: 6px; }
+#db-note-tip td { padding: 3px 10px; vertical-align: top; overflow-wrap: anywhere; }
+#db-note-tip td:first-child:not([colspan]) { color: #adb5bd; white-space: nowrap; padding-right: 6px; }
 #db-note-tip .tip-section { color: #0d6efd; font-weight: 600; padding-top: 6px; padding-bottom: 2px; border-top: 1px solid #3d4349; font-size: .68rem; letter-spacing: .03em; text-transform: uppercase; }
 #db-note-tip .tip-section:first-child { border-top: none; padding-top: 3px; }
 #db-note-tip .tip-statut { font-weight: 600; }
@@ -2711,8 +2712,8 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     box-shadow: 0 4px 16px rgba(0,0,0,.35);
 }
 #db-bord-tip table { width: 100%; border-collapse: collapse; }
-#db-bord-tip td { padding: 3px 10px; vertical-align: top; }
-#db-bord-tip td:first-child { color: #adb5bd; white-space: nowrap; padding-right: 6px; }
+#db-bord-tip td { padding: 3px 10px; vertical-align: top; overflow-wrap: anywhere; }
+#db-bord-tip td:first-child:not([colspan]) { color: #adb5bd; white-space: nowrap; padding-right: 6px; }
 #db-bord-tip .tip-section { color: #0d6efd; font-weight: 600; padding-top: 6px; padding-bottom: 2px; border-top: 1px solid #3d4349; font-size: .68rem; letter-spacing: .03em; text-transform: uppercase; }
 #db-bord-tip .tip-section:first-child { border-top: none; padding-top: 3px; }
 #db-bord-tip .tip-statut { font-weight: 600; }
@@ -2724,8 +2725,8 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     box-shadow: 0 4px 16px rgba(0,0,0,.35);
 }
 #db-piste-tip table { width: 100%; border-collapse: collapse; }
-#db-piste-tip td { padding: 3px 10px; vertical-align: top; }
-#db-piste-tip td:first-child { color: #adb5bd; white-space: nowrap; padding-right: 6px; }
+#db-piste-tip td { padding: 3px 10px; vertical-align: top; overflow-wrap: anywhere; }
+#db-piste-tip td:first-child:not([colspan]) { color: #adb5bd; white-space: nowrap; padding-right: 6px; }
 #db-piste-tip .tip-section { color: #0d6efd; font-weight: 600; padding-top: 6px; padding-bottom: 2px; border-top: 1px solid #3d4349; font-size: .68rem; letter-spacing: .03em; text-transform: uppercase; }
 #db-piste-tip .tip-section:first-child { border-top: none; padding-top: 3px; }
 #db-piste-tip .tip-risque { color: #fbbf24; }
@@ -2808,6 +2809,7 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     margin-top: -6px;
     display: none;
     white-space: pre-wrap;
+    overflow-wrap: anywhere;
     max-width: 280px;
 }
 
@@ -2822,7 +2824,7 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     max-width:290px;
 }
 #db-renew-tip table { border-collapse:collapse; width:100%; min-width:230px; }
-#db-renew-tip td { padding:3px 0; vertical-align:top; }
+#db-renew-tip td { padding:3px 0; vertical-align:top; overflow-wrap:anywhere; }
 #db-renew-tip tr + tr td:not(.tip-section) { border-top:1px solid rgba(255,255,255,.06); }
 #db-renew-tip td.tip-section {
     color:rgba(255,255,255,.38); font-size:.58rem;
@@ -2849,7 +2851,7 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     max-width:290px;
 }
 #db-cash-tip table { border-collapse:collapse; width:100%; min-width:230px; }
-#db-cash-tip td { padding:3px 0; vertical-align:top; }
+#db-cash-tip td { padding:3px 0; vertical-align:top; overflow-wrap:anywhere; }
 #db-cash-tip tr + tr td:not(.tip-section) { border-top:1px solid rgba(255,255,255,.06); }
 #db-cash-tip td.tip-section {
     color:rgba(255,255,255,.38); font-size:.58rem;
@@ -2877,7 +2879,7 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     max-width:300px;
 }
 #db-sin-tip table { border-collapse:collapse; width:100%; min-width:240px; }
-#db-sin-tip td { padding:3px 0; vertical-align:top; }
+#db-sin-tip td { padding:3px 0; vertical-align:top; overflow-wrap:anywhere; }
 #db-sin-tip tr + tr td:not(.tip-section) { border-top:1px solid rgba(255,255,255,.06); }
 #db-sin-tip td.tip-section {
     color:rgba(255,255,255,.38); font-size:.58rem;

@@ -143,7 +143,13 @@
     }
 </style>
 
-<div class="soa-preview-workspace">
+<div class="soa-preview-workspace"
+     data-controller="soa-context-menu"
+     data-soa-context-menu-id-entreprise-value="{{ idEntreprise }}"
+     data-soa-context-menu-id-invite-value="{{ idInvite }}"
+     data-soa-context-menu-client-id-value="{{ client.id }}"
+     data-soa-context-menu-client-nom-value="{{ client.nom }}"
+     data-soa-context-menu-apercu-url-value="{{ apercuUrl }}">
 
     <nav class="soa-actions-bar" aria-label="Actions du relevé de compte">
         <button type="button"
@@ -215,7 +221,7 @@
                     <twig:UX:Icon name="{{ resolve_icon_name('dashboard') }}" width="16px" height="16px" aria-hidden="true" />
                     <h2 id="soa-section-recap">1. Récapitulatif Global</h2>
                 </div>
-                <div class="soa-section-body">
+                <div class="soa-section-body" data-soa-section="recap">
                     <table class="soa-table">
                         <caption class="visually-hidden">Synthèse financière globale du client {{ client.nom }}</caption>
                         <thead>
@@ -311,24 +317,31 @@
                     <twig:UX:Icon name="{{ resolve_icon_name('contact') }}" width="16px" height="16px" aria-hidden="true" />
                     <h2 id="soa-section-contacts">2. Contacts</h2>
                 </div>
-                <div class="soa-section-body">
-                    {% if client.contacts is empty %}
-                        <p class="soa-empty-notice">Aucun contact enregistré.</p>
-                    {% else %}
-                        <table class="soa-table">
-                            <caption class="visually-hidden">Contacts du client {{ client.nom }}</caption>
-                            <thead>
+                <div class="soa-section-body" data-soa-section="contacts">
+                    {# Tableau toujours rendu, même sans contact : le menu contextuel
+                       « Ajouter un contact » n'est proposé qu'à l'intérieur du tableau. #}
+                    <table class="soa-table">
+                        <caption class="visually-hidden">Contacts du client {{ client.nom }}</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">Nom</th>
+                                <th scope="col" class="text-start">Fonction</th>
+                                <th scope="col" class="text-start">Type</th>
+                                <th scope="col">Téléphone</th>
+                                <th scope="col">Email</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if client.contacts is empty %}
                                 <tr>
-                                    <th scope="col">Nom</th>
-                                    <th scope="col" class="text-start">Fonction</th>
-                                    <th scope="col" class="text-start">Type</th>
-                                    <th scope="col">Téléphone</th>
-                                    <th scope="col">Email</th>
+                                    <td colspan="5">
+                                        <p class="soa-empty-notice mb-0">Aucun contact enregistré.</p>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
+                            {% else %}
                                 {% for contact in client.contacts %}
-                                    <tr>
+                                    <tr data-id="{{ contact.id }}"
+                                        data-label="{{ contact.nom }}{{ contact.fonction ? ' — ' ~ contact.fonction : '' }}">
                                         <td class="text-start">{{ contact.nom }}</td>
                                         <td class="text-start">{{ contact.fonction|default('—') }}</td>
                                         <td class="text-start">{{ contactTypeLabels[contact.type]|default('—') }}</td>
@@ -336,9 +349,9 @@
                                         <td>{{ contact.email|default('—') }}</td>
                                     </tr>
                                 {% endfor %}
-                            </tbody>
-                        </table>
-                    {% endif %}
+                            {% endif %}
+                        </tbody>
+                    </table>
                 </div>
             </section>
 
@@ -348,7 +361,7 @@
                     <twig:UX:Icon name="{{ resolve_icon_name('document') }}" width="16px" height="16px" aria-hidden="true" />
                     <h2 id="soa-section-polices">3. Portefeuille de Polices Actives</h2>
                 </div>
-                <div class="soa-section-body">
+                <div class="soa-section-body" data-soa-section="polices">
                     {% if polices is empty %}
                         <p class="soa-empty-notice">Aucune police active.</p>
                     {% else %}
@@ -371,7 +384,8 @@
                                     {% set avenant = item.avenant %}
                                     {% set cotation = item.cotation %}
                                     {% set piste = item.piste %}
-                                    <tr>
+                                    <tr data-id="{{ avenant.id }}"
+                                        data-label="Police {{ avenant.referencePolice|default('#' ~ avenant.id) }}">
                                         <td><strong>{{ avenant.referencePolice|default('—') }}</strong></td>
                                         <td>{{ piste.risque ? piste.risque.nomComplet : '—' }}</td>
                                         <td>{{ cotation.assureur ? cotation.assureur.nom : '—' }}</td>
@@ -407,7 +421,7 @@
                     <twig:UX:Icon name="{{ resolve_icon_name('piste') }}" width="16px" height="16px" aria-hidden="true" />
                     <h2 id="soa-section-pistes">4. Pistes en Cours</h2>
                 </div>
-                <div class="soa-section-body">
+                <div class="soa-section-body" data-soa-section="pistes">
                     {% if pistesEnCours is empty %}
                         <p class="soa-empty-notice">Aucune piste commerciale en cours.</p>
                     {% else %}
@@ -423,7 +437,8 @@
                             </thead>
                             <tbody>
                                 {% for piste in pistesEnCours %}
-                                    <tr>
+                                    <tr data-id="{{ piste.id }}"
+                                        data-label="{{ piste.nom }}">
                                         <td><strong>{{ piste.nom }}</strong></td>
                                         <td>{{ piste.risque ? piste.risque.nomComplet : '—' }}</td>
                                         <td>{{ piste.primePotentielle is not null ? piste.primePotentielle|number_format(2, ',', ' ') ~ ' ' ~ monnaie : '—' }}</td>
@@ -442,7 +457,7 @@
                     <twig:UX:Icon name="{{ resolve_icon_name('cotation') }}" width="16px" height="16px" aria-hidden="true" />
                     <h2 id="soa-section-cotations">5. Cotations en Cours</h2>
                 </div>
-                <div class="soa-section-body">
+                <div class="soa-section-body" data-soa-section="cotations">
                     {% if cotationsEnCours is empty %}
                         <p class="soa-empty-notice">Aucune cotation en cours sans police générée.</p>
                     {% else %}
@@ -450,8 +465,8 @@
                             <caption class="visually-hidden">Cotations en cours (sans avenant généré) pour {{ client.nom }}</caption>
                             <thead>
                                 <tr>
-                                    <th scope="col">Piste parente</th>
                                     <th scope="col">Cotation</th>
+                                    <th scope="col">Piste parente</th>
                                     <th scope="col">Assureur</th>
                                     <th scope="col">Durée</th>
                                     <th scope="col">Prime TTC</th>
@@ -460,9 +475,10 @@
                             </thead>
                             <tbody>
                                 {% for item in cotationsEnCours %}
-                                    <tr>
-                                        <td>{{ item.piste.nom }}</td>
+                                    <tr data-id="{{ item.cotation.id }}"
+                                        data-label="{{ item.cotation.nom }}">
                                         <td><strong>{{ item.cotation.nom }}</strong></td>
+                                        <td>{{ item.piste.nom }}</td>
                                         <td>{{ item.cotation.assureur ? item.cotation.assureur.nom : '—' }}</td>
                                         <td>{{ item.cotation.duree|default('—') }}</td>
                                         <td>{{ (item.cotation.primeTotale|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>
@@ -481,7 +497,7 @@
                     <twig:UX:Icon name="{{ resolve_icon_name('tranche') }}" width="16px" height="16px" aria-hidden="true" />
                     <h2 id="soa-section-echeancier">6. Échéancier des Primes</h2>
                 </div>
-                <div class="soa-section-body">
+                <div class="soa-section-body" data-soa-section="tranches">
                     {% if tranches is empty %}
                         <p class="soa-empty-notice">Aucune tranche de prime enregistrée.</p>
                     {% else %}
@@ -506,7 +522,8 @@
                                     {% set tPct = client.montant_du|default(0) > 0 ? (client.montant_paye|default(0) / client.montant_du) : null %}
                                     {% set tPayee = tPct is not null ? (tranche.primeTranche|default(0) * tPct) : tranche.primePayee|default(0) %}
                                     {% set tSolde = tranche.primeTranche|default(0) - tPayee %}
-                                    <tr>
+                                    <tr data-id="{{ tranche.id }}"
+                                        data-label="{{ tranche.nom }}{{ tranche.payableAt ? ' — éch. ' ~ tranche.payableAt|date('d/m/Y') : '' }}">
                                         <td>{{ cotation.avenants is not empty ? cotation.avenants.first.referencePolice|default('—') : '—' }}</td>
                                         <td>{{ tranche.nom }}</td>
                                         <td style="white-space:nowrap;">{{ tranche.payableAt ? tranche.payableAt|date('d/m/Y') : '—' }}</td>
@@ -536,7 +553,7 @@
                     <twig:UX:Icon name="{{ resolve_icon_name('sinistre') }}" width="16px" height="16px" aria-hidden="true" />
                     <h2 id="soa-section-sinistres">7. Sinistres</h2>
                 </div>
-                <div class="soa-section-body">
+                <div class="soa-section-body" data-soa-section="sinistres">
                     {% if sinistres is empty %}
                         <p class="soa-empty-notice">Aucun sinistre enregistré.</p>
                     {% else %}
@@ -555,7 +572,8 @@
                             </thead>
                             <tbody>
                                 {% for sinistre in sinistres %}
-                                    <tr>
+                                    <tr data-id="{{ sinistre.id }}"
+                                        data-label="{{ sinistre.referenceSinistre|default('Sinistre #' ~ sinistre.id) }}">
                                         <td><strong>{{ sinistre.referenceSinistre|default('—') }}</strong></td>
                                         <td class="soa-circonstance" title="{{ sinistre.descriptionDeFait|default('')|striptags }}">
                                             <span class="soa-circonstance-clamp">{{ sinistre.descriptionDeFait ? sinistre.descriptionDeFait|striptags : '—' }}</span>
@@ -710,7 +728,7 @@
                     {% if tachesActives is empty %}
                         <p class="soa-empty-notice">Aucune tâche active.</p>
                     {% else %}
-                        <table class="soa-table mb-3">
+                        <table class="soa-table mb-3" data-soa-section="taches">
                             <caption class="visually-hidden">Tâches actives liées au client {{ client.nom }}</caption>
                             <thead>
                                 <tr>
@@ -723,7 +741,10 @@
                             <tbody>
                                 {% for tache in tachesActives %}
                                     {% set dernierFeedback = tache.feedbacks|last %}
-                                    <tr class="tache-active-row">
+                                    {% set tacheLabel = tache.description|striptags|trim %}
+                                    <tr class="tache-active-row"
+                                        data-id="{{ tache.id }}"
+                                        data-label="{{ tacheLabel|slice(0, 60) }}{{ tacheLabel|length > 60 ? '…' : '' }}">
                                         <td><strong>{{ tache.description|striptags|trim }}</strong></td>
                                         <td class="text-muted" style="font-size:.8rem;">{{ tache.contexteTache|default('')|striptags|trim ?: '—' }}</td>
                                         <td style="white-space:nowrap;">
@@ -811,7 +832,7 @@
                         {% if crossSelling.nouveaux is empty %}
                             <p class="soa-empty-notice">Tous les produits du catalogue ont déjà été proposés au client.</p>
                         {% else %}
-                            <table class="soa-table mb-3">
+                            <table class="soa-table mb-3" data-soa-section="cross-nouveaux">
                                 <caption class="visually-hidden">Produits du catalogue jamais proposés à {{ client.nom }}</caption>
                                 <thead>
                                     <tr>
@@ -823,7 +844,7 @@
                                 </thead>
                                 <tbody>
                                     {% for risque in crossSelling.nouveaux %}
-                                        <tr>
+                                        <tr data-id="{{ risque.id }}" data-label="{{ risque.nomComplet }}{{ risque.code ? ' (' ~ risque.code ~ ')' : '' }}">
                                             <td><strong>{{ risque.nomComplet }}</strong></td>
                                             <td>{{ risque.code|default('—') }}</td>
                                             <td>{{ risque.branche == constant('App\\Entity\\Risque::BRANCHE_VIE') ? 'Vie' : 'IARD' }}</td>
@@ -843,7 +864,7 @@
                         {% if crossSelling.aRelancer is empty %}
                             <p class="soa-empty-notice">Aucun produit abordé par le passé resté sans suite.</p>
                         {% else %}
-                            <table class="soa-table">
+                            <table class="soa-table" data-soa-section="cross-relancer">
                                 <caption class="visually-hidden">Produits abordés par le passé avec {{ client.nom }} et restés sans suite</caption>
                                 <thead>
                                     <tr>
@@ -855,7 +876,8 @@
                                 </thead>
                                 <tbody>
                                     {% for item in crossSelling.aRelancer %}
-                                        <tr>
+                                        <tr data-id="{{ item.piste ? item.piste.id : '' }}"
+                                            data-label="{{ item.risque.nomComplet }}{{ item.risque.code ? ' (' ~ item.risque.code ~ ')' : '' }}">
                                             <td><strong>{{ item.risque.nomComplet }}</strong></td>
                                             <td>{{ item.risque.code|default('—') }}</td>
                                             <td>{{ item.risque.branche == constant('App\\Entity\\Risque::BRANCHE_VIE') ? 'Vie' : 'IARD' }}</td>
@@ -884,5 +906,57 @@
 
         </div>
     </main>
+
+    {# ── MENU CONTEXTUEL DES SECTIONS (design identique au tableau de bord) ── #}
+    {# Pas d'attribut id : plusieurs onglets SOA peuvent coexister, ciblage via target Stimulus. #}
+    {# Pas de classes d-flex/px/py sur les items : leur display:flex !important
+       écraserait le masquage par section appliqué par le contrôleur. Le style
+       flex/padding/cursor vient du CSS .context-menu [role="menuitem"]. #}
+    <nav class="context-menu"
+         data-soa-context-menu-target="menu"
+         style="display:none;"
+         tabindex="-1"
+         aria-label="Menu contextuel du relevé de compte"
+         onmousedown="event.stopPropagation()">
+        <ul role="menu" class="list-unstyled mb-0">
+            <li role="menuitem" tabindex="-1" data-menu-key="refresh"
+                data-action="click->soa-context-menu#onItemClick">
+                <span class="context-menu-icon" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:refresh') }}" style="width:16px;height:16px;" />
+                </span>
+                <span class="flex-grow-1">Actualiser</span>
+            </li>
+            <li role="menuitem" tabindex="-1" data-menu-key="apercu"
+                data-action="click->soa-context-menu#onItemClick">
+                <span class="context-menu-icon" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:view') }}" style="width:16px;height:16px;" />
+                </span>
+                <span class="flex-grow-1">Aperçu client</span>
+            </li>
+            <li role="separator" class="separator" data-menu-key="sep-actions"></li>
+            <li role="menuitem" tabindex="-1" data-menu-key="create"
+                data-action="click->soa-context-menu#onItemClick">
+                <span class="context-menu-icon" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:add') }}" style="width:16px;height:16px;" />
+                </span>
+                <span class="flex-grow-1" data-soa-context-menu-target="createLabel">Ajouter</span>
+            </li>
+            <li role="menuitem" tabindex="-1" data-menu-key="edit"
+                data-action="click->soa-context-menu#onItemClick">
+                <span class="context-menu-icon" aria-hidden="true">
+                    <twig:UX:Icon name="tabler:edit" style="width:16px;height:16px;" />
+                </span>
+                <span class="flex-grow-1" data-soa-context-menu-target="editLabel">Editer</span>
+            </li>
+            <li role="separator" class="separator" data-menu-key="sep-danger"></li>
+            <li role="menuitem" tabindex="-1" data-menu-key="delete" class="is-danger"
+                data-action="click->soa-context-menu#onItemClick">
+                <span class="context-menu-icon" aria-hidden="true">
+                    <twig:UX:Icon name="fluent:delete-20-filled" style="width:16px;height:16px;" />
+                </span>
+                <span class="flex-grow-1">Supprimer</span>
+            </li>
+        </ul>
+    </nav>
 
 </div>
