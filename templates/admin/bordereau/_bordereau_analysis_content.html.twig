@@ -1,4 +1,4 @@
-    <div class="actions-bar sticky-top d-flex flex-column">
+    <div class="actions-bar d-flex flex-column">
 
         {# Barre principale : titre gauche + actions droite #}
         <div class="d-flex align-items-center justify-content-between w-100 px-3 py-2"> {# Main container for toolbar #}
@@ -180,7 +180,7 @@
                     {# ── Dropdown "options" ── #}
                     <div class="dropdown">
                         <button class="btn btn-icon d-inline-flex align-items-center justify-content-center"
-                                data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" aria-label="Plus d'options">
+                                data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-haspopup="true" aria-expanded="false" aria-label="Plus d'options">
                             <twig:UX:Icon name="lucide:more-vertical" width="18px" height="18px" class="text-white" />
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow" data-bordereau-analysis-target="optionsMenu">
@@ -195,7 +195,7 @@
                             <li data-bordereau-analysis-target="editNoteItem" class="d-none"><button class="dropdown-item d-inline-flex align-items-center gap-2" data-action="click->bordereau-analysis#openLinkedNoteDialog"><twig:UX:Icon name="{{ resolve_icon_name('action:edit') }}" width="16px" height="16px" /><span>Éditer la note</span></button></li>
                             <li data-bordereau-analysis-target="viewNoteItem" class="d-none"><button class="dropdown-item d-inline-flex align-items-center gap-2" data-action="click->bordereau-analysis#viewLinkedNote"><twig:UX:Icon name="{{ resolve_icon_name('action:view') }}" width="16px" height="16px" /><span>Voir la note</span></button></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><button class="dropdown-item d-inline-flex align-items-center gap-2" onclick="window.close()"><twig:UX:Icon name="lucide:x-circle" width="16px" height="16px" /><span>Fermer</span></button></li>
+                            <li><button class="dropdown-item d-inline-flex align-items-center gap-2" data-action="click->bordereau-analysis#closeWorkspaceTab"><twig:UX:Icon name="lucide:x-circle" width="16px" height="16px" /><span>Fermer</span></button></li>
                         </ul>
                     </div>
                 </div>
@@ -212,6 +212,7 @@
 
     </div>
 
+    <div class="bordereau-analysis-scroll-area">
     <div class="analysis-container">
         <div class="analysis-header">
             <div class="text-center mb-4">
@@ -357,6 +358,7 @@
             </p>
         </div>
     </div>
+    </div>{# /bordereau-analysis-scroll-area #}
 
     {# Le script Bootstrap est déjà inclus via importmap dans le <head> #}
 

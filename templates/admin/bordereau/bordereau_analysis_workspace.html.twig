@@ -1,12 +1,13 @@
 {# templates/admin/bordereau/bordereau_analysis_workspace.html.twig #}
 {# Partial injecté dans la zone workspace via app:workspace.inject-html — pas de DOCTYPE/html/head #}
 <style>
-    .bordereau-analysis-workspace { background-color: #f8f9fa; overflow-y: auto; }
+    .bordereau-analysis-workspace { background-color: #f8f9fa; display: flex; flex-direction: column; height: 100%; }
+    .bordereau-analysis-workspace .bordereau-analysis-scroll-area { flex: 1; overflow-y: auto; min-height: 0; }
     .bordereau-analysis-workspace .analysis-container { max-width: 900px; margin: 2rem auto; background-color: #fff; border: 1px solid #dee2e6; box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15); }
     .bordereau-analysis-workspace .analysis-header { padding: 2rem; border-bottom: 1px solid #dee2e6; }
     .bordereau-analysis-workspace .analysis-body { padding: 2rem; }
     .bordereau-analysis-workspace .analysis-footer { padding: 2rem; background-color: #f8f9fa; border-top: 1px solid #dee2e6; }
-    .bordereau-analysis-workspace .actions-bar { padding: 1rem; text-align: center; background-color: #343a40; }
+    .bordereau-analysis-workspace .actions-bar { background-color: #343a40; }
     @media print {
         .bordereau-analysis-workspace .actions-bar { display: none !important; }
         .bordereau-analysis-workspace .analysis-container { margin: 0; border: none; box-shadow: none; max-width: 100%; }

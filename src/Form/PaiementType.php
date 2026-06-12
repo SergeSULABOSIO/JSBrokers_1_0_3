@@ -48,24 +48,24 @@ class PaiementType extends AbstractType
 
         // Logique spécifique au mode CRÉATION
         if ($isCreationMode && $paiement) {
-            // 1. Récupération de la note (déjà associée par le Controller via renderFormCanvas)
+            // 1. Génération de la référence automatique si absente
+            if (!$paiement->getReference()) {
+                $paiement->setReference('PAY-' . (new \DateTime())->format('dmY-His'));
+            }
+
+            // 2. Récupération de la note (déjà associée par le Controller via renderFormCanvas)
             $note = $paiement->getNote();
-            
+
             // Fallback : recherche via la requête si l'association n'est pas encore faite
             $noteId = $note ? $note->getId() : $request?->query->get('parent_id');
             $note = $note ?? ($noteId ? $this->em->getRepository(Note::class)->find($noteId) : null);
 
             if ($note) {
-                // 2. Calcul du montant par défaut (le solde de la note)
+                // 3. Calcul du montant par défaut (le solde de la note)
                 $payable = $this->calculationHelper->getNoteMontantTotal($note);
                 $paye = $this->calculationHelper->getNoteMontantPaye($note);
                 $solde = (float)($payable - $paye);
                 $defaultMontant = $solde > 0 ? $solde : 0;
-
-                // 3. Génération de la référence automatique si absente
-                if (!$paiement->getReference()) {
-                    $paiement->setReference('PAY-' . (new \DateTime())->format('dmY-His'));
-                }
 
                 // 4. Identification du nom réel du destinataire (au lieu du label N/A)
                 $recipient = match ($note->getAddressedTo()) {

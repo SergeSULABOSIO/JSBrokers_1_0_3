@@ -59,6 +59,21 @@ class CotationRepository extends ServiceEntityRepository
     //        ;
     //    }
 
+    /**
+     * Retrouve la cotation liée à une référence de police.
+     * La référence de police est portée par les avenants, pas par la cotation elle-même.
+     */
+    public function findOneByReferencePolice(string $referencePolice): ?Cotation
+    {
+        return $this->createQueryBuilder('c')
+            ->join('c.avenants', 'a')
+            ->andWhere('a.referencePolice = :referencePolice')
+            ->setParameter('referencePolice', $referencePolice)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
     public function loadCotationsWithPartnerRisque($annee, ?Entreprise $entreprise, ?Risque $risque, ?Partenaire $partenaire)
     {
         $data = $this->createQueryBuilder('cotation')

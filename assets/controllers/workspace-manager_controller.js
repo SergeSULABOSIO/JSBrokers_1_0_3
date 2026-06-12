@@ -1195,15 +1195,19 @@ export default class extends Controller {
         if (panel.dataset.loaded !== 'true') {
             const tabData = this.workspaceTabs.find(t => t.id === tabId);
             if (tabData) {
-                this.pendingWorkspaceTabId = tabId;
-                this.progressBarTarget.style.display = 'block';
-                this.notifyCerveau('ui:component.load', {
-                    componentName: tabData.componentName,
-                    entityName: tabData.entityName,
-                    idEntreprise: this.idEntrepriseValue,
-                    idInvite: this.idInviteValue,
-                    workspaceTabId: tabId
-                });
+                if (tabData.loadUrl) {
+                    this._loadTabFromUrl(tabData);
+                } else {
+                    this.pendingWorkspaceTabId = tabId;
+                    this.progressBarTarget.style.display = 'block';
+                    this.notifyCerveau('ui:component.load', {
+                        componentName: tabData.componentName,
+                        entityName: tabData.entityName,
+                        idEntreprise: this.idEntrepriseValue,
+                        idInvite: this.idInviteValue,
+                        workspaceTabId: tabId
+                    });
+                }
             }
         } else {
             // Panneau déjà chargé : informer le Cerveau du changement d'onglet actif
@@ -1286,7 +1290,7 @@ export default class extends Controller {
      * Dédoublonne les onglets via data-tab-key.
      */
     injectHtmlInNewTab(event) {
-        const { html, title, iconAlias, tabKey } = event.detail;
+        const { html, title, iconAlias, tabKey, loadUrl } = event.detail;
 
         // Dédoublonnage : si un onglet portant cette clé existe déjà, l'activer
         if (tabKey) {
@@ -1326,7 +1330,12 @@ export default class extends Controller {
         this.workspaceTabBarTarget.appendChild(tabEl);
         this.workspaceTabPanelsTarget.appendChild(panel);
 
-        // Onglet éphémère : non ajouté à workspaceTabs (pas persisté dans localStorage)
+        // Si une loadUrl est fournie, persister l'onglet pour le restaurer après rechargement
+        if (loadUrl) {
+            const tabData = { id: tabId, title: title || 'Aperçu', iconAlias: iconAlias || null, tabKey: tabKey || null, loadUrl };
+            this.workspaceTabs.push(tabData);
+        }
+
         this._activateWorkspaceTabById(tabId);
     }
 
@@ -1368,9 +1377,10 @@ export default class extends Controller {
     _createTabStructure(tabData) {
         const tabEl = this.workspaceTabTemplateTarget.content.cloneNode(true).firstElementChild;
         tabEl.dataset.tabId = tabData.id;
-        tabEl.dataset.componentName = tabData.componentName;
+        tabEl.dataset.componentName = tabData.componentName || '';
         tabEl.dataset.entityName = tabData.entityName || '';
         tabEl.dataset.groupName = tabData.groupName || '';
+        if (tabData.tabKey) tabEl.dataset.tabKey = tabData.tabKey;
         tabEl.querySelector('.workspace-tab-title').textContent = tabData.title || tabData.entityName || tabData.componentName;
 
         if (tabData.iconAlias) {
@@ -1387,6 +1397,28 @@ export default class extends Controller {
 
         this.workspaceTabBarTarget.appendChild(tabEl);
         this.workspaceTabPanelsTarget.appendChild(panel);
+    }
+
+    /**
+     * Charge le contenu d'un onglet persisté via son loadUrl (utilisé à la restauration).
+     */
+    async _loadTabFromUrl(tabData) {
+        const panel = this.workspaceTabPanelsTarget.querySelector(`[data-tab-id="${tabData.id}"]`);
+        if (!panel) return;
+        this.progressBarTarget.style.display = 'block';
+        try {
+            const response = await fetch(tabData.loadUrl);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const { html } = await response.json();
+            panel.innerHTML = html;
+            panel.dataset.loaded = 'true';
+        } catch (e) {
+            console.error('[WorkspaceManager] _loadTabFromUrl() failed:', e);
+            panel.innerHTML = `<div class="p-4 text-danger">Impossible de recharger l'onglet.</div>`;
+            panel.dataset.loaded = 'true';
+        } finally {
+            this.progressBarTarget.style.display = 'none';
+        }
     }
 
     /**
