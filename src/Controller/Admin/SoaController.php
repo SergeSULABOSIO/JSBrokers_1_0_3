@@ -138,6 +138,10 @@ class SoaController extends AbstractController
             }
         }
 
+        foreach ($taches as $tache) {
+            $this->canvasBuilder->loadAllCalculatedValues($tache);
+        }
+
         usort($tranches, static function (array $a, array $b): int {
             $dateA = $a['tranche']->getPayableAt();
             $dateB = $b['tranche']->getPayableAt();
