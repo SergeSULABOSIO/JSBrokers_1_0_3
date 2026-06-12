@@ -181,6 +181,7 @@
                         <h1>Relevé de Compte</h1>
                         <div class="soa-ref">Réf. : <strong>{{ soaRef }}</strong></div>
                         <div class="soa-ref">Édité le {{ soaDate|date('d/m/Y') }}</div>
+                        <div class="soa-ref" style="opacity:.8;"><small>Dernière mise à jour : {{ soaDate|date('d/m/Y') }} à {{ soaDate|date('H:i') }}</small></div>
                     </div>
                 </div>
                 <hr style="border-color: rgba(255,255,255,.3); margin: 1rem 0 .75rem;">

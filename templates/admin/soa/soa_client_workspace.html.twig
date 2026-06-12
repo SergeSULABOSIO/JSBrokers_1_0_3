@@ -157,7 +157,7 @@
            target="_blank"
            class="btn btn-cobalt btn-sm d-inline-flex align-items-center gap-2"
            aria-label="Ouvrir l'aperçu client du relevé de compte (nouvelle fenêtre)">
-            <twig:UX:Icon name="{{ resolve_icon_name('action:print') }}" width="16px" height="16px" aria-hidden="true" />
+            <twig:UX:Icon name="{{ resolve_icon_name('action:view') }}" width="16px" height="16px" aria-hidden="true" />
             <span>Aperçu client</span>
         </a>
     </nav>
@@ -187,6 +187,7 @@
                         <h1>Relevé de Compte</h1>
                         <div class="soa-ref">Réf. : <strong>{{ soaRef }}</strong></div>
                         <div class="soa-ref">Édité le {{ soaDate|date('d/m/Y') }}</div>
+                        <div class="soa-ref" style="opacity:.8;"><small>Dernière mise à jour : {{ soaDate|date('d/m/Y') }} à {{ soaDate|date('H:i') }}</small></div>
                     </div>
                 </div>
                 <hr style="border-color: rgba(255,255,255,.3); margin: 1rem 0 .75rem;">
