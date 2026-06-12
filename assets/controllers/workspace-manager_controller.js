@@ -66,6 +66,9 @@ export default class extends Controller {
         this.boundInjectHtml = this.injectHtmlInNewTab.bind(this);
         document.addEventListener('app:workspace.inject-html', this.boundInjectHtml);
 
+        this.boundReloadActiveTab = this.reloadActiveWorkspaceTab.bind(this);
+        document.addEventListener('app:workspace.reload-active-tab', this.boundReloadActiveTab);
+
         // --- NOUVEAU : Gestion de la barre de progression pour l'actualisation de la liste ---
         // Écoute les ordres du Cerveau pour afficher/masquer la barre de progression.
         this.boundHandleLoadingStart = this.handleLoadingStart.bind(this);
@@ -151,6 +154,7 @@ export default class extends Controller {
         document.removeEventListener('app:workspace.load-default', this.boundLoadDefault);
         document.removeEventListener('app:workspace.close-active-tab', this.boundCloseActiveTab);
         document.removeEventListener('app:workspace.inject-html', this.boundInjectHtml);
+        document.removeEventListener('app:workspace.reload-active-tab', this.boundReloadActiveTab);
         document.removeEventListener('app:loading.start', this.boundHandleLoadingStart);
         document.removeEventListener('app:loading.stop', this.boundHandleLoadingStop);
         document.removeEventListener('workspace:navigate-to', this.boundHandleNavigateTo);
@@ -1397,6 +1401,17 @@ export default class extends Controller {
 
         this.workspaceTabBarTarget.appendChild(tabEl);
         this.workspaceTabPanelsTarget.appendChild(panel);
+    }
+
+    /**
+     * Recharge le contenu de l'onglet workspace actif depuis son loadUrl.
+     * Déclenché par l'événement 'app:workspace.reload-active-tab' (ex. bouton « Actualiser » du SOA).
+     */
+    reloadActiveWorkspaceTab() {
+        const tabData = this.workspaceTabs.find(t => t.id === this.activeWorkspaceTabId);
+        if (tabData && tabData.loadUrl) {
+            this._loadTabFromUrl(tabData);
+        }
     }
 
     /**

@@ -38,6 +38,7 @@ trait CalculatedIndicatorsNumericProviderTrait
             'indemnisationVersee' => ['description' => 'Sinistre Payé', 'is_percentage' => false],
             'indemnisationSolde' => ['description' => 'Solde Sinistre', 'is_percentage' => false],
             'tauxSP' => ['description' => 'Taux de Sinistralité', 'is_percentage' => true],
+            'indiceSolvabilite' => ['description' => 'Indice de Solvabilité', 'is_percentage' => true],
             'tauxCommission' => ['description' => 'Taux de Commission', 'is_percentage' => true],
         ];
 

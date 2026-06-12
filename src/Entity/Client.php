@@ -198,6 +198,12 @@ class Client
     #[Groups(['list:read'])]
     public ?string $tauxSPInterpretation = null;
 
+    #[Groups(['list:read'])]
+    public ?float $indiceSolvabilite = null;
+
+    #[Groups(['list:read'])]
+    public ?string $indiceSolvabiliteInterpretation = null;
+
     public function getId(): ?int
     {
         return $this->id;

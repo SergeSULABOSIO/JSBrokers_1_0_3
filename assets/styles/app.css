@@ -1543,10 +1543,9 @@ thead.sticky-header {
     background-color: #ffffff; /* Fond blanc pour la confirmation */
 }
 
-/* 6. SUPERPOSITION */
-#confirmation-dialog-modal {
-    z-index: 1070;
-}
+/* 6. SUPERPOSITION : le z-index de #confirmation-dialog-modal est calculé
+   dynamiquement par confirmation-dialog_controller.js pour rester au-dessus
+   de toutes les modales ouvertes, quel que soit le niveau d'imbrication. */
 
 /* --- 4.9 Éléments divers (boutons, infobulles) --- */
 /* 5. ÉLÉMENTS DANS LES BOUTONS */

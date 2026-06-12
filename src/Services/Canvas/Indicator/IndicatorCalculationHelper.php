@@ -52,6 +52,15 @@ class IndicatorCalculationHelper
         return "Déficitaire. Pertes techniques.";
     }
 
+    public function getInterpretationIndiceSolvabilite(float $indice): string
+    {
+        if ($indice == 0) return "Aucune prime émise ou aucun paiement enregistré.";
+        if ($indice >= 95) return "Excellent. Le client honore quasi intégralement ses primes.";
+        if ($indice >= 80) return "Bon. La grande majorité des primes est réglée.";
+        if ($indice >= 60) return "Moyen. Un suivi du recouvrement est recommandé.";
+        return "Faible. Risque d'impayés élevé, recouvrement à engager.";
+    }
+
     public function getRoleAccessString(object $entity, array $params): string
     {
         if (empty($params[0])) return 'Paramètre manquant';
