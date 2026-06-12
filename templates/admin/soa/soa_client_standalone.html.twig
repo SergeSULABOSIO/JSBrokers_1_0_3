@@ -391,8 +391,8 @@
                             <caption class="visually-hidden">Cotations en cours pour {{ client.nom }}</caption>
                             <thead>
                                 <tr>
-                                    <th scope="col">Piste parente</th>
                                     <th scope="col">Cotation</th>
+                                    <th scope="col">Piste parente</th>
                                     <th scope="col">Assureur</th>
                                     <th scope="col">Durée</th>
                                     <th scope="col">Prime TTC</th>
@@ -401,8 +401,8 @@
                             <tbody>
                                 {% for item in cotationsEnCours %}
                                     <tr>
-                                        <td>{{ item.piste.nom }}</td>
                                         <td><strong>{{ item.cotation.nom }}</strong></td>
+                                        <td>{{ item.piste.nom }}</td>
                                         <td>{{ item.cotation.assureur ? item.cotation.assureur.nom : '—' }}</td>
                                         <td>{{ item.cotation.duree|default('—') }}</td>
                                         <td>{{ (item.cotation.primeTotale|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>

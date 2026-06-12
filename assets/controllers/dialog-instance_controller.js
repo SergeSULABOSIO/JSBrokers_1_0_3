@@ -430,6 +430,11 @@ export default class extends Controller {
                 }));
             }
 
+            // Rechargement de l'onglet SOA actif après sauvegarde depuis son menu contextuel.
+            if (this.userContext && this.userContext._soaReload) {
+                document.dispatchEvent(new CustomEvent('app:workspace.reload-active-tab'));
+            }
+
             // On délègue la gestion du succès à une méthode dédiée.
             this.handleSuccessfulSubmit(result);
  
