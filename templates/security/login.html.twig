@@ -1,56 +1,365 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Log in!{% endblock %}
+{% block title %}{{ pageName|default('Connexion') }} — JS Brokers{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    /* ============================================================
+       Page d'authentification JS Brokers
+       Couleurs : charte officielle (cobalt #0047AB, neutres Bootstrap).
+       Aucune couleur hors charte.
+       ============================================================ */
+    .auth {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        background-color: #f3f3f3; /* --bg-body */
+    }
+
+    .auth__card {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        width: 100%;
+        max-width: 920px;
+        background-color: #ffffff; /* --bg-white */
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(0, 71, 171, 0.12); /* ombre cobalt subtile */
+    }
+
+    /* ---- Panneau de marque (gauche) ---- */
+    .auth__brand {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 1.25rem;
+        padding: 2.5rem;
+        color: #ffffff; /* --text-white */
+        background: linear-gradient(160deg, #0047AB 0%, #003380 100%); /* cobalt → cobalt-dark */
+    }
+
+    .auth__brand-logo {
+        width: 64px;
+        height: 64px;
+        border-radius: 14px;
+        background-color: #ffffff;
+        padding: 8px;
+        object-fit: contain;
+    }
+
+    .auth__brand-name {
+        font-size: 1.6rem;
+        font-weight: 700;
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .auth__brand-tagline {
+        font-size: 1rem;
+        line-height: 1.5;
+        margin: 0;
+        color: rgba(255, 255, 255, 0.85); /* texte secondaire sur fond sombre */
+    }
+
+    .auth__brand-points {
+        list-style: none;
+        padding: 0;
+        margin: 0.5rem 0 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+    }
+
+    .auth__brand-points li {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-size: 0.92rem;
+        color: rgba(255, 255, 255, 0.92);
+    }
+
+    .auth__brand-points svg {
+        flex: 0 0 auto;
+        width: 18px;
+        height: 18px;
+    }
+
+    /* ---- Panneau formulaire (droite) ---- */
+    .auth__form {
+        padding: 2.5rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .auth__title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #212529; /* --text-dark */
+        margin: 0 0 0.25rem;
+    }
+
+    .auth__subtitle {
+        color: #6c757d; /* --text-muted */
+        margin: 0 0 1.5rem;
+        font-size: 0.95rem;
+    }
+
+    .auth__form .form-label {
+        font-weight: 600;
+        color: #343a40; /* --text-dark-secondary */
+        margin-bottom: 0.35rem;
+    }
+
+    /* Champ avec icône en préfixe */
+    .auth__field {
+        position: relative;
+        margin-bottom: 1rem;
+    }
+
+    .auth__field-icon {
+        position: absolute;
+        top: 50%;
+        left: 0.85rem;
+        transform: translateY(-50%);
+        width: 20px;
+        height: 20px;
+        color: #6c757d; /* --text-muted */
+        pointer-events: none;
+    }
+
+    .auth__field .form-control {
+        height: 48px;            /* zone de saisie confortable */
+        padding-left: 2.6rem;    /* place pour l'icône préfixe */
+        color: #000000;          /* --text-black (contenu de champ) */
+    }
+
+    /* Focus visible conforme charte : bordure + anneau cobalt */
+    .auth__form .form-control:focus {
+        border-color: #0047AB;
+        box-shadow: 0 0 0 0.25rem rgba(0, 71, 171, 0.35); /* --cobalt-focus-ring */
+    }
+
+    /* Bouton afficher/masquer le mot de passe (≥ 44×44, WCAG 2.5.5) */
+    .auth__toggle {
+        position: absolute;
+        top: 50%;
+        right: 0.35rem;
+        transform: translateY(-50%);
+        width: 44px;
+        height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        background: transparent;
+        color: #6c757d; /* --text-muted */
+        border-radius: 8px;
+        cursor: pointer;
+    }
+    .auth__toggle:hover { color: #0047AB; }      /* cobalt */
+    .auth__toggle:focus-visible {
+        outline: 2px solid #0047AB;
+        outline-offset: 2px;
+    }
+    .auth__toggle svg { width: 20px; height: 20px; }
+    .auth__toggle .is-hidden { display: none; }
+
+    .auth__submit {
+        height: 48px;
+        font-weight: 600;
+        font-size: 1rem;
+        margin-top: 0.25rem;
+    }
+
+    .auth__foot {
+        margin-top: 1.25rem;
+        font-size: 0.85rem;
+        color: #6c757d; /* --text-muted */
+        text-align: center;
+    }
+
+    /* ---- Responsive : empilement sous 768px ---- */
+    @media (max-width: 767.98px) {
+        .auth__card { grid-template-columns: 1fr; max-width: 460px; }
+        .auth__brand {
+            padding: 2rem;
+            flex-direction: row;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .auth__brand-tagline,
+        .auth__brand-points { display: none; } /* on allège l'en-tête sur mobile */
+        .auth__form { padding: 2rem; }
+    }
+</style>
+{% endblock %}
 
 {% block body %}
-    <div class="container">
-		<h3>{{ pageName }}</h3>
-		<div class="card m-2 shadow-sm bg-body" style="width: 40rem;">
-			<div class="card-body">
-				<form method="post">
-                    <p>
-                        {% if error %}
-                            <div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
-                        {% endif %}
-                        {% if app.user %}
-                            Bonjour <strong>{{ app.user.nom }}</strong>,</br>
-                            Vous êtes déjà connecté en tant que <strong>{{ app.user.userIdentifier }}</strong>.</br>
-                            Si vous voulez vous déconnecter, cliquez <a href="{{ path('app_logout') }}">ici</a>.
-                            {% if app.user.verified == false %}
-                                </br><span class="text-danger">Notez que nous n'avons pas encore validé votre adresse mail. Veuillez cliquer <a href="{{ path('app_reverify_email') }}">ici</a> afin que nous puissions vous renvoyer le lien de validation de votre adresse mail.</span>
-                            {% endif %}
-                        {% else %}
-                            Bonjour cher <strong>visiteur</strong>, 
-                            <br>Veuillez renseigner vos identifiants de connexion.
-                        {% endif %}
-                    </p>
-                    <p class="d-flex justify-content-center">
-                        <img class="rounded" src="/images/utilisateurs/default_login.jpg" alt="Image de l'entreprise" width="620px" height="350px">
-                    </p>
-                    <hr>
+<main class="auth">
+    <div class="auth__card">
+
+        {# ---------- Panneau de marque ---------- #}
+        <aside class="auth__brand">
+            <img src="{{ asset('images/entreprises/logofav.png') }}"
+                 alt="" class="auth__brand-logo">
+            <h2 class="auth__brand-name">JS Brokers</h2>
+            <p class="auth__brand-tagline">
+                Votre plateforme de gestion de courtage en assurance,
+                centralisée et sécurisée.
+            </p>
+            <ul class="auth__brand-points">
+                <li>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M20 6 9 17l-5-5"/>
+                    </svg>
+                    Gestion centralisée de vos entreprises
+                </li>
+                <li>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M20 6 9 17l-5-5"/>
+                    </svg>
+                    Suivi des polices, sinistres et encaissements
+                </li>
+                <li>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M20 6 9 17l-5-5"/>
+                    </svg>
+                    Données protégées et conformes
+                </li>
+            </ul>
+        </aside>
+
+        {# ---------- Panneau formulaire ---------- #}
+        <section class="auth__form">
+
+            {% if app.user %}
+                {# --- Utilisateur déjà authentifié --- #}
+                <h1 class="auth__title">Vous êtes déjà connecté</h1>
+                <p class="auth__subtitle">
+                    Bonjour <strong>{{ app.user.nom }}</strong>, vous êtes connecté
+                    en tant que <strong>{{ app.user.userIdentifier }}</strong>.
+                </p>
+
+                {% if app.user.verified == false %}
+                    <div class="alert alert-warning" role="alert">
+                        Votre adresse e-mail n'est pas encore vérifiée.
+                        <a href="{{ path('app_reverify_email') }}" class="alert-link">
+                            Renvoyer le lien de validation
+                        </a>.
+                    </div>
+                {% endif %}
+
+                <a href="{{ path('admin.entreprise.index') }}" class="btn btn-cobalt auth__submit">
+                    Accéder à mon espace
+                </a>
+                <p class="auth__foot">
+                    Ce n'est pas vous ?
+                    <a href="{{ path('app_logout') }}">Se déconnecter</a>
+                </p>
+
+            {% else %}
+                {# --- Formulaire de connexion --- #}
+                <h1 class="auth__title">Connexion</h1>
+                <p class="auth__subtitle">
+                    Renseignez vos identifiants pour accéder à votre espace de travail.
+                </p>
+
+                {% if error %}
+                    <div class="alert alert-danger" role="alert" aria-live="assertive">
+                        {{ error.messageKey|trans(error.messageData, 'security') }}
+                    </div>
+                {% endif %}
+
+                <form method="post" novalidate
+                      data-controller="form-submit"
+                      data-action="submit->form-submit#submitting"
+                      data-form-submit-loading-text-value="Connexion en cours…">
                     {# Email #}
-                    <label for="inputEmail">Email</label>
-                    <input type="email" value="{{ last_username }}" name="email" id="inputEmail" class="form-control" autocomplete="email" required autofocus>
-                    {# Mot de passe #}
-                    <label for="inputPassword">Password</label>
-                    <input type="password" name="password" id="inputPassword" class="form-control" autocomplete="current-password" required>
-                    {# Champ caché #}
-                    <input type="hidden" name="_csrf_token"
-                        value="{{ csrf_token('authenticate') }}"
-                    >
-                    {# Remember me #}
-                    <div class="checkbox mt-2 mb-2">
-                        <label>
-                            <input type="checkbox" name="_remember_me"> Se souvenir de moi (garder ma session ouverte)
+                    <label for="inputEmail" class="form-label">Adresse e-mail</label>
+                    <div class="auth__field">
+                        <svg class="auth__field-icon" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                             stroke-linejoin="round" aria-hidden="true">
+                            <rect x="2" y="4" width="20" height="16" rx="2"/>
+                            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                        </svg>
+                        <input type="email" name="email" id="inputEmail"
+                               value="{{ last_username }}"
+                               class="form-control"
+                               autocomplete="email" required aria-required="true" autofocus
+                               placeholder="vous@exemple.com">
+                    </div>
+
+                    {# Mot de passe (avec bascule afficher/masquer) #}
+                    <label for="inputPassword" class="form-label">Mot de passe</label>
+                    <div class="auth__field" data-controller="password-toggle">
+                        <svg class="auth__field-icon" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                             stroke-linejoin="round" aria-hidden="true">
+                            <rect x="3" y="11" width="18" height="11" rx="2"/>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                        <input type="password" name="password" id="inputPassword"
+                               class="form-control"
+                               autocomplete="current-password" required aria-required="true"
+                               data-password-toggle-target="input"
+                               placeholder="••••••••">
+                        <button type="button" class="auth__toggle"
+                                data-action="password-toggle#toggle"
+                                data-password-toggle-target="button"
+                                aria-pressed="false"
+                                aria-label="Afficher le mot de passe">
+                            {# Œil ouvert (état : mot de passe masqué) #}
+                            <svg data-password-icon viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                 stroke-linejoin="round" aria-hidden="true">
+                                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            {# Œil barré (état : mot de passe affiché) #}
+                            <svg data-password-icon class="is-hidden" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                 stroke-linejoin="round" aria-hidden="true">
+                                <path d="M9.88 9.88a3 3 0 0 0 4.24 4.24"/>
+                                <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c6.5 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                                <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3.5 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                                <line x1="2" y1="2" x2="22" y2="22"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    {# Jeton CSRF #}
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+
+                    {# Se souvenir de moi #}
+                    <div class="form-check mb-3">
+                        <input type="checkbox" name="_remember_me" id="rememberMe" class="form-check-input">
+                        <label for="rememberMe" class="form-check-label">
+                            Se souvenir de moi (garder ma session ouverte)
                         </label>
                     </div>
-                    {# Bouton connexion #}
-                    <button class="btn btn-lg btn-primary" type="submit">
-                        Connexion
+
+                    <button type="submit" class="btn btn-cobalt w-100 auth__submit d-inline-flex align-items-center justify-content-center"
+                            data-form-submit-target="button">
+                        {{ ux_icon(resolve_icon_name('mdi:login'), {height: '20px', width: '20px'}) }}
+                        <span class="ms-2">Se connecter</span>
                     </button>
                 </form>
-				</div>
-			</div>
-		</div>
-	</div>
+
+                <p class="auth__foot">
+                    Accès réservé. Vos identifiants vous ont été communiqués
+                    par votre cabinet.
+                </p>
+            {% endif %}
+
+        </section>
+    </div>
+</main>
 {% endblock %}

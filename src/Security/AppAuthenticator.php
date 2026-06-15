@@ -3,7 +3,6 @@
 namespace App\Security;
 
 use App\Entity\Utilisateur;
-use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -25,8 +24,7 @@ class AppAuthenticator extends AbstractLoginFormAuthenticator
     public const LOGIN_ROUTE = 'app_login';
 
     public function __construct(
-        private UrlGeneratorInterface $urlGenerator,
-        private Security $security
+        private UrlGeneratorInterface $urlGenerator
     ) {}
 
     public function authenticate(Request $request): Passport
@@ -47,17 +45,23 @@ class AppAuthenticator extends AbstractLoginFormAuthenticator
 
     public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): ?Response
     {
+        /** @var Utilisateur $user */
+        $user = $token->getUser();
+
+        // Point de décision UNIQUE après authentification.
+        // Un utilisateur dont l'adresse e-mail n'est pas encore vérifiée est confiné
+        // au parcours de re-vérification : on ignore volontairement le target path pour
+        // ne pas le laisser entrer sur une page protégée tant qu'il n'est pas vérifié.
+        if ($user instanceof Utilisateur && !$user->isVerified()) {
+            return new RedirectResponse($this->urlGenerator->generate('app_reverify_email'));
+        }
+
+        // Utilisateur vérifié : on respecte la page initialement demandée, sinon l'accueil applicatif.
         if ($targetPath = $this->getTargetPath($request->getSession(), $firewallName)) {
             return new RedirectResponse($targetPath);
         }
 
-        /** @var Utilisateur $user */
-        $user = $this->security->getUser();
-        // For example:
-        // return new RedirectResponse($this->urlGenerator->generate('some_route'));
-        // throw new \Exception('TODO: provide a valid redirect inside '.__FILE__);app_index
-        return new RedirectResponse($this->urlGenerator->generate("admin.entreprise.index"));
-        // return new RedirectResponse($this->urlGenerator->generate("admin.invite.index", ['idUtilisateur' => 32]));
+        return new RedirectResponse($this->urlGenerator->generate('admin.entreprise.index'));
     }
 
     protected function getLoginUrl(Request $request): string

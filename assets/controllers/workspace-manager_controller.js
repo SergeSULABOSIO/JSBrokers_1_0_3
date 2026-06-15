@@ -26,7 +26,8 @@ export default class extends Controller {
 
     static values = {
         idEntreprise: Number,
-        idInvite: Number
+        idInvite: Number,
+        entrepriseNom: String
     }
 
     // Cible pour l'élément de menu actuellement actif
@@ -79,6 +80,10 @@ export default class extends Controller {
 
         this.boundHandleNavigateTo = this.handleNavigateTo.bind(this);
         document.addEventListener('workspace:navigate-to', this.boundHandleNavigateTo);
+
+        // NOUVEAU : Écoute la confirmation de l'utilisateur avant d'exécuter la déconnexion.
+        this.boundHandleCerveauEvent = this.handleCerveauEvent.bind(this);
+        document.addEventListener('cerveau:event', this.boundHandleCerveauEvent);
     }
 
     /**
@@ -158,6 +163,45 @@ export default class extends Controller {
         document.removeEventListener('app:loading.start', this.boundHandleLoadingStart);
         document.removeEventListener('app:loading.stop', this.boundHandleLoadingStop);
         document.removeEventListener('workspace:navigate-to', this.boundHandleNavigateTo);
+        document.removeEventListener('cerveau:event', this.boundHandleCerveauEvent);
+    }
+
+    /**
+     * Intercepte le clic sur le bouton de déconnexion. Empêche la navigation
+     * immédiate et demande à l'utilisateur de confirmer qu'il souhaite quitter
+     * l'espace de travail de cette entreprise.
+     * @param {MouseEvent} event
+     */
+    requestLogout(event) {
+        event.preventDefault();
+        const url = event.currentTarget.href;
+        const nom = this.entrepriseNomValue || 'cette entreprise';
+        const safeNom = nom.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
+            detail: {
+                title: "Quitter l'espace de travail",
+                body: `<p>Vous êtes sur le point de vous déconnecter et de quitter l'espace de travail de <strong>${safeNom}</strong>.</p><p>Voulez-vous continuer ?</p>`,
+                showIrreversible: false,
+                onConfirm: {
+                    type: 'app:workspace.logout-execute',
+                    payload: { url },
+                },
+            },
+        }));
+    }
+
+    /**
+     * Réagit aux notifications du Cerveau. Lorsque l'utilisateur a confirmé la
+     * déconnexion dans la boîte de dialogue, déclenche la navigation effective
+     * vers la route de déconnexion (interceptée par le firewall Symfony).
+     * @param {CustomEvent} event
+     */
+    handleCerveauEvent(event) {
+        if (event.detail?.type !== 'app:workspace.logout-execute') return;
+        const url = event.detail.payload?.url;
+        if (url) {
+            window.location.href = url;
+        }
     }
 
     /**

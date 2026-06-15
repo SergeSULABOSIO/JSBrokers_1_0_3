@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Entity\Avenant;
 use App\Entity\Bordereau;
 use App\Entity\Entreprise;
-use App\Entity\Tache;
 use App\Entity\Taxe;
 use App\Repository\TaxeRepository;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
@@ -96,7 +95,8 @@ class DashboardDataProvider
         $result = $this->em->createQuery(
             'SELECT SUM(p.montant) FROM App\Entity\Paiement p
              WHERE p.entreprise = :e
-               AND p.paidAt >= :debut AND p.paidAt <= :fin'
+               AND p.paidAt >= :debut AND p.paidAt <= :fin
+               AND p.offreIndemnisationSinistre IS NULL'
         )
         ->setParameter('e', $entreprise)
         ->setParameter('debut', $debut)
@@ -176,7 +176,8 @@ class DashboardDataProvider
         $paiements = $this->em->createQuery(
             'SELECT p.montant, p.paidAt FROM App\Entity\Paiement p
              WHERE p.entreprise = :e
-               AND p.paidAt >= :debut AND p.paidAt <= :fin'
+               AND p.paidAt >= :debut AND p.paidAt <= :fin
+               AND p.offreIndemnisationSinistre IS NULL'
         )
         ->setParameter('e', $entreprise)
         ->setParameter('debut', $debut)
@@ -638,20 +639,12 @@ class DashboardDataProvider
     {
         $taches = $this->em->createQuery(
             'SELECT t FROM App\Entity\Tache t
-             WHERE t.entreprise = :e AND t.closed = false'
+             WHERE t.entreprise = :e AND t.closed = false
+             ORDER BY t.id DESC'
         )
         ->setParameter('e', $entreprise)
         ->setMaxResults($limit)
         ->getResult();
-
-        usort($taches, function (Tache $a, Tache $b) {
-            $aDate = $a->getToBeEndedAt();
-            $bDate = $b->getToBeEndedAt();
-            if ($aDate === null && $bDate === null) return 0;
-            if ($aDate === null) return 1;
-            if ($bDate === null) return -1;
-            return $aDate <=> $bDate;
-        });
 
         return $taches;
     }
@@ -696,6 +689,7 @@ class DashboardDataProvider
             'SELECT p, n FROM App\Entity\Paiement p
              LEFT JOIN p.note n
              WHERE p.entreprise = :e
+               AND p.offreIndemnisationSinistre IS NULL
              ORDER BY p.paidAt DESC'
         )
         ->setParameter('e', $entreprise)
@@ -1401,7 +1395,8 @@ class DashboardDataProvider
         $rows = $this->em->createQuery(
             'SELECT p.paidAt, p.montant FROM App\Entity\Paiement p
              WHERE p.entreprise = :e
-               AND p.paidAt >= :debut AND p.paidAt <= :fin'
+               AND p.paidAt >= :debut AND p.paidAt <= :fin
+               AND p.offreIndemnisationSinistre IS NULL'
         )
         ->setParameter('e', $entreprise)
         ->setParameter('debut', $debut)

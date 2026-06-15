@@ -4,6 +4,7 @@ namespace App\Form;
 
 use Doctrine\ORM\QueryBuilder;
 use App\Entity\AutoriteFiscale;
+use App\Entity\Utilisateur;
 use Doctrine\ORM\EntityRepository;
 use App\Services\Canvas\Autocomplete\AutoriteFiscaleAutocompleteCanvasProvider;
 use App\Services\FormListenerFactory;
@@ -28,17 +29,18 @@ class AutoriteFiscaleAutocompleteField extends AbstractType
             'class' => AutoriteFiscale::class,
             'placeholder' => "Séléctionnez l'autorité",
             'query_builder' => function (EntityRepository $er): QueryBuilder {
-                /** @var Utilisateur $user */
                 $user = $this->security->getUser();
-    
-                /** @var Entreprise $entreprise */
-                $entreprise = $user->getConnectedTo();
-    
-                // Ici je dois personnaliser cette requête DQL
+
+                // `connectedTo` n'est défini qu'après l'entrée dans un workspace.
+                // Hors workspace (ex. édition d'une entreprise depuis la liste, utilisateur
+                // neuf), il peut être null : on évite alors `getId()` sur null en filtrant
+                // sur un identifiant inexistant (liste vide, aucune fuite inter-entreprises).
+                $entreprise = $user instanceof Utilisateur ? $user->getConnectedTo() : null;
+
                 return $er->createQueryBuilder('autorite')
                     ->leftJoin('autorite.taxe', "taxe")
-                    ->where('taxe.entreprise =:eseId')
-                    ->setParameter('eseId', $entreprise->getId())
+                    ->where('taxe.entreprise = :eseId')
+                    ->setParameter('eseId', $entreprise?->getId() ?? 0)
                     ->orderBy('autorite.id', 'ASC');
             },
             'as_html' => true,

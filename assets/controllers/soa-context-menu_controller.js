@@ -1,6 +1,21 @@
 import { Controller } from '@hotwired/stimulus';
 
 /**
+ * Infobulle de section partagée (singleton au niveau module, comme #db-meta-tip
+ * du tableau de bord). Posée sur document.body car .soa-container a overflow:hidden
+ * et clipperait une bulle interne. Réutilisée par tous les onglets SOA.
+ */
+let _soaTipEl = null;
+function getSoaTip() {
+    if (!_soaTipEl) {
+        _soaTipEl = document.createElement('div');
+        _soaTipEl.className = 'soa-section-tip';
+        document.body.appendChild(_soaTipEl);
+    }
+    return _soaTipEl;
+}
+
+/**
  * Configuration des menus contextuels par section du SOA.
  * Chaque clé correspond à un attribut data-soa-section posé dans le template
  * soa_client_workspace.html.twig. Les actions s'appuient sur les endpoints API
@@ -113,6 +128,11 @@ export default class extends Controller {
         this.element.addEventListener('contextmenu', this._onContextMenu);
         document.addEventListener('cerveau:event', this._onCerveauEvent);
         document.addEventListener('soa:context-menu.open', this._onOtherMenuOpen);
+
+        // Accordéon des sections (un partial injecté dynamiquement n'exécute pas
+        // les balises <script> : la logique doit vivre ici, dans le contrôleur Stimulus).
+        this._initAccordion();
+        this._initTooltips();
     }
 
     disconnect() {
@@ -121,6 +141,145 @@ export default class extends Controller {
         document.removeEventListener('cerveau:event', this._onCerveauEvent);
         document.removeEventListener('soa:context-menu.open', this._onOtherMenuOpen);
         this._removeTransientListeners();
+
+        // Infobulles : retire les écouteurs et masque la bulle partagée.
+        if (this._onTipOver) this.element.removeEventListener('mouseover', this._onTipOver);
+        if (this._onTipMove) this.element.removeEventListener('mousemove', this._onTipMove);
+        if (this._onTipOut) this.element.removeEventListener('mouseout', this._onTipOut);
+        if (_soaTipEl) _soaTipEl.style.display = 'none';
+    }
+
+    // ── Accordéon des sections ─────────────────────────────────────────────────
+
+    /**
+     * Rend chaque titre de section cliquable (toggle ouverture/fermeture avec
+     * animation max-height). Seule la première section (Récapitulatif Global)
+     * reste ouverte au chargement. Le contenu de chaque section est enveloppé
+     * dans un div interne porteur du padding : ainsi max-height:0 referme la
+     * section à 0px exact, sans espace résiduel dû au padding.
+     */
+    _initAccordion() {
+        const sections = this.element.querySelectorAll('.soa-container > section');
+        sections.forEach((section, idx) => {
+            const title = section.querySelector('.soa-section-title');
+            const body = section.querySelector('.soa-section-body');
+            if (!title || !body) return;
+
+            // Enveloppe le contenu existant dans un div interne (porte le padding).
+            const inner = document.createElement('div');
+            inner.className = 'soa-section-body-inner';
+            while (body.firstChild) inner.appendChild(body.firstChild);
+            body.appendChild(inner);
+
+            // Chevron indicateur d'état.
+            const chevron = document.createElement('span');
+            chevron.className = 'soa-toggle-chevron';
+            chevron.setAttribute('aria-hidden', 'true');
+            chevron.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/></svg>';
+            title.appendChild(chevron);
+
+            title.setAttribute('role', 'button');
+            title.setAttribute('tabindex', '0');
+
+            // État initial instantané : 1re section ouverte, les autres fermées.
+            body.style.transition = 'none';
+            if (idx === 0) {
+                body.style.maxHeight = `${body.scrollHeight}px`;
+                title.classList.add('soa-open');
+                title.setAttribute('aria-expanded', 'true');
+            } else {
+                body.style.maxHeight = '0';
+                title.setAttribute('aria-expanded', 'false');
+            }
+            body.offsetHeight; // reflow : fige l'état avant de réactiver la transition
+            body.style.transition = '';
+
+            const toggle = () => {
+                if (title.classList.contains('soa-open')) {
+                    body.style.maxHeight = `${body.scrollHeight}px`;
+                    body.offsetHeight;
+                    body.style.maxHeight = '0';
+                    title.classList.remove('soa-open');
+                    title.setAttribute('aria-expanded', 'false');
+                } else {
+                    body.style.maxHeight = `${body.scrollHeight}px`;
+                    title.classList.add('soa-open');
+                    title.setAttribute('aria-expanded', 'true');
+                    const onEnd = (e) => {
+                        if (e.propertyName !== 'max-height') return;
+                        if (title.classList.contains('soa-open')) body.style.maxHeight = 'none';
+                        body.removeEventListener('transitionend', onEnd);
+                    };
+                    body.addEventListener('transitionend', onEnd);
+                }
+            };
+
+            title.addEventListener('click', toggle);
+            title.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+            });
+        });
+    }
+
+    // ── Infobulles de section ──────────────────────────────────────────────────
+
+    /**
+     * Affiche une infobulle (titre en gras + description) au survol de la barre
+     * de titre d'une section. Le titre est dérivé du <h2>, la description vient
+     * de l'attribut data-soa-tip. Délégation sur l'élément du contrôleur : la
+     * bulle suit le curseur et disparaît quand il quitte la barre.
+     */
+    _initTooltips() {
+        this._onTipOver = (event) => {
+            const title = event.target.closest('.soa-section-title[data-soa-tip]');
+            if (!title || !this.element.contains(title)) return;
+            const heading = title.querySelector('h2');
+            const titleText = heading ? heading.textContent.trim() : '';
+            const descText = title.dataset.soaTip || '';
+            const tip = getSoaTip();
+            tip.innerHTML = '';
+            if (titleText) {
+                const t = document.createElement('span');
+                t.className = 'soa-tip-title';
+                t.textContent = titleText;
+                tip.appendChild(t);
+            }
+            const d = document.createElement('span');
+            d.className = 'soa-tip-desc';
+            d.textContent = descText;
+            tip.appendChild(d);
+            tip.style.display = 'block';
+            this._positionTip(event.clientX, event.clientY);
+        };
+        this._onTipMove = (event) => {
+            if (_soaTipEl && _soaTipEl.style.display === 'block') {
+                this._positionTip(event.clientX, event.clientY);
+            }
+        };
+        this._onTipOut = (event) => {
+            const title = event.target.closest('.soa-section-title[data-soa-tip]');
+            if (!title) return;
+            if (!title.contains(event.relatedTarget) && _soaTipEl) {
+                _soaTipEl.style.display = 'none';
+            }
+        };
+
+        this.element.addEventListener('mouseover', this._onTipOver);
+        this.element.addEventListener('mousemove', this._onTipMove);
+        this.element.addEventListener('mouseout', this._onTipOut);
+    }
+
+    /** Positionne la bulle au-dessus du curseur, bornée au viewport. */
+    _positionTip(mx, my) {
+        const tip = _soaTipEl;
+        if (!tip) return;
+        const offset = 14;
+        let left = mx - tip.offsetWidth / 2;
+        let top = my - tip.offsetHeight - offset;
+        left = Math.max(8, Math.min(left, window.innerWidth - tip.offsetWidth - 8));
+        if (top < 8) top = my + offset; // pas de place au-dessus → sous le curseur
+        tip.style.left = `${left}px`;
+        tip.style.top = `${top}px`;
     }
 
     // ── Ouverture ────────────────────────────────────────────────────────────
