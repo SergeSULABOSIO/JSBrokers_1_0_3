@@ -1,0 +1,15 @@
+{# ============================================================
+   Macro de champ « façon page de connexion » : libellé marqué,
+   champ haut, icône d'illustration en préfixe à l'intérieur du champ.
+   Réutilisée par create.html.twig et edit.html.twig.
+   ============================================================ #}
+{% macro field(field, icon) %}
+    <div class="ent-field-group">
+        {{ form_label(field) }}
+        <div class="ent-field">
+            {{ ux_icon(resolve_icon_name(icon), {height: '20px', width: '20px', class: 'ent-field-icon'}) }}
+            {{ form_widget(field) }}
+        </div>
+        {{ form_errors(field) }}
+    </div>
+{% endmacro %}

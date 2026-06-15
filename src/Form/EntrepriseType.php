@@ -3,8 +3,6 @@
 namespace App\Form;
 
 use App\Entity\Entreprise;
-use App\Form\TypeRevenuType;
-use App\Entity\CompteBancaire;
 use App\Services\ServiceMonnaies;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\FormEvents;
@@ -16,9 +14,18 @@ use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\SubmitType;
-use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\Extension\Core\Type\UrlType;
 
+/**
+ * Formulaire de création / édition d'une entreprise.
+ *
+ * IMPORTANT : ce formulaire ne porte QUE les attributs propres à l'entité
+ * Entreprise. Les entités liées (clients, risques, taxes, comptes, monnaies,
+ * partenaires, invités, groupes…) NE sont PAS des collections de Entreprise —
+ * elles sont gérées indépendamment dans l'espace de travail. Les anciens champs
+ * de collection référençaient des propriétés inexistantes et provoquaient une
+ * erreur 500 au rendu (PropertyAccess) ; ils ont été retirés.
+ */
 class EntrepriseType extends AbstractType
 {
     public function __construct(
@@ -76,13 +83,14 @@ class EntrepriseType extends AbstractType
                 'label' => "Capital social",
                 'currency' => $this->serviceMonnaies->getCodeMonnaieLocale(),
                 'grouping' => true,
-                'disabled' => false,
+                'required' => false,
                 'attr' => [
                     'placeholder' => "Capital sociale",
                 ],
             ])
             ->add('siteweb', UrlType::class, [
-                'label' => "Wite Web",
+                'label' => "Site Web",
+                'required' => false,
                 'attr' => [
                     'placeholder' => "Site web",
                 ],
@@ -90,256 +98,9 @@ class EntrepriseType extends AbstractType
             ->add('thumbnailFile', FileType::class, [
                 'label' => "entreprise_form_label_profile",
                 'required' => false,
-
             ])
-            //les collections des paramètres de l'entreprise. Paramètres que tous les utlisateurs utilisent
-            ->add('classeurs', CollectionType::class, [
-                'label' => "entreprise_form_label_classeurs",
-                'entry_type' => ClasseurType::class,
-                'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'entry_options' => [
-                    'label' => false,
-                ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "nom",
-                ],
-            ])
-            ->add('compteBancaires', CollectionType::class, [
-                'label' => "entreprise_form_label_comptes",
-                'entry_type' => CompteBancaireType::class,
-                'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'entry_options' => [
-                    'label' => false,
-                ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "intitule",
-                ],
-            ])
-            ->add('monnaies', CollectionType::class, [
-                'label' => "entreprise_form_label_currencies",
-                'entry_type' => MonnaieType::class,
-                'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'entry_options' => [
-                    'label' => false,
-                ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "nom",
-                ],
-            ])
-            ->add('taxes', CollectionType::class, [
-                'label' => "entreprise_form_label_taxes",
-                'entry_type' => TaxeType::class,
-                'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'entry_options' => [
-                    'label' => false,
-                ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "code",
-                ],
-            ])
-            ->add('partenaires', CollectionType::class, [
-                'label' => "entreprise_form_label_partenaires",
-                'entry_type' => PartenaireType::class,
-                'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'entry_options' => [
-                    'label' => false,
-                ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "nom",
-                ],
-            ])
-            ->add('modelePieceSinistres', CollectionType::class, [
-                'label' => "entreprise_form_label_modelePieceSinistres",
-                'entry_type' => ModelePieceSinistreType::class,
-                'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'entry_options' => [
-                    'label' => false,
-                ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "nom",
-                ],
-            ])
-            //Paramètres avancés
-            ->add('assureurs', CollectionType::class, [
-                'label' => "entreprise_form_label_assureurs",
-                'entry_type' => AssureurType::class,
-                'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'entry_options' => [
-                    'label' => false,
-                ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "nom",
-                ],
-            ])
-            ->add('risques', CollectionType::class, [
-                'label' => "entreprise_form_label_risques",
-                'entry_type' => RisqueType::class,
-                'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'entry_options' => [
-                    'label' => false,
-                ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "nomComplet",
-                ],
-            ])
-            ->add('clients', CollectionType::class, [
-                'label' => "entreprise_form_label_clients",
-                'entry_type' => ClientType::class,
-                'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'entry_options' => [
-                    'label' => false,
-                ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "nom",
-                ],
-            ])
-            ->add('typerevenus', CollectionType::class, [
-                'label' => "entreprise_form_label_typerevenus",
-                'entry_type' => TypeRevenuType::class,
-                'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'entry_options' => [
-                    'label' => false,
-                ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "nom",
-                ],
-            ])
-            ->add('chargements', CollectionType::class, [
-                'label' => "entreprise_form_label_chargements",
-                'entry_type' => ChargementType::class,
-                'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'entry_options' => [
-                    'label' => false,
-                ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "nom",
-                ],
-            ])
-            ->add('invites', CollectionType::class, [
-                'label' => "entreprise_form_label_invites",
-                'entry_type' => InviteType::class,
-                'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'entry_options' => [
-                    'label' => false,
-                ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "nom",
-                ],
-            ])
-            ->add('groupes', CollectionType::class, [
-                'label' => "entreprise_form_label_groupes",
-                'entry_type' => GroupeType::class,
-                'by_reference' => false,
-                'allow_add' => true,
-                'allow_delete' => true,
-                'entry_options' => [
-                    'label' => false,
-                ],
-                'attr' => [
-                    'data-controller' => 'form-collection-entites',
-                    'data-form-collection-entites-add-label-value' => $this->translatorInterface->trans("commom_add"), //'Ajouter',
-                    'data-form-collection-entites-delete-label-value' => $this->translatorInterface->trans("commom_delete"),
-                    'data-form-collection-entites-edit-label-value' => $this->translatorInterface->trans("commom_edit"),
-                    'data-form-collection-entites-close-label-value' => $this->translatorInterface->trans("commom_close"),
-                    'data-form-collection-entites-new-element-label-value' => $this->translatorInterface->trans("commom_new_element"),
-                    'data-form-collection-entites-view-field-value' => "nom",
-                ],
+            ->add('enregistrer', SubmitType::class, [
+                'label' => "commom_save",
             ])
 
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->setUtilisateur())

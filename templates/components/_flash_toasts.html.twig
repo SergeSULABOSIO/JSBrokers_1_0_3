@@ -1,0 +1,15 @@
+{# ============================================================
+   Relaie les messages flash vers le système de toast applicatif
+   (notification-manager) plutôt qu'en alerte « en ligne ».
+   Types reconnus par le gestionnaire : success | error | info | warning.
+   ============================================================ #}
+{% set flashToasts = [] %}
+{% for label, messages in app.flashes %}
+    {% for message in messages %}
+        {% set flashToasts = flashToasts|merge([{ type: label, text: message }]) %}
+    {% endfor %}
+{% endfor %}
+{% if flashToasts is not empty %}
+    <div data-controller="flash-toast"
+         data-flash-toast-messages-value="{{ flashToasts|json_encode|e('html_attr') }}"></div>
+{% endif %}

@@ -124,6 +124,53 @@ html {
     margin-top: auto; /* La magie opère ici : pousse l'élément vers le bas de son conteneur flex. */
 }
 
+/* Groupe « Paramètres » rendu comme lien <a> (administrateur) : on neutralise la
+   décoration de lien pour conserver l'aspect d'un .nav-item classique. */
+a.nav-item-bottom,
+a.nav-item-bottom:hover {
+    text-decoration: none;
+}
+
+/* Groupe « Paramètres » désactivé pour les invités : visible mais grisé et non cliquable.
+   On verrouille la couleur grise même au survol (override des règles .nav-item:hover). */
+.nav-item-disabled,
+.nav-item-disabled:hover {
+    cursor: not-allowed;
+    border-left-color: transparent;
+}
+
+.nav-item-disabled .nav-icon,
+.nav-item-disabled .nav-text,
+.nav-item-disabled:hover .nav-icon,
+.nav-item-disabled:hover .nav-text {
+    color: #6c757d; /* gris muted — état désactivé */
+    font-weight: normal;
+}
+
+/* Lien de déconnexion : la classe .nav-item est conçue pour des <div>, on neutralise
+   la décoration du lien <a> et on applique la couleur dédiée #ff7676. */
+.nav-item-logout,
+.nav-item-logout:hover {
+    text-decoration: none;
+}
+
+.nav-item-logout .nav-icon,
+.nav-item-logout .nav-text {
+    color: #ff7676;
+}
+
+/* Au survol, on éclaircit vers #ffc3c3 (override du gris clair hérité de .nav-item)
+   et on accorde la bordure gauche à cette même couleur. */
+.nav-item-logout:hover .nav-icon,
+.nav-item-logout:hover .nav-text {
+    color: #ffc3c3;
+    font-weight: bold;
+}
+
+.nav-item-logout:hover {
+    border-left-color: #ffc3c3;
+}
+
 /* NOUVEAU : Style pour le groupe qui contient la rubrique active.
    Ce style est persistant et doit prévaloir sur les autres états. */
 .nav-item.group-active {

@@ -14,11 +14,9 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Messenger\MessageBusInterface;
-use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 #[Route("/admin/entreprise", name: 'admin.entreprise.')]
@@ -26,13 +24,27 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 class EntrepriseController extends AbstractController
 {
     public function __construct(
-        private UrlGeneratorInterface $urlGenerator,
         private TranslatorInterface $translator,
         private MailerInterface $mailer,
         private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
     ) {}
+
+    /**
+     * Garde-fou d'autorisation : seul le propriétaire d'une entreprise peut la gérer
+     * (éditer, supprimer, générer son PDF).
+     *
+     * La liste (`paginateUtilisateur`) ne retourne que les entreprises possédées par
+     * l'utilisateur ; sans ce contrôle, n'importe quel utilisateur authentifié pouvait
+     * agir sur l'entreprise d'autrui en devinant son id (IDOR / contrôle d'accès rompu).
+     */
+    private function denyUnlessOwner(Entreprise $entreprise): void
+    {
+        if ($entreprise->getUtilisateur() !== $this->getUser()) {
+            throw $this->createAccessDeniedException("Vous n'êtes pas autorisé à gérer cette entreprise.");
+        }
+    }
 
     #[Route(name: 'index')]
     public function index(Request $request)
@@ -42,25 +54,19 @@ class EntrepriseController extends AbstractController
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
-        if ($user->isVerified()) {
-            return $this->render('admin/entreprise/index.html.twig', [
-                'pageName' => $this->translator->trans("entreprise_page_name_list"),
-                'utilisateur' => $user,
-                'entreprises' => $this->entrepriseRepository->paginateUtilisateur($user->getId(), $page),
-                'page' => $request->query->getInt("page", 1),
-                // NOUVEAU : On passe l'invité courant pour faciliter l'accès à ses informations
-                'invite' => $this->inviteRepository->findOneBy(['utilisateur' => $user]),
-                'nbEntreprises' => $this->entrepriseRepository->getNBEntreprises(),
-                // 'nbInvites' => $this->inviteRepository->getNBInvites(),
-            ]);
-        } else {
-            // $this->addFlash("warning", "" . $user->getNom() . ", votre adresse mail n'est pas encore vérifiée. Veuillez cliquer sur le lien de vérification qui vous a été envoyé par JS Brokers à votre adresse " . $user->getEmail() . ".");
-            $this->addFlash("warning", $this->translator->trans("entreprise_your_email_is_not_verified", [
-                ':user' => $user->getNom(),
-                ':email' => $user->getEmail()
-            ]));
-            return new RedirectResponse($this->urlGenerator->generate("app_login"));
-        }
+        // NB : la vérification de l'e-mail est désormais imposée globalement par
+        // App\EventSubscriber\EmailVerificationSubscriber. Un utilisateur non vérifié
+        // n'atteint jamais cette action — inutile de re-tester isVerified() ici.
+        return $this->render('admin/entreprise/index.html.twig', [
+            'pageName' => $this->translator->trans("entreprise_page_name_list"),
+            'utilisateur' => $user,
+            'entreprises' => $this->entrepriseRepository->paginateUtilisateur($user->getId(), $page),
+            'page' => $request->query->getInt("page", 1),
+            // NOUVEAU : On passe l'invité courant pour faciliter l'accès à ses informations
+            'invite' => $this->inviteRepository->findOneBy(['utilisateur' => $user]),
+            'nbEntreprises' => $this->entrepriseRepository->getNBEntreprises(),
+            // 'nbInvites' => $this->inviteRepository->getNBInvites(),
+        ]);
     }
 
 
@@ -106,6 +112,8 @@ class EntrepriseController extends AbstractController
             ]));
 
             return $this->redirectToRoute("admin.entreprise.index");
+        } elseif ($form->isSubmitted()) {
+            $this->addFlash("error", $this->translator->trans("entreprise_form_error"));
         }
         return $this->render('admin/entreprise/create.html.twig', [
             'pageName' => $this->translator->trans("entreprise_page_name_new"),
@@ -120,9 +128,9 @@ class EntrepriseController extends AbstractController
     #[Route('/{id}', name: 'edit', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function edit(Entreprise $entreprise, Request $request)
     {
-        // dd($invite);
         /** @var Utilisateur $user */
         $user = $this->getUser();
+        $this->denyUnlessOwner($entreprise);
 
         $form = $this->createForm(EntrepriseType::class, $entreprise);
         $form->handleRequest($request);
@@ -131,9 +139,11 @@ class EntrepriseController extends AbstractController
             $this->manager->flush();
             $this->addFlash("success", $this->translator->trans("entreprise_edited_ok", [
                 ':company' => $entreprise->getNom(),
-            ]));            
+            ]));
             // return $this->redirectToRoute("admin.entreprise.index");
             //Après modification, il faut revenir sur la page d'edition
+        } elseif ($form->isSubmitted()) {
+            $this->addFlash("error", $this->translator->trans("entreprise_form_error"));
         }
         return $this->render('admin/entreprise/edit.html.twig', [
             'pageName' => $this->translator->trans("entreprise_page_name_edition"),
@@ -146,10 +156,17 @@ class EntrepriseController extends AbstractController
     }
 
     #[Route('/{id}', name: 'remove', requirements: ['id' => Requirement::DIGITS], methods: ['DELETE'])]
-    public function remove(Entreprise $entreprise)
+    public function remove(Entreprise $entreprise, Request $request)
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
+
+        // Protection CSRF : le formulaire de suppression fournit un jeton dédié à cet id.
+        if (!$this->isCsrfTokenValid('delete-entreprise-' . $entreprise->getId(), (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Jeton CSRF invalide.');
+        }
+
+        $this->denyUnlessOwner($entreprise);
 
         $entreprise->removeConnectedUser($user);
         $this->manager->persist($entreprise);
@@ -168,10 +185,13 @@ class EntrepriseController extends AbstractController
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
+        $this->denyUnlessOwner($entreprise);
 
         $messageBus->dispatch(new EntreprisePDFMessage($entreprise->getId()));
 
-        $this->addFlash("success", $this->translator->trans("entreprise_pdf_created_ok", [
+        // La génération est asynchrone (file d'attente Messenger) : on annonce une mise en
+        // file, pas une création déjà aboutie, pour ne pas tromper l'utilisateur.
+        $this->addFlash("info", $this->translator->trans("entreprise_pdf_queued_ok", [
             ':user' => $user->getNom(),
             ':company' => $entreprise->getNom(),
         ]));

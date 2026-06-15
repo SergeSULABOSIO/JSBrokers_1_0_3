@@ -31,7 +31,7 @@ class SecurityController extends AbstractController
     ) {}
 
     #[Route(path: '/', name: 'app_index')]
-    public function index(AuthenticationUtils $authenticationUtils): Response
+    public function index(): Response
     {
         return $this->render('home/index.html.twig', [
             'pageName' => $this->translator->trans("Accueil")

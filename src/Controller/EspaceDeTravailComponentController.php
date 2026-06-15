@@ -64,15 +64,21 @@ class EspaceDeTravailComponentController extends AbstractController
     public function index(int $idInvite, int $idEntreprise, Request $request): Response
     {
         // AMÉLIORATION : On passe explicitement les IDs de la route pour une validation sécurisée.
-        $this->validateWorkspaceAccess($idEntreprise, $idInvite);
+        $access = $this->validateWorkspaceAccess($idEntreprise, $idInvite);
 
         // La logique de transformation du menu est maintenant dans le ControllerUtilsTrait.
         $processedMenuData = $this->processDataForShortEntityNames($this->menuData);
+
+        // L'accès à l'édition de l'entreprise (groupe « Paramètres ») est réservé au
+        // propriétaire du compte — même critère que denyUnlessOwner() côté EntrepriseController.
+        $isEntrepriseAdmin = $access['entreprise']->getUtilisateur() === $this->getUser();
 
         return $this->render('espace_de_travail_component/index.html.twig', [
             'menu_data' => $processedMenuData,
             'idEntreprise' => $idEntreprise,
             'idInvite' => $idInvite,
+            'entrepriseNom' => $access['entreprise']->getNom(),
+            'isEntrepriseAdmin' => $isEntrepriseAdmin,
         ]);
     }
 

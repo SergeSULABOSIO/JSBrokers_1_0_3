@@ -16,9 +16,10 @@
 #}
 {% set menu = menu_data %}
 <div 
-    {{ stimulus_controller('workspace-manager') }} 
+    {{ stimulus_controller('workspace-manager') }}
     data-workspace-manager-id-entreprise-value="{{ idEntreprise }}"
     data-workspace-manager-id-invite-value="{{ idInvite }}"
+    data-workspace-manager-entreprise-nom-value="{{ entrepriseNom }}"
 >
     {# Barre de progression globale, contrôlée par Stimulus #}
     <div data-workspace-manager-target="progressBar" class="progress-bar"
@@ -59,22 +60,49 @@
                     </div>
                 {% endfor %}
 
-                {# NOUVEAU : Le groupe Paramètres est ajouté à la fin avec une classe spéciale pour le positionnement CSS. #}
+                {# Le groupe Paramètres est positionné en bas via une classe CSS dédiée.
+                   - Administrateur de l'entreprise (propriétaire) : le clic ouvre la page d'édition de l'entreprise.
+                   - Invité : le groupe reste visible mais est désactivé (grisé, non cliquable). #}
                 {% set parametres = menu.colonne_1.parametres_group %}
-                <div class="nav-item nav-item-bottom"
-                    role="button"
-                    tabindex="0"
-                    data-action="mouseenter->workspace-manager#showItemDescription mouseleave->workspace-manager#clearDescription click->workspace-manager#showGroupRubriques"
-                    data-workspace-manager-group-name-param="{{ parametres.nom }}"
-                    data-workspace-manager-description-param="{{ parametres.description }}"
-                >
-                    <twig:UX:Icon name="{{ resolve_icon_name(parametres.icone) }}" class="nav-icon" />
-                    <span class="nav-text">{{ parametres.nom }}</span>
-                </div>
+                {% if isEntrepriseAdmin %}
+                    <a href="{{ path('admin.entreprise.edit', {'id': idEntreprise}) }}"
+                        class="nav-item nav-item-bottom"
+                        role="button"
+                        title="{{ parametres.nom }}"
+                        data-action="mouseenter->workspace-manager#showItemDescription mouseleave->workspace-manager#clearDescription click->workspace-manager#handleLoadingStart"
+                        data-workspace-manager-description-param="{{ parametres.description }}"
+                    >
+                        <twig:UX:Icon name="{{ resolve_icon_name(parametres.icone) }}" class="nav-icon" />
+                        <span class="nav-text">{{ parametres.nom }}</span>
+                    </a>
+                {% else %}
+                    <div class="nav-item nav-item-bottom nav-item-disabled"
+                        role="button"
+                        aria-disabled="true"
+                        title="{{ parametres.nom }} — réservé à l'administrateur de l'entreprise"
+                        data-action="mouseenter->workspace-manager#showItemDescription mouseleave->workspace-manager#clearDescription"
+                        data-workspace-manager-description-param="{{ parametres.description }}"
+                    >
+                        <twig:UX:Icon name="{{ resolve_icon_name(parametres.icone) }}" class="nav-icon" />
+                        <span class="nav-text">{{ parametres.nom }}</span>
+                    </div>
+                {% endif %}
             </div>
 
-            {# Ligne 3: Espace réservé pour de futurs éléments de menu (ex: Déconnexion) #}
-            <div class="menu-col-1-row-3"></div> {# Cet espace est maintenant vide et peut être conservé pour un usage futur. #}
+            {# Ligne 3: Fermer — revient à la liste des entreprises (sans déconnecter) #}
+            {% set deconnexion = menu.colonne_1.deconnexion %}
+            <div class="menu-col-1-row-3">
+                <a href="{{ path('admin.entreprise.index') }}"
+                    class="nav-item nav-item-logout"
+                    role="button"
+                    title="{{ deconnexion.nom }}"
+                    data-action="mouseenter->workspace-manager#showItemDescription mouseleave->workspace-manager#clearDescription"
+                    data-workspace-manager-description-param="{{ deconnexion.description }}"
+                >
+                    <twig:UX:Icon name="{{ resolve_icon_name(deconnexion.icone) }}" class="nav-icon" />
+                    <span class="nav-text">{{ deconnexion.nom }}</span>
+                </a>
+            </div>
             </nav>
         </div>
 

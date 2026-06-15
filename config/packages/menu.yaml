@@ -79,10 +79,14 @@ parameters:
             parametres_group:
                 nom: 'Paramètres'
                 icone: 'action:settings'
-                description: "<p>Configurez les aspects fondamentaux de votre espace de travail. Personnalisez votre compte, gérez votre abonnement et adaptez l'application à vos besoins.</p><p>Assurez-vous que votre profil est à jour et que votre licence est active pour bénéficier de toutes les fonctionnalités. Une configuration correcte est la clé d'une expérience utilisateur optimale.</p><p><strong>Les paramètres sont le centre névralgique de votre application. Prenez le temps de les ajuster pour une efficacité maximale.</strong></p>"
-                rubriques:
-                    "Mon Compte": { icone: 'action:settings', composant_twig: '_mon_compte_component.html.twig' }
-                    "Licence": { icone: 'action:cart', composant_twig: '_licence_component.html.twig' }
+                description: "<p>Configurez les aspects fondamentaux de votre espace de travail : informations de l'entreprise, coordonnées, paramètres généraux.</p><p>L'accès à l'édition de l'entreprise est réservé à son administrateur (le propriétaire du compte). Les invités peuvent visualiser ce groupe mais ne peuvent pas le modifier.</p><p><strong>Les paramètres sont le centre névralgique de votre application. Prenez le temps de les ajuster pour une efficacité maximale.</strong></p>"
+                rubriques: {}
+
+            # NOUVEAU : Bouton de déconnexion, positionné tout en bas de la colonne 1.
+            deconnexion:
+                icone: 'action:exit'
+                nom: 'Fermer'
+                description: "<p>Cliquez ici pour <strong>fermer l'espace de travail de cette entreprise</strong> et revenir à votre liste d'entreprises.</p><p>Vous restez connecté à l'application : vous pourrez rouvrir cette entreprise ou en ouvrir une autre. Pensez à enregistrer vos modifications en cours avant de partir.</p><p><strong>Pour vous déconnecter complètement, utilisez le bouton « Déconnexion » depuis la liste des entreprises.</strong></p>"
         colonne_2:
             logo: 'images/entreprises/logofav.png'
             titre: 'JS Brokers'
