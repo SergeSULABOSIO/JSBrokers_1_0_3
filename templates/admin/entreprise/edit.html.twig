@@ -207,9 +207,10 @@
             {% endif %}
 
             {{ form_start(form, {'attr': {
-                'data-controller': 'form-submit',
+                'data-controller': 'form-submit pays-dependances',
                 'data-action': 'submit->form-submit#submitting submit->top-progress#show',
                 'data-form-submit-loading-text-value': 'Enregistrement…',
+                'data-pays-dependances-url-template-value': path('admin.entreprise.api.villes', {codePays: 999999999}),
             }}) }}
 
                 <fieldset class="ent-fieldset">
@@ -233,6 +234,10 @@
                     <div class="row">
                         <div class="col-md">{{ ff.field(form.adresse, 'mdi:address-marker-outline') }}</div>
                         <div class="col-md">{{ ff.field(form.telephone, 'ic:outline-phone') }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md">{{ ff.field(form.pays, 'mdi:earth') }}</div>
+                        <div class="col-md">{{ ff.field(form.ville, 'mdi:city') }}</div>
                     </div>
                 </fieldset>
 

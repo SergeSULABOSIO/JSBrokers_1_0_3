@@ -75,6 +75,20 @@ class Entreprise
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $siteweb = null;
 
+    /**
+     * Code ISO 3166-1 numérique du pays où est basé le courtier.
+     * Les libellés/monnaies sont résolus via App\Services\ServiceGeographie.
+     */
+    #[ORM\Column(nullable: true)]
+    private ?int $pays = null;
+
+    /**
+     * Identifiant numérique de la ville (dataset assets/data/pays_villes.json),
+     * dépendant du pays sélectionné.
+     */
+    #[ORM\Column(nullable: true)]
+    private ?int $ville = null;
+
     #[ORM\ManyToOne(cascade: ['persist'])]
     #[ORM\JoinColumn(nullable: false)]
     private ?Utilisateur $utilisateur = null;
@@ -302,6 +316,30 @@ class Entreprise
     public function setSiteweb(?string $siteweb): static
     {
         $this->siteweb = $siteweb;
+
+        return $this;
+    }
+
+    public function getPays(): ?int
+    {
+        return $this->pays;
+    }
+
+    public function setPays(?int $pays): static
+    {
+        $this->pays = $pays;
+
+        return $this;
+    }
+
+    public function getVille(): ?int
+    {
+        return $this->ville;
+    }
+
+    public function setVille(?int $ville): static
+    {
+        $this->ville = $ville;
 
         return $this;
     }

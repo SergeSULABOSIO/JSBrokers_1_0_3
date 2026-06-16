@@ -1,0 +1,2016 @@
+{
+    "250": {
+        "nom": "France",
+        "monnaie": "EUR",
+        "villes": [
+            {
+                "id": 1001,
+                "nom": "Paris"
+            },
+            {
+                "id": 1002,
+                "nom": "Marseille"
+            },
+            {
+                "id": 1003,
+                "nom": "Lyon"
+            },
+            {
+                "id": 1004,
+                "nom": "Toulouse"
+            },
+            {
+                "id": 1005,
+                "nom": "Nice"
+            },
+            {
+                "id": 1006,
+                "nom": "Nantes"
+            },
+            {
+                "id": 1007,
+                "nom": "Strasbourg"
+            },
+            {
+                "id": 1008,
+                "nom": "Bordeaux"
+            },
+            {
+                "id": 1009,
+                "nom": "Lille"
+            }
+        ]
+    },
+    "056": {
+        "nom": "Belgique",
+        "monnaie": "EUR",
+        "villes": [
+            {
+                "id": 1010,
+                "nom": "Bruxelles"
+            },
+            {
+                "id": 1011,
+                "nom": "Anvers"
+            },
+            {
+                "id": 1012,
+                "nom": "Gand"
+            },
+            {
+                "id": 1013,
+                "nom": "Charleroi"
+            },
+            {
+                "id": 1014,
+                "nom": "Liège"
+            },
+            {
+                "id": 1015,
+                "nom": "Bruges"
+            },
+            {
+                "id": 1016,
+                "nom": "Namur"
+            }
+        ]
+    },
+    "442": {
+        "nom": "Luxembourg",
+        "monnaie": "EUR",
+        "villes": [
+            {
+                "id": 1017,
+                "nom": "Luxembourg"
+            },
+            {
+                "id": 1018,
+                "nom": "Esch-sur-Alzette"
+            },
+            {
+                "id": 1019,
+                "nom": "Differdange"
+            }
+        ]
+    },
+    "492": {
+        "nom": "Monaco",
+        "monnaie": "EUR",
+        "villes": [
+            {
+                "id": 1020,
+                "nom": "Monaco"
+            }
+        ]
+    },
+    "756": {
+        "nom": "Suisse",
+        "monnaie": "CHF",
+        "villes": [
+            {
+                "id": 1021,
+                "nom": "Genève"
+            },
+            {
+                "id": 1022,
+                "nom": "Zurich"
+            },
+            {
+                "id": 1023,
+                "nom": "Bâle"
+            },
+            {
+                "id": 1024,
+                "nom": "Lausanne"
+            },
+            {
+                "id": 1025,
+                "nom": "Berne"
+            },
+            {
+                "id": 1026,
+                "nom": "Lugano"
+            }
+        ]
+    },
+    "012": {
+        "nom": "Algérie",
+        "monnaie": "DZD",
+        "villes": [
+            {
+                "id": 1027,
+                "nom": "Alger"
+            },
+            {
+                "id": 1028,
+                "nom": "Oran"
+            },
+            {
+                "id": 1029,
+                "nom": "Constantine"
+            },
+            {
+                "id": 1030,
+                "nom": "Annaba"
+            },
+            {
+                "id": 1031,
+                "nom": "Blida"
+            }
+        ]
+    },
+    "024": {
+        "nom": "Angola",
+        "monnaie": "AOA",
+        "villes": [
+            {
+                "id": 1032,
+                "nom": "Luanda"
+            },
+            {
+                "id": 1033,
+                "nom": "Huambo"
+            },
+            {
+                "id": 1034,
+                "nom": "Lobito"
+            },
+            {
+                "id": 1035,
+                "nom": "Benguela"
+            }
+        ]
+    },
+    "204": {
+        "nom": "Bénin",
+        "monnaie": "XOF",
+        "villes": [
+            {
+                "id": 1036,
+                "nom": "Cotonou"
+            },
+            {
+                "id": 1037,
+                "nom": "Porto-Novo"
+            },
+            {
+                "id": 1038,
+                "nom": "Parakou"
+            },
+            {
+                "id": 1039,
+                "nom": "Abomey"
+            }
+        ]
+    },
+    "072": {
+        "nom": "Botswana",
+        "monnaie": "BWP",
+        "villes": [
+            {
+                "id": 1040,
+                "nom": "Gaborone"
+            },
+            {
+                "id": 1041,
+                "nom": "Francistown"
+            },
+            {
+                "id": 1042,
+                "nom": "Maun"
+            }
+        ]
+    },
+    "854": {
+        "nom": "Burkina Faso",
+        "monnaie": "XOF",
+        "villes": [
+            {
+                "id": 1043,
+                "nom": "Ouagadougou"
+            },
+            {
+                "id": 1044,
+                "nom": "Bobo-Dioulasso"
+            },
+            {
+                "id": 1045,
+                "nom": "Koudougou"
+            }
+        ]
+    },
+    "108": {
+        "nom": "Burundi",
+        "monnaie": "BIF",
+        "villes": [
+            {
+                "id": 1046,
+                "nom": "Bujumbura"
+            },
+            {
+                "id": 1047,
+                "nom": "Gitega"
+            },
+            {
+                "id": 1048,
+                "nom": "Ngozi"
+            }
+        ]
+    },
+    "120": {
+        "nom": "Cameroun",
+        "monnaie": "XAF",
+        "villes": [
+            {
+                "id": 1049,
+                "nom": "Yaoundé"
+            },
+            {
+                "id": 1050,
+                "nom": "Douala"
+            },
+            {
+                "id": 1051,
+                "nom": "Bafoussam"
+            },
+            {
+                "id": 1052,
+                "nom": "Garoua"
+            },
+            {
+                "id": 1053,
+                "nom": "Bamenda"
+            }
+        ]
+    },
+    "132": {
+        "nom": "Cap-Vert",
+        "monnaie": "CVE",
+        "villes": [
+            {
+                "id": 1054,
+                "nom": "Praia"
+            },
+            {
+                "id": 1055,
+                "nom": "Mindelo"
+            }
+        ]
+    },
+    "140": {
+        "nom": "République centrafricaine",
+        "monnaie": "XAF",
+        "villes": [
+            {
+                "id": 1056,
+                "nom": "Bangui"
+            },
+            {
+                "id": 1057,
+                "nom": "Bimbo"
+            },
+            {
+                "id": 1058,
+                "nom": "Berbérati"
+            }
+        ]
+    },
+    "148": {
+        "nom": "Tchad",
+        "monnaie": "XAF",
+        "villes": [
+            {
+                "id": 1059,
+                "nom": "N'Djaména"
+            },
+            {
+                "id": 1060,
+                "nom": "Moundou"
+            },
+            {
+                "id": 1061,
+                "nom": "Sarh"
+            }
+        ]
+    },
+    "174": {
+        "nom": "Comores",
+        "monnaie": "KMF",
+        "villes": [
+            {
+                "id": 1062,
+                "nom": "Moroni"
+            },
+            {
+                "id": 1063,
+                "nom": "Mutsamudu"
+            }
+        ]
+    },
+    "180": {
+        "nom": "Congo (RDC)",
+        "monnaie": "CDF",
+        "villes": [
+            {
+                "id": 1064,
+                "nom": "Kinshasa"
+            },
+            {
+                "id": 1065,
+                "nom": "Lubumbashi"
+            },
+            {
+                "id": 1066,
+                "nom": "Mbuji-Mayi"
+            },
+            {
+                "id": 1067,
+                "nom": "Kananga"
+            },
+            {
+                "id": 1068,
+                "nom": "Kisangani"
+            },
+            {
+                "id": 1069,
+                "nom": "Goma"
+            },
+            {
+                "id": 1070,
+                "nom": "Bukavu"
+            },
+            {
+                "id": 1071,
+                "nom": "Matadi"
+            }
+        ]
+    },
+    "178": {
+        "nom": "Congo (Brazzaville)",
+        "monnaie": "XAF",
+        "villes": [
+            {
+                "id": 1072,
+                "nom": "Brazzaville"
+            },
+            {
+                "id": 1073,
+                "nom": "Pointe-Noire"
+            },
+            {
+                "id": 1074,
+                "nom": "Dolisie"
+            }
+        ]
+    },
+    "384": {
+        "nom": "Côte d'Ivoire",
+        "monnaie": "XOF",
+        "villes": [
+            {
+                "id": 1075,
+                "nom": "Abidjan"
+            },
+            {
+                "id": 1076,
+                "nom": "Yamoussoukro"
+            },
+            {
+                "id": 1077,
+                "nom": "Bouaké"
+            },
+            {
+                "id": 1078,
+                "nom": "Daloa"
+            },
+            {
+                "id": 1079,
+                "nom": "San-Pédro"
+            }
+        ]
+    },
+    "262": {
+        "nom": "Djibouti",
+        "monnaie": "DJF",
+        "villes": [
+            {
+                "id": 1080,
+                "nom": "Djibouti"
+            },
+            {
+                "id": 1081,
+                "nom": "Ali Sabieh"
+            }
+        ]
+    },
+    "818": {
+        "nom": "Égypte",
+        "monnaie": "EGP",
+        "villes": [
+            {
+                "id": 1082,
+                "nom": "Le Caire"
+            },
+            {
+                "id": 1083,
+                "nom": "Alexandrie"
+            },
+            {
+                "id": 1084,
+                "nom": "Gizeh"
+            },
+            {
+                "id": 1085,
+                "nom": "Charm el-Cheikh"
+            },
+            {
+                "id": 1086,
+                "nom": "Louxor"
+            }
+        ]
+    },
+    "226": {
+        "nom": "Guinée équatoriale",
+        "monnaie": "XAF",
+        "villes": [
+            {
+                "id": 1087,
+                "nom": "Malabo"
+            },
+            {
+                "id": 1088,
+                "nom": "Bata"
+            }
+        ]
+    },
+    "232": {
+        "nom": "Érythrée",
+        "monnaie": "ERN",
+        "villes": [
+            {
+                "id": 1089,
+                "nom": "Asmara"
+            },
+            {
+                "id": 1090,
+                "nom": "Keren"
+            }
+        ]
+    },
+    "748": {
+        "nom": "Eswatini",
+        "monnaie": "SZL",
+        "villes": [
+            {
+                "id": 1091,
+                "nom": "Mbabane"
+            },
+            {
+                "id": 1092,
+                "nom": "Manzini"
+            }
+        ]
+    },
+    "231": {
+        "nom": "Éthiopie",
+        "monnaie": "ETB",
+        "villes": [
+            {
+                "id": 1093,
+                "nom": "Addis-Abeba"
+            },
+            {
+                "id": 1094,
+                "nom": "Dire Dawa"
+            },
+            {
+                "id": 1095,
+                "nom": "Mekele"
+            }
+        ]
+    },
+    "266": {
+        "nom": "Gabon",
+        "monnaie": "XAF",
+        "villes": [
+            {
+                "id": 1096,
+                "nom": "Libreville"
+            },
+            {
+                "id": 1097,
+                "nom": "Port-Gentil"
+            },
+            {
+                "id": 1098,
+                "nom": "Franceville"
+            }
+        ]
+    },
+    "270": {
+        "nom": "Gambie",
+        "monnaie": "GMD",
+        "villes": [
+            {
+                "id": 1099,
+                "nom": "Banjul"
+            },
+            {
+                "id": 1100,
+                "nom": "Serrekunda"
+            }
+        ]
+    },
+    "288": {
+        "nom": "Ghana",
+        "monnaie": "GHS",
+        "villes": [
+            {
+                "id": 1101,
+                "nom": "Accra"
+            },
+            {
+                "id": 1102,
+                "nom": "Kumasi"
+            },
+            {
+                "id": 1103,
+                "nom": "Tamale"
+            },
+            {
+                "id": 1104,
+                "nom": "Takoradi"
+            }
+        ]
+    },
+    "324": {
+        "nom": "Guinée",
+        "monnaie": "GNF",
+        "villes": [
+            {
+                "id": 1105,
+                "nom": "Conakry"
+            },
+            {
+                "id": 1106,
+                "nom": "Nzérékoré"
+            },
+            {
+                "id": 1107,
+                "nom": "Kankan"
+            }
+        ]
+    },
+    "624": {
+        "nom": "Guinée-Bissau",
+        "monnaie": "XOF",
+        "villes": [
+            {
+                "id": 1108,
+                "nom": "Bissau"
+            },
+            {
+                "id": 1109,
+                "nom": "Bafatá"
+            }
+        ]
+    },
+    "404": {
+        "nom": "Kenya",
+        "monnaie": "KES",
+        "villes": [
+            {
+                "id": 1110,
+                "nom": "Nairobi"
+            },
+            {
+                "id": 1111,
+                "nom": "Mombasa"
+            },
+            {
+                "id": 1112,
+                "nom": "Kisumu"
+            },
+            {
+                "id": 1113,
+                "nom": "Nakuru"
+            }
+        ]
+    },
+    "426": {
+        "nom": "Lesotho",
+        "monnaie": "LSL",
+        "villes": [
+            {
+                "id": 1114,
+                "nom": "Maseru"
+            },
+            {
+                "id": 1115,
+                "nom": "Teyateyaneng"
+            }
+        ]
+    },
+    "430": {
+        "nom": "Libéria",
+        "monnaie": "LRD",
+        "villes": [
+            {
+                "id": 1116,
+                "nom": "Monrovia"
+            },
+            {
+                "id": 1117,
+                "nom": "Gbarnga"
+            }
+        ]
+    },
+    "434": {
+        "nom": "Libye",
+        "monnaie": "LYD",
+        "villes": [
+            {
+                "id": 1118,
+                "nom": "Tripoli"
+            },
+            {
+                "id": 1119,
+                "nom": "Benghazi"
+            },
+            {
+                "id": 1120,
+                "nom": "Misrata"
+            }
+        ]
+    },
+    "450": {
+        "nom": "Madagascar",
+        "monnaie": "MGA",
+        "villes": [
+            {
+                "id": 1121,
+                "nom": "Antananarivo"
+            },
+            {
+                "id": 1122,
+                "nom": "Toamasina"
+            },
+            {
+                "id": 1123,
+                "nom": "Antsirabe"
+            },
+            {
+                "id": 1124,
+                "nom": "Mahajanga"
+            }
+        ]
+    },
+    "454": {
+        "nom": "Malawi",
+        "monnaie": "MWK",
+        "villes": [
+            {
+                "id": 1125,
+                "nom": "Lilongwe"
+            },
+            {
+                "id": 1126,
+                "nom": "Blantyre"
+            },
+            {
+                "id": 1127,
+                "nom": "Mzuzu"
+            }
+        ]
+    },
+    "466": {
+        "nom": "Mali",
+        "monnaie": "XOF",
+        "villes": [
+            {
+                "id": 1128,
+                "nom": "Bamako"
+            },
+            {
+                "id": 1129,
+                "nom": "Sikasso"
+            },
+            {
+                "id": 1130,
+                "nom": "Ségou"
+            },
+            {
+                "id": 1131,
+                "nom": "Mopti"
+            }
+        ]
+    },
+    "478": {
+        "nom": "Mauritanie",
+        "monnaie": "MRU",
+        "villes": [
+            {
+                "id": 1132,
+                "nom": "Nouakchott"
+            },
+            {
+                "id": 1133,
+                "nom": "Nouadhibou"
+            }
+        ]
+    },
+    "480": {
+        "nom": "Maurice",
+        "monnaie": "MUR",
+        "villes": [
+            {
+                "id": 1134,
+                "nom": "Port-Louis"
+            },
+            {
+                "id": 1135,
+                "nom": "Curepipe"
+            }
+        ]
+    },
+    "504": {
+        "nom": "Maroc",
+        "monnaie": "MAD",
+        "villes": [
+            {
+                "id": 1136,
+                "nom": "Rabat"
+            },
+            {
+                "id": 1137,
+                "nom": "Casablanca"
+            },
+            {
+                "id": 1138,
+                "nom": "Marrakech"
+            },
+            {
+                "id": 1139,
+                "nom": "Fès"
+            },
+            {
+                "id": 1140,
+                "nom": "Tanger"
+            },
+            {
+                "id": 1141,
+                "nom": "Agadir"
+            }
+        ]
+    },
+    "508": {
+        "nom": "Mozambique",
+        "monnaie": "MZN",
+        "villes": [
+            {
+                "id": 1142,
+                "nom": "Maputo"
+            },
+            {
+                "id": 1143,
+                "nom": "Matola"
+            },
+            {
+                "id": 1144,
+                "nom": "Beira"
+            },
+            {
+                "id": 1145,
+                "nom": "Nampula"
+            }
+        ]
+    },
+    "516": {
+        "nom": "Namibie",
+        "monnaie": "NAD",
+        "villes": [
+            {
+                "id": 1146,
+                "nom": "Windhoek"
+            },
+            {
+                "id": 1147,
+                "nom": "Walvis Bay"
+            },
+            {
+                "id": 1148,
+                "nom": "Swakopmund"
+            }
+        ]
+    },
+    "562": {
+        "nom": "Niger",
+        "monnaie": "XOF",
+        "villes": [
+            {
+                "id": 1149,
+                "nom": "Niamey"
+            },
+            {
+                "id": 1150,
+                "nom": "Zinder"
+            },
+            {
+                "id": 1151,
+                "nom": "Maradi"
+            }
+        ]
+    },
+    "566": {
+        "nom": "Nigéria",
+        "monnaie": "NGN",
+        "villes": [
+            {
+                "id": 1152,
+                "nom": "Abuja"
+            },
+            {
+                "id": 1153,
+                "nom": "Lagos"
+            },
+            {
+                "id": 1154,
+                "nom": "Kano"
+            },
+            {
+                "id": 1155,
+                "nom": "Ibadan"
+            },
+            {
+                "id": 1156,
+                "nom": "Port Harcourt"
+            }
+        ]
+    },
+    "800": {
+        "nom": "Ouganda",
+        "monnaie": "UGX",
+        "villes": [
+            {
+                "id": 1157,
+                "nom": "Kampala"
+            },
+            {
+                "id": 1158,
+                "nom": "Gulu"
+            },
+            {
+                "id": 1159,
+                "nom": "Mbarara"
+            }
+        ]
+    },
+    "646": {
+        "nom": "Rwanda",
+        "monnaie": "RWF",
+        "villes": [
+            {
+                "id": 1160,
+                "nom": "Kigali"
+            },
+            {
+                "id": 1161,
+                "nom": "Butare"
+            },
+            {
+                "id": 1162,
+                "nom": "Gisenyi"
+            }
+        ]
+    },
+    "678": {
+        "nom": "Sao Tomé-et-Principe",
+        "monnaie": "STN",
+        "villes": [
+            {
+                "id": 1163,
+                "nom": "São Tomé"
+            }
+        ]
+    },
+    "686": {
+        "nom": "Sénégal",
+        "monnaie": "XOF",
+        "villes": [
+            {
+                "id": 1164,
+                "nom": "Dakar"
+            },
+            {
+                "id": 1165,
+                "nom": "Thiès"
+            },
+            {
+                "id": 1166,
+                "nom": "Touba"
+            },
+            {
+                "id": 1167,
+                "nom": "Saint-Louis"
+            },
+            {
+                "id": 1168,
+                "nom": "Ziguinchor"
+            }
+        ]
+    },
+    "690": {
+        "nom": "Seychelles",
+        "monnaie": "SCR",
+        "villes": [
+            {
+                "id": 1169,
+                "nom": "Victoria"
+            }
+        ]
+    },
+    "694": {
+        "nom": "Sierra Leone",
+        "monnaie": "SLE",
+        "villes": [
+            {
+                "id": 1170,
+                "nom": "Freetown"
+            },
+            {
+                "id": 1171,
+                "nom": "Bo"
+            },
+            {
+                "id": 1172,
+                "nom": "Kenema"
+            }
+        ]
+    },
+    "706": {
+        "nom": "Somalie",
+        "monnaie": "SOS",
+        "villes": [
+            {
+                "id": 1173,
+                "nom": "Mogadiscio"
+            },
+            {
+                "id": 1174,
+                "nom": "Hargeisa"
+            },
+            {
+                "id": 1175,
+                "nom": "Kismayo"
+            }
+        ]
+    },
+    "710": {
+        "nom": "Afrique du Sud",
+        "monnaie": "ZAR",
+        "villes": [
+            {
+                "id": 1176,
+                "nom": "Pretoria"
+            },
+            {
+                "id": 1177,
+                "nom": "Le Cap"
+            },
+            {
+                "id": 1178,
+                "nom": "Johannesburg"
+            },
+            {
+                "id": 1179,
+                "nom": "Durban"
+            },
+            {
+                "id": 1180,
+                "nom": "Port Elizabeth"
+            }
+        ]
+    },
+    "728": {
+        "nom": "Soudan du Sud",
+        "monnaie": "SSP",
+        "villes": [
+            {
+                "id": 1181,
+                "nom": "Djouba"
+            },
+            {
+                "id": 1182,
+                "nom": "Malakal"
+            }
+        ]
+    },
+    "729": {
+        "nom": "Soudan",
+        "monnaie": "SDG",
+        "villes": [
+            {
+                "id": 1183,
+                "nom": "Khartoum"
+            },
+            {
+                "id": 1184,
+                "nom": "Omdourman"
+            },
+            {
+                "id": 1185,
+                "nom": "Port-Soudan"
+            }
+        ]
+    },
+    "834": {
+        "nom": "Tanzanie",
+        "monnaie": "TZS",
+        "villes": [
+            {
+                "id": 1186,
+                "nom": "Dodoma"
+            },
+            {
+                "id": 1187,
+                "nom": "Dar es Salaam"
+            },
+            {
+                "id": 1188,
+                "nom": "Mwanza"
+            },
+            {
+                "id": 1189,
+                "nom": "Arusha"
+            }
+        ]
+    },
+    "768": {
+        "nom": "Togo",
+        "monnaie": "XOF",
+        "villes": [
+            {
+                "id": 1190,
+                "nom": "Lomé"
+            },
+            {
+                "id": 1191,
+                "nom": "Sokodé"
+            },
+            {
+                "id": 1192,
+                "nom": "Kara"
+            }
+        ]
+    },
+    "788": {
+        "nom": "Tunisie",
+        "monnaie": "TND",
+        "villes": [
+            {
+                "id": 1193,
+                "nom": "Tunis"
+            },
+            {
+                "id": 1194,
+                "nom": "Sfax"
+            },
+            {
+                "id": 1195,
+                "nom": "Sousse"
+            },
+            {
+                "id": 1196,
+                "nom": "Kairouan"
+            }
+        ]
+    },
+    "894": {
+        "nom": "Zambie",
+        "monnaie": "ZMW",
+        "villes": [
+            {
+                "id": 1197,
+                "nom": "Lusaka"
+            },
+            {
+                "id": 1198,
+                "nom": "Kitwe"
+            },
+            {
+                "id": 1199,
+                "nom": "Ndola"
+            }
+        ]
+    },
+    "716": {
+        "nom": "Zimbabwe",
+        "monnaie": "ZWL",
+        "villes": [
+            {
+                "id": 1200,
+                "nom": "Harare"
+            },
+            {
+                "id": 1201,
+                "nom": "Bulawayo"
+            },
+            {
+                "id": 1202,
+                "nom": "Mutare"
+            }
+        ]
+    },
+    "004": {
+        "nom": "Afghanistan",
+        "monnaie": "AFN",
+        "villes": [
+            {
+                "id": 1203,
+                "nom": "Kaboul"
+            },
+            {
+                "id": 1204,
+                "nom": "Kandahar"
+            },
+            {
+                "id": 1205,
+                "nom": "Hérat"
+            },
+            {
+                "id": 1206,
+                "nom": "Mazâr-e Charîf"
+            }
+        ]
+    },
+    "051": {
+        "nom": "Arménie",
+        "monnaie": "AMD",
+        "villes": [
+            {
+                "id": 1207,
+                "nom": "Erevan"
+            },
+            {
+                "id": 1208,
+                "nom": "Gyumri"
+            }
+        ]
+    },
+    "031": {
+        "nom": "Azerbaïdjan",
+        "monnaie": "AZN",
+        "villes": [
+            {
+                "id": 1209,
+                "nom": "Bakou"
+            },
+            {
+                "id": 1210,
+                "nom": "Gandja"
+            }
+        ]
+    },
+    "048": {
+        "nom": "Bahreïn",
+        "monnaie": "BHD",
+        "villes": [
+            {
+                "id": 1211,
+                "nom": "Manama"
+            },
+            {
+                "id": 1212,
+                "nom": "Riffa"
+            }
+        ]
+    },
+    "050": {
+        "nom": "Bangladesh",
+        "monnaie": "BDT",
+        "villes": [
+            {
+                "id": 1213,
+                "nom": "Dacca"
+            },
+            {
+                "id": 1214,
+                "nom": "Chittagong"
+            },
+            {
+                "id": 1215,
+                "nom": "Khulna"
+            }
+        ]
+    },
+    "064": {
+        "nom": "Bhoutan",
+        "monnaie": "BTN",
+        "villes": [
+            {
+                "id": 1216,
+                "nom": "Thimphou"
+            },
+            {
+                "id": 1217,
+                "nom": "Phuntsholing"
+            }
+        ]
+    },
+    "096": {
+        "nom": "Brunei",
+        "monnaie": "BND",
+        "villes": [
+            {
+                "id": 1218,
+                "nom": "Bandar Seri Begawan"
+            }
+        ]
+    },
+    "116": {
+        "nom": "Cambodge",
+        "monnaie": "KHR",
+        "villes": [
+            {
+                "id": 1219,
+                "nom": "Phnom Penh"
+            },
+            {
+                "id": 1220,
+                "nom": "Siem Reap"
+            },
+            {
+                "id": 1221,
+                "nom": "Battambang"
+            }
+        ]
+    },
+    "156": {
+        "nom": "Chine",
+        "monnaie": "CNY",
+        "villes": [
+            {
+                "id": 1222,
+                "nom": "Pékin"
+            },
+            {
+                "id": 1223,
+                "nom": "Shanghai"
+            },
+            {
+                "id": 1224,
+                "nom": "Canton"
+            },
+            {
+                "id": 1225,
+                "nom": "Shenzhen"
+            },
+            {
+                "id": 1226,
+                "nom": "Chengdu"
+            },
+            {
+                "id": 1227,
+                "nom": "Wuhan"
+            }
+        ]
+    },
+    "196": {
+        "nom": "Chypre",
+        "monnaie": "EUR",
+        "villes": [
+            {
+                "id": 1228,
+                "nom": "Nicosie"
+            },
+            {
+                "id": 1229,
+                "nom": "Limassol"
+            }
+        ]
+    },
+    "408": {
+        "nom": "Corée du Nord",
+        "monnaie": "KPW",
+        "villes": [
+            {
+                "id": 1230,
+                "nom": "Pyongyang"
+            },
+            {
+                "id": 1231,
+                "nom": "Hamhung"
+            }
+        ]
+    },
+    "410": {
+        "nom": "Corée du Sud",
+        "monnaie": "KRW",
+        "villes": [
+            {
+                "id": 1232,
+                "nom": "Séoul"
+            },
+            {
+                "id": 1233,
+                "nom": "Busan"
+            },
+            {
+                "id": 1234,
+                "nom": "Incheon"
+            },
+            {
+                "id": 1235,
+                "nom": "Daegu"
+            }
+        ]
+    },
+    "784": {
+        "nom": "Émirats arabes unis",
+        "monnaie": "AED",
+        "villes": [
+            {
+                "id": 1236,
+                "nom": "Abou Dabi"
+            },
+            {
+                "id": 1237,
+                "nom": "Dubaï"
+            },
+            {
+                "id": 1238,
+                "nom": "Charjah"
+            }
+        ]
+    },
+    "268": {
+        "nom": "Géorgie",
+        "monnaie": "GEL",
+        "villes": [
+            {
+                "id": 1239,
+                "nom": "Tbilissi"
+            },
+            {
+                "id": 1240,
+                "nom": "Koutaïssi"
+            },
+            {
+                "id": 1241,
+                "nom": "Batoumi"
+            }
+        ]
+    },
+    "356": {
+        "nom": "Inde",
+        "monnaie": "INR",
+        "villes": [
+            {
+                "id": 1242,
+                "nom": "New Delhi"
+            },
+            {
+                "id": 1243,
+                "nom": "Bombay"
+            },
+            {
+                "id": 1244,
+                "nom": "Bangalore"
+            },
+            {
+                "id": 1245,
+                "nom": "Calcutta"
+            },
+            {
+                "id": 1246,
+                "nom": "Chennai"
+            },
+            {
+                "id": 1247,
+                "nom": "Hyderabad"
+            }
+        ]
+    },
+    "360": {
+        "nom": "Indonésie",
+        "monnaie": "IDR",
+        "villes": [
+            {
+                "id": 1248,
+                "nom": "Jakarta"
+            },
+            {
+                "id": 1249,
+                "nom": "Surabaya"
+            },
+            {
+                "id": 1250,
+                "nom": "Bandung"
+            },
+            {
+                "id": 1251,
+                "nom": "Medan"
+            }
+        ]
+    },
+    "368": {
+        "nom": "Irak",
+        "monnaie": "IQD",
+        "villes": [
+            {
+                "id": 1252,
+                "nom": "Bagdad"
+            },
+            {
+                "id": 1253,
+                "nom": "Bassora"
+            },
+            {
+                "id": 1254,
+                "nom": "Mossoul"
+            },
+            {
+                "id": 1255,
+                "nom": "Erbil"
+            }
+        ]
+    },
+    "364": {
+        "nom": "Iran",
+        "monnaie": "IRR",
+        "villes": [
+            {
+                "id": 1256,
+                "nom": "Téhéran"
+            },
+            {
+                "id": 1257,
+                "nom": "Machhad"
+            },
+            {
+                "id": 1258,
+                "nom": "Ispahan"
+            },
+            {
+                "id": 1259,
+                "nom": "Chiraz"
+            },
+            {
+                "id": 1260,
+                "nom": "Tabriz"
+            }
+        ]
+    },
+    "376": {
+        "nom": "Israël",
+        "monnaie": "ILS",
+        "villes": [
+            {
+                "id": 1261,
+                "nom": "Jérusalem"
+            },
+            {
+                "id": 1262,
+                "nom": "Tel-Aviv"
+            },
+            {
+                "id": 1263,
+                "nom": "Haïfa"
+            }
+        ]
+    },
+    "392": {
+        "nom": "Japon",
+        "monnaie": "JPY",
+        "villes": [
+            {
+                "id": 1264,
+                "nom": "Tokyo"
+            },
+            {
+                "id": 1265,
+                "nom": "Osaka"
+            },
+            {
+                "id": 1266,
+                "nom": "Yokohama"
+            },
+            {
+                "id": 1267,
+                "nom": "Nagoya"
+            },
+            {
+                "id": 1268,
+                "nom": "Kyoto"
+            },
+            {
+                "id": 1269,
+                "nom": "Sapporo"
+            }
+        ]
+    },
+    "400": {
+        "nom": "Jordanie",
+        "monnaie": "JOD",
+        "villes": [
+            {
+                "id": 1270,
+                "nom": "Amman"
+            },
+            {
+                "id": 1271,
+                "nom": "Zarka"
+            },
+            {
+                "id": 1272,
+                "nom": "Irbid"
+            }
+        ]
+    },
+    "398": {
+        "nom": "Kazakhstan",
+        "monnaie": "KZT",
+        "villes": [
+            {
+                "id": 1273,
+                "nom": "Astana"
+            },
+            {
+                "id": 1274,
+                "nom": "Almaty"
+            },
+            {
+                "id": 1275,
+                "nom": "Chimkent"
+            }
+        ]
+    },
+    "417": {
+        "nom": "Kirghizistan",
+        "monnaie": "KGS",
+        "villes": [
+            {
+                "id": 1276,
+                "nom": "Bichkek"
+            },
+            {
+                "id": 1277,
+                "nom": "Och"
+            }
+        ]
+    },
+    "414": {
+        "nom": "Koweït",
+        "monnaie": "KWD",
+        "villes": [
+            {
+                "id": 1278,
+                "nom": "Koweït"
+            },
+            {
+                "id": 1279,
+                "nom": "Hawalli"
+            }
+        ]
+    },
+    "418": {
+        "nom": "Laos",
+        "monnaie": "LAK",
+        "villes": [
+            {
+                "id": 1280,
+                "nom": "Vientiane"
+            },
+            {
+                "id": 1281,
+                "nom": "Louang Prabang"
+            }
+        ]
+    },
+    "422": {
+        "nom": "Liban",
+        "monnaie": "LBP",
+        "villes": [
+            {
+                "id": 1282,
+                "nom": "Beyrouth"
+            },
+            {
+                "id": 1283,
+                "nom": "Tripoli"
+            },
+            {
+                "id": 1284,
+                "nom": "Saïda"
+            }
+        ]
+    },
+    "458": {
+        "nom": "Malaisie",
+        "monnaie": "MYR",
+        "villes": [
+            {
+                "id": 1285,
+                "nom": "Kuala Lumpur"
+            },
+            {
+                "id": 1286,
+                "nom": "George Town"
+            },
+            {
+                "id": 1287,
+                "nom": "Johor Bahru"
+            }
+        ]
+    },
+    "462": {
+        "nom": "Maldives",
+        "monnaie": "MVR",
+        "villes": [
+            {
+                "id": 1288,
+                "nom": "Malé"
+            }
+        ]
+    },
+    "496": {
+        "nom": "Mongolie",
+        "monnaie": "MNT",
+        "villes": [
+            {
+                "id": 1289,
+                "nom": "Oulan-Bator"
+            },
+            {
+                "id": 1290,
+                "nom": "Erdenet"
+            }
+        ]
+    },
+    "104": {
+        "nom": "Myanmar",
+        "monnaie": "MMK",
+        "villes": [
+            {
+                "id": 1291,
+                "nom": "Naypyidaw"
+            },
+            {
+                "id": 1292,
+                "nom": "Rangoun"
+            },
+            {
+                "id": 1293,
+                "nom": "Mandalay"
+            }
+        ]
+    },
+    "524": {
+        "nom": "Népal",
+        "monnaie": "NPR",
+        "villes": [
+            {
+                "id": 1294,
+                "nom": "Katmandou"
+            },
+            {
+                "id": 1295,
+                "nom": "Pokhara"
+            }
+        ]
+    },
+    "512": {
+        "nom": "Oman",
+        "monnaie": "OMR",
+        "villes": [
+            {
+                "id": 1296,
+                "nom": "Mascate"
+            },
+            {
+                "id": 1297,
+                "nom": "Salalah"
+            }
+        ]
+    },
+    "860": {
+        "nom": "Ouzbékistan",
+        "monnaie": "UZS",
+        "villes": [
+            {
+                "id": 1298,
+                "nom": "Tachkent"
+            },
+            {
+                "id": 1299,
+                "nom": "Samarcande"
+            },
+            {
+                "id": 1300,
+                "nom": "Boukhara"
+            }
+        ]
+    },
+    "586": {
+        "nom": "Pakistan",
+        "monnaie": "PKR",
+        "villes": [
+            {
+                "id": 1301,
+                "nom": "Islamabad"
+            },
+            {
+                "id": 1302,
+                "nom": "Karachi"
+            },
+            {
+                "id": 1303,
+                "nom": "Lahore"
+            },
+            {
+                "id": 1304,
+                "nom": "Faisalabad"
+            }
+        ]
+    },
+    "275": {
+        "nom": "Palestine",
+        "monnaie": "ILS",
+        "villes": [
+            {
+                "id": 1305,
+                "nom": "Ramallah"
+            },
+            {
+                "id": 1306,
+                "nom": "Gaza"
+            },
+            {
+                "id": 1307,
+                "nom": "Hébron"
+            }
+        ]
+    },
+    "608": {
+        "nom": "Philippines",
+        "monnaie": "PHP",
+        "villes": [
+            {
+                "id": 1308,
+                "nom": "Manille"
+            },
+            {
+                "id": 1309,
+                "nom": "Quezon City"
+            },
+            {
+                "id": 1310,
+                "nom": "Davao"
+            },
+            {
+                "id": 1311,
+                "nom": "Cebu"
+            }
+        ]
+    },
+    "634": {
+        "nom": "Qatar",
+        "monnaie": "QAR",
+        "villes": [
+            {
+                "id": 1312,
+                "nom": "Doha"
+            },
+            {
+                "id": 1313,
+                "nom": "Al Rayyan"
+            }
+        ]
+    },
+    "702": {
+        "nom": "Singapour",
+        "monnaie": "SGD",
+        "villes": [
+            {
+                "id": 1314,
+                "nom": "Singapour"
+            }
+        ]
+    },
+    "144": {
+        "nom": "Sri Lanka",
+        "monnaie": "LKR",
+        "villes": [
+            {
+                "id": 1315,
+                "nom": "Colombo"
+            },
+            {
+                "id": 1316,
+                "nom": "Kandy"
+            },
+            {
+                "id": 1317,
+                "nom": "Jaffna"
+            }
+        ]
+    },
+    "760": {
+        "nom": "Syrie",
+        "monnaie": "SYP",
+        "villes": [
+            {
+                "id": 1318,
+                "nom": "Damas"
+            },
+            {
+                "id": 1319,
+                "nom": "Alep"
+            },
+            {
+                "id": 1320,
+                "nom": "Homs"
+            }
+        ]
+    },
+    "762": {
+        "nom": "Tadjikistan",
+        "monnaie": "TJS",
+        "villes": [
+            {
+                "id": 1321,
+                "nom": "Douchanbé"
+            },
+            {
+                "id": 1322,
+                "nom": "Khodjent"
+            }
+        ]
+    },
+    "158": {
+        "nom": "Taïwan",
+        "monnaie": "TWD",
+        "villes": [
+            {
+                "id": 1323,
+                "nom": "Taipei"
+            },
+            {
+                "id": 1324,
+                "nom": "Kaohsiung"
+            },
+            {
+                "id": 1325,
+                "nom": "Taichung"
+            }
+        ]
+    },
+    "764": {
+        "nom": "Thaïlande",
+        "monnaie": "THB",
+        "villes": [
+            {
+                "id": 1326,
+                "nom": "Bangkok"
+            },
+            {
+                "id": 1327,
+                "nom": "Nonthaburi"
+            },
+            {
+                "id": 1328,
+                "nom": "Chiang Mai"
+            }
+        ]
+    },
+    "626": {
+        "nom": "Timor oriental",
+        "monnaie": "USD",
+        "villes": [
+            {
+                "id": 1329,
+                "nom": "Dili"
+            }
+        ]
+    },
+    "795": {
+        "nom": "Turkménistan",
+        "monnaie": "TMT",
+        "villes": [
+            {
+                "id": 1330,
+                "nom": "Achgabat"
+            },
+            {
+                "id": 1331,
+                "nom": "Türkmenabat"
+            }
+        ]
+    },
+    "792": {
+        "nom": "Turquie",
+        "monnaie": "TRY",
+        "villes": [
+            {
+                "id": 1332,
+                "nom": "Ankara"
+            },
+            {
+                "id": 1333,
+                "nom": "Istanbul"
+            },
+            {
+                "id": 1334,
+                "nom": "Izmir"
+            },
+            {
+                "id": 1335,
+                "nom": "Bursa"
+            },
+            {
+                "id": 1336,
+                "nom": "Antalya"
+            }
+        ]
+    },
+    "704": {
+        "nom": "Viêt Nam",
+        "monnaie": "VND",
+        "villes": [
+            {
+                "id": 1337,
+                "nom": "Hanoï"
+            },
+            {
+                "id": 1338,
+                "nom": "Hô-Chi-Minh-Ville"
+            },
+            {
+                "id": 1339,
+                "nom": "Da Nang"
+            },
+            {
+                "id": 1340,
+                "nom": "Haïphong"
+            }
+        ]
+    },
+    "887": {
+        "nom": "Yémen",
+        "monnaie": "YER",
+        "villes": [
+            {
+                "id": 1341,
+                "nom": "Sanaa"
+            },
+            {
+                "id": 1342,
+                "nom": "Aden"
+            },
+            {
+                "id": 1343,
+                "nom": "Taïz"
+            }
+        ]
+    }
+}
