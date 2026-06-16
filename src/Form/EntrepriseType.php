@@ -12,6 +12,7 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormInterface;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Validator\Constraints\NotNull;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -95,7 +96,12 @@ class EntrepriseType extends AbstractType
                 'label' => "Pays",
                 'choices' => $this->serviceGeographie->getPaysChoices(),
                 'placeholder' => "Sélectionnez un pays",
-                'required' => false,
+                // Obligatoire : le pays détermine la monnaie locale et le contexte
+                // réglementaire utilisés pour initialiser l'espace de travail.
+                'required' => true,
+                'constraints' => [
+                    new NotNull(message: "Veuillez sélectionner un pays."),
+                ],
                 'attr' => [
                     'data-pays-dependances-target' => 'pays',
                     'data-action' => 'change->pays-dependances#paysChange',

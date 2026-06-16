@@ -2,18 +2,13 @@
 
 namespace App\DataFixtures;
 
-use App\Entity\Chargement;
-use App\Entity\TypeRevenu;
 use App\Entity\Assureur;
-use App\Entity\AutoriteFiscale;
 use App\Entity\ConditionPartage;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
-use App\Entity\Monnaie;
 use App\Entity\Partenaire;
-use App\Entity\Risque;
-use App\Entity\Taxe;
 use App\Entity\Utilisateur;
+use App\Services\ServiceInitialisationEntreprise;
 use App\DataFixtures\UtilisateurFixtures;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
@@ -24,10 +19,14 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 class AppFixtures extends Fixture implements DependentFixtureInterface
 {
     private UserPasswordHasherInterface $passwordHasher;
+    private ServiceInitialisationEntreprise $serviceInitialisation;
 
-    public function __construct(UserPasswordHasherInterface $passwordHasher)
-    {
+    public function __construct(
+        UserPasswordHasherInterface $passwordHasher,
+        ServiceInitialisationEntreprise $serviceInitialisation,
+    ) {
         $this->passwordHasher = $passwordHasher;
+        $this->serviceInitialisation = $serviceInitialisation;
     }
 
     public function getDependencies()
@@ -52,6 +51,7 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
         $entreprise->setNumimpot($faker->numerify('IMPOT/#######'));
         $entreprise->setCapitalSociale($faker->randomFloat(2, 50000, 1000000));
         $entreprise->setSiteweb('www.aib-rdc.com');
+        $entreprise->setPays(180); // Congo (RDC) → monnaie locale CDF dérivée par le service
         $manager->persist($entreprise);
         
         // On récupère l'admin user créé dans UtilisateurFixtures
@@ -80,45 +80,10 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
         // TODO: Ajouter la logique des rôles pour la lecture seule
         $entreprise->addInvite($victorInvite); // On l'ajoute simplement à l'entreprise
 
-        $allInvites = [$adminInvite, $victorInvite];
-
-        // 3. Création des Monnaies
-        $usd = new Monnaie();
-        $usd->setNom('Dollar Américain')->setCode('USD')->setTauxusd('1.00')->setLocale(false)->setFonction(Monnaie::FONCTION_SAISIE_ET_AFFICHAGE);
-        $usd->setEntreprise($entreprise);
-        $usd->setInvite($adminInvite);
-        $manager->persist($usd);
-
-        $cdf = new Monnaie();
-        $cdf->setNom('Franc Congolais')->setCode('CDF')->setTauxusd('2250.00')->setLocale(true)->setFonction(Monnaie::FONCTION_SAISIE_UNIQUEMENT);
-        $cdf->setEntreprise($entreprise);
-        $cdf->setInvite($adminInvite);
-        $manager->persist($cdf);
-
-        // 4. Création des Taxes et Autorités Fiscales
-        $taxeArca = new Taxe();
-        $taxeArca->setCode('ARCA')->setDescription("Taxe régulateur")->setTauxIARD('2.00')->setTauxVIE('2.00')->setRedevable(Taxe::REDEVABLE_COURTIER);
-        $taxeArca->setEntreprise($entreprise);
-        $taxeArca->setInvite($adminInvite);
-        $manager->persist($taxeArca);
-
-        $autoriteArca = new AutoriteFiscale();
-        $autoriteArca->setNom('Autorité de régulation et de contrôle des assurances en RDC')->setAbreviation('ARCA')->setTaxe($taxeArca);
-        $autoriteArca->setEntreprise($entreprise);
-        $autoriteArca->setInvite($adminInvite);
-        $manager->persist($autoriteArca);
-
-        $taxeTva = new Taxe();
-        $taxeTva->setCode('TVA')->setDescription("Taxe sur la Valeur Ajoutée")->setTauxIARD('16.00')->setTauxVIE('0.00')->setRedevable(Taxe::REDEVABLE_ASSUREUR);
-        $taxeTva->setEntreprise($entreprise);
-        $taxeTva->setInvite($adminInvite);
-        $manager->persist($taxeTva);
-
-        $autoriteDgi = new AutoriteFiscale();
-        $autoriteDgi->setNom('Direction Générale des Impôts')->setAbreviation('DGI')->setTaxe($taxeTva);
-        $autoriteDgi->setEntreprise($entreprise);
-        $autoriteDgi->setInvite($adminInvite);
-        $manager->persist($autoriteDgi);
+        // Paramètres de configuration par défaut (monnaies, taxes + autorités,
+        // chargements, types de revenu, risques) — source unique partagée avec la
+        // création réelle d'entreprise (EntrepriseController::create).
+        $this->serviceInitialisation->initialiser($entreprise, $adminInvite);
 
         // 5. Création des Assureurs
         $assureurNames = ['SFA CONGO', 'ACTIVA', 'ACTIVA LIFE', 'SUNU IARD RDC', 'MAYFAIR CONGO', 'RAWSUR SA', 'RAWSUR LIFE', 'AFRISSUR'];
@@ -175,84 +140,6 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
             $manager->persist($partenaire);
             $partenaires[] = $partenaire;
         }
-
-        // 7. Création des Risques
-        $risques = [];
-        $risquesData = [
-            ['code' => '10A', 'nom' => 'Incendie et Risques Annexes', 'branche' => Risque::BRANCHE_IARD_OU_NON_VIE, 'commission' => 0.15],
-            ['code' => '11B', 'nom' => 'Responsabilité Civile Automobile', 'branche' => Risque::BRANCHE_IARD_OU_NON_VIE, 'commission' => 0.10],
-            ['code' => '13C', 'nom' => 'Assurance Maladie Groupe', 'branche' => Risque::BRANCHE_VIE, 'commission' => 0.12],
-            ['code' => '05D', 'nom' => 'Transport de Marchandises', 'branche' => Risque::BRANCHE_IARD_OU_NON_VIE, 'commission' => 0.20],
-            ['code' => '21A', 'nom' => 'Assurance Vie Individuelle', 'branche' => Risque::BRANCHE_VIE, 'commission' => 0.25],
-            ['code' => '08E', 'nom' => 'Multirisque Habitation', 'branche' => Risque::BRANCHE_IARD_OU_NON_VIE, 'commission' => 0.18],
-        ];
-        foreach ($risquesData as $data) {
-            $risque = new Risque();
-            $risque->setCode($data['code'])
-                ->setNomComplet($data['nom'])
-                ->setDescription($faker->sentence)
-                ->setBranche($data['branche'])
-                ->setImposable(true)
-                ->setPourcentageCommissionSpecifiqueHT($data['commission'])
-                ->setEntreprise($entreprise)
-                ->setInvite($adminInvite);
-            $manager->persist($risque);
-            $risques[] = $risque;
-        }
-
-        // 7.bis Création des Types de Chargement
-        $chargements = [];
-        $chargementPrimeNette = new Chargement();
-        $chargementPrimeNette
-            ->setNom("Prime nette")
-            ->setFonction(Chargement::FONCTION_PRIME_NETTE)
-            ->setDescription("La part de la prime destinée à couvrir le risque pur.");
-        $chargementPrimeNette->setEntreprise($entreprise)->setInvite($adminInvite);
-        $manager->persist($chargementPrimeNette);
-        $chargements['prime_nette'] = $chargementPrimeNette;
-
-        $chargementFronting = new Chargement();
-        $chargementFronting
-            ->setNom("Fronting")
-            ->setFonction(Chargement::FONCTION_FRONTING)
-            ->setDescription("Frais liés aux opérations de fronting.");
-        $chargementFronting->setEntreprise($entreprise)->setInvite($adminInvite);
-        $manager->persist($chargementFronting);
-        $chargements['fronting'] = $chargementFronting;
-
-        $chargementFrais = new Chargement();
-        $chargementFrais
-            ->setNom("Frais accessoires")
-            ->setFonction(Chargement::FONCTION_FRAIS_ADMIN)
-            ->setDescription("Frais de gestion, accessoires ou de police.");
-        $chargementFrais->setEntreprise($entreprise)->setInvite($adminInvite);
-        $manager->persist($chargementFrais);
-        $chargements['frais'] = $chargementFrais;
-
-        // 7.ter Création des Types de Revenu
-        $typeRevenuCommOrdinaire = new TypeRevenu();
-        $typeRevenuCommOrdinaire->setNom("Commission Ordinaire")->setAppliquerPourcentageDuRisque(true)->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR)->setShared(true)->setTypeChargement($chargementPrimeNette);
-        $typeRevenuCommOrdinaire->setMultipayments(true);
-        $typeRevenuCommOrdinaire->setEntreprise($entreprise)->setInvite($adminInvite);
-        $manager->persist($typeRevenuCommOrdinaire);
-
-        $typeRevenuCommFronting = new TypeRevenu();
-        $typeRevenuCommFronting->setNom("Commission sur Fronting")->setPourcentage(0.30)->setTypeChargement($chargementFronting)->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR)->setShared(false);
-        $typeRevenuCommFronting->setMultipayments(true);
-        $typeRevenuCommFronting->setEntreprise($entreprise)->setInvite($adminInvite);
-        $manager->persist($typeRevenuCommFronting);
-
-        $typeRevenuConsultance = new TypeRevenu();
-        $typeRevenuConsultance->setNom("Frais de consultance")->setPourcentage(0.05)->setTypeChargement($chargementPrimeNette)->setRedevable(TypeRevenu::REDEVABLE_CLIENT)->setShared(false);
-        $typeRevenuConsultance->setMultipayments(false);
-        $typeRevenuConsultance->setEntreprise($entreprise)->setInvite($adminInvite);
-        $manager->persist($typeRevenuConsultance);
-
-        $typeRevenuGestion = new TypeRevenu();
-        $typeRevenuGestion->setNom("Honoraire de gestion")->setPourcentage(0.02)->setTypeChargement($chargementPrimeNette)->setRedevable(TypeRevenu::REDEVABLE_CLIENT)->setShared(false);
-        $typeRevenuGestion->setMultipayments(true);
-        $typeRevenuGestion->setEntreprise($entreprise)->setInvite($adminInvite);
-        $manager->persist($typeRevenuGestion);
 
         $manager->flush();
     }
