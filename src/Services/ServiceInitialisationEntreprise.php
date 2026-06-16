@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Entity\AutoriteFiscale;
 use App\Entity\Chargement;
 use App\Entity\Entreprise;
+use App\Entity\Groupe;
 use App\Entity\Invite;
 use App\Entity\Monnaie;
 use App\Entity\Risque;
@@ -70,6 +71,7 @@ class ServiceInitialisationEntreprise
         $this->initialiserTaxes($entreprise, $proprietaire);
         $this->initialiserChargementsEtRevenus($entreprise, $proprietaire);
         $this->initialiserRisques($entreprise, $proprietaire);
+        $this->initialiserGroupes($entreprise, $proprietaire);
     }
 
     /**
@@ -227,6 +229,33 @@ class ServiceInitialisationEntreprise
                 ->setPourcentageCommissionSpecifiqueHT((float) $data['commission'])
                 ->setImposable(true);
             $this->attacher($risque, $entreprise, $proprietaire);
+        }
+    }
+
+    /**
+     * Groupes de clients par défaut, organisés par secteur d'activité.
+     * Servent à classer les clients dès le démarrage de l'espace de travail.
+     */
+    private function initialiserGroupes(Entreprise $entreprise, Invite $proprietaire): void
+    {
+        $groupes = [
+            ['Banques & Microfinance', "Banques, établissements de crédit et institutions de microfinance."],
+            ['Télécommunications', "Opérateurs télécoms, fournisseurs d'accès et services numériques."],
+            ['Transports & Logistique', "Transport routier, aérien, maritime, fluvial et services logistiques."],
+            ['ONG & Organisations internationales', "Organisations non gouvernementales, agences et missions internationales."],
+            ['Mines & Carrières', "Sociétés minières, d'extraction et d'exploitation de carrières."],
+            ['Pétrole & Énergie', "Hydrocarbures, production et distribution d'énergie."],
+            ['Commerce & Distribution', "Grossistes, détaillants et chaînes de distribution."],
+            ['Industrie & Agro-industrie', "Industries manufacturières, transformation et agro-industrie."],
+            ['Santé & Établissements médicaux', "Hôpitaux, cliniques, laboratoires et professionnels de santé."],
+            ['BTP & Construction', "Bâtiment, travaux publics et entreprises de construction."],
+        ];
+
+        foreach ($groupes as [$nom, $description]) {
+            $groupe = (new Groupe())
+                ->setNom($nom)
+                ->setDescription($description);
+            $this->attacher($groupe, $entreprise, $proprietaire);
         }
     }
 
