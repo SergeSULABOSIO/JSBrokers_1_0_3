@@ -96,7 +96,7 @@
                     class="nav-item nav-item-logout"
                     role="button"
                     title="{{ deconnexion.nom }}"
-                    data-action="mouseenter->workspace-manager#showItemDescription mouseleave->workspace-manager#clearDescription"
+                    data-action="mouseenter->workspace-manager#showItemDescription mouseleave->workspace-manager#clearDescription click->workspace-manager#handleLoadingStart"
                     data-workspace-manager-description-param="{{ deconnexion.description }}"
                 >
                     <twig:UX:Icon name="{{ resolve_icon_name(deconnexion.icone) }}" class="nav-icon" />
@@ -108,13 +108,50 @@
 
         {# COLONNE 2 : Rubriques & Descriptions #}
         <div class="menu-col-2">
-            {# Ligne 1: Infos Entreprise #}
+            {# Ligne 1: Marque JS Brokers #}
             <div class="menu-col-2-row-1">
                 <img src="{{ asset(menu.colonne_2.logo) }}" alt="Logo" class="company-logo">
                 <h2 class="company-title">{{ menu.colonne_2.titre }}</h2>
                 <p class="company-description">{{ menu.colonne_2.description }}</p>
                 <span class="company-version">Version {{ menu.colonne_2.version }}</span>
             </div>
+            {# Carte d'identité de l'entreprise courante #}
+            {% if entreprise is defined and entreprise %}
+                {% set ville = nom_ville(entreprise.ville) %}
+                {% set pays = nom_pays(entreprise.pays) %}
+                <section class="menu-col-2-company" aria-label="Entreprise courante">
+                    <img class="company-card-logo"
+                         src="{{ entreprise.thumbnail ? vich_uploader_asset(entreprise, 'thumbnailFile') : '/images/entreprises/default_entreprise.jpg' }}"
+                         alt="{{ 'Logo de %s'|format(entreprise.nom) }}">
+                    <h3 class="company-card-name">{{ entreprise.nom }}</h3>
+                    {% set adresse_complete = [entreprise.adresse, ville, pays]|filter(v => v)|join(', ') %}
+                    {% if adresse_complete %}
+                        <p class="company-card-address">{{ adresse_complete }}</p>
+                    {% endif %}
+                    <dl class="company-card-details">
+                        {% if entreprise.rccm %}
+                            <div class="company-card-line">
+                                <dt>RCCM</dt><dd>{{ entreprise.rccm }}</dd>
+                            </div>
+                        {% endif %}
+                        {% if entreprise.idnat %}
+                            <div class="company-card-line">
+                                <dt>ID National</dt><dd>{{ entreprise.idnat }}</dd>
+                            </div>
+                        {% endif %}
+                        {% if entreprise.licence %}
+                            <div class="company-card-line">
+                                <dt>Agrément / Licence</dt><dd>{{ entreprise.licence }}</dd>
+                            </div>
+                        {% endif %}
+                        {% if entreprise.capitalSociale is not null %}
+                            <div class="company-card-line">
+                                <dt>Capital social</dt><dd>{{ entreprise.capitalSociale|number_format(2, ',', ' ') }} {{ display_currency_code() }}</dd>
+                            </div>
+                        {% endif %}
+                    </dl>
+                </section>
+            {% endif %}
             {# Ligne 2: Zone dynamique pour descriptions et rubriques #}
             <div class="menu-col-2-row-2">
                 <div data-workspace-manager-target="rubriquesContainer"></div>
