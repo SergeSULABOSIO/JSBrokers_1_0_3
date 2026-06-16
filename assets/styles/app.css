@@ -1543,6 +1543,65 @@ thead.sticky-header {
     background-color: #ffffff; /* Fond blanc pour la confirmation */
 }
 
+/* Champ mot de passe de la confirmation : champ unifié arrondi avec icône
+   cadenas en préfixe et bascule œil en suffixe (même pattern que la page de
+   connexion). Couleurs strictement issues de la charte. */
+.dialog-password-field {
+    position: relative;
+}
+
+.dialog-password-icon {
+    position: absolute;
+    top: 50%;
+    left: 0.85rem;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    color: #6c757d; /* --text-muted */
+    pointer-events: none;
+}
+.dialog-password-icon svg { width: 20px; height: 20px; }
+
+.dialog-password-field .form-control {
+    height: 48px;            /* zone de saisie confortable */
+    padding-left: 2.6rem;    /* place pour l'icône préfixe */
+    padding-right: 3rem;     /* place pour la bascule œil */
+    color: #000000;          /* --text-black (contenu de champ) */
+}
+
+/* Focus visible conforme charte : bordure + anneau cobalt */
+.dialog-password-field .form-control:focus {
+    border-color: #0047AB; /* --cobalt */
+    box-shadow: 0 0 0 0.25rem rgba(0, 71, 171, 0.35); /* --cobalt-focus-ring */
+}
+
+/* Bouton afficher/masquer (≥ 44×44, WCAG 2.5.5), sans bordure ni fond */
+.dialog-password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 0.35rem;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    color: #6c757d; /* --text-muted */
+    border-radius: 8px;
+    cursor: pointer;
+}
+.dialog-password-toggle:hover { color: #0047AB; } /* --cobalt */
+.dialog-password-toggle:focus-visible {
+    outline: 2px solid #0047AB; /* --cobalt */
+    outline-offset: 2px;
+}
+.dialog-password-toggle svg { width: 20px; height: 20px; }
+
 /* 6. SUPERPOSITION : le z-index de #confirmation-dialog-modal est calculé
    dynamiquement par confirmation-dialog_controller.js pour rester au-dessus
    de toutes les modales ouvertes, quel que soit le niveau d'imbrication. */
@@ -2305,7 +2364,39 @@ thead.sticky-header {
 }
 
 /* ================================================================== */
-/* SECTION 8: TOAST DE FEEDBACK (analyse bordereau)                   */
+/* SECTION 8: STRUCTURE COMMUNE DES TOASTS (.jsb-toast)               */
+/* ================================================================== */
+/* Structure partagée par TOUS les toasts (toasts dynamiques de
+   notification-manager + toast permanent « Paramètres de l'espace de
+   travail »). Ne porte QUE la structure : dimensions, marges, ombre et
+   en-tête transparent. La COULEUR reste contextuelle, appliquée par-dessus
+   (classes Bootstrap bg-* pour les toasts dynamiques, .jsb-ws-toast pour les
+   paramètres). */
+.jsb-toast {
+    width: 350px;
+    max-width: calc(100vw - 2rem);
+    /* Marges latérales = .25rem (alignement vertical des toasts empilés),
+       marge basse un peu plus grande comme séparateur. */
+    margin: .25rem .25rem .5rem;
+    box-shadow: 0 .5rem 1.5rem rgba(0, 0, 0, .15);
+    border: 0;
+}
+/* En-tête transparent → la couleur de fond du toast transparaît dessous.
+   color: inherit pour suivre la couleur de texte contextuelle (text-white /
+   text-dark) posée sur le toast. */
+.jsb-toast .toast-header {
+    background-color: transparent;
+    color: inherit;
+    font-weight: 700;
+    border-bottom-color: rgba(0, 0, 0, .15);
+}
+/* Sur fond sombre (texte blanc), bordure d'en-tête claire pour rester lisible. */
+.jsb-toast.text-white .toast-header {
+    border-bottom-color: rgba(255, 255, 255, .35);
+}
+
+/* ================================================================== */
+/* SECTION 8b: TOAST DE FEEDBACK (analyse bordereau)                  */
 /* ================================================================== */
 
 /* Conteneur : déjà géré par Bootstrap .toast-container */

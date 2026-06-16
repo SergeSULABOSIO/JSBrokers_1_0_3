@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use App\Repository\RisqueRepository;
 use Doctrine\Common\Collections\Collection;
@@ -27,7 +28,7 @@ class Risque
     #[Groups(['list:read'])]
     private ?string $code = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
     #[Groups(['list:read'])]
     private ?string $description = null;
 

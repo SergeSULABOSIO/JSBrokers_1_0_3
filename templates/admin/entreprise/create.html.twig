@@ -255,9 +255,10 @@
                     </div>
                 </fieldset>
 
-                <p class="text-muted">
-                    <small>Vous pourrez gérer les paramètres détaillés (clients, risques, taxes, comptes, monnaies, partenaires, invités…) depuis l'espace de travail, une fois l'entreprise créée.</small>
-                </p>
+                {# Rappel important transformé en toast permanent (haut à droite, fixe, non fermable). #}
+                {{ include('components/_workspace_params_toast.html.twig', {
+                    message: 'Vous pourrez gérer les paramètres détaillés (clients, risques, taxes, comptes, monnaies, partenaires, invités…) depuis l\'espace de travail, une fois l\'entreprise créée.'
+                }) }}
 
                 <div class="ent-actions">
                     <a href="{{ path('admin.entreprise.index') }}" class="ent-actions-back"

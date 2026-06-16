@@ -21,7 +21,8 @@ export default class extends Controller {
         "itemDetailsContainer",
         "itemList",
         "passwordContainer",
-        "passwordField"
+        "passwordField",
+        "passwordToggle"
     ];
 
     connect() {
@@ -92,7 +93,9 @@ export default class extends Controller {
         }
         if (this.hasPasswordFieldTarget) {
             this.passwordFieldTarget.value = '';
+            this.passwordFieldTarget.type = 'password';
         }
+        this._syncPasswordToggle(false);
 
         // Couleur d'en-tête personnalisable (défaut : bg-danger text-white)
         if (this.hasHeaderTarget) {
@@ -197,6 +200,34 @@ export default class extends Controller {
     }
 
     /**
+     * Bascule l'affichage du mot de passe (masqué / en clair) et met à jour
+     * l'icône et les attributs d'accessibilité du bouton.
+     */
+    togglePassword() {
+        if (!this.hasPasswordFieldTarget) return;
+        const field = this.passwordFieldTarget;
+        const reveal = field.type === 'password';
+        field.type = reveal ? 'text' : 'password';
+        this._syncPasswordToggle(reveal);
+        field.focus();
+    }
+
+    /**
+     * Synchronise l'icône (œil / œil barré) et les attributs ARIA du bouton bascule.
+     * @param {boolean} revealed - true si le mot de passe est affiché en clair.
+     * @private
+     */
+    _syncPasswordToggle(revealed) {
+        if (!this.hasPasswordToggleTarget) return;
+        const showIcon = this.passwordToggleTarget.querySelector('[data-role="icon-show"]');
+        const hideIcon = this.passwordToggleTarget.querySelector('[data-role="icon-hide"]');
+        if (showIcon) showIcon.style.display = revealed ? 'none' : '';
+        if (hideIcon) hideIcon.style.display = revealed ? '' : 'none';
+        this.passwordToggleTarget.setAttribute('aria-pressed', revealed ? 'true' : 'false');
+        this.passwordToggleTarget.setAttribute('aria-label', revealed ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+    }
+
+    /**
      * Gère un événement d'erreur reçu pendant le processus de confirmation.
      * Affiche le message d'erreur et réactive le bouton.
      * @param {object} payload - Le payload de l'événement d'erreur.
@@ -258,7 +289,9 @@ export default class extends Controller {
             }
             if (this.hasPasswordFieldTarget) {
                 this.passwordFieldTarget.value = '';
+                this.passwordFieldTarget.type = 'password';
             }
+            this._syncPasswordToggle(false);
         }, { once: true });
 
         this.modal.hide();

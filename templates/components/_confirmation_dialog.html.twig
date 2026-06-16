@@ -5,7 +5,10 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white" data-confirmation-dialog-target="header">
-                <h5 class="modal-title" id="confirmation-dialog-title" data-confirmation-dialog-target="title">Confirmation requise</h5>
+                <h5 class="modal-title d-flex align-items-center" id="confirmation-dialog-title">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:delete') }}" class="me-2 flex-shrink-0" style="width: 22px; height: 22px;" />
+                    <span data-confirmation-dialog-target="title">Confirmation requise</span>
+                </h5>
                 <button type="button" class="btn-close btn-close-white" aria-label="Fermer" data-action="click->confirmation-dialog#close"></button>
             </div>
             <div class="dialog-progress-container" data-confirmation-dialog-target="progressBarContainer"
@@ -33,10 +36,23 @@
             {# Confirmation forte par mot de passe : affiché uniquement quand l'action confirmée l'exige (ex. suppression définitive d'une entreprise). #}
             <div class="modal-body pt-1" data-confirmation-dialog-target="passwordContainer" style="display: none;">
                 <label for="confirmation-dialog-password" class="form-label small fw-semibold mb-1">Saisissez votre mot de passe pour confirmer</label>
-                <input type="password" class="form-control" id="confirmation-dialog-password"
-                       data-confirmation-dialog-target="passwordField"
-                       autocomplete="current-password"
-                       data-action="keydown.enter->confirmation-dialog#confirm">
+                <div class="dialog-password-field">
+                    <span class="dialog-password-icon" aria-hidden="true">
+                        <twig:UX:Icon name="{{ resolve_icon_name('action:password') }}" />
+                    </span>
+                    <input type="password" class="form-control" id="confirmation-dialog-password"
+                           data-confirmation-dialog-target="passwordField"
+                           autocomplete="current-password"
+                           placeholder="Votre mot de passe…"
+                           data-action="keydown.enter->confirmation-dialog#confirm">
+                    <button type="button" class="dialog-password-toggle" tabindex="-1"
+                            data-confirmation-dialog-target="passwordToggle"
+                            data-action="click->confirmation-dialog#togglePassword"
+                            aria-label="Afficher le mot de passe" aria-pressed="false">
+                        <twig:UX:Icon name="{{ resolve_icon_name('action:view') }}" data-role="icon-show" />
+                        <twig:UX:Icon name="{{ resolve_icon_name('action:hide') }}" data-role="icon-hide" style="display: none;" />
+                    </button>
+                </div>
             </div>
             <div class="modal-footer">
                 {# AJOUT: Conteneur pour les messages d'erreur #}

@@ -19,27 +19,32 @@ export default class extends Controller {
         console.log(this.nomControleur + " - Show", event.detail);
         const { text, type = 'info' } = event.detail;
 
-        // Map pour associer un type à une classe Bootstrap et une icône
+        // Map pour associer un type à une couleur (contextuelle), une icône et
+        // un titre d'en-tête. La structure (en-tête + corps) est commune à tous
+        // les toasts (cf. .jsb-toast) ; seule la COULEUR varie selon le type.
         const options = {
-            success: { bg: 'bg-success', text: 'text-white', icon: '✅' },
-            error: { bg: 'bg-danger', text: 'text-white', icon: '❌' },
-            info: { bg: 'bg-info', text: 'text-dark', icon: 'ℹ️' },
-            warning: { bg: 'bg-warning', text: 'text-dark', icon: '⚠️' }
+            success: { bg: 'bg-success', text: 'text-white', icon: '✅', title: 'Succès' },
+            error: { bg: 'bg-danger', text: 'text-white', icon: '❌', title: 'Erreur' },
+            info: { bg: 'bg-info', text: 'text-dark', icon: 'ℹ️', title: 'Information' },
+            warning: { bg: 'bg-warning', text: 'text-dark', icon: '⚠️', title: 'Avertissement' }
         };
 
-        const config = options[type];
+        const config = options[type] || options.info;
 
         // Détermine la classe du bouton de fermeture en fonction du fond
         const closeButtonClass = (config.text === 'text-white') ? 'btn-close-white' : '';
 
-        // Création dynamique de l'HTML du toast
+        // Création dynamique de l'HTML du toast — même structure que le toast
+        // « Paramètres de l'espace de travail » : en-tête (icône + titre) + corps.
         const toastHTML = `
-            <div class="toast align-items-center ${config.bg} ${config.text} bg-opacity-75 border border-secondary p-2 m-1" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="d-flex">
-                    <div class="toast-body">
-                        ${config.icon} ${text}
-                    </div>
-                    <button type="button" class="btn-close ${closeButtonClass} me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            <div class="toast jsb-toast ${config.bg} ${config.text} bg-opacity-75" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-header">
+                    <span aria-hidden="true">${config.icon}</span>
+                    <strong class="ms-2 me-auto">${config.title}</strong>
+                    <button type="button" class="btn-close ${closeButtonClass}" data-bs-dismiss="toast" aria-label="Fermer"></button>
+                </div>
+                <div class="toast-body">
+                    ${text}
                 </div>
             </div>
         `;
