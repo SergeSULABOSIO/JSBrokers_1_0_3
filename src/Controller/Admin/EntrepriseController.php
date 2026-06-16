@@ -174,7 +174,9 @@ class EntrepriseController extends AbstractController
             $this->addFlash("error", $this->translator->trans("entreprise_form_error"));
         }
         return $this->render('admin/entreprise/edit.html.twig', [
-            'pageName' => $this->translator->trans("entreprise_page_name_edition"),
+            'pageName' => $this->translator->trans("entreprise_page_name_edition", [
+                ':company' => $entreprise->getNom(),
+            ]),
             'utilisateur' => $user,
             'entreprise' => $entreprise,
             'nbEntreprises' => $this->entrepriseRepository->getNBEntreprises(),
