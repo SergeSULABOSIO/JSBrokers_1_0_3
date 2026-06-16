@@ -8,6 +8,7 @@ use App\Entity\Utilisateur;
 use App\Form\EntrepriseType;
 use App\Services\ServiceGeographie;
 use App\Services\ServiceInitialisationEntreprise;
+use App\Services\ServiceSuppressionEntreprise;
 use App\Repository\InviteRepository;
 use App\Message\EntreprisePDFMessage;
 use App\Repository\EntrepriseRepository;
@@ -20,6 +21,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 #[Route("/admin/entreprise", name: 'admin.entreprise.')]
@@ -33,6 +35,8 @@ class EntrepriseController extends AbstractController
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
         private ServiceInitialisationEntreprise $serviceInitialisation,
+        private ServiceSuppressionEntreprise $serviceSuppression,
+        private UserPasswordHasherInterface $passwordHasher,
     ) {}
 
     /**
@@ -192,13 +196,24 @@ class EntrepriseController extends AbstractController
 
         $this->denyUnlessOwner($entreprise);
 
-        $entreprise->removeConnectedUser($user);
-        $this->manager->persist($entreprise);
+        // Confirmation forte : la suppression étant TOTALE et irréversible (toutes les
+        // données opérationnelles + les fichiers du serveur sont détruits), on exige le
+        // mot de passe du propriétaire saisi dans la boîte de dialogue de confirmation.
+        $motDePasse = (string) $request->request->get('password', '');
+        if ($motDePasse === '' || !$this->passwordHasher->isPasswordValid($user, $motDePasse)) {
+            $this->addFlash("error", $this->translator->trans("entreprise_delete_bad_password"));
 
-        $this->manager->remove($entreprise);
-        $this->manager->flush();
+            return $this->redirectToRoute("admin.entreprise.index");
+        }
+
+        // Le nom est lu avant la purge : l'entité ne sera plus exploitable ensuite.
+        $nom = $entreprise->getNom();
+
+        // Destruction inconditionnelle : données scopées, fichiers uploadés, entreprise.
+        $this->serviceSuppression->supprimer($entreprise);
+
         $this->addFlash("success", $this->translator->trans("entreprise_deleted_ok", [
-            ':company' => $entreprise->getNom(),
+            ':company' => $nom,
         ]));
 
         return $this->redirectToRoute("admin.entreprise.index");

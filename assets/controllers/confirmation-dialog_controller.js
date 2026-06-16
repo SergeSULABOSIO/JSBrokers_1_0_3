@@ -19,7 +19,9 @@ export default class extends Controller {
         "header",
         "irreversibleAlert",
         "itemDetailsContainer",
-        "itemList"
+        "itemList",
+        "passwordContainer",
+        "passwordField"
     ];
 
     connect() {
@@ -78,10 +80,19 @@ export default class extends Controller {
      * @param {object} payload.onConfirm - L'action à notifier au Cerveau en cas de confirmation.
      */
     open(payload) {
-        const { title, body, onConfirm, itemDescriptions, headerClass, confirmClass, showIrreversible } = payload;
+        const { title, body, onConfirm, itemDescriptions, headerClass, confirmClass, showIrreversible, requirePassword } = payload;
         this.titleTarget.innerHTML = title || 'Confirmation requise';
         this.bodyTarget.innerHTML = body || 'Êtes-vous sûr ?';
         this.onConfirmDetail = onConfirm;
+
+        // Confirmation forte par mot de passe (optionnelle).
+        this.requirePassword = requirePassword === true;
+        if (this.hasPasswordContainerTarget) {
+            this.passwordContainerTarget.style.display = this.requirePassword ? 'block' : 'none';
+        }
+        if (this.hasPasswordFieldTarget) {
+            this.passwordFieldTarget.value = '';
+        }
 
         // Couleur d'en-tête personnalisable (défaut : bg-danger text-white)
         if (this.hasHeaderTarget) {
@@ -159,13 +170,29 @@ export default class extends Controller {
      * @fires cerveau:event
      */
     confirm() {
+        this.feedbackTarget.innerHTML = ''; // Nettoie les anciens messages d'erreur
+
+        // Confirmation forte : un mot de passe non vide est requis avant de continuer.
+        let password;
+        if (this.requirePassword) {
+            password = this.hasPasswordFieldTarget ? this.passwordFieldTarget.value : '';
+            if (!password) {
+                this.feedbackTarget.innerHTML = 'Veuillez saisir votre mot de passe.';
+                if (this.hasPasswordFieldTarget) this.passwordFieldTarget.focus();
+                return;
+            }
+        }
+
         this.toggleLoading(true); // Active le spinner
         this.toggleProgressBar(true);
-        this.feedbackTarget.innerHTML = ''; // Nettoie les anciens messages d'erreur
 
         // Si une action de confirmation a été définie...
         if (this.onConfirmDetail && this.onConfirmDetail.type) {
-            this.notifyCerveau(this.onConfirmDetail.type, this.onConfirmDetail.payload || {});
+            const payload = { ...(this.onConfirmDetail.payload || {}) };
+            if (this.requirePassword) {
+                payload.password = password;
+            }
+            this.notifyCerveau(this.onConfirmDetail.type, payload);
         }
     }
 
@@ -225,6 +252,12 @@ export default class extends Controller {
             if (this.hasItemDetailsContainerTarget) {
                 this.itemDetailsContainerTarget.style.display = 'none';
                 this.itemListTarget.innerHTML = '';
+            }
+            if (this.hasPasswordContainerTarget) {
+                this.passwordContainerTarget.style.display = 'none';
+            }
+            if (this.hasPasswordFieldTarget) {
+                this.passwordFieldTarget.value = '';
             }
         }, { once: true });
 
