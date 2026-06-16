@@ -163,6 +163,19 @@ class ServiceInitialisationEntreprise
             ->setDescription('Frais de gestion, accessoires ou de police.');
         $this->attacher($frais, $entreprise, $proprietaire);
 
+        // Chargements de type taxe : composantes de la prime globale payée par le client.
+        $tvaChargement = (new Chargement())
+            ->setNom('TVA')
+            ->setFonction(Chargement::FONCTION_TAXE)
+            ->setDescription('Taxe sur la valeur ajoutée.');
+        $this->attacher($tvaChargement, $entreprise, $proprietaire);
+
+        $arcaChargement = (new Chargement())
+            ->setNom('ARCA')
+            ->setFonction(Chargement::FONCTION_TAXE)
+            ->setDescription("Frais de surveillance de l'autorité de régulation (ARCA).");
+        $this->attacher($arcaChargement, $entreprise, $proprietaire);
+
         $commOrdinaire = (new TypeRevenu())
             ->setNom('Commission Ordinaire')
             ->setAppliquerPourcentageDuRisque(true)
