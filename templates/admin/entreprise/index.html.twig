@@ -88,15 +88,33 @@
         margin-top: auto; display: flex; align-items: center; justify-content: space-between;
         gap: .5rem; padding: .65rem 1rem; background-color: #f8f9fa; border-top: 1px solid #f0f0f0;
     }
-    /* Action primaire de la carte : icône + libellé alignés, léger relief cobalt */
-    .ent-open-btn {
-        display: inline-flex; align-items: center; gap: .4rem;
-        font-weight: 600; padding-inline: .9rem;
-        box-shadow: 0 1px 2px rgba(0, 71, 171, .25);
-        transition: background-color .15s ease, box-shadow .15s ease, transform .15s ease;
+    /* Pied de carte : indicateur de propriété (remplace les anciens boutons).
+       L'icône + le libellé indiquent le rôle de l'utilisateur ; le survol/focus
+       révèle l'explication détaillée dans une infobulle sombre. */
+    .ent-card-foot { justify-content: flex-start; }
+    .ent-owner-status {
+        position: relative; display: inline-flex; align-items: center; gap: .5rem;
+        font-size: .9rem; font-weight: 600; color: #495057;
+        cursor: help; padding: .2rem .15rem; border-radius: 6px;
     }
-    .ent-open-btn:hover { box-shadow: 0 4px 12px rgba(0, 71, 171, .25); transform: translateY(-1px); }
-    .ent-open-btn:active { transform: translateY(0); }
+    .ent-owner-status .ent-owner-icon { flex: 0 0 auto; color: #6c757d; }
+    /* Le propriétaire est mis en avant par l'accent cobalt de la marque. */
+    .ent-owner-status--owner { color: #0047AB; }
+    .ent-owner-status--owner .ent-owner-icon { color: #0047AB; }
+    .ent-owner-status:focus-visible { outline: 2px solid #0047AB; outline-offset: 2px; }
+
+    /* Infobulle flottante sombre — même pattern que le tableau de bord : élément
+       ajouté au <body> par le contrôleur owner-tip, en position fixe, qui suit
+       la souris. Fond #212529, titre blanc gras, contenu gris clair non gras. */
+    .ent-owner-floating-tip {
+        position: fixed; z-index: 1090; display: none;
+        min-width: 220px; max-width: 280px;
+        background-color: #212529; border-radius: 8px; padding: .65rem .8rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, .35);
+        pointer-events: none; text-align: left;
+    }
+    .ent-owner-tip-title { display: block; color: #ffffff; font-weight: 700; font-size: .85rem; margin-bottom: .25rem; }
+    .ent-owner-tip-body  { display: block; color: #adb5bd; font-weight: 400; font-size: .8rem; line-height: 1.4; }
 
     .ent-actions { display: flex; align-items: center; gap: .25rem; }
     .ent-actions form { margin: 0; }
@@ -107,8 +125,6 @@
     .ent-icon-btn:hover { background-color: #e9ecef; color: #212529; }
     .ent-icon-btn.is-danger:hover { background-color: #f8d7da; color: #dc3545; }
     .ent-icon-btn:focus-visible { outline: 2px solid #0047AB; outline-offset: 2px; }
-
-    .ent-invited { font-style: italic; color: #6c757d; font-size: .85rem; }
 
     /* État vide */
     .ent-empty {
@@ -129,7 +145,7 @@
 {% endblock %}
 
 {% block body %}
-<main class="ent-page" data-controller="top-progress">
+<main class="ent-page" data-controller="top-progress entreprise-context-menu">
 
     {# Barre de progression globale (pattern espace de travail) #}
     <div class="ent-progress-bar" data-top-progress-target="bar"
@@ -154,10 +170,10 @@
                     {{ ux_icon(resolve_icon_name('action:add'), {height: '18px', width: '18px'}) }}
                     <span class="ms-1">{{ "boutons_user_new_company" | trans }}</span>
                 </a>
-                <a href="{{ path('app_logout') }}" class="btn btn-sm btn-outline-danger"
-                   data-action="click->top-progress#show">
+                <a href="{{ path('app_logout') }}" class="btn btn-sm btn-outline-danger border-0"
+                   data-action="click->top-progress#show"
+                   title="{{ "boutons_user_logout" | trans }}" aria-label="{{ "boutons_user_logout" | trans }}">
                     {{ ux_icon(resolve_icon_name('action:exit'), {height: '18px', width: '18px'}) }}
-                    <span class="ms-1">{{ "boutons_user_logout" | trans }}</span>
                 </a>
             </div>
         </div>
@@ -184,7 +200,7 @@
                         {% if inv.utilisateur and inv.utilisateur.id == utilisateur.id %}{% set userInvite = inv %}{% endif %}
                     {% endfor %}
                     {% set dashboardUrl = path('app_espace_de_travail_component.index', {'idInvite': userInvite.id, 'idEntreprise': entreprise.id}) %}
-                    <article class="ent-card">
+                    <article class="ent-card" data-ec-nom="{{ entreprise.nom }}">
                         <a href="{{ dashboardUrl }}" class="ent-card-media"
                            data-action="click->top-progress#show"
                            aria-label="{{ 'Ouvrir le tableau de bord de %s'|format(entreprise.nom) }}">
@@ -231,12 +247,19 @@
 
                         <div class="ent-card-foot">
                             {% if entreprise.utilisateur == utilisateur %}
-                                <a href="{{ dashboardUrl }}" class="btn btn-cobalt btn-sm ent-open-btn"
-                                   data-action="click->top-progress#show">
-                                    {{ ux_icon(resolve_icon_name('action:open'), {height: '18px', width: '18px'}) }}
-                                    <span>{{ "entreprise_open" | trans }}</span>
-                                </a>
-                                <div class="ent-actions">
+                                {# Statut de propriété : l'utilisateur courant a créé cette entreprise.
+                                   Survol/focus → infobulle sombre qui suit la souris (pattern du tableau de bord). #}
+                                <div class="ent-owner-status ent-owner-status--owner" tabindex="0"
+                                     role="note" aria-label="Vous êtes propriétaire de cette entreprise"
+                                     data-controller="owner-tip"
+                                     data-owner-tip-title-value="Propriétaire"
+                                     data-owner-tip-body-value="Vous avez créé cette entreprise : vous disposez de tous les droits, dont la modification de sa fiche et sa suppression définitive. Faites un clic droit sur la carte pour accéder à ces actions.">
+                                    {{ ux_icon(resolve_icon_name('action:role'), {height: '18px', width: '18px', class: 'ent-owner-icon'}) }}
+                                    <span class="ent-owner-text">Vous en êtes le propriétaire</span>
+                                </div>
+                                {# Actions conservées mais masquées : pilotées par le menu contextuel (clic droit).
+                                   Le contrôleur entreprise-context-menu délègue à ces éléments. #}
+                                <div class="ent-actions" style="display:none">
                                     <a class="ent-icon-btn" href="{{ path('admin.entreprise.edit', {'id': entreprise.id}) }}"
                                        data-action="click->top-progress#show"
                                        title="Modifier" aria-label="{{ 'Modifier %s'|format(entreprise.nom) }}">
@@ -246,8 +269,7 @@
                                           data-controller="confirm-action"
                                           data-action="submit->confirm-action#request"
                                           data-confirm-action-title-value="Supprimer l'entreprise"
-                                          data-confirm-action-body-value="<p>Cette entreprise, l'ensemble de ses données opérationnelles et ses fichiers seront <strong>définitivement détruits</strong> du serveur.</p>"
-                                          data-confirm-action-item-value="{{ entreprise.nom }}"
+                                          data-confirm-action-body-value="<p>L'entreprise <strong>{{ entreprise.nom }}</strong>, l'ensemble de ses données opérationnelles et ses fichiers seront <strong>définitivement détruits</strong> du serveur.</p>"
                                           data-confirm-action-irreversible-value="true"
                                           data-confirm-action-require-password-value="true">
                                         <input type="hidden" name="_method" value="DELETE">
@@ -259,9 +281,15 @@
                                     </form>
                                 </div>
                             {% else %}
-                                <span class="ent-invited">
-                                    {{ "entreprise_list_item_invited_by" | trans }}<strong>{{ entreprise.utilisateur.nom }}</strong>
-                                </span>
+                                {# Statut de propriété : l'utilisateur courant a été invité sur cette entreprise. #}
+                                <div class="ent-owner-status ent-owner-status--guest" tabindex="0"
+                                     role="note" aria-label="{{ 'Entreprise détenue par %s, vous y êtes invité'|format(entreprise.utilisateur.nom) }}"
+                                     data-controller="owner-tip"
+                                     data-owner-tip-title-value="Membre invité"
+                                     data-owner-tip-body-value="{{ 'Cette entreprise appartient à %s. Vous y accédez en tant qu\'invité : vous pouvez ouvrir l\'espace de travail, mais ni modifier la fiche ni supprimer l\'entreprise.'|format(entreprise.utilisateur.nom) }}">
+                                    {{ ux_icon(resolve_icon_name('partenaire'), {height: '18px', width: '18px', class: 'ent-owner-icon'}) }}
+                                    <span class="ent-owner-text">Vous y êtes invité</span>
+                                </div>
                             {% endif %}
                         </div>
                     </article>
@@ -287,5 +315,41 @@
         {% endif %}
 
     </div>
+
+    {# ── MENU CONTEXTUEL DES CARTES D'ENTREPRISE (design dark identique au workspace) ── #}
+    {# Le contrôleur entreprise-context-menu n'ouvre ce menu que sur une carte actionnable
+       (entreprise possédée) et délègue aux éléments existants de la carte :
+       Éditer → lien d'édition, Supprimer → soumission du formulaire (confirm-action). #}
+    <nav class="context-menu"
+         data-entreprise-context-menu-target="menu"
+         style="display:none;"
+         tabindex="-1"
+         aria-label="Actions sur l'entreprise"
+         onmousedown="event.stopPropagation()">
+        <ul role="menu" class="list-unstyled mb-0">
+            <li role="menuitem" tabindex="-1" data-menu-key="workspace"
+                data-action="click->entreprise-context-menu#onItemClick">
+                <span class="context-menu-icon" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:open') }}" style="width:16px;height:16px;" />
+                </span>
+                <span class="flex-grow-1">Aller dans l'espace de travail</span>
+            </li>
+            <li role="menuitem" tabindex="-1" data-menu-key="edit"
+                data-action="click->entreprise-context-menu#onItemClick">
+                <span class="context-menu-icon" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:edit') }}" style="width:16px;height:16px;" />
+                </span>
+                <span class="flex-grow-1" data-entreprise-context-menu-target="editLabel">Éditer</span>
+            </li>
+            <li role="separator" class="separator" data-menu-key="sep"></li>
+            <li role="menuitem" tabindex="-1" data-menu-key="delete" class="is-danger"
+                data-action="click->entreprise-context-menu#onItemClick">
+                <span class="context-menu-icon" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:delete') }}" style="width:16px;height:16px;" />
+                </span>
+                <span class="flex-grow-1" data-entreprise-context-menu-target="deleteLabel">Supprimer</span>
+            </li>
+        </ul>
+    </nav>
 </main>
 {% endblock %}
