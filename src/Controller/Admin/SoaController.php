@@ -182,14 +182,25 @@ class SoaController extends AbstractController
             return ['nouveaux' => [], 'aRelancer' => []];
         }
 
-        $catalogue = $this->risqueRepository->findBy(['entreprise' => $entreprise], ['nomComplet' => 'ASC']);
+        // Catalogue strictement issu de la BD, restreint à l'entreprise courante.
+        $catalogue = $this->risqueRepository->findCatalogueForEntreprise($entreprise);
+        if ($catalogue === []) {
+            return ['nouveaux' => [], 'aRelancer' => []];
+        }
+
+        // Ensemble des IDs du catalogue : garde-fou d'isolation par entreprise.
+        $catalogueIds = [];
+        foreach ($catalogue as $risqueCatalogue) {
+            $catalogueIds[$risqueCatalogue->getId()] = true;
+        }
 
         // Statut par risque : 'actif' (couvert ou en négociation) > 'policePerdue' > 'pisteFermee'
         $statuts = [];
         $dernierePisteFermee = []; // risqueId => Piste fermée la plus récente (pour "Editer la piste")
         foreach ($client->getPistes() as $piste) {
             $risque = $piste->getRisque();
-            if ($risque === null) {
+            // On ne calcule un statut que pour les risques réellement persistés sous l'entreprise courante.
+            if ($risque === null || !isset($catalogueIds[$risque->getId()])) {
                 continue;
             }
             $risqueId = $risque->getId();

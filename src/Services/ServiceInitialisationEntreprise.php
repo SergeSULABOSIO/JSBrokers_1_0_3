@@ -227,6 +227,7 @@ class ServiceInitialisationEntreprise
                 ->setNomComplet($data['nom'])
                 ->setBranche((int) $data['branche'])
                 ->setPourcentageCommissionSpecifiqueHT((float) $data['commission'])
+                ->setDescription($data['description'] ?? null)
                 ->setImposable(true);
             $this->attacher($risque, $entreprise, $proprietaire);
         }
@@ -260,7 +261,7 @@ class ServiceInitialisationEntreprise
     }
 
     /**
-     * @return array<int, array{code: string, nom: string, branche: int, commission: float}>
+     * @return array<int, array{code: string, nom: string, branche: int, commission: float, description?: string}>
      */
     private function chargerRisquesDefaut(): array
     {

@@ -22,12 +22,16 @@
 	>
 		{# Conteneur pour le corps de la page #}
 		{% block body %}{% endblock %}
-		{# Conteneur pour les notifications (toasts) #}
-		<div 
-			aria-live="polite" 
-			aria-atomic="true" 
-			class="position-fixed top-0 end-0 p-3" 
-			style="z-index: 1100"
+		{# Conteneur pour les notifications (toasts).
+		   Décalé sous la barre de titre (jamais en superposition) via --jsb-toast-top
+		   qu'une page peut surcharger selon la hauteur réelle de sa barre.
+		   Les toasts s'empilent verticalement (flex-column), alignés du haut vers
+		   le bas et calés sur le bord droit (align-items-end). #}
+		<div
+			aria-live="polite"
+			aria-atomic="true"
+			class="position-fixed end-0 p-3 d-flex flex-column align-items-end"
+			style="top: var(--jsb-toast-top, 4.5rem); z-index: 1100"
 			data-controller="notification-manager"
 		>
 			{# Les toasts seront injectés ici par Stimulus #}

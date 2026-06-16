@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Risque;
+use App\Entity\Entreprise;
 use Doctrine\Persistence\ManagerRegistry;
 use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -46,6 +47,22 @@ class RisqueRepository extends ServiceEntityRepository
     //            ->getOneOrNullResult()
     //        ;
     //    }
+
+    /**
+     * Catalogue des risques (produits) persistés pour une entreprise donnée.
+     * Source unique de vérité du catalogue : la BD, jamais une liste en dur.
+     *
+     * @return Risque[]
+     */
+    public function findCatalogueForEntreprise(Entreprise $entreprise): array
+    {
+        return $this->createQueryBuilder('r')
+            ->andWhere('r.entreprise = :entreprise')
+            ->setParameter('entreprise', $entreprise)
+            ->orderBy('r.nomComplet', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 
     public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
     {

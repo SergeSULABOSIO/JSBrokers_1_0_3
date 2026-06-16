@@ -1,0 +1,38 @@
+{# ============================================================================
+   Toast permanent « Paramètres de l'espace de travail ».
+   - Non fermable (aucun bouton de fermeture) et sans auto-dismiss : reste
+     affiché tant qu'on est sur le formulaire, disparaît au changement de page.
+   - Le contrôleur Stimulus `workspace-params-toast` CLONE le toast (contenu du
+     <template>) en tête du conteneur global des toasts (notification-manager).
+     Comme les toasts dynamiques y sont ajoutés en `beforeend`, ils s'empilent
+     juste EN DESSOUS, sans superposition.
+   Paramètre attendu : `message` (HTML autorisé).
+   ============================================================================ #}
+<style>
+    /* Couleur SEULE du toast permanent (la structure vient de .jsb-toast dans
+       app.css). Fond warning #ffc107 semi-transparent + texte foncé charte
+       (#664d03). Défini ici plutôt que via bg-warning/bg-opacity pour rester
+       visible malgré la cascade de fond de .toast. */
+    .jsb-ws-toast {
+        background-color: rgba(255, 193, 7, .75);
+    }
+    /* Couleur de texte/bordure d'en-tête propres à ce toast (texte foncé). */
+    .jsb-ws-toast .toast-header {
+        color: #664d03;
+        border-bottom-color: rgba(102, 77, 3, .25);
+    }
+</style>
+
+<div class="d-none" data-controller="workspace-params-toast">
+    <template data-workspace-params-toast-target="template">
+        <div class="toast show jsb-toast jsb-ws-toast text-dark" role="note">
+            <div class="toast-header">
+                {{ ux_icon('mdi:information-outline', {height: '20px', width: '20px'}) }}
+                <strong class="ms-2 me-auto">Paramètres de l'espace de travail</strong>
+            </div>
+            <div class="toast-body">
+                {{ message|raw }}
+            </div>
+        </div>
+    </template>
+</div>
