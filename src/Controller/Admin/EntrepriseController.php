@@ -6,11 +6,13 @@ use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Utilisateur;
 use App\Form\EntrepriseType;
+use App\Services\ServiceGeographie;
 use App\Repository\InviteRepository;
 use App\Message\EntreprisePDFMessage;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -124,6 +126,21 @@ class EntrepriseController extends AbstractController
         ]);
     }
 
+
+    /**
+     * Renvoie, pour un code pays (ISO 3166-1 numérique), la liste de ses grandes
+     * villes et son code monnaie. Consommé par le contrôleur Stimulus
+     * `pays-dependances` pour remplir dynamiquement le champ « Ville » et
+     * mettre à jour la devise affichée du « Capital social ».
+     */
+    #[Route('/api/villes/{codePays}', name: 'api.villes', requirements: ['codePays' => Requirement::DIGITS], methods: ['GET'])]
+    public function apiVilles(int $codePays, ServiceGeographie $serviceGeographie): JsonResponse
+    {
+        return $this->json([
+            'villes' => $serviceGeographie->getVilles($codePays),
+            'monnaie' => $serviceGeographie->getMonnaie($codePays),
+        ]);
+    }
 
     #[Route('/{id}', name: 'edit', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function edit(Entreprise $entreprise, Request $request)
