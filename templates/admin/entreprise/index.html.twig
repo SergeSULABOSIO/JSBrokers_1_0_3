@@ -199,7 +199,9 @@
                             </h2>
                             <p class="ent-card-address">
                                 {{ ux_icon('mdi:address-marker-outline', {height: '16px', width: '16px'}) }}
-                                {{ entreprise.adresse }}
+                                {% set ville = nom_ville(entreprise.ville) %}
+                                {% set pays = nom_pays(entreprise.pays) %}
+                                {{ [entreprise.adresse, ville, pays]|filter(v => v)|join(', ') }}
                             </p>
 
                             <ul class="ent-info">
@@ -223,13 +225,6 @@
                                         {{ "entreprise_list_item_createdat" | trans }}
                                     </span>
                                     <strong>{{ entreprise.createdAt | format_datetime("medium", "short", locale: app.user.locale) }}</strong>
-                                </li>
-                                <li>
-                                    <span class="ent-info-label">
-                                        {{ ux_icon('ic:twotone-date-range', {height: '16px', width: '16px'}) }}
-                                        {{ "entreprise_list_item_updatedat" | trans }}
-                                    </span>
-                                    <strong>{{ entreprise.updatedAt | format_datetime("medium", "short", locale: app.user.locale) }}</strong>
                                 </li>
                             </ul>
                         </div>
