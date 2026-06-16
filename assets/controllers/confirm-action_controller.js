@@ -31,6 +31,7 @@ export default class extends Controller {
         body: { type: String, default: 'Voulez-vous vraiment continuer ?' },
         item: String,
         irreversible: Boolean,
+        requirePassword: Boolean,
     };
 
     connect() {
@@ -52,6 +53,7 @@ export default class extends Controller {
                 body: this.bodyValue,
                 itemDescriptions: this.itemValue ? [this.itemValue] : [],
                 showIrreversible: this.irreversibleValue,
+                requirePassword: this.requirePasswordValue,
                 onConfirm: { type: this.confirmType, payload: {} },
             },
         }));
@@ -60,6 +62,19 @@ export default class extends Controller {
     onCerveau(event) {
         if (event.detail?.type !== this.confirmType) {
             return;
+        }
+        // Si une confirmation par mot de passe a été exigée, on transporte le mot de
+        // passe saisi dans la modale jusqu'au serveur via un champ caché du formulaire.
+        if (this.requirePasswordValue) {
+            const password = event.detail?.payload?.password ?? '';
+            let input = this.element.querySelector('input[type="hidden"][name="password"]');
+            if (!input) {
+                input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'password';
+                this.element.appendChild(input);
+            }
+            input.value = password;
         }
         // Confirmé : soumission réelle (navigation pleine page, le dialogue disparaît avec).
         this.element.submit();

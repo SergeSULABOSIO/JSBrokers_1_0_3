@@ -149,6 +149,7 @@ entreprise_empty_help: "Créez votre première entreprise pour accéder à son e
 entreprise_edited_ok: ":company a été modifiée avec succès."
 entreprise_form_error: "Le formulaire contient des erreurs. Merci de vérifier les champs signalés."
 entreprise_deleted_ok: ":company a été supprimée avec succès."
+entreprise_delete_bad_password: "Mot de passe incorrect. La suppression a été annulée ; aucune donnée n'a été détruite."
 entreprise_bouton_new_invite: "Nouvel Invité"
 entreprise_bouton_new_monnaie: "Nouvelle Monnaie"
 entreprise_bouton_new_lead: "Une nouvelle piste"

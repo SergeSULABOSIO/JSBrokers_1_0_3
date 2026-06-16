@@ -246,9 +246,10 @@
                                           data-controller="confirm-action"
                                           data-action="submit->confirm-action#request"
                                           data-confirm-action-title-value="Supprimer l'entreprise"
-                                          data-confirm-action-body-value="<p>Cette entreprise et l'ensemble de ses données seront <strong>définitivement supprimées</strong>.</p>"
+                                          data-confirm-action-body-value="<p>Cette entreprise, l'ensemble de ses données opérationnelles et ses fichiers seront <strong>définitivement détruits</strong> du serveur.</p>"
                                           data-confirm-action-item-value="{{ entreprise.nom }}"
-                                          data-confirm-action-irreversible-value="true">
+                                          data-confirm-action-irreversible-value="true"
+                                          data-confirm-action-require-password-value="true">
                                         <input type="hidden" name="_method" value="DELETE">
                                         <input type="hidden" name="_token" value="{{ csrf_token('delete-entreprise-' ~ entreprise.id) }}">
                                         <button type="submit" class="ent-icon-btn is-danger"

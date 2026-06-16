@@ -30,6 +30,14 @@
                     </div>
                 </div>
             </div>
+            {# Confirmation forte par mot de passe : affiché uniquement quand l'action confirmée l'exige (ex. suppression définitive d'une entreprise). #}
+            <div class="modal-body pt-1" data-confirmation-dialog-target="passwordContainer" style="display: none;">
+                <label for="confirmation-dialog-password" class="form-label small fw-semibold mb-1">Saisissez votre mot de passe pour confirmer</label>
+                <input type="password" class="form-control" id="confirmation-dialog-password"
+                       data-confirmation-dialog-target="passwordField"
+                       autocomplete="current-password"
+                       data-action="keydown.enter->confirmation-dialog#confirm">
+            </div>
             <div class="modal-footer">
                 {# AJOUT: Conteneur pour les messages d'erreur #}
                 <div class="feedback-container w-100 text-danger mb-2" data-confirmation-dialog-target="feedback"></div>
