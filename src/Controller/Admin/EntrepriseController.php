@@ -7,6 +7,7 @@ use App\Entity\Invite;
 use App\Entity\Utilisateur;
 use App\Form\EntrepriseType;
 use App\Services\ServiceGeographie;
+use App\Services\ServiceInitialisationEntreprise;
 use App\Repository\InviteRepository;
 use App\Message\EntreprisePDFMessage;
 use App\Repository\EntrepriseRepository;
@@ -31,6 +32,7 @@ class EntrepriseController extends AbstractController
         private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
+        private ServiceInitialisationEntreprise $serviceInitialisation,
     ) {}
 
     /**
@@ -101,11 +103,16 @@ class EntrepriseController extends AbstractController
             $proprietaire->setUtilisateur($user); // On lie directement l'objet Utilisateur
             $proprietaire->setEntreprise($entreprise);
             $proprietaire->setProprietaire(true);
-            
+
             $this->manager->persist($proprietaire);
 
-            // L'AuditableTrait sur Entreprise a besoin de l'invité créateur. 
+            // L'AuditableTrait sur Entreprise a besoin de l'invité créateur.
             // $entreprise->setInvite($proprietaire); // Plus nécessaire
+
+            // Initialisation des paramètres par défaut (monnaies, taxes, chargements,
+            // types de revenu, risques) pour que l'espace de travail soit exploitable
+            // dès la création. Aucun flush interne : un seul flush ci-dessous.
+            $this->serviceInitialisation->initialiser($entreprise, $proprietaire);
 
             $this->manager->flush();
 
