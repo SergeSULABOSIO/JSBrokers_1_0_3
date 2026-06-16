@@ -77,6 +77,7 @@ class EspaceDeTravailComponentController extends AbstractController
             'menu_data' => $processedMenuData,
             'idEntreprise' => $idEntreprise,
             'idInvite' => $idInvite,
+            'entreprise' => $access['entreprise'],
             'entrepriseNom' => $access['entreprise']->getNom(),
             'isEntrepriseAdmin' => $isEntrepriseAdmin,
         ]);
