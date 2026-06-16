@@ -17,9 +17,8 @@
         {{ "boutons_user_new_company" | trans }}
       </a>
     {% endif %}
-    <a href="{{ path('app_logout')}}" type="button" class="btn border-0 btn-outline-danger">
+    <a href="{{ path('app_logout')}}" type="button" class="btn border-0 btn-outline-danger btn-sm" title="{{ "boutons_user_logout" | trans }}" aria-label="{{ "boutons_user_logout" | trans }}">
       {{ ux_icon('hugeicons:logout-04', {height: '18px', width: '18px'}) }}
-      {{ "boutons_user_logout" | trans }}
     </a>
     <a href="{{ path('app_register')}}" type="button" class="btn border-0 btn-outline-secondary">
       {{ ux_icon('material-symbols:settings', {height: '18px', width: '18px'}) }}
