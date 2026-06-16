@@ -172,10 +172,10 @@
             </span>
             <span class="ent-topbar-sep" aria-hidden="true"></span>
             <div class="ent-topbar-actions">
-                <a href="{{ path('app_logout') }}" class="btn btn-sm btn-outline-danger"
-                   data-action="click->top-progress#show">
+                <a href="{{ path('app_logout') }}" class="btn btn-sm btn-outline-danger border-0"
+                   data-action="click->top-progress#show"
+                   title="{{ "boutons_user_logout" | trans }}" aria-label="{{ "boutons_user_logout" | trans }}">
                     {{ ux_icon(resolve_icon_name('action:exit'), {height: '18px', width: '18px'}) }}
-                    <span class="ms-1">{{ "boutons_user_logout" | trans }}</span>
                 </a>
             </div>
         </div>
@@ -256,9 +256,10 @@
                     </div>
                 </fieldset>
 
-                <p class="text-muted">
-                    <small>Les paramètres de l'espace de travail (clients, risques, taxes, comptes, monnaies, partenaires, invités…) se gèrent directement dans l'espace de travail de <strong>{{ entreprise.nom }}</strong>.</small>
-                </p>
+                {# Rappel important transformé en toast permanent (haut à droite, fixe, non fermable). #}
+                {{ include('components/_workspace_params_toast.html.twig', {
+                    message: 'Les paramètres de l\'espace de travail (clients, risques, taxes, comptes, monnaies, partenaires, invités…) se gèrent directement dans l\'espace de travail de <strong>' ~ entreprise.nom ~ '</strong>.'
+                }) }}
 
                 <div class="ent-actions">
                     <a href="{{ path('admin.entreprise.index') }}" class="ent-actions-back"
