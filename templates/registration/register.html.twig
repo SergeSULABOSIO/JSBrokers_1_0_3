@@ -253,7 +253,12 @@
                     {{ ff.field(registrationForm.plainPassword, 'mdi:lock-outline') }}
 
                     <div class="ent-terms">
-                        {{ form_row(registrationForm.agreeTerms) }}
+                        {# Le libellé renvoie vers la page publique des CGU (nouvel onglet) :
+                           l'utilisateur peut lire l'intégralité du contrat avant d'accepter. #}
+                        {{ form_row(registrationForm.agreeTerms, {
+                            label_html: true,
+                            label: 'J\'accepte les <a href="' ~ path('app_terms') ~ '" target="_blank" rel="noopener">conditions et termes d\'utilisation</a>'
+                        }) }}
                     </div>
                 </fieldset>
 

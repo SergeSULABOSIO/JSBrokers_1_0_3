@@ -201,4 +201,12 @@
   </br>
   {# Titre : Pricing Plan #}
   {% include 'segments/pricing_plan.html.twig' %}
+
+  {# Pied de page : accès aux conditions d'utilisation pour tous. #}
+  <footer class="text-center text-secondary border-top mt-5 py-4">
+    <p class="mb-2">{{ "base_base_de_page" | trans }}</p>
+    <a href="{{ path('app_terms') }}" class="text-decoration-none" style="color: #0047AB;">
+      {{ "terms_link" | trans }}
+    </a>
+  </footer>
 {% endblock %}

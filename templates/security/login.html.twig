@@ -157,6 +157,13 @@
                 </p>
             {% endif %}
 
+            {# Accès aux conditions, pour tous (visiteurs comme utilisateurs déjà inscrits). #}
+            <p class="auth__foot">
+                <a href="{{ path('app_terms') }}" data-action="click->top-progress#show">
+                    {{ "terms_link"|trans }}
+                </a>
+            </p>
+
         </section>
     </div>
 </main>
