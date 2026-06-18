@@ -41,6 +41,9 @@ class EmailVerificationSubscriber implements EventSubscriberInterface
         'app_translate',
         'app_index',
         'app_register',
+        // Conditions d'utilisation : page publique, lisible par tous (y compris un
+        // utilisateur connecté mais non encore vérifié) sans rebond vers la re-vérif.
+        'app_terms',
         // Parcours « mot de passe oublié » : accessible même à un utilisateur
         // connecté mais non vérifié (sinon il serait renvoyé en boucle vers la re-vérif).
         'app_forgot_password',

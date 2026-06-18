@@ -68,6 +68,17 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     private ?Entreprise $connectedTo = null;
 
     /**
+     * Version des CGU acceptée par l'utilisateur lors de la création de son compte.
+     * NULL pour les comptes créés avant la mise en place de la traçabilité.
+     */
+    #[ORM\Column(length: 20, nullable: true)]
+    private ?string $cguAcceptedVersion = null;
+
+    /** Date à laquelle l'utilisateur a accepté les CGU. */
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $cguAcceptedAt = null;
+
+    /**
      * @var Collection<int, Invite>
      */
     #[ORM\OneToMany(targetEntity: Invite::class, mappedBy: 'utilisateur', orphanRemoval: true, cascade: ['persist'])]
@@ -235,6 +246,30 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     public function setConnectedTo(?Entreprise $connectedTo): static
     {
         $this->connectedTo = $connectedTo;
+
+        return $this;
+    }
+
+    public function getCguAcceptedVersion(): ?string
+    {
+        return $this->cguAcceptedVersion;
+    }
+
+    public function setCguAcceptedVersion(?string $cguAcceptedVersion): static
+    {
+        $this->cguAcceptedVersion = $cguAcceptedVersion;
+
+        return $this;
+    }
+
+    public function getCguAcceptedAt(): ?\DateTimeImmutable
+    {
+        return $this->cguAcceptedAt;
+    }
+
+    public function setCguAcceptedAt(?\DateTimeImmutable $cguAcceptedAt): static
+    {
+        $this->cguAcceptedAt = $cguAcceptedAt;
 
         return $this;
     }

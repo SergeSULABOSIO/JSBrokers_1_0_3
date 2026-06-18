@@ -1,0 +1,136 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ pageName }} — JS Brokers{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    /* ============================================================
+       Conditions d'utilisation — même pattern que la création de
+       compte / l'édition d'entreprise. Charte : cobalt #0047AB +
+       neutres Bootstrap. Aucune couleur hors charte.
+       ============================================================ */
+    /* L'espace de travail impose globalement `body, html { overflow: hidden }`
+       (interactive-menu.css) ; on rétablit le défilement sur cette page autonome. */
+    html, body { height: auto !important; overflow: auto !important; }
+
+    .cgu-page { min-height: 100vh; display: flex; flex-direction: column; background-color: #f3f3f3; }
+
+    /* Barre applicative — reste visible en haut */
+    .cgu-topbar {
+        flex: 0 0 auto;
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 1rem; padding: .75rem 1.5rem;
+        background-color: #ffffff; border-bottom: 1px solid #dee2e6;
+    }
+    .cgu-brand { display: flex; align-items: center; gap: .6rem; text-decoration: none; }
+    .cgu-brand img { width: 36px; height: 36px; border-radius: 8px; }
+    .cgu-brand span { font-weight: 700; color: #0047AB; font-size: 1.1rem; }
+    .cgu-topbar-actions { display: flex; align-items: center; gap: .5rem; }
+
+    /* Contenu : colonne de lecture confortable */
+    .cgu-content { max-width: 860px; margin: 0 auto; padding: 1.5rem; width: 100%; }
+    .cgu-back-row { display: flex; align-items: center; gap: .4rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .cgu-back { display: inline-flex; align-items: center; gap: .35rem; font-size: .9rem; color: #6c757d; text-decoration: none; }
+    .cgu-back:hover { color: #0047AB; }
+
+    .cgu-head { margin-bottom: 1.25rem; }
+    .cgu-head h1 { display: flex; align-items: center; gap: .55rem; font-size: 1.6rem; font-weight: 700; color: #212529; margin: 0 0 .35rem; }
+    .cgu-head-icon { flex: 0 0 auto; color: #0047AB; }
+    .cgu-meta { color: #6c757d; font-size: .9rem; margin: 0; }
+
+    /* Carte document */
+    .cgu-card {
+        background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 12px;
+        padding: 1.75rem 2rem; box-shadow: 0 4px 16px rgba(0, 71, 171, .06);
+        color: #343a40; line-height: 1.65;
+    }
+    .cgu-intro { color: #495057; margin-bottom: 1.5rem; }
+    .cgu-section { margin-bottom: 1.5rem; }
+    .cgu-section:last-child { margin-bottom: 0; }
+    .cgu-card h2 {
+        font-size: 1.05rem; font-weight: 700; color: #0047AB;
+        margin: 0 0 .6rem; padding-bottom: .35rem; border-bottom: 1px solid #e9ecef;
+    }
+    .cgu-card p { margin: 0 0 .65rem; }
+    .cgu-card ul { margin: 0 0 .65rem; padding-left: 1.25rem; }
+    .cgu-card li { margin-bottom: .35rem; }
+    .cgu-card strong { color: #212529; }
+
+    /* Bascule de langue */
+    .cgu-lang { display: inline-flex; border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; }
+    .cgu-lang a {
+        padding: .35rem .7rem; font-size: .85rem; font-weight: 600;
+        color: #6c757d; text-decoration: none; background-color: #fff;
+    }
+    .cgu-lang a + a { border-left: 1px solid #dee2e6; }
+    .cgu-lang a.is-active { background-color: #0047AB; color: #fff; }
+
+    @media (max-width: 575.98px) {
+        .cgu-card { padding: 1.25rem; }
+    }
+
+    /* Impression : on ne garde que le document. */
+    @media print {
+        .cgu-topbar, .cgu-back-row, .cgu-no-print { display: none !important; }
+        .cgu-page { background: #fff; }
+        .cgu-card { border: none; box-shadow: none; padding: 0; }
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+{% set isEn = (lang == 'en') %}
+{% set backHref = app.user is not null ? path('admin.entreprise.index') : path('app_login') %}
+
+<main class="cgu-page">
+
+    {# Barre applicative #}
+    <header class="cgu-topbar">
+        <a href="{{ backHref }}" class="cgu-brand">
+            <img src="{{ asset('images/entreprises/logofav.png') }}" alt="">
+            <span>JS Brokers</span>
+        </a>
+        <div class="cgu-topbar-actions cgu-no-print">
+            {# Bascule de langue : auto-suffisante via ?lang= (fonctionne hors session). #}
+            <span class="cgu-lang" role="group" aria-label="{{ isEn ? 'Language' : 'Langue' }}">
+                <a href="{{ path('app_terms', {'lang': 'fr'}) }}" class="{{ isEn ? '' : 'is-active' }}" {{ isEn ? '' : 'aria-current="true"' }}>FR</a>
+                <a href="{{ path('app_terms', {'lang': 'en'}) }}" class="{{ isEn ? 'is-active' : '' }}" {{ isEn ? 'aria-current="true"' : '' }}>EN</a>
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center"
+                    onclick="window.print()">
+                {{ ux_icon(resolve_icon_name('mdi:printer-outline'), {height: '18px', width: '18px'}) }}
+                <span class="ms-1">{{ isEn ? 'Print' : 'Imprimer' }}</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="cgu-content">
+
+        <div class="cgu-back-row">
+            <a href="{{ backHref }}" class="cgu-back">
+                {{ ux_icon(resolve_icon_name('hugeicons:arrow-left-01'), {height: '18px', width: '18px'}) }}
+                {{ app.user is not null
+                    ? (isEn ? 'Back to my workspace' : 'Retour à mon espace')
+                    : (isEn ? 'Back to sign in' : 'Retour à la connexion') }}
+            </a>
+        </div>
+
+        <div class="cgu-head">
+            <h1>
+                {{ ux_icon(resolve_icon_name('mdi:file-document-outline'), {height: '28px', width: '28px', class: 'cgu-head-icon'}) }}
+                {{ pageName }}
+            </h1>
+            <p class="cgu-meta">
+                {{ isEn ? 'Version' : 'Version' }} {{ cguVersion }} —
+                {{ isEn ? 'last updated on' : 'dernière mise à jour le' }}
+                {{ cguDate|date(isEn ? 'F j, Y' : 'd/m/Y') }}
+            </p>
+        </div>
+
+        <article class="cgu-card">
+            {% include 'legal/_cgu_' ~ (lang|default('fr')) ~ '.html.twig' %}
+        </article>
+    </div>
+</main>
+{% endblock %}

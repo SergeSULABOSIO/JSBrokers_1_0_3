@@ -14,6 +14,7 @@ namespace App\Controller;
 
 use App\Entity\Utilisateur;
 use App\Form\RegistrationFormType;
+use App\Legal\Cgu;
 use App\Security\EmailVerifier;
 use App\Repository\UtilisateurRepository;
 use App\Services\InvitationLinker;
@@ -67,6 +68,13 @@ class RegistrationController extends AbstractController
             $plainPassword = $form->get('plainPassword')->getData();
             if ($plainPassword) {
                 $user->setPassword($userPasswordHasher->hashPassword($user, $plainPassword));
+            }
+
+            // Création de compte : on conserve la preuve d'acceptation des CGU
+            // (version acceptée + date). En édition de profil, on n'y touche pas.
+            if (!$isEditMode) {
+                $user->setCguAcceptedVersion(Cgu::VERSION);
+                $user->setCguAcceptedAt(new \DateTimeImmutable());
             }
 
             $entityManager->persist($user);

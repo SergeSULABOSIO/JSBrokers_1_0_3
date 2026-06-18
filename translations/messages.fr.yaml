@@ -18,6 +18,9 @@ base_mon_espace: 'Mon espace'
 base_connexion: 'Connexion'
 base_ma_licence: 'Licence'
 base_base_de_page: "JS Brokers. Votre performance est notre priorité."
+
+# Conditions et termes d'utilisation
+terms_link: "Conditions et termes d'utilisation"
 base_my_account_parameters: "Mes Paramètres"
 boutons_user_parametres: "Mes Paramètres"
 boutons_user_logout: "Déconnexion"
