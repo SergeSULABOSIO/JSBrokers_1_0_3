@@ -108,12 +108,19 @@
 
         {# COLONNE 2 : Rubriques & Descriptions #}
         <div class="menu-col-2">
-            {# Ligne 1: Marque JS Brokers #}
+            {# Ligne 1: Marque JS Brokers — version compacte pour laisser de la place aux rubriques #}
             <div class="menu-col-2-row-1">
-                <img src="{{ asset(menu.colonne_2.logo) }}" alt="Logo" class="company-logo">
-                <h2 class="company-title">{{ menu.colonne_2.titre }}</h2>
+                <div class="company-brand">
+                    <img src="{{ asset(menu.colonne_2.logo) }}" alt="Logo" class="company-logo">
+                    <h2 class="company-title">{{ menu.colonne_2.titre }}</h2>
+                </div>
                 <p class="company-description">{{ menu.colonne_2.description }}</p>
-                <span class="company-version">Version {{ menu.colonne_2.version }}</span>
+                {# La version affichée est celle des conditions et termes d'utilisation (source : App\Legal\Cgu),
+                   et non plus la version applicative. Le lien ouvre les CGU. #}
+                <a class="company-version" href="{{ path('app_terms') }}" target="_blank" rel="noopener"
+                   title="Lire les conditions et termes d'utilisation">
+                    Version {{ constant('App\\Legal\\Cgu::VERSION') }} — dernière mise à jour le {{ constant('App\\Legal\\Cgu::DATE')|date('d/m/Y') }}
+                </a>
             </div>
             {# Carte d'identité de l'entreprise courante #}
             {% if entreprise is defined and entreprise %}
