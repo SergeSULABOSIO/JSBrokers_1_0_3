@@ -30,10 +30,12 @@ class RegistrationFormType extends AbstractType
     {
         $builder
             ->add('nom', TextType::class, [
-                'label' => "Nom complet"
+                'label' => "Nom complet",
+                'attr' => ['placeholder' => 'Ex. : Marie Dupont'],
             ])
             ->add('email', TextType::class, [
-                'label' => "Adresse mail"
+                'label' => "Adresse mail",
+                'attr' => ['placeholder' => 'vous@exemple.com'],
             ])
             ->add('locale', ChoiceType::class, [
                 'label' => "Langue",
@@ -46,7 +48,10 @@ class RegistrationFormType extends AbstractType
                 // this is read and encoded in the controller
                 'mapped' => false,
                 'toggle' => true,
-                'attr' => ['autocomplete' => 'new-password'],
+                'attr' => [
+                    'autocomplete' => 'new-password',
+                    'placeholder' => 'Au moins 4 caractères',
+                ],
                 'constraints' => [
                     new NotBlank([
                         'message' => 'Prière de fournir le mot de passe.',

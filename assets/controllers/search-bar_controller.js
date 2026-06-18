@@ -35,6 +35,18 @@ export default class extends BaseController {
         document.removeEventListener('app:context.changed', this.boundHandleContextChanged);
     }
 
+    /**
+     * Retire l'attribut `readonly` du champ de recherche dès que l'utilisateur lui donne
+     * le focus. Le champ est rendu `readonly` côté serveur pour empêcher l'autofill du
+     * navigateur (qui ignore autocomplete="off" et y injecte l'email de connexion) ;
+     * on le rend éditable uniquement quand l'utilisateur veut réellement saisir.
+     */
+    enableEditing() {
+        if (this.hasSimpleSearchInputTarget && this.simpleSearchInputTarget.hasAttribute('readonly')) {
+            this.simpleSearchInputTarget.removeAttribute('readonly');
+        }
+    }
+
     openAdvancedSearch() {
         // On construit le formulaire avancé en se basant sur les critères actuels pour le pré-remplissage.
         const formHtml = this.buildAdvancedForm(this.currentCriteria);
@@ -212,6 +224,15 @@ export default class extends BaseController {
 
     submitSimpleSearch(event) {
         event.preventDefault();
+
+        // Garde anti-déclenchement parasite : on ne lance la recherche que si le champ
+        // de recherche a réellement le focus (= vraie frappe clavier de l'utilisateur).
+        // Bloque les faux « Enter » injectés par l'autofill du navigateur ou un gestionnaire
+        // de mots de passe lors du premier geste utilisateur (clic sur une ligne), qui
+        // déclenchaient une recherche/recharge complète non désirée de la liste.
+        if (document.activeElement !== this.simpleSearchInputTarget) {
+            return;
+        }
 
         const inputValue = this.simpleSearchInputTarget.value.trim();
         const criterionName = this.simpleSearchCriterionTarget.value;

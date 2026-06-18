@@ -145,8 +145,9 @@
                             </div>
                         {% endif %}
                         {% if entreprise.capitalSociale is not null %}
+                            {% set monnaie_capital = monnaie_pays(entreprise.pays)|default(display_currency_code()) %}
                             <div class="company-card-line">
-                                <dt>Capital social</dt><dd>{{ entreprise.capitalSociale|number_format(2, ',', ' ') }} {{ display_currency_code() }}</dd>
+                                <dt>Capital social</dt><dd>{{ entreprise.capitalSociale|number_format(2, ',', ' ') }} {{ monnaie_capital }}</dd>
                             </div>
                         {% endif %}
                     </dl>

@@ -20,7 +20,19 @@ class GeographieExtension extends AbstractExtension
         return [
             new TwigFunction('nom_pays', [$this, 'getNomPays']),
             new TwigFunction('nom_ville', [$this, 'getNomVille']),
+            new TwigFunction('monnaie_pays', [$this, 'getMonnaiePays']),
         ];
+    }
+
+    /**
+     * Code monnaie (ISO 4217) local du pays. C'est la monnaie dans laquelle est
+     * toujours saisi le capital social (cf. EntrepriseType, qui dérive la monnaie
+     * du MoneyType du pays). À utiliser pour afficher le capital social, et non la
+     * monnaie d'affichage du workspace.
+     */
+    public function getMonnaiePays(?int $codePays): ?string
+    {
+        return $codePays !== null ? $this->serviceGeographie->getMonnaie($codePays) : null;
     }
 
     public function getNomPays(?int $codePays): ?string

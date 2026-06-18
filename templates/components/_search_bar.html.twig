@@ -11,13 +11,29 @@
             <twig:ux:icon name="{{ resolve_icon_name('lucide:search') }}" />
         </span>
 
+        {#
+            readonly + focus->enableEditing : technique anti-autofill robuste.
+            Chrome ignore souvent autocomplete="off" et injecte l'email de connexion ;
+            en revanche il n'autofill JAMAIS un champ readonly. On retire readonly au
+            focus pour permettre la saisie normale. Les autres attributs neutralisent
+            les gestionnaires de mots de passe (LastPass / 1Password).
+        #}
         <input
-            type="text"
+            type="search"
             class="jsb-search-bar__input"
             aria-label="Rechercher dans la liste"
             data-search-bar-target="simpleSearchInput"
-            data-action="keydown.enter->search-bar#submitSimpleSearch"
+            data-action="keydown.enter->search-bar#submitSimpleSearch focus->search-bar#enableEditing"
             placeholder="Rechercher..."
+            name="jsb-recherche"
+            readonly
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+            data-lpignore="true"
+            data-1p-ignore
+            data-form-type="other"
         >
 
         <span class="jsb-search-bar__divider" aria-hidden="true"></span>

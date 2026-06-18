@@ -113,8 +113,26 @@ trait ControllerUtilsTrait
         if (!$user) {
             throw $this->createAccessDeniedException("Utilisateur non authentifié.");
         }
+
+        // L'entreprise active est celle du workspace courant (connectedTo), synchronisée à chaque
+        // entrée de workspace par EspaceDeTravailComponentController. Un utilisateur peut posséder
+        // plusieurs Invite (un par entreprise) : sans ce filtre, findOneBy renverrait un invité
+        // arbitraire, souvent celui d'une entreprise déjà quittée — ce qui faussait notamment le SOA.
+        $criteria = ['utilisateur' => $user];
+        $connectedTo = $user->getConnectedTo();
+        if ($connectedTo !== null) {
+            $criteria['entreprise'] = $connectedTo;
+        }
+
         /** @var Invite $invite */
-        $invite = $this->inviteRepository->findOneBy(['utilisateur' => $user]);
+        $invite = $this->inviteRepository->findOneBy($criteria);
+
+        // Filet de sécurité : si aucun invité ne correspond à l'entreprise connectée (données
+        // incohérentes), on retombe sur l'ancien comportement pour ne pas casser l'accès.
+        if (!$invite && $connectedTo !== null) {
+            $invite = $this->inviteRepository->findOneBy(['utilisateur' => $user]);
+        }
+
         if (!$invite) {
             throw $this->createNotFoundException("Aucun invité trouvé pour l'utilisateur actuel.");
         }

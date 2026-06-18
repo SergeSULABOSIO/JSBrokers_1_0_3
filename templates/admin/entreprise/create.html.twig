@@ -169,10 +169,10 @@
             </span>
             <span class="ent-topbar-sep" aria-hidden="true"></span>
             <div class="ent-topbar-actions">
-                <a href="{{ path('app_logout') }}" class="btn btn-sm btn-outline-danger"
-                   data-action="click->top-progress#show">
+                <a href="{{ path('app_logout') }}" class="btn btn-sm btn-outline-danger border-0"
+                   data-action="click->top-progress#show"
+                   title="{{ "boutons_user_logout" | trans }}" aria-label="{{ "boutons_user_logout" | trans }}">
                     {{ ux_icon(resolve_icon_name('action:exit'), {height: '18px', width: '18px'}) }}
-                    <span class="ms-1">{{ "boutons_user_logout" | trans }}</span>
                 </a>
             </div>
         </div>

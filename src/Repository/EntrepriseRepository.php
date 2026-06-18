@@ -69,23 +69,22 @@ class EntrepriseRepository extends ServiceEntityRepository
     }
 
 
+    /**
+     * Nombre d'entreprises visibles par l'utilisateur courant : celles qu'il possède
+     * ET celles auxquelles il est invité (invitation rattachée à son compte).
+     */
     public function getNBEntreprises(): int
     {
         /** @var Utilisateur $user */
         $user = $this->security->getUser();
-        $userId = $user->getId();
 
-        return count(
-            $this->createQueryBuilder("e")
-                // ->leftJoin("e.invites", "i")
-                ->where('e.utilisateur = :userId')
-                // ->orWhere("i.email = :userEmail")
-                ->setParameter('userId', '' . $userId . '')
-                // ->setParameter('userEmail', '' . $user->getEmail() . '')
-                ->orderBy('e.id', 'DESC')
-                ->getQuery()
-                ->getResult()
-        );
+        return (int) $this->createQueryBuilder('e')
+            ->select('COUNT(DISTINCT e.id)')
+            ->where('e.utilisateur = :uid')
+            ->orWhere('EXISTS (SELECT 1 FROM App\Entity\Invite i WHERE i.entreprise = e AND i.utilisateur = :uid)')
+            ->setParameter('uid', $user->getId())
+            ->getQuery()
+            ->getSingleScalarResult();
     }
 
     public function getNBMyProperEntreprises(): int
@@ -102,12 +101,18 @@ class EntrepriseRepository extends ServiceEntityRepository
         );
     }
 
+    /**
+     * Liste paginée des entreprises visibles par l'utilisateur : celles qu'il possède
+     * ET celles auxquelles il est invité (invitation rattachée à son compte). La
+     * sous-requête EXISTS évite toute duplication de lignes due à une jointure.
+     */
     public function paginateUtilisateur(int $idUtilisateur, int $page): PaginationInterface
     {
         return $this->paginator->paginate(
             $this->createQueryBuilder("e")
-                ->where('e.utilisateur = :utilisateurId')
-                ->setParameter('utilisateurId', '' . $idUtilisateur . '')
+                ->where('e.utilisateur = :uid')
+                ->orWhere('EXISTS (SELECT 1 FROM App\Entity\Invite i WHERE i.entreprise = e AND i.utilisateur = :uid)')
+                ->setParameter('uid', $idUtilisateur)
                 ->orderBy('e.id', 'DESC'),
             $page,
             3,

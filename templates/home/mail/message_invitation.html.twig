@@ -1,12 +1,39 @@
-<p>
-    Bonjour <strong>{{ invite.nom }}, {{ invite.email }}</strong>,
-</p>
-<p>
-    JS Brokers a le meilleur plaisir de vous informer que vous venez d'être invité par <strong>{{ entreprise.nom }}</strong> à accéder à son espace de travail.<br>
-    Pour y accéder, vous n'avez qu'à cliquer ici si vous avez un compte JS Brokers.<br><br>
-    Si vous n'avez pas encore un compte JS Brokers, commencez par en créer puis revenez cliquer sur le lien ci-dessus ou accédez directement à cette entreprise à partir de la page d'acceuil de votre compte JS Brokers.    
-</p>
-<p>
-    Cordialement.<br>
-    Equipe JS Brokers.    
-</p>
+{% extends 'emails/_layout.html.twig' %}
+{% import 'emails/_macros.html.twig' as m %}
+
+{% block subject %}JS Brokers — Invitation à rejoindre {{ entreprise.nom }}{% endblock %}
+
+{% block content %}
+    {{ m.heading('action:invite', 'Invitation à rejoindre ' ~ entreprise.nom) }}
+
+    {{ m.paragraph(
+        'Bonjour <strong>' ~ (invite.nom ?: invite.getEmail) ~ '</strong>,<br>
+        JS Brokers a le plaisir de vous informer que <strong>' ~ entreprise.nom ~ '</strong>
+        vient de vous inviter à accéder à son espace de travail.'
+    ) }}
+
+    {% if enAttente %}
+        {{ m.heading('utilisateur', 'Créez votre compte') }}
+        {{ m.paragraph(
+            'Aucun compte JS Brokers n\'est encore associé à l\'adresse
+            <strong>' ~ invite.getEmail ~ '</strong>. Pour rejoindre
+            <strong>' ~ entreprise.nom ~ '</strong>, commencez par créer votre compte&nbsp;:'
+        ) }}
+        {{ m.button(registerUrl, 'Créer mon compte JS Brokers') }}
+
+        {{ m.heading('action:information', 'Et ensuite ?') }}
+        {{ m.paragraph(
+            'Une fois votre compte créé et votre adresse validée, connectez-vous&nbsp;:
+            <strong>' ~ entreprise.nom ~ '</strong> apparaîtra automatiquement dans la liste
+            des entreprises de votre page d\'accueil, dès votre première connexion.'
+        ) }}
+    {% else %}
+        {{ m.heading('action:open', 'Connectez-vous') }}
+        {{ m.paragraph(
+            'Vous disposez déjà d\'un compte JS Brokers. Connectez-vous pour accéder à
+            <strong>' ~ entreprise.nom ~ '</strong>&nbsp;: elle figure désormais dans la liste
+            des entreprises de votre page d\'accueil.'
+        ) }}
+        {{ m.button(loginUrl, 'Me connecter à JS Brokers') }}
+    {% endif %}
+{% endblock %}
