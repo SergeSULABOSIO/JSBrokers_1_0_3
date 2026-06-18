@@ -1,0 +1,66 @@
+{#
+   Composants réutilisables pour les e-mails (HTML « bulletproof » : tables +
+   styles inline, seul format fiable d'un client mail à l'autre).
+
+   - heading(icon, title) : titre de section précédé d'une icône d'illustration.
+     `icon` est un alias d'IconCanvasProvider (ex. 'action:invite') ou un nom Iconify
+     direct ; resolve_icon_name() fait le fallback. L'icône est rendue en SVG inline.
+   - paragraph(html)      : paragraphe de corps (le contenu peut être du HTML).
+   - button(url, label)   : bouton d'appel à l'action, cobalt, centré à gauche.
+   - note(html)           : encart discret (mentions, expiration de lien…).
+
+   Toutes les macros renvoient une (ou des) ligne(s) <tr> : elles s'insèrent dans
+   la table de contenu fournie par emails/_layout.html.twig (bloc `content`).
+#}
+
+{% macro heading(icon, title) %}
+    <tr>
+        <td style="padding: 22px 0 4px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+                <td style="vertical-align: middle; padding-right: 9px; line-height: 0;">
+                    {{ ux_icon(resolve_icon_name(icon), { width: '22', height: '22', style: 'color:#0047AB; vertical-align:middle;' }) }}
+                </td>
+                <td style="vertical-align: middle; font: 700 17px/1.3 Arial, Helvetica, sans-serif; color: #0d2440;">
+                    {{ title }}
+                </td>
+            </tr></table>
+        </td>
+    </tr>
+{% endmacro %}
+
+{% macro paragraph(html) %}
+    <tr>
+        <td style="font: 400 15px/1.6 Arial, Helvetica, sans-serif; color: #343a40; padding: 7px 0;">
+            {{ html|raw }}
+        </td>
+    </tr>
+{% endmacro %}
+
+{% macro button(url, label) %}
+    <tr>
+        <td style="padding: 14px 0 8px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+                <td style="border-radius: 8px; background-color: #0047AB;">
+                    <a href="{{ url }}"
+                       style="display: inline-block; padding: 13px 28px; font: 700 15px/1 Arial, Helvetica, sans-serif; color: #ffffff; text-decoration: none; border-radius: 8px;">
+                        {{ label }}
+                    </a>
+                </td>
+            </tr></table>
+        </td>
+    </tr>
+{% endmacro %}
+
+{% macro note(html) %}
+    <tr>
+        <td style="padding: 10px 0 2px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                    <td style="background-color: #f1f5fb; border-left: 3px solid #0047AB; border-radius: 6px; padding: 11px 14px; font: 400 13px/1.5 Arial, Helvetica, sans-serif; color: #495057;">
+                        {{ html|raw }}
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+{% endmacro %}

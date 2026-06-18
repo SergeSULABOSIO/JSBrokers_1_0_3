@@ -4,7 +4,6 @@ namespace App\Controller\Admin;
 
 use App\Entity\Invite;
 use App\Form\InviteType;
-use App\Security\EmailVerifier;
 use App\Entity\Utilisateur;
 use App\Constantes\Constante;
 use App\Event\InvitationEvent;
@@ -18,15 +17,12 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\Mime\Address;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
@@ -44,8 +40,6 @@ class InviteController extends AbstractController
         private readonly EntrepriseRepository $entrepriseRepository,
         private readonly InviteRepository $inviteRepository,
         private readonly UtilisateurRepository $utilisateurRepository,
-        private readonly UserPasswordHasherInterface $passwordHasher,
-        private readonly EmailVerifier $emailVerifier,
         private readonly Constante $constante,
         private readonly JSBDynamicSearchService $searchService,
         private readonly SerializerInterface $serializer,
@@ -101,44 +95,61 @@ class InviteController extends AbstractController
             return $this->json(['message' => $this->translator->trans("invite_sending_invite_not_granted", [':user' => $user->getNom()])], 403);
         }
 
+        // On valide l'email et l'absence de doublon EN AMONT, pour renvoyer une erreur
+        // 422 propre (affichée par le canevas) plutôt qu'une 500.
+        // - En création : toujours.
+        // - En édition : uniquement pour une invitation encore EN ATTENTE. L'email d'une
+        //   invitation déjà rattachée à un compte appartient au compte utilisateur et
+        //   n'est pas modifiable ici (le champ est rendu en lecture seule).
+        $data = $request->request->all();
+        $isCreation = empty($data['id']);
+        $editedInvite = $isCreation ? null : $this->inviteRepository->find($data['id']);
+        $handleEmail = $isCreation || ($editedInvite && $editedInvite->isEnAttente());
+        if ($handleEmail) {
+            $email = $data['email'] ?? null;
+            if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return $this->json(['message' => "Veuillez corriger les erreurs ci-dessous.", 'errors' => ['email' => ["L'adresse email fournie est invalide ou manquante."]]], 422);
+            }
+            // En édition, on exclut l'invitation en cours pour ne pas la détecter elle-même comme doublon.
+            if ($this->isEmailAlreadyInvited($this->getEntreprise(), $email, $editedInvite)) {
+                return $this->json(['message' => "Veuillez corriger les erreurs ci-dessous.", 'errors' => ['email' => ["Cette personne est déjà invitée dans cette entreprise."]]], 422);
+            }
+        }
+
         $response = $this->handleFormSubmission(
             $request,
             Invite::class,
             InviteType::class,
             function (Invite $invite) use ($request) {
-                // Ce callback est exécuté avant la persistance de l'entité.
-                // C'est l'endroit parfait pour gérer la logique de l'email.
-                if (!$invite->getId()) { // Uniquement en mode création
-                    $data = $request->request->all();
-                    $email = $data['email'] ?? null;
+                // Ce callback est exécuté après validation du formulaire, avant la persistance.
+                // On y résout l'état de l'invitation à partir de l'email saisi, en création
+                // comme en édition d'une invitation EN ATTENTE. On NE touche PAS à l'email
+                // d'une invitation déjà rattachée à un compte : il appartient au compte
+                // utilisateur et se modifie ailleurs (champ rendu en lecture seule).
+                if ($invite->getId() && !$invite->isEnAttente()) {
+                    return;
+                }
 
-                    if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                        // Normalement, la validation du formulaire devrait déjà l'empêcher.
-                        // C'est une sécurité supplémentaire.
-                        throw new \InvalidArgumentException("L'adresse email fournie est invalide ou manquante.");
-                    }
+                $email = $request->request->all()['email'] ?? null;
 
-                    $utilisateur = $this->utilisateurRepository->findOneBy(['email' => $email]);
-
-                    if (!$utilisateur) {
-                        // L'utilisateur n'existe pas, on le crée.
-                        $utilisateur = new Utilisateur();
-                        $utilisateur->setEmail($email);
-                        $utilisateur->setNom($data['nom'] ?? 'Nouveau Collaborateur');
-                        // Créer un mot de passe temporaire et sécurisé
-                        $randomPassword = bin2hex(random_bytes(16));
-                        $utilisateur->setPassword($this->passwordHasher->hashPassword($utilisateur, $randomPassword));
-                        $utilisateur->setVerified(false); // L'utilisateur devra vérifier son email
-                        $this->em->persist($utilisateur);
-                    }
-
-                    // On lie l'utilisateur (existant ou nouveau) à l'invité.
+                // Inviter ≠ créer un compte : on NE pré-crée PAS d'Utilisateur.
+                // - Si un compte existe déjà avec cet email → invitation ACTIVE (rattachée).
+                // - Sinon → invitation EN ATTENTE (on conserve l'email, utilisateur = null) ;
+                //   elle sera rattachée automatiquement quand la personne créera son compte.
+                $utilisateur = $this->utilisateurRepository->findOneBy(['email' => $email]);
+                if ($utilisateur) {
                     $invite->setUtilisateur($utilisateur);
+                    $invite->setEmail(null);
+                } else {
+                    $invite->setUtilisateur(null);
+                    $invite->setEmail($email);
                 }
             }
         );
 
-        // Si c'est une création réussie, on déclenche l'événement d'invitation
+        // Si c'est une création réussie, on déclenche l'événement d'invitation.
+        // L'envoi de l'email (variante « créer un compte » ou « se connecter ») est
+        // entièrement délégué au MailingSubscriber, source unique de l'envoi.
         $isNew = !isset($request->request->all()['id']) || empty($request->request->all()['id']);
         if ($response->getStatusCode() === 200 && $isNew) {
             $responseData = json_decode($response->getContent(), true);
@@ -147,20 +158,6 @@ class InviteController extends AbstractController
                 if ($newInvite) {
                     try {
                         $this->dispatcher->dispatch(new InvitationEvent($newInvite));
-
-                        // Si l'utilisateur vient d'être créé, on envoie l'email de vérification/invitation
-                        $invitedUser = $newInvite->getUtilisateur();
-                        if ($invitedUser && !$invitedUser->isVerified()) {
-                            $this->emailVerifier->sendEmailConfirmation(
-                                'app_verify_email',
-                                $invitedUser,
-                                (new TemplatedEmail())
-                                    ->from(new Address('support@demo.fr', 'Support JS-Brokers'))
-                                    ->to((string) $invitedUser->getEmail())
-                                    ->subject('Vous êtes invité à rejoindre ' . $newInvite->getEntreprise()->getNom())
-                                    ->htmlTemplate('registration/invitation_email.html.twig')
-                            );
-                        }
                     } catch (\Throwable $th) {
                         $responseData['warning'] = $this->translator->trans("invite_email_sending_error");
                         return new JsonResponse($responseData);
@@ -170,6 +167,24 @@ class InviteController extends AbstractController
         }
 
         return $response;
+    }
+
+    /**
+     * Vrai si l'adresse email est déjà rattachée à une invitation de cette entreprise,
+     * qu'elle soit en attente (email stocké) ou active (compte rattaché). S'appuie sur
+     * Invite::getEmail() qui couvre les deux états.
+     */
+    private function isEmailAlreadyInvited(\App\Entity\Entreprise $entreprise, string $email, ?Invite $exclude = null): bool
+    {
+        foreach ($entreprise->getInvites() as $invite) {
+            if ($exclude !== null && $invite === $exclude) {
+                continue; // En édition : ne pas se détecter soi-même comme doublon.
+            }
+            if (strcasecmp((string) $invite->getEmail(), $email) === 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     #[Route('/api/delete/{id}', name: 'api.delete', methods: ['DELETE'])]

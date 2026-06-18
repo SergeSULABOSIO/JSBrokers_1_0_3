@@ -80,6 +80,7 @@ class IconCanvasProvider
         'action:renew'        => 'carbon:renew',
         'action:resiliation'  => 'gravity-ui:hand-stop',
         'action:reset'        => 'bx:reset',
+        'action:resend-invitation' => 'mdi:email-sync-outline',
         'action:role'         => 'carbon:user-role',
         'action:save'         => 'fa-solid:save',
         'action:search'       => 'hugeicons:search-01',

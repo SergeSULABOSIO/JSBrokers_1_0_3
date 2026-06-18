@@ -3,6 +3,7 @@
 namespace App\Security;
 
 use App\Entity\Utilisateur;
+use App\Services\InvitationLinker;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -24,7 +25,8 @@ class AppAuthenticator extends AbstractLoginFormAuthenticator
     public const LOGIN_ROUTE = 'app_login';
 
     public function __construct(
-        private UrlGeneratorInterface $urlGenerator
+        private UrlGeneratorInterface $urlGenerator,
+        private InvitationLinker $invitationLinker
     ) {}
 
     public function authenticate(Request $request): Passport
@@ -47,6 +49,13 @@ class AppAuthenticator extends AbstractLoginFormAuthenticator
     {
         /** @var Utilisateur $user */
         $user = $token->getUser();
+
+        // Filet de sécurité : rattache d'éventuelles invitations en attente portant
+        // l'email de l'utilisateur (cas où il s'est inscrit avant d'être invité, ou
+        // invité via une autre voie). Idempotent et sans effet si rien n'est en attente.
+        if ($user instanceof Utilisateur) {
+            $this->invitationLinker->linkPendingInvitations($user);
+        }
 
         // Point de décision UNIQUE après authentification.
         // Un utilisateur dont l'adresse e-mail n'est pas encore vérifiée est confiné

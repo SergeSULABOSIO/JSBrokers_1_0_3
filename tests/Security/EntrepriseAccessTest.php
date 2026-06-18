@@ -152,18 +152,27 @@ class EntrepriseAccessTest extends WebTestCase
 
     public function testOwnerCanDeleteViaRenderedForm(): void
     {
-        // Parcours nominal : le formulaire rendu porte un jeton CSRF valide → suppression OK.
+        // Parcours nominal : le formulaire rendu porte un jeton CSRF valide ET le mot de
+        // passe du propriétaire (exigé par le dialogue de confirmation) → suppression OK.
         $this->client->loginUser($this->user(self::OWNER_EMAIL));
         $crawler = $this->client->request('GET', '/admin/entreprise');
         $this->assertResponseIsSuccessful();
 
-        $form = $crawler->filter('form[data-controller="confirm-action"]')->form();
-        $this->client->submit($form);
+        // Le champ « password » est injecté par le contrôleur Stimulus confirm-action
+        // (require-password-value) au moment de la confirmation ; absent du HTML statique,
+        // on le fournit explicitement ici pour reproduire la soumission réelle.
+        $form   = $crawler->filter('form[data-controller="confirm-action"]')->form();
+        $values = $form->getPhpValues();
+        $values['password'] = self::PASSWORD;
+        $this->client->request('POST', $form->getUri(), $values);
 
         $this->assertResponseRedirects('/admin/entreprise');
-        $this->assertNull(
-            $this->em()->getRepository(Entreprise::class)->find($this->entrepriseId),
-            "L'entreprise aurait dû être supprimée."
+        // Vérification directe en base (insensible à l'identity-map de l'EM partagé,
+        // qui pourrait encore référencer l'entité supprimée pendant la requête).
+        $stillExists = (bool) $this->em()->getConnection()->fetchOne(
+            'SELECT id FROM entreprise WHERE id = :id',
+            ['id' => $this->entrepriseId]
         );
+        $this->assertFalse($stillExists, "L'entreprise aurait dû être supprimée.");
     }
 }

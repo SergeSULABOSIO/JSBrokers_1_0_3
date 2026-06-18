@@ -379,6 +379,9 @@ export default class extends Controller {
             case 'ui:bordereau.analysis-request':
                 this.handleBordereauAnalysisRequest(payload);
                 break;
+            case 'ui:invite.resend-request':
+                this.handleInviteResendRequest(payload);
+                break;
             case 'ui:bordereau.edit-linked-note':
                 this.handleBordereauEditLinkedNote(payload);
                 break;
@@ -490,6 +493,12 @@ export default class extends Controller {
             isCreationMode: payload.isCreationMode, // Correction: isCreationMode au lieu de isCreateMode
             context: {
                 ...payload.context,
+                // Si l'appelant (ex: collection_controller) n'a pas fourni d'originatorId,
+                // on cible l'onglet actif. C'est le cas d'une création/édition lancée depuis la
+                // toolbar de la liste principale (qui n'envoie pas de contexte). Sans cela,
+                // app:entity.saved ne pourrait pas rafraîchir la liste principale après l'enregistrement.
+                // Même fallback que pour la suppression (cf. case 'app:delete-request').
+                originatorId: payload.context?.originatorId || this.getActiveTabId(),
                 idEntreprise: this.currentIdEntreprise, // CORRECTION : Utiliser la propriété correcte
                 idInvite: this.currentIdInvite       // CORRECTION : Utiliser la propriété correcte
             },
@@ -1205,6 +1214,44 @@ export default class extends Controller {
         } catch (error) {
             console.error('[Cerveau] Erreur lors de la copie du lien SOA :', error);
             this._showNotification('Impossible de copier le lien. Veuillez réessayer.', 'error');
+        }
+    }
+
+    /**
+     * Renvoie l'email d'invitation à l'invité sélectionné, sur demande de l'utilisateur
+     * (action spécifique de la rubrique Invité, déclenchée depuis la barre d'outils ou le
+     * menu contextuel). L'envoi réel est délégué côté serveur au MailingSubscriber via
+     * l'InvitationEvent ; ici on ne fait que déclencher l'appel et restituer le résultat.
+     * @param {object} payload
+     * @param {string} payload.url - URL de type '/admin/invite/api/resend-invitation/{id}'
+     */
+    async handleInviteResendRequest(payload) {
+        if (!payload.url) {
+            console.error("[Cerveau] handleInviteResendRequest() : URL manquante.", payload);
+            this._showNotification("Impossible de renvoyer l'invitation : URL manquante.", 'error');
+            return;
+        }
+        try {
+            // Active la barre de progression globale en haut de la page le temps de l'envoi.
+            this._publishSelectionStatus("Renvoi de l'invitation...");
+            this.broadcast('app:loading.start');
+
+            const response = await fetch(payload.url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || result.success === false) {
+                throw new Error(result.message || "Erreur lors du renvoi de l'invitation.");
+            }
+
+            this._showNotification('Invitation renvoyée avec succès.', 'success');
+            this._publishSelectionStatus('Invitation renvoyée.');
+        } catch (error) {
+            console.error("[Cerveau] Erreur lors du renvoi de l'invitation :", error);
+            this._showNotification(error.message || "Erreur lors du renvoi de l'invitation.", 'error');
+        } finally {
+            this.broadcast('app:loading.stop');
         }
     }
 

@@ -132,9 +132,18 @@ class Invite
     #[Groups(['list:read'])]
     public ?string $status_string = null;
 
+    // Nullable : une invitation peut exister AVANT que la personne invitée n'ait un
+    // compte JS Brokers (invitation « en attente », identifiée par l'email ci-dessous).
+    // Le lien vers l'Utilisateur est rempli soit immédiatement (compte déjà existant),
+    // soit au moment où la personne crée son compte (rattachement via InvitationLinker).
     #[ORM\ManyToOne(inversedBy: 'invites', cascade: ['persist'])]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: true)]
     private ?Utilisateur $utilisateur = null;
+
+    // Adresse email de la personne invitée tant qu'elle n'a pas de compte (invitation
+    // en attente). Vidée une fois l'invitation rattachée à un Utilisateur.
+    #[ORM\Column(length: 180, nullable: true)]
+    private ?string $email = null;
 
     #[ORM\ManyToOne(inversedBy: 'invites')]
     #[ORM\JoinColumn(nullable: true)] // On force la nullabilité ici
@@ -582,6 +591,31 @@ class Invite
         $this->utilisateur = $utilisateur;
 
         return $this;
+    }
+
+    /**
+     * Email de l'invité : la valeur stockée (invitation en attente) ou, à défaut,
+     * celle du compte utilisateur rattaché. Source unique fiable pour l'envoi du mail.
+     */
+    public function getEmail(): ?string
+    {
+        return $this->email ?? $this->utilisateur?->getEmail();
+    }
+
+    public function setEmail(?string $email): static
+    {
+        $this->email = $email;
+
+        return $this;
+    }
+
+    /**
+     * Vrai tant que l'invitation n'est rattachée à aucun compte utilisateur
+     * (la personne invitée n'a pas encore créé son compte JS Brokers).
+     */
+    public function isEnAttente(): bool
+    {
+        return $this->utilisateur === null;
     }
 
     public function getEntreprise(): ?Entreprise

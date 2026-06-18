@@ -138,4 +138,56 @@ class LoginFlowTest extends WebTestCase
         // Décision de l'authenticator : non vérifié → re-vérification (target path ignoré).
         $this->assertResponseRedirects('/reverify/email');
     }
+
+    /**
+     * Non-régression ERR_TOO_MANY_REDIRECTS : la page de re-vérification doit être
+     * une impasse 200 (et NON se rediriger vers elle-même). Avant correctif, elle
+     * se terminait par un `$security->login()` qui ré-exécutait l'authenticator et
+     * renvoyait vers `/reverify/email` → boucle infinie.
+     */
+    public function testReverifyPageIsTerminalAndDoesNotLoop(): void
+    {
+        $this->client->loginUser($this->user(self::UNVERIFIED_EMAIL));
+        $this->client->request('GET', '/reverify/email');
+
+        $this->assertResponseIsSuccessful();
+        $this->assertSelectorTextContains('h1', 'Vérifiez votre adresse e-mail');
+    }
+
+    /**
+     * Le renvoi explicite (clic sur « Renvoyer le lien ») envoie l'e-mail puis
+     * repasse en GET « nu » (motif PRG) — pas de boucle, pas de renvoi au refresh.
+     */
+    public function testReverifyResendRedirectsBackToTerminalPage(): void
+    {
+        $this->client->loginUser($this->user(self::UNVERIFIED_EMAIL));
+        $this->client->request('GET', '/reverify/email?send=1');
+
+        $this->assertResponseRedirects('/reverify/email');
+    }
+
+    /**
+     * Un utilisateur déjà vérifié qui atterrit sur la re-vérification est renvoyé
+     * vers l'espace applicatif (il n'a rien à y faire).
+     */
+    public function testReverifyVerifiedUserIsRedirectedToEntreprise(): void
+    {
+        $this->client->loginUser($this->user(self::VERIFIED_EMAIL));
+        $this->client->request('GET', '/reverify/email');
+
+        $this->assertResponseRedirects('/admin/entreprise');
+    }
+
+    /**
+     * La route de validation d'e-mail est PUBLIQUE : un accès anonyme ne doit PAS
+     * être renvoyé vers la connexion (ancien comportement avec denyAccessUnlessGranted).
+     * Sans paramètre `id` exploitable, on renvoie vers l'inscription.
+     */
+    public function testVerifyEmailRouteIsPublic(): void
+    {
+        $this->client->request('GET', '/verify/email');
+
+        // Pas de redirection vers /login : la page n'exige plus d'être authentifié.
+        $this->assertResponseRedirects('/register');
+    }
 }

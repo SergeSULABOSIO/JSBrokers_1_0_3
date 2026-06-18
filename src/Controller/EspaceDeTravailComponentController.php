@@ -16,6 +16,7 @@ namespace App\Controller;
 use Twig\Environment;
 use Psr\Log\LoggerInterface;
 use App\Constantes\Constante;
+use App\Entity\Utilisateur;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -65,6 +66,18 @@ class EspaceDeTravailComponentController extends AbstractController
     {
         // AMÉLIORATION : On passe explicitement les IDs de la route pour une validation sécurisée.
         $access = $this->validateWorkspaceAccess($idEntreprise, $idInvite);
+
+        // On synchronise l'entreprise « connectée » avec l'espace de travail courant.
+        // Les services et formulaires d'autocomplétion (ex: GroupeAutocompleteField) filtrent
+        // par `getConnectedTo()` : sans cette synchronisation, l'endpoint d'autocomplétion
+        // (route UX autonome, sans contexte de workspace) utiliserait une entreprise obsolète
+        // et ne renverrait aucune suggestion. On n'écrit en base que si la valeur change.
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        if ($user->getConnectedTo() !== $access['entreprise']) {
+            $user->setConnectedTo($access['entreprise']);
+            $this->em->flush();
+        }
 
         // La logique de transformation du menu est maintenant dans le ControllerUtilsTrait.
         $processedMenuData = $this->processDataForShortEntityNames($this->menuData);

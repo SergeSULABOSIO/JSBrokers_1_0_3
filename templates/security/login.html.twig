@@ -100,12 +100,14 @@
         font-weight: 700;
         color: #212529; /* --text-dark */
         margin: 0 0 0.25rem;
+        text-align: center;
     }
 
     .auth__subtitle {
         color: #6c757d; /* --text-muted */
         margin: 0 0 1.5rem;
         font-size: 0.95rem;
+        text-align: center;
     }
 
     .auth__form .form-label {
@@ -181,6 +183,19 @@
         color: #6c757d; /* --text-muted */
         text-align: center;
     }
+    /* Lien de création de compte : accent cobalt de marque, sur sa propre ligne */
+    .auth__foot-link { display: block; margin-top: 0.35rem; }
+    .auth__foot a {
+        font-weight: 600;
+        color: #0047AB; /* --cobalt */
+        text-decoration: none;
+    }
+    .auth__foot a:hover { color: #003380; text-decoration: underline; } /* --cobalt-dark */
+    .auth__foot a:focus-visible {
+        outline: 2px solid #0047AB;
+        outline-offset: 2px;
+        border-radius: 4px;
+    }
 
     /* ---- Responsive : empilement sous 768px ---- */
     @media (max-width: 767.98px) {
@@ -239,6 +254,13 @@
         {# ---------- Panneau formulaire ---------- #}
         <section class="auth__form">
 
+            {# Messages applicatifs (ex. : compte créé → vérifiez vos mails) #}
+            {% for message in app.flashes('success') %}
+                <div class="alert alert-success" role="alert" aria-live="polite">
+                    {{ message }}
+                </div>
+            {% endfor %}
+
             {% if app.user %}
                 {# --- Utilisateur déjà authentifié --- #}
                 <h1 class="auth__title">Vous êtes déjà connecté</h1>
@@ -250,7 +272,7 @@
                 {% if app.user.verified == false %}
                     <div class="alert alert-warning" role="alert">
                         Votre adresse e-mail n'est pas encore vérifiée.
-                        <a href="{{ path('app_reverify_email') }}" class="alert-link">
+                        <a href="{{ path('app_reverify_email', {'send': 1}) }}" class="alert-link">
                             Renvoyer le lien de validation
                         </a>.
                     </div>
@@ -268,7 +290,8 @@
                 {# --- Formulaire de connexion --- #}
                 <h1 class="auth__title">Connexion</h1>
                 <p class="auth__subtitle">
-                    Renseignez vos identifiants pour accéder à votre espace de travail.
+                    Renseignez vos identifiants pour accéder à votre compte
+                    et à la liste de vos entreprises.
                 </p>
 
                 {% if error %}
@@ -354,8 +377,8 @@
                 </form>
 
                 <p class="auth__foot">
-                    Accès réservé. Vos identifiants vous ont été communiqués
-                    par votre cabinet.
+                    Je n'ai pas encore de compte utilisateur JS Brokers.
+                    <a href="{{ path('app_register') }}" class="auth__foot-link">Créer un compte</a>
                 </p>
             {% endif %}
 

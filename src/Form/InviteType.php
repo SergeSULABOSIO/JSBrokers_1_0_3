@@ -7,6 +7,8 @@ use App\Services\ServiceMonnaies;
 use App\Services\FormListenerFactory;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -26,15 +28,7 @@ class InviteType extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('email', EmailType::class, [
-                'label' => "Email du collaborateur",
-                'help' => "Saisissez l'adresse email du collaborateur. S'il n'a pas de compte, une invitation lui sera envoyée.",
-                'mapped' => false, // Très important: ce champ n'est pas directement dans l'entité Invite.
-                'required' => false,
-                'attr' => [
-                    'placeholder' => "nom.prenom@email.com",
-                ],
-            ])
+            ->add('email', EmailType::class, $this->emailFieldOptions())
             ->add('nom', TextType::class, [
                 // 'label' => false,
                 'label' => "Nom",
@@ -112,6 +106,40 @@ class InviteType extends AbstractType
                 'mapped' => false,
             ])
         ;
+
+        // Le champ email est `mapped => false` : Symfony ne le pré-remplit donc pas
+        // depuis l'entité. En édition, on le réinjecte avec la valeur courante pour
+        // que l'adresse de l'invité soit visible et modifiable. Pour une invitation
+        // déjà rattachée à un compte, l'email appartient au compte utilisateur et
+        // n'est pas modifiable ici : le champ est alors en lecture seule.
+        $builder->addEventListener(FormEvents::PRE_SET_DATA, function (FormEvent $event): void {
+            $invite = $event->getData();
+            if (!$invite instanceof Invite || $invite->getId() === null) {
+                return; // Création : rien à pré-remplir.
+            }
+
+            $event->getForm()->add('email', EmailType::class, $this->emailFieldOptions([
+                'data' => $invite->getEmail(),
+                'disabled' => !$invite->isEnAttente(),
+            ]));
+        });
+    }
+
+    /**
+     * Options du champ email, factorisées pour rester identiques en création et en
+     * édition. `$overrides` permet d'injecter la valeur courante et l'état lecture seule.
+     */
+    private function emailFieldOptions(array $overrides = []): array
+    {
+        return array_merge([
+            'label' => "Email du collaborateur",
+            'help' => "Saisissez l'adresse email du collaborateur. S'il n'a pas de compte, une invitation lui sera envoyée.",
+            'mapped' => false, // Très important: ce champ n'est pas directement dans l'entité Invite.
+            'required' => false,
+            'attr' => [
+                'placeholder' => "nom.prenom@email.com",
+            ],
+        ], $overrides);
     }
 
     public function configureOptions(OptionsResolver $resolver): void

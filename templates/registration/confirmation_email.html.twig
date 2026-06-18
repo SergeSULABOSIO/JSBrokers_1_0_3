@@ -1,12 +1,27 @@
-<h1>Salut! Prière de confirmer votre adresse email!</h1>
+{% extends 'emails/_layout.html.twig' %}
+{% import 'emails/_macros.html.twig' as m %}
 
-<p>
-    Veuillez, s'il vous plaît, confirmer votre adresse mail en cliquant sur ce lien : <br>
-    {# Please confirm your email address by clicking the following link: <br><br> #}
-    <a href="{{ signedUrl|raw }}">Je confirme mon adresse mail</a>.<br>
-    Ce lien expirera dans {{ expiresAtMessageKey|trans(expiresAtMessageData, 'VerifyEmailBundle') }}.
-</p>
-<p>
-    Cordialement!<br><br>
-    L'équipe JS Brokers.
-</p>
+{% block subject %}JS Brokers — Confirmation d'adresse e-mail{% endblock %}
+
+{% block content %}
+    {{ m.heading('hugeicons:mail-send-01', 'Confirmez votre adresse e-mail') }}
+
+    {{ m.paragraph(
+        'Bonjour' ~ (recipientName is defined and recipientName ? ' <strong>' ~ recipientName ~ '</strong>' : '') ~
+        ',<br>Bienvenue chez JS Brokers&nbsp;! Votre compte vient d\'être créé. Il ne reste plus
+        qu\'une étape&nbsp;: confirmer votre adresse e-mail pour activer votre accès.'
+    ) }}
+
+    {{ m.button(signedUrl, 'Confirmer mon adresse e-mail') }}
+
+    {{ m.note(
+        'Ce lien de validation expirera dans ' ~
+        expiresAtMessageKey|trans(expiresAtMessageData, 'VerifyEmailBundle') ~
+        '. Passé ce délai, vous pourrez en demander un nouveau depuis la page de connexion.'
+    ) }}
+
+    {{ m.paragraph(
+        'Si le bouton ne fonctionne pas, copiez-collez ce lien dans votre navigateur&nbsp;:<br>
+        <span style="word-break:break-all; color:#0047AB;">' ~ signedUrl ~ '</span>'
+    ) }}
+{% endblock %}

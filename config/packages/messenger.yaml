@@ -28,3 +28,13 @@ framework:
 
             # Route your messages to the transports
             # 'App\Message\YourMessage': async
+
+when@dev:
+    framework:
+        messenger:
+            routing:
+                # En dev, on envoie les emails de façon SYNCHRONE : ils partent pendant la
+                # requête qui les déclenche et apparaissent aussitôt dans le panneau « E-mails »
+                # du profiler Symfony — aucun worker à lancer. Couplé à MAILER_DSN=null://null
+                # (.env.dev), l'envoi est un no-op inoffensif (pas de SMTP requis, pas d'échec).
+                Symfony\Component\Mailer\Messenger\SendEmailMessage: sync

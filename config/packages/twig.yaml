@@ -1,6 +1,10 @@
 twig:
     file_name_pattern: '*.twig'
     form_themes: ['bootstrap_5_layout.html.twig']
+    paths:
+        # Namespace permettant d'embarquer les images (logo) dans les e-mails via
+        # email.image('@images/...') : la fonction résout le fichier par le loader Twig.
+        '%kernel.project_dir%/public/images': images
 
 when@test:
     twig:

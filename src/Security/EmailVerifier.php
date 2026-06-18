@@ -15,22 +15,34 @@ class EmailVerifier
     public function __construct(
         private VerifyEmailHelperInterface $verifyEmailHelper,
         private MailerInterface $mailer,
-        private EntityManagerInterface $entityManager
+        private EntityManagerInterface $entityManager,
+        private string $mailFrom,
+        private string $logoPath,
     ) {
     }
 
     public function sendEmailConfirmation(string $verifyEmailRouteName, Utilisateur $user, TemplatedEmail $email): void
     {
+        // On embarque l'id de l'utilisateur dans l'URL signée (`?id=...`). Ainsi le lien
+        // de validation est CONSOMMABLE SANS être connecté : le contrôleur retrouve
+        // l'utilisateur via cet id, plutôt que via la session. La signature couvre l'id
+        // et l'e-mail : un id falsifié invaliderait la signature.
         $signatureComponents = $this->verifyEmailHelper->generateSignature(
             $verifyEmailRouteName,
             (string) $user->getId(),
-            (string) $user->getEmail()
+            (string) $user->getEmail(),
+            ['id' => $user->getId()]
         );
 
         $context = $email->getContext();
         $context['signedUrl'] = $signatureComponents->getSignedUrl();
         $context['expiresAtMessageKey'] = $signatureComponents->getExpirationMessageKey();
         $context['expiresAtMessageData'] = $signatureComponents->getExpirationMessageData();
+
+        // Données de marque pour le layout commun (logo embarqué + signature).
+        $context['logoPath'] = $this->logoPath;
+        $context['senderEmail'] = $this->mailFrom;
+        $context['recipientName'] = $user->getNom() ?: (string) $user->getEmail();
 
         $email->context($context);
 

@@ -1,0 +1,168 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ pageName|default("Vérification de l'adresse e-mail") }} — JS Brokers{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    /* ============================================================
+       Page de vérification d'e-mail — charte JS Brokers
+       (cobalt #0047AB, neutres Bootstrap). Aligne le style de la
+       page d'authentification (security/login.html.twig).
+       ============================================================ */
+    .verify {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        background-color: #f3f3f3; /* --bg-body */
+    }
+
+    /* Barre de progression globale : fixée en haut, cobalt, animée — même pattern
+       que la création de compte / l'édition d'entreprise (top-progress_controller). */
+    .ent-progress-bar {
+        position: fixed; top: 0; left: 0; width: 100%; height: 6px;
+        background-color: #0047AB; display: none; z-index: 9999;
+        animation: ent-progress-animation 1.5s infinite linear;
+    }
+    @keyframes ent-progress-animation {
+        0%   { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    .verify__card {
+        width: 100%;
+        max-width: 540px;
+        background-color: #ffffff;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(0, 71, 171, 0.12); /* ombre cobalt subtile */
+    }
+
+    .verify__head {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1.75rem 2rem;
+        color: #ffffff;
+        background: linear-gradient(160deg, #0047AB 0%, #003380 100%); /* cobalt → cobalt-dark */
+    }
+
+    .verify__logo {
+        width: 52px;
+        height: 52px;
+        border-radius: 12px;
+        background-color: #ffffff;
+        padding: 6px;
+        object-fit: contain;
+        flex: 0 0 auto;
+    }
+
+    .verify__head h1 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin: 0;
+        line-height: 1.25;
+    }
+
+    .verify__body { padding: 2rem; }
+
+    .verify__lead {
+        color: #343a40; /* --text-dark-secondary */
+        font-size: 1rem;
+        line-height: 1.6;
+        margin: 0 0 1rem;
+    }
+    .verify__lead:last-of-type { margin-bottom: 0; }
+
+    .verify__mail { font-weight: 600; color: #0047AB; } /* --cobalt */
+
+    .verify__actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+    }
+
+    .verify__submit {
+        height: 48px;
+        font-weight: 600;
+        font-size: 1rem;
+    }
+
+    .verify__foot {
+        margin-top: 1.25rem;
+        font-size: 0.85rem;
+        color: #6c757d; /* --text-muted */
+        text-align: center;
+    }
+    .verify__foot a {
+        font-weight: 600;
+        color: #0047AB; /* --cobalt */
+        text-decoration: none;
+    }
+    .verify__foot a:hover { color: #003380; text-decoration: underline; } /* --cobalt-dark */
+    .verify__foot a:focus-visible {
+        outline: 2px solid #0047AB;
+        outline-offset: 2px;
+        border-radius: 4px;
+    }
+
+    @media (max-width: 575.98px) {
+        .verify__head { padding: 1.5rem; }
+        .verify__body { padding: 1.5rem; }
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<main class="verify" data-controller="top-progress form-submit">
+
+    {# Barre de progression globale (haut de page), déclenchée au clic sur « Renvoyer ». #}
+    <div class="ent-progress-bar" data-top-progress-target="bar"
+         role="progressbar" aria-label="Chargement en cours" aria-hidden="true"></div>
+
+    <div class="verify__card">
+
+        <header class="verify__head">
+            <img src="{{ asset('images/entreprises/logofav.png') }}" alt="" class="verify__logo">
+            <h1>Vérifiez votre adresse e-mail</h1>
+        </header>
+
+        <section class="verify__body">
+
+            {# Messages applicatifs (renvoi effectué, avertissement du subscriber…)
+               relayés vers le toast applicatif (notification-manager), pour rester
+               cohérent avec le reste de l'application plutôt qu'une alerte « en ligne ». #}
+            {{ include('components/_flash_toasts.html.twig') }}
+
+            <p class="verify__lead">
+                Bonjour <strong>{{ app.user.nom }}</strong>, votre compte est bien créé, mais
+                l'adresse <span class="verify__mail">{{ app.user.email }}</span> n'est pas encore
+                vérifiée.
+            </p>
+            <p class="verify__lead">
+                Ouvrez l'e-mail de confirmation que nous vous avons envoyé et cliquez sur le lien de
+                validation pour activer votre compte. Vous ne l'avez pas reçu&nbsp;? Renvoyez-le
+                ci-dessous.
+            </p>
+
+            <div class="verify__actions">
+                <a href="{{ path('app_reverify_email', {'send': 1}) }}"
+                   class="btn btn-cobalt verify__submit d-inline-flex align-items-center justify-content-center"
+                   data-action="click->form-submit#navigating click->top-progress#show"
+                   data-loading-text="Envoi du lien…">
+                    {{ ux_icon(resolve_icon_name('action:resend-invitation'), {height: '20px', width: '20px'}) }}
+                    <span class="ms-2">Renvoyer le lien de validation</span>
+                </a>
+            </div>
+
+            <p class="verify__foot">
+                Ce n'est pas vous&nbsp;? <a href="{{ path('app_logout') }}">Se déconnecter</a>
+            </p>
+
+        </section>
+    </div>
+</main>
+{% endblock %}

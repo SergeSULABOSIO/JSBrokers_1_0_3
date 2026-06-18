@@ -29,6 +29,12 @@ export default class extends Controller {
         this.nomControleur = "ConfirmationDialog";
         this.modal = new Modal(this.element);
 
+        // Garde anti-confirmation « fantôme » : la modale n'accepte la confirmation
+        // qu'une fois pleinement affichée. Cela empêche que le geste qui l'ouvre
+        // (clic sur « Supprimer » du menu contextuel, à l'emplacement du curseur)
+        // ne retombe sur le bouton « Confirmer » pendant l'animation d'apparition.
+        this.armed = false;
+
         // Centralisation des écouteurs d'événements via le Cerveau
         this.boundHandleCerveauEvent = this.handleCerveauEvent.bind(this);
         document.addEventListener('ui:confirmation.request', this.boundHandleCerveauEvent);
@@ -37,10 +43,17 @@ export default class extends Controller {
         this.boundClose = this.close.bind(this);
         document.addEventListener('ui:confirmation.close', this.boundClose);
 
+        // La modale est désormais visible et stable : on autorise la confirmation.
+        this.boundArm = () => { this.armed = true; };
+        this.element.addEventListener('shown.bs.modal', this.boundArm);
+
         // À la fermeture (y compris via Échap ou clic sur le backdrop, sans passer
         // par close()), restaure l'opacité des backdrops restants pour redonner
-        // l'assombrissement à la modale du dessous.
-        this.boundRestoreBackdrops = this._restoreRemainingBackdrops.bind(this);
+        // l'assombrissement à la modale du dessous, et désarme la confirmation.
+        this.boundRestoreBackdrops = () => {
+            this.armed = false;
+            this._restoreRemainingBackdrops();
+        };
         this.element.addEventListener('hidden.bs.modal', this.boundRestoreBackdrops);
     }
 
@@ -48,6 +61,7 @@ export default class extends Controller {
         document.removeEventListener('ui:confirmation.request', this.boundHandleCerveauEvent);
         document.removeEventListener('ui:confirmation.close', this.boundClose);
         document.removeEventListener('ui:confirmation.error', this.boundHandleCerveauEvent); // NOUVEAU
+        this.element.removeEventListener('shown.bs.modal', this.boundArm);
         this.element.removeEventListener('hidden.bs.modal', this.boundRestoreBackdrops);
     }
 
@@ -82,6 +96,15 @@ export default class extends Controller {
      */
     open(payload) {
         const { title, body, onConfirm, itemDescriptions, headerClass, confirmClass, showIrreversible, requirePassword } = payload;
+
+        // Repart toujours d'un état propre : bouton réactivé, message d'erreur effacé,
+        // confirmation désarmée jusqu'à l'affichage complet (cf. shown.bs.modal).
+        // Évite un bouton bloqué sur « En cours… » hérité d'une fermeture par Échap/backdrop.
+        this.armed = false;
+        this.toggleLoading(false);
+        this.toggleProgressBar(false);
+        this.feedbackTarget.innerHTML = '';
+
         this.titleTarget.innerHTML = title || 'Confirmation requise';
         this.bodyTarget.innerHTML = body || 'Êtes-vous sûr ?';
         this.onConfirmDetail = onConfirm;
@@ -173,6 +196,12 @@ export default class extends Controller {
      * @fires cerveau:event
      */
     confirm() {
+        // Tant que la modale n'est pas pleinement affichée, on ignore toute confirmation :
+        // protège contre le clic d'ouverture qui « traverserait » sur le bouton Confirmer.
+        if (!this.armed) {
+            return;
+        }
+
         this.feedbackTarget.innerHTML = ''; // Nettoie les anciens messages d'erreur
 
         // Confirmation forte : un mot de passe non vide est requis avant de continuer.

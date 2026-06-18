@@ -54,8 +54,15 @@ trait FormCanvasProviderTrait
             // SAUF si le provider a spécifié une règle personnalisée dans $config['disabled'].
             $isDisabled = $config['disabled'] ?? $isParentNew;
 
+            // En création, une collection désactivée est inutilisable (pas d'ID parent).
+            // Plutôt que de l'afficher grisée, on la masque (d-none) : la ligne reste
+            // rendue — ce qui empêche form_end(render_rest) de produire un accordéon
+            // brut en bas du formulaire — mais elle n'est pas visible.
+            $isHidden = $isParentNew && $isDisabled;
+
             $layout[] = [
                 "couleur_fond" => "white",
+                "hidden" => $isHidden,
                 "colonnes" => [
                     ["champs" => [$this->getCollectionWidgetConfig(
                         $config['fieldName'],
