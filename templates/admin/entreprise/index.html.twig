@@ -237,6 +237,13 @@
                                 </li>
                                 <li>
                                     <span class="ent-info-label">
+                                        {{ ux_icon('ic:outline-groups', {height: '16px', width: '16px'}) }}
+                                        {{ "entreprise_list_item_collaborators" | trans }}
+                                    </span>
+                                    <strong>{{ entreprise.invites|length }}</strong>
+                                </li>
+                                <li>
+                                    <span class="ent-info-label">
                                         {{ ux_icon('ic:twotone-date-range', {height: '16px', width: '16px'}) }}
                                         {{ "entreprise_list_item_createdat" | trans }}
                                     </span>
