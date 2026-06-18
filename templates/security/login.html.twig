@@ -4,262 +4,28 @@
 
 {% block stylesheets %}
 {{ parent() }}
-<style>
-    /* ============================================================
-       Page d'authentification JS Brokers
-       Couleurs : charte officielle (cobalt #0047AB, neutres Bootstrap).
-       Aucune couleur hors charte.
-       ============================================================ */
-    .auth {
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 1.5rem;
-        background-color: #f3f3f3; /* --bg-body */
-    }
-
-    .auth__card {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        width: 100%;
-        max-width: 920px;
-        background-color: #ffffff; /* --bg-white */
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 10px 40px rgba(0, 71, 171, 0.12); /* ombre cobalt subtile */
-    }
-
-    /* ---- Panneau de marque (gauche) ---- */
-    .auth__brand {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        gap: 1.25rem;
-        padding: 2.5rem;
-        color: #ffffff; /* --text-white */
-        background: linear-gradient(160deg, #0047AB 0%, #003380 100%); /* cobalt → cobalt-dark */
-    }
-
-    .auth__brand-logo {
-        width: 64px;
-        height: 64px;
-        border-radius: 14px;
-        background-color: #ffffff;
-        padding: 8px;
-        object-fit: contain;
-    }
-
-    .auth__brand-name {
-        font-size: 1.6rem;
-        font-weight: 700;
-        margin: 0;
-        line-height: 1.2;
-    }
-
-    .auth__brand-tagline {
-        font-size: 1rem;
-        line-height: 1.5;
-        margin: 0;
-        color: rgba(255, 255, 255, 0.85); /* texte secondaire sur fond sombre */
-    }
-
-    .auth__brand-points {
-        list-style: none;
-        padding: 0;
-        margin: 0.5rem 0 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.6rem;
-    }
-
-    .auth__brand-points li {
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        font-size: 0.92rem;
-        color: rgba(255, 255, 255, 0.92);
-    }
-
-    .auth__brand-points svg {
-        flex: 0 0 auto;
-        width: 18px;
-        height: 18px;
-    }
-
-    /* ---- Panneau formulaire (droite) ---- */
-    .auth__form {
-        padding: 2.5rem;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-    }
-
-    .auth__title {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #212529; /* --text-dark */
-        margin: 0 0 0.25rem;
-        text-align: center;
-    }
-
-    .auth__subtitle {
-        color: #6c757d; /* --text-muted */
-        margin: 0 0 1.5rem;
-        font-size: 0.95rem;
-        text-align: center;
-    }
-
-    .auth__form .form-label {
-        font-weight: 600;
-        color: #343a40; /* --text-dark-secondary */
-        margin-bottom: 0.35rem;
-    }
-
-    /* Champ avec icône en préfixe */
-    .auth__field {
-        position: relative;
-        margin-bottom: 1rem;
-    }
-
-    .auth__field-icon {
-        position: absolute;
-        top: 50%;
-        left: 0.85rem;
-        transform: translateY(-50%);
-        width: 20px;
-        height: 20px;
-        color: #6c757d; /* --text-muted */
-        pointer-events: none;
-    }
-
-    .auth__field .form-control {
-        height: 48px;            /* zone de saisie confortable */
-        padding-left: 2.6rem;    /* place pour l'icône préfixe */
-        color: #000000;          /* --text-black (contenu de champ) */
-    }
-
-    /* Focus visible conforme charte : bordure + anneau cobalt */
-    .auth__form .form-control:focus {
-        border-color: #0047AB;
-        box-shadow: 0 0 0 0.25rem rgba(0, 71, 171, 0.35); /* --cobalt-focus-ring */
-    }
-
-    /* Bouton afficher/masquer le mot de passe (≥ 44×44, WCAG 2.5.5) */
-    .auth__toggle {
-        position: absolute;
-        top: 50%;
-        right: 0.35rem;
-        transform: translateY(-50%);
-        width: 44px;
-        height: 44px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border: 0;
-        background: transparent;
-        color: #6c757d; /* --text-muted */
-        border-radius: 8px;
-        cursor: pointer;
-    }
-    .auth__toggle:hover { color: #0047AB; }      /* cobalt */
-    .auth__toggle:focus-visible {
-        outline: 2px solid #0047AB;
-        outline-offset: 2px;
-    }
-    .auth__toggle svg { width: 20px; height: 20px; }
-    .auth__toggle .is-hidden { display: none; }
-
-    .auth__submit {
-        height: 48px;
-        font-weight: 600;
-        font-size: 1rem;
-        margin-top: 0.25rem;
-    }
-
-    .auth__foot {
-        margin-top: 1.25rem;
-        font-size: 0.85rem;
-        color: #6c757d; /* --text-muted */
-        text-align: center;
-    }
-    /* Lien de création de compte : accent cobalt de marque, sur sa propre ligne */
-    .auth__foot-link { display: block; margin-top: 0.35rem; }
-    .auth__foot a {
-        font-weight: 600;
-        color: #0047AB; /* --cobalt */
-        text-decoration: none;
-    }
-    .auth__foot a:hover { color: #003380; text-decoration: underline; } /* --cobalt-dark */
-    .auth__foot a:focus-visible {
-        outline: 2px solid #0047AB;
-        outline-offset: 2px;
-        border-radius: 4px;
-    }
-
-    /* ---- Responsive : empilement sous 768px ---- */
-    @media (max-width: 767.98px) {
-        .auth__card { grid-template-columns: 1fr; max-width: 460px; }
-        .auth__brand {
-            padding: 2rem;
-            flex-direction: row;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .auth__brand-tagline,
-        .auth__brand-points { display: none; } /* on allège l'en-tête sur mobile */
-        .auth__form { padding: 2rem; }
-    }
-</style>
+{# Styles d'auth mutualisés (connexion, mot de passe oublié, réinitialisation). #}
+{{ include('security/_auth_styles.html.twig') }}
 {% endblock %}
 
 {% block body %}
-<main class="auth">
+<main class="auth" data-controller="top-progress">
+
+    {# Barre de progression globale : feedback de navigation (mdp oublié, créer un compte…). #}
+    <div class="ent-progress-bar" data-top-progress-target="bar"
+         role="progressbar" aria-label="Chargement en cours" aria-hidden="true"></div>
+
     <div class="auth__card">
 
         {# ---------- Panneau de marque ---------- #}
-        <aside class="auth__brand">
-            <img src="{{ asset('images/entreprises/logofav.png') }}"
-                 alt="" class="auth__brand-logo">
-            <h2 class="auth__brand-name">JS Brokers</h2>
-            <p class="auth__brand-tagline">
-                Votre plateforme de gestion de courtage en assurance,
-                centralisée et sécurisée.
-            </p>
-            <ul class="auth__brand-points">
-                <li>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M20 6 9 17l-5-5"/>
-                    </svg>
-                    Gestion centralisée de vos entreprises
-                </li>
-                <li>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M20 6 9 17l-5-5"/>
-                    </svg>
-                    Suivi des polices, sinistres et encaissements
-                </li>
-                <li>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M20 6 9 17l-5-5"/>
-                    </svg>
-                    Données protégées et conformes
-                </li>
-            </ul>
-        </aside>
+        {{ include('security/_auth_brand.html.twig') }}
 
         {# ---------- Panneau formulaire ---------- #}
         <section class="auth__form">
 
-            {# Messages applicatifs (ex. : compte créé → vérifiez vos mails) #}
-            {% for message in app.flashes('success') %}
-                <div class="alert alert-success" role="alert" aria-live="polite">
-                    {{ message }}
-                </div>
-            {% endfor %}
+            {# Messages applicatifs (ex. : compte créé → vérifiez vos mails) relayés
+               vers le toast applicatif, pour rester cohérent avec le reste de l'app. #}
+            {{ include('components/_flash_toasts.html.twig') }}
 
             {% if app.user %}
                 {# --- Utilisateur déjà authentifié --- #}
@@ -294,10 +60,12 @@
                     et à la liste de vos entreprises.
                 </p>
 
+                {# Échec d'authentification (identifiants invalides, compte non vérifié…)
+                   relayé vers le toast applicatif (notification-manager) plutôt qu'en
+                   alerte « en ligne » — même canal que les messages flash, DRY. #}
                 {% if error %}
-                    <div class="alert alert-danger" role="alert" aria-live="assertive">
-                        {{ error.messageKey|trans(error.messageData, 'security') }}
-                    </div>
+                    <div data-controller="flash-toast"
+                         data-flash-toast-messages-value="{{ [{ type: 'error', text: error.messageKey|trans(error.messageData, 'security') }]|json_encode|e('html_attr') }}"></div>
                 {% endif %}
 
                 <form method="post" novalidate
@@ -358,6 +126,12 @@
                         </button>
                     </div>
 
+                    {# Lien de récupération : accessible sans être connecté. #}
+                    <p class="auth__inline-link">
+                        <a href="{{ path('app_forgot_password') }}"
+                           data-action="click->top-progress#show">Mot de passe oublié&nbsp;?</a>
+                    </p>
+
                     {# Jeton CSRF #}
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
 
@@ -378,7 +152,8 @@
 
                 <p class="auth__foot">
                     Je n'ai pas encore de compte utilisateur JS Brokers.
-                    <a href="{{ path('app_register') }}" class="auth__foot-link">Créer un compte</a>
+                    <a href="{{ path('app_register') }}" class="auth__foot-link"
+                       data-action="click->top-progress#show">Créer un compte</a>
                 </p>
             {% endif %}
 

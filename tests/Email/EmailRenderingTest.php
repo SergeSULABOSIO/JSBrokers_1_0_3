@@ -59,6 +59,30 @@ class EmailRenderingTest extends KernelTestCase
         $this->assertStringContainsString('cid:', $html);
     }
 
+    public function testResetPasswordEmailRendersBrandedHtml(): void
+    {
+        self::bootKernel();
+
+        $html = $this->render('emails/reset_password_email.html.twig', [
+            'signedUrl' => 'https://example.test/mot-de-passe/reinitialiser?id=1&expires=9&signature=abc',
+            'expiresAtMessageKey' => '1 heure',
+            'expiresAtMessageData' => [],
+            'logoPath' => $this->logoPath(),
+            'senderEmail' => 'contact@jsbrokers.com',
+            'recipientName' => 'Mr. Modogo',
+        ]);
+
+        // Marque + en-tête + signature.
+        $this->assertStringContainsString('JS Brokers', $html);
+        // Appel à l'action.
+        $this->assertStringContainsString('Réinitialiser mon mot de passe', $html);
+        $this->assertStringContainsString('https://example.test/mot-de-passe/reinitialiser', $html);
+        // Icône d'illustration rendue en SVG inline.
+        $this->assertStringContainsString('<svg', $html);
+        // Logo embarqué en inline (CID) par email.image() — header + signature.
+        $this->assertStringContainsString('cid:', $html);
+    }
+
     public function testContactEmailRendersBrandedHtml(): void
     {
         self::bootKernel();

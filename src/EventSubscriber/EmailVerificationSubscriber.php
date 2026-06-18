@@ -41,6 +41,10 @@ class EmailVerificationSubscriber implements EventSubscriberInterface
         'app_translate',
         'app_index',
         'app_register',
+        // Parcours « mot de passe oublié » : accessible même à un utilisateur
+        // connecté mais non vérifié (sinon il serait renvoyé en boucle vers la re-vérif).
+        'app_forgot_password',
+        'app_reset_password',
     ];
 
     public function __construct(
