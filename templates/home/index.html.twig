@@ -1,212 +1,177 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}
-	{{pageName}}
+{% block title %}{{ pageName }} — JS Brokers{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    {{ include('home/_home_styles.html.twig') }}
 {% endblock %}
 
 {% block body %}
-  <p>
-      <h1 class="text-center"><strong>{{ "security_Work_faster_and_efficiently" | trans }}</strong></h1>
-      <h4 class="text-center text-secondary">{{ "security_Work_faster__description" | trans | raw}}</h4>
-  </p>
-  <p class="text-center m-5">
-      {% if app.user %}
-        <a href="{{ path('app_login')}}" type="button" class="btn btn-secondary p-3 shadow">
-          <strong>{{ "security_my_work_space" | trans }}</strong>
-        </a>
-      {% else %}
-        <a href="{{ path('app_register', {idUtilisateur:-1})}}" type="button" class="btn btn-secondary p-3 shadow">
-          <strong>{{ "security_new_account" | trans }}</strong>
-        </a>
-      {% endif %}
-      <a href="#pricing_plan" type="button" class="btn btn-outline-secondary p-3 shadow">
-        {# {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }} #}
-        <strong>{{ "security_tarif" | trans }}</strong>
-      </a>
-  </p>
-  </br>
-  </br>
-  {# Titre : Key features #}
-  <p class="text-center m-5">
-      <h1 class="text-center"><strong>{{ "security_some_key_fitures" | trans }}</strong></h1>
-      <h4 class="text-center text-secondary">{{ "security_some_key_fitures_description" | trans | raw}}</h4>
-  </p>
-  {# tableau des fonctions clées #}
-  <div class="m-5">
-     {# Ligne 1 #}
-    <div class="row justify-content-md-center bg-secondary bg-gradient rounded m-3 p-3">
-      <div class="col-5">
-        {# Marketing & CRM #}
-        <p>
-          <h5 class="">
-            <strong class="text-light">
-              {{ ux_icon('nimbus:marketing', {height: '20px', width: '20px'}) }} 
-              {{ "security_fitures_marketing_crm" | trans }}
-            </strong>
-          </h5>
-          <h6 class="text-light">
-            {{ "security_fitures_marketing_crm_description" | trans | raw}}
-          </h6>
-          <span class="text-light">
-            {{ "security_fitures_to_achieve_this" | trans }}
-            <ul>
-              <li>{{ "security_fitures_crm_task" | trans }}</li>
-              <li>{{ "security_fitures_crm_feedback" | trans }}</li>
-              <li>{{ "security_fitures_crm_prospect" | trans }}</li>
-              <li>{{ "security_fitures_crm_action_plan" | trans }}</li>
-            </ul>
-          </span>
-        </p>
+{% set lang = lang|default(app.request.locale|default('fr')) %}
 
-        {# Production #}
-        <p>
-          <h5 class="">
-            <strong class="text-light">
-              {{ ux_icon('emojione-monotone:umbrella-with-rain-drops', {height: '20px', width: '20px'}) }} 
-              {{ "security_fitures_production" | trans }}
-            </strong>
-          </h5>
-          <h6 class="text-light">
-            {{ "security_fitures_production_description" | trans | raw}}
-          </h6>
-          <span class="text-light">
-            {{ "security_fitures_to_achieve_this" | trans }}
-            <ul>
-              <li>{{ "security_fitures_production_clients" | trans }}</li>
-              <li>{{ "security_fitures_production_insurers" | trans }}</li>
-              <li>{{ "security_fitures_production_contacts" | trans }}</li>
-              <li>{{ "security_fitures_production_products" | trans }}</li>
-              <li>{{ "security_fitures_production_revenus" | trans }}</li>
-              <li>{{ "security_fitures_production_partners" | trans }}</li>
-              <li>{{ "security_fitures_production_reinsurers" | trans }}</li>
-              <li>{{ "security_fitures_production_policies" | trans }}</li>
-            </ul>
-          </span>
-        </p>
-      </div>
-      <div class="col-6">
-				<img class="rounded shadow" src="{{ asset('images/fitures/marketing_crm.jpg') }}" alt="" width="490px" height="530px">
-      </div>
-    </div>
+{# Lien d'évitement : premier élément focusable (WCAG 2.4.1). #}
+<a href="#content" class="skip-link">{{ "home_skip_to_content" | trans }}</a>
 
-    {# Ligne 2 #}
-    <div class="row justify-content-md-center bg-white bg-gradient rounded m-3 p-3">
-      <div class="col-5">
-        {# Claims #}
-        <p>
-          <h5 class="">
-            <strong>
-              {{ ux_icon('hugeicons:accident', {height: '20px', width: '20px'}) }} 
-              {{ "security_fitures_claims" | trans }}
-            </strong>
-          </h5>
-          <h6 class="text-secondary">
-            {{ "security_fitures_claims_description" | trans | raw}}
-          </h6>
-          <span class="text-secondary">
-            {{ "security_fitures_to_achieve_this" | trans }}
-            <ul>
-              <li>{{ "security_fitures_claims_notifications" | trans }}</li>
-              <li>{{ "security_fitures_claims_victimes" | trans }}</li>
-              <li>{{ "security_fitures_claims_assessors" | trans }}</li>
-              <li>{{ "security_fitures_claims_settlements" | trans }}</li>
-              <li>{{ "security_fitures_claims_claims_registry" | trans }}</li>
-              <li>{{ "security_fitures_claims_documentation" | trans }}</li>
-            </ul>
-          </span>
-        </p>
+{# En-tête public (logo, nav, langue, CTA) #}
+{{ include('components/_public_topbar.html.twig') }}
 
-      </div>
-      <div class="col-6">
-				<img class="rounded shadow" src="{{ asset('images/fitures/claims.jpg') }}" alt="" width="490px" height="250px">
-      </div>
-    </div>
+<main id="content">
 
-    {# Ligne 3 #}
-    <div class="row justify-content-md-center bg-secondary bg-gradient rounded m-3 p-3">
-      <div class="col-5">
-        {# Finance #}
-        <p>
-          <h5 class="">
-            <strong class="text-light">
-              {{ ux_icon('carbon:finance', {height: '20px', width: '20px'}) }} 
-              {{ "security_fitures_finance" | trans }}
-            </strong>
-          </h5>
-          <h6 class="text-light">
-            {{ "security_fitures_finance_description" | trans | raw}}
-          </h6>
-          <span class="text-light">
-            {{ "security_fitures_to_achieve_this" | trans }}
-            <ul>
-              <li>{{ "security_fitures_finance_currencies" | trans }}</li>
-              <li>{{ "security_fitures_finance_taxes" | trans }}</li>
-              <li>{{ "security_fitures_finance_taxes_authorities" | trans }}</li>
-              <li>{{ "security_fitures_finance_revenues" | trans }}</li>
-              <li>{{ "security_fitures_finance_invoices" | trans }}</li>
-              <li>{{ "security_fitures_finance_paiments" | trans }}</li>
-              <li>{{ "security_fitures_finance_bank_accounts" | trans }}</li>
-              <li>{{ "security_fitures_finance_provider" | trans }}</li>
-              <li>{{ "security_fitures_finance_brokerage_collection" | trans }}</li>
-              <li>{{ "security_fitures_finance_pops" | trans }}</li>
-            </ul>
-          </span>
-        </p>
-      
-      </div>
-      <div class="col-6">
-				<img class="rounded shadow" src="{{ asset('images/fitures/finances.jpg') }}" alt="" width="490px" height="430px">
-      </div>
-    </div>
+    {# ---------- Hero ---------- #}
+    <section class="public-hero">
+        <div class="public-hero__inner">
+            <h1>{{ "security_Work_faster_and_efficiently" | trans }}</h1>
+            <p class="public-hero__lead">{{ "security_Work_faster__description" | trans | raw }}</p>
+            <div class="public-hero__actions">
+                {% if app.user %}
+                    <a href="{{ path('app_login') }}" class="btn btn-hero-primary">
+                        {{ "security_my_work_space" | trans }}
+                    </a>
+                {% else %}
+                    <a href="{{ path('app_register', {idUtilisateur: -1}) }}" class="btn btn-hero-primary">
+                        {{ "security_new_account" | trans }}
+                    </a>
+                {% endif %}
+                <a href="#pricing_plan" class="btn btn-hero-ghost">
+                    {{ "security_tarif" | trans }}
+                </a>
+            </div>
+        </div>
+    </section>
 
-    {# Ligne 4 #}
-    <div class="row justify-content-md-center bg-white bg-gradient rounded m-3 p-3">
-      <div class="col-5">
-        {# Reporting & Dashboard #}
-        <p>
-          <h5 class="">
-            <strong>
-              {{ ux_icon('mdi:report-bar', {height: '20px', width: '20px'}) }} 
-              {{ "security_fitures_reporting" | trans }}
-            </strong>
-          </h5>
-          <h6 class="text-secondary">
-            {{ "security_fitures_reporting_description" | trans | raw}}
-          </h6>
-          <span class="text-secondary">
-            {{ "security_fitures_to_report_about" | trans }}
-            <ul>
-              <li>{{ "security_fitures_reporting_co_brokerage_revenue" | trans }}</li>
-              <li>{{ "security_fitures_reporting_own_revenue" | trans }}</li>
-              <li>{{ "security_fitures_reporting_portfolio" | trans }}</li>
-              <li>{{ "security_fitures_reporting_client_SOA" | trans }}</li>
-              <li>{{ "security_fitures_reporting_claims" | trans }}</li>
-              <li>{{ "security_fitures_reporting_renewals" | trans }}</li>
-              <li>{{ "security_fitures_reporting_marketing_crm" | trans }}</li>
-              <li>{{ "security_fitures_reporting_documents_management" | trans }}</li>
-              <li>{{ "security_fitures_reporting_tax_amounts" | trans }}</li>
-              <li>{{ "security_fitures_reporting_figures_for_market_authority" | trans }}</li>
-            </ul>
-          </span>
-        </p>
+    {# ---------- Fonctionnalités clés ---------- #}
+    <section id="features" class="public-section">
+        <div class="public-section__head">
+            <h2>{{ "security_some_key_fitures" | trans }}</h2>
+            <p>{{ "security_some_key_fitures_description" | trans | raw }}</p>
+        </div>
 
-      </div>
-      <div class="col-6">
-				<img class="rounded shadow" src="{{ asset('images/fitures/reporting.jpg') }}" alt="" width="490px" height="430px">
-      </div>
-    </div>
-  </div>
-  </br>
-  </br>
-  </br>
-  {# Titre : Pricing Plan #}
-  {% include 'segments/pricing_plan.html.twig' %}
+        {# Bloc 1 — Marketing & CRM + Production (cobalt) #}
+        <div class="feature-row feature-row--cobalt">
+            <div class="feature-row__body">
+                <h3 class="feature-row__title">
+                    {{ ux_icon('nimbus:marketing', {height: '22px', width: '22px'}) }}
+                    {{ "security_fitures_marketing_crm" | trans }}
+                </h3>
+                <p class="feature-row__desc">{{ "security_fitures_marketing_crm_description" | trans | raw }}</p>
+                <p class="feature-row__intro">{{ "security_fitures_to_achieve_this" | trans }}</p>
+                <ul class="feature-row__list">
+                    <li>{{ "security_fitures_crm_task" | trans }}</li>
+                    <li>{{ "security_fitures_crm_feedback" | trans }}</li>
+                    <li>{{ "security_fitures_crm_prospect" | trans }}</li>
+                    <li>{{ "security_fitures_crm_action_plan" | trans }}</li>
+                </ul>
 
-  {# Pied de page : accès aux conditions d'utilisation pour tous. #}
-  <footer class="text-center text-secondary border-top mt-5 py-4">
-    <p class="mb-2">{{ "base_base_de_page" | trans }}</p>
-    <a href="{{ path('app_terms') }}" class="text-decoration-none" style="color: #0047AB;">
-      {{ "terms_link" | trans }}
-    </a>
-  </footer>
+                <h3 class="feature-row__title" style="margin-top:1.25rem;">
+                    {{ ux_icon('emojione-monotone:umbrella-with-rain-drops', {height: '22px', width: '22px'}) }}
+                    {{ "security_fitures_production" | trans }}
+                </h3>
+                <p class="feature-row__desc">{{ "security_fitures_production_description" | trans | raw }}</p>
+                <p class="feature-row__intro">{{ "security_fitures_to_achieve_this" | trans }}</p>
+                <ul class="feature-row__list">
+                    <li>{{ "security_fitures_production_clients" | trans }}</li>
+                    <li>{{ "security_fitures_production_insurers" | trans }}</li>
+                    <li>{{ "security_fitures_production_contacts" | trans }}</li>
+                    <li>{{ "security_fitures_production_products" | trans }}</li>
+                    <li>{{ "security_fitures_production_revenus" | trans }}</li>
+                    <li>{{ "security_fitures_production_partners" | trans }}</li>
+                    <li>{{ "security_fitures_production_reinsurers" | trans }}</li>
+                    <li>{{ "security_fitures_production_policies" | trans }}</li>
+                </ul>
+            </div>
+            <div class="feature-row__media">
+                <img src="{{ asset('images/fitures/marketing_crm.jpg') }}"
+                     alt="{{ "security_fitures_marketing_crm" | trans }}" loading="lazy">
+            </div>
+        </div>
+
+        {# Bloc 2 — Sinistres (clair, image à gauche) #}
+        <div class="feature-row feature-row--light feature-row--reverse">
+            <div class="feature-row__body">
+                <h3 class="feature-row__title">
+                    {{ ux_icon('hugeicons:accident', {height: '22px', width: '22px'}) }}
+                    {{ "security_fitures_claims" | trans }}
+                </h3>
+                <p class="feature-row__desc">{{ "security_fitures_claims_description" | trans | raw }}</p>
+                <p class="feature-row__intro">{{ "security_fitures_to_achieve_this" | trans }}</p>
+                <ul class="feature-row__list">
+                    <li>{{ "security_fitures_claims_notifications" | trans }}</li>
+                    <li>{{ "security_fitures_claims_victimes" | trans }}</li>
+                    <li>{{ "security_fitures_claims_assessors" | trans }}</li>
+                    <li>{{ "security_fitures_claims_settlements" | trans }}</li>
+                    <li>{{ "security_fitures_claims_claims_registry" | trans }}</li>
+                    <li>{{ "security_fitures_claims_documentation" | trans }}</li>
+                </ul>
+            </div>
+            <div class="feature-row__media">
+                <img src="{{ asset('images/fitures/claims.jpg') }}"
+                     alt="{{ "security_fitures_claims" | trans }}" loading="lazy">
+            </div>
+        </div>
+
+        {# Bloc 3 — Finance (cobalt) #}
+        <div class="feature-row feature-row--cobalt">
+            <div class="feature-row__body">
+                <h3 class="feature-row__title">
+                    {{ ux_icon('carbon:finance', {height: '22px', width: '22px'}) }}
+                    {{ "security_fitures_finance" | trans }}
+                </h3>
+                <p class="feature-row__desc">{{ "security_fitures_finance_description" | trans | raw }}</p>
+                <p class="feature-row__intro">{{ "security_fitures_to_achieve_this" | trans }}</p>
+                <ul class="feature-row__list">
+                    <li>{{ "security_fitures_finance_currencies" | trans }}</li>
+                    <li>{{ "security_fitures_finance_taxes" | trans }}</li>
+                    <li>{{ "security_fitures_finance_taxes_authorities" | trans }}</li>
+                    <li>{{ "security_fitures_finance_revenues" | trans }}</li>
+                    <li>{{ "security_fitures_finance_invoices" | trans }}</li>
+                    <li>{{ "security_fitures_finance_paiments" | trans }}</li>
+                    <li>{{ "security_fitures_finance_bank_accounts" | trans }}</li>
+                    <li>{{ "security_fitures_finance_provider" | trans }}</li>
+                    <li>{{ "security_fitures_finance_brokerage_collection" | trans }}</li>
+                    <li>{{ "security_fitures_finance_pops" | trans }}</li>
+                </ul>
+            </div>
+            <div class="feature-row__media">
+                <img src="{{ asset('images/fitures/finances.jpg') }}"
+                     alt="{{ "security_fitures_finance" | trans }}" loading="lazy">
+            </div>
+        </div>
+
+        {# Bloc 4 — Reporting & Dashboard (clair, image à gauche) #}
+        <div class="feature-row feature-row--light feature-row--reverse">
+            <div class="feature-row__body">
+                <h3 class="feature-row__title">
+                    {{ ux_icon('mdi:report-bar', {height: '22px', width: '22px'}) }}
+                    {{ "security_fitures_reporting" | trans }}
+                </h3>
+                <p class="feature-row__desc">{{ "security_fitures_reporting_description" | trans | raw }}</p>
+                <p class="feature-row__intro">{{ "security_fitures_to_report_about" | trans }}</p>
+                <ul class="feature-row__list">
+                    <li>{{ "security_fitures_reporting_co_brokerage_revenue" | trans }}</li>
+                    <li>{{ "security_fitures_reporting_own_revenue" | trans }}</li>
+                    <li>{{ "security_fitures_reporting_portfolio" | trans }}</li>
+                    <li>{{ "security_fitures_reporting_client_SOA" | trans }}</li>
+                    <li>{{ "security_fitures_reporting_claims" | trans }}</li>
+                    <li>{{ "security_fitures_reporting_renewals" | trans }}</li>
+                    <li>{{ "security_fitures_reporting_marketing_crm" | trans }}</li>
+                    <li>{{ "security_fitures_reporting_documents_management" | trans }}</li>
+                    <li>{{ "security_fitures_reporting_tax_amounts" | trans }}</li>
+                    <li>{{ "security_fitures_reporting_figures_for_market_authority" | trans }}</li>
+                </ul>
+            </div>
+            <div class="feature-row__media">
+                <img src="{{ asset('images/fitures/reporting.jpg') }}"
+                     alt="{{ "security_fitures_reporting" | trans }}" loading="lazy">
+            </div>
+        </div>
+    </section>
+
+    {# ---------- Plans tarifaires ---------- #}
+    {% include 'segments/pricing_plan.html.twig' %}
+
+</main>
+
+{# Pied de page public (marque, liens, langue, crédit) #}
+{{ include('components/_public_footer.html.twig') }}
 {% endblock %}

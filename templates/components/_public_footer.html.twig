@@ -1,0 +1,36 @@
+{# ============================================================
+   Pied de page public réutilisable (vitrine JS Brokers).
+   Marque + tagline, liens (fonctionnalités, tarifs, CGU) et bascule de langue.
+   Charte : cobalt #0047AB, neutres Bootstrap. Styles dans _home_styles.html.twig.
+   ============================================================ #}
+{% set lang = lang|default(app.request.locale|default('fr')) %}
+
+<footer class="public-footer">
+    <div class="public-footer__inner">
+
+        <div class="public-footer__brand">
+            <img src="{{ asset('images/entreprises/logofav.png') }}" alt="" width="40" height="40">
+            <div>
+                <p class="public-footer__name">JS Brokers</p>
+                <p class="public-footer__tagline">{{ "security_some_key_fitures_description" | trans }}</p>
+            </div>
+        </div>
+
+        <nav class="public-footer__links" aria-label="{{ "home_nav_features" | trans }}">
+            <a href="#features">{{ "home_nav_features" | trans }}</a>
+            <a href="#pricing_plan">{{ "home_nav_pricing" | trans }}</a>
+            <a href="{{ path('app_terms') }}">{{ "terms_link" | trans }}</a>
+        </nav>
+
+        <span class="public-lang" role="group" aria-label="Langue / Language">
+            <a href="{{ path('app_index', {'lang': 'fr'}) }}"
+               class="{{ lang == 'fr' ? 'is-active' : '' }}"
+               {% if lang == 'fr' %}aria-current="true"{% endif %}>FR</a>
+            <a href="{{ path('app_index', {'lang': 'en'}) }}"
+               class="{{ lang == 'en' ? 'is-active' : '' }}"
+               {% if lang == 'en' %}aria-current="true"{% endif %}>EN</a>
+        </span>
+    </div>
+
+    <p class="public-footer__credit">{{ "base_base_de_page" | trans }}</p>
+</footer>

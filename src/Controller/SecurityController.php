@@ -31,10 +31,22 @@ class SecurityController extends AbstractController
     ) {}
 
     #[Route(path: '/', name: 'app_index')]
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        // Vitrine publique : la langue ne peut dépendre d'un compte connecté. On
+        // l'expose via un paramètre ?lang= (fr|en), auto-suffisant pour les visiteurs
+        // anonymes ; à défaut, on suit la locale courante de la requête (fr par défaut).
+        // Même pattern que LegalController::terms() (DRY).
+        $lang = $request->query->get('lang');
+        if (!in_array($lang, ['fr', 'en'], true)) {
+            $lang = in_array($request->getLocale(), ['fr', 'en'], true) ? $request->getLocale() : 'fr';
+        }
+        // On active la locale choisie pour que tous les « | trans » du rendu en tiennent compte.
+        $this->localeSwitcher->setLocale($lang);
+
         return $this->render('home/index.html.twig', [
-            'pageName' => $this->translator->trans("Accueil")
+            'pageName' => $this->translator->trans("Accueil"),
+            'lang'     => $lang,
         ]);
     }
 

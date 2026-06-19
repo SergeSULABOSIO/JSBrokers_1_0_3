@@ -1,0 +1,51 @@
+{# ============================================================
+   En-tête public réutilisable (vitrine JS Brokers).
+   Logo + navigation par ancres + bascule de langue FR/EN + CTA.
+   Charte : cobalt #0047AB, neutres Bootstrap. Styles dans _home_styles.html.twig.
+   `lang` est fourni par le contrôleur ; on retombe sur la locale courante sinon.
+   ============================================================ #}
+{% set lang = lang|default(app.request.locale|default('fr')) %}
+
+<header class="public-topbar">
+    <div class="public-topbar__inner">
+
+        {# Marque : retour en haut de la vitrine #}
+        <a href="{{ path('app_index') }}" class="public-brand" aria-label="JS Brokers">
+            <img src="{{ asset('images/entreprises/logofav.png') }}" alt="" width="36" height="36">
+            <span>JS Brokers</span>
+        </a>
+
+        {# Navigation par ancres (masquée sous 768px pour rester lisible) #}
+        <nav class="public-nav" aria-label="{{ 'security_some_key_fitures' | trans }}">
+            <a href="#features">{{ "home_nav_features" | trans }}</a>
+            <a href="#pricing_plan">{{ "home_nav_pricing" | trans }}</a>
+        </nav>
+
+        <div class="public-topbar__actions">
+
+            {# Bascule de langue : auto-suffisante via ?lang= (fonctionne hors session). #}
+            <span class="public-lang" role="group" aria-label="Langue / Language">
+                <a href="{{ path('app_index', {'lang': 'fr'}) }}"
+                   class="{{ lang == 'fr' ? 'is-active' : '' }}"
+                   {% if lang == 'fr' %}aria-current="true"{% endif %}>FR</a>
+                <a href="{{ path('app_index', {'lang': 'en'}) }}"
+                   class="{{ lang == 'en' ? 'is-active' : '' }}"
+                   {% if lang == 'en' %}aria-current="true"{% endif %}>EN</a>
+            </span>
+
+            {# CTA contextuel selon l'état de connexion (réutilise les clés base_*). #}
+            {% if app.user %}
+                <a href="{{ path('app_login') }}" class="btn btn-cobalt public-cta">
+                    {{ "base_mon_espace" | trans }}
+                </a>
+            {% else %}
+                <a href="{{ path('app_login') }}" class="btn btn-outline-secondary public-cta public-cta--ghost">
+                    {{ "base_connexion" | trans }}
+                </a>
+                <a href="{{ path('app_register', {idUtilisateur: -1}) }}" class="btn btn-cobalt public-cta">
+                    {{ "base_new_account" | trans }}
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</header>
