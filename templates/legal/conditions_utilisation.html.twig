@@ -13,12 +13,18 @@
     /* L'espace de travail impose globalement `body, html { overflow: hidden }`
        (interactive-menu.css) ; on rétablit le défilement sur cette page autonome. */
     html, body { height: auto !important; overflow: auto !important; }
+    /* Le défilement laisse passer l'ancrage sous la barre fixe. */
+    html { scroll-padding-top: var(--cgu-topbar-h, 64px); }
 
-    .cgu-page { min-height: 100vh; display: flex; flex-direction: column; background-color: #f3f3f3; }
+    .cgu-page {
+        --cgu-topbar-h: 64px;
+        min-height: 100vh; display: flex; flex-direction: column;
+        background-color: #f3f3f3; padding-top: var(--cgu-topbar-h);
+    }
 
-    /* Barre applicative — reste visible en haut */
+    /* Barre applicative — fixée en haut, comme le portail public. */
     .cgu-topbar {
-        flex: 0 0 auto;
+        position: fixed; top: 0; left: 0; right: 0; width: 100%; z-index: 1030;
         display: flex; align-items: center; justify-content: space-between;
         gap: 1rem; padding: .75rem 1.5rem;
         background-color: #ffffff; border-bottom: 1px solid #dee2e6;
@@ -73,7 +79,7 @@
     /* Impression : on ne garde que le document. */
     @media print {
         .cgu-topbar, .cgu-back-row, .cgu-no-print { display: none !important; }
-        .cgu-page { background: #fff; }
+        .cgu-page { background: #fff; padding-top: 0; }
         .cgu-card { border: none; box-shadow: none; padding: 0; }
     }
 </style>
