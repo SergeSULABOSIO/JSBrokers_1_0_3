@@ -1,0 +1,90 @@
+{# ============================================================
+   Section « Comment démarrer » (guide débutant) — vitrine JS Brokers.
+   3 étapes numérotées + mini-FAQ + CTA d'inscription.
+   Charte : cobalt #0047AB, neutres Bootstrap. Styles dans _home_styles.html.twig.
+   Icônes via le provider (resolve_icon_name). FAQ en <details>/<summary> natif
+   (accessible clavier, aria-expanded implicite, sans JavaScript).
+   ============================================================ #}
+<section id="guide" class="public-section" aria-labelledby="guide-title">
+    <div class="public-section__head">
+        <h2 id="guide-title">{{ "guide_section_title" | trans }}</h2>
+        <p>{{ "guide_section_description" | trans }}</p>
+    </div>
+
+    {# ---------- Étapes (même grille responsive que les tarifs) ---------- #}
+    {# role="list" : restaure le rôle de liste retiré par `list-style: none`
+       sous Safari/VoiceOver (la séquence des étapes reste annoncée). #}
+    <ol class="guide-steps row row-cols-1 row-cols-md-3 g-4" role="list">
+        <li class="col">
+            <article class="guide-step">
+                <span class="guide-step__num" aria-hidden="true">1</span>
+                <span class="guide-step__icon" aria-hidden="true">
+                    {{ ux_icon(resolve_icon_name('action:add'), {height: '26px', width: '26px'}) }}
+                </span>
+                <h3 class="guide-step__title">{{ "guide_step_1_title" | trans }}</h3>
+                <p class="guide-step__desc">{{ "guide_step_1_desc" | trans }}</p>
+            </article>
+        </li>
+        <li class="col">
+            <article class="guide-step">
+                <span class="guide-step__num" aria-hidden="true">2</span>
+                <span class="guide-step__icon" aria-hidden="true">
+                    {{ ux_icon(resolve_icon_name('entreprise'), {height: '26px', width: '26px'}) }}
+                </span>
+                <h3 class="guide-step__title">{{ "guide_step_2_title" | trans }}</h3>
+                <p class="guide-step__desc">{{ "guide_step_2_desc" | trans }}</p>
+            </article>
+        </li>
+        <li class="col">
+            <article class="guide-step">
+                <span class="guide-step__num" aria-hidden="true">3</span>
+                <span class="guide-step__icon" aria-hidden="true">
+                    {{ ux_icon(resolve_icon_name('action:invite'), {height: '26px', width: '26px'}) }}
+                </span>
+                <h3 class="guide-step__title">{{ "guide_step_3_title" | trans }}</h3>
+                <p class="guide-step__desc">{{ "guide_step_3_desc" | trans }}</p>
+            </article>
+        </li>
+    </ol>
+
+    {# ---------- Mini-FAQ (information progressive, sans JS) ---------- #}
+    <div class="guide-faq">
+        <h3 class="guide-faq__title">{{ "guide_faq_title" | trans }}</h3>
+
+        {% for i in 1..4 %}
+            <details class="guide-faq__item">
+                <summary class="guide-faq__question">
+                    <span>{{ ("guide_faq_q" ~ i) | trans }}</span>
+                    {# Chevron CSS : indicateur d'état par la forme (rotation via [open]),
+                       pas uniquement par la couleur. #}
+                    <span class="guide-faq__chevron" aria-hidden="true"></span>
+                </summary>
+                <p class="guide-faq__answer">{{ ("guide_faq_a" ~ i) | trans }}</p>
+            </details>
+        {% endfor %}
+    </div>
+
+    {# ---------- CTA final ---------- #}
+    <div class="guide-cta">
+        {% if app.user %}
+            {# Visiteur déjà connecté : on l'oriente vers son espace plutôt que l'inscription. #}
+            <a href="{{ path('app_login') }}"
+               class="btn btn-cobalt guide-cta__btn d-inline-flex align-items-center gap-2"
+               data-controller="ripple"
+               data-action="click->form-submit#navigating click->top-progress#show"
+               data-loading-text="{{ 'guide_cta_logged' | trans }}">
+                {{ ux_icon(resolve_icon_name('dashboard'), {height: '20px', width: '20px'}) }}
+                <span>{{ "guide_cta_logged" | trans }}</span>
+            </a>
+        {% else %}
+            <a href="{{ path('app_register', {idUtilisateur: -1}) }}"
+               class="btn btn-cobalt guide-cta__btn d-inline-flex align-items-center gap-2"
+               data-controller="ripple"
+               data-action="click->form-submit#navigating click->top-progress#show"
+               data-loading-text="{{ 'guide_cta' | trans }}">
+                {{ ux_icon(resolve_icon_name('action:add'), {height: '20px', width: '20px'}) }}
+                <span>{{ "guide_cta" | trans }}</span>
+            </a>
+        {% endif %}
+    </div>
+</section>

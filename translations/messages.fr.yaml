@@ -31,9 +31,31 @@ base_base_de_page: "JS Brokers. Votre performance est notre priorité."
 
 # Portail public (vitrine) — navigation et accessibilité
 home_nav_features: "Fonctionnalités"
+home_nav_guide: "Comment démarrer"
 home_nav_pricing: "Tarifs"
 home_nav_contact: "Contact"
 home_skip_to_content: "Aller au contenu principal"
+
+# Portail public (vitrine) — section Comment démarrer (guide débutant)
+guide_section_title: "Comment démarrer ?"
+guide_section_description: "Lancez-vous en quelques minutes : créez votre compte, mettez en place votre entreprise (ou rejoignez une équipe) et invitez vos collaborateurs."
+guide_step_1_title: "1. Créez votre compte gratuit"
+guide_step_1_desc: "Inscrivez-vous en quelques secondes, puis validez votre adresse e-mail. Aucune carte bancaire requise."
+guide_step_2_title: "2. Créez votre entreprise ou rejoignez une équipe"
+guide_step_2_desc: "Mettez en place votre espace de travail en créant votre entreprise, ou acceptez l'invitation reçue par e-mail pour rejoindre une équipe existante."
+guide_step_3_title: "3. Invitez vos collaborateurs"
+guide_step_3_desc: "Ajoutez vos collègues, attribuez-leur un rôle et travaillez à plusieurs pour profiter de toute la valeur de JS Brokers."
+guide_faq_title: "Questions fréquentes"
+guide_faq_q1: "Est-ce gratuit pour commencer ?"
+guide_faq_a1: "Oui. Le plan BASIC est gratuit et vous permet de démarrer en solo. Consultez la section Tarifs pour les formules en équipe."
+guide_faq_q2: "Comment rejoindre une entreprise existante ?"
+guide_faq_a2: "Un administrateur de l'entreprise vous envoie une invitation par e-mail. Il vous suffit de créer votre compte et d'accepter l'invitation pour rejoindre l'équipe."
+guide_faq_q3: "Puis-je inviter des collègues ?"
+guide_faq_a3: "Oui. Une fois votre entreprise créée, vous invitez vos collaborateurs par e-mail et leur attribuez les rôles adaptés."
+guide_faq_q4: "Faut-il installer un logiciel ?"
+guide_faq_a4: "Non. JS Brokers est entièrement en ligne : il fonctionne directement dans votre navigateur, sans installation."
+guide_cta: "Créer mon compte"
+guide_cta_logged: "Accéder à mon espace"
 
 # Portail public (vitrine) — section Contact
 contact_section_title: "Contactez-nous"

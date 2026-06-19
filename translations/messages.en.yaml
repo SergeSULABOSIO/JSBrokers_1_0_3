@@ -31,9 +31,31 @@ base_base_de_page: "JS Brokers. Your performance is our priority."
 
 # Public portal (landing) — navigation and accessibility
 home_nav_features: "Features"
+home_nav_guide: "Getting started"
 home_nav_pricing: "Pricing"
 home_nav_contact: "Contact"
 home_skip_to_content: "Skip to main content"
+
+# Public portal (landing) — Getting started section (beginner guide)
+guide_section_title: "How to get started?"
+guide_section_description: "Get going in minutes: create your account, set up your company (or join a team), and invite your colleagues."
+guide_step_1_title: "1. Create your free account"
+guide_step_1_desc: "Sign up in seconds, then confirm your email address. No credit card required."
+guide_step_2_title: "2. Create your company or join a team"
+guide_step_2_desc: "Set up your workspace by creating your company, or accept the email invitation to join an existing team."
+guide_step_3_title: "3. Invite your colleagues"
+guide_step_3_desc: "Add your colleagues, assign them a role, and work together to unlock the full value of JS Brokers."
+guide_faq_title: "Frequently asked questions"
+guide_faq_q1: "Is it free to start?"
+guide_faq_a1: "Yes. The BASIC plan is free and lets you get started on your own. See the Pricing section for team plans."
+guide_faq_q2: "How do I join an existing company?"
+guide_faq_a2: "A company administrator sends you an email invitation. Just create your account and accept the invitation to join the team."
+guide_faq_q3: "Can I invite colleagues?"
+guide_faq_a3: "Yes. Once your company is created, you invite your colleagues by email and assign them the right roles."
+guide_faq_q4: "Do I need to install any software?"
+guide_faq_a4: "No. JS Brokers is fully online: it runs right in your browser, with nothing to install."
+guide_cta: "Create my account"
+guide_cta_logged: "Go to my workspace"
 
 # Public portal (landing) — Contact section
 contact_section_title: "Get in touch"

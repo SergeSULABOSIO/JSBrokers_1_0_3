@@ -328,6 +328,84 @@
     .contact-phone { margin-top: 0.85rem; }
     .contact-phone[hidden] { display: none; }
 
+    /* ---------- Section Comment démarrer (guide débutant) ---------- */
+    /* Liste ordonnée sémantique : on masque la puce native (numéro repris dans la
+       pastille .guide-step__num) et on s'appuie sur la grille Bootstrap pour le rythme. */
+    .guide-steps { list-style: none; padding-left: 0; margin: 0 0 1rem; }
+
+    /* Carte d'étape : même langage visuel que .feature-row--light / .contact-card. */
+    .guide-step {
+        height: 100%;
+        display: flex; flex-direction: column; align-items: center; text-align: center;
+        background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 12px;
+        padding: 1.75rem;
+        box-shadow: 0 4px 16px rgba(0, 71, 171, 0.06);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .guide-step:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 28px rgba(0, 71, 171, 0.12);
+    }
+    /* Pastille numéro : cobalt plein, texte blanc (contraste fort, conforme charte). */
+    .guide-step__num {
+        width: 40px; height: 40px; border-radius: 50%;
+        display: inline-flex; align-items: center; justify-content: center;
+        background-color: #0047AB; color: #ffffff;
+        font-weight: 700; font-size: 1.1rem; line-height: 1;
+        margin-bottom: 0.85rem;
+    }
+    .guide-step__icon { display: inline-flex; color: #0047AB; margin-bottom: 0.75rem; }
+    .guide-step__title { font-size: 1.05rem; font-weight: 700; color: #212529; margin: 0 0 0.5rem; }
+    .guide-step__desc { color: #495057; line-height: 1.55; margin: 0; font-size: 0.95rem; }
+
+    /* Mini-FAQ : largeur alignée sur la carte de contact. */
+    .guide-faq { max-width: 720px; margin: 3rem auto 0; }
+    .guide-faq__title {
+        font-size: 1.25rem; font-weight: 700; color: #212529;
+        text-align: center; margin: 0 0 1.25rem;
+    }
+    .guide-faq__item {
+        background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 10px;
+        margin-bottom: 0.75rem; overflow: hidden;
+    }
+    .guide-faq__item:last-child { margin-bottom: 0; }
+
+    /* <summary> : question cliquable (cible ≥ 44px), on masque le marqueur natif. */
+    .guide-faq__question {
+        display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+        min-height: 44px; padding: 0.85rem 1.1rem;
+        font-weight: 600; color: #343a40; cursor: pointer;
+        list-style: none;
+    }
+    .guide-faq__question::-webkit-details-marker { display: none; }
+    .guide-faq__question::marker { content: ""; }
+    .guide-faq__question:hover { color: #0047AB; }
+    .guide-faq__question:focus-visible {
+        outline: 2px solid #0047AB; outline-offset: -2px; border-radius: 8px;
+    }
+
+    /* Chevron dessiné en CSS : carré dont 2 bords forment un « v ». L'ouverture le fait
+       pivoter (indication par la forme, pas par la couleur seule). */
+    .guide-faq__chevron {
+        flex: 0 0 auto; width: 9px; height: 9px; margin-right: 0.2rem;
+        border-right: 2px solid #6c757d; border-bottom: 2px solid #6c757d;
+        transform: rotate(45deg); transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .guide-faq__item[open] .guide-faq__chevron {
+        transform: rotate(225deg); border-color: #0047AB;
+    }
+    .guide-faq__answer { margin: 0; padding: 0 1.1rem 1.1rem; color: #495057; line-height: 1.6; }
+
+    /* CTA final centré. */
+    .guide-cta { text-align: center; margin-top: 2.5rem; }
+    .guide-cta__btn { min-height: 48px; padding: 0 1.6rem; font-weight: 600; }
+
+    /* Animations neutralisées si l'utilisateur les a désactivées. */
+    @media (prefers-reduced-motion: reduce) {
+        .guide-step, .guide-faq__chevron { transition: none; }
+        .guide-step:hover { transform: none; }
+    }
+
     /* ---------- Responsive ---------- */
     @media (max-width: 991.98px) {
         .feature-row__list { grid-template-columns: 1fr; }
