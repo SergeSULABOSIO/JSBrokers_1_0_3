@@ -51,8 +51,12 @@
     </div>
     <div class="card-footer text-center bg-white border-top-0">
         <a href="{{ app.user ? path('app_login') : path('app_register', {idUtilisateur: -1}) }}"
-           class="btn btn-cobalt w-100">
-            {{ "security_pricing_start_professionnel" | trans }}
+           class="btn btn-cobalt w-100 d-inline-flex align-items-center justify-content-center gap-2"
+           data-controller="ripple"
+           data-action="click->form-submit#navigating click->top-progress#show"
+           data-loading-text="{{ 'security_pricing_start_professionnel' | trans }}">
+            {{ ux_icon(resolve_icon_name('action:cart'), {height: '18px', width: '18px'}) }}
+            <span>{{ "security_pricing_start_professionnel" | trans }}</span>
         </a>
     </div>
 </div>

@@ -167,8 +167,9 @@
 
     {# Barre applicative #}
     <header class="ent-topbar">
-        <a href="{{ isEdit ? path('admin.entreprise.index') : path('app_login') }}" class="ent-brand"
-           data-action="click->top-progress#show">
+        <a href="{{ path('app_index') }}" class="ent-brand"
+           data-action="click->top-progress#show"
+           aria-label="JS Brokers — retour à l'accueil" title="Retour à l'accueil JS Brokers">
             <img src="{{ asset('images/entreprises/logofav.png') }}" alt="">
             <span>JS Brokers</span>
         </a>

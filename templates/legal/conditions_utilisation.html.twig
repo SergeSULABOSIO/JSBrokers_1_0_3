@@ -87,7 +87,9 @@
 
     {# Barre applicative #}
     <header class="cgu-topbar">
-        <a href="{{ backHref }}" class="cgu-brand">
+        {# La marque renvoie toujours à l'accueil public ; le bouton « retour » ci-dessous gère le retour contextuel. #}
+        <a href="{{ path('app_index') }}" class="cgu-brand"
+           aria-label="JS Brokers — retour à l'accueil" title="Retour à l'accueil JS Brokers">
             <img src="{{ asset('images/entreprises/logofav.png') }}" alt="">
             <span>JS Brokers</span>
         </a>

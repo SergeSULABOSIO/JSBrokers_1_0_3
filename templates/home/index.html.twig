@@ -13,6 +13,21 @@
 {# Lien d'évitement : premier élément focusable (WCAG 2.4.1). #}
 <a href="#content" class="skip-link">{{ "home_skip_to_content" | trans }}</a>
 
+{# Conteneur unique portant les contrôleurs de feedback : la barre de progression
+   globale (top-progress) et le retour visuel local sur les liens d'action
+   (form-submit#navigating). Il enveloppe en-tête, contenu et pied de page pour que
+   TOUS les liens de navigation serveur de la vitrine (topbar, hero, tarifs, footer)
+   partagent le même périmètre de contrôleur. #}
+<div class="public-shell" data-controller="top-progress form-submit">
+
+    {# Barre de progression globale (haut de page), cobalt animée. Déclenchée au clic
+       sur tout lien menant à une requête serveur (data-action ci-dessous). #}
+    <div class="ent-progress-bar" data-top-progress-target="bar"
+         role="progressbar" aria-label="{{ 'home_skip_to_content' | trans }}" aria-hidden="true"></div>
+
+    {# Retour serveur (accusé d'envoi du formulaire de contact) relayé en toast applicatif. #}
+    {{ include('components/_flash_toasts.html.twig') }}
+
 {# En-tête public (logo, nav, langue, CTA) #}
 {{ include('components/_public_topbar.html.twig') }}
 
@@ -25,16 +40,32 @@
             <p class="public-hero__lead">{{ "security_Work_faster__description" | trans | raw }}</p>
             <div class="public-hero__actions">
                 {% if app.user %}
-                    <a href="{{ path('app_login') }}" class="btn btn-hero-primary">
-                        {{ "security_my_work_space" | trans }}
+                    {# Navigation serveur → feedback local (spinner) + barre de progression. #}
+                    <a href="{{ path('app_login') }}"
+                       class="btn btn-hero-primary d-inline-flex align-items-center gap-2"
+                       data-controller="ripple"
+                       data-action="click->form-submit#navigating click->top-progress#show"
+                       data-loading-text="{{ 'security_my_work_space' | trans }}">
+                        {{ ux_icon(resolve_icon_name('dashboard'), {height: '20px', width: '20px'}) }}
+                        <span>{{ "security_my_work_space" | trans }}</span>
                     </a>
                 {% else %}
-                    <a href="{{ path('app_register', {idUtilisateur: -1}) }}" class="btn btn-hero-primary">
-                        {{ "security_new_account" | trans }}
+                    {# Navigation serveur → feedback local (spinner) + barre de progression. #}
+                    <a href="{{ path('app_register', {idUtilisateur: -1}) }}"
+                       class="btn btn-hero-primary d-inline-flex align-items-center gap-2"
+                       data-controller="ripple"
+                       data-action="click->form-submit#navigating click->top-progress#show"
+                       data-loading-text="{{ 'security_new_account' | trans }}">
+                        {{ ux_icon(resolve_icon_name('action:add'), {height: '20px', width: '20px'}) }}
+                        <span>{{ "security_new_account" | trans }}</span>
                     </a>
                 {% endif %}
-                <a href="#pricing_plan" class="btn btn-hero-ghost">
-                    {{ "security_tarif" | trans }}
+                {# Ancre interne (défilement) : ripple au clic, pas de barre (aucune requête serveur). #}
+                <a href="#pricing_plan"
+                   class="btn btn-hero-ghost d-inline-flex align-items-center gap-2"
+                   data-controller="ripple">
+                    {{ ux_icon(resolve_icon_name('action:view'), {height: '20px', width: '20px'}) }}
+                    <span>{{ "security_tarif" | trans }}</span>
                 </a>
             </div>
         </div>
@@ -51,7 +82,7 @@
         <div class="feature-row feature-row--cobalt">
             <div class="feature-row__body">
                 <h3 class="feature-row__title">
-                    {{ ux_icon('nimbus:marketing', {height: '22px', width: '22px'}) }}
+                    {{ ux_icon(resolve_icon_name('nimbus:marketing'), {height: '22px', width: '22px'}) }}
                     {{ "security_fitures_marketing_crm" | trans }}
                 </h3>
                 <p class="feature-row__desc">{{ "security_fitures_marketing_crm_description" | trans | raw }}</p>
@@ -64,7 +95,7 @@
                 </ul>
 
                 <h3 class="feature-row__title" style="margin-top:1.25rem;">
-                    {{ ux_icon('emojione-monotone:umbrella-with-rain-drops', {height: '22px', width: '22px'}) }}
+                    {{ ux_icon(resolve_icon_name('emojione-monotone:umbrella-with-rain-drops'), {height: '22px', width: '22px'}) }}
                     {{ "security_fitures_production" | trans }}
                 </h3>
                 <p class="feature-row__desc">{{ "security_fitures_production_description" | trans | raw }}</p>
@@ -90,7 +121,7 @@
         <div class="feature-row feature-row--light feature-row--reverse">
             <div class="feature-row__body">
                 <h3 class="feature-row__title">
-                    {{ ux_icon('hugeicons:accident', {height: '22px', width: '22px'}) }}
+                    {{ ux_icon(resolve_icon_name('sinistre'), {height: '22px', width: '22px'}) }}
                     {{ "security_fitures_claims" | trans }}
                 </h3>
                 <p class="feature-row__desc">{{ "security_fitures_claims_description" | trans | raw }}</p>
@@ -114,7 +145,7 @@
         <div class="feature-row feature-row--cobalt">
             <div class="feature-row__body">
                 <h3 class="feature-row__title">
-                    {{ ux_icon('carbon:finance', {height: '22px', width: '22px'}) }}
+                    {{ ux_icon(resolve_icon_name('carbon:finance'), {height: '22px', width: '22px'}) }}
                     {{ "security_fitures_finance" | trans }}
                 </h3>
                 <p class="feature-row__desc">{{ "security_fitures_finance_description" | trans | raw }}</p>
@@ -142,7 +173,7 @@
         <div class="feature-row feature-row--light feature-row--reverse">
             <div class="feature-row__body">
                 <h3 class="feature-row__title">
-                    {{ ux_icon('mdi:report-bar', {height: '22px', width: '22px'}) }}
+                    {{ ux_icon(resolve_icon_name('dashboard'), {height: '22px', width: '22px'}) }}
                     {{ "security_fitures_reporting" | trans }}
                 </h3>
                 <p class="feature-row__desc">{{ "security_fitures_reporting_description" | trans | raw }}</p>
@@ -170,8 +201,116 @@
     {# ---------- Plans tarifaires ---------- #}
     {% include 'segments/pricing_plan.html.twig' %}
 
+    {# ---------- Contact ---------- #}
+    <section id="contact" class="public-section">
+        <div class="public-section__head">
+            <h2>{{ "contact_section_title" | trans }}</h2>
+            <p>{{ "contact_section_description" | trans }}</p>
+        </div>
+
+        <div class="contact-card">
+            {# Formulaire de contact public — même pattern que la page de connexion :
+               libellé au-dessus, champ avec icône en préfixe (.contact-field-icon, icônes
+               via IconCanvasProvider). À la soumission : feedback local sur le bouton
+               (form-submit#submitting) + barre de progression (top-progress#show). La
+               validation HTML5 native prévient l'envoi des champs vides côté client. #}
+            {{ form_start(contactForm, {attr: {
+                class: 'contact-form',
+                'data-controller': 'form-submit',
+                'data-action': 'submit->form-submit#submitting submit->top-progress#show'
+            }}) }}
+
+                {# Nom #}
+                <div class="contact-field">
+                    {{ form_label(contactForm.name, null, {label_attr: {class: 'form-label'}}) }}
+                    <div class="contact-input">
+                        {{ ux_icon(resolve_icon_name('utilisateur'), {height: '20px', width: '20px', class: 'contact-field-icon'}) }}
+                        {{ form_widget(contactForm.name, {attr: {
+                            class: 'form-control', autocomplete: 'name', placeholder: 'ContactForm.name'|trans
+                        }}) }}
+                    </div>
+                    {{ form_errors(contactForm.name) }}
+                </div>
+
+                {# E-mail (pour pouvoir recontacter le visiteur) #}
+                <div class="contact-field">
+                    {{ form_label(contactForm.email, null, {label_attr: {class: 'form-label'}}) }}
+                    <div class="contact-input">
+                        {{ ux_icon(resolve_icon_name('invite'), {height: '20px', width: '20px', class: 'contact-field-icon'}) }}
+                        {{ form_widget(contactForm.email, {attr: {
+                            class: 'form-control', autocomplete: 'email', placeholder: 'ContactForm.email'|trans
+                        }}) }}
+                    </div>
+                    {{ form_errors(contactForm.email) }}
+                </div>
+
+                {# Téléphone facultatif — révélé par la case à cocher (information progressive).
+                   La case pilote l'affichage du champ via le contrôleur « disclosure ». #}
+                <div class="contact-field contact-optional" data-controller="disclosure">
+                    {# Le thème Bootstrap 5 rend déjà la case dans un <div class="form-check">
+                       avec son <label class="form-check-label"> ; on ne rend donc QUE le
+                       widget (pas de form_label séparé qui dupliquerait le libellé). #}
+                    <div class="contact-consent">
+                        {{ form_widget(contactForm.wantsPhone, {attr: {
+                            'data-disclosure-target': 'trigger',
+                            'data-action': 'disclosure#toggle',
+                            'aria-controls': 'contact-phone-region'
+                        }}) }}
+                    </div>
+
+                    <div class="contact-phone" id="contact-phone-region" data-disclosure-target="region" hidden>
+                        {{ form_label(contactForm.phone, null, {label_attr: {class: 'form-label'}}) }}
+                        <div class="contact-input">
+                            {{ ux_icon(resolve_icon_name('contact'), {height: '20px', width: '20px', class: 'contact-field-icon'}) }}
+                            {{ form_widget(contactForm.phone, {attr: {
+                                class: 'form-control', autocomplete: 'tel', inputmode: 'tel',
+                                placeholder: 'ContactForm.phone'|trans,
+                                'data-disclosure-target': 'field'
+                            }}) }}
+                        </div>
+                        {{ form_errors(contactForm.phone) }}
+                    </div>
+                </div>
+
+                {# Objet du message #}
+                <div class="contact-field">
+                    {{ form_label(contactForm.objet, null, {label_attr: {class: 'form-label'}}) }}
+                    <div class="contact-input">
+                        {{ ux_icon(resolve_icon_name('action:description'), {height: '20px', width: '20px', class: 'contact-field-icon'}) }}
+                        {{ form_widget(contactForm.objet, {attr: {class: 'form-select'}}) }}
+                    </div>
+                    {{ form_errors(contactForm.objet) }}
+                </div>
+
+                {# Message #}
+                <div class="contact-field">
+                    {{ form_label(contactForm.message, null, {label_attr: {class: 'form-label'}}) }}
+                    <div class="contact-input contact-input--textarea">
+                        {{ ux_icon(resolve_icon_name('feedback'), {height: '20px', width: '20px', class: 'contact-field-icon'}) }}
+                        {{ form_widget(contactForm.message, {attr: {
+                            class: 'form-control', rows: 5, maxlength: 400, placeholder: 'ContactForm.message'|trans
+                        }}) }}
+                    </div>
+                    {{ form_errors(contactForm.message) }}
+                </div>
+
+                <button type="submit"
+                        class="btn btn-cobalt contact-submit w-100 d-inline-flex align-items-center justify-content-center gap-2"
+                        data-controller="ripple"
+                        data-form-submit-target="button"
+                        data-loading-text="{{ 'ContactForm.send' | trans }}">
+                    {{ ux_icon(resolve_icon_name('action:resend-invitation'), {height: '20px', width: '20px'}) }}
+                    <span>{{ "ContactForm.send" | trans }}</span>
+                </button>
+
+            {{ form_end(contactForm) }}
+        </div>
+    </section>
+
 </main>
 
 {# Pied de page public (marque, liens, langue, crédit) #}
 {{ include('components/_public_footer.html.twig') }}
+
+</div>
 {% endblock %}

@@ -36,15 +36,25 @@ class MailingSubscriber implements EventSubscriberInterface
         /** @var DemandeContactDTO $data */
         $data = $event->data;
 
-        // E-mail interne (vers la boîte de contact). L'expéditeur reste « JS Brokers »
-        // pour la cohérence ; on positionne l'adresse du visiteur en « Répondre à »
-        // afin de pouvoir lui répondre directement d'un clic.
+        // 1) E-mail interne (vers la boîte de contact de l'équipe). L'expéditeur reste
+        // « JS Brokers » pour la cohérence ; on positionne l'adresse du visiteur en
+        // « Répondre à » afin de pouvoir lui répondre directement d'un clic.
         $this->envoyerMail(
             self::CONTACT_INBOX,
-            $this->buildSubject('Demande de contact', $data->email),
+            $this->buildSubject($data->objet ?: 'Demande de contact', $data->email),
             'home/mail/message_demande_de_contact.html.twig',
             ['data' => $data],
-            new Address($data->email, $data->name ?? $data->email),
+            new Address($data->email, $data->name ?: $data->email),
+        );
+
+        // 2) Accusé de réception automatique au visiteur (même charte corporate). On place
+        // la boîte de contact en « Répondre à » : si le visiteur répond, l'équipe reçoit.
+        $this->envoyerMail(
+            $data->email,
+            $this->buildSubject('Accusé de réception', $data->name ?: $data->email),
+            'home/mail/accuse_reception_contact.html.twig',
+            ['data' => $data],
+            new Address(self::CONTACT_INBOX, self::SENDER_NAME),
         );
     }
 

@@ -90,7 +90,11 @@ class EmailRenderingTest extends KernelTestCase
         $data = new \App\DTO\DemandeContactDTO();
         $data->name = 'Victor ESAFE';
         $data->email = 'victor@example.test';
+        $data->objet = 'Demande de rendez-vous';
         $data->message = "Bonjour,\nJe souhaite un devis.";
+        // Le visiteur a volontairement laissé un numéro pour être rappelé.
+        $data->wantsPhone = true;
+        $data->phone = '+243 999 000 111';
 
         $html = $this->render('home/mail/message_demande_de_contact.html.twig', [
             'data' => $data,
@@ -100,6 +104,41 @@ class EmailRenderingTest extends KernelTestCase
 
         $this->assertStringContainsString('Nouvelle demande de contact', $html);
         $this->assertStringContainsString('victor@example.test', $html);
+        // L'objet choisi par le visiteur est repris dans l'e-mail interne.
+        $this->assertStringContainsString('Demande de rendez-vous', $html);
+        // Le numéro + la demande de rappel téléphonique sont signalés à l'équipe.
+        $this->assertStringContainsString('+243 999 000 111', $html);
+        $this->assertStringContainsString('par téléphone', $html);
+        // Le saut de ligne du message est converti en <br> (filtre nl2br).
+        $this->assertStringContainsString('<br', $html);
+        $this->assertStringContainsString('<svg', $html);
+        $this->assertStringContainsString('cid:', $html);
+    }
+
+    public function testContactAcknowledgementEmailRendersBrandedHtml(): void
+    {
+        self::bootKernel();
+
+        $data = new \App\DTO\DemandeContactDTO();
+        $data->name = 'Victor ESAFE';
+        $data->email = 'victor@example.test';
+        $data->objet = 'Demande de rendez-vous';
+        $data->message = "Bonjour,\nJe souhaite un devis.";
+        $data->wantsPhone = true;
+        $data->phone = '+243 999 000 111';
+
+        $html = $this->render('home/mail/accuse_reception_contact.html.twig', [
+            'data' => $data,
+            'logoPath' => $this->logoPath(),
+            'senderEmail' => 'contact@jsbrokers.com',
+        ]);
+
+        // Accusé de réception adressé au visiteur (nom repris, message renvoyé).
+        $this->assertStringContainsString('Merci pour votre message', $html);
+        $this->assertStringContainsString('Victor ESAFE', $html);
+        // L'accusé confirme le rappel téléphonique au numéro fourni.
+        $this->assertStringContainsString('+243 999 000 111', $html);
+        $this->assertStringContainsString('rappellera', $html);
         // Le saut de ligne du message est converti en <br> (filtre nl2br).
         $this->assertStringContainsString('<br', $html);
         $this->assertStringContainsString('<svg', $html);

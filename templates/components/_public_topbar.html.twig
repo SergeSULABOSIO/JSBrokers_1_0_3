@@ -19,6 +19,7 @@
         <nav class="public-nav" aria-label="{{ 'security_some_key_fitures' | trans }}">
             <a href="#features">{{ "home_nav_features" | trans }}</a>
             <a href="#pricing_plan">{{ "home_nav_pricing" | trans }}</a>
+            <a href="#contact">{{ "home_nav_contact" | trans }}</a>
         </nav>
 
         <div class="public-topbar__actions">
@@ -33,17 +34,35 @@
                    {% if lang == 'en' %}aria-current="true"{% endif %}>EN</a>
             </span>
 
-            {# CTA contextuel selon l'état de connexion (réutilise les clés base_*). #}
+            {# CTA contextuel selon l'état de connexion (réutilise les clés base_*).
+               Chaque CTA mène à une requête serveur → feedback local (spinner via
+               form-submit#navigating) + barre de progression (top-progress#show), et
+               ripple au clic. Icônes via le provider (resolve_icon_name). #}
             {% if app.user %}
-                <a href="{{ path('app_login') }}" class="btn btn-cobalt public-cta">
-                    {{ "base_mon_espace" | trans }}
+                <a href="{{ path('app_login') }}"
+                   class="btn btn-cobalt public-cta gap-2"
+                   data-controller="ripple"
+                   data-action="click->form-submit#navigating click->top-progress#show"
+                   data-loading-text="{{ 'base_mon_espace' | trans }}">
+                    {{ ux_icon(resolve_icon_name('dashboard'), {height: '18px', width: '18px'}) }}
+                    <span>{{ "base_mon_espace" | trans }}</span>
                 </a>
             {% else %}
-                <a href="{{ path('app_login') }}" class="btn btn-outline-secondary public-cta public-cta--ghost">
-                    {{ "base_connexion" | trans }}
+                <a href="{{ path('app_login') }}"
+                   class="btn btn-outline-secondary public-cta public-cta--ghost gap-2"
+                   data-controller="ripple"
+                   data-action="click->form-submit#navigating click->top-progress#show"
+                   data-loading-text="{{ 'base_connexion' | trans }}">
+                    {{ ux_icon(resolve_icon_name('utilisateur'), {height: '18px', width: '18px'}) }}
+                    <span>{{ "base_connexion" | trans }}</span>
                 </a>
-                <a href="{{ path('app_register', {idUtilisateur: -1}) }}" class="btn btn-cobalt public-cta">
-                    {{ "base_new_account" | trans }}
+                <a href="{{ path('app_register', {idUtilisateur: -1}) }}"
+                   class="btn btn-cobalt public-cta gap-2"
+                   data-controller="ripple"
+                   data-action="click->form-submit#navigating click->top-progress#show"
+                   data-loading-text="{{ 'base_new_account' | trans }}">
+                    {{ ux_icon(resolve_icon_name('action:add'), {height: '18px', width: '18px'}) }}
+                    <span>{{ "base_new_account" | trans }}</span>
                 </a>
             {% endif %}
         </div>
