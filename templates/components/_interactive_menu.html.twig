@@ -110,10 +110,11 @@
         <div class="menu-col-2">
             {# Ligne 1: Marque JS Brokers — version compacte pour laisser de la place aux rubriques #}
             <div class="menu-col-2-row-1">
-                <div class="company-brand">
+                {# La marque renvoie toujours vers la page d'accueil publique (/). #}
+                <a href="{{ path('app_index') }}" class="company-brand" aria-label="JS Brokers — retour à l'accueil" title="Retour à l'accueil JS Brokers">
                     <img src="{{ asset(menu.colonne_2.logo) }}" alt="Logo" class="company-logo">
                     <h2 class="company-title">{{ menu.colonne_2.titre }}</h2>
-                </div>
+                </a>
                 <p class="company-description">{{ menu.colonne_2.description }}</p>
                 {# La version affichée est celle des conditions et termes d'utilisation (source : App\Legal\Cgu),
                    et non plus la version applicative. Le lien ouvre les CGU. #}

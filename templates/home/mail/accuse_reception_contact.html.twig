@@ -1,0 +1,25 @@
+{% extends 'emails/_layout.html.twig' %}
+{% import 'emails/_macros.html.twig' as m %}
+
+{% block subject %}JS Brokers — Accusé de réception{% endblock %}
+
+{% set wantsCallback = data.wantsPhone and data.phone is not empty %}
+
+{% block content %}
+    {{ m.heading('feedback', 'Merci pour votre message') }}
+    {{ m.paragraph(
+        'Bonjour <strong>' ~ data.name ~ '</strong>,<br>'
+        ~ (wantsCallback
+            ? 'nous avons bien reçu votre message. Notre équipe vous rappellera au <strong>' ~ data.phone ~ '</strong> dans les meilleurs délais.'
+            : 'nous avons bien reçu votre message. Notre équipe vous répondra dans les meilleurs délais.')
+    ) }}
+
+    {{ m.heading('action:description', 'Votre message') }}
+    {{ m.paragraph('<strong>Objet&nbsp;:</strong> ' ~ data.objet) }}
+    {% if wantsCallback %}
+        {{ m.paragraph('<strong>Téléphone&nbsp;:</strong> ' ~ data.phone) }}
+    {% endif %}
+    {{ m.paragraph(data.message|nl2br) }}
+
+    {{ m.note('Ceci est un accusé de réception automatique : merci de ne pas y répondre directement.') }}
+{% endblock %}

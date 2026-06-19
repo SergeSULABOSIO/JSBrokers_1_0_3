@@ -13,12 +13,16 @@
 namespace App\Controller;
 
 use App\Entity\Utilisateur;
+use App\DTO\DemandeContactDTO;
+use App\Form\DemandeContactType;
+use App\Event\DemandeContactEvent;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Translation\LocaleSwitcher;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 
@@ -31,7 +35,7 @@ class SecurityController extends AbstractController
     ) {}
 
     #[Route(path: '/', name: 'app_index')]
-    public function index(Request $request): Response
+    public function index(Request $request, EventDispatcherInterface $dispatcher): Response
     {
         // Vitrine publique : la langue ne peut dépendre d'un compte connecté. On
         // l'expose via un paramètre ?lang= (fr|en), auto-suffisant pour les visiteurs
@@ -44,9 +48,28 @@ class SecurityController extends AbstractController
         // On active la locale choisie pour que tous les « | trans » du rendu en tiennent compte.
         $this->localeSwitcher->setLocale($lang);
 
+        // Section « Contact » de la vitrine : un visiteur (anonyme) nous laisse un message
+        // et son e-mail. À la soumission, l'événement déclenche l'envoi du message à
+        // l'équipe ET un accusé de réception au visiteur (cf. MailingSubscriber). On suit
+        // le pattern Post/Redirect/Get pour éviter le renvoi au rafraîchissement.
+        $contactForm = $this->createForm(DemandeContactType::class, new DemandeContactDTO(), [
+            'action' => $this->generateUrl('app_index', ['lang' => $lang]) . '#contact',
+        ]);
+        $contactForm->handleRequest($request);
+        if ($contactForm->isSubmitted() && $contactForm->isValid()) {
+            try {
+                $dispatcher->dispatch(new DemandeContactEvent($contactForm->getData()));
+                $this->addFlash('success', $this->translator->trans('contact_email_sent_ok'));
+            } catch (\Throwable) {
+                $this->addFlash('error', $this->translator->trans('contact_email_sent_error'));
+            }
+            return $this->redirect($this->generateUrl('app_index', ['lang' => $lang]) . '#contact');
+        }
+
         return $this->render('home/index.html.twig', [
-            'pageName' => $this->translator->trans("Accueil"),
-            'lang'     => $lang,
+            'pageName'    => $this->translator->trans("Accueil"),
+            'lang'        => $lang,
+            'contactForm' => $contactForm,
         ]);
     }
 

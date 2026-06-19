@@ -13,6 +13,24 @@
     html, body { height: auto !important; overflow: auto !important; }
     body { background-color: #f3f3f3; }
 
+    /* Hauteur de l'en-tête fixe : sert d'offset au contenu et aux ancres. */
+    .public-shell { --public-topbar-h: 64px; padding-top: var(--public-topbar-h); }
+    /* Les ancres internes (#features, #pricing_plan) ne doivent pas passer sous
+       l'en-tête fixe : on réserve sa hauteur lors du saut. */
+    html { scroll-behavior: smooth; scroll-padding-top: var(--public-topbar-h, 64px); }
+
+    /* Barre de progression globale : fixée tout en haut, cobalt, animée
+       (même pattern que top-progress_controller / pages d'auth). */
+    .ent-progress-bar {
+        position: fixed; top: 0; left: 0; width: 100%; height: 6px;
+        background-color: #0047AB; display: none; z-index: 1100;
+        animation: ent-progress-animation 1.5s infinite linear;
+    }
+    @keyframes ent-progress-animation {
+        0%   { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
     /* Lien d'évitement (WCAG 2.4.1) : visible uniquement au focus clavier. */
     .skip-link {
         position: absolute; left: 0.75rem; top: -3rem;
@@ -23,10 +41,11 @@
     }
     .skip-link:focus { top: 0; outline: 2px solid #ffffff; outline-offset: -4px; }
 
-    /* ---------- En-tête public collant ---------- */
+    /* ---------- En-tête public FIXE (toujours visible au-dessus de la page) ---------- */
     .public-topbar {
-        position: sticky; top: 0; z-index: 1030;
+        position: fixed; top: 0; left: 0; right: 0; width: 100%; z-index: 1030;
         background-color: #ffffff; border-bottom: 1px solid #dee2e6;
+        box-shadow: 0 1px 8px rgba(0, 71, 171, 0.06); /* légère ombre quand on défile dessous */
     }
     .public-topbar__inner {
         max-width: 1140px; margin: 0 auto; padding: 0.6rem 1.5rem;
@@ -144,22 +163,42 @@
     .feature-row--light .feature-row__desc { color: #495057; }
     .feature-row--cobalt .feature-row__desc { color: rgba(255, 255, 255, 0.9); }
 
-    .feature-row__intro { font-weight: 600; margin: 0 0 0.5rem; }
+    /* Intitulé de liste : surtitre discret en capitales (hiérarchie / signifiance). */
+    .feature-row__intro {
+        font-weight: 700; margin: 0 0 0.6rem;
+        font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .feature-row--light .feature-row__intro { color: #6c757d; }      /* --text-muted */
+    .feature-row--cobalt .feature-row__intro { color: rgba(255, 255, 255, 0.75); }
+
     .feature-row__list {
         list-style: none; padding: 0; margin: 0;
-        display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.35rem 1rem;
+        display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.2rem 0.6rem;
     }
+    /* Chaque entrée : pastille « ✓ » + libellé, dans une zone qui se révèle au survol
+       (reconnaissance plutôt que rappel ; le ✓ signale une capacité incluse). */
     .feature-row__list li {
-        position: relative; padding-left: 1.3rem; font-size: 0.92rem; line-height: 1.5;
+        display: flex; align-items: flex-start; gap: 0.55rem;
+        padding: 0.3rem 0.5rem; border-radius: 8px;
+        font-size: 0.9rem; line-height: 1.45;
+        transition: background-color 0.15s ease;
     }
     .feature-row__list li::before {
-        content: ""; position: absolute; left: 0; top: 0.55em;
-        width: 7px; height: 7px; border-radius: 50%;
+        content: "\2713"; /* ✓ */
+        flex: 0 0 auto; margin-top: 0.05em;
+        width: 18px; height: 18px; border-radius: 50%;
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 0.7rem; font-weight: 700; line-height: 1;
     }
-    .feature-row--light .feature-row__list li::before { background-color: #0047AB; }
-    .feature-row--cobalt .feature-row__list li::before { background-color: #ffffff; }
-    .feature-row--cobalt .feature-row__list li { color: rgba(255, 255, 255, 0.92); }
+    /* Cartes claires : ✓ cobalt sur pastille cobalt très clair (--bg-cobalt-subtle),
+       survol sur fond neutre (--bg-body). */
     .feature-row--light .feature-row__list li { color: #343a40; }
+    .feature-row--light .feature-row__list li::before { background-color: #e8f0fb; color: #0047AB; }
+    .feature-row--light .feature-row__list li:hover { background-color: #f3f3f3; }
+    /* Cartes cobalt : ✓ blanc sur voile blanc translucide, survol légèrement éclairci. */
+    .feature-row--cobalt .feature-row__list li { color: rgba(255, 255, 255, 0.92); }
+    .feature-row--cobalt .feature-row__list li::before { background-color: rgba(255, 255, 255, 0.18); color: #ffffff; }
+    .feature-row--cobalt .feature-row__list li:hover { background-color: rgba(255, 255, 255, 0.10); }
 
     .feature-row__media img {
         width: 100%; height: auto; border-radius: 10px;
@@ -174,7 +213,8 @@
         max-width: 1140px; margin: 0 auto; padding: 2.5rem 1.5rem 1.5rem;
         display: flex; flex-wrap: wrap; align-items: flex-start; gap: 1.5rem;
     }
-    .public-footer__brand { display: flex; align-items: center; gap: 0.75rem; flex: 1 1 280px; }
+    .public-footer__brand { display: flex; align-items: center; gap: 0.75rem; flex: 1 1 280px; text-decoration: none; }
+    .public-footer__brand:hover { opacity: 0.85; }
     .public-footer__brand img { border-radius: 8px; }
     .public-footer__name { font-weight: 700; color: #0047AB; margin: 0; font-size: 1.05rem; }
     .public-footer__tagline { color: #6c757d; margin: 0; font-size: 0.9rem; max-width: 360px; }
@@ -193,13 +233,112 @@
         color: #6c757d; font-size: 0.85rem;
     }
 
+    /* ---------- Interactivité : survol des cartes + onde au clic des boutons ---------- */
+    /* Onde (ripple) : `overflow: hidden` rogne le span enfant aux limites du bouton ;
+       l'ombre/anneau de focus propre au bouton n'est PAS rognée (overflow ne s'applique
+       qu'aux descendants). `position: relative` cale le positionnement de l'onde. */
+    .public-shell .btn { position: relative; overflow: hidden; }
+
+    /* Lignes de fonctionnalités : légère élévation + zoom discret de l'image au survol. */
+    .feature-row { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .feature-row--light:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 28px rgba(0, 71, 171, 0.12);
+    }
+    .feature-row--cobalt:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 14px 32px rgba(0, 51, 128, 0.35);
+    }
+    .feature-row__media img { transition: transform 0.3s ease; }
+    .feature-row:hover .feature-row__media img { transform: scale(1.02); }
+
+    /* Cartes tarifaires : élévation + ombre cobalt au survol (override .shadow Bootstrap). */
+    #pricing_plan .card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+    #pricing_plan .card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 16px 36px rgba(0, 71, 171, 0.18) !important;
+    }
+
+    /* Accessibilité : on neutralise les animations si l'utilisateur les a désactivées. */
+    @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+        .feature-row, .feature-row__media img, #pricing_plan .card { transition: none; }
+        .feature-row--light:hover, .feature-row--cobalt:hover,
+        #pricing_plan .card:hover, .feature-row:hover .feature-row__media img { transform: none; }
+    }
+
+    /* ---------- Section Contact ---------- */
+    .contact-card {
+        max-width: 720px; margin: 0 auto;
+        background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 12px;
+        padding: 2rem; box-shadow: 0 4px 16px rgba(0, 71, 171, 0.06);
+    }
+    .contact-field { margin-bottom: 1.1rem; }
+    .contact-form .form-label { font-weight: 600; color: #343a40; margin-bottom: 0.35rem; }
+
+    /* Champ avec icône en préfixe — même pattern que la page de connexion (.auth__field). */
+    .contact-input { position: relative; }
+    .contact-field-icon {
+        position: absolute; top: 50%; left: 0.85rem; transform: translateY(-50%);
+        width: 20px; height: 20px; color: #6c757d; pointer-events: none; /* --text-muted */
+    }
+    /* Sur le textarea, l'icône se cale en haut (pas au centre vertical). */
+    .contact-input--textarea .contact-field-icon { top: 0.85rem; transform: none; }
+
+    .contact-form .form-control,
+    .contact-form .form-select {
+        color: #000000; border-color: #ced4da;
+        padding-left: 2.6rem;          /* place pour l'icône préfixe */
+    }
+    .contact-form .form-control { height: 48px; }
+    .contact-form textarea.form-control { height: auto; min-height: 120px; padding-top: 0.65rem; resize: vertical; }
+    .contact-form .form-select { height: 48px; }
+    /* Focus conforme charte : bordure + anneau cobalt. */
+    .contact-form .form-control:focus,
+    .contact-form .form-select:focus {
+        border-color: #0047AB;
+        box-shadow: 0 0 0 0.25rem rgba(0, 71, 171, 0.35); /* --cobalt-focus-ring */
+    }
+    /* Messages d'erreur de validation (gestion des erreurs — Bastien & Scapin). */
+    .contact-form .invalid-feedback { display: block; color: #dc3545; font-size: 0.85rem; margin-top: 0.3rem; }
+    .contact-submit { min-height: 48px; font-weight: 600; margin-top: 0.25rem; }
+
+    /* Téléphone facultatif : case à cocher (consentement) + champ révélé.
+       Information progressive — le champ n'apparaît qu'à la demande du visiteur.
+       Le thème Bootstrap rend un <div class="form-check"> ; on conserve son
+       alignement natif case/libellé et on ne fait qu'ajuster taille et couleurs. */
+    .contact-consent { display: flex; align-items: center; min-height: 44px; } /* cible WCAG 2.5.5 */
+    .contact-consent .form-check { margin-bottom: 0; }
+    .contact-consent .form-check-input {
+        width: 1.15rem; height: 1.15rem; margin-top: 0.15rem; /* aligne la case sur la ligne du texte */
+        cursor: pointer; border-color: #ced4da;
+    }
+    .contact-consent .form-check-input:checked {
+        background-color: #0047AB; border-color: #0047AB; /* cobalt de marque */
+    }
+    .contact-consent .form-check-input:focus {
+        border-color: #0047AB;
+        box-shadow: 0 0 0 0.25rem rgba(0, 71, 171, 0.35); /* --cobalt-focus-ring */
+    }
+    .contact-consent .form-check-label {
+        color: #343a40; cursor: pointer; /* --text-dark-secondary */
+    }
+    .contact-phone { margin-top: 0.85rem; }
+    .contact-phone[hidden] { display: none; }
+
     /* ---------- Responsive ---------- */
     @media (max-width: 991.98px) {
         .feature-row__list { grid-template-columns: 1fr; }
     }
     @media (max-width: 767.98px) {
         .public-nav { display: none; }                 /* on allège l'en-tête sur mobile */
-        .public-topbar__inner { gap: 0.6rem; }
+        /* L'en-tête fixe peut tenir sur deux rangs (marque + actions) : on autorise
+           le retour à la ligne et on réserve une hauteur d'offset plus grande. */
+        .public-shell { --public-topbar-h: 116px; }
+        .public-topbar__inner { gap: 0.5rem 0.6rem; flex-wrap: wrap; justify-content: center; }
+        .public-brand { margin-right: auto; }
         .feature-row { grid-template-columns: 1fr; padding: 1.5rem; }
         .feature-row--reverse .feature-row__media { order: 0; } /* image au-dessus du texte */
         .public-hero__inner { padding: 3rem 1.25rem; }

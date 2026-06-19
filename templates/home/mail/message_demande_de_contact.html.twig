@@ -7,14 +7,24 @@
     {{ m.heading('contact', 'Nouvelle demande de contact') }}
     {{ m.paragraph('Une nouvelle demande de contact vient d\'être reçue via le site JS Brokers.') }}
 
+    {% set wantsCallback = data.wantsPhone and data.phone is not empty %}
+
     {{ m.heading('utilisateur', 'Coordonnées') }}
     {{ m.paragraph(
         '<strong>Nom&nbsp;:</strong> ' ~ data.name ~ '<br>
-         <strong>E-mail&nbsp;:</strong> <a href="mailto:' ~ data.email ~ '" style="color:#0047AB; text-decoration:none;">' ~ data.email ~ '</a>'
+         <strong>E-mail&nbsp;:</strong> <a href="mailto:' ~ data.email ~ '" style="color:#0047AB; text-decoration:none;">' ~ data.email ~ '</a><br>'
+         ~ (wantsCallback
+            ? '<strong>Téléphone&nbsp;:</strong> <a href="tel:' ~ data.phone|replace({' ': ''}) ~ '" style="color:#0047AB; text-decoration:none;">' ~ data.phone ~ '</a><br>'
+            : '')
+         ~ '<strong>Objet&nbsp;:</strong> ' ~ data.objet
     ) }}
+
+    {% if wantsCallback %}
+        {{ m.note('Le visiteur souhaite être recontacté <strong>par téléphone</strong> au <strong>' ~ data.phone ~ '</strong>.') }}
+    {% endif %}
 
     {{ m.heading('action:description', 'Message') }}
     {{ m.paragraph(data.message|nl2br) }}
 
-    {{ m.note('Pour répondre, utilisez directement l\'adresse e-mail ci-dessus (définie en « Répondre à »).') }}
+    {{ m.note('Pour répondre, utilisez directement l\'adresse e-mail ci-dessus (définie en « Répondre à »)' ~ (wantsCallback ? ' ou rappelez le visiteur au numéro indiqué' : '') ~ '.') }}
 {% endblock %}
