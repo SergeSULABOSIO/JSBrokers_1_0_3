@@ -1,80 +1,58 @@
 <div class="card h-100 shadow">
-{# <img src="..." class="card-img-top" alt="..."> #}
-<div class="card-header bg-secondary">
-    <h5 class="card-title text-center text-light">
-        {{ "security_pricing_intermediaire" | trans }}
-    </h5>
-</div>
-<div class="card-body">
-    <h1 class="card-title text-center">{{ "security_pricing_intermediaire_price" | trans }}</h1>
-    <hr>
-    <p class="card-text">
-    <blockquote class="blockquote mb-0 text-center">
-        <p>
-            <span class="badge rounded-pill bg-warning text-dark">
-                {{ "security_pricing_intermediaire_mode" | trans }}
-            </span>
-        </p>
-        <footer class="blockquote-footer">
-            {{ "security_pricing_intermediaire_profil" | trans }}
-        </footer>
-    </blockquote>
-    </p>
-    <hr>
-    <p class="card-text">
-    <div class="list-group list-group-flush">
-        <a class="list-group-item list-group-item-action text-muted">
-            {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-            {{ "security_pricing_intermediaire_option_assistance" | trans }}
-        </a>
-        <a class="list-group-item list-group-item-action text-muted">
-            {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-            {{ "security_pricing_intermediaire_option_invite" | trans }}
-            <strong class="text-dark">
-                [{{ "security_pricing_intermediaire_option_invite_value" | trans }}]
-            </strong>
-        </a>
-        <a class="list-group-item list-group-item-action text-muted">
-            {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-            {{ "security_pricing_intermediaire_option_donnees" | trans }}
-        </a>
-        <a class="list-group-item list-group-item-action text-muted">
-            {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-            {{ "security_pricing_intermediaire_option_volume" | trans }}
-            <strong class="text-dark">
-                [{{ "security_pricing_intermediaire_option_volume_value" | trans }}]
-            </strong>
-        </a>
-        <a class="list-group-item list-group-item-action text-muted">
-            {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-            {{ "security_pricing_intermediaire_option_entreprise" | trans }}
-            <strong class="text-dark">
-                [{{ "security_pricing_intermediaire_option_entreprise_value" | trans }}]
-            </strong>
-        </a>
-        <a class="list-group-item list-group-item-action text-muted">
-            {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-            {{ "security_pricing_intermediaire_option_dashboard" | trans }}
-        </a>
-        <a class="list-group-item list-group-item-action text-muted">
-            {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-            {{ "security_pricing_intermediaire_option_email" | trans }}
-            <strong class="text-dark">
-                [{{ "security_pricing_intermediaire_option_email_value" | trans }}]
-            </strong>
-        </a>
-        <a class="list-group-item list-group-item-action text-muted">
-            {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-            {{ "security_pricing_intermediaire_option_fonctions" | trans }}
+    <div class="card-header bg-cobalt">
+        <h3 class="card-title text-center text-light h5 mb-0">{{ "security_pricing_intermediaire" | trans }}</h3>
+    </div>
+    <div class="card-body">
+        <p class="card-title text-center h2">{{ "security_pricing_intermediaire_price" | trans }}</p>
+        <hr>
+        <blockquote class="blockquote mb-0 text-center">
+            <p><span class="badge rounded-pill bg-warning text-dark">{{ "security_pricing_intermediaire_mode" | trans }}</span></p>
+            <footer class="blockquote-footer">{{ "security_pricing_intermediaire_profil" | trans }}</footer>
+        </blockquote>
+        <hr>
+        <div class="list-group list-group-flush">
+            <div class="list-group-item d-flex align-items-center gap-2 text-muted">
+                {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
+                <span>{{ "security_pricing_intermediaire_option_assistance" | trans }}</span>
+            </div>
+            <div class="list-group-item d-flex align-items-center gap-2 text-muted">
+                {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
+                <span>{{ "security_pricing_intermediaire_option_invite" | trans }}
+                    <strong class="text-dark">[{{ "security_pricing_intermediaire_option_invite_value" | trans }}]</strong></span>
+            </div>
+            <div class="list-group-item d-flex align-items-center gap-2 text-muted">
+                {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
+                <span>{{ "security_pricing_intermediaire_option_donnees" | trans }}</span>
+            </div>
+            <div class="list-group-item d-flex align-items-center gap-2 text-muted">
+                {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
+                <span>{{ "security_pricing_intermediaire_option_volume" | trans }}
+                    <strong class="text-dark">[{{ "security_pricing_intermediaire_option_volume_value" | trans }}]</strong></span>
+            </div>
+            <div class="list-group-item d-flex align-items-center gap-2 text-muted">
+                {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
+                <span>{{ "security_pricing_intermediaire_option_entreprise" | trans }}
+                    <strong class="text-dark">[{{ "security_pricing_intermediaire_option_entreprise_value" | trans }}]</strong></span>
+            </div>
+            <div class="list-group-item d-flex align-items-center gap-2 text-muted">
+                {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
+                <span>{{ "security_pricing_intermediaire_option_dashboard" | trans }}</span>
+            </div>
+            <div class="list-group-item d-flex align-items-center gap-2 text-muted">
+                {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
+                <span>{{ "security_pricing_intermediaire_option_email" | trans }}
+                    <strong class="text-dark">[{{ "security_pricing_intermediaire_option_email_value" | trans }}]</strong></span>
+            </div>
+            <div class="list-group-item d-flex align-items-center gap-2 text-muted">
+                {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
+                <span>{{ "security_pricing_intermediaire_option_fonctions" | trans }}</span>
+            </div>
+        </div>
+    </div>
+    <div class="card-footer text-center bg-white border-top-0">
+        <a href="{{ app.user ? path('app_login') : path('app_register', {idUtilisateur: -1}) }}"
+           class="btn btn-outline-secondary w-100">
+            {{ "security_pricing_start_intermediaire" | trans }}
         </a>
     </div>
-    </p>
-</div>
-<div class="card-footer text-center">
-    <small class="text-muted">
-    <a href="#" type="button" class="btn btn-outline-secondary">
-        {{ "security_pricing_start_intermediaire" | trans }}
-    </a>
-    </small>
-</div>
 </div>
