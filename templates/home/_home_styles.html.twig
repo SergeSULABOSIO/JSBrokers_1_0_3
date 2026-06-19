@@ -138,6 +138,28 @@
     }
     .public-section__head p { color: #6c757d; margin: 0 auto; max-width: 640px; }
 
+    /* Séparateur inter-sections : filet pleine largeur du contenu + losange cobalt
+       centré. Ciblage automatique des 3 frontières (features→guide→pricing→contact)
+       via le sélecteur de frère adjacent ; le hero (≠ .public-section) en est exclu,
+       donc pas de séparateur sous le hero (déjà démarqué par son gradient).
+       Purement décoratif (pseudo-éléments) : ni focusable ni annoncé aux lecteurs
+       d'écran ; aucune information portée par la couleur seule. */
+    .public-section + .public-section { position: relative; }
+    .public-section + .public-section::before {
+        content: ""; position: absolute;
+        top: 0; left: 1.5rem; right: 1.5rem;
+        height: 1px; background-color: #dee2e6;   /* --border-light */
+    }
+    .public-section + .public-section::after {
+        content: ""; position: absolute;
+        top: 0; left: 50%;
+        width: 10px; height: 10px;
+        transform: translate(-50%, -50%) rotate(45deg);
+        background-color: #0047AB;                 /* --cobalt */
+        border: 3px solid #f3f3f3;                 /* --bg-body : « coupe » le filet derrière le losange */
+        box-sizing: content-box;
+    }
+
     /* Bloc fonctionnalité : alterné texte / image, responsive. */
     .feature-row {
         display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center;
