@@ -1,0 +1,140 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ pageName }} — JS Brokers{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    /* Espace compte « Tokens » — charte JS Brokers (cobalt #0047AB). */
+    .tkp-page { min-height: 100vh; background-color: #f3f3f3; }
+    .tkp-topbar {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 1rem; flex-wrap: wrap; padding: .75rem 1.5rem;
+        background-color: #fff; border-bottom: 1px solid #dee2e6;
+    }
+    .tkp-brand { display: flex; align-items: center; gap: .6rem; text-decoration: none; }
+    .tkp-brand img { width: 36px; height: 36px; border-radius: 8px; }
+    .tkp-brand span { font-weight: 700; color: #0047AB; font-size: 1.1rem; }
+    .tkp-content { max-width: 1100px; margin: 0 auto; padding: 1.5rem; }
+    .tkp-head { margin-bottom: 1rem; }
+    .tkp-head h1 { font-size: 1.5rem; font-weight: 700; color: #212529; margin: 0 0 .25rem; }
+    .tkp-head p { color: #6c757d; margin: 0; }
+    .tkp-card { background:#fff; border:1px solid #dee2e6; border-radius:12px; overflow:hidden; }
+    .tkp-card-head { padding:.85rem 1.15rem; border-bottom:1px solid #f0f0f0; display:flex; align-items:center; gap:.5rem; }
+    .tkp-card-head h2 { font-size:1.05rem; font-weight:700; color:#212529; margin:0; }
+    .tkp-card-head .tkp-ic { color:#0047AB; }
+    .tkp-table { width:100%; border-collapse:collapse; font-size:.88rem; }
+    .tkp-table th, .tkp-table td { padding:.6rem .75rem; text-align:left; border-bottom:1px solid #f0f0f0; white-space:nowrap; }
+    .tkp-table th { background:#f8f9fa; color:#495057; font-weight:600; font-size:.78rem; text-transform:uppercase; letter-spacing:.02em; }
+    .tkp-table tbody tr:hover { background:#f8f9fa; }
+    .tkp-sens { display:inline-flex; align-items:center; gap:.3rem; font-weight:600; }
+    .tkp-sens--entree { color:#0047AB; }
+    .tkp-sens--sortie { color:#6c757d; }
+    .tkp-num { text-align:right; font-variant-numeric:tabular-nums; }
+    .tkp-empty { text-align:center; padding:2.5rem 1rem; color:#6c757d; }
+    .tkp-pagination { display:flex; justify-content:center; margin-top:1.25rem; }
+    .tkp-scroll { overflow-x:auto; }
+    .tkp-back { display:inline-flex; align-items:center; gap:.35rem; font-size:.9rem; color:#6c757d; text-decoration:none; margin-bottom:1rem; }
+    .tkp-back:hover { color:#0047AB; }
+</style>
+{% endblock %}
+
+{% block body %}
+<main class="tkp-page" data-controller="top-progress">
+    <div class="ent-progress-bar" data-top-progress-target="bar" role="progressbar"
+         aria-label="Chargement en cours" aria-hidden="true"
+         style="position:fixed;top:0;left:0;width:100%;height:6px;background:#0047AB;display:none;z-index:9999;"></div>
+
+    <header class="tkp-topbar">
+        <a href="{{ path('app_index') }}" class="tkp-brand" data-action="click->top-progress#show" aria-label="JS Brokers — accueil">
+            <img src="{{ asset('images/entreprises/logofav.png') }}" alt="">
+            <span>JS Brokers</span>
+        </a>
+        <a href="{{ path('admin.token.buy') }}" class="btn btn-sm btn-cobalt d-inline-flex align-items-center gap-1"
+           style="background:#0047AB;border-color:#0047AB;color:#fff;" data-action="click->top-progress#show">
+            {{ ux_icon(resolve_icon_name('action:cart'), {height: '16px', width: '16px'}) }}
+            <span>{{ "token_recharge" | trans }}</span>
+        </a>
+    </header>
+
+    <div class="tkp-content">
+        <a href="{{ path('admin.entreprise.index') }}" class="tkp-back" data-action="click->top-progress#show">
+            {{ ux_icon('mdi:arrow-left', {height: '16px', width: '16px'}) }}
+            {{ "token_back_to_companies" | trans }}
+        </a>
+
+        {{ include('components/_flash_toasts.html.twig') }}
+
+        <div class="tkp-head">
+            <h1>{{ "token_account_title" | trans }}</h1>
+            <p>{{ "token_account_subtitle" | trans }}</p>
+        </div>
+
+        {{ include('admin/token/_balance_widget.html.twig', { balance: balance }) }}
+
+        <div class="tkp-card">
+            <div class="tkp-card-head">
+                {{ ux_icon('mdi:format-list-bulleted', {height: '20px', width: '20px', class: 'tkp-ic'}) }}
+                <h2>{{ "token_history_title" | trans }}</h2>
+            </div>
+
+            {% if consumptions.getTotalItemCount > 0 %}
+                <div class="tkp-scroll">
+                    <table class="tkp-table">
+                        <caption class="visually-hidden">{{ "token_history_title" | trans }}</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">{{ "token_col_entity" | trans }}</th>
+                                <th scope="col" class="tkp-num">{{ "token_col_count" | trans }}</th>
+                                <th scope="col">{{ "token_col_direction" | trans }}</th>
+                                <th scope="col" class="tkp-num">{{ "token_col_unit_weight" | trans }}</th>
+                                <th scope="col" class="tkp-num">{{ "token_col_total_weight" | trans }}</th>
+                                <th scope="col" class="tkp-num">{{ "token_col_cost" | trans }}</th>
+                                <th scope="col">{{ "token_col_date" | trans }}</th>
+                                <th scope="col">{{ "token_col_company" | trans }}</th>
+                                <th scope="col">{{ "token_col_collaborator" | trans }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in consumptions %}
+                                <tr>
+                                    <td><strong>{{ c.entiteNom }}</strong></td>
+                                    <td class="tkp-num">{{ c.nombre }}</td>
+                                    <td>
+                                        {% if c.sens == 'entree' %}
+                                            <span class="tkp-sens tkp-sens--entree">
+                                                {{ ux_icon('mdi:upload', {height: '15px', width: '15px'}) }}
+                                                {{ "token_direction_in" | trans }}
+                                            </span>
+                                        {% else %}
+                                            <span class="tkp-sens tkp-sens--sortie">
+                                                {{ ux_icon('mdi:download', {height: '15px', width: '15px'}) }}
+                                                {{ "token_direction_out" | trans }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="tkp-num">{{ c.poidsUnitaire }}</td>
+                                    <td class="tkp-num">{{ c.poidsTotal }}</td>
+                                    <td class="tkp-num">{{ (c.poidsTotal * usdPerToken)|number_format(4, '.', ' ') }} $</td>
+                                    <td>{{ c.createdAt | format_datetime("short", "short", locale: app.user.locale) }}</td>
+                                    <td>{{ c.entreprise ? c.entreprise.nom : '—' }}</td>
+                                    <td>{{ c.acteur ? c.acteur.nom : '—' }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="tkp-pagination">
+                    {{ knp_pagination_render(consumptions) }}
+                </div>
+            {% else %}
+                <div class="tkp-empty">
+                    {{ ux_icon('mdi:database-off-outline', {height: '40px', width: '40px'}) }}
+                    <p class="mt-2 mb-0">{{ "token_history_empty" | trans }}</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</main>
+{% endblock %}

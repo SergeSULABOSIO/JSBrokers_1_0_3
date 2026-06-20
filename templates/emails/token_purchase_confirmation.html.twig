@@ -1,0 +1,25 @@
+{% extends 'emails/_layout.html.twig' %}
+{% import 'emails/_macros.html.twig' as m %}
+
+{% block subject %}JS Brokers — Confirmation de paiement{% endblock %}
+
+{% block content %}
+    {{ m.heading('action:cart', 'Paiement confirmé') }}
+    {{ m.paragraph(
+        'Bonjour <strong>' ~ purchase.utilisateur.nom ~ '</strong>,<br>'
+        ~ 'votre achat de tokens a bien été enregistré. Vos tokens sont immédiatement disponibles et cumulés à votre solde.'
+    ) }}
+
+    {{ m.heading('action:description', 'Détails de votre achat') }}
+    {{ m.paragraph('<strong>Paquet&nbsp;:</strong> ' ~ purchase.pack|capitalize) }}
+    {{ m.paragraph('<strong>Tokens crédités&nbsp;:</strong> ' ~ purchase.tokens|number_format(0, ',', ' ')) }}
+    {{ m.paragraph('<strong>Montant&nbsp;:</strong> ' ~ purchase.montantUsd|number_format(2, '.', ' ') ~ ' $') }}
+    {{ m.paragraph('<strong>Référence&nbsp;:</strong> ' ~ purchase.reference) }}
+    {% if purchase.cardLast4 %}
+        {{ m.paragraph('<strong>Carte&nbsp;:</strong> •••• •••• •••• ' ~ purchase.cardLast4) }}
+    {% endif %}
+
+    {{ m.button(accountUrl, 'Voir mon solde de tokens') }}
+
+    {{ m.note('Ceci est une confirmation automatique. Conservez la référence ci-dessus pour toute question relative à cet achat.') }}
+{% endblock %}

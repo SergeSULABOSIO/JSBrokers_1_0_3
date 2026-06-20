@@ -1,0 +1,110 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ pageName }} — JS Brokers{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    /* Page « Fonctionnement des tokens » — même pattern visuel que les CGU.
+       Charte : cobalt #0047AB + neutres Bootstrap. */
+    html, body { height: auto !important; overflow: auto !important; }
+    html { scroll-padding-top: var(--cgu-topbar-h, 64px); }
+
+    .cgu-page { --cgu-topbar-h: 64px; min-height: 100vh; display: flex; flex-direction: column;
+        background-color: #f3f3f3; padding-top: var(--cgu-topbar-h); }
+    .cgu-topbar { position: fixed; top: 0; left: 0; right: 0; width: 100%; z-index: 1030;
+        display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+        padding: .75rem 1.5rem; background-color: #fff; border-bottom: 1px solid #dee2e6; }
+    .cgu-brand { display: flex; align-items: center; gap: .6rem; text-decoration: none; }
+    .cgu-brand img { width: 36px; height: 36px; border-radius: 8px; }
+    .cgu-brand span { font-weight: 700; color: #0047AB; font-size: 1.1rem; }
+    .cgu-topbar-actions { display: flex; align-items: center; gap: .5rem; }
+
+    .cgu-content { max-width: 860px; margin: 0 auto; padding: 1.5rem; width: 100%; }
+    .cgu-back-row { display: flex; align-items: center; gap: .4rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .cgu-back { display: inline-flex; align-items: center; gap: .35rem; font-size: .9rem; color: #6c757d; text-decoration: none; }
+    .cgu-back:hover { color: #0047AB; }
+
+    .cgu-head { margin-bottom: 1.25rem; }
+    .cgu-head h1 { display: flex; align-items: center; gap: .55rem; font-size: 1.6rem; font-weight: 700; color: #212529; margin: 0 0 .35rem; }
+    .cgu-head-icon { flex: 0 0 auto; color: #0047AB; }
+    .cgu-meta { color: #6c757d; font-size: .9rem; margin: 0; }
+
+    .cgu-card { background-color: #fff; border: 1px solid #dee2e6; border-radius: 12px;
+        padding: 1.75rem 2rem; box-shadow: 0 4px 16px rgba(0, 71, 171, .06); color: #343a40; line-height: 1.65; }
+    .cgu-intro { color: #495057; margin-bottom: 1.5rem; }
+    .cgu-section { margin-bottom: 1.5rem; }
+    .cgu-section:last-child { margin-bottom: 0; }
+    .cgu-card h2 { font-size: 1.05rem; font-weight: 700; color: #0047AB; margin: 0 0 .6rem;
+        padding-bottom: .35rem; border-bottom: 1px solid #e9ecef; }
+    .cgu-card p { margin: 0 0 .65rem; }
+    .cgu-card ul { margin: 0 0 .65rem; padding-left: 1.25rem; }
+    .cgu-card li { margin-bottom: .35rem; }
+    .cgu-card strong { color: #212529; }
+
+    .cgu-table { width: 100%; border-collapse: collapse; margin: .25rem 0 .75rem; font-size: .92rem; }
+    .cgu-table th, .cgu-table td { padding: .5rem .65rem; border-bottom: 1px solid #e9ecef; text-align: left; }
+    .cgu-table th { background: #f8f9fa; color: #495057; font-weight: 600; }
+    .cgu-table td:last-child, .cgu-table th:last-child { text-align: right; }
+
+    .cgu-lang { display: inline-flex; border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; }
+    .cgu-lang a { padding: .35rem .7rem; font-size: .85rem; font-weight: 600; color: #6c757d; text-decoration: none; background-color: #fff; }
+    .cgu-lang a + a { border-left: 1px solid #dee2e6; }
+    .cgu-lang a.is-active { background-color: #0047AB; color: #fff; }
+
+    @media (max-width: 575.98px) { .cgu-card { padding: 1.25rem; } }
+    @media print {
+        .cgu-topbar, .cgu-back-row, .cgu-no-print { display: none !important; }
+        .cgu-page { background: #fff; padding-top: 0; }
+        .cgu-card { border: none; box-shadow: none; padding: 0; }
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+{% set isEn = (lang == 'en') %}
+{% set backHref = app.user is not null ? path('admin.token.index') : path('app_index') %}
+
+<main class="cgu-page">
+    <header class="cgu-topbar">
+        <a href="{{ path('app_index') }}" class="cgu-brand"
+           aria-label="JS Brokers — retour à l'accueil" title="Retour à l'accueil JS Brokers">
+            <img src="{{ asset('images/entreprises/logofav.png') }}" alt="">
+            <span>JS Brokers</span>
+        </a>
+        <div class="cgu-topbar-actions cgu-no-print">
+            <span class="cgu-lang" role="group" aria-label="{{ isEn ? 'Language' : 'Langue' }}">
+                <a href="{{ path('app_tokens_info', {'lang': 'fr'}) }}" class="{{ isEn ? '' : 'is-active' }}" {{ isEn ? '' : 'aria-current="true"' }}>FR</a>
+                <a href="{{ path('app_tokens_info', {'lang': 'en'}) }}" class="{{ isEn ? 'is-active' : '' }}" {{ isEn ? 'aria-current="true"' : '' }}>EN</a>
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center" onclick="window.print()">
+                {{ ux_icon(resolve_icon_name('mdi:printer-outline'), {height: '18px', width: '18px'}) }}
+                <span class="ms-1">{{ isEn ? 'Print' : 'Imprimer' }}</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="cgu-content">
+        <div class="cgu-back-row">
+            <a href="{{ backHref }}" class="cgu-back">
+                {{ ux_icon(resolve_icon_name('hugeicons:arrow-left-01'), {height: '18px', width: '18px'}) }}
+                {{ app.user is not null
+                    ? (isEn ? 'Back to my account' : 'Retour à mon compte')
+                    : (isEn ? 'Back to home' : "Retour à l'accueil") }}
+            </a>
+        </div>
+
+        <div class="cgu-head">
+            <h1>
+                {{ ux_icon('mdi:database', {height: '28px', width: '28px', class: 'cgu-head-icon'}) }}
+                {{ pageName }}
+            </h1>
+            <p class="cgu-meta">{{ isEn ? 'JS Brokers token-based billing model' : 'Modèle de facturation par tokens de JS Brokers' }}</p>
+        </div>
+
+        <article class="cgu-card">
+            {% include 'legal/_tokens_info_' ~ (lang|default('fr')) ~ '.html.twig' %}
+        </article>
+    </div>
+</main>
+{% endblock %}

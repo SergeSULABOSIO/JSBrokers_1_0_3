@@ -185,6 +185,10 @@
         {# Messages flash (succès/suppression/PDF…) relayés en toast applicatif #}
         {{ include('components/_flash_toasts.html.twig') }}
 
+        {# Solde de tokens en temps réel + accès recharge / détails (à côté de la
+           liste des entreprises, comme demandé). #}
+        {{ include('admin/token/_balance_widget.html.twig', { balance: tokenBalance }) }}
+
         {# En-tête de section (l'action primaire est dans la barre de titre) #}
         <div class="ent-head">
             <h1>{{ pageName }}</h1>

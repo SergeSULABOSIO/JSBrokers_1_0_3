@@ -1,0 +1,48 @@
+{#
+    Panneau de blocage affiché à la place d'une liste quand le solde de tokens
+    du propriétaire est épuisé. La coquille de l'espace de travail reste intacte.
+
+    @param ?\DateTimeImmutable nextRenewalAt  Date du prochain renouvellement gratuit.
+    @param int required                       Tokens nécessaires à l'opération.
+    @param int available                      Solde disponible.
+#}
+<div class="tokens-blocked">
+    <style>
+        .tokens-blocked { max-width: 560px; margin: 2.5rem auto; padding: 2rem;
+            background:#fff; border:1px solid #dee2e6; border-radius:14px;
+            box-shadow:0 6px 22px rgba(0,71,171,.08); text-align:center; color:#343a40; }
+        .tokens-blocked .tb-icon { color:#0047AB; margin-bottom:.75rem; }
+        .tokens-blocked h2 { font-size:1.25rem; font-weight:700; color:#212529; margin:0 0 .5rem; }
+        .tokens-blocked p { color:#495057; line-height:1.6; margin:0 0 .35rem; }
+        .tokens-blocked .tb-meta { color:#6c757d; font-size:.9rem; margin-bottom:1.25rem; }
+        .tokens-blocked .tb-actions { display:flex; gap:.6rem; justify-content:center; flex-wrap:wrap; }
+        .tokens-blocked .btn-cobalt { background:#0047AB; border-color:#0047AB; color:#fff; }
+        .tokens-blocked .btn-cobalt:hover { background:#003380; border-color:#003380; }
+    </style>
+
+    <div class="tb-icon">
+        {{ ux_icon('mdi:database-clock-outline', {height: '46px', width: '46px'}) }}
+    </div>
+    <h2>{{ "token_blocked_title" | trans }}</h2>
+    <p>{{ "token_blocked_desc" | trans }}</p>
+    {% if nextRenewalAt %}
+        <p class="tb-meta">
+            {{ "token_blocked_next_renewal" | trans }}
+            <strong>{{ nextRenewalAt | format_datetime("medium", "short", locale: app.user.locale) }}</strong>
+        </p>
+    {% endif %}
+
+    <div class="tb-actions">
+        <a href="{{ path('admin.token.buy') }}" class="btn btn-cobalt d-inline-flex align-items-center gap-2"
+           data-action="click->top-progress#show">
+            {{ ux_icon(resolve_icon_name('action:cart'), {height: '18px', width: '18px'}) }}
+            <span>{{ "token_recharge" | trans }}</span>
+        </a>
+        <a href="{{ path('app_tokens_info') }}" target="_blank" rel="noopener"
+           class="btn btn-outline-secondary d-inline-flex align-items-center gap-2"
+           aria-label="{{ 'token_how_it_works'|trans }} ({{ 'token_new_tab'|trans }})">
+            {{ ux_icon('mdi:help-circle-outline', {height: '18px', width: '18px'}) }}
+            <span>{{ "token_how_it_works" | trans }}</span>
+        </a>
+    </div>
+</div>

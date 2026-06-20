@@ -38,4 +38,23 @@ class LegalController extends AbstractController
             'cguDate'    => new \DateTimeImmutable(Cgu::DATE),
         ]);
     }
+
+    /**
+     * Page publique expliquant le modèle de facturation par tokens (freemium).
+     * Même esprit que les CGU : accessible à tous, bilingue via ?lang= (fr|en),
+     * liée depuis le tarif public, le widget de solde et la page de consommation.
+     */
+    #[Route('/fonctionnement-tokens', name: 'app_tokens_info')]
+    public function tokensInfo(Request $request): Response
+    {
+        $lang = $request->query->get('lang');
+        if (!in_array($lang, ['fr', 'en'], true)) {
+            $lang = in_array($request->getLocale(), ['fr', 'en'], true) ? $request->getLocale() : 'fr';
+        }
+
+        return $this->render('legal/fonctionnement_tokens.html.twig', [
+            'pageName' => $lang === 'en' ? 'How tokens work' : 'Fonctionnement des tokens',
+            'lang'     => $lang,
+        ]);
+    }
 }

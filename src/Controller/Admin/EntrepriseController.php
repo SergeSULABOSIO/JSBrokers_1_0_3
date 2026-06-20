@@ -12,6 +12,9 @@ use App\Services\ServiceSuppressionEntreprise;
 use App\Repository\InviteRepository;
 use App\Message\EntreprisePDFMessage;
 use App\Repository\EntrepriseRepository;
+use App\Token\InsufficientTokensException;
+use App\Token\TokenAccountService;
+use App\Token\TokenPricing;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -37,6 +40,7 @@ class EntrepriseController extends AbstractController
         private ServiceInitialisationEntreprise $serviceInitialisation,
         private ServiceSuppressionEntreprise $serviceSuppression,
         private UserPasswordHasherInterface $passwordHasher,
+        private TokenAccountService $tokenAccountService,
     ) {}
 
     /**
@@ -68,6 +72,7 @@ class EntrepriseController extends AbstractController
         return $this->render('admin/entreprise/index.html.twig', [
             'pageName' => $this->translator->trans("entreprise_page_name_list"),
             'utilisateur' => $user,
+            'tokenBalance' => $this->tokenAccountService->getBalance($user),
             'entreprises' => $this->entrepriseRepository->paginateUtilisateur($user->getId(), $page),
             'page' => $request->query->getInt("page", 1),
             // NOUVEAU : On passe l'invité courant pour faciliter l'accès à ses informations
@@ -89,7 +94,16 @@ class EntrepriseController extends AbstractController
         // dd("Ici");
         $form = $this->createForm(EntrepriseType::class, $entreprise);
         $form->handleRequest($request); 
-        if ($form->isSubmitted() && $form->isValid()) { 
+        if ($form->isSubmitted() && $form->isValid()) {
+            // MÉTRAGE TOKENS : créer une entreprise coûte 200 tokens, débités au
+            // créateur (qui en devient le propriétaire). On vérifie la solvabilité
+            // AVANT toute persistance pour ne pas laisser d'entreprise à moitié créée.
+            if (!$this->tokenAccountService->canAfford($user, TokenPricing::weightFor(Entreprise::class))) {
+                $this->addFlash("error", $this->translator->trans("token_blocked_flash"));
+
+                return $this->redirectToRoute("admin.token.index");
+            }
+
             // L'AuditableTrait va maintenant lier l'entreprise au créateur (Invite)
             // Mais pour le tout premier 'Invite' (le propriétaire), nous devons le créer manuellement.
 
@@ -99,6 +113,9 @@ class EntrepriseController extends AbstractController
 
             // Lier l'utilisateur créateur
             $entreprise->setUtilisateur($user);
+
+            // Débit effectif + journalisation (la solvabilité a été vérifiée ci-dessus).
+            $this->tokenAccountService->meterWrite($entreprise, $entreprise, $user);
 
             //On cree aussi l'invité proprietaire de l'entreprise
             /** @var Invite $proprietaire */
@@ -163,6 +180,14 @@ class EntrepriseController extends AbstractController
         $form = $this->createForm(EntrepriseType::class, $entreprise);
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
+            // MÉTRAGE TOKENS (écriture) : éditer l'entreprise coûte aussi 200 tokens.
+            try {
+                $this->tokenAccountService->meterWrite($entreprise, $entreprise, $user);
+            } catch (InsufficientTokensException) {
+                $this->addFlash("error", $this->translator->trans("token_blocked_flash"));
+
+                return $this->redirectToRoute("admin.token.index");
+            }
             $this->manager->persist($entreprise); //On peut ignorer cette instruction car la fonction flush suffit.
             $this->manager->flush();
             $this->addFlash("success", $this->translator->trans("entreprise_edited_ok", [

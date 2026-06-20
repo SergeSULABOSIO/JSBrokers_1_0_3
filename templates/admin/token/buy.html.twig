@@ -1,0 +1,138 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ pageName }} — JS Brokers{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    .tkb-page { min-height: 100vh; background-color: #f3f3f3; }
+    .tkb-topbar {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 1rem; flex-wrap: wrap; padding: .75rem 1.5rem;
+        background-color: #fff; border-bottom: 1px solid #dee2e6;
+    }
+    .tkb-brand { display: flex; align-items: center; gap: .6rem; text-decoration: none; }
+    .tkb-brand img { width: 36px; height: 36px; border-radius: 8px; }
+    .tkb-brand span { font-weight: 700; color: #0047AB; font-size: 1.1rem; }
+    .tkb-content { max-width: 680px; margin: 0 auto; padding: 1.5rem; }
+    .tkb-back { display:inline-flex; align-items:center; gap:.35rem; font-size:.9rem; color:#6c757d; text-decoration:none; margin-bottom:1rem; }
+    .tkb-back:hover { color:#0047AB; }
+    .tkb-head { margin-bottom: 1.25rem; }
+    .tkb-head h1 { font-size: 1.5rem; font-weight: 700; color: #212529; margin: 0 0 .25rem; }
+    .tkb-head p { color: #6c757d; margin: 0; }
+    .tkb-card { background:#fff; border:1px solid #dee2e6; border-radius:12px; padding:1.5rem 1.75rem;
+        box-shadow:0 4px 16px rgba(0,71,171,.06); }
+    .tkb-sim-note { background:#fff3cd; border-left:3px solid #ffc107; border-radius:6px;
+        padding:.7rem .9rem; font-size:.85rem; color:#664d03; margin-bottom:1.25rem; display:flex; gap:.5rem; align-items:flex-start; }
+    .tkb-packs { display:grid; grid-template-columns:1fr; gap:.6rem; margin-bottom:1.25rem; }
+    .tkb-fieldset { border:0; padding:0; margin:0 0 1rem; }
+    .tkb-legend { font-size:.8rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:#0047AB;
+        display:flex; align-items:center; gap:.4rem; margin-bottom:.6rem; }
+    .tkb-field { margin-bottom:.85rem; }
+    .tkb-field label { display:block; font-size:.85rem; font-weight:600; color:#495057; margin-bottom:.25rem; }
+    .tkb-field input { width:100%; padding:.55rem .7rem; border:1px solid #ced4da; border-radius:8px; font-size:.95rem; }
+    .tkb-field input:focus { outline:none; border-color:#0047AB; box-shadow:0 0 0 3px rgba(0,71,171,.35); }
+    .tkb-row { display:flex; gap:.85rem; }
+    .tkb-row .tkb-field { flex:1; }
+    .tkb-pack-choices { display:flex; flex-direction:column; gap:.5rem; }
+    .tkb-pack-choices .form-check { padding:.6rem .85rem; border:1px solid #dee2e6; border-radius:8px; margin:0; }
+    .tkb-submit { width:100%; background:#0047AB; border-color:#0047AB; color:#fff; font-weight:600; padding:.7rem; }
+    .tkb-submit:hover { background:#003380; border-color:#003380; }
+    .tkb-error { color:#dc3545; font-size:.82rem; margin-top:.2rem; }
+</style>
+{% endblock %}
+
+{% block body %}
+<main class="tkb-page" data-controller="top-progress">
+    <header class="tkb-topbar">
+        <a href="{{ path('app_index') }}" class="tkb-brand" data-action="click->top-progress#show" aria-label="JS Brokers — accueil">
+            <img src="{{ asset('images/entreprises/logofav.png') }}" alt="">
+            <span>JS Brokers</span>
+        </a>
+        <a href="{{ path('app_tokens_info') }}" target="_blank" rel="noopener"
+           class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
+           aria-label="{{ 'token_how_it_works'|trans }} ({{ 'token_new_tab'|trans }})">
+            {{ ux_icon('mdi:help-circle-outline', {height: '16px', width: '16px'}) }}
+            <span>{{ "token_how_it_works" | trans }}</span>
+        </a>
+    </header>
+
+    <div class="tkb-content">
+        <a href="{{ path('admin.token.index') }}" class="tkb-back" data-action="click->top-progress#show">
+            {{ ux_icon('mdi:arrow-left', {height: '16px', width: '16px'}) }}
+            {{ "token_back_to_account" | trans }}
+        </a>
+
+        {{ include('components/_flash_toasts.html.twig') }}
+
+        <div class="tkb-head">
+            <h1>{{ "token_buy.title" | trans }}</h1>
+            <p>{{ "token_buy.subtitle" | trans }}</p>
+        </div>
+
+        <div class="tkb-card">
+            <div class="tkb-sim-note">
+                {{ ux_icon('mdi:flask-outline', {height: '18px', width: '18px'}) }}
+                <span>{{ "token_buy.sim_note" | trans }}</span>
+            </div>
+
+            {{ form_start(form, {'attr': {
+                'data-controller': 'form-submit',
+                'data-action': 'submit->form-submit#submitting submit->top-progress#show',
+                'data-form-submit-loading-text-value': 'token_buy.processing'|trans,
+                'novalidate': 'novalidate'
+            }}) }}
+
+                <fieldset class="tkb-fieldset">
+                    <legend class="tkb-legend">
+                        {{ ux_icon('mdi:package-variant-closed', {height: '16px', width: '16px'}) }}
+                        {{ "token_buy.choose_pack" | trans }}
+                    </legend>
+                    <div class="tkb-pack-choices">
+                        {{ form_widget(form.pack) }}
+                    </div>
+                    {{ form_errors(form.pack) }}
+                </fieldset>
+
+                <fieldset class="tkb-fieldset">
+                    <legend class="tkb-legend">
+                        {{ ux_icon('mdi:credit-card-outline', {height: '16px', width: '16px'}) }}
+                        {{ "token_buy.card_section" | trans }}
+                    </legend>
+
+                    <div class="tkb-field">
+                        {{ form_label(form.cardHolder) }}
+                        {{ form_widget(form.cardHolder) }}
+                        {{ form_errors(form.cardHolder) }}
+                    </div>
+                    <div class="tkb-field">
+                        {{ form_label(form.cardNumber) }}
+                        {{ form_widget(form.cardNumber) }}
+                        {{ form_errors(form.cardNumber) }}
+                    </div>
+                    <div class="tkb-row">
+                        <div class="tkb-field">
+                            {{ form_label(form.expiry) }}
+                            {{ form_widget(form.expiry) }}
+                            {{ form_errors(form.expiry) }}
+                        </div>
+                        <div class="tkb-field">
+                            {{ form_label(form.cvc) }}
+                            {{ form_widget(form.cvc) }}
+                            {{ form_errors(form.cvc) }}
+                        </div>
+                    </div>
+                </fieldset>
+
+                <button type="submit" class="btn tkb-submit d-inline-flex align-items-center justify-content-center gap-2"
+                        data-form-submit-target="button">
+                    {{ ux_icon(resolve_icon_name('action:cart'), {height: '18px', width: '18px'}) }}
+                    <span>{{ "token_buy.pay" | trans }}</span>
+                </button>
+
+                {{ form_rest(form) }}
+            {{ form_end(form) }}
+        </div>
+    </div>
+</main>
+{% endblock %}

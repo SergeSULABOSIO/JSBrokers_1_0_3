@@ -17,4 +17,11 @@
             {% include 'segments/pricing_plan_professionnel.html.twig' %}
         </div>
     </div>
+    <div class="text-center mt-4">
+        <a href="{{ path('app_tokens_info', {'lang': lang|default(app.request.locale)}) }}"
+           class="d-inline-flex align-items-center gap-2 text-decoration-none">
+            {{ ux_icon('mdi:help-circle-outline', {height: '18px', width: '18px'}) }}
+            <span>{{ "security_pricing_tokens_learn_more" | trans }}</span>
+        </a>
+    </div>
 </section>

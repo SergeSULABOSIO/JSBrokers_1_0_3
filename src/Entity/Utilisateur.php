@@ -84,6 +84,30 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: Invite::class, mappedBy: 'utilisateur', orphanRemoval: true, cascade: ['persist'])]
     private Collection $invites;
 
+    /**
+     * Solde de tokens prépayés (paquets achetés). Cumulatif, ne se réinitialise
+     * jamais : consommé après l'allocation gratuite est épuisée.
+     */
+    #[ORM\Column(type: 'bigint', options: ['default' => 0])]
+    #[Groups(['list:read'])]
+    private int $paidTokens = 0;
+
+    /**
+     * Reliquat de l'allocation gratuite de la fenêtre courante. Remis à
+     * TokenPricing::FREE_ALLOWANCE à chaque renouvellement (toutes les 8 h).
+     */
+    #[ORM\Column(options: ['default' => 1000])]
+    #[Groups(['list:read'])]
+    private int $freeTokens = 1000;
+
+    /**
+     * Début de la fenêtre de validité de l'allocation gratuite. NULL tant que
+     * l'utilisateur n'a eu aucune activité métrée : la fenêtre démarre à la
+     * première consultation de solde / première opération après connexion.
+     */
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $freeWindowStartedAt = null;
+
     public function __construct()
     {
         $this->entreprises = new ArrayCollection();
@@ -302,6 +326,48 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
         }
 
         return $this;
+    }
+
+    public function getPaidTokens(): int
+    {
+        return (int) $this->paidTokens;
+    }
+
+    public function setPaidTokens(int $paidTokens): static
+    {
+        $this->paidTokens = max(0, $paidTokens);
+
+        return $this;
+    }
+
+    public function getFreeTokens(): int
+    {
+        return $this->freeTokens;
+    }
+
+    public function setFreeTokens(int $freeTokens): static
+    {
+        $this->freeTokens = max(0, $freeTokens);
+
+        return $this;
+    }
+
+    public function getFreeWindowStartedAt(): ?\DateTimeImmutable
+    {
+        return $this->freeWindowStartedAt;
+    }
+
+    public function setFreeWindowStartedAt(?\DateTimeImmutable $freeWindowStartedAt): static
+    {
+        $this->freeWindowStartedAt = $freeWindowStartedAt;
+
+        return $this;
+    }
+
+    /** Solde total disponible (gratuit + prépayé). */
+    public function getTotalTokens(): int
+    {
+        return $this->getFreeTokens() + $this->getPaidTokens();
     }
 
     #[ORM\PrePersist]

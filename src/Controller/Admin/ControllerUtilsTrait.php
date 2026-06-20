@@ -37,6 +37,9 @@ use App\Entity\TypeRevenu;
 use App\Entity\Utilisateur;
 use App\Services\CanvasBuilder;
 use App\Services\JSBDynamicSearchService;
+use App\Token\InsufficientTokensException;
+use App\Token\TokenAccountService;
+use Symfony\Contracts\Service\Attribute\Required;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
@@ -75,6 +78,31 @@ use Symfony\Component\Form\FormInterface;
 trait ControllerUtilsTrait
 {
     protected CanvasBuilder $canvasBuilder;
+
+    /**
+     * Service de métrage des tokens. Injecté par setter autowiré (#[Required])
+     * pour couvrir TOUS les contrôleurs utilisant ce trait sans toucher à leurs
+     * constructeurs respectifs.
+     */
+    private TokenAccountService $tokenAccountService;
+
+    #[Required]
+    public function setTokenAccountService(TokenAccountService $tokenAccountService): void
+    {
+        $this->tokenAccountService = $tokenAccountService;
+    }
+
+    /** Construit la réponse JSON 402 servie quand le solde de tokens est épuisé. */
+    private function tokensBlockedJson(InsufficientTokensException $e): JsonResponse
+    {
+        return $this->json([
+            'message'       => "Quota de tokens épuisé. Rechargez votre solde ou attendez le renouvellement de votre allocation gratuite.",
+            'blocked'       => true,
+            'required'      => $e->required,
+            'available'     => $e->available,
+            'nextRenewalAt' => $e->nextRenewalAt?->format(DateTimeImmutable::ATOM),
+        ], Response::HTTP_PAYMENT_REQUIRED);
+    }
     /**
      * Valide l'accès à un espace de travail en se basant sur idEntreprise et idInvite.
      *
@@ -351,6 +379,14 @@ trait ControllerUtilsTrait
             $searchResult = $this->searchService->search($entityClass, $criteria, $entreprise, $parentContext, $page, 20);
             $data = $searchResult['data'];
 
+            // MÉTRAGE TOKENS (lecture) : bloquant. Chaque entité envoyée vers le
+            // frontend pèse 2 tokens, débités au propriétaire de l'entreprise.
+            try {
+                $this->tokenAccountService->meterRead($entityClass, count($data), $entreprise, $this->getUser());
+            } catch (InsufficientTokensException $e) {
+                return $this->tokensBlockedJson($e);
+            }
+
             // Preload batch avant le calcul des indicateurs (évite N×M lazy-loads pour Cotation/Avenant).
             $this->canvasBuilder->batchPreloadForCollection($data);
 
@@ -391,6 +427,20 @@ trait ControllerUtilsTrait
             if ($entreprise) {
                 $searchResult = $this->searchService->search($entityClass, [], $entreprise, null, 1, 20);
                 $data = $searchResult['data'];
+
+                // MÉTRAGE TOKENS (lecture) au chargement initial de la liste. En cas
+                // d'épuisement, on remplace le contenu par un panneau de blocage tout
+                // en conservant la coquille de l'espace de travail.
+                try {
+                    $this->tokenAccountService->meterRead($entityClass, count($data), $entreprise, $this->getUser());
+                } catch (InsufficientTokensException $e) {
+                    return $this->render('components/_tokens_blocked.html.twig', [
+                        'nextRenewalAt' => $e->nextRenewalAt,
+                        'required'      => $e->required,
+                        'available'     => $e->available,
+                    ]);
+                }
+
                 $paginationMeta = [
                     'currentPage'  => 1,
                     'totalPages'   => $searchResult['totalPages'],
@@ -644,6 +694,15 @@ trait ControllerUtilsTrait
                         }
                     }
                 }
+            }
+
+            // MÉTRAGE TOKENS (écriture) : bloquant. On débite le propriétaire de
+            // l'entreprise courante AVANT la persistance ; si le solde est épuisé,
+            // rien n'est enregistré et on renvoie un 402 explicite.
+            try {
+                $this->tokenAccountService->meterWrite($entity, $currentEntreprise, $this->getUser());
+            } catch (InsufficientTokensException $e) {
+                return $this->tokensBlockedJson($e);
             }
 
             $this->em->persist($entity);
