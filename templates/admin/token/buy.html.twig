@@ -5,12 +5,21 @@
 {% block stylesheets %}
 {{ parent() }}
 <style>
-    .tkb-page { min-height: 100vh; background-color: #f3f3f3; }
+    /* Page en pleine hauteur : la barre de titre reste fixe en haut,
+       seul le contenu situé en dessous défile (zone .tkb-scroll). */
+    .tkb-page {
+        height: 100vh; background-color: #f3f3f3;
+        display: flex; flex-direction: column; overflow: hidden;
+    }
     .tkb-topbar {
+        flex: 0 0 auto; /* barre de titre figée : ne défile pas avec le contenu */
         display: flex; align-items: center; justify-content: space-between;
         gap: 1rem; flex-wrap: wrap; padding: .75rem 1.5rem;
         background-color: #fff; border-bottom: 1px solid #dee2e6;
     }
+    /* Zone défilante : occupe la hauteur restante sous la barre de titre.
+       min-height:0 indispensable pour qu'un enfant flex puisse défiler. */
+    .tkb-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
     .tkb-brand { display: flex; align-items: center; gap: .6rem; text-decoration: none; }
     .tkb-brand img { width: 36px; height: 36px; border-radius: 8px; }
     .tkb-brand span { font-weight: 700; color: #0047AB; font-size: 1.1rem; }
@@ -39,6 +48,21 @@
     .tkb-submit { width:100%; background:#0047AB; border-color:#0047AB; color:#fff; font-weight:600; padding:.7rem; }
     .tkb-submit:hover { background:#003380; border-color:#003380; }
     .tkb-error { color:#dc3545; font-size:.82rem; margin-top:.2rem; }
+
+    /* ── Champs « carte » : pattern identique au formulaire de connexion ──
+       label au-dessus, icône en préfixe, champ haut de 48px, focus cobalt. */
+    .tkb-card .form-label { font-weight:600; color:#343a40; margin-bottom:.35rem; }
+    .tkb-ifield { position:relative; margin-bottom:1rem; }
+    .tkb-ifield-icon {
+        position:absolute; top:50%; left:.85rem; transform:translateY(-50%);
+        width:20px; height:20px; color:#6c757d; pointer-events:none;
+    }
+    .tkb-ifield .form-control { height:48px; padding-left:2.6rem; color:#000; }
+    .tkb-ifield .form-control:focus {
+        border-color:#0047AB; box-shadow:0 0 0 .25rem rgba(0,71,171,.35);
+    }
+    .tkb-cardrow { display:flex; gap:.85rem; }
+    .tkb-cardrow > div { flex:1; }
 </style>
 {% endblock %}
 
@@ -57,6 +81,7 @@
         </a>
     </header>
 
+    <div class="tkb-scroll">
     <div class="tkb-content">
         <a href="{{ path('admin.token.index') }}" class="tkb-back" data-action="click->top-progress#show">
             {{ ux_icon('mdi:arrow-left', {height: '16px', width: '16px'}) }}
@@ -100,25 +125,39 @@
                         {{ "token_buy.card_section" | trans }}
                     </legend>
 
-                    <div class="tkb-field">
-                        {{ form_label(form.cardHolder) }}
-                        {{ form_widget(form.cardHolder) }}
-                        {{ form_errors(form.cardHolder) }}
+                    {# Titulaire de la carte #}
+                    <label for="{{ form.cardHolder.vars.id }}" class="form-label">{{ form.cardHolder.vars.label|trans }}</label>
+                    <div class="tkb-ifield">
+                        {{ ux_icon(resolve_icon_name('utilisateur'), {class: 'tkb-ifield-icon'}) }}
+                        {{ form_widget(form.cardHolder, {attr: {class: 'form-control'}}) }}
                     </div>
-                    <div class="tkb-field">
-                        {{ form_label(form.cardNumber) }}
-                        {{ form_widget(form.cardNumber) }}
-                        {{ form_errors(form.cardNumber) }}
+                    {{ form_errors(form.cardHolder) }}
+
+                    {# Numéro de carte #}
+                    <label for="{{ form.cardNumber.vars.id }}" class="form-label">{{ form.cardNumber.vars.label|trans }}</label>
+                    <div class="tkb-ifield">
+                        {{ ux_icon(resolve_icon_name('compte-bancaire'), {class: 'tkb-ifield-icon'}) }}
+                        {{ form_widget(form.cardNumber, {attr: {class: 'form-control'}}) }}
                     </div>
-                    <div class="tkb-row">
-                        <div class="tkb-field">
-                            {{ form_label(form.expiry) }}
-                            {{ form_widget(form.expiry) }}
+                    {{ form_errors(form.cardNumber) }}
+
+                    <div class="tkb-cardrow">
+                        {# Expiration #}
+                        <div>
+                            <label for="{{ form.expiry.vars.id }}" class="form-label">{{ form.expiry.vars.label|trans }}</label>
+                            <div class="tkb-ifield">
+                                {{ ux_icon(resolve_icon_name('action:renew'), {class: 'tkb-ifield-icon'}) }}
+                                {{ form_widget(form.expiry, {attr: {class: 'form-control'}}) }}
+                            </div>
                             {{ form_errors(form.expiry) }}
                         </div>
-                        <div class="tkb-field">
-                            {{ form_label(form.cvc) }}
-                            {{ form_widget(form.cvc) }}
+                        {# CVC (code de sécurité) #}
+                        <div>
+                            <label for="{{ form.cvc.vars.id }}" class="form-label">{{ form.cvc.vars.label|trans }}</label>
+                            <div class="tkb-ifield">
+                                {{ ux_icon(resolve_icon_name('action:password'), {class: 'tkb-ifield-icon'}) }}
+                                {{ form_widget(form.cvc, {attr: {class: 'form-control'}}) }}
+                            </div>
                             {{ form_errors(form.cvc) }}
                         </div>
                     </div>
@@ -134,5 +173,6 @@
             {{ form_end(form) }}
         </div>
     </div>
+    </div>{# /.tkb-scroll #}
 </main>
 {% endblock %}

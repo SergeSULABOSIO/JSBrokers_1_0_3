@@ -9,7 +9,12 @@
        Liste des entreprises — charte JS Brokers (cobalt #0047AB),
        neutres Bootstrap. Aucune couleur hors charte.
        ============================================================ */
-    .ent-page { min-height: 100vh; background-color: #f3f3f3; }
+    /* Page en pleine hauteur : la barre de titre reste fixe en haut,
+       seul le contenu situé en dessous défile (zone .ent-scroll). */
+    .ent-page {
+        height: 100vh; background-color: #f3f3f3;
+        display: flex; flex-direction: column; overflow: hidden;
+    }
 
     /* Barre de progression globale (même pattern que l'espace de travail) :
        fixée en haut, cobalt, animée, affichée par Stimulus à chaque action. */
@@ -25,10 +30,15 @@
 
     /* Barre applicative */
     .ent-topbar {
+        flex: 0 0 auto; /* barre de titre figée : ne défile pas avec le contenu */
         display: flex; align-items: center; justify-content: space-between;
         gap: 1rem; flex-wrap: wrap; padding: .75rem 1.5rem;
         background-color: #ffffff; border-bottom: 1px solid #dee2e6;
     }
+
+    /* Zone défilante : occupe toute la hauteur restante sous la barre de titre.
+       min-height:0 indispensable pour qu'un enfant flex puisse défiler. */
+    .ent-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
     .ent-brand { display: flex; align-items: center; gap: .6rem; text-decoration: none; }
     .ent-brand img { width: 36px; height: 36px; border-radius: 8px; }
     .ent-brand span { font-weight: 700; color: #0047AB; font-size: 1.1rem; }
@@ -180,6 +190,7 @@
         </div>
     </header>
 
+    <div class="ent-scroll">
     <div class="ent-content">
 
         {# Messages flash (succès/suppression/PDF…) relayés en toast applicatif #}
@@ -327,6 +338,7 @@
         {% endif %}
 
     </div>
+    </div>{# /.ent-scroll #}
 
     {# ── MENU CONTEXTUEL DES CARTES D'ENTREPRISE (design dark identique au workspace) ── #}
     {# Le contrôleur entreprise-context-menu n'ouvre ce menu que sur une carte actionnable

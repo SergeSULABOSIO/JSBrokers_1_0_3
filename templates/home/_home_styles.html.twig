@@ -160,6 +160,74 @@
         box-sizing: content-box;
     }
 
+    /* ---------- Plans tarifaires (tokens) ----------
+       Cartes sémantiques, hiérarchie visuelle progressive (gratuit → prépayé),
+       plan « Professionnel » mis en avant. Couleurs : charte (cobalt #0047AB,
+       neutres Bootstrap). Aucune information portée par la couleur seule
+       (icône ✓ vs − + libellé explicite). */
+    .pp-card {
+        position: relative;
+        display: flex; flex-direction: column; height: 100%;
+        background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 16px;
+        overflow: hidden;
+        transition: box-shadow .2s ease, transform .2s ease;
+    }
+    .pp-card:hover { box-shadow: 0 12px 32px rgba(0, 71, 171, .12); transform: translateY(-4px); }
+
+    /* Plan mis en avant : accent cobalt + élévation permanente. */
+    .pp-card--featured { border: 2px solid #0047AB; box-shadow: 0 12px 32px rgba(0, 71, 171, .18); }
+    @media (min-width: 768px) {
+        .pp-card--featured { transform: scale(1.03); }
+        .pp-card--featured:hover { transform: scale(1.03) translateY(-4px); }
+    }
+
+    /* Bandeau « Recommandé » (plan mis en avant uniquement). */
+    .pp-flag {
+        margin: 0; padding: .4rem; background-color: #0047AB; color: #ffffff;
+        font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+        display: flex; align-items: center; justify-content: center; gap: .35rem;
+    }
+
+    /* En-tête : nom du plan, prix, accroche. */
+    .pp-head { padding: 1.75rem 1.5rem 1.25rem; text-align: center; border-bottom: 1px solid #f0f0f0; }
+    .pp-name { display: block; font-size: .8rem; font-weight: 700; letter-spacing: .08em;
+        text-transform: uppercase; color: #0047AB; margin-bottom: .5rem; }
+    .pp-price { font-size: 2.4rem; font-weight: 800; color: #212529; line-height: 1; margin: 0 0 .75rem; }
+    .pp-badge { display: inline-block; background-color: #e8f0fb; color: #0047AB;
+        font-size: .72rem; font-weight: 600; letter-spacing: .03em; text-transform: uppercase;
+        padding: .2rem .6rem; border-radius: 999px; margin-bottom: .4rem; }
+    .pp-lead { margin: 0 0 .4rem; font-weight: 600; color: #343a40; }
+    .pp-profil { margin: 0; color: #6c757d; font-size: .88rem; }
+
+    /* Liste des caractéristiques. */
+    .pp-features { list-style: none; margin: 0; padding: .75rem 1.5rem;
+        display: flex; flex-direction: column; flex: 1 1 auto; }
+    .pp-feature { display: flex; align-items: flex-start; gap: .6rem;
+        padding: .55rem .25rem; font-size: .9rem; color: #212529; }
+    .pp-feature + .pp-feature { border-top: 1px solid #f5f5f5; }
+    .pp-feature__icon { flex: 0 0 auto; width: 20px; height: 20px; margin-top: 1px; color: #0047AB; }
+    .pp-feature--off { color: #6c757d; }                 /* non inclus : neutre (pas d'alarme rouge) */
+    .pp-feature--off .pp-feature__icon { color: #adb5bd; }
+    .pp-value { font-weight: 700; color: #0047AB; }        /* valeur quantitative mise en avant */
+
+    /* Pied : bouton d'appel à l'action (zone cliquable ≥ 48px, WCAG 2.5.5). */
+    .pp-foot { padding: 1.25rem 1.5rem 1.5rem; margin-top: auto; }
+    .pp-cta {
+        width: 100%; min-height: 48px;
+        display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+        font-weight: 600; padding: .7rem 1rem; border-radius: 10px;
+        border: 1px solid transparent; text-decoration: none;
+        transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+    }
+    .pp-cta:hover { font-weight: 600; }                    /* neutralise le a:hover{font-weight:bold} global */
+    .pp-cta:focus-visible { outline: 2px solid #0047AB; outline-offset: 2px; }
+    .pp-cta--solid { background-color: #0047AB; border-color: #0047AB; color: #ffffff; }
+    .pp-cta--solid:hover, .pp-cta--solid:focus { background-color: #003380; border-color: #003380; color: #ffffff; }
+    .pp-cta--outline { background-color: #ffffff; border-color: #0047AB; color: #0047AB; }
+    .pp-cta--outline:hover, .pp-cta--outline:focus { background-color: #0047AB; color: #ffffff; }
+    .pp-cta--ghost { background-color: #ffffff; border-color: #ced4da; color: #495057; }
+    .pp-cta--ghost:hover, .pp-cta--ghost:focus { background-color: #f8f9fa; border-color: #6c757d; color: #212529; }
+
     /* Bloc fonctionnalité : alterné texte / image, responsive. */
     .feature-row {
         display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center;
