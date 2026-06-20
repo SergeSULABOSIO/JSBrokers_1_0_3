@@ -8,6 +8,7 @@ use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 use App\Event\DemandeContactEvent;
 use App\Event\InvitationEvent;
+use App\Event\TokenPurchaseEvent;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -95,6 +96,33 @@ class MailingSubscriber implements EventSubscriberInterface
         );
     }
 
+    public function onTokenPurchase(TokenPurchaseEvent $event): void
+    {
+        $purchase = $event->purchase;
+        $user = $purchase->getUtilisateur();
+
+        $destinataire = $user?->getEmail();
+        if (!$destinataire) {
+            return;
+        }
+
+        $accountUrl = $this->urlGenerator->generate(
+            'admin.token.index',
+            [],
+            UrlGeneratorInterface::ABSOLUTE_URL
+        );
+
+        $this->envoyerMail(
+            $destinataire,
+            $this->buildSubject('Confirmation de paiement', $user->getNom() ?: $destinataire),
+            'emails/token_purchase_confirmation.html.twig',
+            [
+                'purchase'   => $purchase,
+                'accountUrl' => $accountUrl,
+            ],
+        );
+    }
+
     /**
      * Construit l'objet normalisé de tous les e-mails sortants :
      *   « JS Brokers - [objet] - [destinataire / nom concerné] ».
@@ -140,6 +168,7 @@ class MailingSubscriber implements EventSubscriberInterface
         return [
             DemandeContactEvent::class => 'onDemandeContactEvent',
             InvitationEvent::class => 'onInvitationAjoutee',
+            TokenPurchaseEvent::class => 'onTokenPurchase',
         ];
     }
 }

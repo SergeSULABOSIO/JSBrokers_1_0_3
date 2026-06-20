@@ -1,0 +1,212 @@
+<?php
+
+namespace App\Token;
+
+use App\Entity\Entreprise;
+use App\Entity\TokenConsumption;
+use App\Entity\Utilisateur;
+use Doctrine\ORM\EntityManagerInterface;
+
+/**
+ * @file Service central du modèle de tokens (freemium JS Brokers).
+ * @description Gère l'allocation gratuite renouvelable, le solde prépayé, le
+ * métrage bloquant des lectures/écritures et la journalisation des
+ * consommations. Toute la facturation est rattachée au PROPRIÉTAIRE de
+ * l'entreprise (cf. plan). Point d'entrée unique : meterWrite() / meterRead().
+ */
+class TokenAccountService
+{
+    public function __construct(private EntityManagerInterface $em)
+    {
+    }
+
+    /**
+     * Garantit que la fenêtre gratuite est à jour : si elle n'a jamais démarré
+     * ou si elle a expiré (≥ 8 h), on la réinitialise (allocation rechargée).
+     * Renouvellement paresseux — aucun cron nécessaire.
+     */
+    public function ensureFreshWindow(Utilisateur $owner): void
+    {
+        $now = new \DateTimeImmutable();
+        $start = $owner->getFreeWindowStartedAt();
+
+        if ($start === null || $now >= $start->modify('+' . TokenPricing::FREE_WINDOW_HOURS . ' hours')) {
+            $owner->setFreeTokens(TokenPricing::FREE_ALLOWANCE);
+            $owner->setFreeWindowStartedAt($now);
+            $this->em->flush();
+        }
+    }
+
+    /**
+     * Retourne l'état du solde après renouvellement éventuel.
+     *
+     * @return array{free:int, paid:int, total:int, windowStartedAt:?\DateTimeImmutable, nextRenewalAt:?\DateTimeImmutable, allowance:int}
+     */
+    public function getBalance(Utilisateur $owner): array
+    {
+        $this->ensureFreshWindow($owner);
+        $start = $owner->getFreeWindowStartedAt();
+
+        return [
+            'free'            => $owner->getFreeTokens(),
+            'paid'            => $owner->getPaidTokens(),
+            'total'           => $owner->getTotalTokens(),
+            'windowStartedAt' => $start,
+            'nextRenewalAt'   => $start?->modify('+' . TokenPricing::FREE_WINDOW_HOURS . ' hours'),
+            'allowance'       => TokenPricing::FREE_ALLOWANCE,
+        ];
+    }
+
+    /** Date du prochain renouvellement gratuit (après renouvellement éventuel). */
+    public function nextRenewalAt(Utilisateur $owner): ?\DateTimeImmutable
+    {
+        return $this->getBalance($owner)['nextRenewalAt'];
+    }
+
+    /** Le propriétaire peut-il couvrir un coût donné ? (renouvellement pris en compte) */
+    public function canAfford(Utilisateur $owner, int $cost): bool
+    {
+        if ($cost <= 0) {
+            return true;
+        }
+
+        return $this->getBalance($owner)['total'] >= $cost;
+    }
+
+    /**
+     * Débite un coût : on consomme d'abord le solde prépayé, puis l'allocation
+     * gratuite (⇒ une fois le prépayé épuisé, on « bascule au mode gratuit »).
+     * Jamais négatif. À n'appeler qu'après canAfford().
+     */
+    public function consume(Utilisateur $owner, int $cost): void
+    {
+        if ($cost <= 0) {
+            return;
+        }
+
+        $paid = $owner->getPaidTokens();
+        $fromPaid = min($paid, $cost);
+        $owner->setPaidTokens($paid - $fromPaid);
+
+        $reste = $cost - $fromPaid;
+        if ($reste > 0) {
+            $owner->setFreeTokens($owner->getFreeTokens() - $reste);
+        }
+
+        $this->em->flush();
+    }
+
+    /** Crédite des tokens prépayés (à l'achat d'un paquet). */
+    public function credit(Utilisateur $owner, int $tokens): void
+    {
+        if ($tokens <= 0) {
+            return;
+        }
+
+        $owner->setPaidTokens($owner->getPaidTokens() + $tokens);
+        $this->em->flush();
+    }
+
+    /**
+     * Métrage d'une ÉCRITURE (création/édition d'une entité). Bloquant.
+     *
+     * @throws InsufficientTokensException si le solde du propriétaire est insuffisant.
+     */
+    public function meterWrite(object $entity, Entreprise $entreprise, ?Utilisateur $acteur): void
+    {
+        $owner = $entreprise->getUtilisateur();
+        if (!$owner instanceof Utilisateur) {
+            return; // Pas de propriétaire identifiable : on ne facture pas.
+        }
+
+        $cost = TokenPricing::weightFor($entity::class);
+        $this->guardAndConsume($owner, $cost);
+
+        $this->log(
+            $entreprise,
+            $owner,
+            $acteur,
+            $this->shortName($entity::class),
+            TokenConsumption::SENS_ENTREE,
+            1,
+            $cost,
+        );
+    }
+
+    /**
+     * Métrage d'une LECTURE (lot de $count entités envoyées au frontend). Bloquant.
+     *
+     * @throws InsufficientTokensException si le solde du propriétaire est insuffisant.
+     */
+    public function meterRead(string $fqcn, int $count, Entreprise $entreprise, ?Utilisateur $acteur): void
+    {
+        if ($count <= 0) {
+            return; // Rien d'envoyé : gratuit.
+        }
+
+        $owner = $entreprise->getUtilisateur();
+        if (!$owner instanceof Utilisateur) {
+            return;
+        }
+
+        $unit = TokenPricing::READ_WEIGHT;
+        $cost = $count * $unit;
+        $this->guardAndConsume($owner, $cost);
+
+        $this->log(
+            $entreprise,
+            $owner,
+            $acteur,
+            $this->shortName($fqcn),
+            TokenConsumption::SENS_SORTIE,
+            $count,
+            $unit,
+        );
+    }
+
+    /** Vérifie la solvabilité puis débite, ou lève l'exception de blocage. */
+    private function guardAndConsume(Utilisateur $owner, int $cost): void
+    {
+        if (!$this->canAfford($owner, $cost)) {
+            throw new InsufficientTokensException(
+                $cost,
+                $owner->getTotalTokens(),
+                $this->nextRenewalAt($owner),
+            );
+        }
+
+        $this->consume($owner, $cost);
+    }
+
+    /** Journalise une ligne de consommation. */
+    private function log(
+        Entreprise $entreprise,
+        Utilisateur $owner,
+        ?Utilisateur $acteur,
+        string $entiteNom,
+        string $sens,
+        int $nombre,
+        int $poidsUnitaire,
+    ): void {
+        $conso = (new TokenConsumption())
+            ->setEntreprise($entreprise)
+            ->setProprietaire($owner)
+            ->setActeur($acteur)
+            ->setEntiteNom($entiteNom)
+            ->setSens($sens)
+            ->setNombre($nombre)
+            ->setPoidsUnitaire($poidsUnitaire)
+            ->setPoidsTotal($nombre * $poidsUnitaire);
+
+        $this->em->persist($conso);
+        $this->em->flush();
+    }
+
+    /** Nom court d'une classe (App\Entity\Cotation → Cotation). */
+    private function shortName(string $fqcn): string
+    {
+        $pos = strrpos($fqcn, '\\');
+
+        return $pos === false ? $fqcn : substr($fqcn, $pos + 1);
+    }
+}

@@ -1,0 +1,78 @@
+{#
+    Widget de solde de tokens (temps réel). Réutilisable dans l'espace compte.
+
+    @param array balance  { free, paid, total, nextRenewalAt, allowance }
+    @param bool  compact  (optionnel) variante condensée pour les en-têtes.
+#}
+{% set allowance = balance.allowance ?? 1000 %}
+{% set pct = allowance > 0 ? (balance.free / allowance * 100)|round : 0 %}
+
+<section class="tk-widget" aria-label="{{ 'token_widget_aria' | trans }}"
+         data-controller="token-balance"
+         data-token-balance-url-value="{{ path('admin.token.balance') }}"
+         data-token-balance-allowance-value="{{ allowance }}">
+    <style>
+        .tk-widget { background:#fff; border:1px solid #dee2e6; border-radius:12px;
+            padding:1rem 1.25rem; margin-bottom:1.5rem; box-shadow:0 4px 16px rgba(0,71,171,.06); }
+        .tk-widget .tk-top { display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+        .tk-widget .tk-title { display:flex; align-items:center; gap:.5rem; font-weight:700; color:#212529; margin:0; font-size:1.05rem; }
+        .tk-widget .tk-title .tk-ic { color:#0047AB; }
+        .tk-widget .tk-total { font-size:1.5rem; font-weight:800; color:#0047AB; line-height:1; }
+        .tk-widget .tk-total small { font-size:.8rem; font-weight:600; color:#6c757d; }
+        .tk-widget .tk-detail { display:flex; gap:1.25rem; flex-wrap:wrap; margin:.65rem 0 .5rem; }
+        .tk-widget .tk-detail span { font-size:.85rem; color:#6c757d; }
+        .tk-widget .tk-detail strong { color:#212529; }
+        .tk-widget .tk-bar-wrap { height:8px; background:#e9ecef; border-radius:6px; overflow:hidden; margin:.35rem 0 .25rem; }
+        .tk-widget .tk-bar { height:100%; background:#0047AB; border-radius:6px; transition:width .4s ease; }
+        .tk-widget .tk-renewal { font-size:.8rem; color:#6c757d; margin:.15rem 0 0; }
+        .tk-widget .tk-actions { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.85rem; }
+        .tk-widget .btn-cobalt { background:#0047AB; border-color:#0047AB; color:#fff; }
+        .tk-widget .btn-cobalt:hover { background:#003380; border-color:#003380; }
+    </style>
+
+    <div class="tk-top">
+        <h2 class="tk-title">
+            {{ ux_icon('mdi:database', {height: '20px', width: '20px', class: 'tk-ic'}) }}
+            {{ "token_widget_title" | trans }}
+        </h2>
+        <div class="tk-total">
+            <span data-token-balance-target="total">{{ balance.total }}</span>
+            <small>{{ "token_unit" | trans }}</small>
+        </div>
+    </div>
+
+    <div class="tk-detail">
+        <span>{{ "token_free" | trans }}: <strong data-token-balance-target="free">{{ balance.free }}</strong> / {{ allowance }}</span>
+        <span>{{ "token_paid" | trans }}: <strong data-token-balance-target="paid">{{ balance.paid }}</strong></span>
+    </div>
+
+    <div class="tk-bar-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ pct }}"
+         aria-label="{{ 'token_free_progress' | trans }}">
+        <div class="tk-bar" data-token-balance-target="bar" style="width: {{ pct }}%;"></div>
+    </div>
+    {% if balance.nextRenewalAt %}
+        <p class="tk-renewal">
+            {{ "token_next_renewal" | trans }}
+            <strong data-token-balance-target="renewal">{{ balance.nextRenewalAt | format_datetime("medium", "short", locale: app.user.locale) }}</strong>
+        </p>
+    {% endif %}
+
+    <div class="tk-actions">
+        <a href="{{ path('admin.token.buy') }}" class="btn btn-sm btn-cobalt d-inline-flex align-items-center gap-1"
+           data-action="click->top-progress#show">
+            {{ ux_icon(resolve_icon_name('action:cart'), {height: '16px', width: '16px'}) }}
+            <span>{{ "token_recharge" | trans }}</span>
+        </a>
+        <a href="{{ path('admin.token.index') }}" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
+           data-action="click->top-progress#show">
+            {{ ux_icon('mdi:format-list-bulleted', {height: '16px', width: '16px'}) }}
+            <span>{{ "token_consumption_details" | trans }}</span>
+        </a>
+        <a href="{{ path('app_tokens_info') }}" target="_blank" rel="noopener"
+           class="btn btn-sm btn-link text-decoration-none d-inline-flex align-items-center gap-1"
+           aria-label="{{ 'token_how_it_works'|trans }} ({{ 'token_new_tab'|trans }})">
+            {{ ux_icon('mdi:help-circle-outline', {height: '16px', width: '16px'}) }}
+            <span>{{ "token_how_it_works" | trans }}</span>
+        </a>
+    </div>
+</section>
