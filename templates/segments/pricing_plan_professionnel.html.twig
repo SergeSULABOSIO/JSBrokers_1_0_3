@@ -1,57 +1,57 @@
-<div class="card h-100 shadow" style="border: 2px solid #0047AB;">
-    <div class="card-header bg-cobalt">
-        <h3 class="card-title text-center text-light h5 mb-0">{{ "security_pricing_prof" | trans }}</h3>
-    </div>
-    <div class="card-body">
-        <p class="card-title text-center h2">{{ "security_pricing_prof_price" | trans }}</p>
-        <hr>
-        <blockquote class="blockquote mb-0 text-center">
-            <p><span class="badge rounded-pill bg-warning text-dark">{{ "security_pricing_prof_mode" | trans }}</span></p>
-            <footer class="blockquote-footer">{{ "security_pricing_prof_profil" | trans }}</footer>
-        </blockquote>
-        <hr>
-        <div class="list-group list-group-flush">
-            <div class="list-group-item d-flex align-items-center gap-2 text-muted">
-                {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-                <span>{{ "security_pricing_prof_option_assistance" | trans }}</span>
-            </div>
-            <div class="list-group-item d-flex align-items-center gap-2 text-muted">
-                {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-                <span>{{ "security_pricing_prof_option_invite" | trans }}
-                    <strong class="text-dark">[{{ "security_pricing_prof_option_invite_value" | trans }}]</strong></span>
-            </div>
-            <div class="list-group-item d-flex align-items-center gap-2 text-muted">
-                {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-                <span>{{ "security_pricing_prof_option_donnees" | trans }}</span>
-            </div>
-            <div class="list-group-item d-flex align-items-center gap-2 text-muted">
-                {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-                <span>{{ "security_pricing_prof_option_volume" | trans }}
-                    <strong class="text-dark">[{{ "security_pricing_prof_option_volume_value" | trans }}]</strong></span>
-            </div>
-            <div class="list-group-item d-flex align-items-center gap-2 text-muted">
-                {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-                <span>{{ "security_pricing_prof_option_entreprise" | trans }}
-                    <strong class="text-dark">[{{ "security_pricing_prof_option_entreprise_value" | trans }}]</strong></span>
-            </div>
-            <div class="list-group-item d-flex align-items-center gap-2 text-muted">
-                {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-                <span>{{ "security_pricing_prof_option_dashboard" | trans }}</span>
-            </div>
-            <div class="list-group-item d-flex align-items-center gap-2 text-muted">
-                {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-                <span>{{ "security_pricing_prof_option_email" | trans }}
-                    <strong class="text-dark">[{{ "security_pricing_prof_option_email_value" | trans }}]</strong></span>
-            </div>
-            <div class="list-group-item d-flex align-items-center gap-2 text-muted">
-                {{ ux_icon('mdi:check-bold', {height: '20px', width: '20px'}) }}
-                <span>{{ "security_pricing_prof_option_fonctions" | trans }}</span>
-            </div>
-        </div>
-    </div>
-    <div class="card-footer text-center bg-white border-top-0">
+<article class="pp-card pp-card--featured" aria-labelledby="pp-prof-name">
+    <p class="pp-flag">
+        {{ ux_icon('mdi:star', {height: '14px', width: '14px', 'aria-hidden': 'true'}) }}
+        {{ "security_pricing_recommended" | trans }}
+    </p>
+    <header class="pp-head">
+        <span class="pp-name" id="pp-prof-name">{{ "security_pricing_prof" | trans }}</span>
+        <p class="pp-price">{{ "security_pricing_prof_price" | trans }}</p>
+        <span class="pp-badge">{{ "security_pricing_prof_mode" | trans }}</span>
+        <p class="pp-profil">{{ "security_pricing_prof_profil" | trans }}</p>
+    </header>
+
+    <ul class="pp-features">
+        <li class="pp-feature">
+            {{ ux_icon('mdi:check-circle', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
+            <span>{{ "security_pricing_prof_option_assistance" | trans }}</span>
+        </li>
+        <li class="pp-feature">
+            {{ ux_icon('mdi:check-circle', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
+            <span>{{ "security_pricing_prof_option_invite" | trans }}
+                <strong class="pp-value">{{ "security_pricing_prof_option_invite_value" | trans }}</strong></span>
+        </li>
+        <li class="pp-feature">
+            {{ ux_icon('mdi:check-circle', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
+            <span>{{ "security_pricing_prof_option_donnees" | trans }}</span>
+        </li>
+        <li class="pp-feature">
+            {{ ux_icon('mdi:check-circle', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
+            <span>{{ "security_pricing_prof_option_volume" | trans }}
+                <strong class="pp-value">{{ "security_pricing_prof_option_volume_value" | trans }}</strong></span>
+        </li>
+        <li class="pp-feature">
+            {{ ux_icon('mdi:check-circle', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
+            <span>{{ "security_pricing_prof_option_entreprise" | trans }}
+                <strong class="pp-value">{{ "security_pricing_prof_option_entreprise_value" | trans }}</strong></span>
+        </li>
+        <li class="pp-feature">
+            {{ ux_icon('mdi:check-circle', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
+            <span>{{ "security_pricing_prof_option_dashboard" | trans }}</span>
+        </li>
+        <li class="pp-feature">
+            {{ ux_icon('mdi:check-circle', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
+            <span>{{ "security_pricing_prof_option_email" | trans }}
+                <strong class="pp-value">{{ "security_pricing_prof_option_email_value" | trans }}</strong></span>
+        </li>
+        <li class="pp-feature">
+            {{ ux_icon('mdi:check-circle', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
+            <span>{{ "security_pricing_prof_option_fonctions" | trans }}</span>
+        </li>
+    </ul>
+
+    <div class="pp-foot">
         <a href="{{ app.user ? path('admin.token.buy', {pack: 'professionnel'}) : path('app_register', {idUtilisateur: -1}) }}"
-           class="btn btn-cobalt w-100 d-inline-flex align-items-center justify-content-center gap-2"
+           class="pp-cta pp-cta--solid"
            data-controller="ripple"
            data-action="click->form-submit#navigating click->top-progress#show"
            data-loading-text="{{ 'security_pricing_start_professionnel' | trans }}">
@@ -59,4 +59,4 @@
             <span>{{ "security_pricing_start_professionnel" | trans }}</span>
         </a>
     </div>
-</div>
+</article>
