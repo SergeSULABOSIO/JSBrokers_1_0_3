@@ -279,6 +279,40 @@ class TokenPurchaseFlowTest extends WebTestCase
         $this->assertSame('en', $this->user()->getLocale());
     }
 
+    /**
+     * Feedback visuel de la bascule de langue : sur l'espace compte ET la page
+     * d'achat, chaque lien de langue (barre de titre + pied de page) déclenche la
+     * barre de progression du haut (top-progress#show), et l'infrastructure
+     * (contrôleur + cible de barre) est bien présente. Pas de régression sur le
+     * comportement de navigation (les href restent sur la page courante).
+     */
+    public function testLanguageSwitchTriggersProgressBarOnTokenPages(): void
+    {
+        $this->client->loginUser($this->user());
+
+        foreach (['/admin/tokens' => '.tkp-lang a', '/admin/tokens/buy' => '.tkb-lang a'] as $url => $titleLangSelector) {
+            $crawler = $this->client->request('GET', $url);
+            $this->assertResponseIsSuccessful();
+
+            // Infrastructure de barre de progression présente.
+            $this->assertGreaterThan(0, $crawler->filter('[data-controller~="top-progress"]')->count(),
+                "Le contrôleur top-progress doit envelopper $url.");
+            $this->assertGreaterThan(0, $crawler->filter('[data-top-progress-target="bar"]')->count(),
+                "La barre de progression doit être présente sur $url.");
+
+            // Bascule de la barre de titre + bascule du pied de page : data-action.
+            foreach ([$titleLangSelector, '.public-footer .public-lang a'] as $selector) {
+                $links = $crawler->filter($selector);
+                $this->assertSame(2, $links->count(), "Deux options de langue attendues ($selector sur $url).");
+                foreach ($links->each(fn ($a) => $a->attr('data-action')) as $action) {
+                    $this->assertNotNull($action, "Le lien de langue ($selector sur $url) doit porter un data-action.");
+                    $this->assertStringContainsString('top-progress#show', $action,
+                        "Le clic sur la langue ($selector sur $url) doit déclencher la barre de progression.");
+                }
+            }
+        }
+    }
+
     public function testBalanceJsonReturnsFreeAllowance(): void
     {
         $this->client->loginUser($this->user());
