@@ -22,6 +22,7 @@ use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
+use Symfony\Component\Translation\LocaleSwitcher;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -59,12 +60,13 @@ class EntrepriseController extends AbstractController
     }
 
     #[Route(name: 'index')]
-    public function index(Request $request)
+    public function index(Request $request, LocaleSwitcher $localeSwitcher)
     {
-        $page = $request->query->getInt("page", 1);
-
         /** @var Utilisateur $user */
         $user = $this->getUser();
+        $this->applyLangPreference($request, $user, $localeSwitcher);
+
+        $page = $request->query->getInt("page", 1);
 
         // NB : la vérification de l'e-mail est désormais imposée globalement par
         // App\EventSubscriber\EmailVerificationSubscriber. Un utilisateur non vérifié
@@ -84,10 +86,11 @@ class EntrepriseController extends AbstractController
 
 
     #[Route('/create', name: 'create')]
-    public function create(Request $request)
+    public function create(Request $request, LocaleSwitcher $localeSwitcher)
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
+        $this->applyLangPreference($request, $user, $localeSwitcher);
 
         /** @var Entreprise $entreprise */
         $entreprise = new Entreprise();
@@ -171,10 +174,11 @@ class EntrepriseController extends AbstractController
     }
 
     #[Route('/{id}', name: 'edit', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    public function edit(Entreprise $entreprise, Request $request)
+    public function edit(Entreprise $entreprise, Request $request, LocaleSwitcher $localeSwitcher)
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
+        $this->applyLangPreference($request, $user, $localeSwitcher);
         $this->denyUnlessOwner($entreprise);
 
         $form = $this->createForm(EntrepriseType::class, $entreprise);
@@ -283,5 +287,21 @@ class EntrepriseController extends AbstractController
         return $this->render($lien, [
             'size' => $taille . 'px',
         ]);
+    }
+
+    /**
+     * Bascule de langue persistante pour l'espace authentifié : ?lang= met à
+     * jour la préférence de l'utilisateur (le UserLocaleListener s'appuie
+     * ensuite sur getLocale()) et applique la locale au rendu courant.
+     * Même logique que App\Controller\Admin\TokenController::applyLangPreference.
+     */
+    private function applyLangPreference(Request $request, Utilisateur $user, LocaleSwitcher $localeSwitcher): void
+    {
+        $lang = $request->query->get('lang');
+        if (in_array($lang, ['fr', 'en'], true) && $lang !== $user->getLocale()) {
+            $user->setLocale($lang);
+            $this->manager->flush();
+            $localeSwitcher->setLocale($lang);
+        }
     }
 }

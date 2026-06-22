@@ -152,20 +152,24 @@
         .ent-topbar-sep { display: none; }
     }
 </style>
+{# Styles partagés : bascule de langue (.ent-lang) + pied de page officiel #}
+{{ include('admin/entreprise/_chrome_styles.html.twig') }}
 {% endblock %}
 
 {% block body %}
-<main class="ent-page" data-controller="top-progress entreprise-context-menu">
+<main class="ent-page" data-controller="top-progress entreprise-context-menu"
+      data-entreprise-context-menu-edit-template-value="{{ 'entreprise_menu_edit_named'|trans({':company': '%name%'}) }}"
+      data-entreprise-context-menu-delete-template-value="{{ 'entreprise_menu_delete_named'|trans({':company': '%name%'}) }}">
 
     {# Barre de progression globale (pattern espace de travail) #}
     <div class="ent-progress-bar" data-top-progress-target="bar"
-         role="progressbar" aria-label="Chargement en cours" aria-hidden="true"></div>
+         role="progressbar" aria-label="{{ 'entreprise_loading' | trans }}" aria-hidden="true"></div>
 
     {# Barre applicative : marque + utilisateur + déconnexion #}
     <header class="ent-topbar">
         <a href="{{ path('app_index') }}" class="ent-brand"
            data-action="click->top-progress#show"
-           aria-label="JS Brokers — retour à l'accueil" title="Retour à l'accueil JS Brokers">
+           aria-label="{{ 'entreprise_brand_home' | trans }}" title="{{ 'entreprise_brand_home' | trans }}">
             <img src="{{ asset('images/entreprises/logofav.png') }}" alt="">
             <span>JS Brokers</span>
         </a>
@@ -186,6 +190,9 @@
                    title="{{ "boutons_user_logout" | trans }}" aria-label="{{ "boutons_user_logout" | trans }}">
                     {{ ux_icon(resolve_icon_name('action:exit'), {height: '18px', width: '18px'}) }}
                 </a>
+                {# Bascule de langue (FR/EN) : ancrée à l'extrême droite de la barre de titre.
+                   Persiste la préférence via ?lang=. #}
+                {{ include('admin/entreprise/_topbar_lang.html.twig') }}
             </div>
         </div>
     </header>
@@ -219,10 +226,10 @@
                     <article class="ent-card" data-ec-nom="{{ entreprise.nom }}">
                         <a href="{{ dashboardUrl }}" class="ent-card-media"
                            data-action="click->top-progress#show"
-                           aria-label="{{ 'Ouvrir le tableau de bord de %s'|format(entreprise.nom) }}">
+                           aria-label="{{ 'entreprise_open_dashboard'|trans({':company': entreprise.nom}) }}">
                             <img class="ent-card-img"
                                  src="{{ entreprise.thumbnail ? vich_uploader_asset(entreprise, 'thumbnailFile') : '/images/entreprises/default_entreprise.jpg' }}"
-                                 alt="{{ 'Logo de %s'|format(entreprise.nom) }}">
+                                 alt="{{ 'entreprise_logo_alt'|trans({':company': entreprise.nom}) }}">
                         </a>
 
                         <div class="ent-card-body">
@@ -273,32 +280,32 @@
                                 {# Statut de propriété : l'utilisateur courant a créé cette entreprise.
                                    Survol/focus → infobulle sombre qui suit la souris (pattern du tableau de bord). #}
                                 <div class="ent-owner-status ent-owner-status--owner" tabindex="0"
-                                     role="note" aria-label="Vous êtes propriétaire de cette entreprise"
+                                     role="note" aria-label="{{ 'entreprise_owner_aria' | trans }}"
                                      data-controller="owner-tip"
-                                     data-owner-tip-title-value="Propriétaire"
-                                     data-owner-tip-body-value="Vous avez créé cette entreprise : vous disposez de tous les droits, dont la modification de sa fiche et sa suppression définitive. Faites un clic droit sur la carte pour accéder à ces actions.">
+                                     data-owner-tip-title-value="{{ 'entreprise_owner_tip_title' | trans }}"
+                                     data-owner-tip-body-value="{{ 'entreprise_owner_tip_body' | trans }}">
                                     {{ ux_icon(resolve_icon_name('action:role'), {height: '18px', width: '18px', class: 'ent-owner-icon'}) }}
-                                    <span class="ent-owner-text">Vous en êtes le propriétaire</span>
+                                    <span class="ent-owner-text">{{ 'entreprise_owner_label' | trans }}</span>
                                 </div>
                                 {# Actions conservées mais masquées : pilotées par le menu contextuel (clic droit).
                                    Le contrôleur entreprise-context-menu délègue à ces éléments. #}
                                 <div class="ent-actions" style="display:none">
                                     <a class="ent-icon-btn" href="{{ path('admin.entreprise.edit', {'id': entreprise.id}) }}"
                                        data-action="click->top-progress#show"
-                                       title="Modifier" aria-label="{{ 'Modifier %s'|format(entreprise.nom) }}">
+                                       title="{{ 'commom_edit' | trans }}" aria-label="{{ 'entreprise_action_edit_aria'|trans({':company': entreprise.nom}) }}">
                                         {{ ux_icon('tabler:edit', {height: '20px', width: '20px'}) }}
                                     </a>
                                     <form action="{{ path('admin.entreprise.remove', {'id': entreprise.id}) }}" method="post"
                                           data-controller="confirm-action"
                                           data-action="submit->confirm-action#request"
-                                          data-confirm-action-title-value="Supprimer l'entreprise"
-                                          data-confirm-action-body-value="<p>L'entreprise <strong>{{ entreprise.nom }}</strong>, l'ensemble de ses données opérationnelles et ses fichiers seront <strong>définitivement détruits</strong> du serveur.</p>"
+                                          data-confirm-action-title-value="{{ 'entreprise_delete_confirm_title' | trans }}"
+                                          data-confirm-action-body-value="{{ 'entreprise_delete_confirm_body'|trans({':company': entreprise.nom}) }}"
                                           data-confirm-action-irreversible-value="true"
                                           data-confirm-action-require-password-value="true">
                                         <input type="hidden" name="_method" value="DELETE">
                                         <input type="hidden" name="_token" value="{{ csrf_token('delete-entreprise-' ~ entreprise.id) }}">
                                         <button type="submit" class="ent-icon-btn is-danger"
-                                                title="Supprimer" aria-label="{{ 'Supprimer %s'|format(entreprise.nom) }}">
+                                                title="{{ 'commom_delete' | trans }}" aria-label="{{ 'entreprise_action_delete_aria'|trans({':company': entreprise.nom}) }}">
                                             {{ ux_icon('fluent:delete-20-filled', {height: '20px', width: '20px'}) }}
                                         </button>
                                     </form>
@@ -306,12 +313,12 @@
                             {% else %}
                                 {# Statut de propriété : l'utilisateur courant a été invité sur cette entreprise. #}
                                 <div class="ent-owner-status ent-owner-status--guest" tabindex="0"
-                                     role="note" aria-label="{{ 'Entreprise détenue par %s, vous y êtes invité'|format(entreprise.utilisateur.nom) }}"
+                                     role="note" aria-label="{{ 'entreprise_guest_aria'|trans({':owner': entreprise.utilisateur.nom}) }}"
                                      data-controller="owner-tip"
-                                     data-owner-tip-title-value="Membre invité"
-                                     data-owner-tip-body-value="{{ 'Cette entreprise appartient à %s. Vous y accédez en tant qu\'invité : vous pouvez ouvrir l\'espace de travail, mais ni modifier la fiche ni supprimer l\'entreprise.'|format(entreprise.utilisateur.nom) }}">
+                                     data-owner-tip-title-value="{{ 'entreprise_guest_tip_title' | trans }}"
+                                     data-owner-tip-body-value="{{ 'entreprise_guest_tip_body'|trans({':owner': entreprise.utilisateur.nom}) }}">
                                     {{ ux_icon(resolve_icon_name('partenaire'), {height: '18px', width: '18px', class: 'ent-owner-icon'}) }}
-                                    <span class="ent-owner-text">Vous y êtes invité</span>
+                                    <span class="ent-owner-text">{{ 'entreprise_guest_label' | trans }}</span>
                                 </div>
                             {% endif %}
                         </div>
@@ -338,6 +345,11 @@
         {% endif %}
 
     </div>
+
+    {# Pied de page public officiel JS Brokers (à l'intérieur de la zone défilante :
+       la page est en hauteur fixe à scroll interne). La bascule de langue y est
+       fonctionnelle via ?lang= ; lang = préférence de l'utilisateur connecté. #}
+    {% include 'components/_public_footer.html.twig' with { lang: app.user.locale } %}
     </div>{# /.ent-scroll #}
 
     {# ── MENU CONTEXTUEL DES CARTES D'ENTREPRISE (design dark identique au workspace) ── #}
@@ -348,7 +360,7 @@
          data-entreprise-context-menu-target="menu"
          style="display:none;"
          tabindex="-1"
-         aria-label="Actions sur l'entreprise"
+         aria-label="{{ 'entreprise_menu_aria' | trans }}"
          onmousedown="event.stopPropagation()">
         <ul role="menu" class="list-unstyled mb-0">
             <li role="menuitem" tabindex="-1" data-menu-key="workspace"
@@ -356,14 +368,14 @@
                 <span class="context-menu-icon" aria-hidden="true">
                     <twig:UX:Icon name="{{ resolve_icon_name('action:open') }}" style="width:16px;height:16px;" />
                 </span>
-                <span class="flex-grow-1">Aller dans l'espace de travail</span>
+                <span class="flex-grow-1">{{ 'entreprise_menu_open_workspace' | trans }}</span>
             </li>
             <li role="menuitem" tabindex="-1" data-menu-key="edit"
                 data-action="click->entreprise-context-menu#onItemClick">
                 <span class="context-menu-icon" aria-hidden="true">
                     <twig:UX:Icon name="{{ resolve_icon_name('action:edit') }}" style="width:16px;height:16px;" />
                 </span>
-                <span class="flex-grow-1" data-entreprise-context-menu-target="editLabel">Éditer</span>
+                <span class="flex-grow-1" data-entreprise-context-menu-target="editLabel">{{ 'commom_edit' | trans }}</span>
             </li>
             <li role="separator" class="separator" data-menu-key="sep"></li>
             <li role="menuitem" tabindex="-1" data-menu-key="delete" class="is-danger"
@@ -371,7 +383,7 @@
                 <span class="context-menu-icon" aria-hidden="true">
                     <twig:UX:Icon name="{{ resolve_icon_name('action:delete') }}" style="width:16px;height:16px;" />
                 </span>
-                <span class="flex-grow-1" data-entreprise-context-menu-target="deleteLabel">Supprimer</span>
+                <span class="flex-grow-1" data-entreprise-context-menu-target="deleteLabel">{{ 'commom_delete' | trans }}</span>
             </li>
         </ul>
     </nav>

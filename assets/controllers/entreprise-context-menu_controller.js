@@ -17,6 +17,9 @@ import { Controller } from '@hotwired/stimulus';
  */
 export default class extends Controller {
     static targets = ['menu', 'editLabel', 'deleteLabel'];
+    // Libellés traduits (FR/EN) fournis par le template, avec le placeholder
+    // %name% remplacé par le nom de l'entreprise. Évite tout texte codé en dur.
+    static values = { editTemplate: String, deleteTemplate: String };
 
     connect() {
         this.current = null;
@@ -59,8 +62,8 @@ export default class extends Controller {
         const nom = card.dataset.ecNom || "l'entreprise";
         this.current = { workspaceLink, editLink, deleteForm };
 
-        if (this.hasEditLabelTarget) this.editLabelTarget.textContent = `Éditer ${nom}`;
-        if (this.hasDeleteLabelTarget) this.deleteLabelTarget.textContent = `Supprimer ${nom}`;
+        if (this.hasEditLabelTarget) this.editLabelTarget.textContent = this._labelFor('edit', nom);
+        if (this.hasDeleteLabelTarget) this.deleteLabelTarget.textContent = this._labelFor('delete', nom);
 
         const menu = this.menuTarget;
         // Affiche/masque chaque option selon ce que la carte permet réellement.
@@ -90,6 +93,14 @@ export default class extends Controller {
         menu.focus();
 
         this._addTransientListeners();
+    }
+
+    // Libellé localisé « Éditer/Supprimer {nom} » : on injecte le nom dans le
+    // gabarit traduit fourni par le template (placeholder %name%). Repli sobre
+    // sur le seul nom si le gabarit n'est pas fourni.
+    _labelFor(kind, nom) {
+        const template = kind === 'edit' ? this.editTemplateValue : this.deleteTemplateValue;
+        return template ? template.replace('%name%', nom) : nom;
     }
 
     // ── Actions ────────────────────────────────────────────────────────────────
