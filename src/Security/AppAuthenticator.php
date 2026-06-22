@@ -70,6 +70,12 @@ class AppAuthenticator extends AbstractLoginFormAuthenticator
             return new RedirectResponse($targetPath);
         }
 
+        // Les agents JS Brokers (ROLE_ADMIN/ROLE_SUPER_ADMIN) atterrissent sur la
+        // Console d'administration ; les utilisateurs/clients sur leur espace.
+        if (in_array('ROLE_ADMIN', $user->getRoles(), true) || in_array('ROLE_SUPER_ADMIN', $user->getRoles(), true)) {
+            return new RedirectResponse($this->urlGenerator->generate('console.dashboard'));
+        }
+
         return new RedirectResponse($this->urlGenerator->generate('admin.entreprise.index'));
     }
 

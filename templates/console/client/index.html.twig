@@ -1,0 +1,26 @@
+{% extends 'console/base.html.twig' %}
+
+{% block console_subtitle %}<p>Tous les clients (assurés / prospects) enregistrés, toutes entreprises confondues.</p>{% endblock %}
+
+{% block console_body %}
+<div class="cs-panel">
+    {% if clients.getTotalItemCount > 0 %}
+        <table class="cs-table">
+            <thead><tr><th>Nom</th><th>Entreprise</th><th>Téléphone</th><th>E-mail</th></tr></thead>
+            <tbody>
+            {% for c in clients %}
+                <tr>
+                    <td>{{ ux_icon(resolve_icon_name('client'), {height:'18px', width:'18px'}) }} {{ c.nom }}</td>
+                    <td>{{ c.entreprise ? c.entreprise.nom : '—' }}</td>
+                    <td>{{ c.telephone ?: '—' }}</td>
+                    <td>{{ c.email ?: '—' }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <div class="cs-pagination">{{ knp_pagination_render(clients) }}</div>
+    {% else %}
+        <div class="cs-empty">Aucun client.</div>
+    {% endif %}
+</div>
+{% endblock %}

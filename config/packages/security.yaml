@@ -9,6 +9,12 @@ security:
             entity:
                 class: App\Entity\Utilisateur
                 property: email
+    # Hiérarchie des rôles de l'équipe JS Brokers (Console d'administration).
+    # ROLE_SUPER_ADMIN = collaborateur par défaut (gère tarification + collaborateurs) ;
+    # ROLE_ADMIN = agent JS Brokers ; ROLE_USER = utilisateur/client classique.
+    role_hierarchy:
+        ROLE_SUPER_ADMIN: [ROLE_ADMIN, ROLE_USER]
+        ROLE_ADMIN:       [ROLE_USER]
     firewalls:
         dev:
             pattern: ^/(_(profiler|wdt)|css|images|js)/

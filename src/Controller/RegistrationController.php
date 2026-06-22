@@ -13,12 +13,14 @@
 namespace App\Controller;
 
 use App\Entity\Utilisateur;
+use App\Event\AgentNotificationEvent;
 use App\Form\RegistrationFormType;
 use App\Legal\Cgu;
 use App\Security\EmailVerifier;
 use App\Repository\UtilisateurRepository;
 use App\Services\InvitationLinker;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -35,6 +37,7 @@ class RegistrationController extends AbstractController
         private EmailVerifier $emailVerifier,
         private InvitationLinker $invitationLinker,
         private string $mailFrom,
+        private EventDispatcherInterface $dispatcher,
     ) {}
 
     #[Route('/register', name: 'app_register')]
@@ -82,6 +85,14 @@ class RegistrationController extends AbstractController
 
             // AMÉLIORATION : L'email de confirmation n'est envoyé qu'en mode création.
             if (!$isEditMode) {
+                // Notifie l'équipe JS Brokers de la création d'un nouveau compte.
+                $this->dispatcher->dispatch(new AgentNotificationEvent(
+                    AgentNotificationEvent::ACTION_CREATE,
+                    AgentNotificationEvent::TYPE_UTILISATEUR,
+                    $user->getNom() ?: (string) $user->getEmail(),
+                    ['Nom' => (string) $user->getNom(), 'E-mail' => (string) $user->getEmail()],
+                ));
+
                 // Rattachement automatique des invitations en attente portant cet email :
                 // l'entreprise invitante apparaîtra dans la liste dès la première connexion.
                 $this->invitationLinker->linkPendingInvitations($user);

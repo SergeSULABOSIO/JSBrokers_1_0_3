@@ -59,4 +59,23 @@ class ClientRepository extends ServiceEntityRepository
             20,
         );
     }
+
+    /** Liste paginée GLOBALE (tous clients, toutes entreprises) — Console JS Brokers. */
+    public function paginateAll(int $page): PaginationInterface
+    {
+        return $this->paginator->paginate(
+            $this->createQueryBuilder('m')->orderBy('m.id', 'DESC'),
+            $page,
+            20,
+        );
+    }
+
+    /** Nombre total de clients sur la plateforme. */
+    public function countAll(): int
+    {
+        return (int) $this->createQueryBuilder('m')
+            ->select('COUNT(m.id)')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
 }

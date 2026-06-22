@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Utilisateur;
+use App\Event\AgentNotificationEvent;
 use App\Form\EntrepriseType;
 use App\Services\ServiceGeographie;
 use App\Services\ServiceInitialisationEntreprise;
@@ -13,8 +14,8 @@ use App\Repository\InviteRepository;
 use App\Message\EntreprisePDFMessage;
 use App\Repository\EntrepriseRepository;
 use App\Token\InsufficientTokensException;
+use App\Token\ParametresTokenService;
 use App\Token\TokenAccountService;
-use App\Token\TokenPricing;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -42,6 +43,8 @@ class EntrepriseController extends AbstractController
         private ServiceSuppressionEntreprise $serviceSuppression,
         private UserPasswordHasherInterface $passwordHasher,
         private TokenAccountService $tokenAccountService,
+        private ParametresTokenService $parametres,
+        private \Symfony\Component\EventDispatcher\EventDispatcherInterface $dispatcher,
     ) {}
 
     /**
@@ -101,7 +104,7 @@ class EntrepriseController extends AbstractController
             // MÉTRAGE TOKENS : créer une entreprise coûte 200 tokens, débités au
             // créateur (qui en devient le propriétaire). On vérifie la solvabilité
             // AVANT toute persistance pour ne pas laisser d'entreprise à moitié créée.
-            if (!$this->tokenAccountService->canAfford($user, TokenPricing::weightFor(Entreprise::class))) {
+            if (!$this->tokenAccountService->canAfford($user, $this->parametres->weightFor(Entreprise::class))) {
                 $this->addFlash("error", $this->translator->trans("token_blocked_flash"));
 
                 return $this->redirectToRoute("admin.token.index");
@@ -143,6 +146,13 @@ class EntrepriseController extends AbstractController
             $this->addFlash("success", $this->translator->trans("entreprise_created_ok", [
                 ':company' => $entreprise->getNom(),
             ]));
+
+            $this->dispatcher->dispatch(new AgentNotificationEvent(
+                AgentNotificationEvent::ACTION_CREATE,
+                AgentNotificationEvent::TYPE_ENTREPRISE,
+                $entreprise->getNom(),
+                ['Entreprise' => $entreprise->getNom(), 'Propriétaire' => $user->getNom() ?: (string) $user->getEmail()],
+            ));
 
             return $this->redirectToRoute("admin.entreprise.index");
         } elseif ($form->isSubmitted()) {
@@ -197,6 +207,13 @@ class EntrepriseController extends AbstractController
             $this->addFlash("success", $this->translator->trans("entreprise_edited_ok", [
                 ':company' => $entreprise->getNom(),
             ]));
+
+            $this->dispatcher->dispatch(new AgentNotificationEvent(
+                AgentNotificationEvent::ACTION_UPDATE,
+                AgentNotificationEvent::TYPE_ENTREPRISE,
+                $entreprise->getNom(),
+                ['Entreprise' => $entreprise->getNom(), 'Propriétaire' => $user->getNom() ?: (string) $user->getEmail()],
+            ));
             // return $this->redirectToRoute("admin.entreprise.index");
             //Après modification, il faut revenir sur la page d'edition
         } elseif ($form->isSubmitted()) {
@@ -242,6 +259,13 @@ class EntrepriseController extends AbstractController
 
         // Destruction inconditionnelle : données scopées, fichiers uploadés, entreprise.
         $this->serviceSuppression->supprimer($entreprise);
+
+        $this->dispatcher->dispatch(new AgentNotificationEvent(
+            AgentNotificationEvent::ACTION_DELETE,
+            AgentNotificationEvent::TYPE_ENTREPRISE,
+            $nom,
+            ['Entreprise' => $nom, 'Supprimée par' => $user->getNom() ?: (string) $user->getEmail()],
+        ));
 
         $this->addFlash("success", $this->translator->trans("entreprise_deleted_ok", [
             ':company' => $nom,

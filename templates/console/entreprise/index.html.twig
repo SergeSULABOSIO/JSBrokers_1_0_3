@@ -1,0 +1,42 @@
+{% extends 'console/base.html.twig' %}
+
+{% block console_subtitle %}<p>Toutes les entreprises de la plateforme et leur propriétaire.</p>{% endblock %}
+
+{% block console_body %}
+<div class="cs-panel">
+    {% if entreprises.getTotalItemCount > 0 %}
+        <table class="cs-table">
+            <thead><tr><th>Entreprise</th><th>Propriétaire</th><th>Téléphone</th><th>Collaborateurs</th><th>Créée le</th>
+                {% if is_granted('ROLE_SUPER_ADMIN') %}<th style="text-align:right;">Actions</th>{% endif %}</tr></thead>
+            <tbody>
+            {% for e in entreprises %}
+                <tr>
+                    <td>{{ ux_icon(resolve_icon_name('entreprise'), {height:'18px', width:'18px'}) }} {{ e.nom }}</td>
+                    <td>{{ e.utilisateur ? e.utilisateur.nom : '—' }}</td>
+                    <td>{{ e.telephone ?: '—' }}</td>
+                    <td>{{ e.invites|length }}</td>
+                    <td>{{ e.createdAt ? e.createdAt|format_datetime('medium', 'none', locale: app.user.locale) : '—' }}</td>
+                    {% if is_granted('ROLE_SUPER_ADMIN') %}
+                        <td style="text-align:right;">
+                            <form action="{{ path('console.entreprise.delete', {id: e.id}) }}" method="post" style="display:inline;"
+                                  data-controller="confirm-action" data-action="submit->confirm-action#request"
+                                  data-confirm-action-title-value="Supprimer l'entreprise"
+                                  data-confirm-action-body-value="Supprimer définitivement « {{ e.nom }} » et toutes ses données ?"
+                                  data-confirm-action-irreversible-value="true">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete-entreprise-' ~ e.id) }}">
+                                <button type="submit" class="cs-icon-btn is-danger" title="Supprimer" aria-label="Supprimer {{ e.nom }}">
+                                    {{ ux_icon(resolve_icon_name('action:delete'), {height:'18px', width:'18px'}) }}
+                                </button>
+                            </form>
+                        </td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <div class="cs-pagination">{{ knp_pagination_render(entreprises) }}</div>
+    {% else %}
+        <div class="cs-empty">Aucune entreprise.</div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends 'console/base.html.twig' %}
+
+{% block console_subtitle %}<p>Offres de réduction périodiques appliquées à l'achat de paquets de tokens.</p>{% endblock %}
+
+{% block console_actions %}
+    <a href="{{ path('console.coupon.new') }}" class="btn btn-sm btn-cobalt" data-action="click->top-progress#show">
+        {{ ux_icon(resolve_icon_name('action:add'), {height:'18px', width:'18px'}) }}
+        <span class="ms-1">Nouveau</span>
+    </a>
+{% endblock %}
+
+{% block console_body %}
+<div class="cs-panel">
+    {% if coupons.getTotalItemCount > 0 %}
+        <table class="cs-table">
+            <thead><tr><th>Code</th><th>Remise</th><th>Validité</th><th>Paquet</th><th>Usage</th><th>État</th><th style="text-align:right;">Actions</th></tr></thead>
+            <tbody>
+            {% for c in coupons %}
+                <tr>
+                    <td><strong>{{ c.code }}</strong></td>
+                    <td>{% if c.type == 'percent' %}{{ c.valeur|number_format(0, '.', ' ') }} %{% else %}{{ c.valeur|number_format(2, '.', ' ') }} ${% endif %}</td>
+                    <td>{{ c.dateDebut|format_datetime('short', 'none', locale: app.user.locale) }} → {{ c.dateFin|format_datetime('short', 'none', locale: app.user.locale) }}</td>
+                    <td>{{ c.packCible ? c.packCible|capitalize : 'Tous' }}</td>
+                    <td>{{ c.usageCount }}{{ c.usageLimit ? ' / ' ~ c.usageLimit : '' }}</td>
+                    <td>
+                        {% if c.actif and c.isValideMaintenant %}
+                            <span class="cs-badge cs-badge--ok">Actif</span>
+                        {% else %}
+                            <span class="cs-badge cs-badge--muted">Inactif</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align:right;">
+                        <a href="{{ path('console.coupon.edit', {id: c.id}) }}" class="cs-icon-btn"
+                           data-action="click->top-progress#show" title="Éditer" aria-label="Éditer {{ c.code }}">
+                            {{ ux_icon(resolve_icon_name('action:edit'), {height:'18px', width:'18px'}) }}
+                        </a>
+                        <form action="{{ path('console.coupon.delete', {id: c.id}) }}" method="post" style="display:inline;"
+                              data-controller="confirm-action" data-action="submit->confirm-action#request"
+                              data-confirm-action-title-value="Supprimer le coupon"
+                              data-confirm-action-body-value="Supprimer le coupon « {{ c.code }} » ?"
+                              data-confirm-action-irreversible-value="true">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete-coupon-' ~ c.id) }}">
+                            <button type="submit" class="cs-icon-btn is-danger" title="Supprimer" aria-label="Supprimer {{ c.code }}">
+                                {{ ux_icon(resolve_icon_name('action:delete'), {height:'18px', width:'18px'}) }}
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <div class="cs-pagination">{{ knp_pagination_render(coupons) }}</div>
+    {% else %}
+        <div class="cs-empty">Aucun coupon. Créez votre première offre de réduction.</div>
+    {% endif %}
+</div>
+{% endblock %}

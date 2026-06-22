@@ -1,0 +1,31 @@
+{# Navigation des sections de la Console. L'état actif est déduit du préfixe de
+   la route courante (toutes les routes d'une section partagent le même préfixe). #}
+{% set route = app.request.attributes.get('_route')|default('') %}
+{% set items = [
+    { r: 'console.dashboard',          p: 'console.dashboard',     icon: 'dashboard',        label: 'Tableau de bord' },
+    { r: 'console.collaborateur.',     p: 'console.collaborateur.index', icon: 'action:role', label: 'Collaborateurs' },
+    { r: 'console.utilisateur.',       p: 'console.utilisateur.index',   icon: 'utilisateur', label: 'Utilisateurs' },
+    { r: 'console.client.',            p: 'console.client.index',  icon: 'client',           label: 'Clients' },
+    { r: 'console.entreprise.',        p: 'console.entreprise.index', icon: 'entreprise',    label: 'Entreprises' },
+    { r: 'console.vente.',             p: 'console.vente.index',   icon: 'operation',        label: 'Ventes' },
+    { r: 'console.coupon.',            p: 'console.coupon.index',  icon: 'offre',            label: 'Coupons' },
+] %}
+<nav class="cs-nav" aria-label="Sections de la console">
+    {% for item in items %}
+        {% set active = (item.r == 'console.dashboard') ? (route == 'console.dashboard') : (route starts with item.r) %}
+        <a href="{{ path(item.p) }}" class="{{ active ? 'is-active' : '' }}"
+           data-action="click->top-progress#show" {% if active %}aria-current="page"{% endif %}>
+            {{ ux_icon(resolve_icon_name(item.icon), {height: '18px', width: '18px'}) }}
+            <span>{{ item.label }}</span>
+        </a>
+    {% endfor %}
+    {# Plan tarifaire : réservé au super-admin (édition de la tarification globale). #}
+    {% if is_granted('ROLE_SUPER_ADMIN') %}
+        {% set activePlan = route starts with 'console.plan.' %}
+        <a href="{{ path('console.plan.index') }}" class="{{ activePlan ? 'is-active' : '' }}"
+           data-action="click->top-progress#show" {% if activePlan %}aria-current="page"{% endif %}>
+            {{ ux_icon(resolve_icon_name('action:settings'), {height: '18px', width: '18px'}) }}
+            <span>Plan tarifaire</span>
+        </a>
+    {% endif %}
+</nav>

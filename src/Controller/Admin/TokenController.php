@@ -8,8 +8,9 @@ use App\Entity\Utilisateur;
 use App\Event\TokenPurchaseEvent;
 use App\Form\TokenPurchaseType;
 use App\Repository\TokenConsumptionRepository;
+use App\Token\CouponService;
+use App\Token\ParametresTokenService;
 use App\Token\TokenAccountService;
-use App\Token\TokenPricing;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -35,6 +36,8 @@ class TokenController extends AbstractController
         private EntityManagerInterface $em,
         private TranslatorInterface $translator,
         private EventDispatcherInterface $dispatcher,
+        private ParametresTokenService $parametres,
+        private CouponService $couponService,
     ) {}
 
     /** Page compte : solde + historique de consommation paginé + accès à l'achat. */
@@ -51,7 +54,7 @@ class TokenController extends AbstractController
             'pageName'     => $this->translator->trans('token_account_title'),
             'balance'      => $this->tokenAccountService->getBalance($user),
             'consumptions' => $this->consumptionRepository->paginateForProprietaire($user->getId(), $page),
-            'usdPerToken'  => TokenPricing::USD_PER_TOKEN,
+            'usdPerToken'  => $this->parametres->usdPerToken(),
         ]);
     }
 
@@ -81,7 +84,7 @@ class TokenController extends AbstractController
         $this->applyLangPreference($request, $user, $localeSwitcher);
 
         $dto = new TokenPurchaseDTO();
-        if ($request->query->has('pack') && isset(TokenPricing::PACKS[$request->query->get('pack')])) {
+        if ($request->query->has('pack') && $this->parametres->pack((string) $request->query->get('pack')) !== null) {
             $dto->pack = $request->query->get('pack');
         }
 
@@ -89,7 +92,22 @@ class TokenController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $pack = TokenPricing::pack($dto->pack);
+            $pack = $this->parametres->pack($dto->pack);
+
+            // Application d'un éventuel coupon de réduction (% ou montant fixe) sur
+            // le prix du paquet. Un code fourni mais invalide bloque l'achat avec
+            // un message explicite (l'utilisateur peut corriger ou le retirer).
+            $remise = $this->couponService->appliquer($dto->couponCode, $dto->pack, (float) $pack['price']);
+            if ($remise['erreur'] !== null) {
+                $this->addFlash('error', $this->translator->trans($remise['erreur']));
+
+                return $this->render('admin/token/buy.html.twig', [
+                    'pageName' => $this->translator->trans('token_buy.title'),
+                    'form'     => $form,
+                    'packs'    => $this->parametres->packs(),
+                    'balance'  => $this->tokenAccountService->getBalance($user),
+                ]);
+            }
 
             // --- FRONTIÈRE DE SIMULATION DE PAIEMENT ----------------------------
             // Aujourd'hui : toute carte bien formée « réussit ». Pour passer en
@@ -100,7 +118,9 @@ class TokenController extends AbstractController
                 ->setUtilisateur($user)
                 ->setPack($dto->pack)
                 ->setTokens($pack['tokens'])
-                ->setMontantUsd((float) $pack['price'])
+                ->setMontantUsd($remise['montantFinal'])
+                ->setRemiseUsd($remise['remiseUsd'])
+                ->setCouponCode($remise['coupon']?->getCode())
                 ->setCardLast4($dto->cardLast4())
                 ->setReference($this->generateReference())
                 ->setStatus(TokenPurchase::STATUS_PAID_SIMULATED);
@@ -109,10 +129,15 @@ class TokenController extends AbstractController
             $this->em->flush();
             // --------------------------------------------------------------------
 
+            // Consommation du coupon (incrément du compteur d'usage) après succès.
+            if ($remise['coupon'] !== null) {
+                $this->couponService->consommer($remise['coupon']);
+            }
+
             // Crédit effectif des tokens prépayés (cumulables).
             $this->tokenAccountService->credit($user, $pack['tokens']);
 
-            // E-mail de confirmation corporate.
+            // E-mail de confirmation corporate + notification des agents JS Brokers.
             $this->dispatcher->dispatch(new TokenPurchaseEvent($purchase));
 
             $this->addFlash('success', $this->translator->trans('token_buy.success', [
@@ -125,7 +150,7 @@ class TokenController extends AbstractController
         return $this->render('admin/token/buy.html.twig', [
             'pageName' => $this->translator->trans('token_buy.title'),
             'form'     => $form,
-            'packs'    => TokenPricing::PACKS,
+            'packs'    => $this->parametres->packs(),
             'balance'  => $this->tokenAccountService->getBalance($user),
         ]);
     }

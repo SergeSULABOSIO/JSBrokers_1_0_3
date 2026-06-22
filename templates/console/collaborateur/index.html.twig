@@ -1,0 +1,58 @@
+{% extends 'console/base.html.twig' %}
+
+{% block console_subtitle %}<p>L'équipe JS Brokers, dont le super-administrateur par défaut.</p>{% endblock %}
+
+{% block console_actions %}
+    {% if is_granted('ROLE_SUPER_ADMIN') %}
+        <a href="{{ path('console.collaborateur.new') }}" class="btn btn-sm btn-cobalt" data-action="click->top-progress#show">
+            {{ ux_icon(resolve_icon_name('action:add'), {height:'18px', width:'18px'}) }}
+            <span class="ms-1">Nouveau</span>
+        </a>
+    {% endif %}
+{% endblock %}
+
+{% block console_body %}
+<div class="cs-panel">
+    {% if collaborateurs|length > 0 %}
+        <table class="cs-table">
+            <thead><tr><th>Nom</th><th>E-mail</th><th>Rôle</th><th style="text-align:right;">Actions</th></tr></thead>
+            <tbody>
+            {% for c in collaborateurs %}
+                {% set isSuper = 'ROLE_SUPER_ADMIN' in c.roles %}
+                <tr>
+                    <td>{{ ux_icon(resolve_icon_name('utilisateur'), {height:'18px', width:'18px'}) }} {{ c.nom }}</td>
+                    <td>{{ c.email }}</td>
+                    <td>
+                        {% if isSuper %}
+                            <span class="cs-badge cs-badge--cobalt">Super-admin</span>
+                        {% else %}
+                            <span class="cs-badge cs-badge--muted">Agent</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align:right;">
+                        <a href="{{ path('console.collaborateur.edit', {id: c.id}) }}" class="cs-icon-btn"
+                           data-action="click->top-progress#show" title="Éditer" aria-label="Éditer {{ c.nom }}">
+                            {{ ux_icon(resolve_icon_name('action:edit'), {height:'18px', width:'18px'}) }}
+                        </a>
+                        {% if is_granted('ROLE_SUPER_ADMIN') and c.id != app.user.id %}
+                            <form action="{{ path('console.collaborateur.delete', {id: c.id}) }}" method="post" style="display:inline;"
+                                  data-controller="confirm-action" data-action="submit->confirm-action#request"
+                                  data-confirm-action-title-value="Supprimer le collaborateur"
+                                  data-confirm-action-body-value="Supprimer définitivement « {{ c.nom }} » ?"
+                                  data-confirm-action-irreversible-value="true">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete-collaborateur-' ~ c.id) }}">
+                                <button type="submit" class="cs-icon-btn is-danger" title="Supprimer" aria-label="Supprimer {{ c.nom }}">
+                                    {{ ux_icon(resolve_icon_name('action:delete'), {height:'18px', width:'18px'}) }}
+                                </button>
+                            </form>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="cs-empty">Aucun collaborateur.</div>
+    {% endif %}
+</div>
+{% endblock %}

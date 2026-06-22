@@ -26,7 +26,9 @@ class UtilisateurFixtures extends Fixture
         $adminUser->setNom('Serge SULA BOSIO');
         $adminUser->setEmail('admin@js-brokers.com');
         $adminUser->setPassword($this->passwordHasher->hashPassword($adminUser, 'admin'));
-        $adminUser->setRoles(['ROLE_ADMIN']);
+        // Collaborateur par défaut (super-admin) : gère la Console JS Brokers,
+        // y compris la tarification et les autres collaborateurs.
+        $adminUser->setRoles(['ROLE_SUPER_ADMIN']);
         $adminUser->setVerified(true);
         $manager->persist($adminUser);
 

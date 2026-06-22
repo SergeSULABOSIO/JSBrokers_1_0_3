@@ -180,6 +180,14 @@
             </span>
             <span class="ent-topbar-sep" aria-hidden="true"></span>
             <div class="ent-topbar-actions">
+                {# Accès à la Console JS Brokers, réservé aux agents (ROLE_ADMIN). #}
+                {% if is_granted('ROLE_ADMIN') %}
+                    <a href="{{ path('console.dashboard') }}" class="btn btn-sm btn-outline-primary"
+                       data-action="click->top-progress#show" title="Console JS Brokers">
+                        {{ ux_icon(resolve_icon_name('dashboard'), {height: '18px', width: '18px'}) }}
+                        <span class="ms-1">Console</span>
+                    </a>
+                {% endif %}
                 <a href="{{ path('admin.entreprise.create') }}" class="btn btn-sm btn-cobalt"
                    data-action="click->top-progress#show">
                     {{ ux_icon(resolve_icon_name('action:add'), {height: '18px', width: '18px'}) }}

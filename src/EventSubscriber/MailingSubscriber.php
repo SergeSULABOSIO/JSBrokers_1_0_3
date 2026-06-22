@@ -4,34 +4,27 @@ namespace App\EventSubscriber;
 
 use App\DTO\DemandeContactDTO;
 use App\Entity\Invite;
+use App\Services\Mail\CorporateMailer;
 use Symfony\Component\Mime\Address;
-use Symfony\Component\Mime\Email;
 use App\Event\DemandeContactEvent;
 use App\Event\InvitationEvent;
 use App\Event\TokenPurchaseEvent;
-use Symfony\Bridge\Twig\Mime\TemplatedEmail;
-use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class MailingSubscriber implements EventSubscriberInterface
 {
-    /**
-     * Nom d'expéditeur affiché dans TOUS les e-mails sortants (cohérence corporate :
-     * la source apparaît comme « JS Brokers », jamais comme l'adresse technique brute).
-     */
-    private const SENDER_NAME = 'JS Brokers';
+    /** Nom d'expéditeur affiché dans TOUS les e-mails sortants. */
+    private const SENDER_NAME = CorporateMailer::SENDER_NAME;
 
     /** Boîte interne recevant les demandes de contact du site. */
     private const CONTACT_INBOX = 'contact@jsbrokers.com';
 
     public function __construct(
-        private MailerInterface $mailer,
+        private CorporateMailer $corporateMailer,
         private UrlGeneratorInterface $urlGenerator,
         private TranslatorInterface $translator,
-        private string $mailFrom,
-        private string $logoPath,
     ) {}
 
     public function onDemandeContactEvent(DemandeContactEvent $event): void
@@ -140,12 +133,12 @@ class MailingSubscriber implements EventSubscriberInterface
      */
     private function buildSubject(string $object, string $concerned): string
     {
-        return sprintf('%s - %s - %s', self::SENDER_NAME, $object, $concerned);
+        return $this->corporateMailer->buildSubject($object, $concerned);
     }
 
     /**
-     * Point d'envoi unique : expéditeur « JS Brokers », priorité haute, logo + adresse
-     * de contact injectés dans le contexte pour la signature (cf. emails/_layout.html.twig).
+     * Point d'envoi : délègue au CorporateMailer (expéditeur « JS Brokers »,
+     * priorité haute, logo + adresse de contact injectés pour la signature).
      */
     private function envoyerMail(
         string $to,
@@ -154,24 +147,7 @@ class MailingSubscriber implements EventSubscriberInterface
         array $contextData = [],
         ?Address $replyTo = null,
     ): void {
-        $contextData += [
-            'logoPath' => $this->logoPath,
-            'senderEmail' => $this->mailFrom,
-        ];
-
-        $email = (new TemplatedEmail())
-            ->from(new Address($this->mailFrom, self::SENDER_NAME))
-            ->to($to)
-            ->priority(Email::PRIORITY_HIGH)
-            ->subject($subject)
-            ->htmlTemplate($twigTemplate)
-            ->context($contextData);
-
-        if ($replyTo !== null) {
-            $email->replyTo($replyTo);
-        }
-
-        $this->mailer->send($email);
+        $this->corporateMailer->send($to, $subject, $twigTemplate, $contextData, $replyTo);
     }
 
     public static function getSubscribedEvents(): array

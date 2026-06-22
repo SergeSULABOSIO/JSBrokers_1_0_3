@@ -1,0 +1,153 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ pageName|default('Console') }} — JS Brokers{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    /* ============================================================
+       Console JS Brokers — charte cobalt #0047AB, neutres Bootstrap.
+       Même structure que l'espace entreprise : barre de titre fixe en
+       haut, contenu défilant en dessous, pied de page officiel.
+       ============================================================ */
+    .cs-page {
+        height: 100vh; background-color: #f3f3f3;
+        display: flex; flex-direction: column; overflow: hidden;
+    }
+    .cs-progress-bar {
+        position: fixed; top: 0; left: 0; width: 100%; height: 6px;
+        background-color: #0047AB; display: none; z-index: 9999;
+        animation: cs-progress-animation 1.5s infinite linear;
+    }
+    @keyframes cs-progress-animation {
+        0%   { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    /* Barre de titre fixe */
+    .cs-topbar {
+        flex: 0 0 auto;
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 1rem; flex-wrap: wrap; padding: .6rem 1.25rem;
+        background-color: #ffffff; border-bottom: 1px solid #dee2e6;
+    }
+    .cs-brand { display: flex; align-items: center; gap: .6rem; text-decoration: none; flex: 0 0 auto; }
+    .cs-brand img { width: 34px; height: 34px; border-radius: 8px; }
+    .cs-brand span { font-weight: 700; color: #0047AB; font-size: 1.05rem; }
+    .cs-brand small { display: block; font-weight: 600; color: #6c757d; font-size: .7rem; letter-spacing: .04em; text-transform: uppercase; }
+
+    /* Navigation des sections */
+    .cs-nav { display: flex; align-items: center; gap: .15rem; flex-wrap: wrap; flex: 1 1 auto; justify-content: center; }
+    .cs-nav a {
+        display: inline-flex; align-items: center; gap: .35rem;
+        padding: .4rem .65rem; border-radius: 8px; text-decoration: none;
+        color: #495057; font-size: .88rem; font-weight: 600; white-space: nowrap;
+    }
+    .cs-nav a:hover { background-color: #eef2fb; color: #0047AB; }
+    .cs-nav a.is-active { background-color: #0047AB; color: #ffffff; }
+    .cs-nav a.is-active svg { color: #ffffff; }
+
+    .cs-topbar-right { display: flex; align-items: center; gap: .5rem; flex: 0 0 auto; }
+    .cs-user { display: inline-flex; align-items: center; gap: .4rem; color: #495057; font-size: .9rem; font-weight: 600; }
+    .cs-user-icon { color: #6c757d; }
+    .cs-sep { width: 1px; height: 24px; background-color: #dee2e6; }
+
+    /* Bascule de langue (même rendu que l'espace entreprise) */
+    .cs-lang { display: inline-flex; align-items: center; gap: .15rem; }
+    .cs-lang a {
+        display: inline-flex; align-items: center; gap: .25rem; padding: .25rem .4rem;
+        border-radius: 6px; text-decoration: none; color: #6c757d; font-size: .78rem; font-weight: 700;
+    }
+    .cs-lang a.is-active { background-color: #eef2fb; color: #0047AB; }
+    .cs-lang svg { width: 18px; height: 13px; border-radius: 2px; }
+
+    /* Zone défilante + contenu */
+    .cs-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+    .cs-content { max-width: 1280px; margin: 0 auto; padding: 1.5rem; }
+    .cs-head { margin-bottom: 1.25rem; }
+    .cs-head h1 { font-size: 1.5rem; font-weight: 700; color: #212529; margin: 0 0 .25rem; }
+    .cs-head p { color: #6c757d; margin: 0; max-width: 70ch; }
+
+    /* Cartes / panneaux réutilisables */
+    .cs-panel { background:#fff; border:1px solid #dee2e6; border-radius:12px; padding:1.25rem; }
+    .cs-panel + .cs-panel { margin-top: 1.25rem; }
+
+    /* Grille de KPIs */
+    .cs-kpis { display:grid; grid-template-columns: repeat(auto-fill, minmax(210px,1fr)); gap:1rem; }
+    .cs-kpi { background:#fff; border:1px solid #dee2e6; border-radius:12px; padding:1.1rem 1.2rem; display:flex; align-items:center; gap:.9rem; }
+    .cs-kpi:hover { box-shadow:0 8px 24px rgba(0,71,171,.10); }
+    .cs-kpi-icon { width:46px; height:46px; flex:0 0 auto; border-radius:10px; background:#eef2fb; color:#0047AB; display:inline-flex; align-items:center; justify-content:center; }
+    .cs-kpi-val { font-size:1.5rem; font-weight:700; color:#212529; line-height:1.1; }
+    .cs-kpi-lbl { font-size:.82rem; color:#6c757d; }
+
+    /* Tableaux */
+    .cs-table { width:100%; border-collapse:collapse; }
+    .cs-table th, .cs-table td { padding:.6rem .7rem; text-align:left; border-bottom:1px solid #f0f0f0; font-size:.9rem; }
+    .cs-table th { color:#6c757d; font-weight:600; font-size:.78rem; text-transform:uppercase; letter-spacing:.03em; }
+    .cs-table tbody tr:hover { background:#f8f9fa; }
+    .cs-badge { display:inline-block; padding:.15rem .55rem; border-radius:999px; font-size:.75rem; font-weight:700; }
+    .cs-badge--ok { background:#e6f4ea; color:#137333; }
+    .cs-badge--muted { background:#eef0f2; color:#6c757d; }
+    .cs-badge--cobalt { background:#eef2fb; color:#0047AB; }
+
+    /* Boutons icône */
+    .cs-icon-btn { width:38px; height:38px; display:inline-flex; align-items:center; justify-content:center; border:0; background:transparent; border-radius:8px; color:#6c757d; cursor:pointer; text-decoration:none; }
+    .cs-icon-btn:hover { background:#e9ecef; color:#212529; }
+    .cs-icon-btn.is-danger:hover { background:#f8d7da; color:#dc3545; }
+    .cs-icon-btn:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+
+    .cs-empty { text-align:center; padding:2.5rem 1.5rem; background:#fff; border:1px dashed #ced4da; border-radius:12px; color:#6c757d; }
+    .cs-pagination { display:flex; justify-content:center; margin-top:1.25rem; }
+
+    @media (max-width: 991.98px) {
+        .cs-nav { order: 3; flex-basis: 100%; justify-content: flex-start; }
+    }
+    @media (max-width: 575.98px) {
+        .cs-user { display:none; } .cs-sep { display:none; }
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<main class="cs-page" data-controller="top-progress">
+    <div class="cs-progress-bar" data-top-progress-target="bar" role="progressbar" aria-hidden="true"></div>
+
+    <header class="cs-topbar">
+        <a href="{{ path('console.dashboard') }}" class="cs-brand" data-action="click->top-progress#show">
+            <img src="{{ asset('images/entreprises/logofav.png') }}" alt="">
+            <span>JS Brokers<small>Console</small></span>
+        </a>
+
+        {{ include('console/_nav.html.twig') }}
+
+        <div class="cs-topbar-right">
+            <span class="cs-user">
+                {{ ux_icon(resolve_icon_name('utilisateur'), {height: '20px', width: '20px', class: 'cs-user-icon'}) }}
+                {{ app.user.nom }}
+            </span>
+            <span class="cs-sep" aria-hidden="true"></span>
+            {% block console_actions %}{% endblock %}
+            {{ include('console/_lang.html.twig') }}
+            <a href="{{ path('app_logout') }}" class="cs-icon-btn is-danger" data-action="click->top-progress#show"
+               title="{{ 'boutons_user_logout'|trans }}" aria-label="{{ 'boutons_user_logout'|trans }}">
+                {{ ux_icon(resolve_icon_name('action:exit'), {height: '20px', width: '20px'}) }}
+            </a>
+        </div>
+    </header>
+
+    <div class="cs-scroll">
+        <div class="cs-content">
+            {{ include('components/_flash_toasts.html.twig') }}
+
+            <div class="cs-head">
+                <h1>{{ pageName }}</h1>
+                {% block console_subtitle %}{% endblock %}
+            </div>
+
+            {% block console_body %}{% endblock %}
+        </div>
+
+        {% include 'components/_public_footer.html.twig' with { lang: app.user.locale } %}
+    </div>
+</main>
+{% endblock %}
