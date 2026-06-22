@@ -5,6 +5,7 @@ namespace App\Tests\Token;
 use App\Entity\TokenPurchase;
 use App\Entity\Utilisateur;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -202,6 +203,82 @@ class TokenPurchaseFlowTest extends WebTestCase
         $this->assertResponseIsSuccessful();
     }
 
+    /**
+     * Modernisation : la barre de titre de l'espace compte affiche le sélecteur
+     * de langue à drapeaux, et le pied de page officiel JS Brokers est présent.
+     */
+    public function testAccountPageShowsOfficialFooterAndFlagSwitch(): void
+    {
+        $this->client->loginUser($this->user());
+        $crawler = $this->client->request('GET', '/admin/tokens');
+        $this->assertResponseIsSuccessful();
+
+        // Pied de page officiel.
+        $this->assertGreaterThan(0, $crawler->filter('footer.public-footer')->count(),
+            'Le pied de page officiel JS Brokers doit être présent sur la page compte.');
+
+        // Bascule de langue à drapeaux dans la barre de titre.
+        $this->assertSame(2, $crawler->filter('.tkp-lang a svg.public-lang__flag')->count(),
+            'Chaque option de langue doit afficher un drapeau SVG.');
+        $codes = $crawler->filter('.tkp-lang a .public-lang__code')->each(fn ($n) => trim($n->text()));
+        $this->assertSame(['FR', 'EN'], $codes);
+
+        // Les liens de langue restent sur la page compte.
+        foreach ($crawler->filter('.tkp-lang a')->each(fn ($a) => $a->attr('href')) as $href) {
+            $this->assertStringStartsWith('/admin/tokens', $href, 'La bascule doit rester sur la page compte.');
+        }
+    }
+
+    /**
+     * Bascule de langue de l'espace authentifié : ?lang= traduit le rendu ET
+     * persiste la préférence de l'utilisateur (le rendu suivant, sans ?lang=,
+     * reste dans la langue choisie).
+     */
+    public function testAccountLanguageSwitchPersistsUserLocale(): void
+    {
+        $this->client->loginUser($this->user());
+
+        // Par défaut : français.
+        $crawler = $this->client->request('GET', '/admin/tokens');
+        $this->assertStringContainsString('Mes tokens', $crawler->filter('h1')->text());
+
+        // Bascule EN via ?lang= → page traduite.
+        $crawler = $this->client->request('GET', '/admin/tokens?lang=en');
+        $this->assertResponseIsSuccessful();
+        $this->assertStringContainsString('My tokens', $crawler->filter('h1')->text());
+
+        // Préférence persistée en base.
+        $this->em()->clear();
+        $this->assertSame('en', $this->user()->getLocale(), 'La langue choisie doit être persistée sur l\'utilisateur.');
+
+        // Persistance effective : sans ?lang=, la page reste en anglais.
+        $crawler = $this->client->request('GET', '/admin/tokens');
+        $this->assertStringContainsString('My tokens', $crawler->filter('h1')->text());
+    }
+
+    /**
+     * Idem sur la page de paiement : drapeaux dans la barre de titre, liens
+     * restant sur la page d'achat, et persistance de la langue.
+     */
+    public function testBuyPageLanguageSwitchPersistsUserLocale(): void
+    {
+        $this->client->loginUser($this->user());
+
+        $crawler = $this->client->request('GET', '/admin/tokens/buy?lang=en');
+        $this->assertResponseIsSuccessful();
+        $this->assertStringContainsString('Top up my tokens', $crawler->filter('h1')->text());
+
+        // Drapeaux + liens restant sur la page d'achat.
+        $this->assertSame(2, $crawler->filter('.tkb-lang a svg.public-lang__flag')->count());
+        foreach ($crawler->filter('.tkb-lang a')->each(fn ($a) => $a->attr('href')) as $href) {
+            $this->assertStringStartsWith('/admin/tokens/buy', $href, 'La bascule doit rester sur la page d\'achat.');
+        }
+
+        // Préférence persistée.
+        $this->em()->clear();
+        $this->assertSame('en', $this->user()->getLocale());
+    }
+
     public function testBalanceJsonReturnsFreeAllowance(): void
     {
         $this->client->loginUser($this->user());
@@ -216,18 +293,7 @@ class TokenPurchaseFlowTest extends WebTestCase
     public function testBuyCreditsTokensAndSendsConfirmationEmail(): void
     {
         $this->client->loginUser($this->user());
-
-        $crawler = $this->client->request('GET', '/admin/tokens/buy');
-        $this->assertResponseIsSuccessful();
-
-        $form = $crawler->filter('form')->form();
-        $form['token_purchase[pack]'] = 'intermediaire';
-        $form['token_purchase[cardHolder]'] = 'John Doe';
-        $form['token_purchase[cardNumber]'] = '4242 4242 4242 4242';
-        $form['token_purchase[expiry]'] = '12/30';
-        $form['token_purchase[cvc]'] = '123';
-
-        $this->client->submit($form);
+        $this->submitValidPurchase();
 
         // PRG → redirection vers l'espace compte.
         $this->assertResponseRedirects('/admin/tokens');
@@ -244,5 +310,102 @@ class TokenPurchaseFlowTest extends WebTestCase
         $this->assertNotNull($purchase);
         $this->assertSame(10000, $purchase->getTokens());
         $this->assertSame('4242', $purchase->getCardLast4());
+    }
+
+    /**
+     * Le pied de page officiel JS Brokers est aussi présent sur la page de
+     * paiement, et sa bascule de langue reste sur cette page.
+     */
+    public function testBuyPageShowsOfficialFooter(): void
+    {
+        $this->client->loginUser($this->user());
+        $crawler = $this->client->request('GET', '/admin/tokens/buy');
+        $this->assertResponseIsSuccessful();
+
+        $this->assertGreaterThan(0, $crawler->filter('footer.public-footer')->count(),
+            'Le pied de page officiel doit être présent sur la page de paiement.');
+
+        foreach ($crawler->filter('.public-footer .public-lang a')->each(fn ($a) => $a->attr('href')) as $href) {
+            $this->assertStringStartsWith('/admin/tokens/buy', $href, 'La bascule du pied de page doit rester sur la page d\'achat.');
+        }
+    }
+
+    /**
+     * L'e-mail de confirmation suit la langue de l'utilisateur : un utilisateur
+     * en anglais reçoit un objet anglais, et la locale est figée dans le contexte
+     * du template (rendu correct même en envoi différé/asynchrone).
+     */
+    public function testConfirmationEmailFollowsUserLanguageEnglish(): void
+    {
+        $user = $this->user();
+        $user->setLocale('en');
+        $this->em()->flush();
+
+        $this->client->loginUser($this->user());
+        $this->submitValidPurchase();
+
+        $this->assertQueuedEmailCount(1);
+        $email = $this->getMailerMessage();
+        $this->assertInstanceOf(TemplatedEmail::class, $email);
+
+        // Objet traduit en anglais.
+        $this->assertStringContainsString('Payment confirmation', $email->getSubject());
+        $this->assertStringNotContainsString('Confirmation de paiement', $email->getSubject());
+
+        // Corps rendu dans la langue de l'utilisateur (rendu figé à l'envoi),
+        // y compris le chrome partagé du layout (signature).
+        $body = $this->renderedHtml($email);
+        $this->assertStringContainsString('Payment confirmed', $body);
+        $this->assertStringNotContainsString('Paiement confirmé', $body);
+        $this->assertStringContainsString('The JS Brokers team', $body);
+    }
+
+    /**
+     * Non-régression : par défaut (utilisateur français), l'e-mail reste en
+     * français.
+     */
+    public function testConfirmationEmailDefaultsToFrench(): void
+    {
+        $this->client->loginUser($this->user());
+        $this->submitValidPurchase();
+
+        $this->assertQueuedEmailCount(1);
+        $email = $this->getMailerMessage();
+        $this->assertInstanceOf(TemplatedEmail::class, $email);
+
+        $this->assertStringContainsString('Confirmation de paiement', $email->getSubject());
+
+        $body = $this->renderedHtml($email);
+        $this->assertStringContainsString('Paiement confirmé', $body);
+        $this->assertStringNotContainsString('Payment confirmed', $body);
+        // (l'apostrophe est échappée à l'affichage → on teste un fragment sûr)
+        $this->assertStringContainsString('équipe JS Brokers', $body);
+    }
+
+    /** Corps HTML rendu de l'e-mail (l'envoi asynchrone le rend au dispatch). */
+    private function renderedHtml(TemplatedEmail $email): string
+    {
+        $body = $email->getHtmlBody();
+        if (is_resource($body)) {
+            $body = stream_get_contents($body);
+        }
+
+        return (string) $body;
+    }
+
+    /** Soumet le formulaire d'achat avec une fausse carte valide (paquet « intermediaire »). */
+    private function submitValidPurchase(): void
+    {
+        $crawler = $this->client->request('GET', '/admin/tokens/buy');
+        $this->assertResponseIsSuccessful();
+
+        $form = $crawler->filter('form')->form();
+        $form['token_purchase[pack]'] = 'intermediaire';
+        $form['token_purchase[cardHolder]'] = 'John Doe';
+        $form['token_purchase[cardNumber]'] = '4242 4242 4242 4242';
+        $form['token_purchase[expiry]'] = '12/30';
+        $form['token_purchase[cvc]'] = '123';
+
+        $this->client->submit($form);
     }
 }

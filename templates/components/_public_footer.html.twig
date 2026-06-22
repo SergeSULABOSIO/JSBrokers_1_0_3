@@ -4,6 +4,7 @@
    Charte : cobalt #0047AB, neutres Bootstrap. Styles dans _home_styles.html.twig.
    ============================================================ #}
 {% set lang = lang|default(app.request.locale|default('fr')) %}
+{% import 'components/_lang_flag.html.twig' as flags %}
 
 {# Réutilisable hors vitrine : si l'on n'est pas déjà sur la home, les ancres de
    section deviennent des liens absolus vers le portail (`/?lang=…#section`) pour
@@ -41,10 +42,12 @@
         <span class="public-lang" role="group" aria-label="Langue / Language">
             <a href="{{ path(switchRoute, switchParams|merge({'lang': 'fr'})) }}"
                class="{{ lang == 'fr' ? 'is-active' : '' }}"
-               {% if lang == 'fr' %}aria-current="true"{% endif %}>FR</a>
+               title="Français" lang="fr"
+               {% if lang == 'fr' %}aria-current="true"{% endif %}>{{ flags.fr() }}<span class="public-lang__code">FR</span></a>
             <a href="{{ path(switchRoute, switchParams|merge({'lang': 'en'})) }}"
                class="{{ lang == 'en' ? 'is-active' : '' }}"
-               {% if lang == 'en' %}aria-current="true"{% endif %}>EN</a>
+               title="English" lang="en"
+               {% if lang == 'en' %}aria-current="true"{% endif %}>{{ flags.uk('lang-foot') }}<span class="public-lang__code">EN</span></a>
         </span>
     </div>
 

@@ -17,6 +17,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Translation\LocaleSwitcher;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
@@ -38,10 +39,12 @@ class TokenController extends AbstractController
 
     /** Page compte : solde + historique de consommation paginé + accès à l'achat. */
     #[Route('', name: 'index')]
-    public function index(Request $request): Response
+    public function index(Request $request, LocaleSwitcher $localeSwitcher): Response
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
+        $this->applyLangPreference($request, $user, $localeSwitcher);
+
         $page = max(1, $request->query->getInt('page', 1));
 
         return $this->render('admin/token/index.html.twig', [
@@ -71,10 +74,11 @@ class TokenController extends AbstractController
 
     /** Achat d'un paquet de tokens (paiement simulé, pattern PRG). */
     #[Route('/buy', name: 'buy', methods: ['GET', 'POST'])]
-    public function buy(Request $request): Response
+    public function buy(Request $request, LocaleSwitcher $localeSwitcher): Response
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
+        $this->applyLangPreference($request, $user, $localeSwitcher);
 
         $dto = new TokenPurchaseDTO();
         if ($request->query->has('pack') && isset(TokenPricing::PACKS[$request->query->get('pack')])) {
@@ -130,5 +134,20 @@ class TokenController extends AbstractController
     private function generateReference(): string
     {
         return 'TOK-' . (new \DateTimeImmutable())->format('dmy-His');
+    }
+
+    /**
+     * Bascule de langue persistante pour l'espace authentifié : ?lang= met à
+     * jour la préférence de l'utilisateur (le UserLocaleListener s'appuie
+     * ensuite sur getLocale()) et applique la locale au rendu courant.
+     */
+    private function applyLangPreference(Request $request, Utilisateur $user, LocaleSwitcher $localeSwitcher): void
+    {
+        $lang = $request->query->get('lang');
+        if (in_array($lang, ['fr', 'en'], true) && $lang !== $user->getLocale()) {
+            $user->setLocale($lang);
+            $this->em->flush();
+            $localeSwitcher->setLocale($lang);
+        }
     }
 }

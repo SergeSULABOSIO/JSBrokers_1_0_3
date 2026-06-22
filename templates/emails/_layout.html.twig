@@ -12,8 +12,12 @@
    Bloc à remplir par les templates : `content` (suite de lignes <tr>, à composer
    avec les macros de emails/_macros.html.twig).
 #}
+{# `locale` est optionnel : repli 'fr' → les e-mails qui ne le fournissent pas
+   restent inchangés ; ceux qui le passent (ex. confirmation de tokens) suivent
+   la langue de l'utilisateur. #}
+{% set lang = locale|default('fr') %}
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -41,7 +45,7 @@
                                 <td style="vertical-align: middle;">
                                     <div style="font: 700 21px/1.1 Arial, Helvetica, sans-serif; color: #ffffff;">JS Brokers</div>
                                     <div style="font: 400 12px/1.3 Arial, Helvetica, sans-serif; color: rgba(255,255,255,0.85); margin-top: 3px;">
-                                        Plateforme de gestion de courtage en assurance
+                                        {{ 'email_layout_tagline'|trans({}, 'messages', lang) }}
                                     </div>
                                 </td>
                             </tr></table>
@@ -69,8 +73,8 @@
                                     </td>
                                 {% endif %}
                                 <td style="vertical-align: top; font: 400 13px/1.5 Arial, Helvetica, sans-serif; color: #6c757d;">
-                                    <div style="font-weight: 700; color: #0d2440;">L'équipe JS Brokers</div>
-                                    <div>Courtage &amp; gestion d'assurance</div>
+                                    <div style="font-weight: 700; color: #0d2440;">{{ 'email_layout_signature_team'|trans({}, 'messages', lang) }}</div>
+                                    <div>{{ 'email_layout_signature_role'|trans({}, 'messages', lang) }}</div>
                                     {% if senderEmail is defined %}
                                         <div style="margin-top: 4px;">
                                             <a href="mailto:{{ senderEmail }}" style="color: #0047AB; text-decoration: none;">{{ senderEmail }}</a>
@@ -79,8 +83,7 @@
                                 </td>
                             </tr></table>
                             <div style="font: 400 11px/1.45 Arial, Helvetica, sans-serif; color: #adb5bd; margin-top: 16px;">
-                                Cet e-mail vous a été adressé automatiquement par JS Brokers.
-                                Si vous n'êtes pas concerné(e), vous pouvez l'ignorer.
+                                {{ 'email_layout_auto_note'|trans({}, 'messages', lang) }}
                             </div>
                         </td>
                     </tr>

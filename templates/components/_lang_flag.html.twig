@@ -1,0 +1,14 @@
+{# ============================================================
+   Drapeaux de la bascule de langue (vitrine JS Brokers).
+   Icônes SVG inline, autosuffisantes (aucune dépendance réseau).
+   - fr()      : drapeau tricolore français.
+   - uk(uid)   : Union Jack ; `uid` rend les <clipPath> uniques sur la
+                 page (le sélecteur de langue est présent dans l'en-tête
+                 ET le pied de page → IDs distincts obligatoires).
+   Styles dans _home_styles / conditions_utilisation / fonctionnement_tokens
+   (classe .public-lang__flag).
+   ============================================================ #}
+
+{% macro fr() %}<svg class="public-lang__flag" viewBox="0 0 3 2" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false"><rect width="3" height="2" fill="#fff"/><rect width="1" height="2" fill="#0055A4"/><rect width="1" height="2" x="2" fill="#EF4135"/></svg>{% endmacro %}
+
+{% macro uk(uid) %}<svg class="public-lang__flag" viewBox="0 0 60 30" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false"><clipPath id="{{ uid }}-frame"><rect width="60" height="30"/></clipPath><clipPath id="{{ uid }}-diag"><path d="M30,15 30,0 60,0 z M30,15 60,15 60,30 z M30,15 30,30 0,30 z M30,15 0,15 0,0 z"/></clipPath><g clip-path="url(#{{ uid }}-frame)"><rect width="60" height="30" fill="#012169"/><path d="M0,0 60,30 M60,0 0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 60,30 M60,0 0,30" clip-path="url(#{{ uid }}-diag)" stroke="#C8102E" stroke-width="4"/><path d="M30,0 V30 M0,15 H60" stroke="#fff" stroke-width="10"/><path d="M30,0 V30 M0,15 H60" stroke="#C8102E" stroke-width="6"/></g></svg>{% endmacro %}

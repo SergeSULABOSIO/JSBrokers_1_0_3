@@ -5,6 +5,7 @@
    `lang` est fourni par le contrôleur ; on retombe sur la locale courante sinon.
    ============================================================ #}
 {% set lang = lang|default(app.request.locale|default('fr')) %}
+{% import 'components/_lang_flag.html.twig' as flags %}
 
 <header class="public-topbar">
     <div class="public-topbar__inner">
@@ -29,10 +30,12 @@
             <span class="public-lang" role="group" aria-label="Langue / Language">
                 <a href="{{ path('app_index', {'lang': 'fr'}) }}"
                    class="{{ lang == 'fr' ? 'is-active' : '' }}"
-                   {% if lang == 'fr' %}aria-current="true"{% endif %}>FR</a>
+                   title="Français" lang="fr"
+                   {% if lang == 'fr' %}aria-current="true"{% endif %}>{{ flags.fr() }}<span class="public-lang__code">FR</span></a>
                 <a href="{{ path('app_index', {'lang': 'en'}) }}"
                    class="{{ lang == 'en' ? 'is-active' : '' }}"
-                   {% if lang == 'en' %}aria-current="true"{% endif %}>EN</a>
+                   title="English" lang="en"
+                   {% if lang == 'en' %}aria-current="true"{% endif %}>{{ flags.uk('lang-top') }}<span class="public-lang__code">EN</span></a>
             </span>
 
             {# CTA contextuel selon l'état de connexion (réutilise les clés base_*).

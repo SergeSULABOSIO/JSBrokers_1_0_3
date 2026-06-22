@@ -144,4 +144,32 @@ class EmailRenderingTest extends KernelTestCase
         $this->assertStringContainsString('<svg', $html);
         $this->assertStringContainsString('cid:', $html);
     }
+
+    /**
+     * Non-régression du layout localisé : un e-mail qui ne fournit pas de
+     * `locale` (cas des e-mails de contact, invitation, etc.) conserve un
+     * chrome partagé en français (repli 'fr').
+     */
+    public function testSharedLayoutChromeFallsBackToFrenchWithoutLocale(): void
+    {
+        self::bootKernel();
+
+        $data = new \App\DTO\DemandeContactDTO();
+        $data->name = 'Victor ESAFE';
+        $data->email = 'victor@example.test';
+        $data->objet = 'Demande de rendez-vous';
+        $data->message = 'Bonjour';
+
+        $html = $this->render('home/mail/accuse_reception_contact.html.twig', [
+            'data' => $data,
+            'logoPath' => $this->logoPath(),
+            'senderEmail' => 'contact@jsbrokers.com',
+        ]);
+
+        // Chrome du layout (tagline + signature) rendu en français par défaut.
+        $this->assertStringContainsString('Plateforme de gestion de courtage en assurance', $html);
+        $this->assertStringContainsString('équipe JS Brokers', $html);
+        // Aucune fuite de la version anglaise.
+        $this->assertStringNotContainsString('The JS Brokers team', $html);
+    }
 }
