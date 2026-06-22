@@ -119,6 +119,29 @@ class EntrepriseRepository extends ServiceEntityRepository
         );
     }
 
+    /**
+     * Liste paginée GLOBALE de toutes les entreprises (Console JS Brokers).
+     * NB : distinct de getNBEntreprises()/paginateUtilisateur(), volontairement
+     * scoppés à l'utilisateur courant.
+     */
+    public function paginateAll(int $page): PaginationInterface
+    {
+        return $this->paginator->paginate(
+            $this->createQueryBuilder('e')->orderBy('e.id', 'DESC'),
+            $page,
+            12,
+        );
+    }
+
+    /** Nombre total d'entreprises sur la plateforme (toutes confondues). */
+    public function countAllGlobal(): int
+    {
+        return (int) $this->createQueryBuilder('e')
+            ->select('COUNT(e.id)')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
     //    public function findOneBySomeField($value): ?Entreprise
     //    {
     //        return $this->createQueryBuilder('e')

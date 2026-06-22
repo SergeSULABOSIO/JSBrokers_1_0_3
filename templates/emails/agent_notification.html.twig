@@ -1,0 +1,16 @@
+{% extends 'emails/_layout.html.twig' %}
+{% import 'emails/_macros.html.twig' as m %}
+
+{# E-mail interne (équipe JS Brokers) : rédigé en français. #}
+{% block subject %}JS Brokers — {{ titre }}{% endblock %}
+
+{% block content %}
+    {{ m.heading(icone, titre) }}
+    {{ m.paragraph(intro) }}
+
+    {% for label, valeur in details %}
+        {{ m.paragraph('<strong>' ~ label ~ '&nbsp;:</strong> ' ~ valeur) }}
+    {% endfor %}
+
+    {{ m.note('Notification automatique adressée à l\'équipe JS Brokers pour information.') }}
+{% endblock %}

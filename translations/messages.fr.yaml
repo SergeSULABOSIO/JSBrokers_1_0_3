@@ -239,6 +239,15 @@ token_buy.expiry_required: "Indiquez la date d'expiration."
 token_buy.expiry_invalid: "Format attendu : MM/AA."
 token_buy.cvc_required: "Indiquez le code de sécurité."
 token_buy.cvc_invalid: "CVC invalide (3 ou 4 chiffres)."
+token_buy.coupon_section: "Code de réduction"
+token_buy.coupon: "Coupon (facultatif)"
+token_buy.coupon_ph: "Saisissez un code promo"
+
+# Coupons — messages de validation (achat de tokens)
+coupon.invalid: "Code de réduction inconnu."
+coupon.expired: "Ce coupon n'est pas valide actuellement (expiré ou limite atteinte)."
+coupon.not_applicable: "Ce coupon ne s'applique pas au paquet sélectionné."
+coupon.code_already_used: "Ce code de coupon existe déjà. Choisissez-en un autre."
 
 # E-mails — confirmation d'achat de tokens (suit la langue de l'utilisateur)
 email_token_subject: "Confirmation de paiement"

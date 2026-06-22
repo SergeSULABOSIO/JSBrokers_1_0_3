@@ -1,0 +1,68 @@
+{% extends 'console/base.html.twig' %}
+
+{% block console_subtitle %}<p>Suivi et filtrage des achats de paquets de tokens.</p>{% endblock %}
+
+{% block console_body %}
+    {# ── Volumes (sur le périmètre filtré) ── #}
+    <div class="cs-kpis" style="margin-bottom:1.25rem;">
+        <div class="cs-kpi"><span class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('operation'), {height:'24px', width:'24px'}) }}</span>
+            <span><span class="cs-kpi-val">{{ totals.count }}</span><span class="cs-kpi-lbl">Ventes</span></span></div>
+        <div class="cs-kpi"><span class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('monnaie'), {height:'24px', width:'24px'}) }}</span>
+            <span><span class="cs-kpi-val">{{ totals.revenue|number_format(2, '.', ' ') }} $</span><span class="cs-kpi-lbl">Revenu</span></span></div>
+        <div class="cs-kpi"><span class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('tranche'), {height:'24px', width:'24px'}) }}</span>
+            <span><span class="cs-kpi-val">{{ totals.tokens|number_format(0, ',', ' ') }}</span><span class="cs-kpi-lbl">Tokens vendus</span></span></div>
+        <div class="cs-kpi"><span class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('offre'), {height:'24px', width:'24px'}) }}</span>
+            <span><span class="cs-kpi-val">{{ totals.remises|number_format(2, '.', ' ') }} $</span><span class="cs-kpi-lbl">Remises</span></span></div>
+    </div>
+
+    {# ── Filtres (formulaire GET, sans JS) ── #}
+    <div class="cs-panel" style="margin-bottom:1.25rem;">
+        <form method="get" data-action="submit->top-progress#show"
+              style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.75rem;align-items:end;">
+            <div><label class="form-label">Du</label><input type="date" name="from" value="{{ filtres.from }}" class="form-control"></div>
+            <div><label class="form-label">Au</label><input type="date" name="to" value="{{ filtres.to }}" class="form-control"></div>
+            <div><label class="form-label">Paquet</label>
+                <select name="pack" class="form-select">
+                    <option value="">Tous</option>
+                    {% for p in packs %}<option value="{{ p }}" {{ filtres.pack == p ? 'selected' }}>{{ p|capitalize }}</option>{% endfor %}
+                </select>
+            </div>
+            <div><label class="form-label">Statut</label>
+                <select name="status" class="form-select">
+                    <option value="">Tous</option>
+                    {% for s in statuses %}<option value="{{ s }}" {{ filtres.status == s ? 'selected' }}>{{ s }}</option>{% endfor %}
+                </select>
+            </div>
+            <div><label class="form-label">Recherche (nom, e-mail, réf.)</label><input type="text" name="q" value="{{ filtres.q }}" class="form-control" placeholder="…"></div>
+            <div style="display:flex;gap:.5rem;">
+                <button type="submit" class="btn btn-cobalt">{{ ux_icon(resolve_icon_name('action:filter'), {height:'18px', width:'18px'}) }}<span class="ms-1">Filtrer</span></button>
+                <a href="{{ path('console.vente.index') }}" class="btn btn-outline-secondary" data-action="click->top-progress#show">Réinitialiser</a>
+            </div>
+        </form>
+    </div>
+
+    {# ── Liste ── #}
+    <div class="cs-panel">
+        {% if ventes.getTotalItemCount > 0 %}
+            <table class="cs-table">
+                <thead><tr><th>Date</th><th>Référence</th><th>Acheteur</th><th>Paquet</th><th>Tokens</th><th>Montant</th><th>Coupon</th></tr></thead>
+                <tbody>
+                {% for v in ventes %}
+                    <tr>
+                        <td>{{ v.createdAt|format_datetime('medium', 'short', locale: app.user.locale) }}</td>
+                        <td><code>{{ v.reference }}</code></td>
+                        <td>{{ v.utilisateur ? v.utilisateur.nom : '—' }}<br><small style="color:#6c757d;">{{ v.utilisateur ? v.utilisateur.email : '' }}</small></td>
+                        <td><span class="cs-badge cs-badge--cobalt">{{ v.pack|capitalize }}</span></td>
+                        <td>{{ v.tokens|number_format(0, ',', ' ') }}</td>
+                        <td>{{ v.montantUsd|number_format(2, '.', ' ') }} $</td>
+                        <td>{% if v.couponCode %}{{ v.couponCode }} <small style="color:#137333;">(−{{ v.remiseUsd|number_format(2, '.', ' ') }} $)</small>{% else %}—{% endif %}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <div class="cs-pagination">{{ knp_pagination_render(ventes) }}</div>
+        {% else %}
+            <div class="cs-empty">Aucune vente pour ces critères.</div>
+        {% endif %}
+    </div>
+{% endblock %}

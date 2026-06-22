@@ -1,0 +1,60 @@
+{% extends 'console/base.html.twig' %}
+
+{% block console_subtitle %}<p>Vue d'ensemble de la plateforme JS Brokers : comptes, ventes et revenu.</p>{% endblock %}
+
+{% block console_body %}
+    {% set kpiCards = [
+        { icon: 'action:role',  val: kpis.nbAgents,      lbl: 'Collaborateurs JS Brokers' },
+        { icon: 'utilisateur',  val: kpis.nbUsers,       lbl: 'Utilisateurs' },
+        { icon: 'client',       val: kpis.nbClients,     lbl: 'Clients' },
+        { icon: 'entreprise',   val: kpis.nbEntreprises, lbl: 'Entreprises' },
+        { icon: 'operation',    val: kpis.nbVentes,      lbl: 'Ventes de tokens' },
+        { icon: 'monnaie',      val: kpis.revenuUsd|number_format(2, '.', ' ') ~ ' $', lbl: 'Revenu total' },
+        { icon: 'tranche',      val: kpis.tokensVendus|number_format(0, ',', ' '), lbl: 'Tokens vendus' },
+        { icon: 'offre',        val: kpis.remisesUsd|number_format(2, '.', ' ') ~ ' $', lbl: 'Remises accordées' },
+    ] %}
+    <div class="cs-kpis">
+        {% for c in kpiCards %}
+            <div class="cs-kpi">
+                <span class="cs-kpi-icon">{{ ux_icon(resolve_icon_name(c.icon), {height: '24px', width: '24px'}) }}</span>
+                <span>
+                    <span class="cs-kpi-val">{{ c.val }}</span>
+                    <span class="cs-kpi-lbl">{{ c.lbl }}</span>
+                </span>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="cs-panel" style="margin-top:1.25rem;">
+        <h2 style="font-size:1.05rem;font-weight:700;color:#212529;margin:0 0 1rem;">{{ chartVentesMois.titre }}</h2>
+        {{ render_chart(chartVentesMois.chart) }}
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.25rem;margin-top:1.25rem;">
+        <div class="cs-panel">
+            <h2 style="font-size:1.05rem;font-weight:700;color:#212529;margin:0 0 1rem;">{{ chartVentesPack.titre }}</h2>
+            {{ render_chart(chartVentesPack.chart) }}
+        </div>
+        <div class="cs-panel">
+            <h2 style="font-size:1.05rem;font-weight:700;color:#212529;margin:0 0 1rem;">Dernières ventes</h2>
+            {% if dernieresVentes.getTotalItemCount > 0 %}
+                <table class="cs-table">
+                    <thead><tr><th>Date</th><th>Acheteur</th><th>Paquet</th><th>Montant</th></tr></thead>
+                    <tbody>
+                    {% for v in dernieresVentes %}
+                        <tr>
+                            <td>{{ v.createdAt|format_datetime('medium', 'short', locale: app.user.locale) }}</td>
+                            <td>{{ v.utilisateur ? v.utilisateur.nom : '—' }}</td>
+                            <td><span class="cs-badge cs-badge--cobalt">{{ v.pack|capitalize }}</span></td>
+                            <td>{{ v.montantUsd|number_format(2, '.', ' ') }} $</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="cs-empty">Aucune vente enregistrée pour l'instant.</div>
+            {% endif %}
+            <p style="margin:1rem 0 0;"><a href="{{ path('console.vente.index') }}" data-action="click->top-progress#show" style="color:#0047AB;font-weight:600;text-decoration:none;">Voir toutes les ventes →</a></p>
+        </div>
+    </div>
+{% endblock %}

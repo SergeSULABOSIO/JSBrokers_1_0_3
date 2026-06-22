@@ -41,6 +41,16 @@ class TokenPurchase
     #[Groups(['list:read'])]
     private float $montantUsd = 0.0;
 
+    /** Remise appliquée (USD) via un coupon ; 0 si aucun coupon. */
+    #[ORM\Column(options: ['default' => 0])]
+    #[Groups(['list:read'])]
+    private float $remiseUsd = 0.0;
+
+    /** Code du coupon utilisé pour cet achat (null si aucun) — traçabilité. */
+    #[ORM\Column(length: 40, nullable: true)]
+    #[Groups(['list:read'])]
+    private ?string $couponCode = null;
+
     #[ORM\Column(length: 4, nullable: true)]
     #[Groups(['list:read'])]
     private ?string $cardLast4 = null;
@@ -106,6 +116,30 @@ class TokenPurchase
     public function setMontantUsd(float $montantUsd): static
     {
         $this->montantUsd = $montantUsd;
+
+        return $this;
+    }
+
+    public function getRemiseUsd(): float
+    {
+        return $this->remiseUsd;
+    }
+
+    public function setRemiseUsd(float $remiseUsd): static
+    {
+        $this->remiseUsd = $remiseUsd;
+
+        return $this;
+    }
+
+    public function getCouponCode(): ?string
+    {
+        return $this->couponCode;
+    }
+
+    public function setCouponCode(?string $couponCode): static
+    {
+        $this->couponCode = $couponCode;
 
         return $this;
     }

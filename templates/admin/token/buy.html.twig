@@ -218,6 +218,19 @@
                     </div>
                 </fieldset>
 
+                <fieldset class="tkb-fieldset">
+                    <legend class="tkb-legend">
+                        {{ ux_icon(resolve_icon_name('offre'), {height: '16px', width: '16px'}) }}
+                        {{ "token_buy.coupon_section" | trans }}
+                    </legend>
+                    <label for="{{ form.couponCode.vars.id }}" class="form-label">{{ form.couponCode.vars.label|trans }}</label>
+                    <div class="tkb-ifield">
+                        {{ ux_icon(resolve_icon_name('offre'), {class: 'tkb-ifield-icon'}) }}
+                        {{ form_widget(form.couponCode, {attr: {class: 'form-control', style: 'text-transform:uppercase;'}}) }}
+                    </div>
+                    {{ form_errors(form.couponCode) }}
+                </fieldset>
+
                 <button type="submit" class="btn tkb-submit d-inline-flex align-items-center justify-content-center gap-2"
                         data-form-submit-target="button">
                     {{ ux_icon(resolve_icon_name('action:cart'), {height: '18px', width: '18px'}) }}

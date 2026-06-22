@@ -6,8 +6,11 @@ use App\Entity\Cotation;
 use App\Entity\Entreprise;
 use App\Entity\Piste;
 use App\Entity\TokenConsumption;
+use App\Entity\PlateformeParametres;
 use App\Entity\Utilisateur;
+use App\Repository\PlateformeParametresRepository;
 use App\Token\InsufficientTokensException;
+use App\Token\ParametresTokenService;
 use App\Token\TokenAccountService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -33,7 +36,12 @@ class TokenAccountServiceTest extends TestCase
         });
         $em->method('flush');
 
-        return new TokenAccountService($em);
+        // Repository renvoyant un singleton « vide » (champs nuls) : ParametresTokenService
+        // retombe alors sur les constantes TokenPricing → mêmes valeurs qu'avant.
+        $repo = $this->createMock(PlateformeParametresRepository::class);
+        $repo->method('getSingleton')->willReturn(new PlateformeParametres());
+
+        return new TokenAccountService($em, new ParametresTokenService($repo));
     }
 
     private function owner(): Utilisateur

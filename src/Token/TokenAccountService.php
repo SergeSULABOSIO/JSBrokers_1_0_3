@@ -16,8 +16,10 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 class TokenAccountService
 {
-    public function __construct(private EntityManagerInterface $em)
-    {
+    public function __construct(
+        private EntityManagerInterface $em,
+        private ParametresTokenService $parametres,
+    ) {
     }
 
     /**
@@ -30,8 +32,8 @@ class TokenAccountService
         $now = new \DateTimeImmutable();
         $start = $owner->getFreeWindowStartedAt();
 
-        if ($start === null || $now >= $start->modify('+' . TokenPricing::FREE_WINDOW_HOURS . ' hours')) {
-            $owner->setFreeTokens(TokenPricing::FREE_ALLOWANCE);
+        if ($start === null || $now >= $start->modify('+' . $this->parametres->freeWindowHours() . ' hours')) {
+            $owner->setFreeTokens($this->parametres->freeAllowance());
             $owner->setFreeWindowStartedAt($now);
             $this->em->flush();
         }
@@ -52,8 +54,8 @@ class TokenAccountService
             'paid'            => $owner->getPaidTokens(),
             'total'           => $owner->getTotalTokens(),
             'windowStartedAt' => $start,
-            'nextRenewalAt'   => $start?->modify('+' . TokenPricing::FREE_WINDOW_HOURS . ' hours'),
-            'allowance'       => TokenPricing::FREE_ALLOWANCE,
+            'nextRenewalAt'   => $start?->modify('+' . $this->parametres->freeWindowHours() . ' hours'),
+            'allowance'       => $this->parametres->freeAllowance(),
         ];
     }
 
@@ -119,7 +121,7 @@ class TokenAccountService
             return; // Pas de propriétaire identifiable : on ne facture pas.
         }
 
-        $cost = TokenPricing::weightFor($entity::class);
+        $cost = $this->parametres->weightFor($entity::class);
         $this->guardAndConsume($owner, $cost);
 
         $this->log(
@@ -149,7 +151,7 @@ class TokenAccountService
             return;
         }
 
-        $unit = TokenPricing::READ_WEIGHT;
+        $unit = $this->parametres->readWeight();
         $cost = $count * $unit;
         $this->guardAndConsume($owner, $cost);
 
