@@ -5,6 +5,19 @@
    ============================================================ #}
 {% set lang = lang|default(app.request.locale|default('fr')) %}
 
+{# Réutilisable hors vitrine : si l'on n'est pas déjà sur la home, les ancres de
+   section deviennent des liens absolus vers le portail (`/?lang=…#section`) pour
+   ne pas rompre la navigation. Sur la home, on garde l'ancre nue (défilement). #}
+{% set onHome = app.request.attributes.get('_route') == 'app_index' %}
+{% set homeBase = onHome ? '' : path('app_index', {'lang': lang}) %}
+
+{# Bascule de langue : on reste sur la page courante en ne changeant que `lang`.
+   On reconstruit l'URL active (route + paramètres + query string) au lieu de
+   renvoyer systématiquement vers la vitrine. Repli sur la home si la route est
+   indéterminée (sous-requête). #}
+{% set switchRoute = app.request.attributes.get('_route')|default('app_index') %}
+{% set switchParams = (app.request.attributes.get('_route_params')|default({}))|merge(app.request.query.all) %}
+
 <footer class="public-footer">
     <div class="public-footer__inner">
 
@@ -18,18 +31,18 @@
         </a>
 
         <nav class="public-footer__links" aria-label="{{ "home_nav_features" | trans }}">
-            <a href="#features">{{ "home_nav_features" | trans }}</a>
-            <a href="#guide">{{ "home_nav_guide" | trans }}</a>
-            <a href="#pricing_plan">{{ "home_nav_pricing" | trans }}</a>
-            <a href="#contact">{{ "home_nav_contact" | trans }}</a>
+            <a href="{{ homeBase }}#features">{{ "home_nav_features" | trans }}</a>
+            <a href="{{ homeBase }}#guide">{{ "home_nav_guide" | trans }}</a>
+            <a href="{{ homeBase }}#pricing_plan">{{ "home_nav_pricing" | trans }}</a>
+            <a href="{{ homeBase }}#contact">{{ "home_nav_contact" | trans }}</a>
             <a href="{{ path('app_terms') }}" data-action="click->top-progress#show">{{ "terms_link" | trans }}</a>
         </nav>
 
         <span class="public-lang" role="group" aria-label="Langue / Language">
-            <a href="{{ path('app_index', {'lang': 'fr'}) }}"
+            <a href="{{ path(switchRoute, switchParams|merge({'lang': 'fr'})) }}"
                class="{{ lang == 'fr' ? 'is-active' : '' }}"
                {% if lang == 'fr' %}aria-current="true"{% endif %}>FR</a>
-            <a href="{{ path('app_index', {'lang': 'en'}) }}"
+            <a href="{{ path(switchRoute, switchParams|merge({'lang': 'en'})) }}"
                class="{{ lang == 'en' ? 'is-active' : '' }}"
                {% if lang == 'en' %}aria-current="true"{% endif %}>EN</a>
         </span>

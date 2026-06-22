@@ -15,10 +15,15 @@ use App\Legal\Cgu;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Translation\LocaleSwitcher;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 class LegalController extends AbstractController
 {
+    public function __construct(
+        private readonly LocaleSwitcher $localeSwitcher
+    ) {}
+
     #[Route('/conditions-utilisation', name: 'app_terms')]
     public function terms(Request $request): Response
     {
@@ -30,6 +35,9 @@ class LegalController extends AbstractController
         if (!in_array($lang, ['fr', 'en'], true)) {
             $lang = in_array($request->getLocale(), ['fr', 'en'], true) ? $request->getLocale() : 'fr';
         }
+        // On active la locale choisie pour que tous les « | trans » du rendu
+        // (chrome, pied de page public réutilisé…) suivent la même langue.
+        $this->localeSwitcher->setLocale($lang);
 
         return $this->render('legal/conditions_utilisation.html.twig', [
             'pageName'   => $lang === 'en' ? 'Terms and Conditions of Use' : "Conditions et termes d'utilisation",
@@ -51,6 +59,9 @@ class LegalController extends AbstractController
         if (!in_array($lang, ['fr', 'en'], true)) {
             $lang = in_array($request->getLocale(), ['fr', 'en'], true) ? $request->getLocale() : 'fr';
         }
+        // On active la locale choisie pour que tous les « | trans » du rendu
+        // (chrome, pied de page public réutilisé…) suivent la même langue.
+        $this->localeSwitcher->setLocale($lang);
 
         return $this->render('legal/fonctionnement_tokens.html.twig', [
             'pageName' => $lang === 'en' ? 'How tokens work' : 'Fonctionnement des tokens',
