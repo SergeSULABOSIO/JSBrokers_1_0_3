@@ -1,0 +1,24 @@
+{# ============================================================
+   Bascule de langue (FR/EN) de la barre de titre des pages « entreprise ».
+   Réutilisable à l'identique sur index / create / edit : on reconstruit la
+   route courante (route + paramètres + query string) pour rester sur la même
+   page — y compris l'édition et son paramètre `id` — en ne changeant que `lang`.
+   ?lang= persiste la préférence de l'utilisateur (cf. EntrepriseController::applyLangPreference).
+   Chaque bascule est une navigation serveur complète → barre de progression
+   du haut (top-progress#show) pour un feedback immédiat (Nielsen #1).
+   Drapeaux SVG inline via la macro partagée _lang_flag.
+   ============================================================ #}
+{% import 'components/_lang_flag.html.twig' as flags %}
+{% set lang = app.user.locale %}
+{% set switchRoute = app.request.attributes.get('_route')|default('admin.entreprise.index') %}
+{% set switchParams = (app.request.attributes.get('_route_params')|default({}))|merge(app.request.query.all) %}
+<span class="ent-lang" role="group" aria-label="Langue / Language">
+    <a href="{{ path(switchRoute, switchParams|merge({'lang': 'fr'})) }}"
+       class="{{ lang == 'fr' ? 'is-active' : '' }}" title="Français" lang="fr"
+       data-action="click->top-progress#show"
+       {% if lang == 'fr' %}aria-current="true"{% endif %}>{{ flags.fr() }}<span class="public-lang__code">FR</span></a>
+    <a href="{{ path(switchRoute, switchParams|merge({'lang': 'en'})) }}"
+       class="{{ lang == 'en' ? 'is-active' : '' }}" title="English" lang="en"
+       data-action="click->top-progress#show"
+       {% if lang == 'en' %}aria-current="true"{% endif %}>{{ flags.uk('lang-ent-top') }}<span class="public-lang__code">EN</span></a>
+</span>

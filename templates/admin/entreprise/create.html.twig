@@ -147,6 +147,8 @@
         .ent-actions-back { width: 100%; justify-content: center; }
     }
 </style>
+{# Styles partagés : bascule de langue (.ent-lang) + pied de page officiel #}
+{{ include('admin/entreprise/_chrome_styles.html.twig') }}
 {% endblock %}
 
 {% block body %}
@@ -154,7 +156,7 @@
 
     {# Barre de progression globale (pattern espace de travail) #}
     <div class="ent-progress-bar" data-top-progress-target="bar"
-         role="progressbar" aria-label="Chargement en cours" aria-hidden="true"></div>
+         role="progressbar" aria-label="{{ 'entreprise_loading' | trans }}" aria-hidden="true"></div>
 
     <header class="ent-topbar">
         <a href="{{ path('admin.entreprise.index') }}" class="ent-brand"
@@ -169,6 +171,8 @@
             </span>
             <span class="ent-topbar-sep" aria-hidden="true"></span>
             <div class="ent-topbar-actions">
+                {# Bascule de langue (FR/EN) : persiste la préférence via ?lang= #}
+                {{ include('admin/entreprise/_topbar_lang.html.twig') }}
                 <a href="{{ path('app_logout') }}" class="btn btn-sm btn-outline-danger border-0"
                    data-action="click->top-progress#show"
                    title="{{ "boutons_user_logout" | trans }}" aria-label="{{ "boutons_user_logout" | trans }}">
@@ -208,14 +212,14 @@
             {{ form_start(form, {'attr': {
                 'data-controller': 'form-submit pays-dependances',
                 'data-action': 'submit->form-submit#submitting submit->top-progress#show',
-                'data-form-submit-loading-text-value': 'Création…',
+                'data-form-submit-loading-text-value': 'entreprise_loading_create'|trans,
                 'data-pays-dependances-url-template-value': path('admin.entreprise.api.villes', {codePays: 999999999}),
             }}) }}
 
                 <fieldset class="ent-fieldset">
                     <legend class="ent-legend">
                         {{ ux_icon(resolve_icon_name('entreprise'), {height: '16px', width: '16px'}) }}
-                        Identité &amp; présentation
+                        {{ 'entreprise_legend_identity' | trans }}
                     </legend>
                     {{ ff.field(form.nom, 'entreprise') }}
                     <div class="row">
@@ -228,7 +232,7 @@
                 <fieldset class="ent-fieldset">
                     <legend class="ent-legend">
                         {{ ux_icon(resolve_icon_name('contact'), {height: '16px', width: '16px'}) }}
-                        Coordonnées
+                        {{ 'entreprise_legend_contact' | trans }}
                     </legend>
                     <div class="row">
                         <div class="col-md">{{ ff.field(form.adresse, 'mdi:address-marker-outline') }}</div>
@@ -243,7 +247,7 @@
                 <fieldset class="ent-fieldset">
                     <legend class="ent-legend">
                         {{ ux_icon(resolve_icon_name('taxe'), {height: '16px', width: '16px'}) }}
-                        Immatriculation &amp; fiscalité
+                        {{ 'entreprise_legend_registration' | trans }}
                     </legend>
                     <div class="row">
                         <div class="col-md">{{ ff.field(form.licence, 'clarity:license-outline-badged') }}</div>
@@ -257,7 +261,7 @@
 
                 {# Rappel important transformé en toast permanent (haut à droite, fixe, non fermable). #}
                 {{ include('components/_workspace_params_toast.html.twig', {
-                    message: 'Vous pourrez gérer les paramètres détaillés (clients, risques, taxes, comptes, monnaies, partenaires, invités…) depuis l\'espace de travail, une fois l\'entreprise créée.'
+                    message: 'entreprise_params_toast_create'|trans
                 }) }}
 
                 <div class="ent-actions">
@@ -276,15 +280,20 @@
                         }
                     }) }}
                     <a href="{{ path('admin.entreprise.index') }}" class="btn btn-outline-secondary d-inline-flex align-items-center"
-                       data-action="click->form-submit#navigating click->top-progress#show" data-loading-text="Annulation…">
+                       data-action="click->form-submit#navigating click->top-progress#show" data-loading-text="{{ 'entreprise_loading_cancel' | trans }}">
                         {{ ux_icon(resolve_icon_name('action:cancel'), {height: '18px', width: '18px'}) }}
-                        <span class="ms-1">Annuler</span>
+                        <span class="ms-1">{{ 'entreprise_cancel' | trans }}</span>
                     </a>
                 </div>
 
             {{ form_end(form) }}
         </div>
-    </div>
-    </div>
+    </div>{# /.ent-content #}
+
+    {# Pied de page public officiel JS Brokers : hors de la colonne étroite .ent-content
+       pour occuper 100% de la largeur (même pattern que la liste des entreprises).
+       Bascule de langue fonctionnelle via ?lang=. #}
+    {% include 'components/_public_footer.html.twig' with { lang: app.user.locale } %}
+    </div>{# /.ent-scroll #}
 </main>
 {% endblock %}
