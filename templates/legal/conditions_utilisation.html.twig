@@ -16,6 +16,19 @@
     /* Le défilement laisse passer l'ancrage sous la barre fixe. */
     html { scroll-padding-top: var(--cgu-topbar-h, 64px); }
 
+    /* Barre de progression globale : fixée tout en haut, cobalt, animée
+       (même pattern que top-progress_controller / vitrine). Affichée au clic
+       sur la bascule de langue (navigation serveur complète). */
+    .ent-progress-bar {
+        position: fixed; top: 0; left: 0; width: 100%; height: 6px;
+        background-color: #0047AB; display: none; z-index: 1100;
+        animation: ent-progress-animation 1.5s infinite linear;
+    }
+    @keyframes ent-progress-animation {
+        0%   { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
     .cgu-page {
         --cgu-topbar-h: 64px;
         min-height: 100vh; display: flex; flex-direction: column;
@@ -118,7 +131,12 @@
 {% set isEn = (lang == 'en') %}
 {% set backHref = app.user is not null ? path('admin.entreprise.index') : path('app_login') %}
 
-<main class="cgu-page">
+<main class="cgu-page" data-controller="top-progress">
+
+    {# Barre de progression globale (haut de page), déclenchée au clic sur la bascule
+       de langue (barre de titre ET pied de page). Réinitialisée au chargement suivant. #}
+    <div class="ent-progress-bar" data-top-progress-target="bar"
+         role="progressbar" aria-label="{{ isEn ? 'Loading' : 'Chargement en cours' }}" aria-hidden="true"></div>
 
     {# Barre applicative #}
     <header class="cgu-topbar">
@@ -131,8 +149,8 @@
         <div class="cgu-topbar-actions cgu-no-print">
             {# Bascule de langue : auto-suffisante via ?lang= (fonctionne hors session). #}
             <span class="cgu-lang" role="group" aria-label="{{ isEn ? 'Language' : 'Langue' }}">
-                <a href="{{ path('app_terms', {'lang': 'fr'}) }}" class="{{ isEn ? '' : 'is-active' }}" title="Français" lang="fr" {{ isEn ? '' : 'aria-current="true"' }}>{{ flags.fr() }}<span class="public-lang__code">FR</span></a>
-                <a href="{{ path('app_terms', {'lang': 'en'}) }}" class="{{ isEn ? 'is-active' : '' }}" title="English" lang="en" {{ isEn ? 'aria-current="true"' : '' }}>{{ flags.uk('lang-cgu-top') }}<span class="public-lang__code">EN</span></a>
+                <a href="{{ path('app_terms', {'lang': 'fr'}) }}" class="{{ isEn ? '' : 'is-active' }}" title="Français" lang="fr" data-action="click->top-progress#show" {{ isEn ? '' : 'aria-current="true"' }}>{{ flags.fr() }}<span class="public-lang__code">FR</span></a>
+                <a href="{{ path('app_terms', {'lang': 'en'}) }}" class="{{ isEn ? 'is-active' : '' }}" title="English" lang="en" data-action="click->top-progress#show" {{ isEn ? 'aria-current="true"' : '' }}>{{ flags.uk('lang-cgu-top') }}<span class="public-lang__code">EN</span></a>
             </span>
             <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center"
                     onclick="window.print()">

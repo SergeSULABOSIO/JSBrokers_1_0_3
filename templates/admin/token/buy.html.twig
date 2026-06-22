@@ -104,6 +104,12 @@
 {% block body %}
 {% import 'components/_lang_flag.html.twig' as flags %}
 <main class="tkb-page" data-controller="top-progress">
+    {# Barre de progression globale, déclenchée au clic sur la bascule de langue
+       (barre de titre + pied de page) et les autres liens de navigation serveur. #}
+    <div class="ent-progress-bar" data-top-progress-target="bar" role="progressbar"
+         aria-label="Chargement en cours" aria-hidden="true"
+         style="position:fixed;top:0;left:0;width:100%;height:6px;background:#0047AB;display:none;z-index:9999;"></div>
+
     <header class="tkb-topbar">
         <a href="{{ path('app_index') }}" class="tkb-brand" data-action="click->top-progress#show" aria-label="JS Brokers — accueil">
             <img src="{{ asset('images/entreprises/logofav.png') }}" alt="">
