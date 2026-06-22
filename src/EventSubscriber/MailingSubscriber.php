@@ -13,6 +13,7 @@ use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 class MailingSubscriber implements EventSubscriberInterface
 {
@@ -28,6 +29,7 @@ class MailingSubscriber implements EventSubscriberInterface
     public function __construct(
         private MailerInterface $mailer,
         private UrlGeneratorInterface $urlGenerator,
+        private TranslatorInterface $translator,
         private string $mailFrom,
         private string $logoPath,
     ) {}
@@ -112,13 +114,22 @@ class MailingSubscriber implements EventSubscriberInterface
             UrlGeneratorInterface::ABSOLUTE_URL
         );
 
+        // L'e-mail suit la langue choisie par l'utilisateur. La locale est figée
+        // ici (sujet traduit + contexte `locale`) afin que le rendu reste correct
+        // même lorsque l'envoi est différé (transport Messenger asynchrone).
+        $locale = $user->getLocale() ?: 'fr';
+
         $this->envoyerMail(
             $destinataire,
-            $this->buildSubject('Confirmation de paiement', $user->getNom() ?: $destinataire),
+            $this->buildSubject(
+                $this->translator->trans('email_token_subject', [], 'messages', $locale),
+                $user->getNom() ?: $destinataire
+            ),
             'emails/token_purchase_confirmation.html.twig',
             [
                 'purchase'   => $purchase,
                 'accountUrl' => $accountUrl,
+                'locale'     => $locale,
             ],
         );
     }

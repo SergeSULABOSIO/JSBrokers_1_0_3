@@ -1,25 +1,26 @@
 {% extends 'emails/_layout.html.twig' %}
 {% import 'emails/_macros.html.twig' as m %}
 
-{% block subject %}JS Brokers — Confirmation de paiement{% endblock %}
+{# `locale` est fourni par MailingSubscriber → l'e-mail est rendu dans la langue
+   de l'utilisateur, indépendamment du moment d'envoi (rendu différé/async). #}
+{% set lang = locale|default('fr') %}
+
+{% block subject %}JS Brokers — {{ 'email_token_subject'|trans({}, 'messages', lang) }}{% endblock %}
 
 {% block content %}
-    {{ m.heading('action:cart', 'Paiement confirmé') }}
-    {{ m.paragraph(
-        'Bonjour <strong>' ~ purchase.utilisateur.nom ~ '</strong>,<br>'
-        ~ 'votre achat de tokens a bien été enregistré. Vos tokens sont immédiatement disponibles et cumulés à votre solde.'
-    ) }}
+    {{ m.heading('action:cart', 'email_token_heading_confirmed'|trans({}, 'messages', lang)) }}
+    {{ m.paragraph('email_token_greeting'|trans({'%name%': purchase.utilisateur.nom}, 'messages', lang)) }}
 
-    {{ m.heading('action:description', 'Détails de votre achat') }}
-    {{ m.paragraph('<strong>Paquet&nbsp;:</strong> ' ~ purchase.pack|capitalize) }}
-    {{ m.paragraph('<strong>Tokens crédités&nbsp;:</strong> ' ~ purchase.tokens|number_format(0, ',', ' ')) }}
-    {{ m.paragraph('<strong>Montant&nbsp;:</strong> ' ~ purchase.montantUsd|number_format(2, '.', ' ') ~ ' $') }}
-    {{ m.paragraph('<strong>Référence&nbsp;:</strong> ' ~ purchase.reference) }}
+    {{ m.heading('action:description', 'email_token_details_heading'|trans({}, 'messages', lang)) }}
+    {{ m.paragraph('<strong>' ~ 'email_token_label_pack'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.pack|capitalize) }}
+    {{ m.paragraph('<strong>' ~ 'email_token_label_credited'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.tokens|number_format(0, ',', ' ')) }}
+    {{ m.paragraph('<strong>' ~ 'email_token_label_amount'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.montantUsd|number_format(2, '.', ' ') ~ ' $') }}
+    {{ m.paragraph('<strong>' ~ 'email_token_label_reference'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.reference) }}
     {% if purchase.cardLast4 %}
-        {{ m.paragraph('<strong>Carte&nbsp;:</strong> •••• •••• •••• ' ~ purchase.cardLast4) }}
+        {{ m.paragraph('<strong>' ~ 'email_token_label_card'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> •••• •••• •••• ' ~ purchase.cardLast4) }}
     {% endif %}
 
-    {{ m.button(accountUrl, 'Voir mon solde de tokens') }}
+    {{ m.button(accountUrl, 'email_token_button'|trans({}, 'messages', lang)) }}
 
-    {{ m.note('Ceci est une confirmation automatique. Conservez la référence ci-dessus pour toute question relative à cet achat.') }}
+    {{ m.note('email_token_note'|trans({}, 'messages', lang)) }}
 {% endblock %}

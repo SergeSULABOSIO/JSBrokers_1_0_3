@@ -9,8 +9,14 @@
     /* L'espace de travail impose globalement `body, html { height:100%; overflow:hidden }`
        (interactive-menu.css) ; on le réactive ici sinon le bas de page est rogné. */
     html, body { height: auto !important; overflow: auto !important; }
-    .tkp-page { min-height: 100vh; background-color: #f3f3f3; }
+    .tkp-page {
+        --tkp-topbar-h: 64px;
+        min-height: 100vh; background-color: #f3f3f3;
+        padding-top: var(--tkp-topbar-h); /* compense la barre de titre fixée */
+    }
+    /* Barre de titre figée en haut — même pattern que la page CGU. */
     .tkp-topbar {
+        position: fixed; top: 0; left: 0; right: 0; width: 100%; z-index: 1030;
         display: flex; align-items: center; justify-content: space-between;
         gap: 1rem; flex-wrap: wrap; padding: .75rem 1.5rem;
         background-color: #fff; border-bottom: 1px solid #dee2e6;
@@ -39,10 +45,46 @@
     .tkp-scroll { overflow-x:auto; }
     .tkp-back { display:inline-flex; align-items:center; gap:.35rem; font-size:.9rem; color:#6c757d; text-decoration:none; margin-bottom:1rem; }
     .tkp-back:hover { color:#0047AB; }
+
+    /* Barre de titre : actions à droite (bascule de langue + recharge). */
+    .tkp-actions { display:inline-flex; align-items:center; gap:.75rem; }
+    /* Bascule de langue : drapeaux SVG (FR / Royaume-Uni). */
+    .tkp-lang { display:inline-flex; gap:.25rem; padding:.25rem; border:1px solid #dee2e6; border-radius:10px; background-color:#fff; }
+    .tkp-lang a { display:inline-flex; align-items:center; justify-content:center; min-width:44px; min-height:36px; padding:0 .55rem; border-radius:7px; text-decoration:none; background-color:transparent; transition:background-color .15s ease; }
+    .tkp-lang .public-lang__flag { width:26px; height:18px; display:block; border-radius:3px; box-shadow:0 0 0 1px rgba(0,0,0,.08); opacity:.5; filter:grayscale(.4); transition:opacity .15s ease, filter .15s ease; }
+    .tkp-lang a:hover .public-lang__flag { opacity:.9; filter:none; }
+    .tkp-lang a.is-active { background-color:#0047AB; }
+    .tkp-lang a.is-active .public-lang__flag { opacity:1; filter:none; box-shadow:0 0 0 1px rgba(255,255,255,.6); }
+    .tkp-lang a:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+
+    /* ---------- Pied de page public officiel JS Brokers ---------- */
+    .public-footer { background-color:#fff; border-top:1px solid #dee2e6; margin-top:1rem; }
+    .public-footer__inner { max-width:1140px; margin:0 auto; padding:2.5rem 1.5rem 1.5rem; display:flex; flex-wrap:wrap; align-items:flex-start; gap:1.5rem; }
+    .public-footer__brand { display:flex; align-items:center; gap:.75rem; flex:1 1 280px; text-decoration:none; }
+    .public-footer__brand:hover { opacity:.85; }
+    .public-footer__brand img { border-radius:8px; }
+    .public-footer__name { font-weight:700; color:#0047AB; margin:0; font-size:1.05rem; }
+    .public-footer__tagline { color:#6c757d; margin:0; font-size:.9rem; max-width:360px; }
+    .public-footer__links { display:flex; flex-wrap:wrap; gap:.25rem 1.25rem; }
+    .public-footer__links a { display:inline-flex; align-items:center; min-height:44px; color:#495057; text-decoration:none; font-size:.92rem; font-weight:600; }
+    .public-footer__links a:hover { color:#0047AB; }
+    .public-footer__links a:focus-visible { outline:2px solid #0047AB; outline-offset:2px; border-radius:4px; }
+    .public-footer__credit { max-width:1140px; margin:0 auto; padding:1rem 1.5rem; border-top:1px solid #dee2e6; text-align:center; color:#6c757d; font-size:.85rem; }
+
+    /* Bascule de langue du pied de page (drapeaux SVG). */
+    .public-lang { display:inline-flex; gap:.25rem; padding:.25rem; border:1px solid #dee2e6; border-radius:10px; background-color:#fff; }
+    .public-lang a { display:inline-flex; align-items:center; justify-content:center; min-width:44px; min-height:36px; padding:0 .55rem; border-radius:7px; text-decoration:none; background-color:transparent; transition:background-color .15s ease; }
+    .public-lang__flag { width:26px; height:18px; display:block; border-radius:3px; box-shadow:0 0 0 1px rgba(0,0,0,.08); opacity:.5; filter:grayscale(.4); transition:opacity .15s ease, filter .15s ease; }
+    .public-lang a:hover .public-lang__flag { opacity:.9; filter:none; }
+    .public-lang a.is-active { background-color:#0047AB; }
+    .public-lang a.is-active .public-lang__flag { opacity:1; filter:none; box-shadow:0 0 0 1px rgba(255,255,255,.6); }
+    .public-lang a:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+    .public-lang__code { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 </style>
 {% endblock %}
 
 {% block body %}
+{% import 'components/_lang_flag.html.twig' as flags %}
 <main class="tkp-page" data-controller="top-progress">
     <div class="ent-progress-bar" data-top-progress-target="bar" role="progressbar"
          aria-label="Chargement en cours" aria-hidden="true"
@@ -53,11 +95,24 @@
             <img src="{{ asset('images/entreprises/logofav.png') }}" alt="">
             <span>JS Brokers</span>
         </a>
-        <a href="{{ path('admin.token.buy') }}" class="btn btn-sm btn-cobalt d-inline-flex align-items-center gap-1"
-           style="background:#0047AB;border-color:#0047AB;color:#fff;" data-action="click->top-progress#show">
-            {{ ux_icon(resolve_icon_name('action:cart'), {height: '16px', width: '16px'}) }}
-            <span>{{ "token_recharge" | trans }}</span>
-        </a>
+        <div class="tkp-actions">
+            {# Bascule de langue : ?lang= persiste la préférence de l'utilisateur (cf. TokenController::index). #}
+            <span class="tkp-lang" role="group" aria-label="Langue / Language">
+                <a href="{{ path('admin.token.index', app.request.query.all|merge({'lang': 'fr'})) }}"
+                   class="{{ app.user.locale == 'fr' ? 'is-active' : '' }}" title="Français" lang="fr"
+                   data-action="click->top-progress#show"
+                   {% if app.user.locale == 'fr' %}aria-current="true"{% endif %}>{{ flags.fr() }}<span class="public-lang__code">FR</span></a>
+                <a href="{{ path('admin.token.index', app.request.query.all|merge({'lang': 'en'})) }}"
+                   class="{{ app.user.locale == 'en' ? 'is-active' : '' }}" title="English" lang="en"
+                   data-action="click->top-progress#show"
+                   {% if app.user.locale == 'en' %}aria-current="true"{% endif %}>{{ flags.uk('lang-tkp-top') }}<span class="public-lang__code">EN</span></a>
+            </span>
+            <a href="{{ path('admin.token.buy') }}" class="btn btn-sm btn-cobalt d-inline-flex align-items-center gap-1"
+               style="background:#0047AB;border-color:#0047AB;color:#fff;" data-action="click->top-progress#show">
+                {{ ux_icon(resolve_icon_name('action:cart'), {height: '16px', width: '16px'}) }}
+                <span>{{ "token_recharge" | trans }}</span>
+            </a>
+        </div>
     </header>
 
     <div class="tkp-content">
@@ -139,5 +194,8 @@
             {% endif %}
         </div>
     </div>
+
+    {# Pied de page public officiel JS Brokers (la bascule de langue y est fonctionnelle via ?lang=). #}
+    {% include 'components/_public_footer.html.twig' with { lang: app.user.locale } %}
 </main>
 {% endblock %}
