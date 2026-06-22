@@ -6,6 +6,9 @@
 {{ parent() }}
 <style>
     /* Espace compte « Tokens » — charte JS Brokers (cobalt #0047AB). */
+    /* L'espace de travail impose globalement `body, html { height:100%; overflow:hidden }`
+       (interactive-menu.css) ; on le réactive ici sinon le bas de page est rogné. */
+    html, body { height: auto !important; overflow: auto !important; }
     .tkp-page { min-height: 100vh; background-color: #f3f3f3; }
     .tkp-topbar {
         display: flex; align-items: center; justify-content: space-between;

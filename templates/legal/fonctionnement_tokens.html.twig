@@ -52,9 +52,35 @@
     .cgu-lang a + a { border-left: 1px solid #dee2e6; }
     .cgu-lang a.is-active { background-color: #0047AB; color: #fff; }
 
+    /* La zone de contenu grandit pour pousser le pied de page en bas de fenêtre. */
+    .cgu-content { flex: 1 0 auto; }
+
+    /* ---------- Pied de page public réutilisé (même style que la vitrine) ---------- */
+    .public-footer { background-color: #fff; border-top: 1px solid #dee2e6; margin-top: 1rem; }
+    .public-footer__inner { max-width: 1140px; margin: 0 auto; padding: 2.5rem 1.5rem 1.5rem;
+        display: flex; flex-wrap: wrap; align-items: flex-start; gap: 1.5rem; }
+    .public-footer__brand { display: flex; align-items: center; gap: .75rem; flex: 1 1 280px; text-decoration: none; }
+    .public-footer__brand:hover { opacity: .85; }
+    .public-footer__brand img { border-radius: 8px; }
+    .public-footer__name { font-weight: 700; color: #0047AB; margin: 0; font-size: 1.05rem; }
+    .public-footer__tagline { color: #6c757d; margin: 0; font-size: .9rem; max-width: 360px; }
+    .public-footer__links { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; }
+    .public-footer__links a { display: inline-flex; align-items: center; min-height: 44px;
+        color: #495057; text-decoration: none; font-size: .92rem; font-weight: 600; }
+    .public-footer__links a:hover { color: #0047AB; }
+    .public-footer__links a:focus-visible { outline: 2px solid #0047AB; outline-offset: 2px; border-radius: 4px; }
+    .public-footer__credit { max-width: 1140px; margin: 0 auto; padding: 1rem 1.5rem;
+        border-top: 1px solid #dee2e6; text-align: center; color: #6c757d; font-size: .85rem; }
+    .public-lang { display: inline-flex; border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; }
+    .public-lang a { padding: .35rem .7rem; font-size: .85rem; font-weight: 600; color: #6c757d; text-decoration: none; background-color: #fff; }
+    .public-lang a + a { border-left: 1px solid #dee2e6; }
+    .public-lang a:hover { color: #0047AB; }
+    .public-lang a.is-active { background-color: #0047AB; color: #fff; }
+    .public-lang a:focus-visible { outline: 2px solid #0047AB; outline-offset: -2px; }
+
     @media (max-width: 575.98px) { .cgu-card { padding: 1.25rem; } }
     @media print {
-        .cgu-topbar, .cgu-back-row, .cgu-no-print { display: none !important; }
+        .cgu-topbar, .cgu-back-row, .cgu-no-print, .public-footer { display: none !important; }
         .cgu-page { background: #fff; padding-top: 0; }
         .cgu-card { border: none; box-shadow: none; padding: 0; }
     }
@@ -106,5 +132,7 @@
             {% include 'legal/_tokens_info_' ~ (lang|default('fr')) ~ '.html.twig' %}
         </article>
     </div>
+
+    {% include 'components/_public_footer.html.twig' with { lang: lang } %}
 </main>
 {% endblock %}
