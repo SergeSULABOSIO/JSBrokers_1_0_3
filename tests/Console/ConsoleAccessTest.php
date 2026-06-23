@@ -104,6 +104,7 @@ class ConsoleAccessTest extends WebTestCase
             '/console/entreprises',
             '/console/ventes',
             '/console/coupons',
+            '/console/taxes',
         ] as $url) {
             $this->client->request('GET', $url);
             $this->assertResponseIsSuccessful(sprintf('La page %s doit répondre 200 pour un agent.', $url));

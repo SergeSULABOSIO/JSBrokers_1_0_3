@@ -28,6 +28,10 @@
             <span class="cs-kpi-body"><span class="cs-kpi-val">{{ totals.count }}</span><span class="cs-kpi-lbl">Ventes</span></span></div>
         <div class="cs-kpi"><span class="cs-kpi-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('monnaie'), {height:'24px', width:'24px'}) }}</span>
             <span class="cs-kpi-body"><span class="cs-kpi-val">{{ totals.revenue|number_format(2, '.', ' ') }} $</span><span class="cs-kpi-lbl">Revenu</span></span></div>
+        <div class="cs-kpi"><span class="cs-kpi-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('revenu'), {height:'24px', width:'24px'}) }}</span>
+            <span class="cs-kpi-body"><span class="cs-kpi-val">{{ prix_ht(totals.revenue)|number_format(2, '.', ' ') }} $</span><span class="cs-kpi-lbl">Revenu HT</span></span></div>
+        <div class="cs-kpi"><span class="cs-kpi-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('taxe'), {height:'24px', width:'24px'}) }}</span>
+            <span class="cs-kpi-body"><span class="cs-kpi-val">{{ taxe_due(totals.revenue)|number_format(2, '.', ' ') }} $</span><span class="cs-kpi-lbl">Taxes</span></span></div>
         <div class="cs-kpi"><span class="cs-kpi-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('tranche'), {height:'24px', width:'24px'}) }}</span>
             <span class="cs-kpi-body"><span class="cs-kpi-val">{{ totals.tokens|number_format(0, ',', ' ') }}</span><span class="cs-kpi-lbl">Tokens vendus</span></span></div>
         <div class="cs-kpi"><span class="cs-kpi-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('offre'), {height:'24px', width:'24px'}) }}</span>
@@ -84,7 +88,7 @@
     <div class="cs-panel">
         {% if ventes.getTotalItemCount > 0 %}
             <table class="cs-table">
-                <thead><tr><th>Date</th><th>Référence</th><th>Acheteur</th><th>Paquet</th><th>Tokens</th><th>Montant</th><th>Coupon</th></tr></thead>
+                <thead><tr><th>Date</th><th>Référence</th><th>Acheteur</th><th>Paquet</th><th>Tokens</th><th>Montant</th><th>Revenu HT</th><th>Taxes</th><th>Coupon</th></tr></thead>
                 <tbody>
                 {% for v in ventes %}
                     <tr>
@@ -94,6 +98,8 @@
                         <td><span class="cs-badge cs-badge--cobalt">{{ v.pack|capitalize }}</span></td>
                         <td>{{ v.tokens|number_format(0, ',', ' ') }}</td>
                         <td>{{ v.montantUsd|number_format(2, '.', ' ') }} $</td>
+                        <td>{{ prix_ht(v.montantUsd)|number_format(2, '.', ' ') }} $</td>
+                        <td>{{ taxe_due(v.montantUsd)|number_format(2, '.', ' ') }} $</td>
                         <td>{% if v.couponCode %}{{ v.couponCode }} <small style="color:#137333;">(−{{ v.remiseUsd|number_format(2, '.', ' ') }} $)</small>{% else %}—{% endif %}</td>
                     </tr>
                 {% endfor %}

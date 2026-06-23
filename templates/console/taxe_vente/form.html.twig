@@ -1,0 +1,35 @@
+{% extends 'console/form.html.twig' %}
+
+{# Formulaire taxe sur les ventes : champs regroupés en sections (fieldsets) avec
+   légende à icône, sur le modèle du formulaire coupon (.cs-fieldset / .cs-legend).
+   Le thème de champ (icône incrustée via data-icon) est appliqué par le parent. #}
+{% block console_form_body %}
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('taxe'), {height:'16px', width:'16px'}) }}
+            La taxe
+        </legend>
+        {{ form_row(form.code) }}
+        {{ form_row(form.libelle) }}
+        {{ form_row(form.taux) }}
+    </fieldset>
+
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('autorite-fiscale'), {height:'16px', width:'16px'}) }}
+            Autorité fiscale
+        </legend>
+        <div class="row">
+            <div class="col-md">{{ form_row(form.autoriteNom) }}</div>
+            <div class="col-md">{{ form_row(form.autoriteAbreviation) }}</div>
+        </div>
+    </fieldset>
+
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('action:check'), {height:'16px', width:'16px'}) }}
+            Activation
+        </legend>
+        {{ form_row(form.actif) }}
+    </fieldset>
+{% endblock %}

@@ -3,7 +3,7 @@
 {% set geo = geo|default({}) %}
 {% if dernieresVentes.getTotalItemCount > 0 %}
     <table class="cs-table">
-        <thead><tr><th>Date</th><th>Acheteur</th><th>Localisation</th><th>Paquet</th><th>Montant</th></tr></thead>
+        <thead><tr><th>Date</th><th>Acheteur</th><th>Localisation</th><th>Paquet</th><th>Montant</th><th>Revenu HT</th><th>Taxes</th></tr></thead>
         <tbody>
         {% for v in dernieresVentes %}
             {% set g = geo[v.id]|default({}) %}
@@ -17,6 +17,8 @@
                 </td>
                 <td data-field="paquet"><span class="cs-badge cs-badge--cobalt">{{ v.pack|capitalize }}</span></td>
                 <td>{{ v.montantUsd|number_format(2, '.', ' ') }} $</td>
+                <td>{{ prix_ht(v.montantUsd)|number_format(2, '.', ' ') }} $</td>
+                <td>{{ taxe_due(v.montantUsd)|number_format(2, '.', ' ') }} $</td>
             </tr>
         {% endfor %}
         </tbody>

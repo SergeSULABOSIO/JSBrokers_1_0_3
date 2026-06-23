@@ -5,7 +5,9 @@
     { icon: 'client',       val: kpis.nbClients,     lbl: 'Clients' },
     { icon: 'entreprise',   val: kpis.nbEntreprises, lbl: 'Entreprises' },
     { icon: 'operation',    val: kpis.nbVentes,      lbl: 'Ventes de tokens' },
+    { icon: 'action:analyser', val: kpis.tauxConversion|number_format(1, ',', ' ') ~ ' %', lbl: 'Taux de conversion' },
     { icon: 'monnaie',      val: kpis.revenuUsd|number_format(2, '.', ' ') ~ ' $', lbl: 'Revenu total' },
+    { icon: 'revenu',       val: kpis.revenuHorsTaxe|number_format(2, '.', ' ') ~ ' $', lbl: 'Revenu hors taxe' },
     { icon: 'tranche',      val: kpis.tokensVendus|number_format(0, ',', ' '), lbl: 'Tokens vendus' },
     { icon: 'offre',        val: kpis.remisesUsd|number_format(2, '.', ' ') ~ ' $', lbl: 'Remises accordées' },
 ] %}

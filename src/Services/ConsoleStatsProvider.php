@@ -34,6 +34,7 @@ class ConsoleStatsProvider
         private TokenPurchaseRepository $purchaseRepository,
         private ChartBuilderInterface $chartBuilder,
         private ServiceGeographie $geographie,
+        private ServiceTaxesVente $taxesVente,
     ) {
     }
 
@@ -46,15 +47,24 @@ class ConsoleStatsProvider
     {
         $totals = $this->purchaseRepository->totals();
 
+        // Conversion Utilisateur → Client : part des comptes en mode payant
+        // (clients) sur l'ensemble des comptes « classiques » (gratuits + payants).
+        // Réutilise les compteurs déjà calculés ci-dessous (aucune requête en plus).
+        $nbUsers   = $this->utilisateurRepository->countRegularUsers();
+        $nbClients = $this->utilisateurRepository->countClients();
+        $base      = $nbUsers + $nbClients;
+
         return [
-            'nbAgents'      => count($this->utilisateurRepository->findAgents()),
-            'nbUsers'       => $this->utilisateurRepository->countRegularUsers(),
-            'nbClients'     => $this->utilisateurRepository->countClients(),
-            'nbEntreprises' => $this->entrepriseRepository->countAllGlobal(),
-            'nbVentes'      => $totals['count'],
-            'tokensVendus'  => $totals['tokens'],
-            'revenuUsd'     => $totals['revenue'],
-            'remisesUsd'    => $totals['remises'],
+            'nbAgents'        => count($this->utilisateurRepository->findAgents()),
+            'nbUsers'         => $nbUsers,
+            'nbClients'       => $nbClients,
+            'nbEntreprises'   => $this->entrepriseRepository->countAllGlobal(),
+            'nbVentes'        => $totals['count'],
+            'tokensVendus'    => $totals['tokens'],
+            'revenuUsd'       => $totals['revenue'],
+            'remisesUsd'      => $totals['remises'],
+            'tauxConversion'  => $base > 0 ? round($nbClients / $base * 100, 1) : 0.0,
+            'revenuHorsTaxe'  => $this->taxesVente->revenuHorsTaxe($totals['revenue']),
         ];
     }
 
