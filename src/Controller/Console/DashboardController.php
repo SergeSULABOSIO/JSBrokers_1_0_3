@@ -297,20 +297,25 @@ class DashboardController extends AbstractConsoleController
     }
 
     /**
-     * Fiscalité JS Brokers : taxes actives ventilées sur le revenu total des
-     * ventes (même assiette que le KPI « Revenu total »), avec synthèse TTC /
-     * taxes / hors taxe. Bloc statique, sans pagination.
+     * Fiscalité JS Brokers : taxes actives ventilées sur le revenu de l'année
+     * civile en cours (même assiette que les KPIs du tableau de bord), avec
+     * synthèse TTC / taxes / hors taxe. Bloc statique, sans pagination.
      */
     #[Route('/dashboard/block/taxes', name: 'console.dashboard.block_taxes', methods: ['GET'])]
     public function blockTaxes(): Response
     {
-        $revenu = $this->purchaseRepository->totals()['revenue'];
+        $annee  = (int) date('Y');
+        $revenu = $this->purchaseRepository->totals([
+            'from' => sprintf('%d-01-01', $annee),
+            'to'   => sprintf('%d-12-31', $annee),
+        ])['revenue'];
 
         return $this->render('console/dashboard/_block_taxes.html.twig', [
             'taxes'          => $this->taxesVente->ventilation($revenu),
             'revenuTotal'    => $revenu,
             'revenuHorsTaxe' => $this->taxesVente->revenuHorsTaxe($revenu),
             'montantTaxes'   => $this->taxesVente->montantTaxes($revenu),
+            'annee'          => $annee,
         ]);
     }
 }

@@ -41,30 +41,44 @@ class ConsoleStatsProvider
     /**
      * KPIs chiffrés du tableau de bord.
      *
-     * @return array<string, int|float>
+     * Les volumes d'affaires (ventes, tokens, revenu, remises, revenu HT, taxes)
+     * portent sur l'ANNÉE CIVILE EN COURS. Les effectifs (collaborateurs,
+     * utilisateurs, clients, entreprises) et le taux de conversion restent des
+     * indicateurs cumulés (états actuels, non datés).
+     *
+     * @return array<string, mixed>
      */
     public function getKpis(): array
     {
-        $totals = $this->purchaseRepository->totals();
+        $annee  = (int) date('Y');
+        $bornes = ['from' => sprintf('%d-01-01', $annee), 'to' => sprintf('%d-12-31', $annee)];
+        $totals = $this->purchaseRepository->totals($bornes);
 
-        // Conversion Utilisateur → Client : part des comptes en mode payant
-        // (clients) sur l'ensemble des comptes « classiques » (gratuits + payants).
-        // Réutilise les compteurs déjà calculés ci-dessous (aucune requête en plus).
+        // Conversion Utilisateur → Client (cumulée) : part des comptes en mode
+        // payant (clients) parmi tous les comptes « classiques » (gratuits +
+        // payants). Cohérente avec les compteurs Utilisateurs / Clients affichés.
         $nbUsers   = $this->utilisateurRepository->countRegularUsers();
         $nbClients = $this->utilisateurRepository->countClients();
         $base      = $nbUsers + $nbClients;
 
         return [
+            'annee'           => $annee,
+            // Effectifs cumulés (états actuels).
             'nbAgents'        => count($this->utilisateurRepository->findAgents()),
             'nbUsers'         => $nbUsers,
             'nbClients'       => $nbClients,
             'nbEntreprises'   => $this->entrepriseRepository->countAllGlobal(),
+            // Volumes d'affaires de l'année en cours.
             'nbVentes'        => $totals['count'],
             'tokensVendus'    => $totals['tokens'],
             'revenuUsd'       => $totals['revenue'],
             'remisesUsd'      => $totals['remises'],
+            // Conversion cumulée (cohérente avec les compteurs ci-dessus).
             'tauxConversion'  => $base > 0 ? round($nbClients / $base * 100, 1) : 0.0,
             'revenuHorsTaxe'  => $this->taxesVente->revenuHorsTaxe($totals['revenue']),
+            // Une entrée par taxe active : montant représenté sur le revenu de l'année
+            // (alimente une carte KPI dédiée par taxe).
+            'taxes'           => $this->taxesVente->ventilation($totals['revenue']),
         ];
     }
 
