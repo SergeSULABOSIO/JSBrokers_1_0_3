@@ -1,7 +1,9 @@
+{% set pack = plan_tarifaire().pack('intermediaire') %}
+{% if pack %}
 <article class="pp-card" aria-labelledby="pp-inter-name">
     <header class="pp-head">
         <span class="pp-name" id="pp-inter-name">{{ "security_pricing_intermediaire" | trans }}</span>
-        <p class="pp-price">{{ "security_pricing_intermediaire_price" | trans }}</p>
+        <p class="pp-price">{{ "security_pricing_intermediaire_price" | trans({'%price%': pack.price}) }}</p>
         <span class="pp-badge">{{ "security_pricing_intermediaire_mode" | trans }}</span>
         <p class="pp-profil">{{ "security_pricing_intermediaire_profil" | trans }}</p>
     </header>
@@ -23,7 +25,7 @@
         <li class="pp-feature">
             {{ ux_icon('mdi:check-circle', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
             <span>{{ "security_pricing_intermediaire_option_volume" | trans }}
-                <strong class="pp-value">{{ "security_pricing_intermediaire_option_volume_value" | trans }}</strong></span>
+                <strong class="pp-value">{{ pack.tokens|number_format(0, '.', (lang|default(app.request.locale) == 'en' ? ',' : ' ')) }}</strong></span>
         </li>
         <li class="pp-feature">
             {{ ux_icon('mdi:check-circle', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
@@ -56,3 +58,4 @@
         </a>
     </div>
 </article>
+{% endif %}

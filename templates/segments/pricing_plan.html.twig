@@ -1,7 +1,10 @@
 <section id="pricing_plan" class="public-section">
     <div class="public-section__head">
         <h2>{{ "security_pricing_plan" | trans }}</h2>
-        <p>{{ "security_pricing_plan_description" | trans | raw }}</p>
+        <p>{{ "security_pricing_plan_description" | trans({
+            '%allowance%': plan_tarifaire().freeAllowance|number_format(0, '.', (lang|default(app.request.locale) == 'en' ? ',' : ' ')),
+            '%hours%': plan_tarifaire().freeWindowHours,
+        }) | raw }}</p>
     </div>
     <div class="row row-cols-1 row-cols-md-3 g-4">
         <div class="col">

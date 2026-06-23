@@ -22,12 +22,12 @@
         <li class="pp-feature">
             {{ ux_icon('mdi:check-circle', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
             <span>{{ "security_pricing_basic_option_volume" | trans }}
-                <strong class="pp-value">{{ "security_pricing_basic_option_volume_value" | trans }}</strong></span>
+                <strong class="pp-value">{{ plan_tarifaire().freeAllowance|number_format(0, '.', (lang|default(app.request.locale) == 'en' ? ',' : ' ')) }}</strong></span>
         </li>
         <li class="pp-feature">
             {{ ux_icon('mdi:check-circle', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
             <span>{{ "security_pricing_basic_option_entreprise" | trans }}
-                <strong class="pp-value">{{ "security_pricing_basic_option_entreprise_value" | trans }}</strong></span>
+                <strong class="pp-value">{{ "security_pricing_basic_option_entreprise_value" | trans({'%hours%': plan_tarifaire().freeWindowHours}) }}</strong></span>
         </li>
         <li class="pp-feature">
             {{ ux_icon('mdi:check-circle', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
