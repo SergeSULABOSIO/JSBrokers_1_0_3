@@ -48,13 +48,14 @@ final class TokenPricing
     public const FREE_WINDOW_HOURS = 8;
 
     /**
-     * Paquets prépayés cumulables. Clé = identifiant technique du paquet.
+     * Paquets prépayés cumulables. Clé = identifiant technique (stable) du paquet.
+     *  - label  : nom d'affichage du paquet (repli ucfirst(clé) si absent) ;
      *  - tokens : nombre de tokens crédités ;
-     *  - price  : prix en USD.
+     *  - price  : prix de vente TTC en USD.
      */
     public const PACKS = [
-        'intermediaire' => ['tokens' => 10000, 'price' => 10],
-        'professionnel' => ['tokens' => 50000, 'price' => 40],
+        'intermediaire' => ['label' => 'Intermédiaire', 'tokens' => 10000, 'price' => 10],
+        'professionnel' => ['label' => 'Professionnel', 'tokens' => 50000, 'price' => 40],
     ];
 
     /**

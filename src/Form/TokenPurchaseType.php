@@ -18,10 +18,13 @@ class TokenPurchaseType extends AbstractType
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        // Libellés des paquets : « Intermédiaire — 10 000 tokens (10 $) ».
+        // Libellés des paquets : « Intermédiaire — 10 000 tokens (10 $) ». Le nom
+        // d'affichage est le `label` éditable du paquet, avec repli sur ucfirst(clé)
+        // pour les paquets historiques qui n'en ont pas.
         $choices = [];
         foreach ($this->parametres->packs() as $key => $pack) {
-            $label = ucfirst($key) . ' — ' . number_format($pack['tokens'], 0, ',', ' ')
+            $nom = $pack['label'] ?? ucfirst($key);
+            $label = $nom . ' — ' . number_format($pack['tokens'], 0, ',', ' ')
                 . ' tokens (' . $pack['price'] . ' $)';
             $choices[$label] = $key;
         }
