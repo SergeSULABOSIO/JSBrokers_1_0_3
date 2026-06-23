@@ -124,12 +124,12 @@ class EntrepriseRepository extends ServiceEntityRepository
      * NB : distinct de getNBEntreprises()/paginateUtilisateur(), volontairement
      * scoppés à l'utilisateur courant.
      */
-    public function paginateAll(int $page): PaginationInterface
+    public function paginateAll(int $page, int $perPage = 12): PaginationInterface
     {
         return $this->paginator->paginate(
             $this->createQueryBuilder('e')->orderBy('e.id', 'DESC'),
             $page,
-            12,
+            $perPage,
         );
     }
 

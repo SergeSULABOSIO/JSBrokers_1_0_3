@@ -1,0 +1,39 @@
+{% extends 'console/form.html.twig' %}
+
+{# Formulaire du plan tarifaire : champs regroupés en sections (fieldsets) à légende
+   illustrée, sur le même modèle que la création/édition d'un coupon
+   (.cs-fieldset / .cs-legend). Le thème de champ (icône incrustée via data-icon)
+   est appliqué par le parent. #}
+{% block console_form_body %}
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('offre'), {height:'16px', width:'16px'}) }}
+            Offre gratuite
+        </legend>
+        <div class="row">
+            <div class="col-md">{{ form_row(form.freeAllowance) }}</div>
+            <div class="col-md">{{ form_row(form.freeWindowHours) }}</div>
+        </div>
+    </fieldset>
+
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('tranche'), {height:'16px', width:'16px'}) }}
+            Métrage &amp; conversion
+        </legend>
+        <div class="row">
+            <div class="col-md">{{ form_row(form.readWeight) }}</div>
+            <div class="col-md">{{ form_row(form.defaultWriteWeight) }}</div>
+        </div>
+        {{ form_row(form.usdPerToken) }}
+    </fieldset>
+
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('action:settings'), {height:'16px', width:'16px'}) }}
+            Paquets &amp; poids personnalisés (JSON)
+        </legend>
+        {{ form_row(form.packsJson) }}
+        {{ form_row(form.writeWeightsJson) }}
+    </fieldset>
+{% endblock %}

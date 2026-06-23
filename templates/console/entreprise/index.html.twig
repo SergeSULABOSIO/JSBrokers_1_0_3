@@ -6,15 +6,31 @@
 <div class="cs-panel">
     {% if entreprises.getTotalItemCount > 0 %}
         <table class="cs-table">
-            <thead><tr><th>Entreprise</th><th>Propriétaire</th><th>Téléphone</th><th>Collaborateurs</th><th>Créée le</th>
+            <thead><tr><th>Entreprise</th><th>Propriétaire</th><th>Téléphone</th><th>Collaborateurs</th>
+                <th style="text-align:right;">Consommation</th><th style="text-align:right;">Solde restant</th><th>Créée le</th>
                 {% if is_granted('ROLE_SUPER_ADMIN') %}<th style="text-align:right;">Actions</th>{% endif %}</tr></thead>
             <tbody>
             {% for e in entreprises %}
+                {% set solde = e.utilisateur ? e.utilisateur.totalTokens : null %}
                 <tr>
                     <td>{{ ux_icon(resolve_icon_name('entreprise'), {height:'18px', width:'18px'}) }} {{ e.nom }}</td>
                     <td>{{ e.utilisateur ? e.utilisateur.nom : '—' }}</td>
                     <td>{{ e.telephone ?: '—' }}</td>
                     <td>{{ e.invites|length }}</td>
+                    <td style="text-align:right;">
+                        {{ (consommations[e.id] ?? 0)|number_format(0, ',', ' ') }}
+                        <small style="color:#6c757d;">jetons</small>
+                    </td>
+                    <td style="text-align:right;">
+                        {% if solde is null %}
+                            —
+                        {% else %}
+                            <span class="cs-badge {{ solde > 0 ? 'cs-badge--ok' : 'cs-badge--muted' }}"
+                                  title="Solde du propriétaire (gratuit + prépayé), partagé entre ses entreprises">
+                                {{ solde|number_format(0, ',', ' ') }} jetons
+                            </span>
+                        {% endif %}
+                    </td>
                     <td>{{ e.createdAt ? e.createdAt|format_datetime('medium', 'none', locale: app.user.locale) : '—' }}</td>
                     {% if is_granted('ROLE_SUPER_ADMIN') %}
                         <td style="text-align:right;">

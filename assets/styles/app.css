@@ -41,6 +41,20 @@ a:active {
   background: #555;
 }
 
+/* ============================================================
+   Bascule de langue FR/EN unifiée (.cs-lang) — modèle de la barre de
+   titre Console, réutilisée partout via templates/components/_lang_switch.html.twig.
+   Conçue pour les fonds clairs (texte gris neutre, actif cobalt léger).
+   ============================================================ */
+.cs-lang { display: inline-flex; align-items: center; gap: .15rem; }
+.cs-lang a {
+    display: inline-flex; align-items: center; gap: .25rem; padding: .25rem .4rem;
+    border-radius: 6px; text-decoration: none; color: #6c757d; font-size: .78rem; font-weight: 700;
+}
+.cs-lang a.is-active { background-color: #eef2fb; color: #0047AB; }
+.cs-lang svg { width: 18px; height: 13px; border-radius: 2px; }
+.cs-lang a:focus-visible { outline: 2px solid #0047AB; outline-offset: 2px; }
+
 /* --- 1.3 Classes utilitaires génériques --- */
 .sensible:hover {
     background-color: #ececec;

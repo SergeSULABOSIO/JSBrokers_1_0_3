@@ -1,40 +1,79 @@
 {% extends 'console/base.html.twig' %}
 
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    /* Barre de filtres : grille alignée en bas, libellés sur une seule ligne
+       (ellipsis) pour éviter les décalages de hauteur, champs préfixés d'icône. */
+    .cs-filterbar { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: .85rem 1rem; align-items: end; }
+    .cs-filterbar .cs-filter { display: flex; flex-direction: column; min-width: 0; }
+    .cs-filterbar .form-label { margin: 0 0 .35rem; font-size: .8rem; font-weight: 600; color: #6c757d;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* Les actions occupent leur propre ligne pleine largeur, alignées à droite :
+       garantit qu'aucun bouton ne déborde de sa cellule quelle que soit la largeur,
+       et place l'action primaire en bas à droite (convention). */
+    .cs-filterbar .cs-filter-actions { grid-column: 1 / -1; flex-direction: row; justify-content: flex-end; gap: .5rem; }
+    /* inline-flex : cale l'icône SVG et le texte sur la même ligne, sans hauteur
+       parasite (jambage du baseline) qui ferait dépasser le bouton des champs. */
+    .cs-filterbar .cs-filter-actions .btn { display: inline-flex; align-items: center; white-space: nowrap; }
+</style>
+{% endblock %}
+
 {% block console_subtitle %}<p>Suivi et filtrage des achats de paquets de tokens.</p>{% endblock %}
 
 {% block console_body %}
     {# ── Volumes (sur le périmètre filtré) ── #}
     <div class="cs-kpis" style="margin-bottom:1.25rem;">
-        <div class="cs-kpi"><span class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('operation'), {height:'24px', width:'24px'}) }}</span>
-            <span><span class="cs-kpi-val">{{ totals.count }}</span><span class="cs-kpi-lbl">Ventes</span></span></div>
-        <div class="cs-kpi"><span class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('monnaie'), {height:'24px', width:'24px'}) }}</span>
-            <span><span class="cs-kpi-val">{{ totals.revenue|number_format(2, '.', ' ') }} $</span><span class="cs-kpi-lbl">Revenu</span></span></div>
-        <div class="cs-kpi"><span class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('tranche'), {height:'24px', width:'24px'}) }}</span>
-            <span><span class="cs-kpi-val">{{ totals.tokens|number_format(0, ',', ' ') }}</span><span class="cs-kpi-lbl">Tokens vendus</span></span></div>
-        <div class="cs-kpi"><span class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('offre'), {height:'24px', width:'24px'}) }}</span>
-            <span><span class="cs-kpi-val">{{ totals.remises|number_format(2, '.', ' ') }} $</span><span class="cs-kpi-lbl">Remises</span></span></div>
+        <div class="cs-kpi"><span class="cs-kpi-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('operation'), {height:'24px', width:'24px'}) }}</span>
+            <span class="cs-kpi-body"><span class="cs-kpi-val">{{ totals.count }}</span><span class="cs-kpi-lbl">Ventes</span></span></div>
+        <div class="cs-kpi"><span class="cs-kpi-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('monnaie'), {height:'24px', width:'24px'}) }}</span>
+            <span class="cs-kpi-body"><span class="cs-kpi-val">{{ totals.revenue|number_format(2, '.', ' ') }} $</span><span class="cs-kpi-lbl">Revenu</span></span></div>
+        <div class="cs-kpi"><span class="cs-kpi-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('tranche'), {height:'24px', width:'24px'}) }}</span>
+            <span class="cs-kpi-body"><span class="cs-kpi-val">{{ totals.tokens|number_format(0, ',', ' ') }}</span><span class="cs-kpi-lbl">Tokens vendus</span></span></div>
+        <div class="cs-kpi"><span class="cs-kpi-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('offre'), {height:'24px', width:'24px'}) }}</span>
+            <span class="cs-kpi-body"><span class="cs-kpi-val">{{ totals.remises|number_format(2, '.', ' ') }} $</span><span class="cs-kpi-lbl">Remises</span></span></div>
     </div>
 
     {# ── Filtres (formulaire GET, sans JS) ── #}
     <div class="cs-panel" style="margin-bottom:1.25rem;">
-        <form method="get" data-action="submit->top-progress#show"
-              style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.75rem;align-items:end;">
-            <div><label class="form-label">Du</label><input type="date" name="from" value="{{ filtres.from }}" class="form-control"></div>
-            <div><label class="form-label">Au</label><input type="date" name="to" value="{{ filtres.to }}" class="form-control"></div>
-            <div><label class="form-label">Paquet</label>
-                <select name="pack" class="form-select">
-                    <option value="">Tous</option>
-                    {% for p in packs %}<option value="{{ p }}" {{ filtres.pack == p ? 'selected' }}>{{ p|capitalize }}</option>{% endfor %}
-                </select>
+        <form method="get" data-action="submit->top-progress#show" class="cs-filterbar">
+            <div class="cs-filter"><label class="form-label" for="f-from">Du</label>
+                <div class="cs-field">
+                    <span class="cs-field-icon">{{ ux_icon(resolve_icon_name('action:calendar'), {height:'18px', width:'18px'}) }}</span>
+                    <input id="f-from" type="date" name="from" value="{{ filtres.from }}" class="form-control" placeholder="Date de début">
+                </div>
             </div>
-            <div><label class="form-label">Statut</label>
-                <select name="status" class="form-select">
-                    <option value="">Tous</option>
-                    {% for s in statuses %}<option value="{{ s }}" {{ filtres.status == s ? 'selected' }}>{{ s }}</option>{% endfor %}
-                </select>
+            <div class="cs-filter"><label class="form-label" for="f-to">Au</label>
+                <div class="cs-field">
+                    <span class="cs-field-icon">{{ ux_icon(resolve_icon_name('action:calendar'), {height:'18px', width:'18px'}) }}</span>
+                    <input id="f-to" type="date" name="to" value="{{ filtres.to }}" class="form-control" placeholder="Date de fin">
+                </div>
             </div>
-            <div><label class="form-label">Recherche (nom, e-mail, réf.)</label><input type="text" name="q" value="{{ filtres.q }}" class="form-control" placeholder="…"></div>
-            <div style="display:flex;gap:.5rem;">
+            <div class="cs-filter"><label class="form-label" for="f-pack">Paquet</label>
+                <div class="cs-field">
+                    <span class="cs-field-icon">{{ ux_icon(resolve_icon_name('offre'), {height:'18px', width:'18px'}) }}</span>
+                    <select id="f-pack" name="pack" class="form-select">
+                        <option value="">Tous</option>
+                        {% for p in packs %}<option value="{{ p }}" {{ filtres.pack == p ? 'selected' }}>{{ p|capitalize }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="cs-filter"><label class="form-label" for="f-status">Statut</label>
+                <div class="cs-field">
+                    <span class="cs-field-icon">{{ ux_icon(resolve_icon_name('action:filter'), {height:'18px', width:'18px'}) }}</span>
+                    <select id="f-status" name="status" class="form-select">
+                        <option value="">Tous</option>
+                        {% for s in statuses %}<option value="{{ s }}" {{ filtres.status == s ? 'selected' }}>{{ s }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="cs-filter"><label class="form-label" for="f-q" title="Recherche (nom, e-mail, réf.)">Recherche</label>
+                <div class="cs-field">
+                    <span class="cs-field-icon">{{ ux_icon(resolve_icon_name('action:search'), {height:'18px', width:'18px'}) }}</span>
+                    <input id="f-q" type="text" name="q" value="{{ filtres.q }}" class="form-control" placeholder="Nom, e-mail, réf.…">
+                </div>
+            </div>
+            <div class="cs-filter cs-filter-actions">
                 <button type="submit" class="btn btn-cobalt">{{ ux_icon(resolve_icon_name('action:filter'), {height:'18px', width:'18px'}) }}<span class="ms-1">Filtrer</span></button>
                 <a href="{{ path('console.vente.index') }}" class="btn btn-outline-secondary" data-action="click->top-progress#show">Réinitialiser</a>
             </div>

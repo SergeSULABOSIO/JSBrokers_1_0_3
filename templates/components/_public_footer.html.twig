@@ -4,7 +4,6 @@
    Charte : cobalt #0047AB, neutres Bootstrap. Styles dans _home_styles.html.twig.
    ============================================================ #}
 {% set lang = lang|default(app.request.locale|default('fr')) %}
-{% import 'components/_lang_flag.html.twig' as flags %}
 
 {# Réutilisable hors vitrine : si l'on n'est pas déjà sur la home, les ancres de
    section deviennent des liens absolus vers le portail (`/?lang=…#section`) pour
@@ -39,22 +38,10 @@
             <a href="{{ path('app_terms') }}" data-action="click->top-progress#show">{{ "terms_link" | trans }}</a>
         </nav>
 
-        {# Chaque bascule recharge la page courante dans l'autre langue (navigation
-           serveur) → barre de progression du haut (top-progress#show) pour le feedback.
-           Le contrôleur top-progress enveloppe ce pied de page sur toutes les pages où
-           il est inclus (vitrine, espace tokens, pages légales). #}
-        <span class="public-lang" role="group" aria-label="Langue / Language">
-            <a href="{{ path(switchRoute, switchParams|merge({'lang': 'fr'})) }}"
-               class="{{ lang == 'fr' ? 'is-active' : '' }}"
-               title="Français" lang="fr"
-               data-action="click->top-progress#show"
-               {% if lang == 'fr' %}aria-current="true"{% endif %}>{{ flags.fr() }}<span class="public-lang__code">FR</span></a>
-            <a href="{{ path(switchRoute, switchParams|merge({'lang': 'en'})) }}"
-               class="{{ lang == 'en' ? 'is-active' : '' }}"
-               title="English" lang="en"
-               data-action="click->top-progress#show"
-               {% if lang == 'en' %}aria-current="true"{% endif %}>{{ flags.uk('lang-foot') }}<span class="public-lang__code">EN</span></a>
-        </span>
+        {# Bascule de langue unifiée : recharge la page courante dans l'autre langue
+           (navigation serveur) → barre de progression du haut (top-progress#show).
+           uid distinct de la topbar (lang-foot) car les deux coexistent sur la home. #}
+        {{ include('components/_lang_switch.html.twig', {current: lang, route: switchRoute, params: switchParams, uid: 'lang-foot'}) }}
     </div>
 
     <p class="public-footer__credit">{{ "base_base_de_page" | trans }}</p>

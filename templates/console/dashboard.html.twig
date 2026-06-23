@@ -3,58 +3,140 @@
 {% block console_subtitle %}<p>Vue d'ensemble de la plateforme JS Brokers : comptes, ventes et revenu.</p>{% endblock %}
 
 {% block console_body %}
-    {% set kpiCards = [
-        { icon: 'action:role',  val: kpis.nbAgents,      lbl: 'Collaborateurs JS Brokers' },
-        { icon: 'utilisateur',  val: kpis.nbUsers,       lbl: 'Utilisateurs' },
-        { icon: 'client',       val: kpis.nbClients,     lbl: 'Clients' },
-        { icon: 'entreprise',   val: kpis.nbEntreprises, lbl: 'Entreprises' },
-        { icon: 'operation',    val: kpis.nbVentes,      lbl: 'Ventes de tokens' },
-        { icon: 'monnaie',      val: kpis.revenuUsd|number_format(2, '.', ' ') ~ ' $', lbl: 'Revenu total' },
-        { icon: 'tranche',      val: kpis.tokensVendus|number_format(0, ',', ' '), lbl: 'Tokens vendus' },
-        { icon: 'offre',        val: kpis.remisesUsd|number_format(2, '.', ' ') ~ ' $', lbl: 'Remises accordées' },
-    ] %}
-    <div class="cs-kpis">
-        {% for c in kpiCards %}
-            <div class="cs-kpi">
-                <span class="cs-kpi-icon">{{ ux_icon(resolve_icon_name(c.icon), {height: '24px', width: '24px'}) }}</span>
-                <span>
-                    <span class="cs-kpi-val">{{ c.val }}</span>
-                    <span class="cs-kpi-lbl">{{ c.lbl }}</span>
-                </span>
+    {# ── Colonne centrale unique : pile de blocs pliables, un par ligne ──
+       Même comportement que le tableau de bord de l'espace de travail
+       courtiers : chaque bloc est une carte <details> repliable au clic,
+       sensible au survol (db-dashboard-block), chargée à la demande puis
+       rafraîchie toutes les 3 minutes. ── #}
+    <div class="cs-db">
+
+        {# ── Indicateurs de la plateforme : sans cadre, rendus dès le chargement
+             (toujours visibles) et rafraîchis silencieusement toutes les 3 min. ── #}
+        <div class="mb-3"
+             data-controller="lazy-block"
+             data-lazy-block-url-value="{{ path('console.dashboard.block_kpis') }}"
+             data-lazy-block-interval-value="180000"
+             data-lazy-block-skip-initial-value="true">
+            {{ include('console/dashboard/_block_kpis.html.twig') }}
+        </div>
+
+        {# ── Revenu des ventes : deux vues (par mois / par paquet) dans un
+             bloc unique avec bascule, sur le modèle du bloc « Production »
+             du tableau de bord courtiers. ── #}
+        <details open class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block"
+                 data-controller="chart-modes" data-chart-modes-active-value="mois">
+            <summary class="card-header border-0 bg-white py-2 px-3">
+                <div class="d-flex align-items-center gap-2">
+                    {{ ux_icon('mdi:chart-box-outline', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
+                    <span class="small fw-semibold" style="color:#0047AB;">Revenu des ventes</span>
+                    <small id="cs-db-revenue-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
+                    {{ ux_icon('mdi:chevron-down', {class: 'db-block-chevron ms-auto', style: 'width:15px;height:15px;color:#6c757d;'}) }}
+                </div>
+            </summary>
+            <div class="px-3 pt-2 pb-2 bg-white border-bottom d-flex align-items-center gap-2">
+                <div class="db-prod-tabs">
+                    <button type="button" class="db-task-toggle active" data-mode="mois"
+                            data-chart-modes-target="tab" data-action="chart-modes#switch"
+                            aria-pressed="true" title="Revenu par mois">
+                        {{ ux_icon('mdi:chart-bar', {style: 'width:12px;height:12px;'}) }}
+                        Par mois
+                    </button>
+                    <button type="button" class="db-task-toggle" data-mode="pack"
+                            data-chart-modes-target="tab" data-action="chart-modes#switch"
+                            aria-pressed="false" title="Répartition par paquet">
+                        {{ ux_icon('mdi:chart-pie', {style: 'width:12px;height:12px;'}) }}
+                        Par paquet
+                    </button>
+                    <button type="button" class="db-task-toggle" data-mode="pays"
+                            data-chart-modes-target="tab" data-action="chart-modes#switch"
+                            aria-pressed="false" title="Revenu par pays">
+                        {{ ux_icon('mdi:earth', {style: 'width:12px;height:12px;'}) }}
+                        Par pays
+                    </button>
+                </div>
             </div>
-        {% endfor %}
-    </div>
+            <div class="card-body p-3"
+                 data-controller="lazy-block"
+                 data-lazy-block-url-value="{{ path('console.dashboard.block_revenue') }}"
+                 data-lazy-block-interval-value="180000"
+                 data-lazy-block-status-id-value="cs-db-revenue-update">
+                <div class="db-skeleton-block" style="height:300px;"></div>
+            </div>
+        </details>
 
-    <div class="cs-panel" style="margin-top:1.25rem;">
-        <h2 style="font-size:1.05rem;font-weight:700;color:#212529;margin:0 0 1rem;">{{ chartVentesMois.titre }}</h2>
-        {{ render_chart(chartVentesMois.chart) }}
-    </div>
+        {# ── Dernières ventes (recherche + rafraîchissement du fragment) ──
+             Fermé par défaut : ni chargement ni rafraîchissement tant que le
+             bloc n'est pas ouvert (économie de bande passante). ── #}
+        <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
+            <summary class="card-header border-0 bg-white py-2 px-3">
+                <div class="d-flex align-items-center gap-2">
+                    {{ ux_icon('mdi:cash-multiple', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
+                    <span class="small fw-semibold" style="color:#0047AB;">Dernières ventes</span>
+                    <small id="cs-db-ventes-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
+                    <a href="{{ path('console.vente.index') }}" class="db-task-new-btn ms-auto"
+                       onclick="event.stopPropagation();"
+                       data-action="click->top-progress#show"
+                       data-meta-tip="Voir toutes les ventes"
+                       aria-label="Voir toutes les ventes">
+                        {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
+                    </a>
+                    {{ ux_icon('mdi:chevron-down', {class: 'db-block-chevron', style: 'width:15px;height:15px;color:#6c757d;'}) }}
+                </div>
+            </summary>
+            <div class="card-body p-0"
+                 data-controller="lazy-block"
+                 data-lazy-block-url-value="{{ path('console.dashboard.block_ventes') }}">
+                <div class="db-skeleton-block m-3" style="height:140px;"></div>
+            </div>
+        </details>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.25rem;margin-top:1.25rem;">
-        <div class="cs-panel">
-            <h2 style="font-size:1.05rem;font-weight:700;color:#212529;margin:0 0 1rem;">{{ chartVentesPack.titre }}</h2>
-            {{ render_chart(chartVentesPack.chart) }}
-        </div>
-        <div class="cs-panel">
-            <h2 style="font-size:1.05rem;font-weight:700;color:#212529;margin:0 0 1rem;">Dernières ventes</h2>
-            {% if dernieresVentes.getTotalItemCount > 0 %}
-                <table class="cs-table">
-                    <thead><tr><th>Date</th><th>Acheteur</th><th>Paquet</th><th>Montant</th></tr></thead>
-                    <tbody>
-                    {% for v in dernieresVentes %}
-                        <tr>
-                            <td>{{ v.createdAt|format_datetime('medium', 'short', locale: app.user.locale) }}</td>
-                            <td>{{ v.utilisateur ? v.utilisateur.nom : '—' }}</td>
-                            <td><span class="cs-badge cs-badge--cobalt">{{ v.pack|capitalize }}</span></td>
-                            <td>{{ v.montantUsd|number_format(2, '.', ' ') }} $</td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-            {% else %}
-                <div class="cs-empty">Aucune vente enregistrée pour l'instant.</div>
-            {% endif %}
-            <p style="margin:1rem 0 0;"><a href="{{ path('console.vente.index') }}" data-action="click->top-progress#show" style="color:#0047AB;font-weight:600;text-decoration:none;">Voir toutes les ventes →</a></p>
-        </div>
+        {# ── Dernières entreprises créées (fermé par défaut) ── #}
+        <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
+            <summary class="card-header border-0 bg-white py-2 px-3">
+                <div class="d-flex align-items-center gap-2">
+                    {{ ux_icon('mdi:office-building-outline', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
+                    <span class="small fw-semibold" style="color:#0047AB;">Dernières entreprises créées</span>
+                    <small id="cs-db-entreprises-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
+                    <a href="{{ path('console.entreprise.index') }}" class="db-task-new-btn ms-auto"
+                       onclick="event.stopPropagation();"
+                       data-action="click->top-progress#show"
+                       data-meta-tip="Voir toutes les entreprises"
+                       aria-label="Voir toutes les entreprises">
+                        {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
+                    </a>
+                    {{ ux_icon('mdi:chevron-down', {class: 'db-block-chevron', style: 'width:15px;height:15px;color:#6c757d;'}) }}
+                </div>
+            </summary>
+            <div class="card-body p-0"
+                 data-controller="lazy-block"
+                 data-lazy-block-url-value="{{ path('console.dashboard.block_entreprises') }}">
+                <div class="db-skeleton-block m-3" style="height:140px;"></div>
+            </div>
+        </details>
+
+        {# ── Derniers utilisateurs créés (fermé par défaut) ── #}
+        <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
+            <summary class="card-header border-0 bg-white py-2 px-3">
+                <div class="d-flex align-items-center gap-2">
+                    {{ ux_icon('mdi:account-multiple-outline', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
+                    <span class="small fw-semibold" style="color:#0047AB;">Derniers utilisateurs créés</span>
+                    <small id="cs-db-utilisateurs-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
+                    <a href="{{ path('console.utilisateur.index') }}" class="db-task-new-btn ms-auto"
+                       onclick="event.stopPropagation();"
+                       data-action="click->top-progress#show"
+                       data-meta-tip="Voir tous les utilisateurs"
+                       aria-label="Voir tous les utilisateurs">
+                        {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
+                    </a>
+                    {{ ux_icon('mdi:chevron-down', {class: 'db-block-chevron', style: 'width:15px;height:15px;color:#6c757d;'}) }}
+                </div>
+            </summary>
+            <div class="card-body p-0"
+                 data-controller="lazy-block"
+                 data-lazy-block-url-value="{{ path('console.dashboard.block_utilisateurs') }}">
+                <div class="db-skeleton-block m-3" style="height:140px;"></div>
+            </div>
+        </details>
+
     </div>
 {% endblock %}

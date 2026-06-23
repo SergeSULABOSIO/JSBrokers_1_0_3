@@ -43,7 +43,14 @@ class CouponController extends AbstractConsoleController
         $coupon->setDateDebut(new \DateTimeImmutable('today'));
         $coupon->setDateFin(new \DateTimeImmutable('today +1 month'));
 
-        return $this->traiter($coupon, $request, 'Nouveau coupon', 'Créer le coupon', true);
+        return $this->traiter(
+            $coupon,
+            $request,
+            'Nouveau coupon',
+            'Créer le coupon',
+            true,
+            'Définissez une offre de réduction applicable à l\'achat de paquets de tokens.'
+        );
     }
 
     #[Route('/{id}/edit', name: 'edit', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
@@ -51,7 +58,14 @@ class CouponController extends AbstractConsoleController
     {
         $this->applyLangPreference($request, $localeSwitcher);
 
-        return $this->traiter($coupon, $request, 'Éditer ' . $coupon->getCode(), 'Enregistrer', false);
+        return $this->traiter(
+            $coupon,
+            $request,
+            'Éditer ' . $coupon->getCode(),
+            'Enregistrer',
+            false,
+            'Modifiez les paramètres de ce coupon de réduction.'
+        );
     }
 
     #[Route('/{id}', name: 'delete', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
@@ -71,7 +85,7 @@ class CouponController extends AbstractConsoleController
     }
 
     /** Traitement partagé création/édition (DRY). */
-    private function traiter(Coupon $coupon, Request $request, string $pageName, string $submitLabel, bool $isNew): Response
+    private function traiter(Coupon $coupon, Request $request, string $pageName, string $submitLabel, bool $isNew, string $description = ''): Response
     {
         $form = $this->createForm(CouponType::class, $coupon);
         $form->handleRequest($request);
@@ -87,12 +101,14 @@ class CouponController extends AbstractConsoleController
             return $this->redirectToRoute('console.coupon.index');
         }
 
-        return $this->render('console/form.html.twig', [
+        return $this->render('console/coupon/form.html.twig', [
             'pageName'    => $pageName,
             'form'        => $form,
             'backUrl'     => $this->generateUrl('console.coupon.index'),
             'backLabel'   => 'Coupons',
             'submitLabel' => $submitLabel,
+            'description' => $description,
+            'formIcon'    => 'offre',
         ]);
     }
 }

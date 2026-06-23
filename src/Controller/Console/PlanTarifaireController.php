@@ -62,12 +62,16 @@ class PlanTarifaireController extends AbstractConsoleController
             }
         }
 
-        return $this->render('console/form.html.twig', [
+        return $this->render('console/plan_tarifaire/form.html.twig', [
             'pageName'    => 'Plan tarifaire',
             'form'        => $form,
             'backUrl'     => $this->generateUrl('console.dashboard'),
             'backLabel'   => 'Tableau de bord',
             'submitLabel' => 'Enregistrer le plan',
+            'description' => 'Définissez les paramètres tarifaires globaux de la plateforme : '
+                . 'allocation gratuite, métrage des tokens, taux de conversion et paquets prépayés. '
+                . 'Ces valeurs s\'appliquent à tous les comptes.',
+            'formIcon'    => 'monnaie',
         ]);
     }
 

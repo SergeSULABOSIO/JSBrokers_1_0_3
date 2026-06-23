@@ -53,7 +53,7 @@ class TermsPageTest extends WebTestCase
         $crawler = $client->request('GET', '/conditions-utilisation?lang=fr');
         $this->assertResponseIsSuccessful();
 
-        $langHrefs = $crawler->filter('.public-footer .public-lang a')->each(fn ($a) => $a->attr('href'));
+        $langHrefs = $crawler->filter('.public-footer .cs-lang a')->each(fn ($a) => $a->attr('href'));
         $this->assertContains('/conditions-utilisation?lang=fr', $langHrefs);
         $this->assertContains('/conditions-utilisation?lang=en', $langHrefs);
         foreach ($langHrefs as $href) {
@@ -75,9 +75,9 @@ class TermsPageTest extends WebTestCase
     }
 
     /**
-     * Modernisation du composant : la bascule de langue de la barre de titre
-     * (.cgu-lang) affiche des drapeaux SVG, tout en conservant le libellé
-     * « FR »/« EN » masqué pour l'accessibilité et les tests. Non-régression.
+     * Composant de langue unifié : la bascule de la barre de titre (.cs-lang,
+     * modèle Console) affiche un drapeau SVG suivi du libellé « FR »/« EN »
+     * visible. Non-régression du rendu et de l'option active.
      */
     public function testTitleBarLanguageSwitchUsesFlags(): void
     {
@@ -85,14 +85,14 @@ class TermsPageTest extends WebTestCase
         $crawler = $client->request('GET', '/conditions-utilisation?lang=fr');
         $this->assertResponseIsSuccessful();
 
-        $this->assertSame(2, $crawler->filter('.cgu-lang a')->count(), 'Deux options de langue dans la barre de titre.');
-        $this->assertSame(2, $crawler->filter('.cgu-lang a svg.public-lang__flag')->count(), 'Chaque option doit afficher un drapeau SVG.');
+        $this->assertSame(2, $crawler->filter('.cgu-topbar .cs-lang a')->count(), 'Deux options de langue dans la barre de titre.');
+        $this->assertSame(2, $crawler->filter('.cgu-topbar .cs-lang a svg')->count(), 'Chaque option doit afficher un drapeau SVG.');
 
-        $codes = $crawler->filter('.cgu-lang a .public-lang__code')->each(fn ($n) => trim($n->text()));
-        $this->assertSame(['FR', 'EN'], $codes, 'Le libellé textuel est conservé (lecteurs d\'écran).');
+        $codes = $crawler->filter('.cgu-topbar .cs-lang a')->each(fn ($n) => trim($n->text()));
+        $this->assertSame(['FR', 'EN'], $codes, 'Le libellé textuel FR/EN est affiché.');
 
         // L'option active reflète la langue courante.
-        $this->assertSame('FR', trim($crawler->filter('.cgu-lang a.is-active .public-lang__code')->text()));
+        $this->assertSame('FR', trim($crawler->filter('.cgu-topbar .cs-lang a.is-active')->text()));
     }
 
     public function testClickingFooterLanguageSwitchKeepsUserOnPageInNewLanguage(): void
@@ -101,7 +101,7 @@ class TermsPageTest extends WebTestCase
         $crawler = $client->request('GET', '/conditions-utilisation?lang=fr');
         $this->assertResponseIsSuccessful();
 
-        $enLink = $crawler->filter('.public-footer .public-lang a')->reduce(
+        $enLink = $crawler->filter('.public-footer .cs-lang a')->reduce(
             fn ($a) => trim($a->text()) === 'EN'
         )->first();
         $crawler = $client->click($enLink->link());

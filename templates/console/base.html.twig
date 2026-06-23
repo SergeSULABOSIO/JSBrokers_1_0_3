@@ -52,33 +52,40 @@
     .cs-user-icon { color: #6c757d; }
     .cs-sep { width: 1px; height: 24px; background-color: #dee2e6; }
 
-    /* Bascule de langue (même rendu que l'espace entreprise) */
-    .cs-lang { display: inline-flex; align-items: center; gap: .15rem; }
-    .cs-lang a {
-        display: inline-flex; align-items: center; gap: .25rem; padding: .25rem .4rem;
-        border-radius: 6px; text-decoration: none; color: #6c757d; font-size: .78rem; font-weight: 700;
-    }
-    .cs-lang a.is-active { background-color: #eef2fb; color: #0047AB; }
-    .cs-lang svg { width: 18px; height: 13px; border-radius: 2px; }
+    /* Bascule de langue (.cs-lang) : style global dans assets/styles/app.css. */
 
-    /* Zone défilante + contenu */
-    .cs-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
-    .cs-content { max-width: 1280px; margin: 0 auto; padding: 1.5rem; }
-    .cs-head { margin-bottom: 1.25rem; }
+    /* Zone défilante + contenu : colonne flex pour que le contenu pousse le pied
+       de page tout en bas, même quand la page est plus courte que la fenêtre. */
+    .cs-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+    .cs-content { width: 100%; max-width: 1280px; margin: 0 auto; padding: 1.5rem; flex: 1 0 auto; }
+    .cs-head { margin-bottom: 1.25rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .cs-head-text { min-width: 0; }
+    .cs-head-actions { flex: 0 0 auto; display: flex; align-items: center; gap: .5rem; }
     .cs-head h1 { font-size: 1.5rem; font-weight: 700; color: #212529; margin: 0 0 .25rem; }
     .cs-head p { color: #6c757d; margin: 0; max-width: 70ch; }
 
     /* Cartes / panneaux réutilisables */
     .cs-panel { background:#fff; border:1px solid #dee2e6; border-radius:12px; padding:1.25rem; }
     .cs-panel + .cs-panel { margin-top: 1.25rem; }
+    .cs-panel-title { font-size:1.05rem; font-weight:700; color:#212529; margin:0 0 1rem; }
+    /* Rangée de deux panneaux à hauteurs alignées */
+    .cs-panel-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:1.25rem; margin-top:1.25rem; align-items:stretch; }
+    .cs-panel--flex { display:flex; flex-direction:column; }
+    .cs-panel-foot { margin:1rem 0 0; }            /* pied de panneau aligné en bas */
+    .cs-panel--flex .cs-panel-foot { margin-top:auto; padding-top:1rem; }
+    /* Conteneur de graphique à hauteur fixe (maintainAspectRatio:false) */
+    .cs-chart { position:relative; height:300px; }
+    .cs-panel--flex .cs-chart { flex:0 0 auto; }   /* hauteur déterministe, pas d'expansion flex */
+    .cs-chart canvas { max-width:100%; }
 
     /* Grille de KPIs */
-    .cs-kpis { display:grid; grid-template-columns: repeat(auto-fill, minmax(210px,1fr)); gap:1rem; }
-    .cs-kpi { background:#fff; border:1px solid #dee2e6; border-radius:12px; padding:1.1rem 1.2rem; display:flex; align-items:center; gap:.9rem; }
+    .cs-kpis { display:grid; grid-template-columns: repeat(auto-fill, minmax(210px,1fr)); gap:1rem; align-items:stretch; }
+    .cs-kpi { background:#fff; border:1px solid #dee2e6; border-radius:12px; padding:1.1rem 1.2rem; display:flex; align-items:center; gap:.9rem; transition:box-shadow .15s ease; }
     .cs-kpi:hover { box-shadow:0 8px 24px rgba(0,71,171,.10); }
     .cs-kpi-icon { width:46px; height:46px; flex:0 0 auto; border-radius:10px; background:#eef2fb; color:#0047AB; display:inline-flex; align-items:center; justify-content:center; }
-    .cs-kpi-val { font-size:1.5rem; font-weight:700; color:#212529; line-height:1.1; }
-    .cs-kpi-lbl { font-size:.82rem; color:#6c757d; }
+    .cs-kpi-body { display:flex; flex-direction:column; gap:.15rem; min-width:0; }
+    .cs-kpi-val { font-size:1.5rem; font-weight:700; color:#212529; line-height:1.15; }
+    .cs-kpi-lbl { font-size:.82rem; color:#6c757d; line-height:1.25; }
 
     /* Tableaux */
     .cs-table { width:100%; border-collapse:collapse; }
@@ -96,8 +103,63 @@
     .cs-icon-btn.is-danger:hover { background:#f8d7da; color:#dc3545; }
     .cs-icon-btn:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
 
+    /* ---------- Champ de saisie à icône incrustée ----------
+       Pattern UNIQUE de tout l'espace console, identique à la page de
+       connexion : un seul champ continu, l'icône à l'intérieur à gauche,
+       jamais de boîte d'icône séparée. `top:50%` cale l'icône au centre du
+       champ quelle que soit sa hauteur (formulaire 48px ou filtre 38px). */
+    .cs-field { position:relative; }
+    .cs-field-icon {
+        position:absolute; left:.9rem; top:50%; transform:translateY(-50%);
+        width:18px; height:18px; color:#6c757d; pointer-events:none; z-index:4;
+        display:inline-flex; align-items:center; justify-content:center;
+    }
+    .cs-field .form-control,
+    .cs-field .form-select { padding-left:2.6rem; }
+    .cs-field .form-control:focus,
+    .cs-field .form-select:focus { border-color:#0047AB; box-shadow:0 0 0 .2rem rgba(0,71,171,.25); }
+    /* Zone de texte : icône calée sur la première ligne. */
+    .cs-field--top .cs-field-icon { top:1.65rem; }
+    /* Bascule afficher/masquer du mot de passe (cible tactile ≥ 40px). */
+    .cs-field--password .form-control { padding-right:3rem; }
+    .cs-field-toggle {
+        position:absolute; right:.35rem; top:50%; transform:translateY(-50%);
+        width:40px; height:40px; display:inline-flex; align-items:center; justify-content:center;
+        border:0; background:transparent; color:#6c757d; border-radius:8px; cursor:pointer; z-index:4;
+    }
+    .cs-field-toggle:hover { color:#0047AB; }
+    .cs-field-toggle:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+    .cs-field-toggle svg { width:20px; height:20px; }
+    .cs-field-toggle .is-hidden { display:none; }
+
     .cs-empty { text-align:center; padding:2.5rem 1.5rem; background:#fff; border:1px dashed #ced4da; border-radius:12px; color:#6c757d; }
     .cs-pagination { display:flex; justify-content:center; margin-top:1.25rem; }
+
+    /* ---------- Pied de page public réutilisé (mêmes styles que la vitrine) ----------
+       Les classes public-footer sont définies dans _home_styles ;
+       on les redéclare ici car la console n'inclut pas la feuille de la vitrine,
+       sinon le pied de page s'affiche non stylé. La bascule de langue (.cs-lang)
+       est désormais stylée globalement dans app.css.
+       NB : ne jamais écrire « .public-footer<slash><étoile> » dans ce commentaire — la
+       séquence étoile-slash fermerait le commentaire CSS et invaliderait la règle
+       .public-footer ci-dessous (pied de page rendu transparent sur fond gris).
+       Pied de page collé au contenu (pas de bande grise au-dessus) : il repose
+       franchement sur un fond blanc, sur toute la largeur de la zone défilante. */
+    .public-footer { background-color: #fff; border-top: 1px solid #dee2e6; margin-top: 0; }
+    .public-footer__inner { max-width: 1280px; margin: 0 auto; padding: 2.5rem 1.5rem 1.5rem;
+        display: flex; flex-wrap: wrap; align-items: flex-start; gap: 1.5rem; }
+    .public-footer__brand { display: flex; align-items: center; gap: .75rem; flex: 1 1 280px; text-decoration: none; }
+    .public-footer__brand:hover { opacity: .85; }
+    .public-footer__brand img { border-radius: 8px; }
+    .public-footer__name { font-weight: 700; color: #0047AB; margin: 0; font-size: 1.05rem; }
+    .public-footer__tagline { color: #6c757d; margin: 0; font-size: .9rem; max-width: 360px; }
+    .public-footer__links { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; }
+    .public-footer__links a { display: inline-flex; align-items: center; min-height: 44px;
+        color: #495057; text-decoration: none; font-size: .92rem; font-weight: 600; }
+    .public-footer__links a:hover { color: #0047AB; }
+    .public-footer__links a:focus-visible { outline: 2px solid #0047AB; outline-offset: 2px; border-radius: 4px; }
+    .public-footer__credit { max-width: 1280px; margin: 0 auto; padding: 1rem 1.5rem;
+        border-top: 1px solid #dee2e6; text-align: center; color: #6c757d; font-size: .85rem; }
 
     @media (max-width: 991.98px) {
         .cs-nav { order: 3; flex-basis: 100%; justify-content: flex-start; }
@@ -126,7 +188,6 @@
                 {{ app.user.nom }}
             </span>
             <span class="cs-sep" aria-hidden="true"></span>
-            {% block console_actions %}{% endblock %}
             {{ include('console/_lang.html.twig') }}
             <a href="{{ path('app_logout') }}" class="cs-icon-btn is-danger" data-action="click->top-progress#show"
                title="{{ 'boutons_user_logout'|trans }}" aria-label="{{ 'boutons_user_logout'|trans }}">
@@ -140,8 +201,11 @@
             {{ include('components/_flash_toasts.html.twig') }}
 
             <div class="cs-head">
-                <h1>{{ pageName }}</h1>
-                {% block console_subtitle %}{% endblock %}
+                <div class="cs-head-text">
+                    <h1>{{ pageName }}</h1>
+                    {% block console_subtitle %}{% endblock %}
+                </div>
+                <div class="cs-head-actions">{% block console_actions %}{% endblock %}</div>
             </div>
 
             {% block console_body %}{% endblock %}

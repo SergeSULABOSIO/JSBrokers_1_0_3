@@ -1,0 +1,27 @@
+{# ============================================================
+   Bascule de langue FR/EN unifiée — modèle de la barre de titre Console.
+   Composant unique réutilisé partout dans l'application (DRY/KISS).
+   Style global `.cs-lang` défini dans assets/styles/app.css.
+   Drapeaux SVG via la macro partagée components/_lang_flag.html.twig.
+   Feedback visuel : barre de progression du haut (top-progress#show).
+
+   Paramètres optionnels (tous ont un défaut sûr) :
+     - current : locale active ('fr'|'en'). Défaut : user.locale ou request.locale.
+     - route   : route cible. Défaut : route courante (on reste sur la page).
+     - params  : paramètres route+query à conserver. Défaut : route_params + query.
+     - uid     : identifiant unique du <clipPath> du drapeau UK. Défaut 'cs-lang-uk'.
+                 À surcharger si DEUX bascules coexistent sur une page (topbar + footer).
+   ============================================================ #}
+{% import 'components/_lang_flag.html.twig' as flags %}
+{% set _current = current|default(app.user ? app.user.locale : (app.request.locale|default('fr'))) %}
+{% set _route   = route|default(app.request.attributes.get('_route')|default('app_index')) %}
+{% set _params  = params|default((app.request.attributes.get('_route_params')|default({}))|merge(app.request.query.all)) %}
+{% set _uid     = uid|default('cs-lang-uk') %}
+<span class="cs-lang" role="group" aria-label="Langue / Language">
+    <a href="{{ path(_route, _params|merge({'lang': 'fr'})) }}"
+       class="{{ _current == 'fr' ? 'is-active' : '' }}" title="Français" lang="fr"
+       data-action="click->top-progress#show" {% if _current == 'fr' %}aria-current="true"{% endif %}>{{ flags.fr() }}FR</a>
+    <a href="{{ path(_route, _params|merge({'lang': 'en'})) }}"
+       class="{{ _current == 'en' ? 'is-active' : '' }}" title="English" lang="en"
+       data-action="click->top-progress#show" {% if _current == 'en' %}aria-current="true"{% endif %}>{{ flags.uk(_uid) }}EN</a>
+</span>

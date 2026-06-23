@@ -1,0 +1,39 @@
+{% extends 'console/form.html.twig' %}
+
+{# Formulaire coupon : champs regroupés en sections (fieldsets) avec légende à icône,
+   sur le modèle de la création/édition d'entreprise (.ent-fieldset / .ent-legend).
+   Le thème de champ (icône incrustée via data-icon) est appliqué par le parent. #}
+{% block console_form_body %}
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('offre'), {height:'16px', width:'16px'}) }}
+            La remise
+        </legend>
+        {{ form_row(form.code) }}
+        <div class="row">
+            <div class="col-md">{{ form_row(form.type) }}</div>
+            <div class="col-md">{{ form_row(form.valeur) }}</div>
+        </div>
+    </fieldset>
+
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('action:calendar'), {height:'16px', width:'16px'}) }}
+            Période de validité
+        </legend>
+        <div class="row">
+            <div class="col-md">{{ form_row(form.dateDebut) }}</div>
+            <div class="col-md">{{ form_row(form.dateFin) }}</div>
+        </div>
+        {{ form_row(form.usageLimit) }}
+    </fieldset>
+
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('tranche'), {height:'16px', width:'16px'}) }}
+            Ciblage &amp; activation
+        </legend>
+        {{ form_row(form.packCible) }}
+        {{ form_row(form.actif) }}
+    </fieldset>
+{% endblock %}

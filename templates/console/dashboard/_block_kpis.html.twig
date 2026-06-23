@@ -1,0 +1,22 @@
+{# Fragment AJAX : grille de KPIs de la plateforme (rechargé in extenso). #}
+{% set kpiCards = [
+    { icon: 'action:role',  val: kpis.nbAgents,      lbl: 'Collaborateurs JS Brokers' },
+    { icon: 'utilisateur',  val: kpis.nbUsers,       lbl: 'Utilisateurs' },
+    { icon: 'client',       val: kpis.nbClients,     lbl: 'Clients' },
+    { icon: 'entreprise',   val: kpis.nbEntreprises, lbl: 'Entreprises' },
+    { icon: 'operation',    val: kpis.nbVentes,      lbl: 'Ventes de tokens' },
+    { icon: 'monnaie',      val: kpis.revenuUsd|number_format(2, '.', ' ') ~ ' $', lbl: 'Revenu total' },
+    { icon: 'tranche',      val: kpis.tokensVendus|number_format(0, ',', ' '), lbl: 'Tokens vendus' },
+    { icon: 'offre',        val: kpis.remisesUsd|number_format(2, '.', ' ') ~ ' $', lbl: 'Remises accordées' },
+] %}
+<div class="cs-kpis">
+    {% for c in kpiCards %}
+        <div class="cs-kpi">
+            <span class="cs-kpi-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(c.icon), {height: '24px', width: '24px'}) }}</span>
+            <span class="cs-kpi-body">
+                <span class="cs-kpi-val">{{ c.val }}</span>
+                <span class="cs-kpi-lbl">{{ c.lbl }}</span>
+            </span>
+        </div>
+    {% endfor %}
+</div>

@@ -130,7 +130,7 @@ class TokenPurchaseFlowTest extends WebTestCase
         $crawler = $this->client->request('GET', '/fonctionnement-tokens?lang=fr');
         $this->assertResponseIsSuccessful();
 
-        $langHrefs = $crawler->filter('.public-lang a')->each(fn ($a) => $a->attr('href'));
+        $langHrefs = $crawler->filter('.public-footer .cs-lang a')->each(fn ($a) => $a->attr('href'));
         $this->assertContains('/fonctionnement-tokens?lang=fr', $langHrefs);
         $this->assertContains('/fonctionnement-tokens?lang=en', $langHrefs);
         foreach ($langHrefs as $href) {
@@ -151,7 +151,7 @@ class TokenPurchaseFlowTest extends WebTestCase
         $this->assertStringContainsString('Fonctionnement des tokens', $crawler->filter('h1')->text());
 
         // Clic sur le « EN » du pied de page (et non celui de la barre de titre).
-        $enLink = $crawler->filter('.public-footer .public-lang a')->reduce(
+        $enLink = $crawler->filter('.public-footer .cs-lang a')->reduce(
             fn ($a) => trim($a->text()) === 'EN'
         )->first();
         $crawler = $this->client->click($enLink->link());
@@ -172,7 +172,7 @@ class TokenPurchaseFlowTest extends WebTestCase
         $crawler = $this->client->request('GET', '/?lang=fr');
         $this->assertResponseIsSuccessful();
 
-        $langHrefs = $crawler->filter('.public-footer .public-lang a')->each(fn ($a) => $a->attr('href'));
+        $langHrefs = $crawler->filter('.public-footer .cs-lang a')->each(fn ($a) => $a->attr('href'));
         foreach ($langHrefs as $href) {
             $this->assertStringStartsWith('/?lang=', $href, "La bascule de langue de l'accueil doit rester sur l'accueil.");
         }
@@ -217,14 +217,14 @@ class TokenPurchaseFlowTest extends WebTestCase
         $this->assertGreaterThan(0, $crawler->filter('footer.public-footer')->count(),
             'Le pied de page officiel JS Brokers doit être présent sur la page compte.');
 
-        // Bascule de langue à drapeaux dans la barre de titre.
-        $this->assertSame(2, $crawler->filter('.tkp-lang a svg.public-lang__flag')->count(),
+        // Bascule de langue à drapeaux dans la barre de titre (composant unifié .cs-lang).
+        $this->assertSame(2, $crawler->filter('.tkp-actions .cs-lang a svg')->count(),
             'Chaque option de langue doit afficher un drapeau SVG.');
-        $codes = $crawler->filter('.tkp-lang a .public-lang__code')->each(fn ($n) => trim($n->text()));
+        $codes = $crawler->filter('.tkp-actions .cs-lang a')->each(fn ($n) => trim($n->text()));
         $this->assertSame(['FR', 'EN'], $codes);
 
         // Les liens de langue restent sur la page compte.
-        foreach ($crawler->filter('.tkp-lang a')->each(fn ($a) => $a->attr('href')) as $href) {
+        foreach ($crawler->filter('.tkp-actions .cs-lang a')->each(fn ($a) => $a->attr('href')) as $href) {
             $this->assertStringStartsWith('/admin/tokens', $href, 'La bascule doit rester sur la page compte.');
         }
     }
@@ -269,8 +269,8 @@ class TokenPurchaseFlowTest extends WebTestCase
         $this->assertStringContainsString('Top up my tokens', $crawler->filter('h1')->text());
 
         // Drapeaux + liens restant sur la page d'achat.
-        $this->assertSame(2, $crawler->filter('.tkb-lang a svg.public-lang__flag')->count());
-        foreach ($crawler->filter('.tkb-lang a')->each(fn ($a) => $a->attr('href')) as $href) {
+        $this->assertSame(2, $crawler->filter('.tkb-actions .cs-lang a svg')->count());
+        foreach ($crawler->filter('.tkb-actions .cs-lang a')->each(fn ($a) => $a->attr('href')) as $href) {
             $this->assertStringStartsWith('/admin/tokens/buy', $href, 'La bascule doit rester sur la page d\'achat.');
         }
 
@@ -290,7 +290,7 @@ class TokenPurchaseFlowTest extends WebTestCase
     {
         $this->client->loginUser($this->user());
 
-        foreach (['/admin/tokens' => '.tkp-lang a', '/admin/tokens/buy' => '.tkb-lang a'] as $url => $titleLangSelector) {
+        foreach (['/admin/tokens' => '.tkp-actions .cs-lang a', '/admin/tokens/buy' => '.tkb-actions .cs-lang a'] as $url => $titleLangSelector) {
             $crawler = $this->client->request('GET', $url);
             $this->assertResponseIsSuccessful();
 
@@ -301,7 +301,7 @@ class TokenPurchaseFlowTest extends WebTestCase
                 "La barre de progression doit être présente sur $url.");
 
             // Bascule de la barre de titre + bascule du pied de page : data-action.
-            foreach ([$titleLangSelector, '.public-footer .public-lang a'] as $selector) {
+            foreach ([$titleLangSelector, '.public-footer .cs-lang a'] as $selector) {
                 $links = $crawler->filter($selector);
                 $this->assertSame(2, $links->count(), "Deux options de langue attendues ($selector sur $url).");
                 foreach ($links->each(fn ($a) => $a->attr('data-action')) as $action) {
@@ -359,7 +359,7 @@ class TokenPurchaseFlowTest extends WebTestCase
         $this->assertGreaterThan(0, $crawler->filter('footer.public-footer')->count(),
             'Le pied de page officiel doit être présent sur la page de paiement.');
 
-        foreach ($crawler->filter('.public-footer .public-lang a')->each(fn ($a) => $a->attr('href')) as $href) {
+        foreach ($crawler->filter('.public-footer .cs-lang a')->each(fn ($a) => $a->attr('href')) as $href) {
             $this->assertStringStartsWith('/admin/tokens/buy', $href, 'La bascule du pied de page doit rester sur la page d\'achat.');
         }
     }

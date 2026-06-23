@@ -1,0 +1,29 @@
+{% extends 'console/form.html.twig' %}
+
+{# Formulaire de compte (collaborateur/agent OU utilisateur/client) : tous deux sont
+   bâtis sur CollaborateurType. Champs regroupés en sections (fieldsets) à légende
+   illustrée, sur le même modèle que les formulaires coupon et plan tarifaire
+   (.cs-fieldset / .cs-legend). Le champ `superAdmin` n'existe que pour les
+   collaborateurs (option can_grant_super) → rendu conditionnel.
+   Le thème de champ (icône incrustée via data-icon) est appliqué par le parent. #}
+{% block console_form_body %}
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('utilisateur'), {height:'16px', width:'16px'}) }}
+            Identité
+        </legend>
+        {{ form_row(form.nom) }}
+        {{ form_row(form.email) }}
+    </fieldset>
+
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('action:password'), {height:'16px', width:'16px'}) }}
+            Accès &amp; sécurité
+        </legend>
+        {{ form_row(form.plainPassword) }}
+        {% if form.superAdmin is defined %}
+            {{ form_row(form.superAdmin) }}
+        {% endif %}
+    </fieldset>
+{% endblock %}

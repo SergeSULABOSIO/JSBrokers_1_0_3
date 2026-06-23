@@ -15,10 +15,10 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  * Bascule de langue (FR/EN) + pied de page officiel sur l'espace « admin/entreprise ».
  *
  * Vérifie, sur les 3 pages (liste / création / édition), que :
- *  - le sélecteur de langue de la barre de titre (.ent-lang) est présent, avec ses
- *    deux options câblées sur la barre de progression (top-progress#show) ;
+ *  - le sélecteur de langue de la barre de titre (composant unifié .cs-lang) est
+ *    présent, avec ses deux options câblées sur la barre de progression (top-progress#show) ;
  *  - le pied de page public officiel (.public-footer) est rendu, avec sa propre
- *    bascule de langue ;
+ *    bascule de langue (.cs-lang) ;
  *  - la bascule est RÉELLEMENT fonctionnelle : ?lang=en bascule le rendu en anglais
  *    ET persiste la préférence de l'utilisateur en base (cf. applyLangPreference).
  */
@@ -114,7 +114,7 @@ class EntrepriseLanguageSwitchTest extends WebTestCase
             "La barre de progression (cible) doit être présente sur $context.");
 
         // Sélecteur de langue de la barre de titre : 2 options, chacune déclenchant la barre.
-        $topbarLinks = $crawler->filter('.ent-lang a');
+        $topbarLinks = $crawler->filter('.ent-topbar .cs-lang a');
         $this->assertSame(2, $topbarLinks->count(), "Deux options de langue attendues dans la barre de titre de $context.");
         foreach ($topbarLinks->each(fn ($a) => $a->attr('data-action')) as $action) {
             $this->assertNotNull($action, "Le lien de langue de $context doit porter un data-action.");
@@ -125,7 +125,7 @@ class EntrepriseLanguageSwitchTest extends WebTestCase
         // Pied de page officiel rendu, avec sa bascule de langue.
         $this->assertGreaterThan(0, $crawler->filter('.public-footer')->count(),
             "Le pied de page officiel doit être rendu sur $context.");
-        $this->assertSame(2, $crawler->filter('.public-footer .public-lang a')->count(),
+        $this->assertSame(2, $crawler->filter('.public-footer .cs-lang a')->count(),
             "Le pied de page de $context doit porter la bascule de langue (2 options).");
     }
 
@@ -211,7 +211,7 @@ class EntrepriseLanguageSwitchTest extends WebTestCase
 
         $lastChild = $crawler->filter('.ent-topbar .ent-topbar-actions > *:last-child');
         $this->assertSame(1, $lastChild->count(), "Le groupe d'actions de la barre de titre doit exister.");
-        $this->assertStringContainsString('ent-lang', (string) $lastChild->attr('class'),
+        $this->assertStringContainsString('cs-lang', (string) $lastChild->attr('class'),
             "La bascule de langue doit être le dernier élément (extrême droite) du groupe d'actions.");
     }
 

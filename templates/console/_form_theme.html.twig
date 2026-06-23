@@ -1,0 +1,87 @@
+{# ============================================================
+   Thème de formulaire de la Console.
+   Pattern de référence (page de connexion) : un champ UNIQUE et continu,
+   l'icône (alias résolu via IconCanvasProvider) incrustée À L'INTÉRIEUR, à
+   gauche — pas de boîte d'icône séparée (on n'utilise plus l'input-group).
+   Les champs mot de passe reçoivent en plus la bascule afficher/masquer
+   (Stimulus `password-toggle`), exactement comme sur la connexion.
+   Sans `data-icon`, le rendu Bootstrap par défaut est conservé.
+   Les libellés et placeholders restent gérés dans les FormType.
+   ============================================================ #}
+{% use 'bootstrap_5_layout.html.twig' %}
+
+{# Champs simples : text, email, number, integer, date (single_text)… #}
+{%- block form_widget_simple -%}
+    {%- if attr['data-icon'] is defined -%}
+        {%- set _icon = attr['data-icon'] -%}
+        {%- set attr = attr|filter((v, k) => k != 'data-icon') -%}
+        <div class="cs-field">
+            <span class="cs-field-icon">{{ ux_icon(resolve_icon_name(_icon), {height:'18px', width:'18px'}) }}</span>
+            {{- parent() -}}
+        </div>
+    {%- else -%}
+        {{- parent() -}}
+    {%- endif -%}
+{%- endblock -%}
+
+{# Mot de passe : icône incrustée + bascule afficher/masquer (œil). #}
+{%- block password_widget -%}
+    {%- if attr['data-icon'] is defined -%}
+        {%- set _icon = attr['data-icon'] -%}
+        {%- set attr = attr|filter((v, k) => k != 'data-icon') -%}
+        {%- set attr = attr|merge({'data-password-toggle-target': 'input'}) -%}
+        <div class="cs-field cs-field--password" data-controller="password-toggle">
+            <span class="cs-field-icon">{{ ux_icon(resolve_icon_name(_icon), {height:'18px', width:'18px'}) }}</span>
+            {{- parent() -}}
+            <button type="button" class="cs-field-toggle"
+                    data-action="password-toggle#toggle"
+                    data-password-toggle-target="button"
+                    aria-pressed="false" aria-label="Afficher le mot de passe">
+                {# Œil ouvert (état : mot de passe masqué) #}
+                <svg data-password-icon viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+                {# Œil barré (état : mot de passe affiché) #}
+                <svg data-password-icon class="is-hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M9.88 9.88a3 3 0 0 0 4.24 4.24"/>
+                    <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c6.5 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                    <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3.5 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                    <line x1="2" y1="2" x2="22" y2="22"/>
+                </svg>
+            </button>
+        </div>
+    {%- else -%}
+        {{- parent() -}}
+    {%- endif -%}
+{%- endblock -%}
+
+{# Listes déroulantes (ChoiceType non multiple/non expanded). #}
+{%- block choice_widget_collapsed -%}
+    {%- if attr['data-icon'] is defined -%}
+        {%- set _icon = attr['data-icon'] -%}
+        {%- set attr = attr|filter((v, k) => k != 'data-icon') -%}
+        <div class="cs-field">
+            <span class="cs-field-icon">{{ ux_icon(resolve_icon_name(_icon), {height:'18px', width:'18px'}) }}</span>
+            {{- parent() -}}
+        </div>
+    {%- else -%}
+        {{- parent() -}}
+    {%- endif -%}
+{%- endblock -%}
+
+{# Zones de texte : icône calée en haut, sur la première ligne. #}
+{%- block textarea_widget -%}
+    {%- if attr['data-icon'] is defined -%}
+        {%- set _icon = attr['data-icon'] -%}
+        {%- set attr = attr|filter((v, k) => k != 'data-icon') -%}
+        <div class="cs-field cs-field--top">
+            <span class="cs-field-icon">{{ ux_icon(resolve_icon_name(_icon), {height:'18px', width:'18px'}) }}</span>
+            {{- parent() -}}
+        </div>
+    {%- else -%}
+        {{- parent() -}}
+    {%- endif -%}
+{%- endblock -%}

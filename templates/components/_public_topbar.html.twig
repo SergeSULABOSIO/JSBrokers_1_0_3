@@ -5,7 +5,6 @@
    `lang` est fourni par le contrôleur ; on retombe sur la locale courante sinon.
    ============================================================ #}
 {% set lang = lang|default(app.request.locale|default('fr')) %}
-{% import 'components/_lang_flag.html.twig' as flags %}
 
 <header class="public-topbar">
     <div class="public-topbar__inner">
@@ -26,21 +25,10 @@
 
         <div class="public-topbar__actions">
 
-            {# Bascule de langue : auto-suffisante via ?lang= (fonctionne hors session).
-               Chaque bascule est une navigation serveur complète → on déclenche la
-               barre de progression du haut (top-progress#show) pour un feedback immédiat. #}
-            <span class="public-lang" role="group" aria-label="Langue / Language">
-                <a href="{{ path('app_index', {'lang': 'fr'}) }}"
-                   class="{{ lang == 'fr' ? 'is-active' : '' }}"
-                   title="Français" lang="fr"
-                   data-action="click->top-progress#show"
-                   {% if lang == 'fr' %}aria-current="true"{% endif %}>{{ flags.fr() }}<span class="public-lang__code">FR</span></a>
-                <a href="{{ path('app_index', {'lang': 'en'}) }}"
-                   class="{{ lang == 'en' ? 'is-active' : '' }}"
-                   title="English" lang="en"
-                   data-action="click->top-progress#show"
-                   {% if lang == 'en' %}aria-current="true"{% endif %}>{{ flags.uk('lang-top') }}<span class="public-lang__code">EN</span></a>
-            </span>
+            {# Bascule de langue unifiée : auto-suffisante via ?lang= (fonctionne hors session).
+               Chaque bascule est une navigation serveur complète → barre de progression
+               du haut (top-progress#show) pour un feedback immédiat. #}
+            {{ include('components/_lang_switch.html.twig', {current: lang, route: 'app_index', uid: 'lang-top'}) }}
 
             {# CTA contextuel selon l'état de connexion (réutilise les clés base_*).
                Chaque CTA mène à une requête serveur → feedback local (spinner via
