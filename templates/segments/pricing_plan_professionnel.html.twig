@@ -1,3 +1,5 @@
+{% set pack = plan_tarifaire().pack('professionnel') %}
+{% if pack %}
 <article class="pp-card pp-card--featured" aria-labelledby="pp-prof-name">
     <p class="pp-flag">
         {{ ux_icon('mdi:star', {height: '14px', width: '14px', 'aria-hidden': 'true'}) }}
@@ -5,7 +7,7 @@
     </p>
     <header class="pp-head">
         <span class="pp-name" id="pp-prof-name">{{ "security_pricing_prof" | trans }}</span>
-        <p class="pp-price">{{ "security_pricing_prof_price" | trans }}</p>
+        <p class="pp-price">{{ "security_pricing_prof_price" | trans({'%price%': pack.price}) }}</p>
         <span class="pp-badge">{{ "security_pricing_prof_mode" | trans }}</span>
         <p class="pp-profil">{{ "security_pricing_prof_profil" | trans }}</p>
     </header>
@@ -27,7 +29,7 @@
         <li class="pp-feature">
             {{ ux_icon('mdi:check-circle', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
             <span>{{ "security_pricing_prof_option_volume" | trans }}
-                <strong class="pp-value">{{ "security_pricing_prof_option_volume_value" | trans }}</strong></span>
+                <strong class="pp-value">{{ pack.tokens|number_format(0, '.', (lang|default(app.request.locale) == 'en' ? ',' : ' ')) }}</strong></span>
         </li>
         <li class="pp-feature">
             {{ ux_icon('mdi:check-circle', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
@@ -60,3 +62,4 @@
         </a>
     </div>
 </article>
+{% endif %}

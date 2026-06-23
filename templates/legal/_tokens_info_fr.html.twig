@@ -1,3 +1,9 @@
+{# Valeurs lues depuis le plan tarifaire (BDD éditable en Console, repli constantes). #}
+{% set plan = plan_tarifaire() %}
+{% set readWeight = plan.readWeight %}
+{% set freeAllowance = plan.freeAllowance|number_format(0, '.', ' ') %}
+{% set freeWindowHours = plan.freeWindowHours %}
+
 <p class="cgu-intro">
     Sur JS Brokers, le <strong>token</strong> est l'unité de mesure de votre usage de la plateforme.
     Il permet une tarification juste, à la consommation réelle, tout en conservant un
@@ -15,7 +21,7 @@
 <section class="cgu-section">
     <h2>2. Quand consomme-t-on des tokens ?</h2>
     <ul>
-        <li><strong>En sortie (lecture)</strong> : chaque entité affichée/téléchargée vers votre écran coûte <strong>2 tokens</strong>. Charger une liste de 20 éléments coûte donc 20 × 2 = 40 tokens.</li>
+        <li><strong>En sortie (lecture)</strong> : chaque entité affichée/téléchargée vers votre écran coûte <strong>{{ readWeight }} tokens</strong>. Charger une liste de 20 éléments coûte donc 20 × {{ readWeight }} = {{ 20 * readWeight }} tokens.</li>
         <li><strong>En entrée (écriture)</strong> : chaque enregistrement (création ou modification) coûte un poids variable selon le type d'entité.</li>
     </ul>
 </section>
@@ -25,14 +31,11 @@
     <table class="cgu-table">
         <thead><tr><th>Entité</th><th>Poids (tokens)</th></tr></thead>
         <tbody>
-            <tr><td>Entreprise</td><td>200</td></tr>
-            <tr><td>Avenant</td><td>100</td></tr>
-            <tr><td>Cotation</td><td>50</td></tr>
-            <tr><td>Piste</td><td>20</td></tr>
-            <tr><td>Tâche</td><td>10</td></tr>
-            <tr><td>Feedback</td><td>8</td></tr>
-            <tr><td>Toute autre entité</td><td>5</td></tr>
-            <tr><td>Lecture (par entité, en sortie)</td><td>2</td></tr>
+            {% for fqcn, poids in plan.writeWeights %}
+            <tr><td>{{ token_entite_label(fqcn, 'fr') }}</td><td>{{ poids }}</td></tr>
+            {% endfor %}
+            <tr><td>Toute autre entité</td><td>{{ plan.defaultWriteWeight }}</td></tr>
+            <tr><td>Lecture (par entité, en sortie)</td><td>{{ readWeight }}</td></tr>
         </tbody>
     </table>
 </section>
@@ -40,10 +43,10 @@
 <section class="cgu-section">
     <h2>4. Le mode gratuit (Basic)</h2>
     <p>
-        Chaque compte reçoit <strong>1 000 tokens offerts</strong>, automatiquement
-        <strong>renouvelés toutes les 8 heures</strong>. Le compteur démarre à votre première
+        Chaque compte reçoit <strong>{{ freeAllowance }} tokens offerts</strong>, automatiquement
+        <strong>renouvelés toutes les {{ freeWindowHours }} heures</strong>. Le compteur démarre à votre première
         activité après la création du compte. Les tokens gratuits ne se cumulent pas : à chaque
-        renouvellement, le solde gratuit est ramené à 1 000.
+        renouvellement, le solde gratuit est ramené à {{ freeAllowance }}.
     </p>
 </section>
 
@@ -53,13 +56,14 @@
     <table class="cgu-table">
         <thead><tr><th>Paquet</th><th>Prix</th></tr></thead>
         <tbody>
-            <tr><td>Intermédiaire — 10 000 tokens</td><td>10 $</td></tr>
-            <tr><td>Professionnel — 50 000 tokens</td><td>40 $</td></tr>
+            {% for key, p in plan.packs %}
+            <tr><td>{{ key|capitalize }} — {{ p.tokens|number_format(0, '.', ' ') }} tokens</td><td>{{ p.price }} $</td></tr>
+            {% endfor %}
         </tbody>
     </table>
     <p>
         Les tokens prépayés sont consommés en priorité ; une fois épuisés, vous repassez
-        automatiquement en mode gratuit (1 000 tokens / 8 h).
+        automatiquement en mode gratuit ({{ freeAllowance }} tokens / {{ freeWindowHours }} h).
     </p>
 </section>
 
@@ -69,7 +73,7 @@
         Lorsque votre solde (gratuit + prépayé) ne suffit plus, la <strong>lecture et l'écriture
         sont temporairement bloquées</strong>. Vous pouvez alors soit <strong>recharger</strong>
         un paquet, soit <strong>attendre le prochain renouvellement</strong> de votre allocation
-        gratuite (sous 8 h).
+        gratuite (sous {{ freeWindowHours }} h).
     </p>
 </section>
 
