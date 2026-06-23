@@ -4,6 +4,7 @@ namespace App\Form;
 
 use App\Entity\PlateformeParametres;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
@@ -42,10 +43,11 @@ class PlanTarifaireType extends AbstractType
                 'scale' => 5,
                 'attr'  => ['placeholder' => 'Ex. 0.001', 'data-icon' => 'monnaie'],
             ])
-            ->add('packsJson', TextareaType::class, [
-                'label'  => 'Paquets prépayés (JSON : { "clé": { "tokens": n, "price": p } })',
+            // Paquets prépayés : édités via une collection + boîte de dialogue (contrôleur
+            // Stimulus `packs-editor`) qui tient ce champ caché synchronisé en JSON. Le
+            // contrôleur PHP décode ce JSON de façon générique (cf. decodeJsonMap).
+            ->add('packsJson', HiddenType::class, [
                 'mapped' => false,
-                'attr'   => ['rows' => 6, 'style' => 'font-family:monospace;', 'placeholder' => '{ "starter": { "tokens": 5000, "price": 5 } }', 'data-icon' => 'offre'],
                 'data'   => $options['packs_json'],
             ])
             ->add('writeWeightsJson', TextareaType::class, [

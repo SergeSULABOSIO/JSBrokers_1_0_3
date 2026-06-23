@@ -6,20 +6,38 @@
             '%hours%': plan_tarifaire().freeWindowHours,
         }) | raw }}</p>
     </div>
-    <div class="row row-cols-1 row-cols-md-3 g-4">
+
+    {# Source de vérité unique : les paquets prépayés viennent du paramétrage de la
+       Console (plan_tarifaire().packs()). Toute carte payante est donc générée
+       dynamiquement — ajouter / éditer / supprimer un paquet en Console se reflète
+       ici sans toucher au code. Le paquet « recommandé » est celui qui offre le
+       plus gros volume de tokens. #}
+    {% set packs = plan_tarifaire().packs() %}
+    {% set featuredKey = null %}
+    {% set maxTokens = -1 %}
+    {% for key, pack in packs %}
+        {% if pack.tokens > maxTokens %}
+            {% set maxTokens = pack.tokens %}
+            {% set featuredKey = key %}
+        {% endif %}
+    {% endfor %}
+
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 justify-content-center">
         <div class="col">
-            {# Plan Basic #}
+            {# Plan Basic (offre gratuite : allocation renouvelable, pas un paquet) #}
             {% include 'segments/pricing_plan_basic.html.twig' %}
         </div>
-        <div class="col">
-            {# Plan Intermédiaire #}
-            {% include 'segments/pricing_plan_intermediaire.html.twig' %}
-        </div>
-        <div class="col">
-            {# Plan Professionnel #}
-            {% include 'segments/pricing_plan_professionnel.html.twig' %}
-        </div>
+        {% for key, pack in packs %}
+            <div class="col">
+                {% include 'segments/_pricing_plan_pack.html.twig' with {
+                    key: key,
+                    pack: pack,
+                    featured: key == featuredKey,
+                } %}
+            </div>
+        {% endfor %}
     </div>
+
     <div class="text-center mt-4">
         <a href="{{ path('app_tokens_info', {'lang': lang|default(app.request.locale)}) }}"
            class="d-inline-flex align-items-center gap-2 text-decoration-none">
