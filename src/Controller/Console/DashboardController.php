@@ -11,6 +11,7 @@ use App\Repository\TokenPurchaseRepository;
 use App\Repository\UtilisateurRepository;
 use App\Services\ConsoleStatsProvider;
 use App\Services\ServiceGeographie;
+use App\Services\ServiceTaxesVente;
 use App\Token\ParametresTokenService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -40,6 +41,7 @@ class DashboardController extends AbstractConsoleController
         private ServiceGeographie $geographie,
         private CouponRepository $couponRepository,
         private ParametresTokenService $parametres,
+        private ServiceTaxesVente $taxesVente,
     ) {}
 
     #[Route('', name: 'console.dashboard', methods: ['GET'])]
@@ -291,6 +293,24 @@ class DashboardController extends AbstractConsoleController
     {
         return $this->render('console/dashboard/_block_plans.html.twig', [
             'packs' => $this->parametres->packs(),
+        ]);
+    }
+
+    /**
+     * Fiscalité JS Brokers : taxes actives ventilées sur le revenu total des
+     * ventes (même assiette que le KPI « Revenu total »), avec synthèse TTC /
+     * taxes / hors taxe. Bloc statique, sans pagination.
+     */
+    #[Route('/dashboard/block/taxes', name: 'console.dashboard.block_taxes', methods: ['GET'])]
+    public function blockTaxes(): Response
+    {
+        $revenu = $this->purchaseRepository->totals()['revenue'];
+
+        return $this->render('console/dashboard/_block_taxes.html.twig', [
+            'taxes'          => $this->taxesVente->ventilation($revenu),
+            'revenuTotal'    => $revenu,
+            'revenuHorsTaxe' => $this->taxesVente->revenuHorsTaxe($revenu),
+            'montantTaxes'   => $this->taxesVente->montantTaxes($revenu),
         ]);
     }
 }

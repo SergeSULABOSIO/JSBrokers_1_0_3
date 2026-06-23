@@ -212,5 +212,29 @@
             </div>
         </details>
 
+        {# ── Fiscalité : taxes dues par JS Brokers sur ses ventes (fermé par défaut) ── #}
+        <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
+            <summary class="card-header border-0 bg-white py-2 px-3">
+                <div class="d-flex align-items-center gap-2">
+                    {{ ux_icon(resolve_icon_name('taxe'), {style: 'width:15px;height:15px;color:#0047AB;'}) }}
+                    <span class="small fw-semibold" style="color:#0047AB;">Fiscalité</span>
+                    <small id="cs-db-taxes-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
+                    <a href="{{ path('console.taxe.index') }}" class="db-task-new-btn ms-auto"
+                       onclick="event.stopPropagation();"
+                       data-action="click->top-progress#show"
+                       data-meta-tip="Gérer les taxes sur les ventes"
+                       aria-label="Gérer les taxes sur les ventes">
+                        {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
+                    </a>
+                    {{ ux_icon('mdi:chevron-down', {class: 'db-block-chevron', style: 'width:15px;height:15px;color:#6c757d;'}) }}
+                </div>
+            </summary>
+            <div class="card-body p-0"
+                 data-controller="lazy-block"
+                 data-lazy-block-url-value="{{ path('console.dashboard.block_taxes') }}">
+                <div class="db-skeleton-block m-3" style="height:140px;"></div>
+            </div>
+        </details>
+
     </div>
 {% endblock %}

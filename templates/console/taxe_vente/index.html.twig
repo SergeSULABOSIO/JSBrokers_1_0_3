@@ -1,0 +1,63 @@
+{% extends 'console/base.html.twig' %}
+
+{% block console_subtitle %}<p>Taxes dues par JS Brokers sur ses ventes, reversées aux autorités fiscales. La colonne « Montant sur le CA » indique ce que chaque taxe active représente sur le revenu total cumulé ({{ revenuTotal|number_format(2, '.', ' ') }} $).</p>{% endblock %}
+
+{% block console_actions %}
+    <a href="{{ path('console.taxe.new') }}" class="btn btn-sm btn-cobalt" data-action="click->top-progress#show">
+        {{ ux_icon(resolve_icon_name('action:add'), {height:'18px', width:'18px'}) }}
+        <span class="ms-1">Nouvelle</span>
+    </a>
+{% endblock %}
+
+{% block console_body %}
+<div class="cs-panel">
+    {% if taxes.getTotalItemCount > 0 %}
+        <table class="cs-table">
+            <thead><tr><th>Code</th><th>Libellé</th><th>Autorité fiscale</th><th style="text-align:right;">Taux</th><th style="text-align:right;">Montant sur le CA</th><th>État</th><th style="text-align:right;">Actions</th></tr></thead>
+            <tbody>
+            {% for t in taxes %}
+                <tr>
+                    <td><strong>{{ t.code }}</strong></td>
+                    <td>{{ t.libelle }}</td>
+                    <td>{{ t.autoriteNom }} <span class="cs-badge cs-badge--cobalt">{{ t.autoriteAbreviation }}</span></td>
+                    <td style="text-align:right;">{{ t.taux|number_format(2, '.', ' ') }} %</td>
+                    <td style="text-align:right;">{% if t.actif %}{{ (prix_ht(revenuTotal) * t.taux / 100)|number_format(2, '.', ' ') }} ${% else %}—{% endif %}</td>
+                    <td>
+                        {% if t.actif %}
+                            <span class="cs-badge cs-badge--ok">Active</span>
+                        {% else %}
+                            <span class="cs-badge cs-badge--muted">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align:right;">
+                        <a href="{{ path('console.taxe.edit', {id: t.id}) }}" class="cs-icon-btn"
+                           data-action="click->top-progress#show" title="Éditer" aria-label="Éditer {{ t.code }}">
+                            {{ ux_icon(resolve_icon_name('action:edit'), {height:'18px', width:'18px'}) }}
+                        </a>
+                        <form action="{{ path('console.taxe.delete', {id: t.id}) }}" method="post" style="display:inline;"
+                              data-controller="confirm-action" data-action="submit->confirm-action#request"
+                              data-confirm-action-title-value="Supprimer la taxe"
+                              data-confirm-action-body-value="Supprimer la taxe « {{ t.code }} » ?"
+                              data-confirm-action-irreversible-value="true">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete-taxe-' ~ t.id) }}">
+                            <button type="submit" class="cs-icon-btn is-danger" title="Supprimer" aria-label="Supprimer {{ t.code }}">
+                                {{ ux_icon(resolve_icon_name('action:delete'), {height:'18px', width:'18px'}) }}
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <div class="cs-pagination">{{ knp_pagination_render(taxes) }}</div>
+    {% else %}
+        <div class="cs-empty">
+            <p>Aucune taxe configurée. Créez la première taxe sur les ventes.</p>
+            <a href="{{ path('console.taxe.new') }}" class="btn btn-cobalt mt-2" data-action="click->top-progress#show">
+                {{ ux_icon(resolve_icon_name('action:add'), {height:'18px', width:'18px'}) }}
+                <span class="ms-1">Nouvelle taxe</span>
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
