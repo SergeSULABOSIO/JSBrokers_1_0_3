@@ -1,48 +1,9 @@
 {% extends 'console/base.html.twig' %}
 
-{% block console_subtitle %}<p>Tous les comptes utilisateurs (clients) de la plateforme.</p>{% endblock %}
+{% block console_subtitle %}<p>Comptes gratuits de la plateforme : utilisateurs sur le plan basic, sans solde de jetons prépayés.</p>{% endblock %}
 
 {% block console_body %}
 <div class="cs-panel">
-    {% if utilisateurs.getTotalItemCount > 0 %}
-        <table class="cs-table">
-            <thead><tr><th>Nom</th><th>E-mail</th><th>Statut</th><th>Langue</th><th style="text-align:right;">Actions</th></tr></thead>
-            <tbody>
-            {% for u in utilisateurs %}
-                <tr>
-                    <td>{{ ux_icon(resolve_icon_name('utilisateur'), {height:'18px', width:'18px'}) }} {{ u.nom }}</td>
-                    <td>{{ u.email }}</td>
-                    <td>
-                        {% if u.verified %}
-                            <span class="cs-badge cs-badge--ok">Vérifié</span>
-                        {% else %}
-                            <span class="cs-badge cs-badge--muted">Non vérifié</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ u.locale|upper }}</td>
-                    <td style="text-align:right;">
-                        <a href="{{ path('console.utilisateur.edit', {id: u.id}) }}" class="cs-icon-btn"
-                           data-action="click->top-progress#show" title="Éditer" aria-label="Éditer {{ u.nom }}">
-                            {{ ux_icon(resolve_icon_name('action:edit'), {height:'18px', width:'18px'}) }}
-                        </a>
-                        <form action="{{ path('console.utilisateur.delete', {id: u.id}) }}" method="post" style="display:inline;"
-                              data-controller="confirm-action" data-action="submit->confirm-action#request"
-                              data-confirm-action-title-value="Supprimer l'utilisateur"
-                              data-confirm-action-body-value="Supprimer définitivement « {{ u.nom }} » ?"
-                              data-confirm-action-irreversible-value="true">
-                            <input type="hidden" name="_token" value="{{ csrf_token('delete-utilisateur-' ~ u.id) }}">
-                            <button type="submit" class="cs-icon-btn is-danger" title="Supprimer" aria-label="Supprimer {{ u.nom }}">
-                                {{ ux_icon(resolve_icon_name('action:delete'), {height:'18px', width:'18px'}) }}
-                            </button>
-                        </form>
-                    </td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-        <div class="cs-pagination">{{ knp_pagination_render(utilisateurs) }}</div>
-    {% else %}
-        <div class="cs-empty">Aucun utilisateur.</div>
-    {% endif %}
+    {% include 'console/_users_table.html.twig' with { utilisateurs: utilisateurs } %}
 </div>
 {% endblock %}

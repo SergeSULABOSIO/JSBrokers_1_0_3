@@ -1,0 +1,53 @@
+{# Tableau partagé des comptes (entité Utilisateur) pour les rubriques Clients
+   (payants) et Utilisateurs (gratuits). Reçoit `utilisateurs` (pagination KnpPaginator).
+   Les actions Éditer/Supprimer pointent vers les routes console.utilisateur.* : même
+   entité, quelle que soit la liste qui l'affiche. #}
+{% if utilisateurs.getTotalItemCount > 0 %}
+    <table class="cs-table">
+        <thead><tr><th>Nom</th><th>E-mail</th><th>Plan</th><th>Statut</th><th>Langue</th><th style="text-align:right;">Actions</th></tr></thead>
+        <tbody>
+        {% for u in utilisateurs %}
+            <tr>
+                <td>{{ ux_icon(resolve_icon_name('utilisateur'), {height:'18px', width:'18px'}) }} {{ u.nom }}</td>
+                <td>{{ u.email }}</td>
+                <td>
+                    {% if u.paidTokens > 0 %}
+                        <span class="cs-badge cs-badge--ok">Payant</span>
+                        <small>{{ u.paidTokens }} / {{ u.totalTokens }} jetons</small>
+                    {% else %}
+                        <span class="cs-badge cs-badge--muted">Gratuit</span>
+                        <small>{{ u.totalTokens }} jetons</small>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if u.verified %}
+                        <span class="cs-badge cs-badge--ok">Vérifié</span>
+                    {% else %}
+                        <span class="cs-badge cs-badge--muted">Non vérifié</span>
+                    {% endif %}
+                </td>
+                <td>{{ u.locale|upper }}</td>
+                <td style="text-align:right;">
+                    <a href="{{ path('console.utilisateur.edit', {id: u.id}) }}" class="cs-icon-btn"
+                       data-action="click->top-progress#show" title="Éditer" aria-label="Éditer {{ u.nom }}">
+                        {{ ux_icon(resolve_icon_name('action:edit'), {height:'18px', width:'18px'}) }}
+                    </a>
+                    <form action="{{ path('console.utilisateur.delete', {id: u.id}) }}" method="post" style="display:inline;"
+                          data-controller="confirm-action" data-action="submit->confirm-action#request"
+                          data-confirm-action-title-value="Supprimer l'utilisateur"
+                          data-confirm-action-body-value="Supprimer définitivement « {{ u.nom }} » ?"
+                          data-confirm-action-irreversible-value="true">
+                        <input type="hidden" name="_token" value="{{ csrf_token('delete-utilisateur-' ~ u.id) }}">
+                        <button type="submit" class="cs-icon-btn is-danger" title="Supprimer" aria-label="Supprimer {{ u.nom }}">
+                            {{ ux_icon(resolve_icon_name('action:delete'), {height:'18px', width:'18px'}) }}
+                        </button>
+                    </form>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <div class="cs-pagination">{{ knp_pagination_render(utilisateurs) }}</div>
+{% else %}
+    <div class="cs-empty">Aucun compte à afficher.</div>
+{% endif %}

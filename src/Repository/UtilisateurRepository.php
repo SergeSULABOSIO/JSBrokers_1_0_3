@@ -41,28 +41,67 @@ class UtilisateurRepository extends ServiceEntityRepository implements PasswordU
             ->getResult();
     }
 
-    /** Liste paginée des utilisateurs « classiques » (hors agents JS Brokers). */
+    /**
+     * Requête de base sur les comptes « classiques » (hors agents JS Brokers).
+     * Sert d'assise commune au partitionnement Clients (payants) / Utilisateurs
+     * (gratuits) afin de ne pas dupliquer le filtre rôles.
+     */
+    private function regularUsersQb(): \Doctrine\ORM\QueryBuilder
+    {
+        return $this->createQueryBuilder('u')
+            ->where('u.roles NOT LIKE :admin AND u.roles NOT LIKE :super')
+            ->setParameter('admin', '%ROLE_ADMIN%')
+            ->setParameter('super', '%ROLE_SUPER_ADMIN%');
+    }
+
+    /**
+     * Liste paginée des utilisateurs « gratuits » : comptes classiques sans solde
+     * prépayé (plan basic), par opposition aux clients (cf. paginateClients()).
+     */
     public function paginateRegularUsers(int $page): PaginationInterface
     {
         return $this->paginator->paginate(
-            $this->createQueryBuilder('u')
-                ->where('u.roles NOT LIKE :admin AND u.roles NOT LIKE :super')
-                ->setParameter('admin', '%ROLE_ADMIN%')
-                ->setParameter('super', '%ROLE_SUPER_ADMIN%')
+            $this->regularUsersQb()
+                ->andWhere('u.paidTokens = 0')
                 ->orderBy('u.id', 'DESC'),
             $page,
             20,
         );
     }
 
-    /** Nombre total d'utilisateurs « classiques » (hors agents). */
+    /** Nombre d'utilisateurs « gratuits » (comptes classiques, plan basic, sans solde prépayé). */
     public function countRegularUsers(): int
+    {
+        return (int) $this->regularUsersQb()
+            ->andWhere('u.paidTokens = 0')
+            ->select('COUNT(u.id)')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * Liste paginée des « clients » : tout compte en mode payant, c.-à-d. disposant
+     * encore d'un solde de jetons prépayés (paidTokens > 0). Le rôle n'entre PAS en
+     * ligne de compte : un agent JS Brokers qui a acheté des jetons et en possède
+     * encore est aussi un client.
+     */
+    public function paginateClients(int $page): PaginationInterface
+    {
+        return $this->paginator->paginate(
+            $this->createQueryBuilder('u')
+                ->where('u.paidTokens > 0')
+                ->orderBy('u.id', 'DESC'),
+            $page,
+            20,
+        );
+    }
+
+    /** Nombre de « clients » (tout compte avec solde prépayé > 0, rôle indifférent). */
+    public function countClients(): int
     {
         return (int) $this->createQueryBuilder('u')
             ->select('COUNT(u.id)')
-            ->where('u.roles NOT LIKE :admin AND u.roles NOT LIKE :super')
-            ->setParameter('admin', '%ROLE_ADMIN%')
-            ->setParameter('super', '%ROLE_SUPER_ADMIN%')
+            ->where('u.paidTokens > 0')
             ->getQuery()
             ->getSingleScalarResult();
     }

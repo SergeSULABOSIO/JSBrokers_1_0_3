@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Repository\ClientRepository;
 use App\Repository\EntrepriseRepository;
 use App\Repository\TokenPurchaseRepository;
 use App\Repository\UtilisateurRepository;
@@ -31,7 +30,6 @@ class ConsoleStatsProvider
 
     public function __construct(
         private UtilisateurRepository $utilisateurRepository,
-        private ClientRepository $clientRepository,
         private EntrepriseRepository $entrepriseRepository,
         private TokenPurchaseRepository $purchaseRepository,
         private ChartBuilderInterface $chartBuilder,
@@ -51,7 +49,7 @@ class ConsoleStatsProvider
         return [
             'nbAgents'      => count($this->utilisateurRepository->findAgents()),
             'nbUsers'       => $this->utilisateurRepository->countRegularUsers(),
-            'nbClients'     => $this->clientRepository->countAll(),
+            'nbClients'     => $this->utilisateurRepository->countClients(),
             'nbEntreprises' => $this->entrepriseRepository->countAllGlobal(),
             'nbVentes'      => $totals['count'],
             'tokensVendus'  => $totals['tokens'],
