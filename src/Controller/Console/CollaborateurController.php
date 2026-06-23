@@ -69,12 +69,15 @@ class CollaborateurController extends AbstractConsoleController
             return $this->redirectToRoute('console.collaborateur.index');
         }
 
-        return $this->render('console/form.html.twig', [
+        return $this->render('console/compte/form.html.twig', [
             'pageName'    => 'Nouveau collaborateur',
             'form'        => $form,
             'backUrl'     => $this->generateUrl('console.collaborateur.index'),
             'backLabel'   => 'Collaborateurs',
             'submitLabel' => 'Créer le collaborateur',
+            'description' => 'Créez un compte interne pour un agent JS Brokers. '
+                . 'Le compte est actif immédiatement (sans vérification e-mail).',
+            'formIcon'    => 'utilisateur',
         ]);
     }
 
@@ -108,12 +111,15 @@ class CollaborateurController extends AbstractConsoleController
             return $this->redirectToRoute('console.collaborateur.index');
         }
 
-        return $this->render('console/form.html.twig', [
+        return $this->render('console/compte/form.html.twig', [
             'pageName'    => 'Éditer ' . $collaborateur->getNom(),
             'form'        => $form,
             'backUrl'     => $this->generateUrl('console.collaborateur.index'),
             'backLabel'   => 'Collaborateurs',
             'submitLabel' => 'Enregistrer',
+            'description' => 'Modifiez les informations et l\'accès de ce collaborateur. '
+                . 'Laissez le mot de passe vide pour le conserver.',
+            'formIcon'    => 'utilisateur',
         ]);
     }
 

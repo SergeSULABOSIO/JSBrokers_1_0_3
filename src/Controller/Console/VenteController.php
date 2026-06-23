@@ -29,9 +29,13 @@ class VenteController extends AbstractConsoleController
         $this->applyLangPreference($request, $localeSwitcher);
 
         // Filtres lus depuis la query string (formulaire GET, sans JS).
+        // Par défaut (aucun paramètre en query), les bornes de dates pointent sur
+        // le jour en cours. Une valeur vide explicite ('') reste respectée (l'agent
+        // a volontairement vidé le champ avant de filtrer).
+        $today = (new \DateTimeImmutable('today'))->format('Y-m-d');
         $filtres = [
-            'from'   => $request->query->get('from'),
-            'to'     => $request->query->get('to'),
+            'from'   => $request->query->get('from', $today),
+            'to'     => $request->query->get('to', $today),
             'pack'   => $request->query->get('pack'),
             'status' => $request->query->get('status'),
             'q'      => $request->query->get('q'),

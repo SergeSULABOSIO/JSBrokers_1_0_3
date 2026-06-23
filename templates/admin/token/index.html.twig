@@ -48,14 +48,6 @@
 
     /* Barre de titre : actions à droite (bascule de langue + recharge). */
     .tkp-actions { display:inline-flex; align-items:center; gap:.75rem; }
-    /* Bascule de langue : drapeaux SVG (FR / Royaume-Uni). */
-    .tkp-lang { display:inline-flex; gap:.25rem; padding:.25rem; border:1px solid #dee2e6; border-radius:10px; background-color:#fff; }
-    .tkp-lang a { display:inline-flex; align-items:center; justify-content:center; min-width:44px; min-height:36px; padding:0 .55rem; border-radius:7px; text-decoration:none; background-color:transparent; transition:background-color .15s ease; }
-    .tkp-lang .public-lang__flag { width:26px; height:18px; display:block; border-radius:3px; box-shadow:0 0 0 1px rgba(0,0,0,.08); opacity:.5; filter:grayscale(.4); transition:opacity .15s ease, filter .15s ease; }
-    .tkp-lang a:hover .public-lang__flag { opacity:.9; filter:none; }
-    .tkp-lang a.is-active { background-color:#0047AB; }
-    .tkp-lang a.is-active .public-lang__flag { opacity:1; filter:none; box-shadow:0 0 0 1px rgba(255,255,255,.6); }
-    .tkp-lang a:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
 
     /* ---------- Pied de page public officiel JS Brokers ---------- */
     .public-footer { background-color:#fff; border-top:1px solid #dee2e6; margin-top:1rem; }
@@ -72,19 +64,10 @@
     .public-footer__credit { max-width:1140px; margin:0 auto; padding:1rem 1.5rem; border-top:1px solid #dee2e6; text-align:center; color:#6c757d; font-size:.85rem; }
 
     /* Bascule de langue du pied de page (drapeaux SVG). */
-    .public-lang { display:inline-flex; gap:.25rem; padding:.25rem; border:1px solid #dee2e6; border-radius:10px; background-color:#fff; }
-    .public-lang a { display:inline-flex; align-items:center; justify-content:center; min-width:44px; min-height:36px; padding:0 .55rem; border-radius:7px; text-decoration:none; background-color:transparent; transition:background-color .15s ease; }
-    .public-lang__flag { width:26px; height:18px; display:block; border-radius:3px; box-shadow:0 0 0 1px rgba(0,0,0,.08); opacity:.5; filter:grayscale(.4); transition:opacity .15s ease, filter .15s ease; }
-    .public-lang a:hover .public-lang__flag { opacity:.9; filter:none; }
-    .public-lang a.is-active { background-color:#0047AB; }
-    .public-lang a.is-active .public-lang__flag { opacity:1; filter:none; box-shadow:0 0 0 1px rgba(255,255,255,.6); }
-    .public-lang a:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
-    .public-lang__code { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 </style>
 {% endblock %}
 
 {% block body %}
-{% import 'components/_lang_flag.html.twig' as flags %}
 <main class="tkp-page" data-controller="top-progress">
     <div class="ent-progress-bar" data-top-progress-target="bar" role="progressbar"
          aria-label="Chargement en cours" aria-hidden="true"
@@ -96,17 +79,8 @@
             <span>JS Brokers</span>
         </a>
         <div class="tkp-actions">
-            {# Bascule de langue : ?lang= persiste la préférence de l'utilisateur (cf. TokenController::index). #}
-            <span class="tkp-lang" role="group" aria-label="Langue / Language">
-                <a href="{{ path('admin.token.index', app.request.query.all|merge({'lang': 'fr'})) }}"
-                   class="{{ app.user.locale == 'fr' ? 'is-active' : '' }}" title="Français" lang="fr"
-                   data-action="click->top-progress#show"
-                   {% if app.user.locale == 'fr' %}aria-current="true"{% endif %}>{{ flags.fr() }}<span class="public-lang__code">FR</span></a>
-                <a href="{{ path('admin.token.index', app.request.query.all|merge({'lang': 'en'})) }}"
-                   class="{{ app.user.locale == 'en' ? 'is-active' : '' }}" title="English" lang="en"
-                   data-action="click->top-progress#show"
-                   {% if app.user.locale == 'en' %}aria-current="true"{% endif %}>{{ flags.uk('lang-tkp-top') }}<span class="public-lang__code">EN</span></a>
-            </span>
+            {# Bascule de langue unifiée : ?lang= persiste la préférence (cf. TokenController::index). #}
+            {{ include('components/_lang_switch.html.twig', {route: 'admin.token.index', params: app.request.query.all, uid: 'lang-tkp'}) }}
             <a href="{{ path('admin.token.buy') }}" class="btn btn-sm btn-cobalt d-inline-flex align-items-center gap-1"
                style="background:#0047AB;border-color:#0047AB;color:#fff;" data-action="click->top-progress#show">
                 {{ ux_icon(resolve_icon_name('action:cart'), {height: '16px', width: '16px'}) }}

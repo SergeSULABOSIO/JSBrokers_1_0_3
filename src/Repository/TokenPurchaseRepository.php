@@ -146,4 +146,81 @@ class TokenPurchaseRepository extends ServiceEntityRepository
             'tokens'  => array_values($tokens),
         ];
     }
+
+    /**
+     * Série mensuelle du revenu/volume pour les 12 mois (janvier → décembre)
+     * d'une année civile donnée. Regroupement en PHP (portable tous moteurs).
+     *
+     * @return array{labels:string[], revenue:float[], tokens:int[]}
+     */
+    public function seriesParMoisAnnee(int $annee): array
+    {
+        [$debut, $fin] = $this->bornesAnnee($annee);
+
+        $rows = $this->createQueryBuilder('p')
+            ->select('p.createdAt AS createdAt, p.montantUsd AS montantUsd, p.tokens AS tokens')
+            ->where('p.createdAt >= :debut AND p.createdAt < :fin')
+            ->setParameter('debut', $debut)
+            ->setParameter('fin', $fin)
+            ->getQuery()
+            ->getArrayResult();
+
+        $labels = [];
+        $revenue = [];
+        $tokens = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $cle = sprintf('%d-%02d', $annee, $m);
+            $labels[] = $cle;
+            $revenue[$cle] = 0.0;
+            $tokens[$cle] = 0;
+        }
+
+        foreach ($rows as $r) {
+            $cle = $r['createdAt'] instanceof \DateTimeInterface ? $r['createdAt']->format('Y-m') : null;
+            if ($cle !== null && isset($revenue[$cle])) {
+                $revenue[$cle] += (float) $r['montantUsd'];
+                $tokens[$cle] += (int) $r['tokens'];
+            }
+        }
+
+        return [
+            'labels'  => $labels,
+            'revenue' => array_values($revenue),
+            'tokens'  => array_values($tokens),
+        ];
+    }
+
+    /**
+     * Ventes d'une année civile (entités hydratées, acheteur joint) — sert à
+     * dériver le pays via l'entreprise de l'acheteur.
+     *
+     * @return TokenPurchase[]
+     */
+    public function findAnnee(int $annee): array
+    {
+        [$debut, $fin] = $this->bornesAnnee($annee);
+
+        return $this->createQueryBuilder('p')
+            ->leftJoin('p.utilisateur', 'u')->addSelect('u')
+            ->where('p.createdAt >= :debut AND p.createdAt < :fin')
+            ->setParameter('debut', $debut)
+            ->setParameter('fin', $fin)
+            ->orderBy('p.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Bornes [début, fin[ d'une année civile (1ᵉʳ janvier inclus → 1ᵉʳ janvier
+     * suivant exclu).
+     *
+     * @return array{0:\DateTimeImmutable, 1:\DateTimeImmutable}
+     */
+    private function bornesAnnee(int $annee): array
+    {
+        return [
+            new \DateTimeImmutable(sprintf('%d-01-01 00:00:00', $annee)),
+            new \DateTimeImmutable(sprintf('%d-01-01 00:00:00', $annee + 1)),
+        ];
+    }
 }

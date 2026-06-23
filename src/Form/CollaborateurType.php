@@ -26,17 +26,17 @@ class CollaborateurType extends AbstractType
         $builder
             ->add('nom', TextType::class, [
                 'label' => 'Nom complet',
-                'attr'  => ['placeholder' => 'Ex. Jean Dupont'],
+                'attr'  => ['placeholder' => 'Ex. Jean Dupont', 'data-icon' => 'utilisateur'],
             ])
             ->add('email', EmailType::class, [
                 'label' => 'Adresse e-mail',
-                'attr'  => ['placeholder' => 'agent@js-brokers.com', 'autocomplete' => 'off'],
+                'attr'  => ['placeholder' => 'agent@js-brokers.com', 'autocomplete' => 'off', 'data-icon' => 'contact'],
             ])
             ->add('plainPassword', PasswordType::class, [
                 'label'       => $isEdit ? 'Nouveau mot de passe (laisser vide pour conserver)' : 'Mot de passe',
                 'mapped'      => false,
                 'required'    => !$isEdit,
-                'attr'        => ['autocomplete' => 'new-password', 'placeholder' => '••••••••'],
+                'attr'        => ['autocomplete' => 'new-password', 'placeholder' => '••••••••', 'data-icon' => 'action:password'],
                 'constraints' => $isEdit ? [] : [
                     new NotBlank(message: 'Veuillez définir un mot de passe.'),
                     new Length(min: 6, minMessage: 'Au moins {{ limit }} caractères.'),

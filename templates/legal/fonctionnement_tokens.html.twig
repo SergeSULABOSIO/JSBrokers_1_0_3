@@ -60,14 +60,6 @@
     .cgu-table th { background: #f8f9fa; color: #495057; font-weight: 600; }
     .cgu-table td:last-child, .cgu-table th:last-child { text-align: right; }
 
-    .cgu-lang { display: inline-flex; gap: .25rem; padding: .25rem; border: 1px solid #dee2e6; border-radius: 10px; background-color: #fff; }
-    .cgu-lang a { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 36px; padding: 0 .55rem; border-radius: 7px; text-decoration: none; background-color: transparent; transition: background-color .15s ease; }
-    .cgu-lang .public-lang__flag { width: 26px; height: 18px; display: block; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); opacity: .5; filter: grayscale(.4); transition: opacity .15s ease, filter .15s ease; }
-    .cgu-lang a:hover .public-lang__flag { opacity: .9; filter: none; }
-    .cgu-lang a.is-active { background-color: #0047AB; }
-    .cgu-lang a.is-active .public-lang__flag { opacity: 1; filter: none; box-shadow: 0 0 0 1px rgba(255,255,255,.6); }
-    .cgu-lang a:focus-visible { outline: 2px solid #0047AB; outline-offset: 2px; }
-
     /* La zone de contenu grandit pour pousser le pied de page en bas de fenêtre. */
     .cgu-content { flex: 1 0 auto; }
 
@@ -87,14 +79,6 @@
     .public-footer__links a:focus-visible { outline: 2px solid #0047AB; outline-offset: 2px; border-radius: 4px; }
     .public-footer__credit { max-width: 1140px; margin: 0 auto; padding: 1rem 1.5rem;
         border-top: 1px solid #dee2e6; text-align: center; color: #6c757d; font-size: .85rem; }
-    .public-lang { display: inline-flex; gap: .25rem; padding: .25rem; border: 1px solid #dee2e6; border-radius: 10px; background-color: #fff; }
-    .public-lang a { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 36px; padding: 0 .55rem; border-radius: 7px; text-decoration: none; background-color: transparent; transition: background-color .15s ease; }
-    .public-lang__flag { width: 26px; height: 18px; display: block; border-radius: 3px; box-shadow: 0 0 0 1px rgba(0,0,0,.08); opacity: .5; filter: grayscale(.4); transition: opacity .15s ease, filter .15s ease; }
-    .public-lang a:hover .public-lang__flag { opacity: .9; filter: none; }
-    .public-lang a.is-active { background-color: #0047AB; }
-    .public-lang a.is-active .public-lang__flag { opacity: 1; filter: none; box-shadow: 0 0 0 1px rgba(255,255,255,.6); }
-    .public-lang a:focus-visible { outline: 2px solid #0047AB; outline-offset: 2px; }
-    .public-lang__code { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
     @media (max-width: 575.98px) { .cgu-card { padding: 1.25rem; } }
     @media print {
@@ -106,7 +90,6 @@
 {% endblock %}
 
 {% block body %}
-{% import 'components/_lang_flag.html.twig' as flags %}
 {% set isEn = (lang == 'en') %}
 {% set backHref = app.user is not null ? path('admin.token.index') : path('app_index') %}
 
@@ -124,10 +107,7 @@
             <span>JS Brokers</span>
         </a>
         <div class="cgu-topbar-actions cgu-no-print">
-            <span class="cgu-lang" role="group" aria-label="{{ isEn ? 'Language' : 'Langue' }}">
-                <a href="{{ path('app_tokens_info', {'lang': 'fr'}) }}" class="{{ isEn ? '' : 'is-active' }}" title="Français" lang="fr" data-action="click->top-progress#show" {{ isEn ? '' : 'aria-current="true"' }}>{{ flags.fr() }}<span class="public-lang__code">FR</span></a>
-                <a href="{{ path('app_tokens_info', {'lang': 'en'}) }}" class="{{ isEn ? 'is-active' : '' }}" title="English" lang="en" data-action="click->top-progress#show" {{ isEn ? 'aria-current="true"' : '' }}>{{ flags.uk('lang-cgu-top') }}<span class="public-lang__code">EN</span></a>
-            </span>
+            {{ include('components/_lang_switch.html.twig', {current: (isEn ? 'en' : 'fr'), route: 'app_tokens_info', uid: 'lang-tok'}) }}
             <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center" onclick="window.print()">
                 {{ ux_icon(resolve_icon_name('mdi:printer-outline'), {height: '18px', width: '18px'}) }}
                 <span class="ms-1">{{ isEn ? 'Print' : 'Imprimer' }}</span>

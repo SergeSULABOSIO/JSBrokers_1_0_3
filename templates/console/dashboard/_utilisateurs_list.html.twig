@@ -1,0 +1,38 @@
+{# Fragment AJAX : lignes des derniers utilisateurs créés (rechargées /3 min).
+   data-row : repère utilisé par « dashboard-list » pour le filtrage client. #}
+{% set consommations = consommations|default({}) %}
+{% set geo = geo|default({}) %}
+{% if derniersUtilisateurs.getTotalItemCount > 0 %}
+    <table class="cs-table">
+        <thead><tr><th>Créé le</th><th>Nom</th><th>E-mail</th><th>Localisation</th>
+            <th style="text-align:right;">Consommation</th><th style="text-align:right;">Solde restant</th></tr></thead>
+        <tbody>
+        {% for u in derniersUtilisateurs %}
+            {% set solde = u.totalTokens %}
+            {% set g = geo[u.id]|default({}) %}
+            <tr data-row>
+                <td>{{ u.createdAt ? u.createdAt|format_datetime('medium', 'none', locale: app.user.locale) : '—' }}</td>
+                <td data-field="nom">{{ ux_icon(resolve_icon_name('utilisateur'), {height:'16px', width:'16px'}) }} {{ u.nom ?: '—' }}</td>
+                <td data-field="email">{{ u.email }}</td>
+                <td data-field="localisation">
+                    {% if g.ville or g.pays %}
+                        {{ g.ville ?: '' }}{% if g.ville and g.pays %}, {% endif %}{{ g.pays ?: '' }}
+                    {% else %}—{% endif %}
+                </td>
+                <td style="text-align:right;">
+                    {{ (consommations[u.id] ?? 0)|number_format(0, ',', ' ') }}
+                    <small style="color:#6c757d;">jetons</small>
+                </td>
+                <td style="text-align:right;">
+                    <span class="cs-badge {{ solde > 0 ? 'cs-badge--ok' : 'cs-badge--muted' }}"
+                          title="Solde de l'utilisateur (gratuit + prépayé)">
+                        {{ solde|number_format(0, ',', ' ') }} jetons
+                    </span>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <div class="cs-empty">Aucun utilisateur enregistré pour l'instant.</div>
+{% endif %}

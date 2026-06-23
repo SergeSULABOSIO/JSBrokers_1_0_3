@@ -38,6 +38,66 @@ class TokenConsumptionRepository extends ServiceEntityRepository
         );
     }
 
+    /**
+     * Total de tokens consommés par entreprise, pour un lot d'identifiants.
+     * Agrégat groupé en une seule requête (évite le N+1 sur une liste paginée).
+     *
+     * @param int[] $entrepriseIds
+     *
+     * @return array<int,int> [entrepriseId => totalPoids]
+     */
+    public function totauxParEntreprises(array $entrepriseIds): array
+    {
+        if ($entrepriseIds === []) {
+            return [];
+        }
+
+        $rows = $this->createQueryBuilder('c')
+            ->select('IDENTITY(c.entreprise) AS eid, COALESCE(SUM(c.poidsTotal), 0) AS total')
+            ->where('c.entreprise IN (:ids)')
+            ->setParameter('ids', $entrepriseIds)
+            ->groupBy('c.entreprise')
+            ->getQuery()
+            ->getArrayResult();
+
+        $map = [];
+        foreach ($rows as $r) {
+            $map[(int) $r['eid']] = (int) $r['total'];
+        }
+
+        return $map;
+    }
+
+    /**
+     * Total de tokens consommés par propriétaire (payeur), pour un lot d'IDs.
+     * Agrégat groupé en une seule requête (évite le N+1 sur une liste paginée).
+     *
+     * @param int[] $proprietaireIds
+     *
+     * @return array<int,int> [proprietaireId => totalPoids]
+     */
+    public function totauxParProprietaires(array $proprietaireIds): array
+    {
+        if ($proprietaireIds === []) {
+            return [];
+        }
+
+        $rows = $this->createQueryBuilder('c')
+            ->select('IDENTITY(c.proprietaire) AS uid, COALESCE(SUM(c.poidsTotal), 0) AS total')
+            ->where('c.proprietaire IN (:ids)')
+            ->setParameter('ids', $proprietaireIds)
+            ->groupBy('c.proprietaire')
+            ->getQuery()
+            ->getArrayResult();
+
+        $map = [];
+        foreach ($rows as $r) {
+            $map[(int) $r['uid']] = (int) $r['total'];
+        }
+
+        return $map;
+    }
+
     /** Total de tokens consommés par un propriétaire (tous sens confondus). */
     public function totalConsommeForProprietaire(int $idProprietaire): int
     {

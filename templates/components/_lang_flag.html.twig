@@ -5,8 +5,9 @@
    - uk(uid)   : Union Jack ; `uid` rend les <clipPath> uniques sur la
                  page (le sélecteur de langue est présent dans l'en-tête
                  ET le pied de page → IDs distincts obligatoires).
-   Styles dans _home_styles / conditions_utilisation / fonctionnement_tokens
-   (classe .public-lang__flag).
+   Dimensionnés par le composant unifié .cs-lang (assets/styles/app.css,
+   règle `.cs-lang svg`). La classe .public-lang__flag est conservée sur les
+   <svg> mais n'est plus stylée (inerte).
    ============================================================ #}
 
 {% macro fr() %}<svg class="public-lang__flag" viewBox="0 0 3 2" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false"><rect width="3" height="2" fill="#fff"/><rect width="1" height="2" fill="#0055A4"/><rect width="1" height="2" x="2" fill="#EF4135"/></svg>{% endmacro %}

@@ -5,6 +5,7 @@ namespace App\Controller\Console;
 use App\Entity\Entreprise;
 use App\Event\AgentNotificationEvent;
 use App\Repository\EntrepriseRepository;
+use App\Repository\TokenConsumptionRepository;
 use App\Services\ServiceSuppressionEntreprise;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -25,6 +26,7 @@ class EntrepriseController extends AbstractConsoleController
         private EntrepriseRepository $entrepriseRepository,
         private ServiceSuppressionEntreprise $serviceSuppression,
         private EventDispatcherInterface $dispatcher,
+        private TokenConsumptionRepository $consumptionRepository,
     ) {}
 
     #[Route('', name: 'index')]
@@ -32,9 +34,17 @@ class EntrepriseController extends AbstractConsoleController
     {
         $this->applyLangPreference($request, $localeSwitcher);
 
+        $entreprises = $this->entrepriseRepository->paginateAll($request->query->getInt('page', 1));
+
+        // Consommation cumulée de tokens par entreprise (un seul agrégat pour
+        // toute la page) ; le solde restant est lu sur le propriétaire (déjà
+        // chargé via e.utilisateur dans le gabarit).
+        $ids = array_map(static fn (Entreprise $e) => $e->getId(), $entreprises->getItems());
+
         return $this->render('console/entreprise/index.html.twig', [
-            'pageName'    => 'Entreprises',
-            'entreprises' => $this->entrepriseRepository->paginateAll($request->query->getInt('page', 1)),
+            'pageName'      => 'Entreprises',
+            'entreprises'   => $entreprises,
+            'consommations' => $this->consumptionRepository->totauxParEntreprises($ids),
         ]);
     }
 

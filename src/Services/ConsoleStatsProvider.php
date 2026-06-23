@@ -35,6 +35,7 @@ class ConsoleStatsProvider
         private EntrepriseRepository $entrepriseRepository,
         private TokenPurchaseRepository $purchaseRepository,
         private ChartBuilderInterface $chartBuilder,
+        private ServiceGeographie $geographie,
     ) {
     }
 
@@ -60,13 +61,15 @@ class ConsoleStatsProvider
     }
 
     /**
-     * Histogramme du revenu des ventes par mois (12 derniers mois).
+     * Histogramme du revenu des ventes par mois (janvier → décembre) de l'année
+     * civile en cours.
      *
      * @return array{chart: Chart, titre: string}
      */
     public function chartVentesParMois(): array
     {
-        $serie = $this->purchaseRepository->seriesParMois(12);
+        $annee = (int) date('Y');
+        $serie = $this->purchaseRepository->seriesParMoisAnnee($annee);
 
         $chart = $this->chartBuilder->createChart(Chart::TYPE_BAR);
         $chart->setData([
@@ -78,19 +81,76 @@ class ConsoleStatsProvider
                 'data'            => $serie['revenue'],
             ]],
         ]);
-        $chart->setOptions(['scales' => ['y' => ['beginAtZero' => true]]]);
+        $chart->setOptions([
+            'responsive'          => true,
+            'maintainAspectRatio' => false,
+            'scales'              => ['y' => ['beginAtZero' => true]],
+        ]);
 
-        return ['chart' => $chart, 'titre' => 'Revenu des ventes par mois'];
+        return ['chart' => $chart, 'titre' => sprintf('Revenu des ventes par mois (%d)', $annee)];
     }
 
     /**
-     * Camembert du revenu par paquet de tokens.
+     * Histogramme du revenu des ventes par pays pour l'année civile en cours.
+     * Le pays d'une vente est dérivé de l'entreprise représentative de
+     * l'acheteur (sa première entreprise détenue, à défaut l'entreprise active) ;
+     * les ventes sans pays identifiable sont regroupées sous « Inconnu ».
+     *
+     * @return array{chart: Chart, titre: string}
+     */
+    public function chartVentesParPays(): array
+    {
+        $annee = (int) date('Y');
+
+        $parPays = [];
+        foreach ($this->purchaseRepository->findAnnee($annee) as $vente) {
+            $acheteur   = $vente->getUtilisateur();
+            $entreprise = null;
+            if ($acheteur !== null) {
+                $entreprise = $acheteur->getEntreprises()->first() ?: $acheteur->getConnectedTo();
+            }
+
+            $nom = 'Inconnu';
+            if ($entreprise !== null && $entreprise->getPays() !== null) {
+                $nom = $this->geographie->getNomPays($entreprise->getPays()) ?? 'Inconnu';
+            }
+
+            $parPays[$nom] = ($parPays[$nom] ?? 0.0) + (float) $vente->getMontantUsd();
+        }
+
+        arsort($parPays); // pays les plus contributeurs en tête
+
+        $chart = $this->chartBuilder->createChart(Chart::TYPE_BAR);
+        $chart->setData([
+            'labels' => array_keys($parPays),
+            'datasets' => [[
+                'label'           => 'Revenu (USD)',
+                'backgroundColor' => self::COLORS[0],
+                'borderColor'     => 'white',
+                'data'            => array_values($parPays),
+            ]],
+        ]);
+        $chart->setOptions([
+            'responsive'          => true,
+            'maintainAspectRatio' => false,
+            'scales'              => ['y' => ['beginAtZero' => true]],
+        ]);
+
+        return ['chart' => $chart, 'titre' => sprintf('Revenu des ventes par pays (%d)', $annee)];
+    }
+
+    /**
+     * Camembert du revenu par paquet de tokens, pour l'année civile en cours.
      *
      * @return array{chart: Chart, titre: string}
      */
     public function chartVentesParPaquet(): array
     {
-        $rows = $this->purchaseRepository->groupByPack();
+        $annee = (int) date('Y');
+        $rows = $this->purchaseRepository->groupByPack([
+            'from' => sprintf('%d-01-01', $annee),
+            'to'   => sprintf('%d-12-31', $annee),
+        ]);
 
         $chart = $this->chartBuilder->createChart(Chart::TYPE_PIE);
         $chart->setData([
@@ -103,7 +163,11 @@ class ConsoleStatsProvider
                 'hoverOffset'     => 30,
             ]],
         ]);
+        $chart->setOptions([
+            'responsive'          => true,
+            'maintainAspectRatio' => false,
+        ]);
 
-        return ['chart' => $chart, 'titre' => 'Répartition du revenu par paquet'];
+        return ['chart' => $chart, 'titre' => sprintf('Répartition du revenu par paquet (%d)', $annee)];
     }
 }

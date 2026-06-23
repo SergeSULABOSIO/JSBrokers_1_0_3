@@ -1,0 +1,52 @@
+{# Fragment AJAX : barre de recherche + liste des derniers utilisateurs créés.
+   Même pattern que « Dernières ventes » : champ statique, fragment liste
+   rechargé toutes les 3 min, critère ré-appliqué après chaque rafraîchissement. #}
+<div data-controller="dashboard-list"
+     data-dashboard-list-url-value="{{ path('console.dashboard.utilisateurs_fragment') }}"
+     data-dashboard-list-interval-value="180000"
+     data-dashboard-list-status-id-value="cs-db-utilisateurs-update">
+    <div class="px-3 pt-3 pb-2 d-flex align-items-center gap-1">
+        {# Sélecteur du champ pris en compte par la recherche (data-field côté
+           liste), précédé de son icône d'illustration (alias action:filter). #}
+        <div class="input-group input-group-sm flex-shrink-0 ms-auto" style="max-width:175px;">
+            <span class="input-group-text border-0 bg-light px-2">
+                {{ ux_icon(resolve_icon_name('action:filter'), {style: 'width:14px;height:14px;color:#6c757d;'}) }}
+            </span>
+            <select class="form-select form-select-sm border-0 bg-light"
+                    style="font-size:.72rem;"
+                    aria-label="Champ de recherche"
+                    data-dashboard-list-target="field"
+                    data-action="change->dashboard-list#search">
+                <option value="all">Tous les champs</option>
+                <option value="nom">Nom</option>
+                <option value="email">E-mail</option>
+                <option value="localisation">Localisation</option>
+            </select>
+        </div>
+        <div class="input-group input-group-sm flex-shrink-0" role="search" style="max-width:200px;">
+            <span class="input-group-text border-0 bg-light px-2">
+                {{ ux_icon('mdi:magnify', {style: 'width:14px;height:14px;color:#6c757d;'}) }}
+            </span>
+            {# Anti remplissage automatique (readonly levé au focus) : champ vide au chargement. #}
+            <input type="search"
+                   name="cs-db-utilisateurs-filter"
+                   autocomplete="off"
+                   autocapitalize="off"
+                   autocorrect="off"
+                   spellcheck="false"
+                   readonly
+                   data-form-type="other"
+                   data-lpignore="true"
+                   data-1p-ignore="true"
+                   class="form-control form-control-sm border-0 bg-light"
+                   style="font-size:.78rem;"
+                   placeholder="Filtrer (nom, e-mail…)"
+                   aria-label="Filtrer les utilisateurs"
+                   data-dashboard-list-target="search"
+                   data-action="focus->dashboard-list#unlock input->dashboard-list#search">
+        </div>
+    </div>
+    <div class="px-3 pb-3" style="max-height:340px;overflow:auto;" data-dashboard-list-target="list">
+        {% include 'console/dashboard/_utilisateurs_list.html.twig' with { derniersUtilisateurs: derniersUtilisateurs, consommations: consommations, geo: geo } %}
+    </div>
+</div>

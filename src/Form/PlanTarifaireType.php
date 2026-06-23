@@ -23,31 +23,36 @@ class PlanTarifaireType extends AbstractType
         $builder
             ->add('freeAllowance', IntegerType::class, [
                 'label' => 'Allocation gratuite (tokens / fenêtre)',
+                'attr'  => ['placeholder' => 'Ex. 1000', 'data-icon' => 'action:count'],
             ])
             ->add('freeWindowHours', IntegerType::class, [
                 'label' => 'Durée de la fenêtre gratuite (heures)',
+                'attr'  => ['placeholder' => 'Ex. 8', 'data-icon' => 'action:calendar'],
             ])
             ->add('readWeight', IntegerType::class, [
                 'label' => 'Poids d\'une lecture (tokens / entité)',
+                'attr'  => ['placeholder' => 'Ex. 2', 'data-icon' => 'action:count'],
             ])
             ->add('defaultWriteWeight', IntegerType::class, [
                 'label' => 'Poids d\'écriture par défaut (tokens)',
+                'attr'  => ['placeholder' => 'Ex. 5', 'data-icon' => 'action:count'],
             ])
             ->add('usdPerToken', NumberType::class, [
                 'label' => 'Taux de conversion (USD / token)',
                 'scale' => 5,
+                'attr'  => ['placeholder' => 'Ex. 0.001', 'data-icon' => 'monnaie'],
             ])
             ->add('packsJson', TextareaType::class, [
                 'label'  => 'Paquets prépayés (JSON : { "clé": { "tokens": n, "price": p } })',
                 'mapped' => false,
-                'attr'   => ['rows' => 6, 'style' => 'font-family:monospace;'],
+                'attr'   => ['rows' => 6, 'style' => 'font-family:monospace;', 'placeholder' => '{ "starter": { "tokens": 5000, "price": 5 } }', 'data-icon' => 'offre'],
                 'data'   => $options['packs_json'],
             ])
             ->add('writeWeightsJson', TextareaType::class, [
                 'label'  => 'Poids d\'écriture par entité (JSON : { "App\\\\Entity\\\\Cotation": n })',
                 'mapped' => false,
                 'required' => false,
-                'attr'   => ['rows' => 8, 'style' => 'font-family:monospace;'],
+                'attr'   => ['rows' => 8, 'style' => 'font-family:monospace;', 'placeholder' => '{ "App\\\\Entity\\\\Cotation": 5 }', 'data-icon' => 'action:settings'],
                 'data'   => $options['write_weights_json'],
             ]);
     }

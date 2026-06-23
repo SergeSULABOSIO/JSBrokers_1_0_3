@@ -59,8 +59,8 @@ class LanguageSwitchProgressBarTest extends WebTestCase
         $this->assertResponseIsSuccessful();
 
         $this->assertProgressBarWiring($crawler, "la vitrine");
-        $this->assertLangLinksTriggerProgress($crawler, '.public-topbar .public-lang a', "l'en-tête de la vitrine");
-        $this->assertLangLinksTriggerProgress($crawler, '.public-footer .public-lang a', "le pied de page de la vitrine");
+        $this->assertLangLinksTriggerProgress($crawler, '.public-topbar .cs-lang a', "l'en-tête de la vitrine");
+        $this->assertLangLinksTriggerProgress($crawler, '.public-footer .cs-lang a', "le pied de page de la vitrine");
     }
 
     public function testTermsPageLanguageSwitchTriggersProgressBar(): void
@@ -70,9 +70,9 @@ class LanguageSwitchProgressBarTest extends WebTestCase
         $this->assertResponseIsSuccessful();
 
         $this->assertProgressBarWiring($crawler, "la page des conditions d'utilisation");
-        // Barre de titre (.cgu-lang) ET pied de page public réutilisé.
-        $this->assertLangLinksTriggerProgress($crawler, '.cgu-lang a', "la barre de titre des CGU");
-        $this->assertLangLinksTriggerProgress($crawler, '.public-footer .public-lang a', "le pied de page des CGU");
+        // Barre de titre (.cs-lang) ET pied de page public réutilisé (.cs-lang).
+        $this->assertLangLinksTriggerProgress($crawler, '.cgu-topbar .cs-lang a', "la barre de titre des CGU");
+        $this->assertLangLinksTriggerProgress($crawler, '.public-footer .cs-lang a', "le pied de page des CGU");
     }
 
     public function testTokensInfoPageLanguageSwitchTriggersProgressBar(): void
@@ -82,8 +82,8 @@ class LanguageSwitchProgressBarTest extends WebTestCase
         $this->assertResponseIsSuccessful();
 
         $this->assertProgressBarWiring($crawler, "la page de fonctionnement des tokens");
-        $this->assertLangLinksTriggerProgress($crawler, '.cgu-lang a', "la barre de titre des tokens");
-        $this->assertLangLinksTriggerProgress($crawler, '.public-footer .public-lang a', "le pied de page des tokens");
+        $this->assertLangLinksTriggerProgress($crawler, '.cgu-topbar .cs-lang a', "la barre de titre des tokens");
+        $this->assertLangLinksTriggerProgress($crawler, '.public-footer .cs-lang a', "le pied de page des tokens");
     }
 
     /**
@@ -97,7 +97,7 @@ class LanguageSwitchProgressBarTest extends WebTestCase
         $crawler = $client->request('GET', '/conditions-utilisation?lang=fr');
         $this->assertResponseIsSuccessful();
 
-        $enLink = $crawler->filter('.cgu-lang a')->reduce(
+        $enLink = $crawler->filter('.cgu-topbar .cs-lang a')->reduce(
             fn ($a) => trim($a->text()) === 'EN'
         )->first();
         $crawler = $client->click($enLink->link());

@@ -1,0 +1,13 @@
+{# Fragment AJAX : deux vues du revenu dans un même bloc.
+   La visibilité d'un volet (« pane ») est pilotée par les boutons de bascule du
+   bloc via le contrôleur Stimulus « chart-modes » ; le volet actif est
+   ré-appliqué après chaque rafraîchissement (data-mode = clé du volet). #}
+<div data-chart-modes-target="pane" data-mode="mois" class="cs-chart">
+    {{ render_chart(chartVentesMois.chart) }}
+</div>
+<div data-chart-modes-target="pane" data-mode="pack" class="cs-chart" style="display:none;">
+    {{ render_chart(chartVentesPack.chart) }}
+</div>
+<div data-chart-modes-target="pane" data-mode="pays" class="cs-chart" style="display:none;">
+    {{ render_chart(chartVentesPays.chart) }}
+</div>

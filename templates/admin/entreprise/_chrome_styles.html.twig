@@ -1,22 +1,11 @@
 <style>
     /* ============================================================
        Styles partagés du « chrome » des pages entreprise :
-       - bascule de langue de la barre de titre (.ent-lang) ;
-       - pied de page public officiel JS Brokers (.public-footer) +
-         sa bascule de langue (.public-lang).
-       Repris à l'identique de admin/token/index.html.twig (charte cobalt
-       #0047AB) pour rester cohérent partout. Inclus dans le block
-       stylesheets de index / create / edit.
+       - pied de page public officiel JS Brokers (.public-footer).
+       La bascule de langue (.cs-lang) est désormais unifiée et stylée
+       globalement dans assets/styles/app.css. Charte cobalt #0047AB.
+       Inclus dans le block stylesheets de index / create / edit.
        ============================================================ */
-
-    /* Bascule de langue de la barre de titre (drapeaux SVG FR / Royaume-Uni). */
-    .ent-lang { display:inline-flex; gap:.25rem; padding:.25rem; border:1px solid #dee2e6; border-radius:10px; background-color:#fff; }
-    .ent-lang a { display:inline-flex; align-items:center; justify-content:center; min-width:44px; min-height:36px; padding:0 .55rem; border-radius:7px; text-decoration:none; background-color:transparent; transition:background-color .15s ease; }
-    .ent-lang .public-lang__flag { width:26px; height:18px; display:block; border-radius:3px; box-shadow:0 0 0 1px rgba(0,0,0,.08); opacity:.5; filter:grayscale(.4); transition:opacity .15s ease, filter .15s ease; }
-    .ent-lang a:hover .public-lang__flag { opacity:.9; filter:none; }
-    .ent-lang a.is-active { background-color:#0047AB; }
-    .ent-lang a.is-active .public-lang__flag { opacity:1; filter:none; box-shadow:0 0 0 1px rgba(255,255,255,.6); }
-    .ent-lang a:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
 
     /* ---------- Pied de page public officiel JS Brokers ---------- */
     .public-footer { background-color:#fff; border-top:1px solid #dee2e6; margin-top:1rem; }
@@ -31,14 +20,4 @@
     .public-footer__links a:hover { color:#0047AB; }
     .public-footer__links a:focus-visible { outline:2px solid #0047AB; outline-offset:2px; border-radius:4px; }
     .public-footer__credit { max-width:1140px; margin:0 auto; padding:1rem 1.5rem; border-top:1px solid #dee2e6; text-align:center; color:#6c757d; font-size:.85rem; }
-
-    /* Bascule de langue du pied de page (drapeaux SVG). */
-    .public-lang { display:inline-flex; gap:.25rem; padding:.25rem; border:1px solid #dee2e6; border-radius:10px; background-color:#fff; }
-    .public-lang a { display:inline-flex; align-items:center; justify-content:center; min-width:44px; min-height:36px; padding:0 .55rem; border-radius:7px; text-decoration:none; background-color:transparent; transition:background-color .15s ease; }
-    .public-lang__flag { width:26px; height:18px; display:block; border-radius:3px; box-shadow:0 0 0 1px rgba(0,0,0,.08); opacity:.5; filter:grayscale(.4); transition:opacity .15s ease, filter .15s ease; }
-    .public-lang a:hover .public-lang__flag { opacity:.9; filter:none; }
-    .public-lang a.is-active { background-color:#0047AB; }
-    .public-lang a.is-active .public-lang__flag { opacity:1; filter:none; box-shadow:0 0 0 1px rgba(255,255,255,.6); }
-    .public-lang a:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
-    .public-lang__code { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 </style>

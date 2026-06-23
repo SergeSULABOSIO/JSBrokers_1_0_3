@@ -68,12 +68,15 @@ class UtilisateurController extends AbstractConsoleController
             return $this->redirectToRoute('console.utilisateur.index');
         }
 
-        return $this->render('console/form.html.twig', [
+        return $this->render('console/compte/form.html.twig', [
             'pageName'    => 'Éditer ' . $utilisateur->getNom(),
             'form'        => $form,
             'backUrl'     => $this->generateUrl('console.utilisateur.index'),
             'backLabel'   => 'Utilisateurs',
             'submitLabel' => 'Enregistrer',
+            'description' => 'Modifiez les informations de ce compte client. '
+                . 'Laissez le mot de passe vide pour le conserver.',
+            'formIcon'    => 'utilisateur',
         ]);
     }
 

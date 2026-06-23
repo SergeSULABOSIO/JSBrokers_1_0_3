@@ -48,6 +48,8 @@ class IconCanvasProvider
         
         // --- Icônes d'Actions ---
         'action:add'          => 'gridicons:add',
+        'action:calendar'     => 'jsb:calendar', // icône locale (aucune dispo dans les sets)
+        'action:count'        => 'jsb:hashtag',  // icône locale (compteur / quantité)
         'action:analyser'     => 'boxicons:analyze-filled',
         'action:alert'        => 'fluent:alert-24-regular',
         'action:annulation'   => 'fluent:calendar-cancel-24-regular',

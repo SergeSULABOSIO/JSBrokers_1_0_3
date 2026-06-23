@@ -72,29 +72,7 @@
         display: flex; align-items: center; gap: 0.6rem; margin-left: auto;
     }
 
-    /* Bascule de langue : drapeaux SVG (FR / Royaume-Uni). */
-    .public-lang { display: inline-flex; gap: 0.25rem; padding: 0.25rem; border: 1px solid #dee2e6; border-radius: 10px; background-color: #ffffff; }
-    .public-lang a {
-        display: inline-flex; align-items: center; justify-content: center;
-        min-width: 44px; min-height: 36px; padding: 0 0.55rem;
-        border-radius: 7px; text-decoration: none; background-color: transparent;
-        transition: background-color 0.15s ease;
-    }
-    .public-lang__flag {
-        width: 26px; height: 18px; display: block; border-radius: 3px;
-        box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
-        opacity: 0.5; filter: grayscale(0.4);
-        transition: opacity 0.15s ease, filter 0.15s ease;
-    }
-    .public-lang a:hover .public-lang__flag { opacity: 0.9; filter: none; }
-    .public-lang a.is-active { background-color: #0047AB; }
-    .public-lang a.is-active .public-lang__flag { opacity: 1; filter: none; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6); }
-    .public-lang a:focus-visible { outline: 2px solid #0047AB; outline-offset: 2px; }
-    /* Libellé textuel masqué visuellement (conservé pour lecteurs d'écran). */
-    .public-lang__code {
-        position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-        overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
-    }
+    /* Bascule de langue (.cs-lang) : style global dans assets/styles/app.css. */
 
     /* CTA d'en-tête : hauteur de zone cliquable confortable (≥ 44px). */
     .public-cta {

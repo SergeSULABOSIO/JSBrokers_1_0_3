@@ -34,7 +34,7 @@ class CouponType extends AbstractType
         $builder
             ->add('code', TextType::class, [
                 'label' => 'Code',
-                'attr'  => ['placeholder' => 'Ex. PROMO2026', 'style' => 'text-transform:uppercase;'],
+                'attr'  => ['placeholder' => 'Ex. PROMO2026', 'style' => 'text-transform:uppercase;', 'data-icon' => 'offre'],
             ])
             ->add('type', ChoiceType::class, [
                 'label'   => 'Type de remise',
@@ -42,28 +42,34 @@ class CouponType extends AbstractType
                     'Pourcentage (%)'   => Coupon::TYPE_PERCENT,
                     'Montant fixe (USD)' => Coupon::TYPE_FIXED,
                 ],
+                'attr'    => ['data-icon' => 'tranche'],
             ])
             ->add('valeur', NumberType::class, [
                 'label' => 'Valeur (% si pourcentage, sinon montant en USD)',
                 'scale' => 2,
+                'attr'  => ['placeholder' => 'Ex. 15', 'data-icon' => 'monnaie'],
             ])
             ->add('dateDebut', DateTimeType::class, [
                 'label'  => 'Début de validité',
                 'widget' => 'single_text',
+                'attr'   => ['placeholder' => 'Date de début', 'data-icon' => 'action:calendar'],
             ])
             ->add('dateFin', DateTimeType::class, [
                 'label'  => 'Fin de validité',
                 'widget' => 'single_text',
+                'attr'   => ['placeholder' => 'Date de fin', 'data-icon' => 'action:calendar'],
             ])
             ->add('usageLimit', IntegerType::class, [
                 'label'    => 'Limite d\'utilisations (vide = illimité)',
                 'required' => false,
+                'attr'     => ['placeholder' => 'Illimité si vide', 'data-icon' => 'action:count'],
             ])
             ->add('packCible', ChoiceType::class, [
                 'label'       => 'Paquet ciblé',
                 'choices'     => $packChoices,
                 'required'    => false,
                 'placeholder' => false,
+                'attr'        => ['data-icon' => 'offre'],
             ])
             ->add('actif', CheckboxType::class, [
                 'label'    => 'Actif',

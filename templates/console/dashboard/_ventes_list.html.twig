@@ -1,0 +1,26 @@
+{# Fragment AJAX : lignes des dernières ventes (rechargées toutes les 3 min).
+   data-row : repère utilisé par « dashboard-list » pour le filtrage client. #}
+{% set geo = geo|default({}) %}
+{% if dernieresVentes.getTotalItemCount > 0 %}
+    <table class="cs-table">
+        <thead><tr><th>Date</th><th>Acheteur</th><th>Localisation</th><th>Paquet</th><th>Montant</th></tr></thead>
+        <tbody>
+        {% for v in dernieresVentes %}
+            {% set g = geo[v.id]|default({}) %}
+            <tr data-row>
+                <td>{{ v.createdAt|format_datetime('medium', 'short', locale: app.user.locale) }}</td>
+                <td data-field="acheteur">{{ v.utilisateur ? v.utilisateur.nom : '—' }}</td>
+                <td data-field="localisation">
+                    {% if g.ville or g.pays %}
+                        {{ g.ville ?: '' }}{% if g.ville and g.pays %}, {% endif %}{{ g.pays ?: '' }}
+                    {% else %}—{% endif %}
+                </td>
+                <td data-field="paquet"><span class="cs-badge cs-badge--cobalt">{{ v.pack|capitalize }}</span></td>
+                <td>{{ v.montantUsd|number_format(2, '.', ' ') }} $</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <div class="cs-empty">Aucune vente enregistrée pour l'instant.</div>
+{% endif %}

@@ -51,7 +51,13 @@
         </table>
         <div class="cs-pagination">{{ knp_pagination_render(coupons) }}</div>
     {% else %}
-        <div class="cs-empty">Aucun coupon. Créez votre première offre de réduction.</div>
+        <div class="cs-empty">
+            <p>Aucun coupon. Créez votre première offre de réduction.</p>
+            <a href="{{ path('console.coupon.new') }}" class="btn btn-cobalt mt-2" data-action="click->top-progress#show">
+                {{ ux_icon(resolve_icon_name('action:add'), {height:'18px', width:'18px'}) }}
+                <span class="ms-1">Nouveau coupon</span>
+            </a>
+        </div>
     {% endif %}
 </div>
 {% endblock %}
