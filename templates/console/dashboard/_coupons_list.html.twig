@@ -1,0 +1,28 @@
+{# Fragment AJAX : lignes des derniers coupons (rechargées toutes les 3 min).
+   data-row : repère utilisé par « dashboard-list » pour le filtrage client.
+   Colonnes reprises de console/coupon/index.html.twig. #}
+{% if derniersCoupons.getTotalItemCount > 0 %}
+    <table class="cs-table">
+        <thead><tr><th>Code</th><th>Remise</th><th>Validité</th><th>Paquet</th><th>Usage</th><th>État</th></tr></thead>
+        <tbody>
+        {% for c in derniersCoupons %}
+            <tr data-row>
+                <td data-field="code"><strong>{{ c.code }}</strong></td>
+                <td>{% if c.type == 'percent' %}{{ c.valeur|number_format(0, '.', ' ') }} %{% else %}{{ c.valeur|number_format(2, '.', ' ') }} ${% endif %}</td>
+                <td>{{ c.dateDebut|format_datetime('short', 'none', locale: app.user.locale) }} → {{ c.dateFin|format_datetime('short', 'none', locale: app.user.locale) }}</td>
+                <td data-field="paquet">{{ c.packCible ? c.packCible|capitalize : 'Tous' }}</td>
+                <td>{{ c.usageCount }}{{ c.usageLimit ? ' / ' ~ c.usageLimit : '' }}</td>
+                <td data-field="etat">
+                    {% if c.actif and c.isValideMaintenant %}
+                        <span class="cs-badge cs-badge--ok">Actif</span>
+                    {% else %}
+                        <span class="cs-badge cs-badge--muted">Inactif</span>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <div class="cs-empty">Aucun coupon pour l'instant.</div>
+{% endif %}

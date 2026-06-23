@@ -2,6 +2,7 @@
    data-row : repère utilisé par « dashboard-list » pour le filtrage client. #}
 {% set consommations = consommations|default({}) %}
 {% set geo = geo|default({}) %}
+{% set emptyMessage = emptyMessage|default("Aucun utilisateur enregistré pour l'instant.") %}
 {% if derniersUtilisateurs.getTotalItemCount > 0 %}
     <table class="cs-table">
         <thead><tr><th>Créé le</th><th>Nom</th><th>E-mail</th><th>Localisation</th>
@@ -34,5 +35,5 @@
         </tbody>
     </table>
 {% else %}
-    <div class="cs-empty">Aucun utilisateur enregistré pour l'instant.</div>
+    <div class="cs-empty">{{ emptyMessage }}</div>
 {% endif %}

@@ -4,12 +4,14 @@ namespace App\Controller\Console;
 
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
+use App\Repository\CouponRepository;
 use App\Repository\EntrepriseRepository;
 use App\Repository\TokenConsumptionRepository;
 use App\Repository\TokenPurchaseRepository;
 use App\Repository\UtilisateurRepository;
 use App\Services\ConsoleStatsProvider;
 use App\Services\ServiceGeographie;
+use App\Token\ParametresTokenService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -36,6 +38,8 @@ class DashboardController extends AbstractConsoleController
         private UtilisateurRepository $utilisateurRepository,
         private TokenConsumptionRepository $consumptionRepository,
         private ServiceGeographie $geographie,
+        private CouponRepository $couponRepository,
+        private ParametresTokenService $parametres,
     ) {}
 
     #[Route('', name: 'console.dashboard', methods: ['GET'])]
@@ -180,6 +184,43 @@ class DashboardController extends AbstractConsoleController
         ];
     }
 
+    #[Route('/dashboard/block/clients', name: 'console.dashboard.block_clients', methods: ['GET'])]
+    public function blockClients(): Response
+    {
+        return $this->render('console/dashboard/_block_clients.html.twig', $this->donneesClients());
+    }
+
+    #[Route('/dashboard/clients-fragment', name: 'console.dashboard.clients_fragment', methods: ['GET'])]
+    public function clientsFragment(): Response
+    {
+        return $this->render('console/dashboard/_utilisateurs_list.html.twig', $this->donneesClients());
+    }
+
+    /**
+     * Derniers clients : comptes en mode payant (solde prépayé > 0), tous rôles
+     * confondus. Réutilise la liste générique des comptes (clé derniersUtilisateurs)
+     * avec un message vide adapté ; consommation cumulée comme payeur en agrégat.
+     *
+     * @return array{derniersUtilisateurs: \Knp\Component\Pager\Pagination\PaginationInterface, consommations: array<int,int>, geo: array<int,array{pays:?string, ville:?string}>, emptyMessage: string}
+     */
+    private function donneesClients(): array
+    {
+        $clients = $this->utilisateurRepository->paginateClients(1);
+        $ids = array_map(static fn ($u) => $u->getId(), $clients->getItems());
+
+        $geo = [];
+        foreach ($clients->getItems() as $u) {
+            $geo[$u->getId()] = $this->localisationDe($this->entrepriseRepresentative($u));
+        }
+
+        return [
+            'derniersUtilisateurs' => $clients,
+            'consommations'        => $this->consumptionRepository->totauxParProprietaires($ids),
+            'geo'                  => $geo,
+            'emptyMessage'         => 'Aucun client en mode payant pour l\'instant.',
+        ];
+    }
+
     #[Route('/dashboard/block/utilisateurs', name: 'console.dashboard.block_utilisateurs', methods: ['GET'])]
     public function blockUtilisateurs(): Response
     {
@@ -216,5 +257,40 @@ class DashboardController extends AbstractConsoleController
             'consommations'        => $this->consumptionRepository->totauxParProprietaires($ids),
             'geo'                  => $geo,
         ];
+    }
+
+    #[Route('/dashboard/block/coupons', name: 'console.dashboard.block_coupons', methods: ['GET'])]
+    public function blockCoupons(): Response
+    {
+        return $this->render('console/dashboard/_block_coupons.html.twig', $this->donneesCoupons());
+    }
+
+    #[Route('/dashboard/coupons-fragment', name: 'console.dashboard.coupons_fragment', methods: ['GET'])]
+    public function couponsFragment(): Response
+    {
+        return $this->render('console/dashboard/_coupons_list.html.twig', $this->donneesCoupons());
+    }
+
+    /**
+     * Derniers coupons (les plus récents d'abord), paginés. Réutilise la liste
+     * paginée du dépôt (tri sur l'id décroissant).
+     *
+     * @return array{derniersCoupons: \Knp\Component\Pager\Pagination\PaginationInterface}
+     */
+    private function donneesCoupons(): array
+    {
+        return ['derniersCoupons' => $this->couponRepository->paginateAll(1)];
+    }
+
+    /**
+     * Plans tarifaires : liste des paquets prépayés effectifs (config singleton
+     * ou repli sur les constantes). Bloc statique, sans pagination ni date.
+     */
+    #[Route('/dashboard/block/plans', name: 'console.dashboard.block_plans', methods: ['GET'])]
+    public function blockPlans(): Response
+    {
+        return $this->render('console/dashboard/_block_plans.html.twig', [
+            'packs' => $this->parametres->packs(),
+        ]);
     }
 }

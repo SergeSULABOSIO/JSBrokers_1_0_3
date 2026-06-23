@@ -2,6 +2,7 @@
 
 namespace App\Tests\Console;
 
+use App\Entity\Coupon;
 use App\Entity\Utilisateur;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -19,6 +20,7 @@ class DashboardBlocksTest extends WebTestCase
     private const ADMIN = 'phpunit-db-admin@test.local';
     private const USER  = 'phpunit-db-user@test.local';
     private const PASSWORD = 'Test1234!';
+    private const COUPON = 'PHPUNIT-DB';
 
     private KernelBrowser $client;
 
@@ -40,6 +42,17 @@ class DashboardBlocksTest extends WebTestCase
             $u->setPassword($hasher->hashPassword($u, self::PASSWORD));
             $em->persist($u);
         }
+
+        // Coupon de test : alimente le bloc « Derniers coupons ».
+        $coupon = new Coupon();
+        $coupon->setCode(self::COUPON);
+        $coupon->setType(Coupon::TYPE_PERCENT);
+        $coupon->setValeur(10);
+        $coupon->setDateDebut(new \DateTimeImmutable('-1 day'));
+        $coupon->setDateFin(new \DateTimeImmutable('+1 day'));
+        $coupon->setActif(true);
+        $em->persist($coupon);
+
         $em->flush();
     }
 
@@ -56,11 +69,13 @@ class DashboardBlocksTest extends WebTestCase
 
     private function cleanUp(): void
     {
-        $this->em()->getConnection()->executeStatement(
+        $conn = $this->em()->getConnection();
+        $conn->executeStatement(
             'DELETE FROM utilisateur WHERE email IN (:e)',
             ['e' => [self::ADMIN, self::USER]],
             ['e' => \Doctrine\DBAL\ArrayParameterType::STRING],
         );
+        $conn->executeStatement('DELETE FROM coupon WHERE code = :c', ['c' => self::COUPON]);
     }
 
     private function user(string $email): Utilisateur
@@ -78,8 +93,13 @@ class DashboardBlocksTest extends WebTestCase
             '/console/dashboard/ventes-fragment',
             '/console/dashboard/block/entreprises',
             '/console/dashboard/entreprises-fragment',
+            '/console/dashboard/block/clients',
+            '/console/dashboard/clients-fragment',
             '/console/dashboard/block/utilisateurs',
             '/console/dashboard/utilisateurs-fragment',
+            '/console/dashboard/block/coupons',
+            '/console/dashboard/coupons-fragment',
+            '/console/dashboard/block/plans',
         ];
     }
 
@@ -130,5 +150,29 @@ class DashboardBlocksTest extends WebTestCase
         $this->assertContains('mois', $modes);
         $this->assertContains('pack', $modes);
         $this->assertContains('pays', $modes);
+    }
+
+    public function testCouponsBlockShowsCoupon(): void
+    {
+        $this->client->loginUser($this->user(self::ADMIN));
+
+        $this->client->request('GET', '/console/dashboard/block/coupons');
+        $this->assertResponseIsSuccessful();
+
+        $html = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString(self::COUPON, $html, 'Le bloc « Derniers coupons » doit lister le coupon de test.');
+    }
+
+    public function testPlansBlockListsPackages(): void
+    {
+        $this->client->loginUser($this->user(self::ADMIN));
+
+        $this->client->request('GET', '/console/dashboard/block/plans');
+        $this->assertResponseIsSuccessful();
+
+        // Au moins un palier tarifaire est listé : les paquets par défaut
+        // (TokenPricing::PACKS) servent de repli, donc aucun fixture n'est requis.
+        $rows = $this->client->getCrawler()->filter('table.cs-table tbody tr');
+        $this->assertGreaterThan(0, $rows->count(), 'Le bloc « Plans tarifaires » doit lister au moins un paquet.');
     }
 }

@@ -165,12 +165,16 @@ class TokenPurchaseRepository extends ServiceEntityRepository
             ->getQuery()
             ->getArrayResult();
 
+        // Libellés courts en français (« Jan 2026 » → « Déc 2026 ») ; les clés
+        // internes restent au format « Y-m » pour le rapprochement des montants.
+        $moisCourts = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+
         $labels = [];
         $revenue = [];
         $tokens = [];
         for ($m = 1; $m <= 12; $m++) {
             $cle = sprintf('%d-%02d', $annee, $m);
-            $labels[] = $cle;
+            $labels[] = sprintf('%s %d', $moisCourts[$m - 1], $annee);
             $revenue[$cle] = 0.0;
             $tokens[$cle] = 0;
         }

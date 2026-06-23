@@ -114,6 +114,30 @@
             </div>
         </details>
 
+        {# ── Derniers clients : comptes en mode payant (fermé par défaut) ── #}
+        <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
+            <summary class="card-header border-0 bg-white py-2 px-3">
+                <div class="d-flex align-items-center gap-2">
+                    {{ ux_icon('mdi:account-cash-outline', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
+                    <span class="small fw-semibold" style="color:#0047AB;">Derniers clients</span>
+                    <small id="cs-db-clients-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
+                    <a href="{{ path('console.client.index') }}" class="db-task-new-btn ms-auto"
+                       onclick="event.stopPropagation();"
+                       data-action="click->top-progress#show"
+                       data-meta-tip="Voir tous les clients"
+                       aria-label="Voir tous les clients">
+                        {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
+                    </a>
+                    {{ ux_icon('mdi:chevron-down', {class: 'db-block-chevron', style: 'width:15px;height:15px;color:#6c757d;'}) }}
+                </div>
+            </summary>
+            <div class="card-body p-0"
+                 data-controller="lazy-block"
+                 data-lazy-block-url-value="{{ path('console.dashboard.block_clients') }}">
+                <div class="db-skeleton-block m-3" style="height:140px;"></div>
+            </div>
+        </details>
+
         {# ── Derniers utilisateurs créés (fermé par défaut) ── #}
         <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
             <summary class="card-header border-0 bg-white py-2 px-3">
@@ -134,6 +158,56 @@
             <div class="card-body p-0"
                  data-controller="lazy-block"
                  data-lazy-block-url-value="{{ path('console.dashboard.block_utilisateurs') }}">
+                <div class="db-skeleton-block m-3" style="height:140px;"></div>
+            </div>
+        </details>
+
+        {# ── Derniers coupons (fermé par défaut) ── #}
+        <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
+            <summary class="card-header border-0 bg-white py-2 px-3">
+                <div class="d-flex align-items-center gap-2">
+                    {{ ux_icon(resolve_icon_name('offre'), {style: 'width:15px;height:15px;color:#0047AB;'}) }}
+                    <span class="small fw-semibold" style="color:#0047AB;">Derniers coupons</span>
+                    <small id="cs-db-coupons-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
+                    <a href="{{ path('console.coupon.index') }}" class="db-task-new-btn ms-auto"
+                       onclick="event.stopPropagation();"
+                       data-action="click->top-progress#show"
+                       data-meta-tip="Voir tous les coupons"
+                       aria-label="Voir tous les coupons">
+                        {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
+                    </a>
+                    {{ ux_icon('mdi:chevron-down', {class: 'db-block-chevron', style: 'width:15px;height:15px;color:#6c757d;'}) }}
+                </div>
+            </summary>
+            <div class="card-body p-0"
+                 data-controller="lazy-block"
+                 data-lazy-block-url-value="{{ path('console.dashboard.block_coupons') }}">
+                <div class="db-skeleton-block m-3" style="height:140px;"></div>
+            </div>
+        </details>
+
+        {# ── Plans tarifaires : paquets prépayés effectifs (config, fermé par défaut) ── #}
+        <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
+            <summary class="card-header border-0 bg-white py-2 px-3">
+                <div class="d-flex align-items-center gap-2">
+                    {{ ux_icon(resolve_icon_name('action:premium'), {style: 'width:15px;height:15px;color:#0047AB;'}) }}
+                    <span class="small fw-semibold" style="color:#0047AB;">Plans tarifaires</span>
+                    <small id="cs-db-plans-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
+                    {% if is_granted('ROLE_SUPER_ADMIN') %}
+                        <a href="{{ path('console.plan.index') }}" class="db-task-new-btn ms-auto"
+                           onclick="event.stopPropagation();"
+                           data-action="click->top-progress#show"
+                           data-meta-tip="Éditer le plan tarifaire"
+                           aria-label="Éditer le plan tarifaire">
+                            {{ ux_icon('hugeicons:view', {style: 'width:15px;height:15px;color:#0047AB;'}) }}
+                        </a>
+                    {% endif %}
+                    {{ ux_icon('mdi:chevron-down', {class: 'db-block-chevron{% if not is_granted("ROLE_SUPER_ADMIN") %} ms-auto{% endif %}', style: 'width:15px;height:15px;color:#6c757d;'}) }}
+                </div>
+            </summary>
+            <div class="card-body p-0"
+                 data-controller="lazy-block"
+                 data-lazy-block-url-value="{{ path('console.dashboard.block_plans') }}">
                 <div class="db-skeleton-block m-3" style="height:140px;"></div>
             </div>
         </details>

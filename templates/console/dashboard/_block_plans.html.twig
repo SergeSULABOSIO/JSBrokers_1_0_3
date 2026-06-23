@@ -1,0 +1,22 @@
+{# Plans tarifaires : liste des paquets prépayés effectifs (config singleton ou
+   repli sur les constantes TokenPricing). Bloc statique — pas de recherche, pas
+   de pagination, pas de date : la configuration change rarement. #}
+{% if packs is not empty %}
+    <div class="px-3 pb-3" style="max-height:340px;overflow:auto;">
+        <table class="cs-table">
+            <thead><tr><th>Paquet</th><th style="text-align:right;">Jetons</th><th style="text-align:right;">Prix</th><th style="text-align:right;">$ / jeton</th></tr></thead>
+            <tbody>
+            {% for key, p in packs %}
+                <tr>
+                    <td><span class="cs-badge cs-badge--cobalt">{{ key|capitalize }}</span></td>
+                    <td style="text-align:right;">{{ p.tokens|number_format(0, ',', ' ') }} jetons</td>
+                    <td style="text-align:right;">{{ p.price|number_format(2, '.', ' ') }} $</td>
+                    <td style="text-align:right;">{{ p.tokens > 0 ? (p.price / p.tokens)|number_format(5, '.', ' ') : '—' }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="cs-empty m-3">Aucun paquet tarifaire configuré.</div>
+{% endif %}
