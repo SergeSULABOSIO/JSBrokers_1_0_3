@@ -216,6 +216,17 @@ class DashboardBlocksTest extends WebTestCase
         $this->assertStringContainsString('Revenu hors taxe', $html, 'La grille de KPIs doit afficher le revenu hors taxe.');
     }
 
+    public function testKpisBlockExposesOneCardPerTax(): void
+    {
+        $this->client->loginUser($this->user(self::ADMIN));
+
+        $this->client->request('GET', '/console/dashboard/block/kpis');
+        $this->assertResponseIsSuccessful();
+
+        // Une carte KPI dédiée par taxe active (libellée « Taxe <code> »).
+        $this->assertStringContainsString('Taxe ' . self::TAXE, (string) $this->client->getResponse()->getContent(), 'La grille de KPIs doit afficher une carte par taxe active.');
+    }
+
     public function testTaxesBlockShowsConfiguredTaxAndSummary(): void
     {
         $this->client->loginUser($this->user(self::ADMIN));

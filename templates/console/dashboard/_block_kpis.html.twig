@@ -11,6 +11,9 @@
     { icon: 'tranche',      val: kpis.tokensVendus|number_format(0, ',', ' '), lbl: 'Tokens vendus' },
     { icon: 'offre',        val: kpis.remisesUsd|number_format(2, '.', ' ') ~ ' $', lbl: 'Remises accordées' },
 ] %}
+<p class="text-muted mb-2" style="font-size:.72rem;">
+    Volumes d'affaires de l'année {{ kpis.annee }} (ventes, revenu, taxes) ; effectifs et taux de conversion en cumulé.
+</p>
 <div class="cs-kpis">
     {% for c in kpiCards %}
         <div class="cs-kpi">
@@ -18,6 +21,16 @@
             <span class="cs-kpi-body">
                 <span class="cs-kpi-val">{{ c.val }}</span>
                 <span class="cs-kpi-lbl">{{ c.lbl }}</span>
+            </span>
+        </div>
+    {% endfor %}
+    {# Une carte par taxe active : montant représenté sur le revenu de l'année. #}
+    {% for t in kpis.taxes %}
+        <div class="cs-kpi">
+            <span class="cs-kpi-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('taxe'), {height: '24px', width: '24px'}) }}</span>
+            <span class="cs-kpi-body">
+                <span class="cs-kpi-val">{{ t.montant|number_format(2, '.', ' ') }} $</span>
+                <span class="cs-kpi-lbl">Taxe {{ t.taxe.code }}</span>
             </span>
         </div>
     {% endfor %}
