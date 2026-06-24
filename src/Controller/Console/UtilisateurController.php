@@ -35,6 +35,7 @@ class UtilisateurController extends AbstractConsoleController
 
         return $this->render('console/utilisateur/index.html.twig', [
             'pageName'     => 'Utilisateurs',
+            'pageIcon'     => 'utilisateur',
             'utilisateurs' => $this->utilisateurRepository->paginateRegularUsers($request->query->getInt('page', 1)),
         ]);
     }

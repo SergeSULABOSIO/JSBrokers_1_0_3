@@ -111,6 +111,34 @@ class ConsoleAccessTest extends WebTestCase
         }
     }
 
+    public function testRubricTitlesShowIconPastille(): void
+    {
+        $this->client->loginUser($this->user(self::ADMIN));
+
+        // Chaque rubrique (liste / tableau de bord) doit afficher la pastille cobalt
+        // à icône devant son titre (.cs-head-title > .cs-head-icon), pour l'unité
+        // visuelle avec les formulaires. La pastille porte une <svg> résolue via
+        // l'alias `pageIcon` passé par le contrôleur.
+        foreach ([
+            '/console',
+            '/console/collaborateurs',
+            '/console/utilisateurs',
+            '/console/clients',
+            '/console/entreprises',
+            '/console/ventes',
+            '/console/coupons',
+            '/console/taxes',
+        ] as $url) {
+            $crawler = $this->client->request('GET', $url);
+            $this->assertResponseIsSuccessful(sprintf('La page %s doit répondre 200.', $url));
+            $this->assertSame(
+                1,
+                $crawler->filter('.cs-head .cs-head-title .cs-head-icon svg')->count(),
+                sprintf('La pastille d\'icône doit être présente devant le titre de %s.', $url)
+            );
+        }
+    }
+
     public function testPlanTarifaireForbiddenForPlainAdmin(): void
     {
         $this->client->loginUser($this->user(self::ADMIN));

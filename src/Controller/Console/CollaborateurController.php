@@ -36,6 +36,7 @@ class CollaborateurController extends AbstractConsoleController
 
         return $this->render('console/collaborateur/index.html.twig', [
             'pageName'       => 'Collaborateurs JS Brokers',
+            'pageIcon'       => 'action:role',
             'collaborateurs' => $this->utilisateurRepository->findAgents(),
         ]);
     }

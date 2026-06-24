@@ -63,6 +63,17 @@
     .cs-head-actions { flex: 0 0 auto; display: flex; align-items: center; gap: .5rem; }
     .cs-head h1 { font-size: 1.5rem; font-weight: 700; color: #212529; margin: 0 0 .25rem; }
     .cs-head p { color: #6c757d; margin: 0; max-width: 70ch; }
+    /* Titre de rubrique + pastille d'icône alignés sur une même ligne. Même langage
+       visuel que .cs-head-icon des formulaires (console/form.html.twig) pour unifier
+       l'identité des deux familles de pages. L'icône est portée par `pageIcon`. */
+    .cs-head-title { display: flex; align-items: center; gap: .7rem; margin-bottom: .25rem; }
+    .cs-head-title h1 { margin: 0; }   /* la marge basse est reportée sur .cs-head-title */
+    .cs-head-icon {
+        flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+        width: 46px; height: 46px; border-radius: 11px;
+        background: #e8f0fb; color: #0047AB;
+    }
+    .cs-head-icon svg { width: 26px; height: 26px; }
 
     /* Cartes / panneaux réutilisables */
     .cs-panel { background:#fff; border:1px solid #dee2e6; border-radius:12px; padding:1.25rem; }
@@ -202,7 +213,14 @@
 
             <div class="cs-head">
                 <div class="cs-head-text">
-                    <h1>{{ pageName }}</h1>
+                    <div class="cs-head-title">
+                        {% if pageIcon is defined and pageIcon %}
+                            <span class="cs-head-icon" aria-hidden="true">
+                                {{ ux_icon(resolve_icon_name(pageIcon), {height:'26px', width:'26px'}) }}
+                            </span>
+                        {% endif %}
+                        <h1>{{ pageName }}</h1>
+                    </div>
                     {% block console_subtitle %}{% endblock %}
                 </div>
                 <div class="cs-head-actions">{% block console_actions %}{% endblock %}</div>

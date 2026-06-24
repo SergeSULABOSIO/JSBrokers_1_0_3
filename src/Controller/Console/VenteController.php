@@ -43,6 +43,7 @@ class VenteController extends AbstractConsoleController
 
         return $this->render('console/vente/index.html.twig', [
             'pageName' => 'Ventes de tokens',
+            'pageIcon' => 'operation',
             'ventes'   => $this->purchaseRepository->paginateFiltered($filtres, $request->query->getInt('page', 1)),
             'totals'   => $this->purchaseRepository->totals($filtres),
             'parPack'  => $this->purchaseRepository->groupByPack($filtres),

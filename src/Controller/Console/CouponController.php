@@ -30,6 +30,7 @@ class CouponController extends AbstractConsoleController
 
         return $this->render('console/coupon/index.html.twig', [
             'pageName' => 'Coupons de réduction',
+            'pageIcon' => 'offre',
             'coupons'  => $this->couponRepository->paginateAll($request->query->getInt('page', 1)),
         ]);
     }

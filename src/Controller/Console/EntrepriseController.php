@@ -43,6 +43,7 @@ class EntrepriseController extends AbstractConsoleController
 
         return $this->render('console/entreprise/index.html.twig', [
             'pageName'      => 'Entreprises',
+            'pageIcon'      => 'entreprise',
             'entreprises'   => $entreprises,
             'consommations' => $this->consumptionRepository->totauxParEntreprises($ids),
         ]);
