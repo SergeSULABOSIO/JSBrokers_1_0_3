@@ -19,18 +19,30 @@
     {% endif %}
     <header class="pp-head">
         <span class="pp-name" id="pp-{{ key }}-name">{{ (pack.label|default(key|capitalize))|upper }}</span>
-        {% if promo %}
-            {# Promo active : prix d'origine barré + prix remisé (= prix facturé avec ce code). #}
-            <span class="pp-price-old">{{ "security_pricing_pack_price" | trans({'%price%': pack.price}) }}</span>
-            <p class="pp-price">{{ "security_pricing_pack_price" | trans({'%price%': promo.montantFinal}) }}</p>
-            <span class="pp-promo">
-                {{ ux_icon(resolve_icon_name('offre'), {height: '14px', width: '14px', 'aria-hidden': 'true'}) }}
-                <span class="pp-promo__code">{{ promo.code }}</span>
-                <span>{% if promo.type == 'percent' %}−{{ promo.valeur|number_format(0) }}%{% else %}{{ "security_pricing_pack_promo_off" | trans({'%amount%': promo.remiseUsd}) }}{% endif %}</span>
-            </span>
-        {% else %}
-            <p class="pp-price">{{ "security_pricing_pack_price" | trans({'%price%': pack.price}) }}</p>
-        {% endif %}
+        {# Zone de prix à hauteur réservée : aligne les cartes entre elles, avec ou sans promo. #}
+        <div class="pp-price-zone">
+            {% if promo %}
+                {# Promo active : prix d'origine barré → prix remisé (= prix facturé avec ce code).
+                   <del> porte la sémantique « ancien prix » (lecteurs d'écran). #}
+                <div class="pp-price-row">
+                    <del class="pp-price-old">
+                        <span class="visually-hidden">{{ "security_pricing_old_price" | trans }} </span>
+                        {{ "security_pricing_pack_price" | trans({'%price%': pack.price}) }}
+                    </del>
+                    <p class="pp-price">
+                        <span class="visually-hidden">{{ "security_pricing_new_price" | trans }} </span>
+                        {{ "security_pricing_pack_price" | trans({'%price%': promo.montantFinal}) }}
+                    </p>
+                </div>
+                <span class="pp-promo" aria-label="{{ 'security_pricing_promo_code' | trans }} {{ promo.code }}">
+                    {{ ux_icon(resolve_icon_name('offre'), {height: '15px', width: '15px', 'aria-hidden': 'true'}) }}
+                    <span class="pp-promo__code">{{ promo.code }}</span>
+                    <span>{% if promo.type == 'percent' %}−{{ promo.valeur|number_format(0) }}%{% else %}{{ "security_pricing_pack_promo_off" | trans({'%amount%': promo.remiseUsd}) }}{% endif %}</span>
+                </span>
+            {% else %}
+                <p class="pp-price">{{ "security_pricing_pack_price" | trans({'%price%': pack.price}) }}</p>
+            {% endif %}
+        </div>
         <span class="pp-badge">{{ "security_pricing_pack_mode" | trans }}</span>
         <p class="pp-profil">{{ "security_pricing_pack_profil" | trans }}</p>
     </header>

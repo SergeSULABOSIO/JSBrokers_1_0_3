@@ -1,7 +1,10 @@
 <article class="pp-card" aria-labelledby="pp-basic-name">
     <header class="pp-head">
         <span class="pp-name" id="pp-basic-name">{{ "security_pricing_basic" | trans }}</span>
-        <p class="pp-price">{{ "security_pricing_basic_price" | trans }}</p>
+        {# Même zone de prix à hauteur réservée que les paquets payants, pour aligner les cartes. #}
+        <div class="pp-price-zone">
+            <p class="pp-price">{{ "security_pricing_basic_price" | trans }}</p>
+        </div>
         <p class="pp-lead">{{ "security_pricing_basic_mode" | trans }}</p>
         <p class="pp-profil">{{ "security_pricing_basic_profil" | trans }}</p>
     </header>
