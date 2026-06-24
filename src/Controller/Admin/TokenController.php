@@ -87,6 +87,10 @@ class TokenController extends AbstractController
         if ($request->query->has('pack') && $this->parametres->pack((string) $request->query->get('pack')) !== null) {
             $dto->pack = $request->query->get('pack');
         }
+        // Préremplissage du code promo (lien « Profiter de l'offre » depuis la vitrine).
+        if ($request->query->has('coupon')) {
+            $dto->couponCode = (string) $request->query->get('coupon');
+        }
 
         $form = $this->createForm(TokenPurchaseType::class, $dto);
         $form->handleRequest($request);
@@ -152,6 +156,32 @@ class TokenController extends AbstractController
             'form'     => $form,
             'packs'    => $this->parametres->packs(),
             'balance'  => $this->tokenAccountService->getBalance($user),
+        ]);
+    }
+
+    /**
+     * Aperçu en direct de la remise d'un coupon sur un paquet (sans effet de bord).
+     * Réutilise EXACTEMENT la logique d'achat (CouponService::appliquer) : le prix
+     * affiché en aperçu est donc identique au prix qui sera facturé. GET sans effet
+     * de bord → pas de jeton CSRF nécessaire.
+     */
+    #[Route('/coupon-preview', name: 'coupon_preview', methods: ['GET'])]
+    public function couponPreview(Request $request): JsonResponse
+    {
+        $packKey = (string) $request->query->get('pack', '');
+        $pack = $this->parametres->pack($packKey);
+        if ($pack === null) {
+            return $this->json(['erreur' => $this->translator->trans('coupon.invalid')], Response::HTTP_BAD_REQUEST);
+        }
+
+        $base = (float) $pack['price'];
+        $remise = $this->couponService->appliquer($request->query->get('code'), $packKey, $base);
+
+        return $this->json([
+            'base'         => $base,
+            'montantFinal' => $remise['montantFinal'],
+            'remiseUsd'    => $remise['remiseUsd'],
+            'erreur'       => $remise['erreur'] !== null ? $this->translator->trans($remise['erreur']) : null,
         ]);
     }
 

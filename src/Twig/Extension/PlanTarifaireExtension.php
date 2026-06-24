@@ -18,6 +18,7 @@ use App\Entity\Partenaire;
 use App\Entity\Piste;
 use App\Entity\Risque;
 use App\Entity\Tache;
+use App\Token\CouponService;
 use App\Token\ParametresTokenService;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
@@ -63,16 +64,44 @@ class PlanTarifaireExtension extends AbstractExtension
         Document::class      => ['fr' => 'Document',       'en' => 'Document',     'icon' => 'document'],
     ];
 
-    public function __construct(private ParametresTokenService $parametres) {}
+    public function __construct(
+        private ParametresTokenService $parametres,
+        private CouponService $couponService,
+    ) {}
 
     public function getFunctions(): array
     {
         return [
             new TwigFunction('plan_tarifaire', [$this, 'getPlanTarifaire']),
+            new TwigFunction('promos_vitrine', [$this, 'getPromosVitrine']),
             new TwigFunction('token_entite_label', [$this, 'getEntiteLabel']),
             new TwigFunction('token_entite_icon', [$this, 'getEntiteIcon']),
             new TwigFunction('token_entites_facturables', [$this, 'getEntitesFacturables']),
         ];
+    }
+
+    /**
+     * Meilleures promos publiques par paquet, pour la vitrine : map
+     * « clé de paquet => { code, type, valeur, montantFinal, remiseUsd } ». Calculée
+     * en lisant la MÊME source que le paiement (CouponService), si bien que le prix
+     * remisé AFFICHÉ correspond exactement au prix FACTURÉ avec ce coupon. Les
+     * paquets sans promo publique applicable sont absents de la map.
+     *
+     * @return array<string, array{code: string, type: string, valeur: float, montantFinal: float, remiseUsd: float}>
+     */
+    public function getPromosVitrine(): array
+    {
+        $now = new \DateTimeImmutable();
+        $promos = [];
+
+        foreach ($this->parametres->packs() as $key => $pack) {
+            $promo = $this->couponService->meilleureRemisePublique($key, (float) $pack['price'], $now);
+            if ($promo !== null) {
+                $promos[$key] = $promo;
+            }
+        }
+
+        return $promos;
     }
 
     /**

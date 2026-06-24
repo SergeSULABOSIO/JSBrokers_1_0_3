@@ -58,6 +58,41 @@ class CouponService
         ];
     }
 
+    /**
+     * Meilleure promo PUBLIQUE applicable à un paquet, pour la vitrine. Parcourt
+     * les coupons visibles et valides, ne garde que ceux applicables au paquet, et
+     * renvoie celui qui offre la plus grosse remise — ou null s'il n'y en a aucun.
+     *
+     * @return array{code: string, type: string, valeur: float, montantFinal: float, remiseUsd: float}|null
+     */
+    public function meilleureRemisePublique(string $packKey, float $prix, ?\DateTimeImmutable $now = null): ?array
+    {
+        $now ??= new \DateTimeImmutable();
+        $meilleure = null;
+
+        foreach ($this->couponRepository->findVisiblesPourVitrine($now) as $coupon) {
+            if (!$coupon->estApplicableAuPack($packKey)) {
+                continue;
+            }
+
+            $remise = $this->calculerRemise($coupon, $prix);
+            $montantFinal = max(0.0, round($prix - $remise, 2));
+            $remiseUsd = round($prix - $montantFinal, 2);
+
+            if ($meilleure === null || $remiseUsd > $meilleure['remiseUsd']) {
+                $meilleure = [
+                    'code'         => $coupon->getCode(),
+                    'type'         => $coupon->getType(),
+                    'valeur'       => $coupon->getValeur(),
+                    'montantFinal' => $montantFinal,
+                    'remiseUsd'    => $remiseUsd,
+                ];
+            }
+        }
+
+        return $meilleure;
+    }
+
     /** Calcule la remise brute (avant bornage) selon le type du coupon. */
     private function calculerRemise(Coupon $coupon, float $montantBase): float
     {

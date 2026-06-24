@@ -35,6 +35,11 @@
         padding:.7rem .9rem; font-size:.85rem; color:#664d03; margin-bottom:1.25rem; display:flex; gap:.5rem; align-items:flex-start; }
     .tkb-packs { display:grid; grid-template-columns:1fr; gap:.6rem; margin-bottom:1.25rem; }
     .tkb-fieldset { border:0; padding:0; margin:0 0 1rem; }
+    /* Groupe de saisie encadré : chaque rubrique (paquet / carte / coupon) forme
+       une boîte visuelle distincte, introduite par une légende à icône (alias). */
+    .tkb-group { border:1px solid #dee2e6; border-radius:12px; padding:1.1rem 1.25rem; background:#fff; }
+    .tkb-group > .tkb-legend { margin-bottom:.85rem; }
+    .tkb-group .tkb-field:last-child, .tkb-group .tkb-ifield:last-child { margin-bottom:0; }
     .tkb-legend { font-size:.8rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:#0047AB;
         display:flex; align-items:center; gap:.4rem; margin-bottom:.6rem; }
     .tkb-field { margin-bottom:.85rem; }
@@ -48,6 +53,22 @@
     .tkb-submit { width:100%; background:#0047AB; border-color:#0047AB; color:#fff; font-weight:600; padding:.7rem; }
     .tkb-submit:hover { background:#003380; border-color:#003380; }
     .tkb-error { color:#dc3545; font-size:.82rem; margin-top:.2rem; }
+
+    /* ── Code promo : champ + bouton « Appliquer », message d'erreur, récap ── */
+    .tkb-coupon-row { display:flex; gap:.6rem; align-items:flex-start; }
+    .tkb-coupon-input { flex:1 1 auto; margin-bottom:0; }
+    .tkb-coupon-apply { height:48px; white-space:nowrap; font-weight:600;
+        color:#0047AB; border-color:#0047AB; }
+    .tkb-coupon-apply:hover { background:#0047AB; border-color:#0047AB; color:#fff; }
+    .tkb-coupon-error { color:#dc3545; font-size:.82rem; margin:.45rem 0 0; }
+
+    .tkb-recap { background:#f8f9fa; border:1px solid #dee2e6; border-radius:10px;
+        padding:.85rem 1.1rem; margin-bottom:1.25rem; }
+    .tkb-recap-line { display:flex; justify-content:space-between; align-items:center;
+        font-size:.92rem; color:#495057; padding:.2rem 0; }
+    .tkb-recap-line--remise { color:#0f5132; font-weight:600; }
+    .tkb-recap-line--total { border-top:1px solid #dee2e6; margin-top:.35rem; padding-top:.6rem;
+        font-size:1.05rem; font-weight:800; color:#212529; }
 
     /* ── Champs « carte » : pattern identique au formulaire de connexion ──
        label au-dessus, icône en préfixe, champ haut de 48px, focus cobalt. */
@@ -129,26 +150,28 @@
             </div>
 
             {{ form_start(form, {'attr': {
-                'data-controller': 'form-submit',
+                'data-controller': 'form-submit coupon-preview',
                 'data-action': 'submit->form-submit#submitting submit->top-progress#show',
                 'data-form-submit-loading-text-value': 'token_buy.processing'|trans,
+                'data-coupon-preview-url-value': path('admin.token.coupon_preview'),
                 'novalidate': 'novalidate'
             }}) }}
 
-                <fieldset class="tkb-fieldset">
+                <fieldset class="tkb-fieldset tkb-group">
                     <legend class="tkb-legend">
-                        {{ ux_icon('mdi:package-variant-closed', {height: '16px', width: '16px'}) }}
+                        {{ ux_icon(resolve_icon_name('action:cart'), {height: '16px', width: '16px'}) }}
                         {{ "token_buy.choose_pack" | trans }}
                     </legend>
-                    <div class="tkb-pack-choices">
+                    {# `change` remonte des radios vers ce conteneur → rafraîchit l'aperçu. #}
+                    <div class="tkb-pack-choices" data-action="change->coupon-preview#refresh">
                         {{ form_widget(form.pack) }}
                     </div>
                     {{ form_errors(form.pack) }}
                 </fieldset>
 
-                <fieldset class="tkb-fieldset">
+                <fieldset class="tkb-fieldset tkb-group">
                     <legend class="tkb-legend">
-                        {{ ux_icon('mdi:credit-card-outline', {height: '16px', width: '16px'}) }}
+                        {{ ux_icon(resolve_icon_name('compte-bancaire'), {height: '16px', width: '16px'}) }}
                         {{ "token_buy.card_section" | trans }}
                     </legend>
 
@@ -190,18 +213,46 @@
                     </div>
                 </fieldset>
 
-                <fieldset class="tkb-fieldset">
+                <fieldset class="tkb-fieldset tkb-group">
                     <legend class="tkb-legend">
                         {{ ux_icon(resolve_icon_name('offre'), {height: '16px', width: '16px'}) }}
                         {{ "token_buy.coupon_section" | trans }}
                     </legend>
                     <label for="{{ form.couponCode.vars.id }}" class="form-label">{{ form.couponCode.vars.label|trans }}</label>
-                    <div class="tkb-ifield">
-                        {{ ux_icon(resolve_icon_name('offre'), {class: 'tkb-ifield-icon'}) }}
-                        {{ form_widget(form.couponCode, {attr: {class: 'form-control', style: 'text-transform:uppercase;'}}) }}
+                    <div class="tkb-coupon-row">
+                        <div class="tkb-ifield tkb-coupon-input">
+                            {{ ux_icon(resolve_icon_name('offre'), {class: 'tkb-ifield-icon'}) }}
+                            {{ form_widget(form.couponCode, {attr: {
+                                class: 'form-control',
+                                style: 'text-transform:uppercase;',
+                                'data-coupon-preview-target': 'code',
+                                'data-action': 'input->coupon-preview#refresh',
+                            }}) }}
+                        </div>
+                        <button type="button" class="btn btn-outline-primary tkb-coupon-apply"
+                                data-action="coupon-preview#refresh">
+                            {{ "token_buy.coupon_apply" | trans }}
+                        </button>
                     </div>
                     {{ form_errors(form.couponCode) }}
+                    <p class="tkb-coupon-error" data-coupon-preview-target="error" hidden role="alert"></p>
                 </fieldset>
+
+                {# Récapitulatif du prix, recalculé en direct par le contrôleur coupon-preview. #}
+                <div class="tkb-recap" data-coupon-preview-target="recap" hidden>
+                    <div class="tkb-recap-line">
+                        <span>{{ "token_buy.recap_base" | trans }}</span>
+                        <span data-coupon-preview-target="base">—</span>
+                    </div>
+                    <div class="tkb-recap-line tkb-recap-line--remise" data-coupon-preview-target="remiseRow" hidden>
+                        <span>{{ "token_buy.recap_remise" | trans }}</span>
+                        <span data-coupon-preview-target="remise">—</span>
+                    </div>
+                    <div class="tkb-recap-line tkb-recap-line--total">
+                        <span>{{ "token_buy.recap_total" | trans }}</span>
+                        <span data-coupon-preview-target="final">—</span>
+                    </div>
+                </div>
 
                 <button type="submit" class="btn tkb-submit d-inline-flex align-items-center justify-content-center gap-2"
                         data-form-submit-target="button">

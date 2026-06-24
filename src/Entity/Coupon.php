@@ -70,6 +70,11 @@ class Coupon
     #[Groups(['list:read'])]
     private ?string $packCible = null;
 
+    /** Le coupon est-il mis en avant sur la vitrine publique (badge promo) ? */
+    #[ORM\Column]
+    #[Groups(['list:read'])]
+    private bool $visiblePublic = false;
+
     #[ORM\Column]
     #[Groups(['list:read'])]
     private ?\DateTimeImmutable $createdAt = null;
@@ -191,6 +196,18 @@ class Coupon
     public function setPackCible(?string $packCible): static
     {
         $this->packCible = $packCible;
+
+        return $this;
+    }
+
+    public function isVisiblePublic(): bool
+    {
+        return $this->visiblePublic;
+    }
+
+    public function setVisiblePublic(bool $visiblePublic): static
+    {
+        $this->visiblePublic = $visiblePublic;
 
         return $this;
     }
