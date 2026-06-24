@@ -5,14 +5,21 @@
    (.cs-fieldset / .cs-legend). Le thème de champ (icône incrustée via data-icon)
    est appliqué par le parent.
 
-   Les « Paquets prépayés » sont édités via une collection stylisée + une boîte de
-   dialogue (contrôleur Stimulus `packs-editor`) ; le champ caché `packsJson` reste
-   la source de vérité soumise au serveur (décodée par le contrôleur PHP). #}
+   Deux groupes sont édités via une collection stylisée + une boîte de dialogue :
+   « Paquets prépayés » (contrôleur Stimulus `packs-editor`) et « Poids d'écriture
+   par entité » (contrôleur `weights-editor`). Dans les deux cas, un champ caché
+   (packsJson / writeWeightsJson) reste la source de vérité soumise au serveur,
+   décodée par le contrôleur PHP. Les classes .cs-pack* sont partagées : ce sont les
+   styles génériques de carte/dialogue de collection utilisés par les deux groupes. #}
 
 {% block stylesheets %}
     {{ parent() }}
     <style>
-        /* ── Collection des paquets prépayés ───────────────────────────────── */
+        /* ── Collections éditables (paquets / poids d'écriture) ─────────────── */
+        /* Ces panneaux se terminent par un bouton (et non un champ à marge basse) :
+           on rétablit une gouttière basse égale à la haute pour des marges uniformes. */
+        .cs-fieldset[data-controller="packs-editor"],
+        .cs-fieldset[data-controller="weights-editor"] { padding-bottom: 1.15rem; }
         .cs-packs { display: flex; flex-direction: column; gap: .6rem; margin-bottom: 1rem; }
         .cs-pack {
             display: flex; align-items: center; gap: .9rem;
@@ -27,20 +34,22 @@
         }
         .cs-pack-icon svg { width: 22px; height: 22px; }
         .cs-pack-main { flex: 1 1 auto; min-width: 0; }
-        .cs-pack-name { display: block; font-weight: 700; color: #212529; font-size: 1rem; }
-        .cs-pack-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .75rem; margin-top: .2rem; }
-        .cs-pack-tokens {
-            display: inline-flex; align-items: center; gap: .3rem;
-            background: #e8f0fb; color: #0047AB; font-weight: 700;
-            font-size: .78rem; padding: .15rem .55rem; border-radius: 999px;
-        }
-        .cs-pack-tokens svg { width: 14px; height: 14px; }
+        .cs-pack-name { display: block; font-weight: 700; color: #212529; font-size: 1rem; line-height: 1.3; }
+        /* Les indicateurs (tokens / prix / poids) partagent la même forme de pastille
+           pour un alignement vertical net et un couple visuel équilibré. */
+        .cs-pack-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .5rem; margin-top: .35rem; }
+        .cs-pack-tokens,
         .cs-pack-price {
-            display: inline-flex; align-items: center; gap: .3rem;
-            color: #495057; font-size: .85rem; font-weight: 600;
+            display: inline-flex; align-items: center; gap: .35rem;
+            font-size: .78rem; font-weight: 700; line-height: 1;
+            padding: .25rem .6rem; border-radius: 999px;
         }
-        .cs-pack-price svg { width: 15px; height: 15px; color: #6c757d; }
-        .cs-pack-actions { flex: 0 0 auto; display: inline-flex; gap: .25rem; }
+        .cs-pack-tokens { background: #e8f0fb; color: #0047AB; }
+        .cs-pack-price { background: #f0f0f0; color: #495057; }
+        .cs-pack-tokens svg,
+        .cs-pack-price svg { width: 14px; height: 14px; flex: 0 0 auto; }
+        .cs-pack-price svg { color: #6c757d; }
+        .cs-pack-actions { flex: 0 0 auto; display: inline-flex; align-items: center; gap: .25rem; }
         .cs-pack-btn {
             display: inline-flex; align-items: center; justify-content: center;
             width: 38px; height: 38px; border: 1px solid #dee2e6; border-radius: 8px;
@@ -58,15 +67,22 @@
             padding: 1rem; margin-bottom: 1rem;
         }
 
+        /* Affordance « ajouter une carte » : pleine largeur, alignée sur les bords
+           et le rayon des cartes ci-dessus pour une colonne visuelle cohérente. */
         .cs-packs-add {
-            display: inline-flex; align-items: center; gap: .45rem;
-            min-height: 44px; padding: .5rem 1rem;
+            display: flex; align-items: center; justify-content: center; gap: .45rem;
+            width: 100%; min-height: 48px; padding: .6rem 1rem;
             background: #fff; color: #0047AB; font-weight: 600;
-            border: 1px solid #0047AB; border-radius: 8px; cursor: pointer;
-            transition: all .15s ease;
+            border: 1px dashed #0047AB; border-radius: 10px; cursor: pointer;
+            transition: background-color .15s ease, border-color .15s ease, color .15s ease;
         }
-        .cs-packs-add:hover { background: #0047AB; color: #fff; }
-        .cs-packs-add:focus-visible { outline: none; box-shadow: 0 0 0 .25rem rgba(0,71,171,.35); }
+        .cs-packs-add:hover { background: #e8f0fb; border-color: #003380; color: #003380; }
+        .cs-packs-add:focus-visible { outline: none; border-color: #003380; box-shadow: 0 0 0 .25rem rgba(0,71,171,.35); }
+        /* Désactivé : même forme que la version active (bordure pointillée cobalt),
+           simplement atténuée — l'alignement visuel avec « Ajouter un paquet » est conservé. */
+        .cs-packs-add:disabled { opacity: .5; cursor: not-allowed; }
+        .cs-packs-add:disabled:hover { background: #fff; border-color: #0047AB; color: #0047AB; }
+        .cs-packs-add svg { flex: 0 0 auto; }
 
         /* ── Boîte de dialogue d'ajout / édition ───────────────────────────── */
         .cs-pack-dialog {
@@ -84,11 +100,29 @@
         .cs-pack-fld { margin-bottom: 1rem; }
         .cs-pack-fld:last-child { margin-bottom: 0; }
         .cs-pack-fld label { display: block; font-weight: 600; color: #343a40; font-size: .9rem; margin-bottom: .35rem; }
-        .cs-pack-fld input {
-            width: 100%; height: 46px; padding: 0 .8rem;
-            border: 1px solid #ced4da; border-radius: 8px; font-size: 1rem; color: #000; background: #fff;
+        /* Champ à icône incrustée — même pattern que le formulaire de connexion :
+           icône à gauche dans le champ, jamais de boîte d'icône séparée. */
+        .cs-pack-input { position: relative; }
+        .cs-pack-input-icon {
+            position: absolute; left: .85rem; top: 50%; transform: translateY(-50%);
+            width: 18px; height: 18px; color: #6c757d; pointer-events: none; z-index: 2;
+            display: inline-flex; align-items: center; justify-content: center;
         }
-        .cs-pack-fld input:focus { outline: none; border-color: #0047AB; box-shadow: 0 0 0 .25rem rgba(0,71,171,.35); }
+        .cs-pack-fld input,
+        .cs-pack-fld select {
+            width: 100%; height: 46px; padding: 0 .8rem 0 2.6rem;
+            border: 1px solid #ced4da; border-radius: 8px; font-size: 1rem; color: #000; background: #fff;
+            appearance: none; -webkit-appearance: none;
+        }
+        .cs-pack-fld input:focus,
+        .cs-pack-fld select:focus { outline: none; border-color: #0047AB; box-shadow: 0 0 0 .25rem rgba(0,71,171,.35); }
+        /* Chevron du sélecteur (appearance:none retire la flèche native). */
+        .cs-pack-fld select {
+            padding-right: 2.4rem; cursor: pointer;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236c757d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right .85rem center; background-size: 16px;
+        }
+        .cs-pack-fld select:disabled { background-color: #f8f9fa; color: #495057; cursor: default; }
         .cs-pack-fld-row { display: flex; gap: .85rem; }
         .cs-pack-fld-row .cs-pack-fld { flex: 1; }
         .cs-pack-error {
@@ -196,25 +230,34 @@
             <div class="cs-pack-dialog-body">
                 <div class="cs-pack-fld">
                     <label for="cs-pack-label">Nom du plan</label>
-                    <input type="text" id="cs-pack-label" maxlength="60" autocomplete="off"
-                           placeholder="Ex. Intermédiaire"
-                           data-packs-editor-target="fieldLabel" aria-describedby="cs-pack-error"
-                           data-action="keydown.enter->packs-editor#save">
+                    <div class="cs-pack-input">
+                        <span class="cs-pack-input-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('action:description'), {height:'18px', width:'18px'}) }}</span>
+                        <input type="text" id="cs-pack-label" maxlength="60" autocomplete="off"
+                               placeholder="Ex. Intermédiaire"
+                               data-packs-editor-target="fieldLabel" aria-describedby="cs-pack-error"
+                               data-action="keydown.enter->packs-editor#save">
+                    </div>
                 </div>
                 <div class="cs-pack-fld-row">
                     <div class="cs-pack-fld">
                         <label for="cs-pack-tokens">Tokens offerts</label>
-                        <input type="number" id="cs-pack-tokens" min="1" step="1" inputmode="numeric"
-                               placeholder="Ex. 10000"
-                               data-packs-editor-target="fieldTokens" aria-describedby="cs-pack-error"
-                               data-action="keydown.enter->packs-editor#save">
+                        <div class="cs-pack-input">
+                            <span class="cs-pack-input-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('action:count'), {height:'18px', width:'18px'}) }}</span>
+                            <input type="number" id="cs-pack-tokens" min="1" step="1" inputmode="numeric"
+                                   placeholder="Ex. 10000"
+                                   data-packs-editor-target="fieldTokens" aria-describedby="cs-pack-error"
+                                   data-action="keydown.enter->packs-editor#save">
+                        </div>
                     </div>
                     <div class="cs-pack-fld">
                         <label for="cs-pack-price">Prix de vente TTC ($)</label>
-                        <input type="number" id="cs-pack-price" min="0" step="0.01" inputmode="decimal"
-                               placeholder="Ex. 10"
-                               data-packs-editor-target="fieldPrice" aria-describedby="cs-pack-error"
-                               data-action="keydown.enter->packs-editor#save">
+                        <div class="cs-pack-input">
+                            <span class="cs-pack-input-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('monnaie'), {height:'18px', width:'18px'}) }}</span>
+                            <input type="number" id="cs-pack-price" min="0" step="0.01" inputmode="decimal"
+                                   placeholder="Ex. 10"
+                                   data-packs-editor-target="fieldPrice" aria-describedby="cs-pack-error"
+                                   data-action="keydown.enter->packs-editor#save">
+                        </div>
                     </div>
                 </div>
                 <p class="cs-pack-error" id="cs-pack-error" data-packs-editor-target="error" role="alert" hidden></p>
@@ -231,17 +274,102 @@
                 </button>
             </div>
         </dialog>
-
-        {# Boîte de confirmation stylisée et réutilisable du projet : la suppression
-           d'un paquet passe par elle (au lieu du window.confirm() du navigateur). #}
-        {{ include('components/_confirmation_dialog.html.twig') }}
     </fieldset>
 
-    <fieldset class="cs-fieldset">
+    {# ── Poids d'écriture par entité : collection éditable + boîte de dialogue ─ #}
+    <fieldset class="cs-fieldset" data-controller="weights-editor"
+              data-weights-editor-labels-value="{{ token_entites_facturables(app.request.locale)|json_encode }}">
         <legend class="cs-legend">
             {{ ux_icon(resolve_icon_name('action:settings'), {height:'16px', width:'16px'}) }}
-            Poids d'écriture par entité (JSON)
+            Poids d'écriture par entité
         </legend>
-        {{ form_row(form.writeWeightsJson) }}
+
+        {{ form_widget(form.writeWeightsJson, {attr: {'data-weights-editor-target': 'input'}}) }}
+
+        <div class="cs-packs" data-weights-editor-target="list" role="list"></div>
+
+        <p class="cs-packs-empty" data-weights-editor-target="empty" hidden>
+            {{ ux_icon(resolve_icon_name('action:information'), {height:'18px', width:'18px'}) }}
+            Aucun poids personnalisé : toutes les entités utilisent le poids d'écriture par défaut.
+        </p>
+
+        <button type="button" class="cs-packs-add" data-weights-editor-target="addButton" data-action="weights-editor#add">
+            {{ ux_icon(resolve_icon_name('action:add'), {height:'18px', width:'18px'}) }}
+            <span>Ajouter une entité</span>
+        </button>
+
+        {# Gabarit d'une carte de poids d'écriture, cloné par le contrôleur. #}
+        <template data-weights-editor-target="rowTemplate">
+            <div class="cs-pack" role="listitem">
+                <span class="cs-pack-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('tranche'), {height:'22px', width:'22px'}) }}</span>
+                <div class="cs-pack-main">
+                    <span class="cs-pack-name" data-field="entity"></span>
+                    <div class="cs-pack-meta">
+                        <span class="cs-pack-tokens">
+                            {{ ux_icon(resolve_icon_name('action:count'), {height:'14px', width:'14px'}) }}
+                            <span data-field="weight"></span>&nbsp;tokens / écriture
+                        </span>
+                    </div>
+                </div>
+                <div class="cs-pack-actions">
+                    <button type="button" class="cs-pack-btn" data-action="weights-editor#edit" data-key=""
+                            aria-label="Modifier ce poids d'écriture" title="Modifier">
+                        {{ ux_icon(resolve_icon_name('action:edit'), {height:'18px', width:'18px'}) }}
+                    </button>
+                    <button type="button" class="cs-pack-btn cs-pack-btn--danger" data-action="weights-editor#delete" data-key=""
+                            aria-label="Supprimer ce poids d'écriture" title="Supprimer">
+                        {{ ux_icon(resolve_icon_name('action:delete'), {height:'18px', width:'18px'}) }}
+                    </button>
+                </div>
+            </div>
+        </template>
+
+        {# Banque d'icônes par entité (FQCN → SVG), clonée par le contrôleur pour
+           illustrer chaque carte et l'entête du dialogue avec l'icône appropriée. #}
+        <template data-weights-editor-target="icons">
+            {% for fqcn, label in token_entites_facturables(app.request.locale) %}
+                <span data-fqcn="{{ fqcn }}">{{ ux_icon(resolve_icon_name(token_entite_icon(fqcn)), {height:'22px', width:'22px'}) }}</span>
+            {% endfor %}
+        </template>
+
+        <dialog class="cs-pack-dialog" data-weights-editor-target="dialog" aria-labelledby="cs-weight-dialog-title">
+            <div class="cs-pack-dialog-head">
+                <span class="cs-pack-dialog-icon" aria-hidden="true" data-weights-editor-target="dialogIcon">{{ ux_icon(resolve_icon_name('action:settings'), {height:'22px', width:'22px'}) }}</span>
+                <h2 class="cs-pack-dialog-title" id="cs-weight-dialog-title" data-weights-editor-target="dialogTitle">Nouveau poids d'écriture</h2>
+            </div>
+
+            <div class="cs-pack-dialog-body">
+                <div class="cs-pack-fld">
+                    <label for="cs-weight-entity">Entité concernée</label>
+                    <div class="cs-pack-input">
+                        <span class="cs-pack-input-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('classeur'), {height:'18px', width:'18px'}) }}</span>
+                        <select id="cs-weight-entity" data-action="change->weights-editor#syncDialogIcon"
+                                data-weights-editor-target="fieldEntity" aria-describedby="cs-weight-error"></select>
+                    </div>
+                </div>
+                <div class="cs-pack-fld">
+                    <label for="cs-weight-weight">Poids d'écriture (tokens)</label>
+                    <div class="cs-pack-input">
+                        <span class="cs-pack-input-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('action:count'), {height:'18px', width:'18px'}) }}</span>
+                        <input type="number" id="cs-weight-weight" min="1" step="1" inputmode="numeric"
+                               placeholder="Ex. 50"
+                               data-weights-editor-target="fieldWeight" aria-describedby="cs-weight-error"
+                               data-action="keydown.enter->weights-editor#save">
+                    </div>
+                </div>
+                <p class="cs-pack-error" id="cs-weight-error" data-weights-editor-target="error" role="alert" hidden></p>
+            </div>
+
+            <div class="cs-pack-dialog-foot">
+                <button type="button" class="btn btn-outline-secondary" data-action="weights-editor#cancel">
+                    {{ ux_icon(resolve_icon_name('action:cancel'), {height:'16px', width:'16px'}) }}
+                    <span>Annuler</span>
+                </button>
+                <button type="button" class="btn btn-cobalt" data-action="weights-editor#save">
+                    {{ ux_icon(resolve_icon_name('action:save'), {height:'16px', width:'16px'}) }}
+                    <span>Valider</span>
+                </button>
+            </div>
+        </dialog>
     </fieldset>
 {% endblock %}

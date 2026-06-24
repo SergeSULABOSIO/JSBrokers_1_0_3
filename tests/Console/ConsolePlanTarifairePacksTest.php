@@ -93,6 +93,19 @@ class ConsolePlanTarifairePacksTest extends WebTestCase
         // …ainsi que le champ caché (source de vérité soumise) et la boîte de dialogue.
         $this->assertCount(1, $crawler->filter('input[type="hidden"][name="plan_tarifaire[packsJson]"]'));
         $this->assertCount(1, $crawler->filter('dialog[data-packs-editor-target="dialog"]'));
+
+        // Même pattern pour les poids d'écriture : collection + champ caché + dialogue
+        // (avec sélecteur d'entité). Plus aucun textarea JSON brut sur la page.
+        $this->assertCount(1, $crawler->filter('[data-controller="weights-editor"]'));
+        $this->assertCount(1, $crawler->filter('input[type="hidden"][name="plan_tarifaire[writeWeightsJson]"]'));
+        $this->assertCount(1, $crawler->filter('dialog[data-weights-editor-target="dialog"] select[data-weights-editor-target="fieldEntity"]'));
+        $this->assertCount(0, $crawler->filter('textarea[name="plan_tarifaire[writeWeightsJson]"]'));
+
+        // La boîte de confirmation de suppression vient du layout global (base.html.twig)
+        // et NE DOIT PAS être dupliquée par la page : une seule instance, sinon deux
+        // modales s'ouvriraient en même temps.
+        $this->assertCount(1, $crawler->filter('#confirmation-dialog-modal'),
+            'Le dialogue de confirmation doit être présent en une seule instance.');
     }
 
     /** Un paquet avec libellé est persisté tel quel et relayé par le service. */
@@ -125,6 +138,35 @@ class ConsolePlanTarifairePacksTest extends WebTestCase
         $this->assertSame('Démarrage', $pack['label']);
         $this->assertSame(5000, $pack['tokens']);
         $this->assertSame(5, $pack['price']);
+    }
+
+    /** Un poids d'écriture saisi via la collection est persisté et relayé par le service. */
+    public function testSuperAdminSavesWriteWeight(): void
+    {
+        $this->client->loginUser($this->user(self::SUPER));
+
+        $crawler = $this->client->request('GET', '/console/plan-tarifaire');
+        $this->assertResponseIsSuccessful();
+
+        $form = $crawler->filter('form')->form();
+        $form['plan_tarifaire[freeAllowance]'] = '1000';
+        $form['plan_tarifaire[freeWindowHours]'] = '8';
+        $form['plan_tarifaire[readWeight]'] = '2';
+        $form['plan_tarifaire[defaultWriteWeight]'] = '5';
+        $form['plan_tarifaire[usdPerToken]'] = '0.001';
+        // Soumission telle que produite par le contrôleur Stimulus (clé = FQCN).
+        $form['plan_tarifaire[writeWeightsJson]'] = json_encode([
+            'App\\Entity\\Cotation' => 75,
+        ]);
+        $this->client->submit($form);
+
+        $this->assertResponseRedirects('/console/plan-tarifaire');
+
+        $params = static::getContainer()->get(ParametresTokenService::class);
+        $params->refresh();
+        $this->assertSame(75, $params->weightFor('App\\Entity\\Cotation'));
+        // Une entité non configurée retombe sur le poids par défaut.
+        $this->assertSame(5, $params->weightFor('App\\Entity\\Piste'));
     }
 
     /**
@@ -179,5 +221,30 @@ class ConsolePlanTarifairePacksTest extends WebTestCase
         $this->assertStringContainsString('7 000', $content);
         // …et l'ancienne carte codée en dur n'existe plus.
         $this->assertStringNotContainsString('INTERMÉDIAIRE', $content);
+    }
+
+    /**
+     * La page publique « Fonctionnement des tokens » tire toutes ses valeurs du plan
+     * tarifaire édité en Console : libellé de paquet, poids d'écriture par entité,
+     * allocation gratuite.
+     */
+    public function testTokensInfoPageReflectsConsolePlan(): void
+    {
+        $repository = static::getContainer()->get(PlateformeParametresRepository::class);
+        $params = $repository->getSingleton();
+        $params->setPacks(['decouverte' => ['label' => 'Découverte Promo', 'tokens' => 7000, 'price' => 7]]);
+        $params->setWriteWeights(['App\\Entity\\Cotation' => 321]);
+        $params->setFreeAllowance(4242);
+        $this->em()->flush();
+        static::getContainer()->get(ParametresTokenService::class)->refresh();
+
+        $this->client->request('GET', '/fonctionnement-tokens');
+        $this->assertResponseIsSuccessful();
+
+        $content = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('Découverte Promo', $content);   // libellé éditable du paquet
+        $this->assertStringContainsString('321', $content);                 // poids d'écriture personnalisé
+        $this->assertStringContainsString('Cotation', $content);            // libellé d'entité résolu
+        $this->assertStringContainsString('4 242', $content);               // allocation gratuite éditée
     }
 }

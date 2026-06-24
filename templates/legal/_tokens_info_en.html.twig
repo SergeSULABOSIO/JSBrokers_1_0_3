@@ -57,7 +57,7 @@
         <thead><tr><th>Pack</th><th>Price</th></tr></thead>
         <tbody>
             {% for key, p in plan.packs %}
-            <tr><td>{{ key|capitalize }} — {{ p.tokens|number_format(0, '.', ',') }} tokens</td><td>${{ p.price }}</td></tr>
+            <tr><td>{{ p.label|default(key|capitalize) }} — {{ p.tokens|number_format(0, '.', ',') }} tokens</td><td>${{ p.price }}</td></tr>
             {% endfor %}
         </tbody>
     </table>

@@ -102,6 +102,35 @@ class TokenAccountServiceTest extends TestCase
         $this->assertSame('entree', $this->persisted[0]->getSens());
     }
 
+    public function testWriteWeightReflectsConsoleEdit(): void
+    {
+        $this->persisted = [];
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->method('persist')->willReturnCallback(function ($o): void {
+            if ($o instanceof TokenConsumption) {
+                $this->persisted[] = $o;
+            }
+        });
+        $em->method('flush');
+
+        // Plan tarifaire édité en Console : poids d'écriture de Cotation porté à 500
+        // (au lieu de la constante 50). Le métrage doit appliquer la valeur ÉDITÉE.
+        $params = (new PlateformeParametres())->setWriteWeights([Cotation::class => 500]);
+        $repo = $this->createMock(PlateformeParametresRepository::class);
+        $repo->method('getSingleton')->willReturn($params);
+        $svc = new TokenAccountService($em, new ParametresTokenService($repo));
+
+        $owner = $this->owner();
+        $owner->setPaidTokens(1000);
+        $ent = $this->entreprise($owner);
+
+        $svc->meterWrite(new Cotation(), $ent, $owner);
+
+        // La facturation lit la même source que la Console : 500 tokens débités, journalisés.
+        $this->assertSame(500, $owner->getPaidTokens());
+        $this->assertSame(500, $this->persisted[0]->getPoidsUnitaire());
+    }
+
     public function testPrepaidConsumedBeforeFree(): void
     {
         $svc = $this->makeService();
