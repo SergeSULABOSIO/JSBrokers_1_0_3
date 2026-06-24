@@ -35,6 +35,7 @@ class TaxeVenteController extends AbstractConsoleController
 
         return $this->render('console/taxe_vente/index.html.twig', [
             'pageName'    => 'Fiscalité',
+            'pageIcon'    => 'taxe',
             'taxes'       => $this->taxeVenteRepository->paginateAll($request->query->getInt('page', 1)),
             // Revenu total cumulé : assiette du montant représenté par chaque taxe
             // (calcul par ligne via le helper Twig prix_ht, cf. liste).

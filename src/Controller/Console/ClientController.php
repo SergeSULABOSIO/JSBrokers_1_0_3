@@ -29,6 +29,7 @@ class ClientController extends AbstractConsoleController
 
         return $this->render('console/client/index.html.twig', [
             'pageName'     => 'Clients',
+            'pageIcon'     => 'client',
             'utilisateurs' => $this->utilisateurRepository->paginateClients($request->query->getInt('page', 1)),
         ]);
     }

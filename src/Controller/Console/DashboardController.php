@@ -51,6 +51,7 @@ class DashboardController extends AbstractConsoleController
 
         return $this->render('console/dashboard.html.twig', [
             'pageName' => 'Tableau de bord',
+            'pageIcon' => 'dashboard',
             // KPIs rendus dès le chargement (toujours visibles, sans cadre) ;
             // ils sont ensuite rafraîchis silencieusement côté client.
             'kpis'     => $this->stats->getKpis(),
