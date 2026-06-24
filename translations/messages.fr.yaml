@@ -147,6 +147,7 @@ security_pricing_basic_option_fonctions: "Accès à toutes les autres fonctions"
 # Carte de tarif GÉNÉRIQUE : tout paquet payant de la Console partage ces libellés ;
 # seuls le nom (label), le prix TTC et le volume de tokens varient (données).
 security_pricing_pack_price: "%price% $"
+security_pricing_pack_promo_off: "%amount% $ de remise"
 security_pricing_pack_mode: "Paquet prépayé"
 security_pricing_pack_profil: "Tokens cumulables, valables sans expiration."
 security_pricing_pack_option_assistance: "Assistance technique personnalisée"
@@ -225,6 +226,10 @@ token_buy.cvc_invalid: "CVC invalide (3 ou 4 chiffres)."
 token_buy.coupon_section: "Code de réduction"
 token_buy.coupon: "Coupon (facultatif)"
 token_buy.coupon_ph: "Saisissez un code promo"
+token_buy.coupon_apply: "Appliquer"
+token_buy.recap_base: "Prix du paquet"
+token_buy.recap_remise: "Remise"
+token_buy.recap_total: "À payer"
 
 # Coupons — messages de validation (achat de tokens)
 coupon.invalid: "Code de réduction inconnu."

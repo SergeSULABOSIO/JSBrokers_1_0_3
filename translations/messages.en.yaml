@@ -147,6 +147,7 @@ security_pricing_basic_option_fonctions: "Access to all other features"
 # GENERIC pricing card: every paid Console pack shares these labels; only the name
 # (label), the price and the token volume change (data-driven).
 security_pricing_pack_price: "$%price%"
+security_pricing_pack_promo_off: "$%amount% off"
 security_pricing_pack_mode: "Prepaid pack"
 security_pricing_pack_profil: "Stackable tokens, valid with no expiry."
 security_pricing_pack_option_assistance: "Customized technical support"
@@ -225,6 +226,10 @@ token_buy.cvc_invalid: "Invalid CVC (3 or 4 digits)."
 token_buy.coupon_section: "Discount code"
 token_buy.coupon: "Coupon (optional)"
 token_buy.coupon_ph: "Enter a promo code"
+token_buy.coupon_apply: "Apply"
+token_buy.recap_base: "Pack price"
+token_buy.recap_remise: "Discount"
+token_buy.recap_total: "To pay"
 
 # Coupons — validation messages (token purchase)
 coupon.invalid: "Unknown discount code."

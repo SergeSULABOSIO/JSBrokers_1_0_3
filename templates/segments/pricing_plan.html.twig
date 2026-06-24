@@ -13,6 +13,9 @@
        ici sans toucher au code. Le paquet « recommandé » est celui qui offre le
        plus gros volume de tokens. #}
     {% set packs = plan_tarifaire().packs() %}
+    {# Promos publiques actives par paquet (même source que le paiement) : prix
+       remisé affiché = prix facturé avec ce coupon. #}
+    {% set promos = promos_vitrine() %}
     {% set featuredKey = null %}
     {% set maxTokens = -1 %}
     {% for key, pack in packs %}
@@ -33,6 +36,7 @@
                     key: key,
                     pack: pack,
                     featured: key == featuredKey,
+                    promo: promos[key]|default(null),
                 } %}
             </div>
         {% endfor %}

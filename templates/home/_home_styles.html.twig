@@ -188,6 +188,16 @@
     .pp-lead { margin: 0 0 .4rem; font-weight: 600; color: #343a40; }
     .pp-profil { margin: 0; color: #6c757d; font-size: .88rem; }
 
+    /* Promo active : prix d'origine barré + prix remisé, et pastille code promo.
+       Sémantique « économies » → vert succès de la charte. */
+    .pp-price-old { display: block; font-size: 1.1rem; font-weight: 600; color: #6c757d;
+        text-decoration: line-through; margin: 0 0 .15rem; }
+    .pp-promo { display: inline-flex; align-items: center; gap: .35rem;
+        background-color: #d1e7dd; color: #0f5132;
+        font-size: .74rem; font-weight: 700; letter-spacing: .02em;
+        padding: .25rem .65rem; border-radius: 999px; margin-bottom: .5rem; }
+    .pp-promo__code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .04em; }
+
     /* Liste des caractéristiques. */
     .pp-features { list-style: none; margin: 0; padding: .75rem 1.5rem;
         display: flex; flex-direction: column; flex: 1 1 auto; }

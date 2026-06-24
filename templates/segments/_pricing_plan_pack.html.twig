@@ -6,7 +6,9 @@
    Paramètres attendus (via include ... with) :
      - key      : clé technique du paquet (sert au lien d'achat) ;
      - pack      : { label, tokens, price } ;
-     - featured  : booléen — met la carte en avant (« Recommandé »).
+     - featured  : booléen — met la carte en avant (« Recommandé ») ;
+     - promo     : meilleure promo publique applicable (ou null) —
+                   { code, type, valeur, montantFinal, remiseUsd }.
    La variable `lang` provient du contexte parent. #}
 <article class="pp-card{{ featured ? ' pp-card--featured' : '' }}" aria-labelledby="pp-{{ key }}-name">
     {% if featured %}
@@ -17,7 +19,18 @@
     {% endif %}
     <header class="pp-head">
         <span class="pp-name" id="pp-{{ key }}-name">{{ (pack.label|default(key|capitalize))|upper }}</span>
-        <p class="pp-price">{{ "security_pricing_pack_price" | trans({'%price%': pack.price}) }}</p>
+        {% if promo %}
+            {# Promo active : prix d'origine barré + prix remisé (= prix facturé avec ce code). #}
+            <span class="pp-price-old">{{ "security_pricing_pack_price" | trans({'%price%': pack.price}) }}</span>
+            <p class="pp-price">{{ "security_pricing_pack_price" | trans({'%price%': promo.montantFinal}) }}</p>
+            <span class="pp-promo">
+                {{ ux_icon(resolve_icon_name('offre'), {height: '14px', width: '14px', 'aria-hidden': 'true'}) }}
+                <span class="pp-promo__code">{{ promo.code }}</span>
+                <span>{% if promo.type == 'percent' %}−{{ promo.valeur|number_format(0) }}%{% else %}{{ "security_pricing_pack_promo_off" | trans({'%amount%': promo.remiseUsd}) }}{% endif %}</span>
+            </span>
+        {% else %}
+            <p class="pp-price">{{ "security_pricing_pack_price" | trans({'%price%': pack.price}) }}</p>
+        {% endif %}
         <span class="pp-badge">{{ "security_pricing_pack_mode" | trans }}</span>
         <p class="pp-profil">{{ "security_pricing_pack_profil" | trans }}</p>
     </header>
@@ -62,7 +75,7 @@
     </ul>
 
     <div class="pp-foot">
-        <a href="{{ app.user ? path('admin.token.buy', {pack: key}) : path('app_register', {idUtilisateur: -1}) }}"
+        <a href="{{ app.user ? path('admin.token.buy', promo ? {pack: key, coupon: promo.code} : {pack: key}) : path('app_register', {idUtilisateur: -1}) }}"
            class="pp-cta {{ featured ? 'pp-cta--solid' : 'pp-cta--outline' }}"
            data-controller="ripple"
            data-action="click->form-submit#navigating click->top-progress#show"

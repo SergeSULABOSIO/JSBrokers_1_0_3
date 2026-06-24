@@ -35,4 +35,25 @@ class CouponRepository extends ServiceEntityRepository
             20,
         );
     }
+
+    /**
+     * Coupons mis en avant sur la vitrine publique et utilisables maintenant :
+     * actifs, visibles, dans leur période de validité et sous leur limite d'usage.
+     * Triés par valeur de remise décroissante (la plus avantageuse d'abord).
+     *
+     * @return Coupon[]
+     */
+    public function findVisiblesPourVitrine(\DateTimeImmutable $now): array
+    {
+        return $this->createQueryBuilder('c')
+            ->andWhere('c.actif = true')
+            ->andWhere('c.visiblePublic = true')
+            ->andWhere('c.dateDebut <= :now')
+            ->andWhere('c.dateFin >= :now')
+            ->andWhere('c.usageLimit IS NULL OR c.usageCount < c.usageLimit')
+            ->setParameter('now', $now)
+            ->orderBy('c.valeur', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
 }

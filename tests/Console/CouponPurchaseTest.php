@@ -146,4 +146,54 @@ class CouponPurchaseTest extends WebTestCase
         $this->assertEqualsWithDelta(0.0, $purchase->getRemiseUsd(), 0.001);
         $this->assertNull($purchase->getCouponCode());
     }
+
+    /** L'aperçu en direct renvoie le même prix remisé que celui qui sera facturé. */
+    public function testCouponPreviewReturnsDiscountedPrice(): void
+    {
+        $this->client->loginUser($this->user());
+
+        $this->client->request('GET', '/admin/tokens/coupon-preview?pack=intermediaire&code=' . self::CODE);
+        $this->assertResponseIsSuccessful();
+
+        $data = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertNull($data['erreur']);
+        $this->assertEqualsWithDelta(10.0, $data['base'], 0.001);
+        $this->assertEqualsWithDelta(5.0, $data['montantFinal'], 0.001);
+        $this->assertEqualsWithDelta(5.0, $data['remiseUsd'], 0.001);
+    }
+
+    /** Un code invalide en aperçu : message d'erreur, prix de base conservé, pas de 500. */
+    public function testCouponPreviewReportsInvalidCode(): void
+    {
+        $this->client->loginUser($this->user());
+
+        $this->client->request('GET', '/admin/tokens/coupon-preview?pack=intermediaire&code=DOESNOTEXIST');
+        $this->assertResponseIsSuccessful();
+
+        $data = json_decode($this->client->getResponse()->getContent(), true);
+        $this->assertNotNull($data['erreur']);
+        $this->assertEqualsWithDelta(10.0, $data['montantFinal'], 0.001);
+        $this->assertEqualsWithDelta(0.0, $data['remiseUsd'], 0.001);
+    }
+
+    /** Coupon « visible sur la vitrine » : son code apparaît sur la page d'accueil publique. */
+    public function testVisibleCouponAppearsOnVitrine(): void
+    {
+        $coupon = $this->em()->getRepository(Coupon::class)->findOneBy(['code' => self::CODE]);
+        $coupon->setVisiblePublic(true);
+        $this->em()->flush();
+
+        $this->client->request('GET', '/');
+        $this->assertResponseIsSuccessful();
+        $this->assertStringContainsString(self::CODE, $this->client->getResponse()->getContent());
+    }
+
+    /** Coupon non visible (réglage par défaut) : son code n'apparaît PAS sur la vitrine. */
+    public function testHiddenCouponIsAbsentFromVitrine(): void
+    {
+        // Le coupon de setUp() a visiblePublic = false par défaut.
+        $this->client->request('GET', '/');
+        $this->assertResponseIsSuccessful();
+        $this->assertStringNotContainsString(self::CODE, $this->client->getResponse()->getContent());
+    }
 }
