@@ -34,14 +34,19 @@
     .tkb-sim-note { background:#fff3cd; border-left:3px solid #ffc107; border-radius:6px;
         padding:.7rem .9rem; font-size:.85rem; color:#664d03; margin-bottom:1.25rem; display:flex; gap:.5rem; align-items:flex-start; }
     .tkb-packs { display:grid; grid-template-columns:1fr; gap:.6rem; margin-bottom:1.25rem; }
-    .tkb-fieldset { border:0; padding:0; margin:0 0 1rem; }
-    /* Groupe de saisie encadré : chaque rubrique (paquet / carte / coupon) forme
-       une boîte visuelle distincte, introduite par une légende à icône (alias). */
-    .tkb-group { border:1px solid #dee2e6; border-radius:12px; padding:1.1rem 1.25rem; background:#fff; }
-    .tkb-group > .tkb-legend { margin-bottom:.85rem; }
-    .tkb-group .tkb-field:last-child, .tkb-group .tkb-ifield:last-child { margin-bottom:0; }
-    .tkb-legend { font-size:.8rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:#0047AB;
-        display:flex; align-items:center; gap:.4rem; margin-bottom:.6rem; }
+    .tkb-fieldset { border:0; padding:0; margin:0 0 1.1rem; }
+    /* Groupe de saisie encadré — même pattern que l'éditeur de tarif en Console
+       (.cs-fieldset / .cs-legend) : panneau gris clair, légende cobalt en capitales,
+       champs blancs qui ressortent. */
+    .tkb-group { border:1px solid #dee2e6; border-radius:10px; background:#f8f9fa;
+        padding:1.15rem 1.25rem; margin:0 0 1.1rem; }
+    .tkb-group:last-of-type { margin-bottom:0; }
+    .tkb-group > .tkb-legend { margin-bottom:1rem; }
+    .tkb-group > :last-child { margin-bottom:0; }
+    /* Les champs (blancs) ressortent sur le fond clair du panneau. */
+    .tkb-group .form-control, .tkb-group .tkb-pack-choices .form-check { background:#fff; }
+    .tkb-legend { font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#0047AB;
+        display:inline-flex; align-items:center; gap:.45rem; margin-bottom:1rem; }
     .tkb-field { margin-bottom:.85rem; }
     .tkb-field label { display:block; font-size:.85rem; font-weight:600; color:#495057; margin-bottom:.25rem; }
     .tkb-field input { width:100%; padding:.55rem .7rem; border:1px solid #ced4da; border-radius:8px; font-size:.95rem; }
