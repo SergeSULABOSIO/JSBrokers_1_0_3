@@ -15,7 +15,7 @@
                         {{ g.ville ?: '' }}{% if g.ville and g.pays %}, {% endif %}{{ g.pays ?: '' }}
                     {% else %}—{% endif %}
                 </td>
-                <td data-field="paquet"><span class="cs-badge cs-badge--cobalt">{{ v.pack|capitalize }}</span></td>
+                <td data-field="paquet"><span class="cs-badge cs-badge--cobalt">{{ token_pack_label(v.pack) }}</span></td>
                 <td>{{ v.montantUsd|number_format(2, '.', ' ') }} $</td>
                 <td>{{ prix_ht(v.montantUsd)|number_format(2, '.', ' ') }} $</td>
                 <td>{{ taxe_due(v.montantUsd)|number_format(2, '.', ' ') }} $</td>

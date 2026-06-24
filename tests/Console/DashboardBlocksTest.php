@@ -261,4 +261,37 @@ class DashboardBlocksTest extends WebTestCase
         $this->assertStringContainsString('Revenu HT', $html, 'Le bloc « Dernières ventes » doit exposer la colonne « Revenu HT ».');
         $this->assertStringContainsString('Taxes', $html, 'Le bloc « Dernières ventes » doit exposer la colonne « Taxes ».');
     }
+
+    /**
+     * Les colonnes « Paquet » des blocs Ventes / Coupons / Plans doivent afficher
+     * le LIBELLÉ PUBLIC du paquet (le même que la vitrine), pas la clé technique
+     * capitalisée. On s'appuie sur les paquets par défaut (TokenPricing::PACKS)
+     * où la clé « intermediaire » a pour libellé « Intermédiaire » : le libellé
+     * accentué n'apparaît que si la résolution clé → label est faite, alors que
+     * l'ancien `|capitalize` produisait « Intermediaire » (sans accent).
+     */
+    public function testBlocksShowPublicPackLabels(): void
+    {
+        // Rattache la vente et le coupon de test au paquet « intermediaire ».
+        $em = $this->em();
+
+        $vente = $em->getRepository(TokenPurchase::class)->findOneBy(['reference' => self::VENTE_REF]);
+        $vente->setPack('intermediaire');
+
+        $coupon = $em->getRepository(Coupon::class)->findOneBy(['code' => self::COUPON]);
+        $coupon->setPackCible('intermediaire');
+
+        $em->flush();
+
+        $this->client->loginUser($this->user(self::ADMIN));
+
+        foreach (['/console/dashboard/block/ventes', '/console/dashboard/block/coupons', '/console/dashboard/block/plans'] as $url) {
+            $this->client->request('GET', $url);
+            $this->assertResponseIsSuccessful(sprintf('Le bloc %s doit répondre 200.', $url));
+
+            $html = (string) $this->client->getResponse()->getContent();
+            $this->assertStringContainsString('Intermédiaire', $html, sprintf('Le bloc %s doit afficher le libellé public « Intermédiaire ».', $url));
+            $this->assertStringNotContainsString('Intermediaire', $html, sprintf('Le bloc %s ne doit plus afficher la clé capitalisée sans accent.', $url));
+        }
+    }
 }

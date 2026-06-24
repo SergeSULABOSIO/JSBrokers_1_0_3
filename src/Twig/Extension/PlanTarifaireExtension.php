@@ -74,6 +74,7 @@ class PlanTarifaireExtension extends AbstractExtension
         return [
             new TwigFunction('plan_tarifaire', [$this, 'getPlanTarifaire']),
             new TwigFunction('promos_vitrine', [$this, 'getPromosVitrine']),
+            new TwigFunction('token_pack_label', [$this, 'getPackLabel']),
             new TwigFunction('token_entite_label', [$this, 'getEntiteLabel']),
             new TwigFunction('token_entite_icon', [$this, 'getEntiteIcon']),
             new TwigFunction('token_entites_facturables', [$this, 'getEntitesFacturables']),
@@ -130,6 +131,17 @@ class PlanTarifaireExtension extends AbstractExtension
     public function getPlanTarifaire(): ParametresTokenService
     {
         return $this->parametres;
+    }
+
+    /**
+     * Libellé public d'un paquet à partir de sa clé technique : on lit la MÊME
+     * source que la vitrine (ParametresTokenService → label configuré ou repli
+     * TokenPricing::PACKS). Repli pour une clé absente du plan (donnée héritée) :
+     * la clé capitalisée, identique au filtre Twig `capitalize` historique.
+     */
+    public function getPackLabel(string $key): string
+    {
+        return $this->parametres->pack($key)['label'] ?? ucfirst(mb_strtolower($key));
     }
 
     /** Libellé d'affichage d'une entité (par FQCN) dans la langue demandée. */

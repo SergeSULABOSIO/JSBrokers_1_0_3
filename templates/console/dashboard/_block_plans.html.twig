@@ -8,7 +8,7 @@
             <tbody>
             {% for key, p in packs %}
                 <tr>
-                    <td><span class="cs-badge cs-badge--cobalt">{{ key|capitalize }}</span></td>
+                    <td><span class="cs-badge cs-badge--cobalt">{{ p.label|default(key|capitalize) }}</span></td>
                     <td style="text-align:right;">{{ p.tokens|number_format(0, ',', ' ') }} jetons</td>
                     <td style="text-align:right;">{{ p.price|number_format(2, '.', ' ') }} $</td>
                     <td style="text-align:right;">{{ prix_ht(p.price)|number_format(2, '.', ' ') }} $</td>
