@@ -16,7 +16,16 @@
     .cs-back:hover { color:#0047AB; }
     /* Entête du formulaire : titre + description (modèle .ent-head). */
     .cs-form-head { margin-bottom: 1.5rem; }
-    .cs-form-head h1 { font-size: 1.6rem; font-weight: 700; color:#212529; margin: 0 0 .25rem; }
+    /* Titre + icône d'illustration alignés sur une même ligne. */
+    .cs-head-title { display: flex; align-items: center; gap: .7rem; margin-bottom: .25rem; }
+    .cs-form-head h1 { font-size: 1.6rem; font-weight: 700; color:#212529; margin: 0; }
+    /* Pastille cobalt (même langage visuel que .cs-pack-icon), portée par `formIcon`. */
+    .cs-head-icon {
+        flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+        width: 46px; height: 46px; border-radius: 11px;
+        background: #e8f0fb; color: #0047AB;
+    }
+    .cs-head-icon svg { width: 26px; height: 26px; }
     .cs-form-head p { color:#6c757d; margin:0; }
     /* Séparateur entre le texte d'entête et la carte (modèle entreprise : le message
        de description se termine par un <hr>). */
@@ -26,7 +35,9 @@
         padding:1.75rem; box-shadow:0 10px 40px rgba(0,71,171,.08);
     }
     /* Illustration en cercle, centrée en haut de la carte (modèle .ent-thumb /
-       .ent-thumb-placeholder de l'entreprise). */
+       .ent-thumb-placeholder de l'entreprise). Cohabite avec la pastille du titre :
+       le cercle est l'illustration principale de la carte, la pastille rappelle
+       l'icône au niveau du titre. */
     .cs-thumb { display:flex; justify-content:center; margin-bottom:1.5rem; }
     .cs-thumb-placeholder {
         display:flex; align-items:center; justify-content:center;
@@ -105,7 +116,15 @@
     </a>
 
     <div class="cs-form-head">
-        <h1>{{ pageName }}</h1>
+        <div class="cs-head-title">
+            {# Icône d'illustration du titre : pastille cobalt (même esprit que
+               .cs-pack-icon) ; l'icône est choisie par le contrôleur via `formIcon`,
+               repli sur l'icône console. #}
+            <span class="cs-head-icon" aria-hidden="true">
+                {{ ux_icon(resolve_icon_name(formIcon|default('offre')), {height:'26px', width:'26px'}) }}
+            </span>
+            <h1>{{ pageName }}</h1>
+        </div>
         {% if description is defined and description %}<p>{{ description|raw }}</p>{% endif %}
         <hr>
     </div>
