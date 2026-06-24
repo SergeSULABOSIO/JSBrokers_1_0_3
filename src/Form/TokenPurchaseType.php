@@ -35,32 +35,35 @@ class TokenPurchaseType extends AbstractType
                 'choices'  => $choices,
                 'expanded' => true,
             ])
+            // `data-icon` : alias d'icône incrustée par le thème console/_form_theme,
+            // exactement comme l'éditeur de tarif en Console (champ continu, icône grise
+            // à gauche). cf. IconCanvasProvider pour la table des alias.
             ->add('cardHolder', TextType::class, [
                 'label'      => 'token_buy.card_holder',
                 'empty_data' => '',
-                'attr'       => ['autocomplete' => 'cc-name', 'placeholder' => 'token_buy.card_holder_ph'],
+                'attr'       => ['autocomplete' => 'cc-name', 'placeholder' => 'token_buy.card_holder_ph', 'data-icon' => 'utilisateur'],
             ])
             ->add('cardNumber', TextType::class, [
                 'label'      => 'token_buy.card_number',
                 'empty_data' => '',
-                'attr'       => ['autocomplete' => 'cc-number', 'inputmode' => 'numeric', 'placeholder' => '4242 4242 4242 4242'],
+                'attr'       => ['autocomplete' => 'cc-number', 'inputmode' => 'numeric', 'placeholder' => '4242 4242 4242 4242', 'data-icon' => 'compte-bancaire'],
             ])
             ->add('expiry', TextType::class, [
                 'label'      => 'token_buy.expiry',
                 'empty_data' => '',
-                'attr'       => ['autocomplete' => 'cc-exp', 'placeholder' => 'MM/AA'],
+                'attr'       => ['autocomplete' => 'cc-exp', 'placeholder' => 'MM/AA', 'data-icon' => 'action:renew'],
             ])
             ->add('cvc', TextType::class, [
                 'label'      => 'token_buy.cvc',
                 'empty_data' => '',
-                'attr'       => ['autocomplete' => 'cc-csc', 'inputmode' => 'numeric', 'placeholder' => '123'],
+                'attr'       => ['autocomplete' => 'cc-csc', 'inputmode' => 'numeric', 'placeholder' => '123', 'data-icon' => 'action:password'],
             ])
             // Code de réduction OPTIONNEL : laissé vide, l'achat se déroule au plein tarif.
             ->add('couponCode', TextType::class, [
                 'label'      => 'token_buy.coupon',
                 'required'   => false,
                 'empty_data' => '',
-                'attr'       => ['placeholder' => 'token_buy.coupon_ph', 'autocapitalize' => 'characters'],
+                'attr'       => ['placeholder' => 'token_buy.coupon_ph', 'autocapitalize' => 'characters', 'data-icon' => 'offre'],
             ])
             // Le bouton de soumission est fourni par le template (style + icône).
         ;

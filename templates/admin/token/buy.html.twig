@@ -27,45 +27,143 @@
     .tkb-back { display:inline-flex; align-items:center; gap:.35rem; font-size:.9rem; color:#6c757d; text-decoration:none; margin-bottom:1rem; }
     .tkb-back:hover { color:#0047AB; }
     .tkb-head { margin-bottom: 1.25rem; }
-    .tkb-head h1 { font-size: 1.5rem; font-weight: 700; color: #212529; margin: 0 0 .25rem; }
+    /* Titre + icône d'illustration alignés sur une même ligne. */
+    .tkb-head-title { display: flex; align-items: center; gap: .7rem; margin-bottom: .25rem; }
+    .tkb-head h1 { font-size: 1.5rem; font-weight: 700; color: #212529; margin: 0; }
     .tkb-head p { color: #6c757d; margin: 0; }
+    /* Pastille cobalt (même langage visuel que .cs-pack-icon en Console). */
+    .tkb-head-icon {
+        flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+        width: 46px; height: 46px; border-radius: 11px;
+        background: #e8f0fb; color: #0047AB;
+    }
+    .tkb-head-icon svg { width: 26px; height: 26px; }
     .tkb-card { background:#fff; border:1px solid #dee2e6; border-radius:12px; padding:1.5rem 1.75rem;
         box-shadow:0 4px 16px rgba(0,71,171,.06); }
+    /* Illustration en cercle en haut de la carte — même modèle que .cs-thumb en
+       Console : le cercle est l'illustration principale de la carte, la pastille
+       du titre (.tkb-head-icon) rappelle l'icône au niveau de l'entête. */
+    .tkb-thumb { display:flex; justify-content:center; margin-bottom:1.5rem; }
+    .tkb-thumb-placeholder {
+        display:flex; align-items:center; justify-content:center;
+        width:150px; height:150px; border-radius:50%;
+        border:1px solid #dee2e6; background:#f8f9fa; transition:box-shadow .2s ease;
+    }
+    .tkb-thumb-placeholder:hover { box-shadow:0 4px 16px rgba(0,71,171,.12); }
+    .tkb-thumb-placeholder svg { width:64px; height:64px; color:#0047AB; }
     .tkb-sim-note { background:#fff3cd; border-left:3px solid #ffc107; border-radius:6px;
         padding:.7rem .9rem; font-size:.85rem; color:#664d03; margin-bottom:1.25rem; display:flex; gap:.5rem; align-items:flex-start; }
     .tkb-packs { display:grid; grid-template-columns:1fr; gap:.6rem; margin-bottom:1.25rem; }
-    .tkb-fieldset { border:0; padding:0; margin:0 0 1.1rem; }
-    /* Groupe de saisie encadré — même pattern que l'éditeur de tarif en Console
-       (.cs-fieldset / .cs-legend) : panneau gris clair, légende cobalt en capitales,
-       champs blancs qui ressortent. */
-    .tkb-group { border:1px solid #dee2e6; border-radius:10px; background:#f8f9fa;
-        padding:1.15rem 1.25rem; margin:0 0 1.1rem; }
-    .tkb-group:last-of-type { margin-bottom:0; }
-    .tkb-group > .tkb-legend { margin-bottom:1rem; }
-    .tkb-group > :last-child { margin-bottom:0; }
-    /* Les champs (blancs) ressortent sur le fond clair du panneau. */
-    .tkb-group .form-control, .tkb-group .tkb-pack-choices .form-check { background:#fff; }
-    .tkb-legend { font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:#0047AB;
-        display:inline-flex; align-items:center; gap:.45rem; margin-bottom:1rem; }
-    .tkb-field { margin-bottom:.85rem; }
-    .tkb-field label { display:block; font-size:.85rem; font-weight:600; color:#495057; margin-bottom:.25rem; }
-    .tkb-field input { width:100%; padding:.55rem .7rem; border:1px solid #ced4da; border-radius:8px; font-size:.95rem; }
-    .tkb-field input:focus { outline:none; border-color:#0047AB; box-shadow:0 0 0 3px rgba(0,71,171,.35); }
-    .tkb-row { display:flex; gap:.85rem; }
-    .tkb-row .tkb-field { flex:1; }
-    .tkb-pack-choices { display:flex; flex-direction:column; gap:.5rem; }
-    .tkb-pack-choices .form-check { padding:.6rem .85rem; border:1px solid #dee2e6; border-radius:8px; margin:0; }
-    .tkb-submit { width:100%; background:#0047AB; border-color:#0047AB; color:#fff; font-weight:600; padding:.7rem; }
-    .tkb-submit:hover { background:#003380; border-color:#003380; }
-    .tkb-error { color:#dc3545; font-size:.82rem; margin-top:.2rem; }
+    /* ── Groupe de champs : panneau STRICTEMENT identique à l'éditeur de tarif
+       en Console (.cs-fieldset / .cs-legend). Panneau gris clair, légende cobalt
+       en capitales, champs blancs incrustés d'une icône grise. ── */
+    /* Rythme vertical délibéré (principe de proximité / Gestalt) : la gouttière
+       INTER-groupes (1.5rem) domine nettement la gouttière INTER-champs (1.1rem),
+       pour que chaque panneau se lise comme un bloc distinct. Padding interne
+       uniforme : le panneau « respire » autant en haut qu'en bas. */
+    .cs-fieldset { border:1px solid #dee2e6; border-radius:10px; background:#f8f9fa;
+        padding:1.35rem; margin:0 0 1.5rem; }
+    .cs-legend { display:inline-flex; align-items:center; gap:.45rem;
+        font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; font-weight:700;
+        color:#0047AB; margin:0 0 1.15rem; padding:0; width:auto; float:none; }
+    /* Gouttière inter-champs régulière ; le dernier champ d'un groupe se cale sur
+       le padding bas du panneau (pas de double gouttière). */
+    .tkb-card .cs-fieldset .mb-3 { margin-bottom:1.1rem; }
+    .tkb-card .cs-fieldset > .mb-3:last-child,
+    .tkb-card .cs-fieldset > .row:last-child .mb-3 { margin-bottom:0; }
 
-    /* ── Code promo : champ + bouton « Appliquer », message d'erreur, récap ── */
-    .tkb-coupon-row { display:flex; gap:.6rem; align-items:flex-start; }
-    .tkb-coupon-input { flex:1 1 auto; margin-bottom:0; }
-    .tkb-coupon-apply { height:48px; white-space:nowrap; font-weight:600;
-        color:#0047AB; border-color:#0047AB; }
-    .tkb-coupon-apply:hover { background:#0047AB; border-color:#0047AB; color:#fff; }
-    .tkb-coupon-error { color:#dc3545; font-size:.82rem; margin:.45rem 0 0; }
+    /* Libellés + champs : mêmes mesures que la carte de formulaire Console
+       (.cs-form-card), les champs blancs ressortant sur le panneau gris. */
+    .tkb-card .form-label { font-weight:600; color:#343a40; margin-bottom:.35rem; }
+    .tkb-card .form-control,
+    .tkb-card .form-select { height:48px; font-size:1rem; color:#000; background:#fff; }
+    .tkb-card textarea.form-control { height:auto; }
+    .tkb-card .form-control:focus,
+    .tkb-card .form-select:focus { border-color:#0047AB; box-shadow:0 0 0 .25rem rgba(0,71,171,.35); }
+
+    /* Champ à icône incrustée — pattern unique de la Console (.cs-field) :
+       un seul champ continu, l'icône grise à gauche À L'INTÉRIEUR (jamais de
+       boîte séparée). Rendu par le thème console/_form_theme via `data-icon`. */
+    .cs-field { position:relative; }
+    .cs-field-icon { position:absolute; left:.9rem; top:50%; transform:translateY(-50%);
+        width:18px; height:18px; color:#6c757d; pointer-events:none; z-index:4;
+        display:inline-flex; align-items:center; justify-content:center; }
+    .cs-field .form-control,
+    .cs-field .form-select { padding-left:2.6rem; }
+    .cs-field .form-control:focus,
+    .cs-field .form-select:focus { border-color:#0047AB; box-shadow:0 0 0 .2rem rgba(0,71,171,.25); }
+
+    /* ── Choix de paquet : cartes radio sélectionnables (même esprit que les
+       cartes .cs-pack de l'éditeur en Console). Toute la carte est cliquable,
+       le pastillage radio est cobalt, et l'état sélectionné ressort nettement
+       (bordure + fond cobalt clair). ── */
+    .tkb-pack-choices { display:flex; flex-direction:column; gap:.6rem; }
+    .tkb-pack-choices .form-check {
+        position:relative; display:flex; align-items:center; gap:.8rem;
+        margin:0; padding:.9rem 1.05rem;
+        border:1px solid #dee2e6; border-radius:10px; background:#fff; cursor:pointer;
+        transition:border-color .15s ease, box-shadow .15s ease, background-color .15s ease;
+    }
+    .tkb-pack-choices .form-check:hover {
+        border-color:#0047AB; box-shadow:0 4px 14px rgba(0,71,171,.08);
+    }
+    /* Pastille radio cobalt, légèrement agrandie pour une cible nette. */
+    .tkb-pack-choices .form-check-input {
+        flex:0 0 auto; width:1.2rem; height:1.2rem; margin:0;
+        border-color:#ced4da; cursor:pointer;
+    }
+    .tkb-pack-choices .form-check-input:checked { background-color:#0047AB; border-color:#0047AB; }
+    .tkb-pack-choices .form-check-input:focus {
+        border-color:#0047AB; box-shadow:0 0 0 .25rem rgba(0,71,171,.25);
+    }
+    .tkb-pack-choices .form-check-label {
+        flex:1 1 auto; cursor:pointer; font-weight:600; color:#343a40; line-height:1.3;
+    }
+    /* Toute la surface de la carte est cliquable (recouvre l'étiquette). */
+    .tkb-pack-choices .form-check-label::after { content:""; position:absolute; inset:0; }
+    /* État sélectionné : carte mise en avant en cobalt clair (`:has` = sans JS). */
+    .tkb-pack-choices .form-check:has(.form-check-input:checked) {
+        border-color:#0047AB; background:#e8f0fb; box-shadow:0 4px 16px rgba(0,71,171,.12);
+    }
+
+    /* Bouton de paiement : couleur + survol = pattern canonique .btn-cobalt
+       (cobalt → #003380 au survol, halo cobalt au focus, cf. app.css). */
+    .tkb-pay { font-weight:600; }
+
+    /* ── Barre d'actions épinglée en bas de la carte — même pattern que l'éditeur
+       de tarif en Console (.cs-form-actions) : reste visible quel que soit le
+       scroll (position:sticky), lien de retour ancré à gauche, action principale
+       à droite. Les marges négatives neutralisent le padding de la carte pour
+       coller la barre à ses bords (rayon bas aligné sur .tkb-card = 12px). ── */
+    .tkb-form-actions {
+        position:sticky; bottom:0; z-index:5;
+        display:flex; align-items:center; gap:.75rem;
+        margin:1.5rem -1.75rem -1.5rem;
+        padding:1rem 1.75rem;
+        background:#fff; border-top:1px solid #dee2e6;
+        border-bottom-left-radius:12px; border-bottom-right-radius:12px;
+        box-shadow:0 -4px 12px rgba(0,71,171,.06);
+    }
+    .tkb-form-actions .btn { height:46px; display:inline-flex; align-items:center; }
+    /* Lien de retour ancré à gauche (même cible que .tkb-back en haut du formulaire). */
+    .tkb-actions-back {
+        display:inline-flex; align-items:center; gap:.35rem;
+        font-size:.9rem; color:#6c757d; text-decoration:none; white-space:nowrap;
+        transition:color .15s ease;
+    }
+    .tkb-actions-back:hover { color:#0047AB; }
+    /* margin-left:auto pousse le séparateur + le bouton vers la droite. */
+    .tkb-actions-sep { flex:0 0 auto; width:1px; height:28px; background:#dee2e6; margin-left:auto; }
+
+    @media (max-width: 575.98px) {
+        .tkb-form-actions { flex-direction:column-reverse; align-items:stretch; }
+        .tkb-form-actions .btn { width:100%; }
+        .tkb-actions-sep { display:none; }
+        .tkb-actions-back { width:100%; justify-content:center; }
+    }
+
+    /* ── Code promo : champ unique (remise calculée en direct) + message d'erreur. ── */
+    .tkb-coupon-error { color:#dc3545; font-size:.82rem; margin:.55rem 0 0; }
 
     .tkb-recap { background:#f8f9fa; border:1px solid #dee2e6; border-radius:10px;
         padding:.85rem 1.1rem; margin-bottom:1.25rem; }
@@ -74,21 +172,6 @@
     .tkb-recap-line--remise { color:#0f5132; font-weight:600; }
     .tkb-recap-line--total { border-top:1px solid #dee2e6; margin-top:.35rem; padding-top:.6rem;
         font-size:1.05rem; font-weight:800; color:#212529; }
-
-    /* ── Champs « carte » : pattern identique au formulaire de connexion ──
-       label au-dessus, icône en préfixe, champ haut de 48px, focus cobalt. */
-    .tkb-card .form-label { font-weight:600; color:#343a40; margin-bottom:.35rem; }
-    .tkb-ifield { position:relative; margin-bottom:1rem; }
-    .tkb-ifield-icon {
-        position:absolute; top:50%; left:.85rem; transform:translateY(-50%);
-        width:20px; height:20px; color:#6c757d; pointer-events:none;
-    }
-    .tkb-ifield .form-control { height:48px; padding-left:2.6rem; color:#000; }
-    .tkb-ifield .form-control:focus {
-        border-color:#0047AB; box-shadow:0 0 0 .25rem rgba(0,71,171,.35);
-    }
-    .tkb-cardrow { display:flex; gap:.85rem; }
-    .tkb-cardrow > div { flex:1; }
 
     /* Barre de titre : actions à droite (bascule de langue + aide). */
     .tkb-actions { display:inline-flex; align-items:center; gap:.75rem; }
@@ -144,15 +227,34 @@
         {{ include('components/_flash_toasts.html.twig') }}
 
         <div class="tkb-head">
-            <h1>{{ "token_buy.title" | trans }}</h1>
+            <div class="tkb-head-title">
+                {# Icône d'illustration du titre : pastille cobalt (même esprit que
+                   .cs-pack-icon en Console) ; `action:cart` rappelle l'achat de tokens. #}
+                <span class="tkb-head-icon" aria-hidden="true">
+                    {{ ux_icon(resolve_icon_name('action:cart'), {height: '26px', width: '26px'}) }}
+                </span>
+                <h1>{{ "token_buy.title" | trans }}</h1>
+            </div>
             <p>{{ "token_buy.subtitle" | trans }}</p>
         </div>
 
         <div class="tkb-card">
+            {# Illustration en cercle, centrée en haut de la carte (même modèle que la
+               Console) ; reprend l'icône `action:cart` du parcours d'achat de tokens. #}
+            <div class="tkb-thumb">
+                <div class="tkb-thumb-placeholder" aria-hidden="true">
+                    {{ ux_icon(resolve_icon_name('action:cart'), {height:'64px', width:'64px'}) }}
+                </div>
+            </div>
+
             <div class="tkb-sim-note">
                 {{ ux_icon('mdi:flask-outline', {height: '18px', width: '18px'}) }}
                 <span>{{ "token_buy.sim_note" | trans }}</span>
             </div>
+
+            {# Thème de champ partagé avec la Console : incruste l'icône (alias `data-icon`
+               défini dans TokenPurchaseType) à l'intérieur du champ — pattern .cs-field. #}
+            {% form_theme form 'console/_form_theme.html.twig' %}
 
             {{ form_start(form, {'attr': {
                 'data-controller': 'form-submit coupon-preview',
@@ -162,8 +264,8 @@
                 'novalidate': 'novalidate'
             }}) }}
 
-                <fieldset class="tkb-fieldset tkb-group">
-                    <legend class="tkb-legend">
+                <fieldset class="cs-fieldset">
+                    <legend class="cs-legend">
                         {{ ux_icon(resolve_icon_name('action:cart'), {height: '16px', width: '16px'}) }}
                         {{ "token_buy.choose_pack" | trans }}
                     </legend>
@@ -174,71 +276,40 @@
                     {{ form_errors(form.pack) }}
                 </fieldset>
 
-                <fieldset class="tkb-fieldset tkb-group">
-                    <legend class="tkb-legend">
+                <fieldset class="cs-fieldset">
+                    <legend class="cs-legend">
                         {{ ux_icon(resolve_icon_name('compte-bancaire'), {height: '16px', width: '16px'}) }}
                         {{ "token_buy.card_section" | trans }}
                     </legend>
 
-                    {# Titulaire de la carte #}
-                    <label for="{{ form.cardHolder.vars.id }}" class="form-label">{{ form.cardHolder.vars.label|trans }}</label>
-                    <div class="tkb-ifield">
-                        {{ ux_icon(resolve_icon_name('utilisateur'), {class: 'tkb-ifield-icon'}) }}
-                        {{ form_widget(form.cardHolder, {attr: {class: 'form-control'}}) }}
-                    </div>
-                    {{ form_errors(form.cardHolder) }}
+                    {# Champs rendus par form_row : libellé + champ à icône incrustée
+                       (via le thème console + `data-icon`), exactement comme en Console. #}
+                    {{ form_row(form.cardHolder) }}
+                    {{ form_row(form.cardNumber) }}
 
-                    {# Numéro de carte #}
-                    <label for="{{ form.cardNumber.vars.id }}" class="form-label">{{ form.cardNumber.vars.label|trans }}</label>
-                    <div class="tkb-ifield">
-                        {{ ux_icon(resolve_icon_name('compte-bancaire'), {class: 'tkb-ifield-icon'}) }}
-                        {{ form_widget(form.cardNumber, {attr: {class: 'form-control'}}) }}
-                    </div>
-                    {{ form_errors(form.cardNumber) }}
-
-                    <div class="tkb-cardrow">
-                        {# Expiration #}
-                        <div>
-                            <label for="{{ form.expiry.vars.id }}" class="form-label">{{ form.expiry.vars.label|trans }}</label>
-                            <div class="tkb-ifield">
-                                {{ ux_icon(resolve_icon_name('action:renew'), {class: 'tkb-ifield-icon'}) }}
-                                {{ form_widget(form.expiry, {attr: {class: 'form-control'}}) }}
-                            </div>
-                            {{ form_errors(form.expiry) }}
-                        </div>
-                        {# CVC (code de sécurité) #}
-                        <div>
-                            <label for="{{ form.cvc.vars.id }}" class="form-label">{{ form.cvc.vars.label|trans }}</label>
-                            <div class="tkb-ifield">
-                                {{ ux_icon(resolve_icon_name('action:password'), {class: 'tkb-ifield-icon'}) }}
-                                {{ form_widget(form.cvc, {attr: {class: 'form-control'}}) }}
-                            </div>
-                            {{ form_errors(form.cvc) }}
-                        </div>
+                    <div class="row">
+                        <div class="col-md">{{ form_row(form.expiry) }}</div>
+                        <div class="col-md">{{ form_row(form.cvc) }}</div>
                     </div>
                 </fieldset>
 
-                <fieldset class="tkb-fieldset tkb-group">
-                    <legend class="tkb-legend">
+                <fieldset class="cs-fieldset">
+                    <legend class="cs-legend">
                         {{ ux_icon(resolve_icon_name('offre'), {height: '16px', width: '16px'}) }}
                         {{ "token_buy.coupon_section" | trans }}
                     </legend>
-                    <label for="{{ form.couponCode.vars.id }}" class="form-label">{{ form.couponCode.vars.label|trans }}</label>
-                    <div class="tkb-coupon-row">
-                        <div class="tkb-ifield tkb-coupon-input">
-                            {{ ux_icon(resolve_icon_name('offre'), {class: 'tkb-ifield-icon'}) }}
-                            {{ form_widget(form.couponCode, {attr: {
-                                class: 'form-control',
-                                style: 'text-transform:uppercase;',
-                                'data-coupon-preview-target': 'code',
-                                'data-action': 'input->coupon-preview#refresh',
-                            }}) }}
-                        </div>
-                        <button type="button" class="btn btn-outline-primary tkb-coupon-apply"
-                                data-action="coupon-preview#refresh">
-                            {{ "token_buy.coupon_apply" | trans }}
-                        </button>
-                    </div>
+                    {# Un seul champ : la légende sert de titre visuel ; le libellé reste
+                       présent pour les lecteurs d'écran (WCAG 3.3.2 / 4.1.2). Aucun bouton
+                       « Appliquer » : la remise s'affiche en direct dans le récapitulatif à
+                       mesure de la saisie (logique du contrôleur coupon-preview inchangée). #}
+                    <label for="{{ form.couponCode.vars.id }}" class="visually-hidden">{{ form.couponCode.vars.label|trans }}</label>
+                    {# data-icon (défini dans le FormType) → icône incrustée par le thème. #}
+                    {{ form_widget(form.couponCode, {attr: {
+                        class: 'form-control',
+                        style: 'text-transform:uppercase;',
+                        'data-coupon-preview-target': 'code',
+                        'data-action': 'input->coupon-preview#refresh',
+                    }}) }}
                     {{ form_errors(form.couponCode) }}
                     <p class="tkb-coupon-error" data-coupon-preview-target="error" hidden role="alert"></p>
                 </fieldset>
@@ -259,13 +330,26 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn tkb-submit d-inline-flex align-items-center justify-content-center gap-2"
-                        data-form-submit-target="button">
-                    {{ ux_icon(resolve_icon_name('action:cart'), {height: '18px', width: '18px'}) }}
-                    <span>{{ "token_buy.pay" | trans }}</span>
-                </button>
-
                 {{ form_rest(form) }}
+
+                {# Barre d'actions épinglée : lien de retour (gauche) + paiement (droite),
+                   structure et comportement identiques à .cs-form-actions en Console.
+                   Reste dans le <form> pour ne pas affecter la soumission / le jeton CSRF. #}
+                <div class="tkb-form-actions">
+                    <a href="{{ path('admin.token.index') }}" class="tkb-actions-back"
+                       data-action="click->top-progress#show">
+                        {{ ux_icon('hugeicons:arrow-left-01', {height:'18px', width:'18px'}) }}
+                        <span>{{ "token_back_to_account" | trans }}</span>
+                    </a>
+
+                    <span class="tkb-actions-sep" aria-hidden="true"></span>
+
+                    <button type="submit" class="btn btn-cobalt tkb-pay d-inline-flex align-items-center justify-content-center gap-2"
+                            data-form-submit-target="button">
+                        {{ ux_icon(resolve_icon_name('action:cart'), {height: '18px', width: '18px'}) }}
+                        <span>{{ "token_buy.pay" | trans }}</span>
+                    </button>
+                </div>
             {{ form_end(form) }}
         </div>
     </div>
