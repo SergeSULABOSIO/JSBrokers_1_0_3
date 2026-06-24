@@ -7,7 +7,6 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
-use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
@@ -50,12 +49,13 @@ class PlanTarifaireType extends AbstractType
                 'mapped' => false,
                 'data'   => $options['packs_json'],
             ])
-            ->add('writeWeightsJson', TextareaType::class, [
-                'label'  => 'Poids d\'écriture par entité (JSON : { "App\\\\Entity\\\\Cotation": n })',
-                'mapped' => false,
+            // Poids d'écriture par entité : édités via une collection + boîte de dialogue
+            // (contrôleur Stimulus `weights-editor`) qui tient ce champ caché synchronisé
+            // en JSON. Le contrôleur PHP décode ce JSON de façon générique (decodeJsonMap).
+            ->add('writeWeightsJson', HiddenType::class, [
+                'mapped'   => false,
                 'required' => false,
-                'attr'   => ['rows' => 8, 'style' => 'font-family:monospace;', 'placeholder' => '{ "App\\\\Entity\\\\Cotation": 5 }', 'data-icon' => 'action:settings'],
-                'data'   => $options['write_weights_json'],
+                'data'     => $options['write_weights_json'],
             ]);
     }
 
