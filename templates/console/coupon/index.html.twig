@@ -20,7 +20,7 @@
                     <td><strong>{{ c.code }}</strong></td>
                     <td>{% if c.type == 'percent' %}{{ c.valeur|number_format(0, '.', ' ') }} %{% else %}{{ c.valeur|number_format(2, '.', ' ') }} ${% endif %}</td>
                     <td>{{ c.dateDebut|format_datetime('short', 'none', locale: app.user.locale) }} → {{ c.dateFin|format_datetime('short', 'none', locale: app.user.locale) }}</td>
-                    <td>{{ c.packCible ? c.packCible|capitalize : 'Tous' }}</td>
+                    <td>{{ c.packCible ? token_pack_label(c.packCible) : 'Tous' }}</td>
                     <td>{{ c.usageCount }}{{ c.usageLimit ? ' / ' ~ c.usageLimit : '' }}</td>
                     <td>
                         {% if c.actif and c.isValideMaintenant %}

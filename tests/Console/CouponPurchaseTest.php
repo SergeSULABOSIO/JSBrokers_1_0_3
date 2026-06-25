@@ -17,6 +17,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 class CouponPurchaseTest extends WebTestCase
 {
     private const EMAIL = 'phpunit-coupon@test.local';
+    private const ADMIN = 'phpunit-coupon-admin@test.local';
     private const PASSWORD = 'Test1234!';
     private const CODE = 'PHPUNIT50';
 
@@ -36,6 +37,15 @@ class CouponPurchaseTest extends WebTestCase
         $user->setVerified(true);
         $user->setPassword($hasher->hashPassword($user, self::PASSWORD));
         $em->persist($user);
+
+        // Agent (ROLE_ADMIN) pour consulter la liste des coupons en Console.
+        $admin = new Utilisateur();
+        $admin->setEmail(self::ADMIN);
+        $admin->setNom('PHPUnit Coupon Admin');
+        $admin->setVerified(true);
+        $admin->setRoles(['ROLE_ADMIN']);
+        $admin->setPassword($hasher->hashPassword($admin, self::PASSWORD));
+        $em->persist($admin);
 
         // Coupon -50% valable, applicable à tous les paquets.
         $coupon = new Coupon();
@@ -68,13 +78,22 @@ class CouponPurchaseTest extends WebTestCase
             'DELETE tp FROM token_purchase tp LEFT JOIN utilisateur u ON tp.utilisateur_id = u.id WHERE u.email = :e',
             ['e' => self::EMAIL]
         );
-        $conn->executeStatement('DELETE FROM utilisateur WHERE email = :e', ['e' => self::EMAIL]);
+        $conn->executeStatement(
+            'DELETE FROM utilisateur WHERE email IN (:e)',
+            ['e' => [self::EMAIL, self::ADMIN]],
+            ['e' => \Doctrine\DBAL\ArrayParameterType::STRING],
+        );
         $conn->executeStatement('DELETE FROM coupon WHERE code = :c', ['c' => self::CODE]);
     }
 
     private function user(): Utilisateur
     {
         return $this->em()->getRepository(Utilisateur::class)->findOneBy(['email' => self::EMAIL]);
+    }
+
+    private function admin(): Utilisateur
+    {
+        return $this->em()->getRepository(Utilisateur::class)->findOneBy(['email' => self::ADMIN]);
     }
 
     private function buyForm(): \Symfony\Component\DomCrawler\Form
@@ -195,5 +214,27 @@ class CouponPurchaseTest extends WebTestCase
         $this->client->request('GET', '/');
         $this->assertResponseIsSuccessful();
         $this->assertStringNotContainsString(self::CODE, $this->client->getResponse()->getContent());
+    }
+
+    /**
+     * La liste des coupons en Console doit afficher le LIBELLÉ PUBLIC du paquet
+     * ciblé (comme la vitrine), et non la clé technique capitalisée. Paquet par
+     * défaut « intermediaire » → « Intermédiaire » (l'ancien `|capitalize`
+     * donnait « Intermediaire », sans accent).
+     */
+    public function testCouponListShowsPublicPackLabel(): void
+    {
+        $coupon = $this->em()->getRepository(Coupon::class)->findOneBy(['code' => self::CODE]);
+        $coupon->setPackCible('intermediaire');
+        $this->em()->flush();
+
+        $this->client->loginUser($this->admin());
+
+        $this->client->request('GET', '/console/coupons');
+        $this->assertResponseIsSuccessful();
+
+        $html = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('Intermédiaire', $html, 'La liste des coupons doit afficher le libellé public « Intermédiaire ».');
+        $this->assertStringNotContainsString('Intermediaire', $html, 'La liste des coupons ne doit plus afficher la clé capitalisée sans accent.');
     }
 }
