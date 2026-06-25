@@ -58,7 +58,7 @@
                     <span class="cs-field-icon">{{ ux_icon(resolve_icon_name('offre'), {height:'18px', width:'18px'}) }}</span>
                     <select id="f-pack" name="pack" class="form-select">
                         <option value="">Tous</option>
-                        {% for p in packs %}<option value="{{ p }}" {{ filtres.pack == p ? 'selected' }}>{{ p|capitalize }}</option>{% endfor %}
+                        {% for p in packs %}<option value="{{ p }}" {{ filtres.pack == p ? 'selected' }}>{{ token_pack_label(p) }}</option>{% endfor %}
                     </select>
                 </div>
             </div>
@@ -95,7 +95,7 @@
                         <td>{{ v.createdAt|format_datetime('medium', 'short', locale: app.user.locale) }}</td>
                         <td><code>{{ v.reference }}</code></td>
                         <td>{{ v.utilisateur ? v.utilisateur.nom : '—' }}<br><small style="color:#6c757d;">{{ v.utilisateur ? v.utilisateur.email : '' }}</small></td>
-                        <td><span class="cs-badge cs-badge--cobalt">{{ v.pack|capitalize }}</span></td>
+                        <td><span class="cs-badge cs-badge--cobalt">{{ token_pack_label(v.pack) }}</span></td>
                         <td>{{ v.tokens|number_format(0, ',', ' ') }}</td>
                         <td>{{ v.montantUsd|number_format(2, '.', ' ') }} $</td>
                         <td>{{ prix_ht(v.montantUsd)|number_format(2, '.', ' ') }} $</td>
