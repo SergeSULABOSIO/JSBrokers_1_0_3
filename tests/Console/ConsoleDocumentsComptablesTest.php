@@ -113,7 +113,7 @@ class ConsoleDocumentsComptablesTest extends WebTestCase
 
         $vente = new TokenPurchase();
         $vente->setUtilisateur($this->user(self::ADMIN));
-        $vente->setPack('professionnel');
+        $vente->setPack('intermediaire');
         $vente->setTokens(50000);
         $vente->setMontantUsd(1000.0);
         $vente->setReference('PHPUNIT-DOC-V');
@@ -184,6 +184,21 @@ class ConsoleDocumentsComptablesTest extends WebTestCase
         $this->assertStringContainsString('100.00', $html, 'La charge HT (100) doit apparaître.');
         $this->assertStringContainsString('16.00', $html, 'La TVA déductible (16) doit apparaître.');
         $this->assertStringContainsString('116.00', $html, 'Le décaissement TTC (116) doit apparaître.');
+    }
+
+    public function testJournalUsesPublicPackLabel(): void
+    {
+        $this->createFixtures();
+        $this->client->loginUser($this->user(self::ADMIN));
+
+        $this->client->request('GET', '/console/documents?doc=journal&exercice=' . self::EXERCICE);
+        $this->assertResponseIsSuccessful();
+        $html = (string) $this->client->getResponse()->getContent();
+
+        // Le libellé de l'écriture de vente doit reprendre le libellé PUBLIC du paquet
+        // (même source que la vitrine / section Tarif), pas la clé technique capitalisée.
+        $this->assertStringContainsString('Vente paquet Intermédiaire', $html, 'Le journal doit afficher le libellé public du paquet.');
+        $this->assertStringNotContainsString('Intermediaire', $html, 'Le journal ne doit pas afficher la clé technique capitalisée (sans accent).');
     }
 
     public function testBilanShowsCapitalSocial(): void

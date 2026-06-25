@@ -8,6 +8,7 @@ use App\Repository\DepenseRepository;
 use App\Repository\PlateformeParametresRepository;
 use App\Repository\TokenPurchaseRepository;
 use App\Services\ServiceTaxesVente;
+use App\Token\ParametresTokenService;
 
 /**
  * @file Génération « à la volée » des écritures comptables de JS Brokers.
@@ -32,6 +33,7 @@ class EcritureComptableService
         private DepenseRepository $depenseRepository,
         private PlateformeParametresRepository $parametresRepository,
         private ServiceTaxesVente $taxesVente,
+        private ParametresTokenService $parametresToken,
     ) {
     }
 
@@ -148,10 +150,21 @@ class EcritureComptableService
         return [
             'date'    => $vente->getCreatedAt(),
             'piece'   => $vente->getReference() ?? ('V-' . $vente->getId()),
-            'libelle' => sprintf('Vente paquet %s', ucfirst((string) $vente->getPack())),
+            'libelle' => sprintf('Vente paquet %s', $this->libellePaquet((string) $vente->getPack())),
             'type'    => 'vente',
             'lignes'  => $lignes,
         ];
+    }
+
+    /**
+     * Libellé public d'un paquet à partir de sa clé technique : MÊME source que la
+     * vitrine / section Tarif (ParametresTokenService → label configuré, repli
+     * TokenPricing::PACKS), avec repli sur la clé capitalisée si absente. Identique
+     * au filtre Twig `token_pack_label` (DRY).
+     */
+    private function libellePaquet(string $key): string
+    {
+        return $this->parametresToken->pack($key)['label'] ?? ucfirst(mb_strtolower($key));
     }
 
     /**
