@@ -1,0 +1,50 @@
+{# Fragment AJAX : barre de recherche + liste des dernières dépenses.
+   Même mécanique que le bloc « Dernières ventes » : le champ de recherche reste
+   statique, seul le contenu de la liste est rechargé (fragment) toutes les 3 min,
+   le critère saisi étant ré-appliqué par le contrôleur Stimulus « dashboard-list ». #}
+<div data-controller="dashboard-list"
+     data-dashboard-list-url-value="{{ path('console.dashboard.depenses_fragment') }}"
+     data-dashboard-list-interval-value="180000"
+     data-dashboard-list-status-id-value="cs-db-depenses-update">
+    <div class="px-3 pt-3 pb-2 d-flex align-items-center gap-1">
+        <div class="input-group input-group-sm flex-shrink-0 ms-auto" style="max-width:175px;">
+            <span class="input-group-text border-0 bg-light px-2">
+                {{ ux_icon(resolve_icon_name('action:filter'), {style: 'width:14px;height:14px;color:#6c757d;'}) }}
+            </span>
+            <select class="form-select form-select-sm border-0 bg-light"
+                    style="font-size:.72rem;"
+                    aria-label="Champ de recherche"
+                    data-dashboard-list-target="field"
+                    data-action="change->dashboard-list#search">
+                <option value="all">Tous les champs</option>
+                <option value="beneficiaire">Bénéficiaire</option>
+                <option value="charge">Charge</option>
+                <option value="statut">Statut</option>
+            </select>
+        </div>
+        <div class="input-group input-group-sm flex-shrink-0" role="search" style="max-width:200px;">
+            <span class="input-group-text border-0 bg-light px-2">
+                {{ ux_icon('mdi:magnify', {style: 'width:14px;height:14px;color:#6c757d;'}) }}
+            </span>
+            <input type="search"
+                   name="cs-db-depenses-filter"
+                   autocomplete="off"
+                   autocapitalize="off"
+                   autocorrect="off"
+                   spellcheck="false"
+                   readonly
+                   data-form-type="other"
+                   data-lpignore="true"
+                   data-1p-ignore="true"
+                   class="form-control form-control-sm border-0 bg-light"
+                   style="font-size:.78rem;"
+                   placeholder="Filtrer (bénéficiaire, charge…)"
+                   aria-label="Filtrer les dépenses"
+                   data-dashboard-list-target="search"
+                   data-action="focus->dashboard-list#unlock input->dashboard-list#search">
+        </div>
+    </div>
+    <div class="px-3 pb-3" style="max-height:340px;overflow:auto;" data-dashboard-list-target="list">
+        {% include 'console/dashboard/_depenses_list.html.twig' with { dernieresDepenses: dernieresDepenses } %}
+    </div>
+</div>

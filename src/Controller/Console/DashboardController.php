@@ -5,6 +5,7 @@ namespace App\Controller\Console;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
 use App\Repository\CouponRepository;
+use App\Repository\DepenseRepository;
 use App\Repository\EntrepriseRepository;
 use App\Repository\TokenConsumptionRepository;
 use App\Repository\TokenPurchaseRepository;
@@ -42,6 +43,7 @@ class DashboardController extends AbstractConsoleController
         private CouponRepository $couponRepository,
         private ParametresTokenService $parametres,
         private ServiceTaxesVente $taxesVente,
+        private DepenseRepository $depenseRepository,
     ) {}
 
     #[Route('', name: 'console.dashboard', methods: ['GET'])]
@@ -147,6 +149,29 @@ class DashboardController extends AbstractConsoleController
             'pays'  => $paysId !== null ? $this->geographie->getNomPays($paysId) : null,
             'ville' => $villeId !== null ? $this->geographie->getNomVille($villeId) : null,
         ];
+    }
+
+    #[Route('/dashboard/block/depenses', name: 'console.dashboard.block_depenses', methods: ['GET'])]
+    public function blockDepenses(): Response
+    {
+        return $this->render('console/dashboard/_block_depenses.html.twig', $this->donneesDepenses());
+    }
+
+    #[Route('/dashboard/depenses-fragment', name: 'console.dashboard.depenses_fragment', methods: ['GET'])]
+    public function depensesFragment(): Response
+    {
+        return $this->render('console/dashboard/_depenses_list.html.twig', $this->donneesDepenses());
+    }
+
+    /**
+     * Dernières dépenses (les plus récentes d'abord), paginées. Miroir du bloc
+     * Ventes : le décaissement de JS Brokers est le pendant de son produit.
+     *
+     * @return array{dernieresDepenses: \Knp\Component\Pager\Pagination\PaginationInterface}
+     */
+    private function donneesDepenses(): array
+    {
+        return ['dernieresDepenses' => $this->depenseRepository->paginateFiltered([], 1)];
     }
 
     #[Route('/dashboard/block/entreprises', name: 'console.dashboard.block_entreprises', methods: ['GET'])]

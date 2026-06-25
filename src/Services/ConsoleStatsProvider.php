@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Entity\Charge;
+use App\Repository\DepenseRepository;
 use App\Repository\EntrepriseRepository;
 use App\Repository\TokenPurchaseRepository;
 use App\Repository\UtilisateurRepository;
@@ -35,6 +37,7 @@ class ConsoleStatsProvider
         private ChartBuilderInterface $chartBuilder,
         private ServiceGeographie $geographie,
         private ServiceTaxesVente $taxesVente,
+        private DepenseRepository $depenseRepository,
     ) {
     }
 
@@ -79,7 +82,85 @@ class ConsoleStatsProvider
             // Une entrée par taxe active : montant représenté sur le revenu de l'année
             // (alimente une carte KPI dédiée par taxe).
             'taxes'           => $this->taxesVente->ventilation($totals['revenue']),
+            // Indicateurs financiers (compte de résultat simplifié + trésorerie) et
+            // SaaS (ARPC, CAC, marge brute, rétention) dégagés grâce aux dépenses.
+            'finance'         => $this->financeKpis($annee, $bornes, $totals['revenue']),
+            'saas'            => $this->saasKpis($annee, $bornes, $totals['revenue'], $nbClients),
         ];
+    }
+
+    /**
+     * KPIs financiers de l'année en cours : produit (HT), charges (dépenses non
+     * annulées), résultat, et trésorerie en position cumulée depuis l'origine
+     * (encaissements des ventes − décaissements des dépenses payées).
+     *
+     * @param array{from:string, to:string} $bornes
+     *
+     * @return array{produit:float, charges:float, resultat:float, tresorerie:float}
+     */
+    private function financeKpis(int $annee, array $bornes, float $revenuTtc): array
+    {
+        $produit = $this->taxesVente->revenuHorsTaxe($revenuTtc);
+        $charges = $this->depenseRepository->totalCharges($bornes['from'], $bornes['to']);
+
+        // Trésorerie = cumul de tous les encaissements (ventes) − cumul de tous les
+        // décaissements (dépenses payées), sans borne de date (solde de caisse réel).
+        $encaissementsCumules = $this->purchaseRepository->totals([])['revenue'];
+        $decaissementsCumules = $this->depenseRepository->totalPaye();
+
+        return [
+            'produit'    => $produit,
+            'charges'    => $charges,
+            'resultat'   => $produit - $charges,
+            'tresorerie' => $encaissementsCumules - $decaissementsCumules,
+        ];
+    }
+
+    /**
+     * KPIs SaaS de l'année en cours : revenu moyen par client (ARPC), coût
+     * d'acquisition client (CAC), marge brute (%) et taux de rétention (%) déduit
+     * du ré-achat mensuel (mois en cours vs mois précédent).
+     *
+     * @param array{from:string, to:string} $bornes
+     *
+     * @return array{arpc:float, cac:float, margeBrute:float, retention:float}
+     */
+    private function saasKpis(int $annee, array $bornes, float $revenuTtc, int $nbClients): array
+    {
+        $produit      = $this->taxesVente->revenuHorsTaxe($revenuTtc);
+        $coutsDirects = $this->depenseRepository->totalByDestination(Charge::DEST_COUT_DIRECT, $bornes['from'], $bornes['to']);
+        $acquisition  = $this->depenseRepository->totalByDestination(Charge::DEST_ACQUISITION, $bornes['from'], $bornes['to']);
+        $nbNouveaux   = $this->purchaseRepository->countNewClients($bornes['from'], $bornes['to']);
+
+        return [
+            'arpc'       => $nbClients > 0 ? $revenuTtc / $nbClients : 0.0,
+            'cac'        => $nbNouveaux > 0 ? $acquisition / $nbNouveaux : 0.0,
+            'margeBrute' => $produit > 0 ? ($produit - $coutsDirects) / $produit * 100 : 0.0,
+            'retention'  => $this->retentionMensuelle(),
+        ];
+    }
+
+    /**
+     * Taux de rétention par ré-achat : part des clients actifs le mois précédent
+     * qui ont de nouveau acheté le mois en cours. Seul signal de fidélité fiable
+     * (la plateforme ne trace pas l'activité de connexion). 0 si aucun client le
+     * mois précédent.
+     */
+    private function retentionMensuelle(): float
+    {
+        $debutMois     = new \DateTimeImmutable('first day of this month 00:00:00');
+        $debutMoisPrec = $debutMois->modify('-1 month');
+        $finMois       = $debutMois->modify('+1 month');
+
+        $moisPrecedent = $this->purchaseRepository->buyerIdsForPeriod($debutMoisPrec, $debutMois);
+        if ($moisPrecedent === []) {
+            return 0.0;
+        }
+
+        $moisCourant = $this->purchaseRepository->buyerIdsForPeriod($debutMois, $finMois);
+        $fideles     = array_intersect($moisPrecedent, $moisCourant);
+
+        return count($fideles) / count($moisPrecedent) * 100;
     }
 
     /**

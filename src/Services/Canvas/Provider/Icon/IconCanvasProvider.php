@@ -13,7 +13,9 @@ class IconCanvasProvider
         'autorite-fiscale'=> 'hugeicons:bank',
         'avenant'         => 'fluent:document-edit-16-regular',
         'bordereau'       => 'streamline-ultimate:notes-checklist-flip',
+        'charge'          => 'tabler:receipt-tax',     // type de charge (comptabilité OHADA)
         'chargement'      => 'system-uicons:box-download',
+        'depense'         => 'hugeicons:dollar-send-02', // sortie de fonds (pendant de « paiement »)
         'classeur'        => 'hugeicons:folder-01',
         'client'          => 'hugeicons:user-group',
         'compte-bancaire' => 'hugeicons:wallet-02',
