@@ -96,12 +96,13 @@ class ConsoleStatsProvider
      *
      * @param array{from:string, to:string} $bornes
      *
-     * @return array{produit:float, charges:float, resultat:float, tresorerie:float}
+     * @return array{produit:float, charges:float, resultat:float, tresorerie:float, rentabilite:float}
      */
     private function financeKpis(int $annee, array $bornes, float $revenuTtc): array
     {
-        $produit = $this->taxesVente->revenuHorsTaxe($revenuTtc);
-        $charges = $this->depenseRepository->totalCharges($bornes['from'], $bornes['to']);
+        $produit  = $this->taxesVente->revenuHorsTaxe($revenuTtc);
+        $charges  = $this->depenseRepository->totalCharges($bornes['from'], $bornes['to']);
+        $resultat = $produit - $charges;
 
         // Trésorerie = cumul de tous les encaissements (ventes) − cumul de tous les
         // décaissements (dépenses payées), sans borne de date (solde de caisse réel).
@@ -111,8 +112,10 @@ class ConsoleStatsProvider
         return [
             'produit'    => $produit,
             'charges'    => $charges,
-            'resultat'   => $produit - $charges,
+            'resultat'   => $resultat,
             'tresorerie' => $encaissementsCumules - $decaissementsCumules,
+            // Taux de rentabilité nette : part du produit qui reste en résultat.
+            'rentabilite' => $produit > 0 ? $resultat / $produit * 100 : 0.0,
         ];
     }
 

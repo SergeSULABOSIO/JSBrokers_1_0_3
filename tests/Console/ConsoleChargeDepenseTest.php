@@ -253,6 +253,7 @@ class ConsoleChargeDepenseTest extends WebTestCase
         $this->assertStringContainsString('Produit (HT)', $html, 'Le tableau de bord doit afficher le KPI Produit.');
         $this->assertStringContainsString('Trésorerie', $html, 'Le tableau de bord doit afficher le KPI Trésorerie.');
         $this->assertStringContainsString('Résultat', $html, 'Le tableau de bord doit afficher le KPI Résultat.');
+        $this->assertStringContainsString('Taux de rentabilité', $html, 'Le tableau de bord doit afficher le KPI Taux de rentabilité.');
         $this->assertStringContainsString('Marge brute', $html, 'Le tableau de bord doit afficher le KPI Marge brute.');
         $this->assertStringContainsString('Taux de rétention', $html, 'Le tableau de bord doit afficher le KPI Taux de rétention.');
         $this->assertStringContainsString('Dernières dépenses', $html, 'Le tableau de bord doit afficher le bloc Dernières dépenses.');
