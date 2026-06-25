@@ -34,10 +34,12 @@ class DepenseController extends AbstractConsoleController
     {
         $this->applyLangPreference($request, $localeSwitcher);
 
-        // Filtres lus depuis la query string (GET, sans JS) — même approche que les Ventes.
+        // Filtres lus depuis la query string (GET, sans JS) — même approche que les
+        // Ventes : au chargement, la période pointe sur le jour courant (et non vide).
+        $today = (new \DateTimeImmutable('today'))->format('Y-m-d');
         $filtres = [
-            'from'        => $request->query->get('from'),
-            'to'          => $request->query->get('to'),
+            'from'        => $request->query->get('from', $today),
+            'to'          => $request->query->get('to', $today),
             'charge'      => $request->query->get('charge'),
             'statut'      => $request->query->get('statut'),
             'destination' => $request->query->get('destination'),
