@@ -208,9 +208,10 @@ class ConsoleChargeDepenseTest extends WebTestCase
         $reloaded = $this->em()->getRepository(Depense::class)->findOneBy(['reference' => self::DEPENSE_REF]);
         $this->assertEqualsWithDelta(275.5, $reloaded->getMontantFloat(), 0.001);
 
-        // Suppression (CSRF).
+        // Suppression (CSRF). La liste pointe par défaut sur le jour courant : on
+        // élargit la période pour que la dépense de test (datée) reste affichée.
         $id = $reloaded->getId();
-        $this->client->request('GET', '/console/depenses');
+        $this->client->request('GET', '/console/depenses?from=2000-01-01&to=2100-01-01');
         $token = $this->client->getCrawler()
             ->filter('form[action$="/console/depenses/' . $id . '"] input[name="_token"]')
             ->attr('value');
@@ -229,11 +230,16 @@ class ConsoleChargeDepenseTest extends WebTestCase
     {
         $this->client->loginUser($this->user(self::ADMIN));
 
-        $this->client->request('GET', '/console/depenses');
+        $crawler = $this->client->request('GET', '/console/depenses');
         $this->assertResponseIsSuccessful();
         $html = (string) $this->client->getResponse()->getContent();
         $this->assertStringContainsString('Décaissé', $html, 'La liste des dépenses doit exposer le KPI « Décaissé ».');
         $this->assertStringContainsString('Engagé non payé', $html, 'La liste des dépenses doit exposer le KPI « Engagé non payé ».');
+
+        // Au chargement, les dates du filtre pointent sur le jour courant (non vides).
+        $today = (new \DateTimeImmutable('today'))->format('Y-m-d');
+        $this->assertSame($today, $crawler->filter('#f-from')->attr('value'), 'La date « Du » doit valoir le jour courant.');
+        $this->assertSame($today, $crawler->filter('#f-to')->attr('value'), 'La date « Au » doit valoir le jour courant.');
     }
 
     public function testDashboardExposesFinanceAndSaasKpisAndDepensesBlock(): void
