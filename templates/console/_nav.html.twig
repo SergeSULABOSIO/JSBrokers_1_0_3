@@ -1,35 +1,69 @@
-{# Navigation des sections de la Console. L'état actif est déduit du préfixe de
-   la route courante (toutes les routes d'une section partagent le même préfixe). #}
+{# Navigation de la Console, regroupée par fonction (Comptes / Ventes / Finance)
+   pour éviter le débordement de la barre. Chaque groupe est un menu déroulant
+   accessible bâti sur <details>/<summary> (état exposé nativement) et piloté par
+   le contrôleur Stimulus `nav-menu` (un seul ouvert, fermeture clic-dehors/Échap).
+   L'état actif est déduit du préfixe de la route courante (un groupe est actif si
+   l'une de ses rubriques l'est). #}
 {% set route = app.request.attributes.get('_route')|default('') %}
-{% set items = [
-    { r: 'console.dashboard',          p: 'console.dashboard',     icon: 'dashboard',        label: 'Tableau de bord' },
-    { r: 'console.collaborateur.',     p: 'console.collaborateur.index', icon: 'action:role', label: 'Collaborateurs' },
-    { r: 'console.utilisateur.',       p: 'console.utilisateur.index',   icon: 'utilisateur', label: 'Utilisateurs' },
-    { r: 'console.client.',            p: 'console.client.index',  icon: 'client',           label: 'Clients' },
-    { r: 'console.entreprise.',        p: 'console.entreprise.index', icon: 'entreprise',    label: 'Entreprises' },
-    { r: 'console.vente.',             p: 'console.vente.index',   icon: 'operation',        label: 'Ventes' },
-    { r: 'console.depense.',           p: 'console.depense.index', icon: 'depense',          label: 'Dépenses' },
-    { r: 'console.charge.',            p: 'console.charge.index',  icon: 'charge',           label: 'Charges' },
-    { r: 'console.document.',          p: 'console.document.index', icon: 'document',        label: 'Documents comptables' },
-    { r: 'console.coupon.',            p: 'console.coupon.index',  icon: 'offre',            label: 'Coupons' },
-    { r: 'console.taxe.',              p: 'console.taxe.index',    icon: 'taxe',             label: 'Fiscalité' },
+{% set groups = [
+    { label: 'Comptes', icon: 'client', items: [
+        { r: 'console.collaborateur.', p: 'console.collaborateur.index', icon: 'action:role', label: 'Collaborateurs' },
+        { r: 'console.utilisateur.',   p: 'console.utilisateur.index',   icon: 'utilisateur',  label: 'Utilisateurs' },
+        { r: 'console.client.',        p: 'console.client.index',        icon: 'client',       label: 'Clients' },
+        { r: 'console.entreprise.',    p: 'console.entreprise.index',    icon: 'entreprise',   label: 'Entreprises' },
+    ] },
+    { label: 'Ventes', icon: 'operation', items: [
+        { r: 'console.vente.',  p: 'console.vente.index',  icon: 'operation', label: 'Ventes' },
+        { r: 'console.coupon.', p: 'console.coupon.index', icon: 'offre',     label: 'Coupons' },
+    ] },
+    { label: 'Finance', icon: 'charge', items: [
+        { r: 'console.depense.',  p: 'console.depense.index',  icon: 'depense',  label: 'Dépenses' },
+        { r: 'console.charge.',   p: 'console.charge.index',   icon: 'charge',   label: 'Charges' },
+        { r: 'console.document.', p: 'console.document.index', icon: 'document', label: 'Documents comptables' },
+        { r: 'console.taxe.',     p: 'console.taxe.index',     icon: 'taxe',     label: 'Fiscalité' },
+    ] },
 ] %}
-<nav class="cs-nav" aria-label="Sections de la console">
-    {% for item in items %}
-        {% set active = (item.r == 'console.dashboard') ? (route == 'console.dashboard') : (route starts with item.r) %}
-        <a href="{{ path(item.p) }}" class="{{ active ? 'is-active' : '' }}"
-           data-action="click->top-progress#show" {% if active %}aria-current="page"{% endif %}>
-            {{ ux_icon(resolve_icon_name(item.icon), {height: '18px', width: '18px'}) }}
-            <span>{{ item.label }}</span>
-        </a>
+<nav class="cs-nav" aria-label="Sections de la console" data-controller="nav-menu">
+    {# Tableau de bord : lien direct (pas de sous-rubriques). #}
+    {% set dashActive = route == 'console.dashboard' %}
+    <a href="{{ path('console.dashboard') }}" class="cs-nav-link {{ dashActive ? 'is-active' }}"
+       data-action="click->top-progress#show" {% if dashActive %}aria-current="page"{% endif %}>
+        {{ ux_icon(resolve_icon_name('dashboard'), {height: '18px', width: '18px'}) }}
+        <span>Tableau de bord</span>
+    </a>
+
+    {% for g in groups %}
+        {# Groupe « Ventes » : le Plan tarifaire (super-admin) en fait partie. #}
+        {% set isVentes = g.label == 'Ventes' %}
+        {% set gActive = (isVentes and route starts with 'console.plan.') %}
+        {% for it in g.items %}
+            {% if route starts with it.r %}{% set gActive = true %}{% endif %}
+        {% endfor %}
+
+        <details class="cs-menu" data-nav-menu-target="menu" data-action="toggle->nav-menu#opened">
+            <summary class="cs-nav-link {{ gActive ? 'is-active' }}" aria-haspopup="true">
+                {{ ux_icon(resolve_icon_name(g.icon), {height: '18px', width: '18px'}) }}
+                <span>{{ g.label }}</span>
+                <span class="cs-menu-caret" aria-hidden="true"></span>
+            </summary>
+            <div class="cs-menu-panel">
+                {% for it in g.items %}
+                    {% set active = route starts with it.r %}
+                    <a href="{{ path(it.p) }}" class="{{ active ? 'is-active' }}"
+                       data-action="click->top-progress#show" {% if active %}aria-current="page"{% endif %}>
+                        {{ ux_icon(resolve_icon_name(it.icon), {height: '18px', width: '18px'}) }}
+                        <span>{{ it.label }}</span>
+                    </a>
+                {% endfor %}
+                {% if isVentes and is_granted('ROLE_SUPER_ADMIN') %}
+                    {% set planActive = route starts with 'console.plan.' %}
+                    <a href="{{ path('console.plan.index') }}" class="{{ planActive ? 'is-active' }}"
+                       data-action="click->top-progress#show" {% if planActive %}aria-current="page"{% endif %}>
+                        {{ ux_icon(resolve_icon_name('action:settings'), {height: '18px', width: '18px'}) }}
+                        <span>Plan tarifaire</span>
+                    </a>
+                {% endif %}
+            </div>
+        </details>
     {% endfor %}
-    {# Plan tarifaire : réservé au super-admin (édition de la tarification globale). #}
-    {% if is_granted('ROLE_SUPER_ADMIN') %}
-        {% set activePlan = route starts with 'console.plan.' %}
-        <a href="{{ path('console.plan.index') }}" class="{{ activePlan ? 'is-active' : '' }}"
-           data-action="click->top-progress#show" {% if activePlan %}aria-current="page"{% endif %}>
-            {{ ux_icon(resolve_icon_name('action:settings'), {height: '18px', width: '18px'}) }}
-            <span>Plan tarifaire</span>
-        </a>
-    {% endif %}
 </nav>

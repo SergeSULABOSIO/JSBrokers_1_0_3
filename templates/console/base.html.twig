@@ -36,16 +36,48 @@
     .cs-brand span { font-weight: 700; color: #0047AB; font-size: 1.05rem; }
     .cs-brand small { display: block; font-weight: 600; color: #6c757d; font-size: .7rem; letter-spacing: .04em; text-transform: uppercase; }
 
-    /* Navigation des sections */
+    /* Navigation des sections : liens directs (.cs-nav-link) + menus déroulants (.cs-menu). */
     .cs-nav { display: flex; align-items: center; gap: .15rem; flex-wrap: wrap; flex: 1 1 auto; justify-content: center; }
-    .cs-nav a {
+    .cs-nav-link {
         display: inline-flex; align-items: center; gap: .35rem;
         padding: .4rem .65rem; border-radius: 8px; text-decoration: none;
         color: #495057; font-size: .88rem; font-weight: 600; white-space: nowrap;
+        background: transparent; border: 0; cursor: pointer; font-family: inherit;
     }
-    .cs-nav a:hover { background-color: #eef2fb; color: #0047AB; }
-    .cs-nav a.is-active { background-color: #0047AB; color: #ffffff; }
-    .cs-nav a.is-active svg { color: #ffffff; }
+    .cs-nav-link:hover { background-color: #eef2fb; color: #0047AB; }
+    .cs-nav-link:focus-visible { outline: 2px solid #0047AB; outline-offset: 2px; }
+    .cs-nav-link.is-active { background-color: #0047AB; color: #ffffff; }
+    .cs-nav-link.is-active svg { color: #ffffff; }
+
+    /* Groupe déroulant bâti sur <details>/<summary>. */
+    .cs-menu { position: relative; }
+    .cs-menu > summary { list-style: none; }
+    .cs-menu > summary::-webkit-details-marker { display: none; }
+    .cs-menu-caret {
+        width: 0; height: 0; margin-left: .1rem;
+        border-left: 4px solid transparent; border-right: 4px solid transparent;
+        border-top: 5px solid currentColor; transition: transform .15s ease;
+    }
+    .cs-menu[open] > summary .cs-menu-caret { transform: rotate(180deg); }
+    .cs-menu[open] > summary:not(.is-active) { background-color: #eef2fb; color: #0047AB; }
+
+    /* Panneau du menu : carte blanche posée sous le déclencheur. */
+    .cs-menu-panel {
+        position: absolute; top: calc(100% + .35rem); left: 0; z-index: 1000;
+        min-width: 230px; padding: .35rem;
+        background: #ffffff; border: 1px solid #dee2e6; border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0,71,171,.12);
+        display: flex; flex-direction: column; gap: .1rem;
+    }
+    .cs-menu-panel a {
+        display: inline-flex; align-items: center; gap: .5rem;
+        padding: .5rem .65rem; border-radius: 8px; text-decoration: none;
+        color: #495057; font-size: .88rem; font-weight: 600; white-space: nowrap;
+    }
+    .cs-menu-panel a:hover { background-color: #eef2fb; color: #0047AB; }
+    .cs-menu-panel a:focus-visible { outline: 2px solid #0047AB; outline-offset: 2px; }
+    .cs-menu-panel a.is-active { background-color: #0047AB; color: #ffffff; }
+    .cs-menu-panel a.is-active svg { color: #ffffff; }
 
     .cs-topbar-right { display: flex; align-items: center; gap: .5rem; flex: 0 0 auto; }
     .cs-user { display: inline-flex; align-items: center; gap: .4rem; color: #495057; font-size: .9rem; font-weight: 600; }
