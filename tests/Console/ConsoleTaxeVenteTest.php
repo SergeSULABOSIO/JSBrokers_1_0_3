@@ -3,6 +3,7 @@
 namespace App\Tests\Console;
 
 use App\Entity\TaxeVente;
+use App\Entity\TokenPurchase;
 use App\Entity\Utilisateur;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -20,6 +21,7 @@ class ConsoleTaxeVenteTest extends WebTestCase
     private const USER  = 'phpunit-taxe-user@test.local';
     private const PASSWORD = 'Test1234!';
     private const CODE = 'PHPUNIT-TVA';
+    private const VENTE_REF = 'PHPUNIT-TVA-SALE';
 
     private KernelBrowser $client;
 
@@ -64,6 +66,7 @@ class ConsoleTaxeVenteTest extends WebTestCase
             ['e' => \Doctrine\DBAL\ArrayParameterType::STRING],
         );
         $conn->executeStatement('DELETE FROM taxe_vente WHERE code = :c', ['c' => self::CODE]);
+        $conn->executeStatement('DELETE FROM token_purchase WHERE reference = :r', ['r' => self::VENTE_REF]);
     }
 
     private function user(string $email): Utilisateur
@@ -101,6 +104,36 @@ class ConsoleTaxeVenteTest extends WebTestCase
         $html = (string) $this->client->getResponse()->getContent();
         $this->assertStringContainsString('Revenu HT', $html, 'La page des ventes doit afficher le revenu HT.');
         $this->assertStringContainsString('Taxes', $html, 'La page des ventes doit afficher les taxes.');
+    }
+
+    /**
+     * La liste des ventes (colonne « Paquet » + filtre) doit afficher le LIBELLÉ
+     * PUBLIC du paquet, comme la vitrine et les blocs du tableau de bord, et non
+     * la clé technique capitalisée. On s'appuie sur le paquet par défaut
+     * « intermediaire » → « Intermédiaire » (l'ancien `|capitalize` donnait
+     * « Intermediaire », sans accent).
+     */
+    public function testVentesListShowsPublicPackLabel(): void
+    {
+        $em = $this->em();
+
+        $vente = new TokenPurchase();
+        $vente->setUtilisateur($this->user(self::ADMIN));
+        $vente->setPack('intermediaire');
+        $vente->setTokens(500);
+        $vente->setMontantUsd(10.0);
+        $vente->setReference(self::VENTE_REF);
+        $em->persist($vente);
+        $em->flush();
+
+        $this->client->loginUser($this->user(self::ADMIN));
+
+        $this->client->request('GET', '/console/ventes');
+        $this->assertResponseIsSuccessful();
+
+        $html = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('Intermédiaire', $html, 'La liste des ventes doit afficher le libellé public « Intermédiaire ».');
+        $this->assertStringNotContainsString('Intermediaire', $html, 'La liste des ventes ne doit plus afficher la clé capitalisée sans accent.');
     }
 
     public function testAdminCreatesEditsAndDeletesTaxe(): void
