@@ -80,6 +80,15 @@ class Depense
     #[Groups(['list:read'])]
     private string $devise = 'USD';
 
+    /**
+     * Taux de TVA déductible (récupérable) en pourcentage, appliqué au montant TTC.
+     * 0 si la TVA n'est pas récupérable (montant entièrement comptabilisé en charge).
+     */
+    #[Assert\PositiveOrZero(message: 'Le taux de TVA ne peut pas être négatif.')]
+    #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2, options: ['default' => '0.00'])]
+    #[Groups(['list:read'])]
+    private string $tauxTva = '0.00';
+
     /** Bénéficiaire / fournisseur. */
     #[ORM\Column(length: 255, nullable: true)]
     #[Groups(['list:read'])]
@@ -177,6 +186,40 @@ class Depense
         $this->devise = strtoupper(trim($devise));
 
         return $this;
+    }
+
+    public function getTauxTva(): string
+    {
+        return $this->tauxTva;
+    }
+
+    public function setTauxTva(?string $tauxTva): static
+    {
+        // Repli sur 0 si vide : un champ laissé vide signifie « pas de TVA récupérable ».
+        $this->tauxTva = ($tauxTva === null || $tauxTva === '') ? '0.00' : $tauxTva;
+
+        return $this;
+    }
+
+    /** Taux de TVA déductible exploitable pour le calcul. */
+    public function getTauxTvaFloat(): float
+    {
+        return (float) $this->tauxTva;
+    }
+
+    /**
+     * Montant HORS TAXE (base de la charge au compte de résultat) : le TTC saisi
+     * dégrevé de la TVA déductible. Égal au TTC quand le taux est nul.
+     */
+    public function getMontantHtFloat(): float
+    {
+        return $this->getMontantFloat() / (1 + $this->getTauxTvaFloat() / 100);
+    }
+
+    /** Part de TVA déductible (récupérable auprès de l'État) incluse dans le TTC. */
+    public function getTvaDeductibleFloat(): float
+    {
+        return $this->getMontantFloat() - $this->getMontantHtFloat();
     }
 
     public function getBeneficiaire(): ?string

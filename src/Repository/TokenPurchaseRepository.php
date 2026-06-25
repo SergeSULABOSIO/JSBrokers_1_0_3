@@ -53,6 +53,22 @@ class TokenPurchaseRepository extends ServiceEntityRepository
         return $qb;
     }
 
+    /**
+     * Ventes ordonnées chronologiquement (acheteur joint). Alimente la génération
+     * des documents comptables (écritures de revenu).
+     *
+     * @return TokenPurchase[]
+     */
+    public function findChronologique(): array
+    {
+        return $this->createQueryBuilder('p')
+            ->leftJoin('p.utilisateur', 'u')->addSelect('u')
+            ->orderBy('p.createdAt', 'ASC')
+            ->addOrderBy('p.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
     /** Liste paginée des ventes filtrées, plus récentes d'abord. */
     public function paginateFiltered(array $filtres, int $page): PaginationInterface
     {

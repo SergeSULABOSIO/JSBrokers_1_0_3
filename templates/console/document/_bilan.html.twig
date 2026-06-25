@@ -1,0 +1,43 @@
+{% import 'console/document/_macros.html.twig' as fmt %}
+<h2 class="cs-doc-title">Bilan comparatif — exercice {{ documents.exercice }}</h2>
+<p class="cs-doc-sub">Situation patrimoniale à l'ouverture ({{ documents.ouverture|date('d/m/Y') }}) et à la clôture ({{ documents.cloture|date('d/m/Y') }}) de l'exercice.</p>
+
+{% set b = documents.bilan %}
+<div class="cs-panel-row" style="margin-top:0;">
+    <div class="cs-panel cs-panel--flex" style="padding:0; border:0;">
+        <h3 class="cs-doc-title" style="font-size:1rem;">Actif</h3>
+        <div style="overflow-x:auto;">
+        <table class="cs-doc-table">
+            <thead><tr><th>Poste</th><th class="num">Ouverture</th><th class="num">Clôture</th></tr></thead>
+            <tbody>
+            {% for p in b.actif %}
+                <tr class="{{ p.total is defined and p.total ? 'is-total' : '' }}">
+                    <td>{{ p.libelle }}</td>
+                    <td class="num">{{ fmt.m(p.ouverture) }}</td>
+                    <td class="num">{{ fmt.m(p.cloture) }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <div class="cs-panel cs-panel--flex" style="padding:0; border:0;">
+        <h3 class="cs-doc-title" style="font-size:1rem;">Passif</h3>
+        <div style="overflow-x:auto;">
+        <table class="cs-doc-table">
+            <thead><tr><th>Poste</th><th class="num">Ouverture</th><th class="num">Clôture</th></tr></thead>
+            <tbody>
+            {% for p in b.passif %}
+                <tr class="{{ p.total is defined and p.total ? 'is-total' : '' }}">
+                    <td>{{ p.libelle }}</td>
+                    <td class="num">{{ fmt.m(p.ouverture) }}</td>
+                    <td class="num">{{ fmt.m(p.cloture) }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+</div>
+
