@@ -1,0 +1,19 @@
+{% import 'console/document/_macros.html.twig' as fmt %}
+<h2 class="cs-doc-title">Tableau de flux de trésorerie — exercice {{ documents.exercice }}</h2>
+<p class="cs-doc-sub">Où est passé le cash : variation de trésorerie entre l'ouverture et la clôture.</p>
+
+{% set t = documents.tft %}
+<div style="overflow-x:auto;">
+<table class="cs-doc-table">
+    <thead><tr><th>Poste</th><th class="num">Montant</th></tr></thead>
+    <tbody>
+        <tr class="is-solde"><td>Trésorerie d'ouverture</td><td class="num">{{ fmt.m(t.ouverture) }}</td></tr>
+        <tr><td class="indent">Encaissements clients (ventes)</td><td class="num">{{ fmt.m(t.encaissements) }}</td></tr>
+        <tr><td class="indent">Décaissements (dépenses payées)</td><td class="num">{{ fmt.m(-t.decaissements) }}</td></tr>
+        <tr class="is-solde"><td>Flux de trésorerie d'exploitation</td><td class="num">{{ fmt.m(t.fluxExploitation) }}</td></tr>
+        <tr class="is-solde"><td>Flux de trésorerie de financement (apports en capital)</td><td class="num">{{ fmt.m(t.fluxFinancement) }}</td></tr>
+        <tr class="is-total"><td>Variation de trésorerie</td><td class="num">{{ fmt.m(t.variation) }}</td></tr>
+        <tr class="is-solde"><td>Trésorerie de clôture</td><td class="num">{{ fmt.m(t.cloture) }}</td></tr>
+    </tbody>
+</table>
+</div>

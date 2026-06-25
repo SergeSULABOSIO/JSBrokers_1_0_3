@@ -1,0 +1,3 @@
+{# Formatage monétaire partagé des documents comptables (DRY). Les montants
+   négatifs sont mis en rouge (.cs-neg). #}
+{% macro m(v) %}{% if v < 0 %}<span class="cs-neg">{{ v|number_format(2, '.', ' ') }}</span>{% else %}{{ v|number_format(2, '.', ' ') }}{% endif %}{% endmacro %}

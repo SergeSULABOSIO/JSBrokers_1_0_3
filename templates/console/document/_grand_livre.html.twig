@@ -1,0 +1,35 @@
+{% import 'console/document/_macros.html.twig' as fmt %}
+<h2 class="cs-doc-title">Grand livre — exercice {{ documents.exercice }}</h2>
+<p class="cs-doc-sub">Détail des mouvements de chaque compte, avec report à-nouveau et solde de clôture.</p>
+
+{% if documents.grandLivre is empty %}
+    <div class="cs-empty"><p>Aucun mouvement sur cet exercice.</p></div>
+{% else %}
+    {% for c in documents.grandLivre %}
+    <div class="cs-doc-led">
+        <div class="cs-doc-led-head">
+            <span class="cs-badge cs-badge--cobalt">{{ c.compte }}</span>
+            <span class="cs-doc-account">{{ c.libelle }}</span>
+        </div>
+        <div style="overflow-x:auto;">
+        <table class="cs-doc-table">
+            <thead><tr><th>Date</th><th>Pièce</th><th>Libellé</th><th class="num">Débit</th><th class="num">Crédit</th><th class="num">Solde</th></tr></thead>
+            <tbody>
+                <tr><td colspan="5"><em>Report à-nouveau</em></td><td class="num">{{ fmt.m(c.aNouveau) }}</td></tr>
+                {% for l in c.lignes %}
+                    <tr>
+                        <td>{{ l.date|date('d/m/Y') }}</td>
+                        <td><code>{{ l.piece }}</code></td>
+                        <td>{{ l.libelle }}</td>
+                        <td class="num">{{ l.debit ? fmt.m(l.debit) : '' }}</td>
+                        <td class="num">{{ l.credit ? fmt.m(l.credit) : '' }}</td>
+                        <td class="num">{{ fmt.m(l.solde) }}</td>
+                    </tr>
+                {% endfor %}
+                <tr class="is-total"><td colspan="3">Totaux / solde</td><td class="num">{{ fmt.m(c.totalDebit) }}</td><td class="num">{{ fmt.m(c.totalCredit) }}</td><td class="num">{{ fmt.m(c.solde) }}</td></tr>
+            </tbody>
+        </table>
+        </div>
+    </div>
+    {% endfor %}
+{% endif %}

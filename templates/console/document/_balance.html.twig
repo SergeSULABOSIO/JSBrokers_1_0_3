@@ -1,0 +1,46 @@
+{% import 'console/document/_macros.html.twig' as fmt %}
+<h2 class="cs-doc-title">Balance générale — exercice {{ documents.exercice }}</h2>
+<p class="cs-doc-sub">Soldes d'ouverture, mouvements de la période et soldes de clôture, par compte.</p>
+
+{% set b = documents.balance %}
+{% if b.lignes is empty %}
+    <div class="cs-empty"><p>Aucun compte mouvementé sur cet exercice.</p></div>
+{% else %}
+<div style="overflow-x:auto;">
+<table class="cs-doc-table">
+    <thead>
+        <tr>
+            <th rowspan="2">Compte</th><th rowspan="2">Libellé</th>
+            <th class="num" colspan="2">Ouverture</th>
+            <th class="num" colspan="2">Mouvements</th>
+            <th class="num" colspan="2">Clôture</th>
+        </tr>
+        <tr>
+            <th class="num">Débit</th><th class="num">Crédit</th>
+            <th class="num">Débit</th><th class="num">Crédit</th>
+            <th class="num">Débit</th><th class="num">Crédit</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for l in b.lignes %}
+        <tr>
+            <td><span class="cs-doc-account">{{ l.compte }}</span></td>
+            <td>{{ l.libelle }}</td>
+            <td class="num">{{ l.ouvD ? fmt.m(l.ouvD) : '' }}</td>
+            <td class="num">{{ l.ouvC ? fmt.m(l.ouvC) : '' }}</td>
+            <td class="num">{{ l.mvtD ? fmt.m(l.mvtD) : '' }}</td>
+            <td class="num">{{ l.mvtC ? fmt.m(l.mvtC) : '' }}</td>
+            <td class="num">{{ l.cloD ? fmt.m(l.cloD) : '' }}</td>
+            <td class="num">{{ l.cloC ? fmt.m(l.cloC) : '' }}</td>
+        </tr>
+    {% endfor %}
+        <tr class="is-total">
+            <td colspan="2">TOTAUX</td>
+            <td class="num">{{ fmt.m(b.totaux.ouvD) }}</td><td class="num">{{ fmt.m(b.totaux.ouvC) }}</td>
+            <td class="num">{{ fmt.m(b.totaux.mvtD) }}</td><td class="num">{{ fmt.m(b.totaux.mvtC) }}</td>
+            <td class="num">{{ fmt.m(b.totaux.cloD) }}</td><td class="num">{{ fmt.m(b.totaux.cloC) }}</td>
+        </tr>
+    </tbody>
+</table>
+</div>
+{% endif %}

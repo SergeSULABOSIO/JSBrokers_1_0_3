@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\PlateformeParametresRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -53,6 +54,18 @@ class PlateformeParametres
     /** Taux de référence USD par token (informatif). */
     #[ORM\Column(nullable: true)]
     private ?float $usdPerToken = null;
+
+    /**
+     * Capital social de JS Brokers (USD). Apport d'ouverture des actionnaires :
+     * génère l'écriture fondatrice (D 521 Banques / C 101 Capital social) qui
+     * alimente la trésorerie et les capitaux propres dans les documents comptables.
+     */
+    #[ORM\Column(type: Types::DECIMAL, precision: 14, scale: 2, nullable: true)]
+    private ?string $capitalSocial = null;
+
+    /** Date de constitution (date de l'apport en capital). À défaut : 1ʳᵉ opération. */
+    #[ORM\Column(type: Types::DATE_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $dateConstitution = null;
 
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $updatedAt = null;
@@ -142,6 +155,37 @@ class PlateformeParametres
     public function setUsdPerToken(?float $usdPerToken): static
     {
         $this->usdPerToken = $usdPerToken;
+
+        return $this;
+    }
+
+    public function getCapitalSocial(): ?string
+    {
+        return $this->capitalSocial;
+    }
+
+    public function setCapitalSocial(?string $capitalSocial): static
+    {
+        // Champ vide → null (pas de capital social saisi).
+        $this->capitalSocial = ($capitalSocial === null || $capitalSocial === '') ? null : $capitalSocial;
+
+        return $this;
+    }
+
+    /** Capital social exploitable pour le calcul (0 si non renseigné). */
+    public function getCapitalSocialFloat(): float
+    {
+        return (float) $this->capitalSocial;
+    }
+
+    public function getDateConstitution(): ?\DateTimeImmutable
+    {
+        return $this->dateConstitution;
+    }
+
+    public function setDateConstitution(?\DateTimeImmutable $dateConstitution): static
+    {
+        $this->dateConstitution = $dateConstitution;
 
         return $this;
     }

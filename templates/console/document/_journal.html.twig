@@ -1,0 +1,29 @@
+{% import 'console/document/_macros.html.twig' as fmt %}
+<h2 class="cs-doc-title">Journal — exercice {{ documents.exercice }}</h2>
+<p class="cs-doc-sub">Toutes les opérations de l'exercice, dans l'ordre chronologique.</p>
+
+{% set j = documents.journal %}
+{% if j.ecritures is empty %}
+    <div class="cs-empty"><p>Aucune opération sur cet exercice.</p></div>
+{% else %}
+<div style="overflow-x:auto;">
+<table class="cs-doc-table">
+    <thead><tr><th>Date</th><th>Pièce</th><th>Libellé</th><th>Compte</th><th class="num">Débit</th><th class="num">Crédit</th></tr></thead>
+    <tbody>
+    {% for e in j.ecritures %}
+        {% for l in e.lignes %}
+            <tr class="{{ loop.first ? 'ecr-start' : '' }}">
+                <td>{{ loop.first ? e.date|date('d/m/Y') : '' }}</td>
+                <td>{{ loop.first ? ('<code>' ~ e.piece ~ '</code>')|raw : '' }}</td>
+                <td>{{ loop.first ? e.libelle : '' }}</td>
+                <td><span class="cs-doc-account">{{ l.compte }}</span> {{ l.libelle }}</td>
+                <td class="num">{{ l.debit ? fmt.m(l.debit) : '' }}</td>
+                <td class="num">{{ l.credit ? fmt.m(l.credit) : '' }}</td>
+            </tr>
+        {% endfor %}
+    {% endfor %}
+        <tr class="is-total"><td colspan="4">TOTAUX</td><td class="num">{{ fmt.m(j.totalDebit) }}</td><td class="num">{{ fmt.m(j.totalCredit) }}</td></tr>
+    </tbody>
+</table>
+</div>
+{% endif %}

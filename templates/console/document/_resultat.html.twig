@@ -1,0 +1,29 @@
+{% import 'console/document/_macros.html.twig' as fmt %}
+<h2 class="cs-doc-title">Compte de résultat — exercice {{ documents.exercice }}</h2>
+<p class="cs-doc-sub">Produits et charges de l'exercice : sommes-nous rentables ?</p>
+
+{% set r = documents.resultat %}
+<div style="overflow-x:auto;">
+<table class="cs-doc-table">
+    <thead><tr><th>Compte</th><th>Libellé</th><th class="num">Montant</th></tr></thead>
+    <tbody>
+        <tr class="is-section"><td colspan="3">Produits</td></tr>
+        {% for p in r.produits %}
+            <tr><td><span class="cs-doc-account">{{ p.compte }}</span></td><td>{{ p.libelle }}</td><td class="num">{{ fmt.m(p.montant) }}</td></tr>
+        {% else %}
+            <tr><td colspan="2"><em>Aucun produit.</em></td><td class="num">0.00</td></tr>
+        {% endfor %}
+        <tr class="is-total"><td colspan="2">Total des produits</td><td class="num">{{ fmt.m(r.totalProduits) }}</td></tr>
+
+        <tr class="is-section"><td colspan="3">Charges</td></tr>
+        {% for c in r.charges %}
+            <tr><td><span class="cs-doc-account">{{ c.compte }}</span></td><td>{{ c.libelle }}</td><td class="num">{{ fmt.m(c.montant) }}</td></tr>
+        {% else %}
+            <tr><td colspan="2"><em>Aucune charge.</em></td><td class="num">0.00</td></tr>
+        {% endfor %}
+        <tr class="is-total"><td colspan="2">Total des charges</td><td class="num">{{ fmt.m(r.totalCharges) }}</td></tr>
+
+        <tr class="is-solde"><td colspan="2">RÉSULTAT NET DE L'EXERCICE</td><td class="num">{{ fmt.m(r.resultat) }}</td></tr>
+    </tbody>
+</table>
+</div>

@@ -1,0 +1,17 @@
+{% import 'console/document/_macros.html.twig' as fmt %}
+<h2 class="cs-doc-title">Tableau de formation du résultat — exercice {{ documents.exercice }}</h2>
+<p class="cs-doc-sub">Soldes intermédiaires de gestion (OHADA) : comment le résultat s'est construit, palier par palier.</p>
+
+<div style="overflow-x:auto;">
+<table class="cs-doc-table">
+    <thead><tr><th>Solde intermédiaire de gestion</th><th class="num">Montant</th></tr></thead>
+    <tbody>
+    {% for l in documents.tfr %}
+        <tr class="{{ l.solde ? 'is-solde' : '' }}">
+            <td class="{{ l.solde ? '' : 'indent' }}">{{ l.libelle }}</td>
+            <td class="num">{{ fmt.m(l.montant) }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>

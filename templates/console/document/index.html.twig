@@ -1,0 +1,99 @@
+{% extends 'console/base.html.twig' %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    /* Barre d'outils : sélecteur d'exercice à gauche, exports à droite. */
+    .cs-doc-toolbar { display:flex; flex-wrap:wrap; align-items:end; gap:1rem; justify-content:space-between; }
+    .cs-doc-toolbar .cs-filter { display:flex; flex-direction:column; min-width:200px; }
+    .cs-doc-toolbar .form-label { margin:0 0 .35rem; font-size:.8rem; font-weight:600; color:#6c757d; }
+    .cs-doc-toolbar .cs-doc-exports { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; }
+    .cs-doc-toolbar .btn { display:inline-flex; align-items:center; white-space:nowrap; }
+
+    /* Sous-onglets (pills) : même langage visuel que la navigation principale. */
+    .cs-tabs { display:flex; flex-wrap:wrap; gap:.25rem; margin:1.25rem 0; }
+    .cs-tabs a {
+        display:inline-flex; align-items:center; gap:.4rem;
+        padding:.5rem .85rem; border-radius:8px; text-decoration:none;
+        color:#495057; font-size:.9rem; font-weight:600; white-space:nowrap;
+        border:1px solid #dee2e6; background:#fff;
+    }
+    .cs-tabs a:hover { background:#eef2fb; color:#0047AB; border-color:#cdd8f0; }
+    .cs-tabs a.is-active { background:#0047AB; color:#fff; border-color:#0047AB; }
+    .cs-tabs a.is-active svg { color:#fff; }
+
+    /* Documents comptables : tables compactes, montants alignés à droite. */
+    .cs-doc-title { font-size:1.1rem; font-weight:700; color:#212529; margin:0 0 .25rem; }
+    .cs-doc-sub { color:#6c757d; font-size:.9rem; margin:0 0 1.1rem; }
+    .cs-doc-table { width:100%; border-collapse:collapse; }
+    .cs-doc-table th, .cs-doc-table td { padding:.5rem .6rem; border-bottom:1px solid #f0f0f0; font-size:.88rem; vertical-align:top; }
+    .cs-doc-table th { color:#6c757d; font-weight:600; font-size:.76rem; text-transform:uppercase; letter-spacing:.03em; text-align:left; }
+    .cs-doc-table td.num, .cs-doc-table th.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .cs-doc-table tbody tr:hover { background:#f8f9fa; }
+    .cs-doc-table .is-total td, .cs-doc-table tr.is-total { font-weight:700; color:#212529; background:#eef2fb; }
+    .cs-doc-table .is-solde td { font-weight:700; color:#0047AB; }
+    .cs-doc-table .is-section td { font-weight:700; color:#0047AB; text-transform:uppercase; font-size:.78rem; letter-spacing:.03em; }
+    .cs-doc-table .indent { padding-left:1.4rem; }
+    .cs-doc-account { font-weight:700; color:#212529; }
+    .cs-doc-table tr.ecr-start td { border-top:2px solid #e3e9f5; }
+    .cs-doc-led { margin-bottom:1.5rem; }
+    .cs-doc-led-head { display:flex; align-items:center; gap:.6rem; margin:0 0 .4rem; }
+    .cs-doc-led-head .cs-badge { font-family:inherit; }
+    .cs-neg { color:#b3261e; }
+</style>
+{% endblock %}
+
+{% block console_subtitle %}<p>États financiers de JS Brokers générés à partir des ventes et des dépenses, conformes au plan comptable OHADA.</p>{% endblock %}
+
+{% block console_body %}
+    {# ── Barre d'outils : exercice + exports ── #}
+    <div class="cs-panel">
+        <div class="cs-doc-toolbar">
+            <form method="get" data-action="submit->top-progress#show" class="cs-filter">
+                <label class="form-label" for="f-exercice">Exercice (année civile)</label>
+                <div class="cs-field">
+                    <span class="cs-field-icon">{{ ux_icon(resolve_icon_name('action:calendar'), {height:'18px', width:'18px'}) }}</span>
+                    <input type="hidden" name="doc" value="{{ docActif }}">
+                    <select id="f-exercice" name="exercice" class="form-select" onchange="this.form.submit()">
+                        {% for an in exercices %}<option value="{{ an }}" {{ an == exercice ? 'selected' }}>{{ an }}</option>{% endfor %}
+                    </select>
+                </div>
+            </form>
+
+            <div class="cs-doc-exports">
+                <a href="{{ path('console.document.export', {doc: docActif, exercice: exercice}) }}" class="btn btn-sm btn-cobalt" data-action="click->top-progress#show">
+                    {{ ux_icon(resolve_icon_name('action:download'), {height:'18px', width:'18px'}) }}<span class="ms-1">Exporter ce document</span>
+                </a>
+                <a href="{{ path('console.document.export', {doc: 'all', exercice: exercice}) }}" class="btn btn-sm btn-outline-secondary" data-action="click->top-progress#show">
+                    {{ ux_icon(resolve_icon_name('classeur'), {height:'18px', width:'18px'}) }}<span class="ms-1">Exporter l'exercice complet</span>
+                </a>
+                {% if is_granted('ROLE_SUPER_ADMIN') %}
+                    <a href="{{ path('console.document.parametres') }}" class="btn btn-sm btn-outline-secondary" data-action="click->top-progress#show">
+                        {{ ux_icon(resolve_icon_name('action:settings'), {height:'18px', width:'18px'}) }}<span class="ms-1">Paramètres comptables</span>
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# ── Sous-onglets ── #}
+    {% set docIcons = {
+        'journal': 'operation', 'grand-livre': 'classeur', 'balance': 'action:analyser',
+        'resultat': 'revenu', 'tfr': 'tranche', 'bilan': 'entreprise', 'tft': 'compte-bancaire'
+    } %}
+    <nav class="cs-tabs" aria-label="Documents comptables">
+        {% for cle, label in docs %}
+            <a href="{{ path('console.document.index', {doc: cle, exercice: exercice}) }}"
+               class="{{ cle == docActif ? 'is-active' : '' }}" data-action="click->top-progress#show"
+               {% if cle == docActif %}aria-current="page"{% endif %}>
+                {{ ux_icon(resolve_icon_name(docIcons[cle]), {height:'17px', width:'17px'}) }}
+                <span>{{ label }}</span>
+            </a>
+        {% endfor %}
+    </nav>
+
+    {# ── Document actif ── #}
+    <div class="cs-panel">
+        {% include 'console/document/_' ~ docActif|replace({'-': '_'}) ~ '.html.twig' %}
+    </div>
+{% endblock %}

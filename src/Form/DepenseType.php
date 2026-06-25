@@ -47,6 +47,13 @@ class DepenseType extends AbstractType
                 'label' => 'Devise',
                 'attr'  => ['placeholder' => 'USD', 'maxlength' => 3, 'style' => 'text-transform:uppercase;', 'data-icon' => 'monnaie'],
             ])
+            ->add('tauxTva', NumberType::class, [
+                'label'    => 'TVA déductible (%)',
+                'scale'    => 2,
+                'required' => false,
+                'help'     => 'Taux de TVA récupérable sur cette dépense. 0 si la TVA n\'est pas déductible (montant comptabilisé en charge TTC).',
+                'attr'     => ['placeholder' => 'Ex. 16', 'data-icon' => 'taxe'],
+            ])
             ->add('beneficiaire', TextType::class, [
                 'label'    => 'Bénéficiaire / fournisseur',
                 'required' => false,
