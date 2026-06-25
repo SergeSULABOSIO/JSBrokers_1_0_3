@@ -35,3 +35,47 @@
         </div>
     {% endfor %}
 </div>
+
+{# ── Synthèse financière (compte de résultat simplifié + trésorerie) ── #}
+{% set financeCards = [
+    { icon: 'revenu',   val: kpis.finance.produit|number_format(2, '.', ' ') ~ ' $',    lbl: 'Produit (HT)' },
+    { icon: 'depense',  val: kpis.finance.charges|number_format(2, '.', ' ') ~ ' $',    lbl: 'Charges' },
+    { icon: 'operation', val: kpis.finance.resultat|number_format(2, '.', ' ') ~ ' $',  lbl: 'Résultat' },
+    { icon: 'compte-bancaire', val: kpis.finance.tresorerie|number_format(2, '.', ' ') ~ ' $', lbl: 'Trésorerie (cumulée)' },
+] %}
+<p class="text-muted mb-2 mt-3" style="font-size:.72rem;">
+    Finance — produit et charges de l'année {{ kpis.annee }} ; trésorerie en position cumulée depuis l'origine.
+</p>
+<div class="cs-kpis">
+    {% for c in financeCards %}
+        <div class="cs-kpi">
+            <span class="cs-kpi-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(c.icon), {height: '24px', width: '24px'}) }}</span>
+            <span class="cs-kpi-body">
+                <span class="cs-kpi-val">{{ c.val }}</span>
+                <span class="cs-kpi-lbl">{{ c.lbl }}</span>
+            </span>
+        </div>
+    {% endfor %}
+</div>
+
+{# ── Indicateurs SaaS ── #}
+{% set saasCards = [
+    { icon: 'client',          val: kpis.saas.arpc|number_format(2, '.', ' ') ~ ' $',       lbl: 'Revenu moyen par client' },
+    { icon: 'action:invite',   val: kpis.saas.cac|number_format(2, '.', ' ') ~ ' $',        lbl: "Coût d'acquisition client" },
+    { icon: 'tranche',         val: kpis.saas.margeBrute|number_format(1, ',', ' ') ~ ' %', lbl: 'Marge brute' },
+    { icon: 'action:analyser', val: kpis.saas.retention|number_format(1, ',', ' ') ~ ' %',  lbl: 'Taux de rétention' },
+] %}
+<p class="text-muted mb-2 mt-3" style="font-size:.72rem;">
+    SaaS — rétention déduite du ré-achat mensuel (mois en cours vs mois précédent).
+</p>
+<div class="cs-kpis">
+    {% for c in saasCards %}
+        <div class="cs-kpi">
+            <span class="cs-kpi-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(c.icon), {height: '24px', width: '24px'}) }}</span>
+            <span class="cs-kpi-body">
+                <span class="cs-kpi-val">{{ c.val }}</span>
+                <span class="cs-kpi-lbl">{{ c.lbl }}</span>
+            </span>
+        </div>
+    {% endfor %}
+</div>

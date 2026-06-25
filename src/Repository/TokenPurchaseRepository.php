@@ -215,6 +215,46 @@ class TokenPurchaseRepository extends ServiceEntityRepository
     }
 
     /**
+     * Nombre de NOUVEAUX clients sur une fenêtre [from, to] : comptes dont le tout
+     * premier achat (MIN(createdAt)) tombe dans la fenêtre. Sert au calcul du coût
+     * d'acquisition client (CAC).
+     */
+    public function countNewClients(string $from, string $to): int
+    {
+        $rows = $this->createQueryBuilder('p')
+            ->select('IDENTITY(p.utilisateur) AS uid')
+            ->where('p.utilisateur IS NOT NULL')
+            ->groupBy('p.utilisateur')
+            ->having('MIN(p.createdAt) >= :from AND MIN(p.createdAt) <= :to')
+            ->setParameter('from', new \DateTimeImmutable($from . ' 00:00:00'))
+            ->setParameter('to', new \DateTimeImmutable($to . ' 23:59:59'))
+            ->getQuery()
+            ->getArrayResult();
+
+        return count($rows);
+    }
+
+    /**
+     * Identifiants distincts des acheteurs ayant effectué au moins un achat sur la
+     * fenêtre [debut, fin[. Sert au calcul du taux de rétention (ré-achat mensuel).
+     *
+     * @return int[]
+     */
+    public function buyerIdsForPeriod(\DateTimeImmutable $debut, \DateTimeImmutable $fin): array
+    {
+        $rows = $this->createQueryBuilder('p')
+            ->select('DISTINCT IDENTITY(p.utilisateur) AS uid')
+            ->where('p.utilisateur IS NOT NULL')
+            ->andWhere('p.createdAt >= :debut AND p.createdAt < :fin')
+            ->setParameter('debut', $debut)
+            ->setParameter('fin', $fin)
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_map(static fn (array $r) => (int) $r['uid'], $rows);
+    }
+
+    /**
      * Bornes [début, fin[ d'une année civile (1ᵉʳ janvier inclus → 1ᵉʳ janvier
      * suivant exclu).
      *

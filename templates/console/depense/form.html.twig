@@ -1,0 +1,40 @@
+{% extends 'console/form.html.twig' %}
+
+{# Formulaire dépense : sections (fieldsets) à légende iconographique. #}
+{% block console_form_body %}
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('depense'), {height:'16px', width:'16px'}) }}
+            Nature de la dépense
+        </legend>
+        {{ form_row(form.charge) }}
+        <div class="row">
+            <div class="col-md">{{ form_row(form.dateDepense) }}</div>
+            <div class="col-md">{{ form_row(form.statut) }}</div>
+        </div>
+    </fieldset>
+
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('monnaie'), {height:'16px', width:'16px'}) }}
+            Montant &amp; règlement
+        </legend>
+        <div class="row">
+            <div class="col-md">{{ form_row(form.montant) }}</div>
+            <div class="col-md">{{ form_row(form.devise) }}</div>
+        </div>
+        {{ form_row(form.moyenPaiement) }}
+    </fieldset>
+
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('document'), {height:'16px', width:'16px'}) }}
+            Justificatif &amp; détail
+        </legend>
+        <div class="row">
+            <div class="col-md">{{ form_row(form.beneficiaire) }}</div>
+            <div class="col-md">{{ form_row(form.reference) }}</div>
+        </div>
+        {{ form_row(form.description) }}
+    </fieldset>
+{% endblock %}

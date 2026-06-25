@@ -1,0 +1,38 @@
+{% extends 'console/form.html.twig' %}
+
+{# Formulaire type de charge : sections (fieldsets) à légende iconographique,
+   sur le modèle du coupon. Le thème de champ (icône data-icon) vient du parent. #}
+{% block console_form_body %}
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('charge'), {height:'16px', width:'16px'}) }}
+            Identification
+        </legend>
+        {{ form_row(form.code) }}
+        {{ form_row(form.libelle) }}
+        {{ form_row(form.compteOhada) }}
+    </fieldset>
+
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('action:analyser'), {height:'16px', width:'16px'}) }}
+            Classification analytique
+        </legend>
+        <div class="row">
+            <div class="col-md">{{ form_row(form.destination) }}</div>
+            <div class="col-md">{{ form_row(form.comportement) }}</div>
+        </div>
+    </fieldset>
+
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('action:calendar'), {height:'16px', width:'16px'}) }}
+            Périodicité &amp; budget
+        </legend>
+        <div class="row">
+            <div class="col-md">{{ form_row(form.periodicite) }}</div>
+            <div class="col-md">{{ form_row(form.montantBudgeteMensuel) }}</div>
+        </div>
+        {{ form_row(form.actif) }}
+    </fieldset>
+{% endblock %}

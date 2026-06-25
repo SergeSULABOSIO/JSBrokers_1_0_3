@@ -1,0 +1,20 @@
+{# Fragment AJAX : lignes des dernières dépenses (rechargées toutes les 3 min).
+   data-row : repère utilisé par « dashboard-list » pour le filtrage client. #}
+{% if dernieresDepenses.getTotalItemCount > 0 %}
+    <table class="cs-table">
+        <thead><tr><th>Date</th><th>Bénéficiaire</th><th>Charge</th><th>Statut</th><th>Montant</th></tr></thead>
+        <tbody>
+        {% for d in dernieresDepenses %}
+            <tr data-row>
+                <td>{{ d.dateDepense|format_datetime('medium', 'none', locale: app.user.locale) }}</td>
+                <td data-field="beneficiaire">{{ d.beneficiaire ?: '—' }}</td>
+                <td data-field="charge"><span class="cs-badge cs-badge--cobalt">{{ d.charge.code }}</span></td>
+                <td data-field="statut">{{ d.statutLabel }}</td>
+                <td>{{ d.montantFloat|number_format(2, '.', ' ') }} {{ d.devise }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <div class="cs-empty">Aucune dépense enregistrée pour l'instant.</div>
+{% endif %}
