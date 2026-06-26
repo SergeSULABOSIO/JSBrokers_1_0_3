@@ -1,0 +1,14 @@
+{# Macros partagées des tickets de support CRM (DRY : liste Support + onglet
+   Support de la fiche client). #}
+
+{# Badge de statut coloré, pour distinguer visuellement les tickets :
+   Ouvert = ambre (à traiter), En cours = cobalt, Résolu = vert, Clos = gris. #}
+{% macro statutBadge(ticket) %}
+    {% set map = {
+        ouvert:   'cs-badge--warn',
+        en_cours: 'cs-badge--cobalt',
+        resolu:   'cs-badge--ok',
+        clos:     'cs-badge--muted',
+    } %}
+    <span class="cs-badge {{ map[ticket.statut]|default('cs-badge--muted') }}">{{ ticket.statutLabel }}</span>
+{% endmacro %}

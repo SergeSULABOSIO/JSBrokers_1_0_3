@@ -1,4 +1,5 @@
 {% extends 'console/base.html.twig' %}
+{% import 'console/crm/_ticket_macros.html.twig' as ticketm %}
 
 {% block console_actions %}
     <a href="{{ path('console.crm.client.index') }}" class="btn btn-sm btn-outline-secondary" data-action="click->top-progress#show">
@@ -323,7 +324,7 @@
         <div class="cs-panel">
             {% if taches|length > 0 %}
                 <table class="cs-table">
-                    <thead><tr><th>Tâche</th><th>Échéance</th><th>Priorité</th><th>Statut</th></tr></thead>
+                    <thead><tr><th>Tâche</th><th>Échéance</th><th>Priorité</th><th>Statut</th><th></th></tr></thead>
                     <tbody>
                     {% for t in taches %}
                         <tr>
@@ -331,6 +332,17 @@
                             <td>{{ t.dueAt|format_datetime('short','none', locale: app.user.locale) }}</td>
                             <td>{{ t.priorite }}</td>
                             <td>{% if t.faite %}<span class="cs-badge cs-badge--ok">Faite</span>{% elseif t.enRetard %}<span class="cs-badge" style="background:#fde8e6;color:#c5221f;">En retard</span>{% else %}<span class="cs-badge cs-badge--cobalt">À faire</span>{% endif %}</td>
+                            <td class="text-end">
+                                {% if not t.faite %}
+                                    <form method="post" action="{{ path('console.crm.tache.done', {id: t.id}) }}" class="d-inline">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('crm-tache-done-' ~ t.id) }}">
+                                        <input type="hidden" name="_retour" value="fiche">
+                                        <button type="submit" class="cs-icon-btn" title="Marquer faite" aria-label="Marquer faite">
+                                            {{ ux_icon(resolve_icon_name('action:check'), {height:'18px', width:'18px'}) }}
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </td>
                         </tr>
                     {% endfor %}
                     </tbody>
@@ -393,15 +405,26 @@
         <div class="cs-panel">
             {% if tickets|length > 0 %}
                 <table class="cs-table">
-                    <thead><tr><th>Réf.</th><th>Sujet</th><th>Priorité</th><th>Statut</th><th>SLA</th></tr></thead>
+                    <thead><tr><th>Réf.</th><th>Sujet</th><th>Priorité</th><th>SLA</th><th>Statut</th><th style="text-align:right;">Action</th></tr></thead>
                     <tbody>
                     {% for t in tickets %}
                         <tr>
                             <td>{{ t.reference }}</td>
                             <td>{{ t.sujet }}</td>
                             <td>{{ t.priorite }}</td>
-                            <td>{{ t.statutLabel }}</td>
-                            <td>{% if t.slaDepasse %}<span class="cs-badge" style="background:#fde8e6;color:#c5221f;">Dépassé</span>{% elseif t.slaDueAt %}{{ t.slaDueAt|format_datetime('short','short', locale: app.user.locale) }}{% else %}—{% endif %}</td>
+                            <td>{% if t.slaDepasse %}<span class="cs-badge cs-badge--danger">Dépassé</span>{% elseif t.slaDueAt %}{{ t.slaDueAt|format_datetime('short','short', locale: app.user.locale) }}{% else %}—{% endif %}</td>
+                            <td>{{ ticketm.statutBadge(t) }}</td>
+                            <td style="text-align:right;">
+                                <form method="post" action="{{ path('console.crm.ticket.statut', {id: t.id}) }}" class="d-inline-flex">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('crm-ticket-statut-' ~ t.id) }}">
+                                    <input type="hidden" name="_retour" value="fiche">
+                                    <select name="statut" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()" aria-label="Changer le statut du ticket {{ t.reference }}">
+                                        {% for key, label in {ouvert:'Ouvert', en_cours:'En cours', resolu:'Résolu', clos:'Clos'} %}
+                                            <option value="{{ key }}" {{ t.statut == key ? 'selected' }}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </form>
+                            </td>
                         </tr>
                     {% endfor %}
                     </tbody>

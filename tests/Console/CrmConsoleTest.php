@@ -132,6 +132,30 @@ class CrmConsoleTest extends WebTestCase
         }
     }
 
+    public function testDashboardShowsOpenTicketsBlockWithSupportShortcut(): void
+    {
+        $client = $this->user(self::CLIENT);
+        $ticket = (new \App\Entity\Crm\CrmTicket())
+            ->setClient($client)
+            ->setSujet('Aperçu tableau de bord')
+            ->setPriorite(\App\Entity\Crm\CrmTicket::PRIORITE_NORMALE);
+        $this->em()->persist($ticket);
+        $this->em()->flush();
+
+        $this->client->loginUser($this->user(self::ADMIN));
+        $crawler = $this->client->request('GET', '/console/crm');
+        $this->assertResponseIsSuccessful();
+
+        // Le ticket ouvert apparaît dans l'aperçu, avec un raccourci direct vers
+        // l'onglet Support de la fiche client.
+        $this->assertSame(
+            1,
+            $crawler->filter('a[href$="/console/crm/clients/' . $client->getId() . '#tab-support"]')->count(),
+            'Le bloc Tickets doit proposer un raccourci vers l\'onglet Support du client.',
+        );
+        $this->assertStringContainsString('Aperçu tableau de bord', $crawler->html());
+    }
+
     public function testClientFicheCreatesProfilAndDerivesStage(): void
     {
         $this->client->loginUser($this->user(self::ADMIN));
@@ -396,6 +420,111 @@ class CrmConsoleTest extends WebTestCase
         $second = $this->em()->getConnection()->fetchOne('SELECT crm_last_auto_run_at FROM plateforme_parametres');
 
         $this->assertSame($first, $second, 'La routine ne doit pas se réexécuter dans la fenêtre de throttle.');
+    }
+
+    public function testTacheDoneFromFicheRedirectsToClientTasksTab(): void
+    {
+        $client = $this->user(self::CLIENT);
+
+        // Tâche ouverte rattachée au client.
+        $tache = (new \App\Entity\Crm\CrmTache())
+            ->setTitre('Relancer le client')
+            ->setClient($client)
+            ->setDueAt(new \DateTimeImmutable());
+        $this->em()->persist($tache);
+        $this->em()->flush();
+        $id = $tache->getId();
+
+        $this->client->loginUser($this->user(self::ADMIN));
+
+        // On soumet le formulaire réellement rendu dans l'onglet Tâches de la fiche
+        // (porte _retour=fiche + jeton CSRF) → retour sur la fiche, onglet Tâches.
+        $crawler = $this->client->request('GET', '/console/crm/clients/' . $client->getId());
+        $this->assertResponseIsSuccessful();
+        $form = $crawler->filter('form[action$="/taches/' . $id . '/done"]')->form();
+        $this->client->submit($form);
+        $this->assertResponseRedirects(
+            '/console/crm/clients/' . $client->getId() . '#tab-taches',
+        );
+
+        $this->em()->clear();
+        $this->assertSame(
+            \App\Entity\Crm\CrmTache::STATUT_FAITE,
+            $this->em()->getRepository(\App\Entity\Crm\CrmTache::class)->find($id)->getStatut(),
+        );
+    }
+
+    public function testTacheDoneFromGlobalListRedirectsToIndex(): void
+    {
+        $tache = (new \App\Entity\Crm\CrmTache())
+            ->setTitre('Tâche transverse')
+            ->setClient($this->user(self::CLIENT))
+            ->setDueAt(new \DateTimeImmutable());
+        $this->em()->persist($tache);
+        $this->em()->flush();
+        $id = $tache->getId();
+
+        $this->client->loginUser($this->user(self::ADMIN));
+
+        // Formulaire de la liste globale (sans _retour) : redirection historique conservée.
+        $crawler = $this->client->request('GET', '/console/crm/taches');
+        $this->assertResponseIsSuccessful();
+        $form = $crawler->filter('form[action$="/taches/' . $id . '/done"]')->form();
+        $this->client->submit($form);
+        $this->assertResponseRedirects('/console/crm/taches');
+    }
+
+    public function testTicketStatutFromFicheRedirectsToClientSupportTab(): void
+    {
+        $client = $this->user(self::CLIENT);
+
+        $ticket = (new \App\Entity\Crm\CrmTicket())
+            ->setClient($client)
+            ->setSujet('Problème de connexion')
+            ->setPriorite(\App\Entity\Crm\CrmTicket::PRIORITE_NORMALE);
+        $this->em()->persist($ticket);
+        $this->em()->flush();
+        $id = $ticket->getId();
+
+        $this->client->loginUser($this->user(self::ADMIN));
+
+        // On soumet le select de statut réellement rendu dans l'onglet Support de la
+        // fiche (porte _retour=fiche + jeton CSRF) → retour sur la fiche, onglet Support.
+        $crawler = $this->client->request('GET', '/console/crm/clients/' . $client->getId());
+        $this->assertResponseIsSuccessful();
+        $form = $crawler->filter('form[action$="/tickets/' . $id . '/statut"]')->form();
+        $form['statut'] = \App\Entity\Crm\CrmTicket::STATUT_RESOLU;
+        $this->client->submit($form);
+        $this->assertResponseRedirects(
+            '/console/crm/clients/' . $client->getId() . '#tab-support',
+        );
+
+        $this->em()->clear();
+        $this->assertSame(
+            \App\Entity\Crm\CrmTicket::STATUT_RESOLU,
+            $this->em()->getRepository(\App\Entity\Crm\CrmTicket::class)->find($id)->getStatut(),
+        );
+    }
+
+    public function testTicketStatutFromGlobalListRedirectsToIndex(): void
+    {
+        $ticket = (new \App\Entity\Crm\CrmTicket())
+            ->setClient($this->user(self::CLIENT))
+            ->setSujet('Question facturation')
+            ->setPriorite(\App\Entity\Crm\CrmTicket::PRIORITE_NORMALE);
+        $this->em()->persist($ticket);
+        $this->em()->flush();
+        $id = $ticket->getId();
+
+        $this->client->loginUser($this->user(self::ADMIN));
+
+        // Select de la liste globale (sans _retour) : redirection historique conservée.
+        $crawler = $this->client->request('GET', '/console/crm/tickets');
+        $this->assertResponseIsSuccessful();
+        $form = $crawler->filter('form[action$="/tickets/' . $id . '/statut"]')->form();
+        $form['statut'] = \App\Entity\Crm\CrmTicket::STATUT_EN_COURS;
+        $this->client->submit($form);
+        $this->assertResponseRedirects('/console/crm/tickets');
     }
 
     public function testPipelineDerivationLogic(): void

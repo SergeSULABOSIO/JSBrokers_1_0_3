@@ -47,6 +47,15 @@ class CrmTacheController extends AbstractConsoleController
         $this->em->flush();
         $this->addFlash('success', 'Tâche marquée comme faite.');
 
+        // Retour contextuel : si l'action vient de la fiche client, on y revient
+        // (onglet Tâches). Sinon, on reste sur la liste globale des tâches.
+        if ($request->request->get('_retour') === 'fiche' && $tache->getClient()) {
+            return $this->redirectToRoute('console.crm.client.show', [
+                'id'        => $tache->getClient()->getId(),
+                '_fragment' => 'tab-taches',
+            ]);
+        }
+
         return $this->redirectToRoute('console.crm.tache.index');
     }
 }
