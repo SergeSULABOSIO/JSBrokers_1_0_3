@@ -258,10 +258,11 @@ class CrmConsoleTest extends WebTestCase
 
         $crawler = $this->client->request('GET', '/console/crm/tickets/new');
         $this->assertResponseIsSuccessful();
+        // Formulaire Symfony (pattern Coupon) : champs préfixés crm_ticket[...].
         $form = $crawler->filter('form')->form();
-        $form['client'] = (string) $client->getId();
-        $form['sujet'] = 'Problème de connexion';
-        $form['priorite'] = 'haute';
+        $form['crm_ticket[client]'] = (string) $client->getId();
+        $form['crm_ticket[sujet]'] = 'Problème de connexion';
+        $form['crm_ticket[priorite]'] = 'haute';
         $this->client->submit($form);
         $this->assertResponseRedirects();
 
@@ -269,6 +270,29 @@ class CrmConsoleTest extends WebTestCase
         $this->assertCount(1, $tickets);
         $this->assertSame('Problème de connexion', $tickets[0]->getSujet());
         $this->assertNotNull($tickets[0]->getSlaDueAt(), 'Le SLA doit être calculé à la création.');
+    }
+
+    public function testCrmEditFormsFollowConsolePattern(): void
+    {
+        // Tous les formulaires d'édition CRM doivent utiliser le shell partagé
+        // (console/form.html.twig) comme la rubrique Coupon : carte .cs-form-card
+        // + sections .cs-fieldset/.cs-legend + barre d'actions sticky.
+        $this->client->loginUser($this->user(self::SUPER));
+
+        foreach (['/console/crm/tickets/new', '/console/crm/campagnes/new', '/console/crm/parametres'] as $url) {
+            $crawler = $this->client->request('GET', $url);
+            $this->assertResponseIsSuccessful(sprintf('%s doit répondre 200.', $url));
+            $this->assertGreaterThanOrEqual(
+                1,
+                $crawler->filter('.cs-form-card .cs-fieldset .cs-legend')->count(),
+                sprintf('%s doit suivre le pattern Console (fieldsets à légende).', $url),
+            );
+            $this->assertSame(
+                1,
+                $crawler->filter('.cs-form-actions button[type="submit"]')->count(),
+                sprintf('%s doit avoir la barre d\'actions sticky du shell.', $url),
+            );
+        }
     }
 
     public function testReportExportReturnsXlsx(): void

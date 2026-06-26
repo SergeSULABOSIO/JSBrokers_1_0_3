@@ -9,6 +9,7 @@
    travaille (ping throttlé côté serveur, exécution après réponse). #}
 <div data-controller="crm-heartbeat" data-crm-heartbeat-url-value="{{ path('console.crm.heartbeat') }}"></div>
 
+<div class="crm-dash">
 {# --- Bandeau santé du portefeuille --- #}
 <div class="cs-panel">
     <h2 class="cs-panel-title">Santé du portefeuille</h2>
@@ -74,6 +75,7 @@
         <div class="cs-empty"><p>Aucune tâche ouverte. Bonne journée !</p></div>
     {% endif %}
 </div>
+</div>{# /.crm-dash #}
 {% endblock %}
 
 {# ----- Macros de liste (DRY) ----- #}

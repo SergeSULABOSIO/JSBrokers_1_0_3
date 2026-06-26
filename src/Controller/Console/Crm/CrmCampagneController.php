@@ -4,8 +4,8 @@ namespace App\Controller\Console\Crm;
 
 use App\Controller\Console\AbstractConsoleController;
 use App\Crm\CrmCampagneService;
-use App\Crm\CrmPipelineService;
 use App\Entity\Crm\CrmCampagne;
+use App\Form\CrmCampagneType;
 use App\Repository\Crm\CrmCampagneRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -26,7 +26,6 @@ class CrmCampagneController extends AbstractConsoleController
     public function __construct(
         private CrmCampagneRepository $campagneRepository,
         private CrmCampagneService $campagneService,
-        private CrmPipelineService $pipeline,
     ) {
     }
 
@@ -47,40 +46,30 @@ class CrmCampagneController extends AbstractConsoleController
     {
         $this->applyLangPreference($request, $localeSwitcher);
 
-        if ($request->isMethod('POST')) {
-            if (!$this->isCsrfTokenValid('crm-campagne-new', (string) $request->request->get('_token'))) {
-                throw $this->createAccessDeniedException('Jeton CSRF invalide.');
-            }
+        $campagne = new CrmCampagne();
+        $form = $this->createForm(CrmCampagneType::class, $campagne);
+        $form->handleRequest($request);
 
-            $nom = trim((string) $request->request->get('nom', ''));
-            $objet = trim((string) $request->request->get('objet', ''));
-            $message = trim((string) $request->request->get('message', ''));
+        if ($form->isSubmitted() && $form->isValid()) {
+            $campagne->setSegmentRegles([
+                'stages'   => $form->get('stages')->getData() ?: [],
+                'couleurs' => $form->get('couleurs')->getData() ?: [],
+            ]);
+            $this->em->persist($campagne);
+            $this->em->flush();
+            $this->addFlash('success', 'Campagne créée. Vous pouvez maintenant l\'envoyer depuis la liste.');
 
-            if ($nom !== '' && $objet !== '' && $message !== '') {
-                $campagne = (new CrmCampagne())
-                    ->setNom($nom)
-                    ->setType((string) $request->request->get('type', CrmCampagne::TYPE_ONBOARDING))
-                    ->setObjet($objet)
-                    ->setMessage($message)
-                    ->setSegmentRegles([
-                        'stages'   => (array) $request->request->all('stages'),
-                        'couleurs' => (array) $request->request->all('couleurs'),
-                    ]);
-                $this->em->persist($campagne);
-                $this->em->flush();
-                $this->addFlash('success', 'Campagne créée. Vous pouvez maintenant l\'envoyer.');
-
-                return $this->redirectToRoute('console.crm.campagne.index');
-            }
-
-            $this->addFlash('warning', 'Nom, objet et message sont requis.');
+            return $this->redirectToRoute('console.crm.campagne.index');
         }
 
-        return $this->render('console/crm/campagne/new.html.twig', [
-            'pageName' => 'Nouvelle campagne',
-            'pageIcon' => 'action:premium',
-            'types'    => CrmCampagne::TYPES,
-            'stages'   => $this->pipeline->orderedStages(),
+        return $this->render('console/crm/campagne/form.html.twig', [
+            'pageName'    => 'Nouvelle campagne',
+            'formIcon'    => 'action:premium',
+            'form'        => $form,
+            'backUrl'     => $this->generateUrl('console.crm.campagne.index'),
+            'backLabel'   => 'Marketing',
+            'submitLabel' => 'Créer la campagne',
+            'description' => 'Définissez le message et le segment ciblé (étapes de pipeline / santé). Vide = tous les clients.',
         ]);
     }
 

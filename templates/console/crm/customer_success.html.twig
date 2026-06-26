@@ -5,6 +5,7 @@
 {% block console_body %}
 {{ include('console/crm/_styles.html.twig') }}
 
+<div class="crm-dash">
 <div class="cs-kpis">
     <div class="cs-kpi"><div class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('action:analyser'), {height:'24px', width:'24px'}) }}</div><div class="cs-kpi-body"><div class="cs-kpi-val">{{ scoreMoyen }}/100</div><div class="cs-kpi-lbl">Score de santé moyen</div></div></div>
     <div class="cs-kpi"><div class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('client'), {height:'24px', width:'24px'}) }}</div><div class="cs-kpi-body"><div class="cs-kpi-val">{{ total }}</div><div class="cs-kpi-lbl">Clients suivis</div></div></div>
@@ -53,4 +54,5 @@
         {% endfor %}
     </div>
 </div>
+</div>{# /.crm-dash #}
 {% endblock %}

@@ -5,6 +5,7 @@ namespace App\Controller\Console\Crm;
 use App\Controller\Console\AbstractConsoleController;
 use App\Crm\CrmHealthScoreService;
 use App\Crm\ParametresCrmService;
+use App\Form\CrmParametresType;
 use App\Repository\PlateformeParametresRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -33,27 +34,34 @@ class CrmParametresController extends AbstractConsoleController
         $this->applyLangPreference($request, $localeSwitcher);
         $singleton = $this->repository->getSingleton();
 
-        if ($request->isMethod('POST')) {
-            if (!$this->isCsrfTokenValid('crm-parametres', (string) $request->request->get('_token'))) {
-                throw $this->createAccessDeniedException('Jeton CSRF invalide.');
-            }
+        $form = $this->createForm(CrmParametresType::class, null, [
+            'weights'    => $this->params->healthWeights(),
+            'thresholds' => $this->params->thresholds(),
+            'automation' => [
+                'inactiviteJours' => $this->params->inactiviteJours(),
+                'soldeBas'        => $this->params->soldeBas(),
+                'churnJours'      => $this->params->churnJours(),
+            ],
+        ]);
+        $form->handleRequest($request);
 
+        if ($form->isSubmitted() && $form->isValid()) {
             $weights = [];
             foreach (array_keys(CrmHealthScoreService::WEIGHTS) as $key) {
-                $weights[$key] = max(0, (int) $request->request->get('w_' . $key, 0));
+                $weights[$key] = max(0, (int) $form->get('w_' . $key)->getData());
             }
             $singleton->setCrmHealthWeights($weights);
 
             $singleton->setCrmThresholds([
-                'vert'   => (int) $request->request->get('t_vert', 75),
-                'jaune'  => (int) $request->request->get('t_jaune', 50),
-                'orange' => (int) $request->request->get('t_orange', 25),
+                'vert'   => (int) $form->get('t_vert')->getData(),
+                'jaune'  => (int) $form->get('t_jaune')->getData(),
+                'orange' => (int) $form->get('t_orange')->getData(),
             ]);
 
             $singleton->setCrmAutomation([
-                'inactiviteJours' => max(1, (int) $request->request->get('a_inactivite', 15)),
-                'soldeBas'        => max(0, (int) $request->request->get('a_soldebas', 1000)),
-                'churnJours'      => max(1, (int) $request->request->get('a_churn', 45)),
+                'inactiviteJours' => max(1, (int) $form->get('a_inactivite')->getData()),
+                'soldeBas'        => max(0, (int) $form->get('a_soldebas')->getData()),
+                'churnJours'      => max(1, (int) $form->get('a_churn')->getData()),
             ]);
 
             $this->em->flush();
@@ -63,17 +71,14 @@ class CrmParametresController extends AbstractConsoleController
             return $this->redirectToRoute('console.crm.parametres.index');
         }
 
-        return $this->render('console/crm/parametres.html.twig', [
-            'pageName'   => 'CRM — Paramètres',
-            'pageIcon'   => 'action:settings',
-            'weights'    => $this->params->healthWeights(),
-            'thresholds' => $this->params->thresholds(),
-            'automation' => [
-                'inactiviteJours' => $this->params->inactiviteJours(),
-                'soldeBas'        => $this->params->soldeBas(),
-                'churnJours'      => $this->params->churnJours(),
-            ],
-            'labels'     => CrmHealthScoreService::WEIGHTS,
+        return $this->render('console/crm/parametres_form.html.twig', [
+            'pageName'    => 'CRM — Paramètres',
+            'formIcon'    => 'action:settings',
+            'form'        => $form,
+            'backUrl'     => $this->generateUrl('console.crm.dashboard'),
+            'backLabel'   => 'CRM',
+            'submitLabel' => 'Enregistrer les paramètres',
+            'description' => 'Poids du score de santé, seuils de couleur et paramètres d\'automatisation. Valeurs vides = valeurs par défaut.',
         ]);
     }
 }

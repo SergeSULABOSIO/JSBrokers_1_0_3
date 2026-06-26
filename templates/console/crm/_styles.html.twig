@@ -47,6 +47,17 @@
     .crm-card__meta { font-size:.75rem; color:#6c757d; display:flex; align-items:center; gap:.4rem; margin-top:.2rem; }
     .crm-col.is-over { outline:2px dashed #0047AB; outline-offset:-4px; }
 
+    /* Rythme vertical uniforme des tableaux de bord CRM : un seul espaceur (gap),
+       au lieu de marges cumulées. Corrige aussi l'alignement des rangées à deux
+       colonnes — la règle globale « .cs-panel + .cs-panel { margin-top } » poussait
+       le 2ᵉ panneau d'une rangée vers le bas ; on l'annule ici (colonnes alignées
+       en haut). Scopé à .crm-dash : aucun impact sur la console historique. */
+    .crm-dash { display:flex; flex-direction:column; gap:1.25rem; }
+    .crm-dash .cs-panel-row { margin-top:0; }
+    .crm-dash .cs-panel-row > .cs-panel { margin-top:0; }
+    .crm-dash > .cs-panel + .cs-panel { margin-top:0; }
+    .crm-dash .cs-kpis { margin:0; }
+
     /* Mini-grille de KPIs santé */
     .crm-health-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:.75rem; }
     .crm-health-cell { background:#fff; border:1px solid #dee2e6; border-radius:10px; padding:.7rem .8rem; }
