@@ -1,0 +1,54 @@
+{# Styles propres au module CRM, réutilisés par toutes ses pages (DRY).
+   Inclus dans le corps des pages CRM (rendus pleine page, pas en onglet AJAX :
+   pas de gotcha d'exécution). Charte cobalt #0047AB + neutres de la console. #}
+<style>
+    /* Pastille de score de santé */
+    .crm-health { display:inline-flex; align-items:center; gap:.4rem; }
+    .crm-dot { width:.7rem; height:.7rem; border-radius:50%; flex:0 0 auto; }
+    .crm-score { font-weight:700; }
+
+    /* Barre de progression d'un critère de santé */
+    .crm-bar { background:#eef0f2; border-radius:999px; height:.5rem; overflow:hidden; }
+    .crm-bar > span { display:block; height:100%; border-radius:999px; background:#0047AB; }
+
+    /* Badge d'étape de pipeline */
+    .crm-stage { display:inline-flex; align-items:center; gap:.35rem; padding:.15rem .55rem;
+        border-radius:999px; font-size:.75rem; font-weight:700; background:#eef2fb; color:#0047AB; }
+    .crm-stage--churn { background:#fde8e6; color:#c5221f; }
+
+    /* Onglets de la fiche client */
+    .crm-tabs { display:flex; flex-wrap:wrap; gap:.25rem; border-bottom:1px solid #dee2e6; margin-bottom:1.25rem; }
+    .crm-tab { border:0; background:transparent; padding:.6rem .9rem; border-radius:8px 8px 0 0;
+        font-weight:600; font-size:.9rem; color:#495057; cursor:pointer; }
+    .crm-tab:hover { background:#eef2fb; color:#0047AB; }
+    .crm-tab.is-active { color:#0047AB; box-shadow:inset 0 -3px 0 #0047AB; }
+    .crm-tab:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+    .crm-pane { display:none; }
+    .crm-pane.is-active { display:block; }
+
+    /* Timeline */
+    .crm-timeline { list-style:none; margin:0; padding:0; }
+    .crm-timeline li { position:relative; padding:0 0 1.1rem 1.5rem; border-left:2px solid #e8f0fb; }
+    .crm-timeline li:last-child { border-left-color:transparent; }
+    .crm-timeline li::before { content:""; position:absolute; left:-.45rem; top:.15rem; width:.8rem; height:.8rem;
+        border-radius:50%; background:#0047AB; }
+    .crm-timeline .crm-tl-meta { font-size:.78rem; color:#6c757d; }
+
+    /* Kanban */
+    .crm-kanban { display:flex; gap:1rem; overflow-x:auto; padding-bottom:1rem; }
+    .crm-col { flex:0 0 270px; background:#f3f6fc; border:1px solid #e1e8f5; border-radius:12px; padding:.6rem; min-height:120px; }
+    .crm-col__head { display:flex; align-items:center; justify-content:space-between; gap:.5rem; margin-bottom:.6rem; padding:.1rem .25rem; }
+    .crm-col__title { font-weight:700; font-size:.85rem; color:#0047AB; display:inline-flex; align-items:center; gap:.35rem; }
+    .crm-col__count { background:#fff; border:1px solid #dee2e6; border-radius:999px; padding:0 .5rem; font-size:.75rem; font-weight:700; color:#6c757d; }
+    .crm-card { display:block; background:#fff; border:1px solid #e1e8f5; border-radius:10px; padding:.55rem .65rem;
+        margin-bottom:.5rem; text-decoration:none; color:#212529; cursor:grab; }
+    .crm-card:hover { box-shadow:0 6px 18px rgba(0,71,171,.12); border-color:#0047AB; }
+    .crm-card__name { font-weight:600; font-size:.88rem; }
+    .crm-card__meta { font-size:.75rem; color:#6c757d; display:flex; align-items:center; gap:.4rem; margin-top:.2rem; }
+    .crm-col.is-over { outline:2px dashed #0047AB; outline-offset:-4px; }
+
+    /* Mini-grille de KPIs santé */
+    .crm-health-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:.75rem; }
+    .crm-health-cell { background:#fff; border:1px solid #dee2e6; border-radius:10px; padding:.7rem .8rem; }
+    .crm-health-cell b { font-size:1.3rem; }
+</style>

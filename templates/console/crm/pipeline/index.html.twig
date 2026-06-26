@@ -1,0 +1,50 @@
+{% extends 'console/base.html.twig' %}
+
+{% block console_subtitle %}<p>Cycle de vie commercial des clients. Les cartes se placent automatiquement selon l'activité ; glissez-déposez pour forcer une étape.</p>{% endblock %}
+
+{% block console_body %}
+{{ include('console/crm/_styles.html.twig') }}
+
+<div data-controller="crm-kanban"
+     data-crm-kanban-base-value="{{ path('console.crm.pipeline.index') }}"
+     data-crm-kanban-token-value="{{ csrf_token('crm-pipeline-move') }}">
+    <div class="crm-kanban">
+        {% for key, meta in stages %}
+            <div class="crm-col" data-crm-kanban-target="col" data-stage="{{ key }}"
+                 data-action="dragover->crm-kanban#over dragleave->crm-kanban#leave drop->crm-kanban#drop">
+                <div class="crm-col__head">
+                    <span class="crm-col__title">{{ ux_icon(resolve_icon_name(meta.icon), {height:'15px', width:'15px'}) }} {{ meta.label }}</span>
+                    <span class="crm-col__count">{{ colonnes[key]|length }}</span>
+                </div>
+                {% for p in colonnes[key] %}
+                    {{ _self.carte(p) }}
+                {% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+
+    {% if churn|length > 0 %}
+        <div class="cs-panel mt-3" style="border-color:#f3c9c4;">
+            <h2 class="cs-panel-title" style="color:#c5221f;">{{ ux_icon(resolve_icon_name('action:alert'), {height:'18px', width:'18px'}) }} Churn / Inactifs</h2>
+            <div class="crm-col" data-crm-kanban-target="col" data-stage="churn"
+                 data-action="dragover->crm-kanban#over dragleave->crm-kanban#leave drop->crm-kanban#drop" style="background:#fff;border:0;display:flex;flex-wrap:wrap;gap:.5rem;">
+                {% for p in churn %}{{ _self.carte(p) }}{% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% macro carte(p) %}
+    {% set u = p.utilisateur %}
+    <a class="crm-card" href="{{ path('console.crm.client.show', {id: u.id}) }}"
+       draggable="true" data-crm-kanban-target="card" data-user-id="{{ u.id }}"
+       data-action="dragstart->crm-kanban#start dragend->crm-kanban#end">
+        <div class="crm-card__name">{{ u.nom ?: u.email }}</div>
+        <div class="crm-card__meta">
+            <span class="crm-dot" style="background:{{ crm_health_hex(p.scoreCouleur) }};"></span>
+            <span>{{ p.scoreSante }}/100</span>
+            {% if p.etapeManuelleForcee %}· forcée{% endif %}
+        </div>
+    </a>
+{% endmacro %}

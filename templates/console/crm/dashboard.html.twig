@@ -1,0 +1,114 @@
+{% extends 'console/base.html.twig' %}
+
+{% block console_subtitle %}<p>Vue commerciale du jour : relances, prospects chauds, inactivité, soldes et tâches — données synchronisées automatiquement depuis le SaaS.</p>{% endblock %}
+
+{% block console_body %}
+{{ include('console/crm/_styles.html.twig') }}
+
+{# --- Bandeau santé du portefeuille --- #}
+<div class="cs-panel">
+    <h2 class="cs-panel-title">Santé du portefeuille</h2>
+    <div class="crm-health-grid">
+        {% for couleur in ['vert', 'jaune', 'orange', 'rouge'] %}
+            <div class="crm-health-cell">
+                <span class="crm-health">
+                    <span class="crm-dot" style="background:{{ crm_health_hex(couleur) }};"></span>
+                    <span>{{ crm_health_label(couleur) }}</span>
+                </span>
+                <div><b>{{ sante[couleur]|default(0) }}</b> client(s)</div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="cs-panel-row">
+    {# --- Clients à relancer --- #}
+    <div class="cs-panel cs-panel--flex">
+        <h2 class="cs-panel-title">{{ ux_icon(resolve_icon_name('action:calendar'), {height:'18px', width:'18px'}) }} À relancer</h2>
+        {{ _self.listeProfils(aRelancer, 'Aucune relance en attente.') }}
+    </div>
+
+    {# --- Prospects chauds --- #}
+    <div class="cs-panel cs-panel--flex">
+        <h2 class="cs-panel-title">{{ ux_icon(resolve_icon_name('action:premium'), {height:'18px', width:'18px'}) }} Prospects chauds</h2>
+        {{ _self.listeProfils(prospectsChauds, 'Aucun prospect chaud pour le moment.') }}
+    </div>
+</div>
+
+<div class="cs-panel-row">
+    {# --- Clients sans connexion --- #}
+    <div class="cs-panel cs-panel--flex">
+        <h2 class="cs-panel-title">{{ ux_icon(resolve_icon_name('action:alert'), {height:'18px', width:'18px'}) }} Sans connexion (> {{ inactiviteJours }} j)</h2>
+        {{ _self.listeUsers(sansConnexion, 'Tous les clients se sont connectés récemment.') }}
+    </div>
+
+    {# --- Presque à court de tokens --- #}
+    <div class="cs-panel cs-panel--flex">
+        <h2 class="cs-panel-title">{{ ux_icon(resolve_icon_name('monnaie'), {height:'18px', width:'18px'}) }} Presque à court de tokens</h2>
+        {{ _self.listeUsersTokens(presqueCourt, 'Aucun solde critique.') }}
+    </div>
+</div>
+
+{# --- Tâches ouvertes --- #}
+<div class="cs-panel">
+    <h2 class="cs-panel-title">{{ ux_icon(resolve_icon_name('tache'), {height:'18px', width:'18px'}) }} Tâches ouvertes</h2>
+    {% if taches|length > 0 %}
+        <table class="cs-table">
+            <thead><tr><th>Tâche</th><th>Client</th><th>Échéance</th><th>Priorité</th></tr></thead>
+            <tbody>
+            {% for t in taches %}
+                <tr>
+                    <td>{{ t.titre }}</td>
+                    <td>{% if t.client %}<a href="{{ path('console.crm.client.show', {id: t.client.id}) }}">{{ t.client.nom ?: t.client.email }}</a>{% else %}—{% endif %}</td>
+                    <td>{% if t.enRetard %}<span class="cs-badge" style="background:#fde8e6;color:#c5221f;">{{ t.dueAt|format_datetime('short','none', locale: app.user.locale) }}</span>{% else %}{{ t.dueAt|format_datetime('short','none', locale: app.user.locale) }}{% endif %}</td>
+                    <td>{{ t.priorite }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="cs-empty"><p>Aucune tâche ouverte. Bonne journée !</p></div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{# ----- Macros de liste (DRY) ----- #}
+{% macro listeProfils(profils, vide) %}
+    {% if profils|length > 0 %}
+        <ul class="list-unstyled mb-0">
+            {% for p in profils %}
+                {% set u = p.utilisateur %}
+                <li class="d-flex align-items-center justify-content-between py-2" style="border-bottom:1px solid #f0f0f0;">
+                    <a href="{{ path('console.crm.client.show', {id: u.id}) }}" class="text-decoration-none fw-semibold">{{ u.nom ?: u.email }}</a>
+                    <span class="crm-stage {{ p.etapePipeline == 'churn' ? 'crm-stage--churn' }}">{{ crm_stage_label(p.etapePipeline) }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}<div class="cs-empty"><p>{{ vide }}</p></div>{% endif %}
+{% endmacro %}
+
+{% macro listeUsers(users, vide) %}
+    {% if users|length > 0 %}
+        <ul class="list-unstyled mb-0">
+            {% for u in users %}
+                <li class="d-flex align-items-center justify-content-between py-2" style="border-bottom:1px solid #f0f0f0;">
+                    <a href="{{ path('console.crm.client.show', {id: u.id}) }}" class="text-decoration-none fw-semibold">{{ u.nom ?: u.email }}</a>
+                    <span class="cs-badge cs-badge--muted">{{ u.lastLoginAt ? u.lastLoginAt|format_datetime('short','none', locale: app.user.locale) : '—' }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}<div class="cs-empty"><p>{{ vide }}</p></div>{% endif %}
+{% endmacro %}
+
+{% macro listeUsersTokens(users, vide) %}
+    {% if users|length > 0 %}
+        <ul class="list-unstyled mb-0">
+            {% for u in users %}
+                <li class="d-flex align-items-center justify-content-between py-2" style="border-bottom:1px solid #f0f0f0;">
+                    <a href="{{ path('console.crm.client.show', {id: u.id}) }}" class="text-decoration-none fw-semibold">{{ u.nom ?: u.email }}</a>
+                    <span class="cs-badge" style="background:#fff3cd;color:#b58100;">{{ u.paidTokens|number_format(0, '.', ' ') }} tk</span>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}<div class="cs-empty"><p>{{ vide }}</p></div>{% endif %}
+{% endmacro %}

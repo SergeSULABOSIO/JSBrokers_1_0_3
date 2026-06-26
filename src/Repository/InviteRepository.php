@@ -122,6 +122,38 @@ class InviteRepository extends ServiceEntityRepository
         ;
     }
 
+    /**
+     * Nombre d'invités (collaborateurs) gérés par un propriétaire, à travers
+     * toutes ses entreprises. Sert au CRM (adoption / vue 360 du client).
+     */
+    public function countGuestsForOwner(int $ownerId): int
+    {
+        return (int) $this->createQueryBuilder('i')
+            ->select('COUNT(i.id)')
+            ->join('i.entreprise', 'e')
+            ->where('e.utilisateur = :owner')
+            ->setParameter('owner', $ownerId)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * Invités gérés par un propriétaire, à travers toutes ses entreprises
+     * (entreprise jointe pour l'affichage de la vue 360).
+     *
+     * @return Invite[]
+     */
+    public function findGuestsForOwner(int $ownerId): array
+    {
+        return $this->createQueryBuilder('i')
+            ->join('i.entreprise', 'e')->addSelect('e')
+            ->where('e.utilisateur = :owner')
+            ->setParameter('owner', $ownerId)
+            ->orderBy('i.id', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
     public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
     {
         return $this->paginator->paginate(

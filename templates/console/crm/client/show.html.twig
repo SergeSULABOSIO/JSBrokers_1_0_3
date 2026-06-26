@@ -1,0 +1,323 @@
+{% extends 'console/base.html.twig' %}
+
+{% block console_actions %}
+    <a href="{{ path('console.crm.client.index') }}" class="btn btn-sm btn-outline-secondary" data-action="click->top-progress#show">
+        {{ ux_icon(resolve_icon_name('action:exit'), {height:'16px', width:'16px'}) }}<span class="ms-1">Retour</span>
+    </a>
+{% endblock %}
+
+{% block console_body %}
+{{ include('console/crm/_styles.html.twig') }}
+
+{# --- En-tête synthèse --- #}
+<div class="cs-panel">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="crm-stage {{ profil.etapePipeline == 'churn' ? 'crm-stage--churn' }}">
+                    {{ ux_icon(resolve_icon_name(crm_stage_icon(profil.etapePipeline)), {height:'14px', width:'14px'}) }}
+                    {{ crm_stage_label(profil.etapePipeline) }}
+                </span>
+                <span class="crm-health">
+                    <span class="crm-dot" style="background:{{ crm_health_hex(profil.scoreCouleur) }};"></span>
+                    <span class="crm-score" style="color:{{ crm_health_hex(profil.scoreCouleur) }};">{{ profil.scoreSante }}/100</span>
+                    <span class="text-muted" style="font-size:.8rem;">{{ crm_health_label(profil.scoreCouleur) }}</span>
+                </span>
+            </div>
+            <div class="text-muted mt-1" style="font-size:.85rem;">
+                {{ client.email }}{% if pays %} · {{ pays }}{% endif %} · Inscrit le {{ client.createdAt ? client.createdAt|format_datetime('short','none', locale: app.user.locale) : '—' }}
+            </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-sm btn-cobalt" data-action="crm-tabs#go" data-crm-tabs-go-param="activites">
+                {{ ux_icon(resolve_icon_name('feedback'), {height:'16px', width:'16px'}) }}<span class="ms-1">Logger un échange</span>
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="crm-tabs#go" data-crm-tabs-go-param="taches">
+                {{ ux_icon(resolve_icon_name('tache'), {height:'16px', width:'16px'}) }}<span class="ms-1">Créer une tâche</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div data-controller="crm-tabs">
+    {# --- Barre d'onglets --- #}
+    <nav class="crm-tabs" role="tablist">
+        {% set onglets = {
+            informations: 'Informations', entreprises: 'Entreprises', invites: 'Invités',
+            portefeuille: 'Portefeuille', achats: 'Achats', consommation: 'Consommation',
+            pipeline: 'Pipeline', activites: 'Activités', notes: 'Notes',
+            historique: 'Historique', taches: 'Tâches', sante: 'Santé',
+            support: 'Support', marketing: 'Marketing'
+        } %}
+        {% for key, label in onglets %}
+            <button type="button" class="crm-tab {{ loop.first ? 'is-active' }}" role="tab"
+                    data-crm-tabs-target="tab" data-tab="{{ key }}" data-action="crm-tabs#select">{{ label }}</button>
+        {% endfor %}
+    </nav>
+
+    {# === Informations === #}
+    <div class="crm-pane is-active" data-crm-tabs-target="pane" data-tab="informations" id="tab-informations">
+        <div class="cs-panel">
+            <table class="cs-table">
+                <tbody>
+                    <tr><th>Nom</th><td>{{ client.nom ?: '—' }}</td></tr>
+                    <tr><th>E-mail</th><td>{{ client.email }}</td></tr>
+                    <tr><th>Pays</th><td>{{ pays ?: '—' }}</td></tr>
+                    <tr><th>Compte vérifié</th><td>{{ client.verified ? 'Oui' : 'Non' }}</td></tr>
+                    <tr><th>Dernière connexion</th><td>{{ client.lastLoginAt ? client.lastLoginAt|format_datetime('short','short', locale: app.user.locale) : 'Jamais' }} ({{ client.loginCount }} connexion{{ client.loginCount > 1 ? 's' }})</td></tr>
+                    <tr><th>Agent référent</th><td>{{ profil.agentReferent ? profil.agentReferent.nom : '—' }}</td></tr>
+                    <tr><th>Source</th><td>{{ profil.source ?: '—' }}</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {# === Entreprises === #}
+    <div class="crm-pane" data-crm-tabs-target="pane" data-tab="entreprises" id="tab-entreprises">
+        <div class="cs-panel">
+            {% if entreprises|length > 0 %}
+                <table class="cs-table">
+                    <thead><tr><th>Entreprise</th><th>Invités</th><th></th></tr></thead>
+                    <tbody>
+                    {% for e in entreprises %}
+                        <tr>
+                            <td class="fw-semibold">{{ e.nom }}</td>
+                            <td>{{ e.invites|length }}</td>
+                            <td style="text-align:right;"><a href="{{ path('console.crm.entreprise.show', {id: e.id}) }}" class="cs-icon-btn">{{ ux_icon(resolve_icon_name('action:view'), {height:'18px', width:'18px'}) }}</a></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}<div class="cs-empty"><p>Ce client ne possède aucune entreprise.</p></div>{% endif %}
+        </div>
+    </div>
+
+    {# === Invités === #}
+    <div class="crm-pane" data-crm-tabs-target="pane" data-tab="invites" id="tab-invites">
+        <div class="cs-panel">
+            {% if invites|length > 0 %}
+                <table class="cs-table">
+                    <thead><tr><th>Invité</th><th>E-mail</th><th>Entreprise</th></tr></thead>
+                    <tbody>
+                    {% for i in invites %}
+                        <tr><td>{{ i.nom ?: '—' }}</td><td>{{ i.email ?: '—' }}</td><td>{{ i.entreprise ? i.entreprise.nom : '—' }}</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}<div class="cs-empty"><p>Aucun collaborateur invité.</p></div>{% endif %}
+        </div>
+    </div>
+
+    {# === Portefeuille === #}
+    <div class="crm-pane" data-crm-tabs-target="pane" data-tab="portefeuille" id="tab-portefeuille">
+        <div class="cs-kpis">
+            <div class="cs-kpi"><div class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('monnaie'), {height:'24px', width:'24px'}) }}</div><div class="cs-kpi-body"><div class="cs-kpi-val">{{ client.paidTokens|number_format(0,'.',' ') }}</div><div class="cs-kpi-lbl">Tokens prépayés</div></div></div>
+            <div class="cs-kpi"><div class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('action:premium'), {height:'24px', width:'24px'}) }}</div><div class="cs-kpi-body"><div class="cs-kpi-val">{{ client.freeTokens|number_format(0,'.',' ') }}</div><div class="cs-kpi-lbl">Tokens gratuits</div></div></div>
+            <div class="cs-kpi"><div class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('action:count'), {height:'24px', width:'24px'}) }}</div><div class="cs-kpi-body"><div class="cs-kpi-val">{{ signals.consumption30|number_format(0,'.',' ') }}</div><div class="cs-kpi-lbl">Consommés (30 j)</div></div></div>
+            <div class="cs-kpi"><div class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('action:cart'), {height:'24px', width:'24px'}) }}</div><div class="cs-kpi-body"><div class="cs-kpi-val">{{ signals.montantTotal|number_format(2,'.',' ') }} $</div><div class="cs-kpi-lbl">Total dépensé (LTV)</div></div></div>
+        </div>
+    </div>
+
+    {# === Achats === #}
+    <div class="crm-pane" data-crm-tabs-target="pane" data-tab="achats" id="tab-achats">
+        <div class="cs-panel">
+            {% if achats|length > 0 %}
+                <table class="cs-table">
+                    <thead><tr><th>Date</th><th>Paquet</th><th>Tokens</th><th>Montant</th><th>Coupon</th></tr></thead>
+                    <tbody>
+                    {% for a in achats %}
+                        <tr>
+                            <td>{{ a.createdAt|format_datetime('short','short', locale: app.user.locale) }}</td>
+                            <td>{{ token_pack_label(a.pack) }}</td>
+                            <td>{{ a.tokens|number_format(0,'.',' ') }}</td>
+                            <td>{{ a.montantUsd|number_format(2,'.',' ') }} $</td>
+                            <td>{{ a.couponCode ?: '—' }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}<div class="cs-empty"><p>Aucun achat. C'est encore un prospect / utilisateur gratuit.</p></div>{% endif %}
+        </div>
+    </div>
+
+    {# === Consommation === #}
+    <div class="crm-pane" data-crm-tabs-target="pane" data-tab="consommation" id="tab-consommation">
+        <div class="cs-panel">
+            {% if consommations.getTotalItemCount > 0 %}
+                <table class="cs-table">
+                    <thead><tr><th>Date</th><th>Entité</th><th>Sens</th><th>Entreprise</th><th>Poids</th></tr></thead>
+                    <tbody>
+                    {% for c in consommations %}
+                        <tr>
+                            <td>{{ c.createdAt|format_datetime('short','short', locale: app.user.locale) }}</td>
+                            <td>{{ c.entiteNom }}</td>
+                            <td>{{ c.sens == 'entree' ? 'Écriture' : 'Lecture' }}</td>
+                            <td>{{ c.entreprise ? c.entreprise.nom : '—' }}</td>
+                            <td>{{ c.poidsTotal }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}<div class="cs-empty"><p>Aucune consommation enregistrée.</p></div>{% endif %}
+        </div>
+    </div>
+
+    {# === Pipeline === #}
+    <div class="crm-pane" data-crm-tabs-target="pane" data-tab="pipeline" id="tab-pipeline">
+        <div class="cs-panel">
+            <p>Étape actuelle : <span class="crm-stage {{ profil.etapePipeline == 'churn' ? 'crm-stage--churn' }}">{{ crm_stage_label(profil.etapePipeline) }}</span>
+                {% if profil.etapeManuelleForcee %}<span class="cs-badge cs-badge--muted">forcée manuellement</span>{% endif %}</p>
+            <form method="post" action="{{ path('console.crm.client.etape', {id: client.id}) }}" class="d-flex gap-2 align-items-end" style="max-width:480px;">
+                <input type="hidden" name="_token" value="{{ csrf_token('crm-etape-' ~ client.id) }}">
+                <div class="flex-grow-1">
+                    <label class="form-label" style="font-size:.85rem;">Forcer une étape</label>
+                    <select name="etape" class="form-select">
+                        {% for key, meta in stages %}
+                            <option value="{{ key }}" {{ key == profil.etapePipeline ? 'selected' }}>{{ meta.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-cobalt">Appliquer</button>
+            </form>
+        </div>
+    </div>
+
+    {# === Activités === #}
+    <div class="crm-pane" data-crm-tabs-target="pane" data-tab="activites" id="tab-activites">
+        <div class="cs-panel">
+            <h2 class="cs-panel-title">Logger un échange</h2>
+            <form method="post" action="{{ path('console.crm.client.interaction', {id: client.id}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('crm-interaction-' ~ client.id) }}">
+                <div class="row g-2">
+                    <div class="col-sm-3"><select name="type" class="form-select">
+                        <option value="appel">Appel</option><option value="email">E-mail</option>
+                        <option value="demo">Démonstration</option><option value="reunion">Réunion</option>
+                        <option value="note" selected>Note</option>
+                    </select></div>
+                    <div class="col-sm-3"><select name="direction" class="form-select"><option value="out">Sortant</option><option value="in">Entrant</option></select></div>
+                    <div class="col-sm-6"><input type="text" name="sujet" class="form-control" placeholder="Sujet *" required></div>
+                    <div class="col-12"><textarea name="contenu" class="form-control" rows="2" placeholder="Détails (optionnel)"></textarea></div>
+                </div>
+                <div class="mt-2"><button type="submit" class="btn btn-cobalt">Enregistrer</button></div>
+            </form>
+        </div>
+        <div class="cs-panel">
+            <h2 class="cs-panel-title">Timeline</h2>
+            {% if interactions|length > 0 %}
+                <ul class="crm-timeline">
+                    {% for i in interactions %}
+                        <li>
+                            <strong>{{ crm_interaction_label(i.type) }}</strong> — {{ i.sujet }}
+                            <div class="crm-tl-meta">{{ i.occurredAt|format_datetime('short','short', locale: app.user.locale) }}{% if i.agent %} · {{ i.agent.nom }}{% endif %} · {{ i.direction == 'in' ? 'entrant' : 'sortant' }}</div>
+                            {% if i.contenu %}<div class="mt-1" style="font-size:.9rem;">{{ i.contenu }}</div>{% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}<div class="cs-empty"><p>Aucune interaction enregistrée.</p></div>{% endif %}
+        </div>
+    </div>
+
+    {# === Notes === #}
+    <div class="crm-pane" data-crm-tabs-target="pane" data-tab="notes" id="tab-notes">
+        <div class="cs-panel">
+            <form method="post" action="{{ path('console.crm.client.profil', {id: client.id}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('crm-profil-' ~ client.id) }}">
+                <div class="mb-3">
+                    <label class="form-label">Notes internes</label>
+                    <textarea name="notes" class="form-control" rows="5" placeholder="Notes de l'équipe commerciale…">{{ profil.notes }}</textarea>
+                </div>
+                <div class="mb-3" style="max-width:280px;">
+                    <label class="form-label">Prochaine action prévue</label>
+                    <input type="date" name="prochaineActionAt" class="form-control" value="{{ profil.prochaineActionAt ? profil.prochaineActionAt|date('Y-m-d') : '' }}">
+                </div>
+                <button type="submit" class="btn btn-cobalt">Enregistrer</button>
+            </form>
+        </div>
+    </div>
+
+    {# === Historique === #}
+    <div class="crm-pane" data-crm-tabs-target="pane" data-tab="historique" id="tab-historique">
+        <div class="cs-panel">
+            <h2 class="cs-panel-title">Achats &amp; échanges</h2>
+            <ul class="crm-timeline">
+                {% for a in achats %}
+                    <li><strong>Achat — {{ token_pack_label(a.pack) }}</strong> ({{ a.montantUsd|number_format(2,'.',' ') }} $)
+                        <div class="crm-tl-meta">{{ a.createdAt|format_datetime('short','short', locale: app.user.locale) }}</div></li>
+                {% endfor %}
+                {% for i in interactions %}
+                    <li><strong>{{ crm_interaction_label(i.type) }}</strong> — {{ i.sujet }}
+                        <div class="crm-tl-meta">{{ i.occurredAt|format_datetime('short','short', locale: app.user.locale) }}</div></li>
+                {% endfor %}
+                {% if achats|length == 0 and interactions|length == 0 %}<li class="text-muted" style="border:0;">Aucun historique.</li>{% endif %}
+            </ul>
+        </div>
+    </div>
+
+    {# === Tâches === #}
+    <div class="crm-pane" data-crm-tabs-target="pane" data-tab="taches" id="tab-taches">
+        <div class="cs-panel">
+            <h2 class="cs-panel-title">Nouvelle tâche</h2>
+            <form method="post" action="{{ path('console.crm.client.tache', {id: client.id}) }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('crm-tache-' ~ client.id) }}">
+                <div class="row g-2">
+                    <div class="col-sm-6"><input type="text" name="titre" class="form-control" placeholder="Intitulé *" required></div>
+                    <div class="col-sm-3"><input type="date" name="dueAt" class="form-control"></div>
+                    <div class="col-sm-3"><select name="priorite" class="form-select"><option value="basse">Basse</option><option value="normale" selected>Normale</option><option value="haute">Haute</option></select></div>
+                    <div class="col-12"><input type="text" name="description" class="form-control" placeholder="Description (optionnel)"></div>
+                </div>
+                <div class="mt-2"><button type="submit" class="btn btn-cobalt">Créer la tâche</button></div>
+            </form>
+        </div>
+        <div class="cs-panel">
+            {% if taches|length > 0 %}
+                <table class="cs-table">
+                    <thead><tr><th>Tâche</th><th>Échéance</th><th>Priorité</th><th>Statut</th></tr></thead>
+                    <tbody>
+                    {% for t in taches %}
+                        <tr>
+                            <td>{{ t.titre }}</td>
+                            <td>{{ t.dueAt|format_datetime('short','none', locale: app.user.locale) }}</td>
+                            <td>{{ t.priorite }}</td>
+                            <td>{% if t.faite %}<span class="cs-badge cs-badge--ok">Faite</span>{% elseif t.enRetard %}<span class="cs-badge" style="background:#fde8e6;color:#c5221f;">En retard</span>{% else %}<span class="cs-badge cs-badge--cobalt">À faire</span>{% endif %}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}<div class="cs-empty"><p>Aucune tâche pour ce client.</p></div>{% endif %}
+        </div>
+    </div>
+
+    {# === Santé === #}
+    <div class="crm-pane" data-crm-tabs-target="pane" data-tab="sante" id="tab-sante">
+        <div class="cs-panel">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="crm-dot" style="width:1.2rem;height:1.2rem;background:{{ crm_health_hex(profil.scoreCouleur) }};"></span>
+                <span style="font-size:1.6rem;font-weight:700;color:{{ crm_health_hex(profil.scoreCouleur) }};">{{ profil.scoreSante }}/100</span>
+                <span class="text-muted">{{ crm_health_label(profil.scoreCouleur) }}</span>
+            </div>
+            <table class="cs-table">
+                <thead><tr><th>Critère</th><th>Poids</th><th style="width:40%;">Score</th></tr></thead>
+                <tbody>
+                {% for d in health.details %}
+                    <tr>
+                        <td>{{ d.label }}</td>
+                        <td>{{ d.weight }} %</td>
+                        <td><div class="crm-bar"><span style="width:{{ d.pct }}%;"></span></div></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {# === Support (à venir) === #}
+    <div class="crm-pane" data-crm-tabs-target="pane" data-tab="support" id="tab-support">
+        <div class="cs-empty"><p>Module Support (tickets, SLA) — disponible dans une prochaine phase.</p></div>
+    </div>
+
+    {# === Marketing (à venir) === #}
+    <div class="crm-pane" data-crm-tabs-target="pane" data-tab="marketing" id="tab-marketing">
+        <div class="cs-empty"><p>Module Marketing (campagnes ciblées) — disponible dans une prochaine phase.</p></div>
+    </div>
+</div>
+{% endblock %}
