@@ -49,8 +49,12 @@ class CrmPipelineService
         self::STAGE_DEMO,
     ];
 
-    /** Seuil d'inactivité (jours) au-delà duquel un compte engagé bascule en churn. */
+    /** Seuil d'inactivité (jours) au-delà duquel un compte engagé bascule en churn (défaut, surchargé par la config). */
     public const CHURN_INACTIVE_DAYS = 45;
+
+    public function __construct(private ParametresCrmService $params)
+    {
+    }
 
     public function isValidStage(string $stage): bool
     {
@@ -103,7 +107,7 @@ class CrmPipelineService
         // Churn : compte ayant déjà eu de l'engagement, mais silencieux depuis trop longtemps.
         if (
             $daysSinceActivity !== null
-            && $daysSinceActivity > self::CHURN_INACTIVE_DAYS
+            && $daysSinceActivity > $this->params->churnJours()
             && ($s['nbPurchases'] > 0 || $s['loginCount'] > 0)
         ) {
             return self::STAGE_CHURN;

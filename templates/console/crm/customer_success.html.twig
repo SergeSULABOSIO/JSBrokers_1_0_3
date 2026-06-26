@@ -1,0 +1,56 @@
+{% extends 'console/base.html.twig' %}
+
+{% block console_subtitle %}<p>Santé du portefeuille, adoption, risques de churn et recommandations d'actions.</p>{% endblock %}
+
+{% block console_body %}
+{{ include('console/crm/_styles.html.twig') }}
+
+<div class="cs-kpis">
+    <div class="cs-kpi"><div class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('action:analyser'), {height:'24px', width:'24px'}) }}</div><div class="cs-kpi-body"><div class="cs-kpi-val">{{ scoreMoyen }}/100</div><div class="cs-kpi-lbl">Score de santé moyen</div></div></div>
+    <div class="cs-kpi"><div class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('client'), {height:'24px', width:'24px'}) }}</div><div class="cs-kpi-body"><div class="cs-kpi-val">{{ total }}</div><div class="cs-kpi-lbl">Clients suivis</div></div></div>
+    {% for couleur in ['vert','jaune','orange','rouge'] %}
+        <div class="cs-kpi"><div class="cs-kpi-icon" style="background:{{ crm_health_hex(couleur) }}22;color:{{ crm_health_hex(couleur) }};">{{ ux_icon(resolve_icon_name('feedback'), {height:'24px', width:'24px'}) }}</div><div class="cs-kpi-body"><div class="cs-kpi-val" style="color:{{ crm_health_hex(couleur) }};">{{ sante[couleur]|default(0) }}</div><div class="cs-kpi-lbl">{{ crm_health_label(couleur) }}</div></div></div>
+    {% endfor %}
+</div>
+
+<div class="cs-panel-row">
+    <div class="cs-panel">
+        <h2 class="cs-panel-title">Clients à risque</h2>
+        {% if aRisque|length > 0 %}
+            {% for p in aRisque %}
+                {% set u = p.utilisateur %}
+                <div style="border-bottom:1px solid #f0f0f0;padding:.6rem 0;">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <a href="{{ path('console.crm.client.show', {id: u.id}) }}" class="fw-semibold text-decoration-none">{{ u.nom ?: u.email }}</a>
+                        <span class="crm-health"><span class="crm-dot" style="background:{{ crm_health_hex(p.scoreCouleur) }};"></span><span style="color:{{ crm_health_hex(p.scoreCouleur) }};font-weight:700;">{{ p.scoreSante }}</span></span>
+                    </div>
+                    {% if reco[u.id] is defined %}<div class="text-muted" style="font-size:.82rem;">{{ reco[u.id]|first }}</div>{% endif %}
+                </div>
+            {% endfor %}
+        {% else %}<div class="cs-empty"><p>Aucun client à risque. 🎉</p></div>{% endif %}
+    </div>
+    <div class="cs-panel">
+        <h2 class="cs-panel-title">Clients inactifs</h2>
+        {% if inactifs|length > 0 %}
+            <table class="cs-table">
+                <thead><tr><th>Client</th><th>Dernière connexion</th></tr></thead>
+                <tbody>
+                {% for u in inactifs %}
+                    <tr><td><a href="{{ path('console.crm.client.show', {id: u.id}) }}">{{ u.nom ?: u.email }}</a></td>
+                        <td>{{ u.lastLoginAt ? u.lastLoginAt|format_datetime('short','none', locale: app.user.locale) : '—' }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% else %}<div class="cs-empty"><p>Aucun client inactif.</p></div>{% endif %}
+    </div>
+</div>
+
+<div class="cs-panel">
+    <h2 class="cs-panel-title">Répartition du pipeline</h2>
+    <div class="crm-health-grid">
+        {% for key, nb in pipeline %}
+            <div class="crm-health-cell"><div class="text-muted" style="font-size:.82rem;">{{ crm_stage_label(key) }}</div><b>{{ nb }}</b></div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

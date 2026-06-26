@@ -1,0 +1,33 @@
+{% extends 'console/base.html.twig' %}
+
+{% block console_subtitle %}<p>Tâches ouvertes de l'équipe (relances, démos, onboarding). Échéances les plus proches d'abord.</p>{% endblock %}
+
+{% block console_body %}
+{{ include('console/crm/_styles.html.twig') }}
+<div class="cs-panel">
+    {% if taches|length > 0 %}
+        <table class="cs-table">
+            <thead><tr><th>Tâche</th><th>Client</th><th>Échéance</th><th>Priorité</th><th>Origine</th><th style="text-align:right;">Action</th></tr></thead>
+            <tbody>
+            {% for t in taches %}
+                <tr>
+                    <td>{{ t.titre }}</td>
+                    <td>{% if t.client %}<a href="{{ path('console.crm.client.show', {id: t.client.id}) }}">{{ t.client.nom ?: t.client.email }}</a>{% else %}—{% endif %}</td>
+                    <td>{% if t.enRetard %}<span class="cs-badge" style="background:#fde8e6;color:#c5221f;">{{ t.dueAt|format_datetime('short','none', locale: app.user.locale) }}</span>{% else %}{{ t.dueAt|format_datetime('short','none', locale: app.user.locale) }}{% endif %}</td>
+                    <td>{{ t.priorite }}</td>
+                    <td>{{ t.origine == 'auto' ? 'Auto' : 'Manuelle' }}</td>
+                    <td style="text-align:right;">
+                        <form method="post" action="{{ path('console.crm.tache.done', {id: t.id}) }}" style="display:inline;">
+                            <input type="hidden" name="_token" value="{{ csrf_token('crm-tache-done-' ~ t.id) }}">
+                            <button type="submit" class="cs-icon-btn" title="Marquer faite" aria-label="Marquer faite">{{ ux_icon(resolve_icon_name('action:check'), {height:'18px', width:'18px'}) }}</button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="cs-empty"><p>Aucune tâche ouverte. 🎉</p></div>
+    {% endif %}
+</div>
+{% endblock %}

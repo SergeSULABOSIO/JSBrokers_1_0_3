@@ -130,6 +130,49 @@ class CrmProfilRepository extends ServiceEntityRepository
     }
 
     /**
+     * Profils correspondant à un segment marketing : étapes de pipeline et/ou
+     * couleurs de santé. Un critère vide n'applique aucun filtre sur cet axe.
+     *
+     * @param string[] $stages
+     * @param string[] $couleurs
+     *
+     * @return CrmProfil[]
+     */
+    public function findBySegment(array $stages, array $couleurs, int $limit = 1000): array
+    {
+        $qb = $this->createQueryBuilder('p')
+            ->join('p.utilisateur', 'u')->addSelect('u')
+            ->setMaxResults($limit);
+
+        if ($stages !== []) {
+            $qb->andWhere('p.etapePipeline IN (:stages)')->setParameter('stages', $stages);
+        }
+        if ($couleurs !== []) {
+            $qb->andWhere('p.scoreCouleur IN (:couleurs)')->setParameter('couleurs', $couleurs);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /** Score de santé moyen du portefeuille (0 si aucun profil). */
+    public function averageScore(): float
+    {
+        return (float) $this->createQueryBuilder('p')
+            ->select('COALESCE(AVG(p.scoreSante), 0)')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /** Nombre total de profils CRM. */
+    public function countAll(): int
+    {
+        return (int) $this->createQueryBuilder('p')
+            ->select('COUNT(p.utilisateur)')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
      * Répartition des profils par couleur de santé.
      *
      * @return array<string, int> [couleur => count]

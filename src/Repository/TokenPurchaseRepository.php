@@ -318,6 +318,30 @@ class TokenPurchaseRepository extends ServiceEntityRepository
     }
 
     /**
+     * Top clients par revenu cumulé (LTV) — alimente le tableau de bord CFO.
+     *
+     * @return array<int, array{nom:?string, email:?string, montant:float, nb:int}>
+     */
+    public function topClients(int $limit = 10): array
+    {
+        $rows = $this->createQueryBuilder('p')
+            ->select('u.nom AS nom, u.email AS email, COALESCE(SUM(p.montantUsd), 0) AS montant, COUNT(p.id) AS nb')
+            ->join('p.utilisateur', 'u')
+            ->groupBy('u.id')
+            ->orderBy('montant', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_map(static fn (array $r) => [
+            'nom'     => $r['nom'],
+            'email'   => $r['email'],
+            'montant' => (float) $r['montant'],
+            'nb'      => (int) $r['nb'],
+        ], $rows);
+    }
+
+    /**
      * Achats d'un utilisateur, plus récents d'abord (onglet « Achats » de la fiche).
      *
      * @return TokenPurchase[]

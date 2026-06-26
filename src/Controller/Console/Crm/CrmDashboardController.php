@@ -4,6 +4,7 @@ namespace App\Controller\Console\Crm;
 
 use App\Controller\Console\AbstractConsoleController;
 use App\Crm\CrmPipelineService;
+use App\Crm\ParametresCrmService;
 use App\Repository\Crm\CrmProfilRepository;
 use App\Repository\Crm\CrmTacheRepository;
 use App\Repository\UtilisateurRepository;
@@ -22,15 +23,11 @@ use Symfony\Component\Translation\LocaleSwitcher;
 #[IsGranted('ROLE_ADMIN')]
 class CrmDashboardController extends AbstractConsoleController
 {
-    /** Seuil (jours) sans connexion pour la relance d'inactivité. */
-    private const INACTIVITE_JOURS = 15;
-    /** Seuil de solde prépayé considéré comme « presque à court ». */
-    private const SOLDE_BAS = 1000;
-
     public function __construct(
         private CrmProfilRepository $profilRepository,
         private UtilisateurRepository $utilisateurRepository,
         private CrmTacheRepository $tacheRepository,
+        private ParametresCrmService $params,
     ) {
     }
 
@@ -39,7 +36,8 @@ class CrmDashboardController extends AbstractConsoleController
     {
         $this->applyLangPreference($request, $localeSwitcher);
 
-        $cutoff = (new \DateTimeImmutable())->modify('-' . self::INACTIVITE_JOURS . ' days');
+        $inactiviteJours = $this->params->inactiviteJours();
+        $cutoff = (new \DateTimeImmutable())->modify('-' . $inactiviteJours . ' days');
 
         return $this->render('console/crm/dashboard.html.twig', [
             'pageName'       => 'CRM — Tableau de bord',
@@ -51,11 +49,11 @@ class CrmDashboardController extends AbstractConsoleController
                 CrmPipelineService::STAGE_QUALIFICATION,
             ], 10),
             'sansConnexion'  => $this->utilisateurRepository->findSansConnexionCrm($cutoff, 10),
-            'presqueCourt'   => $this->utilisateurRepository->findPresqueCourtCrm(self::SOLDE_BAS, 10),
+            'presqueCourt'   => $this->utilisateurRepository->findPresqueCourtCrm($this->params->soldeBas(), 10),
             'taches'         => $this->tacheRepository->findOuvertes(null, 10),
             'sante'          => $this->profilRepository->countByHealthColor(),
             'pipeline'       => $this->profilRepository->countByStage(),
-            'inactiviteJours' => self::INACTIVITE_JOURS,
+            'inactiviteJours' => $inactiviteJours,
         ]);
     }
 }

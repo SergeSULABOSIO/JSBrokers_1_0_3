@@ -35,6 +35,10 @@ class CrmHealthScoreService
     /** Cible de consommation mensuelle (tokens) considérée comme « pleinement actif ». */
     private const CONSO_CIBLE_30J = 500;
 
+    public function __construct(private ParametresCrmService $params)
+    {
+    }
+
     /**
      * Calcule le score à partir des signaux agrégés.
      *
@@ -100,12 +104,15 @@ class CrmHealthScoreService
 
         $score = 0.0;
         $details = [];
-        foreach (self::WEIGHTS as $key => $weight) {
+        foreach ($this->params->healthWeights() as $key => $weight) {
+            if (!isset($pcts[$key])) {
+                continue;
+            }
             $pct = $pcts[$key];
             $score += $weight * $pct / 100;
             $details[] = [
                 'key'    => $key,
-                'label'  => self::LABELS[$key],
+                'label'  => self::LABELS[$key] ?? $key,
                 'weight' => $weight,
                 'pct'    => $pct,
             ];
@@ -123,11 +130,13 @@ class CrmHealthScoreService
     /** Couleur (charte) selon le score : vert / jaune / orange / rouge. */
     public function color(int $score): string
     {
+        $t = $this->params->thresholds();
+
         return match (true) {
-            $score >= 75 => 'vert',
-            $score >= 50 => 'jaune',
-            $score >= 25 => 'orange',
-            default      => 'rouge',
+            $score >= $t['vert']   => 'vert',
+            $score >= $t['jaune']  => 'jaune',
+            $score >= $t['orange'] => 'orange',
+            default                => 'rouge',
         };
     }
 

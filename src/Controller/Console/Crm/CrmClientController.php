@@ -4,12 +4,15 @@ namespace App\Controller\Console\Crm;
 
 use App\Controller\Console\AbstractConsoleController;
 use App\Crm\CrmPipelineService;
+use App\Crm\CrmRecommendationService;
 use App\Crm\CrmSyncService;
 use App\Entity\Crm\CrmInteraction;
 use App\Entity\Crm\CrmTache;
 use App\Entity\Utilisateur;
+use App\Repository\Crm\CrmHealthSnapshotRepository;
 use App\Repository\Crm\CrmInteractionRepository;
 use App\Repository\Crm\CrmTacheRepository;
+use App\Repository\Crm\CrmTicketRepository;
 use App\Repository\InviteRepository;
 use App\Repository\TokenConsumptionRepository;
 use App\Repository\TokenPurchaseRepository;
@@ -39,6 +42,9 @@ class CrmClientController extends AbstractConsoleController
         private InviteRepository $inviteRepository,
         private CrmInteractionRepository $interactionRepository,
         private CrmTacheRepository $tacheRepository,
+        private CrmTicketRepository $ticketRepository,
+        private CrmHealthSnapshotRepository $snapshotRepository,
+        private CrmRecommendationService $recommendations,
         private CrmPipelineService $pipeline,
         private ServiceGeographie $geographie,
     ) {
@@ -91,6 +97,9 @@ class CrmClientController extends AbstractConsoleController
             'consommations' => $this->consumptionRepository->paginateForProprietaire($uid, 1, 15),
             'interactions'  => $this->interactionRepository->findForClient($client),
             'taches'        => $this->tacheRepository->findForClient($client),
+            'tickets'       => $this->ticketRepository->findForClient($client),
+            'snapshots'     => $this->snapshotRepository->trendForClient($client, 30),
+            'reco'          => $this->recommendations->forClient($sync['profil'], $sync['signals']),
             'stages'        => $this->pipeline->orderedStages(),
         ]);
     }

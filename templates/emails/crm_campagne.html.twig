@@ -1,0 +1,15 @@
+{% extends 'emails/_layout.html.twig' %}
+{% import 'emails/_macros.html.twig' as m %}
+
+{# E-mail de campagne marketing CRM, envoyé au client (propriétaire). #}
+{% block subject %}{{ objet }}{% endblock %}
+
+{% block content %}
+    {{ m.heading('action:premium', objet) }}
+    {{ m.paragraph('Bonjour ' ~ (clientNom ?: '') ~ ',') }}
+    {% for ligne in messageLignes %}
+        {{ m.paragraph(ligne) }}
+    {% endfor %}
+    {{ m.button(lien, 'Accéder à JS Brokers') }}
+    {{ m.note('Vous recevez cet e-mail en tant qu\'utilisateur de la plateforme JS Brokers.') }}
+{% endblock %}

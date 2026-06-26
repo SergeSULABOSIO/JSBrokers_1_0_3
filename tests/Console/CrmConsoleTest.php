@@ -4,6 +4,7 @@ namespace App\Tests\Console;
 
 use App\Crm\CrmHealthScoreService;
 use App\Crm\CrmPipelineService;
+use App\Crm\CrmSyncService;
 use App\Entity\Crm\CrmProfil;
 use App\Entity\Entreprise;
 use App\Entity\TokenConsumption;
@@ -23,6 +24,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 class CrmConsoleTest extends WebTestCase
 {
     private const ADMIN  = 'phpunit-crm-admin@test.local';
+    private const SUPER  = 'phpunit-crm-super@test.local';
     private const CLIENT = 'phpunit-crm-client@test.local';
     private const PLAIN  = 'phpunit-crm-plain@test.local';
     private const PASSWORD = 'Test1234!';
@@ -40,6 +42,10 @@ class CrmConsoleTest extends WebTestCase
         $admin = (new Utilisateur())->setEmail(self::ADMIN)->setNom('Agent CRM')->setVerified(true)->setRoles(['ROLE_ADMIN']);
         $admin->setPassword($hasher->hashPassword($admin, self::PASSWORD));
         $em->persist($admin);
+
+        $super = (new Utilisateur())->setEmail(self::SUPER)->setNom('Super CRM')->setVerified(true)->setRoles(['ROLE_SUPER_ADMIN']);
+        $super->setPassword($hasher->hashPassword($super, self::PASSWORD));
+        $em->persist($super);
 
         $plain = (new Utilisateur())->setEmail(self::PLAIN)->setNom('Utilisateur Lambda')->setVerified(true);
         $plain->setPassword($hasher->hashPassword($plain, self::PASSWORD));
@@ -85,13 +91,13 @@ class CrmConsoleTest extends WebTestCase
     private function cleanUp(): void
     {
         $conn = $this->em()->getConnection();
-        $emails = "(SELECT id FROM utilisateur WHERE email IN ('" . self::ADMIN . "','" . self::CLIENT . "','" . self::PLAIN . "'))";
+        $emails = "(SELECT id FROM utilisateur WHERE email IN ('" . self::ADMIN . "','" . self::SUPER . "','" . self::CLIENT . "','" . self::PLAIN . "'))";
         // L'entreprise référence l'utilisateur sans ON DELETE : on la retire d'abord
         // (la consommation liée est supprimée en cascade). Le reste part avec l'utilisateur.
         $conn->executeStatement("DELETE FROM entreprise WHERE utilisateur_id IN $emails");
         $conn->executeStatement(
             'DELETE FROM utilisateur WHERE email IN (:e)',
-            ['e' => [self::ADMIN, self::CLIENT, self::PLAIN]],
+            ['e' => [self::ADMIN, self::SUPER, self::CLIENT, self::PLAIN]],
             ['e' => \Doctrine\DBAL\ArrayParameterType::STRING],
         );
     }
@@ -158,6 +164,104 @@ class CrmConsoleTest extends WebTestCase
         $profil = $this->em()->getRepository(CrmProfil::class)->find($this->user(self::CLIENT));
         $this->assertSame(CrmPipelineService::STAGE_QUALIFICATION, $profil->getEtapePipeline());
         $this->assertTrue($profil->isEtapeManuelleForcee(), 'Une étape relationnelle forcée doit être marquée comme telle.');
+    }
+
+    public function testCrmSecondaryPagesAccessible(): void
+    {
+        $this->client->loginUser($this->user(self::ADMIN));
+
+        foreach ([
+            '/console/crm/customer-success',
+            '/console/crm/tickets',
+            '/console/crm/campagnes',
+            '/console/crm/taches',
+            '/console/crm/notifications',
+            '/console/crm/cfo',
+            '/console/crm/ceo',
+            '/console/crm/rapports',
+        ] as $url) {
+            $this->client->request('GET', $url);
+            $this->assertResponseIsSuccessful(sprintf('La page %s doit répondre 200 pour un agent.', $url));
+        }
+    }
+
+    public function testParametresCrmGating(): void
+    {
+        $this->client->loginUser($this->user(self::ADMIN));
+        $this->client->request('GET', '/console/crm/parametres');
+        $this->assertResponseStatusCodeSame(403);
+
+        $this->client->loginUser($this->user(self::SUPER));
+        $this->client->request('GET', '/console/crm/parametres');
+        $this->assertResponseIsSuccessful();
+    }
+
+    public function testTicketCreationFromConsole(): void
+    {
+        $this->client->loginUser($this->user(self::ADMIN));
+        $client = $this->user(self::CLIENT);
+
+        $crawler = $this->client->request('GET', '/console/crm/tickets/new');
+        $this->assertResponseIsSuccessful();
+        $form = $crawler->filter('form')->form();
+        $form['client'] = (string) $client->getId();
+        $form['sujet'] = 'Problème de connexion';
+        $form['priorite'] = 'haute';
+        $this->client->submit($form);
+        $this->assertResponseRedirects();
+
+        $tickets = static::getContainer()->get(\App\Repository\Crm\CrmTicketRepository::class)->findForClient($this->user(self::CLIENT));
+        $this->assertCount(1, $tickets);
+        $this->assertSame('Problème de connexion', $tickets[0]->getSujet());
+        $this->assertNotNull($tickets[0]->getSlaDueAt(), 'Le SLA doit être calculé à la création.');
+    }
+
+    public function testReportExportReturnsXlsx(): void
+    {
+        $this->client->loginUser($this->user(self::ADMIN));
+        $this->client->request('GET', '/console/crm/rapports/pipeline/export');
+        $this->assertResponseIsSuccessful();
+        $this->assertStringContainsString(
+            'spreadsheetml',
+            (string) $this->client->getResponse()->headers->get('Content-Type'),
+        );
+    }
+
+    public function testCampaignSendEmailsTargetSegment(): void
+    {
+        // Synchronise le profil du client pour qu'il soit ciblable.
+        $sync = static::getContainer()->get(CrmSyncService::class);
+        $sync->refresh($this->user(self::CLIENT));
+
+        $campagne = (new \App\Entity\Crm\CrmCampagne())
+            ->setNom('Test onboarding')
+            ->setType(\App\Entity\Crm\CrmCampagne::TYPE_ONBOARDING)
+            ->setObjet('Bienvenue')
+            ->setMessage("Merci de votre confiance.\nÀ très vite.")
+            ->setSegmentRegles(['stages' => [], 'couleurs' => []]); // tous les clients
+        $this->em()->persist($campagne);
+        $this->em()->flush();
+
+        $envois = static::getContainer()->get(\App\Crm\CrmCampagneService::class)->send($campagne);
+        $this->assertGreaterThanOrEqual(1, $envois);
+        $this->assertSame(\App\Entity\Crm\CrmCampagne::STATUT_ENVOYEE, $campagne->getStatut());
+        $this->assertQueuedEmailCount($envois);
+    }
+
+    public function testAutomationEngineCreatesInactivityTask(): void
+    {
+        // Client inactif depuis 20 jours.
+        $client = $this->user(self::CLIENT);
+        $client->setLastLoginAt((new \DateTimeImmutable())->modify('-20 days'));
+        $this->em()->flush();
+
+        static::getContainer()->get(CrmSyncService::class)->refresh($client);
+        $counts = static::getContainer()->get(\App\Crm\CrmAutomationEngine::class)->runScheduled();
+
+        $this->assertGreaterThanOrEqual(1, $counts['inactivite']);
+
+        $taches = static::getContainer()->get(\App\Repository\Crm\CrmTacheRepository::class)->findForClient($this->user(self::CLIENT));
+        $this->assertNotEmpty($taches, 'Une tâche de relance doit être créée pour un client inactif.');
     }
 
     public function testPipelineDerivationLogic(): void

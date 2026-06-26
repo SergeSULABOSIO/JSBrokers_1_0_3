@@ -67,12 +67,69 @@ class PlateformeParametres
     #[ORM\Column(type: Types::DATE_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $dateConstitution = null;
 
+    /**
+     * Poids des critères du score de santé CRM : { "engagement": int, ... }.
+     * NULL → repli sur App\Crm\CrmHealthScoreService::WEIGHTS.
+     */
+    #[ORM\Column(nullable: true)]
+    private ?array $crmHealthWeights = null;
+
+    /**
+     * Seuils de couleur du score CRM : { "vert": 75, "jaune": 50, "orange": 25 }.
+     * NULL → repli sur les seuils par défaut.
+     */
+    #[ORM\Column(nullable: true)]
+    private ?array $crmThresholds = null;
+
+    /**
+     * Paramètres d'automatisation CRM : { "inactiviteJours": 15, "soldeBas": 1000,
+     * "churnJours": 45 }. NULL → repli sur les constantes par défaut.
+     */
+    #[ORM\Column(nullable: true)]
+    private ?array $crmAutomation = null;
+
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $updatedAt = null;
 
     public function getId(): ?int
     {
         return $this->id;
+    }
+
+    public function getCrmHealthWeights(): ?array
+    {
+        return $this->crmHealthWeights;
+    }
+
+    public function setCrmHealthWeights(?array $crmHealthWeights): static
+    {
+        $this->crmHealthWeights = $crmHealthWeights;
+
+        return $this;
+    }
+
+    public function getCrmThresholds(): ?array
+    {
+        return $this->crmThresholds;
+    }
+
+    public function setCrmThresholds(?array $crmThresholds): static
+    {
+        $this->crmThresholds = $crmThresholds;
+
+        return $this;
+    }
+
+    public function getCrmAutomation(): ?array
+    {
+        return $this->crmAutomation;
+    }
+
+    public function setCrmAutomation(?array $crmAutomation): static
+    {
+        $this->crmAutomation = $crmAutomation;
+
+        return $this;
     }
 
     public function getPacks(): ?array

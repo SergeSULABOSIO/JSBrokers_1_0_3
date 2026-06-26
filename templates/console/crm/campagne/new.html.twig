@@ -1,0 +1,40 @@
+{% extends 'console/base.html.twig' %}
+
+{% block console_actions %}
+    <a href="{{ path('console.crm.campagne.index') }}" class="btn btn-sm btn-outline-secondary">{{ ux_icon(resolve_icon_name('action:exit'), {height:'16px', width:'16px'}) }}<span class="ms-1">Retour</span></a>
+{% endblock %}
+
+{% block console_body %}
+{{ include('console/crm/_styles.html.twig') }}
+<div class="cs-panel" style="max-width:760px;">
+    <form method="post" action="{{ path('console.crm.campagne.new') }}">
+        <input type="hidden" name="_token" value="{{ csrf_token('crm-campagne-new') }}">
+        <div class="row g-2 mb-3">
+            <div class="col-sm-8"><label class="form-label">Nom de la campagne *</label><input type="text" name="nom" class="form-control" required></div>
+            <div class="col-sm-4"><label class="form-label">Type</label><select name="type" class="form-select">{% for key, label in types %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></div>
+        </div>
+        <div class="mb-3"><label class="form-label">Objet de l'e-mail *</label><input type="text" name="objet" class="form-control" required></div>
+        <div class="mb-3"><label class="form-label">Message *</label><textarea name="message" class="form-control" rows="5" placeholder="Une ligne par paragraphe…" required></textarea></div>
+
+        <div class="cs-panel" style="background:#f8f9fb;">
+            <p class="fw-semibold mb-2">Segment (laisser vide = tous les clients)</p>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Étapes du pipeline</label>
+                    {% for key, meta in stages %}
+                        <div class="form-check"><input class="form-check-input" type="checkbox" name="stages[]" value="{{ key }}" id="st_{{ key }}"><label class="form-check-label" for="st_{{ key }}">{{ meta.label }}</label></div>
+                    {% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Couleurs de santé</label>
+                    {% for couleur in ['vert','jaune','orange','rouge'] %}
+                        <div class="form-check"><input class="form-check-input" type="checkbox" name="couleurs[]" value="{{ couleur }}" id="co_{{ couleur }}"><label class="form-check-label" for="co_{{ couleur }}">{{ crm_health_label(couleur) }}</label></div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-3"><button type="submit" class="btn btn-cobalt">Créer la campagne</button></div>
+    </form>
+</div>
+{% endblock %}
