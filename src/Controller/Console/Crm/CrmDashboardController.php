@@ -7,6 +7,7 @@ use App\Crm\CrmPipelineService;
 use App\Crm\ParametresCrmService;
 use App\Repository\Crm\CrmProfilRepository;
 use App\Repository\Crm\CrmTacheRepository;
+use App\Repository\Crm\CrmTicketRepository;
 use App\Repository\UtilisateurRepository;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -27,6 +28,7 @@ class CrmDashboardController extends AbstractConsoleController
         private CrmProfilRepository $profilRepository,
         private UtilisateurRepository $utilisateurRepository,
         private CrmTacheRepository $tacheRepository,
+        private CrmTicketRepository $ticketRepository,
         private ParametresCrmService $params,
     ) {
     }
@@ -51,6 +53,7 @@ class CrmDashboardController extends AbstractConsoleController
             'sansConnexion'  => $this->utilisateurRepository->findSansConnexionCrm($cutoff, 10),
             'presqueCourt'   => $this->utilisateurRepository->findPresqueCourtCrm($this->params->soldeBas(), 10),
             'taches'         => $this->tacheRepository->findOuvertes(null, 10),
+            'tickets'        => $this->ticketRepository->findOuverts(10),
             'sante'          => $this->profilRepository->countByHealthColor(),
             'pipeline'       => $this->profilRepository->countByStage(),
             'inactiviteJours' => $inactiviteJours,

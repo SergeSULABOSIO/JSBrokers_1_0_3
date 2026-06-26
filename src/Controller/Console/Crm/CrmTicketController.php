@@ -98,6 +98,15 @@ class CrmTicketController extends AbstractConsoleController
             $this->addFlash('success', 'Statut du ticket mis à jour.');
         }
 
+        // Retour contextuel : si l'action vient de la fiche client, on y revient
+        // (onglet Support). Sinon, on reste sur la liste globale des tickets.
+        if ($request->request->get('_retour') === 'fiche' && $ticket->getClient()) {
+            return $this->redirectToRoute('console.crm.client.show', [
+                'id'        => $ticket->getClient()->getId(),
+                '_fragment' => 'tab-support',
+            ]);
+        }
+
         return $this->redirectToRoute('console.crm.ticket.index');
     }
 }

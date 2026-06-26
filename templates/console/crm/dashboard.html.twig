@@ -1,4 +1,5 @@
 {% extends 'console/base.html.twig' %}
+{% import 'console/crm/_ticket_macros.html.twig' as ticketm %}
 
 {% block console_subtitle %}<p>Vue commerciale du jour : relances, prospects chauds, inactivité, soldes et tâches — données synchronisées automatiquement depuis le SaaS.</p>{% endblock %}
 
@@ -59,7 +60,7 @@
     <h2 class="cs-panel-title">{{ ux_icon(resolve_icon_name('tache'), {height:'18px', width:'18px'}) }} Tâches ouvertes</h2>
     {% if taches|length > 0 %}
         <table class="cs-table">
-            <thead><tr><th>Tâche</th><th>Client</th><th>Échéance</th><th>Priorité</th></tr></thead>
+            <thead><tr><th>Tâche</th><th>Client</th><th>Échéance</th><th>Priorité</th><th></th></tr></thead>
             <tbody>
             {% for t in taches %}
                 <tr>
@@ -67,12 +68,53 @@
                     <td>{% if t.client %}<a href="{{ path('console.crm.client.show', {id: t.client.id}) }}">{{ t.client.nom ?: t.client.email }}</a>{% else %}—{% endif %}</td>
                     <td>{% if t.enRetard %}<span class="cs-badge" style="background:#fde8e6;color:#c5221f;">{{ t.dueAt|format_datetime('short','none', locale: app.user.locale) }}</span>{% else %}{{ t.dueAt|format_datetime('short','none', locale: app.user.locale) }}{% endif %}</td>
                     <td>{{ t.priorite }}</td>
+                    <td class="text-end">
+                        {% if t.client %}
+                            <a href="{{ path('console.crm.client.show', {id: t.client.id, _fragment: 'tab-taches'}) }}"
+                               class="btn btn-sm btn-outline-secondary"
+                               title="Gérer les tâches de {{ t.client.nom ?: t.client.email }}">
+                                {{ ux_icon(resolve_icon_name('tache'), {height:'15px', width:'15px'}) }}<span class="ms-1">Gérer</span>
+                            </a>
+                        {% endif %}
+                    </td>
                 </tr>
             {% endfor %}
             </tbody>
         </table>
     {% else %}
         <div class="cs-empty"><p>Aucune tâche ouverte. Bonne journée !</p></div>
+    {% endif %}
+</div>
+
+{# --- Tickets de support ouverts --- #}
+<div class="cs-panel">
+    <h2 class="cs-panel-title">{{ ux_icon(resolve_icon_name('feedback'), {height:'18px', width:'18px'}) }} Tickets de support</h2>
+    {% if tickets|length > 0 %}
+        <table class="cs-table">
+            <thead><tr><th>Réf.</th><th>Client</th><th>Sujet</th><th>SLA</th><th>Statut</th><th></th></tr></thead>
+            <tbody>
+            {% for t in tickets %}
+                <tr>
+                    <td>{{ t.reference }}</td>
+                    <td>{% if t.client %}<a href="{{ path('console.crm.client.show', {id: t.client.id}) }}">{{ t.client.nom ?: t.client.email }}</a>{% else %}—{% endif %}</td>
+                    <td>{{ t.sujet }}</td>
+                    <td>{% if t.slaDepasse %}<span class="cs-badge cs-badge--danger">Dépassé</span>{% elseif t.slaDueAt %}{{ t.slaDueAt|format_datetime('short','none', locale: app.user.locale) }}{% else %}—{% endif %}</td>
+                    <td>{{ ticketm.statutBadge(t) }}</td>
+                    <td class="text-end">
+                        {% if t.client %}
+                            <a href="{{ path('console.crm.client.show', {id: t.client.id, _fragment: 'tab-support'}) }}"
+                               class="btn btn-sm btn-outline-secondary"
+                               title="Gérer le support de {{ t.client.nom ?: t.client.email }}">
+                                {{ ux_icon(resolve_icon_name('feedback'), {height:'15px', width:'15px'}) }}<span class="ms-1">Gérer</span>
+                            </a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="cs-empty"><p>Aucun ticket de support ouvert.</p></div>
     {% endif %}
 </div>
 </div>{# /.crm-dash #}

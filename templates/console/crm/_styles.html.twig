@@ -58,6 +58,11 @@
     .crm-dash > .cs-panel + .cs-panel { margin-top:0; }
     .crm-dash .cs-kpis { margin:0; }
 
+    /* Sensibilité au survol des blocs (même effet que le tableau de bord
+       principal de la console, .db-dashboard-block) : ombre cobalt douce. */
+    .crm-dash .cs-panel { transition:box-shadow .2s ease; }
+    .crm-dash .cs-panel:hover { box-shadow:0 4px 16px rgba(0,71,171,.12); }
+
     /* Mini-grille de KPIs santé */
     .crm-health-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:.75rem; }
     .crm-health-cell { background:#fff; border:1px solid #dee2e6; border-radius:10px; padding:.7rem .8rem; }

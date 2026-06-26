@@ -50,6 +50,24 @@ class CrmTicketRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * Tickets ouverts (ouvert/en cours) les plus récents — aperçu du tableau de
+     * bord. SLA dépassé d'abord, puis les plus récents.
+     *
+     * @return CrmTicket[]
+     */
+    public function findOuverts(int $limit = 10): array
+    {
+        return $this->createQueryBuilder('t')
+            ->leftJoin('t.client', 'c')->addSelect('c')
+            ->where('t.statut IN (:ouverts)')
+            ->setParameter('ouverts', [CrmTicket::STATUT_OUVERT, CrmTicket::STATUT_EN_COURS])
+            ->orderBy('t.createdAt', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
+
     /** Nombre de tickets ouverts (ouvert/en cours) d'un client — critère santé. */
     public function countOpenForClient(int $clientId): int
     {
