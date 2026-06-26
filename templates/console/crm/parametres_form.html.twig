@@ -1,6 +1,64 @@
 {% extends 'console/form.html.twig' %}
 
 {% block console_form_body %}
+    <style>
+        .cs-help { border:1px solid #d7e2f7; background:#f5f8ff; border-radius:12px; margin-bottom:1.5rem; }
+        .cs-help > summary { cursor:pointer; list-style:none; padding:.85rem 1.1rem; font-weight:700; color:#0047AB;
+            display:flex; align-items:center; gap:.5rem; }
+        .cs-help > summary::-webkit-details-marker { display:none; }
+        .cs-help > summary::after { content:"▸"; margin-left:auto; transition:transform .2s ease; color:#6c757d; }
+        .cs-help[open] > summary::after { transform:rotate(90deg); }
+        .cs-help__body { padding:0 1.1rem 1rem; color:#333; font-size:.9rem; }
+        .cs-help__body h3 { font-size:.9rem; font-weight:700; color:#0047AB; margin:1rem 0 .35rem; }
+        .cs-help__body ul { margin:0; padding-left:1.2rem; }
+        .cs-help__body li { margin:.2rem 0; }
+        .cs-help__note { margin-top:.9rem; padding:.6rem .8rem; background:#fff3cd; color:#7a5b00; border-radius:8px; }
+    </style>
+
+    <details class="cs-help">
+        <summary>
+            {{ ux_icon(resolve_icon_name('action:information'), {height:'18px', width:'18px'}) }}
+            Comment configurer ces paramètres ?
+        </summary>
+        <div class="cs-help__body">
+            <p>Ces réglages pilotent deux mécanismes automatiques du CRM : le <strong>score de santé</strong>
+               de chaque client et les <strong>automatisations</strong> commerciales. Laisser un champ vide
+               rétablit sa valeur par défaut.</p>
+
+            <h3>Poids du score de santé</h3>
+            <p>Le score (/100) de chaque client est une <strong>somme pondérée de 6 critères</strong>,
+               chacun noté de 0 à 100 % puis multiplié par son poids. Augmentez le poids d'un critère
+               prioritaire et diminuez-en un autre&nbsp;: <strong>le total des poids doit rester à 100</strong>.</p>
+            <ul>
+                <li><strong>Engagement</strong> — récence d'activité (0 j = 100 %, ≥ 30 j = 0 %).</li>
+                <li><strong>Consommation</strong> — tokens consommés sur 30 jours (cible 500).</li>
+                <li><strong>Autonomie</strong> — jours de tokens restants au rythme actuel.</li>
+                <li><strong>Adoption</strong> — entreprises, invités et diversité d'entités utilisées.</li>
+                <li><strong>Monétisation</strong> — récence (60 %) et fréquence (40 %) des achats.</li>
+                <li><strong>Support</strong> — 100 %, moins 25 % par ticket ouvert.</li>
+            </ul>
+
+            <h3>Seuils de couleur</h3>
+            <p>Convertissent le score en pastille de couleur. Respectez l'ordre
+               <strong>Vert &gt; Jaune &gt; Orange</strong>&nbsp;: ≥ 75 vert (en bonne santé), 50-74 jaune
+               (à surveiller), 25-49 orange (à risque), &lt; 25 rouge (critique). Baissez-les pour être
+               plus indulgent, montez-les pour détecter les risques plus tôt.</p>
+
+            <h3>Automatisations</h3>
+            <ul>
+                <li><strong>Inactivité (jours)</strong> — au-delà, le client apparaît dans « Sans connexion »
+                    et une tâche de relance est créée.</li>
+                <li><strong>Solde bas (tokens)</strong> — sous ce solde, le client est signalé
+                    « presque à court de tokens ».</li>
+                <li><strong>Churn (jours)</strong> — un compte engagé inactif depuis N jours bascule en
+                    étape Churn. Gardez-le <strong>supérieur</strong> à l'inactivité (on relance d'abord).</li>
+            </ul>
+
+            <p class="cs-help__note">⚠ Point de vigilance&nbsp;: la somme des 6 poids doit faire 100, sinon
+               les seuils de couleur perdent leur sens.</p>
+        </div>
+    </details>
+
     <fieldset class="cs-fieldset">
         <legend class="cs-legend">
             {{ ux_icon(resolve_icon_name('action:analyser'), {height:'16px', width:'16px'}) }}
