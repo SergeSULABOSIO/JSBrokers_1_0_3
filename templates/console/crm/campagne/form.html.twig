@@ -1,0 +1,27 @@
+{% extends 'console/form.html.twig' %}
+
+{% block console_form_body %}
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('action:premium'), {height:'16px', width:'16px'}) }}
+            Le message
+        </legend>
+        <div class="row">
+            <div class="col-md">{{ form_row(form.nom) }}</div>
+            <div class="col-md">{{ form_row(form.type) }}</div>
+        </div>
+        {{ form_row(form.objet) }}
+        {{ form_row(form.message) }}
+    </fieldset>
+
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('action:filter'), {height:'16px', width:'16px'}) }}
+            Segment ciblé
+        </legend>
+        <div class="row">
+            <div class="col-md">{{ form_row(form.stages) }}</div>
+            <div class="col-md">{{ form_row(form.couleurs) }}</div>
+        </div>
+    </fieldset>
+{% endblock %}

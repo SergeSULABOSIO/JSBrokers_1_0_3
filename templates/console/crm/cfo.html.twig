@@ -5,6 +5,7 @@
 {% block console_body %}
 {{ include('console/crm/_styles.html.twig') }}
 
+<div class="crm-dash">
 <div class="cs-kpis">
     <div class="cs-kpi"><div class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('revenu'), {height:'24px', width:'24px'}) }}</div><div class="cs-kpi-body"><div class="cs-kpi-val">{{ kpis.revenuUsd|number_format(0,'.',' ') }} $</div><div class="cs-kpi-lbl">Revenu (TTC, {{ kpis.annee }})</div></div></div>
     <div class="cs-kpi"><div class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('type-revenu'), {height:'24px', width:'24px'}) }}</div><div class="cs-kpi-body"><div class="cs-kpi-val">{{ kpis.revenuHorsTaxe|number_format(0,'.',' ') }} $</div><div class="cs-kpi-lbl">Produit (HT)</div></div></div>
@@ -40,4 +41,5 @@
         </table>
     {% else %}<div class="cs-empty"><p>Aucune vente enregistrée.</p></div>{% endif %}
 </div>
+</div>{# /.crm-dash #}
 {% endblock %}

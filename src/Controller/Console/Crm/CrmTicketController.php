@@ -5,6 +5,7 @@ namespace App\Controller\Console\Crm;
 use App\Controller\Console\AbstractConsoleController;
 use App\Entity\Crm\CrmTicket;
 use App\Entity\Utilisateur;
+use App\Form\CrmTicketType;
 use App\Repository\Crm\CrmTicketRepository;
 use App\Repository\UtilisateurRepository;
 use Symfony\Component\HttpFoundation\Request;
@@ -50,39 +51,35 @@ class CrmTicketController extends AbstractConsoleController
     {
         $this->applyLangPreference($request, $localeSwitcher);
 
-        if ($request->isMethod('POST')) {
-            if (!$this->isCsrfTokenValid('crm-ticket-new', (string) $request->request->get('_token'))) {
-                throw $this->createAccessDeniedException('Jeton CSRF invalide.');
+        $ticket = new CrmTicket();
+        // Préselection du client depuis la fiche (?client=ID).
+        if ($preId = $request->query->getInt('client')) {
+            $client = $this->utilisateurRepository->find($preId);
+            if ($client instanceof Utilisateur) {
+                $ticket->setClient($client);
             }
-
-            $client = $this->utilisateurRepository->find((int) $request->request->get('client'));
-            $sujet = trim((string) $request->request->get('sujet', ''));
-
-            if ($client instanceof Utilisateur && $sujet !== '') {
-                $ticket = (new CrmTicket())
-                    ->setClient($client)
-                    ->setAgent($this->getUser() instanceof Utilisateur ? $this->getUser() : null)
-                    ->setSujet($sujet)
-                    ->setDescription(trim((string) $request->request->get('description', '')) ?: null)
-                    ->setCanal((string) $request->request->get('canal', 'email'))
-                    ->setPriorite((string) $request->request->get('priorite', CrmTicket::PRIORITE_NORMALE));
-                $this->em->persist($ticket);
-                $this->em->flush();
-                $this->addFlash('success', 'Ticket créé (' . $ticket->getReference() . ').');
-
-                return $this->redirectToRoute('console.crm.client.show', ['id' => $client->getId(), '_fragment' => 'tab-support']);
-            }
-
-            $this->addFlash('warning', 'Client et sujet sont requis.');
         }
 
-        $preClient = $request->query->getInt('client') ?: null;
+        $form = $this->createForm(CrmTicketType::class, $ticket);
+        $form->handleRequest($request);
 
-        return $this->render('console/crm/ticket/new.html.twig', [
-            'pageName'  => 'Nouveau ticket',
-            'pageIcon'  => 'feedback',
-            'clients'   => $this->utilisateurRepository->findAllCrm(500),
-            'preClient' => $preClient,
+        if ($form->isSubmitted() && $form->isValid()) {
+            $ticket->setAgent($this->getUser() instanceof Utilisateur ? $this->getUser() : null);
+            $this->em->persist($ticket);
+            $this->em->flush();
+            $this->addFlash('success', 'Ticket créé (' . $ticket->getReference() . ').');
+
+            return $this->redirectToRoute('console.crm.client.show', ['id' => $ticket->getClient()->getId(), '_fragment' => 'tab-support']);
+        }
+
+        return $this->render('console/crm/ticket/form.html.twig', [
+            'pageName'    => 'Nouveau ticket',
+            'formIcon'    => 'feedback',
+            'form'        => $form,
+            'backUrl'     => $this->generateUrl('console.crm.ticket.index'),
+            'backLabel'   => 'Support',
+            'submitLabel' => 'Créer le ticket',
+            'description' => 'Ouvrez une demande de support rattachée à un client. Le délai SLA est calculé selon la priorité.',
         ]);
     }
 

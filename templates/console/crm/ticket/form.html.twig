@@ -1,0 +1,26 @@
+{% extends 'console/form.html.twig' %}
+
+{# Formulaire ticket : sections (fieldsets) à légende icône, comme le coupon.
+   Le thème de champ (icône incrustée via data-icon) est appliqué par le parent. #}
+{% block console_form_body %}
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('client'), {height:'16px', width:'16px'}) }}
+            Client
+        </legend>
+        {{ form_row(form.client) }}
+    </fieldset>
+
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('feedback'), {height:'16px', width:'16px'}) }}
+            La demande
+        </legend>
+        {{ form_row(form.sujet) }}
+        <div class="row">
+            <div class="col-md">{{ form_row(form.priorite) }}</div>
+            <div class="col-md">{{ form_row(form.canal) }}</div>
+        </div>
+        {{ form_row(form.description) }}
+    </fieldset>
+{% endblock %}

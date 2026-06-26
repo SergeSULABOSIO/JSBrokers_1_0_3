@@ -5,6 +5,7 @@
 {% block console_body %}
 {{ include('console/crm/_styles.html.twig') }}
 
+<div class="crm-dash">
 <div class="cs-kpis">
     <div class="cs-kpi"><div class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('revenu'), {height:'24px', width:'24px'}) }}</div><div class="cs-kpi-body"><div class="cs-kpi-val">{{ kpis.revenuUsd|number_format(0,'.',' ') }} $</div><div class="cs-kpi-lbl">Revenu annuel</div></div></div>
     <div class="cs-kpi"><div class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('client'), {height:'24px', width:'24px'}) }}</div><div class="cs-kpi-body"><div class="cs-kpi-val">{{ kpis.nbClients }}</div><div class="cs-kpi-lbl">Clients payants</div></div></div>
@@ -20,4 +21,5 @@
     <h2 class="cs-panel-title">{{ chartVentesMois.titre }}</h2>
     <div class="cs-chart">{{ render_chart(chartVentesMois.chart) }}</div>
 </div>
+</div>{# /.crm-dash #}
 {% endblock %}

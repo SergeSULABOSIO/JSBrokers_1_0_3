@@ -1,0 +1,41 @@
+{% extends 'console/form.html.twig' %}
+
+{% block console_form_body %}
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('action:analyser'), {height:'16px', width:'16px'}) }}
+            Poids du score de santé (total conseillé : 100)
+        </legend>
+        <div class="row">
+            {% for child in form %}
+                {% if child.vars.name starts with 'w_' %}
+                    <div class="col-md-4">{{ form_row(child) }}</div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </fieldset>
+
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('action:check'), {height:'16px', width:'16px'}) }}
+            Seuils de couleur
+        </legend>
+        <div class="row">
+            <div class="col-md-4">{{ form_row(form.t_vert) }}</div>
+            <div class="col-md-4">{{ form_row(form.t_jaune) }}</div>
+            <div class="col-md-4">{{ form_row(form.t_orange) }}</div>
+        </div>
+    </fieldset>
+
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('action:alert'), {height:'16px', width:'16px'}) }}
+            Automatisations
+        </legend>
+        <div class="row">
+            <div class="col-md-4">{{ form_row(form.a_inactivite) }}</div>
+            <div class="col-md-4">{{ form_row(form.a_soldebas) }}</div>
+            <div class="col-md-4">{{ form_row(form.a_churn) }}</div>
+        </div>
+    </fieldset>
+{% endblock %}

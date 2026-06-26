@@ -335,19 +335,11 @@
 
     {# === Support === #}
     <div class="crm-pane" data-crm-tabs-target="pane" data-tab="support" id="tab-support">
-        <div class="cs-panel">
-            <h2 class="cs-panel-title">Nouveau ticket</h2>
-            <form method="post" action="{{ path('console.crm.ticket.new') }}">
-                <input type="hidden" name="_token" value="{{ csrf_token('crm-ticket-new') }}">
-                <input type="hidden" name="client" value="{{ client.id }}">
-                <div class="row g-2">
-                    <div class="col-sm-6"><input type="text" name="sujet" class="form-control" placeholder="Sujet *" required></div>
-                    <div class="col-sm-3"><select name="priorite" class="form-select"><option value="basse">Basse</option><option value="normale" selected>Normale</option><option value="haute">Haute</option><option value="urgente">Urgente</option></select></div>
-                    <div class="col-sm-3"><select name="canal" class="form-select"><option value="email">E-mail</option><option value="telephone">Téléphone</option><option value="chat">Chat</option></select></div>
-                    <div class="col-12"><textarea name="description" class="form-control" rows="2" placeholder="Description (optionnel)"></textarea></div>
-                </div>
-                <div class="mt-2"><button type="submit" class="btn btn-cobalt">Ouvrir le ticket</button></div>
-            </form>
+        <div class="cs-panel d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <span class="text-muted">Ouvrez une demande de support rattachée à ce client.</span>
+            <a href="{{ path('console.crm.ticket.new', {client: client.id}) }}" class="btn btn-sm btn-cobalt" data-action="click->top-progress#show">
+                {{ ux_icon(resolve_icon_name('action:add'), {height:'16px', width:'16px'}) }}<span class="ms-1">Nouveau ticket</span>
+            </a>
         </div>
         <div class="cs-panel">
             {% if tickets|length > 0 %}
