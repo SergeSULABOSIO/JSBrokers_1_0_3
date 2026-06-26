@@ -56,17 +56,24 @@ class CrmClientController extends AbstractConsoleController
         $this->applyLangPreference($request, $localeSwitcher);
 
         $q = trim((string) $request->query->get('q', ''));
-        $pagination = $this->utilisateurRepository->paginateCrm($request->query->getInt('page', 1), $q ?: null);
+        $type = $request->query->get('type') ?: null; // 'client' | 'prospect' | null
+        $pagination = $this->utilisateurRepository->paginateCrm($request->query->getInt('page', 1), $q ?: null, $type);
 
         // Synchronise les profils de la page affichée (création + score + étape).
         $profils = $this->crmSync->refreshMany($pagination->getItems());
 
+        // Statut client (au moins un achat) vs prospect, en un seul agrégat (pas de N+1).
+        $ids = array_map(static fn ($u) => (int) $u->getId(), $pagination->getItems());
+        $metrics = $this->purchaseRepository->metricsByUsers($ids);
+
         return $this->render('console/crm/client/index.html.twig', [
-            'pageName' => 'CRM — Clients',
+            'pageName' => 'CRM — Clients & prospects',
             'pageIcon' => 'client',
             'clients'  => $pagination,
             'profils'  => $profils,
+            'metrics'  => $metrics,
             'q'        => $q,
+            'type'     => $type,
         ]);
     }
 

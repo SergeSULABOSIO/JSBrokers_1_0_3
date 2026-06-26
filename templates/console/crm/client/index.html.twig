@@ -1,28 +1,42 @@
 {% extends 'console/base.html.twig' %}
 
-{% block console_subtitle %}<p>Tous les clients suivis par le CRM (du prospect au client fidèle). Étape de pipeline et score de santé calculés automatiquement.</p>{% endblock %}
+{% block console_subtitle %}<p>L'entonnoir suivi par le CRM (l'équipe interne est exclue). Filtrez par Clients (au moins un achat) ou Prospects. Étape et santé calculées automatiquement.</p>{% endblock %}
 
 {% block console_body %}
 {{ include('console/crm/_styles.html.twig') }}
 
 <div class="cs-panel">
+    <div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
+        {% for key, label in {'': 'Tous', client: 'Clients', prospect: 'Prospects'} %}
+            <a href="{{ path('console.crm.client.index', q ? {q: q, type: key} : {type: key}) }}"
+               class="cs-badge {{ (type|default('')) == key ? 'cs-badge--cobalt' : 'cs-badge--muted' }}" style="text-decoration:none;"
+               data-action="click->top-progress#show">{{ label }}</a>
+        {% endfor %}
+    </div>
+
     <form method="get" class="mb-3" data-action="submit->top-progress#show">
+        {% if type %}<input type="hidden" name="type" value="{{ type }}">{% endif %}
         <div class="cs-field" style="max-width:420px;">
             <span class="cs-field-icon">{{ ux_icon(resolve_icon_name('action:search'), {height:'18px', width:'18px'}) }}</span>
-            <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Rechercher un client (nom, e-mail)…">
+            <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Rechercher (nom, e-mail)…">
         </div>
     </form>
 
     {% if clients.getTotalItemCount > 0 %}
         <table class="cs-table">
-            <thead><tr><th>Client</th><th>Étape</th><th>Santé</th><th>Solde tokens</th><th>Inscrit</th><th style="text-align:right;">Actions</th></tr></thead>
+            <thead><tr><th>Compte</th><th>Type</th><th>Étape</th><th>Santé</th><th>Solde tokens</th><th>Inscrit</th><th style="text-align:right;">Actions</th></tr></thead>
             <tbody>
             {% for u in clients %}
                 {% set p = profils[u.id]|default(null) %}
+                {% set estClient = (metrics[u.id].count|default(0)) > 0 %}
                 <tr>
                     <td>
                         <a href="{{ path('console.crm.client.show', {id: u.id}) }}" class="fw-semibold text-decoration-none">{{ u.nom ?: u.email }}</a>
                         <div class="text-muted" style="font-size:.8rem;">{{ u.email }}</div>
+                    </td>
+                    <td>
+                        {% if estClient %}<span class="cs-badge cs-badge--ok">Client</span>
+                        {% else %}<span class="cs-badge cs-badge--muted">Prospect</span>{% endif %}
                     </td>
                     <td>
                         {% if p %}

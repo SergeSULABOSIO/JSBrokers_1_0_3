@@ -9,6 +9,10 @@
 {% block console_body %}
 {{ include('console/crm/_styles.html.twig') }}
 
+{# Le contrôleur englobe l'en-tête ET les onglets : les actions rapides (boutons)
+   doivent être dans la portée Stimulus pour piloter la bascule d'onglet. #}
+<div data-controller="crm-tabs">
+
 {# --- En-tête synthèse --- #}
 <div class="cs-panel">
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
@@ -39,7 +43,6 @@
     </div>
 </div>
 
-<div data-controller="crm-tabs">
     {# --- Barre d'onglets --- #}
     <nav class="crm-tabs" role="tablist">
         {% set onglets = {
