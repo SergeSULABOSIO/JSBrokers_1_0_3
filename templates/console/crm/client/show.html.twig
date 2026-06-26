@@ -308,16 +308,73 @@
                 </tbody>
             </table>
         </div>
+        <div class="cs-panel">
+            <h2 class="cs-panel-title">Recommandations</h2>
+            <ul class="mb-0">
+                {% for r in reco %}<li class="mb-1">{{ r }}</li>{% endfor %}
+            </ul>
+        </div>
+        {% if snapshots|length > 1 %}
+        <div class="cs-panel">
+            <h2 class="cs-panel-title">Tendance du score</h2>
+            <table class="cs-table">
+                <thead><tr><th>Date</th><th>Score</th></tr></thead>
+                <tbody>
+                {% for s in snapshots %}
+                    <tr><td>{{ s.capturedAt|format_datetime('short','none', locale: app.user.locale) }}</td>
+                        <td><span style="color:{{ crm_health_hex(s.couleur) }};font-weight:700;">{{ s.score }}</span></td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
     </div>
 
-    {# === Support (à venir) === #}
+    {# === Support === #}
     <div class="crm-pane" data-crm-tabs-target="pane" data-tab="support" id="tab-support">
-        <div class="cs-empty"><p>Module Support (tickets, SLA) — disponible dans une prochaine phase.</p></div>
+        <div class="cs-panel">
+            <h2 class="cs-panel-title">Nouveau ticket</h2>
+            <form method="post" action="{{ path('console.crm.ticket.new') }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('crm-ticket-new') }}">
+                <input type="hidden" name="client" value="{{ client.id }}">
+                <div class="row g-2">
+                    <div class="col-sm-6"><input type="text" name="sujet" class="form-control" placeholder="Sujet *" required></div>
+                    <div class="col-sm-3"><select name="priorite" class="form-select"><option value="basse">Basse</option><option value="normale" selected>Normale</option><option value="haute">Haute</option><option value="urgente">Urgente</option></select></div>
+                    <div class="col-sm-3"><select name="canal" class="form-select"><option value="email">E-mail</option><option value="telephone">Téléphone</option><option value="chat">Chat</option></select></div>
+                    <div class="col-12"><textarea name="description" class="form-control" rows="2" placeholder="Description (optionnel)"></textarea></div>
+                </div>
+                <div class="mt-2"><button type="submit" class="btn btn-cobalt">Ouvrir le ticket</button></div>
+            </form>
+        </div>
+        <div class="cs-panel">
+            {% if tickets|length > 0 %}
+                <table class="cs-table">
+                    <thead><tr><th>Réf.</th><th>Sujet</th><th>Priorité</th><th>Statut</th><th>SLA</th></tr></thead>
+                    <tbody>
+                    {% for t in tickets %}
+                        <tr>
+                            <td>{{ t.reference }}</td>
+                            <td>{{ t.sujet }}</td>
+                            <td>{{ t.priorite }}</td>
+                            <td>{{ t.statutLabel }}</td>
+                            <td>{% if t.slaDepasse %}<span class="cs-badge" style="background:#fde8e6;color:#c5221f;">Dépassé</span>{% elseif t.slaDueAt %}{{ t.slaDueAt|format_datetime('short','short', locale: app.user.locale) }}{% else %}—{% endif %}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}<div class="cs-empty"><p>Aucun ticket pour ce client.</p></div>{% endif %}
+        </div>
     </div>
 
-    {# === Marketing (à venir) === #}
+    {# === Marketing === #}
     <div class="crm-pane" data-crm-tabs-target="pane" data-tab="marketing" id="tab-marketing">
-        <div class="cs-empty"><p>Module Marketing (campagnes ciblées) — disponible dans une prochaine phase.</p></div>
+        <div class="cs-panel">
+            <p>Les campagnes se créent et se ciblent depuis la rubrique
+                <a href="{{ path('console.crm.campagne.index') }}">Marketing</a>.
+                Ce client est inclus dans une campagne dès qu'il correspond au segment
+                (étape de pipeline « {{ crm_stage_label(profil.etapePipeline) }} » /
+                santé « {{ crm_health_label(profil.scoreCouleur) }} »).</p>
+        </div>
     </div>
 </div>
 {% endblock %}

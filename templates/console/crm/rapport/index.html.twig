@@ -1,0 +1,24 @@
+{% extends 'console/base.html.twig' %}
+
+{% block console_subtitle %}<p>Rapports exploitables, exportables au format Excel.</p>{% endblock %}
+
+{% block console_body %}
+{{ include('console/crm/_styles.html.twig') }}
+<div class="cs-panel">
+    <table class="cs-table">
+        <thead><tr><th>Rapport</th><th style="text-align:right;">Export</th></tr></thead>
+        <tbody>
+        {% for type, label in rapports %}
+            <tr>
+                <td>{{ label }}</td>
+                <td style="text-align:right;">
+                    <a href="{{ path('console.crm.rapport.export', {type: type}) }}" class="btn btn-sm btn-cobalt">
+                        {{ ux_icon(resolve_icon_name('action:download'), {height:'16px', width:'16px'}) }}<span class="ms-1">Excel</span>
+                    </a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -7,10 +7,20 @@
 {% set route = app.request.attributes.get('_route')|default('') %}
 {% set groups = [
     { label: 'CRM', icon: 'piste', items: [
-        { r: 'console.crm.dashboard',  p: 'console.crm.dashboard',        icon: 'dashboard',  label: 'Tableau de bord' },
-        { r: 'console.crm.client.',    p: 'console.crm.client.index',     icon: 'client',     label: 'Clients' },
-        { r: 'console.crm.pipeline.',  p: 'console.crm.pipeline.index',   icon: 'piste',      label: 'Pipeline' },
-        { r: 'console.crm.entreprise.', p: 'console.crm.entreprise.index', icon: 'entreprise', label: 'Entreprises' },
+        { r: 'console.crm.dashboard',     p: 'console.crm.dashboard',         icon: 'dashboard',      label: 'Tableau de bord' },
+        { r: 'console.crm.client.',       p: 'console.crm.client.index',      icon: 'client',         label: 'Clients' },
+        { r: 'console.crm.pipeline.',     p: 'console.crm.pipeline.index',    icon: 'piste',          label: 'Pipeline' },
+        { r: 'console.crm.tache.',        p: 'console.crm.tache.index',       icon: 'tache',          label: 'Tâches' },
+        { r: 'console.crm.cs',            p: 'console.crm.cs',                icon: 'action:analyser', label: 'Customer Success' },
+        { r: 'console.crm.ticket.',       p: 'console.crm.ticket.index',      icon: 'feedback',       label: 'Support' },
+        { r: 'console.crm.campagne.',     p: 'console.crm.campagne.index',    icon: 'action:premium', label: 'Marketing' },
+        { r: 'console.crm.notification.', p: 'console.crm.notification.index', icon: 'action:alert',  label: 'Notifications' },
+        { r: 'console.crm.entreprise.',   p: 'console.crm.entreprise.index',  icon: 'entreprise',     label: 'Entreprises' },
+    ] },
+    { label: 'Pilotage', icon: 'dashboard', items: [
+        { r: 'console.crm.cfo',     p: 'console.crm.cfo',            icon: 'revenu',    label: 'CFO' },
+        { r: 'console.crm.ceo',     p: 'console.crm.ceo',            icon: 'dashboard', label: 'CEO' },
+        { r: 'console.crm.rapport.', p: 'console.crm.rapport.index', icon: 'document',  label: 'Rapports' },
     ] },
     { label: 'Comptes', icon: 'client', items: [
         { r: 'console.collaborateur.', p: 'console.collaborateur.index', icon: 'action:role', label: 'Collaborateurs' },
@@ -39,9 +49,11 @@
     </a>
 
     {% for g in groups %}
-        {# Groupe « Ventes » : le Plan tarifaire (super-admin) en fait partie. #}
+        {# Groupe « Ventes » : le Plan tarifaire (super-admin) en fait partie.
+           Groupe « CRM » : les Paramètres CRM (super-admin) en font partie. #}
         {% set isVentes = g.label == 'Ventes' %}
-        {% set gActive = (isVentes and route starts with 'console.plan.') %}
+        {% set isCrm = g.label == 'CRM' %}
+        {% set gActive = (isVentes and route starts with 'console.plan.') or (isCrm and route starts with 'console.crm.parametres.') %}
         {% for it in g.items %}
             {% if route starts with it.r %}{% set gActive = true %}{% endif %}
         {% endfor %}
@@ -67,6 +79,14 @@
                        data-action="click->top-progress#show" {% if planActive %}aria-current="page"{% endif %}>
                         {{ ux_icon(resolve_icon_name('action:settings'), {height: '18px', width: '18px'}) }}
                         <span>Plan tarifaire</span>
+                    </a>
+                {% endif %}
+                {% if isCrm and is_granted('ROLE_SUPER_ADMIN') %}
+                    {% set crmParamActive = route starts with 'console.crm.parametres.' %}
+                    <a href="{{ path('console.crm.parametres.index') }}" class="{{ crmParamActive ? 'is-active' }}"
+                       data-action="click->top-progress#show" {% if crmParamActive %}aria-current="page"{% endif %}>
+                        {{ ux_icon(resolve_icon_name('action:settings'), {height: '18px', width: '18px'}) }}
+                        <span>Paramètres CRM</span>
                     </a>
                 {% endif %}
             </div>

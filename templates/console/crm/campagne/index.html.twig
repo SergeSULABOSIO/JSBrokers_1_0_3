@@ -1,0 +1,45 @@
+{% extends 'console/base.html.twig' %}
+
+{% block console_subtitle %}<p>Campagnes ciblées (onboarding, recharge, réactivation, upsell) envoyées par e-mail.</p>{% endblock %}
+
+{% block console_actions %}
+    <a href="{{ path('console.crm.campagne.new') }}" class="btn btn-sm btn-cobalt" data-action="click->top-progress#show">
+        {{ ux_icon(resolve_icon_name('action:add'), {height:'18px', width:'18px'}) }}<span class="ms-1">Nouvelle campagne</span>
+    </a>
+{% endblock %}
+
+{% block console_body %}
+{{ include('console/crm/_styles.html.twig') }}
+<div class="cs-panel">
+    {% if campagnes.getTotalItemCount > 0 %}
+        <table class="cs-table">
+            <thead><tr><th>Nom</th><th>Type</th><th>Statut</th><th>Cibles</th><th>Envois</th><th style="text-align:right;">Action</th></tr></thead>
+            <tbody>
+            {% for c in campagnes %}
+                <tr>
+                    <td class="fw-semibold">{{ c.nom }}</td>
+                    <td>{{ c.typeLabel }}</td>
+                    <td>{% if c.statut == 'envoyee' %}<span class="cs-badge cs-badge--ok">Envoyée</span>{% else %}<span class="cs-badge cs-badge--muted">Brouillon</span>{% endif %}</td>
+                    <td>{{ c.nbCibles }}</td>
+                    <td>{{ c.nbEnvois }}</td>
+                    <td style="text-align:right;">
+                        {% if c.statut != 'envoyee' %}
+                            <form method="post" action="{{ path('console.crm.campagne.envoyer', {id: c.id}) }}" style="display:inline;"
+                                  data-controller="confirm-action" data-action="submit->confirm-action#request"
+                                  data-confirm-action-title-value="Envoyer la campagne"
+                                  data-confirm-action-body-value="Envoyer « {{ c.nom }} » à son segment ?">
+                                <input type="hidden" name="_token" value="{{ csrf_token('crm-campagne-envoyer-' ~ c.id) }}">
+                                <button type="submit" class="btn btn-sm btn-cobalt">{{ ux_icon(resolve_icon_name('invite'), {height:'15px', width:'15px'}) }} Envoyer</button>
+                            </form>
+                        {% else %}<span class="text-muted">{{ c.sentAt|format_datetime('short','none', locale: app.user.locale) }}</span>{% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <div class="cs-pagination">{{ knp_pagination_render(campagnes) }}</div>
+    {% else %}
+        <div class="cs-empty"><p>Aucune campagne. Créez votre première campagne ciblée.</p></div>
+    {% endif %}
+</div>
+{% endblock %}

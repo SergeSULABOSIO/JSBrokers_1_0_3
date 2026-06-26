@@ -1,0 +1,34 @@
+{% extends 'console/base.html.twig' %}
+
+{% block console_subtitle %}<p>Alertes internes générées par les automatisations CRM et les jalons clients.</p>{% endblock %}
+
+{% block console_actions %}
+    <form method="post" action="{{ path('console.crm.notification.read') }}">
+        <input type="hidden" name="_token" value="{{ csrf_token('crm-notif-read') }}">
+        <button type="submit" class="btn btn-sm btn-outline-secondary">{{ ux_icon(resolve_icon_name('action:check'), {height:'16px', width:'16px'}) }}<span class="ms-1">Tout marquer lu</span></button>
+    </form>
+{% endblock %}
+
+{% block console_body %}
+{{ include('console/crm/_styles.html.twig') }}
+<div class="cs-panel">
+    {% if notifications|length > 0 %}
+        <ul class="list-unstyled mb-0">
+            {% for n in notifications %}
+                {% set hex = n.niveau == 'alerte' ? '#c5221f' : (n.niveau == 'succes' ? '#137333' : '#0047AB') %}
+                <li class="d-flex gap-2 py-2" style="border-bottom:1px solid #f0f0f0;{{ not n.lu ? 'background:#f6f9ff;' }}">
+                    <span class="crm-dot" style="background:{{ hex }};margin-top:.4rem;"></span>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold">{{ n.titre }}</div>
+                        {% if n.message %}<div style="font-size:.88rem;">{{ n.message }}</div>{% endif %}
+                        <div class="text-muted" style="font-size:.78rem;">{{ n.createdAt|format_datetime('short','short', locale: app.user.locale) }}</div>
+                    </div>
+                    {% if not n.lu %}<span class="cs-badge cs-badge--cobalt">Nouveau</span>{% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <div class="cs-empty"><p>Aucune notification.</p></div>
+    {% endif %}
+</div>
+{% endblock %}

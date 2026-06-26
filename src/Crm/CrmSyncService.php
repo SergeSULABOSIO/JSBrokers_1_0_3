@@ -5,6 +5,7 @@ namespace App\Crm;
 use App\Entity\Crm\CrmProfil;
 use App\Entity\Utilisateur;
 use App\Repository\Crm\CrmProfilRepository;
+use App\Repository\Crm\CrmTicketRepository;
 use App\Repository\InviteRepository;
 use App\Repository\TokenConsumptionRepository;
 use App\Repository\TokenPurchaseRepository;
@@ -26,6 +27,7 @@ class CrmSyncService
         private TokenPurchaseRepository $purchaseRepository,
         private TokenConsumptionRepository $consumptionRepository,
         private InviteRepository $inviteRepository,
+        private CrmTicketRepository $ticketRepository,
         private CrmPipelineService $pipeline,
         private CrmHealthScoreService $health,
     ) {
@@ -77,7 +79,7 @@ class CrmSyncService
             'distinctEntites'   => $this->consumptionRepository->countDistinctEntitesForProprietaire($uid),
             'paidTokens'        => $user->getPaidTokens(),
             'daysSinceCreation' => $user->getCreatedAt() ? (int) $user->getCreatedAt()->diff($now)->days : 0,
-            'openTickets'       => 0, // alimenté par le module Support (phase ultérieure)
+            'openTickets'       => $this->ticketRepository->countOpenForClient($uid),
         ];
     }
 

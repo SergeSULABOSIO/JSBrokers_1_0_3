@@ -1,0 +1,53 @@
+{% extends 'console/base.html.twig' %}
+
+{% block console_subtitle %}<p>Tickets de support des clients : réception, suivi, SLA.</p>{% endblock %}
+
+{% block console_actions %}
+    <a href="{{ path('console.crm.ticket.new') }}" class="btn btn-sm btn-cobalt" data-action="click->top-progress#show">
+        {{ ux_icon(resolve_icon_name('action:add'), {height:'18px', width:'18px'}) }}<span class="ms-1">Nouveau ticket</span>
+    </a>
+{% endblock %}
+
+{% block console_body %}
+{{ include('console/crm/_styles.html.twig') }}
+
+<div class="cs-panel">
+    <div class="mb-3 d-flex flex-wrap gap-2">
+        <a href="{{ path('console.crm.ticket.index') }}" class="cs-badge {{ statut is null ? 'cs-badge--cobalt' : 'cs-badge--muted' }}" style="text-decoration:none;">Tous</a>
+        {% for key, label in {ouvert:'Ouvert', en_cours:'En cours', resolu:'Résolu', clos:'Clos'} %}
+            <a href="{{ path('console.crm.ticket.index', {statut: key}) }}" class="cs-badge {{ statut == key ? 'cs-badge--cobalt' : 'cs-badge--muted' }}" style="text-decoration:none;">{{ label }} ({{ compteurs[key]|default(0) }})</a>
+        {% endfor %}
+    </div>
+
+    {% if tickets.getTotalItemCount > 0 %}
+        <table class="cs-table">
+            <thead><tr><th>Réf.</th><th>Client</th><th>Sujet</th><th>Priorité</th><th>SLA</th><th>Statut</th><th style="text-align:right;">Action</th></tr></thead>
+            <tbody>
+            {% for t in tickets %}
+                <tr>
+                    <td>{{ t.reference }}</td>
+                    <td>{% if t.client %}<a href="{{ path('console.crm.client.show', {id: t.client.id}) }}">{{ t.client.nom ?: t.client.email }}</a>{% else %}—{% endif %}</td>
+                    <td>{{ t.sujet }}</td>
+                    <td>{{ t.priorite }}</td>
+                    <td>{% if t.slaDepasse %}<span class="cs-badge" style="background:#fde8e6;color:#c5221f;">Dépassé</span>{% elseif t.slaDueAt %}{{ t.slaDueAt|format_datetime('short','short', locale: app.user.locale) }}{% else %}—{% endif %}</td>
+                    <td>{{ t.statutLabel }}</td>
+                    <td style="text-align:right;">
+                        <form method="post" action="{{ path('console.crm.ticket.statut', {id: t.id}) }}" class="d-inline-flex gap-1">
+                            <input type="hidden" name="_token" value="{{ csrf_token('crm-ticket-statut-' ~ t.id) }}">
+                            <select name="statut" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+                                {% for key, label in {ouvert:'Ouvert', en_cours:'En cours', resolu:'Résolu', clos:'Clos'} %}
+                                    <option value="{{ key }}" {{ t.statut == key ? 'selected' }}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <div class="cs-pagination">{{ knp_pagination_render(tickets) }}</div>
+    {% else %}
+        <div class="cs-empty"><p>Aucun ticket.</p></div>
+    {% endif %}
+</div>
+{% endblock %}

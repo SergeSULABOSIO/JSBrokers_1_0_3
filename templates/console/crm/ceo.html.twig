@@ -1,0 +1,23 @@
+{% extends 'console/base.html.twig' %}
+
+{% block console_subtitle %}<p>KPI stratégiques de la plateforme — année {{ kpis.annee }}.</p>{% endblock %}
+
+{% block console_body %}
+{{ include('console/crm/_styles.html.twig') }}
+
+<div class="cs-kpis">
+    <div class="cs-kpi"><div class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('revenu'), {height:'24px', width:'24px'}) }}</div><div class="cs-kpi-body"><div class="cs-kpi-val">{{ kpis.revenuUsd|number_format(0,'.',' ') }} $</div><div class="cs-kpi-lbl">Revenu annuel</div></div></div>
+    <div class="cs-kpi"><div class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('client'), {height:'24px', width:'24px'}) }}</div><div class="cs-kpi-body"><div class="cs-kpi-val">{{ kpis.nbClients }}</div><div class="cs-kpi-lbl">Clients payants</div></div></div>
+    <div class="cs-kpi"><div class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('utilisateur'), {height:'24px', width:'24px'}) }}</div><div class="cs-kpi-body"><div class="cs-kpi-val">{{ kpis.tauxConversion }} %</div><div class="cs-kpi-lbl">Conversion freemium</div></div></div>
+    <div class="cs-kpi"><div class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('action:renew'), {height:'24px', width:'24px'}) }}</div><div class="cs-kpi-body"><div class="cs-kpi-val">{{ kpis.saas.retention|number_format(1,'.',' ') }} %</div><div class="cs-kpi-lbl">Rétention</div></div></div>
+    <div class="cs-kpi"><div class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('action:premium'), {height:'24px', width:'24px'}) }}</div><div class="cs-kpi-body"><div class="cs-kpi-val">{{ kpis.finance.rentabilite|number_format(1,'.',' ') }} %</div><div class="cs-kpi-lbl">Rentabilité</div></div></div>
+    <div class="cs-kpi"><div class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('feedback'), {height:'24px', width:'24px'}) }}</div><div class="cs-kpi-body"><div class="cs-kpi-val">{{ scoreMoyen }}/100</div><div class="cs-kpi-lbl">Santé moyenne</div></div></div>
+    <div class="cs-kpi"><div class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('entreprise'), {height:'24px', width:'24px'}) }}</div><div class="cs-kpi-body"><div class="cs-kpi-val">{{ kpis.nbEntreprises }}</div><div class="cs-kpi-lbl">Entreprises</div></div></div>
+    <div class="cs-kpi"><div class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('action:cart'), {height:'24px', width:'24px'}) }}</div><div class="cs-kpi-body"><div class="cs-kpi-val">{{ kpis.tokensVendus|number_format(0,'.',' ') }}</div><div class="cs-kpi-lbl">Tokens vendus</div></div></div>
+</div>
+
+<div class="cs-panel cs-panel--flex">
+    <h2 class="cs-panel-title">{{ chartVentesMois.titre }}</h2>
+    <div class="cs-chart">{{ render_chart(chartVentesMois.chart) }}</div>
+</div>
+{% endblock %}
