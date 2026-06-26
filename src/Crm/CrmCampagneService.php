@@ -32,15 +32,24 @@ class CrmCampagneService
     }
 
     /**
-     * Envoie la campagne à son segment. Idempotent au niveau métier : une campagne
-     * déjà envoyée n'est pas renvoyée.
+     * Envoie la campagne à son segment. Idempotent par défaut : une campagne déjà
+     * envoyée n'est pas renvoyée — sauf relance explicite ($relance = true), qui
+     * repart d'un envoi propre (anciennes cibles supprimées).
      *
      * @return int Nombre d'e-mails envoyés
      */
-    public function send(CrmCampagne $campagne): int
+    public function send(CrmCampagne $campagne, bool $relance = false): int
     {
-        if ($campagne->getStatut() === CrmCampagne::STATUT_ENVOYEE) {
+        if (!$relance && $campagne->getStatut() === CrmCampagne::STATUT_ENVOYEE) {
             return 0;
+        }
+
+        // Relance : on efface les cibles du précédent envoi pour repartir propre.
+        if ($relance) {
+            $this->em->createQuery('DELETE FROM App\Entity\Crm\CrmCampagneCible c WHERE c.campagne = :c')
+                ->setParameter('c', $campagne)
+                ->execute();
+            $campagne->getCibles()->clear();
         }
 
         $segment = $campagne->getSegmentRegles();

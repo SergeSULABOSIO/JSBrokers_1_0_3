@@ -1,0 +1,14 @@
+{# Rend un choix étendu (cases à cocher) d'un segment de campagne, avec un badge
+   par option = nombre de clients/prospects dans ce segment (taille de la cible).
+   Variables : field (champ de formulaire étendu), counts (map valeur => nombre). #}
+<label class="form-label fw-semibold mb-2">{{ field.vars.label }}</label>
+<div class="crm-seg">
+    {% for child in field %}
+        {% set n = counts[child.vars.value]|default(0) %}
+        <div class="crm-seg__item">
+            {{ form_widget(child) }}
+            <span class="cs-badge {{ n > 0 ? 'cs-badge--cobalt' : 'cs-badge--muted' }} crm-seg__badge"
+                  title="{{ n }} client(s)/prospect(s) dans ce segment">{{ n }}</span>
+        </div>
+    {% endfor %}
+</div>

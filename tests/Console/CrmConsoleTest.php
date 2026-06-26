@@ -527,6 +527,92 @@ class CrmConsoleTest extends WebTestCase
         $this->assertResponseRedirects('/console/crm/tickets');
     }
 
+    public function testCampagneFormShowsSegmentSizeBadges(): void
+    {
+        // Profil synchronisé → le client compte dans un segment (étape + couleur).
+        static::getContainer()->get(CrmSyncService::class)->refresh($this->user(self::CLIENT));
+
+        $this->client->loginUser($this->user(self::ADMIN));
+        $crawler = $this->client->request('GET', '/console/crm/campagnes/new');
+        $this->assertResponseIsSuccessful();
+
+        // Un badge de taille par segment : 9 étapes + 4 couleurs de santé.
+        $badges = $crawler->filter('.crm-seg__badge');
+        $this->assertGreaterThanOrEqual(13, $badges->count(), 'Chaque segment doit afficher un badge de taille.');
+
+        // Au moins un client/prospect compté dans un segment (le client synchronisé).
+        $total = 0;
+        foreach ($badges as $b) {
+            $total += (int) trim($b->textContent);
+        }
+        $this->assertGreaterThanOrEqual(1, $total, 'Au moins un client/prospect doit être compté dans un segment.');
+    }
+
+    public function testCampagneEditPrefillsSegmentAndUpdates(): void
+    {
+        $campagne = (new \App\Entity\Crm\CrmCampagne())
+            ->setNom('Avant')
+            ->setType(\App\Entity\Crm\CrmCampagne::TYPE_ONBOARDING)
+            ->setObjet('Objet initial')
+            ->setMessage('Message initial')
+            ->setSegmentRegles(['stages' => ['prospect'], 'couleurs' => []]);
+        $this->em()->persist($campagne);
+        $this->em()->flush();
+        $id = $campagne->getId();
+
+        $this->client->loginUser($this->user(self::ADMIN));
+        $crawler = $this->client->request('GET', '/console/crm/campagnes/' . $id . '/edit');
+        $this->assertResponseIsSuccessful();
+
+        // Pré-remplissage : la case « Prospect » est cochée.
+        $this->assertNotNull(
+            $crawler->filter('input[type=checkbox][value="prospect"]')->attr('checked'),
+            'L\'étape enregistrée doit être pré-cochée à l\'édition.',
+        );
+
+        $form = $crawler->selectButton('Enregistrer les modifications')->form();
+        $form['crm_campagne[nom]'] = 'Après';
+        $this->client->submit($form);
+        $this->assertResponseRedirects('/console/crm/campagnes');
+
+        $this->em()->clear();
+        $reloaded = $this->em()->getRepository(\App\Entity\Crm\CrmCampagne::class)->find($id);
+        $this->assertSame('Après', $reloaded->getNom());
+        $this->assertContains('prospect', $reloaded->getSegmentRegles()['stages'], 'Le segment doit être conservé.');
+    }
+
+    public function testCampagneRelancerResendsSentCampaign(): void
+    {
+        static::getContainer()->get(CrmSyncService::class)->refresh($this->user(self::CLIENT));
+
+        $campagne = (new \App\Entity\Crm\CrmCampagne())
+            ->setNom('Déjà envoyée')
+            ->setType(\App\Entity\Crm\CrmCampagne::TYPE_RECHARGE)
+            ->setObjet('Recharge')
+            ->setMessage('Pensez à recharger.')
+            ->setSegmentRegles(['stages' => [], 'couleurs' => []]) // tous les clients
+            ->setStatut(\App\Entity\Crm\CrmCampagne::STATUT_ENVOYEE)
+            ->setSentAt(new \DateTimeImmutable('-1 day'));
+        $this->em()->persist($campagne);
+        $this->em()->flush();
+        $id = $campagne->getId();
+
+        $this->client->loginUser($this->user(self::ADMIN));
+        $crawler = $this->client->request('GET', '/console/crm/campagnes');
+        $this->assertResponseIsSuccessful();
+
+        // Le bouton « Relancer » est présent pour une campagne déjà envoyée.
+        $form = $crawler->filter('form[action$="/campagnes/' . $id . '/relancer"]')->form();
+        $this->client->submit($form);
+        $this->assertResponseRedirects('/console/crm/campagnes');
+
+        // La relance a recalculé les cibles (segment = tous → ≥ 1 client synchronisé).
+        $this->em()->clear();
+        $reloaded = $this->em()->getRepository(\App\Entity\Crm\CrmCampagne::class)->find($id);
+        $this->assertSame(\App\Entity\Crm\CrmCampagne::STATUT_ENVOYEE, $reloaded->getStatut());
+        $this->assertGreaterThanOrEqual(1, $reloaded->getNbCibles(), 'La relance doit recibler le segment.');
+    }
+
     public function testPipelineDerivationLogic(): void
     {
         /** @var CrmPipelineService $pipe */
