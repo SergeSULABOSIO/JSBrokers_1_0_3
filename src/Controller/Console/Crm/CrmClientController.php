@@ -66,14 +66,18 @@ class CrmClientController extends AbstractConsoleController
         $ids = array_map(static fn ($u) => (int) $u->getId(), $pagination->getItems());
         $metrics = $this->purchaseRepository->metricsByUsers($ids);
 
+        // Comptes qui sont AUSSI invités (collaborateurs) dans des entreprises tierces.
+        $invitedIn = $this->inviteRepository->guestMembershipCountByUsers($ids);
+
         return $this->render('console/crm/client/index.html.twig', [
-            'pageName' => 'CRM — Clients & prospects',
-            'pageIcon' => 'client',
-            'clients'  => $pagination,
-            'profils'  => $profils,
-            'metrics'  => $metrics,
-            'q'        => $q,
-            'type'     => $type,
+            'pageName'  => 'CRM — Clients & prospects',
+            'pageIcon'  => 'client',
+            'clients'   => $pagination,
+            'profils'   => $profils,
+            'metrics'   => $metrics,
+            'invitedIn' => $invitedIn,
+            'q'         => $q,
+            'type'      => $type,
         ]);
     }
 

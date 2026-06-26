@@ -92,6 +92,12 @@ class CrmConsoleTest extends WebTestCase
     {
         $conn = $this->em()->getConnection();
         $emails = "(SELECT id FROM utilisateur WHERE email IN ('" . self::ADMIN . "','" . self::SUPER . "','" . self::CLIENT . "','" . self::PLAIN . "'))";
+        // Les invitations référencent utilisateur et entreprise (sans ON DELETE) :
+        // on les retire en premier pour ne pas violer les contraintes.
+        $conn->executeStatement(
+            "DELETE FROM invite WHERE utilisateur_id IN $emails
+             OR entreprise_id IN (SELECT e.id FROM (SELECT id FROM entreprise WHERE utilisateur_id IN $emails) e)"
+        );
         // L'entreprise référence l'utilisateur sans ON DELETE : on la retire d'abord
         // (la consommation liée est supprimée en cascade). Le reste part avec l'utilisateur.
         $conn->executeStatement("DELETE FROM entreprise WHERE utilisateur_id IN $emails");
@@ -525,6 +531,34 @@ class CrmConsoleTest extends WebTestCase
         $form['statut'] = \App\Entity\Crm\CrmTicket::STATUT_EN_COURS;
         $this->client->submit($form);
         $this->assertResponseRedirects('/console/crm/tickets');
+    }
+
+    public function testClientListFlagsAccountsThatAreAlsoGuests(): void
+    {
+        $client = $this->user(self::CLIENT);
+        $ent = $this->em()->getRepository(Entreprise::class)->findOneBy(['utilisateur' => $client]);
+        $plain = $this->user(self::PLAIN);
+
+        // PLAIN est aussi invité comme collaborateur dans l'entreprise du client.
+        $invite = (new \App\Entity\Invite())->setUtilisateur($plain)->setEntreprise($ent)->setNom('Collaborateur');
+        $this->em()->persist($invite);
+        $this->em()->flush();
+
+        $this->client->loginUser($this->user(self::ADMIN));
+        $crawler = $this->client->request('GET', '/console/crm/clients');
+        $this->assertResponseIsSuccessful();
+
+        // La ligne de PLAIN porte le badge « Invité » ; pas celle du client.
+        $plainRow = $crawler->filter('tr')->reduce(
+            fn ($node) => str_contains($node->text(), $plain->getEmail()),
+        );
+        $this->assertSame(1, $plainRow->count(), 'La ligne du compte invité doit exister.');
+        $this->assertStringContainsString('Invité', $plainRow->text(), 'Le compte aussi invité doit être signalé.');
+
+        $clientRow = $crawler->filter('tr')->reduce(
+            fn ($node) => str_contains($node->text(), $client->getEmail()),
+        );
+        $this->assertStringNotContainsString('Invité', $clientRow->text(), 'Le client non invité ne doit pas porter le badge.');
     }
 
     public function testCampagneFormShowsSegmentSizeBadges(): void

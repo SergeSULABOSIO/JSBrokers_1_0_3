@@ -154,6 +154,38 @@ class InviteRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * Parmi des comptes donnés, ceux qui sont AUSSI invités (collaborateurs) dans
+     * au moins une entreprise, avec le nombre d'entreprises concernées. Batché
+     * (un seul agrégat, pas de N+1) pour la liste CRM Clients & prospects.
+     *
+     * @param int[] $userIds
+     *
+     * @return array<int,int> [userId => nb d'entreprises où il est invité]
+     */
+    public function guestMembershipCountByUsers(array $userIds): array
+    {
+        if ($userIds === []) {
+            return [];
+        }
+
+        $rows = $this->createQueryBuilder('i')
+            ->select('IDENTITY(i.utilisateur) AS uid, COUNT(DISTINCT e.id) AS nb')
+            ->join('i.entreprise', 'e')
+            ->where('i.utilisateur IN (:ids)')
+            ->setParameter('ids', $userIds)
+            ->groupBy('i.utilisateur')
+            ->getQuery()
+            ->getArrayResult();
+
+        $map = [];
+        foreach ($rows as $r) {
+            $map[(int) $r['uid']] = (int) $r['nb'];
+        }
+
+        return $map;
+    }
+
     public function paginateForEntreprise(int $idEntreprise, int $page): PaginationInterface
     {
         return $this->paginator->paginate(

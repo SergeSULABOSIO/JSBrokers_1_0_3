@@ -32,6 +32,13 @@
                 <tr>
                     <td>
                         <a href="{{ path('console.crm.client.show', {id: u.id}) }}" class="fw-semibold text-decoration-none">{{ u.nom ?: u.email }}</a>
+                        {% set nbInvite = invitedIn[u.id]|default(0) %}
+                        {% if nbInvite > 0 %}
+                            <span class="cs-badge cs-badge--cobalt ms-1" style="font-size:.68rem;"
+                                  title="Ce compte est aussi invité comme collaborateur dans {{ nbInvite }} entreprise{{ nbInvite > 1 ? 's' }}">
+                                {{ ux_icon(resolve_icon_name('invite'), {height:'12px', width:'12px'}) }} Invité{% if nbInvite > 1 %} · {{ nbInvite }}{% endif %}
+                            </span>
+                        {% endif %}
                         <div class="text-muted" style="font-size:.8rem;">{{ u.email }}</div>
                     </td>
                     <td>
