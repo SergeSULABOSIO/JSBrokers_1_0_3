@@ -1,6 +1,15 @@
 {% extends 'console/form.html.twig' %}
 
 {% block console_form_body %}
+    <style>
+        .crm-seg { display:flex; flex-direction:column; gap:.1rem; }
+        .crm-seg__item { display:flex; align-items:center; justify-content:space-between; gap:.75rem;
+            padding:.2rem .4rem; border-radius:8px; }
+        .crm-seg__item:hover { background:#f5f8ff; }
+        .crm-seg__item .form-check { margin:0; }
+        .crm-seg__badge { flex:0 0 auto; min-width:2.1rem; text-align:center; }
+    </style>
+
     <fieldset class="cs-fieldset">
         <legend class="cs-legend">
             {{ ux_icon(resolve_icon_name('action:premium'), {height:'16px', width:'16px'}) }}
@@ -19,9 +28,10 @@
             {{ ux_icon(resolve_icon_name('action:filter'), {height:'16px', width:'16px'}) }}
             Segment ciblé
         </legend>
+        <p class="text-muted small mb-3">Le badge indique le nombre de clients/prospects dans chaque segment : vous voyez la taille de la cible avant d'enregistrer.</p>
         <div class="row">
-            <div class="col-md">{{ form_row(form.stages) }}</div>
-            <div class="col-md">{{ form_row(form.couleurs) }}</div>
+            <div class="col-md">{{ include('console/crm/campagne/_segment_choice.html.twig', {field: form.stages, counts: stageCounts}) }}</div>
+            <div class="col-md">{{ include('console/crm/campagne/_segment_choice.html.twig', {field: form.couleurs, counts: colorCounts}) }}</div>
         </div>
     </fieldset>
 {% endblock %}

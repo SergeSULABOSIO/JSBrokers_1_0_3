@@ -23,15 +23,29 @@
                     <td>{{ c.nbCibles }}</td>
                     <td>{{ c.nbEnvois }}</td>
                     <td style="text-align:right;">
-                        {% if c.statut != 'envoyee' %}
-                            <form method="post" action="{{ path('console.crm.campagne.envoyer', {id: c.id}) }}" style="display:inline;"
-                                  data-controller="confirm-action" data-action="submit->confirm-action#request"
-                                  data-confirm-action-title-value="Envoyer la campagne"
-                                  data-confirm-action-body-value="Envoyer « {{ c.nom }} » à son segment ?">
-                                <input type="hidden" name="_token" value="{{ csrf_token('crm-campagne-envoyer-' ~ c.id) }}">
-                                <button type="submit" class="btn btn-sm btn-cobalt">{{ ux_icon(resolve_icon_name('invite'), {height:'15px', width:'15px'}) }} Envoyer</button>
-                            </form>
-                        {% else %}<span class="text-muted">{{ c.sentAt|format_datetime('short','none', locale: app.user.locale) }}</span>{% endif %}
+                        <div class="d-inline-flex align-items-center gap-1 justify-content-end flex-wrap">
+                            <a href="{{ path('console.crm.campagne.edit', {id: c.id}) }}" class="btn btn-sm btn-outline-secondary" data-action="click->top-progress#show">
+                                {{ ux_icon(resolve_icon_name('action:edit'), {height:'15px', width:'15px'}) }} Éditer
+                            </a>
+                            {% if c.statut != 'envoyee' %}
+                                <form method="post" action="{{ path('console.crm.campagne.envoyer', {id: c.id}) }}" style="display:inline;"
+                                      data-controller="confirm-action" data-action="submit->confirm-action#request"
+                                      data-confirm-action-title-value="Envoyer la campagne"
+                                      data-confirm-action-body-value="Envoyer « {{ c.nom }} » à son segment ?">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('crm-campagne-envoyer-' ~ c.id) }}">
+                                    <button type="submit" class="btn btn-sm btn-cobalt">{{ ux_icon(resolve_icon_name('invite'), {height:'15px', width:'15px'}) }} Envoyer</button>
+                                </form>
+                            {% else %}
+                                <span class="text-muted small me-1" title="Dernier envoi">{{ c.sentAt|format_datetime('short','none', locale: app.user.locale) }}</span>
+                                <form method="post" action="{{ path('console.crm.campagne.relancer', {id: c.id}) }}" style="display:inline;"
+                                      data-controller="confirm-action" data-action="submit->confirm-action#request"
+                                      data-confirm-action-title-value="Relancer la campagne"
+                                      data-confirm-action-body-value="Renvoyer « {{ c.nom }} » à son segment (les destinataires actuels seront recontactés) ?">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('crm-campagne-relancer-' ~ c.id) }}">
+                                    <button type="submit" class="btn btn-sm btn-cobalt">{{ ux_icon(resolve_icon_name('action:refresh'), {height:'15px', width:'15px'}) }} Relancer</button>
+                                </form>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
             {% endfor %}
