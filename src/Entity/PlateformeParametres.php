@@ -88,12 +88,31 @@ class PlateformeParametres
     #[ORM\Column(nullable: true)]
     private ?array $crmAutomation = null;
 
+    /**
+     * Dernière exécution des automatisations CRM planifiées (déclenchement
+     * paresseux throttlé). NULL = jamais exécutées.
+     */
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $crmLastAutoRunAt = null;
+
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $updatedAt = null;
 
     public function getId(): ?int
     {
         return $this->id;
+    }
+
+    public function getCrmLastAutoRunAt(): ?\DateTimeImmutable
+    {
+        return $this->crmLastAutoRunAt;
+    }
+
+    public function setCrmLastAutoRunAt(?\DateTimeImmutable $crmLastAutoRunAt): static
+    {
+        $this->crmLastAutoRunAt = $crmLastAutoRunAt;
+
+        return $this;
     }
 
     public function getCrmHealthWeights(): ?array

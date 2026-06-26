@@ -100,6 +100,9 @@ class CrmConsoleTest extends WebTestCase
             ['e' => [self::ADMIN, self::SUPER, self::CLIENT, self::PLAIN]],
             ['e' => \Doctrine\DBAL\ArrayParameterType::STRING],
         );
+        // Réinitialise le singleton (dont l'horodatage du heartbeat) pour des
+        // tests déterministes ; getSingleton() le recrée au besoin.
+        $conn->executeStatement('DELETE FROM plateforme_parametres');
     }
 
     private function user(string $email): Utilisateur
@@ -262,6 +265,41 @@ class CrmConsoleTest extends WebTestCase
 
         $taches = static::getContainer()->get(\App\Repository\Crm\CrmTacheRepository::class)->findForClient($this->user(self::CLIENT));
         $this->assertNotEmpty($taches, 'Une tâche de relance doit être créée pour un client inactif.');
+    }
+
+    public function testHeartbeatRunsMaintenanceAfterConsoleVisit(): void
+    {
+        $this->client->loginUser($this->user(self::ADMIN));
+
+        // L'accès à une page CRM déclenche, après réponse (kernel.terminate), la
+        // routine quotidienne si elle est due (ici : jamais exécutée → due).
+        $this->client->request('GET', '/console/crm');
+        $this->assertResponseIsSuccessful();
+
+        $lastRun = $this->em()->getConnection()->fetchOne('SELECT crm_last_auto_run_at FROM plateforme_parametres');
+        $this->assertNotEmpty($lastRun, 'Le heartbeat doit horodater l\'exécution après la visite.');
+
+        // La routine a synchronisé les profils et capturé un snapshot du client.
+        $snapshots = (int) $this->em()->getConnection()->fetchOne(
+            'SELECT COUNT(*) FROM crm_health_snapshot s JOIN utilisateur u ON u.id = s.utilisateur_id WHERE u.email = :e',
+            ['e' => self::CLIENT],
+        );
+        $this->assertGreaterThanOrEqual(1, $snapshots, 'Un snapshot de santé doit avoir été capturé.');
+    }
+
+    public function testHeartbeatIsThrottled(): void
+    {
+        $this->client->loginUser($this->user(self::ADMIN));
+
+        $this->client->request('GET', '/console/crm');
+        $first = $this->em()->getConnection()->fetchOne('SELECT crm_last_auto_run_at FROM plateforme_parametres');
+
+        // Deuxième visite immédiate : la fenêtre de 24 h n'est pas écoulée → pas de
+        // nouvelle exécution (l'horodatage reste identique).
+        $this->client->request('GET', '/console/crm');
+        $second = $this->em()->getConnection()->fetchOne('SELECT crm_last_auto_run_at FROM plateforme_parametres');
+
+        $this->assertSame($first, $second, 'La routine ne doit pas se réexécuter dans la fenêtre de throttle.');
     }
 
     public function testPipelineDerivationLogic(): void
