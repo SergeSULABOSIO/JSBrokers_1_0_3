@@ -107,16 +107,28 @@ class UtilisateurRepository extends ServiceEntityRepository implements PasswordU
     }
 
     /**
-     * Liste paginée de TOUS les comptes « clients » du CRM : utilisateurs non
-     * agents (payants ou prospects gratuits), filtrables par recherche libre.
-     * Le CRM suit l'ensemble de l'entonnoir, du prospect au client fidèle.
+     * Liste paginée des comptes suivis par le CRM : utilisateurs non agents
+     * (l'équipe interne est exclue). Le CRM couvre tout l'entonnoir ; le filtre
+     * `type` permet de cibler les clients payants (au moins un achat) ou les
+     * prospects (aucun achat). Recherche libre par nom/e-mail.
+     *
+     * @param string|null $type 'client' | 'prospect' | null (tous)
      */
-    public function paginateCrm(int $page, ?string $q = null): PaginationInterface
+    public function paginateCrm(int $page, ?string $q = null, ?string $type = null): PaginationInterface
     {
         $qb = $this->regularUsersQb()->orderBy('u.id', 'DESC');
 
         if ($q !== null && $q !== '') {
             $qb->andWhere('u.nom LIKE :q OR u.email LIKE :q')->setParameter('q', '%' . $q . '%');
+        }
+
+        // Un « client » est un compte ayant au moins un achat de tokens (historique),
+        // critère plus fiable que le solde courant qui peut être épuisé.
+        $sousRequete = 'SELECT IDENTITY(tp.utilisateur) FROM App\Entity\TokenPurchase tp';
+        if ($type === 'client') {
+            $qb->andWhere("u.id IN ($sousRequete)");
+        } elseif ($type === 'prospect') {
+            $qb->andWhere("u.id NOT IN ($sousRequete)");
         }
 
         return $this->paginator->paginate($qb, $page, 20);

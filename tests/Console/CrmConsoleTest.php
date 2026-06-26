@@ -150,6 +150,42 @@ class CrmConsoleTest extends WebTestCase
         $this->assertContains($profil->getScoreCouleur(), ['vert', 'jaune', 'orange', 'rouge']);
     }
 
+    public function testQuickActionButtonsAreInsideTabsController(): void
+    {
+        // Régression : les actions rapides doivent être DANS la portée du
+        // contrôleur Stimulus crm-tabs, sinon le clic ne bascule pas l'onglet.
+        $this->client->loginUser($this->user(self::ADMIN));
+        $crawler = $this->client->request('GET', '/console/crm/clients/' . $this->user(self::CLIENT)->getId());
+        $this->assertResponseIsSuccessful();
+
+        $this->assertSame(
+            1,
+            $crawler->filter('[data-controller="crm-tabs"] button[data-crm-tabs-go-param="activites"]')->count(),
+            'Le bouton « Logger un échange » doit être dans la portée du contrôleur crm-tabs.',
+        );
+        $this->assertSame(
+            1,
+            $crawler->filter('[data-controller="crm-tabs"] button[data-crm-tabs-go-param="taches"]')->count(),
+            'Le bouton « Créer une tâche » doit être dans la portée du contrôleur crm-tabs.',
+        );
+    }
+
+    public function testClientProspectFilter(): void
+    {
+        $this->client->loginUser($this->user(self::ADMIN));
+
+        // CLIENT a un achat → « client » ; PLAIN n'en a aucun → « prospect ».
+        $this->client->request('GET', '/console/crm/clients?type=client');
+        $contenu = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString(self::CLIENT, $contenu);
+        $this->assertStringNotContainsString(self::PLAIN, $contenu);
+
+        $this->client->request('GET', '/console/crm/clients?type=prospect');
+        $contenu = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString(self::PLAIN, $contenu);
+        $this->assertStringNotContainsString(self::CLIENT, $contenu);
+    }
+
     public function testForceStageViaPost(): void
     {
         $this->client->loginUser($this->user(self::ADMIN));
