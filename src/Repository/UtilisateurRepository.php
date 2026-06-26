@@ -107,16 +107,30 @@ class UtilisateurRepository extends ServiceEntityRepository implements PasswordU
     }
 
     /**
-     * Liste paginée des comptes suivis par le CRM : utilisateurs non agents
-     * (l'équipe interne est exclue). Le CRM couvre tout l'entonnoir ; le filtre
-     * `type` permet de cibler les clients payants (au moins un achat) ou les
-     * prospects (aucun achat). Recherche libre par nom/e-mail.
+     * Périmètre des comptes suivis par le CRM : tous les utilisateurs classiques
+     * (non agents) PLUS les agents JS Brokers ayant déjà acheté des tokens (donc
+     * eux aussi clients). L'équipe interne sans achat reste exclue. Distinct de
+     * regularUsersQb() (utilisé par la console historique) pour éviter toute
+     * régression.
+     */
+    private function crmScopeQb(): \Doctrine\ORM\QueryBuilder
+    {
+        return $this->createQueryBuilder('u')
+            ->where('(u.roles NOT LIKE :admin AND u.roles NOT LIKE :super) OR u.id IN (SELECT IDENTITY(tp0.utilisateur) FROM App\Entity\TokenPurchase tp0)')
+            ->setParameter('admin', '%ROLE_ADMIN%')
+            ->setParameter('super', '%ROLE_SUPER_ADMIN%');
+    }
+
+    /**
+     * Liste paginée des comptes suivis par le CRM (cf. crmScopeQb). Le CRM couvre
+     * tout l'entonnoir ; le filtre `type` cible les clients payants (au moins un
+     * achat) ou les prospects (aucun achat). Recherche libre par nom/e-mail.
      *
      * @param string|null $type 'client' | 'prospect' | null (tous)
      */
     public function paginateCrm(int $page, ?string $q = null, ?string $type = null): PaginationInterface
     {
-        $qb = $this->regularUsersQb()->orderBy('u.id', 'DESC');
+        $qb = $this->crmScopeQb()->orderBy('u.id', 'DESC');
 
         if ($q !== null && $q !== '') {
             $qb->andWhere('u.nom LIKE :q OR u.email LIKE :q')->setParameter('q', '%' . $q . '%');
@@ -143,7 +157,7 @@ class UtilisateurRepository extends ServiceEntityRepository implements PasswordU
      */
     public function findAllCrm(int $limit = 2000): array
     {
-        return $this->regularUsersQb()
+        return $this->crmScopeQb()
             ->orderBy('u.id', 'DESC')
             ->setMaxResults($limit)
             ->getQuery()
@@ -158,7 +172,7 @@ class UtilisateurRepository extends ServiceEntityRepository implements PasswordU
      */
     public function findSansConnexionCrm(\DateTimeImmutable $cutoff, int $limit = 20): array
     {
-        return $this->regularUsersQb()
+        return $this->crmScopeQb()
             ->andWhere('u.lastLoginAt IS NOT NULL AND u.lastLoginAt < :cutoff')
             ->setParameter('cutoff', $cutoff)
             ->orderBy('u.lastLoginAt', 'ASC')

@@ -1,6 +1,6 @@
 {% extends 'console/base.html.twig' %}
 
-{% block console_subtitle %}<p>L'entonnoir suivi par le CRM (l'équipe interne est exclue). Filtrez par Clients (au moins un achat) ou Prospects. Étape et santé calculées automatiquement.</p>{% endblock %}
+{% block console_subtitle %}<p>L'entonnoir suivi par le CRM : utilisateurs classiques + agents devenus clients (au moins un achat). Filtrez par Clients ou Prospects. Étape et santé calculées automatiquement.</p>{% endblock %}
 
 {% block console_body %}
 {{ include('console/crm/_styles.html.twig') }}

@@ -9,10 +9,11 @@ use Symfony\Component\Security\Http\Event\LoginSuccessEvent;
 
 /**
  * @file Suivi d'activité léger pour le CRM interne.
- * @description À chaque connexion réussie d'un client (utilisateur non agent),
- * horodate la dernière connexion, incrémente le compteur et resynchronise son
- * profil CRM (étape de pipeline + score de santé). Les agents JS Brokers sont
- * ignorés : le CRM ne suit que les clients. Aucune ressaisie : tout vient du SaaS.
+ * @description À chaque connexion réussie d'un compte suivi par le CRM, horodate
+ * la dernière connexion, incrémente le compteur et resynchronise son profil CRM
+ * (étape de pipeline + score de santé). Sont suivis : les utilisateurs classiques
+ * (non agents) ET les agents JS Brokers qui sont eux-mêmes clients payants
+ * (solde prépayé > 0). Aucune ressaisie : tout vient du SaaS.
  */
 class CrmActivitySubscriber implements EventSubscriberInterface
 {
@@ -23,7 +24,9 @@ class CrmActivitySubscriber implements EventSubscriberInterface
     public function onLoginSuccess(LoginSuccessEvent $event): void
     {
         $user = $event->getUser();
-        if (!$user instanceof Utilisateur || $user->isAgent()) {
+        // Suivi des utilisateurs classiques, et des agents qui sont aussi clients
+        // payants (solde prépayé > 0). Les agents non-clients sont ignorés.
+        if (!$user instanceof Utilisateur || ($user->isAgent() && $user->getPaidTokens() <= 0)) {
             return;
         }
 
