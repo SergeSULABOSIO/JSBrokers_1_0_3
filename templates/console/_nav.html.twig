@@ -6,6 +6,12 @@
    l'une de ses rubriques l'est). #}
 {% set route = app.request.attributes.get('_route')|default('') %}
 {% set groups = [
+    { label: 'CRM', icon: 'piste', items: [
+        { r: 'console.crm.dashboard',  p: 'console.crm.dashboard',        icon: 'dashboard',  label: 'Tableau de bord' },
+        { r: 'console.crm.client.',    p: 'console.crm.client.index',     icon: 'client',     label: 'Clients' },
+        { r: 'console.crm.pipeline.',  p: 'console.crm.pipeline.index',   icon: 'piste',      label: 'Pipeline' },
+        { r: 'console.crm.entreprise.', p: 'console.crm.entreprise.index', icon: 'entreprise', label: 'Entreprises' },
+    ] },
     { label: 'Comptes', icon: 'client', items: [
         { r: 'console.collaborateur.', p: 'console.collaborateur.index', icon: 'action:role', label: 'Collaborateurs' },
         { r: 'console.utilisateur.',   p: 'console.utilisateur.index',   icon: 'utilisateur',  label: 'Utilisateurs' },

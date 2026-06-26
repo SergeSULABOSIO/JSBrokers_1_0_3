@@ -1,0 +1,33 @@
+{% extends 'console/base.html.twig' %}
+
+{% block console_subtitle %}<p>Espaces de travail (workspaces) de la plateforme — vue enrichie en lecture seule.</p>{% endblock %}
+
+{% block console_body %}
+{{ include('console/crm/_styles.html.twig') }}
+
+<div class="cs-panel">
+    {% if entreprises.getTotalItemCount > 0 %}
+        <table class="cs-table">
+            <thead><tr><th>Entreprise</th><th>Propriétaire</th><th>Invités</th><th>Consommation</th><th style="text-align:right;">Actions</th></tr></thead>
+            <tbody>
+            {% for e in entreprises %}
+                <tr>
+                    <td class="fw-semibold">{{ e.nom }}</td>
+                    <td>{% if e.utilisateur %}<a href="{{ path('console.crm.client.show', {id: e.utilisateur.id}) }}" class="text-decoration-none">{{ e.utilisateur.nom ?: e.utilisateur.email }}</a>{% else %}—{% endif %}</td>
+                    <td>{{ e.invites|length }}</td>
+                    <td>{{ (consommations[e.id]|default(0))|number_format(0, '.', ' ') }} tk</td>
+                    <td style="text-align:right;">
+                        <a href="{{ path('console.crm.entreprise.show', {id: e.id}) }}" class="cs-icon-btn" data-action="click->top-progress#show" title="Ouvrir" aria-label="Ouvrir {{ e.nom }}">
+                            {{ ux_icon(resolve_icon_name('action:view'), {height:'18px', width:'18px'}) }}
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <div class="cs-pagination">{{ knp_pagination_render(entreprises) }}</div>
+    {% else %}
+        <div class="cs-empty"><p>Aucune entreprise.</p></div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends 'console/base.html.twig' %}
+
+{% block console_actions %}
+    <a href="{{ path('console.crm.entreprise.index') }}" class="btn btn-sm btn-outline-secondary" data-action="click->top-progress#show">
+        {{ ux_icon(resolve_icon_name('action:exit'), {height:'16px', width:'16px'}) }}<span class="ms-1">Retour</span>
+    </a>
+{% endblock %}
+
+{% block console_body %}
+{{ include('console/crm/_styles.html.twig') }}
+
+<div class="cs-panel-row">
+    <div class="cs-panel">
+        <h2 class="cs-panel-title">Informations</h2>
+        <table class="cs-table">
+            <tbody>
+                <tr><th>Nom</th><td>{{ entreprise.nom }}</td></tr>
+                <tr><th>Propriétaire</th><td>{% if entreprise.utilisateur %}<a href="{{ path('console.crm.client.show', {id: entreprise.utilisateur.id}) }}">{{ entreprise.utilisateur.nom ?: entreprise.utilisateur.email }}</a>{% else %}—{% endif %}</td></tr>
+                <tr><th>Pays / Ville</th><td>{{ pays ?: '—' }}{% if ville %} · {{ ville }}{% endif %}</td></tr>
+                <tr><th>RCCM</th><td>{{ entreprise.rccm ?: '—' }}</td></tr>
+                <tr><th>Créée le</th><td>{{ entreprise.createdAt ? entreprise.createdAt|format_datetime('short','none', locale: app.user.locale) : '—' }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="cs-panel">
+        <h2 class="cs-panel-title">Consommation</h2>
+        <div class="cs-kpi mb-3"><div class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('action:count'), {height:'24px', width:'24px'}) }}</div><div class="cs-kpi-body"><div class="cs-kpi-val">{{ consommation|number_format(0,'.',' ') }}</div><div class="cs-kpi-lbl">Tokens consommés (total)</div></div></div>
+        {% if breakdown|length > 0 %}
+            <table class="cs-table">
+                <thead><tr><th>Type d'entité</th><th>Poids</th></tr></thead>
+                <tbody>
+                {% for nom, total in breakdown %}<tr><td>{{ nom }}</td><td>{{ total|number_format(0,'.',' ') }}</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+</div>
+
+<div class="cs-panel-row">
+    <div class="cs-panel">
+        <h2 class="cs-panel-title">Invités</h2>
+        {% if entreprise.invites|length > 0 %}
+            <table class="cs-table">
+                <thead><tr><th>Nom</th><th>E-mail</th></tr></thead>
+                <tbody>{% for i in entreprise.invites %}<tr><td>{{ i.nom ?: '—' }}</td><td>{{ i.email ?: '—' }}</td></tr>{% endfor %}</tbody>
+            </table>
+        {% else %}<div class="cs-empty"><p>Aucun invité.</p></div>{% endif %}
+    </div>
+    <div class="cs-panel">
+        <h2 class="cs-panel-title">Activités récentes</h2>
+        {% if activites|length > 0 %}
+            <table class="cs-table">
+                <thead><tr><th>Date</th><th>Entité</th><th>Acteur</th></tr></thead>
+                <tbody>
+                {% for c in activites %}
+                    <tr><td>{{ c.createdAt|format_datetime('short','short', locale: app.user.locale) }}</td><td>{{ c.entiteNom }}</td><td>{{ c.acteur ? c.acteur.nom : '—' }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% else %}<div class="cs-empty"><p>Aucune activité récente.</p></div>{% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -107,6 +107,72 @@ class UtilisateurRepository extends ServiceEntityRepository implements PasswordU
     }
 
     /**
+     * Liste paginée de TOUS les comptes « clients » du CRM : utilisateurs non
+     * agents (payants ou prospects gratuits), filtrables par recherche libre.
+     * Le CRM suit l'ensemble de l'entonnoir, du prospect au client fidèle.
+     */
+    public function paginateCrm(int $page, ?string $q = null): PaginationInterface
+    {
+        $qb = $this->regularUsersQb()->orderBy('u.id', 'DESC');
+
+        if ($q !== null && $q !== '') {
+            $qb->andWhere('u.nom LIKE :q OR u.email LIKE :q')->setParameter('q', '%' . $q . '%');
+        }
+
+        return $this->paginator->paginate($qb, $page, 20);
+    }
+
+    /**
+     * Tous les comptes « clients » non agents (sans pagination) — pour les scans
+     * du tableau de bord CRM et la synchronisation des profils. Borné par $limit
+     * pour rester prévisible en charge.
+     *
+     * @return Utilisateur[]
+     */
+    public function findAllCrm(int $limit = 2000): array
+    {
+        return $this->regularUsersQb()
+            ->orderBy('u.id', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Clients sans connexion récente : comptes non agents s'étant déjà connectés
+     * mais plus depuis la date butoir. Alimente la relance / détection d'inactivité.
+     *
+     * @return Utilisateur[]
+     */
+    public function findSansConnexionCrm(\DateTimeImmutable $cutoff, int $limit = 20): array
+    {
+        return $this->regularUsersQb()
+            ->andWhere('u.lastLoginAt IS NOT NULL AND u.lastLoginAt < :cutoff')
+            ->setParameter('cutoff', $cutoff)
+            ->orderBy('u.lastLoginAt', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Clients presque à court de tokens : solde prépayé strictement positif mais
+     * sous le seuil. Alimente la suggestion de recharge.
+     *
+     * @return Utilisateur[]
+     */
+    public function findPresqueCourtCrm(int $seuil, int $limit = 20): array
+    {
+        return $this->createQueryBuilder('u')
+            ->where('u.paidTokens > 0 AND u.paidTokens < :seuil')
+            ->setParameter('seuil', $seuil)
+            ->orderBy('u.paidTokens', 'ASC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
      * Used to upgrade (rehash) the user's password automatically over time.
      */
     public function upgradePassword(PasswordAuthenticatedUserInterface $user, string $newHashedPassword): void

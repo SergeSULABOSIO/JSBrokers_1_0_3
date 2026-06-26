@@ -271,6 +271,68 @@ class TokenPurchaseRepository extends ServiceEntityRepository
     }
 
     /**
+     * Métriques d'achat agrégées par utilisateur, pour un lot d'IDs (évite le
+     * N+1 sur la liste CRM). Renvoie nombre d'achats, montant total (LTV), date
+     * du premier et du dernier achat.
+     *
+     * @param int[] $userIds
+     *
+     * @return array<int, array{count:int, montant:float, first:?\DateTimeImmutable, last:?\DateTimeImmutable}>
+     */
+    public function metricsByUsers(array $userIds): array
+    {
+        if ($userIds === []) {
+            return [];
+        }
+
+        $rows = $this->createQueryBuilder('p')
+            ->select('IDENTITY(p.utilisateur) AS uid, COUNT(p.id) AS nb, COALESCE(SUM(p.montantUsd), 0) AS montant, MIN(p.createdAt) AS first, MAX(p.createdAt) AS last')
+            ->where('p.utilisateur IN (:ids)')
+            ->setParameter('ids', $userIds)
+            ->groupBy('p.utilisateur')
+            ->getQuery()
+            ->getArrayResult();
+
+        $map = [];
+        foreach ($rows as $r) {
+            $map[(int) $r['uid']] = [
+                'count'   => (int) $r['nb'],
+                'montant' => (float) $r['montant'],
+                'first'   => $r['first'] ? new \DateTimeImmutable($r['first']) : null,
+                'last'    => $r['last'] ? new \DateTimeImmutable($r['last']) : null,
+            ];
+        }
+
+        return $map;
+    }
+
+    /**
+     * Métriques d'achat d'un seul utilisateur (cf. metricsByUsers).
+     *
+     * @return array{count:int, montant:float, first:?\DateTimeImmutable, last:?\DateTimeImmutable}
+     */
+    public function metricsForUser(int $userId): array
+    {
+        return $this->metricsByUsers([$userId])[$userId]
+            ?? ['count' => 0, 'montant' => 0.0, 'first' => null, 'last' => null];
+    }
+
+    /**
+     * Achats d'un utilisateur, plus récents d'abord (onglet « Achats » de la fiche).
+     *
+     * @return TokenPurchase[]
+     */
+    public function findForUser(int $userId): array
+    {
+        return $this->createQueryBuilder('p')
+            ->where('p.utilisateur = :uid')
+            ->setParameter('uid', $userId)
+            ->orderBy('p.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
      * Bornes [début, fin[ d'une année civile (1ᵉʳ janvier inclus → 1ᵉʳ janvier
      * suivant exclu).
      *

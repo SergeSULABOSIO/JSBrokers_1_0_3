@@ -108,6 +108,19 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $freeWindowStartedAt = null;
 
+    /**
+     * Suivi d'activité léger (alimente le CRM interne : score de santé, relances,
+     * détection d'inactivité). Mis à jour par App\EventSubscriber\CrmActivitySubscriber
+     * à chaque connexion réussie. NULL pour les comptes jamais connectés depuis la
+     * mise en place du suivi.
+     */
+    #[ORM\Column(nullable: true)]
+    private ?\DateTimeImmutable $lastLoginAt = null;
+
+    /** Nombre cumulé de connexions réussies (jauge d'engagement du CRM). */
+    #[ORM\Column(options: ['default' => 0])]
+    private int $loginCount = 0;
+
     public function __construct()
     {
         $this->entreprises = new ArrayCollection();
@@ -368,6 +381,47 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     public function getTotalTokens(): int
     {
         return $this->getFreeTokens() + $this->getPaidTokens();
+    }
+
+    public function getLastLoginAt(): ?\DateTimeImmutable
+    {
+        return $this->lastLoginAt;
+    }
+
+    public function setLastLoginAt(?\DateTimeImmutable $lastLoginAt): static
+    {
+        $this->lastLoginAt = $lastLoginAt;
+
+        return $this;
+    }
+
+    public function getLoginCount(): int
+    {
+        return $this->loginCount;
+    }
+
+    public function setLoginCount(int $loginCount): static
+    {
+        $this->loginCount = max(0, $loginCount);
+
+        return $this;
+    }
+
+    /** Incrémente le compteur de connexions et horodate la dernière connexion. */
+    public function registerLogin(\DateTimeImmutable $when): static
+    {
+        $this->lastLoginAt = $when;
+        $this->loginCount++;
+
+        return $this;
+    }
+
+    /** Vrai si le compte est un agent JS Brokers (équipe interne), pas un client. */
+    public function isAgent(): bool
+    {
+        $roles = $this->getRoles();
+
+        return in_array('ROLE_ADMIN', $roles, true) || in_array('ROLE_SUPER_ADMIN', $roles, true);
     }
 
     #[ORM\PrePersist]
