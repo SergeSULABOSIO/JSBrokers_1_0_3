@@ -186,6 +186,22 @@ class CrmConsoleTest extends WebTestCase
         $this->assertStringNotContainsString(self::CLIENT, $contenu);
     }
 
+    public function testPurchasingAgentIsIncludedAsClient(): void
+    {
+        // Exclusion des agents levée : un agent ayant acheté des tokens est aussi
+        // client et doit apparaître dans le CRM (cas du compte admin-acheteur).
+        $super = $this->user(self::SUPER);
+        $achat = (new TokenPurchase())->setUtilisateur($super)->setPack('intermediaire')
+            ->setTokens(10000)->setMontantUsd(9.0)->setReference('REF-CRM-SUPER');
+        $this->em()->persist($achat);
+        $this->em()->flush();
+
+        $this->client->loginUser($this->user(self::ADMIN));
+        $this->client->request('GET', '/console/crm/clients?type=client');
+        $contenu = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString(self::SUPER, $contenu, 'Un agent ayant acheté doit figurer parmi les clients du CRM.');
+    }
+
     public function testForceStageViaPost(): void
     {
         $this->client->loginUser($this->user(self::ADMIN));
