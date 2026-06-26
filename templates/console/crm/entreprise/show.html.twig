@@ -9,6 +9,7 @@
 {% block console_body %}
 {{ include('console/crm/_styles.html.twig') }}
 
+<div class="crm-dash">
 <div class="cs-panel-row">
     <div class="cs-panel">
         <h2 class="cs-panel-title">Informations</h2>
@@ -59,5 +60,6 @@
             </table>
         {% else %}<div class="cs-empty"><p>Aucune activité récente.</p></div>{% endif %}
     </div>
+</div>
 </div>
 {% endblock %}
