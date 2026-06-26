@@ -174,11 +174,14 @@
                 <input type="hidden" name="_token" value="{{ csrf_token('crm-etape-' ~ client.id) }}">
                 <div class="flex-grow-1">
                     <label class="form-label" style="font-size:.85rem;">Forcer une étape</label>
-                    <select name="etape" class="form-select">
-                        {% for key, meta in stages %}
-                            <option value="{{ key }}" {{ key == profil.etapePipeline ? 'selected' }}>{{ meta.label }}</option>
-                        {% endfor %}
-                    </select>
+                    <div class="cs-field">
+                        <span class="cs-field-icon">{{ ux_icon(resolve_icon_name('piste'), {height:'18px', width:'18px'}) }}</span>
+                        <select name="etape" class="form-select">
+                            {% for key, meta in stages %}
+                                <option value="{{ key }}" {{ key == profil.etapePipeline ? 'selected' }}>{{ meta.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
                 <button type="submit" class="btn btn-cobalt">Appliquer</button>
             </form>
@@ -192,14 +195,34 @@
             <form method="post" action="{{ path('console.crm.client.interaction', {id: client.id}) }}">
                 <input type="hidden" name="_token" value="{{ csrf_token('crm-interaction-' ~ client.id) }}">
                 <div class="row g-2">
-                    <div class="col-sm-3"><select name="type" class="form-select">
-                        <option value="appel">Appel</option><option value="email">E-mail</option>
-                        <option value="demo">Démonstration</option><option value="reunion">Réunion</option>
-                        <option value="note" selected>Note</option>
-                    </select></div>
-                    <div class="col-sm-3"><select name="direction" class="form-select"><option value="out">Sortant</option><option value="in">Entrant</option></select></div>
-                    <div class="col-sm-6"><input type="text" name="sujet" class="form-control" placeholder="Sujet *" required></div>
-                    <div class="col-12"><textarea name="contenu" class="form-control" rows="2" placeholder="Détails (optionnel)"></textarea></div>
+                    <div class="col-sm-3">
+                        <div class="cs-field">
+                            <span class="cs-field-icon">{{ ux_icon(resolve_icon_name('feedback'), {height:'18px', width:'18px'}) }}</span>
+                            <select name="type" class="form-select">
+                                <option value="appel">Appel</option><option value="email">E-mail</option>
+                                <option value="demo">Démonstration</option><option value="reunion">Réunion</option>
+                                <option value="note" selected>Note</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-sm-3">
+                        <div class="cs-field">
+                            <span class="cs-field-icon">{{ ux_icon(resolve_icon_name('operation'), {height:'18px', width:'18px'}) }}</span>
+                            <select name="direction" class="form-select"><option value="out">Sortant</option><option value="in">Entrant</option></select>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="cs-field">
+                            <span class="cs-field-icon">{{ ux_icon(resolve_icon_name('note'), {height:'18px', width:'18px'}) }}</span>
+                            <input type="text" name="sujet" class="form-control" placeholder="Sujet *" required>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="cs-field cs-field--top">
+                            <span class="cs-field-icon">{{ ux_icon(resolve_icon_name('action:description'), {height:'18px', width:'18px'}) }}</span>
+                            <textarea name="contenu" class="form-control" rows="2" placeholder="Détails (optionnel)"></textarea>
+                        </div>
+                    </div>
                 </div>
                 <div class="mt-2"><button type="submit" class="btn btn-cobalt">Enregistrer</button></div>
             </form>
@@ -227,11 +250,17 @@
                 <input type="hidden" name="_token" value="{{ csrf_token('crm-profil-' ~ client.id) }}">
                 <div class="mb-3">
                     <label class="form-label">Notes internes</label>
-                    <textarea name="notes" class="form-control" rows="5" placeholder="Notes de l'équipe commerciale…">{{ profil.notes }}</textarea>
+                    <div class="cs-field cs-field--top">
+                        <span class="cs-field-icon">{{ ux_icon(resolve_icon_name('action:description'), {height:'18px', width:'18px'}) }}</span>
+                        <textarea name="notes" class="form-control" rows="5" placeholder="Notes de l'équipe commerciale…">{{ profil.notes }}</textarea>
+                    </div>
                 </div>
                 <div class="mb-3" style="max-width:280px;">
                     <label class="form-label">Prochaine action prévue</label>
-                    <input type="date" name="prochaineActionAt" class="form-control" value="{{ profil.prochaineActionAt ? profil.prochaineActionAt|date('Y-m-d') : '' }}">
+                    <div class="cs-field">
+                        <span class="cs-field-icon">{{ ux_icon(resolve_icon_name('action:calendar'), {height:'18px', width:'18px'}) }}</span>
+                        <input type="date" name="prochaineActionAt" class="form-control" value="{{ profil.prochaineActionAt ? profil.prochaineActionAt|date('Y-m-d') : '' }}">
+                    </div>
                 </div>
                 <button type="submit" class="btn btn-cobalt">Enregistrer</button>
             </form>
@@ -263,10 +292,30 @@
             <form method="post" action="{{ path('console.crm.client.tache', {id: client.id}) }}">
                 <input type="hidden" name="_token" value="{{ csrf_token('crm-tache-' ~ client.id) }}">
                 <div class="row g-2">
-                    <div class="col-sm-6"><input type="text" name="titre" class="form-control" placeholder="Intitulé *" required></div>
-                    <div class="col-sm-3"><input type="date" name="dueAt" class="form-control"></div>
-                    <div class="col-sm-3"><select name="priorite" class="form-select"><option value="basse">Basse</option><option value="normale" selected>Normale</option><option value="haute">Haute</option></select></div>
-                    <div class="col-12"><input type="text" name="description" class="form-control" placeholder="Description (optionnel)"></div>
+                    <div class="col-sm-6">
+                        <div class="cs-field">
+                            <span class="cs-field-icon">{{ ux_icon(resolve_icon_name('tache'), {height:'18px', width:'18px'}) }}</span>
+                            <input type="text" name="titre" class="form-control" placeholder="Intitulé *" required>
+                        </div>
+                    </div>
+                    <div class="col-sm-3">
+                        <div class="cs-field">
+                            <span class="cs-field-icon">{{ ux_icon(resolve_icon_name('action:calendar'), {height:'18px', width:'18px'}) }}</span>
+                            <input type="date" name="dueAt" class="form-control">
+                        </div>
+                    </div>
+                    <div class="col-sm-3">
+                        <div class="cs-field">
+                            <span class="cs-field-icon">{{ ux_icon(resolve_icon_name('action:alert'), {height:'18px', width:'18px'}) }}</span>
+                            <select name="priorite" class="form-select"><option value="basse">Basse</option><option value="normale" selected>Normale</option><option value="haute">Haute</option></select>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="cs-field">
+                            <span class="cs-field-icon">{{ ux_icon(resolve_icon_name('action:description'), {height:'18px', width:'18px'}) }}</span>
+                            <input type="text" name="description" class="form-control" placeholder="Description (optionnel)">
+                        </div>
+                    </div>
                 </div>
                 <div class="mt-2"><button type="submit" class="btn btn-cobalt">Créer la tâche</button></div>
             </form>

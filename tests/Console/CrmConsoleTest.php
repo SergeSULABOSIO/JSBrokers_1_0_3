@@ -170,6 +170,26 @@ class CrmConsoleTest extends WebTestCase
         );
     }
 
+    public function testInlineFicheFieldsUseFieldPattern(): void
+    {
+        // Les mini-formulaires inline de la fiche restent inline, mais leurs champs
+        // suivent le pattern champ-à-icône (.cs-field + .cs-field-icon) de la console.
+        $this->client->loginUser($this->user(self::ADMIN));
+        $crawler = $this->client->request('GET', '/console/crm/clients/' . $this->user(self::CLIENT)->getId());
+        $this->assertResponseIsSuccessful();
+
+        $this->assertGreaterThanOrEqual(
+            1,
+            $crawler->filter('form[action$="/interaction"] .cs-field .cs-field-icon svg')->count(),
+            'Les champs du formulaire d\'interaction doivent utiliser .cs-field avec pastille d\'icône.',
+        );
+        $this->assertGreaterThanOrEqual(
+            1,
+            $crawler->filter('form[action$="/tache"] .cs-field .cs-field-icon svg')->count(),
+            'Les champs du formulaire de tâche doivent utiliser .cs-field avec pastille d\'icône.',
+        );
+    }
+
     public function testClientProspectFilter(): void
     {
         $this->client->loginUser($this->user(self::ADMIN));
