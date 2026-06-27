@@ -233,6 +233,12 @@
                 {{ app.user.nom }}
             </span>
             <span class="cs-sep" aria-hidden="true"></span>
+            {# Retour à l'espace privé de l'utilisateur (tout agent est aussi utilisateur JS Brokers). #}
+            <a href="{{ path('admin.entreprise.index') }}" class="btn btn-sm btn-outline-primary"
+               data-action="click->top-progress#show" title="Mon espace JS Brokers">
+                {{ ux_icon(resolve_icon_name('entreprise'), {height: '18px', width: '18px'}) }}
+                <span class="ms-1">Mon espace</span>
+            </a>
             {{ include('console/_lang.html.twig') }}
             <a href="{{ path('app_logout') }}" class="cs-icon-btn is-danger" data-action="click->top-progress#show"
                title="{{ 'boutons_user_logout'|trans }}" aria-label="{{ 'boutons_user_logout'|trans }}">

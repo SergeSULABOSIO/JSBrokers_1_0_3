@@ -42,6 +42,19 @@ class CrmTicket
         self::PRIORITE_URGENTE => 8,
     ];
 
+    public const CANAL_EMAIL     = 'email';
+    public const CANAL_TELEPHONE = 'telephone';
+    public const CANAL_CHAT      = 'chat';
+    /** Demande ouverte par le courtier depuis son espace (support self-service). */
+    public const CANAL_PORTAIL   = 'portail';
+
+    public const CANAUX = [
+        self::CANAL_EMAIL     => 'E-mail',
+        self::CANAL_TELEPHONE => 'Téléphone',
+        self::CANAL_CHAT      => 'Chat',
+        self::CANAL_PORTAIL   => 'Portail client',
+    ];
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -195,6 +208,11 @@ class CrmTicket
     public function getStatutLabel(): string
     {
         return self::STATUTS[$this->statut] ?? $this->statut;
+    }
+
+    public function getCanalLabel(): string
+    {
+        return self::CANAUX[$this->canal] ?? $this->canal;
     }
 
     public function isOuvert(): bool
