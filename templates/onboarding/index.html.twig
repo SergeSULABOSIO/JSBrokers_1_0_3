@@ -11,7 +11,10 @@
        Charte : cobalt #0047AB + neutres Bootstrap (cohérent avec
        la création d'entreprise et la page de connexion).
        ============================================================ */
-    .ob-page { min-height: 100vh; display: flex; flex-direction: column; background-color: #f3f3f3; }
+    /* Hauteur fixe (pas min-height) : indispensable pour que .ob-scroll, en flex:1 +
+       overflow-y:auto, dispose d'une hauteur bornée et puisse réellement défiler.
+       Même pattern que la page de création d'entreprise (.ent-page). */
+    .ob-page { height: 100vh; display: flex; flex-direction: column; background-color: #f3f3f3; }
 
     .ob-progress-bar {
         position: fixed; top: 0; left: 0; width: 100%; height: 6px;
