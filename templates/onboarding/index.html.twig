@@ -77,12 +77,15 @@
     /* Bandeau « offerte » au-dessus de la carte du formulaire (et non dans la barre
        d'actions) : information rassurante avant la saisie. */
     .ob-free-note {
-        display: flex; align-items: center; justify-content: center; gap: .5rem;
-        margin-bottom: 1rem; padding: .7rem 1rem;
+        display: flex; align-items: flex-start; justify-content: center; gap: .55rem;
+        max-width: 560px; margin: 0 auto 1rem; padding: .75rem 1rem;
         background-color: #e8f0fb; color: #0047AB; border-radius: 10px;
-        font-size: .9rem; font-weight: 600; text-align: center;
+        font-size: .9rem; font-weight: 600; line-height: 1.4;
     }
-    .ob-free-note svg { flex: 0 0 auto; }
+    /* Icône décorative alignée optiquement sur la première ligne ; texte aligné à
+       gauche pour que les lignes enroulées s'alignent sous un bord constant. */
+    .ob-free-note svg { flex: 0 0 auto; margin-top: .1rem; }
+    .ob-free-note span { text-align: left; }
 
     .ob-form-card {
         background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 14px;
@@ -212,8 +215,8 @@
             </div>
         </div>
 
-        <div class="ob-free-note">
-            {{ ux_icon('mdi:gift-outline', {height: '18px', width: '18px'}) }}
+        <div class="ob-free-note" role="note">
+            {{ ux_icon('mdi:gift-outline', {height: '18px', width: '18px', 'aria-hidden': 'true'}) }}
             <span>{{ 'onboarding_free_note' | trans }}</span>
         </div>
 
