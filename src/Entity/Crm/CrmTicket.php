@@ -2,6 +2,7 @@
 
 namespace App\Entity\Crm;
 
+use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
 use App\Repository\Crm\CrmTicketRepository;
 use Doctrine\ORM\Mapping as ORM;
@@ -68,6 +69,11 @@ class CrmTicket
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?Utilisateur $agent = null;
 
+    /** Entreprise depuis laquelle le ticket a été émis (demandes self-service du portail). */
+    #[ORM\ManyToOne(targetEntity: Entreprise::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?Entreprise $entreprise = null;
+
     #[ORM\Column(length: 40)]
     private ?string $reference = null;
 
@@ -126,6 +132,18 @@ class CrmTicket
     public function setAgent(?Utilisateur $agent): static
     {
         $this->agent = $agent;
+
+        return $this;
+    }
+
+    public function getEntreprise(): ?Entreprise
+    {
+        return $this->entreprise;
+    }
+
+    public function setEntreprise(?Entreprise $entreprise): static
+    {
+        $this->entreprise = $entreprise;
 
         return $this;
     }

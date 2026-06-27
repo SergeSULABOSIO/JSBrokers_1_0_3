@@ -2984,11 +2984,12 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     display:inline-flex; align-items:center; gap:4px;
     font-size:.63rem; font-weight:500; padding:3px 10px; border-radius:16px;
     border:none; background:transparent; color:#6c757d;
-    cursor:pointer; white-space:nowrap;
+    cursor:pointer; white-space:nowrap; text-decoration:none; font-family:inherit;
     transition:background .2s, color .2s, box-shadow .2s;
 }
 .db-task-toggle:hover  { color:#212529; }
 .db-task-toggle.active { background:#fff; color:#212529; box-shadow:0 1px 3px rgba(0,0,0,.14); }
+.db-task-toggle:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
 
 .db-task-new-btn {
     padding:2px 5px; border:1px solid transparent; border-radius:4px;

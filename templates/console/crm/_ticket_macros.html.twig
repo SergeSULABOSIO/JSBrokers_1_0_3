@@ -12,3 +12,18 @@
     } %}
     <span class="cs-badge {{ map[ticket.statut]|default('cs-badge--muted') }}">{{ ticket.statutLabel }}</span>
 {% endmacro %}
+
+{# Cellule « Sujet » : l'objet du ticket ET le message rédigé par le client
+   (l'agent doit pouvoir le lire), affiché en ligne secondaire sous l'objet.
+   Le canal (ex. « portail » = demande self-service) est rappelé en légende. #}
+{% macro sujet(ticket) %}
+    <div class="crm-ticket-sujet">{{ ticket.sujet }}</div>
+    {% if ticket.description %}<div class="crm-ticket-msg">{{ ticket.description }}</div>{% endif %}
+    {% if ticket.entreprise %}
+        <div class="crm-ticket-ese">
+            {{ ux_icon(resolve_icon_name('entreprise'), {height: '14px', width: '14px'}) }}
+            <a href="{{ path('console.crm.entreprise.show', {id: ticket.entreprise.id}) }}">{{ ticket.entreprise.nom }}</a>
+        </div>
+    {% endif %}
+    <div class="crm-ticket-canal">via {{ ticket.canalLabel }}</div>
+{% endmacro %}

@@ -98,6 +98,14 @@ class CrmConsoleTest extends WebTestCase
             "DELETE FROM invite WHERE utilisateur_id IN $emails
              OR entreprise_id IN (SELECT e.id FROM (SELECT id FROM entreprise WHERE utilisateur_id IN $emails) e)"
         );
+        // Le champ connectedTo (espace de travail actif) référence l'entreprise sans
+        // ON DELETE : on le neutralise pour les comptes de test avant de retirer leurs
+        // entreprises (sinon la suppression de l'entreprise viole la contrainte).
+        $conn->executeStatement(
+            'UPDATE utilisateur SET connected_to_id = NULL WHERE email IN (:e)',
+            ['e' => [self::ADMIN, self::SUPER, self::CLIENT, self::PLAIN]],
+            ['e' => \Doctrine\DBAL\ArrayParameterType::STRING],
+        );
         // L'entreprise référence l'utilisateur sans ON DELETE : on la retire d'abord
         // (la consommation liée est supprimée en cascade). Le reste part avec l'utilisateur.
         $conn->executeStatement("DELETE FROM entreprise WHERE utilisateur_id IN $emails");
@@ -704,6 +712,11 @@ class CrmConsoleTest extends WebTestCase
         $client = $this->user(self::CLIENT);
         $ent = $this->em()->getRepository(Entreprise::class)->findOneBy(['utilisateur' => $client]);
 
+        // Espace de travail actif du courtier : c'est l'entreprise depuis laquelle
+        // la demande sera émise (et retenue sur le ticket).
+        $client->setConnectedTo($ent);
+        $this->em()->flush();
+
         $this->client->loginUser($client);
 
         $crawler = $this->client->request('GET', '/admin/support/workspace/' . $ent->getId());
@@ -714,7 +727,11 @@ class CrmConsoleTest extends WebTestCase
         $form['support_demande[priorite]'] = \App\Entity\Crm\CrmTicket::PRIORITE_HAUTE;
         $form['support_demande[description]'] = 'Le bouton de génération reste grisé.';
         $this->client->submit($form);
-        $this->assertResponseIsSuccessful('La soumission renvoie le composant rafraîchi (200).');
+        $this->assertResponseIsSuccessful('La soumission renvoie une réponse JSON (200).');
+
+        // Réponse JSON pilotant le toast + le rafraîchissement du composant.
+        $payload = json_decode((string) $this->client->getResponse()->getContent(), true);
+        $this->assertTrue($payload['success'] ?? false, 'La soumission doit réussir.');
 
         $tickets = static::getContainer()->get(\App\Repository\Crm\CrmTicketRepository::class)
             ->findForClient($this->user(self::CLIENT));
@@ -725,12 +742,26 @@ class CrmConsoleTest extends WebTestCase
         $this->assertSame(\App\Entity\Crm\CrmTicket::STATUT_OUVERT, $ticket->getStatut());
         $this->assertSame($client->getId(), $ticket->getClient()->getId(), 'Le client du ticket est le courtier connecté.');
         $this->assertNotNull($ticket->getSlaDueAt(), 'Le SLA doit être calculé à la création (priorité haute → 24 h).');
+        $this->assertSame('Le bouton de génération reste grisé.', $ticket->getDescription(), 'Le message saisi doit être conservé.');
+        $this->assertSame($ent->getId(), $ticket->getEntreprise()?->getId(), 'Le ticket doit retenir l\'entreprise émettrice (espace de travail actif).');
 
-        // L'accusé de réception (référence du ticket) figure dans le composant rafraîchi.
-        $this->assertStringContainsString(
-            $ticket->getReference(),
-            (string) $this->client->getResponse()->getContent(),
-            'Le composant rafraîchi doit afficher l\'accusé de réception avec la référence.',
+        // L'accusé de réception (toast) mentionne la référence ; la liste rafraîchie
+        // contient le nouveau ticket avec son message.
+        $this->assertStringContainsString($ticket->getReference(), (string) $payload['message']);
+        $this->assertStringContainsString($ticket->getReference(), (string) $payload['html']);
+        $this->assertStringContainsString('Le bouton de génération reste grisé.', (string) $payload['html'], 'La liste doit afficher le message du courtier.');
+
+        // Côté console : l'agent voit le message ET l'entreprise émettrice (lien vers sa fiche).
+        $this->client->loginUser($this->user(self::ADMIN));
+        $crawler = $this->client->request('GET', '/console/crm/tickets');
+        $this->assertResponseIsSuccessful();
+        $consoleHtml = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('Le bouton de génération reste grisé.', $consoleHtml, 'Le message du client doit être visible côté console.');
+        $this->assertStringContainsString($ent->getNom(), $consoleHtml, 'L\'entreprise émettrice doit être visible côté console.');
+        $this->assertSame(
+            1,
+            $crawler->filter('a[href$="/console/crm/entreprises/' . $ent->getId() . '"]')->count(),
+            'L\'entreprise émettrice doit être un lien vers sa fiche.',
         );
     }
 }

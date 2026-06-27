@@ -27,8 +27,9 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
  * directement la file support de la console — aucune entité parallèle. L'équipe
  * est notifiée (in-app via CrmNotifier + e-mail via CorporateMailer) et le
  * courtier suit le statut de ses demandes. Rendu comme composant du workspace
- * (cf. getComponentMap + menu.yaml « Assistance ») ; l'interactivité du
- * formulaire est pilotée par le contrôleur Stimulus `support`.
+ * (cf. getComponentMap + menu.yaml « Assistance ») ; l'interactivité (barre de
+ * progression + toast + rafraîchissement) est pilotée par le contrôleur Stimulus
+ * `support`, d'où la réponse JSON de la soumission.
  */
 #[Route('/admin/support', name: 'admin.support.')]
 #[IsGranted('ROLE_USER')]
@@ -52,10 +53,17 @@ class SupportController extends AbstractController
     #[Route('/workspace/{idEntreprise}', name: 'workspace', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET', 'POST'])]
     public function loadWorkspaceComponent(): Response
     {
-        return $this->renderComponent($this->createForm(SupportDemandeType::class, new CrmTicket()));
+        return $this->render(
+            'components/_support_component.html.twig',
+            $this->componentParams($this->createForm(SupportDemandeType::class, new CrmTicket())),
+        );
     }
 
-    /** Crée le ticket à partir de la demande du courtier, puis notifie l'équipe. */
+    /**
+     * Crée le ticket à partir de la demande du courtier, puis notifie l'équipe.
+     * Répond en JSON { success, message, html } : le contrôleur Stimulus affiche le
+     * toast (succès/échec) et remplace le composant par sa version rafraîchie.
+     */
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]
     public function submit(Request $request): Response
     {
@@ -64,38 +72,47 @@ class SupportController extends AbstractController
         $form->handleRequest($request);
 
         if (!$form->isSubmitted() || !$form->isValid()) {
-            return $this->renderComponent($form);
+            return $this->json([
+                'success' => false,
+                'message' => "Votre demande n'a pas pu être envoyée. Veuillez vérifier les champs indiqués.",
+                'html'    => $this->renderView('components/_support_component.html.twig', $this->componentParams($form)),
+            ]);
         }
 
         /** @var Utilisateur $user */
         $user = $this->getUser();
         $ticket->setClient($user)
             ->setAgent(null)
-            ->setCanal(CrmTicket::CANAL_PORTAIL);
+            ->setCanal(CrmTicket::CANAL_PORTAIL)
+            // Entreprise depuis laquelle la demande est émise = espace de travail
+            // actif du courtier (connectedTo, synchronisé à l'entrée du workspace).
+            ->setEntreprise($user->getConnectedTo());
 
         $this->em->persist($ticket);
         $this->em->flush();
 
         $this->notifierEquipe($ticket, $user);
 
-        // Composant rafraîchi : accusé de réception, formulaire vierge, et le
-        // nouveau ticket figurant désormais dans la liste du courtier.
-        return $this->renderComponent(
-            $this->createForm(SupportDemandeType::class, new CrmTicket()),
-            $ticket->getReference(),
-        );
+        return $this->json([
+            'success' => true,
+            'message' => sprintf('Votre demande %s a bien été transmise au support. Notre équipe vous recontactera.', $ticket->getReference()),
+            'html'    => $this->renderView(
+                'components/_support_component.html.twig',
+                $this->componentParams($this->createForm(SupportDemandeType::class, new CrmTicket())),
+            ),
+        ]);
     }
 
-    private function renderComponent(FormInterface $form, ?string $createdRef = null): Response
+    /** @return array{form: \Symfony\Component\Form\FormView, tickets: CrmTicket[]} */
+    private function componentParams(FormInterface $form): array
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
 
-        return $this->render('components/_support_component.html.twig', [
-            'form'       => $form->createView(),
-            'tickets'    => $this->ticketRepository->findForClient($user),
-            'createdRef' => $createdRef,
-        ]);
+        return [
+            'form'    => $form->createView(),
+            'tickets' => $this->ticketRepository->findForClient($user),
+        ];
     }
 
     /**
@@ -105,21 +122,29 @@ class SupportController extends AbstractController
     private function notifierEquipe(CrmTicket $ticket, Utilisateur $client): void
     {
         $nom = $client->getNom() ?: $client->getEmail();
+        $entreprise = $ticket->getEntreprise();
+        $origine = $entreprise ? sprintf('%s (%s)', $nom, $entreprise->getNom()) : $nom;
 
         $this->notifier->broadcast(
             'Nouveau ticket support',
-            sprintf('%s a ouvert le ticket %s : « %s ».', $nom, $ticket->getReference(), $ticket->getSujet()),
+            sprintf('%s a ouvert le ticket %s : « %s ».', $origine, $ticket->getReference(), $ticket->getSujet()),
             CrmNotification::NIVEAU_INFO,
             $this->generateUrl('console.crm.ticket.index'),
             true,
         );
 
         $details = [
-            'Référence' => $ticket->getReference(),
-            'Sujet'     => $ticket->getSujet(),
-            'Priorité'  => $ticket->getPriorite(),
-            'Client'    => sprintf('%s (%s)', $nom, $client->getEmail()),
+            'Référence'  => $ticket->getReference(),
+            'Sujet'      => $ticket->getSujet(),
+            'Priorité'   => $ticket->getPriorite(),
+            'Client'     => sprintf('%s (%s)', $nom, $client->getEmail()),
         ];
+        if ($entreprise) {
+            $details['Entreprise'] = $entreprise->getNom();
+        }
+        if ($ticket->getDescription()) {
+            $details['Message'] = $ticket->getDescription();
+        }
 
         // L'e-mail ne doit jamais compromettre la création du ticket (déjà
         // persisté) : un souci de transport est journalisé, pas propagé.
