@@ -178,7 +178,9 @@ class PasswordResetFlowTest extends WebTestCase
             'password' => self::NEW_PASSWORD,
         ]);
         $this->client->submit($form);
-        $this->assertResponseRedirects('/admin/entreprise');
+        // Compte vérifié par le reset mais sans entreprise ni invitation : l'authenticator
+        // le conduit à l'assistant d'onboarding (et non directement à la liste).
+        $this->assertResponseRedirects('/onboarding');
 
         // Ancien mot de passe → refusé (retour à la connexion).
         $this->client->request('GET', '/logout');

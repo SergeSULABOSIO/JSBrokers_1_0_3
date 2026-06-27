@@ -16,6 +16,7 @@ namespace App\Controller;
 use Twig\Environment;
 use Psr\Log\LoggerInterface;
 use App\Constantes\Constante;
+use App\Entity\Client;
 use App\Entity\Utilisateur;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
@@ -86,6 +87,12 @@ class EspaceDeTravailComponentController extends AbstractController
         // propriétaire du compte — même critère que denyUnlessOwner() côté EntrepriseController.
         $isEntrepriseAdmin = $access['entreprise']->getUtilisateur() === $this->getUser();
 
+        // État d'accueil : on affiche le panneau de bienvenue (étapes suggérées) soit
+        // à la sortie de l'onboarding (?welcome=1), soit tant que l'espace ne contient
+        // encore aucun client (espace fraîchement amorcé). Comptage bon marché.
+        $welcome = $request->query->getBoolean('welcome')
+            || $this->em->getRepository(Client::class)->count(['entreprise' => $access['entreprise']]) === 0;
+
         return $this->render('espace_de_travail_component/index.html.twig', [
             'menu_data' => $processedMenuData,
             'idEntreprise' => $idEntreprise,
@@ -93,6 +100,7 @@ class EspaceDeTravailComponentController extends AbstractController
             'entreprise' => $access['entreprise'],
             'entrepriseNom' => $access['entreprise']->getNom(),
             'isEntrepriseAdmin' => $isEntrepriseAdmin,
+            'welcome' => $welcome,
         ]);
     }
 

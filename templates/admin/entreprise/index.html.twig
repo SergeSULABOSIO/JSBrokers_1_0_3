@@ -339,12 +339,14 @@
             </div>
 
         {% else %}
-            {# État vide : un nouvel utilisateur n'est plus bloqué devant une page blanche #}
+            {# État vide : un nouvel utilisateur n'est plus bloqué devant une page blanche.
+               Le CTA renvoie vers l'assistant d'onboarding guidé (première entreprise
+               offerte), pas vers le formulaire complet payant. #}
             <div class="ent-empty">
                 {{ ux_icon('hugeicons:building-02', {height: '48px', width: '48px'}) }}
                 <h2>{{ "entreprise_empty_title" | trans }}</h2>
                 <p>{{ "entreprise_empty_help" | trans }}</p>
-                <a href="{{ path('admin.entreprise.create') }}" class="btn btn-cobalt"
+                <a href="{{ path('app_onboarding.index') }}" class="btn btn-cobalt"
                    data-action="click->top-progress#show">
                     {{ ux_icon('gridicons:add', {height: '18px', width: '18px'}) }}
                     <span class="ms-1">{{ "boutons_user_new_company" | trans }}</span>

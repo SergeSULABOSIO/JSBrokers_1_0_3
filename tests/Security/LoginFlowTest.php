@@ -113,7 +113,7 @@ class LoginFlowTest extends WebTestCase
         $this->assertResponseRedirects('/reverify/email');
     }
 
-    public function testFormLoginVerifiedRedirectsToEntreprise(): void
+    public function testFormLoginVerifiedWithoutWorkspaceRedirectsToOnboarding(): void
     {
         $crawler = $this->client->request('GET', '/login');
         $form = $crawler->selectButton('Se connecter')->form([
@@ -122,8 +122,9 @@ class LoginFlowTest extends WebTestCase
         ]);
         $this->client->submit($form);
 
-        // Décision de l'authenticator : utilisateur vérifié → accueil applicatif.
-        $this->assertResponseRedirects('/admin/entreprise');
+        // Décision de l'authenticator : utilisateur vérifié SANS entreprise ni invitation
+        // → assistant d'onboarding self-service (création de sa première entreprise).
+        $this->assertResponseRedirects('/onboarding');
     }
 
     public function testFormLoginUnverifiedRedirectsToReverify(): void
