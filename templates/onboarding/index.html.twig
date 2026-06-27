@@ -76,16 +76,21 @@
 
     /* Bandeau « offerte » au-dessus de la carte du formulaire (et non dans la barre
        d'actions) : information rassurante avant la saisie. */
+    /* Alerte « offerte » : pastille cobalt (icône cadeau) + texte neutre lisible,
+       carte claire bordée. Pattern d'alerte standard, scannable. */
     .ob-free-note {
-        display: flex; align-items: flex-start; justify-content: center; gap: .55rem;
-        max-width: 560px; margin: 0 auto 1rem; padding: .75rem 1rem;
-        background-color: #e8f0fb; color: #0047AB; border-radius: 10px;
-        font-size: .9rem; font-weight: 600; line-height: 1.4;
+        display: flex; align-items: center; gap: .8rem;
+        max-width: 600px; margin: 0 auto 1.25rem; padding: .85rem 1.1rem;
+        background-color: #e8f0fb; border: 1px solid #dee2e6; border-radius: 12px;
     }
-    /* Icône décorative alignée optiquement sur la première ligne ; texte aligné à
-       gauche pour que les lignes enroulées s'alignent sous un bord constant. */
-    .ob-free-note svg { flex: 0 0 auto; margin-top: .1rem; }
-    .ob-free-note span { text-align: left; }
+    .ob-free-ico {
+        flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+        width: 38px; height: 38px; border-radius: 50%;
+        background-color: #0047AB; color: #ffffff;
+    }
+    .ob-free-ico svg { width: 20px; height: 20px; }
+    .ob-free-note p { margin: 0; font-size: .9rem; line-height: 1.45; color: #495057; text-align: left; }
+    .ob-free-note p strong { color: #0047AB; font-weight: 700; }
 
     .ob-form-card {
         background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 14px;
@@ -224,8 +229,10 @@
         </div>
 
         <div class="ob-free-note" role="note">
-            {{ ux_icon('mdi:gift-outline', {height: '18px', width: '18px', 'aria-hidden': 'true'}) }}
-            <span>{{ 'onboarding_free_note' | trans }}</span>
+            <span class="ob-free-ico" aria-hidden="true">
+                {{ ux_icon('mdi:gift-outline', {height: '20px', width: '20px'}) }}
+            </span>
+            <p><strong>{{ 'onboarding_free_lead' | trans }}</strong> {{ 'onboarding_free_detail' | trans }}</p>
         </div>
 
         <div class="ob-form-card">
