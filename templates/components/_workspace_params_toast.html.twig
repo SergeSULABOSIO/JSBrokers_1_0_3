@@ -6,7 +6,8 @@
      <template>) en tête du conteneur global des toasts (notification-manager).
      Comme les toasts dynamiques y sont ajoutés en `beforeend`, ils s'empilent
      juste EN DESSOUS, sans superposition.
-   Paramètre attendu : `message` (HTML autorisé).
+   Paramètres : `message` (HTML autorisé) ; `title` (optionnel, défaut « Paramètres
+   de l'espace de travail »).
    ============================================================================ #}
 <style>
     /* Couleur SEULE du toast permanent (la structure vient de .jsb-toast dans
@@ -28,7 +29,7 @@
         <div class="toast show jsb-toast jsb-ws-toast text-dark" role="note">
             <div class="toast-header">
                 {{ ux_icon('mdi:information-outline', {height: '20px', width: '20px'}) }}
-                <strong class="ms-2 me-auto">Paramètres de l'espace de travail</strong>
+                <strong class="ms-2 me-auto">{{ title|default("Paramètres de l'espace de travail") }}</strong>
             </div>
             <div class="toast-body">
                 {{ message|raw }}
