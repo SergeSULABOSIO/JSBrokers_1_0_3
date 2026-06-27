@@ -978,6 +978,8 @@ trait ControllerUtilsTrait
             //PARAMETRES
             '_mon_compte_component.html.twig' => 'App\Controller\RegistrationController::register',
             '_licence_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index', // TODO: A remplacer par le bon contrôleur
+            // SUPPORT (self-service courtier → file CrmTicket de la console)
+            '_support_component.html.twig' => 'App\Controller\Admin\SupportController::loadWorkspaceComponent',
         ];
     }
 

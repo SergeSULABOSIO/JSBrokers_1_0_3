@@ -75,6 +75,12 @@ parameters:
                         Classeurs: { icone: 'classeur', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\Classeur' }
                         Invités: { icone: 'invite', composant_twig: '_view_manager_administration.html.twig', entity_name: 'App\Entity\Invite' }
 
+                Assistance:
+                    icone: 'feedback'
+                    description: "<p>Besoin d'aide ? Ouvrez une demande de support et suivez son traitement par l'équipe JS Brokers, sans quitter votre espace de travail.</p><p>Décrivez votre situation et son urgence : notre équipe la prend en charge et vous tient informé de son avancement.</p><p><strong>Un support réactif, au cœur de votre outil. Vous n'êtes jamais seul.</strong></p>"
+                    rubriques:
+                        "Support": { icone: 'feedback', composant_twig: '_support_component.html.twig' }
+
             # NOUVEAU : Le groupe Paramètres est extrait pour un positionnement spécial.
             parametres_group:
                 nom: 'Paramètres'

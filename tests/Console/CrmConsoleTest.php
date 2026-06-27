@@ -695,4 +695,42 @@ class CrmConsoleTest extends WebTestCase
         $this->assertLessThan(25, $faible['score']);
         $this->assertSame('rouge', $faible['couleur']);
     }
+
+    public function testSupportTicketOpenedFromBrokerWorkspace(): void
+    {
+        // Support self-service : le courtier (ROLE_USER) ouvre une demande depuis son
+        // espace de travail ; elle crée un CrmTicket (canal « portail ») qui alimente
+        // directement la file support de la console — sans saisie d'un agent.
+        $client = $this->user(self::CLIENT);
+        $ent = $this->em()->getRepository(Entreprise::class)->findOneBy(['utilisateur' => $client]);
+
+        $this->client->loginUser($client);
+
+        $crawler = $this->client->request('GET', '/admin/support/workspace/' . $ent->getId());
+        $this->assertResponseIsSuccessful('Le composant Support doit être accessible au courtier.');
+
+        $form = $crawler->filter('form')->form();
+        $form['support_demande[sujet]'] = 'Je n\'arrive pas à générer un bordereau';
+        $form['support_demande[priorite]'] = \App\Entity\Crm\CrmTicket::PRIORITE_HAUTE;
+        $form['support_demande[description]'] = 'Le bouton de génération reste grisé.';
+        $this->client->submit($form);
+        $this->assertResponseIsSuccessful('La soumission renvoie le composant rafraîchi (200).');
+
+        $tickets = static::getContainer()->get(\App\Repository\Crm\CrmTicketRepository::class)
+            ->findForClient($this->user(self::CLIENT));
+        $this->assertCount(1, $tickets, 'Un ticket doit être créé pour le courtier.');
+
+        $ticket = $tickets[0];
+        $this->assertSame(\App\Entity\Crm\CrmTicket::CANAL_PORTAIL, $ticket->getCanal(), 'Le canal doit être « portail ».');
+        $this->assertSame(\App\Entity\Crm\CrmTicket::STATUT_OUVERT, $ticket->getStatut());
+        $this->assertSame($client->getId(), $ticket->getClient()->getId(), 'Le client du ticket est le courtier connecté.');
+        $this->assertNotNull($ticket->getSlaDueAt(), 'Le SLA doit être calculé à la création (priorité haute → 24 h).');
+
+        // L'accusé de réception (référence du ticket) figure dans le composant rafraîchi.
+        $this->assertStringContainsString(
+            $ticket->getReference(),
+            (string) $this->client->getResponse()->getContent(),
+            'Le composant rafraîchi doit afficher l\'accusé de réception avec la référence.',
+        );
+    }
 }
