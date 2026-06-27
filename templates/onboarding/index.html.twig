@@ -1,0 +1,227 @@
+{% extends 'base.html.twig' %}
+{% import 'admin/entreprise/_form_macros.html.twig' as ff %}
+
+{% block title %}{{ 'onboarding_page_title' | trans }} — JS Brokers{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    /* ============================================================
+       Assistant d'onboarding — écran de bienvenue.
+       Charte : cobalt #0047AB + neutres Bootstrap (cohérent avec
+       la création d'entreprise et la page de connexion).
+       ============================================================ */
+    .ob-page { min-height: 100vh; display: flex; flex-direction: column; background-color: #f3f3f3; }
+
+    .ob-progress-bar {
+        position: fixed; top: 0; left: 0; width: 100%; height: 6px;
+        background-color: #0047AB; display: none; z-index: 9999;
+        animation: ob-progress-animation 1.5s infinite linear;
+    }
+    @keyframes ob-progress-animation {
+        0%   { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    .ob-topbar {
+        flex: 0 0 auto;
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 1rem; padding: .75rem 1.5rem;
+        background-color: #ffffff; border-bottom: 1px solid #dee2e6;
+    }
+    .ob-brand { display: flex; align-items: center; gap: .6rem; text-decoration: none; }
+    .ob-brand img { width: 36px; height: 36px; border-radius: 8px; }
+    .ob-brand span { font-weight: 700; color: #0047AB; font-size: 1.1rem; }
+    .ob-topbar-user { display: flex; align-items: center; gap: 1rem; }
+    .ob-user-name { display: inline-flex; align-items: center; gap: .4rem; color: #495057; font-size: .95rem; font-weight: 600; }
+    .ob-user-icon { color: #6c757d; flex: 0 0 auto; }
+    .ob-topbar-actions { display: flex; align-items: center; gap: .5rem; }
+    .ob-topbar-sep { width: 1px; height: 24px; background-color: #dee2e6; }
+    @media (max-width: 575.98px) {
+        .ob-user-name, .ob-topbar-sep { display: none; }
+    }
+
+    .ob-scroll { flex: 1 1 auto; overflow-y: auto; }
+    .ob-content { max-width: 760px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    /* Bandeau de bienvenue */
+    .ob-hero { text-align: center; margin-bottom: 1.75rem; }
+    .ob-hero-badge {
+        display: inline-flex; align-items: center; gap: .4rem;
+        padding: .3rem .8rem; border-radius: 999px;
+        background-color: #e8f0fb; color: #0047AB;
+        font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+        margin-bottom: 1rem;
+    }
+    .ob-hero h1 { font-size: 1.9rem; font-weight: 700; color: #212529; margin: 0 0 .5rem; }
+    .ob-hero p { color: #6c757d; margin: 0 auto; max-width: 560px; }
+
+    /* Fil des étapes (1 entreprise → 2 espace prêt) */
+    .ob-steps { display: flex; align-items: center; justify-content: center; gap: .5rem; margin: 1.25rem 0 0; flex-wrap: wrap; }
+    .ob-step { display: inline-flex; align-items: center; gap: .45rem; color: #6c757d; font-size: .85rem; font-weight: 600; }
+    .ob-step-num {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 24px; height: 24px; border-radius: 50%;
+        background-color: #e9ecef; color: #495057; font-size: .8rem; font-weight: 700;
+    }
+    .ob-step--active .ob-step-num { background-color: #0047AB; color: #ffffff; }
+    .ob-step--active { color: #0047AB; }
+    .ob-step-sep { width: 28px; height: 2px; background-color: #dee2e6; }
+
+    .ob-form-card {
+        background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 12px;
+        padding: 1.5rem 1.75rem; box-shadow: 0 4px 16px rgba(0, 71, 171, .06);
+    }
+
+    .ob-fieldset {
+        border: 1px solid #dee2e6; border-radius: 10px;
+        background-color: #f8f9fa;
+        padding: 1.15rem 1.25rem .35rem; margin: 0 0 1.1rem;
+    }
+    .ob-fieldset:last-of-type { margin-bottom: 0; }
+    .ob-legend {
+        display: inline-flex; align-items: center; gap: .45rem;
+        font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; font-weight: 700;
+        color: #0047AB; margin-bottom: 1rem; padding: 0; width: auto; float: none;
+    }
+    .ob-fieldset .form-control,
+    .ob-fieldset .form-select { background-color: #ffffff; }
+
+    .ob-form-card .form-label { font-weight: 600; color: #343a40; margin-bottom: .35rem; }
+    .ob-form-card .form-control,
+    .ob-form-card .form-select { height: 48px; font-size: 1rem; color: #000000; }
+    .ob-form-card .form-control::placeholder { font-weight: 400; color: #adb5bd; }
+    .ob-form-card .form-control:focus,
+    .ob-form-card .form-select:focus {
+        border-color: #0047AB;
+        box-shadow: 0 0 0 .25rem rgba(0, 71, 171, .35);
+    }
+
+    /* Réutilise les classes de la macro ff.field (champ à icône préfixe) */
+    .ent-field-group { margin-bottom: 1rem; }
+    .ent-field { position: relative; }
+    .ent-field-icon {
+        position: absolute; top: 50%; left: .85rem; transform: translateY(-50%);
+        width: 20px; height: 20px; color: #6c757d; pointer-events: none;
+    }
+    .ent-field .form-control,
+    .ent-field .form-select { padding-left: 2.6rem; }
+
+    .ob-actions { display: flex; align-items: center; gap: .75rem; margin-top: 1.25rem; }
+    .ob-actions .ob-spacer { margin-left: auto; }
+    @media (max-width: 575.98px) {
+        .ob-actions { flex-direction: column-reverse; align-items: stretch; }
+        .ob-actions .btn { width: 100%; }
+        .ob-actions .ob-spacer { margin-left: 0; }
+    }
+</style>
+{{ include('admin/entreprise/_chrome_styles.html.twig') }}
+{% endblock %}
+
+{% block body %}
+<main class="ob-page" data-controller="top-progress">
+
+    <div class="ob-progress-bar" data-top-progress-target="bar"
+         role="progressbar" aria-label="{{ 'entreprise_loading' | trans }}" aria-hidden="true"></div>
+
+    <header class="ob-topbar">
+        <a href="{{ path('app_index') }}" class="ob-brand" data-action="click->top-progress#show">
+            <img src="{{ asset('images/entreprises/logofav.png') }}" alt="">
+            <span>JS Brokers</span>
+        </a>
+        <div class="ob-topbar-user">
+            <span class="ob-user-name">
+                {{ ux_icon(resolve_icon_name('utilisateur'), {height: '20px', width: '20px', class: 'ob-user-icon'}) }}
+                {{ utilisateur.nom }}
+            </span>
+            <span class="ob-topbar-sep" aria-hidden="true"></span>
+            <div class="ob-topbar-actions">
+                {{ include('admin/entreprise/_topbar_lang.html.twig') }}
+                <a href="{{ path('app_logout') }}" class="btn btn-sm btn-outline-danger border-0"
+                   data-action="click->top-progress#show"
+                   title="{{ "boutons_user_logout" | trans }}" aria-label="{{ "boutons_user_logout" | trans }}">
+                    {{ ux_icon(resolve_icon_name('action:exit'), {height: '18px', width: '18px'}) }}
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="ob-scroll">
+    <div class="ob-content">
+
+        {{ include('components/_flash_toasts.html.twig') }}
+
+        <div class="ob-hero">
+            <span class="ob-hero-badge">
+                {{ ux_icon('mdi:hand-wave', {height: '16px', width: '16px'}) }}
+                {{ 'onboarding_badge' | trans }}
+            </span>
+            <h1>{{ 'onboarding_title' | trans({':user': utilisateur.nom}) }}</h1>
+            <p>{{ 'onboarding_intro' | trans }}</p>
+
+            <div class="ob-steps" aria-hidden="true">
+                <span class="ob-step ob-step--active">
+                    <span class="ob-step-num">1</span>{{ 'onboarding_step_company' | trans }}
+                </span>
+                <span class="ob-step-sep"></span>
+                <span class="ob-step">
+                    <span class="ob-step-num">2</span>{{ 'onboarding_step_workspace' | trans }}
+                </span>
+            </div>
+        </div>
+
+        <div class="ob-form-card">
+            {{ form_start(form, {'attr': {
+                'data-controller': 'form-submit pays-dependances',
+                'data-action': 'submit->form-submit#submitting submit->top-progress#show',
+                'data-form-submit-loading-text-value': 'onboarding_loading'|trans,
+                'data-pays-dependances-url-template-value': path('admin.entreprise.api.villes', {codePays: 999999999}),
+            }}) }}
+
+                <fieldset class="ob-fieldset">
+                    <legend class="ob-legend">
+                        {{ ux_icon(resolve_icon_name('entreprise'), {height: '16px', width: '16px'}) }}
+                        {{ 'entreprise_legend_identity' | trans }}
+                    </legend>
+                    {{ ff.field(form.nom, 'entreprise') }}
+                    <div class="row">
+                        <div class="col-md">{{ ff.field(form.pays, 'mdi:earth') }}</div>
+                        <div class="col-md">{{ ff.field(form.ville, 'mdi:city') }}</div>
+                    </div>
+                </fieldset>
+
+                <fieldset class="ob-fieldset">
+                    <legend class="ob-legend">
+                        {{ ux_icon(resolve_icon_name('contact'), {height: '16px', width: '16px'}) }}
+                        {{ 'entreprise_legend_contact' | trans }}
+                    </legend>
+                    {{ ff.field(form.adresse, 'mdi:address-marker-outline') }}
+                    <div class="row">
+                        <div class="col-md">{{ ff.field(form.telephone, 'ic:outline-phone') }}</div>
+                        <div class="col-md">{{ ff.field(form.licence, 'clarity:license-outline-badged') }}</div>
+                    </div>
+                </fieldset>
+
+                <div class="ob-actions">
+                    {{ form_widget(form.enregistrer, {
+                        label_html: true,
+                        label: ux_icon(resolve_icon_name('action:save'), {height: '18px', width: '18px'}) ~ '<span class="ms-1">' ~ ('onboarding_company_submit'|trans) ~ '</span>',
+                        attr: {
+                            'class': 'btn btn-cobalt d-inline-flex align-items-center ob-spacer',
+                            'data-form-submit-target': 'button',
+                        }
+                    }) }}
+                </div>
+
+            {{ form_end(form) }}
+        </div>
+
+        <p class="text-muted text-center mt-3 mb-0" style="font-size: .85rem;">
+            {{ 'onboarding_free_note' | trans }}
+        </p>
+    </div>{# /.ob-content #}
+
+    {% include 'components/_public_footer.html.twig' with { lang: app.user.locale } %}
+    </div>{# /.ob-scroll #}
+</main>
+{% endblock %}

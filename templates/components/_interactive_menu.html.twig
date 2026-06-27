@@ -15,7 +15,37 @@
     - La persistance de l'état (se souvenir de la dernière rubrique ouverte).
 #}
 {% set menu = menu_data %}
-<div 
+<style>
+    /* État d'accueil de l'espace vide (charte cobalt JS Brokers) */
+    .ws-welcome { max-width: 720px; margin: 0 auto; padding: 2.5rem 1.5rem; }
+    .ws-welcome-head { text-align: center; margin-bottom: 1.75rem; }
+    .ws-welcome-emoji {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 72px; height: 72px; border-radius: 50%;
+        background-color: #e8f0fb; color: #0047AB; margin-bottom: 1rem;
+    }
+    .ws-welcome-title { font-size: 1.5rem; font-weight: 700; color: #212529; margin: 0 0 .5rem; }
+    .ws-welcome-intro { color: #6c757d; margin: 0 auto; max-width: 520px; }
+    .ws-welcome-steps { display: flex; flex-direction: column; gap: .75rem; margin-bottom: 1.5rem; }
+    .ws-step-card {
+        display: flex; align-items: center; gap: 1rem; width: 100%; text-align: left;
+        padding: 1rem 1.15rem; border: 1px solid #dee2e6; border-radius: 12px;
+        background-color: #ffffff; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease, transform .1s ease;
+    }
+    .ws-step-card:hover { border-color: #0047AB; box-shadow: 0 4px 16px rgba(0, 71, 171, .12); transform: translateY(-1px); }
+    .ws-step-card:focus-visible { outline: none; border-color: #0047AB; box-shadow: 0 0 0 .25rem rgba(0, 71, 171, .35); }
+    .ws-step-num {
+        flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+        width: 28px; height: 28px; border-radius: 50%;
+        background-color: #0047AB; color: #ffffff; font-weight: 700; font-size: .9rem;
+    }
+    .ws-step-icon { flex: 0 0 auto; color: #0047AB; display: inline-flex; }
+    .ws-step-text { display: flex; flex-direction: column; gap: .15rem; }
+    .ws-step-text strong { color: #212529; font-size: 1rem; }
+    .ws-step-text span { color: #6c757d; font-size: .88rem; }
+    .ws-welcome-hint { text-align: center; color: #6c757d; font-size: .85rem; margin: 0; }
+</style>
+<div
     {{ stimulus_controller('workspace-manager') }}
     data-workspace-manager-id-entreprise-value="{{ idEntreprise }}"
     data-workspace-manager-id-invite-value="{{ idInvite }}"
@@ -175,20 +205,97 @@
                  data-workspace-manager-target="workspaceTabBar"></div>
             {# Zone de contenu des onglets #}
             <div class="workspace-tab-panels" data-workspace-manager-target="workspaceTabPanels">
-                {# Squelette initial — supprimé dès le premier onglet créé #}
-                <div class="workspace-skeleton workspace-initial-skeleton">
-                    <div class="skeleton-header">
-                        <div class="skeleton-icon"></div>
-                        <div style="flex-grow: 1;">
-                            <div class="skeleton-line" style="width: 40%; height: 24px;"></div>
-                            <div class="skeleton-line" style="width: 80%; margin-top: 10px;"></div>
+                {% if welcome|default(false) %}
+                    {# État d'accueil de l'espace vide : panneau de bienvenue + étapes
+                       suggérées. Porte la classe `workspace-initial-skeleton` pour être
+                       retiré automatiquement dès l'ouverture du premier onglet (cf.
+                       workspace-manager_controller.js). Chaque étape déclenche l'action
+                       `loadComponent` existante avec les paramètres de la rubrique cible
+                       (lus dans le menu pour rester cohérents avec la navigation). #}
+                    {% set _groupes = menu.colonne_1.groupes %}
+                    {% set _step_clients = _groupes.Production.rubriques.Clients|default(null) %}
+                    {% set _step_taxes = _groupes.Finances.rubriques.Taxes|default(null) %}
+                    {% set _step_invites = _groupes.Administration.rubriques['Invités']|default(null) %}
+                    <div class="workspace-initial-skeleton ws-welcome">
+                        <div class="ws-welcome-head">
+                            <div class="ws-welcome-emoji" aria-hidden="true">
+                                {{ ux_icon('mdi:rocket-launch-outline', {height: '40px', width: '40px'}) }}
+                            </div>
+                            <h2 class="ws-welcome-title">{{ 'onboarding_ws_title'|trans({':company': entrepriseNom}) }}</h2>
+                            <p class="ws-welcome-intro">{{ 'onboarding_ws_intro'|trans }}</p>
                         </div>
+
+                        <div class="ws-welcome-steps">
+                            {% if _step_clients %}
+                                <button type="button" class="ws-step-card"
+                                    data-action="click->workspace-manager#loadComponent"
+                                    data-workspace-manager-component-name-param="{{ _step_clients.composant_twig }}"
+                                    data-workspace-manager-group-name-param="Production"
+                                    data-workspace-manager-entity-name-param="{{ _step_clients.entity_name|default('') }}"
+                                    data-workspace-manager-icon-param="{{ _step_clients.icone|default('') }}"
+                                    data-workspace-manager-description-param="">
+                                    <span class="ws-step-num">1</span>
+                                    <span class="ws-step-icon">{{ ux_icon(resolve_icon_name('client'), {height: '22px', width: '22px'}) }}</span>
+                                    <span class="ws-step-text">
+                                        <strong>{{ 'onboarding_ws_step_clients_title'|trans }}</strong>
+                                        <span>{{ 'onboarding_ws_step_clients_desc'|trans }}</span>
+                                    </span>
+                                </button>
+                            {% endif %}
+
+                            {% if _step_taxes %}
+                                <button type="button" class="ws-step-card"
+                                    data-action="click->workspace-manager#loadComponent"
+                                    data-workspace-manager-component-name-param="{{ _step_taxes.composant_twig }}"
+                                    data-workspace-manager-group-name-param="Finances"
+                                    data-workspace-manager-entity-name-param="{{ _step_taxes.entity_name|default('') }}"
+                                    data-workspace-manager-icon-param="{{ _step_taxes.icone|default('') }}"
+                                    data-workspace-manager-description-param="">
+                                    <span class="ws-step-num">2</span>
+                                    <span class="ws-step-icon">{{ ux_icon(resolve_icon_name('taxe'), {height: '22px', width: '22px'}) }}</span>
+                                    <span class="ws-step-text">
+                                        <strong>{{ 'onboarding_ws_step_taxes_title'|trans }}</strong>
+                                        <span>{{ 'onboarding_ws_step_taxes_desc'|trans }}</span>
+                                    </span>
+                                </button>
+                            {% endif %}
+
+                            {% if _step_invites and isEntrepriseAdmin %}
+                                <button type="button" class="ws-step-card"
+                                    data-action="click->workspace-manager#loadComponent"
+                                    data-workspace-manager-component-name-param="{{ _step_invites.composant_twig }}"
+                                    data-workspace-manager-group-name-param="Administration"
+                                    data-workspace-manager-entity-name-param="{{ _step_invites.entity_name|default('') }}"
+                                    data-workspace-manager-icon-param="{{ _step_invites.icone|default('') }}"
+                                    data-workspace-manager-description-param="">
+                                    <span class="ws-step-num">3</span>
+                                    <span class="ws-step-icon">{{ ux_icon(resolve_icon_name('invite'), {height: '22px', width: '22px'}) }}</span>
+                                    <span class="ws-step-text">
+                                        <strong>{{ 'onboarding_ws_step_invites_title'|trans }}</strong>
+                                        <span>{{ 'onboarding_ws_step_invites_desc'|trans }}</span>
+                                    </span>
+                                </button>
+                            {% endif %}
+                        </div>
+
+                        <p class="ws-welcome-hint">{{ 'onboarding_ws_hint'|trans }}</p>
                     </div>
-                    <div class="skeleton-line" style="height: 40px; width: 100%; margin-bottom: 1rem;"></div>
-                    <div class="skeleton-line" style="height: 40px; width: 100%; margin-bottom: 1rem;"></div>
-                    <div class="skeleton-line" style="height: 40px; width: 100%; margin-bottom: 1rem;"></div>
-                    <div class="skeleton-row" style="height: 300px;"></div>
-                </div>
+                {% else %}
+                    {# Squelette initial — supprimé dès le premier onglet créé #}
+                    <div class="workspace-skeleton workspace-initial-skeleton">
+                        <div class="skeleton-header">
+                            <div class="skeleton-icon"></div>
+                            <div style="flex-grow: 1;">
+                                <div class="skeleton-line" style="width: 40%; height: 24px;"></div>
+                                <div class="skeleton-line" style="width: 80%; margin-top: 10px;"></div>
+                            </div>
+                        </div>
+                        <div class="skeleton-line" style="height: 40px; width: 100%; margin-bottom: 1rem;"></div>
+                        <div class="skeleton-line" style="height: 40px; width: 100%; margin-bottom: 1rem;"></div>
+                        <div class="skeleton-line" style="height: 40px; width: 100%; margin-bottom: 1rem;"></div>
+                        <div class="skeleton-row" style="height: 300px;"></div>
+                    </div>
+                {% endif %}
             </div>
         </div>
 
