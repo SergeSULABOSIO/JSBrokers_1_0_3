@@ -6,12 +6,15 @@
 {{ include('console/crm/_styles.html.twig') }}
 
 <div class="cs-panel">
-    <div class="mb-3 d-flex flex-wrap gap-2 align-items-center">
-        {% for key, label in {'': 'Tous', client: 'Clients', prospect: 'Prospects'} %}
-            <a href="{{ path('console.crm.client.index', q ? {q: q, type: key} : {type: key}) }}"
-               class="cs-badge {{ (type|default('')) == key ? 'cs-badge--cobalt' : 'cs-badge--muted' }}" style="text-decoration:none;"
-               data-action="click->top-progress#show">{{ label }}</a>
-        {% endfor %}
+    <div class="mb-3">
+        <div class="db-prod-tabs">
+            {% for key, label in {'': 'Tous', client: 'Clients', prospect: 'Prospects'} %}
+                <a href="{{ path('console.crm.client.index', q ? {q: q, type: key} : {type: key}) }}"
+                   class="db-task-toggle {{ (type|default('')) == key ? 'active' : '' }}"
+                   aria-pressed="{{ (type|default('')) == key ? 'true' : 'false' }}"
+                   data-action="click->top-progress#show">{{ label }}</a>
+            {% endfor %}
+        </div>
     </div>
 
     <form method="get" class="mb-3" data-action="submit->top-progress#show">

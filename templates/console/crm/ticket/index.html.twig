@@ -13,11 +13,13 @@
 {{ include('console/crm/_styles.html.twig') }}
 
 <div class="cs-panel">
-    <div class="mb-3 d-flex flex-wrap gap-2">
-        <a href="{{ path('console.crm.ticket.index') }}" class="cs-badge {{ statut is null ? 'cs-badge--cobalt' : 'cs-badge--muted' }}" style="text-decoration:none;">Tous</a>
-        {% for key, label in {ouvert:'Ouvert', en_cours:'En cours', resolu:'Résolu', clos:'Clos'} %}
-            <a href="{{ path('console.crm.ticket.index', {statut: key}) }}" class="cs-badge {{ statut == key ? 'cs-badge--cobalt' : 'cs-badge--muted' }}" style="text-decoration:none;">{{ label }} ({{ compteurs[key]|default(0) }})</a>
-        {% endfor %}
+    <div class="mb-3">
+        <div class="db-prod-tabs">
+            <a href="{{ path('console.crm.ticket.index') }}" class="db-task-toggle {{ statut is null ? 'active' : '' }}" aria-pressed="{{ statut is null ? 'true' : 'false' }}">Tous</a>
+            {% for key, label in {ouvert:'Ouvert', en_cours:'En cours', resolu:'Résolu', clos:'Clos'} %}
+                <a href="{{ path('console.crm.ticket.index', {statut: key}) }}" class="db-task-toggle {{ statut == key ? 'active' : '' }}" aria-pressed="{{ statut == key ? 'true' : 'false' }}">{{ label }} ({{ compteurs[key]|default(0) }})</a>
+            {% endfor %}
+        </div>
     </div>
 
     {% if tickets.getTotalItemCount > 0 %}
@@ -28,7 +30,7 @@
                 <tr>
                     <td>{{ t.reference }}</td>
                     <td>{% if t.client %}<a href="{{ path('console.crm.client.show', {id: t.client.id}) }}">{{ t.client.nom ?: t.client.email }}</a>{% else %}—{% endif %}</td>
-                    <td>{{ t.sujet }}</td>
+                    <td>{{ ticketm.sujet(t) }}</td>
                     <td>{{ t.priorite }}</td>
                     <td>{% if t.slaDepasse %}<span class="cs-badge cs-badge--danger">Dépassé</span>{% elseif t.slaDueAt %}{{ t.slaDueAt|format_datetime('short','short', locale: app.user.locale) }}{% else %}—{% endif %}</td>
                     <td>{{ ticketm.statutBadge(t) }}</td>

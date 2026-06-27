@@ -1,10 +1,14 @@
 {#
     Composant Support self-service (espace courtier).
     - Liste les demandes du courtier (entité CrmTicket, côté équipe = file console).
-    - Formulaire d'ouverture d'une nouvelle demande.
+    - Formulaire d'ouverture d'une nouvelle demande, sur le pattern du formulaire
+      Coupon : chaque champ porte une icône incrustée à gauche, le bouton de
+      soumission porte aussi une icône.
     Chargé en AJAX dans l'espace de travail (cf. getComponentMap + menu « Assistance »).
-    Comportement piloté par le contrôleur Stimulus `support` (jamais de <script> inline
-    dans un partial chargé en onglet). Couleurs : charte JS Brokers (cobalt #0047AB).
+    Comportement piloté par le contrôleur Stimulus `support` : la soumission déclenche
+    la barre de progression du workspace et le retour s'affiche dans le toast global
+    (jamais de <script> inline dans un partial chargé en onglet).
+    Couleurs : charte JS Brokers (cobalt #0047AB).
 #}
 <div class="jsb-support" data-controller="support">
     <style>
@@ -18,31 +22,38 @@
         .jsb-support .jsb-card__title { font-size: 1rem; font-weight: 600; color: #343a40; margin: 0 0 .9rem; }
         .jsb-support .jsb-field { margin-bottom: .9rem; display: flex; flex-direction: column; }
         .jsb-support label { font-size: .8rem; color: #495057; margin-bottom: .3rem; font-weight: 600; }
-        .jsb-support input[type="text"],
-        .jsb-support select,
-        .jsb-support textarea {
-            width: 100%; padding: .55rem .7rem; border: 1px solid #ced4da; border-radius: .4rem;
+        /* Champ à icône incrustée (pattern Coupon / thème console .cs-field) :
+           l'icône est posée à l'intérieur, à gauche, et l'input reçoit un retrait. */
+        .jsb-support .jsb-field-control { position: relative; }
+        .jsb-support .jsb-field-icon {
+            position: absolute; left: .65rem; top: 50%; transform: translateY(-50%);
+            display: inline-flex; color: #0047AB; pointer-events: none; /* --cobalt */
+        }
+        .jsb-support .jsb-field-control--top .jsb-field-icon { top: .7rem; transform: none; }
+        .jsb-support .jsb-field-control input[type="text"],
+        .jsb-support .jsb-field-control select,
+        .jsb-support .jsb-field-control textarea {
+            width: 100%; padding: .55rem .7rem .55rem 2.4rem; border: 1px solid #ced4da; border-radius: .4rem;
             font-size: .9rem; color: #000000; background: #ffffff; font-family: inherit; box-sizing: border-box;
         }
-        .jsb-support input[type="text"]:focus,
-        .jsb-support select:focus,
-        .jsb-support textarea:focus {
+        .jsb-support .jsb-field-control input[type="text"]:focus,
+        .jsb-support .jsb-field-control select:focus,
+        .jsb-support .jsb-field-control textarea:focus {
             outline: none; border-color: #0047AB; box-shadow: 0 0 0 .2rem rgba(0, 71, 171, .35); /* --cobalt / --cobalt-focus-ring */
         }
-        .jsb-support textarea { resize: vertical; min-height: 96px; }
-        .jsb-support .jsb-btn { display: inline-flex; align-items: center; gap: .4rem; border: none; border-radius: .4rem;
+        .jsb-support .jsb-field-control textarea { resize: vertical; min-height: 96px; }
+        .jsb-support .jsb-btn { display: inline-flex; align-items: center; gap: .45rem; border: none; border-radius: .4rem;
             padding: .6rem 1.15rem; font-size: .9rem; font-weight: 600; cursor: pointer; }
         .jsb-support .jsb-btn--primary { background: #0047AB; color: #ffffff; } /* --cobalt / --text-white */
         .jsb-support .jsb-btn--primary:hover { background: #003380; } /* --cobalt-dark */
         .jsb-support .jsb-btn--primary:disabled { opacity: .65; cursor: default; }
-        .jsb-support .jsb-alert { background: #d1e7dd; color: #0f5132; border-radius: .4rem; padding: .7rem .9rem;
-            margin-bottom: 1rem; font-size: .88rem; } /* --success-bg / --success-dark */
         .jsb-support .jsb-errors li { color: #842029; font-size: .78rem; margin-top: .25rem; } /* --danger-dark */
         .jsb-support .jsb-ticket-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .6rem; }
         .jsb-support .jsb-ticket { border: 1px solid #dee2e6; border-radius: .5rem; padding: .75rem .9rem; background: #f8f9fa; } /* --border-light / --bg-light */
         .jsb-support .jsb-ticket__top { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
         .jsb-support .jsb-ticket__ref { font-family: monospace; font-size: .8rem; color: #0047AB; font-weight: 700; } /* --cobalt */
         .jsb-support .jsb-ticket__sujet { font-weight: 600; color: #212529; flex: 1 1 auto; } /* --text-dark */
+        .jsb-support .jsb-ticket__msg { color: #495057; font-size: .82rem; margin: .4rem 0 0; white-space: pre-line; } /* --text-body */
         .jsb-support .jsb-ticket__meta { color: #6c757d; font-size: .78rem; margin-top: .35rem; display: flex; gap: 1rem; flex-wrap: wrap; }
         .jsb-support .jsb-badge { font-size: .72rem; font-weight: 700; padding: .15rem .55rem; border-radius: 1rem; white-space: nowrap; }
         .jsb-support .jsb-badge--ouvert   { background: #e8f0fb; color: #0047AB; } /* --bg-cobalt-subtle / --cobalt */
@@ -58,33 +69,39 @@
     </div>
     <p class="jsb-support__intro">Une question, un blocage ? Ouvrez une demande : l'équipe JS Brokers la prend en charge et vous suivez son avancement ici même.</p>
 
-    {% if createdRef %}
-        <div class="jsb-alert" role="status">
-            Votre demande <strong>{{ createdRef }}</strong> a bien été transmise au support. Notre équipe vous recontactera dans les meilleurs délais.
-        </div>
-    {% endif %}
-
     <div class="jsb-support__grid">
-        {# --- Formulaire de nouvelle demande --- #}
+        {# --- Formulaire de nouvelle demande (pattern Coupon : champ à icône) --- #}
         <section class="jsb-card" aria-label="Ouvrir une demande de support">
             <h3 class="jsb-card__title">Nouvelle demande</h3>
             {{ form_start(form, {action: path('admin.support.api.submit'), attr: {'data-action': 'submit->support#submit', novalidate: 'novalidate'}}) }}
                 <div class="jsb-field">
                     {{ form_label(form.sujet) }}
-                    {{ form_widget(form.sujet) }}
+                    <div class="jsb-field-control">
+                        <span class="jsb-field-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('feedback'), {height: '18px', width: '18px'}) }}</span>
+                        {{ form_widget(form.sujet) }}
+                    </div>
                     {{ form_errors(form.sujet, {attr: {class: 'jsb-errors'}}) }}
                 </div>
                 <div class="jsb-field">
                     {{ form_label(form.priorite) }}
-                    {{ form_widget(form.priorite) }}
+                    <div class="jsb-field-control">
+                        <span class="jsb-field-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('action:alert'), {height: '18px', width: '18px'}) }}</span>
+                        {{ form_widget(form.priorite) }}
+                    </div>
                     {{ form_errors(form.priorite, {attr: {class: 'jsb-errors'}}) }}
                 </div>
                 <div class="jsb-field">
                     {{ form_label(form.description) }}
-                    {{ form_widget(form.description) }}
+                    <div class="jsb-field-control jsb-field-control--top">
+                        <span class="jsb-field-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('action:description'), {height: '18px', width: '18px'}) }}</span>
+                        {{ form_widget(form.description) }}
+                    </div>
                     {{ form_errors(form.description, {attr: {class: 'jsb-errors'}}) }}
                 </div>
-                <button type="submit" class="jsb-btn jsb-btn--primary">Envoyer ma demande</button>
+                <button type="submit" class="jsb-btn jsb-btn--primary">
+                    {{ ux_icon(resolve_icon_name('feedback'), {height: '18px', width: '18px'}) }}
+                    <span>Envoyer ma demande</span>
+                </button>
             {{ form_end(form) }}
         </section>
 
@@ -102,6 +119,7 @@
                                 <span class="jsb-ticket__sujet">{{ t.sujet }}</span>
                                 <span class="jsb-badge jsb-badge--{{ t.statut }}">{{ t.statutLabel }}</span>
                             </div>
+                            {% if t.description %}<p class="jsb-ticket__msg">{{ t.description }}</p>{% endif %}
                             <div class="jsb-ticket__meta">
                                 <span>Priorité&nbsp;: {{ t.priorite|capitalize }}</span>
                                 <span>Ouverte le {{ t.createdAt|date('d/m/Y') }}</span>

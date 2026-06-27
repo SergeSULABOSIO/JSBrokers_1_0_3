@@ -410,7 +410,7 @@
                     {% for t in tickets %}
                         <tr>
                             <td>{{ t.reference }}</td>
-                            <td>{{ t.sujet }}</td>
+                            <td>{{ ticketm.sujet(t) }}</td>
                             <td>{{ t.priorite }}</td>
                             <td>{% if t.slaDepasse %}<span class="cs-badge cs-badge--danger">Dépassé</span>{% elseif t.slaDueAt %}{{ t.slaDueAt|format_datetime('short','short', locale: app.user.locale) }}{% else %}—{% endif %}</td>
                             <td>{{ ticketm.statutBadge(t) }}</td>
