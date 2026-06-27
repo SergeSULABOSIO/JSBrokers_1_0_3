@@ -50,22 +50,20 @@
     .ob-scroll { flex: 1 1 auto; overflow-y: auto; }
     .ob-content { max-width: 720px; margin: 0 auto; padding: 1.5rem; }
 
-    /* Entête du formulaire : pastille cobalt + titre, description, séparateur
-       (modèle .cs-form-head / .cs-head-title). */
-    .ob-head { margin-bottom: 1.5rem; }
-    .ob-head-title { display: flex; align-items: center; gap: .7rem; margin-bottom: .25rem; }
-    .ob-head-title h1 { font-size: 1.6rem; font-weight: 700; color: #212529; margin: 0; }
-    .ob-head-icon {
-        flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
-        width: 46px; height: 46px; border-radius: 11px;
-        background: #e8f0fb; color: #0047AB;
+    /* Entête centré (style d'origine) : badge, titre et intro centrés. */
+    .ob-hero { text-align: center; margin-bottom: 1.75rem; }
+    .ob-hero-badge {
+        display: inline-flex; align-items: center; gap: .4rem;
+        padding: .3rem .8rem; border-radius: 999px;
+        background-color: #e8f0fb; color: #0047AB;
+        font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+        margin-bottom: 1rem;
     }
-    .ob-head-icon svg { width: 26px; height: 26px; }
-    .ob-head p { color: #6c757d; margin: 0; }
-    .ob-head hr { margin: 1.25rem 0 0; border: 0; border-top: 1px solid #dee2e6; opacity: 1; }
+    .ob-hero h1 { font-size: 1.9rem; font-weight: 700; color: #212529; margin: 0 0 .5rem; }
+    .ob-hero p { color: #6c757d; margin: 0 auto; max-width: 560px; }
 
-    /* Fil des étapes (1 entreprise → 2 espace prêt) */
-    .ob-steps { display: flex; align-items: center; gap: .5rem; margin: 1rem 0 0; flex-wrap: wrap; }
+    /* Fil des étapes (1 entreprise → 2 espace prêt), centré sous l'intro. */
+    .ob-steps { display: flex; align-items: center; justify-content: center; gap: .5rem; margin: 1.25rem 0 0; flex-wrap: wrap; }
     .ob-step { display: inline-flex; align-items: center; gap: .45rem; color: #6c757d; font-size: .85rem; font-weight: 600; }
     .ob-step-num {
         display: inline-flex; align-items: center; justify-content: center;
@@ -80,16 +78,6 @@
         background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 14px;
         padding: 1.75rem; box-shadow: 0 10px 40px rgba(0, 71, 171, .08);
     }
-
-    /* Illustration en cercle, centrée en haut de la carte (modèle .cs-thumb). */
-    .ob-thumb { display: flex; justify-content: center; margin-bottom: 1.5rem; }
-    .ob-thumb-placeholder {
-        display: flex; align-items: center; justify-content: center;
-        width: 150px; height: 150px; border-radius: 50%;
-        border: 1px solid #dee2e6; background-color: #f8f9fa; transition: box-shadow .2s ease;
-    }
-    .ob-thumb-placeholder:hover { box-shadow: 0 4px 16px rgba(0, 71, 171, .12); }
-    .ob-thumb-placeholder svg { width: 64px; height: 64px; color: #0047AB; }
 
     /* Sections = panneaux à légende (modèle .cs-fieldset / .cs-legend). */
     .ob-fieldset {
@@ -187,13 +175,12 @@
 
         {{ include('components/_flash_toasts.html.twig') }}
 
-        <div class="ob-head">
-            <div class="ob-head-title">
-                <span class="ob-head-icon" aria-hidden="true">
-                    {{ ux_icon('mdi:hand-wave', {height: '26px', width: '26px'}) }}
-                </span>
-                <h1>{{ 'onboarding_title' | trans({':user': utilisateur.nom}) }}</h1>
-            </div>
+        <div class="ob-hero">
+            <span class="ob-hero-badge">
+                {{ ux_icon('mdi:hand-wave', {height: '16px', width: '16px'}) }}
+                {{ 'onboarding_badge' | trans }}
+            </span>
+            <h1>{{ 'onboarding_title' | trans({':user': utilisateur.nom}) }}</h1>
             <p>{{ 'onboarding_intro' | trans }}</p>
 
             <div class="ob-steps" aria-hidden="true">
@@ -205,16 +192,9 @@
                     <span class="ob-step-num">2</span>{{ 'onboarding_step_workspace' | trans }}
                 </span>
             </div>
-            <hr>
         </div>
 
         <div class="ob-form-card">
-
-            <div class="ob-thumb">
-                <div class="ob-thumb-placeholder" aria-hidden="true">
-                    {{ ux_icon(resolve_icon_name('entreprise'), {height: '64px', width: '64px'}) }}
-                </div>
-            </div>
 
             {{ form_start(form, {'attr': {
                 'novalidate': 'novalidate',
