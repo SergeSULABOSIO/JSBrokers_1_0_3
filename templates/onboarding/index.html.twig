@@ -66,9 +66,11 @@
     .ob-steps { display: flex; align-items: center; justify-content: center; gap: .5rem; margin: 1.25rem 0 0; flex-wrap: wrap; }
     .ob-step { display: inline-flex; align-items: center; gap: .45rem; color: #6c757d; font-size: .85rem; font-weight: 600; }
     .ob-step-num {
+        flex: 0 0 auto;
         display: inline-flex; align-items: center; justify-content: center;
         width: 24px; height: 24px; border-radius: 50%;
-        background-color: #e9ecef; color: #495057; font-size: .8rem; font-weight: 700;
+        background-color: #e9ecef; color: #495057;
+        font-size: .8rem; font-weight: 700; line-height: 1;
     }
     .ob-step--active .ob-step-num { background-color: #0047AB; color: #ffffff; }
     .ob-step--active { color: #0047AB; }
