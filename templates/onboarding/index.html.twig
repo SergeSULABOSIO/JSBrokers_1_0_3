@@ -74,6 +74,16 @@
     .ob-step--active { color: #0047AB; }
     .ob-step-sep { width: 28px; height: 2px; background-color: #dee2e6; }
 
+    /* Bandeau « offerte » au-dessus de la carte du formulaire (et non dans la barre
+       d'actions) : information rassurante avant la saisie. */
+    .ob-free-note {
+        display: flex; align-items: center; justify-content: center; gap: .5rem;
+        margin-bottom: 1rem; padding: .7rem 1rem;
+        background-color: #e8f0fb; color: #0047AB; border-radius: 10px;
+        font-size: .9rem; font-weight: 600; text-align: center;
+    }
+    .ob-free-note svg { flex: 0 0 auto; }
+
     .ob-form-card {
         background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 14px;
         padding: 1.75rem; box-shadow: 0 10px 40px rgba(0, 71, 171, .08);
@@ -126,17 +136,25 @@
         box-shadow: 0 -4px 12px rgba(0, 71, 171, .06);
     }
     .ob-actions .btn { height: 46px; display: inline-flex; align-items: center; }
-    /* Note « offerte » ancrée à gauche ; margin-left:auto sur le séparateur pousse
-       le bouton à droite (repris de .cs-actions-back / .cs-actions-sep). */
-    .ob-actions-note { display: inline-flex; align-items: center; gap: .35rem; font-size: .85rem; color: #6c757d; }
-    .ob-actions-note svg { color: #198754; flex: 0 0 auto; }
+    /* Pattern console (.cs-actions-back / .cs-actions-sep) : à GAUCHE une pastille +
+       un lien vers l'espace utilisateur (liste d'entreprises) ; le séparateur, en
+       margin-left:auto, pousse le bouton principal à DROITE. */
+    .ob-actions-go { display: inline-flex; align-items: center; gap: .55rem; }
+    .ob-go-pill {
+        flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+        width: 34px; height: 34px; border-radius: 50%;
+        background: #e8f0fb; color: #0047AB;
+    }
+    .ob-go-pill svg { width: 18px; height: 18px; }
+    .ob-go-link { color: #0047AB; text-decoration: none; font-weight: 600; font-size: .9rem; white-space: nowrap; }
+    .ob-go-link:hover { color: #003380; text-decoration: underline; }
     .ob-actions-sep { flex: 0 0 auto; width: 1px; height: 28px; background-color: #dee2e6; margin-left: auto; }
 
     @media (max-width: 575.98px) {
         .ob-actions { flex-direction: column-reverse; align-items: stretch; }
         .ob-actions .btn { width: 100%; justify-content: center; }
         .ob-actions-sep { display: none; }
-        .ob-actions-note { width: 100%; justify-content: center; }
+        .ob-actions-go { justify-content: center; }
     }
 </style>
 {{ include('admin/entreprise/_chrome_styles.html.twig') }}
@@ -194,6 +212,11 @@
             </div>
         </div>
 
+        <div class="ob-free-note">
+            {{ ux_icon('mdi:gift-outline', {height: '18px', width: '18px'}) }}
+            <span>{{ 'onboarding_free_note' | trans }}</span>
+        </div>
+
         <div class="ob-form-card">
 
             {{ form_start(form, {'attr': {
@@ -228,12 +251,28 @@
                     </div>
                 </fieldset>
 
+                {# Rappel permanent (même logique de toast que la création d'entreprise) :
+                   l'offre « première entreprise offerte » reste affichée en toast. #}
+                {{ include('components/_workspace_params_toast.html.twig', {
+                    title: 'onboarding_free_toast_title'|trans,
+                    message: 'onboarding_free_note'|trans
+                }) }}
+
                 <div class="ob-actions">
-                    <span class="ob-actions-note">
-                        {{ ux_icon('mdi:gift-outline', {height: '18px', width: '18px'}) }}
-                        <span>{{ 'onboarding_free_note' | trans }}</span>
+                    {# À gauche (pattern console) : pastille + lien pour rejoindre l'espace
+                       utilisateur (liste d'entreprises) sans passer par l'assistant. #}
+                    <span class="ob-actions-go">
+                        <span class="ob-go-pill" aria-hidden="true">
+                            {{ ux_icon(resolve_icon_name('entreprise'), {height: '18px', width: '18px'}) }}
+                        </span>
+                        <a href="{{ path('admin.entreprise.index') }}" class="ob-go-link"
+                           data-action="click->top-progress#show">
+                            {{ 'onboarding_goto_companies' | trans }}
+                        </a>
                     </span>
+
                     <span class="ob-actions-sep" aria-hidden="true"></span>
+
                     {{ form_widget(form.enregistrer, {
                         label_html: true,
                         label: ux_icon(resolve_icon_name('action:save'), {height: '18px', width: '18px'}) ~ '<span class="ms-1">' ~ ('onboarding_company_submit'|trans) ~ '</span>',
