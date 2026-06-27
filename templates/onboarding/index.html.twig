@@ -92,6 +92,17 @@
         padding: 1.75rem; box-shadow: 0 10px 40px rgba(0, 71, 171, .08);
     }
 
+    /* Illustration en cercle, centrée en haut de la carte (modèle .cs-thumb /
+       .ent-thumb-placeholder). */
+    .ob-thumb { display: flex; justify-content: center; margin-bottom: 1.5rem; }
+    .ob-thumb-placeholder {
+        display: flex; align-items: center; justify-content: center;
+        width: 150px; height: 150px; border-radius: 50%;
+        border: 1px solid #dee2e6; background-color: #f8f9fa; transition: box-shadow .2s ease;
+    }
+    .ob-thumb-placeholder:hover { box-shadow: 0 4px 16px rgba(0, 71, 171, .12); }
+    .ob-thumb-placeholder svg { width: 64px; height: 64px; color: #0047AB; }
+
     /* Sections = panneaux à légende (modèle .cs-fieldset / .cs-legend). */
     .ob-fieldset {
         border: 1px solid #dee2e6; border-radius: 10px; background-color: #f8f9fa;
@@ -219,6 +230,13 @@
 
         <div class="ob-form-card">
 
+            {# Illustration en cercle, centrée en haut de la carte (modèle entreprise). #}
+            <div class="ob-thumb">
+                <div class="ob-thumb-placeholder" aria-hidden="true">
+                    {{ ux_icon(resolve_icon_name('entreprise'), {height: '64px', width: '64px'}) }}
+                </div>
+            </div>
+
             {{ form_start(form, {'attr': {
                 'novalidate': 'novalidate',
                 'data-controller': 'form-submit pays-dependances',
@@ -259,12 +277,13 @@
                 }) }}
 
                 <div class="ob-actions">
-                    {# À gauche (pattern console .cs-actions-back) : lien icône + libellé
-                       vers l'espace utilisateur (liste d'entreprises). #}
+                    {# Pattern exact du coupon (.cs-form-actions / .ent-actions) :
+                       à GAUCHE le lien chevron + nom de la liste ; à DROITE le bouton
+                       principal puis « Annuler », tous deux vers la liste d'entreprises. #}
                     <a href="{{ path('admin.entreprise.index') }}" class="ob-actions-back"
                        data-action="click->top-progress#show">
-                        {{ ux_icon(resolve_icon_name('entreprise'), {height: '18px', width: '18px'}) }}
-                        <span>{{ 'onboarding_goto_companies' | trans }}</span>
+                        {{ ux_icon('hugeicons:arrow-left-01', {height: '18px', width: '18px'}) }}
+                        <span>{{ 'entreprise_page_name_list' | trans }}</span>
                     </a>
 
                     <span class="ob-actions-sep" aria-hidden="true"></span>
@@ -277,6 +296,14 @@
                             'data-form-submit-target': 'button',
                         }
                     }) }}
+
+                    <a href="{{ path('admin.entreprise.index') }}"
+                       class="btn btn-outline-secondary d-inline-flex align-items-center"
+                       data-action="click->form-submit#navigating click->top-progress#show"
+                       data-loading-text="{{ 'entreprise_loading_cancel' | trans }}">
+                        {{ ux_icon(resolve_icon_name('action:cancel'), {height: '18px', width: '18px'}) }}
+                        <span class="ms-1">{{ 'entreprise_cancel' | trans }}</span>
+                    </a>
                 </div>
 
             {{ form_end(form) }}
