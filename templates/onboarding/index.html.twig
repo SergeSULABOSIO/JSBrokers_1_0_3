@@ -76,22 +76,6 @@
 
     /* Bandeau « offerte » au-dessus de la carte du formulaire (et non dans la barre
        d'actions) : information rassurante avant la saisie. */
-    /* Alerte « offerte » : pastille cobalt (icône cadeau) + texte neutre lisible,
-       carte claire bordée. Pattern d'alerte standard, scannable. */
-    .ob-free-note {
-        display: flex; align-items: center; gap: .8rem;
-        max-width: 600px; margin: 0 auto 1.25rem; padding: .85rem 1.1rem;
-        background-color: #e8f0fb; border: 1px solid #dee2e6; border-radius: 12px;
-    }
-    .ob-free-ico {
-        flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
-        width: 38px; height: 38px; border-radius: 50%;
-        background-color: #0047AB; color: #ffffff;
-    }
-    .ob-free-ico svg { width: 20px; height: 20px; }
-    .ob-free-note p { margin: 0; font-size: .9rem; line-height: 1.45; color: #495057; text-align: left; }
-    .ob-free-note p strong { color: #0047AB; font-weight: 700; }
-
     .ob-form-card {
         background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 14px;
         padding: 1.75rem; box-shadow: 0 10px 40px rgba(0, 71, 171, .08);
@@ -226,13 +210,6 @@
                     <span class="ob-step-num">2</span>{{ 'onboarding_step_workspace' | trans }}
                 </span>
             </div>
-        </div>
-
-        <div class="ob-free-note" role="note">
-            <span class="ob-free-ico" aria-hidden="true">
-                {{ ux_icon('mdi:gift-outline', {height: '20px', width: '20px'}) }}
-            </span>
-            <p><strong>{{ 'onboarding_free_lead' | trans }}</strong> {{ 'onboarding_free_detail' | trans }}</p>
         </div>
 
         <div class="ob-form-card">
