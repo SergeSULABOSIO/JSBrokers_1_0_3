@@ -1,0 +1,141 @@
+{% extends 'console/base.html.twig' %}
+{% import 'console/crm/_ticket_macros.html.twig' as ticketm %}
+
+{% block console_subtitle %}<p>Détails du ticket, statut et échanges internes (feedbacks).</p>{% endblock %}
+
+{% block console_actions %}
+    <a href="{{ path('console.crm.ticket.index') }}" class="btn btn-sm btn-outline-secondary" data-action="click->top-progress#show">
+        {{ ux_icon('hugeicons:arrow-left-01', {height:'18px', width:'18px'}) }}<span class="ms-1">Retour au support</span>
+    </a>
+{% endblock %}
+
+{% block console_body %}
+{{ include('console/crm/_styles.html.twig') }}
+<style>
+    /* Fil des feedbacks : réutilise la timeline cobalt du module CRM. Carte par
+       message, en-tête auteur/date, corps respectant les retours à la ligne. */
+    .crm-fb { background:#fff; border:1px solid #dee2e6; border-radius:10px; padding:.75rem .9rem; }
+    .crm-fb__head { display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-bottom:.35rem; }
+    .crm-fb__who { font-weight:600; color:#212529; display:inline-flex; align-items:center; gap:.4rem; }
+    .crm-fb__when { font-size:.78rem; color:#6c757d; }
+    .crm-fb__body { color:#495057; white-space:pre-line; margin:0; }
+    .crm-fb__edit { font-size:.8rem; color:#0047AB; text-decoration:none; display:inline-flex; align-items:center; gap:.25rem; }
+    .crm-fb__edit:hover { color:#003380; text-decoration:underline; }
+    /* Liste de définitions des détails du ticket. */
+    .crm-def { display:grid; grid-template-columns:auto 1fr; gap:.5rem 1.25rem; margin:0; }
+    .crm-def dt { color:#6c757d; font-size:.85rem; }
+    .crm-def dd { margin:0; color:#212529; }
+    .crm-def dd a { color:#0047AB; text-decoration:none; font-weight:600; }
+    .crm-def dd a:hover { text-decoration:underline; }
+    @media (max-width:575.98px) { .crm-def { grid-template-columns:1fr; gap:.15rem 0; } .crm-def dt { margin-top:.5rem; } }
+</style>
+
+{# === Détails du ticket === #}
+<div class="cs-panel">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <h2 class="cs-panel-title m-0 d-inline-flex align-items-center gap-2">
+            {{ ux_icon(resolve_icon_name('feedback'), {height:'20px', width:'20px'}) }}
+            {{ ticket.reference }}
+        </h2>
+        {{ ticketm.statutBadge(ticket) }}
+    </div>
+
+    <dl class="crm-def">
+        <dt>Demandeur</dt>
+        <dd>
+            {% if ticket.client %}
+                <a href="{{ path('console.crm.client.show', {id: ticket.client.id}) }}">{{ ticket.demandeurNom }}</a>
+            {% elseif ticket.demandeurNom %}
+                {{ ticket.demandeurNom }}
+            {% else %}—{% endif %}
+            {% if ticket.demandeurEmail %}
+                — <a href="mailto:{{ ticket.demandeurEmail }}">{{ ticket.demandeurEmail }}</a>
+            {% endif %}
+            {% if ticket.contactTelephone %}<div class="crm-fb__when">Tél. {{ ticket.contactTelephone }}</div>{% endif %}
+        </dd>
+
+        <dt>Sujet</dt>
+        <dd>{{ ticket.sujet }}</dd>
+
+        {% if ticket.description %}
+            <dt>Message</dt>
+            <dd style="white-space:pre-line;">{{ ticket.description }}</dd>
+        {% endif %}
+
+        {% if ticket.entreprise %}
+            <dt>Entreprise</dt>
+            <dd><a href="{{ path('console.crm.entreprise.show', {id: ticket.entreprise.id}) }}">{{ ticket.entreprise.nom }}</a></dd>
+        {% endif %}
+
+        <dt>Priorité</dt>
+        <dd>{{ ticket.priorite }}</dd>
+
+        <dt>Canal</dt>
+        <dd>{{ ticket.canalLabel }}</dd>
+
+        <dt>SLA</dt>
+        <dd>{% if ticket.slaDepasse %}<span class="cs-badge cs-badge--danger">Dépassé</span>{% elseif ticket.slaDueAt %}{{ ticket.slaDueAt|format_datetime('short','short', locale: app.user.locale) }}{% else %}—{% endif %}</dd>
+
+        <dt>Agent</dt>
+        <dd>{% if ticket.agent %}{{ ticket.agent.nom ?: ticket.agent.email }}{% else %}—{% endif %}</dd>
+
+        <dt>Créé le</dt>
+        <dd>{{ ticket.createdAt|format_datetime('short','short', locale: app.user.locale) }}</dd>
+    </dl>
+
+    <form method="post" action="{{ path('console.crm.ticket.statut', {id: ticket.id}) }}" class="d-inline-flex align-items-center gap-2 mt-3">
+        <input type="hidden" name="_token" value="{{ csrf_token('crm-ticket-statut-' ~ ticket.id) }}">
+        <input type="hidden" name="_retour" value="show">
+        <label for="ticket-statut" class="form-label m-0">Statut</label>
+        <select id="ticket-statut" name="statut" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+            {% for key, label in {ouvert:'Ouvert', en_cours:'En cours', resolu:'Résolu', clos:'Clos'} %}
+                <option value="{{ key }}" {{ ticket.statut == key ? 'selected' }}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
+{# === Fil des feedbacks (notes internes) === #}
+<div class="cs-panel" id="feedbacks">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <h2 class="cs-panel-title m-0">Échanges internes ({{ ticket.feedbacks|length }})</h2>
+        {% if ticket.statut != 'clos' %}
+            <a href="{{ path('console.crm.ticket.feedback_new', {id: ticket.id}) }}" class="btn btn-sm btn-cobalt" data-action="click->top-progress#show">
+                {{ ux_icon(resolve_icon_name('action:add'), {height:'16px', width:'16px'}) }}<span class="ms-1">Ajouter un feedback</span>
+            </a>
+        {% endif %}
+    </div>
+
+    {% if ticket.statut == 'clos' %}
+        <p class="text-muted m-0 mb-3">Ce ticket est clos : il n'accepte plus de nouveau feedback.</p>
+    {% endif %}
+
+    {% if ticket.feedbacks|length > 0 %}
+        <ul class="crm-timeline">
+            {% for fb in ticket.feedbacks %}
+                <li>
+                    <div class="crm-fb">
+                        <div class="crm-fb__head">
+                            <span class="crm-fb__who">
+                                {{ ux_icon(resolve_icon_name('utilisateur'), {height:'16px', width:'16px'}) }}
+                                {{ fb.auteur ? (fb.auteur.nom ?: fb.auteur.email) : 'Collaborateur' }}
+                            </span>
+                            <span class="crm-fb__when">
+                                {{ fb.createdAt|format_datetime('short','short', locale: app.user.locale) }}
+                                {% if ticket.statut != 'clos' %}
+                                    · <a href="{{ path('console.crm.ticket.feedback_edit', {id: fb.id}) }}" class="crm-fb__edit" data-action="click->top-progress#show">
+                                        {{ ux_icon(resolve_icon_name('action:edit'), {height:'14px', width:'14px'}) }}Éditer
+                                    </a>
+                                {% endif %}
+                            </span>
+                        </div>
+                        <p class="crm-fb__body">{{ fb.contenu }}</p>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <div class="cs-empty"><p>Aucun feedback pour l'instant.</p></div>
+    {% endif %}
+</div>
+{% endblock %}
