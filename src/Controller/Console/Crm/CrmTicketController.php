@@ -39,7 +39,7 @@ class CrmTicketController extends AbstractConsoleController
         $statut = $request->query->get('statut') ?: null;
 
         return $this->render('console/crm/ticket/index.html.twig', [
-            'pageName' => 'CRM — Support',
+            'pageName' => 'CRM — Support Client',
             'pageIcon' => 'feedback',
             'tickets'  => $this->ticketRepository->paginateFiltered($statut, $request->query->getInt('page', 1)),
             'statut'   => $statut,
@@ -79,7 +79,7 @@ class CrmTicketController extends AbstractConsoleController
             'formIcon'    => 'feedback',
             'form'        => $form,
             'backUrl'     => $this->generateUrl('console.crm.ticket.index'),
-            'backLabel'   => 'Support',
+            'backLabel'   => 'Support Client',
             'submitLabel' => 'Créer le ticket',
             'description' => 'Ouvrez une demande de support rattachée à un client. Le délai SLA est calculé selon la priorité.',
         ]);
