@@ -44,6 +44,11 @@
                                     {% endfor %}
                                 </select>
                             </form>
+                            <a href="{{ path('console.crm.ticket.show', {id: t.id}) }}"
+                               class="cs-icon-btn" title="Ouvrir le ticket {{ t.reference }}" aria-label="Ouvrir la fiche du ticket {{ t.reference }}"
+                               data-action="click->top-progress#show">
+                                {{ ux_icon(resolve_icon_name('action:view'), {height:'16px', width:'16px'}) }}
+                            </a>
                             {% if t.client %}
                                 <a href="{{ path('console.crm.client.show', {id: t.client.id, _fragment: 'tab-support'}) }}"
                                    class="cs-icon-btn" title="Gérer le support de {{ t.client.nom ?: t.client.email }}" aria-label="Ouvrir la fiche support du client">

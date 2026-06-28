@@ -1,0 +1,11 @@
+{% extends 'console/form.html.twig' %}
+
+{% block console_form_body %}
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('feedback'), {height:'16px', width:'16px'}) }}
+            Le message
+        </legend>
+        {{ form_row(form.contenu) }}
+    </fieldset>
+{% endblock %}

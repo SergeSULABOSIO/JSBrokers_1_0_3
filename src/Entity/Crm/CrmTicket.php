@@ -5,6 +5,8 @@ namespace App\Entity\Crm;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
 use App\Repository\Crm\CrmTicketRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -48,12 +50,15 @@ class CrmTicket
     public const CANAL_CHAT      = 'chat';
     /** Demande ouverte par le courtier depuis son espace (support self-service). */
     public const CANAL_PORTAIL   = 'portail';
+    /** Message laissé par un visiteur via le formulaire de contact de la vitrine. */
+    public const CANAL_CONTACT   = 'contact';
 
     public const CANAUX = [
         self::CANAL_EMAIL     => 'E-mail',
         self::CANAL_TELEPHONE => 'Téléphone',
         self::CANAL_CHAT      => 'Chat',
         self::CANAL_PORTAIL   => 'Portail client',
+        self::CANAL_CONTACT   => 'Formulaire de contact',
     ];
 
     #[ORM\Id]
@@ -61,9 +66,24 @@ class CrmTicket
     #[ORM\Column]
     private ?int $id = null;
 
+    // Nullable : les messages issus du formulaire de contact de la vitrine sont
+    // déposés par des visiteurs anonymes (pas de compte). Leur identité est alors
+    // portée par les champs contactNom/contactEmail/contactTelephone ci-dessous.
     #[ORM\ManyToOne(targetEntity: Utilisateur::class)]
-    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'CASCADE')]
     private ?Utilisateur $client = null;
+
+    /** Nom du demandeur anonyme (formulaire de contact, sans compte). */
+    #[ORM\Column(length: 120, nullable: true)]
+    private ?string $contactNom = null;
+
+    /** E-mail du demandeur anonyme : permet à l'agent de le recontacter. */
+    #[ORM\Column(length: 180, nullable: true)]
+    private ?string $contactEmail = null;
+
+    /** Téléphone du demandeur anonyme (facultatif, s'il l'a laissé). */
+    #[ORM\Column(length: 30, nullable: true)]
+    private ?string $contactTelephone = null;
 
     #[ORM\ManyToOne(targetEntity: Utilisateur::class)]
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
@@ -107,6 +127,21 @@ class CrmTicket
     #[ORM\Column(nullable: true)]
     private ?\DateTimeImmutable $updatedAt = null;
 
+    /**
+     * Fil des feedbacks (notes internes des collaborateurs) attachés au ticket,
+     * du plus ancien au plus récent. Supprimés en cascade avec le ticket.
+     *
+     * @var Collection<int, CrmTicketFeedback>
+     */
+    #[ORM\OneToMany(mappedBy: 'ticket', targetEntity: CrmTicketFeedback::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    #[ORM\OrderBy(['createdAt' => 'ASC'])]
+    private Collection $feedbacks;
+
+    public function __construct()
+    {
+        $this->feedbacks = new ArrayCollection();
+    }
+
     public function getId(): ?int
     {
         return $this->id;
@@ -122,6 +157,61 @@ class CrmTicket
         $this->client = $client;
 
         return $this;
+    }
+
+    public function getContactNom(): ?string
+    {
+        return $this->contactNom;
+    }
+
+    public function setContactNom(?string $contactNom): static
+    {
+        $this->contactNom = $contactNom;
+
+        return $this;
+    }
+
+    public function getContactEmail(): ?string
+    {
+        return $this->contactEmail;
+    }
+
+    public function setContactEmail(?string $contactEmail): static
+    {
+        $this->contactEmail = $contactEmail;
+
+        return $this;
+    }
+
+    public function getContactTelephone(): ?string
+    {
+        return $this->contactTelephone;
+    }
+
+    public function setContactTelephone(?string $contactTelephone): static
+    {
+        $this->contactTelephone = $contactTelephone;
+
+        return $this;
+    }
+
+    /**
+     * Nom à afficher pour le demandeur : le client connecté s'il existe, sinon
+     * l'identité du visiteur anonyme (formulaire de contact).
+     */
+    public function getDemandeurNom(): ?string
+    {
+        if ($this->client) {
+            return $this->client->getNom() ?: $this->client->getEmail();
+        }
+
+        return $this->contactNom ?: $this->contactEmail;
+    }
+
+    /** E-mail de contact du demandeur (compte client ou visiteur anonyme). */
+    public function getDemandeurEmail(): ?string
+    {
+        return $this->client ? $this->client->getEmail() : $this->contactEmail;
     }
 
     public function getAgent(): ?Utilisateur
@@ -308,5 +398,30 @@ class CrmTicket
     public function onPreUpdate(): void
     {
         $this->updatedAt = new \DateTimeImmutable();
+    }
+
+    /** @return Collection<int, CrmTicketFeedback> */
+    public function getFeedbacks(): Collection
+    {
+        return $this->feedbacks;
+    }
+
+    public function addFeedback(CrmTicketFeedback $feedback): static
+    {
+        if (!$this->feedbacks->contains($feedback)) {
+            $this->feedbacks->add($feedback);
+            $feedback->setTicket($this);
+        }
+
+        return $this;
+    }
+
+    public function removeFeedback(CrmTicketFeedback $feedback): static
+    {
+        if ($this->feedbacks->removeElement($feedback) && $feedback->getTicket() === $this) {
+            $feedback->setTicket(null);
+        }
+
+        return $this;
     }
 }
