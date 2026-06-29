@@ -5,6 +5,8 @@ namespace App\Controller\Console;
 use App\Entity\Evaluation;
 use App\Entity\Objectif;
 use App\Entity\Utilisateur;
+use App\Enum\Departement;
+use App\Enum\FonctionCollaborateur;
 use App\Form\EvaluationType;
 use App\Form\ObjectifType;
 use App\Repository\EvaluationRepository;
@@ -22,8 +24,9 @@ use Symfony\Component\Translation\LocaleSwitcher;
 /**
  * Évaluations RH : objectifs (SMART) et fiches d'évaluation des collaborateurs.
  * La consultation est ouverte aux agents ; la définition d'objectifs, la saisie de
- * l'appréciation et la clôture sont réservées au super-admin, qui notifie le
- * collaborateur concerné par e-mail.
+ * l'appréciation et la clôture sont réservées à ceux qui peuvent gérer les
+ * évaluations — le super-administrateur (Direction Générale) et le Directeur des
+ * Ressources Humaines — qui notifient le collaborateur concerné par e-mail.
  */
 #[Route('/console/evaluations', name: 'console.evaluation.')]
 #[IsGranted('ROLE_ADMIN')]
@@ -61,6 +64,7 @@ class EvaluationController extends AbstractConsoleController
             'annee'     => $annee,
             'trimestre' => $trimestre,
             'annees'    => $this->anneesProposees($annee),
+            'canManage' => $this->canManageEvaluations(),
         ]);
     }
 
@@ -79,13 +83,14 @@ class EvaluationController extends AbstractConsoleController
             'annee'         => $annee,
             'trimestre'     => $trimestre,
             'annees'        => $this->anneesProposees($annee),
+            'canManage'     => $this->canManageEvaluations(),
         ]);
     }
 
     #[Route('/collaborateur/{id}/objectif/new', name: 'objectif_new', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    #[IsGranted('ROLE_SUPER_ADMIN')]
     public function objectifNew(Utilisateur $collaborateur, Request $request, LocaleSwitcher $localeSwitcher): Response
     {
+        $this->denyUnlessCanManage();
         $this->applyLangPreference($request, $localeSwitcher);
         [$annee, $trimestre] = $this->periode($request);
 
@@ -98,18 +103,18 @@ class EvaluationController extends AbstractConsoleController
     }
 
     #[Route('/objectif/{id}/edit', name: 'objectif_edit', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    #[IsGranted('ROLE_SUPER_ADMIN')]
     public function objectifEdit(Objectif $objectif, Request $request, LocaleSwitcher $localeSwitcher): Response
     {
+        $this->denyUnlessCanManage();
         $this->applyLangPreference($request, $localeSwitcher);
 
         return $this->traiterObjectif($objectif, $request, false);
     }
 
     #[Route('/objectif/{id}', name: 'objectif_delete', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
-    #[IsGranted('ROLE_SUPER_ADMIN')]
     public function objectifDelete(Objectif $objectif, Request $request): Response
     {
+        $this->denyUnlessCanManage();
         if (!$this->isCsrfTokenValid('delete-objectif-' . $objectif->getId(), (string) $request->request->get('_token'))) {
             throw $this->createAccessDeniedException('Jeton CSRF invalide.');
         }
@@ -127,9 +132,9 @@ class EvaluationController extends AbstractConsoleController
     }
 
     #[Route('/collaborateur/{id}/evaluer', name: 'evaluer', requirements: ['id' => Requirement::DIGITS], methods: ['GET', 'POST'])]
-    #[IsGranted('ROLE_SUPER_ADMIN')]
     public function evaluer(Utilisateur $collaborateur, Request $request, LocaleSwitcher $localeSwitcher): Response
     {
+        $this->denyUnlessCanManage();
         $this->applyLangPreference($request, $localeSwitcher);
         [$annee, $trimestre] = $this->periode($request);
 
@@ -267,6 +272,33 @@ class EvaluationController extends AbstractConsoleController
                 'nom' => $collaborateur->getNom(),
                 'msg' => $e->getMessage(),
             ]);
+        }
+    }
+
+    /**
+     * Peut gérer les évaluations (créer/éditer objectifs, évaluer, clôturer) :
+     * le super-administrateur (Direction Générale) et le Directeur des Ressources
+     * Humaines. Les autres collaborateurs ont un accès en lecture seule.
+     */
+    private function canManageEvaluations(): bool
+    {
+        if ($this->isGranted('ROLE_SUPER_ADMIN')) {
+            return true;
+        }
+
+        $user = $this->getUser();
+
+        return $user instanceof Utilisateur
+            && $user->getDepartement() === Departement::RH
+            && $user->getFonction() === FonctionCollaborateur::DIRECTEUR;
+    }
+
+    private function denyUnlessCanManage(): void
+    {
+        if (!$this->canManageEvaluations()) {
+            throw $this->createAccessDeniedException(
+                'Réservé au super-administrateur ou au Directeur des Ressources Humaines.'
+            );
         }
     }
 

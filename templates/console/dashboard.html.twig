@@ -3,14 +3,32 @@
 {% block stylesheets %}
 {{ parent() }}
 <style>
-    /* Bandeau personnalisé du tableau de bord (profil du collaborateur). */
+    /* Bandeau personnalisé du tableau de bord (profil du collaborateur).
+       Mise en page alignée : entête (identité ↔ score) sur une ligne, description
+       à mesure de lecture confortable, accès rapides étiquetés en pied. */
     .cs-db-greeting { margin-bottom: 1rem; }
-    .cs-db-score { display:flex; align-items:center; gap:.7rem; padding:.5rem .9rem;
-        background:#f8f9fa; border:1px solid #dee2e6; border-radius:12px; }
-    .cs-db-quick { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1rem;
+    .cs-db-greet-head { display:flex; align-items:flex-start; justify-content:space-between;
+        gap:1rem 1.5rem; flex-wrap:wrap; }
+    .cs-db-greet-id { display:flex; align-items:center; gap:.85rem; min-width:0; }
+    .cs-db-greet-idtext { min-width:0; }
+    .cs-db-greet-title { font-size:1.15rem; font-weight:700; color:#212529; margin:0 0 .4rem; line-height:1.25; }
+    .cs-db-greet-tags { display:flex; flex-wrap:wrap; gap:.4rem; }
+    /* Description : largeur de ligne bornée (~74 caractères) pour la lisibilité. */
+    .cs-db-greet-desc { margin-top:1.1rem; max-width:74ch; }
+    .cs-db-greet-desc p { color:#495057; font-size:.9rem; line-height:1.65; margin:0; }
+    .cs-db-greet-desc p + p { margin-top:.6rem; }
+    /* Carte « score » alignée en haut à droite de l'entête. */
+    .cs-db-score { display:flex; align-items:center; gap:.7rem; flex:0 0 auto; align-self:flex-start;
+        padding:.6rem .9rem; background:#f8f9fa; border:1px solid #dee2e6; border-radius:12px; }
+    .cs-db-score-val { font-size:1.4rem; font-weight:700; color:#212529; line-height:1; }
+    .cs-db-score-val span { font-size:.85rem; color:#6c757d; font-weight:600; }
+    /* Accès rapides : rangée étiquetée, cibles ≥ 40px (WCAG 2.5.5). */
+    .cs-db-quick { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-top:1.1rem;
         padding-top:1rem; border-top:1px solid #f0f0f0; }
-    .cs-db-quick-link { display:inline-flex; align-items:center; gap:.4rem;
-        padding:.45rem .75rem; border-radius:8px; text-decoration:none;
+    .cs-db-quick-label { font-size:.72rem; font-weight:700; text-transform:uppercase;
+        letter-spacing:.05em; color:#6c757d; margin-right:.35rem; }
+    .cs-db-quick-link { display:inline-flex; align-items:center; gap:.45rem; min-height:40px;
+        padding:.4rem .8rem; border-radius:8px; text-decoration:none;
         background:#eef2fb; color:#0047AB; font-size:.85rem; font-weight:600; }
     .cs-db-quick-link:hover { background:#0047AB; color:#fff; }
     .cs-db-quick-link:hover svg { color:#fff; }
@@ -38,60 +56,67 @@
         { p: 'console.evaluation.index',    icon: 'action:analyser', label: 'Évaluations' },
     ]|filter(l => console_can_access(l.p)) %}
 
-    <div class="cs-panel cs-db-greeting">
-        <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
-            <div>
-                <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
-                    {% if app.user.departement %}
-                        <span class="cs-badge cs-badge--cobalt">
-                            {{ ux_icon(resolve_icon_name(app.user.departement.icon), {height:'14px', width:'14px'}) }}
-                            {{ app.user.departement.label }}
-                        </span>
-                    {% elseif is_granted('ROLE_SUPER_ADMIN') %}
-                        <span class="cs-badge cs-badge--cobalt">Super-administrateur · accès complet</span>
-                    {% else %}
-                        <span class="cs-badge cs-badge--warn">Non affecté · accès complet</span>
-                    {% endif %}
-                    {% if app.user.fonction %}
-                        <span class="cs-badge {{ app.user.fonction.badgeClass }}">{{ app.user.fonction.label }}</span>
-                    {% endif %}
+    <section class="cs-panel cs-db-greeting" aria-label="Mon profil">
+        {# Entête : identité (icône + département + fonction) à gauche, score à droite. #}
+        <div class="cs-db-greet-head">
+            <div class="cs-db-greet-id">
+                <span class="cs-head-icon" aria-hidden="true">
+                    {{ ux_icon(resolve_icon_name(app.user.departement ? app.user.departement.icon : 'utilisateur'), {height:'26px', width:'26px'}) }}
+                </span>
+                <div class="cs-db-greet-idtext">
+                    <h2 class="cs-db-greet-title">
+                        {%- if app.user.departement -%}{{ app.user.departement.label }}
+                        {%- elseif is_granted('ROLE_SUPER_ADMIN') -%}Super-administrateur
+                        {%- else -%}Accès complet{%- endif -%}
+                    </h2>
+                    <div class="cs-db-greet-tags">
+                        {% if app.user.fonction %}
+                            <span class="cs-badge {{ app.user.fonction.badgeClass }}">{{ app.user.fonction.label }}</span>
+                        {% endif %}
+                        {% if not app.user.departement %}
+                            <span class="cs-badge {{ is_granted('ROLE_SUPER_ADMIN') ? 'cs-badge--cobalt' : 'cs-badge--warn' }}">Accès complet à la console</span>
+                        {% endif %}
+                    </div>
                 </div>
-                {% if app.user.departement %}
-                    {% for para in app.user.departement.descriptionDetaillee %}
-                        <p class="text-muted mb-0{% if not loop.first %} mt-2{% endif %}" style="font-size:.9rem;max-width:80ch;">{{ para }}</p>
-                    {% endfor %}
-                {% else %}
-                    <p class="text-muted mb-0" style="font-size:.9rem;">Vous avez accès à l'ensemble des rubriques de la console.</p>
-                {% endif %}
             </div>
 
             {% if monScore is not null %}
                 {# Score d'évaluation personnel (période annuelle courante), en lecture. #}
-                <div class="cs-db-score" data-meta-tip="Votre score d'évaluation pour {{ monScoreAnnee }}">
-                    <span class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('action:analyser'), {height:'22px', width:'22px'}) }}</span>
+                <aside class="cs-db-score" aria-label="Mon score d'évaluation {{ monScoreAnnee }}">
+                    <span class="cs-kpi-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('action:analyser'), {height:'22px', width:'22px'}) }}</span>
                     <div>
-                        <div style="font-size:1.4rem;font-weight:700;color:#212529;line-height:1;">
-                            {{ monScore }} <span style="font-size:.85rem;color:#6c757d;">/ 100</span>
-                        </div>
-                        <div class="cs-kpi-lbl">Mon évaluation {{ monScoreAnnee }} ·
+                        <div class="cs-db-score-val">{{ monScore }} <span>/ 100</span></div>
+                        <div class="cs-kpi-lbl">Mon évaluation {{ monScoreAnnee }}
                             <span class="cs-badge {{ monScoreClass }}">{{ monScoreMention }}</span>
                         </div>
                     </div>
-                </div>
+                </aside>
+            {% endif %}
+        </div>
+
+        {# Description du département, à mesure de lecture confortable. #}
+        <div class="cs-db-greet-desc">
+            {% if app.user.departement %}
+                {% for para in app.user.departement.descriptionDetaillee %}
+                    <p>{{ para }}</p>
+                {% endfor %}
+            {% else %}
+                <p>Vous avez accès à l'ensemble des rubriques de la console.</p>
             {% endif %}
         </div>
 
         {% if quickLinks is not empty %}
-            <div class="cs-db-quick">
+            <nav class="cs-db-quick" aria-label="Accès rapides à mes rubriques">
+                <span class="cs-db-quick-label">Accès rapides</span>
                 {% for l in quickLinks %}
                     <a href="{{ path(l.p) }}" class="cs-db-quick-link" data-action="click->top-progress#show">
                         {{ ux_icon(resolve_icon_name(l.icon), {height:'16px', width:'16px'}) }}
                         <span>{{ l.label }}</span>
                     </a>
                 {% endfor %}
-            </div>
+            </nav>
         {% endif %}
-    </div>
+    </section>
 
     {# ── Colonne centrale unique : pile de blocs pliables, un par ligne ──
        Même comportement que le tableau de bord de l'espace de travail
