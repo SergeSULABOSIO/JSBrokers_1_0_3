@@ -16,7 +16,9 @@
                         <h1 style="font-size:1.15rem;">{{ dep.label }}</h1>
                         <span class="cs-badge cs-badge--cobalt">{{ entry.agents|length }}</span>
                     </div>
-                    <p>{{ dep.description }}</p>
+                    {% for para in dep.descriptionDetaillee %}
+                        <p{% if not loop.first %} class="mt-2"{% endif %}>{{ para }}</p>
+                    {% endfor %}
                 </div>
             </div>
 
