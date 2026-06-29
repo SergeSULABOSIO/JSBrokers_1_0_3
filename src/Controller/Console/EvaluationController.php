@@ -68,6 +68,32 @@ class EvaluationController extends AbstractConsoleController
         ]);
     }
 
+    /**
+     * Fiche d'évaluation personnelle (lecture seule) : chaque collaborateur
+     * consulte ses propres objectifs et son score, sans accéder à la section RH.
+     * Route exemptée du filtrage par département (cf. ConsoleAccessResolver).
+     */
+    #[Route('/mes-objectifs', name: 'mine', methods: ['GET'])]
+    public function mine(Request $request, LocaleSwitcher $localeSwitcher): Response
+    {
+        $this->applyLangPreference($request, $localeSwitcher);
+        [$annee, $trimestre] = $this->periode($request);
+
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+
+        return $this->render('console/evaluation/mine.html.twig', [
+            'pageName'      => 'Mon évaluation',
+            'pageIcon'      => 'action:analyser',
+            'collaborateur' => $user,
+            'fiche'         => $this->ficheBuilder->build($user, $annee, $trimestre),
+            'evaluation'    => $this->evaluationRepository->findOnePeriode($user, $annee, $trimestre),
+            'annee'         => $annee,
+            'trimestre'     => $trimestre,
+            'annees'        => $this->anneesProposees($annee),
+        ]);
+    }
+
     #[Route('/collaborateur/{id}', name: 'show', requirements: ['id' => Requirement::DIGITS])]
     public function show(Utilisateur $collaborateur, Request $request, LocaleSwitcher $localeSwitcher): Response
     {

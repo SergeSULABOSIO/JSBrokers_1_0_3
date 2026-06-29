@@ -145,6 +145,20 @@ class DepartementRoleTest extends WebTestCase
         }
     }
 
+    /** Tout collaborateur consulte sa propre fiche d'évaluation, même hors RH. */
+    public function testCollaboratorCanViewOwnEvaluation(): void
+    {
+        $this->client->loginUser($this->user(self::FINANCE));
+
+        // La section RH (liste des évaluations) lui reste interdite…
+        $this->client->request('GET', '/console/evaluations');
+        $this->assertResponseStatusCodeSame(403);
+
+        // …mais il accède à sa propre fiche en lecture seule.
+        $this->client->request('GET', '/console/evaluations/mes-objectifs');
+        $this->assertResponseIsSuccessful('Chaque collaborateur doit voir ses propres objectifs.');
+    }
+
     /** Le Directeur RH peut gérer les évaluations (créer un objectif), comme le super-admin. */
     public function testRhDirectorCanManageEvaluations(): void
     {

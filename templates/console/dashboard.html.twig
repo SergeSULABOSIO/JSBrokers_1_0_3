@@ -17,11 +17,16 @@
     .cs-db-greet-desc { margin-top:1.1rem; }
     .cs-db-greet-desc p { color:#495057; font-size:.9rem; line-height:1.65; margin:0; }
     .cs-db-greet-desc p + p { margin-top:.6rem; }
-    /* Carte « score » alignée en haut à droite de l'entête. */
+    /* Carte « score » (lien) alignée en haut à droite de l'entête. */
     .cs-db-score { display:flex; align-items:center; gap:.7rem; flex:0 0 auto; align-self:flex-start;
-        padding:.6rem .9rem; background:#f8f9fa; border:1px solid #dee2e6; border-radius:12px; }
+        padding:.6rem .9rem; background:#f8f9fa; border:1px solid #dee2e6; border-radius:12px;
+        text-decoration:none; transition:border-color .15s ease, box-shadow .15s ease; }
+    .cs-db-score:hover { border-color:#0047AB; box-shadow:0 4px 16px rgba(0,71,171,.12); }
+    .cs-db-score:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
     .cs-db-score-val { font-size:1.4rem; font-weight:700; color:#212529; line-height:1; }
     .cs-db-score-val span { font-size:.85rem; color:#6c757d; font-weight:600; }
+    .cs-db-score-go { color:#6c757d; flex:0 0 auto; }
+    .cs-db-score:hover .cs-db-score-go { color:#0047AB; }
     /* Accès rapides : rangée étiquetée, cibles ≥ 40px (WCAG 2.5.5). */
     .cs-db-quick { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-top:1.1rem;
         padding-top:1rem; border-top:1px solid #f0f0f0; }
@@ -42,6 +47,7 @@
     {# ── Bandeau personnalisé selon le profil (département, fonction, périmètre,
          score d'évaluation) + accès rapides aux seules rubriques autorisées. ── #}
     {% set quickLinks = [
+        { p: 'console.evaluation.mine',     icon: 'action:analyser', label: 'Mon évaluation' },
         { p: 'console.vente.index',         icon: 'operation',       label: 'Ventes' },
         { p: 'console.coupon.index',        icon: 'offre',           label: 'Coupons' },
         { p: 'console.depense.index',       icon: 'depense',         label: 'Dépenses' },
@@ -81,8 +87,11 @@
             </div>
 
             {% if monScore is not null %}
-                {# Score d'évaluation personnel (période annuelle courante), en lecture. #}
-                <aside class="cs-db-score" aria-label="Mon score d'évaluation {{ monScoreAnnee }}">
+                {# Score d'évaluation personnel (période annuelle courante) : lien vers
+                   le détail de mes objectifs. #}
+                <a class="cs-db-score" href="{{ path('console.evaluation.mine') }}"
+                   data-action="click->top-progress#show"
+                   aria-label="Voir le détail de mon évaluation {{ monScoreAnnee }}">
                     <span class="cs-kpi-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('action:analyser'), {height:'22px', width:'22px'}) }}</span>
                     <div>
                         <div class="cs-db-score-val">{{ monScore }} <span>/ 100</span></div>
@@ -90,7 +99,8 @@
                             <span class="cs-badge {{ monScoreClass }}">{{ monScoreMention }}</span>
                         </div>
                     </div>
-                </aside>
+                    {{ ux_icon('hugeicons:arrow-right-01', {height:'18px', width:'18px', class:'cs-db-score-go'}) }}
+                </a>
             {% endif %}
         </div>
 

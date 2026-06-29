@@ -17,8 +17,12 @@ use App\Entity\Utilisateur;
  */
 class ConsoleAccessResolver
 {
-    /** Routes toujours accessibles à tout collaborateur (accueil + transparence org). */
-    private const ALWAYS_ALLOWED = ['console.dashboard', 'console.departement.index'];
+    /**
+     * Routes toujours accessibles à tout collaborateur, quel que soit son
+     * département : accueil, organigramme (transparence) et sa propre fiche
+     * d'évaluation en lecture seule (chacun consulte ses objectifs).
+     */
+    private const ALWAYS_ALLOWED = ['console.dashboard', 'console.departement.index', 'console.evaluation.mine'];
 
     /** Accès complet : super-admin, non affecté (pas encore restreint), ou Direction. */
     public function isAllAccess(Utilisateur $user): bool
