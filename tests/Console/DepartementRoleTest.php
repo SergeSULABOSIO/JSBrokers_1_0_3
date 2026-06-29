@@ -23,6 +23,7 @@ class DepartementRoleTest extends WebTestCase
     private const FINANCE   = 'phpunit-dr-finance@test.local';
     private const SUPPORT   = 'phpunit-dr-support@test.local';
     private const DIRECTION = 'phpunit-dr-direction@test.local';
+    private const RH        = 'phpunit-dr-rh@test.local';
     private const LIBRE     = 'phpunit-dr-libre@test.local';
     private const CIBLE     = 'phpunit-dr-cible@test.local';
     private const NOUVEAU   = 'phpunit-dr-nouveau@test.local';
@@ -44,6 +45,7 @@ class DepartementRoleTest extends WebTestCase
             [self::FINANCE,   ['ROLE_ADMIN'],       Departement::FINANCE,          FonctionCollaborateur::CHARGE],
             [self::SUPPORT,   ['ROLE_ADMIN'],       Departement::RELATION_CLIENT,  FonctionCollaborateur::RESPONSABLE],
             [self::DIRECTION, ['ROLE_ADMIN'],       Departement::DIRECTION,        FonctionCollaborateur::DIRECTEUR],
+            [self::RH,        ['ROLE_ADMIN'],       Departement::RH,               FonctionCollaborateur::DIRECTEUR],
             [self::LIBRE,     ['ROLE_ADMIN'],       null,                          null],
             [self::CIBLE,     ['ROLE_ADMIN'],       null,                          null],
         ];
@@ -77,7 +79,7 @@ class DepartementRoleTest extends WebTestCase
         // Les objectifs / évaluations sont supprimés par cascade (ON DELETE CASCADE).
         $this->em()->getConnection()->executeStatement(
             'DELETE FROM utilisateur WHERE email IN (:e)',
-            ['e' => [self::SUPER, self::FINANCE, self::SUPPORT, self::DIRECTION, self::LIBRE, self::CIBLE, self::NOUVEAU]],
+            ['e' => [self::SUPER, self::FINANCE, self::SUPPORT, self::DIRECTION, self::RH, self::LIBRE, self::CIBLE, self::NOUVEAU]],
             ['e' => \Doctrine\DBAL\ArrayParameterType::STRING]
         );
     }
@@ -123,6 +125,22 @@ class DepartementRoleTest extends WebTestCase
         $this->assertResponseIsSuccessful('Support doit accéder au CRM.');
         $this->client->request('GET', '/console/taxes');
         $this->assertResponseStatusCodeSame(403, 'Support ne doit pas accéder à la fiscalité.');
+    }
+
+    /** RH : gère les collaborateurs, pas les comptes clients/utilisateurs/entreprises. */
+    public function testRhPerimeterExcludesPlatformAccounts(): void
+    {
+        $this->client->loginUser($this->user(self::RH));
+
+        $this->client->request('GET', '/console/collaborateurs');
+        $this->assertResponseIsSuccessful('RH doit accéder aux collaborateurs.');
+        $this->client->request('GET', '/console/evaluations');
+        $this->assertResponseIsSuccessful('RH doit accéder aux évaluations.');
+
+        foreach (['/console/utilisateurs', '/console/clients', '/console/entreprises'] as $url) {
+            $this->client->request('GET', $url);
+            $this->assertResponseStatusCodeSame(403, sprintf('RH ne doit pas accéder à %s.', $url));
+        }
     }
 
     /** Direction Générale : accès complet malgré l'affectation à un département. */
