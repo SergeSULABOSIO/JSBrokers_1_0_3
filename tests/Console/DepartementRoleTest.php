@@ -199,6 +199,33 @@ class DepartementRoleTest extends WebTestCase
         $this->assertSame(FonctionCollaborateur::ASSISTANT, $cree->getFonction());
     }
 
+    /** Le tableau de bord est personnalisé : bandeau profil + blocs filtrés. */
+    public function testDashboardIsPersonalizedByProfile(): void
+    {
+        $this->client->loginUser($this->user(self::FINANCE));
+        $this->client->request('GET', '/console');
+        $this->assertResponseIsSuccessful();
+
+        $content = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('Finance &amp; Comptabilité', $content, 'Le bandeau doit nommer le département.');
+        $this->assertStringContainsString('/console/taxes', $content, 'Accès rapide Fiscalité attendu (Finance).');
+        // Les blocs hors périmètre (clients/CRM) ne sont pas rendus.
+        $this->assertStringNotContainsString('console.dashboard.block_clients', $content);
+        $this->assertStringNotContainsString('/console/crm/clients', $content);
+    }
+
+    /** Les endpoints de blocs hors périmètre sont refusés (pas de contournement). */
+    public function testDashboardBlockEndpointsRespectPerimeter(): void
+    {
+        $this->client->loginUser($this->user(self::FINANCE));
+
+        $this->client->request('GET', '/console/dashboard/block/taxes');
+        $this->assertResponseIsSuccessful('Finance doit charger le bloc fiscalité.');
+
+        $this->client->request('GET', '/console/dashboard/block/clients');
+        $this->assertResponseStatusCodeSame(403, 'Finance ne doit pas charger le bloc clients (RH).');
+    }
+
     /** L'affectation est interdite à un agent non super-admin. */
     public function testPlainAdminCannotAffect(): void
     {

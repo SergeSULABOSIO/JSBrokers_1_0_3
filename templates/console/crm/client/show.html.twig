@@ -51,7 +51,7 @@
             portefeuille: 'Portefeuille', achats: 'Achats', consommation: 'Consommation',
             pipeline: 'Pipeline', activites: 'Activités', notes: 'Notes',
             historique: 'Historique', taches: 'Tâches', sante: 'Santé',
-            support: 'Support', marketing: 'Marketing'
+            support: 'Support', marketing: 'Campagnes'
         } %}
         {% for key, label in onglets %}
             <button type="button" class="crm-tab {{ loop.first ? 'is-active' }}" role="tab"
@@ -440,11 +440,11 @@
         </div>
     </div>
 
-    {# === Marketing === #}
+    {# === Campagnes === #}
     <div class="crm-pane" data-crm-tabs-target="pane" data-tab="marketing" id="tab-marketing">
         <div class="cs-panel">
             <p>Les campagnes se créent et se ciblent depuis la rubrique
-                <a href="{{ path('console.crm.campagne.index') }}">Marketing</a>.
+                <a href="{{ path('console.crm.campagne.index') }}">Campagnes</a>.
                 Ce client est inclus dans une campagne dès qu'il correspond au segment
                 (étape de pipeline « {{ crm_stage_label(profil.etapePipeline) }} » /
                 santé « {{ crm_health_label(profil.scoreCouleur) }} »).</p>

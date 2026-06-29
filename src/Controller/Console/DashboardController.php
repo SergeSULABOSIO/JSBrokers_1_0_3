@@ -8,8 +8,11 @@ use App\Repository\CouponRepository;
 use App\Repository\DepenseRepository;
 use App\Repository\EntrepriseRepository;
 use App\Repository\TokenConsumptionRepository;
+use App\Repository\ObjectifRepository;
 use App\Repository\TokenPurchaseRepository;
 use App\Repository\UtilisateurRepository;
+use App\Service\Console\ConsoleAccessResolver;
+use App\Service\Console\FicheEvaluationBuilder;
 use App\Services\ConsoleStatsProvider;
 use App\Services\ServiceGeographie;
 use App\Services\ServiceTaxesVente;
@@ -44,6 +47,9 @@ class DashboardController extends AbstractConsoleController
         private ParametresTokenService $parametres,
         private ServiceTaxesVente $taxesVente,
         private DepenseRepository $depenseRepository,
+        private ConsoleAccessResolver $accessResolver,
+        private FicheEvaluationBuilder $ficheBuilder,
+        private ObjectifRepository $objectifRepository,
     ) {}
 
     #[Route('', name: 'console.dashboard', methods: ['GET'])]
@@ -51,13 +57,41 @@ class DashboardController extends AbstractConsoleController
     {
         $this->applyLangPreference($request, $localeSwitcher);
 
+        // Personnalisation : score d'évaluation du collaborateur sur la période
+        // annuelle courante, affiché s'il a au moins un objectif défini.
+        $user = $this->getUser();
+        $annee = (int) date('Y');
+        $monScore = null;
+        if ($user instanceof Utilisateur
+            && $this->objectifRepository->findForPeriode($user, $annee, 0) !== []) {
+            $monScore = $this->ficheBuilder->score($user, $annee, 0);
+        }
+
         return $this->render('console/dashboard.html.twig', [
-            'pageName' => 'Tableau de bord',
-            'pageIcon' => 'dashboard',
+            'pageName'        => 'Tableau de bord',
+            'pageIcon'        => 'dashboard',
             // KPIs rendus dès le chargement (toujours visibles, sans cadre) ;
             // ils sont ensuite rafraîchis silencieusement côté client.
-            'kpis'     => $this->stats->getKpis(),
+            'kpis'            => $this->stats->getKpis(),
+            'monScore'        => $monScore,
+            'monScoreAnnee'   => $annee,
+            'monScoreMention' => $monScore !== null ? $this->ficheBuilder->mention($monScore) : null,
+            'monScoreClass'   => $monScore !== null ? $this->ficheBuilder->mentionClass($monScore) : null,
         ]);
+    }
+
+    /**
+     * Refuse l'accès à un bloc/fragment du tableau de bord si la rubrique
+     * correspondante n'est pas dans le périmètre du collaborateur. Les endpoints
+     * de blocs étant exemptés du blocage global (préfixe console.dashboard.*), ce
+     * garde-fou empêche un contournement de la restriction par appel direct.
+     */
+    private function assertDomaine(string $routeRubrique): void
+    {
+        $user = $this->getUser();
+        if ($user instanceof Utilisateur && !$this->accessResolver->canAccessRoute($user, $routeRubrique)) {
+            throw $this->createAccessDeniedException('Cette rubrique ne relève pas de votre département.');
+        }
     }
 
     #[Route('/dashboard/block/kpis', name: 'console.dashboard.block_kpis', methods: ['GET'])]
@@ -71,6 +105,7 @@ class DashboardController extends AbstractConsoleController
     #[Route('/dashboard/block/revenue', name: 'console.dashboard.block_revenue', methods: ['GET'])]
     public function blockRevenue(): Response
     {
+        $this->assertDomaine('console.vente.index');
         // Bloc fusionné : les deux vues du revenu (par mois / par paquet) sont
         // rendues ensemble, l'affichage de l'une ou l'autre étant piloté côté
         // client par les boutons de bascule (contrôleur Stimulus « chart-modes »).
@@ -84,12 +119,16 @@ class DashboardController extends AbstractConsoleController
     #[Route('/dashboard/block/ventes', name: 'console.dashboard.block_ventes', methods: ['GET'])]
     public function blockVentes(): Response
     {
+        $this->assertDomaine('console.vente.index');
+
         return $this->render('console/dashboard/_block_ventes.html.twig', $this->donneesVentes());
     }
 
     #[Route('/dashboard/ventes-fragment', name: 'console.dashboard.ventes_fragment', methods: ['GET'])]
     public function ventesFragment(): Response
     {
+        $this->assertDomaine('console.vente.index');
+
         return $this->render('console/dashboard/_ventes_list.html.twig', $this->donneesVentes());
     }
 
@@ -154,12 +193,16 @@ class DashboardController extends AbstractConsoleController
     #[Route('/dashboard/block/depenses', name: 'console.dashboard.block_depenses', methods: ['GET'])]
     public function blockDepenses(): Response
     {
+        $this->assertDomaine('console.depense.index');
+
         return $this->render('console/dashboard/_block_depenses.html.twig', $this->donneesDepenses());
     }
 
     #[Route('/dashboard/depenses-fragment', name: 'console.dashboard.depenses_fragment', methods: ['GET'])]
     public function depensesFragment(): Response
     {
+        $this->assertDomaine('console.depense.index');
+
         return $this->render('console/dashboard/_depenses_list.html.twig', $this->donneesDepenses());
     }
 
@@ -177,12 +220,16 @@ class DashboardController extends AbstractConsoleController
     #[Route('/dashboard/block/entreprises', name: 'console.dashboard.block_entreprises', methods: ['GET'])]
     public function blockEntreprises(): Response
     {
+        $this->assertDomaine('console.entreprise.index');
+
         return $this->render('console/dashboard/_block_entreprises.html.twig', $this->donneesEntreprises());
     }
 
     #[Route('/dashboard/entreprises-fragment', name: 'console.dashboard.entreprises_fragment', methods: ['GET'])]
     public function entreprisesFragment(): Response
     {
+        $this->assertDomaine('console.entreprise.index');
+
         return $this->render('console/dashboard/_entreprises_list.html.twig', $this->donneesEntreprises());
     }
 
@@ -215,12 +262,16 @@ class DashboardController extends AbstractConsoleController
     #[Route('/dashboard/block/clients', name: 'console.dashboard.block_clients', methods: ['GET'])]
     public function blockClients(): Response
     {
+        $this->assertDomaine('console.client.index');
+
         return $this->render('console/dashboard/_block_clients.html.twig', $this->donneesClients());
     }
 
     #[Route('/dashboard/clients-fragment', name: 'console.dashboard.clients_fragment', methods: ['GET'])]
     public function clientsFragment(): Response
     {
+        $this->assertDomaine('console.client.index');
+
         return $this->render('console/dashboard/_utilisateurs_list.html.twig', $this->donneesClients());
     }
 
@@ -252,12 +303,16 @@ class DashboardController extends AbstractConsoleController
     #[Route('/dashboard/block/utilisateurs', name: 'console.dashboard.block_utilisateurs', methods: ['GET'])]
     public function blockUtilisateurs(): Response
     {
+        $this->assertDomaine('console.utilisateur.index');
+
         return $this->render('console/dashboard/_block_utilisateurs.html.twig', $this->donneesUtilisateurs());
     }
 
     #[Route('/dashboard/utilisateurs-fragment', name: 'console.dashboard.utilisateurs_fragment', methods: ['GET'])]
     public function utilisateursFragment(): Response
     {
+        $this->assertDomaine('console.utilisateur.index');
+
         return $this->render('console/dashboard/_utilisateurs_list.html.twig', $this->donneesUtilisateurs());
     }
 
@@ -290,12 +345,16 @@ class DashboardController extends AbstractConsoleController
     #[Route('/dashboard/block/coupons', name: 'console.dashboard.block_coupons', methods: ['GET'])]
     public function blockCoupons(): Response
     {
+        $this->assertDomaine('console.coupon.index');
+
         return $this->render('console/dashboard/_block_coupons.html.twig', $this->donneesCoupons());
     }
 
     #[Route('/dashboard/coupons-fragment', name: 'console.dashboard.coupons_fragment', methods: ['GET'])]
     public function couponsFragment(): Response
     {
+        $this->assertDomaine('console.coupon.index');
+
         return $this->render('console/dashboard/_coupons_list.html.twig', $this->donneesCoupons());
     }
 
@@ -317,6 +376,8 @@ class DashboardController extends AbstractConsoleController
     #[Route('/dashboard/block/plans', name: 'console.dashboard.block_plans', methods: ['GET'])]
     public function blockPlans(): Response
     {
+        $this->assertDomaine('console.plan.index');
+
         return $this->render('console/dashboard/_block_plans.html.twig', [
             'packs' => $this->parametres->packs(),
         ]);
@@ -330,6 +391,8 @@ class DashboardController extends AbstractConsoleController
     #[Route('/dashboard/block/taxes', name: 'console.dashboard.block_taxes', methods: ['GET'])]
     public function blockTaxes(): Response
     {
+        $this->assertDomaine('console.taxe.index');
+
         $annee  = (int) date('Y');
         $revenu = $this->purchaseRepository->totals([
             'from' => sprintf('%d-01-01', $annee),
