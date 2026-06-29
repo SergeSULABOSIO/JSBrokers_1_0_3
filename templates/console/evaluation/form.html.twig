@@ -1,0 +1,46 @@
+{% extends 'console/form.html.twig' %}
+
+{# Sert les deux formulaires du module : objectif (champ `titre` présent) et fiche
+   d'évaluation (appréciation + clôture). Champs groupés en fieldsets, pattern console. #}
+{% block console_form_body %}
+    {% if form.titre is defined %}
+        {# ---- Objectif ---- #}
+        <fieldset class="cs-fieldset">
+            <legend class="cs-legend">
+                {{ ux_icon(resolve_icon_name('tache'), {height:'16px', width:'16px'}) }}
+                Définition
+            </legend>
+            {{ form_row(form.titre) }}
+            {{ form_row(form.description) }}
+            <div class="row">
+                <div class="col-md">{{ form_row(form.annee) }}</div>
+                <div class="col-md">{{ form_row(form.trimestre) }}</div>
+            </div>
+        </fieldset>
+
+        <fieldset class="cs-fieldset">
+            <legend class="cs-legend">
+                {{ ux_icon(resolve_icon_name('action:analyser'), {height:'16px', width:'16px'}) }}
+                Mesure
+            </legend>
+            <div class="row">
+                <div class="col-md">{{ form_row(form.cible) }}</div>
+                <div class="col-md">{{ form_row(form.unite) }}</div>
+                <div class="col-md">{{ form_row(form.poids) }}</div>
+            </div>
+            {{ form_row(form.mode) }}
+            {{ form_row(form.metrique) }}
+            {{ form_row(form.valeurManuelle) }}
+        </fieldset>
+    {% else %}
+        {# ---- Fiche d'évaluation ---- #}
+        <fieldset class="cs-fieldset">
+            <legend class="cs-legend">
+                {{ ux_icon(resolve_icon_name('action:analyser'), {height:'16px', width:'16px'}) }}
+                Appréciation &amp; clôture
+            </legend>
+            {{ form_row(form.appreciation) }}
+            {{ form_row(form.cloturee) }}
+        </fieldset>
+    {% endif %}
+{% endblock %}

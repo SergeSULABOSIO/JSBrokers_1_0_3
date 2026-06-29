@@ -2,6 +2,8 @@
 
 namespace App\Entity;
 
+use App\Enum\Departement;
+use App\Enum\FonctionCollaborateur;
 use App\Repository\UtilisateurRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -120,6 +122,18 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     /** Nombre cumulé de connexions réussies (jauge d'engagement du CRM). */
     #[ORM\Column(options: ['default' => 0])]
     private int $loginCount = 0;
+
+    /**
+     * Département d'affectation du collaborateur (couche organisationnelle/d'accès).
+     * NULL = non affecté (n'accède qu'au tableau de bord tant qu'un super-admin ne
+     * l'a pas rattaché à un département). Sans effet pour les clients (non agents).
+     */
+    #[ORM\Column(length: 30, nullable: true, enumType: Departement::class)]
+    private ?Departement $departement = null;
+
+    /** Fonction (poste) du collaborateur au sein de son département. */
+    #[ORM\Column(length: 30, nullable: true, enumType: FonctionCollaborateur::class)]
+    private ?FonctionCollaborateur $fonction = null;
 
     public function __construct()
     {
@@ -422,6 +436,41 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
         $roles = $this->getRoles();
 
         return in_array('ROLE_ADMIN', $roles, true) || in_array('ROLE_SUPER_ADMIN', $roles, true);
+    }
+
+    public function getDepartement(): ?Departement
+    {
+        return $this->departement;
+    }
+
+    public function setDepartement(?Departement $departement): static
+    {
+        $this->departement = $departement;
+
+        return $this;
+    }
+
+    public function getFonction(): ?FonctionCollaborateur
+    {
+        return $this->fonction;
+    }
+
+    public function setFonction(?FonctionCollaborateur $fonction): static
+    {
+        $this->fonction = $fonction;
+
+        return $this;
+    }
+
+    /**
+     * Libellés humains des rubriques accessibles selon le département (pour
+     * l'e-mail d'affectation et l'affichage). Vide si non affecté.
+     *
+     * @return string[]
+     */
+    public function getPerimetreLabels(): array
+    {
+        return $this->departement?->rubriques() ?? [];
     }
 
     #[ORM\PrePersist]

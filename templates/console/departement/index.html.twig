@@ -1,0 +1,92 @@
+{% extends 'console/base.html.twig' %}
+
+{% block console_subtitle %}<p>Organisation de l'équipe JS Brokers par département. L'affectation d'un collaborateur ajuste son périmètre d'accès à la console.</p>{% endblock %}
+
+{% block console_body %}
+    {# Un panneau par département : entête illustré + tableau des collaborateurs. #}
+    {% for entry in groupes %}
+        {% set dep = entry.dep %}
+        <div class="cs-panel">
+            <div class="cs-head" style="margin-bottom:1rem;">
+                <div class="cs-head-text">
+                    <div class="cs-head-title">
+                        <span class="cs-head-icon" aria-hidden="true">
+                            {{ ux_icon(resolve_icon_name(dep.icon), {height:'26px', width:'26px'}) }}
+                        </span>
+                        <h1 style="font-size:1.15rem;">{{ dep.label }}</h1>
+                        <span class="cs-badge cs-badge--cobalt">{{ entry.agents|length }}</span>
+                    </div>
+                    <p>{{ dep.description }}</p>
+                </div>
+            </div>
+
+            {% if entry.agents|length > 0 %}
+                <table class="cs-table">
+                    <thead><tr><th>Nom</th><th>E-mail</th><th>Fonction</th><th style="text-align:right;">Actions</th></tr></thead>
+                    <tbody>
+                    {% for c in entry.agents %}
+                        <tr>
+                            <td>{{ ux_icon(resolve_icon_name('utilisateur'), {height:'18px', width:'18px'}) }} {{ c.nom }}</td>
+                            <td>{{ c.email }}</td>
+                            <td>
+                                {% if c.fonction %}
+                                    <span class="cs-badge {{ c.fonction.badgeClass }}">{{ c.fonction.label }}</span>
+                                {% else %}
+                                    <span class="cs-badge cs-badge--muted">Non définie</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align:right;">
+                                {% if is_granted('ROLE_SUPER_ADMIN') %}
+                                    <a href="{{ path('console.departement.edit', {id: c.id}) }}" class="cs-icon-btn"
+                                       data-action="click->top-progress#show" title="Affecter" aria-label="Affecter {{ c.nom }}">
+                                        {{ ux_icon(resolve_icon_name('action:role'), {height:'18px', width:'18px'}) }}
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="cs-empty">Aucun collaborateur dans ce département.</div>
+            {% endif %}
+        </div>
+    {% endfor %}
+
+    {# Collaborateurs sans département : à rattacher (accès limité au tableau de bord). #}
+    {% if nonAffectes|length > 0 %}
+        <div class="cs-panel">
+            <div class="cs-head" style="margin-bottom:1rem;">
+                <div class="cs-head-text">
+                    <div class="cs-head-title">
+                        <span class="cs-head-icon" aria-hidden="true">
+                            {{ ux_icon(resolve_icon_name('action:alert'), {height:'26px', width:'26px'}) }}
+                        </span>
+                        <h1 style="font-size:1.15rem;">Non affectés</h1>
+                        <span class="cs-badge cs-badge--warn">{{ nonAffectes|length }}</span>
+                    </div>
+                    <p>Ces collaborateurs ne sont rattachés à aucun département : leur accès n'est pas encore restreint. Affectez-les pour cadrer leur périmètre.</p>
+                </div>
+            </div>
+            <table class="cs-table">
+                <thead><tr><th>Nom</th><th>E-mail</th><th style="text-align:right;">Actions</th></tr></thead>
+                <tbody>
+                {% for c in nonAffectes %}
+                    <tr>
+                        <td>{{ ux_icon(resolve_icon_name('utilisateur'), {height:'18px', width:'18px'}) }} {{ c.nom }}</td>
+                        <td>{{ c.email }}</td>
+                        <td style="text-align:right;">
+                            {% if is_granted('ROLE_SUPER_ADMIN') %}
+                                <a href="{{ path('console.departement.edit', {id: c.id}) }}" class="cs-icon-btn"
+                                   data-action="click->top-progress#show" title="Affecter" aria-label="Affecter {{ c.nom }}">
+                                    {{ ux_icon(resolve_icon_name('action:role'), {height:'18px', width:'18px'}) }}
+                                </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+{% endblock %}
