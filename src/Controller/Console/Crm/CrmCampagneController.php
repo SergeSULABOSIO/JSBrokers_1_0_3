@@ -46,7 +46,7 @@ class CrmCampagneController extends AbstractConsoleController
         $this->applyLangPreference($request, $localeSwitcher);
 
         return $this->render('console/crm/campagne/index.html.twig', [
-            'pageName'  => 'CRM — Marketing',
+            'pageName'  => 'CRM — Campagnes',
             'pageIcon'  => 'action:premium',
             'campagnes' => $this->campagneRepository->paginateAll($request->query->getInt('page', 1)),
         ]);
@@ -78,7 +78,7 @@ class CrmCampagneController extends AbstractConsoleController
             'formIcon'    => 'action:premium',
             'form'        => $form,
             'backUrl'     => $this->generateUrl('console.crm.campagne.index'),
-            'backLabel'   => 'Marketing',
+            'backLabel'   => 'Campagnes',
             'submitLabel' => 'Créer la campagne',
             'description' => 'Définissez le message et le segment ciblé (étapes de pipeline / santé). Vide = tous les clients.',
         ] + $this->segmentCounts());
@@ -113,7 +113,7 @@ class CrmCampagneController extends AbstractConsoleController
             'formIcon'    => 'action:premium',
             'form'        => $form,
             'backUrl'     => $this->generateUrl('console.crm.campagne.index'),
-            'backLabel'   => 'Marketing',
+            'backLabel'   => 'Campagnes',
             'submitLabel' => 'Enregistrer les modifications',
             'description' => 'Modifiez le message et le segment ciblé. Une campagne déjà envoyée peut être relancée depuis la liste.',
         ] + $this->segmentCounts());

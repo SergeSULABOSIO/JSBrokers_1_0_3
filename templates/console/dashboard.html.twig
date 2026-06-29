@@ -1,8 +1,98 @@
 {% extends 'console/base.html.twig' %}
 
-{% block console_subtitle %}<p>Vue d'ensemble de la plateforme JS Brokers : comptes, ventes et revenu.</p>{% endblock %}
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    /* Bandeau personnalisé du tableau de bord (profil du collaborateur). */
+    .cs-db-greeting { margin-bottom: 1rem; }
+    .cs-db-score { display:flex; align-items:center; gap:.7rem; padding:.5rem .9rem;
+        background:#f8f9fa; border:1px solid #dee2e6; border-radius:12px; }
+    .cs-db-quick { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:1rem;
+        padding-top:1rem; border-top:1px solid #f0f0f0; }
+    .cs-db-quick-link { display:inline-flex; align-items:center; gap:.4rem;
+        padding:.45rem .75rem; border-radius:8px; text-decoration:none;
+        background:#eef2fb; color:#0047AB; font-size:.85rem; font-weight:600; }
+    .cs-db-quick-link:hover { background:#0047AB; color:#fff; }
+    .cs-db-quick-link:hover svg { color:#fff; }
+    .cs-db-quick-link:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+</style>
+{% endblock %}
+
+{% block console_subtitle %}<p>Bonjour {{ app.user.nom }} — voici votre espace, adapté à votre département.</p>{% endblock %}
 
 {% block console_body %}
+    {# ── Bandeau personnalisé selon le profil (département, fonction, périmètre,
+         score d'évaluation) + accès rapides aux seules rubriques autorisées. ── #}
+    {% set quickLinks = [
+        { p: 'console.vente.index',         icon: 'operation',       label: 'Ventes' },
+        { p: 'console.coupon.index',        icon: 'offre',           label: 'Coupons' },
+        { p: 'console.depense.index',       icon: 'depense',         label: 'Dépenses' },
+        { p: 'console.document.index',      icon: 'document',        label: 'Documents comptables' },
+        { p: 'console.taxe.index',          icon: 'taxe',            label: 'Fiscalité' },
+        { p: 'console.crm.dashboard',       icon: 'piste',           label: 'CRM' },
+        { p: 'console.crm.ticket.index',    icon: 'feedback',        label: 'Support' },
+        { p: 'console.crm.campagne.index',  icon: 'action:premium',  label: 'Campagnes' },
+        { p: 'console.client.index',        icon: 'client',          label: 'Clients' },
+        { p: 'console.entreprise.index',    icon: 'entreprise',      label: 'Entreprises' },
+        { p: 'console.collaborateur.index', icon: 'action:role',     label: 'Collaborateurs' },
+        { p: 'console.evaluation.index',    icon: 'action:analyser', label: 'Évaluations' },
+    ]|filter(l => console_can_access(l.p)) %}
+
+    <div class="cs-panel cs-db-greeting">
+        <div class="d-flex align-items-start justify-content-between flex-wrap gap-3">
+            <div>
+                <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
+                    {% if app.user.departement %}
+                        <span class="cs-badge cs-badge--cobalt">
+                            {{ ux_icon(resolve_icon_name(app.user.departement.icon), {height:'14px', width:'14px'}) }}
+                            {{ app.user.departement.label }}
+                        </span>
+                    {% elseif is_granted('ROLE_SUPER_ADMIN') %}
+                        <span class="cs-badge cs-badge--cobalt">Super-administrateur · accès complet</span>
+                    {% else %}
+                        <span class="cs-badge cs-badge--warn">Non affecté · accès complet</span>
+                    {% endif %}
+                    {% if app.user.fonction %}
+                        <span class="cs-badge {{ app.user.fonction.badgeClass }}">{{ app.user.fonction.label }}</span>
+                    {% endif %}
+                </div>
+                <p class="text-muted mb-0" style="font-size:.9rem;">
+                    {% if app.user.departement %}
+                        {{ app.user.departement.description }}
+                    {% else %}
+                        Vous avez accès à l'ensemble des rubriques de la console.
+                    {% endif %}
+                </p>
+            </div>
+
+            {% if monScore is not null %}
+                {# Score d'évaluation personnel (période annuelle courante), en lecture. #}
+                <div class="cs-db-score" data-meta-tip="Votre score d'évaluation pour {{ monScoreAnnee }}">
+                    <span class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('action:analyser'), {height:'22px', width:'22px'}) }}</span>
+                    <div>
+                        <div style="font-size:1.4rem;font-weight:700;color:#212529;line-height:1;">
+                            {{ monScore }} <span style="font-size:.85rem;color:#6c757d;">/ 100</span>
+                        </div>
+                        <div class="cs-kpi-lbl">Mon évaluation {{ monScoreAnnee }} ·
+                            <span class="cs-badge {{ monScoreClass }}">{{ monScoreMention }}</span>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        {% if quickLinks is not empty %}
+            <div class="cs-db-quick">
+                {% for l in quickLinks %}
+                    <a href="{{ path(l.p) }}" class="cs-db-quick-link" data-action="click->top-progress#show">
+                        {{ ux_icon(resolve_icon_name(l.icon), {height:'16px', width:'16px'}) }}
+                        <span>{{ l.label }}</span>
+                    </a>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+
     {# ── Colonne centrale unique : pile de blocs pliables, un par ligne ──
        Même comportement que le tableau de bord de l'espace de travail
        courtiers : chaque bloc est une carte <details> repliable au clic,
@@ -20,6 +110,7 @@
             {{ include('console/dashboard/_block_kpis.html.twig') }}
         </div>
 
+        {% if console_can_access('console.vente.index') %}
         {# ── Revenu des ventes : deux vues (par mois / par paquet) dans un
              bloc unique avec bascule, sur le modèle du bloc « Production »
              du tableau de bord courtiers. ── #}
@@ -90,6 +181,9 @@
             </div>
         </details>
 
+        {% endif %}
+
+        {% if console_can_access('console.depense.index') %}
         {# ── Dernières dépenses (recherche + rafraîchissement du fragment) ──
              Pendant du bloc Ventes : décaissements de JS Brokers. Fermé par
              défaut (chargement/rafraîchissement uniquement à l'ouverture). ── #}
@@ -116,6 +210,9 @@
             </div>
         </details>
 
+        {% endif %}
+
+        {% if console_can_access('console.entreprise.index') %}
         {# ── Dernières entreprises créées (fermé par défaut) ── #}
         <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
             <summary class="card-header border-0 bg-white py-2 px-3">
@@ -140,6 +237,9 @@
             </div>
         </details>
 
+        {% endif %}
+
+        {% if console_can_access('console.client.index') %}
         {# ── Derniers clients : comptes en mode payant (fermé par défaut) ── #}
         <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
             <summary class="card-header border-0 bg-white py-2 px-3">
@@ -164,6 +264,9 @@
             </div>
         </details>
 
+        {% endif %}
+
+        {% if console_can_access('console.utilisateur.index') %}
         {# ── Derniers utilisateurs créés (fermé par défaut) ── #}
         <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
             <summary class="card-header border-0 bg-white py-2 px-3">
@@ -188,6 +291,9 @@
             </div>
         </details>
 
+        {% endif %}
+
+        {% if console_can_access('console.coupon.index') %}
         {# ── Derniers coupons (fermé par défaut) ── #}
         <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
             <summary class="card-header border-0 bg-white py-2 px-3">
@@ -212,6 +318,9 @@
             </div>
         </details>
 
+        {% endif %}
+
+        {% if console_can_access('console.plan.index') %}
         {# ── Plans tarifaires : paquets prépayés effectifs (config, fermé par défaut) ── #}
         <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
             <summary class="card-header border-0 bg-white py-2 px-3">
@@ -238,6 +347,9 @@
             </div>
         </details>
 
+        {% endif %}
+
+        {% if console_can_access('console.taxe.index') %}
         {# ── Fiscalité : taxes dues par JS Brokers sur ses ventes (fermé par défaut) ── #}
         <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
             <summary class="card-header border-0 bg-white py-2 px-3">
@@ -261,6 +373,7 @@
                 <div class="db-skeleton-block m-3" style="height:140px;"></div>
             </div>
         </details>
+        {% endif %}
 
     </div>
 {% endblock %}
