@@ -26,4 +26,17 @@
             {{ form_row(form.superAdmin) }}
         {% endif %}
     </fieldset>
+
+    {# Affectation : visible pour le super-admin (option can_assign). Le périmètre
+       d'accès à la console découle du département choisi. #}
+    {% if form.departement is defined %}
+        <fieldset class="cs-fieldset">
+            <legend class="cs-legend">
+                {{ ux_icon(resolve_icon_name('action:role'), {height:'16px', width:'16px'}) }}
+                Département &amp; rôle
+            </legend>
+            {{ form_row(form.departement) }}
+            {{ form_row(form.fonction) }}
+        </fieldset>
+    {% endif %}
 {% endblock %}
