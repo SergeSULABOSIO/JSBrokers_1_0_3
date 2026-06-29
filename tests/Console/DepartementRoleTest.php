@@ -25,6 +25,7 @@ class DepartementRoleTest extends WebTestCase
     private const DIRECTION = 'phpunit-dr-direction@test.local';
     private const LIBRE     = 'phpunit-dr-libre@test.local';
     private const CIBLE     = 'phpunit-dr-cible@test.local';
+    private const NOUVEAU   = 'phpunit-dr-nouveau@test.local';
     private const PASSWORD  = 'Test1234!';
 
     private KernelBrowser $client;
@@ -76,7 +77,7 @@ class DepartementRoleTest extends WebTestCase
         // Les objectifs / évaluations sont supprimés par cascade (ON DELETE CASCADE).
         $this->em()->getConnection()->executeStatement(
             'DELETE FROM utilisateur WHERE email IN (:e)',
-            ['e' => [self::SUPER, self::FINANCE, self::SUPPORT, self::DIRECTION, self::LIBRE, self::CIBLE]],
+            ['e' => [self::SUPER, self::FINANCE, self::SUPPORT, self::DIRECTION, self::LIBRE, self::CIBLE, self::NOUVEAU]],
             ['e' => \Doctrine\DBAL\ArrayParameterType::STRING]
         );
     }
@@ -168,6 +169,34 @@ class DepartementRoleTest extends WebTestCase
         $maj = $this->user(self::CIBLE);
         $this->assertSame(Departement::FINANCE, $maj->getDepartement());
         $this->assertSame(FonctionCollaborateur::CHARGE, $maj->getFonction());
+    }
+
+    /** Le formulaire de création de collaborateur permet d'affecter directement. */
+    public function testCollaboratorFormAssignsDepartement(): void
+    {
+        $this->client->loginUser($this->user(self::SUPER));
+
+        $crawler = $this->client->request('GET', '/console/collaborateurs/new');
+        $this->assertResponseIsSuccessful();
+        // Le champ d'affectation est bien présent dans le formulaire de création.
+        $this->assertSame(1, $crawler->filter('select[name="collaborateur[departement]"]')->count(),
+            'Le formulaire collaborateur doit proposer le choix du département.');
+
+        $form = $crawler->filter('form')->form();
+        $form['collaborateur[nom]'] = 'Nouveau Affecté';
+        $form['collaborateur[email]'] = self::NOUVEAU;
+        $form['collaborateur[plainPassword]'] = self::PASSWORD;
+        $form['collaborateur[departement]'] = Departement::RELATION_CLIENT->value;
+        $form['collaborateur[fonction]'] = FonctionCollaborateur::ASSISTANT->value;
+        $this->client->submit($form);
+
+        $this->assertResponseRedirects('/console/collaborateurs');
+
+        $this->em()->clear();
+        $cree = $this->user(self::NOUVEAU);
+        $this->assertNotNull($cree);
+        $this->assertSame(Departement::RELATION_CLIENT, $cree->getDepartement());
+        $this->assertSame(FonctionCollaborateur::ASSISTANT, $cree->getFonction());
     }
 
     /** L'affectation est interdite à un agent non super-admin. */

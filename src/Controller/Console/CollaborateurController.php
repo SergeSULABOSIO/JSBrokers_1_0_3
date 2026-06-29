@@ -6,6 +6,7 @@ use App\Entity\Utilisateur;
 use App\Event\AgentNotificationEvent;
 use App\Form\CollaborateurType;
 use App\Repository\UtilisateurRepository;
+use App\Service\Console\AffectationNotifier;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -27,6 +28,7 @@ class CollaborateurController extends AbstractConsoleController
         private UtilisateurRepository $utilisateurRepository,
         private UserPasswordHasherInterface $passwordHasher,
         private EventDispatcherInterface $dispatcher,
+        private AffectationNotifier $affectationNotifier,
     ) {}
 
     #[Route('', name: 'index')]
@@ -51,6 +53,7 @@ class CollaborateurController extends AbstractConsoleController
         $form = $this->createForm(CollaborateurType::class, $collaborateur, [
             'is_edit'         => false,
             'can_grant_super' => true,
+            'can_assign'      => true,
         ]);
         $form->handleRequest($request);
 
@@ -65,6 +68,10 @@ class CollaborateurController extends AbstractConsoleController
             $this->em->flush();
 
             $this->notifier(AgentNotificationEvent::ACTION_CREATE, $collaborateur);
+            // Si un département a été choisi à la création, on en informe le concerné.
+            if ($collaborateur->getDepartement() !== null) {
+                $this->affectationNotifier->notify($collaborateur);
+            }
             $this->addFlash('success', sprintf('Collaborateur « %s » créé.', $collaborateur->getNom()));
 
             return $this->redirectToRoute('console.collaborateur.index');
@@ -88,10 +95,15 @@ class CollaborateurController extends AbstractConsoleController
         $this->applyLangPreference($request, $localeSwitcher);
 
         $canGrantSuper = $this->isGranted('ROLE_SUPER_ADMIN');
+        // Affectation initiale, pour ne notifier le concerné qu'en cas de changement.
+        $ancienDepartement = $collaborateur->getDepartement();
+        $ancienneFonction = $collaborateur->getFonction();
+
         $form = $this->createForm(CollaborateurType::class, $collaborateur, [
             'is_edit'         => true,
             'can_grant_super' => $canGrantSuper,
             'is_super'        => in_array('ROLE_SUPER_ADMIN', $collaborateur->getRoles(), true),
+            'can_assign'      => $canGrantSuper,
         ]);
         $form->handleRequest($request);
 
@@ -107,6 +119,12 @@ class CollaborateurController extends AbstractConsoleController
             $this->em->flush();
 
             $this->notifier(AgentNotificationEvent::ACTION_UPDATE, $collaborateur);
+            // Notification dédiée au concerné si son affectation a changé.
+            if ($canGrantSuper
+                && ($collaborateur->getDepartement() !== $ancienDepartement
+                    || $collaborateur->getFonction() !== $ancienneFonction)) {
+                $this->affectationNotifier->notify($collaborateur);
+            }
             $this->addFlash('success', sprintf('Collaborateur « %s » mis à jour.', $collaborateur->getNom()));
 
             return $this->redirectToRoute('console.collaborateur.index');

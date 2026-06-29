@@ -6,8 +6,7 @@ use App\Entity\Utilisateur;
 use App\Enum\Departement;
 use App\Form\AffectationCollaborateurType;
 use App\Repository\UtilisateurRepository;
-use App\Services\Mail\CorporateMailer;
-use Psr\Log\LoggerInterface;
+use App\Service\Console\AffectationNotifier;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -26,8 +25,7 @@ class DepartementController extends AbstractConsoleController
 {
     public function __construct(
         private UtilisateurRepository $utilisateurRepository,
-        private CorporateMailer $corporateMailer,
-        private LoggerInterface $logger,
+        private AffectationNotifier $affectationNotifier,
     ) {}
 
     #[Route('', name: 'index')]
@@ -71,7 +69,7 @@ class DepartementController extends AbstractConsoleController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->em->flush();
 
-            $this->notifierAffectation($collaborateur);
+            $this->affectationNotifier->notify($collaborateur);
             $this->addFlash('success', sprintf('Affectation de « %s » enregistrée.', $collaborateur->getNom()));
 
             return $this->redirectToRoute('console.departement.index');
@@ -88,51 +86,5 @@ class DepartementController extends AbstractConsoleController
                 . 'Son périmètre d\'accès à la console s\'ajuste automatiquement, et il en est informé par e-mail.',
             'formIcon'      => 'action:role',
         ]);
-    }
-
-    /**
-     * Notifie le collaborateur concerné de son affectation (département, fonction,
-     * périmètre). Envoi direct via CorporateMailer (au seul concerné), tolérant aux
-     * pannes : l'échec d'envoi ne doit pas annuler l'enregistrement déjà persisté.
-     */
-    private function notifierAffectation(Utilisateur $collaborateur): void
-    {
-        $email = $collaborateur->getEmail();
-        if (!$email) {
-            return;
-        }
-
-        $dep = $collaborateur->getDepartement();
-        $fonction = $collaborateur->getFonction();
-
-        $details = [
-            'Département'           => $dep?->label() ?? 'Non affecté',
-            'Fonction'             => $fonction?->label() ?? 'Non définie',
-            'Niveau d\'accès'      => $fonction?->niveauLabel() ?? '—',
-            'Rubriques accessibles' => implode(', ', $collaborateur->getPerimetreLabels()) ?: 'Accès complet (non restreint)',
-        ];
-
-        try {
-            $this->corporateMailer->send(
-                $email,
-                $this->corporateMailer->buildSubject('Affectation & rôle', (string) $collaborateur->getNom()),
-                'emails/agent_notification.html.twig',
-                [
-                    'titre'   => 'Votre rôle au sein de JS Brokers',
-                    'intro'   => sprintf(
-                        'Bonjour %s, votre rattachement au sein de l\'équipe JS Brokers vient d\'être défini. Voici les détails de votre affectation.',
-                        $collaborateur->getNom()
-                    ),
-                    'icone'   => 'role',
-                    'details' => $details,
-                    'agent'   => $collaborateur->getNom(),
-                ],
-            );
-        } catch (\Throwable $e) {
-            $this->logger->warning('Affectation : échec de notification e-mail de {nom} : {msg}', [
-                'nom' => $collaborateur->getNom(),
-                'msg' => $e->getMessage(),
-            ]);
-        }
     }
 }
