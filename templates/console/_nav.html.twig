@@ -24,6 +24,8 @@
     ] },
     { label: 'Comptes', icon: 'client', items: [
         { r: 'console.collaborateur.', p: 'console.collaborateur.index', icon: 'action:role', label: 'Collaborateurs' },
+        { r: 'console.departement.',   p: 'console.departement.index',   icon: 'role',         label: 'Départements & rôles' },
+        { r: 'console.evaluation.',    p: 'console.evaluation.index',    icon: 'tache',        label: 'Évaluations' },
         { r: 'console.utilisateur.',   p: 'console.utilisateur.index',   icon: 'utilisateur',  label: 'Utilisateurs' },
         { r: 'console.client.',        p: 'console.client.index',        icon: 'client',       label: 'Clients' },
         { r: 'console.entreprise.',    p: 'console.entreprise.index',    icon: 'entreprise',   label: 'Entreprises' },
@@ -53,8 +55,12 @@
            Groupe « CRM » : les Paramètres CRM (super-admin) en font partie. #}
         {% set isVentes = g.label == 'Ventes' %}
         {% set isCrm = g.label == 'CRM' %}
+        {# Filtrage par département : on ne garde que les rubriques accessibles au
+           collaborateur courant (même règle que le blocage serveur). #}
+        {% set vItems = g.items|filter(it => console_can_access(it.p)) %}
+        {% if vItems|length > 0 %}
         {% set gActive = (isVentes and route starts with 'console.plan.') or (isCrm and route starts with 'console.crm.parametres.') %}
-        {% for it in g.items %}
+        {% for it in vItems %}
             {% if route starts with it.r %}{% set gActive = true %}{% endif %}
         {% endfor %}
 
@@ -65,7 +71,7 @@
                 <span class="cs-menu-caret" aria-hidden="true"></span>
             </summary>
             <div class="cs-menu-panel">
-                {% for it in g.items %}
+                {% for it in vItems %}
                     {% set active = route starts with it.r %}
                     <a href="{{ path(it.p) }}" class="{{ active ? 'is-active' }}"
                        data-action="click->top-progress#show" {% if active %}aria-current="page"{% endif %}>
@@ -91,5 +97,6 @@
                 {% endif %}
             </div>
         </details>
+        {% endif %}
     {% endfor %}
 </nav>

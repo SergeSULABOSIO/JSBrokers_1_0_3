@@ -15,7 +15,7 @@
 <div class="cs-panel">
     {% if collaborateurs|length > 0 %}
         <table class="cs-table">
-            <thead><tr><th>Nom</th><th>E-mail</th><th>Rôle</th><th style="text-align:right;">Actions</th></tr></thead>
+            <thead><tr><th>Nom</th><th>E-mail</th><th>Rôle</th><th>Département / Fonction</th><th style="text-align:right;">Actions</th></tr></thead>
             <tbody>
             {% for c in collaborateurs %}
                 {% set isSuper = 'ROLE_SUPER_ADMIN' in c.roles %}
@@ -27,6 +27,14 @@
                             <span class="cs-badge cs-badge--cobalt">Super-admin</span>
                         {% else %}
                             <span class="cs-badge cs-badge--muted">Agent</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if c.departement %}
+                            <span class="cs-badge cs-badge--cobalt">{{ c.departement.label }}</span>
+                            {% if c.fonction %}<span class="cs-badge {{ c.fonction.badgeClass }}">{{ c.fonction.label }}</span>{% endif %}
+                        {% else %}
+                            <span class="cs-badge cs-badge--warn">Non affecté</span>
                         {% endif %}
                     </td>
                     <td style="text-align:right;">

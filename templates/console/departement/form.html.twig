@@ -1,0 +1,15 @@
+{% extends 'console/form.html.twig' %}
+
+{# Affectation d'un collaborateur : département + fonction. Même pattern que les
+   autres formulaires console (.cs-fieldset / .cs-legend, thème de champ à icône
+   incrustée appliqué par le parent). #}
+{% block console_form_body %}
+    <fieldset class="cs-fieldset">
+        <legend class="cs-legend">
+            {{ ux_icon(resolve_icon_name('action:role'), {height:'16px', width:'16px'}) }}
+            Rattachement
+        </legend>
+        {{ form_row(form.departement) }}
+        {{ form_row(form.fonction) }}
+    </fieldset>
+{% endblock %}
