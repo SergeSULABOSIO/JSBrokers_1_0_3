@@ -56,13 +56,13 @@
                         <span class="cs-badge {{ app.user.fonction.badgeClass }}">{{ app.user.fonction.label }}</span>
                     {% endif %}
                 </div>
-                <p class="text-muted mb-0" style="font-size:.9rem;">
-                    {% if app.user.departement %}
-                        {{ app.user.departement.description }}
-                    {% else %}
-                        Vous avez accès à l'ensemble des rubriques de la console.
-                    {% endif %}
-                </p>
+                {% if app.user.departement %}
+                    {% for para in app.user.departement.descriptionDetaillee %}
+                        <p class="text-muted mb-0{% if not loop.first %} mt-2{% endif %}" style="font-size:.9rem;max-width:80ch;">{{ para }}</p>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted mb-0" style="font-size:.9rem;">Vous avez accès à l'ensemble des rubriques de la console.</p>
+                {% endif %}
             </div>
 
             {% if monScore is not null %}
