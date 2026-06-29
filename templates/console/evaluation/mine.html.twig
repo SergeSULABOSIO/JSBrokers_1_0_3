@@ -1,0 +1,126 @@
+{% extends 'console/base.html.twig' %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    /* Jauge d'atteinte d'un objectif (charte cobalt) — même rendu que la fiche RH. */
+    .cs-gauge { background:#eef0f2; border-radius:999px; height:10px; overflow:hidden; min-width:120px; }
+    .cs-gauge > span { display:block; height:100%; background:#0047AB; border-radius:999px; }
+    .cs-score-big { font-size:2rem; font-weight:700; color:#212529; line-height:1; }
+    .cs-objline-meta { color:#6c757d; font-size:.82rem; }
+</style>
+{% endblock %}
+
+{% block console_subtitle %}
+    <p>
+        {% if collaborateur.departement %}<span class="cs-badge cs-badge--cobalt">{{ collaborateur.departement.label }}</span>{% endif %}
+        {% if collaborateur.fonction %}<span class="cs-badge {{ collaborateur.fonction.badgeClass }}">{{ collaborateur.fonction.label }}</span>{% endif %}
+        Période : <strong>{{ fiche.periodeLabel }}</strong>
+    </p>
+{% endblock %}
+
+{% block console_actions %}
+    {# Sélecteur de période (année + trimestre), soumis en GET sur ma propre fiche. #}
+    <form method="get" class="d-flex align-items-center gap-2" data-action="change->top-progress#show">
+        <select name="annee" class="form-select form-select-sm" onchange="this.form.submit()" aria-label="Année">
+            {% for a in annees %}
+                <option value="{{ a }}" {{ a == annee ? 'selected' }}>{{ a }}</option>
+            {% endfor %}
+        </select>
+        <select name="trimestre" class="form-select form-select-sm" onchange="this.form.submit()" aria-label="Période">
+            <option value="0" {{ trimestre == 0 ? 'selected' }}>Annuel</option>
+            {% for t in 1..4 %}
+                <option value="{{ t }}" {{ trimestre == t ? 'selected' }}>T{{ t }}</option>
+            {% endfor %}
+        </select>
+        <noscript><button type="submit" class="btn btn-sm btn-cobalt">Afficher</button></noscript>
+    </form>
+{% endblock %}
+
+{% block console_body %}
+{# Score global de la période. #}
+<div class="cs-panel">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div class="d-flex align-items-center gap-3">
+            <span class="cs-kpi-icon">{{ ux_icon(resolve_icon_name('action:analyser'), {height:'26px', width:'26px'}) }}</span>
+            <div>
+                <div class="cs-score-big">{{ fiche.score }} <span style="font-size:1rem;color:#6c757d;">/ 100</span></div>
+                <div class="cs-kpi-lbl">Score global pondéré</div>
+            </div>
+        </div>
+        <span class="cs-badge {{ fiche.mentionClass }}" style="font-size:.9rem;">{{ fiche.mention }}</span>
+        {% if evaluation and evaluation.cloturee %}
+            <span class="cs-badge cs-badge--ok">{{ ux_icon(resolve_icon_name('action:check'), {height:'14px', width:'14px'}) }} Clôturée</span>
+        {% endif %}
+    </div>
+</div>
+
+{# Mes objectifs de la période avec jauge d'atteinte. #}
+<div class="cs-panel">
+    <h2 class="cs-panel-title">Mes objectifs de la période</h2>
+    {% if fiche.lignes|length > 0 %}
+        <table class="cs-table">
+            <thead><tr><th>Objectif</th><th>Atteinte</th><th style="width:35%;">Progression</th><th>Poids</th></tr></thead>
+            <tbody>
+            {% for l in fiche.lignes %}
+                {% set o = l.objectif %}
+                <tr>
+                    <td>
+                        <strong>{{ o.titre }}</strong>
+                        <div class="cs-objline-meta">
+                            {% if l.metriqueLabel %}Auto · {{ l.metriqueLabel }}{% else %}Manuel{% endif %}
+                            {% if o.description %} — {{ o.description }}{% endif %}
+                        </div>
+                    </td>
+                    <td>{{ l.atteinte|number_format(0, '.', ' ') }} / {{ o.cible|number_format(0, '.', ' ') }} {{ o.unite }}</td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="cs-gauge" style="flex:1;"><span style="width:{{ l.pourcentage }}%;"></span></div>
+                            <span class="cs-objline-meta">{{ l.pourcentage }}%</span>
+                        </div>
+                    </td>
+                    <td>{{ o.poids }} %</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="cs-empty">Aucun objectif ne vous a encore été assigné pour cette période.</div>
+    {% endif %}
+</div>
+
+{# Appréciation (visible une fois l'évaluation renseignée par un responsable). #}
+{% if evaluation and evaluation.appreciation %}
+    <div class="cs-panel">
+        <h2 class="cs-panel-title">Appréciation</h2>
+        <p style="white-space:pre-line;margin:0;">{{ evaluation.appreciation }}</p>
+    </div>
+{% endif %}
+
+{# Historique de mes périodes précédentes. #}
+{% if fiche.historique|length > 0 %}
+    <div class="cs-panel">
+        <h2 class="cs-panel-title">Historique</h2>
+        <table class="cs-table">
+            <thead><tr><th>Période</th><th>Score</th><th>Mention</th><th style="text-align:right;">Fiche</th></tr></thead>
+            <tbody>
+            {% for h in fiche.historique %}
+                <tr>
+                    <td>{{ h.label }}</td>
+                    <td><strong>{{ h.score }}</strong> / 100</td>
+                    <td><span class="cs-badge {{ h.score >= 70 ? 'cs-badge--ok' : (h.score >= 40 ? 'cs-badge--warn' : 'cs-badge--danger') }}">
+                        {{ h.score >= 90 ? 'Excellent' : (h.score >= 70 ? 'Atteint' : (h.score >= 40 ? 'Partiel' : 'Insuffisant')) }}
+                    </span></td>
+                    <td style="text-align:right;">
+                        <a href="{{ path('console.evaluation.mine', {annee: h.annee, trimestre: h.trimestre}) }}"
+                           class="cs-icon-btn" data-action="click->top-progress#show" title="Ouvrir" aria-label="Ouvrir {{ h.label }}">
+                            {{ ux_icon(resolve_icon_name('action:view'), {height:'18px', width:'18px'}) }}
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endif %}
+{% endblock %}
