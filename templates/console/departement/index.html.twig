@@ -1,5 +1,17 @@
 {% extends 'console/base.html.twig' %}
 
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    /* Description du département : pleine largeur. On force la colonne de texte de
+       l'entête à occuper toute la largeur du panneau (le conteneur .cs-head est en
+       flex) et on neutralise la borne 70ch appliquée par défaut à .cs-head p. */
+    .cs-head .cs-head-text { flex: 1 1 100%; min-width: 0; }
+    .cs-head .cs-dep-desc p { max-width: none; color:#495057; line-height:1.6; }
+    .cs-head .cs-dep-desc p + p { margin-top:.6rem; }
+</style>
+{% endblock %}
+
 {% block console_subtitle %}<p>Organisation de l'équipe JS Brokers par département. L'affectation d'un collaborateur ajuste son périmètre d'accès à la console.</p>{% endblock %}
 
 {% block console_body %}
@@ -16,9 +28,11 @@
                         <h1 style="font-size:1.15rem;">{{ dep.label }}</h1>
                         <span class="cs-badge cs-badge--cobalt">{{ entry.agents|length }}</span>
                     </div>
-                    {% for para in dep.descriptionDetaillee %}
-                        <p{% if not loop.first %} class="mt-2"{% endif %}>{{ para }}</p>
-                    {% endfor %}
+                    <div class="cs-dep-desc">
+                        {% for para in dep.descriptionDetaillee %}
+                            <p>{{ para }}</p>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
 
