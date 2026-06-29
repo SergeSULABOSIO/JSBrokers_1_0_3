@@ -50,7 +50,7 @@ enum Departement: string
             self::FINANCE         => 'Comptabilité, dépenses, fiscalité, ventes et tarification.',
             self::COMMERCIAL      => 'Développement commercial, campagnes marketing et pipeline.',
             self::RELATION_CLIENT => 'Relation client, customer success et support / tickets.',
-            self::RH              => 'Collaborateurs, comptes, départements et évaluations.',
+            self::RH              => 'Collaborateurs, départements, rôles et évaluations.',
         };
     }
 
@@ -84,8 +84,9 @@ enum Departement: string
                 'console.crm.ticket.', 'console.crm.notification.',
             ],
             self::RH => [
-                'console.collaborateur.', 'console.utilisateur.', 'console.client.',
-                'console.entreprise.', 'console.departement.', 'console.evaluation.',
+                // RH = gestion des collaborateurs internes (pas les comptes
+                // clients/utilisateurs/entreprises de la plateforme).
+                'console.collaborateur.', 'console.departement.', 'console.evaluation.',
             ],
         };
     }
@@ -102,7 +103,7 @@ enum Departement: string
             self::FINANCE         => ['Dépenses', 'Charges', 'Documents comptables', 'Fiscalité', 'Ventes', 'Coupons', 'Plan tarifaire', 'CFO'],
             self::COMMERCIAL      => ['Ventes', 'Coupons', 'Marketing', 'Pipeline', 'Clients et prospects'],
             self::RELATION_CLIENT => ['Tableau de bord CRM', 'Clients', 'Customer Success', 'Entreprises', 'Tâches', 'Pipeline', 'Support Client', 'Notifications'],
-            self::RH              => ['Collaborateurs', 'Utilisateurs', 'Clients', 'Entreprises', 'Départements & rôles', 'Évaluations'],
+            self::RH              => ['Collaborateurs', 'Départements & rôles', 'Évaluations'],
         };
     }
 }
