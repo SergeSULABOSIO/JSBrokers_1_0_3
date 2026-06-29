@@ -24,6 +24,7 @@ class DepartementRoleTest extends WebTestCase
     private const SUPPORT   = 'phpunit-dr-support@test.local';
     private const DIRECTION = 'phpunit-dr-direction@test.local';
     private const RH        = 'phpunit-dr-rh@test.local';
+    private const RH_AGENT  = 'phpunit-dr-rhagent@test.local';
     private const LIBRE     = 'phpunit-dr-libre@test.local';
     private const CIBLE     = 'phpunit-dr-cible@test.local';
     private const NOUVEAU   = 'phpunit-dr-nouveau@test.local';
@@ -46,6 +47,7 @@ class DepartementRoleTest extends WebTestCase
             [self::SUPPORT,   ['ROLE_ADMIN'],       Departement::RELATION_CLIENT,  FonctionCollaborateur::RESPONSABLE],
             [self::DIRECTION, ['ROLE_ADMIN'],       Departement::DIRECTION,        FonctionCollaborateur::DIRECTEUR],
             [self::RH,        ['ROLE_ADMIN'],       Departement::RH,               FonctionCollaborateur::DIRECTEUR],
+            [self::RH_AGENT,  ['ROLE_ADMIN'],       Departement::RH,               FonctionCollaborateur::CHARGE],
             [self::LIBRE,     ['ROLE_ADMIN'],       null,                          null],
             [self::CIBLE,     ['ROLE_ADMIN'],       null,                          null],
         ];
@@ -79,7 +81,7 @@ class DepartementRoleTest extends WebTestCase
         // Les objectifs / évaluations sont supprimés par cascade (ON DELETE CASCADE).
         $this->em()->getConnection()->executeStatement(
             'DELETE FROM utilisateur WHERE email IN (:e)',
-            ['e' => [self::SUPER, self::FINANCE, self::SUPPORT, self::DIRECTION, self::RH, self::LIBRE, self::CIBLE, self::NOUVEAU]],
+            ['e' => [self::SUPER, self::FINANCE, self::SUPPORT, self::DIRECTION, self::RH, self::RH_AGENT, self::LIBRE, self::CIBLE, self::NOUVEAU]],
             ['e' => \Doctrine\DBAL\ArrayParameterType::STRING]
         );
     }
@@ -141,6 +143,43 @@ class DepartementRoleTest extends WebTestCase
             $this->client->request('GET', $url);
             $this->assertResponseStatusCodeSame(403, sprintf('RH ne doit pas accéder à %s.', $url));
         }
+    }
+
+    /** Le Directeur RH peut gérer les évaluations (créer un objectif), comme le super-admin. */
+    public function testRhDirectorCanManageEvaluations(): void
+    {
+        $this->client->loginUser($this->user(self::RH));
+        $finance = $this->user(self::FINANCE);
+
+        $this->client->request(
+            'GET',
+            '/console/evaluations/collaborateur/' . $finance->getId() . '/objectif/new?annee=2026&trimestre=0'
+        );
+        $this->assertResponseIsSuccessful('Le Directeur RH doit pouvoir créer un objectif.');
+
+        $this->client->request(
+            'GET',
+            '/console/evaluations/collaborateur/' . $finance->getId() . '/evaluer?annee=2026&trimestre=0'
+        );
+        $this->assertResponseIsSuccessful('Le Directeur RH doit pouvoir évaluer.');
+    }
+
+    /** Un agent RH non-directeur consulte mais ne peut pas gérer les évaluations. */
+    public function testRhNonDirectorCannotManageEvaluations(): void
+    {
+        $this->client->loginUser($this->user(self::RH_AGENT));
+        $finance = $this->user(self::FINANCE);
+
+        // Lecture autorisée (les évaluations sont dans le périmètre RH).
+        $this->client->request('GET', '/console/evaluations');
+        $this->assertResponseIsSuccessful('Un agent RH peut consulter les évaluations.');
+
+        // Écriture refusée.
+        $this->client->request(
+            'GET',
+            '/console/evaluations/collaborateur/' . $finance->getId() . '/objectif/new?annee=2026&trimestre=0'
+        );
+        $this->assertResponseStatusCodeSame(403, 'Un agent RH non-directeur ne doit pas créer d\'objectif.');
     }
 
     /** Direction Générale : accès complet malgré l'affectation à un département. */
