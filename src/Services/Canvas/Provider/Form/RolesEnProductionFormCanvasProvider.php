@@ -24,7 +24,9 @@ class RolesEnProductionFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/rolesenproduction/api/submit",
             "endpoint_delete_url" => "/admin/rolesenproduction/api/delete",
             "endpoint_form_url" => "/admin/rolesenproduction/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Rendu dédié « droits d'accès » (grille de cases sur charte cobalt).
+            "form_class" => "form-column--roles",
         ];
         $layout = $this->buildRolesEnProductionLayout();
 
@@ -38,8 +40,10 @@ class RolesEnProductionFormCanvasProvider implements FormCanvasProviderInterface
     private function buildRolesEnProductionLayout(): array
     {
         return [
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nom"]]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["invite"]]]],
+            // Champs connus et pré-remplis (libellé du rôle + collaborateur cible) :
+            // rendus masqués (soumis mais non affichés) pour alléger le formulaire.
+            ["couleur_fond" => "white", "hidden" => true, "colonnes" => [["champs" => ["nom"]]]],
+            ["couleur_fond" => "white", "hidden" => true, "colonnes" => [["champs" => ["invite"]]]],
             ["couleur_fond" => "white", "colonnes" => [
                 ["champs" => ["accessGroupe"]], 
                 ["champs" => ["accessClient"]], 

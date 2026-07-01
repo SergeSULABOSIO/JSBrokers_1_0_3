@@ -13,7 +13,7 @@
         {% include 'components/dialog/_calculated_attributes.html.twig' with { entity: entity, canvas: entityCanvas } %}
 
         {# La colonne du formulaire prend l'espace restant #}
-        <div class="col form-column{% if is_auth %} form-column--auth{% endif %}">
+        <div class="col form-column{% if is_auth %} form-column--auth{% endif %}{% if formCanvas.parametres.form_class is defined %} {{ formCanvas.parametres.form_class }}{% endif %}">
             {{ form_start(form) }}
             {% if formCanvas.form_layout is defined and formCanvas.form_layout is not empty %}
                 {# Pour chaque ligne définie dans la configuration du layout... #}
