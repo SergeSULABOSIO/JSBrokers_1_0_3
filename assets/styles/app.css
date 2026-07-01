@@ -1438,6 +1438,80 @@ thead.sticky-header {
     padding-left: 2.6rem;
 }
 
+/*
+===================================================================
+ SECTION: RENDU DÉDIÉ DES FORMULAIRES DE RÔLES (.form-column--roles)
+ Activé par form_class == 'form-column--roles' dans les canevas RolesEn*.
+ Objectif : ergonomie (Bastien & Scapin — Guidage, Signifiance, Charge
+ de travail) + charte JS Brokers (cobalt #0047AB). Les champs connus
+ (nom du rôle, collaborateur) sont masqués côté canevas ; chaque groupe
+ de droits devient une carte lisible, les cases cochées adoptent le
+ cobalt de marque, le focus est visible (WCAG 2.4.7). Entièrement scopé :
+ n'affecte AUCUN autre formulaire.
+===================================================================
+*/
+
+/* Chaque groupe de droits (ChoiceType étendu) = une carte claire et autonome. */
+.form-column--roles .mb-3 {
+    height: 100%;
+    padding: 0.9rem 1rem 0.75rem;
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    background-color: #ffffff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+.form-column--roles .mb-3:focus-within {
+    border-color: #0047AB;
+    box-shadow: 0 0 0 3px rgba(0, 71, 171, 0.15);
+}
+
+/* En-tête de carte : intitulé de la rubrique, accent cobalt (Guidage). */
+.form-column--roles .form-label {
+    display: block;
+    margin-bottom: 0.6rem;
+    padding: 0 0 0.4rem 0.6rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: #212529;
+    border-bottom: 1px solid #e0e0e0;
+    border-left: 3px solid #0047AB;
+}
+
+/* Chaque niveau d'accès : ligne confortable, cible cliquable élargie (WCAG 2.5.5). */
+.form-column--roles .form-check {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 34px;
+    margin-bottom: 0.1rem;
+    padding-left: 0; /* alignement géré par flex, pas par le retrait Bootstrap */
+}
+.form-column--roles .form-check-input {
+    float: none;
+    margin: 0;
+    width: 1.15em;
+    height: 1.15em;
+    cursor: pointer;
+    border-color: #ced4da;
+}
+.form-column--roles .form-check-label {
+    cursor: pointer;
+    color: #495057;
+    user-select: none;
+}
+
+/* État coché : cobalt de marque (au lieu du bleu Bootstrap par défaut). */
+.form-column--roles .form-check-input:checked {
+    background-color: #0047AB;
+    border-color: #0047AB;
+}
+/* Focus visible conforme charte : anneau cobalt. */
+.form-column--roles .form-check-input:focus {
+    border-color: #0047AB;
+    box-shadow: 0 0 0 0.2rem rgba(0, 71, 171, 0.35);
+}
+
 /* STYLES POUR LE DÉFILEMENT DE FORMULAIRES (utilisé par le dialogue de recherche avancée) */
 .form-scrollable-content {
     max-height: 45vh; /* Hauteur augmentée pour plus de confort */
