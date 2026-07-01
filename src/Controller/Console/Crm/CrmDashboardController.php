@@ -44,7 +44,7 @@ class CrmDashboardController extends AbstractConsoleController
         return $this->render('console/crm/dashboard.html.twig', [
             'pageName'       => 'CRM — Tableau de bord',
             'pageIcon'       => 'dashboard',
-            'aRelancer'      => $this->profilRepository->findARelancer(10),
+            'aRelancer'      => $this->profilRepository->findARelancer(20),
             'prospectsChauds' => $this->profilRepository->findByStages([
                 CrmPipelineService::STAGE_ESSAI,
                 CrmPipelineService::STAGE_DEMO,
