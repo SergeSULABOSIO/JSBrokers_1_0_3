@@ -21,6 +21,7 @@ final class PlanComptable
     public const FOURNISSEURS        = '401'; // Dettes fournisseurs (charges engagées non payées)
     public const TVA_FACTUREE        = '443'; // État, TVA facturée (collectée sur les ventes)
     public const TVA_RECUPERABLE     = '445'; // État, TVA récupérable (déductible sur les achats)
+    public const TVA_DUE             = '4441'; // État, TVA due (liquidée, restant à reverser)
     public const BANQUES             = '521'; // Trésorerie : banque
     public const CAISSE              = '571'; // Trésorerie : caisse (espèces)
     public const SERVICES_VENDUS     = '706'; // Produits : prestations de services vendues
@@ -33,6 +34,7 @@ final class PlanComptable
         self::FOURNISSEURS      => 'Fournisseurs',
         self::TVA_FACTUREE      => 'État, TVA facturée',
         self::TVA_RECUPERABLE   => 'État, TVA récupérable',
+        self::TVA_DUE           => 'État, TVA due',
         self::BANQUES           => 'Banques',
         self::CAISSE            => 'Caisse',
         self::SERVICES_VENDUS   => 'Services vendus',

@@ -19,6 +19,9 @@ services:
             # les e-mails via email.image(). Le « @@ » échappe le « @ » littéral en YAML
             # de services (sinon interprété comme une référence de service).
             string $logoPath: '@@images/entreprises/logofav.png'
+            # Secret de vérification des signatures de webhook de paiement. Repli sur
+            # APP_SECRET tant qu'aucun PSP réel (avec sa propre clé) n'est branché.
+            string $paymentWebhookSecret: '%env(APP_SECRET)%'
 
     # makes classes in src/ available to be used as services
     # this creates a service per class whose id is the fully-qualified class name
@@ -60,6 +63,11 @@ services:
         # NOUVEAU : Pour les stratégies de calcul d'indicateurs
         App\Services\Canvas\Indicator\IndicatorCalculationStrategyInterface:
             tags: ['app.indicator_calculation_strategy']
+
+    # PSP de paiement : implémentation par défaut = simulateur (repli/tests). Le
+    # jour où un PSP réel est choisi, on ajoute son adaptateur et on repointe cet
+    # alias dessus — aucun autre changement applicatif.
+    App\Payment\Gateway\PaymentGatewayInterface: '@App\Payment\Gateway\SimulatedGateway'
 
     # NOUVEAU : Décorateur pour le PropertyAccessor du Sérialiseur.
     # Cela permet d'intercepter les exceptions Doctrine (EntityNotFoundException)

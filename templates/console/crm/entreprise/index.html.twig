@@ -8,15 +8,15 @@
 <div class="cs-panel">
     {% if entreprises.getTotalItemCount > 0 %}
         <table class="cs-table">
-            <thead><tr><th>Entreprise</th><th>Propriétaire</th><th>Invités</th><th>Consommation</th><th style="text-align:right;">Actions</th></tr></thead>
+            <thead><tr><th>Entreprise</th><th>Propriétaire</th><th>Invités</th><th>Consommation</th></tr></thead>
             <tbody>
             {% for e in entreprises %}
-                <tr>
+                <tr data-cm-row>
                     <td class="fw-semibold">{{ e.nom }}</td>
                     <td>{% if e.utilisateur %}<a href="{{ path('console.crm.client.show', {id: e.utilisateur.id}) }}" class="text-decoration-none">{{ e.utilisateur.nom ?: e.utilisateur.email }}</a>{% else %}—{% endif %}</td>
                     <td>{{ e.invites|length }}</td>
                     <td>{{ (consommations[e.id]|default(0))|number_format(0, '.', ' ') }} tk</td>
-                    <td style="text-align:right;">
+                    <td hidden data-cm-actions>
                         <a href="{{ path('console.crm.entreprise.show', {id: e.id}) }}" class="cs-icon-btn" data-action="click->top-progress#show" title="Ouvrir" aria-label="Ouvrir {{ e.nom }}">
                             {{ ux_icon(resolve_icon_name('action:view'), {height:'18px', width:'18px'}) }}
                         </a>

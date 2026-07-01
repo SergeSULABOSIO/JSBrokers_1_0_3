@@ -3,9 +3,11 @@
 namespace App\Comptabilite;
 
 use App\Entity\Depense;
+use App\Entity\ReglementTaxe;
 use App\Entity\TokenPurchase;
 use App\Repository\DepenseRepository;
 use App\Repository\PlateformeParametresRepository;
+use App\Repository\ReglementTaxeRepository;
 use App\Repository\TokenPurchaseRepository;
 use App\Services\ServiceTaxesVente;
 use App\Token\ParametresTokenService;
@@ -34,6 +36,7 @@ class EcritureComptableService
         private PlateformeParametresRepository $parametresRepository,
         private ServiceTaxesVente $taxesVente,
         private ParametresTokenService $parametresToken,
+        private ReglementTaxeRepository $reglementRepository,
     ) {
     }
 
@@ -66,6 +69,11 @@ class EcritureComptableService
         // 3) Dépenses (charges) non annulées : charge HT, TVA déductible, sortie TTC.
         foreach ($this->depenseRepository->findChronologique() as $depense) {
             $ecritures[] = $this->ecritureDepense($depense);
+        }
+
+        // 4) Reversements de TVA à l'autorité : extinction de la dette / sortie trésorerie.
+        foreach ($this->reglementRepository->findChronologique() as $reglement) {
+            $ecritures[] = $this->ecritureReglementTaxe($reglement);
         }
 
         // Tri chronologique stable (les écritures sans pièce gardent leur ordre relatif).
@@ -202,6 +210,57 @@ class EcritureComptableService
             'type'    => 'depense',
             'lignes'  => $lignes,
         ];
+    }
+
+    /**
+     * Écriture de reversement / déclaration de TVA, DÉTAILLÉE :
+     *   D 443 État, TVA facturée   (TVA collectée de la période déclarée)
+     *   C 445 État, TVA récupérable (TVA déductible de la période)
+     *   C 521/571 Trésorerie        (montant net effectivement payé)
+     *   ± 4441 État, TVA due        (solde déclaré non encore payé, si paiement partiel)
+     * Équilibrée par construction. Pour les reversements antérieurs à la saisie des
+     * photos de TVA (collectée/déductible = 0), repli sur l'écriture simple
+     * D 443 / C trésorerie.
+     */
+    private function ecritureReglementTaxe(ReglementTaxe $reglement): array
+    {
+        $montant     = round($reglement->getMontantFloat(), 2);
+        $collectee   = round($reglement->getTvaCollecteeFloat(), 2);
+        $deductible  = round($reglement->getTvaDeductibleFloat(), 2);
+        $tresorerie  = $reglement->getMoyenPaiement() === ReglementTaxe::MOYEN_CAISSE
+            ? PlanComptable::CAISSE
+            : PlanComptable::BANQUES;
+
+        $base = [
+            'date'    => $reglement->getDatePaiement(),
+            'piece'   => $reglement->getReference() ?? ('TVA-' . $reglement->getId()),
+            'libelle' => sprintf('Reversement TVA %s — %s', $reglement->getPeriodeLabel(), $reglement->getAutorite()),
+            'type'    => 'reglement_taxe',
+        ];
+
+        // Repli (données héritées sans photo de TVA) : extinction simple de la dette.
+        if ($collectee < 0.005 && $deductible < 0.005) {
+            return $base + ['lignes' => [
+                $this->ligne(PlanComptable::TVA_FACTUREE, $montant, 0.0),
+                $this->ligne($tresorerie, 0.0, $montant),
+            ]];
+        }
+
+        $lignes = [
+            $this->ligne(PlanComptable::TVA_FACTUREE, $collectee, 0.0),
+            $this->ligne(PlanComptable::TVA_RECUPERABLE, 0.0, $deductible),
+            $this->ligne($tresorerie, 0.0, $montant),
+        ];
+
+        // Solde déclaré non couvert par le paiement → dette (4441) ; trop-payé → créance.
+        $residuel = round($collectee - $deductible - $montant, 2);
+        if ($residuel >= 0.005) {
+            $lignes[] = $this->ligne(PlanComptable::TVA_DUE, 0.0, $residuel);
+        } elseif ($residuel <= -0.005) {
+            $lignes[] = $this->ligne(PlanComptable::TVA_DUE, -$residuel, 0.0);
+        }
+
+        return $base + ['lignes' => $lignes];
     }
 
     /** Écriture du capital social (D 521 Banques / C 101 Capital social), ou null si non renseigné. */
@@ -572,6 +631,7 @@ class EcritureComptableService
 
             $fournisseurs = -$this->solde($agg, PlanComptable::FOURNISSEURS);
             $tvaFacturee  = -$this->solde($agg, PlanComptable::TVA_FACTUREE);
+            $tvaDue       = -$this->solde($agg, PlanComptable::TVA_DUE); // TVA liquidée restant à reverser
 
             return [
                 'actif' => [
@@ -585,7 +645,8 @@ class EcritureComptableService
                     'resultat'     => $resultat,
                     'fournisseurs' => $fournisseurs,
                     'tvaFacturee'  => $tvaFacturee,
-                    'total'        => round($capital + $report + $resultat + $fournisseurs + $tvaFacturee, 2),
+                    'tvaDue'       => $tvaDue,
+                    'total'        => round($capital + $report + $resultat + $fournisseurs + $tvaFacturee + $tvaDue, 2),
                 ],
             ];
         };
@@ -605,6 +666,7 @@ class EcritureComptableService
                 ['libelle' => 'Résultat de l\'exercice', 'ouverture' => $ouv['passif']['resultat'], 'cloture' => $clo['passif']['resultat']],
                 ['libelle' => 'Fournisseurs', 'ouverture' => $ouv['passif']['fournisseurs'], 'cloture' => $clo['passif']['fournisseurs']],
                 ['libelle' => 'État, TVA facturée', 'ouverture' => $ouv['passif']['tvaFacturee'], 'cloture' => $clo['passif']['tvaFacturee']],
+                ['libelle' => 'État, TVA due', 'ouverture' => $ouv['passif']['tvaDue'], 'cloture' => $clo['passif']['tvaDue']],
                 ['libelle' => 'TOTAL PASSIF', 'ouverture' => $ouv['passif']['total'], 'cloture' => $clo['passif']['total'], 'total' => true],
             ],
         ];

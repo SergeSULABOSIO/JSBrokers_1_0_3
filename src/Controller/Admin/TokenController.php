@@ -5,18 +5,22 @@ namespace App\Controller\Admin;
 use App\DTO\TokenPurchaseDTO;
 use App\Entity\TokenPurchase;
 use App\Entity\Utilisateur;
-use App\Event\TokenPurchaseEvent;
 use App\Form\TokenPurchaseType;
+use App\Payment\Gateway\PaymentGatewayInterface;
+use App\Payment\PaymentContext;
 use App\Repository\TokenConsumptionRepository;
+use App\Repository\TokenPurchaseRepository;
+use App\Services\TokenInvoicePdfService;
 use App\Token\CouponService;
 use App\Token\ParametresTokenService;
 use App\Token\TokenAccountService;
+use App\Token\TokenPurchaseFulfillmentService;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Translation\LocaleSwitcher;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -30,14 +34,19 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 #[IsGranted('ROLE_USER')]
 class TokenController extends AbstractController
 {
+    /** Numéro de carte de TEST déclenchant un refus simulé (cf. SimulatedGateway). */
+    private const TEST_DECLINE_CARD = '4000000000000002';
+
     public function __construct(
         private TokenAccountService $tokenAccountService,
         private TokenConsumptionRepository $consumptionRepository,
         private EntityManagerInterface $em,
         private TranslatorInterface $translator,
-        private EventDispatcherInterface $dispatcher,
         private ParametresTokenService $parametres,
         private CouponService $couponService,
+        private PaymentGatewayInterface $gateway,
+        private TokenPurchaseFulfillmentService $fulfillment,
+        private TokenPurchaseRepository $purchaseRepository,
     ) {}
 
     /** Page compte : solde + historique de consommation paginé + accès à l'achat. */
@@ -55,6 +64,7 @@ class TokenController extends AbstractController
             'balance'      => $this->tokenAccountService->getBalance($user),
             'consumptions' => $this->consumptionRepository->paginateForProprietaire($user->getId(), $page),
             'usdPerToken'  => $this->parametres->usdPerToken(),
+            'purchases'    => $this->purchaseRepository->findForUser($user->getId()),
         ]);
     }
 
@@ -113,11 +123,13 @@ class TokenController extends AbstractController
                 ]);
             }
 
-            // --- FRONTIÈRE DE SIMULATION DE PAIEMENT ----------------------------
-            // Aujourd'hui : toute carte bien formée « réussit ». Pour passer en
-            // production, remplacer ce bloc par l'appel à l'API du prestataire
-            // (création d'intention de paiement, confirmation, webhook) ; le reste
-            // de la logique (crédit + e-mail) demeure inchangé.
+            // --- ENCAISSEMENT VIA LE PSP (abstraction PSP-agnostique) -----------
+            // 1) Achat enregistré en PENDING (montant + coupon/remise figés) ;
+            // 2) création de l'intention chez le PSP ;
+            // 3) succès UNIQUEMENT → crédit + facture + e-mail (TokenPurchaseFulfillmentService),
+            //    logique idempotente partagée avec le webhook de réconciliation.
+            // L'implémentation par défaut (SimulatedGateway) confirme en synchrone ;
+            // un PSP réel renverra une URL de redirection et confirmera via webhook.
             $purchase = (new TokenPurchase())
                 ->setUtilisateur($user)
                 ->setPack($dto->pack)
@@ -127,28 +139,50 @@ class TokenController extends AbstractController
                 ->setCouponCode($remise['coupon']?->getCode())
                 ->setCardLast4($dto->cardLast4())
                 ->setReference($this->generateReference())
-                ->setStatus(TokenPurchase::STATUS_PAID_SIMULATED);
+                ->setProvider($this->gateway->name())
+                ->setStatus(TokenPurchase::STATUS_PENDING);
 
             $this->em->persist($purchase);
             $this->em->flush();
-            // --------------------------------------------------------------------
 
-            // Consommation du coupon (incrément du compteur d'usage) après succès.
-            if ($remise['coupon'] !== null) {
-                $this->couponService->consommer($remise['coupon']);
+            $context = new PaymentContext(
+                montant:   (float) $remise['montantFinal'],
+                devise:    'USD',
+                reference: $purchase->getReference(),
+                libelle:   $this->translator->trans('token_buy.title') . ' — ' . ($pack['label'] ?? $dto->pack),
+                email:     $user->getEmail(),
+                returnUrl: $this->generateUrl('admin.token.payment_return', [], UrlGeneratorInterface::ABSOLUTE_URL),
+                // Métadonnée NEUTRE pilotant l'issue du simulateur (carte de test de refus).
+                metadata:  ['outcome' => $this->simulatedOutcome($dto)],
+            );
+
+            $intent = $this->gateway->createIntent($context);
+            $purchase->setProviderReference($intent->providerReference);
+            $this->em->flush();
+
+            // PSP réel : redirection vers la page hébergée ; fulfillment au retour/webhook.
+            if ($intent->requiresRedirect()) {
+                $this->addFlash('info', $this->translator->trans('token_buy.pending'));
+
+                return $this->redirect($intent->redirectUrl);
             }
 
-            // Crédit effectif des tokens prépayés (cumulables).
-            $this->tokenAccountService->credit($user, $pack['tokens']);
+            // Simulateur : confirmation synchrone.
+            $result = $this->gateway->confirm($intent->providerReference);
+            if ($result->isPaid()) {
+                $this->fulfillment->fulfill($purchase);
 
-            // E-mail de confirmation corporate + notification des agents JS Brokers.
-            $this->dispatcher->dispatch(new TokenPurchaseEvent($purchase));
+                $this->addFlash('success', $this->translator->trans('token_buy.success', [
+                    ':tokens' => number_format($pack['tokens'], 0, ',', ' '),
+                ]));
 
-            $this->addFlash('success', $this->translator->trans('token_buy.success', [
-                ':tokens' => number_format($pack['tokens'], 0, ',', ' '),
-            ]));
+                return $this->redirectToRoute('admin.token.index');
+            }
 
-            return $this->redirectToRoute('admin.token.index');
+            // Échec : aucun crédit, message explicite, l'utilisateur peut réessayer.
+            $this->fulfillment->markFailed($purchase, $result->failureReason);
+            $this->addFlash('error', $this->translator->trans($result->failureReason ?? 'token_buy.failed'));
+            // --------------------------------------------------------------------
         }
 
         return $this->render('admin/token/buy.html.twig', [
@@ -185,10 +219,79 @@ class TokenController extends AbstractController
         ]);
     }
 
+    /**
+     * Retour après paiement chez un PSP réel (page hébergée). Confirme l'intention
+     * et déclenche le fulfillment idempotent ; sans effet si le webhook a déjà
+     * réconcilié l'achat. Inutilisé en mode simulé (confirmation synchrone).
+     */
+    #[Route('/payment/return', name: 'payment_return', methods: ['GET'])]
+    public function paymentReturn(Request $request): Response
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        $ref = (string) $request->query->get('ref', '');
+
+        $purchase = $ref !== '' ? $this->purchaseRepository->findOneBy(['providerReference' => $ref]) : null;
+        // L'achat doit appartenir à l'utilisateur courant (anti-rejeu d'une réf. tierce).
+        if ($purchase === null || $purchase->getUtilisateur()?->getId() !== $user->getId()) {
+            throw $this->createNotFoundException();
+        }
+
+        if ($purchase->isPaid()) {
+            return $this->redirectToRoute('admin.token.index'); // Déjà réconcilié (webhook).
+        }
+
+        $result = $this->gateway->confirm($ref);
+        if ($result->isPaid()) {
+            $this->fulfillment->fulfill($purchase);
+            $this->addFlash('success', $this->translator->trans('token_buy.success', [
+                ':tokens' => number_format($purchase->getTokens(), 0, ',', ' '),
+            ]));
+        } else {
+            $this->fulfillment->markFailed($purchase, $result->failureReason);
+            $this->addFlash('error', $this->translator->trans($result->failureReason ?? 'token_buy.failed'));
+        }
+
+        return $this->redirectToRoute('admin.token.index');
+    }
+
+    /**
+     * Facture (ou avoir) PDF d'un achat encaissé. Réservée au propriétaire de
+     * l'achat ; régénérée à la volée (jamais stockée).
+     */
+    #[Route('/invoice/{id}', name: 'invoice', methods: ['GET'])]
+    public function invoice(TokenPurchase $purchase, TokenInvoicePdfService $pdfService): Response
+    {
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        if ($purchase->getUtilisateur()?->getId() !== $user->getId() || !$purchase->isPaid()) {
+            throw $this->createNotFoundException();
+        }
+
+        $fileName = $pdfService->fileName($purchase);
+
+        return new Response($pdfService->generate($purchase), Response::HTTP_OK, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $fileName . '"',
+        ]);
+    }
+
     /** Référence lisible d'achat : TOK-ddMMyy-HHmmss. */
     private function generateReference(): string
     {
         return 'TOK-' . (new \DateTimeImmutable())->format('dmy-His');
+    }
+
+    /**
+     * Issue à demander au simulateur : « failed » si la carte de test de refus est
+     * saisie, « paid » sinon. Permet de tester le parcours d'échec de bout en bout
+     * sans dépendre d'un PSP réel. Donnée neutre passée en métadonnée du contexte.
+     */
+    private function simulatedOutcome(TokenPurchaseDTO $dto): string
+    {
+        $digits = preg_replace('/\D/', '', $dto->cardNumber);
+
+        return $digits === self::TEST_DECLINE_CARD ? 'failed' : 'paid';
     }
 
     /**

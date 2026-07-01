@@ -102,18 +102,18 @@
     <div class="cs-panel">
         <h2 class="cs-panel-title">Historique</h2>
         <table class="cs-table">
-            <thead><tr><th>Période</th><th>Score</th><th>Mention</th><th style="text-align:right;">Fiche</th></tr></thead>
+            <thead><tr><th>Période</th><th>Score</th><th>Mention</th></tr></thead>
             <tbody>
             {% for h in fiche.historique %}
-                <tr>
+                <tr data-cm-row>
                     <td>{{ h.label }}</td>
                     <td><strong>{{ h.score }}</strong> / 100</td>
                     <td><span class="cs-badge {{ h.score >= 70 ? 'cs-badge--ok' : (h.score >= 40 ? 'cs-badge--warn' : 'cs-badge--danger') }}">
                         {{ h.score >= 90 ? 'Excellent' : (h.score >= 70 ? 'Atteint' : (h.score >= 40 ? 'Partiel' : 'Insuffisant')) }}
                     </span></td>
-                    <td style="text-align:right;">
+                    <td hidden data-cm-actions>
                         <a href="{{ path('console.evaluation.mine', {annee: h.annee, trimestre: h.trimestre}) }}"
-                           class="cs-icon-btn" data-action="click->top-progress#show" title="Ouvrir" aria-label="Ouvrir {{ h.label }}">
+                           class="cs-icon-btn" data-cm-label="Ouvrir la fiche" data-action="click->top-progress#show" title="Ouvrir" aria-label="Ouvrir {{ h.label }}">
                             {{ ux_icon(resolve_icon_name('action:view'), {height:'18px', width:'18px'}) }}
                         </a>
                     </td>

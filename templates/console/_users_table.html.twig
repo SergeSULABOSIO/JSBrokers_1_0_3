@@ -4,10 +4,10 @@
    entité, quelle que soit la liste qui l'affiche. #}
 {% if utilisateurs.getTotalItemCount > 0 %}
     <table class="cs-table">
-        <thead><tr><th>Nom</th><th>E-mail</th><th>Plan</th><th>Statut</th><th>Langue</th><th style="text-align:right;">Actions</th></tr></thead>
+        <thead><tr><th>Nom</th><th>E-mail</th><th>Plan</th><th>Statut</th><th>Langue</th></tr></thead>
         <tbody>
         {% for u in utilisateurs %}
-            <tr>
+            <tr data-cm-row>
                 <td>{{ ux_icon(resolve_icon_name('utilisateur'), {height:'18px', width:'18px'}) }} {{ u.nom }}</td>
                 <td>{{ u.email }}</td>
                 <td>
@@ -27,7 +27,7 @@
                     {% endif %}
                 </td>
                 <td>{{ u.locale|upper }}</td>
-                <td style="text-align:right;">
+                <td hidden data-cm-actions>
                     <a href="{{ path('console.utilisateur.edit', {id: u.id}) }}" class="cs-icon-btn"
                        data-action="click->top-progress#show" title="Éditer" aria-label="Éditer {{ u.nom }}">
                         {{ ux_icon(resolve_icon_name('action:edit'), {height:'18px', width:'18px'}) }}

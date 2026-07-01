@@ -37,7 +37,10 @@ class CorporateMailer
      * Envoie un e-mail corporate. Le logo (CID) et l'adresse de contact sont
      * ajoutés au contexte s'ils ne sont pas déjà fournis.
      *
-     * @param string|string[] $to
+     * @param string|string[]                                          $to
+     * @param array<int, array{content:string, filename:string, mime?:string}> $attachments
+     *        Pièces jointes optionnelles (ex. facture PDF). `mime` par défaut
+     *        application/octet-stream.
      */
     public function send(
         string|array $to,
@@ -45,6 +48,7 @@ class CorporateMailer
         string $twigTemplate,
         array $contextData = [],
         ?Address $replyTo = null,
+        array $attachments = [],
     ): void {
         $contextData += [
             'logoPath'    => $this->logoPath,
@@ -64,6 +68,10 @@ class CorporateMailer
 
         if ($replyTo !== null) {
             $email->replyTo($replyTo);
+        }
+
+        foreach ($attachments as $piece) {
+            $email->attach($piece['content'], $piece['filename'], $piece['mime'] ?? 'application/octet-stream');
         }
 
         $this->mailer->send($email);

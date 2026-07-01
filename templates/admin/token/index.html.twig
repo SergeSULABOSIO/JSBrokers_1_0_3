@@ -167,6 +167,57 @@
                 </div>
             {% endif %}
         </div>
+
+        {# ── Mes achats & factures ── #}
+        <div class="tkp-card" style="margin-top:1.5rem;">
+            <div class="tkp-card-head">
+                {{ ux_icon('mdi:receipt-text-outline', {height: '20px', width: '20px', class: 'tkp-ic'}) }}
+                <h2>{{ "token_purchases_title" | trans }}</h2>
+            </div>
+
+            {% if purchases is not empty %}
+                <div class="tkp-scroll">
+                    <table class="tkp-table">
+                        <caption class="visually-hidden">{{ "token_purchases_title" | trans }}</caption>
+                        <thead>
+                            <tr>
+                                <th scope="col">{{ "token_col_date" | trans }}</th>
+                                <th scope="col">{{ "email_token_label_reference" | trans }}</th>
+                                <th scope="col">{{ "token_buy.pack" | trans }}</th>
+                                <th scope="col" class="tkp-num">{{ "email_token_label_amount" | trans }}</th>
+                                <th scope="col">{{ "token_col_status" | trans }}</th>
+                                <th scope="col">{{ "email_token_label_invoice" | trans }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in purchases %}
+                                <tr>
+                                    <td>{{ (p.paidAt ?: p.createdAt) | format_datetime("short", "short", locale: app.user.locale) }}</td>
+                                    <td><code>{{ p.reference }}</code></td>
+                                    <td>{{ token_pack_label(p.pack) }}</td>
+                                    <td class="tkp-num">{{ p.montantUsd|number_format(2, '.', ' ') }} $</td>
+                                    <td>{{ ('token_status.' ~ p.status) | trans }}</td>
+                                    <td>
+                                        {% if p.isPaid %}
+                                            <a href="{{ path('admin.token.invoice', {id: p.id}) }}" target="_blank" rel="noopener"
+                                               class="tkp-sens tkp-sens--entree" data-action="click->top-progress#show">
+                                                {{ ux_icon('mdi:file-download-outline', {height: '16px', width: '16px'}) }}
+                                                {{ p.invoiceNumber ?: ('token_purchases_download' | trans) }}
+                                            </a>
+                                        {% else %}—{% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="tkp-empty">
+                    {{ ux_icon('mdi:receipt-text-outline', {height: '40px', width: '40px'}) }}
+                    <p class="mt-2 mb-0">{{ "token_purchases_empty" | trans }}</p>
+                </div>
+            {% endif %}
+        </div>
     </div>
 
     {# Pied de page public officiel JS Brokers (la bascule de langue y est fonctionnelle via ?lang=). #}

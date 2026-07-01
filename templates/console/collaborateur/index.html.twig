@@ -15,11 +15,11 @@
 <div class="cs-panel">
     {% if collaborateurs|length > 0 %}
         <table class="cs-table">
-            <thead><tr><th>Nom</th><th>E-mail</th><th>Rôle</th><th>Département / Fonction</th><th style="text-align:right;">Actions</th></tr></thead>
+            <thead><tr><th>Nom</th><th>E-mail</th><th>Rôle</th><th>Département / Fonction</th></tr></thead>
             <tbody>
             {% for c in collaborateurs %}
                 {% set isSuper = 'ROLE_SUPER_ADMIN' in c.roles %}
-                <tr>
+                <tr data-cm-row>
                     <td>{{ ux_icon(resolve_icon_name('utilisateur'), {height:'18px', width:'18px'}) }} {{ c.nom }}</td>
                     <td>{{ c.email }}</td>
                     <td>
@@ -37,7 +37,7 @@
                             <span class="cs-badge cs-badge--warn">Non affecté</span>
                         {% endif %}
                     </td>
-                    <td style="text-align:right;">
+                    <td hidden data-cm-actions>
                         <a href="{{ path('console.collaborateur.edit', {id: c.id}) }}" class="cs-icon-btn"
                            data-action="click->top-progress#show" title="Éditer" aria-label="Éditer {{ c.nom }}">
                             {{ ux_icon(resolve_icon_name('action:edit'), {height:'18px', width:'18px'}) }}

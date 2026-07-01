@@ -38,10 +38,10 @@
 
             {% if entry.agents|length > 0 %}
                 <table class="cs-table">
-                    <thead><tr><th>Nom</th><th>E-mail</th><th>Fonction</th><th style="text-align:right;">Actions</th></tr></thead>
+                    <thead><tr><th>Nom</th><th>E-mail</th><th>Fonction</th></tr></thead>
                     <tbody>
                     {% for c in entry.agents %}
-                        <tr>
+                        <tr{% if is_granted('ROLE_SUPER_ADMIN') %} data-cm-row{% endif %}>
                             <td>{{ ux_icon(resolve_icon_name('utilisateur'), {height:'18px', width:'18px'}) }} {{ c.nom }}</td>
                             <td>{{ c.email }}</td>
                             <td>
@@ -51,7 +51,7 @@
                                     <span class="cs-badge cs-badge--muted">Non définie</span>
                                 {% endif %}
                             </td>
-                            <td style="text-align:right;">
+                            <td hidden data-cm-actions>
                                 {% if is_granted('ROLE_SUPER_ADMIN') %}
                                     <a href="{{ path('console.departement.edit', {id: c.id}) }}" class="cs-icon-btn"
                                        data-action="click->top-progress#show" title="Affecter" aria-label="Affecter {{ c.nom }}">
@@ -85,13 +85,13 @@
                 </div>
             </div>
             <table class="cs-table">
-                <thead><tr><th>Nom</th><th>E-mail</th><th style="text-align:right;">Actions</th></tr></thead>
+                <thead><tr><th>Nom</th><th>E-mail</th></tr></thead>
                 <tbody>
                 {% for c in nonAffectes %}
-                    <tr>
+                    <tr{% if is_granted('ROLE_SUPER_ADMIN') %} data-cm-row{% endif %}>
                         <td>{{ ux_icon(resolve_icon_name('utilisateur'), {height:'18px', width:'18px'}) }} {{ c.nom }}</td>
                         <td>{{ c.email }}</td>
-                        <td style="text-align:right;">
+                        <td hidden data-cm-actions>
                             {% if is_granted('ROLE_SUPER_ADMIN') %}
                                 <a href="{{ path('console.departement.edit', {id: c.id}) }}" class="cs-icon-btn"
                                    data-action="click->top-progress#show" title="Affecter" aria-label="Affecter {{ c.nom }}">

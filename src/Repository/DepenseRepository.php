@@ -186,6 +186,42 @@ class DepenseRepository extends ServiceEntityRepository
     }
 
     /**
+     * TVA déductible par mois pour un exercice : [mois(1-12) => montant], sur les
+     * dépenses non annulées. TVA = TTC − HT = montant − montant/(1 + taux/100).
+     * Regroupement en PHP pour rester portable (SQLite en test, MySQL en prod).
+     *
+     * @return array<int, float>
+     */
+    public function tvaDeductibleParMoisAnnee(int $annee): array
+    {
+        $debut = new \DateTimeImmutable(sprintf('%d-01-01 00:00:00', $annee));
+        $fin   = new \DateTimeImmutable(sprintf('%d-01-01 00:00:00', $annee + 1));
+
+        $rows = $this->createQueryBuilder('d')
+            ->select('d.dateDepense AS dateDepense, d.montant AS montant, d.tauxTva AS tauxTva')
+            ->where('d.statut != :annulee')
+            ->andWhere('d.dateDepense >= :debut AND d.dateDepense < :fin')
+            ->setParameter('annulee', Depense::STATUT_ANNULEE)
+            ->setParameter('debut', $debut)
+            ->setParameter('fin', $fin)
+            ->getQuery()
+            ->getArrayResult();
+
+        $parMois = array_fill(1, 12, 0.0);
+        foreach ($rows as $row) {
+            if (!$row['dateDepense'] instanceof \DateTimeInterface) {
+                continue;
+            }
+            $ttc  = (float) $row['montant'];
+            $taux = (float) $row['tauxTva'];
+            $tva  = $ttc - ($ttc / (1 + $taux / 100));
+            $parMois[(int) $row['dateDepense']->format('n')] += $tva;
+        }
+
+        return $parMois;
+    }
+
+    /**
      * Somme d'une expression de montant (`$expr` : TTC `d.montant` ou HT) sur une
      * fenêtre [from, to] optionnelle, avec un prédicat additionnel (statut/
      * destination). Factorise les agrégats KPI (DRY).

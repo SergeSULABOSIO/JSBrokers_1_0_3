@@ -110,7 +110,7 @@ enum Departement: string
             self::DIRECTION => ['console.'],
             self::FINANCE => [
                 'console.depense.', 'console.charge.', 'console.document.', 'console.taxe.',
-                'console.vente.', 'console.coupon.', 'console.plan.', 'console.crm.cfo',
+                'console.reglement_taxe.', 'console.vente.', 'console.coupon.', 'console.plan.', 'console.crm.cfo',
             ],
             self::COMMERCIAL => [
                 'console.vente.', 'console.coupon.',

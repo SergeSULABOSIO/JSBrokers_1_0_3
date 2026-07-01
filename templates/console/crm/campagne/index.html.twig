@@ -22,16 +22,16 @@
 <div class="cs-panel">
     {% if campagnes.getTotalItemCount > 0 %}
         <table class="cs-table">
-            <thead><tr><th>Nom</th><th>Type</th><th>Statut</th><th>Cibles</th><th>Envois</th><th style="text-align:right;">Action</th></tr></thead>
+            <thead><tr><th>Nom</th><th>Type</th><th>Statut</th><th>Cibles</th><th>Envois</th></tr></thead>
             <tbody>
             {% for c in campagnes %}
-                <tr>
+                <tr data-cm-row>
                     <td class="fw-semibold">{{ c.nom }}</td>
                     <td>{{ c.typeLabel }}</td>
                     <td>{% if c.statut == 'envoyee' %}<span class="cs-badge cs-badge--ok">Envoyée</span>{% else %}<span class="cs-badge cs-badge--muted">Brouillon</span>{% endif %}</td>
                     <td>{{ c.nbCibles }}</td>
                     <td>{{ c.nbEnvois }}</td>
-                    <td style="text-align:right;">
+                    <td hidden data-cm-actions>
                         <div class="crm-actions">
                             <div class="crm-actions__row">
                                 <a href="{{ path('console.crm.campagne.edit', {id: c.id}) }}" class="btn btn-sm btn-outline-secondary" data-action="click->top-progress#show">

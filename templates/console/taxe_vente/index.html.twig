@@ -1,63 +1,175 @@
 {% extends 'console/base.html.twig' %}
 
-{% block console_subtitle %}<p>Taxes dues par JS Brokers sur ses ventes, reversées aux autorités fiscales. La colonne « Montant sur le CA » indique ce que chaque taxe active représente sur le revenu total cumulé ({{ revenuTotal|number_format(2, '.', ' ') }} $).</p>{% endblock %}
-
 {% block console_actions %}
-    <a href="{{ path('console.taxe.new') }}" class="btn btn-sm btn-cobalt" data-action="click->top-progress#show">
-        {{ ux_icon(resolve_icon_name('action:add'), {height:'18px', width:'18px'}) }}
-        <span class="ms-1">Nouvelle</span>
+    <a href="{{ path('console.reglement_taxe.new', {exercice: exercice}) }}" class="btn btn-sm btn-cobalt" data-action="click->top-progress#show">
+        {{ ux_icon(resolve_icon_name('paiement'), {height:'18px', width:'18px'}) }}
+        <span class="ms-1">Enregistrer un reversement</span>
     </a>
 {% endblock %}
 
 {% block console_body %}
-<div class="cs-panel">
-    {% if taxes.getTotalItemCount > 0 %}
+    {# Description pleine largeur (hors colonne d'entête, tirée à gauche par le bouton d'action). #}
+    <p style="color:#6c757d; line-height:1.6; max-width:none; margin:0 0 1.25rem;">Suivi des obligations de TVA de JS Brokers : TVA collectée sur les ventes, TVA déductible sur les dépenses, montant net dû à l'autorité fiscale, reversements effectués et solde restant dû. Le paramétrage des taux figure plus bas.</p>
+
+    {# ── Sélecteur d'exercice ── #}
+    <div class="cs-panel" style="margin-bottom:1.25rem; display:flex; align-items:center; gap:.75rem; flex-wrap:wrap;">
+        <span style="font-weight:600; color:#495057;">Exercice :</span>
+        {% for an in exercices %}
+            <a href="{{ path('console.taxe.index', {exercice: an}) }}" data-action="click->top-progress#show"
+               class="cs-badge {{ an == exercice ? 'cs-badge--cobalt' : 'cs-badge--muted' }}" style="text-decoration:none;">{{ an }}</a>
+        {% endfor %}
+    </div>
+
+    {# ── KPIs de TVA (exercice sélectionné) ── #}
+    {% set t = suivi.totaux %}
+    <div class="cs-kpis" style="margin-bottom:1.25rem;">
+        <div class="cs-kpi"><span class="cs-kpi-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('revenu'), {height:'24px', width:'24px'}) }}</span>
+            <span class="cs-kpi-body"><span class="cs-kpi-val">{{ t.collectee|number_format(2, '.', ' ') }} $</span><span class="cs-kpi-lbl">TVA collectée</span></span></div>
+        <div class="cs-kpi"><span class="cs-kpi-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('depense'), {height:'24px', width:'24px'}) }}</span>
+            <span class="cs-kpi-body"><span class="cs-kpi-val">{{ t.deductible|number_format(2, '.', ' ') }} $</span><span class="cs-kpi-lbl">TVA déductible</span></span></div>
+        <div class="cs-kpi"><span class="cs-kpi-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('taxe'), {height:'24px', width:'24px'}) }}</span>
+            <span class="cs-kpi-body"><span class="cs-kpi-val">{{ t.netDu|number_format(2, '.', ' ') }} $</span><span class="cs-kpi-lbl">TVA nette due</span></span></div>
+        <div class="cs-kpi"><span class="cs-kpi-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('paiement'), {height:'24px', width:'24px'}) }}</span>
+            <span class="cs-kpi-body"><span class="cs-kpi-val">{{ t.reverse|number_format(2, '.', ' ') }} $</span><span class="cs-kpi-lbl">Total reversé</span></span></div>
+        <div class="cs-kpi"><span class="cs-kpi-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('monnaie'), {height:'24px', width:'24px'}) }}</span>
+            <span class="cs-kpi-body"><span class="cs-kpi-val" style="color:{{ t.solde > 0.005 ? '#b3261e' : '#137333' }};">{{ t.solde|number_format(2, '.', ' ') }} $</span><span class="cs-kpi-lbl">Solde dû</span></span></div>
+    </div>
+
+    {# ── Détail mensuel de la TVA ── #}
+    <div class="cs-panel" style="margin-bottom:1.25rem;">
+        <h3 style="font-size:1rem; font-weight:700; margin:0 0 .75rem;">Détail mensuel — exercice {{ exercice }}</h3>
         <table class="cs-table">
-            <thead><tr><th>Code</th><th>Libellé</th><th>Autorité fiscale</th><th style="text-align:right;">Taux</th><th style="text-align:right;">Montant sur le CA</th><th>État</th><th style="text-align:right;">Actions</th></tr></thead>
+            <thead><tr>
+                <th>Mois</th>
+                <th style="text-align:right;">TVA collectée</th>
+                <th style="text-align:right;">TVA déductible</th>
+                <th style="text-align:right;">Net dû</th>
+                <th style="text-align:right;">Reversé</th>
+                <th style="text-align:right;">Solde dû</th>
+            </tr></thead>
             <tbody>
-            {% for t in taxes %}
+            {% for l in suivi.lignes %}
                 <tr>
-                    <td><strong>{{ t.code }}</strong></td>
-                    <td>{{ t.libelle }}</td>
-                    <td>{{ t.autoriteNom }} <span class="cs-badge cs-badge--cobalt">{{ t.autoriteAbreviation }}</span></td>
-                    <td style="text-align:right;">{{ t.taux|number_format(2, '.', ' ') }} %</td>
-                    <td style="text-align:right;">{% if t.actif %}{{ (prix_ht(revenuTotal) * t.taux / 100)|number_format(2, '.', ' ') }} ${% else %}—{% endif %}</td>
-                    <td>
-                        {% if t.actif %}
-                            <span class="cs-badge cs-badge--ok">Active</span>
-                        {% else %}
-                            <span class="cs-badge cs-badge--muted">Inactive</span>
-                        {% endif %}
-                    </td>
-                    <td style="text-align:right;">
-                        <a href="{{ path('console.taxe.edit', {id: t.id}) }}" class="cs-icon-btn"
-                           data-action="click->top-progress#show" title="Éditer" aria-label="Éditer {{ t.code }}">
-                            {{ ux_icon(resolve_icon_name('action:edit'), {height:'18px', width:'18px'}) }}
-                        </a>
-                        <form action="{{ path('console.taxe.delete', {id: t.id}) }}" method="post" style="display:inline;"
-                              data-controller="confirm-action" data-action="submit->confirm-action#request"
-                              data-confirm-action-title-value="Supprimer la taxe"
-                              data-confirm-action-body-value="Supprimer la taxe « {{ t.code }} » ?"
-                              data-confirm-action-irreversible-value="true">
-                            <input type="hidden" name="_token" value="{{ csrf_token('delete-taxe-' ~ t.id) }}">
-                            <button type="submit" class="cs-icon-btn is-danger" title="Supprimer" aria-label="Supprimer {{ t.code }}">
-                                {{ ux_icon(resolve_icon_name('action:delete'), {height:'18px', width:'18px'}) }}
-                            </button>
-                        </form>
-                    </td>
+                    <td>{{ l.libelle }}</td>
+                    <td style="text-align:right;">{{ l.collectee|number_format(2, '.', ' ') }} $</td>
+                    <td style="text-align:right;">{{ l.deductible|number_format(2, '.', ' ') }} $</td>
+                    <td style="text-align:right;">{{ l.netDu|number_format(2, '.', ' ') }} $</td>
+                    <td style="text-align:right;">{{ l.reverse|number_format(2, '.', ' ') }} $</td>
+                    <td style="text-align:right; color:{{ l.solde > 0.005 ? '#b3261e' : (l.solde < -0.005 ? '#137333' : '#6c757d') }};">{{ l.solde|number_format(2, '.', ' ') }} $</td>
                 </tr>
             {% endfor %}
             </tbody>
+            <tfoot>
+                <tr style="font-weight:700; border-top:2px solid #0047AB;">
+                    <td>Total {{ exercice }}</td>
+                    <td style="text-align:right;">{{ t.collectee|number_format(2, '.', ' ') }} $</td>
+                    <td style="text-align:right;">{{ t.deductible|number_format(2, '.', ' ') }} $</td>
+                    <td style="text-align:right;">{{ t.netDu|number_format(2, '.', ' ') }} $</td>
+                    <td style="text-align:right;">{{ t.reverse|number_format(2, '.', ' ') }} $</td>
+                    <td style="text-align:right; color:{{ t.solde > 0.005 ? '#b3261e' : '#137333' }};">{{ t.solde|number_format(2, '.', ' ') }} $</td>
+                </tr>
+            </tfoot>
         </table>
-        <div class="cs-pagination">{{ knp_pagination_render(taxes) }}</div>
-    {% else %}
-        <div class="cs-empty">
-            <p>Aucune taxe configurée. Créez la première taxe sur les ventes.</p>
-            <a href="{{ path('console.taxe.new') }}" class="btn btn-cobalt mt-2" data-action="click->top-progress#show">
-                {{ ux_icon(resolve_icon_name('action:add'), {height:'18px', width:'18px'}) }}
-                <span class="ms-1">Nouvelle taxe</span>
+        <p class="cs-hint" style="margin:.6rem 0 0; color:#6c757d; font-size:.85rem;">Net dû = TVA collectée sur les ventes encaissées − TVA déductible sur les dépenses. Solde dû = net dû − reversé.</p>
+    </div>
+
+    {# ── Reversements de l'exercice ── #}
+    <div class="cs-panel" style="margin-bottom:1.25rem;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:.75rem;">
+            <h3 style="font-size:1rem; font-weight:700; margin:0;">Reversements à l'autorité fiscale — {{ exercice }}</h3>
+            <a href="{{ path('console.reglement_taxe.new', {exercice: exercice}) }}" class="btn btn-sm btn-outline-secondary" data-action="click->top-progress#show">
+                {{ ux_icon(resolve_icon_name('action:add'), {height:'16px', width:'16px'}) }}<span class="ms-1">Nouveau reversement</span>
             </a>
         </div>
-    {% endif %}
-</div>
+        {% if reversements is not empty %}
+            <table class="cs-table">
+                <thead><tr><th>Date</th><th>Période</th><th>Autorité</th><th style="text-align:right;">Montant</th><th>Trésorerie</th><th>Référence</th></tr></thead>
+                <tbody>
+                {% for r in reversements %}
+                    <tr data-cm-row>
+                        <td>{{ r.datePaiement|date('d/m/Y') }}</td>
+                        <td><span class="cs-badge cs-badge--cobalt">{{ r.periodeLabel }}</span></td>
+                        <td>{{ r.autorite }}</td>
+                        <td style="text-align:right;">{{ r.montantFloat|number_format(2, '.', ' ') }} $</td>
+                        <td>{{ r.moyenPaiement == 'caisse' ? 'Caisse' : 'Banque' }}</td>
+                        <td>{{ r.reference ?: '—' }}</td>
+                        <td hidden data-cm-actions>
+                            <form action="{{ path('console.reglement_taxe.delete', {id: r.id}) }}" method="post" style="display:inline;"
+                                  data-controller="confirm-action" data-action="submit->confirm-action#request"
+                                  data-confirm-action-title-value="Supprimer le reversement"
+                                  data-confirm-action-body-value="Supprimer le reversement de TVA ({{ r.periodeLabel }}) ? L'écriture comptable correspondante sera retirée."
+                                  data-confirm-action-irreversible-value="true">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete-reglement-' ~ r.id) }}">
+                                <button type="submit" class="cs-icon-btn is-danger" title="Supprimer" aria-label="Supprimer le reversement">
+                                    {{ ux_icon(resolve_icon_name('action:delete'), {height:'18px', width:'18px'}) }}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="cs-empty">Aucun reversement enregistré pour cet exercice.</div>
+        {% endif %}
+    </div>
+
+    {# ── Paramétrage des taxes ── #}
+    <div class="cs-panel">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:.75rem;">
+            <h3 style="font-size:1rem; font-weight:700; margin:0;">Taux des taxes sur les ventes</h3>
+            <a href="{{ path('console.taxe.new') }}" class="btn btn-sm btn-outline-secondary" data-action="click->top-progress#show">
+                {{ ux_icon(resolve_icon_name('action:add'), {height:'16px', width:'16px'}) }}<span class="ms-1">Nouvelle taxe</span>
+            </a>
+        </div>
+        <p style="color:#6c757d; font-size:.85rem; margin:0 0 .75rem;">La colonne « Montant sur le CA » indique ce que chaque taxe active représente sur le revenu total cumulé ({{ revenuTotal|number_format(2, '.', ' ') }} $).</p>
+        {% if taxes.getTotalItemCount > 0 %}
+            <table class="cs-table">
+                <thead><tr><th>Code</th><th>Libellé</th><th>Autorité fiscale</th><th style="text-align:right;">Taux</th><th style="text-align:right;">Montant sur le CA</th><th>État</th></tr></thead>
+                <tbody>
+                {% for t in taxes %}
+                    <tr data-cm-row>
+                        <td><strong>{{ t.code }}</strong></td>
+                        <td>{{ t.libelle }}</td>
+                        <td>{{ t.autoriteNom }} <span class="cs-badge cs-badge--cobalt">{{ t.autoriteAbreviation }}</span></td>
+                        <td style="text-align:right;">{{ t.taux|number_format(2, '.', ' ') }} %</td>
+                        <td style="text-align:right;">{% if t.actif %}{{ (prix_ht(revenuTotal) * t.taux / 100)|number_format(2, '.', ' ') }} ${% else %}—{% endif %}</td>
+                        <td>
+                            {% if t.actif %}
+                                <span class="cs-badge cs-badge--ok">Active</span>
+                            {% else %}
+                                <span class="cs-badge cs-badge--muted">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td hidden data-cm-actions>
+                            <a href="{{ path('console.taxe.edit', {id: t.id}) }}" class="cs-icon-btn"
+                               data-action="click->top-progress#show" title="Éditer" aria-label="Éditer {{ t.code }}">
+                                {{ ux_icon(resolve_icon_name('action:edit'), {height:'18px', width:'18px'}) }}
+                            </a>
+                            <form action="{{ path('console.taxe.delete', {id: t.id}) }}" method="post" style="display:inline;"
+                                  data-controller="confirm-action" data-action="submit->confirm-action#request"
+                                  data-confirm-action-title-value="Supprimer la taxe"
+                                  data-confirm-action-body-value="Supprimer la taxe « {{ t.code }} » ?"
+                                  data-confirm-action-irreversible-value="true">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete-taxe-' ~ t.id) }}">
+                                <button type="submit" class="cs-icon-btn is-danger" title="Supprimer" aria-label="Supprimer {{ t.code }}">
+                                    {{ ux_icon(resolve_icon_name('action:delete'), {height:'18px', width:'18px'}) }}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <div class="cs-pagination">{{ knp_pagination_render(taxes) }}</div>
+        {% else %}
+            <div class="cs-empty">
+                <p>Aucune taxe configurée. Créez la première taxe sur les ventes.</p>
+                <a href="{{ path('console.taxe.new') }}" class="btn btn-cobalt mt-2" data-action="click->top-progress#show">
+                    {{ ux_icon(resolve_icon_name('action:add'), {height:'18px', width:'18px'}) }}
+                    <span class="ms-1">Nouvelle taxe</span>
+                </a>
+            </div>
+        {% endif %}
+    </div>
 {% endblock %}

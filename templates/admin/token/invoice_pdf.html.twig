@@ -1,0 +1,189 @@
+{#
+  Facture / avoir PDF d'un achat de tokens (rendu DomPDF, A4 portrait).
+  Calqué sur le pattern de facture de vente normalisée (en-tête émetteur / encart
+  client, titre centré, tableau de lignes, ventilation HT/TVA, total TTC, montant
+  en lettres), aux SEULES couleurs de base JS Brokers (cobalt #0047AB).
+  HT/TVA/TTC fournis par le contrôleur (ServiceTaxesVente) → cohérents avec la compta.
+#}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <style>
+        @page { margin: 18mm 15mm; }
+        body { font-family: DejaVu Sans, Arial, sans-serif; color: #1a1a1a; font-size: 11px; line-height: 1.45; }
+        .muted { color: #6c757d; }
+        .cobalt { color: #0047AB; }
+
+        /* En-tête : émetteur (gauche) + encart client (droite). */
+        table.layout { width: 100%; border-collapse: collapse; }
+        table.layout > tbody > tr > td { vertical-align: top; }
+        .issuer-logo { height: 46px; margin-bottom: 8px; }
+        .issuer-name { font-size: 17px; font-weight: bold; color: #0047AB; letter-spacing: .3px; margin-bottom: 4px; }
+        .issuer-sub { font-weight: bold; margin: 6px 0 2px; }
+        .issuer p { margin: 1px 0; }
+
+        .client-box { border: 1px solid #0047AB; width: 100%; border-collapse: collapse; }
+        .client-box th.client-head { background: #0047AB; color: #fff; text-align: left; font-weight: bold;
+            padding: 5px 8px; letter-spacing: .5px; }
+        .client-box td { padding: 3px 8px; border-bottom: 1px solid #e6e8ec; vertical-align: top; }
+        .client-box td.k { color: #6c757d; font-style: italic; width: 34%; }
+
+        /* Titre. */
+        .title { text-align: center; font-size: 18px; font-weight: bold; color: #0047AB; margin: 22px 0 2px; letter-spacing: 1px; }
+        .title-num { text-align: center; font-size: 13px; margin-bottom: 16px; }
+
+        /* Lignes d'information (objet, paiement…), séparées par un filet. */
+        .info-line { padding: 4px 0; border-bottom: 1px solid #e6e8ec; }
+        .info-line strong { color: #0047AB; }
+
+        /* Tableau des lignes de facturation. */
+        table.lines { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        table.lines th { background: #0047AB; color: #fff; text-align: left; padding: 7px 9px; font-size: 10.5px; }
+        table.lines th.num, table.lines td.num { text-align: right; }
+        table.lines th.c, table.lines td.c { text-align: center; }
+        table.lines td { padding: 8px 9px; border: 1px solid #e6e8ec; }
+        .tag { display: inline-block; background: #eaf0fb; color: #0047AB; border-radius: 3px; padding: 0 5px; font-size: 9px; font-weight: bold; }
+
+        /* Bloc totaux : récap articles/TVA (gauche) + total TTC (droite). */
+        table.totZone { width: 100%; border-collapse: collapse; margin-top: 14px; }
+        table.totZone > tbody > tr > td { vertical-align: top; }
+        table.recap { width: 100%; border-collapse: collapse; }
+        table.recap td { padding: 3px 0; }
+        table.recap td.num { text-align: right; }
+        table.recap tr.total-tva td { border-top: 1px solid #cbd2da; font-weight: bold; }
+        .ttc-box { border: 2px solid #0047AB; padding: 10px 14px; text-align: right; }
+        .ttc-box .lbl { color: #0047AB; font-weight: bold; letter-spacing: .5px; }
+        .ttc-box .val { font-size: 18px; font-weight: bold; color: #0047AB; }
+
+        .pay { margin-top: 16px; }
+        .pay p { margin: 2px 0; }
+        .words { margin-top: 18px; padding: 9px 12px; background: #f5f8ff; border-left: 3px solid #0047AB; font-style: italic; }
+
+        .avoir-banner { background: #fbeaea; color: #b3261e; border: 1px solid #b3261e; padding: 7px 12px;
+            border-radius: 5px; margin-bottom: 14px; font-weight: bold; }
+
+        /* Zone de contrôle (QR + repères de vérification), inspirée des éléments de
+           sécurité d'une facture normalisée — ici à usage de contrôle interne. */
+        .ctrl-title { text-align: center; color: #6c757d; font-size: 9px; letter-spacing: .5px; margin: 24px 0 6px; }
+        table.ctrl { width: 100%; border-collapse: collapse; border: 1px solid #e6e8ec; }
+        table.ctrl td { vertical-align: middle; padding: 10px 12px; }
+        table.ctrl td.qr { width: 92px; text-align: center; }
+        table.ctrl td.qr img { width: 84px; height: 84px; }
+        .ctrl-k { color: #6c757d; }
+        .ctrl-v { color: #0047AB; font-weight: bold; }
+        .foot { margin-top: 14px; padding-top: 10px; border-top: 1px solid #e6e8ec; font-size: 9.5px; color: #6c757d; text-align: center; }
+    </style>
+</head>
+<body>
+    {% if isAvoir %}
+        <div class="avoir-banner">AVOIR — cet achat a été remboursé{% if purchase.refundedAt %} le {{ purchase.refundedAt|date('d/m/Y') }}{% endif %}.</div>
+    {% endif %}
+
+    {# ── En-tête : émetteur + encart client ── #}
+    <table class="layout">
+        <tr>
+            <td style="width:58%; padding-right:18px;" class="issuer">
+                {% if logo %}<img src="{{ logo }}" alt="{{ issuer.nom }}" class="issuer-logo">{% endif %}
+                <div class="issuer-name">{{ issuer.nom }}</div>
+                <p class="muted">Plateforme SaaS de gestion de courtage en assurance</p>
+                <p>{{ issuer.email }}</p>
+                {% if issuer.capitalSocial > 0 %}<p class="muted">Capital social : {{ issuer.capitalSocial|number_format(2, ',', ' ') }} USD</p>{% endif %}
+            </td>
+            <td style="width:42%;">
+                <table class="client-box">
+                    <tr><th class="client-head" colspan="2">CLIENT</th></tr>
+                    <tr><td class="k">Type</td><td>Compte client</td></tr>
+                    <tr><td class="k">Nom</td><td><strong>{{ purchase.utilisateur ? purchase.utilisateur.nom : '—' }}</strong></td></tr>
+                    <tr><td class="k">E-mail</td><td>{{ purchase.utilisateur ? purchase.utilisateur.email : '—' }}</td></tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    {# ── Titre ── #}
+    <div class="title">{{ isAvoir ? 'AVOIR' : 'FACTURE DE VENTE' }}</div>
+    <div class="title-num">{{ isAvoir ? 'Avoir' : 'Facture' }} n° {{ purchase.invoiceNumber ?: purchase.reference }}</div>
+
+    {# ── Informations ── #}
+    <div class="info-line"><strong>Objet :</strong> Achat de tokens — paquet « {{ packLabel }} »</div>
+    <div class="info-line"><strong>Référence d'achat :</strong> {{ purchase.reference }}</div>
+    <div class="info-line"><strong>Date :</strong> {{ (purchase.paidAt ?: purchase.createdAt)|date('d/m/Y H:i') }}</div>
+
+    {# ── Lignes de facturation ── #}
+    <table class="lines">
+        <thead>
+            <tr>
+                <th style="width:5%;">#</th>
+                <th>Désignation</th>
+                <th class="num" style="width:20%;">Prix unitaire (TTC)</th>
+                <th class="c" style="width:11%;">Quantité</th>
+                <th class="num" style="width:22%;">Montant (TTC)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="c">1</td>
+                <td>Paquet de tokens « {{ packLabel }} » <span class="tag">SERVICE</span><br>
+                    <small class="muted">{{ purchase.tokens|number_format(0, ' ', ' ') }} tokens prépayés{% if purchase.couponCode %} — coupon {{ purchase.couponCode }} (remise {{ purchase.remiseUsd|number_format(2, ',', ' ') }} USD déduite){% endif %}</small></td>
+                <td class="num">{{ ttc|number_format(2, ',', ' ') }}</td>
+                <td class="c">1</td>
+                <td class="num">{{ ttc|number_format(2, ',', ' ') }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    {# ── Totaux ── #}
+    <table class="totZone">
+        <tr>
+            <td style="width:55%; padding-right:18px;">
+                <table class="recap">
+                    <tr><td>Nombre d'articles : 1</td><td class="num"></td></tr>
+                    <tr><td>H.T. Taxable {{ tauxGlobal|number_format(tauxGlobal == (tauxGlobal|round) ? 0 : 2, ',', ' ') }} %</td>
+                        <td class="num">{{ ht|number_format(2, ',', ' ') }} USD</td></tr>
+                    {% for t in taxes %}
+                        <tr><td>{{ t.libelle }} {{ t.taux|number_format(t.taux == (t.taux|round) ? 0 : 2, ',', ' ') }} %</td>
+                            <td class="num">{{ t.montant|number_format(2, ',', ' ') }} USD</td></tr>
+                    {% endfor %}
+                    <tr class="total-tva"><td>TOTAL TVA</td><td class="num">{{ tva|number_format(2, ',', ' ') }} USD</td></tr>
+                </table>
+            </td>
+            <td style="width:45%;">
+                <div class="ttc-box">
+                    <div class="lbl">{{ isAvoir ? 'TOTAL REMBOURSÉ TTC' : 'TOTAL TTC' }}</div>
+                    <div class="val">USD {{ ttc|number_format(2, ',', ' ') }}</div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    {# ── Paiement ── #}
+    <div class="pay">
+        <p><strong>Mode de paiement :</strong> {{ purchase.provider == 'simulated' ? 'Carte (mode démonstration)' : (purchase.provider|default('—')|capitalize) }}</p>
+        <p><strong>Montant en USD :</strong> {{ ttc|number_format(2, ',', ' ') }}</p>
+    </div>
+
+    {# ── Montant en toutes lettres ── #}
+    <div class="words">
+        Arrêté{{ isAvoir ? ' le présent avoir' : ' la présente facture' }} à la somme de {{ ttc|to_words('USD') }} toutes taxes comprises.
+    </div>
+
+    {# ── Éléments de contrôle (QR) ── #}
+    <div class="ctrl-title">— ÉLÉMENTS DE CONTRÔLE —</div>
+    <table class="ctrl">
+        <tr>
+            <td class="qr"><img src="{{ qr }}" alt="QR de contrôle"></td>
+            <td>
+                <div><span class="ctrl-k">Référence du document :</span> <span class="ctrl-v">{{ purchase.invoiceNumber ?: purchase.reference }}</span></div>
+                <div><span class="ctrl-k">Montant TTC :</span> <span class="ctrl-v">{{ ttc|number_format(2, ',', ' ') }} USD</span></div>
+                <div><span class="ctrl-k">Émis le :</span> {{ (purchase.paidAt ?: purchase.createdAt)|date('d/m/Y H:i') }}</div>
+                <div class="muted" style="margin-top:4px; font-size:9px;">Scannez ce code pour vérifier les informations de {{ isAvoir ? "l'avoir" : 'la facture' }}.</div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="foot">
+        {{ issuer.nom }} — Document généré électroniquement, valant facture{{ isAvoir ? ' rectificative (avoir)' : '' }}.
+    </div>
+</body>
+</html>
