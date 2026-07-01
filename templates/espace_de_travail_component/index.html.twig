@@ -3,5 +3,5 @@
 {% block title %}JS Brokers - Espace de travail{% endblock %}
 
 {% block body %}
-    {{ component('_interactive_menu', {menu_data: menu_data, idEntreprise: idEntreprise, idInvite: idInvite, entreprise: entreprise, entrepriseNom: entrepriseNom, isEntrepriseAdmin: isEntrepriseAdmin, welcome: welcome|default(false)}) }}
+    {{ component('_interactive_menu', {menu_data: menu_data, idEntreprise: idEntreprise, idInvite: idInvite, entreprise: entreprise, entrepriseNom: entrepriseNom, isEntrepriseAdmin: isEntrepriseAdmin, welcome: welcome|default(false), hasPerimetre: hasPerimetre|default(true)}) }}
 {% endblock %}

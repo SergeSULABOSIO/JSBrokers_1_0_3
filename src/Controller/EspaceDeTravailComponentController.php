@@ -83,6 +83,15 @@ class EspaceDeTravailComponentController extends AbstractController
         // La logique de transformation du menu est maintenant dans le ControllerUtilsTrait.
         $processedMenuData = $this->processDataForShortEntityNames($this->menuData);
 
+        // Adaptation au périmètre de l'invité connecté : on retire du menu les rubriques
+        // hors de ses droits de lecture (le propriétaire garde le menu complet). Source
+        // unique partagée avec le blocage serveur et le Twig (DRY).
+        $processedMenuData = $this->workspaceAccessResolver->filterMenu($processedMenuData, $access['invite']);
+
+        // Fail-closed : un invité sans aucun périmètre ne voit qu'une coquille d'accueil
+        // l'invitant à contacter le propriétaire, plutôt qu'un espace de travail vide.
+        $hasPerimetre = $this->workspaceAccessResolver->hasAnyPerimetre($access['invite']);
+
         // L'accès à l'édition de l'entreprise (groupe « Paramètres ») est réservé au
         // propriétaire du compte — même critère que denyUnlessOwner() côté EntrepriseController.
         $isEntrepriseAdmin = $access['entreprise']->getUtilisateur() === $this->getUser();
@@ -101,6 +110,7 @@ class EspaceDeTravailComponentController extends AbstractController
             'entrepriseNom' => $access['entreprise']->getNom(),
             'isEntrepriseAdmin' => $isEntrepriseAdmin,
             'welcome' => $welcome,
+            'hasPerimetre' => $hasPerimetre,
         ]);
     }
 

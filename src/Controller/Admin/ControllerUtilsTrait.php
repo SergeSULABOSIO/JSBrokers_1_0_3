@@ -39,6 +39,8 @@ use App\Services\CanvasBuilder;
 use App\Services\JSBDynamicSearchService;
 use App\Token\InsufficientTokensException;
 use App\Token\TokenAccountService;
+use App\Service\Workspace\WorkspaceAccessResolver;
+use App\Service\Workspace\InvitePerimetreNotifier;
 use Symfony\Contracts\Service\Attribute\Required;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\EntityManagerInterface;
@@ -90,6 +92,105 @@ trait ControllerUtilsTrait
     public function setTokenAccountService(TokenAccountService $tokenAccountService): void
     {
         $this->tokenAccountService = $tokenAccountService;
+    }
+
+    /**
+     * Contrôle d'accès de l'espace de travail selon les rôles de l'invité connecté.
+     * Injectés par setter autowiré (#[Required]) — même mécanique que le métrage de
+     * tokens — pour couvrir TOUS les contrôleurs du trait sans toucher aux constructeurs.
+     */
+    private WorkspaceAccessResolver $workspaceAccessResolver;
+    private InvitePerimetreNotifier $invitePerimetreNotifier;
+
+    #[Required]
+    public function setWorkspaceAccessResolver(WorkspaceAccessResolver $workspaceAccessResolver): void
+    {
+        $this->workspaceAccessResolver = $workspaceAccessResolver;
+    }
+
+    #[Required]
+    public function setInvitePerimetreNotifier(InvitePerimetreNotifier $invitePerimetreNotifier): void
+    {
+        $this->invitePerimetreNotifier = $invitePerimetreNotifier;
+    }
+
+    /**
+     * L'invité connecté a-t-il le droit d'agir au niveau $level sur cette entité ?
+     * Point de contrôle unique réutilisé par tous les points de passage CRUD génériques.
+     */
+    private function mayAccessEntity(object|string $entityOrClass, int $level): bool
+    {
+        return $this->workspaceAccessResolver->can(
+            $this->getInvite(),
+            $this->getEntityName($entityOrClass),
+            $level
+        );
+    }
+
+    /** Panneau « Accès restreint » rendu dans la colonne de travail (lecture refusée). */
+    private function accessDeniedComponent(object|string $entityOrClass): Response
+    {
+        return $this->render('components/_access_denied.html.twig', [
+            'entiteNom' => $this->getEntityName($entityOrClass),
+        ]);
+    }
+
+    /** Réponse JSON 403 servie quand une mutation est hors périmètre (même forme que 402 tokens). */
+    private function accessDeniedJson(): JsonResponse
+    {
+        return $this->json([
+            'message' => "Action hors de votre périmètre d'accès. Contactez le propriétaire de l'espace de travail pour ajuster vos droits.",
+            'blocked' => true,
+        ], Response::HTTP_FORBIDDEN);
+    }
+
+    /**
+     * Retire du canevas de formulaire les points d'entrée d'action (submit/delete) hors
+     * périmètre : la barre d'outils masque alors automatiquement Ajouter/Modifier/
+     * Supprimer (elle se base sur endpoint_submit_url / endpoint_delete_url). Aucun
+     * template ni JS à modifier ; la sécurité reste garantie côté serveur.
+     */
+    private function applyPermissionToFormCanvas(array $canvas, object|string $entityOrClass): array
+    {
+        $invite = $this->getInvite();
+        $short = $this->getEntityName($entityOrClass);
+
+        $canWrite = $this->workspaceAccessResolver->can($invite, $short, Invite::ACCESS_ECRITURE)
+            || $this->workspaceAccessResolver->can($invite, $short, Invite::ACCESS_MODIFICATION);
+        $canDelete = $this->workspaceAccessResolver->can($invite, $short, Invite::ACCESS_SUPPRESSION);
+
+        if (!$canWrite) {
+            unset($canvas['parametres']['endpoint_submit_url']);
+        }
+        if (!$canDelete) {
+            unset($canvas['parametres']['endpoint_delete_url']);
+        }
+
+        return $canvas;
+    }
+
+    /**
+     * Notifie l'invité concerné quand son périmètre change (enregistrement d'un rôle).
+     * Ne se déclenche QUE pour les entités de rôle RolesEn* : une édition de la fiche
+     * invité (nom/email) n'émet donc aucun e-mail. Tolérant aux pannes.
+     */
+    private function notifyPerimetreIfRoleEntity(?object $roleInvite): void
+    {
+        if ($roleInvite instanceof Invite) {
+            $this->invitePerimetreNotifier->notify($roleInvite);
+        }
+    }
+
+    /** L'invité cible d'une entité de rôle RolesEn*, sinon null (pour l'e-mail de périmètre). */
+    private function roleTargetInvite(object $entity): ?Invite
+    {
+        if (str_starts_with($this->getEntityName($entity), 'RolesEn') && method_exists($entity, 'getInvite')) {
+            $target = $entity->getInvite();
+
+            return $target instanceof Invite ? $target : null;
+        }
+
+        return null;
     }
 
     /** Construit la réponse JSON 402 servie quand le solde de tokens est épuisé. */
@@ -361,6 +462,13 @@ trait ControllerUtilsTrait
         $idEntreprise = $request->attributes->get('idEntreprise');
         $data = [];
 
+        // CONTRÔLE D'ACCÈS (lecture) : l'invité connecté doit avoir le droit de lecture
+        // sur cette entité. Sinon, panneau « Accès restreint » (chargement initial) ou
+        // 403 JSON (rafraîchissement de liste), sans casser la coquille de l'espace.
+        if (!$this->mayAccessEntity($entityClass, Invite::ACCESS_LECTURE)) {
+            return $isQueryResult ? $this->accessDeniedJson() : $this->accessDeniedComponent($entityClass);
+        }
+
         // CAS 1: C'est une requête API pour rafraîchir la liste (recherche, etc.)
         if ($isQueryResult) {
             $entreprise = $this->entrepriseRepository->find($idEntreprise);
@@ -477,7 +585,13 @@ trait ControllerUtilsTrait
             'serverRootName' => $this->getServerRootName($entityClass),
             'listeCanvas' => $this->canvasBuilder->getListeCanvas($entityClass),
             'entityCanvas' => $entityCanvas,
-            'entityFormCanvas' => $this->canvasBuilder->getEntityFormCanvas(new $entityClass(), (int)$idEntreprise),
+            // Le canevas de formulaire est filtré selon le périmètre : sans droit
+            // d'écriture/modification (ou de suppression), les points d'entrée
+            // correspondants sont retirés et la barre d'outils masque les actions.
+            'entityFormCanvas' => $this->applyPermissionToFormCanvas(
+                $this->canvasBuilder->getEntityFormCanvas(new $entityClass(), (int)$idEntreprise),
+                $entityClass
+            ),
             'searchCanvas' => $this->canvasBuilder->getSearchCanvas($entityClass), // Pass for dynamic queries
             'numericAttributesAndValues' => $numericAttributesAndValues,
             'idInvite' => $idInvite,
@@ -512,6 +626,14 @@ trait ControllerUtilsTrait
         $entreprise = $this->getEntreprise();
         $invite = $this->getInvite();
         $isCreationMode = ($entity === null);
+
+        // CONTRÔLE D'ACCÈS (ouverture du formulaire) : créer exige l'Écriture, éditer
+        // exige la Modification. Pour les invités et les rôles, exige la gestion des
+        // invités (propriétaire ou délégué), géré par le resolver.
+        $requiredLevel = $isCreationMode ? Invite::ACCESS_ECRITURE : Invite::ACCESS_MODIFICATION;
+        if (!$this->mayAccessEntity($entity ?? $entityClass, $requiredLevel)) {
+            return $this->accessDeniedComponent($entityClass);
+        }
 
         if (!$entity) {
             $entity = new $entityClass();
@@ -612,6 +734,13 @@ trait ControllerUtilsTrait
         $idInvite = isset($data['idInvite']) ? (int)$data['idInvite'] : 0;
         ['entreprise' => $currentEntreprise, 'invite' => $currentInvite] = $this->validateWorkspaceAccess($idEntreprise, $idInvite);
 
+        // CONTRÔLE D'ACCÈS (mutation) : création → Écriture, édition → Modification.
+        // Pour Invite et les rôles RolesEn*, le resolver exige la gestion des invités.
+        $requiredLevel = $isCreationMode ? Invite::ACCESS_ECRITURE : Invite::ACCESS_MODIFICATION;
+        if (!$this->mayAccessEntity($entity, $requiredLevel)) {
+            return $this->accessDeniedJson();
+        }
+
         if ($isCreationMode) {
             // Renseigne automatiquement l'entreprise et l'invité pour les nouvelles entités
             // si elles utilisent AuditableTrait et que ces champs ne sont pas déjà définis.
@@ -708,6 +837,11 @@ trait ControllerUtilsTrait
             $this->em->persist($entity);
             $this->em->flush();
 
+            // NOTIFICATION PÉRIMÈTRE : si un rôle (RolesEn*) vient d'être enregistré, on
+            // informe l'invité concerné de son nouveau périmètre d'action. Ne se déclenche
+            // pas pour une simple édition de la fiche invité (routée par InviteController).
+            $this->notifyPerimetreIfRoleEntity($this->roleTargetInvite($entity));
+
             // NOUVEAU : Charger les valeurs calculées après la persistance
             // pour que la réponse JSON contienne une entité complète, y compris
             // les champs qui ne sont pas directement en base de données.
@@ -736,10 +870,23 @@ trait ControllerUtilsTrait
      */
     private function handleDeleteApi(object $entity): JsonResponse
     {
+        // CONTRÔLE D'ACCÈS (suppression) : exige le droit de Suppression sur l'entité
+        // (ou la gestion des invités pour Invite / RolesEn*).
+        if (!$this->mayAccessEntity($entity, Invite::ACCESS_SUPPRESSION)) {
+            return $this->accessDeniedJson();
+        }
+
+        // On mémorise l'invité cible AVANT suppression (pour l'e-mail de périmètre si
+        // c'est un rôle RolesEn* — après remove(), la relation n'est plus lisible).
+        $roleInvite = $this->roleTargetInvite($entity);
+
         try {
             $entityName = $this->getEntityName($entity);
             $this->em->remove($entity);
             $this->em->flush();
+
+            // Périmètre réduit : on notifie l'invité concerné le cas échéant.
+            $this->notifyPerimetreIfRoleEntity($roleInvite);
 
             // Using (e) to be more generic with gender.
             return $this->json(['message' => ucfirst($entityName) . ' supprimé(e) avec succès.']);
@@ -781,6 +928,11 @@ trait ControllerUtilsTrait
         $collectionMap = $this->getCollectionMap();
         if (!isset($collectionMap[$collectionName])) {
             throw new NotFoundHttpException("La collection '$collectionName' n'existe pas ou n'est pas autorisée.");
+        }
+        // CONTRÔLE D'ACCÈS (lecture) sur l'entité de la collection (ex. les rôles
+        // RolesEn* d'un invité exigent la gestion des invités).
+        if (!$this->mayAccessEntity($collectionMap[$collectionName], Invite::ACCESS_LECTURE)) {
+            throw $this->createAccessDeniedException("Cette collection n'est pas dans votre périmètre d'accès.");
         }
         $page = ($request !== null) ? max(1, $request->query->getInt('page', 1)) : 1;
         $parentEntity = $this->findParentOrNew($parentEntityClass, $id);
@@ -1048,6 +1200,12 @@ trait ControllerUtilsTrait
         }
 
         $entityClass = 'App\\Entity\\' . $entityType;
+
+        // CONTRÔLE D'ACCÈS (lecture) : hors périmètre → accès refusé.
+        if (!$this->mayAccessEntity($entityClass, Invite::ACCESS_LECTURE)) {
+            throw $this->createAccessDeniedException("Cette entité n'est pas dans votre périmètre d'accès.");
+        }
+
         $repository = $this->em->getRepository($entityClass);
 
         return $repository->findAll();
@@ -1070,6 +1228,12 @@ trait ControllerUtilsTrait
         }
 
         $entityClass = 'App\\Entity\\' . $entityType;
+
+        // CONTRÔLE D'ACCÈS (lecture) : ouverture du détail (colonne de visualisation).
+        if (!$this->mayAccessEntity($entityClass, Invite::ACCESS_LECTURE)) {
+            throw $this->createAccessDeniedException("Cette entité n'est pas dans votre périmètre d'accès.");
+        }
+
         $entity = $this->em->getRepository($entityClass)->find($id);
 
         if (!$entity) {
