@@ -59,6 +59,16 @@
     .cgu-table th, .cgu-table td { padding: .5rem .65rem; border-bottom: 1px solid #e9ecef; text-align: left; }
     .cgu-table th { background: #f8f9fa; color: #495057; font-weight: 600; }
     .cgu-table td:last-child, .cgu-table th:last-child { text-align: right; }
+    /* Chaque ligne est sensible au survol (retour visuel léger, teinte cobalt). */
+    .cgu-table tbody tr { transition: background-color .12s ease; }
+    .cgu-table tbody tr:hover { background-color: #eef4ff; }
+
+    /* Pastille d'icône devant chaque entité facturée (même langage visuel que la
+       Console : carré arrondi, fond cobalt clair, glyphe cobalt). */
+    .cgu-entity { display: inline-flex; align-items: center; gap: .6rem; }
+    .cgu-entity-icon { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+        width: 30px; height: 30px; border-radius: 8px; background: #e8f0fb; color: #0047AB; }
+    .cgu-entity-icon svg { width: 18px; height: 18px; }
 
     /* La zone de contenu grandit pour pousser le pied de page en bas de fenêtre. */
     .cgu-content { flex: 1 0 auto; }

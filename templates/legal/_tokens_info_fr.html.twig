@@ -32,10 +32,34 @@
         <thead><tr><th>Entité</th><th>Poids (tokens)</th></tr></thead>
         <tbody>
             {% for fqcn, poids in plan.writeWeights %}
-            <tr><td>{{ token_entite_label(fqcn, 'fr') }}</td><td>{{ poids }}</td></tr>
+            <tr>
+                <td>
+                    <span class="cgu-entity">
+                        <span class="cgu-entity-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(token_entite_icon(fqcn)), {height:'18px', width:'18px'}) }}</span>
+                        <span>{{ token_entite_label(fqcn, 'fr') }}</span>
+                    </span>
+                </td>
+                <td>{{ poids }}</td>
+            </tr>
             {% endfor %}
-            <tr><td>Toute autre entité</td><td>{{ plan.defaultWriteWeight }}</td></tr>
-            <tr><td>Lecture (par entité, en sortie)</td><td>{{ readWeight }}</td></tr>
+            <tr>
+                <td>
+                    <span class="cgu-entity">
+                        <span class="cgu-entity-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('default'), {height:'18px', width:'18px'}) }}</span>
+                        <span>Toute autre entité</span>
+                    </span>
+                </td>
+                <td>{{ plan.defaultWriteWeight }}</td>
+            </tr>
+            <tr>
+                <td>
+                    <span class="cgu-entity">
+                        <span class="cgu-entity-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name('action:view'), {height:'18px', width:'18px'}) }}</span>
+                        <span>Lecture (par entité, en sortie)</span>
+                    </span>
+                </td>
+                <td>{{ readWeight }}</td>
+            </tr>
         </tbody>
     </table>
 </section>
