@@ -31,8 +31,19 @@ export default class extends Controller {
         this.boundOnDocPointer = this.onDocumentPointer.bind(this);
         this.boundOnMenuKeydown = this.onMenuKeydown.bind(this);
 
+        // Dès que la souris est utilisée dans le menu, on retire le focus clavier
+        // éventuel : seul l'item réellement survolé (:hover) reste surligné, ce qui
+        // évite un double surlignage (1er item focalisé + item survolé).
+        this.boundClearKeyboardFocus = () => {
+            const active = document.activeElement;
+            if (active && active.getAttribute?.('role') === 'menuitem' && this.menuTarget.contains(active)) {
+                active.blur();
+            }
+        };
+
         this.element.addEventListener('contextmenu', this.boundOnContextMenu);
         this.element.addEventListener('keydown', this.boundOnRowKeydown);
+        this.menuTarget.addEventListener('mousemove', this.boundClearKeyboardFocus);
         document.addEventListener('pointerdown', this.boundOnDocPointer, true);
         document.addEventListener('scroll', this.boundHideOnScroll = () => this.hide(), true);
         window.addEventListener('resize', this.boundHideOnResize = () => this.hide());
@@ -44,6 +55,7 @@ export default class extends Controller {
     disconnect() {
         this.element.removeEventListener('contextmenu', this.boundOnContextMenu);
         this.element.removeEventListener('keydown', this.boundOnRowKeydown);
+        this.menuTarget.removeEventListener('mousemove', this.boundClearKeyboardFocus);
         document.removeEventListener('pointerdown', this.boundOnDocPointer, true);
         document.removeEventListener('scroll', this.boundHideOnScroll, true);
         window.removeEventListener('resize', this.boundHideOnResize);
@@ -72,7 +84,7 @@ export default class extends Controller {
 
         const items = this.collectActions(row);
         event.preventDefault();
-        this.open(row, items, { x: event.clientX, y: event.clientY });
+        this.open(row, items, { x: event.clientX, y: event.clientY }, false);
     }
 
     onRowKeydown(event) {
@@ -85,7 +97,7 @@ export default class extends Controller {
         event.preventDefault();
         const items = this.collectActions(row);
         const rect = row.getBoundingClientRect();
-        this.open(row, items, { x: rect.left + 24, y: rect.top + rect.height - 4 });
+        this.open(row, items, { x: rect.left + 24, y: rect.top + rect.height - 4 }, true);
     }
 
     /**
@@ -114,7 +126,7 @@ export default class extends Controller {
         return items;
     }
 
-    open(row, items, position) {
+    open(row, items, position, viaKeyboard = false) {
         this.originRow = row;
         const menu = this.menuTarget;
         menu.innerHTML = '';
@@ -131,8 +143,12 @@ export default class extends Controller {
 
         this.display(position);
 
-        const first = menu.querySelector('[role="menuitem"]');
-        if (first) first.focus();
+        // Focus initial UNIQUEMENT à l'ouverture clavier. À la souris, on laisse
+        // le seul :hover surligner l'item réellement sous le curseur.
+        if (viaKeyboard) {
+            const first = menu.querySelector('[role="menuitem"]');
+            if (first) first.focus();
+        }
     }
 
     buildItem(item) {
