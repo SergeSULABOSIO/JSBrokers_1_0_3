@@ -1451,13 +1451,22 @@ thead.sticky-header {
 ===================================================================
 */
 
-/* Gouttière unique et cohérente entre les cartes, dans les deux directions :
-   l'horizontale (gouttière Bootstrap) et la verticale (marge des cartes) sont
-   alignées sur la même valeur, sinon les espaces paraissent irréguliers. */
+/* Gouttière unique et cohérente entre les cartes, dans les deux directions.
+   On force explicitement le rembourrage des colonnes (gouttière horizontale) et
+   la marge basse des cartes (gouttière verticale) à la MÊME valeur (1rem), sans
+   dépendre de la résolution de --bs-gutter-x de Bootstrap (qui restait à 1.5rem
+   et rendait l'horizontale plus large que la verticale). La marge négative de la
+   ligne (-0.5rem) compense le rembourrage des colonnes pour aligner les bords. */
 .form-column--roles .row {
     --bs-gutter-x: 1rem;
     --bs-gutter-y: 0;
-    margin-bottom: 0; /* l'espacement vertical est porté par la marge des cartes */
+    margin-right: -0.5rem;
+    margin-left: -0.5rem;
+    margin-bottom: 0;
+}
+.form-column--roles .row > [class*="col-"] {
+    padding-right: 0.5rem;
+    padding-left: 0.5rem;
 }
 
 /* Chaque groupe de droits (ChoiceType étendu) = une carte claire et autonome. */
