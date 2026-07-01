@@ -1451,9 +1451,19 @@ thead.sticky-header {
 ===================================================================
 */
 
+/* Gouttière unique et cohérente entre les cartes, dans les deux directions :
+   l'horizontale (gouttière Bootstrap) et la verticale (marge des cartes) sont
+   alignées sur la même valeur, sinon les espaces paraissent irréguliers. */
+.form-column--roles .row {
+    --bs-gutter-x: 1rem;
+    --bs-gutter-y: 0;
+    margin-bottom: 0; /* l'espacement vertical est porté par la marge des cartes */
+}
+
 /* Chaque groupe de droits (ChoiceType étendu) = une carte claire et autonome. */
 .form-column--roles .mb-3 {
     height: 100%;
+    margin-bottom: 1rem; /* = --bs-gutter-x : gouttière verticale cohérente */
     padding: 0.9rem 1rem 0.75rem;
     border: 1px solid #dee2e6;
     border-radius: 12px;
