@@ -55,6 +55,7 @@
         } %}
         {% for key, label in onglets %}
             <button type="button" class="crm-tab {{ loop.first ? 'is-active' }}" role="tab"
+                    aria-selected="{{ loop.first ? 'true' : 'false' }}"
                     data-crm-tabs-target="tab" data-tab="{{ key }}" data-action="crm-tabs#select">{{ label }}</button>
         {% endfor %}
     </nav>

@@ -38,6 +38,7 @@ export default class extends Controller {
         this.tabTargets.forEach((tab) => {
             const active = tab.dataset.tab === name;
             tab.classList.toggle('is-active', active);
+            tab.setAttribute('aria-selected', active ? 'true' : 'false');
             found = found || active;
         });
         if (!found) {

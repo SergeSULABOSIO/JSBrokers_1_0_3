@@ -16,12 +16,17 @@
         border-radius:999px; font-size:.75rem; font-weight:700; background:#eef2fb; color:#0047AB; }
     .crm-stage--churn { background:#fde8e6; color:#c5221f; }
 
-    /* Onglets de la fiche client */
-    .crm-tabs { display:flex; flex-wrap:wrap; gap:.25rem; border-bottom:1px solid #dee2e6; margin-bottom:1.25rem; }
-    .crm-tab { border:0; background:transparent; padding:.6rem .9rem; border-radius:8px 8px 0 0;
-        font-weight:600; font-size:.9rem; color:#495057; cursor:pointer; }
-    .crm-tab:hover { background:#eef2fb; color:#0047AB; }
-    .crm-tab.is-active { color:#0047AB; box-shadow:inset 0 -3px 0 #0047AB; }
+    /* Onglets de la fiche client — barre segmentée qui s'enroule proprement.
+       Style « pastilles » (et non soulignement) : chaque rangée reste autonome
+       quand les onglets passent à la ligne, sans indicateur actif « flottant ». */
+    .crm-tabs { display:flex; flex-wrap:wrap; gap:.35rem; margin-bottom:1.25rem;
+        padding:.35rem; background:#f3f6fc; border:1px solid #e1e8f5; border-radius:12px; }
+    .crm-tab { border:0; background:transparent; padding:.5rem .85rem; border-radius:8px;
+        font-weight:600; font-size:.875rem; line-height:1.2; color:#495057; cursor:pointer;
+        white-space:nowrap; transition:background .12s ease, color .12s ease, box-shadow .12s ease; }
+    .crm-tab:hover { background:#e2eafb; color:#0047AB; }
+    /* Actif : pastille pleine (forme + couleur + ombre) — pas d'info par la couleur seule. */
+    .crm-tab.is-active { background:#0047AB; color:#fff; box-shadow:0 2px 6px rgba(0,71,171,.25); }
     .crm-tab:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
     .crm-pane { display:none; }
     .crm-pane.is-active { display:block; }
