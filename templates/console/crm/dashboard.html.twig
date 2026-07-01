@@ -31,7 +31,7 @@
     {# --- Clients à relancer --- #}
     <div class="cs-panel cs-panel--flex">
         <h2 class="cs-panel-title">{{ ux_icon(resolve_icon_name('action:calendar'), {height:'18px', width:'18px'}) }} À relancer</h2>
-        {{ _self.listeProfils(aRelancer, 'Aucune relance en attente.') }}
+        {{ _self.listeProfils(aRelancer, 'Aucune relance en attente.', true) }}
     </div>
 
     {# --- Prospects chauds --- #}
@@ -121,14 +121,22 @@
 {% endblock %}
 
 {# ----- Macros de liste (DRY) ----- #}
-{% macro listeProfils(profils, vide) %}
+{% macro listeProfils(profils, vide, relance) %}
     {% if profils|length > 0 %}
         <ul class="list-unstyled mb-0">
             {% for p in profils %}
                 {% set u = p.utilisateur %}
-                <li class="d-flex align-items-center justify-content-between py-2" style="border-bottom:1px solid #f0f0f0;">
-                    <a href="{{ path('console.crm.client.show', {id: u.id}) }}" class="text-decoration-none fw-semibold">{{ u.nom ?: u.email }}</a>
-                    <span class="crm-stage {{ p.etapePipeline == 'churn' ? 'crm-stage--churn' }}">{{ crm_stage_label(p.etapePipeline) }}</span>
+                <li class="d-flex align-items-center justify-content-between py-2 gap-2" style="border-bottom:1px solid #f0f0f0;">
+                    <a href="{{ path('console.crm.client.show', {id: u.id, _fragment: relance ? 'tab-notes'}) }}" class="text-decoration-none fw-semibold">{{ u.nom ?: u.email }}</a>
+                    <span class="d-flex align-items-center gap-2">
+                        {% if relance and p.prochaineActionAt %}
+                            {% set echue = p.prochaineActionAt|date('U') <= "now"|date('U') %}
+                            <span class="cs-badge {{ echue ? 'cs-badge--danger' : 'cs-badge--muted' }}" title="Prochaine action prévue">
+                                {{ p.prochaineActionAt|format_datetime('short','none', locale: app.user.locale) }}
+                            </span>
+                        {% endif %}
+                        <span class="crm-stage {{ p.etapePipeline == 'churn' ? 'crm-stage--churn' }}">{{ crm_stage_label(p.etapePipeline) }}</span>
+                    </span>
                 </li>
             {% endfor %}
         </ul>
