@@ -3,8 +3,10 @@
 namespace App\Form;
 
 use App\Entity\Invite;
+use App\Entity\Utilisateur;
 use App\Services\ServiceMonnaies;
 use App\Services\FormListenerFactory;
+use App\Service\Workspace\WorkspaceAccessResolver;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Form\FormEvent;
@@ -14,6 +16,7 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 class InviteType extends AbstractType
@@ -22,7 +25,8 @@ class InviteType extends AbstractType
         private readonly FormListenerFactory $ecouteurFormulaire,
         private readonly TranslatorInterface $translatorInterface,
         private readonly ServiceMonnaies $serviceMonnaies,
-        private readonly Security $security
+        private readonly Security $security,
+        private readonly WorkspaceAccessResolver $accessResolver
     ) {}
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
@@ -106,6 +110,20 @@ class InviteType extends AbstractType
                 'mapped' => false,
             ])
         ;
+
+        // Désignation d'un gestionnaire délégué : réservée au PROPRIÉTAIRE de l'entreprise.
+        // Le champ n'est ajouté au formulaire que pour lui — un délégué ne peut donc pas
+        // nommer d'autres gestionnaires (pas d'escalade de privilège). Comme le champ est
+        // alors absent du formulaire, une valeur soumise par un non-propriétaire est
+        // simplement ignorée par Symfony.
+        $user = $this->security->getUser();
+        if ($user instanceof Utilisateur && $this->accessResolver->isOwnerOfConnected($user)) {
+            $builder->add('gestionnaireInvites', CheckboxType::class, [
+                'label' => "Gestionnaire des invités et des rôles",
+                'help' => "Autorise cet invité à créer, modifier et supprimer les invités et à leur attribuer des rôles. N'accorde aucun accès supplémentaire aux données métier.",
+                'required' => false,
+            ]);
+        }
 
         // Le champ email est `mapped => false` : Symfony ne le pré-remplit donc pas
         // depuis l'entité. En édition, on le réinjecte avec la valeur courante pour

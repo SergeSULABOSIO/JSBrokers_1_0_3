@@ -1,0 +1,38 @@
+{#
+  Panneau « Accès restreint » affiché DANS la colonne de travail (col-3) quand l'invité
+  connecté tente d'ouvrir une rubrique hors de son périmètre. Partiel (pas de page
+  complète, contrairement à console/access_denied.html.twig rendu hors contrôleur).
+  Charte JS Brokers (cobalt #0047AB) + ergonomie : role="alert", icône + texte (l'info
+  n'est pas portée par la seule couleur), contrastes AA.
+#}
+<div class="jsb-access-denied" role="alert" aria-labelledby="wad-title">
+    <style>
+        .jsb-access-denied {
+            display: flex; align-items: center; justify-content: center;
+            min-height: 100%; padding: 2.5rem 1.5rem; text-align: center;
+        }
+        .jsb-access-denied .wad-card {
+            max-width: 480px; background: #ffffff; border: 1px solid #dee2e6;
+            border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.06);
+            padding: 2rem 1.75rem;
+        }
+        .jsb-access-denied .wad-ic {
+            width: 64px; height: 64px; margin: 0 auto 1rem; border-radius: 50%;
+            background: #e8f0fb; color: #0047AB;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .jsb-access-denied h2 { font-size: 1.3rem; color: #212529; margin: 0 0 .5rem; }
+        .jsb-access-denied p { color: #6c757d; margin: 0; line-height: 1.55; }
+    </style>
+    <div class="wad-card">
+        <div class="wad-ic" aria-hidden="true">
+            <twig:UX:Icon name="{{ resolve_icon_name('lucide:lock') }}" style="width:32px;height:32px;" />
+        </div>
+        <h2 id="wad-title">Accès restreint</h2>
+        <p>
+            La rubrique « {{ entiteNom|default('demandée') }} » ne fait pas partie de votre
+            périmètre d'action. Pour y accéder, contactez le propriétaire de l'espace de
+            travail afin qu'il ajuste vos droits.
+        </p>
+    </div>
+</div>

@@ -15,7 +15,8 @@
         {# ── Colonne gauche (65%) ── #}
         <div class="col-lg-8">
 
-            {# Hero KPI + KPI cards — toujours visible, charge immédiatement #}
+            {# Bloc KPIs — visible seulement avec la lecture Finance (Notes). #}
+            {% if workspace_can_read('Note') %}
             <div data-controller="lazy-block"
                  data-lazy-block-url-value="/admin/entreprise_dashbord/block/kpis/{{ entreprise.id }}">
                 {# Skeleton hero : card avec cercle + lignes #}
@@ -39,8 +40,10 @@
                     <div style="flex:0 0 175px;height:68px;background:rgba(0,0,0,0.05);border-radius:.4rem;opacity:.6;"></div>
                 </div>
             </div>
+            {% endif %}
 
-            {# Renouvellements — fermé par défaut, chargement différé #}
+            {# Renouvellements — visible avec la lecture Production (Avenants). #}
+            {% if workspace_can_read('Avenant') %}
             <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
                 <summary class="card-header border-0 bg-white py-2 px-3">
                     <div class="d-flex align-items-center gap-2">
@@ -60,8 +63,10 @@
                      data-lazy-block-url-value="/admin/entreprise_dashbord/block/renewals/{{ entreprise.id }}">
                 </div>
             </details>
+            {% endif %}
 
-            {# Pistes en cours — fermé par défaut, chargement différé #}
+            {# Pistes — visible avec la lecture Marketing (Pistes). #}
+            {% if workspace_can_read('Piste') %}
             <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
                 <summary class="card-header border-0 bg-white py-2 px-3">
                     <div class="d-flex align-items-center gap-2">
@@ -89,8 +94,10 @@
                      data-lazy-block-url-value="/admin/entreprise_dashbord/block/pistes/{{ entreprise.id }}">
                 </div>
             </details>
+            {% endif %}
 
-            {# Derniers encaissements — fermé par défaut, chargement différé #}
+            {# Encaissements — visible avec la lecture Finance (Paiements). #}
+            {% if workspace_can_read('Paiement') %}
             <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
                 <summary class="card-header border-0 bg-white py-2 px-3">
                     <div class="d-flex align-items-center gap-2">
@@ -110,8 +117,10 @@
                      data-lazy-block-url-value="/admin/entreprise_dashbord/block/encaissements/{{ entreprise.id }}">
                 </div>
             </details>
+            {% endif %}
 
-            {# Bordereaux — fermé par défaut, chargement différé #}
+            {# Bordereaux — visible avec la lecture Finance (Bordereaux). #}
+            {% if workspace_can_read('Bordereau') %}
             <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
                 <summary class="card-header border-0 bg-white py-2 px-3">
                     <div class="d-flex align-items-center gap-2">
@@ -139,8 +148,10 @@
                      data-lazy-block-url-value="/admin/entreprise_dashbord/block/bordereaux/{{ entreprise.id }}">
                 </div>
             </details>
+            {% endif %}
 
-            {# Notes — fermé par défaut, chargement différé #}
+            {# Notes — visible avec la lecture Finance (Notes). #}
+            {% if workspace_can_read('Note') %}
             <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
                 <summary class="card-header border-0 bg-white py-2 px-3">
                     <div class="d-flex align-items-center gap-2">
@@ -168,8 +179,10 @@
                      data-lazy-block-url-value="/admin/entreprise_dashbord/block/notes/{{ entreprise.id }}">
                 </div>
             </details>
+            {% endif %}
 
-            {# Sinistres — fermé par défaut, chargement différé #}
+            {# Sinistres — visible avec la lecture Sinistre (Notifications). #}
+            {% if workspace_can_read('NotificationSinistre') %}
             <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
                 <summary class="card-header border-0 bg-white py-2 px-3">
                     <div class="d-flex align-items-center gap-2">
@@ -197,8 +210,10 @@
                      data-lazy-block-url-value="/admin/entreprise_dashbord/block/sinistres/{{ entreprise.id }}">
                 </div>
             </details>
+            {% endif %}
 
-            {# Production — ouvert par défaut, charge immédiatement #}
+            {# Production — visible avec la lecture Production (Avenants). #}
+            {% if workspace_can_read('Avenant') %}
             <details open class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
                 <summary class="card-header border-0 bg-white py-2 px-3" style="cursor:pointer;">
                     <div class="d-flex align-items-center gap-2">
@@ -246,6 +261,7 @@
                     </div>
                 </div>
             </details>
+            {% endif %}
 
         </div>
 

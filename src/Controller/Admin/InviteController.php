@@ -196,6 +196,11 @@ class InviteController extends AbstractController
     #[Route('/api/resend-invitation/{id}', name: 'api.resend_invitation', methods: ['POST'])]
     public function resendInvitation(Invite $invite): JsonResponse
     {
+        // Seul le propriétaire ou un gestionnaire délégué peut (re)lancer une invitation.
+        if (!$this->workspaceAccessResolver->canManageInvites($this->getInvite())) {
+            return $this->json(['success' => false, 'message' => "Action réservée au propriétaire de l'espace de travail."], 403);
+        }
+
         try {
             $this->dispatcher->dispatch(new InvitationEvent($invite));
             return $this->json(['success' => true]);

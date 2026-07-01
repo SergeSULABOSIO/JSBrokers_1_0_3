@@ -3,8 +3,11 @@
 namespace App\Services\Canvas\Provider\Form;
 
 use App\Entity\Invite;
+use App\Entity\Utilisateur;
+use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\SecurityBundle\Security;
 
 class InviteFormCanvasProvider implements FormCanvasProviderInterface
 {
@@ -12,7 +15,9 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
 
     public function __construct(
         private CanvasBuilder $canvasBuilder,
-        private EntityManagerInterface $em
+        private EntityManagerInterface $em,
+        private Security $security,
+        private WorkspaceAccessResolver $accessResolver
     ) {
     }
 
@@ -92,6 +97,20 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
                 ]
             ]
         ];
+
+        // Case « Gestionnaire des invités » : rendue uniquement pour le PROPRIÉTAIRE de
+        // l'entreprise (le champ n'existe dans InviteType que pour lui — cohérence UI/form).
+        $user = $this->security->getUser();
+        if ($user instanceof Utilisateur && $this->accessResolver->isOwnerOfConnected($user)) {
+            $layout[] = [
+                "couleur_fond" => "white",
+                "group_title" => "Délégation d'administration",
+                "group_icon" => "mdi:shield-account-outline",
+                "colonnes" => [
+                    ["champs" => ["gestionnaireInvites"]]
+                ]
+            ];
+        }
 
         // Collections de rôles, ajoutées en dernier → elles se placent en bas du
         // formulaire. En édition elles sont actives ; en création elles sont masquées

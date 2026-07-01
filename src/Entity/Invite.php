@@ -76,9 +76,18 @@ class Invite
     #[ORM\OneToMany(targetEntity: self::class, mappedBy: 'manager')]
     private Collection $assistants;
 
-    
+
     #[ORM\Column(nullable: true)]
     private ?bool $proprietaire = null;
+
+    // Délégation de la gestion des invités et de leurs rôles. Attribut de CONTRÔLE
+    // D'ACCÈS (pas de logique métier) : seul le propriétaire de l'entreprise peut le
+    // positionner. Un invité « gestionnaire » peut créer/éditer/supprimer les invités
+    // et leur attribuer des rôles, MAIS n'obtient AUCUN privilège sur les données
+    // métier (son périmètre data reste celui de ses propres rôles). Voir
+    // WorkspaceAccessResolver::canManageInvites().
+    #[ORM\Column(nullable: true)]
+    private ?bool $gestionnaireInvites = null;
 
     /**
      * @var Collection<int, Note>
@@ -397,6 +406,18 @@ class Invite
     public function setProprietaire(?bool $proprietaire): static
     {
         $this->proprietaire = $proprietaire;
+
+        return $this;
+    }
+
+    public function isGestionnaireInvites(): ?bool
+    {
+        return $this->gestionnaireInvites;
+    }
+
+    public function setGestionnaireInvites(?bool $gestionnaireInvites): static
+    {
+        $this->gestionnaireInvites = $gestionnaireInvites;
 
         return $this;
     }

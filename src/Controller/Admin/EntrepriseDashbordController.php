@@ -8,6 +8,7 @@ use App\Entity\Utilisateur;
 use App\Form\RechercheDashBordType;
 use App\DTO\CriteresRechercheDashBordDTO;
 use App\Repository\EntrepriseRepository;
+use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\DashboardDataProvider;
 use App\Services\JSBTableauDeBordBuilder;
 use App\Services\ServiceMonnaies;
@@ -30,7 +31,29 @@ class EntrepriseDashbordController extends AbstractController
         private TranslatorInterface $translator,
         private EntityManagerInterface $manager,
         private EntrepriseRepository $entrepriseRepository,
+        private WorkspaceAccessResolver $accessResolver,
     ) {
+    }
+
+    /**
+     * Garde de bloc du tableau de bord : renvoie une réponse vide (le bloc lazy reste
+     * simplement vide, sans erreur JS) si l'invité connecté n'a pas la lecture sur
+     * l'entité de référence du bloc. Défense en profondeur — le Twig masque déjà le bloc.
+     * Le propriétaire de l'entreprise passe toujours (bypass du resolver).
+     */
+    private function denyBlockIfCannotRead(string $entityShortName): ?Response
+    {
+        $user = $this->getUser();
+        if (!$user instanceof Utilisateur) {
+            return new Response('', Response::HTTP_FORBIDDEN);
+        }
+
+        $invite = $this->accessResolver->resolveConnectedInvite($user);
+        if ($invite === null || !$this->accessResolver->canRead($invite, $entityShortName)) {
+            return new Response(''); // 200 vide : le conteneur lazy-block reste inerte.
+        }
+
+        return null;
     }
 
 
@@ -91,6 +114,7 @@ class EntrepriseDashbordController extends AbstractController
     #[Route('/block/kpis/{idEntreprise}', name: 'block_kpis', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
     public function loadBlockKpis(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): Response
     {
+        if ($denied = $this->denyBlockIfCannotRead('Note')) { return $denied; }
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
         $debut = new DateTimeImmutable("1/1/" . date('Y') . " 00:00");
         $fin   = new DateTimeImmutable("12/31/" . date('Y') . " 23:59");
@@ -111,6 +135,7 @@ class EntrepriseDashbordController extends AbstractController
     #[Route('/block/renewals/{idEntreprise}', name: 'block_renewals', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
     public function loadBlockRenewals(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): Response
     {
+        if ($denied = $this->denyBlockIfCannotRead('Avenant')) { return $denied; }
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
 
         return $this->render('components/dashboard/_renewals.html.twig', [
@@ -135,6 +160,7 @@ class EntrepriseDashbordController extends AbstractController
     #[Route('/block/encaissements/{idEntreprise}', name: 'block_encaissements', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
     public function loadBlockEncaissements(int $idEntreprise, DashboardDataProvider $provider): Response
     {
+        if ($denied = $this->denyBlockIfCannotRead('Paiement')) { return $denied; }
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
 
         return $this->render('components/dashboard/_encaissements.html.twig', [
@@ -156,6 +182,7 @@ class EntrepriseDashbordController extends AbstractController
     #[Route('/block/sinistres/{idEntreprise}', name: 'block_sinistres', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
     public function loadBlockSinistres(int $idEntreprise, DashboardDataProvider $provider): Response
     {
+        if ($denied = $this->denyBlockIfCannotRead('NotificationSinistre')) { return $denied; }
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
 
         return $this->render('components/dashboard/_sinistres.html.twig', [
@@ -257,6 +284,7 @@ class EntrepriseDashbordController extends AbstractController
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
+        if ($denied = $this->denyBlockIfCannotRead('Piste')) { return $denied; }
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
         return $this->render('components/dashboard/_block_pistes.html.twig', [
             'utilisateur' => $user,
@@ -283,6 +311,7 @@ class EntrepriseDashbordController extends AbstractController
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
+        if ($denied = $this->denyBlockIfCannotRead('Bordereau')) { return $denied; }
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
         return $this->render('components/dashboard/_block_bordereaux.html.twig', [
             'utilisateur' => $user,
@@ -296,6 +325,7 @@ class EntrepriseDashbordController extends AbstractController
     {
         /** @var Utilisateur $user */
         $user = $this->getUser();
+        if ($denied = $this->denyBlockIfCannotRead('Note')) { return $denied; }
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
         return $this->render('components/dashboard/_block_notes.html.twig', [
             'utilisateur' => $user,
@@ -335,6 +365,7 @@ class EntrepriseDashbordController extends AbstractController
     #[Route('/block/production/{idEntreprise}', name: 'block_production', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
     public function loadBlockProduction(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): Response
     {
+        if ($denied = $this->denyBlockIfCannotRead('Avenant')) { return $denied; }
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
         $monthly = $provider->getProductionMensuelle($entreprise);
 
