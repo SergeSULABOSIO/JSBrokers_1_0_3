@@ -84,11 +84,16 @@ class CrmProfilRepository extends ServiceEntityRepository
 
         return $this->createQueryBuilder('p')
             ->join('p.utilisateur', 'u')->addSelect('u')
+            // Urgence réelle : la date qui a déclenché l'inclusion (action échue ou
+            // dernier contact), la plus ancienne d'abord. Le COALESCE évite que les
+            // profils sans date d'action (NULL) remontent en tête sous MySQL. Il est
+            // sélectionné en HIDDEN car DQL n'autorise pas COALESCE dans ORDER BY.
+            ->addSelect('COALESCE(p.prochaineActionAt, p.dernierContactAt) AS HIDDEN urgence')
             ->where('p.prochaineActionAt IS NOT NULL AND p.prochaineActionAt <= :now')
             ->orWhere('p.dernierContactAt IS NOT NULL AND p.dernierContactAt <= :seuil')
             ->setParameter('now', $now)
             ->setParameter('seuil', $now->modify('-14 days'))
-            ->orderBy('p.prochaineActionAt', 'ASC')
+            ->orderBy('urgence', 'ASC')
             ->setMaxResults($limit)
             ->getQuery()
             ->getResult();

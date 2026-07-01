@@ -129,11 +129,17 @@
                 <li class="d-flex align-items-center justify-content-between py-2 gap-2" style="border-bottom:1px solid #f0f0f0;">
                     <a href="{{ path('console.crm.client.show', {id: u.id, _fragment: relance ? 'tab-notes'}) }}" class="text-decoration-none fw-semibold">{{ u.nom ?: u.email }}</a>
                     <span class="d-flex align-items-center gap-2">
-                        {% if relance and p.prochaineActionAt %}
-                            {% set echue = p.prochaineActionAt|date('U') <= "now"|date('U') %}
-                            <span class="cs-badge {{ echue ? 'cs-badge--danger' : 'cs-badge--muted' }}" title="Prochaine action prévue">
-                                {{ p.prochaineActionAt|format_datetime('short','none', locale: app.user.locale) }}
-                            </span>
+                        {% if relance %}
+                            {% if p.prochaineActionAt %}
+                                {% set echue = p.prochaineActionAt|date('U') <= "now"|date('U') %}
+                                <span class="cs-badge {{ echue ? 'cs-badge--danger' : 'cs-badge--muted' }}" title="Prochaine action prévue">
+                                    {{ p.prochaineActionAt|format_datetime('short','none', locale: app.user.locale) }}
+                                </span>
+                            {% elseif p.dernierContactAt %}
+                                <span class="cs-badge cs-badge--muted" title="Dernier contact — relance conseillée après 14 j">
+                                    Contact {{ p.dernierContactAt|format_datetime('short','none', locale: app.user.locale) }}
+                                </span>
+                            {% endif %}
                         {% endif %}
                         <span class="crm-stage {{ p.etapePipeline == 'churn' ? 'crm-stage--churn' }}">{{ crm_stage_label(p.etapePipeline) }}</span>
                     </span>
