@@ -181,6 +181,26 @@ trait ControllerUtilsTrait
         }
     }
 
+    /**
+     * Le code de champ $fieldCode est-il déjà présent dans le layout de formulaire ?
+     * Les champs sont soit une chaîne, soit un tableau avec la clé 'field_code'.
+     */
+    private function layoutHasField(array $formLayout, string $fieldCode): bool
+    {
+        foreach ($formLayout as $row) {
+            foreach (($row['colonnes'] ?? []) as $col) {
+                foreach (($col['champs'] ?? []) as $field) {
+                    $code = is_array($field) ? ($field['field_code'] ?? null) : $field;
+                    if ($code === $fieldCode) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
     /** L'invité cible d'une entité de rôle RolesEn*, sinon null (pour l'e-mail de périmètre). */
     private function roleTargetInvite(object $entity): ?Invite
     {
@@ -673,7 +693,12 @@ trait ControllerUtilsTrait
             }
 
             // 2. On ajoute le champ au layout du formulaire pour qu'il soit rendu, mais masqué.
-            if (isset($formCanvas['form_layout']) && is_array($formCanvas['form_layout'])) {
+            //    SAUF s'il figure déjà dans le layout du provider (ex. les formulaires
+            //    RolesEn* déclarent explicitement le champ « invite ») : sinon il serait
+            //    rendu deux fois → « Field has already been rendered ». L'entité est de
+            //    toute façon déjà pré-remplie (étape 1), le champ existant suffit.
+            if (isset($formCanvas['form_layout']) && is_array($formCanvas['form_layout'])
+                && !$this->layoutHasField($formCanvas['form_layout'], $parentFieldName)) {
                 $parentFieldConfig = [
                     'field_code' => $parentFieldName,
                     'options' => ['row_attr' => ['class' => 'd-none']] // Masque la ligne du formulaire.

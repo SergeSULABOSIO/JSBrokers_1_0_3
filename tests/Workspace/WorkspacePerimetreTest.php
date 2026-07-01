@@ -201,6 +201,48 @@ class WorkspacePerimetreTest extends WebTestCase
         );
     }
 
+    public function testOwnerCanOpenRoleCreationForm(): void
+    {
+        ['owner' => $owner, 'guest' => $guest, 'entreprise' => $e] = $this->seed();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        // Ouverture du formulaire de création d'un rôle Finance pour l'invité cible.
+        // Le champ « invite » figure dans le layout du provider ET était (à tort) injecté
+        // une seconde fois → « Field invite has already been rendered ». Non-régression.
+        $this->client->request('GET', sprintf(
+            '/admin/rolesenfinance/api/get-form?parent_id=%d&parent_field_name=invite&idEntreprise=%d&idInvite=%d',
+            $guest->getId(),
+            $e->getId(),
+            $owner->getId()
+        ));
+
+        $this->assertResponseIsSuccessful('Le propriétaire doit pouvoir ouvrir le formulaire de rôle (pas de 500).');
+        $html = (string) $this->client->getResponse()->getContent();
+        $this->assertStringNotContainsString(self::DENIED_MARKER, $html);
+        $this->assertStringContainsString('accessMonnaie', $html, 'Le formulaire de rôle Finance doit être rendu.');
+    }
+
+    public function testGuestCannotOpenRoleCreationForm(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed();
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+
+        // Un invité ordinaire (non gestionnaire) ne peut pas ouvrir un formulaire de rôle.
+        $this->client->request('GET', sprintf(
+            '/admin/rolesenfinance/api/get-form?parent_id=%d&parent_field_name=invite&idEntreprise=%d&idInvite=%d',
+            $guest->getId(),
+            $e->getId(),
+            $guest->getId()
+        ));
+
+        $this->assertResponseIsSuccessful();
+        $this->assertStringContainsString(
+            self::DENIED_MARKER,
+            (string) $this->client->getResponse()->getContent(),
+            "L'attribution de rôle est réservée au propriétaire / délégué."
+        );
+    }
+
     public function testOwnerReachesEverything(): void
     {
         ['owner' => $owner, 'entreprise' => $e] = $this->seed();
