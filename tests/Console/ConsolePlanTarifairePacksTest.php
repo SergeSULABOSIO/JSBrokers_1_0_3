@@ -170,6 +170,89 @@ class ConsolePlanTarifairePacksTest extends WebTestCase
     }
 
     /**
+     * Modernisation : le catalogue d'entités facturables couvre désormais 100 % des
+     * entités du workspace. Le sélecteur de l'éditeur de poids d'écriture (attribut
+     * data-weights-editor-labels-value) doit donc exposer les entités autrefois
+     * absentes — dont « Chargement sur prime », citée en exemple par le besoin.
+     */
+    public function testWeightEditorCatalogCoversAllWorkspaceEntities(): void
+    {
+        $this->client->loginUser($this->user(self::SUPER));
+
+        $crawler = $this->client->request('GET', '/console/plan-tarifaire');
+        $this->assertResponseIsSuccessful();
+
+        $labels = $crawler->filter('[data-controller="weights-editor"]')
+            ->attr('data-weights-editor-labels-value');
+        $this->assertNotNull($labels);
+
+        $catalogue = json_decode($labels, true);
+        $this->assertIsArray($catalogue);
+
+        // Entités désormais facturables (auparavant hors catalogue) : elles doivent
+        // toutes être proposées au paramétrage du poids d'écriture.
+        $attendues = [
+            \App\Entity\ChargementPourPrime::class, // « chargement sur prime » (exemple du besoin)
+            \App\Entity\Chargement::class,
+            \App\Entity\Tranche::class,
+            \App\Entity\Monnaie::class,
+            \App\Entity\Taxe::class,
+            \App\Entity\AutoriteFiscale::class,
+            \App\Entity\RevenuPourCourtier::class,
+            \App\Entity\TypeRevenu::class,
+            \App\Entity\Operation::class,
+            \App\Entity\Article::class,
+            \App\Entity\Groupe::class,
+            \App\Entity\ConditionPartage::class,
+            \App\Entity\ModelePieceSinistre::class,
+            \App\Entity\PieceSinistre::class,
+            \App\Entity\NotificationSinistre::class,
+            \App\Entity\OffreIndemnisationSinistre::class,
+            \App\Entity\Classeur::class,
+            \App\Entity\Invite::class,
+            \App\Entity\RolesEnFinance::class,
+            \App\Entity\RolesEnProduction::class,
+            \App\Entity\RolesEnSinistre::class,
+            \App\Entity\RolesEnMarketing::class,
+            \App\Entity\RolesEnAdministration::class,
+        ];
+        foreach ($attendues as $fqcn) {
+            $this->assertArrayHasKey($fqcn, $catalogue, sprintf('%s doit être proposée au paramétrage du poids d\'écriture.', $fqcn));
+            $this->assertNotSame('', (string) $catalogue[$fqcn], sprintf('%s doit avoir un libellé.', $fqcn));
+        }
+    }
+
+    /**
+     * Bout en bout : un poids d'écriture défini sur une entité auparavant NON
+     * paramétrable (« Chargement sur prime ») est persisté et effectivement appliqué
+     * par le service de facturation (weightFor) — la logique de métrage étant générique.
+     */
+    public function testSuperAdminBillsWriteWeightOnPreviouslyUnavailableEntity(): void
+    {
+        $this->client->loginUser($this->user(self::SUPER));
+
+        $crawler = $this->client->request('GET', '/console/plan-tarifaire');
+        $this->assertResponseIsSuccessful();
+
+        $form = $crawler->filter('form')->form();
+        $form['plan_tarifaire[freeAllowance]'] = '1000';
+        $form['plan_tarifaire[freeWindowHours]'] = '8';
+        $form['plan_tarifaire[readWeight]'] = '2';
+        $form['plan_tarifaire[defaultWriteWeight]'] = '5';
+        $form['plan_tarifaire[usdPerToken]'] = '0.001';
+        $form['plan_tarifaire[writeWeightsJson]'] = json_encode([
+            \App\Entity\ChargementPourPrime::class => 40,
+        ]);
+        $this->client->submit($form);
+
+        $this->assertResponseRedirects('/console/plan-tarifaire');
+
+        $params = static::getContainer()->get(ParametresTokenService::class);
+        $params->refresh();
+        $this->assertSame(40, $params->weightFor(\App\Entity\ChargementPourPrime::class));
+    }
+
+    /**
      * Rétro-compatibilité : sur la page d'achat, un paquet avec libellé affiche ce
      * libellé ; un paquet sans libellé (format historique) retombe sur ucfirst(clé).
      */
