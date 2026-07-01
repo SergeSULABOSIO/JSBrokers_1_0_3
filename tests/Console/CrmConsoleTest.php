@@ -65,7 +65,8 @@ class CrmConsoleTest extends WebTestCase
         $em->persist($ent);
 
         $achat = (new TokenPurchase())->setUtilisateur($cli)->setPack('intermediaire')
-            ->setTokens(10000)->setMontantUsd(9.0)->setReference('REF-CRM-1');
+            ->setTokens(10000)->setMontantUsd(9.0)->setReference('REF-CRM-1')
+            ->setStatus(TokenPurchase::STATUS_PAID);
         $em->persist($achat);
 
         $conso = (new TokenConsumption())
@@ -250,7 +251,8 @@ class CrmConsoleTest extends WebTestCase
         // client et doit apparaître dans le CRM (cas du compte admin-acheteur).
         $super = $this->user(self::SUPER);
         $achat = (new TokenPurchase())->setUtilisateur($super)->setPack('intermediaire')
-            ->setTokens(10000)->setMontantUsd(9.0)->setReference('REF-CRM-SUPER');
+            ->setTokens(10000)->setMontantUsd(9.0)->setReference('REF-CRM-SUPER')
+            ->setStatus(TokenPurchase::STATUS_PAID);
         $this->em()->persist($achat);
         $this->em()->flush();
 
@@ -506,8 +508,9 @@ class CrmConsoleTest extends WebTestCase
         // fiche (porte _retour=fiche + jeton CSRF) → retour sur la fiche, onglet Support.
         $crawler = $this->client->request('GET', '/console/crm/clients/' . $client->getId());
         $this->assertResponseIsSuccessful();
-        $form = $crawler->filter('form[action$="/tickets/' . $id . '/statut"]')->form();
-        $form['statut'] = \App\Entity\Crm\CrmTicket::STATUT_RESOLU;
+        // Le changement de statut se fait désormais via un bouton par statut cible (le
+        // <select> a été remplacé pour alimenter le menu contextuel). Route/CSRF/_retour inchangés.
+        $form = $crawler->filter('form[action$="/tickets/' . $id . '/statut"] button[value="' . \App\Entity\Crm\CrmTicket::STATUT_RESOLU . '"]')->form();
         $this->client->submit($form);
         $this->assertResponseRedirects(
             '/console/crm/clients/' . $client->getId() . '#tab-support',
@@ -532,11 +535,10 @@ class CrmConsoleTest extends WebTestCase
 
         $this->client->loginUser($this->user(self::ADMIN));
 
-        // Select de la liste globale (sans _retour) : redirection historique conservée.
+        // Bouton de statut de la liste globale (sans _retour) : redirection historique conservée.
         $crawler = $this->client->request('GET', '/console/crm/tickets');
         $this->assertResponseIsSuccessful();
-        $form = $crawler->filter('form[action$="/tickets/' . $id . '/statut"]')->form();
-        $form['statut'] = \App\Entity\Crm\CrmTicket::STATUT_EN_COURS;
+        $form = $crawler->filter('form[action$="/tickets/' . $id . '/statut"] button[value="' . \App\Entity\Crm\CrmTicket::STATUT_EN_COURS . '"]')->form();
         $this->client->submit($form);
         $this->assertResponseRedirects('/console/crm/tickets');
     }

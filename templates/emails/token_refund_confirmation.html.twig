@@ -1,0 +1,25 @@
+{% extends 'emails/_layout.html.twig' %}
+{% import 'emails/_macros.html.twig' as m %}
+
+{# `locale` est fourni par MailingSubscriber → l'e-mail est rendu dans la langue
+   de l'utilisateur, indépendamment du moment d'envoi (rendu différé/async). #}
+{% set lang = locale|default('fr') %}
+
+{% block subject %}JS Brokers — {{ 'email_token_refund_subject'|trans({}, 'messages', lang) }}{% endblock %}
+
+{% block content %}
+    {{ m.heading('action:description', 'email_token_refund_heading'|trans({}, 'messages', lang)) }}
+    {{ m.paragraph('email_token_refund_greeting'|trans({'%name%': purchase.utilisateur.nom}, 'messages', lang)) }}
+
+    {{ m.heading('action:description', 'email_token_details_heading'|trans({}, 'messages', lang)) }}
+    {{ m.paragraph('<strong>' ~ 'email_token_label_pack'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.pack|capitalize) }}
+    {{ m.paragraph('<strong>' ~ 'email_token_label_amount'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.montantUsd|number_format(2, '.', ' ') ~ ' $') }}
+    {{ m.paragraph('<strong>' ~ 'email_token_label_reference'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.reference) }}
+    {% if purchase.invoiceNumber %}
+        {{ m.paragraph('<strong>' ~ 'email_token_label_invoice'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.invoiceNumber) }}
+    {% endif %}
+
+    {{ m.button(accountUrl, 'email_token_button'|trans({}, 'messages', lang)) }}
+
+    {{ m.note('email_token_refund_note'|trans({}, 'messages', lang)) }}
+{% endblock %}

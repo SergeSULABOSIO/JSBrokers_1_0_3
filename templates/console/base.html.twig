@@ -135,6 +135,14 @@
     .cs-table th, .cs-table td { padding:.6rem .7rem; text-align:left; border-bottom:1px solid #f0f0f0; font-size:.9rem; }
     .cs-table th { color:#6c757d; font-weight:600; font-size:.78rem; text-transform:uppercase; letter-spacing:.03em; }
     .cs-table tbody tr:hover { background:#f8f9fa; }
+    /* Lignes pilotées par le menu contextuel (clic droit) : affordance + focus clavier. */
+    .cs-cm-row { cursor: context-menu; }
+    .cs-cm-row:focus-visible { outline: 2px solid #0047AB; outline-offset: -2px; }
+    /* Item désactivé du menu contextuel (aucune action pour la ligne). */
+    .context-menu .cs-cm-empty {
+        display: flex; align-items: center; padding: 9px 14px; margin: 1px 4px;
+        color: rgba(248, 249, 250, 0.6); font-size: .85rem; font-style: italic; cursor: default;
+    }
     .cs-badge { display:inline-block; padding:.15rem .55rem; border-radius:999px; font-size:.75rem; font-weight:700; }
     .cs-badge--ok { background:#e6f4ea; color:#137333; }
     .cs-badge--muted { background:#eef0f2; color:#6c757d; }
@@ -216,8 +224,14 @@
 {% endblock %}
 
 {% block body %}
-<main class="cs-page" data-controller="top-progress">
+<main class="cs-page" data-controller="top-progress console-context-menu">
     <div class="cs-progress-bar" data-top-progress-target="bar" role="progressbar" aria-hidden="true"></div>
+
+    {# Menu contextuel unique et partagé par toutes les listes de la Console (clic droit).
+       Rempli dynamiquement par console-context-menu_controller.js à partir des actions
+       masquées de chaque ligne : aucune colonne « Actions » n'est plus nécessaire. #}
+    <nav class="context-menu" role="menu" aria-label="Actions de la ligne sélectionnée"
+         data-console-context-menu-target="menu" style="display:none;"></nav>
 
     <header class="cs-topbar">
         <a href="{{ path('console.dashboard') }}" class="cs-brand" data-action="click->top-progress#show">

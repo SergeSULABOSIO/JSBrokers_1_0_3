@@ -27,12 +27,12 @@
 
     {% if clients.getTotalItemCount > 0 %}
         <table class="cs-table">
-            <thead><tr><th>Compte</th><th>Type</th><th>Étape</th><th>Santé</th><th>Solde tokens</th><th>Inscrit</th><th style="text-align:right;">Actions</th></tr></thead>
+            <thead><tr><th>Compte</th><th>Type</th><th>Étape</th><th>Santé</th><th>Solde tokens</th><th>Inscrit</th></tr></thead>
             <tbody>
             {% for u in clients %}
                 {% set p = profils[u.id]|default(null) %}
                 {% set estClient = (metrics[u.id].count|default(0)) > 0 %}
-                <tr>
+                <tr data-cm-row>
                     <td>
                         <a href="{{ path('console.crm.client.show', {id: u.id}) }}" class="fw-semibold text-decoration-none">{{ u.nom ?: u.email }}</a>
                         {% set nbInvite = invitedIn[u.id]|default(0) %}
@@ -63,7 +63,7 @@
                     </td>
                     <td>{{ (u.paidTokens + u.freeTokens)|number_format(0, '.', ' ') }}</td>
                     <td>{{ u.createdAt ? u.createdAt|format_datetime('short','none', locale: app.user.locale) : '—' }}</td>
-                    <td style="text-align:right;">
+                    <td hidden data-cm-actions>
                         <a href="{{ path('console.crm.client.show', {id: u.id}) }}" class="cs-icon-btn" data-action="click->top-progress#show" title="Ouvrir la fiche" aria-label="Ouvrir la fiche de {{ u.nom ?: u.email }}">
                             {{ ux_icon(resolve_icon_name('action:view'), {height:'18px', width:'18px'}) }}
                         </a>

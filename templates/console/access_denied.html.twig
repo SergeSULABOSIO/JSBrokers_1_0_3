@@ -1,0 +1,124 @@
+{#
+  Boîte de dialogue « Accès restreint » (réponse 403 stylisée) affichée quand un
+  collaborateur tente d'atteindre une rubrique hors du périmètre de son département.
+  Autonome (rendue hors contexte contrôleur par ConsoleAccessSubscriber).
+  Charte JS Brokers (cobalt #0047AB, tokens d'avertissement) + ergonomie (sémantique,
+  role="alert", aria-labelledby, contrastes AA, cible ≥ 44px, info non portée par la
+  seule couleur : icône + texte).
+#}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Accès restreint — JS Brokers</title>
+    <style>
+        :root {
+            --cobalt: #0047AB; --cobalt-dark: #003380; --cobalt-subtle: #e8f0fb;
+            --bg-body: #f3f3f3; --bg-white: #ffffff;
+            --text-dark: #212529; --text-body: #495057; --text-muted: #6c757d;
+            --border-light: #dee2e6;
+            --warning-bg: #fff3cd; --warning-dark: #664d03; --warning: #ffc107;
+            --focus-ring: rgba(0, 71, 171, 0.35);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; min-height: 100vh; background: var(--bg-body);
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+            color: var(--text-body); line-height: 1.55;
+            display: flex; align-items: center; justify-content: center; padding: 1.5rem;
+        }
+        .ad-card {
+            background: var(--bg-white); width: 100%; max-width: 560px;
+            border: 1px solid var(--border-light); border-radius: 16px;
+            box-shadow: 0 18px 48px rgba(0, 0, 0, 0.10);
+            padding: 2rem 2rem 1.75rem; text-align: center;
+        }
+        .ad-brand { display: inline-flex; align-items: center; gap: .5rem; margin-bottom: 1.25rem; }
+        .ad-brand img { width: 34px; height: 34px; border-radius: 8px; }
+        .ad-brand span { font-weight: 700; color: var(--cobalt); font-size: 1.05rem; }
+        .ad-ic {
+            width: 64px; height: 64px; margin: 0 auto 1rem; border-radius: 50%;
+            background: var(--cobalt-subtle); color: var(--cobalt);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .ad-ic svg { width: 32px; height: 32px; }
+        h1 { font-size: 1.4rem; color: var(--text-dark); margin: 0 0 .5rem; }
+        .ad-lead { margin: 0 0 1.25rem; color: var(--text-body); }
+        .ad-notice {
+            display: flex; gap: .65rem; text-align: left;
+            background: var(--warning-bg); color: var(--warning-dark);
+            border: 1px solid var(--warning); border-radius: 10px;
+            padding: .85rem 1rem; margin-bottom: 1.25rem;
+        }
+        .ad-notice svg { flex: 0 0 auto; width: 20px; height: 20px; margin-top: 2px; }
+        .ad-notice p { margin: 0; font-size: .92rem; }
+        .ad-perimeter { text-align: left; margin-bottom: 1.5rem; }
+        .ad-perimeter h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em;
+            color: var(--text-muted); margin: 0 0 .5rem; }
+        .ad-perimeter .dep { font-weight: 600; color: var(--text-dark); }
+        .ad-chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .6rem; padding: 0; list-style: none; }
+        .ad-chips li {
+            background: var(--cobalt-subtle); color: var(--cobalt);
+            border-radius: 999px; padding: .2rem .7rem; font-size: .82rem; font-weight: 600;
+        }
+        .ad-actions { display: flex; flex-direction: column; gap: .6rem; align-items: stretch; }
+        .ad-btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+            min-height: 46px; padding: 0 1.25rem; border-radius: 10px;
+            font-weight: 600; font-size: 1rem; text-decoration: none; cursor: pointer;
+            border: 1px solid transparent; transition: background-color .15s ease;
+        }
+        .ad-btn--primary { background: var(--cobalt); color: var(--bg-white); }
+        .ad-btn--primary:hover { background: var(--cobalt-dark); }
+        .ad-btn:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+        .ad-foot { margin: 1.25rem 0 0; font-size: .85rem; color: var(--text-muted); }
+    </style>
+</head>
+<body>
+    <main class="ad-card" role="alert" aria-labelledby="ad-title">
+        <span class="ad-brand">
+            <img src="{{ asset('images/entreprises/logofav.png') }}" alt="">
+            <span>JS Brokers</span>
+        </span>
+
+        {# Icône cadenas — décorative (l'information est aussi portée par le texte). #}
+        <div class="ad-ic" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+        </div>
+
+        <h1 id="ad-title">Accès restreint</h1>
+        <p class="ad-lead">Cette rubrique ne fait pas partie du périmètre de votre département. Vous n'y avez donc pas accès.</p>
+
+        <div class="ad-notice">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <p>L'accès à la console est organisé par département afin que chacun travaille sur son périmètre. Cette section relève d'un autre département.</p>
+        </div>
+
+        {% if departement %}
+            <section class="ad-perimeter" aria-label="Votre périmètre d'accès">
+                <h2>Votre périmètre</h2>
+                <div>Département : <span class="dep">{{ departement.label }}</span></div>
+                <ul class="ad-chips">
+                    {% for rubrique in departement.rubriques %}<li>{{ rubrique }}</li>{% endfor %}
+                </ul>
+            </section>
+        {% endif %}
+
+        <div class="ad-actions">
+            <a href="{{ dashboardUrl }}" class="ad-btn ad-btn--primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:18px;height:18px;">
+                    <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+                </svg>
+                Retour au tableau de bord
+            </a>
+        </div>
+
+        <p class="ad-foot">Si vous pensez qu'il s'agit d'une erreur, contactez un super-administrateur pour faire ajuster votre département.</p>
+    </main>
+</body>
+</html>

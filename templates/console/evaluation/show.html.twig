@@ -63,12 +63,11 @@
     <h2 class="cs-panel-title">Objectifs de la période</h2>
     {% if fiche.lignes|length > 0 %}
         <table class="cs-table">
-            <thead><tr><th>Objectif</th><th>Atteinte</th><th style="width:35%;">Progression</th><th>Poids</th>
-                {% if canManage %}<th style="text-align:right;">Actions</th>{% endif %}</tr></thead>
+            <thead><tr><th>Objectif</th><th>Atteinte</th><th style="width:35%;">Progression</th><th>Poids</th></tr></thead>
             <tbody>
             {% for l in fiche.lignes %}
                 {% set o = l.objectif %}
-                <tr>
+                <tr{% if canManage %} data-cm-row{% endif %}>
                     <td>
                         <div class="cs-objline-head"><strong>{{ o.titre }}</strong></div>
                         <div class="cs-objline-meta">
@@ -88,7 +87,7 @@
                     </td>
                     <td>{{ o.poids }} %</td>
                     {% if canManage %}
-                        <td style="text-align:right;">
+                        <td hidden data-cm-actions>
                             <a href="{{ path('console.evaluation.objectif_edit', {id: o.id, annee: annee, trimestre: trimestre}) }}"
                                class="cs-icon-btn" data-action="click->top-progress#show" title="Éditer" aria-label="Éditer {{ o.titre }}">
                                 {{ ux_icon(resolve_icon_name('action:edit'), {height:'18px', width:'18px'}) }}

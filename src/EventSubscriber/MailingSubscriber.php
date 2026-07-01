@@ -5,10 +5,13 @@ namespace App\EventSubscriber;
 use App\DTO\DemandeContactDTO;
 use App\Entity\Invite;
 use App\Services\Mail\CorporateMailer;
+use App\Services\TokenInvoicePdfService;
 use Symfony\Component\Mime\Address;
 use App\Event\DemandeContactEvent;
 use App\Event\InvitationEvent;
 use App\Event\TokenPurchaseEvent;
+use App\Event\TokenRefundEvent;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -25,6 +28,8 @@ class MailingSubscriber implements EventSubscriberInterface
         private CorporateMailer $corporateMailer,
         private UrlGeneratorInterface $urlGenerator,
         private TranslatorInterface $translator,
+        private TokenInvoicePdfService $invoicePdf,
+        private ?LoggerInterface $logger = null,
     ) {}
 
     public function onDemandeContactEvent(DemandeContactEvent $event): void
@@ -124,7 +129,65 @@ class MailingSubscriber implements EventSubscriberInterface
                 'accountUrl' => $accountUrl,
                 'locale'     => $locale,
             ],
+            null,
+            $this->factureJointe($purchase),
         );
+    }
+
+    public function onTokenRefund(TokenRefundEvent $event): void
+    {
+        $purchase = $event->purchase;
+        $user = $purchase->getUtilisateur();
+
+        $destinataire = $user?->getEmail();
+        if (!$destinataire) {
+            return;
+        }
+
+        $accountUrl = $this->urlGenerator->generate(
+            'admin.token.index',
+            [],
+            UrlGeneratorInterface::ABSOLUTE_URL
+        );
+        $locale = $user->getLocale() ?: 'fr';
+
+        $this->envoyerMail(
+            $destinataire,
+            $this->buildSubject(
+                $this->translator->trans('email_token_refund_subject', [], 'messages', $locale),
+                $user->getNom() ?: $destinataire
+            ),
+            'emails/token_refund_confirmation.html.twig',
+            [
+                'purchase'   => $purchase,
+                'accountUrl' => $accountUrl,
+                'locale'     => $locale,
+            ],
+            null,
+            $this->factureJointe($purchase),
+        );
+    }
+
+    /**
+     * Génère la facture / avoir PDF en pièce jointe. Tolérant aux pannes : si la
+     * génération échoue, l'e-mail part SANS la pièce jointe (ne jamais perdre la
+     * confirmation pour un souci de rendu PDF).
+     *
+     * @return array<int, array{content:string, filename:string, mime:string}>
+     */
+    private function factureJointe($purchase): array
+    {
+        try {
+            return [[
+                'content'  => $this->invoicePdf->generate($purchase),
+                'filename' => $this->invoicePdf->fileName($purchase),
+                'mime'     => 'application/pdf',
+            ]];
+        } catch (\Throwable $e) {
+            $this->logger?->error('Échec génération facture PDF e-mail : ' . $e->getMessage(), ['purchase' => $purchase->getId()]);
+
+            return [];
+        }
     }
 
     /**
@@ -146,8 +209,9 @@ class MailingSubscriber implements EventSubscriberInterface
         string $twigTemplate,
         array $contextData = [],
         ?Address $replyTo = null,
+        array $attachments = [],
     ): void {
-        $this->corporateMailer->send($to, $subject, $twigTemplate, $contextData, $replyTo);
+        $this->corporateMailer->send($to, $subject, $twigTemplate, $contextData, $replyTo, $attachments);
     }
 
     public static function getSubscribedEvents(): array
@@ -156,6 +220,7 @@ class MailingSubscriber implements EventSubscriberInterface
             DemandeContactEvent::class => 'onDemandeContactEvent',
             InvitationEvent::class => 'onInvitationAjoutee',
             TokenPurchaseEvent::class => 'onTokenPurchase',
+            TokenRefundEvent::class => 'onTokenRefund',
         ];
     }
 }

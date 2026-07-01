@@ -7,12 +7,11 @@
     {% if entreprises.getTotalItemCount > 0 %}
         <table class="cs-table">
             <thead><tr><th>Entreprise</th><th>Propriétaire</th><th>Téléphone</th><th>Collaborateurs</th>
-                <th style="text-align:right;">Consommation</th><th style="text-align:right;">Solde restant</th><th>Créée le</th>
-                {% if is_granted('ROLE_SUPER_ADMIN') %}<th style="text-align:right;">Actions</th>{% endif %}</tr></thead>
+                <th style="text-align:right;">Consommation</th><th style="text-align:right;">Solde restant</th><th>Créée le</th></tr></thead>
             <tbody>
             {% for e in entreprises %}
                 {% set solde = e.utilisateur ? e.utilisateur.totalTokens : null %}
-                <tr>
+                <tr{% if is_granted('ROLE_SUPER_ADMIN') %} data-cm-row{% endif %}>
                     <td>{{ ux_icon(resolve_icon_name('entreprise'), {height:'18px', width:'18px'}) }} {{ e.nom }}</td>
                     <td>{{ e.utilisateur ? e.utilisateur.nom : '—' }}</td>
                     <td>{{ e.telephone ?: '—' }}</td>
@@ -33,7 +32,7 @@
                     </td>
                     <td>{{ e.createdAt ? e.createdAt|format_datetime('medium', 'none', locale: app.user.locale) : '—' }}</td>
                     {% if is_granted('ROLE_SUPER_ADMIN') %}
-                        <td style="text-align:right;">
+                        <td hidden data-cm-actions>
                             <form action="{{ path('console.entreprise.delete', {id: e.id}) }}" method="post" style="display:inline;"
                                   data-controller="confirm-action" data-action="submit->confirm-action#request"
                                   data-confirm-action-title-value="Supprimer l'entreprise"

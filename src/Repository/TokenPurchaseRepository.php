@@ -54,6 +54,19 @@ class TokenPurchaseRepository extends ServiceEntityRepository
     }
 
     /**
+     * Restreint un QueryBuilder aux achats RÉELLEMENT ENCAISSÉS (statuts paid /
+     * paid_simulated legacy) : seuls ceux-ci constituent le chiffre d'affaires.
+     * Indispensable depuis l'introduction du cycle de vie de paiement réel, afin
+     * que les achats PENDING / FAILED / REFUNDED ne gonflent ni la comptabilité,
+     * ni les KPI, ni les métriques CRM.
+     */
+    private function restreindreAuxEncaisses(QueryBuilder $qb, string $alias = 'p'): QueryBuilder
+    {
+        return $qb->andWhere($alias . '.status IN (:revenueStatuses)')
+            ->setParameter('revenueStatuses', TokenPurchase::STATUSES_REVENUE);
+    }
+
+    /**
      * Ventes ordonnées chronologiquement (acheteur joint). Alimente la génération
      * des documents comptables (écritures de revenu).
      *
@@ -61,12 +74,12 @@ class TokenPurchaseRepository extends ServiceEntityRepository
      */
     public function findChronologique(): array
     {
-        return $this->createQueryBuilder('p')
+        $qb = $this->createQueryBuilder('p')
             ->leftJoin('p.utilisateur', 'u')->addSelect('u')
             ->orderBy('p.createdAt', 'ASC')
-            ->addOrderBy('p.id', 'ASC')
-            ->getQuery()
-            ->getResult();
+            ->addOrderBy('p.id', 'ASC');
+
+        return $this->restreindreAuxEncaisses($qb)->getQuery()->getResult();
     }
 
     /** Liste paginée des ventes filtrées, plus récentes d'abord. */
@@ -87,6 +100,11 @@ class TokenPurchaseRepository extends ServiceEntityRepository
     {
         $qb = $this->appliquerFiltres($this->createQueryBuilder('p'), $filtres)
             ->select('COUNT(p.id) AS nb, COALESCE(SUM(p.tokens), 0) AS tokens, COALESCE(SUM(p.montantUsd), 0) AS revenue, COALESCE(SUM(p.remiseUsd), 0) AS remises');
+
+        // Sans filtre de statut explicite, les KPI ne comptent que l'encaissé (CA réel).
+        if (empty($filtres['status'])) {
+            $this->restreindreAuxEncaisses($qb);
+        }
 
         $row = $qb->getQuery()->getSingleResult();
 
@@ -110,6 +128,10 @@ class TokenPurchaseRepository extends ServiceEntityRepository
             ->groupBy('p.pack')
             ->orderBy('revenue', 'DESC');
 
+        if (empty($filtres['status'])) {
+            $this->restreindreAuxEncaisses($qb);
+        }
+
         return array_map(static fn (array $r) => [
             'pack'    => (string) $r['pack'],
             'nb'      => (int) $r['nb'],
@@ -130,12 +152,11 @@ class TokenPurchaseRepository extends ServiceEntityRepository
         $depuis = (new \DateTimeImmutable('first day of this month 00:00:00'))
             ->modify('-' . ($mois - 1) . ' months');
 
-        $rows = $this->createQueryBuilder('p')
+        $qb = $this->createQueryBuilder('p')
             ->select('p.createdAt AS createdAt, p.montantUsd AS montantUsd, p.tokens AS tokens')
             ->where('p.createdAt >= :depuis')
-            ->setParameter('depuis', $depuis)
-            ->getQuery()
-            ->getArrayResult();
+            ->setParameter('depuis', $depuis);
+        $rows = $this->restreindreAuxEncaisses($qb)->getQuery()->getArrayResult();
 
         // Initialise tous les mois de la fenêtre à zéro (clé AAAA-MM).
         $revenue = [];
@@ -173,13 +194,12 @@ class TokenPurchaseRepository extends ServiceEntityRepository
     {
         [$debut, $fin] = $this->bornesAnnee($annee);
 
-        $rows = $this->createQueryBuilder('p')
+        $qb = $this->createQueryBuilder('p')
             ->select('p.createdAt AS createdAt, p.montantUsd AS montantUsd, p.tokens AS tokens')
             ->where('p.createdAt >= :debut AND p.createdAt < :fin')
             ->setParameter('debut', $debut)
-            ->setParameter('fin', $fin)
-            ->getQuery()
-            ->getArrayResult();
+            ->setParameter('fin', $fin);
+        $rows = $this->restreindreAuxEncaisses($qb)->getQuery()->getArrayResult();
 
         // Libellés courts en français (« Jan 2026 » → « Déc 2026 ») ; les clés
         // internes restent au format « Y-m » pour le rapprochement des montants.
@@ -220,14 +240,14 @@ class TokenPurchaseRepository extends ServiceEntityRepository
     {
         [$debut, $fin] = $this->bornesAnnee($annee);
 
-        return $this->createQueryBuilder('p')
+        $qb = $this->createQueryBuilder('p')
             ->leftJoin('p.utilisateur', 'u')->addSelect('u')
             ->where('p.createdAt >= :debut AND p.createdAt < :fin')
             ->setParameter('debut', $debut)
             ->setParameter('fin', $fin)
-            ->orderBy('p.createdAt', 'DESC')
-            ->getQuery()
-            ->getResult();
+            ->orderBy('p.createdAt', 'DESC');
+
+        return $this->restreindreAuxEncaisses($qb)->getQuery()->getResult();
     }
 
     /**
@@ -237,15 +257,14 @@ class TokenPurchaseRepository extends ServiceEntityRepository
      */
     public function countNewClients(string $from, string $to): int
     {
-        $rows = $this->createQueryBuilder('p')
+        $qb = $this->createQueryBuilder('p')
             ->select('IDENTITY(p.utilisateur) AS uid')
             ->where('p.utilisateur IS NOT NULL')
             ->groupBy('p.utilisateur')
             ->having('MIN(p.createdAt) >= :from AND MIN(p.createdAt) <= :to')
             ->setParameter('from', new \DateTimeImmutable($from . ' 00:00:00'))
-            ->setParameter('to', new \DateTimeImmutable($to . ' 23:59:59'))
-            ->getQuery()
-            ->getArrayResult();
+            ->setParameter('to', new \DateTimeImmutable($to . ' 23:59:59'));
+        $rows = $this->restreindreAuxEncaisses($qb)->getQuery()->getArrayResult();
 
         return count($rows);
     }
@@ -258,14 +277,13 @@ class TokenPurchaseRepository extends ServiceEntityRepository
      */
     public function buyerIdsForPeriod(\DateTimeImmutable $debut, \DateTimeImmutable $fin): array
     {
-        $rows = $this->createQueryBuilder('p')
+        $qb = $this->createQueryBuilder('p')
             ->select('DISTINCT IDENTITY(p.utilisateur) AS uid')
             ->where('p.utilisateur IS NOT NULL')
             ->andWhere('p.createdAt >= :debut AND p.createdAt < :fin')
             ->setParameter('debut', $debut)
-            ->setParameter('fin', $fin)
-            ->getQuery()
-            ->getArrayResult();
+            ->setParameter('fin', $fin);
+        $rows = $this->restreindreAuxEncaisses($qb)->getQuery()->getArrayResult();
 
         return array_map(static fn (array $r) => (int) $r['uid'], $rows);
     }
@@ -285,13 +303,12 @@ class TokenPurchaseRepository extends ServiceEntityRepository
             return [];
         }
 
-        $rows = $this->createQueryBuilder('p')
+        $qb = $this->createQueryBuilder('p')
             ->select('IDENTITY(p.utilisateur) AS uid, COUNT(p.id) AS nb, COALESCE(SUM(p.montantUsd), 0) AS montant, MIN(p.createdAt) AS first, MAX(p.createdAt) AS last')
             ->where('p.utilisateur IN (:ids)')
             ->setParameter('ids', $userIds)
-            ->groupBy('p.utilisateur')
-            ->getQuery()
-            ->getArrayResult();
+            ->groupBy('p.utilisateur');
+        $rows = $this->restreindreAuxEncaisses($qb)->getQuery()->getArrayResult();
 
         $map = [];
         foreach ($rows as $r) {
@@ -324,14 +341,13 @@ class TokenPurchaseRepository extends ServiceEntityRepository
      */
     public function topClients(int $limit = 10): array
     {
-        $rows = $this->createQueryBuilder('p')
+        $qb = $this->createQueryBuilder('p')
             ->select('u.nom AS nom, u.email AS email, COALESCE(SUM(p.montantUsd), 0) AS montant, COUNT(p.id) AS nb')
             ->join('p.utilisateur', 'u')
             ->groupBy('u.id')
             ->orderBy('montant', 'DESC')
-            ->setMaxResults($limit)
-            ->getQuery()
-            ->getArrayResult();
+            ->setMaxResults($limit);
+        $rows = $this->restreindreAuxEncaisses($qb)->getQuery()->getArrayResult();
 
         return array_map(static fn (array $r) => [
             'nom'     => $r['nom'],

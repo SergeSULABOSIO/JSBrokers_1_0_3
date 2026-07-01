@@ -13,10 +13,10 @@
 <div class="cs-panel">
     {% if charges.getTotalItemCount > 0 %}
         <table class="cs-table">
-            <thead><tr><th>Code</th><th>Libellé</th><th>Compte OHADA</th><th>Destination</th><th>Comportement</th><th>Périodicité</th><th>Budget / mois</th><th>État</th><th style="text-align:right;">Actions</th></tr></thead>
+            <thead><tr><th>Code</th><th>Libellé</th><th>Compte OHADA</th><th>Destination</th><th>Comportement</th><th>Périodicité</th><th>Budget / mois</th><th>État</th></tr></thead>
             <tbody>
             {% for c in charges %}
-                <tr>
+                <tr data-cm-row>
                     <td><strong>{{ c.code }}</strong></td>
                     <td>{{ c.libelle }}</td>
                     <td><span class="cs-badge cs-badge--cobalt">{{ c.compteOhada }}</span> <small style="color:#6c757d;">{{ c.compteOhadaLabel }}</small></td>
@@ -31,7 +31,7 @@
                             <span class="cs-badge cs-badge--muted">Inactive</span>
                         {% endif %}
                     </td>
-                    <td style="text-align:right;">
+                    <td hidden data-cm-actions>
                         <a href="{{ path('console.charge.edit', {id: c.id}) }}" class="cs-icon-btn"
                            data-action="click->top-progress#show" title="Éditer" aria-label="Éditer {{ c.code }}">
                             {{ ux_icon(resolve_icon_name('action:edit'), {height:'18px', width:'18px'}) }}

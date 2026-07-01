@@ -24,38 +24,45 @@
 
     {% if tickets.getTotalItemCount > 0 %}
         <table class="cs-table">
-            <thead><tr><th>Réf.</th><th>Client</th><th>Sujet</th><th>Priorité</th><th>SLA</th><th>Statut</th><th style="text-align:right;">Action</th></tr></thead>
+            <thead><tr><th>Réf.</th><th>Client</th><th>Sujet</th><th>Priorité</th><th>SLA</th><th>Statut</th></tr></thead>
             <tbody>
+            {# Icône par statut, réutilisée dans le menu contextuel (changement de statut). #}
+            {% set statutIcons = {ouvert: 'action:open', en_cours: 'action:ongoing', resolu: 'action:completed', clos: 'action:check'} %}
             {% for t in tickets %}
-                <tr>
+                <tr data-cm-row>
                     <td>{{ t.reference }}</td>
                     <td>{% if t.client %}<a href="{{ path('console.crm.client.show', {id: t.client.id}) }}">{{ t.client.nom ?: t.client.email }}</a>{% else %}—{% endif %}</td>
                     <td>{{ ticketm.sujet(t) }}</td>
                     <td>{{ t.priorite }}</td>
                     <td>{% if t.slaDepasse %}<span class="cs-badge cs-badge--danger">Dépassé</span>{% elseif t.slaDueAt %}{{ t.slaDueAt|format_datetime('short','short', locale: app.user.locale) }}{% else %}—{% endif %}</td>
                     <td>{{ ticketm.statutBadge(t) }}</td>
-                    <td style="text-align:right;">
-                        <div class="d-inline-flex align-items-center gap-1">
-                            <form method="post" action="{{ path('console.crm.ticket.statut', {id: t.id}) }}" class="d-inline-flex">
-                                <input type="hidden" name="_token" value="{{ csrf_token('crm-ticket-statut-' ~ t.id) }}">
-                                <select name="statut" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()" aria-label="Changer le statut du ticket {{ t.reference }}">
-                                    {% for key, label in {ouvert:'Ouvert', en_cours:'En cours', resolu:'Résolu', clos:'Clos'} %}
-                                        <option value="{{ key }}" {{ t.statut == key ? 'selected' }}>{{ label }}</option>
-                                    {% endfor %}
-                                </select>
-                            </form>
-                            <a href="{{ path('console.crm.ticket.show', {id: t.id}) }}"
-                               class="cs-icon-btn" title="Ouvrir le ticket {{ t.reference }}" aria-label="Ouvrir la fiche du ticket {{ t.reference }}"
-                               data-action="click->top-progress#show">
-                                {{ ux_icon(resolve_icon_name('action:view'), {height:'16px', width:'16px'}) }}
+                    <td hidden data-cm-actions>
+                        {# Changement de statut : un bouton par statut cible (le statut courant est
+                           désactivé, donc absent du menu). Même route/CSRF/paramètre que l'ancien
+                           <select> — aucune logique métier modifiée. #}
+                        <form method="post" action="{{ path('console.crm.ticket.statut', {id: t.id}) }}" style="display:inline;">
+                            <input type="hidden" name="_token" value="{{ csrf_token('crm-ticket-statut-' ~ t.id) }}">
+                            {% for key, label in {ouvert:'Ouvert', en_cours:'En cours', resolu:'Résolu', clos:'Clos'} %}
+                                <button type="submit" name="statut" value="{{ key }}" class="cs-icon-btn"
+                                        {{ t.statut == key ? 'disabled' }}
+                                        data-cm-label="Marquer « {{ label }} »" title="Marquer « {{ label }} »">
+                                    {{ ux_icon(resolve_icon_name(statutIcons[key]), {height:'18px', width:'18px'}) }}
+                                </button>
+                            {% endfor %}
+                        </form>
+                        <a href="{{ path('console.crm.ticket.show', {id: t.id}) }}"
+                           class="cs-icon-btn" data-cm-label="Ouvrir le ticket {{ t.reference }}"
+                           title="Ouvrir le ticket {{ t.reference }}" aria-label="Ouvrir la fiche du ticket {{ t.reference }}"
+                           data-action="click->top-progress#show">
+                            {{ ux_icon(resolve_icon_name('action:view'), {height:'18px', width:'18px'}) }}
+                        </a>
+                        {% if t.client %}
+                            <a href="{{ path('console.crm.client.show', {id: t.client.id, _fragment: 'tab-support'}) }}"
+                               class="cs-icon-btn" data-cm-label="Gérer le support"
+                               title="Gérer le support de {{ t.client.nom ?: t.client.email }}" aria-label="Ouvrir la fiche support du client">
+                                {{ ux_icon(resolve_icon_name('feedback'), {height:'18px', width:'18px'}) }}
                             </a>
-                            {% if t.client %}
-                                <a href="{{ path('console.crm.client.show', {id: t.client.id, _fragment: 'tab-support'}) }}"
-                                   class="cs-icon-btn" title="Gérer le support de {{ t.client.nom ?: t.client.email }}" aria-label="Ouvrir la fiche support du client">
-                                    {{ ux_icon(resolve_icon_name('feedback'), {height:'16px', width:'16px'}) }}
-                                </a>
-                            {% endif %}
-                        </div>
+                        {% endif %}
                     </td>
                 </tr>
             {% endfor %}

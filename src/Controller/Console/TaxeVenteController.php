@@ -2,8 +2,10 @@
 
 namespace App\Controller\Console;
 
+use App\Comptabilite\SuiviFiscalService;
 use App\Entity\TaxeVente;
 use App\Form\TaxeVenteType;
+use App\Repository\ReglementTaxeRepository;
 use App\Repository\TaxeVenteRepository;
 use App\Repository\TokenPurchaseRepository;
 use Symfony\Component\HttpFoundation\Request;
@@ -25,6 +27,8 @@ class TaxeVenteController extends AbstractConsoleController
     public function __construct(
         private TaxeVenteRepository $taxeVenteRepository,
         private TokenPurchaseRepository $purchaseRepository,
+        private SuiviFiscalService $suiviFiscal,
+        private ReglementTaxeRepository $reglementRepository,
     ) {
     }
 
@@ -33,6 +37,10 @@ class TaxeVenteController extends AbstractConsoleController
     {
         $this->applyLangPreference($request, $localeSwitcher);
 
+        // Exercice sélectionné (par défaut le plus récent), comme les documents comptables.
+        $exercices = $this->suiviFiscal->exercicesDisponibles();
+        $exercice  = $request->query->getInt('exercice') ?: $exercices[0];
+
         return $this->render('console/taxe_vente/index.html.twig', [
             'pageName'    => 'Fiscalité',
             'pageIcon'    => 'taxe',
@@ -40,6 +48,11 @@ class TaxeVenteController extends AbstractConsoleController
             // Revenu total cumulé : assiette du montant représenté par chaque taxe
             // (calcul par ligne via le helper Twig prix_ht, cf. liste).
             'revenuTotal' => $this->purchaseRepository->totals()['revenue'],
+            // Suivi fiscal (TVA collectée / déductible / nette due / reversée / solde dû).
+            'exercice'    => $exercice,
+            'exercices'   => $exercices,
+            'suivi'       => $this->suiviFiscal->suivi($exercice),
+            'reversements'=> $this->reglementRepository->findAnnee($exercice),
         ]);
     }
 

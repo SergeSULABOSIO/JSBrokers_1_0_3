@@ -24,10 +24,10 @@
 <div class="cs-panel">
     {% if lignes|length > 0 %}
         <table class="cs-table">
-            <thead><tr><th>Collaborateur</th><th>Département</th><th>Score de la période</th><th>Mention</th><th style="text-align:right;">Actions</th></tr></thead>
+            <thead><tr><th>Collaborateur</th><th>Département</th><th>Score de la période</th><th>Mention</th></tr></thead>
             <tbody>
             {% for l in lignes %}
-                <tr>
+                <tr data-cm-row>
                     <td>{{ ux_icon(resolve_icon_name('utilisateur'), {height:'18px', width:'18px'}) }} {{ l.agent.nom }}</td>
                     <td>
                         {% if l.agent.departement %}
@@ -38,7 +38,7 @@
                     </td>
                     <td><strong>{{ l.score }}</strong> / 100</td>
                     <td><span class="cs-badge {{ l.mentionClass }}">{{ l.mention }}</span></td>
-                    <td style="text-align:right;">
+                    <td hidden data-cm-actions>
                         <a href="{{ path('console.evaluation.show', {id: l.agent.id, annee: annee, trimestre: trimestre}) }}"
                            class="cs-icon-btn" data-action="click->top-progress#show"
                            title="Ouvrir la fiche" aria-label="Ouvrir la fiche de {{ l.agent.nom }}">

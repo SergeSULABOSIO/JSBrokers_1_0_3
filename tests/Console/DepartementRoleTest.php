@@ -109,11 +109,16 @@ class DepartementRoleTest extends WebTestCase
 
         $this->client->request('GET', '/console/taxes');
         $this->assertResponseIsSuccessful('Finance doit accéder à la fiscalité.');
+        $this->client->request('GET', '/console/taxes/reversements/new');
+        $this->assertResponseIsSuccessful('Finance doit pouvoir enregistrer un reversement de TVA (Fiscalité).');
         $this->client->request('GET', '/console/documents');
         $this->assertResponseIsSuccessful('Finance doit accéder aux documents comptables.');
 
-        $this->client->request('GET', '/console/crm');
+        $crawler = $this->client->request('GET', '/console/crm');
         $this->assertResponseStatusCodeSame(403, 'Finance ne doit pas accéder au CRM.');
+        // Boîte de dialogue stylisée (et non page d'erreur brute), rappelant le périmètre.
+        $this->assertStringContainsString('Accès restreint', $crawler->filter('h1')->text());
+        $this->assertStringContainsString('Finance & Comptabilité', $crawler->filter('.ad-perimeter')->text());
         $this->client->request('GET', '/console/evaluations');
         $this->assertResponseStatusCodeSame(403, 'Finance ne doit pas accéder aux évaluations (RH).');
     }

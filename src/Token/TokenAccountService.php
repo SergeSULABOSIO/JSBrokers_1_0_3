@@ -110,6 +110,21 @@ class TokenAccountService
     }
 
     /**
+     * Reprend des tokens prépayés lors d'un remboursement (symétrique de credit()).
+     * Borné à 0 : si le solde a déjà été partiellement consommé, on ne descend
+     * jamais en négatif (le débit effectif peut être inférieur au montant remboursé).
+     */
+    public function refund(Utilisateur $owner, int $tokens): void
+    {
+        if ($tokens <= 0) {
+            return;
+        }
+
+        $owner->setPaidTokens(max(0, $owner->getPaidTokens() - $tokens));
+        $this->em->flush();
+    }
+
+    /**
      * Métrage d'une ÉCRITURE (création/édition d'une entité). Bloquant.
      *
      * @throws InsufficientTokensException si le solde du propriétaire est insuffisant.

@@ -16,11 +16,15 @@
     {{ m.paragraph('<strong>' ~ 'email_token_label_credited'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.tokens|number_format(0, ',', ' ')) }}
     {{ m.paragraph('<strong>' ~ 'email_token_label_amount'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.montantUsd|number_format(2, '.', ' ') ~ ' $') }}
     {{ m.paragraph('<strong>' ~ 'email_token_label_reference'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.reference) }}
+    {% if purchase.invoiceNumber %}
+        {{ m.paragraph('<strong>' ~ 'email_token_label_invoice'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> ' ~ purchase.invoiceNumber) }}
+    {% endif %}
     {% if purchase.cardLast4 %}
         {{ m.paragraph('<strong>' ~ 'email_token_label_card'|trans({}, 'messages', lang) ~ '&nbsp;:</strong> •••• •••• •••• ' ~ purchase.cardLast4) }}
     {% endif %}
 
     {{ m.button(accountUrl, 'email_token_button'|trans({}, 'messages', lang)) }}
 
+    {{ m.note('email_token_invoice_attached'|trans({}, 'messages', lang)) }}
     {{ m.note('email_token_note'|trans({}, 'messages', lang)) }}
 {% endblock %}

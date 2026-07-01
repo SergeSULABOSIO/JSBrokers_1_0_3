@@ -123,6 +123,7 @@ class ConsoleTaxeVenteTest extends WebTestCase
         $vente->setTokens(500);
         $vente->setMontantUsd(10.0);
         $vente->setReference(self::VENTE_REF);
+        $vente->setStatus(TokenPurchase::STATUS_PAID);
         $em->persist($vente);
         $em->flush();
 
