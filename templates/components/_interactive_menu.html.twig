@@ -205,7 +205,7 @@
                  data-workspace-manager-target="workspaceTabBar"></div>
             {# Zone de contenu des onglets #}
             <div class="workspace-tab-panels" data-workspace-manager-target="workspaceTabPanels">
-                {% if hasPerimetre|default(true) == false %}
+                {% if hasPerimetre is same as(false) %}
                     {# Fail-closed : l'invité n'a aucun périmètre attribué. On affiche une
                        coquille d'accueil claire plutôt qu'un espace vide et déroutant. #}
                     <div class="workspace-initial-skeleton ws-welcome" role="status">

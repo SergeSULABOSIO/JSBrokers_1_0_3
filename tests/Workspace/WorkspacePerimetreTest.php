@@ -110,7 +110,7 @@ class WorkspacePerimetreTest extends WebTestCase
      *
      * @return array{owner: Invite, guest: Invite, entreprise: Entreprise}
      */
-    private function seed(): array
+    private function seed(bool $withClientRole = true): array
     {
         $em = $this->em();
 
@@ -147,12 +147,14 @@ class WorkspacePerimetreTest extends WebTestCase
         // On renseigne les DEUX côtés de la relation (addRolesEnProduction) pour que la
         // collection en mémoire de l'invité contienne le rôle dans le même EntityManager
         // (le contrôleur relit la même instance managée via l'identity map).
-        $role = new RolesEnProduction();
-        $role->setNom('Rôle test');
-        $role->setAccessClient([Invite::ACCESS_LECTURE]);
-        $role->setEntreprise($entreprise);
-        $guestInvite->addRolesEnProduction($role);
-        $em->persist($role);
+        if ($withClientRole) {
+            $role = new RolesEnProduction();
+            $role->setNom('Rôle test');
+            $role->setAccessClient([Invite::ACCESS_LECTURE]);
+            $role->setEntreprise($entreprise);
+            $guestInvite->addRolesEnProduction($role);
+            $em->persist($role);
+        }
 
         $em->flush();
 
@@ -273,6 +275,140 @@ class WorkspacePerimetreTest extends WebTestCase
             self::DENIED_MARKER,
             (string) $this->client->getResponse()->getContent(),
             "L'attribution de rôle est réservée au propriétaire / délégué."
+        );
+    }
+
+    public function testRoleEditGrowsPerimetre(): void
+    {
+        ['owner' => $owner, 'guest' => $guest, 'entreprise' => $e] = $this->seed();
+        $guestId = $guest->getId();
+        $role = $this->em()->getRepository(RolesEnProduction::class)->findOneBy(['invite' => $guest]);
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        // Édition du rôle existant : on ajoute l'Écriture sur les Clients (chemin
+        // MODIFICATION de handleFormSubmission).
+        $this->client->request('POST', '/admin/rolesenproduction/api/submit', [
+            'id'            => $role->getId(),
+            'idEntreprise'  => $e->getId(),
+            'idInvite'      => $owner->getId(),
+            'invite'        => $guestId,
+            'nom'           => 'Rôle test (édité)',
+            'accessClient'  => [Invite::ACCESS_LECTURE, Invite::ACCESS_ECRITURE],
+        ]);
+
+        $this->assertResponseIsSuccessful();
+        $this->em()->clear();
+        $reloaded = $this->em()->getRepository(Invite::class)->find($guestId);
+        $resolver = static::getContainer()->get(\App\Service\Workspace\WorkspaceAccessResolver::class);
+        $this->assertTrue($resolver->can($reloaded, 'Client', Invite::ACCESS_ECRITURE), "L'édition doit ajouter l'Écriture sur les Clients.");
+    }
+
+    public function testRoleDeleteShrinksPerimetre(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed();
+        $guestId = $guest->getId();
+        $role = $this->em()->getRepository(RolesEnProduction::class)->findOneBy(['invite' => $guest]);
+        $roleId = $role->getId();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        // Suppression du rôle (chemin handleDeleteApi + garde SUPPRESSION réservée au manager).
+        $this->client->request('DELETE', '/admin/rolesenproduction/api/delete/' . $roleId);
+
+        $this->assertResponseIsSuccessful();
+        $this->em()->clear();
+        $reloaded = $this->em()->getRepository(Invite::class)->find($guestId);
+        $resolver = static::getContainer()->get(\App\Service\Workspace\WorkspaceAccessResolver::class);
+        $this->assertFalse($resolver->canRead($reloaded, 'Client'), 'Après suppression du rôle, la lecture des Clients doit être retirée.');
+    }
+
+    public function testDelegateManagesInvitesButHasNoDataAccess(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed();
+        // Le propriétaire désigne l'invité comme gestionnaire délégué.
+        $guest->setGestionnaireInvites(true);
+        $this->em()->flush();
+        $guestId = $guest->getId();
+
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+
+        // Délégué : accède à la gestion des invités…
+        $this->client->request('GET', sprintf('/admin/invite/index/%d/%d', $guestId, $e->getId()));
+        $this->assertResponseIsSuccessful();
+        $this->assertStringNotContainsString(self::DENIED_MARKER, (string) $this->client->getResponse()->getContent(), 'Le délégué doit gérer les invités.');
+
+        // …et peut ouvrir un formulaire de rôle…
+        $this->client->request('GET', sprintf('/admin/rolesenfinance/api/get-form?parent_id=%d&parent_field_name=invite&idEntreprise=%d&idInvite=%d', $guestId, $e->getId(), $guestId));
+        $this->assertResponseIsSuccessful();
+        $this->assertStringNotContainsString(self::DENIED_MARKER, (string) $this->client->getResponse()->getContent());
+
+        // …mais n'a AUCUN accès aux données métier hors de ses propres rôles (Finance).
+        $this->client->request('GET', sprintf('/admin/taxe/index/%d/%d', $guestId, $e->getId()));
+        $this->assertStringContainsString(self::DENIED_MARKER, (string) $this->client->getResponse()->getContent(), "Le délégué n'obtient aucun droit data implicite.");
+    }
+
+    public function testGuestDeniedCreateFormOutsidePerimetre(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed();
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+
+        // L'invité a la Lecture sur les Clients mais PAS l'Écriture : le formulaire de
+        // création (niveau Écriture) doit être refusé.
+        $this->client->request('GET', sprintf('/admin/client/api/get-form?idEntreprise=%d&idInvite=%d', $e->getId(), $guest->getId()));
+        $this->assertStringContainsString(
+            self::DENIED_MARKER,
+            (string) $this->client->getResponse()->getContent(),
+            "Sans droit d'Écriture, le formulaire de création doit être refusé."
+        );
+    }
+
+    public function testDashboardBlockGatedServerSide(): void
+    {
+        ['owner' => $owner, 'guest' => $guest, 'entreprise' => $e] = $this->seed();
+        $url = sprintf('/admin/entreprise_dashbord/block/kpis/%d', $e->getId());
+
+        // Invité sans droit Finance : le bloc KPIs renvoie une réponse vide (défense en profondeur).
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $this->client->request('GET', $url);
+        $this->assertResponseIsSuccessful();
+        $this->assertSame('', trim((string) $this->client->getResponse()->getContent()), 'Le bloc KPIs doit être vide pour un invité hors périmètre Finance.');
+
+        // Propriétaire : le bloc est rendu normalement.
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+        $this->client->request('GET', $url);
+        $this->assertResponseIsSuccessful();
+        $this->assertNotSame('', trim((string) $this->client->getResponse()->getContent()), 'Le propriétaire doit voir le bloc KPIs.');
+    }
+
+    public function testWorkspaceMenuIsFilteredForGuest(): void
+    {
+        ['owner' => $owner, 'guest' => $guest, 'entreprise' => $e] = $this->seed();
+
+        // Invité (Lecture Clients uniquement) : la rubrique Clients est présente, pas Taxes.
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $this->client->request('GET', sprintf('/espacedetravail/%d/%d', $guest->getId(), $e->getId()));
+        $this->assertResponseIsSuccessful();
+        $guestHtml = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('entity-name-param="Client"', $guestHtml, 'La rubrique Clients doit rester visible.');
+        $this->assertStringNotContainsString('entity-name-param="Taxe"', $guestHtml, 'La rubrique Taxes (hors périmètre) doit disparaître du menu.');
+
+        // Propriétaire : menu complet, Taxes incluse.
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+        $this->client->request('GET', sprintf('/espacedetravail/%d/%d', $owner->getId(), $e->getId()));
+        $this->assertStringContainsString('entity-name-param="Taxe"', (string) $this->client->getResponse()->getContent(), 'Le propriétaire garde le menu complet.');
+    }
+
+    public function testWorkspaceFailClosedShellForGuestWithoutRole(): void
+    {
+        // Invité SANS aucun rôle : coquille « aucun périmètre » (fail-closed).
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed(false);
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+
+        $this->client->request('GET', sprintf('/espacedetravail/%d/%d', $guest->getId(), $e->getId()));
+        $this->assertResponseIsSuccessful();
+        $this->assertStringContainsString(
+            'Aucun périmètre attribué',
+            (string) $this->client->getResponse()->getContent(),
+            "Un invité sans rôle doit voir la coquille d'accueil fail-closed."
         );
     }
 
