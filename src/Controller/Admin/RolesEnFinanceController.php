@@ -7,6 +7,7 @@ use App\Entity\RolesEnFinance;
 use App\Services\CanvasBuilder;
 use App\Form\RolesEnFinanceType;
 use App\Repository\InviteRepository;
+use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -25,6 +26,7 @@ class RolesEnFinanceController extends AbstractController
     public function __construct(
         private EntityManagerInterface $em,
         private InviteRepository $inviteRepository,
+        private EntrepriseRepository $entrepriseRepository,
         CanvasBuilder $canvasBuilder,
         private SerializerInterface $serializer
     ) {

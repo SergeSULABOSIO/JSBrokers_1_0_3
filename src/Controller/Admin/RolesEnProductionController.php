@@ -6,6 +6,7 @@ use App\Entity\Invite;
 use App\Entity\RolesEnProduction;
 use App\Form\RolesEnProductionType;
 use App\Repository\InviteRepository;
+use App\Repository\EntrepriseRepository;
 use App\Services\CanvasBuilder;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -25,6 +26,7 @@ class RolesEnProductionController extends AbstractController
     public function __construct(
         private EntityManagerInterface $em,
         private InviteRepository $inviteRepository,
+        private EntrepriseRepository $entrepriseRepository,
         CanvasBuilder $canvasBuilder,
         private SerializerInterface $serializer
     ) {

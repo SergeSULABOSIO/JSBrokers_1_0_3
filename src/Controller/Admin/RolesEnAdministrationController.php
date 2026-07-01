@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 use App\Entity\Invite;
 use App\Services\CanvasBuilder;
 use App\Repository\InviteRepository;
+use App\Repository\EntrepriseRepository;
 use App\Entity\RolesEnAdministration;
 use App\Form\RolesEnAdministrationType;
 use Doctrine\ORM\EntityManagerInterface;
@@ -25,6 +26,7 @@ class RolesEnAdministrationController extends AbstractController
     public function __construct(
         private EntityManagerInterface $em,
         private InviteRepository $inviteRepository,
+        private EntrepriseRepository $entrepriseRepository,
         CanvasBuilder $canvasBuilder,
         private SerializerInterface $serializer
     ) {

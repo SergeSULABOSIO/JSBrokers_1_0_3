@@ -75,14 +75,19 @@ class WorkspacePerimetreTest extends WebTestCase
             ['emails' => \Doctrine\DBAL\ArrayParameterType::STRING]
         );
 
-        // rôles → invités → entreprise → utilisateurs (ordre des clés étrangères).
-        $conn->executeStatement(
-            "DELETE r FROM roles_en_production r
-             JOIN invite i ON r.invite_id = i.id
-             JOIN entreprise e ON i.entreprise_id = e.id
-             WHERE e.nom = :nom",
-            ['nom' => self::ENTREPRISE_NOM]
-        );
+        // rôles (les 5 modules) → invités → entreprise → utilisateurs (ordre des FK).
+        foreach ([
+            'roles_en_finance', 'roles_en_marketing', 'roles_en_production',
+            'roles_en_sinistre', 'roles_en_administration',
+        ] as $table) {
+            $conn->executeStatement(
+                "DELETE r FROM {$table} r
+                 JOIN invite i ON r.invite_id = i.id
+                 JOIN entreprise e ON i.entreprise_id = e.id
+                 WHERE e.nom = :nom",
+                ['nom' => self::ENTREPRISE_NOM]
+            );
+        }
         $conn->executeStatement(
             "DELETE i FROM invite i
              LEFT JOIN utilisateur u ON i.utilisateur_id = u.id
@@ -220,6 +225,34 @@ class WorkspacePerimetreTest extends WebTestCase
         $html = (string) $this->client->getResponse()->getContent();
         $this->assertStringNotContainsString(self::DENIED_MARKER, $html);
         $this->assertStringContainsString('accessMonnaie', $html, 'Le formulaire de rôle Finance doit être rendu.');
+    }
+
+    public function testOwnerCanSaveRoleAndPerimetreApplies(): void
+    {
+        ['owner' => $owner, 'guest' => $guest, 'entreprise' => $e] = $this->seed();
+        $guestId = $guest->getId();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        // Enregistrement d'un rôle Finance (Lecture sur les Monnaies) pour l'invité cible.
+        // Exerce tout le flux : validateWorkspaceAccess (→ entrepriseRepository), garde
+        // d'accès, persistance, notification de périmètre.
+        $this->client->request('POST', '/admin/rolesenfinance/api/submit', [
+            'idEntreprise'  => $e->getId(),
+            'idInvite'      => $owner->getId(),
+            'invite'        => $guestId,
+            'nom'           => 'Rôle Finance test',
+            'accessMonnaie' => [Invite::ACCESS_LECTURE],
+        ]);
+
+        $this->assertResponseIsSuccessful('L\'enregistrement du rôle ne doit pas échouer (pas de propriété manquante).');
+        // Le JSON échappe les accents (succès) : on teste le préfixe ASCII.
+        $this->assertStringContainsString('Enregistr', (string) $this->client->getResponse()->getContent());
+
+        // Le périmètre est réellement appliqué : l'invité peut désormais lire les Monnaies.
+        $this->em()->clear();
+        $reloaded = $this->em()->getRepository(Invite::class)->find($guestId);
+        $resolver = static::getContainer()->get(\App\Service\Workspace\WorkspaceAccessResolver::class);
+        $this->assertTrue($resolver->canRead($reloaded, 'Monnaie'), 'Le rôle enregistré doit ouvrir la lecture des Monnaies.');
     }
 
     public function testGuestCannotOpenRoleCreationForm(): void
