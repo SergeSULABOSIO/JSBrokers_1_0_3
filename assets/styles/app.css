@@ -1484,22 +1484,27 @@ thead.sticky-header {
    dépendre de la résolution de --bs-gutter-x de Bootstrap (qui restait à 1.5rem
    et rendait l'horizontale plus large que la verticale). La marge négative de la
    ligne (-0.5rem) compense le rembourrage des colonnes pour aligner les bords. */
-.form-column:has(input[name^="access"]) .row {
-    --bs-gutter-x: 1rem;
-    --bs-gutter-y: 0;
-    margin-right: -0.5rem;
-    margin-left: -0.5rem;
-    margin-bottom: 0;
+/* Grille 2 colonnes UNIFORME pour les droits, quel que soit le découpage du canevas.
+   On aplatit les rangées/colonnes Bootstrap (display:contents) pour poser TOUTES les
+   cartes dans une seule grille : exactement 2 cartes par ligne, avec une gouttière
+   unique (`gap`) rigoureusement identique à l'horizontale et à la verticale. Les
+   rangées cachées (nom/collaborateur) restent masquées (.d-none l'emporte). */
+.form-column:has(input[name^="access"]) form {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    align-items: stretch;
 }
-.form-column:has(input[name^="access"]) .row > [class*="col-"] {
-    padding-right: 0.5rem;
-    padding-left: 0.5rem;
+.form-column:has(input[name^="access"]) form > .row,
+.form-column:has(input[name^="access"]) form .row > [class*="col-"] {
+    display: contents;
 }
 
-/* Chaque groupe de droits (ChoiceType étendu) = une carte claire et autonome. */
+/* Chaque groupe de droits (ChoiceType étendu) = une carte claire et autonome.
+   La grille gère les hauteurs égales (align-items:stretch) et tout l'espacement ;
+   la carte ne porte donc aucune marge. */
 .form-column:has(input[name^="access"]) .mb-3 {
-    height: 100%;
-    margin-bottom: 1rem; /* = --bs-gutter-x : gouttière verticale cohérente */
+    margin: 0 !important;
     padding: 0.9rem 1rem 0.75rem;
     border: 1px solid #dee2e6;
     border-radius: 12px;
@@ -1511,9 +1516,15 @@ thead.sticky-header {
     box-shadow: 0 0 0 3px rgba(0, 71, 171, 0.15);
 }
 
-/* En-tête de carte : intitulé de la rubrique, accent cobalt (Guidage). */
-.form-column:has(input[name^="access"]) .form-label {
+/* En-tête de carte : intitulé de la rubrique, accent cobalt (Guidage).
+   Le champ « ChoiceType étendu » rend l'intitulé dans un <legend class="col-form-label">
+   (et non un .form-label) : on cible donc les deux. On neutralise le float par défaut
+   du <legend> pour un bloc propre. */
+.form-column:has(input[name^="access"]) .form-label,
+.form-column:has(input[name^="access"]) legend {
+    float: none;
     display: block;
+    width: 100%;
     margin-bottom: 0.6rem;
     padding: 0 0 0.4rem 0.6rem;
     font-size: 0.9rem;
