@@ -1516,10 +1516,23 @@ thead.sticky-header {
     border-radius: 12px;
     background-color: #ffffff;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+/* Survol : élévation discrète (visibilité de l'état du système, Nielsen 1). */
+.form-column:has(input[name^="access"]) .mb-3:hover {
+    border-color: #ced4da;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 .form-column:has(input[name^="access"]) .mb-3:focus-within {
     border-color: #0047AB;
     box-shadow: 0 0 0 3px rgba(0, 71, 171, 0.15);
+}
+/* Carte à entête bandeau (variante avec icône) : le rembourrage global disparaît,
+   chaque zone interne (entête, options) porte le sien ; overflow:hidden pour que
+   le bandeau épouse les coins arrondis. */
+.form-column:has(input[name^="access"]) .mb-3.dlg-field-card {
+    padding: 0;
+    overflow: hidden;
 }
 
 /* En-tête de carte : intitulé de la rubrique, accent cobalt (Guidage).
@@ -1548,11 +1561,9 @@ thead.sticky-header {
 .form-column:has(input[name^="access"]) .dlg-field-card-head {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.6rem;
-    padding: 0 0 0.4rem 0.6rem;
+    gap: 0.55rem;
+    padding: 0.6rem 0.75rem;
     border-bottom: 1px solid #e0e0e0;
-    border-left: 3px solid #0047AB;
 }
 .form-column:has(input[name^="access"]) .dlg-field-card-head .form-label,
 .form-column:has(input[name^="access"]) .dlg-field-card-head legend {
@@ -1561,6 +1572,23 @@ thead.sticky-header {
     padding: 0;
     width: auto;
     display: inline;
+    font-size: 0.85rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: #343a40;
+}
+/* Zone des niveaux d'accès : 2 options par ligne (compacité — Bastien & Scapin,
+   Charge de travail) tout en conservant des cibles confortables (WCAG 2.5.5). */
+.form-column:has(input[name^="access"]) .dlg-field-card > div:has(> .form-check) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.2rem 0.5rem;
+    padding: 0.55rem 0.65rem 0.65rem;
+}
+.form-column:has(input[name^="access"]) .dlg-field-card .form-text,
+.form-column:has(input[name^="access"]) .dlg-field-card .invalid-feedback {
+    margin: 0;
+    padding: 0 0.75rem 0.6rem;
 }
 .dlg-field-card-icon {
     flex: 0 0 auto;
@@ -1578,14 +1606,29 @@ thead.sticky-header {
     height: 16px;
 }
 
-/* Chaque niveau d'accès : ligne confortable, cible cliquable élargie (WCAG 2.5.5). */
+/* Chaque niveau d'accès : rangée cliquable entière, cible élargie (WCAG 2.5.5),
+   retour visuel au survol et à la sélection (Nielsen 1 — visibilité de l'état). */
 .form-column:has(input[name^="access"]) .form-check {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    min-height: 34px;
-    margin-bottom: 0.1rem;
-    padding-left: 0; /* alignement géré par flex, pas par le retrait Bootstrap */
+    min-height: 40px;
+    margin: 0;
+    padding: 0.15rem 0.5rem; /* alignement géré par flex, pas par le retrait Bootstrap */
+    border-radius: 8px;
+    transition: background-color 0.15s ease;
+}
+.form-column:has(input[name^="access"]) .form-check:hover {
+    background-color: #f8f9fa;
+}
+/* Rangée cochée : surlignage cobalt très clair. L'état reste aussi porté par la
+   coche elle-même (pas d'information par la couleur seule — WCAG 1.4.1). */
+.form-column:has(input[name^="access"]) .form-check:has(.form-check-input:checked) {
+    background-color: #e8f0fb;
+}
+.form-column:has(input[name^="access"]) .form-check:has(.form-check-input:checked) .form-check-label {
+    color: #212529;
+    font-weight: 500;
 }
 .form-column:has(input[name^="access"]) .form-check-input {
     float: none;
@@ -1599,6 +1642,8 @@ thead.sticky-header {
     cursor: pointer;
     color: #495057;
     user-select: none;
+    font-size: 0.875rem;
+    flex: 1; /* toute la largeur de la rangée est cliquable */
 }
 
 /* État coché : cobalt de marque (au lieu du bleu Bootstrap par défaut). */
@@ -1625,9 +1670,11 @@ thead.sticky-header {
 */
 .form-column .form-intro {
     display: flex;
-    align-items: flex-start;
-    gap: 0.8rem;
-    margin-bottom: 1rem;
+    align-items: center;
+    gap: 0.9rem;
+    margin-bottom: 1.1rem;
+    padding-bottom: 1.1rem;
+    border-bottom: 1px solid #e0e0e0; /* écho du <hr> d'entête des formulaires Console */
 }
 .form-column .form-intro-icon {
     flex: 0 0 auto;
@@ -1646,7 +1693,7 @@ thead.sticky-header {
 }
 .form-column .form-intro-title {
     margin: 0 0 0.15rem;
-    font-size: 1rem;
+    font-size: 1.05rem;
     font-weight: 700;
     color: #212529;
 }
@@ -1655,6 +1702,7 @@ thead.sticky-header {
     font-size: 0.875rem;
     line-height: 1.45;
     color: #6c757d;
+    max-width: 78ch; /* longueur de ligne lisible (Opquast — confort de lecture) */
 }
 
 /* STYLES POUR LE DÉFILEMENT DE FORMULAIRES (utilisé par le dialogue de recherche avancée) */
