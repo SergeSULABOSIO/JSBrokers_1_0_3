@@ -1490,9 +1490,50 @@ thead.sticky-header {
     pointer-events: none;
     z-index: 2;
 }
-/* Le retrait à gauche n'est appliqué qu'aux champs réellement décorés d'une icône. */
-.form-column--auth .dlg-field--icon .form-control {
+/* Le retrait à gauche n'est appliqué qu'aux champs réellement décorés d'une icône.
+   Il couvre aussi les listes déroulantes et l'autocomplétion (TomSelect) : l'icône
+   ne doit jamais chevaucher la valeur affichée. */
+.form-column--auth .dlg-field--icon .form-control,
+.form-column--auth .dlg-field--icon .form-select,
+.form-column--auth .dlg-field--icon .ts-control,
+.form-column--auth .dlg-field--icon .tom-select-control {
     padding-left: 2.6rem;
+}
+
+/* Case à cocher en rendu « auth » : rangée dédiée (mini-pastille + case + libellé
+   inline), à la place de l'icône préfixe superposée qui masquait la case. */
+.form-column--auth .dlg-field--check {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 40px;
+}
+.form-column--auth .dlg-field--check .form-check-input {
+    flex: 0 0 auto;
+    float: none;
+    margin: 0;
+    width: 1.15em;
+    height: 1.15em;
+    cursor: pointer;
+}
+.form-column--auth .dlg-field--check label {
+    margin: 0;
+    cursor: pointer;
+}
+.form-column--auth .dlg-field-check-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background-color: #e8f0fb;
+    color: #0047AB;
+}
+.form-column--auth .dlg-field-check-icon svg {
+    width: 16px;
+    height: 16px;
 }
 
 /*
@@ -1734,17 +1775,34 @@ thead.sticky-header {
 .form-column .dlg-field-card-body > div:has(> .form-check) {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.2rem 0.5rem;
+    gap: 0.35rem 0.6rem;
 }
 .form-column .dlg-field-card-body .form-check {
     display: flex;
-    align-items: center;
+    align-items: flex-start; /* les options riches (titre + aide) tiennent sur 2 lignes */
     gap: 0.5rem;
     min-height: 40px;
     margin: 0;
-    padding: 0.15rem 0.5rem;
+    padding: 0.4rem 0.55rem;
     border-radius: 8px;
     transition: background-color 0.15s ease;
+}
+/* La coche/puce reste DANS sa rangée : on neutralise le flottement Bootstrap
+   (float + margin négative) qui la faisait déborder et se faire rogner. */
+.form-column .dlg-field-card-body .form-check-input {
+    float: none;
+    flex: 0 0 auto;
+    margin: 0.25em 0 0; /* alignée optiquement sur la première ligne du libellé */
+    width: 1.15em;
+    height: 1.15em;
+    cursor: pointer;
+}
+.form-column .dlg-field-card-body .form-check-label {
+    cursor: pointer;
+    user-select: none;
+    font-size: 0.875rem;
+    flex: 1;
+    min-width: 0; /* autorise le retour à la ligne du texte d'aide dans la cellule */
 }
 .form-column .dlg-field-card-body .form-check:hover {
     background-color: #f8f9fa;
@@ -2199,20 +2257,26 @@ thead.sticky-header {
 ===================================================================
 */
 .collection-manager-accordion {
-    /* On applique le même style de carte que les champs simples */
+    /* Aligné sur les cartes de champ à entête bandeau (.dlg-field-card) : même
+       bordure, mêmes coins, même élévation au survol (Cohérence). */
     background-color: #ffffff;
-    border-radius: var(--bs-border-radius-sm);
-    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.08);
-    transition: box-shadow 0.2s ease-in-out;
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
     overflow: hidden;
+}
+.collection-manager-accordion:hover {
+    border-color: #ced4da;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 .accordion-title {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem; /* Gouttière interne harmonisée pour plus d'espace. */
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem; /* même bandeau que .dlg-field-card-head */
     cursor: pointer;
-    border-bottom: 1px solid #e0e0e0;
 }
 .title-left-block {
     flex-grow: 1;
@@ -2222,14 +2286,25 @@ thead.sticky-header {
     gap: 0.5rem;
 }
 .toggle-icon {
-    font-size: 1.2em; /* CORRECTION : Taille réduite pour ne pas augmenter la hauteur de la ligne. */
+    /* Disque d'état ouvert/fermé : cible visuelle nette dans le bandeau. */
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    font-size: 1em;
     font-weight: bold;
-    color: #6c757d;
-    /* La largeur et le centrage ne sont plus nécessaires, le padding du parent gère l'espace. */
+    line-height: 1;
+    color: #495057;
 }
 .field-label {
-    font-size: 1rem;
-    font-weight: bold;
+    font-size: 0.85rem;
+    font-weight: 600;
+    line-height: 1.3;
     color: #343a40;
 }
 .badge {
@@ -2252,6 +2327,59 @@ thead.sticky-header {
     max-height: 400px;
     overflow-y: auto;
     padding: 1px;
+    border-top: 1px solid #e0e0e0; /* le filet n'apparaît que quand le panneau est ouvert */
+}
+
+/*
+===================================================================
+ MODERNISATION DES COLLECTIONS DANS LES DIALOGUES (scopée à l'accordéon)
+ Finitions alignées sur les cartes de champ : badge et bouton d'ajout au
+ cobalt de marque, tableau interne aéré avec entêtes discrètes. Aucune
+ incidence hors du composant (sélecteurs préfixés par l'accordéon).
+===================================================================
+*/
+/* Compteur d'éléments : cobalt de marque, droit (pas d'italique). */
+.collection-manager-accordion .badge {
+    font-style: normal;
+    background-color: #0047AB !important;
+    border-radius: 999px;
+}
+/* Bouton « Ajouter » : action primaire de marque (cobalt, hover cobalt foncé). */
+.collection-manager-accordion .accordion-title .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background-color: #0047AB;
+    border-color: #0047AB;
+}
+.collection-manager-accordion .accordion-title .btn-primary:hover,
+.collection-manager-accordion .accordion-title .btn-primary:focus-visible {
+    background-color: #003380;
+    border-color: #003380;
+}
+/* Tableau interne : entêtes en micro-libellés discrets, rangées aérées. */
+.collection-manager-accordion .accordion-content thead th {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6c757d;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    vertical-align: middle;
+}
+.collection-manager-accordion .accordion-content tbody td {
+    padding: 0.6rem 0.75rem;
+    vertical-align: middle;
+}
+.collection-manager-accordion .accordion-content .table {
+    margin-bottom: 0;
+}
+/* Le libellé du form_row est redondant : le bandeau de l'accordéon porte déjà
+   le même intitulé (+ compteur). On le masque, sans perte d'information. */
+.form-column .mb-3:has(.collection-manager-accordion) > label,
+.form-column .mb-3:has(.collection-manager-accordion) > .form-label {
+    display: none;
 }
 .collection-item {
     padding: 0.5rem 0.5rem; /* CORRECTION : Gouttière horizontale réduite pour correspondre au padding de 0.5rem des autres champs. */
