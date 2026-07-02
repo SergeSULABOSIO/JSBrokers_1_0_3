@@ -1494,6 +1494,12 @@ thead.sticky-header {
     grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
     align-items: stretch;
+    /* Cadre englobant du formulaire : le fond léger (#f8f9fa) fait ressortir
+       les cartes blanches, à la manière des .cs-fieldset de la Console. */
+    padding: 1.25rem;
+    border: 1px solid #dee2e6;
+    border-radius: 14px;
+    background-color: #f8f9fa;
 }
 .form-column:has(input[name^="access"]) form > .row,
 .form-column:has(input[name^="access"]) form .row > [class*="col-"] {
@@ -1567,6 +1573,51 @@ thead.sticky-header {
 .form-column:has(input[name^="access"]) .form-check-input:focus {
     border-color: #0047AB;
     box-shadow: 0 0 0 0.2rem rgba(0, 71, 171, 0.35);
+}
+
+/*
+===================================================================
+ ENTÊTE CONTEXTUEL DES FORMULAIRES DE DIALOGUE (.form-intro)
+ Bloc opt-in rendu au-dessus du cadre du formulaire quand le canvas
+ pose form_intro (cf. _form_content.html.twig) : pastille cobalt de
+ l'entité + description de ce que l'utilisateur édite et de son
+ importance. Reprend le motif de l'entête des formulaires Console
+ (.cs-head-icon) : pastille 46x46 sur fond cobalt très clair.
+ Ergonomie (Bastien & Scapin — Guidage / Incitation).
+===================================================================
+*/
+.form-column .form-intro {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+}
+.form-column .form-intro-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 11px;
+    background-color: #e8f0fb;
+    color: #0047AB;
+}
+.form-column .form-intro-icon svg {
+    width: 26px;
+    height: 26px;
+}
+.form-column .form-intro-title {
+    margin: 0 0 0.15rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #212529;
+}
+.form-column .form-intro-desc {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: #6c757d;
 }
 
 /* STYLES POUR LE DÉFILEMENT DE FORMULAIRES (utilisé par le dialogue de recherche avancée) */

@@ -27,6 +27,11 @@ class RolesEnAdministrationFormCanvasProvider implements FormCanvasProviderInter
             "isCreationMode" => $isParentNew,
             // Rendu dédié « droits d'accès » (grille de cases sur charte cobalt).
             "form_class" => "form-column--roles",
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Droits d'accès — module Administration",
+                "description" => "Vous définissez ce que ce collaborateur peut consulter et modifier sur l'administration de l'espace de travail (documents, classeurs, collaborateurs invités). Ces droits s'appliquent dès l'enregistrement : n'accordez que le nécessaire.",
+            ],
         ];
         $layout = $this->buildRolesEnAdministrationLayout();
 

@@ -27,6 +27,11 @@ class RolesEnFinanceFormCanvasProvider implements FormCanvasProviderInterface
             "isCreationMode" => $isParentNew,
             // Rendu dédié « droits d'accès » (grille de cases sur charte cobalt).
             "form_class" => "form-column--roles",
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Droits d'accès — module Finance",
+                "description" => "Vous définissez ce que ce collaborateur peut consulter et modifier sur les données financières de l'entreprise (monnaies, comptes bancaires, taxes, paiements, bordereaux, revenus…). Ces droits s'appliquent dès l'enregistrement : n'accordez que le nécessaire.",
+            ],
         ];
         $layout = $this->buildRolesEnFinanceLayout();
 

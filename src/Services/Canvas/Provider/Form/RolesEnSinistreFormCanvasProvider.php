@@ -27,6 +27,11 @@ class RolesEnSinistreFormCanvasProvider implements FormCanvasProviderInterface
             "isCreationMode" => $isParentNew,
             // Rendu dédié « droits d'accès » (grille de cases sur charte cobalt).
             "form_class" => "form-column--roles",
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Droits d'accès — module Sinistre",
+                "description" => "Vous définissez ce que ce collaborateur peut consulter et modifier sur la gestion des sinistres (types de pièces, notifications, règlements). Ces droits s'appliquent dès l'enregistrement : n'accordez que le nécessaire.",
+            ],
         ];
         $layout = $this->buildLayout();
 
