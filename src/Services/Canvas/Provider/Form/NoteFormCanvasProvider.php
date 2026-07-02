@@ -61,7 +61,30 @@ class NoteFormCanvasProvider implements FormCanvasProviderInterface
                     "event" => "ui:note.preview-request", // On réutilise le même événement
                     "url" => "/admin/note/api/get-preview-url/%id%?download=1" // On ajoute un paramètre pour le téléchargement
                 ]
-            ]
+            ],
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Note",
+                "description" => "Vous composez une note de débit ou de crédit adressée à un client, un assureur, un partenaire ou une autorité fiscale. Elle formalise les montants à encaisser ou à reverser et permet le suivi de leurs paiements.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "type"            => "action:options",
+                "addressedTo"     => "action:options",
+                "client"          => "client",
+                "assureur"        => "assureur",
+                "partenaire"      => "partenaire",
+                "autoritefiscale" => "autorite-fiscale",
+                "nom"             => "action:edit",
+                "reference"       => "action:edit",
+                "description"     => "action:description",
+                "articles"        => "action:cart",
+                "paiements"       => "paiement",
+                "comptes"         => "compte-bancaire",
+                "signedBy"        => "utilisateur",
+                "titleSignedBy"   => "action:edit",
+                "sentAt"          => "action:calendar",
+            ],
         ];
         $layout = $this->buildNoteLayout($object, $isParentNew);
 

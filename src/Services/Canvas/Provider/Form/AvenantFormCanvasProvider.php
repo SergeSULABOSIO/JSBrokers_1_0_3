@@ -33,7 +33,22 @@ class AvenantFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/avenant/api/submit",
             "endpoint_delete_url" => "/admin/avenant/api/delete",
             "endpoint_form_url" => "/admin/avenant/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Fiche avenant",
+                "description" => "Vous précisez la modification contractuelle apportée à la police : numéro, référence, période d'effet et pièces associées. Chaque avenant trace l'évolution du contrat et sécurise le suivi de la couverture.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "cotation"        => "cotation",
+                "numero"          => "action:edit",
+                "referencePolice" => "action:edit",
+                "description"     => "action:description",
+                "startingAt"      => "action:calendar",
+                "endingAt"        => "action:calendar",
+                "documents"       => "document",
+            ],
         ];
         $layout = $this->buildAvenantLayout($object, $isParentNew);
 

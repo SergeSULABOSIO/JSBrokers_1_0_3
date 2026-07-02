@@ -25,7 +25,24 @@ class TypeRevenuFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/typerevenu/api/submit",
             "endpoint_delete_url" => "/admin/typerevenu/api/delete",
             "endpoint_form_url" => "/admin/typerevenu/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Type de revenu",
+                "description" => "Vous paramétrez la manière dont un revenu du courtier est calculé (pourcentage d'un chargement ou montant fixe), son redevable ainsi que ses modalités de paiement et de partage. Ce paramétrage s'applique à tous les revenus qui s'y réfèrent.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "nom"                          => "action:edit",
+                "modeCalcul"                   => "action:options",
+                "typeChargement"               => "chargement",
+                "pourcentage"                  => "action:count",
+                "montantflat"                  => "action:count",
+                "appliquerPourcentageDuRisque" => "risque",
+                "redevable"                    => "action:options",
+                "multipayments"                => "paiement",
+                "shared"                       => "action:check",
+            ],
         ];
         $layout = $this->buildTypeRevenuLayout($typeRevenuId, $isParentNew);
 

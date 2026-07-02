@@ -43,11 +43,23 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
             // templates/components/dialog/_form_content.html.twig : seul ce dialogue est
             // concerné, les autres dialogues d'entités gardent le rendu d'origine.
             "form_style" => "auth",
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Invitation d'un collaborateur",
+                "description" => "Vous invitez un collaborateur à rejoindre l'espace de travail de l'entreprise et définissez son périmètre : assistants rattachés, délégation éventuelle et rôles par module. L'invité n'accède qu'aux données couvertes par les droits accordés ici.",
+            ],
             // Icône d'illustration en préfixe par code de champ (mêmes noms que la page
             // d'inscription). Seuls les champs textuels simples sont décorés.
             "field_icons" => [
                 "nom" => "utilisateur",
                 "email" => "mdi:email-outline",
+                "assistants" => "invite",
+                "gestionnaireInvites" => "action:role",
+                "rolesEnFinance" => "role",
+                "rolesEnMarketing" => "role",
+                "rolesEnProduction" => "role",
+                "rolesEnSinistre" => "role",
+                "rolesEnAdministration" => "role",
             ],
             // Action spécifique de la rubrique (barre d'outils + menu contextuel), sur le
             // modèle des actions du Bordereau. Renvoie l'email d'invitation à l'invité à

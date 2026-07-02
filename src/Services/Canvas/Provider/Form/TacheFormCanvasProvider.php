@@ -32,7 +32,21 @@ class TacheFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/tache/api/submit",
             "endpoint_delete_url" => "/admin/tache/api/delete",
             "endpoint_form_url" => "/admin/tache/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Fiche tâche",
+                "description" => "Vous décrivez une action à mener, désignez son exécutant et fixez son échéance. Le suivi des tâches et de leurs feedbacks garantit qu'aucune étape du dossier ne reste en attente.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "description" => "action:description",
+                "executor"    => "invite",
+                "toBeEndedAt" => "action:calendar",
+                "closed"      => "action:check",
+                "feedbacks"   => "feedback",
+                "documents"   => "document",
+            ],
         ];
         $layout = $this->buildTacheLayout($object, $isParentNew);
 

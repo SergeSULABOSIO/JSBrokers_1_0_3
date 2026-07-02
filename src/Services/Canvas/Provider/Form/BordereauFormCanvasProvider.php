@@ -72,7 +72,24 @@ class BordereauFormCanvasProvider implements FormCanvasProviderInterface
                     "url"       => "/admin/bordereau/api/get-linked-note-preview-url/%id%?print=1",
                     "condition" => ["field" => "currentAnalysisStep", "value" => Bordereau::STEP_NOTE_EMISE],
                 ],
-            ]
+            ],
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Bordereau",
+                "description" => "Vous enregistrez un bordereau transmis par un assureur : identification, période couverte, opérations détaillées et documents justificatifs. Il sert de base à l'analyse et à la facturation des revenus du courtier.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "type"         => "action:options",
+                "nom"          => "action:edit",
+                "reference"    => "action:edit",
+                "assureur"     => "assureur",
+                "periodeDebut" => "action:calendar",
+                "periodeFin"   => "action:calendar",
+                "receivedAt"   => "action:calendar",
+                "operations"   => "operation",
+                "documents"    => "document",
+            ],
         ];
         $layout = $this->buildBordereauLayout($object, $isParentNew); // buildBordereauLayout ne prend plus idEntreprise
 

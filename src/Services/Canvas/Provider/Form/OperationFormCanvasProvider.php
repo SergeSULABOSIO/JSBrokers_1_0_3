@@ -34,7 +34,19 @@ class OperationFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_form_url" => "/admin/operation/api/get-form",
             "isCreationMode" => $isParentNew,
             // Pas d'actions spécifiques pour les opérations pour l'instant
-            "attribute_actions" => []
+            "attribute_actions" => [],
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Opération",
+                "description" => "Vous détaillez une ligne d'un bordereau : police concernée, numéro d'avenant et montants hors taxe et de taxe. Ces opérations alimentent l'analyse du bordereau et le rapprochement avec la production.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "referencePolice" => "action:edit",
+                "numeroAvenant"   => "avenant",
+                "montantHT"       => "action:count",
+                "montantTaxe"     => "taxe",
+            ],
         ];
         $layout = $this->buildOperationLayout($object, $isParentNew);
 

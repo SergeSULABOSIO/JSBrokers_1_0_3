@@ -25,7 +25,20 @@ class ContactFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/contact/api/submit",
             "endpoint_delete_url" => "/admin/contact/api/delete",
             "endpoint_form_url" => "/admin/contact/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Fiche contact",
+                "description" => "Vous identifiez un interlocuteur chez le client : nom, coordonnées et fonction. Un carnet de contacts à jour accélère les échanges lors des cotations, des renouvellements et des sinistres.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "nom"       => "action:edit",
+                "email"     => "contact",
+                "telephone" => "contact",
+                "fonction"  => "role",
+                "type"      => "action:options",
+            ],
         ];
         $layout = $this->buildContactLayout($contactId, $isParentNew);
 

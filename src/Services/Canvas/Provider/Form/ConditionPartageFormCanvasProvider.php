@@ -33,7 +33,22 @@ class ConditionPartageFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/conditionpartage/api/submit",
             "endpoint_delete_url" => "/admin/conditionpartage/api/delete",
             "endpoint_form_url" => "/admin/conditionpartage/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Condition de partage",
+                "description" => "Vous paramétrez la règle de partage des revenus avec un partenaire : taux, seuil, unité de mesure, formule d'application et risques concernés. Elle détermine la part reversée au partenaire sur les affaires visées.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "nom"           => "action:edit",
+                "taux"          => "action:count",
+                "seuil"         => "action:count",
+                "uniteMesure"   => "action:options",
+                "formule"       => "action:options",
+                "critereRisque" => "risque",
+                "produits"      => "risque",
+            ],
         ];
         $layout = $this->buildConditionPartageLayout($object, $isParentNew);
 

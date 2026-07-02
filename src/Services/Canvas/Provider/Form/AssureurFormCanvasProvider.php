@@ -25,7 +25,23 @@ class AssureurFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/assureur/api/submit",
             "endpoint_delete_url" => "/admin/assureur/api/delete",
             "endpoint_form_url" => "/admin/assureur/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Fiche assureur",
+                "description" => "Vous renseignez l'identité, les coordonnées et les références légales de la compagnie d'assurance. Ces informations servent de référence pour les cotations, les polices et la facturation liées à cet assureur.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "nom"             => "action:edit",
+                "telephone"       => "contact",
+                "adressePhysique" => "contact",
+                "url"             => "action:open",
+                "email"           => "contact",
+                "numimpot"        => "taxe",
+                "rccm"            => "action:edit",
+                "idnat"           => "action:edit",
+            ],
         ];
         $layout = $this->buildAssureurLayout($assureurId, $isParentNew);
 

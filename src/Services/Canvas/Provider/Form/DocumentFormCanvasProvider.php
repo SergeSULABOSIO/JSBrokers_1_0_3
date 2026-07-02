@@ -25,7 +25,18 @@ class DocumentFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/document/api/submit",
             "endpoint_delete_url" => "/admin/document/api/delete",
             "endpoint_form_url" => "/admin/document/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Document du classeur",
+                "description" => "Vous enregistrez un document en précisant son nom, le classeur de rattachement et le fichier à téléverser. Chaque pièce ainsi archivée reste traçable et accessible pour la gestion administrative du cabinet.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "nom"      => "action:edit",
+                "classeur" => "classeur",
+                "fichier"  => "action:upload",
+            ],
         ];
         $layout = $this->buildDocumentLayout($documentId, $isParentNew);
 

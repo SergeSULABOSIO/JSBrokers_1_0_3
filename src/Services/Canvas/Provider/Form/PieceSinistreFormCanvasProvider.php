@@ -33,7 +33,20 @@ class PieceSinistreFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/piecesinistre/api/submit",
             "endpoint_delete_url" => "/admin/piecesinistre/api/delete",
             "endpoint_form_url" => "/admin/piecesinistre/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Pièce du dossier sinistre",
+                "description" => "Vous consignez une pièce reçue pour l'instruction du sinistre : sa description, sa source, sa date de réception et sa nature (modèle de pièce). Un dossier complet accélère l'évaluation et l'indemnisation.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "description" => "action:description",
+                "fourniPar"   => "contact",
+                "receivedAt"  => "action:calendar",
+                "type"        => "modele-piece",
+                "documents"   => "document",
+            ],
         ];
         $layout = $this->buildPieceSinistreLayout($object, $isParentNew);
 

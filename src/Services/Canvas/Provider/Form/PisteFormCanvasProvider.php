@@ -34,6 +34,28 @@ class PisteFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/piste/api/delete",
             "endpoint_form_url" => "/admin/piste/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Fiche piste",
+                "description" => "Vous qualifiez une opportunité commerciale : client, risque visé, potentiel de prime et de commission, apporteurs impliqués. La piste structure la prospection et prépare les cotations à venir.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "nom"                              => "action:edit",
+                "descriptionDuRisque"              => "action:description",
+                "client"                           => "client",
+                "risque"                           => "risque",
+                "typeAvenant"                      => "avenant",
+                "renewalCondition"                 => "action:renew",
+                "exercice"                         => "action:calendar",
+                "primePotentielle"                 => "action:count",
+                "commissionPotentielle"            => "action:count",
+                "partenaires"                      => "partenaire",
+                "conditionsPartageExceptionnelles" => "condition",
+                "cotations"                        => "cotation",
+                "taches"                           => "tache",
+                "documents"                        => "document",
+            ],
         ];
         $layout = $this->buildPisteLayout($object, $isParentNew);
 

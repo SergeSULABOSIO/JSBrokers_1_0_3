@@ -25,7 +25,18 @@ class ChargementFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/chargement/api/submit",
             "endpoint_delete_url" => "/admin/chargement/api/delete",
             "endpoint_form_url" => "/admin/chargement/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Type de chargement",
+                "description" => "Vous définissez une composante de la prime d'assurance : son nom, sa fonction et sa description. Ces types structurent la décomposition des primes sur les cotations et servent d'assiette au calcul de certains revenus.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "nom"         => "action:edit",
+                "fonction"    => "action:options",
+                "description" => "action:description",
+            ],
         ];
         $layout = $this->buildChargementLayout($chargementId, $isParentNew);
 
