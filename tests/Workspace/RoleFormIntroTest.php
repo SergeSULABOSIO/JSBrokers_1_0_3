@@ -71,6 +71,18 @@ class RoleFormIntroTest extends WebTestCase
             ['emails' => $emails],
             ['emails' => \Doctrine\DBAL\ArrayParameterType::STRING]
         );
+        foreach ([
+            'roles_en_finance', 'roles_en_marketing', 'roles_en_production',
+            'roles_en_sinistre', 'roles_en_administration',
+        ] as $table) {
+            $conn->executeStatement(
+                "DELETE r FROM {$table} r
+                 JOIN invite i ON r.invite_id = i.id
+                 JOIN entreprise e ON i.entreprise_id = e.id
+                 WHERE e.nom = :nom",
+                ['nom' => self::ENTREPRISE_NOM]
+            );
+        }
         $conn->executeStatement(
             "DELETE i FROM invite i
              LEFT JOIN utilisateur u ON i.utilisateur_id = u.id
@@ -179,6 +191,42 @@ class RoleFormIntroTest extends WebTestCase
             $this->assertStringContainsString('Collaborateur concerné', $html, sprintf('« %s » doit libeller la puce du collaborateur cible.', $root));
             $this->assertStringContainsString('Collaborateur cible', $html, sprintf('« %s » doit afficher le nom du collaborateur pour qui le rôle est édité.', $root));
         }
+    }
+
+    /**
+     * ÉDITION : le contexte parent est rappelé dans les puces même quand le champ
+     * parent n'est pas dans le layout (dérivé des associations ManyToOne de l'entité
+     * par renderFormCanvas), et sans doublon avec les faits des champs masqués.
+     */
+    public function testEditFormRecallsParentContext(): void
+    {
+        ['owner' => $owner, 'guest' => $guest, 'entreprise' => $e] = $this->seed();
+
+        $role = new \App\Entity\RolesEnProduction();
+        $role->setNom('Rôle test contexte');
+        $role->setAccessClient([\App\Entity\Invite::ACCESS_LECTURE]);
+        $role->setEntreprise($e);
+        $guest->addRolesEnProduction($role);
+        $this->em()->persist($role);
+        $this->em()->flush();
+
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+        $this->client->request('GET', sprintf(
+            '/admin/rolesenproduction/api/get-form/%d?idEntreprise=%d&idInvite=%d',
+            $role->getId(),
+            $e->getId(),
+            $owner->getId()
+        ));
+
+        $this->assertResponseIsSuccessful();
+        $html = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('form-intro-facts', $html, 'En édition, les puces de contexte doivent être présentes.');
+        $this->assertStringContainsString('Collaborateur cible', $html, 'Le collaborateur parent du rôle doit être rappelé en édition.');
+        $this->assertSame(
+            1,
+            substr_count($html, 'Collaborateur concerné'),
+            'Le fait « collaborateur » ne doit apparaître qu\'une fois (dédoublonnage champ masqué / parent auto).'
+        );
     }
 
     /**

@@ -45,11 +45,23 @@
                                 {% endif %}
                                 {% if display is not null and display != '' %}
                                     {% set fact_label = intro.facts_labels[fc]|default(form[fc].vars.label|default(fc|humanize)) %}
-                                    {% set intro_facts = intro_facts|merge([{label: fact_label, value: display}]) %}
+                                    {% set intro_facts = intro_facts|merge([{field: fc, label: fact_label, value: display}]) %}
                                 {% endif %}
                             {% endif %}
                         {% endfor %}
                     {% endfor %}
+                {% endfor %}
+                {# Contexte parent (fourni par renderFormCanvas) : objets parents déjà
+                   rattachés à l'entité — indispensable en ÉDITION où le parent n'est
+                   pas dans le layout (ex. la tâche d'un feedback). Dédoublonné avec
+                   les faits issus des champs masqués ci-dessus. #}
+                {% for pf_field, pf_value in parentContextFacts|default({}) %}
+                    {% set already_listed = intro_facts|filter(f => f.field == pf_field)|length > 0 %}
+                    {% if not already_listed %}
+                        {% set pf_form_label = form[pf_field] is defined ? form[pf_field].vars.label|default(pf_field|humanize) : pf_field|humanize %}
+                        {% set fact_label = intro.facts_labels[pf_field]|default(pf_form_label) %}
+                        {% set intro_facts = intro_facts|merge([{field: pf_field, label: fact_label, value: pf_value}]) %}
+                    {% endif %}
                 {% endfor %}
                 <div class="form-intro" role="note">
                     <span class="form-intro-icon" aria-hidden="true">
