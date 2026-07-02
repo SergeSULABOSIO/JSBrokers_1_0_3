@@ -40,6 +40,8 @@
         {% if calculated_attributes is not empty %}
             {# On ajoute une classe pour gérer l'espacement si la barre d'outils est présente #}
             <h5 class="column-title {% if not isCreationMode and formCanvas.parametres.attribute_actions is defined %}mt-3{% endif %}">
+                {# Pastille cobalt de l'entité : écho de l'entête contextuel du volet droit (Cohérence). #}
+                <span class="column-title-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(canvas.parametres.icone|default('default')), {height: '20px', width: '20px'}) }}</span>
                 Attributs calculés
             </h5>
             <div class="calculated-attributes-content">
