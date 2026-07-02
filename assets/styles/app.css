@@ -1157,39 +1157,70 @@ thead.sticky-header {
 }
 
 .calculated-attributes-column .column-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
     font-weight: bold;
     color: white;
-    font-size: 1.2rem;
-    margin-bottom: 1.5rem;
-    padding-bottom: 0.5rem;
+    font-size: 1.05rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.85rem;
     border-bottom: 1px solid #495057;
+}
+/* Pastille cobalt de l'entité : miroir de la pastille claire de l'entête du volet
+   droit (.form-intro-icon) — cohérence des deux volets. Blanc sur cobalt (charte). */
+.calculated-attributes-column .column-title-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background-color: #0047AB;
+    color: #ffffff;
+}
+.calculated-attributes-column .column-title-icon svg {
+    width: 20px;
+    height: 20px;
 }
 
 .calculated-attributes-list {
-    /* Liste de description (dl) : on neutralise les marges/styles par défaut */
+    /* Liste de description (dl) : chaque groupe devient un panneau sombre délimité,
+       en miroir des cartes claires du volet droit (Cohérence). */
     list-style: none;
-    padding: 0;
+    padding: 0.3rem 0.35rem;
     margin: 0;
+    background-color: #343a40;
+    border: 1px solid #495057;
+    border-radius: 10px;
 }
 
 /* Ligne d'un couple intitulé / valeur (ancien <li>, désormais un conteneur de <dt>/<dd>) */
 .calculated-attributes-item {
     display: flex;
     justify-content: space-between;
+    align-items: baseline;
     gap: 0.75rem;
-    padding: 0.75rem 0.5rem;
-    border-radius: 4px;
+    padding: 0.6rem 0.6rem;
+    border-radius: 7px;
     transition: background-color 0.2s ease;
+}
+/* Filet discret entre les rangées d'un même panneau. */
+.calculated-attributes-item + .calculated-attributes-item {
+    border-top: 1px solid #495057;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
 }
 
 .calculated-attributes-item:hover {
-    background-color: #343a40;
+    background-color: #495057;
 }
 
 .calculated-attributes-list .attr-label {
-    /* <dt> */
+    /* <dt> : gris clair de la charte, lisible sur les fonds sombres */
     font-weight: normal;
-    opacity: 0.8;
+    color: #adb5bd;
 }
 .calculated-attributes-list .attr-value {
     /* <dd> : on retire la marge par défaut du navigateur */
@@ -1265,24 +1296,26 @@ thead.sticky-header {
     color: #ffffff; /* Blanc pour la valeur */
 }
 
-/* NOUVEAU : Style pour les titres de groupe dans la colonne des attributs */
+/* NOUVEAU : Style pour les titres de groupe dans la colonne des attributs.
+   Micro-libellé au-dessus du panneau de groupe (le panneau délimite désormais
+   le contenu : plus besoin de filet sous le titre). */
 .calculated-attributes-group-title {
-    font-size: 0.9rem;
+    font-size: 0.72rem;
     font-weight: bold;
     color: #adb5bd; /* Gris clair pour le titre du groupe */
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 0.5rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #495057; /* Ligne de séparation sombre */
+    letter-spacing: 0.06em;
+    margin-bottom: 0.4rem;
+    padding-left: 0.25rem;
 }
 .calculated-attributes-content dl + .calculated-attributes-group-title {
-    margin-top: 1.5rem; /* Ajoute un espace au-dessus des groupes, sauf le premier */
+    margin-top: 1.25rem; /* Ajoute un espace au-dessus des groupes, sauf le premier */
 }
 
 /* NOUVEAU : Barre d'outils pour la colonne des attributs */
 .attributes-toolbar {
     background-color: #343a40; /* Un gris un peu plus clair que le fond de la colonne */
+    border: 1px solid #495057; /* Même délimitation que les panneaux de groupe */
     border-radius: var(--bs-border-radius-sm);
     padding: 0.5rem;
     margin-bottom: 1rem;
