@@ -8,9 +8,14 @@
     {{ m.heading(icone, titre) }}
     {{ m.paragraph(intro) }}
 
-    {% for label, valeur in details %}
-        {{ m.paragraph('<strong>' ~ label ~ '&nbsp;:</strong> ' ~ valeur) }}
-    {% endfor %}
+    {% if perimetre is defined %}
+        {# Rendu structuré (cartes par module + pastilles de niveaux) : lisible et pro. #}
+        {{ m.perimetre(perimetre) }}
+    {% elseif details is defined %}
+        {% for label, valeur in details %}
+            {{ m.paragraph('<strong>' ~ label ~ '&nbsp;:</strong> ' ~ valeur) }}
+        {% endfor %}
+    {% endif %}
 
-    {{ m.note('Notification automatique adressée à l\'équipe JS Brokers pour information.') }}
+    {{ m.note(piedNote|default('Notification automatique adressée à l\'équipe JS Brokers pour information.')) }}
 {% endblock %}

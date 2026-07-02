@@ -43,15 +43,16 @@ class InvitePerimetreNotifier
                 $this->corporateMailer->buildSubject('Mise à jour de vos accès', (string) $nom),
                 'emails/agent_notification.html.twig',
                 [
-                    'titre'   => "Votre périmètre d'action a été mis à jour",
-                    'intro'   => sprintf(
-                        'Bonjour %s, le propriétaire de l\'espace de travail%s vient de mettre à jour vos droits d\'accès. Voici votre périmètre d\'action actuel.',
+                    'titre'     => "Votre périmètre d'action a été mis à jour",
+                    'intro'     => sprintf(
+                        'Bonjour %s, le propriétaire de l\'espace de travail%s vient de mettre à jour vos droits d\'accès. Voici, module par module, le périmètre d\'action dont vous disposez désormais.',
                         $nom,
                         $entreprise ? ' « ' . $entreprise->getNom() . ' »' : ''
                     ),
-                    'icone'   => 'role',
-                    'details' => $this->resolver->describePerimetre($invite),
-                    'agent'   => $nom,
+                    'icone'     => 'role',
+                    'perimetre' => $this->resolver->describePerimetreDetailed($invite),
+                    'piedNote'  => "Notification automatique. Pour toute question sur vos accès, rapprochez-vous du propriétaire de l'espace de travail.",
+                    'agent'     => $nom,
                 ],
             );
         } catch (\Throwable $e) {

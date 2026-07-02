@@ -64,3 +64,87 @@
         </td>
     </tr>
 {% endmacro %}
+
+{#
+   perimetre(data) : rend le périmètre d'action d'un invité de façon lisible et
+   professionnelle — une carte par module, chaque entité sur sa propre ligne, et
+   les niveaux d'accès affichés en pastilles (Lecture / Écriture / …) plutôt qu'en
+   une longue ligne dense. `data` est la sortie de
+   WorkspaceAccessResolver::describePerimetreDetailed() :
+     { owner: bool, gestionnaire: bool, modules: [ { nom, entites: [ { nom, niveaux[] } ] } ] }
+   Les libellés textuels des niveaux garantissent que l'information ne repose jamais
+   sur la seule couleur (WCAG 1.4.1).
+#}
+{% macro perimetre(data) %}
+    {% if data.owner %}
+        <tr>
+            <td style="padding: 8px 0 4px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                        <td style="background-color: #e8f0fb; border-left: 4px solid #0047AB; border-radius: 8px; padding: 14px 16px; font: 600 15px/1.5 Arial, Helvetica, sans-serif; color: #0d2440;">
+                            Accès complet à l'espace de travail, en qualité de propriétaire de l'entreprise.
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    {% elseif data.modules is empty %}
+        <tr>
+            <td style="padding: 8px 0 4px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                        <td style="background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 8px; padding: 14px 16px; font: 400 14px/1.55 Arial, Helvetica, sans-serif; color: #664d03;">
+                            Aucun accès ne vous a encore été attribué. Rapprochez-vous du propriétaire de l'espace de travail pour définir votre périmètre d'action.
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    {% else %}
+        {% for module in data.modules %}
+            <tr>
+                <td style="padding: 8px 0;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                           style="border: 1px solid #dee2e6; border-radius: 10px; overflow: hidden;">
+                        <tr>
+                            <td style="background-color: #f1f5fb; border-left: 4px solid #0047AB; padding: 10px 16px; font: 700 14px/1.3 Arial, Helvetica, sans-serif; color: #0047AB; letter-spacing: .2px;">
+                                {{ module.nom }}
+                            </td>
+                        </tr>
+                        {% for entite in module.entites %}
+                            <tr>
+                                <td style="padding: 10px 16px;{% if not loop.first %} border-top: 1px solid #eef1f5;{% endif %}">
+                                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                                        <tr>
+                                            <td style="font: 600 14px/1.4 Arial, Helvetica, sans-serif; color: #343a40; vertical-align: middle; padding-right: 8px;">
+                                                {{ entite.nom }}
+                                            </td>
+                                            <td align="right" style="vertical-align: middle;">
+                                                {% for niveau in entite.niveaux %}
+                                                    <span style="display: inline-block; background-color: #e8f0fb; color: #0047AB; font: 600 12px/1 Arial, Helvetica, sans-serif; padding: 5px 10px; border-radius: 20px; margin: 2px 0 2px 6px; white-space: nowrap;">{{ niveau }}</span>
+                                                {% endfor %}
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                </td>
+            </tr>
+        {% endfor %}
+        {% if data.gestionnaire %}
+            <tr>
+                <td style="padding: 8px 0 2px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                            <td style="background-color: #e8f0fb; border-left: 4px solid #0047AB; border-radius: 8px; padding: 12px 16px; font: 600 14px/1.5 Arial, Helvetica, sans-serif; color: #0d2440;">
+                                Vous êtes également habilité à gérer les invités et leurs rôles au sein de l'espace de travail.
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        {% endif %}
+    {% endif %}
+{% endmacro %}
