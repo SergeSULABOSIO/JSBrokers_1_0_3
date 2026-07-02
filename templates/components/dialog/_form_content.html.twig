@@ -14,6 +14,21 @@
 
         {# La colonne du formulaire prend l'espace restant #}
         <div class="col form-column{% if is_auth %} form-column--auth{% endif %}{% if formCanvas.parametres.form_class is defined %} {{ formCanvas.parametres.form_class }}{% endif %}">
+            {# Entête contextuel opt-in (pastille de l'entité + description de l'édition
+               et de son importance), au-dessus du cadre du formulaire. Rendu uniquement
+               si le canvas pose form_intro : les autres dialogues sont inchangés. #}
+            {% if formCanvas.parametres.form_intro is defined %}
+                {% set intro = formCanvas.parametres.form_intro %}
+                <div class="form-intro" role="note">
+                    <span class="form-intro-icon" aria-hidden="true">
+                        {{ ux_icon(resolve_icon_name(intro.icone|default(entityCanvas.parametres.icone|default('action:role'))), {height: '26px', width: '26px'}) }}
+                    </span>
+                    <div class="form-intro-text">
+                        <p class="form-intro-title">{{ intro.titre }}</p>
+                        <p class="form-intro-desc">{{ intro.description }}</p>
+                    </div>
+                </div>
+            {% endif %}
             {{ form_start(form) }}
             {% if formCanvas.form_layout is defined and formCanvas.form_layout is not empty %}
                 {# Pour chaque ligne définie dans la configuration du layout... #}

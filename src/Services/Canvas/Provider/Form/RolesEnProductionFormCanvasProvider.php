@@ -27,6 +27,11 @@ class RolesEnProductionFormCanvasProvider implements FormCanvasProviderInterface
             "isCreationMode" => $isParentNew,
             // Rendu dédié « droits d'accès » (grille de cases sur charte cobalt).
             "form_class" => "form-column--roles",
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Droits d'accès — module Production",
+                "description" => "Vous définissez ce que ce collaborateur peut consulter et modifier sur le portefeuille de l'entreprise (groupes, clients, assureurs, contacts, risques, avenants, partenaires, cotations). Ces droits s'appliquent dès l'enregistrement : n'accordez que le nécessaire.",
+            ],
         ];
         $layout = $this->buildRolesEnProductionLayout();
 
