@@ -140,12 +140,23 @@
                                                    (manager_options, attr, idEntreprise, idInvite) pour préserver la
                                                    logique métier — notamment le filtrage connectedTo de l'autocomplétion. #}
                                                 {% set field_icon = formCanvas.parametres.field_icons[field_code]|default(null) %}
+                                                {% set is_check_field = 'checkbox' in form[field_code].vars.block_prefixes %}
                                                 <div class="dlg-field-group">
-                                                    {{ form_label(form[field_code]) }}
-                                                    <div class="dlg-field{% if field_icon %} dlg-field--icon{% endif %}">
-                                                        {% if field_icon %}{{ ux_icon(resolve_icon_name(field_icon), {height: '20px', width: '20px', class: 'dlg-field-icon'}) }}{% endif %}
-                                                        {{ form_widget(form[field_code], {'manager_options': current_field_options, 'attr': current_widget_attr, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
-                                                    </div>
+                                                    {% if is_check_field %}
+                                                        {# Case à cocher : l'icône préfixe superposée ne convient pas à ce
+                                                           gabarit — rangée dédiée : mini-pastille + case + libellé inline. #}
+                                                        <div class="dlg-field dlg-field--check">
+                                                            {% if field_icon %}<span class="dlg-field-check-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(field_icon), {height: '16px', width: '16px'}) }}</span>{% endif %}
+                                                            {{ form_widget(form[field_code], {'manager_options': current_field_options, 'attr': current_widget_attr, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
+                                                            {{ form_label(form[field_code]) }}
+                                                        </div>
+                                                    {% else %}
+                                                        {{ form_label(form[field_code]) }}
+                                                        <div class="dlg-field{% if field_icon %} dlg-field--icon{% endif %}">
+                                                            {% if field_icon %}{{ ux_icon(resolve_icon_name(field_icon), {height: '20px', width: '20px', class: 'dlg-field-icon'}) }}{% endif %}
+                                                            {{ form_widget(form[field_code], {'manager_options': current_field_options, 'attr': current_widget_attr, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
+                                                        </div>
+                                                    {% endif %}
                                                     {# form_widget seul n'affiche pas l'aide : on la rend explicitement (textes d'aide email/assistants). #}
                                                     {{ form_help(form[field_code]) }}
                                                     {{ form_errors(form[field_code]) }}
