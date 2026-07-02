@@ -32,6 +32,19 @@ class RolesEnFinanceFormCanvasProvider implements FormCanvasProviderInterface
                 "titre" => "Droits d'accès — module Finance",
                 "description" => "Vous définissez ce que ce collaborateur peut consulter et modifier sur les données financières de l'entreprise (monnaies, comptes bancaires, taxes, paiements, bordereaux, revenus…). Ces droits s'appliquent dès l'enregistrement : n'accordez que le nécessaire.",
             ],
+            // Mini-pastille par carte de droits : icône de l'entité concernée (alias IconCanvasProvider).
+            "field_icons" => [
+                "accessMonnaie"        => "monnaie",
+                "accessCompteBancaire" => "compte-bancaire",
+                "accessTaxe"           => "taxe",
+                "accessTypeRevenu"     => "type-revenu",
+                "accessTranche"        => "tranche",
+                "accessTypeChargement" => "chargement",
+                "accessNote"           => "note",
+                "accessPaiement"       => "paiement",
+                "accessBordereau"      => "bordereau",
+                "accessRevenu"         => "revenu",
+            ],
         ];
         $layout = $this->buildRolesEnFinanceLayout();
 

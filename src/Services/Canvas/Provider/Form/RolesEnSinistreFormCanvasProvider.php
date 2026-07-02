@@ -32,6 +32,12 @@ class RolesEnSinistreFormCanvasProvider implements FormCanvasProviderInterface
                 "titre" => "Droits d'accès — module Sinistre",
                 "description" => "Vous définissez ce que ce collaborateur peut consulter et modifier sur la gestion des sinistres (types de pièces, notifications, règlements). Ces droits s'appliquent dès l'enregistrement : n'accordez que le nécessaire.",
             ],
+            // Mini-pastille par carte de droits : icône de l'entité concernée (alias IconCanvasProvider).
+            "field_icons" => [
+                "accessTypePiece"    => "modele-piece",
+                "accessNotification" => "action:alert",
+                "accessReglement"    => "paiement",
+            ],
         ];
         $layout = $this->buildLayout();
 

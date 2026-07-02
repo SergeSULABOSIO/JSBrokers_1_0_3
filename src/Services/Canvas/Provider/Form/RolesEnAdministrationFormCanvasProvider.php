@@ -32,6 +32,12 @@ class RolesEnAdministrationFormCanvasProvider implements FormCanvasProviderInter
                 "titre" => "Droits d'accès — module Administration",
                 "description" => "Vous définissez ce que ce collaborateur peut consulter et modifier sur l'administration de l'espace de travail (documents, classeurs, collaborateurs invités). Ces droits s'appliquent dès l'enregistrement : n'accordez que le nécessaire.",
             ],
+            // Mini-pastille par carte de droits : icône de l'entité concernée (alias IconCanvasProvider).
+            "field_icons" => [
+                "accessDocument" => "document",
+                "accessClasseur" => "classeur",
+                "accessInvite"   => "invite",
+            ],
         ];
         $layout = $this->buildRolesEnAdministrationLayout();
 
