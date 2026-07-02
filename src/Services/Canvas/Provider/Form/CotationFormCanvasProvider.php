@@ -33,7 +33,24 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
             'endpoint_form_url' => '/admin/cotation/api/get-form',
             'endpoint_submit_url' => '/admin/cotation/api/submit',
             'endpoint_delete_url' => '/admin/cotation/api/delete',
-            'isCreationMode' => $isCreateMode
+            'isCreationMode' => $isCreateMode,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Fiche cotation",
+                "description" => "Vous construisez la proposition tarifaire auprès d'un assureur : chargements, revenus du courtier, tranches de paiement et avenants. C'est la pièce maîtresse du placement, dont découlent la prime et la commission.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "nom"         => "action:edit",
+                "duree"       => "action:calendar",
+                "assureur"    => "assureur",
+                "chargements" => "chargement",
+                "revenus"     => "revenu",
+                "tranches"    => "tranche",
+                "documents"   => "document",
+                "taches"      => "tache",
+                "avenants"    => "avenant",
+            ],
         ];
 
         $layout = $this->buildCotationLayout($object, $isCreateMode);

@@ -33,7 +33,21 @@ class PaiementFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/paiement/api/submit",
             "endpoint_delete_url" => "/admin/paiement/api/delete",
             "endpoint_form_url" => "/admin/paiement/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Paiement",
+                "description" => "Vous enregistrez un règlement rattaché à une note : référence, montant, date et compte bancaire concerné. Chaque paiement met à jour le solde de la note et doit être justifié par une preuve documentaire.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "reference"      => "action:edit",
+                "montant"        => "action:count",
+                "paidAt"         => "action:calendar",
+                "CompteBancaire" => "compte-bancaire",
+                "description"    => "action:description",
+                "preuves"        => "document",
+            ],
         ];
         $layout = $this->buildPaiementLayout($object, $isParentNew);
 

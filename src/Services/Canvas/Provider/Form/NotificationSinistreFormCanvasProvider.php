@@ -33,7 +33,31 @@ class NotificationSinistreFormCanvasProvider implements FormCanvasProviderInterf
             "endpoint_submit_url" => "/admin/notificationsinistre/api/submit",
             "endpoint_delete_url" => "/admin/notificationsinistre/api/delete",
             "endpoint_form_url" => "/admin/notificationsinistre/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Notification de sinistre",
+                "description" => "Vous déclarez un sinistre : l'assuré et l'assureur concernés, le risque touché, les faits, les dates et l'évaluation des dommages. Cette notification ouvre le dossier de sinistre et sert de référence pour les pièces, offres d'indemnisation et tâches qui suivront.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "assure"                      => "client",
+                "assureur"                    => "assureur",
+                "risque"                      => "risque",
+                "referencePolice"             => "action:edit",
+                "referenceSinistre"           => "action:edit",
+                "descriptionDeFait"           => "action:description",
+                "occuredAt"                   => "action:calendar",
+                "notifiedAt"                  => "action:calendar",
+                "lieu"                        => "contact",
+                "descriptionVictimes"         => "action:description",
+                "dommage"                     => "action:count",
+                "evaluationChiffree"          => "action:count",
+                "contacts"                    => "contact",
+                "pieces"                      => "piece-sinistre",
+                "offreIndemnisationSinistres" => "offre",
+                "taches"                      => "tache",
+            ],
         ];
         $layout = $this->buildNotificationSinistreLayout($object, $isParentNew);
 

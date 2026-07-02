@@ -182,22 +182,26 @@ class RoleFormIntroTest extends WebTestCase
     }
 
     /**
-     * Le bloc est opt-in : un dialogue sans `form_intro` dans son canvas (ex. Client)
-     * ne doit pas l'afficher.
+     * Généralisation : les dialogues des autres entités (ex. Client, Assureur) portent
+     * eux aussi l'entête contextuel désormais fourni par leur FormCanvasProvider.
      */
-    public function testNonRoleFormHasNoIntro(): void
+    public function testOtherEntityFormsHaveIntroToo(): void
     {
         ['owner' => $owner, 'entreprise' => $e] = $this->seed();
         $this->client->loginUser($this->user(self::OWNER_EMAIL));
 
-        $this->client->request('GET', sprintf(
-            '/admin/client/api/get-form?idEntreprise=%d&idInvite=%d',
-            $e->getId(),
-            $owner->getId()
-        ));
+        foreach (['client', 'assureur'] as $root) {
+            $this->client->request('GET', sprintf(
+                '/admin/%s/api/get-form?idEntreprise=%d&idInvite=%d',
+                $root,
+                $e->getId(),
+                $owner->getId()
+            ));
 
-        $this->assertResponseIsSuccessful();
-        $html = (string) $this->client->getResponse()->getContent();
-        $this->assertStringNotContainsString('class="form-intro"', $html, 'Un dialogue sans form_intro ne doit pas afficher l\'entête contextuel.');
+            $this->assertResponseIsSuccessful(sprintf('Le formulaire « %s » doit se rendre sans erreur.', $root));
+            $html = (string) $this->client->getResponse()->getContent();
+            $this->assertStringContainsString('class="form-intro"', $html, sprintf('Le dialogue « %s » doit afficher l\'entête contextuel généralisé.', $root));
+            $this->assertStringContainsString('form-intro-icon', $html, sprintf('L\'entête de « %s » doit contenir la pastille de l\'entité.', $root));
+        }
     }
 }

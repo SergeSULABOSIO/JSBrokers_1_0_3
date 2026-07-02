@@ -33,7 +33,22 @@ class CompteBancaireFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/comptebancaire/api/submit",
             "endpoint_delete_url" => "/admin/comptebancaire/api/delete",
             "endpoint_form_url" => "/admin/comptebancaire/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Compte bancaire",
+                "description" => "Vous décrivez un compte bancaire de l'entreprise : banque, intitulé, numéro et code SWIFT. Ce compte figure sur les notes de débit émises et sert à rattacher les paiements encaissés.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "nom"       => "action:edit",
+                "banque"    => "action:edit",
+                "intitule"  => "action:edit",
+                "numero"    => "action:edit",
+                "codeSwift" => "action:edit",
+                "documents" => "document",
+                "paiements" => "paiement",
+            ],
         ];
         $layout = $this->buildCompteBancaireLayout($object, $isParentNew);
 

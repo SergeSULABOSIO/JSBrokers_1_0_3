@@ -25,7 +25,18 @@ class AutoriteFiscaleFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/autoritefiscale/api/submit",
             "endpoint_delete_url" => "/admin/autoritefiscale/api/delete",
             "endpoint_form_url" => "/admin/autoritefiscale/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Autorité fiscale",
+                "description" => "Vous renseignez l'organisme public destinataire des taxes collectées (nom, abréviation) et la taxe qui lui est rattachée. Ces informations servent à l'émission des notes de reversement des taxes.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "nom"         => "action:edit",
+                "abreviation" => "action:edit",
+                "taxe"        => "taxe",
+            ],
         ];
         $layout = $this->buildAutoriteFiscaleLayout($autoriteId, $isParentNew);
 

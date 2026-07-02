@@ -25,7 +25,21 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/tranche/api/submit",
             "endpoint_delete_url" => "/admin/tranche/api/delete",
             "endpoint_form_url" => "/admin/tranche/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Tranche",
+                "description" => "Vous découpez le paiement d'une affaire en tranches : mode de calcul (montant fixe ou pourcentage), date d'exigibilité et échéance. Les tranches cadencent la facturation et le suivi des encaissements.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "nom"         => "action:edit",
+                "modeCalcul"  => "action:options",
+                "montantFlat" => "action:count",
+                "pourcentage" => "action:count",
+                "payableAt"   => "action:calendar",
+                "echeanceAt"  => "action:calendar",
+            ],
         ];
         $layout = $this->buildTrancheLayout($trancheId, $isParentNew);
 

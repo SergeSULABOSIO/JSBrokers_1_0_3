@@ -25,7 +25,21 @@ class TaxeFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/taxe/api/submit",
             "endpoint_delete_url" => "/admin/taxe/api/delete",
             "endpoint_form_url" => "/admin/taxe/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Taxe",
+                "description" => "Vous définissez une taxe applicable aux primes d'assurance : ses taux IARD et Vie, son redevable et les autorités fiscales bénéficiaires. Elle est appliquée automatiquement lors des calculs sur les cotations.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "code"             => "action:edit",
+                "tauxIARD"         => "action:count",
+                "tauxVIE"          => "action:count",
+                "description"      => "action:description",
+                "redevable"        => "action:options",
+                "autoriteFiscales" => "autorite-fiscale",
+            ],
         ];
         $layout = $this->buildTaxeLayout($object, $isParentNew);
 

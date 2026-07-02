@@ -25,7 +25,19 @@ class RevenuPourCourtierFormCanvasProvider implements FormCanvasProviderInterfac
             "endpoint_submit_url" => "/admin/revenupourcourtier/api/submit",
             "endpoint_delete_url" => "/admin/revenupourcourtier/api/delete",
             "endpoint_form_url" => "/admin/revenupourcourtier/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Revenu pour courtier",
+                "description" => "Vous rattachez un revenu du courtier à une affaire en vous appuyant sur un type de revenu, avec la possibilité d'un montant ou d'un taux exceptionnel. Il détermine la rémunération facturable sur l'affaire concernée.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "nom"                    => "action:edit",
+                "typeRevenu"             => "type-revenu",
+                "montantFlatExceptionel" => "action:count",
+                "tauxExceptionel"        => "action:count",
+            ],
         ];
         $layout = $this->buildRevenuPourCourtierLayout($revenuId, $isParentNew);
 

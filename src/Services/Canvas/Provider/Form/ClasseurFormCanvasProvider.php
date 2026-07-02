@@ -33,7 +33,18 @@ class ClasseurFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/classeur/api/submit",
             "endpoint_delete_url" => "/admin/classeur/api/delete",
             "endpoint_form_url" => "/admin/classeur/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Classeur de documents",
+                "description" => "Vous organisez ici un classeur : son nom, sa description et les documents qu'il regroupe. Un classement rigoureux facilite la recherche des pièces administratives et contractuelles du cabinet.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "nom"         => "action:edit",
+                "description" => "action:description",
+                "documents"   => "document",
+            ],
         ];
         $layout = $this->buildClasseurLayout($object, $isParentNew);
 

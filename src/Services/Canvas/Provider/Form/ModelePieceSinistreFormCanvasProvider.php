@@ -27,7 +27,18 @@ class ModelePieceSinistreFormCanvasProvider implements FormCanvasProviderInterfa
             "endpoint_submit_url" => "/admin/modelepiecesinistre/api/submit",
             "endpoint_delete_url" => "/admin/modelepiecesinistre/api/delete",
             "endpoint_form_url" => "/admin/modelepiecesinistre/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Modèle de pièce sinistre",
+                "description" => "Vous définissez un modèle de pièce attendue lors de l'instruction d'un sinistre : son intitulé, sa description et son caractère obligatoire. Ces modèles servent de liste de contrôle pour réunir les justificatifs requis.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "nom"         => "action:edit",
+                "description" => "action:description",
+                "obligatoire" => "action:check",
+            ],
         ];
         $layout = $this->buildModelePieceSinistreLayout($modeleId, $isParentNew);
 

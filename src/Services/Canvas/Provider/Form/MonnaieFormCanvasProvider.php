@@ -32,7 +32,20 @@ class MonnaieFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/monnaie/api/submit",
             "endpoint_delete_url" => "/admin/monnaie/api/delete",
             "endpoint_form_url" => "/admin/monnaie/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Monnaie",
+                "description" => "Vous configurez une devise utilisée par l'entreprise : code, taux de change vers l'USD, format local et fonction. Elle conditionne l'affichage et la conversion des montants dans toute la gestion financière.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "nom"      => "action:edit",
+                "code"     => "action:edit",
+                "tauxusd"  => "action:count",
+                "locale"   => "action:options",
+                "fonction" => "action:options",
+            ],
         ];
         $layout = $this->buildMonnaieLayout($object, $isParentNew);
 

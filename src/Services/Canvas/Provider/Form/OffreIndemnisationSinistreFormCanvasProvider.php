@@ -33,7 +33,23 @@ class OffreIndemnisationSinistreFormCanvasProvider implements FormCanvasProvider
             "endpoint_submit_url" => "/admin/offreindemnisationsinistre/api/submit",
             "endpoint_delete_url" => "/admin/offreindemnisationsinistre/api/delete",
             "endpoint_form_url" => "/admin/offreindemnisationsinistre/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Offre d'indemnisation",
+                "description" => "Vous formalisez l'offre d'indemnisation proposée sur ce sinistre : bénéficiaire, franchise appliquée, montant payable et référence bancaire du règlement. Ces éléments conditionnent les paiements et la clôture du dossier.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "nom"                => "action:edit",
+                "beneficiaire"       => "client",
+                "franchiseAppliquee" => "action:count",
+                "montantPayable"     => "action:count",
+                "referenceBancaire"  => "compte-bancaire",
+                "taches"             => "tache",
+                "documents"          => "document",
+                "paiements"          => "paiement",
+            ],
         ];
         $layout = $this->buildOffreIndemnisationLayout($object, $isParentNew);
 

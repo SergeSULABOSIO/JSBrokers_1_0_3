@@ -33,7 +33,23 @@ class RisqueFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/risque/api/submit",
             "endpoint_delete_url" => "/admin/risque/api/delete",
             "endpoint_form_url" => "/admin/risque/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Fiche risque",
+                "description" => "Vous décrivez un produit d'assurance du catalogue : code, branche, taux de commission spécifique et régime d'imposition. Ce référentiel alimente les pistes et le calcul des revenus du courtier.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "nomComplet"                        => "action:edit",
+                "code"                              => "action:edit",
+                "pourcentageCommissionSpecifiqueHT" => "action:count",
+                "description"                       => "action:description",
+                "branche"                           => "action:options",
+                "imposable"                         => "taxe",
+                "pistes"                            => "piste",
+                "notificationSinistres"             => "sinistre",
+            ],
         ];
         $layout = $this->buildRisqueLayout($object, $isParentNew);
 

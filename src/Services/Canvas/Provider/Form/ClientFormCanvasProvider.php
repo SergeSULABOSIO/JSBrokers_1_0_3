@@ -48,6 +48,27 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                     "url"   => "/admin/soa/client/%id%/apercu",
                 ],
             ],
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Fiche client",
+                "description" => "Vous constituez le dossier d'identification du client : civilité, coordonnées, références légales et rattachements (groupe, apporteurs, contacts). Une fiche complète fiabilise les pistes, les cotations et le relevé de compte du client.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "civilite"    => "action:options",
+                "nom"         => "action:edit",
+                "groupe"      => "groupe",
+                "adresse"     => "contact",
+                "email"       => "contact",
+                "telephone"   => "contact",
+                "exonere"     => "taxe",
+                "numimpot"    => "taxe",
+                "rccm"        => "action:edit",
+                "idnat"       => "action:edit",
+                "partenaires" => "partenaire",
+                "contacts"    => "contact",
+                "documents"   => "document",
+            ],
         ];
         $layout = $this->buildClientLayout($object, $isParentNew);
 

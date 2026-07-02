@@ -33,7 +33,21 @@ class PartenaireFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/partenaire/api/submit",
             "endpoint_delete_url" => "/admin/partenaire/api/delete",
             "endpoint_form_url" => "/admin/partenaire/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Fiche partenaire",
+                "description" => "Vous enregistrez un apporteur d'affaires : coordonnées, part de rétrocession par défaut et conditions de partage particulières. Ces éléments déterminent la répartition des commissions sur les affaires apportées.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "nom"               => "action:edit",
+                "email"             => "contact",
+                "telephone"         => "contact",
+                "part"              => "action:count",
+                "conditionPartages" => "condition",
+                "documents"         => "document",
+            ],
         ];
         $layout = $this->buildPartenaireLayout($object, $isParentNew);
 

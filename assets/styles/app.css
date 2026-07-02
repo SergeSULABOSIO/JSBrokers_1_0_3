@@ -1610,19 +1610,6 @@ thead.sticky-header {
     line-height: 1.3;
     color: #343a40;
 }
-/* Zone des niveaux d'accès : 2 options par ligne (compacité — Bastien & Scapin,
-   Charge de travail) tout en conservant des cibles confortables (WCAG 2.5.5). */
-.form-column:has(input[name^="access"]) .dlg-field-card > div:has(> .form-check) {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.2rem 0.5rem;
-    padding: 0.55rem 0.65rem 0.65rem;
-}
-.form-column:has(input[name^="access"]) .dlg-field-card .form-text,
-.form-column:has(input[name^="access"]) .dlg-field-card .invalid-feedback {
-    margin: 0;
-    padding: 0 0.75rem 0.6rem;
-}
 .dlg-field-card-icon {
     flex: 0 0 auto;
     display: inline-flex;
@@ -1688,6 +1675,86 @@ thead.sticky-header {
 .form-column:has(input[name^="access"]) .form-check-input:focus {
     border-color: #0047AB;
     box-shadow: 0 0 0 0.2rem rgba(0, 71, 171, 0.35);
+}
+
+/*
+===================================================================
+ GÉNÉRALISATION DES DIALOGUES MODERNISÉS (tous formulaires imbriqués)
+ Les mécanismes introduits pour les formulaires de rôle deviennent
+ disponibles pour TOUS les dialogues d'entité : cadre du formulaire dès
+ qu'un entête contextuel (.form-intro) est présent, cartes de champ à
+ entête bandeau (field_icons du canvas), groupes de choix en rangées
+ cliquables. Les règles « rôles » ci-dessus, plus spécifiques, restent
+ prioritaires (grille 2 cartes/ligne, cartes bordées).
+===================================================================
+*/
+/* Cadre englobant du formulaire : appliqué dès que le canvas fournit un
+   entête contextuel. Exclut le rendu « auth » qui a ses propres panneaux. */
+.form-column:not(.form-column--auth):has(.form-intro) form {
+    padding: 1.25rem;
+    border: 1px solid #dee2e6;
+    border-radius: 14px;
+    background-color: #f8f9fa;
+}
+/* Carte à entête bandeau : le rembourrage est porté par les zones internes,
+   overflow:hidden pour que le bandeau épouse les coins arrondis. */
+.form-column .mb-3.dlg-field-card {
+    padding: 0;
+    overflow: hidden;
+}
+.form-column .dlg-field-card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+.form-column .dlg-field-card-head .form-label,
+.form-column .dlg-field-card-head legend {
+    float: none;
+    border: 0;
+    margin: 0;
+    padding: 0;
+    width: auto;
+    display: inline;
+    font-size: 0.85rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: #343a40;
+}
+.form-column .dlg-field-card-body {
+    padding: 0.55rem 0.65rem 0.65rem;
+}
+.form-column .dlg-field-card-body .form-text {
+    margin-top: 0.35rem;
+}
+/* Groupes de choix (cases/radios) dans une carte : 2 options par ligne
+   (compacité) et rangée entière cliquable avec retour visuel, comme sur
+   les formulaires de rôle (Cohérence). */
+.form-column .dlg-field-card-body > div:has(> .form-check) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.2rem 0.5rem;
+}
+.form-column .dlg-field-card-body .form-check {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 40px;
+    margin: 0;
+    padding: 0.15rem 0.5rem;
+    border-radius: 8px;
+    transition: background-color 0.15s ease;
+}
+.form-column .dlg-field-card-body .form-check:hover {
+    background-color: #f8f9fa;
+}
+.form-column .dlg-field-card-body .form-check:has(.form-check-input:checked) {
+    background-color: #e8f0fb;
+}
+.form-column .dlg-field-card-body .form-check:has(.form-check-input:checked) .form-check-label {
+    color: #212529;
+    font-weight: 500;
 }
 
 /*

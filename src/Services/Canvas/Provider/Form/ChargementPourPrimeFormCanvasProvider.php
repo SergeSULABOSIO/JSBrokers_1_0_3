@@ -25,7 +25,18 @@ class ChargementPourPrimeFormCanvasProvider implements FormCanvasProviderInterfa
             "endpoint_submit_url" => "/admin/chargementpourprime/api/submit",
             "endpoint_delete_url" => "/admin/chargementpourprime/api/delete",
             "endpoint_form_url" => "/admin/chargementpourprime/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Chargement sur prime",
+                "description" => "Vous précisez une composante du montant de la prime d'une cotation : son type et, le cas échéant, son montant exceptionnel. Ces éléments déterminent le calcul de la prime totale due par le client.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "nom"                    => "action:edit",
+                "type"                   => "chargement",
+                "montantFlatExceptionel" => "action:count",
+            ],
         ];
         $layout = $this->buildChargementPourPrimeLayout($chargementId, $isParentNew);
 

@@ -33,7 +33,21 @@ class FeedbackFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/feedback/api/submit",
             "endpoint_delete_url" => "/admin/feedback/api/delete",
             "endpoint_form_url" => "/admin/feedback/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Fiche feedback",
+                "description" => "Vous consignez le compte rendu d'une tâche : ce qui a été fait, le moyen de contact utilisé et, le cas échéant, la prochaine action à planifier. Cet historique assure la traçabilité du traitement des dossiers.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "description"   => "action:description",
+                "type"          => "action:options",
+                "hasNextAction" => "action:check",
+                "documents"     => "document",
+                "nextActionAt"  => "action:calendar",
+                "nextAction"    => "action:ongoing",
+            ],
         ];
         $layout = $this->buildFeedbackLayout($object, $isParentNew);
 

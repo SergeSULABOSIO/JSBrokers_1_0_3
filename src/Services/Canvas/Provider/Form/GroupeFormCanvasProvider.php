@@ -33,7 +33,17 @@ class GroupeFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/groupe/api/submit",
             "endpoint_delete_url" => "/admin/groupe/api/delete",
             "endpoint_form_url" => "/admin/groupe/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Fiche groupe",
+                "description" => "Vous définissez un groupe pour rattacher plusieurs clients d'un même ensemble (holding, réseau, famille de sociétés). Ce regroupement facilite l'analyse consolidée du portefeuille.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "nom"         => "action:edit",
+                "description" => "action:description",
+            ],
         ];
         $layout = $this->buildGroupeLayout($object, $isParentNew);
 

@@ -37,9 +37,20 @@ class ArticleFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/article/api/submit",
             "endpoint_delete_url" => "/admin/article/api/delete",
             "endpoint_form_url" => "/admin/article/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Ligne de facturation",
+                "description" => "Vous composez une ligne de facturation en rattachant un revenu, sa tranche éventuelle et la quantité à facturer. Ces éléments déterminent le montant porté sur la note et alimentent le suivi financier du courtage.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "revenuFacture" => "revenu",
+                "tranche"       => "tranche",
+                "quantite"      => "action:count",
+            ],
         ];
-        
+
         $layout = $this->buildArticleLayout($object, $isParentNew);
 
         return [

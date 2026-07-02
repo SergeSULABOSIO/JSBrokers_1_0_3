@@ -25,7 +25,17 @@ class EntrepriseFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_submit_url" => "/admin/entreprise/api/submit",
             "endpoint_delete_url" => "/admin/entreprise/api/delete",
             "endpoint_form_url" => "/admin/entreprise/api/get-form",
-            "isCreationMode" => $isParentNew
+            "isCreationMode" => $isParentNew,
+            // Entête contextuel du volet de saisie (pastille + description).
+            "form_intro" => [
+                "titre" => "Entreprise de courtage",
+                "description" => "Vous renseignez l'identité de l'entreprise : sa dénomination et son numéro de licence d'exploitation. Ces informations identifient l'espace de travail et figurent sur les documents produits par la plateforme.",
+            ],
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
+            "field_icons" => [
+                "nom"     => "entreprise",
+                "licence" => "action:premium",
+            ],
         ];
         $layout = $this->buildEntrepriseLayout($entrepriseId, $isParentNew);
 
