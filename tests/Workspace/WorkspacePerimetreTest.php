@@ -227,6 +227,9 @@ class WorkspacePerimetreTest extends WebTestCase
         $html = (string) $this->client->getResponse()->getContent();
         $this->assertStringNotContainsString(self::DENIED_MARKER, $html);
         $this->assertStringContainsString('accessMonnaie', $html, 'Le formulaire de rôle Finance doit être rendu.');
+        // Le rendu dédié « droits d'accès » (grille sur charte) doit être appliqué :
+        // la classe conditionne tout le style (cartes, cobalt, gouttières).
+        $this->assertStringContainsString('form-column--roles', $html, 'La colonne de formulaire doit porter la classe de rendu dédiée.');
     }
 
     public function testOwnerCanSaveRoleAndPerimetreApplies(): void

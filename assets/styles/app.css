@@ -1166,27 +1166,34 @@ thead.sticky-header {
 }
 
 .calculated-attributes-list {
+    /* Liste de description (dl) : on neutralise les marges/styles par défaut */
     list-style: none;
     padding: 0;
     margin: 0;
 }
 
-.calculated-attributes-list li {
+/* Ligne d'un couple intitulé / valeur (ancien <li>, désormais un conteneur de <dt>/<dd>) */
+.calculated-attributes-item {
     display: flex;
     justify-content: space-between;
+    gap: 0.75rem;
     padding: 0.75rem 0.5rem;
     border-radius: 4px;
     transition: background-color 0.2s ease;
 }
 
-.calculated-attributes-list li:hover {
+.calculated-attributes-item:hover {
     background-color: #343a40;
 }
 
 .calculated-attributes-list .attr-label {
+    /* <dt> */
+    font-weight: normal;
     opacity: 0.8;
 }
 .calculated-attributes-list .attr-value {
+    /* <dd> : on retire la marge par défaut du navigateur */
+    margin: 0;
     font-weight: bold;
     text-align: right;
 }
@@ -1238,14 +1245,16 @@ thead.sticky-header {
 }
 
 /* Style des cellules (clé et valeur) */
-.attr-table td {
+.attr-table td,
+.attr-table th {
     padding: 8px 5px;
     vertical-align: top;
 }
 
-/* Style de la cellule de gauche (la clé, ex: "Attendus") */
+/* Style de la cellule de gauche (la clé, ex: "Attendus") — <th scope="row"> pour l'accessibilité */
 .attr-table .attr-table-key {
     text-align: left;
+    font-weight: normal; /* On neutralise le gras par défaut du <th> */
     color: #adb5bd; /* Gris plus clair pour la clé */
 }
 
@@ -1267,7 +1276,7 @@ thead.sticky-header {
     padding-bottom: 0.5rem;
     border-bottom: 1px solid #495057; /* Ligne de séparation sombre */
 }
-.calculated-attributes-content ul + .calculated-attributes-group-title {
+.calculated-attributes-content dl + .calculated-attributes-group-title {
     margin-top: 1.5rem; /* Ajoute un espace au-dessus des groupes, sauf le premier */
 }
 
@@ -1284,9 +1293,13 @@ thead.sticky-header {
 .attributes-toolbar-button {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
     font-size: 0.85rem;
     padding: 0.3rem 0.8rem;
+    /* Taille de cible confortable pour le pointeur et le tactile (WCAG 2.5.5 / 2.5.8) */
+    min-width: 32px;
+    min-height: 32px;
     /* NOUVEAU : Styles pour le bouton sans bordure */
     border: none;
     color: #e9ecef; /* Couleur gris clair pour l'icône par défaut */
@@ -1302,8 +1315,19 @@ thead.sticky-header {
     transform: scale(0.97);
 }
 
+/* On neutralise l'ombre Bootstrap au focus souris... */
 .attributes-toolbar-button:focus {
-    box-shadow: none; /* Supprime l'ombre au focus */
+    box-shadow: none;
+}
+
+/*
+   ...mais on rétablit un indicateur de focus clairement visible au clavier (WCAG 2.4.7 / 1.4.11).
+   Bleu Bootstrap #0d6efd = couleur de focus de la charte, contrastée sur le fond sombre de la barre.
+*/
+.attributes-toolbar-button:focus-visible {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
+    color: #ffffff;
 }
 
 .attributes-toolbar-button .button-icon {
@@ -1440,8 +1464,11 @@ thead.sticky-header {
 
 /*
 ===================================================================
- SECTION: RENDU DÉDIÉ DES FORMULAIRES DE RÔLES (.form-column--roles)
- Activé par form_class == 'form-column--roles' dans les canevas RolesEn*.
+ SECTION: RENDU DÉDIÉ DES FORMULAIRES DE RÔLES
+ Ciblage ROBUSTE : un formulaire de rôle est reconnu à la présence de cases
+ « accès… » (input[name^="access"]), indépendamment de toute classe ajoutée par
+ le canevas. Le style s'applique donc dès le rechargement de la feuille de style,
+ sans dépendre d'un gabarit recompilé côté serveur.
  Objectif : ergonomie (Bastien & Scapin — Guidage, Signifiance, Charge
  de travail) + charte JS Brokers (cobalt #0047AB). Les champs connus
  (nom du rôle, collaborateur) sont masqués côté canevas ; chaque groupe
@@ -1457,20 +1484,20 @@ thead.sticky-header {
    dépendre de la résolution de --bs-gutter-x de Bootstrap (qui restait à 1.5rem
    et rendait l'horizontale plus large que la verticale). La marge négative de la
    ligne (-0.5rem) compense le rembourrage des colonnes pour aligner les bords. */
-.form-column--roles .row {
+.form-column:has(input[name^="access"]) .row {
     --bs-gutter-x: 1rem;
     --bs-gutter-y: 0;
     margin-right: -0.5rem;
     margin-left: -0.5rem;
     margin-bottom: 0;
 }
-.form-column--roles .row > [class*="col-"] {
+.form-column:has(input[name^="access"]) .row > [class*="col-"] {
     padding-right: 0.5rem;
     padding-left: 0.5rem;
 }
 
 /* Chaque groupe de droits (ChoiceType étendu) = une carte claire et autonome. */
-.form-column--roles .mb-3 {
+.form-column:has(input[name^="access"]) .mb-3 {
     height: 100%;
     margin-bottom: 1rem; /* = --bs-gutter-x : gouttière verticale cohérente */
     padding: 0.9rem 1rem 0.75rem;
@@ -1479,13 +1506,13 @@ thead.sticky-header {
     background-color: #ffffff;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
-.form-column--roles .mb-3:focus-within {
+.form-column:has(input[name^="access"]) .mb-3:focus-within {
     border-color: #0047AB;
     box-shadow: 0 0 0 3px rgba(0, 71, 171, 0.15);
 }
 
 /* En-tête de carte : intitulé de la rubrique, accent cobalt (Guidage). */
-.form-column--roles .form-label {
+.form-column:has(input[name^="access"]) .form-label {
     display: block;
     margin-bottom: 0.6rem;
     padding: 0 0 0.4rem 0.6rem;
@@ -1498,7 +1525,7 @@ thead.sticky-header {
 }
 
 /* Chaque niveau d'accès : ligne confortable, cible cliquable élargie (WCAG 2.5.5). */
-.form-column--roles .form-check {
+.form-column:has(input[name^="access"]) .form-check {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -1506,7 +1533,7 @@ thead.sticky-header {
     margin-bottom: 0.1rem;
     padding-left: 0; /* alignement géré par flex, pas par le retrait Bootstrap */
 }
-.form-column--roles .form-check-input {
+.form-column:has(input[name^="access"]) .form-check-input {
     float: none;
     margin: 0;
     width: 1.15em;
@@ -1514,19 +1541,19 @@ thead.sticky-header {
     cursor: pointer;
     border-color: #ced4da;
 }
-.form-column--roles .form-check-label {
+.form-column:has(input[name^="access"]) .form-check-label {
     cursor: pointer;
     color: #495057;
     user-select: none;
 }
 
 /* État coché : cobalt de marque (au lieu du bleu Bootstrap par défaut). */
-.form-column--roles .form-check-input:checked {
+.form-column:has(input[name^="access"]) .form-check-input:checked {
     background-color: #0047AB;
     border-color: #0047AB;
 }
 /* Focus visible conforme charte : anneau cobalt. */
-.form-column--roles .form-check-input:focus {
+.form-column:has(input[name^="access"]) .form-check-input:focus {
     border-color: #0047AB;
     box-shadow: 0 0 0 0.2rem rgba(0, 71, 171, 0.35);
 }

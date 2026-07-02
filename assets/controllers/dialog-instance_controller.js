@@ -252,7 +252,7 @@ export default class extends Controller {
         const mainDialogElement = this.modalOutlet.element;
 
         // On vérifie si le contenu retourné contient des attributs calculés pour ajuster la classe CSS.
-        const hasCalculatedAttrs = this.contentTarget.querySelector('.calculated-attributes-list li');
+        const hasCalculatedAttrs = this.contentTarget.querySelector('.calculated-attributes-list .calculated-attributes-item');
         if (hasCalculatedAttrs) {
             mainDialogElement.classList.add('has-attributes-column');
         } else {

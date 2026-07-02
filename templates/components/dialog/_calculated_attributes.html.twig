@@ -1,25 +1,31 @@
 {# templates/components/dialog/_calculated_attributes.html.twig #}
 
-{# CORRECTION : On déplace le contrôleur tooltip ici pour qu'il englobe la barre d'outils ET les attributs #}
-<div class="col-auto calculated-attributes-column" style="width: 400px;">
-    {# NOUVEAU : Barre d'outils pour les attributs, visible uniquement en mode édition #}
+{#
+    Repère de page dédié aux attributs calculés (colonne sombre).
+    <aside> + aria-label : identifie la zone comme contenu complémentaire pour les technologies d'assistance (Bastien & Scapin > Guidage).
+    Le contrôleur de tooltip englobe la barre d'outils ET les attributs.
+#}
+<aside class="col-auto calculated-attributes-column" style="width: 400px;" aria-label="Attributs calculés">
+    {# Barre d'outils des attributs, visible uniquement en mode édition #}
     {% if not isCreationMode and formCanvas.parametres.attribute_actions is defined and formCanvas.parametres.attribute_actions is not empty %}
-        <div class="attributes-toolbar">
+        {# role="toolbar" + aria-label : regroupe les actions et annonce leur finalité (WCAG 1.3.1) #}
+        <div class="attributes-toolbar" role="toolbar" aria-label="Actions sur les attributs">
             {% for action in formCanvas.parametres.attribute_actions %}
-                <button 
-                    type="button" 
-                    {# CORRECTION : On retire 'btn-outline-light' pour supprimer la bordure #}
+                <button
+                    type="button"
                     class="btn btn-sm attributes-toolbar-button"
-                    data-controller="ripple" {# NOUVEAU : Ajout de l'effet d'onde #}
+                    data-controller="ripple" {# Effet d'onde au clic #}
+                    {# aria-label garantit un nom accessible même quand le libellé texte est masqué (WCAG 4.1.2) #}
+                    aria-label="{{ action.label }}"
                     data-meta-tip="{{ action.label }}"
                     data-action="click->dialog-instance#handleAttributeAction"
                     data-event-name="{{ action.event }}"
                     data-event-url="{{ action.url }}"
                     data-event-payload="{{ {id: entity.id}|json_encode }}"
                 >
-                    {# CORRECTION : On revient à la logique JS pour le chargement de l'icône via son alias. #}
-                    <span class="button-icon" data-icon-alias="{{ action.icon }}"></span>
-                    {# NOUVEAU : Afficher le texte seulement si on a moins de 2 boutons #}
+                    {# Icône chargée par son alias via JS ; décorative → masquée aux lecteurs d'écran (WCAG 1.1.1) #}
+                    <span class="button-icon" data-icon-alias="{{ action.icon }}" aria-hidden="true"></span>
+                    {# Afficher le texte seulement si on a moins de 2 boutons #}
                     {% if formCanvas.parametres.attribute_actions|length < 2 %}
                         <span>{{ action.label }}</span>
                     {% endif %}
@@ -39,7 +45,8 @@
             <div class="calculated-attributes-content">
                 <div> {# Le data-controller="tooltip" était ici, il a été déplacé sur l'élément parent. #}
                     {% set current_group = "___INITIAL_STATE___" %} {# État initial unique pour démarrer la boucle #}
-                    
+                    {% set current_group_title_id = null %} {# Identifiant du titre de groupe courant, pour l'association aria #}
+
                     {% for attr in calculated_attributes %}
                         {% set attr_group = attr.group|default(null) %}
 
@@ -47,33 +54,41 @@
                         {% if attr_group != current_group %}
                             {# On ferme la liste précédente, sauf pour la toute première itération #}
                             {% if current_group != "___INITIAL_STATE___" %}
-                            </ul>
+                            </dl>
                             {% endif %}
 
-                            {# On affiche le titre du groupe s'il existe #}
+                            {# On affiche le titre du groupe s'il existe et on prépare son identifiant #}
                             {% if attr_group is not null %}
-                                <h6 class="calculated-attributes-group-title">{{ attr_group }}</h6>
+                                {% set current_group_title_id = 'attr-group-title-' ~ loop.index %}
+                                <h6 class="calculated-attributes-group-title" id="{{ current_group_title_id }}">{{ attr_group }}</h6>
+                            {% else %}
+                                {% set current_group_title_id = null %}
                             {% endif %}
 
-                            {# On ouvre une nouvelle liste pour le groupe (ou pour les éléments non groupés) #}
-                            <ul class="calculated-attributes-list">
+                            {#
+                                Liste de description (dl) : les couples intitulé/valeur sont sémantiquement des termes/définitions (WCAG 1.3.1).
+                                aria-labelledby relie la liste à son titre de groupe pour les lecteurs d'écran.
+                            #}
+                            <dl class="calculated-attributes-list"{% if current_group_title_id %} aria-labelledby="{{ current_group_title_id }}"{% endif %}>
                                 {% set current_group = attr_group %}
                         {% endif %}
 
-                        {# On affiche l'élément de liste pour l'attribut courant #}
-                            <li
+                        {# On affiche le couple intitulé / valeur pour l'attribut courant #}
+                            <div
+                                class="calculated-attributes-item"
                                 data-meta-tip="{{ attr.description|default('Aucune description disponible.') }}"
                             >
-                                <span class="attr-label">{{ attr.intitule }}:</span>
-                                <span class="attr-value">
+                                <dt class="attr-label">{{ attr.intitule }}</dt>
+                                <dd class="attr-value">
                                     {% set value = attribute(entity, attr.code) %}
 
                                     {% if attr.format is defined and attr.format == 'ArrayAssoc' and value is iterable %}
                                         <table class="attr-table">
+                                            <caption class="visually-hidden">Détail de « {{ attr.intitule }} »</caption>
                                             <tbody>
                                                 {% for key, val in value %}
                                                     <tr>
-                                                        <td class="attr-table-key">{{ key }}</td>
+                                                        <th scope="row" class="attr-table-key">{{ key }}</th>
                                                         <td class="attr-table-value">{{ val }}</td>
                                                     </tr>
                                                 {% endfor %}
@@ -88,14 +103,14 @@
                                         {% set is_numeric_format = attr.format is defined and (attr.format == 'Monetaire' or attr.format == 'Nombre') %}
                                         {{ (is_numeric_format and value is not null) ? value|number_format(2, ',', ' ') : value }} {{ attr.unite|default('') }}
                                     {% endif %}
-                                </span>
-                            </li>
+                                </dd>
+                            </div>
                     {% endfor %}
-                    
+
                     {# On s'assure de fermer la toute dernière liste de la boucle #}
-                    </ul>
+                    </dl>
                 </div>
             </div>
         {% endif %}
     {% endif %}
-</div>
+</aside>
