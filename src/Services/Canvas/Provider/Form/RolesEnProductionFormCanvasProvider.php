@@ -32,6 +32,17 @@ class RolesEnProductionFormCanvasProvider implements FormCanvasProviderInterface
                 "titre" => "Droits d'accès — module Production",
                 "description" => "Vous définissez ce que ce collaborateur peut consulter et modifier sur le portefeuille de l'entreprise (groupes, clients, assureurs, contacts, risques, avenants, partenaires, cotations). Ces droits s'appliquent dès l'enregistrement : n'accordez que le nécessaire.",
             ],
+            // Mini-pastille par carte de droits : icône de l'entité concernée (alias IconCanvasProvider).
+            "field_icons" => [
+                "accessGroupe"     => "groupe",
+                "accessClient"     => "client",
+                "accessAssureur"   => "assureur",
+                "accessContact"    => "contact",
+                "accessRisque"     => "risque",
+                "accessAvenant"    => "avenant",
+                "accessPartenaire" => "partenaire",
+                "accessCotation"   => "cotation",
+            ],
         ];
         $layout = $this->buildRolesEnProductionLayout();
 

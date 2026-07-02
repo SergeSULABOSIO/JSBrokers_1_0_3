@@ -32,6 +32,12 @@ class RolesEnMarketingFormCanvasProvider implements FormCanvasProviderInterface
                 "titre" => "Droits d'accès — module Marketing",
                 "description" => "Vous définissez ce que ce collaborateur peut consulter et modifier sur l'activité commerciale de l'entreprise (pistes, tâches, feedbacks). Ces droits s'appliquent dès l'enregistrement : n'accordez que le nécessaire.",
             ],
+            // Mini-pastille par carte de droits : icône de l'entité concernée (alias IconCanvasProvider).
+            "field_icons" => [
+                "accessPiste"    => "piste",
+                "accessTache"    => "tache",
+                "accessFeedback" => "feedback",
+            ],
         ];
         $layout = $this->buildRolesEnMarketingLayout();
 

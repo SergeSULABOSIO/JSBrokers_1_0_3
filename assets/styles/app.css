@@ -1541,6 +1541,43 @@ thead.sticky-header {
     border-left: 3px solid #0047AB;
 }
 
+/* Carte de champ avec icône (field_icons du canvas) : l'entête de carte reprend
+   l'accent cobalt (bordure gauche + soulignement) à la place du libellé seul, qui
+   est remis à plat ; une mini-pastille illustre l'entité concernée (écho de la
+   pastille de l'entête .form-intro). */
+.form-column:has(input[name^="access"]) .dlg-field-card-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+    padding: 0 0 0.4rem 0.6rem;
+    border-bottom: 1px solid #e0e0e0;
+    border-left: 3px solid #0047AB;
+}
+.form-column:has(input[name^="access"]) .dlg-field-card-head .form-label,
+.form-column:has(input[name^="access"]) .dlg-field-card-head legend {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    width: auto;
+    display: inline;
+}
+.dlg-field-card-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background-color: #e8f0fb;
+    color: #0047AB;
+}
+.dlg-field-card-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
 /* Chaque niveau d'accès : ligne confortable, cible cliquable élargie (WCAG 2.5.5). */
 .form-column:has(input[name^="access"]) .form-check {
     display: flex;

@@ -139,15 +139,16 @@ class RoleFormIntroTest extends WebTestCase
         ['owner' => $owner, 'guest' => $guest, 'entreprise' => $e] = $this->seed();
         $this->client->loginUser($this->user(self::OWNER_EMAIL));
 
+        // [libellé attendu dans la description, nombre de cartes de droits du module]
         $modules = [
-            'rolesenfinance'        => 'module Finance',
-            'rolesenmarketing'      => 'module Marketing',
-            'rolesenproduction'     => 'module Production',
-            'rolesenadministration' => 'module Administration',
-            'rolesensinistre'       => 'module Sinistre',
+            'rolesenfinance'        => ['module Finance', 10],
+            'rolesenmarketing'      => ['module Marketing', 3],
+            'rolesenproduction'     => ['module Production', 8],
+            'rolesenadministration' => ['module Administration', 3],
+            'rolesensinistre'       => ['module Sinistre', 3],
         ];
 
-        foreach ($modules as $root => $expectedModule) {
+        foreach ($modules as $root => [$expectedModule, $expectedCards]) {
             $this->client->request('GET', sprintf(
                 '/admin/%s/api/get-form?parent_id=%d&parent_field_name=invite&idEntreprise=%d&idInvite=%d',
                 $root,
@@ -165,6 +166,13 @@ class RoleFormIntroTest extends WebTestCase
             $this->assertStringContainsString($expectedModule, $html, sprintf('La description de « %s » doit nommer le module concerné.', $root));
             // L'apostrophe de « n'accordez » est échappée en HTML : on teste le fragment qui la suit.
             $this->assertStringContainsString('accordez que le nécessaire', $html, sprintf('La description de « %s » doit rappeler la prudence d\'attribution.', $root));
+            // Chaque carte de droits porte sa mini-pastille (field_icons du canvas) :
+            // exactement une icône par groupe de cases à cocher du module.
+            $this->assertSame(
+                $expectedCards,
+                substr_count($html, 'dlg-field-card-icon'),
+                sprintf('Chaque carte de droits de « %s » doit porter sa propre icône d\'entité.', $root)
+            );
         }
     }
 

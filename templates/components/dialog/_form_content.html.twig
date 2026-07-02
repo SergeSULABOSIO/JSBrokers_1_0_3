@@ -109,7 +109,23 @@
                                                     {{ form_errors(form[field_code]) }}
                                                 </div>
                                             {% else %}
-                                                {{ form_row(form[field_code], {'manager_options': current_field_options, 'attr': current_widget_attr, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
+                                                {# Icône de champ opt-in (field_icons du canvas, même clé que le rendu
+                                                   « auth ») : la carte est rendue à la main pour poser une mini-pastille
+                                                   devant le libellé. Sans icône, form_row d'origine inchangé. #}
+                                                {% set field_icon = formCanvas.parametres.field_icons[field_code]|default(null) %}
+                                                {% if field_icon %}
+                                                    <div class="mb-3 dlg-field-card">
+                                                        <div class="dlg-field-card-head">
+                                                            <span class="dlg-field-card-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(field_icon), {height: '16px', width: '16px'}) }}</span>
+                                                            {{ form_label(form[field_code]) }}
+                                                        </div>
+                                                        {{ form_widget(form[field_code], {'manager_options': current_field_options, 'attr': current_widget_attr, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
+                                                        {{ form_help(form[field_code]) }}
+                                                        {{ form_errors(form[field_code]) }}
+                                                    </div>
+                                                {% else %}
+                                                    {{ form_row(form[field_code], {'manager_options': current_field_options, 'attr': current_widget_attr, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
+                                                {% endif %}
                                             {% endif %}
                                         {% endif %}
                                     {% endif %}
