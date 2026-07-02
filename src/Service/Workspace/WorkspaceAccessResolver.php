@@ -310,4 +310,46 @@ class WorkspaceAccessResolver
 
         return $details;
     }
+
+    /**
+     * Variante STRUCTURÉE de describePerimetre(), destinée à un rendu riche (e-mail de
+     * notification de périmètre) : au lieu d'une chaîne « Entité (niveaux) · … » par
+     * module, on renvoie l'arborescence complète module → entités → niveaux, afin que
+     * la vue puisse la présenter en cartes/pastilles lisibles plutôt qu'en une longue
+     * ligne dense et peu professionnelle.
+     *
+     * @return array{
+     *     owner: bool,
+     *     gestionnaire: bool,
+     *     modules: array<int, array{nom: string, entites: array<int, array{nom: string, niveaux: string[]}>}>
+     * }
+     */
+    public function describePerimetreDetailed(Invite $invite): array
+    {
+        if ($this->isOwner($invite)) {
+            return ['owner' => true, 'gestionnaire' => true, 'modules' => []];
+        }
+
+        $parModule = [];
+        foreach (self::MAP as $entityShortName => [$module, , , $label]) {
+            $levels = $this->allowedLevels($invite, $entityShortName);
+            if (empty($levels)) {
+                continue;
+            }
+            sort($levels);
+            $niveaux = array_map(fn (int $l) => self::LEVEL_LABELS[$l] ?? (string) $l, $levels);
+            $parModule[$module][] = ['nom' => $label, 'niveaux' => $niveaux];
+        }
+
+        $modules = [];
+        foreach ($parModule as $nom => $entites) {
+            $modules[] = ['nom' => $nom, 'entites' => $entites];
+        }
+
+        return [
+            'owner'        => false,
+            'gestionnaire' => $this->canManageInvites($invite),
+            'modules'      => $modules,
+        ];
+    }
 }

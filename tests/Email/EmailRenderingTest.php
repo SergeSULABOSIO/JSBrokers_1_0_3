@@ -146,6 +146,50 @@ class EmailRenderingTest extends KernelTestCase
     }
 
     /**
+     * L'e-mail de notification de périmètre présente les droits en cartes lisibles
+     * (un module par carte, une entité par ligne, niveaux en pastilles) plutôt qu'en
+     * une longue ligne dense « Entité (…) · Entité (…) · … ».
+     */
+    public function testPerimetreEmailRendersStructuredCards(): void
+    {
+        self::bootKernel();
+
+        $html = $this->render('emails/agent_notification.html.twig', [
+            'titre' => "Votre périmètre d'action a été mis à jour",
+            'intro' => 'Bonjour Victor, voici votre périmètre.',
+            'icone' => 'role',
+            'logoPath' => $this->logoPath(),
+            'senderEmail' => 'contact@jsbrokers.com',
+            'piedNote' => 'Notification automatique.',
+            'perimetre' => [
+                'owner' => false,
+                'gestionnaire' => true,
+                'modules' => [
+                    ['nom' => 'Finances', 'entites' => [
+                        ['nom' => 'Monnaies', 'niveaux' => ['Lecture', 'Écriture', 'Modification', 'Suppression']],
+                        ['nom' => 'Bordereaux', 'niveaux' => ['Lecture']],
+                    ]],
+                ],
+            ],
+        ]);
+
+        // Marque + icône + logo (chrome partagé).
+        $this->assertStringContainsString('JS Brokers', $html);
+        $this->assertStringContainsString('<svg', $html);
+        $this->assertStringContainsString('cid:', $html);
+        // Le module et ses entités apparaissent, avec leurs niveaux en pastilles.
+        $this->assertStringContainsString('Finances', $html);
+        $this->assertStringContainsString('Monnaies', $html);
+        $this->assertStringContainsString('Bordereaux', $html);
+        $this->assertStringContainsString('Suppression', $html);
+        $this->assertStringContainsString('border-radius: 20px', $html);
+        // Mention de délégation de gestion des invités.
+        $this->assertStringContainsString('gérer les invités', $html);
+        // On ne retombe PAS sur l'ancien rendu dense en une ligne.
+        $this->assertStringNotContainsString('Monnaies (Lecture', $html);
+    }
+
+    /**
      * Non-régression du layout localisé : un e-mail qui ne fournit pas de
      * `locale` (cas des e-mails de contact, invitation, etc.) conserve un
      * chrome partagé en français (repli 'fr').
