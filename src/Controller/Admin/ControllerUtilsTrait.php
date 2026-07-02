@@ -710,6 +710,35 @@ trait ControllerUtilsTrait
             }
         }
 
+        // CONTEXTE PARENT (présentation uniquement) : rappel, dans l'entête contextuel
+        // du formulaire, des objets parents déjà rattachés à l'entité (associations
+        // ManyToOne) — indispensable en ÉDITION, où le parent n'est ni injecté dans le
+        // layout ni masqué (ex. la tâche d'un feedback). Lecture best-effort, aucune
+        // incidence métier. L'entreprise (contexte implicite du workspace) et
+        // l'utilisateur (déjà porté par les attributs calculés) sont exclus.
+        $parentContextFacts = [];
+        foreach ($this->buildParentAssociationMapFromEntity($entityClass) as $parentField => $parentClass) {
+            if (in_array($parentField, ['entreprise', 'utilisateur'], true)) {
+                continue;
+            }
+            $getter = 'get' . ucfirst($parentField);
+            if (!method_exists($entity, $getter)) {
+                continue;
+            }
+            try {
+                $parentEntity = $entity->$getter();
+            } catch (\Throwable) {
+                continue;
+            }
+            if (!is_object($parentEntity)) {
+                continue;
+            }
+            $display = $this->describeEntityForContext($parentEntity);
+            if ($display !== null) {
+                $parentContextFacts[$parentField] = $display;
+            }
+        }
+
         $form = $this->createForm($formTypeClass, $entity);
         $entityCanvas = $this->canvasBuilder->getEntityCanvas($entityClass);
 
@@ -723,6 +752,7 @@ trait ControllerUtilsTrait
             'isCreationMode' => $isCreationMode,
             'idEntreprise' => $entreprise->getId(),
             'idInvite' => $invite->getId(),
+            'parentContextFacts' => $parentContextFacts,
         ]);
     }
 
@@ -1071,6 +1101,37 @@ trait ControllerUtilsTrait
             }
         }
         return $parentMap;
+    }
+
+    /**
+     * Libellé de présentation d'une entité pour les puces de contexte de l'entête
+     * de formulaire (best-effort : nom / libellé / titre / référence / code, sinon
+     * description tronquée, sinon #id). Présentation uniquement — aucune logique métier.
+     */
+    private function describeEntityForContext(object $entity): ?string
+    {
+        $base = null;
+        foreach (['getNom', 'getLibelle', 'getTitre', 'getReference', 'getCode', 'getDescription'] as $getter) {
+            if (method_exists($entity, $getter)) {
+                $value = $entity->$getter();
+                if (is_string($value) && trim(strip_tags($value)) !== '') {
+                    $base = trim(strip_tags($value));
+                    break;
+                }
+            }
+        }
+        $id = method_exists($entity, 'getId') ? $entity->getId() : null;
+        if ($base === null && $id === null) {
+            return null;
+        }
+        if ($base !== null && mb_strlen($base) > 60) {
+            $base = mb_substr($base, 0, 57) . '…';
+        }
+        if ($base === null) {
+            return sprintf('#%d', $id);
+        }
+
+        return $id !== null ? sprintf('%s (#%d)', $base, $id) : $base;
     }
 
     /**
