@@ -173,6 +173,11 @@ class RoleFormIntroTest extends WebTestCase
                 substr_count($html, 'dlg-field-card-icon'),
                 sprintf('Chaque carte de droits de « %s » doit porter sa propre icône d\'entité.', $root)
             );
+            // Les puces de contexte rappellent les informations pré-remplies dont les
+            // champs sont masqués : ici le collaborateur cible du rôle (parent_id).
+            $this->assertStringContainsString('form-intro-facts', $html, sprintf('« %s » doit rappeler les informations pré-remplies masquées.', $root));
+            $this->assertStringContainsString('Collaborateur concerné', $html, sprintf('« %s » doit libeller la puce du collaborateur cible.', $root));
+            $this->assertStringContainsString('Collaborateur cible', $html, sprintf('« %s » doit afficher le nom du collaborateur pour qui le rôle est édité.', $root));
         }
     }
 

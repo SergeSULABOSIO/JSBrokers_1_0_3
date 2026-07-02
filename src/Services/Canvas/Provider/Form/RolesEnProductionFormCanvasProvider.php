@@ -31,6 +31,11 @@ class RolesEnProductionFormCanvasProvider implements FormCanvasProviderInterface
             "form_intro" => [
                 "titre" => "Droits d'accès — module Production",
                 "description" => "Vous définissez ce que ce collaborateur peut consulter et modifier sur le portefeuille de l'entreprise (groupes, clients, assureurs, contacts, risques, avenants, partenaires, cotations). Ces droits s'appliquent dès l'enregistrement : n'accordez que le nécessaire.",
+                // Libellés des puces de contexte (rappel des champs masqués pré-remplis).
+                "facts_labels" => [
+                    "nom"    => "Libellé du rôle",
+                    "invite" => "Collaborateur concerné",
+                ],
             ],
             // Mini-pastille par carte de droits : icône de l'entité concernée (alias IconCanvasProvider).
             "field_icons" => [

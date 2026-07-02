@@ -19,6 +19,33 @@
                si le canvas pose form_intro : les autres dialogues sont inchangés. #}
             {% if formCanvas.parametres.form_intro is defined %}
                 {% set intro = formCanvas.parametres.form_intro %}
+                {# Rappel des informations pré-remplies dont les champs sont masqués
+                   (rangées hidden du canvas) : l'utilisateur voit POUR QUI / SUR QUOI
+                   il édite sans avoir à le mémoriser (Nielsen 6 — reconnaissance
+                   plutôt que rappel). Meilleur effort : objets affichés via leur
+                   « nom »/« libellé », scalaires tels quels, le reste est ignoré. #}
+                {% set intro_facts = [] %}
+                {% for row in formCanvas.form_layout|default([])|filter(r => r.hidden is defined and r.hidden) %}
+                    {% for col in row.colonnes %}
+                        {% for field in (col.champs is defined ? col.champs : [col]) %}
+                            {% set fc = (field is mapping and field.field_code is defined) ? field.field_code : field %}
+                            {% if form[fc] is defined %}
+                                {% set raw = form[fc].vars.data %}
+                                {% set display = null %}
+                                {% if raw is not null and raw is not iterable %}
+                                    {% if raw.nom is defined %}{% set display = raw.nom %}
+                                    {% elseif raw.libelle is defined %}{% set display = raw.libelle %}
+                                    {% elseif raw.timestamp is defined %}{% set display = raw|date('d/m/Y') %}
+                                    {% else %}{% set display = raw %}{% endif %}
+                                {% endif %}
+                                {% if display is not null and display != '' %}
+                                    {% set fact_label = intro.facts_labels[fc]|default(form[fc].vars.label|default(fc|humanize)) %}
+                                    {% set intro_facts = intro_facts|merge([{label: fact_label, value: display}]) %}
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                {% endfor %}
                 <div class="form-intro" role="note">
                     <span class="form-intro-icon" aria-hidden="true">
                         {{ ux_icon(resolve_icon_name(intro.icone|default(entityCanvas.parametres.icone|default('action:role'))), {height: '26px', width: '26px'}) }}
@@ -26,6 +53,16 @@
                     <div class="form-intro-text">
                         <p class="form-intro-title">{{ intro.titre }}</p>
                         <p class="form-intro-desc">{{ intro.description }}</p>
+                        {% if intro_facts is not empty %}
+                            <dl class="form-intro-facts">
+                                {% for fact in intro_facts %}
+                                    <div class="form-intro-fact">
+                                        <dt>{{ fact.label }}</dt>
+                                        <dd>{{ fact.value }}</dd>
+                                    </div>
+                                {% endfor %}
+                            </dl>
+                        {% endif %}
                     </div>
                 </div>
             {% endif %}

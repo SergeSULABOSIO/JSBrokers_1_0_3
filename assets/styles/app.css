@@ -1703,7 +1703,7 @@ thead.sticky-header {
 */
 .form-column .form-intro {
     display: flex;
-    align-items: center;
+    align-items: flex-start; /* le bloc texte peut porter plusieurs lignes + les puces de contexte */
     gap: 0.9rem;
     margin-bottom: 1.1rem;
     padding-bottom: 1.1rem;
@@ -1736,6 +1736,37 @@ thead.sticky-header {
     line-height: 1.45;
     color: #6c757d;
     max-width: 78ch; /* longueur de ligne lisible (Opquast — confort de lecture) */
+}
+/* Puces de contexte : rappel des informations pré-remplies (champs masqués),
+   présentées en pastilles « libellé : valeur » scannables d'un coup d'œil. */
+.form-column .form-intro-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 0.5rem;
+    margin: 0.6rem 0 0;
+}
+.form-column .form-intro-fact {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    padding: 0.25rem 0.7rem;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 999px;
+}
+.form-column .form-intro-fact dt {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #495057;
+}
+.form-column .form-intro-fact dd {
+    margin: 0;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #212529;
 }
 
 /* STYLES POUR LE DÉFILEMENT DE FORMULAIRES (utilisé par le dialogue de recherche avancée) */
