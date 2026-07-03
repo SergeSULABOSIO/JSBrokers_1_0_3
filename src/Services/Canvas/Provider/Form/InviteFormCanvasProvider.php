@@ -38,18 +38,12 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/invite/api/delete",
             "endpoint_form_url" => "/admin/invite/api/get-form",
             "isCreationMode" => $isParentNew,
-            // Active le rendu « façon page de connexion » (libellés marqués, champs hauts,
-            // icône en préfixe, panneaux de section). Drapeau opt-in lu par
-            // templates/components/dialog/_form_content.html.twig : seul ce dialogue est
-            // concerné, les autres dialogues d'entités gardent le rendu d'origine.
-            "form_style" => "auth",
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Invitation d'un collaborateur",
                 "description" => "Vous invitez un collaborateur à rejoindre l'espace de travail de l'entreprise et définissez son périmètre : assistants rattachés, délégation éventuelle et rôles par module. L'invité n'accède qu'aux données couvertes par les droits accordés ici.",
             ],
-            // Icône d'illustration en préfixe par code de champ (mêmes noms que la page
-            // d'inscription). Seuls les champs textuels simples sont décorés.
+            // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
                 "nom" => "utilisateur",
                 "email" => "mdi:email-outline",
@@ -93,8 +87,6 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
         $layout = [
             [
                 "couleur_fond" => "white",
-                "group_title" => "Invité",
-                "group_icon" => "utilisateur",
                 "colonnes" => [
                     ["champs" => ["nom"]],
                     ["champs" => ["email"]],
@@ -102,8 +94,6 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
             ],
             [
                 "couleur_fond" => "white",
-                "group_title" => "Collaboration",
-                "group_icon" => "mdi:account-multiple-outline",
                 "colonnes" => [
                     ["champs" => ["assistants"]]
                 ]
@@ -116,8 +106,6 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
         if ($user instanceof Utilisateur && $this->accessResolver->isOwnerOfConnected($user)) {
             $layout[] = [
                 "couleur_fond" => "white",
-                "group_title" => "Délégation d'administration",
-                "group_icon" => "mdi:shield-account-outline",
                 "colonnes" => [
                     ["champs" => ["gestionnaireInvites"]]
                 ]

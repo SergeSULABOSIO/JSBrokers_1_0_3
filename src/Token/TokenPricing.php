@@ -8,6 +8,7 @@ use App\Entity\Cotation;
 use App\Entity\DepenseCourtier;
 use App\Entity\Entreprise;
 use App\Entity\Feedback;
+use App\Entity\Fournisseur;
 use App\Entity\Piste;
 use App\Entity\Tache;
 
@@ -39,6 +40,7 @@ final class TokenPricing
         // dans le plan tarifaire éditable (console), au poids standard.
         ChargeCourtier::class  => 5,
         DepenseCourtier::class => 5,
+        Fournisseur::class     => 5,
     ];
 
     /** Poids par défaut en écriture pour toute entité non explicitement listée. */

@@ -70,6 +70,7 @@ class DocumentIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'getPiste' => fn ($e) => "Lié à la piste : '" . $e->getNom() . "'",
             'getPartenaire' => fn ($e) => "Lié au partenaire : '" . $e->getNom() . "'",
             'getPaiement' => fn ($e) => "Utilisé comme preuve pour le paiement n°" . $e->getReference(),
+            'getFournisseur' => fn ($e) => "Lié au fournisseur : '" . $e->getNom() . "'",
         ];
 
         foreach ($parentGetters as $getter => $formatter) {

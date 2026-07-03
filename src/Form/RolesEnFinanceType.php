@@ -180,6 +180,18 @@ class RolesEnFinanceType extends AbstractType
                     "Suppression" => Invite::ACCESS_SUPPRESSION,
                 ],
             ])
+            ->add('accessFournisseur', ChoiceType::class, [
+                'label' => "Droit d'accès sur les fournisseurs",
+                'multiple' => true,
+                'expanded' => true,
+                'required' => false,
+                'choices'  => [
+                    "Lecture" => Invite::ACCESS_LECTURE,
+                    "Ecriture" => Invite::ACCESS_ECRITURE,
+                    "Modification" => Invite::ACCESS_MODIFICATION,
+                    "Suppression" => Invite::ACCESS_SUPPRESSION,
+                ],
+            ])
             ->add('accessDocumentComptable', ChoiceType::class, [
                 'label' => "Droit d'accès sur les documents comptables",
                 'multiple' => true,

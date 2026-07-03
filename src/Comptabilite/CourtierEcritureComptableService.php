@@ -259,8 +259,9 @@ class CourtierEcritureComptableService
         $lignes[] = $this->ligne($compteContrepartie, 0.0, $ttc);
 
         $libelle = $depense->getCharge()?->getLibelle() ?? 'Dépense';
-        if ($depense->getBeneficiaire() !== null && $depense->getBeneficiaire() !== '') {
-            $libelle .= ' — ' . $depense->getBeneficiaire();
+        $tiers = $depense->getTiersLibelle(); // fournisseur enregistré prioritaire, sinon bénéficiaire libre
+        if ($tiers !== null && $tiers !== '') {
+            $libelle .= ' — ' . $tiers;
         }
 
         return [

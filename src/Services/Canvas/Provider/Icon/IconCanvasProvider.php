@@ -26,6 +26,7 @@ class IconCanvasProvider
         'document-comptable' => 'tabler:report-money', // états comptables OHADA (workspace & rôles)
         'entreprise'      => 'hugeicons:building-02',
         'feedback'        => 'tabler:message-chatbot',
+        'fournisseur'     => 'tabler:building-store', // opérateur économique (achats / services généraux)
         'groupe'          => 'mingcute:group-3-fill',
         'invite'          => 'hugeicons:mail-send-01',
         'modele-piece'    => 'uil:document-layout-left',

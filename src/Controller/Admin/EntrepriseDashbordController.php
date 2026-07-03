@@ -132,6 +132,54 @@ class EntrepriseDashbordController extends AbstractController
         ]);
     }
 
+    /**
+     * Bloc « Comptabilité » : indicateurs comptables du cabinet sur l'exercice en
+     * cours, dérivés de la MÊME source que les Documents comptables
+     * (CourtierEcritureComptableService) — cohérence garantie : commissions
+     * encaissées (produits), charges, résultat net, décaissements et trésorerie,
+     * plus le pouls des dépenses (payées / engagées) et des fournisseurs actifs.
+     * Gate : lecture des Dépenses (périmètre Finances).
+     */
+    #[Route('/block/compta/{idEntreprise}', name: 'block_compta', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadBlockCompta(
+        int $idEntreprise,
+        \App\Comptabilite\CourtierEcritureComptableService $courtierComptabilite,
+        \App\Repository\DepenseCourtierRepository $depenseRepository,
+        \App\Repository\FournisseurRepository $fournisseurRepository,
+        ServiceMonnaies $serviceMonnaies,
+    ): Response {
+        if ($denied = $this->denyBlockIfCannotRead('DepenseCourtier')) { return $denied; }
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+        $exercice = (int) date('Y');
+
+        $documents = $courtierComptabilite->documents($entreprise, $exercice);
+
+        // Pouls des dépenses de l'exercice (non annulées, déjà filtrées par la requête).
+        $depensesPayees = 0;
+        $depensesEngagees = 0;
+        foreach ($depenseRepository->findChronologiqueForEntreprise($idEntreprise) as $depense) {
+            if ((int) $depense->getDateDepense()?->format('Y') !== $exercice) {
+                continue;
+            }
+            if ($depense->getStatut() === \App\Entity\Depense::STATUT_PAYEE) {
+                $depensesPayees++;
+            } else {
+                $depensesEngagees++;
+            }
+        }
+
+        return $this->render('components/dashboard/_block_compta.html.twig', [
+            'entreprise'        => $entreprise,
+            'exercice'          => $exercice,
+            'resultat'          => $documents['resultat'],
+            'tft'               => $documents['tft'],
+            'depensesPayees'    => $depensesPayees,
+            'depensesEngagees'  => $depensesEngagees,
+            'fournisseursActifs' => $fournisseurRepository->count(['entreprise' => $entreprise, 'actif' => true]),
+            'deviseCode'        => $serviceMonnaies->getCodeMonnaieAffichage() ?? 'USD',
+        ]);
+    }
+
     #[Route('/block/renewals/{idEntreprise}', name: 'block_renewals', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
     public function loadBlockRenewals(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): Response
     {

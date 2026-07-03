@@ -1,0 +1,39 @@
+{#
+  Bloc « Comptabilité » du tableau de bord (workspace courtier) : indicateurs de
+  l'exercice en cours, dérivés de la même source que les Documents comptables —
+  produits (commissions encaissées), charges, résultat net, décaissements,
+  trésorerie de clôture, pouls des dépenses et fournisseurs actifs. Charte
+  JS Brokers (cobalt #0047AB), négatifs en rouge sémantique, information jamais
+  portée par la seule couleur (libellés explicites).
+#}
+{% set kpis = [
+    { label: 'Commissions encaissées', valeur: resultat.totalProduits, aide: 'Produits HT de l\'exercice' },
+    { label: 'Charges',                valeur: resultat.totalCharges,  aide: 'Rétro-commissions, taxes courtier, dépenses (HT)' },
+    { label: 'Résultat net',           valeur: resultat.resultat,      aide: 'Produits − charges' },
+    { label: 'Décaissements',          valeur: tft.decaissements,      aide: 'Sorties de trésorerie de l\'exercice' },
+    { label: 'Trésorerie',             valeur: tft.cloture,            aide: 'Banques + caisse en fin de période' },
+] %}
+
+<div class="px-3 py-2 bg-white">
+    <div class="d-flex flex-wrap gap-2">
+        {% for kpi in kpis %}
+            <div class="flex-fill" style="flex-basis:150px; min-width:150px; background:#f8f9fa; border:1px solid #dee2e6; border-radius:.5rem; padding:.55rem .7rem;"
+                 title="{{ kpi.aide }}">
+                <div class="text-muted" style="font-size:.68rem; text-transform:uppercase; letter-spacing:.03em;">{{ kpi.label }}</div>
+                <div class="fw-bold" style="font-size:.95rem; font-variant-numeric:tabular-nums; color:{{ kpi.valeur < 0 ? '#dc3545' : '#212529' }};">
+                    {{ kpi.valeur|number_format(2, ',', ' ') }} {{ deviseCode }}
+                    {% if kpi.valeur < 0 %}<span class="visually-hidden">(négatif)</span>{% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="d-flex flex-wrap align-items-center gap-3 mt-2 pt-2" style="border-top:1px solid #f0f0f0;">
+        <span class="text-muted" style="font-size:.75rem;">
+            <strong style="color:#212529;">{{ depensesPayees }}</strong> dépense{{ depensesPayees > 1 ? 's' }} payée{{ depensesPayees > 1 ? 's' }}
+            · <strong style="color:#212529;">{{ depensesEngagees }}</strong> engagée{{ depensesEngagees > 1 ? 's' }}
+            · <strong style="color:#212529;">{{ fournisseursActifs }}</strong> fournisseur{{ fournisseursActifs > 1 ? 's' }} actif{{ fournisseursActifs > 1 ? 's' }}
+        </span>
+        <span class="text-muted ms-auto" style="font-size:.7rem;">Exercice {{ exercice }} · même source que les Documents comptables</span>
+    </div>
+</div>

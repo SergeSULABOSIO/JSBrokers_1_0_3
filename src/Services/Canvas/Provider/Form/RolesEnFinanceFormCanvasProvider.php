@@ -51,6 +51,7 @@ class RolesEnFinanceFormCanvasProvider implements FormCanvasProviderInterface
                 "accessRevenu"         => "revenu",
                 "accessCharge"         => "charge",
                 "accessDepense"        => "depense",
+                "accessFournisseur"    => "fournisseur",
                 "accessDocumentComptable" => "document-comptable",
             ],
         ];
@@ -90,7 +91,10 @@ class RolesEnFinanceFormCanvasProvider implements FormCanvasProviderInterface
                 ["champs" => ["accessCharge"]],
                 ["champs" => ["accessDepense"]]
             ]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["accessDocumentComptable"]]]],
+            ["couleur_fond" => "white", "colonnes" => [
+                ["champs" => ["accessFournisseur"]],
+                ["champs" => ["accessDocumentComptable"]]
+            ]],
         ];
     }
 }

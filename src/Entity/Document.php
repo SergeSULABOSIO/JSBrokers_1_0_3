@@ -72,6 +72,9 @@ class Document
     #[ORM\ManyToOne(inversedBy: 'preuves')]
     private ?Paiement $paiement = null;
 
+    #[ORM\ManyToOne(inversedBy: 'documents')]
+    private ?Fournisseur $fournisseur = null;
+
     #[Groups(['list:read'])]
     public ?string $parent_string;
 
@@ -289,6 +292,18 @@ class Document
     public function setPaiement(?Paiement $paiement): static
     {
         $this->paiement = $paiement;
+
+        return $this;
+    }
+
+    public function getFournisseur(): ?Fournisseur
+    {
+        return $this->fournisseur;
+    }
+
+    public function setFournisseur(?Fournisseur $fournisseur): static
+    {
+        $this->fournisseur = $fournisseur;
 
         return $this;
     }

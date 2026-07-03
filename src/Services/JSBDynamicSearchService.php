@@ -33,6 +33,7 @@ class JSBDynamicSearchService
         'Document',
         'Entreprise',
         'Feedback',
+        'Fournisseur',
         'Groupe',
         'Invite',
         'ModelePieceSinistre',

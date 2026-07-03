@@ -19,6 +19,7 @@ use App\Entity\DepenseCourtier;
 use App\Entity\Document;
 use App\Entity\Entreprise;
 use App\Entity\Feedback;
+use App\Entity\Fournisseur;
 use App\Entity\Groupe;
 use App\Entity\Invite;
 use App\Entity\ModelePieceSinistre;
@@ -1185,6 +1186,7 @@ trait ControllerUtilsTrait
                 RevenuPourCourtier::class => 'App\Controller\Admin\RevenuPourCourtierController::index',
                 ChargeCourtier::class => 'App\Controller\Admin\ChargeCourtierController::index',
                 DepenseCourtier::class => 'App\Controller\Admin\DepenseCourtierController::index',
+                Fournisseur::class => 'App\Controller\Admin\FournisseurController::index',
             ],
             // MARKETING
             '_view_manager_marketing.html.twig' => [

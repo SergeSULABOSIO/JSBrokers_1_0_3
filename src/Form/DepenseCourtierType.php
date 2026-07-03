@@ -6,6 +6,7 @@ use App\Entity\ChargeCourtier;
 use App\Entity\Depense;
 use App\Entity\DepenseCourtier;
 use App\Entity\Entreprise;
+use App\Entity\Fournisseur;
 use App\Entity\Utilisateur;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\QueryBuilder;
@@ -68,10 +69,30 @@ class DepenseCourtierType extends AbstractType
                 'help'     => 'Taux de TVA récupérable sur cette dépense. 0 si la TVA n\'est pas déductible (montant comptabilisé en charge TTC).',
                 'attr'     => ['placeholder' => 'Ex. 16'],
             ])
+            ->add('fournisseur', EntityType::class, [
+                'class'         => Fournisseur::class,
+                'label'         => 'Fournisseur enregistré',
+                'required'      => false,
+                'choice_label'  => fn (Fournisseur $f) => (string) $f,
+                'query_builder' => function (EntityRepository $er): QueryBuilder {
+                    /** @var Utilisateur $user */
+                    $user = $this->security->getUser();
+                    /** @var Entreprise|null $entreprise */
+                    $entreprise = $user?->getConnectedTo();
+
+                    return $er->createQueryBuilder('f')
+                        ->where('f.entreprise = :eseId')
+                        ->andWhere('f.actif = true')
+                        ->setParameter('eseId', $entreprise?->getId() ?? -1)
+                        ->orderBy('f.nom', 'ASC');
+                },
+                'placeholder'   => 'Aucun (bénéficiaire occasionnel)…',
+                'help'          => 'Opérateur économique du référentiel Fournisseurs. Laissez vide et utilisez le champ ci-dessous pour un bénéficiaire occasionnel (personne physique…).',
+            ])
             ->add('beneficiaire', TextType::class, [
-                'label'    => 'Bénéficiaire / fournisseur',
+                'label'    => 'Bénéficiaire occasionnel (texte libre)',
                 'required' => false,
-                'attr'     => ['placeholder' => 'Ex. Bailleur, imprimeur, prestataire…'],
+                'attr'     => ['placeholder' => 'Ex. remboursement à un particulier…'],
             ])
             ->add('reference', TextType::class, [
                 'label'    => 'Référence de la pièce (facture / reçu)',
