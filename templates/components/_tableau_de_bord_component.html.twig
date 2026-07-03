@@ -42,6 +42,28 @@
             </div>
             {% endif %}
 
+            {# Comptabilité — visible avec la lecture Finances (Dépenses). #}
+            {% if workspace_can_read('DepenseCourtier') %}
+            <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block" open>
+                <summary class="card-header border-0 bg-white py-2 px-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <twig:UX:Icon name="tabler:report-money" style="width:14px;height:14px;color:#0047AB;" />
+                        <span class="small fw-semibold" style="color:#0047AB;">Comptabilité</span>
+                        <button class="db-task-new-btn ms-auto"
+                                data-meta-tip="Ouvrir les documents comptables"
+                                onclick="event.stopPropagation(); document.dispatchEvent(new CustomEvent('workspace:navigate-to',{bubbles:true,detail:{component:'_document_comptable_component.html.twig',group:'Finances',entity:'DocumentComptable'}}));"
+                                aria-label="Ouvrir les documents comptables">
+                            <twig:UX:Icon name="hugeicons:view" style="width:15px;height:15px;color:#0047AB;" />
+                        </button>
+                        <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron" style="width:15px;height:15px;color:#6c757d;flex-shrink:0;" />
+                    </div>
+                </summary>
+                <div data-controller="lazy-block"
+                     data-lazy-block-url-value="/admin/entreprise_dashbord/block/compta/{{ entreprise.id }}">
+                </div>
+            </details>
+            {% endif %}
+
             {# Renouvellements — visible avec la lecture Production (Avenants). #}
             {% if workspace_can_read('Avenant') %}
             <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">

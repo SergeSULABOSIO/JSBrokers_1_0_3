@@ -1396,148 +1396,6 @@ thead.sticky-header {
 
 /*
 ===================================================================
- SECTION: RENDU « FAÇON PAGE DE CONNEXION » POUR LES DIALOGUES OPT-IN
- (.form-column--auth) — activé par form_style == 'auth' dans le canvas.
- Reprend le pattern login/création/inscription : libellés marqués,
- champs hauts (48px) à anneau de focus cobalt, icône préfixe, panneaux
- de section. Entièrement scopé : n'affecte AUCUN autre dialogue.
- Couleurs : charte officielle (cobalt #0047AB + neutres Bootstrap).
-===================================================================
-*/
-
-/* On neutralise la « boîte » par champ : ici, le regroupement se fait en panneaux. */
-.form-column--auth .mb-3 {
-    padding: 0;
-    background-color: transparent;
-    box-shadow: none;
-}
-.form-column--auth .mb-3:focus-within {
-    box-shadow: none;
-}
-
-/* Panneau de section (calque de .ent-fieldset des pages autonomes). */
-.form-column--auth .dlg-fieldset {
-    border: 1px solid #dee2e6;
-    border-radius: 10px;
-    background-color: #f8f9fa;
-    padding: 1.15rem 1.25rem 0.35rem;
-    margin: 0 0 1.1rem;
-}
-.form-column--auth .dlg-fieldset:last-of-type {
-    margin-bottom: 0;
-}
-
-/* Légende du panneau : accent cobalt, majuscule (calque de .ent-legend). */
-.form-column--auth .dlg-legend {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    font-weight: 700;
-    color: #0047AB;
-    margin-bottom: 1rem;
-    padding: 0;
-    width: auto;
-    float: none;
-}
-
-/* Libellé marqué et foncé (remplace le gris pâle global .form-label). */
-.form-column--auth .form-label {
-    font-weight: 600;
-    color: #343a40;
-    margin-bottom: 0.35rem;
-}
-
-/* Champ haut et confortable, contenu noir, sur fond blanc dans le panneau clair. */
-.form-column--auth .form-control,
-.form-column--auth .form-select,
-.form-column--auth .tom-select-control {
-    height: 48px;
-    font-size: 1rem;
-    color: #000000;
-    background-color: #ffffff !important;
-}
-.form-column--auth .form-control::placeholder {
-    font-weight: 400;
-    color: #adb5bd;
-}
-
-/* Focus visible conforme charte : bordure + anneau cobalt. */
-.form-column--auth .form-control:focus,
-.form-column--auth .form-select:focus,
-.form-column--auth .tom-select-control.focus {
-    border-color: #0047AB !important;
-    box-shadow: 0 0 0 0.25rem rgba(0, 71, 171, 0.35) !important;
-}
-
-/* Champ à icône préfixe (calque de .ent-field des pages autonomes). */
-.form-column--auth .dlg-field-group {
-    margin-bottom: 1rem;
-}
-.form-column--auth .dlg-field {
-    position: relative;
-}
-.form-column--auth .dlg-field-icon {
-    position: absolute;
-    top: 50%;
-    left: 0.85rem;
-    transform: translateY(-50%);
-    width: 20px;
-    height: 20px;
-    color: #6c757d;
-    pointer-events: none;
-    z-index: 2;
-}
-/* Le retrait à gauche n'est appliqué qu'aux champs réellement décorés d'une icône.
-   Il couvre aussi les listes déroulantes et l'autocomplétion (TomSelect) : l'icône
-   ne doit jamais chevaucher la valeur affichée. */
-.form-column--auth .dlg-field--icon .form-control,
-.form-column--auth .dlg-field--icon .form-select,
-.form-column--auth .dlg-field--icon .ts-control,
-.form-column--auth .dlg-field--icon .tom-select-control {
-    padding-left: 2.6rem;
-}
-
-/* Case à cocher en rendu « auth » : rangée dédiée (mini-pastille + case + libellé
-   inline), à la place de l'icône préfixe superposée qui masquait la case. */
-.form-column--auth .dlg-field--check {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    min-height: 40px;
-}
-.form-column--auth .dlg-field--check .form-check-input {
-    flex: 0 0 auto;
-    float: none;
-    margin: 0;
-    width: 1.15em;
-    height: 1.15em;
-    cursor: pointer;
-}
-.form-column--auth .dlg-field--check label {
-    margin: 0;
-    cursor: pointer;
-}
-.form-column--auth .dlg-field-check-icon {
-    flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    background-color: #e8f0fb;
-    color: #0047AB;
-}
-.form-column--auth .dlg-field-check-icon svg {
-    width: 16px;
-    height: 16px;
-}
-
-/*
-===================================================================
  SECTION: RENDU DÉDIÉ DES FORMULAIRES DE RÔLES
  Ciblage ROBUSTE : un formulaire de rôle est reconnu à la présence de cases
  « accès… » (input[name^="access"]), indépendamment de toute classe ajoutée par
@@ -1730,8 +1588,8 @@ thead.sticky-header {
 ===================================================================
 */
 /* Cadre englobant du formulaire : appliqué dès que le canvas fournit un
-   entête contextuel. Exclut le rendu « auth » qui a ses propres panneaux. */
-.form-column:not(.form-column--auth):has(.form-intro) form {
+   entête contextuel. */
+.form-column:has(.form-intro) form {
     padding: 1.25rem;
     border: 1px solid #dee2e6;
     border-radius: 14px;
@@ -1863,7 +1721,9 @@ thead.sticky-header {
     max-width: 78ch; /* longueur de ligne lisible (Opquast — confort de lecture) */
 }
 /* Puces de contexte : rappel des informations pré-remplies (champs masqués),
-   présentées en pastilles « libellé : valeur » scannables d'un coup d'œil. */
+   présentées en badges bicolores « libellé | valeur » : le libellé est une
+   pastille grise à texte noir, la valeur repose sur le fond blanc du badge
+   en texte gris, le tout encadré en pilule (charte JS Brokers). */
 .form-column .form-intro-facts {
     display: flex;
     flex-wrap: wrap;
@@ -1872,26 +1732,28 @@ thead.sticky-header {
 }
 .form-column .form-intro-fact {
     display: inline-flex;
-    align-items: baseline;
-    gap: 0.35rem;
-    padding: 0.25rem 0.7rem;
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.18rem 0.75rem 0.18rem 0.18rem; /* fine gouttière blanche autour de la pastille du libellé */
+    background-color: #ffffff;
+    border: 1px solid #ced4da;
     border-radius: 999px;
 }
 .form-column .form-intro-fact dt {
     margin: 0;
+    padding: 0.2rem 0.65rem;
     font-size: 0.72rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #495057;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: #212529;
+    background-color: #e9ecef;
+    border-radius: 999px;
 }
 .form-column .form-intro-fact dd {
     margin: 0;
     font-size: 0.82rem;
     font-weight: 600;
-    color: #212529;
+    color: #495057;
 }
 
 /* STYLES POUR LE DÉFILEMENT DE FORMULAIRES (utilisé par le dialogue de recherche avancée) */

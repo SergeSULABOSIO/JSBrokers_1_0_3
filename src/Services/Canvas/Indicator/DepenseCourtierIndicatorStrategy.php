@@ -30,8 +30,10 @@ class DepenseCourtierIndicatorStrategy implements IndicatorCalculationStrategyIn
         }
 
         return [
-            'ligne_principale'   => trim(sprintf('%s — %s', $entity->getCharge()?->getLibelle() ?? 'Dépense', $entity->getBeneficiaire() ?? ''), ' —'),
+            'ligne_principale'   => trim(sprintf('%s — %s', $entity->getCharge()?->getLibelle() ?? 'Dépense', $entity->getTiersLibelle() ?? ''), ' —'),
             'ligne_secondaire'   => $ligneSecondaire,
+            'tiersLibelle'       => $entity->getTiersLibelle() ?? 'Aucun tiers renseigné',
+            'fournisseurNom'     => $entity->getFournisseur()?->getNom() ?? '',
             'chargeLibelle'      => $entity->getCharge()?->getLibelle() ?? '',
             'compteOhadaFull'    => $entity->getCharge() !== null
                 ? sprintf('%s — %s', $entity->getCharge()->getCompteOhada(), $entity->getCharge()->getCompteOhadaLabel())

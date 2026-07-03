@@ -68,6 +68,7 @@ class WorkspaceAccessResolver
         'RevenuPourCourtier'         => ['Finances', 'getRolesEnFinance', 'getAccessRevenu', 'Revenus'],
         'ChargeCourtier'             => ['Finances', 'getRolesEnFinance', 'getAccessCharge', 'Charges'],
         'DepenseCourtier'            => ['Finances', 'getRolesEnFinance', 'getAccessDepense', 'Dépenses'],
+        'Fournisseur'                => ['Finances', 'getRolesEnFinance', 'getAccessFournisseur', 'Fournisseurs'],
         // Pseudo-entité (documents générés à la volée, aucune classe Doctrine) : gate la
         // rubrique « Documents comptables » du menu et le contrôleur/export associés.
         'DocumentComptable'          => ['Finances', 'getRolesEnFinance', 'getAccessDocumentComptable', 'Documents comptables'],

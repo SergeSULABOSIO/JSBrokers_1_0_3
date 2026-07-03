@@ -60,7 +60,18 @@ class DepenseCourtier
     #[Groups(['list:read'])]
     private string $tauxTva = '0.00';
 
-    /** Bénéficiaire / fournisseur. */
+    /**
+     * Fournisseur PROFESSIONNEL enregistré (référentiel Fournisseurs du workspace),
+     * pour les dépenses auprès d'opérateurs économiques. Optionnel : le champ libre
+     * `beneficiaire` reste disponible pour les bénéficiaires occasionnels
+     * (personnes physiques, non-opérateurs).
+     */
+    #[ORM\ManyToOne(targetEntity: Fournisseur::class)]
+    #[ORM\JoinColumn(nullable: true)]
+    #[Groups(['list:read'])]
+    private ?Fournisseur $fournisseur = null;
+
+    /** Bénéficiaire occasionnel (texte libre, si aucun fournisseur enregistré). */
     #[ORM\Column(length: 255, nullable: true)]
     #[Groups(['list:read'])]
     private ?string $beneficiaire = null;
@@ -163,6 +174,27 @@ class DepenseCourtier
     public function getTvaDeductibleFloat(): float
     {
         return $this->getMontantFloat() - $this->getMontantHtFloat();
+    }
+
+    public function getFournisseur(): ?Fournisseur
+    {
+        return $this->fournisseur;
+    }
+
+    public function setFournisseur(?Fournisseur $fournisseur): static
+    {
+        $this->fournisseur = $fournisseur;
+
+        return $this;
+    }
+
+    /**
+     * Tiers affiché / comptabilisé : le fournisseur enregistré prime sur le
+     * bénéficiaire libre (source unique pour les listes et les écritures).
+     */
+    public function getTiersLibelle(): ?string
+    {
+        return $this->fournisseur?->getNom() ?? $this->beneficiaire;
     }
 
     public function getBeneficiaire(): ?string

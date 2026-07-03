@@ -4,16 +4,12 @@
     ? formCanvas.parametres.titre_creation
     : formCanvas.parametres.titre_modification|replace({'%id%': entity.id})
 %}
-{# Rendu « façon page de connexion » (libellés marqués, champs hauts à icône préfixe,
-   panneaux de section). Activé uniquement si le canvas pose form_style == 'auth'
-   (cf. InviteFormCanvasProvider). Tous les autres dialogues gardent le rendu d'origine. #}
-{% set is_auth = formCanvas.parametres.form_style|default('') == 'auth' %}
     <div class="row gx-0" data-icon-name="{{ entityCanvas.parametres.icone|default('') }}">
         {# La colonne des attributs est incluse ici et gère sa propre classe de colonne (ex: col-auto) #}
         {% include 'components/dialog/_calculated_attributes.html.twig' with { entity: entity, canvas: entityCanvas } %}
 
         {# La colonne du formulaire prend l'espace restant #}
-        <div class="col form-column{% if is_auth %} form-column--auth{% endif %}{% if formCanvas.parametres.form_class is defined %} {{ formCanvas.parametres.form_class }}{% endif %}">
+        <div class="col form-column{% if formCanvas.parametres.form_class is defined %} {{ formCanvas.parametres.form_class }}{% endif %}">
             {# Entête contextuel opt-in (pastille de l'entité + description de l'édition
                et de son importance), au-dessus du cadre du formulaire. Rendu uniquement
                si le canvas pose form_intro : les autres dialogues sont inchangés. #}
@@ -87,24 +83,11 @@
             {% if formCanvas.form_layout is defined and formCanvas.form_layout is not empty %}
                 {# Pour chaque ligne définie dans la configuration du layout... #}
                 {% for row in formCanvas.form_layout %}
-                    {# Rendu « auth » : les rangées titrées deviennent des panneaux de
-                       section (fieldset + légende). La rangée interne .row reste la cible
-                       Stimulus « formRow » (la logique de visibilité lit ses colonnes). #}
-                    {% set wrap_panel = is_auth and row.group_title is defined %}
-
-                    {# Rendu d'origine : le titre de groupe est un libellé sur sa propre ligne. #}
-                    {% if row.group_title is defined and not is_auth %}
+                    {# Le titre de groupe est un libellé sur sa propre ligne. #}
+                    {% if row.group_title is defined %}
                         <div class="row">
                             <div class="col-12"><label class="form-label required">{{ row.group_title }}</label></div>
                         </div>
-                    {% endif %}
-
-                    {% if wrap_panel %}
-                        <fieldset class="dlg-fieldset">
-                            <legend class="dlg-legend">
-                                {% if row.group_icon is defined %}{{ ux_icon(resolve_icon_name(row.group_icon), {height: '16px', width: '16px'}) }}{% endif %}
-                                {{ row.group_title }}
-                            </legend>
                     {% endif %}
 
                     {% set row_visibility_conditions = (row.visibility_conditions is defined) ? row.visibility_conditions|json_encode : null %}
@@ -146,53 +129,24 @@
                                                 {% set current_widget_attr = current_widget_attr|merge({'data-controller': 'rich-text'}) %}
                                             {% endif %}
 
-                                            {% if is_auth %}
-                                                {# Champ plat « façon login » : libellé marqué + icône préfixe + champ.
-                                                   On transmet EXACTEMENT les mêmes variables que le form_row d'origine
-                                                   (manager_options, attr, idEntreprise, idInvite) pour préserver la
-                                                   logique métier — notamment le filtrage connectedTo de l'autocomplétion. #}
-                                                {% set field_icon = formCanvas.parametres.field_icons[field_code]|default(null) %}
-                                                {% set is_check_field = 'checkbox' in form[field_code].vars.block_prefixes %}
-                                                <div class="dlg-field-group">
-                                                    {% if is_check_field %}
-                                                        {# Case à cocher : l'icône préfixe superposée ne convient pas à ce
-                                                           gabarit — rangée dédiée : mini-pastille + case + libellé inline. #}
-                                                        <div class="dlg-field dlg-field--check">
-                                                            {% if field_icon %}<span class="dlg-field-check-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(field_icon), {height: '16px', width: '16px'}) }}</span>{% endif %}
-                                                            {{ form_widget(form[field_code], {'manager_options': current_field_options, 'attr': current_widget_attr, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
-                                                            {{ form_label(form[field_code]) }}
-                                                        </div>
-                                                    {% else %}
+                                            {# Icône de champ opt-in (field_icons du canvas) : la carte est rendue
+                                               à la main pour poser une mini-pastille devant le libellé. Sans icône,
+                                               form_row d'origine inchangé. #}
+                                            {% set field_icon = formCanvas.parametres.field_icons[field_code]|default(null) %}
+                                            {% if field_icon %}
+                                                <div class="mb-3 dlg-field-card">
+                                                    <div class="dlg-field-card-head">
+                                                        <span class="dlg-field-card-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(field_icon), {height: '16px', width: '16px'}) }}</span>
                                                         {{ form_label(form[field_code]) }}
-                                                        <div class="dlg-field{% if field_icon %} dlg-field--icon{% endif %}">
-                                                            {% if field_icon %}{{ ux_icon(resolve_icon_name(field_icon), {height: '20px', width: '20px', class: 'dlg-field-icon'}) }}{% endif %}
-                                                            {{ form_widget(form[field_code], {'manager_options': current_field_options, 'attr': current_widget_attr, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
-                                                        </div>
-                                                    {% endif %}
-                                                    {# form_widget seul n'affiche pas l'aide : on la rend explicitement (textes d'aide email/assistants). #}
-                                                    {{ form_help(form[field_code]) }}
-                                                    {{ form_errors(form[field_code]) }}
+                                                    </div>
+                                                    <div class="dlg-field-card-body">
+                                                        {{ form_widget(form[field_code], {'manager_options': current_field_options, 'attr': current_widget_attr, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
+                                                        {{ form_help(form[field_code]) }}
+                                                        {{ form_errors(form[field_code]) }}
+                                                    </div>
                                                 </div>
                                             {% else %}
-                                                {# Icône de champ opt-in (field_icons du canvas, même clé que le rendu
-                                                   « auth ») : la carte est rendue à la main pour poser une mini-pastille
-                                                   devant le libellé. Sans icône, form_row d'origine inchangé. #}
-                                                {% set field_icon = formCanvas.parametres.field_icons[field_code]|default(null) %}
-                                                {% if field_icon %}
-                                                    <div class="mb-3 dlg-field-card">
-                                                        <div class="dlg-field-card-head">
-                                                            <span class="dlg-field-card-icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(field_icon), {height: '16px', width: '16px'}) }}</span>
-                                                            {{ form_label(form[field_code]) }}
-                                                        </div>
-                                                        <div class="dlg-field-card-body">
-                                                            {{ form_widget(form[field_code], {'manager_options': current_field_options, 'attr': current_widget_attr, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
-                                                            {{ form_help(form[field_code]) }}
-                                                            {{ form_errors(form[field_code]) }}
-                                                        </div>
-                                                    </div>
-                                                {% else %}
-                                                    {{ form_row(form[field_code], {'manager_options': current_field_options, 'attr': current_widget_attr, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
-                                                {% endif %}
+                                                {{ form_row(form[field_code], {'manager_options': current_field_options, 'attr': current_widget_attr, 'idEntreprise': idEntreprise, 'idInvite': idInvite}) }}
                                             {% endif %}
                                         {% endif %}
                                     {% endif %}
@@ -200,8 +154,6 @@
                             </div>
                         {% endfor %}
                     </div>
-
-                    {% if wrap_panel %}</fieldset>{% endif %}
                 {% endfor %}
             {% else %}
                 {{ form_widget(form) }}

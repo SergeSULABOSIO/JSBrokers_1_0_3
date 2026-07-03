@@ -37,6 +37,7 @@ parameters:
                         "Bordereaux": { icone: 'bordereau', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Bordereau' }
                         "Revenus": { icone: 'revenu', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\RevenuPourCourtier' }
                         "Charges": { icone: 'charge', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\ChargeCourtier' }
+                        "Fournisseurs": { icone: 'fournisseur', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Fournisseur' }
                         "Dépenses": { icone: 'depense', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\DepenseCourtier' }
                         # Rubrique SANS entité Doctrine : 'DocumentComptable' est une PSEUDO-entité
                         # (documents générés à la volée). Elle sert uniquement au gating du menu

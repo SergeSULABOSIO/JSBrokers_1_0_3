@@ -5,6 +5,7 @@ namespace App\Services\Canvas\Provider\Entity;
 use App\Entity\ChargeCourtier;
 use App\Entity\DepenseCourtier;
 use App\Entity\Entreprise;
+use App\Entity\Fournisseur;
 
 class DepenseCourtierEntityCanvasProvider implements EntityCanvasProviderInterface
 {
@@ -32,7 +33,8 @@ class DepenseCourtierEntityCanvasProvider implements EntityCanvasProviderInterfa
                 ["code" => "dateDepense", "intitule" => "Date", "type" => "Date"],
                 ["code" => "montant", "intitule" => "Montant TTC", "type" => "Nombre", "format" => "Monetaire"],
                 ["code" => "tauxTva", "intitule" => "Taux TVA (%)", "type" => "Nombre"],
-                ["code" => "beneficiaire", "intitule" => "Bénéficiaire", "type" => "Texte"],
+                ["code" => "fournisseur", "intitule" => "Fournisseur", "type" => "Relation", "targetEntity" => Fournisseur::class, "displayField" => "nom"],
+                ["code" => "beneficiaire", "intitule" => "Bénéficiaire occasionnel", "type" => "Texte"],
                 ["code" => "reference", "intitule" => "Référence", "type" => "Texte"],
                 ["code" => "moyenPaiement", "intitule" => "Moyen de paiement", "type" => "Texte"],
                 ["code" => "statut", "intitule" => "Statut", "type" => "Texte"],
@@ -47,6 +49,7 @@ class DepenseCourtierEntityCanvasProvider implements EntityCanvasProviderInterfa
         return [
             ["group" => "Détails", "code" => "chargeLibelle", "intitule" => "Type de charge", "type" => "Calcul", "format" => "Texte", "description" => "Libellé de la charge de rattachement."],
             ["group" => "Détails", "code" => "compteOhadaFull", "intitule" => "Compte OHADA", "type" => "Calcul", "format" => "Texte", "description" => "Compte SYSCOHADA de la charge de rattachement."],
+            ["group" => "Détails", "code" => "tiersLibelle", "intitule" => "Tiers", "type" => "Calcul", "format" => "Texte", "description" => "Fournisseur enregistré (prioritaire) ou bénéficiaire occasionnel."],
             ["group" => "Détails", "code" => "statutLabel", "intitule" => "Statut", "type" => "Calcul", "format" => "Texte", "description" => "Engagée (pèse sur le résultat), payée (décaisse la trésorerie) ou annulée (exclue)."],
             ["group" => "Détails", "code" => "moyenPaiementLabel", "intitule" => "Moyen de paiement", "type" => "Calcul", "format" => "Texte", "description" => "Canal de décaissement (banque, caisse, mobile money…)."],
             ["group" => "Montants", "code" => "montantTtc", "intitule" => "Montant TTC", "type" => "Calcul", "format" => "Monetaire", "description" => "Montant toutes taxes comprises de la dépense."],

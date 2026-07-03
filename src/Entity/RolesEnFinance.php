@@ -75,6 +75,10 @@ class RolesEnFinance implements OwnerAwareInterface
     #[Groups(['list:read'])]
     private array $accessDocumentComptable = [];
 
+    #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
+    private array $accessFournisseur = [];
+
     public function getId(): ?int
     {
         return $this->id;
@@ -244,6 +248,18 @@ class RolesEnFinance implements OwnerAwareInterface
     public function setAccessDocumentComptable(array $accessDocumentComptable): static
     {
         $this->accessDocumentComptable = $accessDocumentComptable;
+
+        return $this;
+    }
+
+    public function getAccessFournisseur(): array
+    {
+        return $this->accessFournisseur;
+    }
+
+    public function setAccessFournisseur(array $accessFournisseur): static
+    {
+        $this->accessFournisseur = $accessFournisseur;
 
         return $this;
     }

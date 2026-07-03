@@ -28,7 +28,7 @@ class DepenseCourtierFormCanvasProvider implements FormCanvasProviderInterface
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Dépense du cabinet",
-                "description" => "Vous enregistrez une sortie de fonds de votre cabinet, classée par type de charge. « Engagée » : la charge pèse sur le résultat sans décaisser ; « Payée » : elle décaisse la trésorerie (banque ou caisse) ; « Annulée » : elle est exclue de la comptabilité. La TVA déductible alimente votre suivi fiscal.",
+                "description" => "Vous enregistrez une sortie de fonds de votre cabinet, classée par type de charge. « Engagée » : la charge pèse sur le résultat sans décaisser ; « Payée » : elle décaisse la trésorerie (banque ou caisse) ; « Annulée » : elle est exclue de la comptabilité. Rattachez la dépense à un fournisseur enregistré (opérateur économique) ou saisissez un bénéficiaire occasionnel. La TVA déductible alimente votre suivi fiscal.",
             ],
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
@@ -36,6 +36,7 @@ class DepenseCourtierFormCanvasProvider implements FormCanvasProviderInterface
                 "dateDepense"   => "action:calendar",
                 "montant"       => "monnaie",
                 "tauxTva"       => "taxe",
+                "fournisseur"   => "fournisseur",
                 "beneficiaire"  => "partenaire",
                 "reference"     => "document",
                 "moyenPaiement" => "compte-bancaire",
@@ -47,7 +48,8 @@ class DepenseCourtierFormCanvasProvider implements FormCanvasProviderInterface
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["charge"], 'width' => 8], ["champs" => ["dateDepense"], 'width' => 4]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["montant"], 'width' => 6], ["champs" => ["tauxTva"], 'width' => 6]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["moyenPaiement"], 'width' => 6], ["champs" => ["statut"], 'width' => 6]]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["beneficiaire"], 'width' => 6], ["champs" => ["reference"], 'width' => 6]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["fournisseur"], 'width' => 6], ["champs" => ["beneficiaire"], 'width' => 6]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["reference"], 'width' => 12]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"], 'width' => 12]]],
         ];
 
