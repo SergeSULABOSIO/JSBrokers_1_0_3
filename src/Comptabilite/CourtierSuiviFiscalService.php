@@ -3,6 +3,8 @@
 namespace App\Comptabilite;
 
 use App\Entity\Entreprise;
+use App\Entity\Taxe;
+use App\Repository\TaxeRepository;
 
 /**
  * @file Suivi des obligations fiscales du COURTIER vis-à-vis des autorités.
@@ -29,6 +31,7 @@ class CourtierSuiviFiscalService
 
     public function __construct(
         private CourtierEcritureComptableService $ecritures,
+        private TaxeRepository $taxeRepository,
     ) {
     }
 
@@ -129,6 +132,43 @@ class CourtierSuiviFiscalService
             'exercice' => $exercice,
             'assureur' => ['lignes' => $lignesAssureur, 'totaux' => $totauxAssureur],
             'courtier' => ['lignes' => $lignesCourtier, 'totaux' => $totauxCourtier],
+            'taxes'    => $this->taxesParRedevable($entreprise),
         ];
+    }
+
+    /**
+     * Fiches descriptives des taxes du workspace, groupées par redevable : nom/code,
+     * description, taux IARD et VIE, et autorités auprès desquelles le cabinet est
+     * assujetti (destinataires des reversements — ex. DGI, ARCA). Affichées en tête
+     * de chaque bloc du suivi fiscal pour situer les montants.
+     *
+     * @return array{assureur: array<int, array>, courtier: array<int, array>}
+     */
+    private function taxesParRedevable(Entreprise $entreprise): array
+    {
+        $result = ['assureur' => [], 'courtier' => []];
+
+        foreach ($this->taxeRepository->findBy(['entreprise' => $entreprise]) as $taxe) {
+            $autorites = [];
+            foreach ($taxe->getAutoriteFiscales() as $autorite) {
+                $abreviation = trim((string) $autorite->getAbreviation());
+                $autorites[] = $abreviation !== ''
+                    ? sprintf('%s — %s', $abreviation, $autorite->getNom())
+                    : (string) $autorite->getNom();
+            }
+
+            $fiche = [
+                'code'        => $taxe->getCode(),
+                'description' => $taxe->getDescription(),
+                'tauxIARD'    => (float) $taxe->getTauxIARD(),
+                'tauxVIE'     => (float) $taxe->getTauxVIE(),
+                'autorites'   => $autorites,
+            ];
+
+            $cle = $taxe->getRedevable() === Taxe::REDEVABLE_COURTIER ? 'courtier' : 'assureur';
+            $result[$cle][] = $fiche;
+        }
+
+        return $result;
     }
 }

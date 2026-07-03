@@ -10,11 +10,52 @@
 #}
 {% import 'console/document/_macros.html.twig' as fmt %}
 
+{# Fiches descriptives des taxes d'un redevable : nom, taux, autorités assujetties. #}
+{% macro fiches_taxes(taxes) %}
+    {% if taxes is empty %}
+        <p class="text-muted" style="font-size:.85rem; margin:.25rem 0 .75rem;">
+            Aucune taxe de ce redevable n'est configurée dans la rubrique « Taxes » du module Finances.
+        </p>
+    {% else %}
+        <div style="display:flex; flex-wrap:wrap; gap:.6rem; margin:.25rem 0 .9rem;">
+            {% for taxe in taxes %}
+                <div style="flex:1 1 260px; max-width:420px; background:#f8f9fa; border:1px solid #dee2e6; border-radius:10px; padding:.65rem .8rem;">
+                    <div style="display:flex; align-items:center; gap:.4rem; margin-bottom:.2rem;">
+                        <twig:UX:Icon name="{{ resolve_icon_name('taxe') }}" style="width:16px;height:16px;color:#0047AB;" />
+                        <strong style="color:#212529;">{{ taxe.code }}</strong>
+                        <span class="text-muted" style="font-size:.8rem;">IARD {{ taxe.tauxIARD|number_format(2, ',', ' ') }} % · VIE {{ taxe.tauxVIE|number_format(2, ',', ' ') }} %</span>
+                    </div>
+                    {% if taxe.description %}
+                        <div style="color:#495057; font-size:.83rem; margin-bottom:.2rem;">{{ taxe.description }}</div>
+                    {% endif %}
+                    <div style="color:#6c757d; font-size:.8rem;">
+                        Assujetti auprès de :
+                        {% if taxe.autorites is empty %}<em>aucune autorité renseignée</em>{% else %}{{ taxe.autorites|join(' · ') }}{% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endmacro %}
+
 <h3 class="cs-doc-title">Suivi fiscal — exercice {{ documents.exercice }}</h3>
 <p class="cs-doc-sub">
     Montants dus collectés, déductibles, soldes payables, montants payés et soldes dus,
     par redevable. Dérivé des mêmes écritures que le journal — cohérence garantie.
 </p>
+
+{# Mode opératoire : le reversement s'appuie sur les mécanismes existants du workspace. #}
+<div role="note" style="display:flex; gap:.6rem; align-items:flex-start; background:#e8f0fb; border:1px solid #cdd8f0; border-radius:10px; padding:.7rem .9rem; margin:0 0 1rem;">
+    <twig:UX:Icon name="{{ resolve_icon_name('action:information') }}" style="width:18px;height:18px;color:#0047AB;flex:0 0 auto;margin-top:2px;" />
+    <p style="margin:0; color:#212529; font-size:.85rem;">
+        <strong>Enregistrer un reversement :</strong> créez dans la rubrique <strong>Notes</strong> une
+        <em>note de crédit</em> adressée à l'<em>autorité fiscale</em> concernée, puis enregistrez son
+        <em>paiement</em> (rubrique Paiements) en y joignant vos <em>preuves / pièces justificatives</em>
+        (avis de débit, quittance…). Le reversement est alors comptabilisé automatiquement ici et dans
+        les documents : apurement de la dette (443) pour une taxe à charge de l'assureur, charge (641)
+        pour une taxe dont le cabinet est redevable.
+    </p>
+</div>
 
 {# ── Bloc 1 : taxes collectées (redevable : assureur) ── #}
 <div class="cs-doc-led">
@@ -22,6 +63,7 @@
         <span class="cs-doc-account">Taxes collectées (redevable : l'assureur)</span>
         <span class="text-muted" style="font-size:.85rem;">Dette fiscale ordinaire — aucun impact sur le résultat, reversement = trésorerie seule</span>
     </div>
+    {{ _self.fiches_taxes(suiviFiscal.taxes.assureur) }}
     <table class="cs-doc-table">
         <caption class="visually-hidden">Suivi mensuel des taxes collectées pour le compte de l'État (redevable assureur)</caption>
         <thead>
@@ -64,6 +106,7 @@
         <span class="cs-doc-account">Taxes du courtier (redevable : le courtier)</span>
         <span class="text-muted" style="font-size:.85rem;">Charges du cabinet (compte 641) — reversement = trésorerie ET résultat</span>
     </div>
+    {{ _self.fiches_taxes(suiviFiscal.taxes.courtier) }}
     <table class="cs-doc-table">
         <caption class="visually-hidden">Suivi mensuel des taxes dont le courtier est redevable (charges)</caption>
         <thead>
