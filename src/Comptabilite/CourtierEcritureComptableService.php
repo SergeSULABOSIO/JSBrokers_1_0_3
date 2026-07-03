@@ -11,6 +11,7 @@ use App\Entity\Taxe;
 use App\Repository\DepenseCourtierRepository;
 use App\Repository\PaiementRepository;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
+use App\Services\ServiceMonnaies;
 use App\Services\ServiceTaxes;
 
 /**
@@ -49,6 +50,7 @@ class CourtierEcritureComptableService
         private DepenseCourtierRepository $depenseRepository,
         private IndicatorCalculationHelper $helper,
         private ServiceTaxes $serviceTaxes,
+        private ServiceMonnaies $serviceMonnaies,
         private DocumentsComptablesBuilder $builder,
     ) {
     }
@@ -276,14 +278,38 @@ class CourtierEcritureComptableService
      * opération de l'entreprise, sinon 1ᵉʳ janvier de l'année courante (l'entité
      * Entreprise ne porte pas de date de constitution).
      *
+     * MONNAIE : le capital social des paramètres de l'entreprise est saisi en
+     * monnaie LOCALE (ex. CDF) alors que les documents comptables sont exprimés
+     * en monnaie d'AFFICHAGE (ex. USD) — on le convertit via ServiceMonnaies
+     * (pivot USD, taux des paramètres Monnaies du workspace). Sans configuration
+     * de monnaies exploitable, le montant est repris tel quel.
+     *
      * @param Paiement[]        $paiements
      * @param DepenseCourtier[] $depenses
      */
     private function ecritureCapital(Entreprise $entreprise, array $paiements, array $depenses): ?array
     {
-        $capital = round((float) $entreprise->getCapitalSociale(), 2);
+        $capitalLocal = round((float) $entreprise->getCapitalSociale(), 2);
+        if ($capitalLocal < 0.005) {
+            return null;
+        }
+
+        $capital = round($this->serviceMonnaies->convertirLocaleVersAffichage($capitalLocal, $entreprise), 2);
         if ($capital < 0.005) {
             return null;
+        }
+
+        // Libellé explicite quand une conversion a réellement eu lieu (traçabilité).
+        $libelle = 'Apport en capital social';
+        $locale = $this->serviceMonnaies->getMonnaieLocalePourEntreprise($entreprise);
+        $affichage = $this->serviceMonnaies->getMonnaieAffichagePourEntreprise($entreprise);
+        if ($locale !== null && $affichage !== null && $locale->getCode() !== $affichage->getCode()) {
+            $libelle .= sprintf(
+                ' (%s %s convertis en %s)',
+                number_format($capitalLocal, 2, ',', ' '),
+                $locale->getCode(),
+                $affichage->getCode(),
+            );
         }
 
         $date = $this->premiereOperation($paiements, $depenses)
@@ -292,7 +318,7 @@ class CourtierEcritureComptableService
         return [
             'date'    => $date,
             'piece'   => 'CAPITAL',
-            'libelle' => 'Apport en capital social',
+            'libelle' => $libelle,
             'type'    => 'capital',
             'lignes'  => [
                 $this->ligne(PlanComptable::BANQUES, $capital, 0.0),

@@ -97,7 +97,7 @@ class WorkspaceDocumentsComptablesTest extends WebTestCase
         foreach ([
             'paiement', 'note', 'bordereau', 'offre_indemnisation_sinistre',
             'depense_courtier', 'charge_courtier', 'compte_bancaire',
-            'autorite_fiscale', 'taxe',
+            'autorite_fiscale', 'taxe', 'monnaie',
             'roles_en_finance', 'roles_en_marketing', 'roles_en_production',
             'roles_en_sinistre', 'roles_en_administration',
         ] as $table) {
@@ -484,6 +484,53 @@ class WorkspaceDocumentsComptablesTest extends WebTestCase
         // Menu : la rubrique est visible.
         $this->client->request('GET', sprintf('/espacedetravail/%d/%d', $guest->getId(), $e->getId()));
         $this->assertStringContainsString('entity-name-param="DocumentComptable"', (string) $this->client->getResponse()->getContent());
+    }
+
+    public function testCapitalSocialConvertiDeLaMonnaieLocaleVersAffichage(): void
+    {
+        ['entreprise' => $e] = $this->seed();
+        $em = $this->em();
+
+        // Paramètres monnaies du workspace : CDF = monnaie LOCALE (saisie, dont le
+        // capital social), USD = monnaie d'AFFICHAGE (celle des documents comptables).
+        // tauxusd = unités de la monnaie pour 1 USD (pivot).
+        $cdf = new \App\Entity\Monnaie();
+        $cdf->setNom('Franc congolais')->setCode('CDF')->setTauxusd('2800.00')
+            ->setFonction(\App\Entity\Monnaie::FONCTION_SAISIE_UNIQUEMENT)->setLocale(true);
+        $cdf->setEntreprise($e);
+        $em->persist($cdf);
+
+        $usd = new \App\Entity\Monnaie();
+        $usd->setNom('Dollar américain')->setCode('USD')->setTauxusd('1.00')
+            ->setFonction(\App\Entity\Monnaie::FONCTION_SAISIE_ET_AFFICHAGE)->setLocale(false);
+        $usd->setEntreprise($e);
+        $em->persist($usd);
+
+        // Capital social saisi en monnaie locale : 2 800 000 CDF = 1 000 USD.
+        $e->setCapitalSociale(2800000.0);
+        $em->flush();
+
+        /** @var CourtierEcritureComptableService $service */
+        $service = static::getContainer()->get(CourtierEcritureComptableService::class);
+        $documents = $service->documents($e, self::EXERCICE);
+
+        // L'écriture fondatrice est convertie en monnaie d'affichage, libellé traçable.
+        $capital = null;
+        foreach ($documents['journal']['ecritures'] as $ecriture) {
+            if ($ecriture['piece'] === 'CAPITAL') {
+                $capital = $ecriture;
+                break;
+            }
+        }
+        $this->assertNotNull($capital, "L'écriture de capital doit exister.");
+        $this->assertEqualsWithDelta(1000.0, $capital['lignes'][0]['debit'], 0.01, '2 800 000 CDF doivent devenir 1 000 USD.');
+        $this->assertStringContainsString('CDF', $capital['libelle'], 'Le libellé doit tracer la monnaie d\'origine.');
+        $this->assertStringContainsString('USD', $capital['libelle'], 'Le libellé doit tracer la monnaie de conversion.');
+
+        // Le bilan porte le capital converti — et reste équilibré.
+        $passif = $documents['bilan']['passif'];
+        $this->assertEqualsWithDelta(1000.0, $passif[0]['cloture'], 0.01, 'Le poste Capital social du bilan doit être en monnaie d\'affichage.');
+        $this->assertEqualsWithDelta(end($documents['bilan']['actif'])['cloture'], end($passif)['cloture'], 0.01);
     }
 
     public function testChaqueActualisationConsommeDesTokens(): void
