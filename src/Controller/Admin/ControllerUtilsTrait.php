@@ -8,12 +8,14 @@ use App\Entity\Avenant;
 use App\Entity\Bordereau;
 use App\Entity\Chargement;
 use App\Entity\ChargementPourPrime;
+use App\Entity\ChargeCourtier;
 use App\Entity\Classeur;
 use App\Entity\Client;
 use App\Entity\CompteBancaire;
 use App\Entity\ConditionPartage;
 use App\Entity\Contact;
 use App\Entity\Cotation;
+use App\Entity\DepenseCourtier;
 use App\Entity\Document;
 use App\Entity\Entreprise;
 use App\Entity\Feedback;
@@ -1181,6 +1183,8 @@ trait ControllerUtilsTrait
                 Paiement::class => 'App\Controller\Admin\PaiementController::index',
                 Bordereau::class => 'App\Controller\Admin\BordereauController::index',
                 RevenuPourCourtier::class => 'App\Controller\Admin\RevenuPourCourtierController::index',
+                ChargeCourtier::class => 'App\Controller\Admin\ChargeCourtierController::index',
+                DepenseCourtier::class => 'App\Controller\Admin\DepenseCourtierController::index',
             ],
             // MARKETING
             '_view_manager_marketing.html.twig' => [
@@ -1218,6 +1222,8 @@ trait ControllerUtilsTrait
             '_licence_component.html.twig' => 'App\Controller\Admin\NotificationSinistreController::index', // TODO: A remplacer par le bon contrôleur
             // SUPPORT (self-service courtier → file CrmTicket de la console)
             '_support_component.html.twig' => 'App\Controller\Admin\SupportController::loadWorkspaceComponent',
+            // DOCUMENTS COMPTABLES (états OHADA du courtier, générés à la volée)
+            '_document_comptable_component.html.twig' => 'App\Controller\Admin\DocumentComptableWorkspaceController::loadWorkspaceComponent',
         ];
     }
 

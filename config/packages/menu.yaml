@@ -36,6 +36,14 @@ parameters:
                         "Paiements": { icone: 'paiement', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Paiement' }
                         "Bordereaux": { icone: 'bordereau', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\Bordereau' }
                         "Revenus": { icone: 'revenu', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\RevenuPourCourtier' }
+                        "Charges": { icone: 'charge', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\ChargeCourtier' }
+                        "Dépenses": { icone: 'depense', composant_twig: '_view_manager.html.twig', entity_name: 'App\Entity\DepenseCourtier' }
+                        # Rubrique SANS entité Doctrine : 'DocumentComptable' est une PSEUDO-entité
+                        # (documents générés à la volée). Elle sert uniquement au gating du menu
+                        # (WorkspaceAccessResolver::MAP → RolesEnFinance::accessDocumentComptable).
+                        # Ne JAMAIS créer une vraie classe App\Entity\DocumentComptable sans revisiter
+                        # processDataForShortEntityNames (garde class_exists) et cette rubrique.
+                        "Documents comptables": { icone: 'document-comptable', composant_twig: '_document_comptable_component.html.twig', entity_name: 'DocumentComptable' }
 
                 Marketing:
                     icone: 'piste'

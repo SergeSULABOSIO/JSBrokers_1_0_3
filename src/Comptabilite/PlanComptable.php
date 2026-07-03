@@ -26,7 +26,11 @@ final class PlanComptable
     public const CAISSE              = '571'; // Trésorerie : caisse (espèces)
     public const SERVICES_VENDUS     = '706'; // Produits : prestations de services vendues
 
-    /** @var array<string, string> Libellés des comptes hors classe 6. */
+    // --- Subdivisions employées par la comptabilité du COURTIER (workspace). ---
+    public const RETRO_COMMISSIONS   = '632'; // Rémunérations d'intermédiaires (rétro-commissions)
+    public const IMPOTS_TAXES        = '641'; // Impôts et taxes (taxes dont le courtier est redevable)
+
+    /** @var array<string, string> Libellés des comptes hors classe 6 (+ subdivisions courtier). */
     private const LIBELLES = [
         self::CAPITAL_SOCIAL    => 'Capital social',
         self::REPORT_A_NOUVEAU  => 'Report à nouveau',
@@ -38,6 +42,8 @@ final class PlanComptable
         self::BANQUES           => 'Banques',
         self::CAISSE            => 'Caisse',
         self::SERVICES_VENDUS   => 'Services vendus',
+        self::RETRO_COMMISSIONS => 'Rémunérations d\'intermédiaires et de conseils',
+        self::IMPOTS_TAXES      => 'Impôts et taxes',
     ];
 
     /** Comptes de trésorerie (classe 5) suivis par le tableau de flux. */

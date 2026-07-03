@@ -1,0 +1,140 @@
+{#
+  Composant « Documents comptables » de l'espace de travail du courtier.
+
+  Sept états SYSCOHADA générés à la volée depuis les opérations de l'entreprise
+  (encaissements de commissions, rétro-commissions, reversements de taxes,
+  dépenses, capital) + suivi fiscal des taxes, avec export Excel. Réutilise les
+  partials console (console/document/_*.html.twig — dépendants de la seule
+  variable `documents`) et leur langage visuel (.cs-doc-*), re-scopé ici sous
+  .jsb-doccpt. Charte JS Brokers (cobalt #0047AB), contrastes AA, navigation par
+  onglets accessible (nav + aria-current). AUCUN <script> inline (non exécuté
+  dans les partials AJAX) : l'interactivité est portée par le contrôleur Stimulus
+  `document-comptable`, qui recharge ce composant en AJAX. Les `values` Stimulus
+  sont ré-émises à chaque rendu (le rechargement remplace l'élément entier).
+#}
+<div class="jsb-doccpt"
+     data-controller="document-comptable"
+     data-document-comptable-url-value="{{ path('admin.documentcomptable.workspace', {idEntreprise: idEntreprise}) }}"
+     data-document-comptable-doc-value="{{ docActif }}"
+     data-document-comptable-exercice-value="{{ exercice }}">
+    <style>
+        .jsb-doccpt { padding: 1.25rem 1.5rem; }
+        .jsb-doccpt .cs-panel { background:#ffffff; border:1px solid #dee2e6; border-radius:12px; padding:1.1rem 1.25rem; margin-bottom:1rem; }
+
+        /* Entête du composant. */
+        .jsb-doccpt .dc-head { display:flex; align-items:center; gap:.75rem; margin:0 0 1rem; }
+        .jsb-doccpt .dc-head-ic {
+            width:44px; height:44px; border-radius:12px; flex:0 0 auto;
+            background:#e8f0fb; color:#0047AB; display:flex; align-items:center; justify-content:center;
+        }
+        .jsb-doccpt .dc-head h2 { font-size:1.25rem; font-weight:700; color:#212529; margin:0; }
+        .jsb-doccpt .dc-head p { color:#6c757d; font-size:.88rem; margin:.15rem 0 0; }
+
+        /* Barre d'outils : sélecteur d'exercice à gauche, exports à droite. */
+        .jsb-doccpt .cs-doc-toolbar { display:flex; flex-wrap:wrap; align-items:end; gap:1rem; justify-content:space-between; }
+        .jsb-doccpt .cs-doc-toolbar .cs-filter { display:flex; flex-direction:column; min-width:200px; }
+        .jsb-doccpt .cs-doc-toolbar .form-label { margin:0 0 .35rem; font-size:.8rem; font-weight:600; color:#6c757d; }
+        .jsb-doccpt .cs-doc-toolbar .cs-doc-exports { display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; }
+        .jsb-doccpt .cs-doc-toolbar .btn { display:inline-flex; align-items:center; white-space:nowrap; min-height:38px; }
+        .jsb-doccpt .btn-cobalt { background:#0047AB; border-color:#0047AB; color:#ffffff; }
+        .jsb-doccpt .btn-cobalt:hover { background:#003380; border-color:#003380; color:#ffffff; }
+
+        /* Sous-onglets (pills) : même langage visuel que la console. */
+        .jsb-doccpt .cs-tabs { display:flex; flex-wrap:wrap; gap:.25rem; margin:1rem 0; }
+        .jsb-doccpt .cs-tabs button {
+            display:inline-flex; align-items:center; gap:.4rem;
+            padding:.5rem .85rem; border-radius:8px; cursor:pointer;
+            color:#495057; font-size:.9rem; font-weight:600; white-space:nowrap;
+            border:1px solid #dee2e6; background:#ffffff;
+        }
+        .jsb-doccpt .cs-tabs button:hover { background:#eef2fb; color:#0047AB; border-color:#cdd8f0; }
+        .jsb-doccpt .cs-tabs button:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+        .jsb-doccpt .cs-tabs button.is-active { background:#0047AB; color:#ffffff; border-color:#0047AB; }
+        .jsb-doccpt .cs-tabs button.is-active svg { color:#ffffff; }
+
+        /* Documents comptables : tables compactes, montants alignés à droite. */
+        .jsb-doccpt .cs-doc-title { font-size:1.1rem; font-weight:700; color:#212529; margin:0 0 .25rem; }
+        .jsb-doccpt .cs-doc-sub { color:#6c757d; font-size:.9rem; margin:0 0 1.1rem; }
+        .jsb-doccpt .cs-doc-table { width:100%; border-collapse:collapse; }
+        .jsb-doccpt .cs-doc-table th, .jsb-doccpt .cs-doc-table td { padding:.5rem .6rem; border-bottom:1px solid #f0f0f0; font-size:.88rem; vertical-align:top; }
+        .jsb-doccpt .cs-doc-table th { color:#6c757d; font-weight:600; font-size:.76rem; text-transform:uppercase; letter-spacing:.03em; text-align:left; }
+        .jsb-doccpt .cs-doc-table td.num, .jsb-doccpt .cs-doc-table th.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+        .jsb-doccpt .cs-doc-table tbody tr:hover { background:#f8f9fa; }
+        .jsb-doccpt .cs-doc-table .is-total td, .jsb-doccpt .cs-doc-table tr.is-total { font-weight:700; color:#212529; background:#eef2fb; }
+        .jsb-doccpt .cs-doc-table .is-solde td { font-weight:700; color:#0047AB; }
+        .jsb-doccpt .cs-doc-table .is-section td { font-weight:700; color:#0047AB; text-transform:uppercase; font-size:.78rem; letter-spacing:.03em; }
+        .jsb-doccpt .cs-doc-table .indent { padding-left:1.4rem; }
+        .jsb-doccpt .cs-doc-account { font-weight:700; color:#212529; }
+        .jsb-doccpt .cs-doc-table tr.ecr-start td { border-top:2px solid #e3e9f5; }
+        .jsb-doccpt .cs-doc-led { margin-bottom:1.5rem; }
+        .jsb-doccpt .cs-doc-led-head { display:flex; align-items:center; gap:.6rem; margin:0 0 .4rem; }
+        .jsb-doccpt .cs-neg { color:#b3261e; }
+    </style>
+
+    {# ── Entête ── #}
+    <div class="dc-head">
+        <div class="dc-head-ic" aria-hidden="true">
+            <twig:UX:Icon name="{{ resolve_icon_name('document-comptable') }}" style="width:24px;height:24px;" />
+        </div>
+        <div>
+            <h2>Documents comptables</h2>
+            <p>
+                États SYSCOHADA (OHADA) de votre cabinet, générés à la volée depuis vos opérations.
+                Montants exprimés en {{ display_currency_code() }} (monnaie d'affichage, sans conversion).
+            </p>
+        </div>
+    </div>
+
+    {# ── Barre d'outils : exercice + exports ── #}
+    <div class="cs-panel">
+        <div class="cs-doc-toolbar">
+            <div class="cs-filter">
+                <label class="form-label" for="dc-exercice">Exercice (année civile)</label>
+                <select id="dc-exercice" class="form-select" data-action="change->document-comptable#changeExercice">
+                    {% for an in exercices %}<option value="{{ an }}" {{ an == exercice ? 'selected' }}>{{ an }}</option>{% endfor %}
+                </select>
+            </div>
+
+            <div class="cs-doc-exports">
+                <a href="{{ path('admin.documentcomptable.export', {idEntreprise: idEntreprise, doc: docActif, exercice: exercice}) }}"
+                   class="btn btn-sm btn-cobalt">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:download') }}" style="width:18px;height:18px;" />
+                    <span class="ms-1">Exporter ce document</span>
+                </a>
+                <a href="{{ path('admin.documentcomptable.export', {idEntreprise: idEntreprise, doc: 'all', exercice: exercice}) }}"
+                   class="btn btn-sm btn-outline-secondary">
+                    <twig:UX:Icon name="{{ resolve_icon_name('classeur') }}" style="width:18px;height:18px;" />
+                    <span class="ms-1">Exporter l'exercice complet</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {# ── Sous-onglets (boutons : rechargement AJAX, pas de navigation) ── #}
+    {% set docIcons = {
+        'journal': 'operation', 'grand-livre': 'classeur', 'balance': 'action:analyser',
+        'resultat': 'revenu', 'tfr': 'tranche', 'bilan': 'entreprise', 'tft': 'compte-bancaire',
+        'suivi-fiscal': 'taxe'
+    } %}
+    <nav class="cs-tabs" aria-label="Documents comptables">
+        {% for cle, label in docs %}
+            <button type="button"
+                    class="{{ cle == docActif ? 'is-active' : '' }}"
+                    data-action="click->document-comptable#changeDoc"
+                    data-document-comptable-doc-param="{{ cle }}"
+                    {% if cle == docActif %}aria-current="page"{% endif %}>
+                <twig:UX:Icon name="{{ resolve_icon_name(docIcons[cle]) }}" style="width:17px;height:17px;" />
+                <span>{{ label }}</span>
+            </button>
+        {% endfor %}
+    </nav>
+
+    {# ── Document actif : réutilisation directe des partials console ── #}
+    <div class="cs-panel">
+        {% if docActif == 'suivi-fiscal' %}
+            {% include 'components/_document_comptable_suivi_fiscal.html.twig' %}
+        {% else %}
+            {% include 'console/document/_' ~ docActif|replace({'-': '_'}) ~ '.html.twig' %}
+        {% endif %}
+    </div>
+</div>
