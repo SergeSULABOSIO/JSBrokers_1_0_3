@@ -215,6 +215,17 @@ class WorkspaceChargeDepenseCrudTest extends WebTestCase
         $this->assertSame($e->getId(), $depense->getEntreprise()->getId());
         $this->assertEqualsWithDelta(100.0, $depense->getMontantHtFloat(), 0.01, 'HT = TTC dégrevé de la TVA déductible.');
         $this->assertEqualsWithDelta(20.0, $depense->getTvaDeductibleFloat(), 0.01);
+
+        // 3) Rechargement des listes AVEC données : le rendu des lignes (_list_row,
+        //    colonnes numériques avec attribut_unité) ne doit pas casser — régression
+        //    vue en réel après la création d'une charge.
+        $this->client->request('GET', sprintf('/admin/chargecourtier/index/%d/%d', $owner->getId(), $e->getId()));
+        $this->assertResponseIsSuccessful('La liste des charges doit se recharger avec des lignes.');
+        $this->assertStringContainsString('Loyer du bureau', (string) $this->client->getResponse()->getContent());
+
+        $this->client->request('GET', sprintf('/admin/depensecourtier/index/%d/%d', $owner->getId(), $e->getId()));
+        $this->assertResponseIsSuccessful('La liste des dépenses doit se recharger avec des lignes.');
+        $this->assertStringContainsString('Loyer du bureau', (string) $this->client->getResponse()->getContent());
     }
 
     public function testMenuFiltreLesNouvellesRubriques(): void
