@@ -70,6 +70,34 @@ class PaiementRepository extends ServiceEntityRepository
     }
 
 
+    /**
+     * Paiements de NOTES d'une entreprise (les paiements de sinistres, sans note,
+     * sont exclus : ils n'impactent pas la trésorerie du courtier), chronologiques
+     * par date de paiement — source du moteur d'écritures comptables du courtier
+     * (CourtierEcritureComptableService). Fetch-join des articles, du bordereau et
+     * de l'autorité fiscale pour éviter les N+1 lors de la ventilation HT/taxe.
+     *
+     * @return Paiement[]
+     */
+    public function findChronologiqueForEntreprise(int $idEntreprise): array
+    {
+        return $this->createQueryBuilder('p')
+            ->join('p.note', 'n')->addSelect('n')
+            ->join('n.invite', 'i')
+            ->leftJoin('n.articles', 'a')->addSelect('a')
+            ->leftJoin('n.bordereau', 'b')->addSelect('b')
+            ->leftJoin('n.autoritefiscale', 'af')->addSelect('af')
+            ->leftJoin('af.taxe', 'tx')->addSelect('tx')
+            ->where('i.entreprise = :entrepriseId')
+            ->andWhere('p.offreIndemnisationSinistre IS NULL')
+            ->andWhere('p.paidAt IS NOT NULL')
+            ->setParameter('entrepriseId', $idEntreprise)
+            ->orderBy('p.paidAt', 'ASC')
+            ->addOrderBy('p.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
     public function paginateForInvite(int $idInvite, int $page): PaginationInterface
     {
         return $this->paginator->paginate(

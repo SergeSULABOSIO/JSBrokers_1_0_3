@@ -12,12 +12,15 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * @file Export Excel (XLSX) des documents comptables de JS Brokers.
- * @description Produit, depuis les documents calculés par EcritureComptableService,
- * soit une feuille unique (un document), soit un classeur complet (les 7 documents
- * de l'exercice, un onglet chacun). Réutilise PhpSpreadsheet (déjà présent). DRY :
- * chaque type de document a une unique méthode de remplissage, partagée entre
- * l'export unitaire et l'export global.
+ * @file Export Excel (XLSX) des documents comptables.
+ * @description Produit, depuis une structure `documents` (cf.
+ * DocumentsComptablesBuilder), soit une feuille unique (un document), soit un
+ * classeur complet (les 7 documents de l'exercice, un onglet chacun — plus,
+ * lorsqu'il est fourni, le suivi fiscal du courtier). Réutilise PhpSpreadsheet
+ * (déjà présent). DRY : chaque type de document a une unique méthode de
+ * remplissage, partagée entre l'export unitaire et l'export global, et entre la
+ * console (adaptateur export()) et l'espace de travail du courtier
+ * (exportDocuments() avec préfixe de fichier propre).
  */
 class ComptaExportService
 {
@@ -34,17 +37,39 @@ class ComptaExportService
         'tft'         => 'Flux de trésorerie',
     ];
 
+    /** Clé et libellé du suivi fiscal (onglet supplémentaire, workspace courtier). */
+    public const DOC_SUIVI_FISCAL = 'suivi-fiscal';
+    public const SUIVI_FISCAL_LABEL = 'Suivi fiscal';
+
     public function __construct(private EcritureComptableService $ecritures)
     {
     }
 
     /**
-     * Construit la réponse XLSX : un seul document (`$doc` ∈ clés de DOCUMENTS) ou
-     * le classeur complet (`$doc === 'all'`).
+     * Adaptateur console : documents de la plateforme JS Brokers, préfixe historique.
      */
     public function export(string $doc, int $exercice): Response
     {
-        $documents = $this->ecritures->documents($exercice);
+        return $this->exportDocuments($this->ecritures->documents($exercice), $doc, 'JSBrokers');
+    }
+
+    /**
+     * Construit la réponse XLSX depuis une structure `documents` déjà calculée :
+     * un seul document (`$doc` ∈ clés de DOCUMENTS, ou DOC_SUIVI_FISCAL si
+     * `$suiviFiscal` est fourni) ou le classeur complet (`$doc === 'all'`).
+     *
+     * @param array      $documents    Structure retournée par DocumentsComptablesBuilder::documents().
+     * @param string     $prefixe      Préfixe du nom de fichier (ex. nom de l'entreprise), assaini.
+     * @param array|null $suiviFiscal  Suivi fiscal du courtier (CourtierSuiviFiscalService::suivi()), optionnel.
+     */
+    public function exportDocuments(array $documents, string $doc, string $prefixe, ?array $suiviFiscal = null): Response
+    {
+        $prefixe = trim((string) preg_replace('/[^A-Za-z0-9_-]+/', '_', $prefixe), '_');
+        if ($prefixe === '') {
+            $prefixe = 'Export';
+        }
+
+        $exercice = (int) $documents['exercice'];
         $spreadsheet = new Spreadsheet();
         $spreadsheet->removeSheetByIndex(0);
 
@@ -52,11 +77,17 @@ class ComptaExportService
             foreach (array_keys(self::DOCUMENTS) as $cle) {
                 $this->ajouterFeuille($spreadsheet, $cle, $documents);
             }
-            $nom = sprintf('JSBrokers_comptabilite_%d.xlsx', $exercice);
+            if ($suiviFiscal !== null) {
+                $this->ajouterFeuilleSuiviFiscal($spreadsheet, $suiviFiscal, $exercice);
+            }
+            $nom = sprintf('%s_comptabilite_%d.xlsx', $prefixe, $exercice);
+        } elseif ($doc === self::DOC_SUIVI_FISCAL && $suiviFiscal !== null) {
+            $this->ajouterFeuilleSuiviFiscal($spreadsheet, $suiviFiscal, $exercice);
+            $nom = sprintf('%s_%s_%d.xlsx', $prefixe, self::DOC_SUIVI_FISCAL, $exercice);
         } else {
             $cle = isset(self::DOCUMENTS[$doc]) ? $doc : 'journal';
             $this->ajouterFeuille($spreadsheet, $cle, $documents);
-            $nom = sprintf('JSBrokers_%s_%d.xlsx', $cle, $exercice);
+            $nom = sprintf('%s_%s_%d.xlsx', $prefixe, $cle, $exercice);
         }
 
         $spreadsheet->setActiveSheetIndex(0);
@@ -241,6 +272,41 @@ class ComptaExportService
         }
 
         $this->finaliser($sheet, ['B']);
+    }
+
+    /** Ajoute l'onglet « Suivi fiscal » (courtier) : deux sections, assureur puis courtier. */
+    private function ajouterFeuilleSuiviFiscal(Spreadsheet $spreadsheet, array $suiviFiscal, int $exercice): void
+    {
+        $sheet = $spreadsheet->createSheet();
+        $sheet->setTitle(mb_substr(self::SUIVI_FISCAL_LABEL, 0, 31));
+
+        $this->titre($sheet, sprintf('Suivi fiscal — exercice %d', $exercice), 6);
+
+        // Section 1 : taxes collectées pour le compte de l'État (redevable : assureur).
+        $ligne = 3;
+        $sheet->setCellValue('A' . $ligne, 'Taxes collectées (redevable : assureur) — dette fiscale, sans impact sur le résultat');
+        $sheet->getStyle('A' . $ligne++)->getFont()->setBold(true);
+        $ligne = $this->entetes($sheet, ['Mois', 'Collecté', 'Déductible', 'Solde payable', 'Payé', 'Solde dû'], $ligne);
+        foreach ($suiviFiscal['assureur']['lignes'] as $l) {
+            $sheet->fromArray([
+                $l['libelle'], $l['collectee'], $l['deductible'], $l['netDu'], $l['reverse'], $l['solde'],
+            ], null, 'A' . $ligne++);
+        }
+        $t = $suiviFiscal['assureur']['totaux'];
+        $this->ligneTotaux($sheet, $ligne++, ['TOTAUX', $t['collectee'], $t['deductible'], $t['netDu'], $t['reverse'], $t['solde']]);
+
+        // Section 2 : taxes dont le courtier est redevable (charges).
+        $ligne++;
+        $sheet->setCellValue('A' . $ligne, 'Taxes du courtier (redevable : courtier) — charges, impact trésorerie et résultat');
+        $sheet->getStyle('A' . $ligne++)->getFont()->setBold(true);
+        $ligne = $this->entetes($sheet, ['Mois', 'Dû', 'Payé', 'Solde dû'], $ligne);
+        foreach ($suiviFiscal['courtier']['lignes'] as $l) {
+            $sheet->fromArray([$l['libelle'], $l['du'], $l['paye'], $l['solde']], null, 'A' . $ligne++);
+        }
+        $t = $suiviFiscal['courtier']['totaux'];
+        $this->ligneTotaux($sheet, $ligne, ['TOTAUX', $t['du'], $t['paye'], $t['solde']]);
+
+        $this->finaliser($sheet, ['B', 'C', 'D', 'E', 'F']);
     }
 
     // ===================== Helpers de mise en forme =====================

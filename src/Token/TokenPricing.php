@@ -3,7 +3,9 @@
 namespace App\Token;
 
 use App\Entity\Avenant;
+use App\Entity\ChargeCourtier;
 use App\Entity\Cotation;
+use App\Entity\DepenseCourtier;
 use App\Entity\Entreprise;
 use App\Entity\Feedback;
 use App\Entity\Piste;
@@ -27,12 +29,16 @@ final class TokenPricing
      * Toute entité non listée ici vaut DEFAULT_WRITE_WEIGHT.
      */
     public const WRITE_WEIGHTS = [
-        Entreprise::class => 200,
-        Avenant::class    => 100,
-        Cotation::class   => 50,
-        Piste::class      => 20,
-        Tache::class      => 10,
-        Feedback::class   => 8,
+        Entreprise::class      => 200,
+        Avenant::class         => 100,
+        Cotation::class        => 50,
+        Piste::class           => 20,
+        Tache::class           => 10,
+        Feedback::class        => 8,
+        // Comptabilité du courtier (workspace) : entrées explicites pour figurer
+        // dans le plan tarifaire éditable (console), au poids standard.
+        ChargeCourtier::class  => 5,
+        DepenseCourtier::class => 5,
     ];
 
     /** Poids par défaut en écriture pour toute entité non explicitement listée. */

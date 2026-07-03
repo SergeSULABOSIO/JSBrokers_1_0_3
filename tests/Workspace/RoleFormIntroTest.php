@@ -153,7 +153,8 @@ class RoleFormIntroTest extends WebTestCase
 
         // [libellé attendu dans la description, nombre de cartes de droits du module]
         $modules = [
-            'rolesenfinance'        => ['module Finance', 10],
+            // 13 cartes depuis l'ajout des droits Charges / Dépenses / Documents comptables.
+            'rolesenfinance'        => ['module Finance', 13],
             'rolesenmarketing'      => ['module Marketing', 3],
             'rolesenproduction'     => ['module Production', 8],
             'rolesenadministration' => ['module Administration', 3],

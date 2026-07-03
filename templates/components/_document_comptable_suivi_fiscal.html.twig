@@ -1,0 +1,95 @@
+{#
+  Onglet « Suivi fiscal » des documents comptables du courtier : obligations de
+  taxes vis-à-vis des autorités, par exercice et par mois, ventilées par REDEVABLE
+  (règle métier) :
+   - taxes ASSUREUR (ex. TVA) : collectées pour le compte de l'État (passif 443),
+     sans impact sur le résultat — leur reversement n'impacte que la trésorerie ;
+   - taxes COURTIER : charges du cabinet (641) — leur reversement impacte la
+     trésorerie ET le résultat.
+  Réutilise la macro monétaire des documents console (DRY) et les styles .cs-doc-*.
+#}
+{% import 'console/document/_macros.html.twig' as fmt %}
+
+<h3 class="cs-doc-title">Suivi fiscal — exercice {{ documents.exercice }}</h3>
+<p class="cs-doc-sub">
+    Montants dus collectés, déductibles, soldes payables, montants payés et soldes dus,
+    par redevable. Dérivé des mêmes écritures que le journal — cohérence garantie.
+</p>
+
+{# ── Bloc 1 : taxes collectées (redevable : assureur) ── #}
+<div class="cs-doc-led">
+    <div class="cs-doc-led-head">
+        <span class="cs-doc-account">Taxes collectées (redevable : l'assureur)</span>
+        <span class="text-muted" style="font-size:.85rem;">Dette fiscale ordinaire — aucun impact sur le résultat, reversement = trésorerie seule</span>
+    </div>
+    <table class="cs-doc-table">
+        <caption class="visually-hidden">Suivi mensuel des taxes collectées pour le compte de l'État (redevable assureur)</caption>
+        <thead>
+            <tr>
+                <th scope="col">Mois</th>
+                <th scope="col" class="num">Collecté</th>
+                <th scope="col" class="num">Déductible</th>
+                <th scope="col" class="num">Solde payable</th>
+                <th scope="col" class="num">Payé</th>
+                <th scope="col" class="num">Solde dû</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for l in suiviFiscal.assureur.lignes %}
+                <tr>
+                    <td>{{ l.libelle }}</td>
+                    <td class="num">{{ fmt.m(l.collectee) }}</td>
+                    <td class="num">{{ fmt.m(l.deductible) }}</td>
+                    <td class="num">{{ fmt.m(l.netDu) }}</td>
+                    <td class="num">{{ fmt.m(l.reverse) }}</td>
+                    <td class="num">{{ fmt.m(l.solde) }}</td>
+                </tr>
+            {% endfor %}
+            {% set t = suiviFiscal.assureur.totaux %}
+            <tr class="is-total">
+                <td>TOTAUX</td>
+                <td class="num">{{ fmt.m(t.collectee) }}</td>
+                <td class="num">{{ fmt.m(t.deductible) }}</td>
+                <td class="num">{{ fmt.m(t.netDu) }}</td>
+                <td class="num">{{ fmt.m(t.reverse) }}</td>
+                <td class="num">{{ fmt.m(t.solde) }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+{# ── Bloc 2 : taxes du courtier (charges) ── #}
+<div class="cs-doc-led">
+    <div class="cs-doc-led-head">
+        <span class="cs-doc-account">Taxes du courtier (redevable : le courtier)</span>
+        <span class="text-muted" style="font-size:.85rem;">Charges du cabinet (compte 641) — reversement = trésorerie ET résultat</span>
+    </div>
+    <table class="cs-doc-table">
+        <caption class="visually-hidden">Suivi mensuel des taxes dont le courtier est redevable (charges)</caption>
+        <thead>
+            <tr>
+                <th scope="col">Mois</th>
+                <th scope="col" class="num">Dû</th>
+                <th scope="col" class="num">Payé</th>
+                <th scope="col" class="num">Solde dû</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for l in suiviFiscal.courtier.lignes %}
+                <tr>
+                    <td>{{ l.libelle }}</td>
+                    <td class="num">{{ fmt.m(l.du) }}</td>
+                    <td class="num">{{ fmt.m(l.paye) }}</td>
+                    <td class="num">{{ fmt.m(l.solde) }}</td>
+                </tr>
+            {% endfor %}
+            {% set tc = suiviFiscal.courtier.totaux %}
+            <tr class="is-total">
+                <td>TOTAUX</td>
+                <td class="num">{{ fmt.m(tc.du) }}</td>
+                <td class="num">{{ fmt.m(tc.paye) }}</td>
+                <td class="num">{{ fmt.m(tc.solde) }}</td>
+            </tr>
+        </tbody>
+    </table>
+</div>

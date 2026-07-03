@@ -30,7 +30,7 @@ class RolesEnFinanceFormCanvasProvider implements FormCanvasProviderInterface
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Droits d'accès — module Finance",
-                "description" => "Vous définissez ce que ce collaborateur peut consulter et modifier sur les données financières de l'entreprise (monnaies, comptes bancaires, taxes, paiements, bordereaux, revenus…). Ces droits s'appliquent dès l'enregistrement : n'accordez que le nécessaire.",
+                "description" => "Vous définissez ce que ce collaborateur peut consulter et modifier sur les données financières de l'entreprise (monnaies, comptes bancaires, taxes, paiements, bordereaux, revenus, charges, dépenses, documents comptables…). Ces droits s'appliquent dès l'enregistrement : n'accordez que le nécessaire.",
                 // Libellés des puces de contexte (rappel des champs masqués pré-remplis).
                 "facts_labels" => [
                     "nom"    => "Libellé du rôle",
@@ -49,6 +49,9 @@ class RolesEnFinanceFormCanvasProvider implements FormCanvasProviderInterface
                 "accessPaiement"       => "paiement",
                 "accessBordereau"      => "bordereau",
                 "accessRevenu"         => "revenu",
+                "accessCharge"         => "charge",
+                "accessDepense"        => "depense",
+                "accessDocumentComptable" => "document-comptable",
             ],
         ];
         $layout = $this->buildRolesEnFinanceLayout();
@@ -82,7 +85,12 @@ class RolesEnFinanceFormCanvasProvider implements FormCanvasProviderInterface
                 ["champs" => ["accessPaiement"]], 
                 ["champs" => ["accessBordereau"]]
             ]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["accessRevenu"]]]],
+            ["couleur_fond" => "white", "colonnes" => [
+                ["champs" => ["accessRevenu"]],
+                ["champs" => ["accessCharge"]],
+                ["champs" => ["accessDepense"]]
+            ]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["accessDocumentComptable"]]]],
         ];
     }
 }

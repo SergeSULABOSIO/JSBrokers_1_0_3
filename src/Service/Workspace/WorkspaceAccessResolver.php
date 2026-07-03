@@ -41,7 +41,8 @@ class WorkspaceAccessResolver
      * Carte de permissions : nom court d'entité => [module, getter de la collection de
      * rôles sur Invite, getter du champ d'accès sur l'entité de rôle, libellé].
      *
-     * Couvre les 33 entités du menu de l'espace de travail. Attention aux alias non
+     * Couvre les 36 entrées du menu de l'espace de travail (dont la pseudo-entité
+     * « DocumentComptable », sans classe Doctrine). Attention aux alias non
      * triviaux (le nom du champ d'accès ne suit pas toujours le nom de l'entité) :
      *  - Chargement                 → getAccessTypeChargement
      *  - RevenuPourCourtier         → getAccessRevenu
@@ -65,6 +66,11 @@ class WorkspaceAccessResolver
         'Paiement'                   => ['Finances', 'getRolesEnFinance', 'getAccessPaiement', 'Paiements'],
         'Bordereau'                  => ['Finances', 'getRolesEnFinance', 'getAccessBordereau', 'Bordereaux'],
         'RevenuPourCourtier'         => ['Finances', 'getRolesEnFinance', 'getAccessRevenu', 'Revenus'],
+        'ChargeCourtier'             => ['Finances', 'getRolesEnFinance', 'getAccessCharge', 'Charges'],
+        'DepenseCourtier'            => ['Finances', 'getRolesEnFinance', 'getAccessDepense', 'Dépenses'],
+        // Pseudo-entité (documents générés à la volée, aucune classe Doctrine) : gate la
+        // rubrique « Documents comptables » du menu et le contrôleur/export associés.
+        'DocumentComptable'          => ['Finances', 'getRolesEnFinance', 'getAccessDocumentComptable', 'Documents comptables'],
         // MARKETING
         'Piste'                      => ['Marketing', 'getRolesEnMarketing', 'getAccessPiste', 'Pistes'],
         'Tache'                      => ['Marketing', 'getRolesEnMarketing', 'getAccessTache', 'Tâches'],
