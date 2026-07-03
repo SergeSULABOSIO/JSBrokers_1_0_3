@@ -486,6 +486,45 @@ class WorkspaceDocumentsComptablesTest extends WebTestCase
         $this->assertStringContainsString('entity-name-param="DocumentComptable"', (string) $this->client->getResponse()->getContent());
     }
 
+    public function testChaqueActualisationConsommeDesTokens(): void
+    {
+        ['entreprise' => $e] = $this->seed();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        /** @var \App\Token\TokenAccountService $tokens */
+        $tokens = static::getContainer()->get(\App\Token\TokenAccountService::class);
+        /** @var \App\Token\ParametresTokenService $parametres */
+        $parametres = static::getContainer()->get(\App\Token\ParametresTokenService::class);
+        $poidsLecture = $parametres->readWeight(); // tarif EN VIGUEUR (plan éditable, repli constantes)
+
+        $soldeAvant = $tokens->getBalance($this->user(self::OWNER_EMAIL))['total'];
+
+        // Trois actualisations successives (chargement initial + bouton Actualiser /
+        // auto-refresh passent tous par la même route) : chacune est métrée.
+        $url = sprintf('/admin/document-comptable/workspace/%d?exercice=%d', $e->getId(), self::EXERCICE);
+        for ($i = 0; $i < 3; $i++) {
+            $this->client->request('GET', $url);
+            $this->assertResponseIsSuccessful();
+        }
+
+        $this->em()->clear();
+        $soldeApres = $tokens->getBalance($this->user(self::OWNER_EMAIL))['total'];
+        $this->assertSame(
+            $soldeAvant - 3 * $poidsLecture,
+            $soldeApres,
+            'Chaque rechargement des documents comptables doit débiter le tarif de lecture en vigueur.'
+        );
+
+        // Journalisation : une ligne de consommation par actualisation, au nom de la pseudo-entité.
+        $consommations = $this->em()->getConnection()->fetchOne(
+            "SELECT COUNT(*) FROM token_consumption tc
+             JOIN entreprise e ON tc.entreprise_id = e.id
+             WHERE e.nom = :nom AND tc.entite_nom = 'DocumentComptable'",
+            ['nom' => self::ENTREPRISE_NOM]
+        );
+        $this->assertSame(3, (int) $consommations, 'Chaque actualisation doit être journalisée dans les consommations.');
+    }
+
     public function testExportsUnitaireCompletEtSuiviFiscal(): void
     {
         ['entreprise' => $e] = $this->seed();
