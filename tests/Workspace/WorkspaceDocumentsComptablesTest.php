@@ -191,7 +191,8 @@ class WorkspaceDocumentsComptablesTest extends WebTestCase
         $em->persist($taxeCourtier);
         $autoriteCourtier = new AutoriteFiscale();
         $autoriteCourtier->setNom('Autorité courtier')->setAbreviation('AC');
-        $autoriteCourtier->setTaxe($taxeCourtier);
+        // Les deux côtés de la relation (comme le CollectionType by_reference:false du formulaire).
+        $taxeCourtier->addAutoriteFiscale($autoriteCourtier);
         $autoriteCourtier->setEntreprise($entreprise);
         $em->persist($autoriteCourtier);
 
@@ -201,7 +202,7 @@ class WorkspaceDocumentsComptablesTest extends WebTestCase
         $em->persist($taxeAssureur);
         $autoriteAssureur = new AutoriteFiscale();
         $autoriteAssureur->setNom('Autorité assureur')->setAbreviation('AA');
-        $autoriteAssureur->setTaxe($taxeAssureur);
+        $taxeAssureur->addAutoriteFiscale($autoriteAssureur);
         $autoriteAssureur->setEntreprise($entreprise);
         $em->persist($autoriteAssureur);
 
@@ -396,6 +397,15 @@ class WorkspaceDocumentsComptablesTest extends WebTestCase
         $this->assertEqualsWithDelta(50.0, $tc['du'], 0.01);
         $this->assertEqualsWithDelta(50.0, $tc['paye'], 0.01);
         $this->assertEqualsWithDelta(0.0, $tc['solde'], 0.01);
+
+        // Fiches des taxes par redevable : nom/code, taux et autorités assujetties.
+        $this->assertCount(1, $suivi['taxes']['assureur']);
+        $this->assertSame('TA-TEST', $suivi['taxes']['assureur'][0]['code']);
+        $this->assertEqualsWithDelta(16.0, $suivi['taxes']['assureur'][0]['tauxIARD'], 0.01);
+        $this->assertSame(['AA — Autorité assureur'], $suivi['taxes']['assureur'][0]['autorites']);
+        $this->assertCount(1, $suivi['taxes']['courtier']);
+        $this->assertSame('TC-TEST', $suivi['taxes']['courtier'][0]['code']);
+        $this->assertSame(['AC — Autorité courtier'], $suivi['taxes']['courtier'][0]['autorites']);
     }
 
     public function testComposantAccessibleAuProprietaire(): void
@@ -415,12 +425,17 @@ class WorkspaceDocumentsComptablesTest extends WebTestCase
         $this->assertResponseIsSuccessful();
         $this->assertStringContainsString('TOTAL ACTIF', (string) $this->client->getResponse()->getContent());
 
-        // Onglet suivi fiscal : les deux blocs par redevable.
+        // Onglet suivi fiscal : les deux blocs par redevable, les fiches des taxes
+        // (code, taux, autorité assujettie) et le rappel du mode opératoire de reversement.
         $this->client->request('GET', sprintf('/admin/document-comptable/workspace/%d?doc=suivi-fiscal&exercice=%d', $e->getId(), self::EXERCICE));
         $this->assertResponseIsSuccessful();
         $html = (string) $this->client->getResponse()->getContent();
         $this->assertStringContainsString('Taxes collectées', $html);
         $this->assertStringContainsString('Taxes du courtier', $html);
+        $this->assertStringContainsString('TA-TEST', $html, 'La fiche de la taxe assureur doit être affichée.');
+        $this->assertStringContainsString('TC-TEST', $html, 'La fiche de la taxe courtier doit être affichée.');
+        $this->assertStringContainsString('Autorité assureur', $html, "L'autorité assujettie doit être nommée.");
+        $this->assertStringContainsString('Enregistrer un reversement', $html, 'Le mode opératoire du reversement doit être rappelé.');
     }
 
     public function testGatingInviteSansDroit(): void

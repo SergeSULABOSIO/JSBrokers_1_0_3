@@ -286,6 +286,7 @@ class ComptaExportService
         $ligne = 3;
         $sheet->setCellValue('A' . $ligne, 'Taxes collectées (redevable : assureur) — dette fiscale, sans impact sur le résultat');
         $sheet->getStyle('A' . $ligne++)->getFont()->setBold(true);
+        $ligne = $this->lignesFichesTaxes($sheet, $suiviFiscal['taxes']['assureur'] ?? [], $ligne);
         $ligne = $this->entetes($sheet, ['Mois', 'Collecté', 'Déductible', 'Solde payable', 'Payé', 'Solde dû'], $ligne);
         foreach ($suiviFiscal['assureur']['lignes'] as $l) {
             $sheet->fromArray([
@@ -299,6 +300,7 @@ class ComptaExportService
         $ligne++;
         $sheet->setCellValue('A' . $ligne, 'Taxes du courtier (redevable : courtier) — charges, impact trésorerie et résultat');
         $sheet->getStyle('A' . $ligne++)->getFont()->setBold(true);
+        $ligne = $this->lignesFichesTaxes($sheet, $suiviFiscal['taxes']['courtier'] ?? [], $ligne);
         $ligne = $this->entetes($sheet, ['Mois', 'Dû', 'Payé', 'Solde dû'], $ligne);
         foreach ($suiviFiscal['courtier']['lignes'] as $l) {
             $sheet->fromArray([$l['libelle'], $l['du'], $l['paye'], $l['solde']], null, 'A' . $ligne++);
@@ -307,6 +309,31 @@ class ComptaExportService
         $this->ligneTotaux($sheet, $ligne, ['TOTAUX', $t['du'], $t['paye'], $t['solde']]);
 
         $this->finaliser($sheet, ['B', 'C', 'D', 'E', 'F']);
+    }
+
+    /**
+     * Écrit les fiches descriptives des taxes d'un redevable (une ligne par taxe :
+     * code — description, taux, autorités assujetties) et renvoie la ligne suivante.
+     *
+     * @param array<int, array{code:?string, description:?string, tauxIARD:float, tauxVIE:float, autorites:string[]}> $taxes
+     */
+    private function lignesFichesTaxes(Worksheet $sheet, array $taxes, int $ligne): int
+    {
+        foreach ($taxes as $taxe) {
+            $libelle = trim(sprintf('%s — %s', $taxe['code'] ?? '', $taxe['description'] ?? ''), ' —');
+            $autorites = $taxe['autorites'] === [] ? 'aucune autorité renseignée' : implode(' · ', $taxe['autorites']);
+            $sheet->setCellValue('A' . $ligne, sprintf(
+                '%s | Taux IARD %.2f %% · VIE %.2f %% | Assujetti auprès de : %s',
+                $libelle,
+                $taxe['tauxIARD'],
+                $taxe['tauxVIE'],
+                $autorites,
+            ));
+            $sheet->getStyle('A' . $ligne)->getFont()->setItalic(true)->getColor()->setRGB('6C757D');
+            $ligne++;
+        }
+
+        return $ligne;
     }
 
     // ===================== Helpers de mise en forme =====================
