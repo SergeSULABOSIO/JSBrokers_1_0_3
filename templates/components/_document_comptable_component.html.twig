@@ -96,6 +96,15 @@
             </div>
 
             <div class="cs-doc-exports">
+                <span class="text-muted" style="font-size:.8rem;" aria-live="polite">
+                    Actualisé à {{ 'now'|date('H:i') }} · auto toutes les 5 min
+                </span>
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                        data-action="click->document-comptable#refresh"
+                        title="Recharger les documents avec les dernières opérations enregistrées">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:refresh') }}" style="width:18px;height:18px;" />
+                    <span class="ms-1">Actualiser</span>
+                </button>
                 <a href="{{ path('admin.documentcomptable.export', {idEntreprise: idEntreprise, doc: docActif, exercice: exercice}) }}"
                    class="btn btn-sm btn-cobalt">
                     <twig:UX:Icon name="{{ resolve_icon_name('action:download') }}" style="width:18px;height:18px;" />

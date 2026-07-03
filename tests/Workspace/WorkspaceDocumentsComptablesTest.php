@@ -419,6 +419,10 @@ class WorkspaceDocumentsComptablesTest extends WebTestCase
         $this->assertStringNotContainsString(self::DENIED_MARKER, $html);
         $this->assertStringContainsString('Documents comptables', $html);
         $this->assertStringContainsString('Suivi fiscal', $html, 'Le 8ᵉ onglet Suivi fiscal doit être proposé.');
+        // Actualisation : bouton manuel branché sur le contrôleur Stimulus + mention
+        // de l'actualisation automatique (5 min, gérée par le même contrôleur).
+        $this->assertStringContainsString('document-comptable#refresh', $html, 'Le bouton Actualiser doit être branché au contrôleur Stimulus.');
+        $this->assertStringContainsString('auto toutes les 5 min', $html, "L'actualisation automatique doit être annoncée.");
 
         // Onglet bilan : totaux rendus.
         $this->client->request('GET', sprintf('/admin/document-comptable/workspace/%d?doc=bilan&exercice=%d', $e->getId(), self::EXERCICE));
