@@ -221,11 +221,18 @@ class WorkspaceChargeDepenseCrudTest extends WebTestCase
         //    vue en réel après la création d'une charge.
         $this->client->request('GET', sprintf('/admin/chargecourtier/index/%d/%d', $owner->getId(), $e->getId()));
         $this->assertResponseIsSuccessful('La liste des charges doit se recharger avec des lignes.');
-        $this->assertStringContainsString('Loyer du bureau', (string) $this->client->getResponse()->getContent());
+        $html = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('Loyer du bureau', $html);
+        // Barre des totaux active : les attributs totalisables (NumericCanvasProvider)
+        // doivent être embarqués dans le list-manager (sinon « Aucune valeur numérique »).
+        $this->assertStringContainsString('Budget mensuel', $html, 'La barre des totaux doit proposer le budget mensuel des charges.');
 
         $this->client->request('GET', sprintf('/admin/depensecourtier/index/%d/%d', $owner->getId(), $e->getId()));
         $this->assertResponseIsSuccessful('La liste des dépenses doit se recharger avec des lignes.');
-        $this->assertStringContainsString('Loyer du bureau', (string) $this->client->getResponse()->getContent());
+        $html = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('Loyer du bureau', $html);
+        $this->assertStringContainsString('Montant TTC', $html, 'La barre des totaux doit proposer le montant TTC des dépenses.');
+        $this->assertStringContainsString('TVA d', $html, 'La barre des totaux doit proposer la TVA déductible des dépenses.');
     }
 
     public function testMenuFiltreLesNouvellesRubriques(): void
