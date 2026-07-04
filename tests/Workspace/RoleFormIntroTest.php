@@ -156,7 +156,8 @@ class RoleFormIntroTest extends WebTestCase
             // 14 cartes depuis l'ajout des droits Charges / Dépenses / Fournisseurs / Documents comptables.
             'rolesenfinance'        => ['module Finance', 14],
             'rolesenmarketing'      => ['module Marketing', 3],
-            'rolesenproduction'     => ['module Production', 8],
+            // 9 cartes depuis l'ajout du droit dédié « Portefeuilles ».
+            'rolesenproduction'     => ['module Production', 9],
             'rolesenadministration' => ['module Administration', 3],
             'rolesensinistre'       => ['module Sinistre', 3],
         ];

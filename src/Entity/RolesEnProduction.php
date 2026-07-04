@@ -33,6 +33,10 @@ class RolesEnProduction implements OwnerAwareInterface
 
     #[ORM\Column(type: Types::ARRAY)]
     #[Groups(['list:read'])]
+    private array $accessPortefeuille = [];
+
+    #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
     private array $accessAssureur = [];
 
     #[ORM\Column(type: Types::ARRAY)]
@@ -92,6 +96,18 @@ class RolesEnProduction implements OwnerAwareInterface
     public function setAccessClient(array $accessClient): static
     {
         $this->accessClient = $accessClient;
+
+        return $this;
+    }
+
+    public function getAccessPortefeuille(): array
+    {
+        return $this->accessPortefeuille;
+    }
+
+    public function setAccessPortefeuille(array $accessPortefeuille): static
+    {
+        $this->accessPortefeuille = $accessPortefeuille;
 
         return $this;
     }

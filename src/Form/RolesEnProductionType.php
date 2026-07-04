@@ -59,6 +59,18 @@ class RolesEnProductionType extends AbstractType
                     "Suppression" => Invite::ACCESS_SUPPRESSION,
                 ],
             ])
+            ->add('accessPortefeuille', ChoiceType::class, [
+                'label' => "Droit d'accès sur les portefeuilles",
+                'multiple' => true,
+                'expanded' => true,
+                'required' => false,
+                'choices'  => [
+                    "Lecture" => Invite::ACCESS_LECTURE,
+                    "Ecriture" => Invite::ACCESS_ECRITURE,
+                    "Modification" => Invite::ACCESS_MODIFICATION,
+                    "Suppression" => Invite::ACCESS_SUPPRESSION,
+                ],
+            ])
             ->add('accessAssureur', ChoiceType::class, [
                 'label' => "Droit d'accès sur les assureurs",
                 'multiple' => true,

@@ -78,10 +78,9 @@ class WorkspaceAccessResolver
         'Feedback'                   => ['Marketing', 'getRolesEnMarketing', 'getAccessFeedback', 'Feedbacks'],
         // PRODUCTION
         'Groupe'                     => ['Production', 'getRolesEnProduction', 'getAccessGroupe', 'Groupes'],
-        // Portefeuille = regroupement de clients par gestionnaire de compte. Réutilise le
-        // droit « Client » existant (aucun champ de rôle ni migration de RolesEnProduction
-        // à créer) : qui peut voir les Clients gère aussi les Portefeuilles.
-        'Portefeuille'               => ['Production', 'getRolesEnProduction', 'getAccessClient', 'Portefeuilles'],
+        // Portefeuille = regroupement de clients par gestionnaire de compte. Droit dédié
+        // (RolesEnProduction::accessPortefeuille), paramétrable comme les autres rubriques.
+        'Portefeuille'               => ['Production', 'getRolesEnProduction', 'getAccessPortefeuille', 'Portefeuilles'],
         'Client'                     => ['Production', 'getRolesEnProduction', 'getAccessClient', 'Clients'],
         'Assureur'                   => ['Production', 'getRolesEnProduction', 'getAccessAssureur', 'Assureurs'],
         'Contact'                    => ['Production', 'getRolesEnProduction', 'getAccessContact', 'Contacts'],
