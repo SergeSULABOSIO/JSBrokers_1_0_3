@@ -141,6 +141,29 @@
             </details>
             {% endif %}
 
+            {# Dépenses — visible avec la lecture Finance (Dépenses). #}
+            {% if workspace_can_read('DepenseCourtier') %}
+            <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">
+                <summary class="card-header border-0 bg-white py-2 px-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <twig:UX:Icon name="hugeicons:dollar-send-02" style="width:14px;height:14px;color:#0047AB;" />
+                        <span class="small fw-semibold" style="color:#0047AB;">Dépenses</span>
+                        <small id="db-depenses-last-update" class="text-muted ms-1" style="font-size:.68rem;"></small>
+                        <button class="db-task-new-btn ms-auto"
+                                data-meta-tip="Voir toutes les dépenses"
+                                onclick="event.stopPropagation(); document.dispatchEvent(new CustomEvent('workspace:navigate-to',{bubbles:true,detail:{component:'_view_manager.html.twig',group:'Finances',entity:'DepenseCourtier'}}));"
+                                aria-label="Voir toutes les dépenses">
+                            <twig:UX:Icon name="hugeicons:view" style="width:15px;height:15px;color:#0047AB;" />
+                        </button>
+                        <twig:UX:Icon name="mdi:chevron-down" class="db-block-chevron" style="width:15px;height:15px;color:#6c757d;flex-shrink:0;" />
+                    </div>
+                </summary>
+                <div data-controller="lazy-block"
+                     data-lazy-block-url-value="/admin/entreprise_dashbord/block/depenses/{{ entreprise.id }}">
+                </div>
+            </details>
+            {% endif %}
+
             {# Bordereaux — visible avec la lecture Finance (Bordereaux). #}
             {% if workspace_can_read('Bordereau') %}
             <details class="db-block-details card border-0 shadow-sm mb-3 db-dashboard-block">

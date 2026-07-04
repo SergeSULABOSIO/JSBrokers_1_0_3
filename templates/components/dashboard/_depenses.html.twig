@@ -1,0 +1,49 @@
+{#
+  Bloc « Dépenses » du tableau de bord (workspace courtier) : les 10 dernières
+  dépenses du cabinet (non annulées), les plus récentes d'abord. Miroir du bloc
+  « Encaissements » côté sortie de fonds (toggle par ancienneté + recherche +
+  lignes dépliables). Montants en rouge sémantique (décaissement).
+#}
+{% set _now = date() %}
+{% set countJ30 = 0 %}
+{% set countJ60 = 0 %}
+{% set countJ61plus = 0 %}
+{% for d in dernieresDepenses %}
+    {% set _diff = (_now|date('U') - d.dateDepense|date('U')) / 86400 %}
+    {% if _diff <= 30 %}
+        {% set countJ30 = countJ30 + 1 %}
+    {% elseif _diff <= 60 %}
+        {% set countJ60 = countJ60 + 1 %}
+    {% else %}
+        {% set countJ61plus = countJ61plus + 1 %}
+    {% endif %}
+{% endfor %}
+
+<div class="px-3 pt-2 pb-2 bg-white">
+        <div class="d-flex align-items-center gap-2">
+            <div class="db-prod-tabs" id="dbDepToggleBar">
+                <button class="db-task-toggle active" data-mode="j30"     onclick="dbDepToggle(this)" aria-pressed="true">≤ 30 jrs ({{ countJ30 }})</button>
+                <button class="db-task-toggle"        data-mode="j60"     onclick="dbDepToggle(this)" aria-pressed="false">31-60 jrs ({{ countJ60 }})</button>
+                <button class="db-task-toggle"        data-mode="j61plus" onclick="dbDepToggle(this)" aria-pressed="false">61+ jrs ({{ countJ61plus }})</button>
+            </div>
+            <div class="ms-auto input-group input-group-sm flex-shrink-0" role="search" style="max-width:130px;">
+                <span class="input-group-text border-0 bg-light px-2">
+                    <twig:UX:Icon name="mdi:magnify" style="width:13px;height:13px;color:#6c757d;" />
+                </span>
+                <input type="search"
+                       aria-label="Filtrer les dépenses"
+                       placeholder="Filtrer..."
+                       class="form-control form-control-sm border-0 bg-light"
+                       style="font-size:.72rem;"
+                       oninput="dbDepSearch(this)">
+            </div>
+        </div>
+    </div>
+    <div id="db-dep-list"
+         class="card-body p-2 db-tasks-scroll"
+         data-depenses-url="/admin/entreprise_dashbord/depenses-fragment/{{ entreprise.id }}">
+        {% include 'components/dashboard/_depenses_list.html.twig' with {
+            'dernieresDepenses': dernieresDepenses,
+            'deviseCode': deviseCode
+        } %}
+    </div>

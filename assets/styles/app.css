@@ -3464,6 +3464,28 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 #db-renew-tip .tip-ok  { color:#4ade80; }
 #db-renew-tip .tip-nok { color:#f87171; font-style:italic; font-weight:400; }
 
+/* ── Infobulle KPIs comptables (data-compta-tip) — calquée sur renew-tip ── */
+#db-compta-tip {
+    position:fixed; z-index:9999; pointer-events:none;
+    background:#212529; color:#fff;
+    padding:10px 14px; border-radius:9px;
+    font-size:.68rem; line-height:1.5;
+    box-shadow:0 4px 18px rgba(0,0,0,.45);
+    display:none;
+    max-width:300px;
+}
+#db-compta-tip .tip-title {
+    font-weight:700; font-size:.72rem; color:#fff;
+    margin-bottom:5px;
+}
+#db-compta-tip p { margin:0; color:rgba(255,255,255,.92); overflow-wrap:anywhere; }
+#db-compta-tip .tip-section {
+    color:rgba(255,255,255,.38); font-size:.58rem;
+    text-transform:uppercase; letter-spacing:.09em;
+    margin-top:8px; padding-top:6px; margin-bottom:2px;
+    border-top:1px solid rgba(255,255,255,.13);
+}
+
 /* ── Infobulle encaissements (data-cash-tip) ── */
 #db-cash-tip {
     position:fixed; z-index:9999; pointer-events:none;
