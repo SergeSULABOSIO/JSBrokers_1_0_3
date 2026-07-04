@@ -38,6 +38,7 @@ class IconCanvasProvider
         'partenaire'      => 'carbon:partnership',
         'piece-sinistre'  => 'hugeicons:document-attachment',
         'piste'           => 'material-symbols:footprint',
+        'portefeuille'    => 'mdi:briefcase-account', // portefeuille client rattaché à un gestionnaire de compte
         'revenu'          => 'hugeicons:money-bag-02',
         'risque'          => 'ant-design:product-filled',
         'role'            => 'famicons:hand-right-outline',

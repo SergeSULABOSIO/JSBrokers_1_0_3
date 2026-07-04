@@ -45,6 +45,7 @@ class JSBDynamicSearchService
         'Partenaire',
         'PieceSinistre',
         'Piste',
+        'Portefeuille',
         'RevenuPourCourtier',
         'Risque',
         'Tache',
@@ -218,15 +219,42 @@ class JSBDynamicSearchService
 
                 $metadata = $this->em->getClassMetadata($qb->getRootEntities()[0]);
 
-                // SOUS-CAS 2.1 : Le champ est une relation (ex: 'assure').
-                if ($metadata->hasAssociation($actualField)) {
-                    $relationAlias = $actualField . $suffix;
-                    $qb->leftJoin("{$currentAlias}.{$actualField}", $relationAlias);
+                // SOUS-CAS 2.1 : Le champ est une relation, éventuellement à PLUSIEURS niveaux
+                // (ex: 'assure', ou chemin 'client.portefeuille', 'cotation.piste.client.portefeuille').
+                // On traverse chaque segment par un leftJoin, en dédupliquant les jointures via
+                // $joinedEntities (alias uniques, compatibles requête de comptage grâce à $suffix).
+                if (str_contains($actualField, '.') || $metadata->hasAssociation($actualField)) {
+                    $segments = explode('.', $actualField);
+                    $joinAlias = $currentAlias;
+                    $currentMeta = $metadata;
+                    $pathKey = $currentAlias;
+                    $pathIsValid = true;
+
+                    foreach ($segments as $segment) {
+                        // Sécurité : chaque segment doit être une véritable association.
+                        if (!$currentMeta->hasAssociation($segment)) {
+                            $pathIsValid = false;
+                            break;
+                        }
+                        $pathKey .= '.' . $segment;
+                        if (!isset($joinedEntities[$pathKey])) {
+                            $newAlias = 'search_' . str_replace('.', '_', $actualField) . '_' . $segment . $suffix;
+                            $qb->leftJoin("{$joinAlias}.{$segment}", $newAlias);
+                            $joinedEntities[$pathKey] = $newAlias;
+                        }
+                        $joinAlias = $joinedEntities[$pathKey];
+                        $currentMeta = $this->em->getClassMetadata($currentMeta->getAssociationTargetClass($segment));
+                    }
+
+                    // Chemin invalide (segment inexistant) : on ignore le critère sans casser la requête.
+                    if (!$pathIsValid) {
+                        continue;
+                    }
 
                     // Le champ cible sur lequel chercher (ex: 'nom') est fourni dans le critère.
                     $targetField = $value['targetField'] ?? 'nom';
 
-                    $qb->andWhere($qb->expr()->like("{$relationAlias}.{$targetField}", ':' . $parameterName))
+                    $qb->andWhere($qb->expr()->like("{$joinAlias}.{$targetField}", ':' . $parameterName))
                         ->setParameter($parameterName, '%' . $filterValue . '%');
                 }
                 // SOUS-CAS 2.2 : Le champ est un attribut simple (texte, nombre, etc.).

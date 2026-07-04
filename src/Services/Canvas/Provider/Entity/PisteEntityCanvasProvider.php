@@ -10,6 +10,7 @@ use App\Entity\Document;
 use App\Entity\Invite;
 use App\Entity\Partenaire;
 use App\Entity\Piste;
+use App\Entity\Portefeuille;
 use App\Entity\Risque;
 use App\Entity\Tache;
 use App\Services\Canvas\CanvasHelper;
@@ -47,6 +48,7 @@ class PisteEntityCanvasProvider implements EntityCanvasProviderInterface
                     ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
                     ["code" => "risque", "intitule" => "Risque", "type" => "Relation", "targetEntity" => Risque::class, "displayField" => "nomComplet"],
                     ["code" => "client", "intitule" => "Client", "type" => "Relation", "targetEntity" => Client::class, "displayField" => "nom"],
+                    ["code" => "client.portefeuille", "intitule" => "Portefeuille", "type" => "Relation", "targetEntity" => Portefeuille::class, "displayField" => "nom"],
                     ["code" => "invite", "intitule" => "Gestionnaire", "type" => "Relation", "targetEntity" => Invite::class, "displayField" => "email"],
                     ["code" => "primePotentielle", "intitule" => "Prime Potentielle", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
                     ["code" => "commissionPotentielle", "intitule" => "Com. Potentielle", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],

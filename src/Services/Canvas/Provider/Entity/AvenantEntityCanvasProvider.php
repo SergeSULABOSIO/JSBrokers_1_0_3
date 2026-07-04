@@ -5,6 +5,7 @@ namespace App\Services\Canvas\Provider\Entity;
 use App\Entity\Avenant;
 use App\Entity\Cotation;
 use App\Entity\Document;
+use App\Entity\Portefeuille;
 use App\Services\Canvas\CanvasHelper;
 use App\Services\ServiceMonnaies;
 
@@ -41,6 +42,7 @@ class AvenantEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "startingAt", "intitule" => "Date d'effet", "type" => "Date"],
                 ["code" => "endingAt", "intitule" => "Date d'échéance", "type" => "Date"],
                 ["code" => "cotation", "intitule" => "Cotation", "type" => "Relation", "targetEntity" => Cotation::class, "displayField" => "nom"],
+                ["code" => "cotation.piste.client.portefeuille", "intitule" => "Portefeuille", "type" => "Relation", "targetEntity" => Portefeuille::class, "displayField" => "nom"],
                 ["code" => "documents", "intitule" => "Documents", "type" => "Collection", "targetEntity" => Document::class, "displayField" => "nom"],
             ], $this->getSpecificIndicators())
         ];

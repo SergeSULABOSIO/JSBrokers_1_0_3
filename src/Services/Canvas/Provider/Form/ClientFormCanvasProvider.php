@@ -58,6 +58,7 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                 "civilite"    => "action:options",
                 "nom"         => "action:edit",
                 "groupe"      => "groupe",
+                "portefeuille"=> "portefeuille",
                 "adresse"     => "contact",
                 "email"       => "contact",
                 "telephone"   => "contact",
@@ -103,10 +104,10 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
             [
                 "colonnes" => [["champs" => ["nom"]]]
             ],
-            // Ligne 3: "groupe" (full width)
+            // Ligne 3: "groupe", "portefeuille" (1/2 each)
             [
-                // "couleur_fond" => "white", 
-                "colonnes" => [["champs" => ["groupe"]]]
+                // "couleur_fond" => "white",
+                "colonnes" => [["champs" => ["groupe"], "width" => 6], ["champs" => ["portefeuille"], "width" => 6]]
             ],
             // Ligne 4: "adresse" (full width)
             [

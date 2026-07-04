@@ -73,6 +73,11 @@ class ClientType extends AbstractType
                 'placeholder' => 'Sélectionner un groupe',
                 'required' => false,
             ])
+            ->add('portefeuille', PortefeuilleAutocompleteField::class, [
+                'label' => 'Portefeuille',
+                'placeholder' => 'Sélectionner un portefeuille',
+                'required' => false,
+            ])
             ->add('exonere', ChoiceType::class, [
                 'label' => "Exonéré de taxes ?",
                 'expanded' => true,

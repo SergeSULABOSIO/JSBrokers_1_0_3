@@ -10,6 +10,7 @@ use App\Entity\Note;
 use App\Entity\NotificationSinistre;
 use App\Entity\Partenaire;
 use App\Entity\Piste;
+use App\Entity\Portefeuille;
 use App\Services\ServiceMonnaies;
 
 class ClientEntityCanvasProvider implements EntityCanvasProviderInterface
@@ -48,6 +49,7 @@ class ClientEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "rccm", "intitule" => "RCCM", "type" => "Texte"],
                 ["code" => "idnat", "intitule" => "ID.NAT", "type" => "Texte"],
                 ["code" => "groupe", "intitule" => "Groupe", "type" => "Relation", "targetEntity" => Groupe::class, "displayField" => "nom"],
+                ["code" => "portefeuille", "intitule" => "Portefeuille", "type" => "Relation", "targetEntity" => Portefeuille::class, "displayField" => "nom"],
                 ["code" => "contacts", "intitule" => "Contacts", "type" => "Collection", "targetEntity" => Contact::class, "displayField" => "nom"],
                 ["code" => "pistes", "intitule" => "Pistes", "type" => "Collection", "targetEntity" => Piste::class, "displayField" => "nom"],
                 ["code" => "notificationSinistres", "intitule" => "Sinistres", "type" => "Collection", "targetEntity" => NotificationSinistre::class, "displayField" => "referenceSinistre"],

@@ -140,11 +140,13 @@ class DashboardDataProvider
     public function getAllRenouvellements(Entreprise $entreprise, int $maxDays = 365): array
     {
         $avenants = $this->em->createQuery(
-            'SELECT a, c, ass, p, cl, r, pdr FROM App\Entity\Avenant a
+            'SELECT a, c, ass, p, cl, r, pdr, pf, pfg FROM App\Entity\Avenant a
              JOIN a.cotation c
              JOIN c.assureur ass
              LEFT JOIN c.piste p
              LEFT JOIN p.client cl
+             LEFT JOIN cl.portefeuille pf
+             LEFT JOIN pf.gestionnaire pfg
              LEFT JOIN p.risque r
              LEFT JOIN a.pisteDeRenouvellement pdr
              WHERE a.entreprise = :e
