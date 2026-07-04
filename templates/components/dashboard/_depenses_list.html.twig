@@ -1,4 +1,17 @@
 {% set _now = date() %}
+
+{# Résolution de l'inviteId courant (menu contextuel), si non fourni par le bloc. #}
+{% if currentInviteId is not defined %}
+    {% set currentInviteId = '' %}
+    {% if utilisateur is defined and utilisateur is not null %}
+        {% for inv in utilisateur.invites %}
+            {% if inv.entreprise is not null and inv.entreprise.id == entreprise.id %}
+                {% set currentInviteId = inv.id %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endif %}
+
 {% set countJ30 = 0 %}
 {% set countJ60 = 0 %}
 {% set countJ61plus = 0 %}
@@ -54,6 +67,11 @@
         <details class="db-ass-details db-dep-item"
                  data-group="{{ group }}"
                  data-search-text="{{ searchText|e }}"
+                 data-dep-id="{{ d.id }}"
+                 data-entreprise-id="{{ entreprise.id }}"
+                 data-invite-id="{{ currentInviteId }}"
+                 data-dep-nom="{{ (chargeLib ~ (tiers ? ' — ' ~ tiers : ''))|e }}"
+                 oncontextmenu="dbDepCtxOpen(event,this)"
                  {% if group != 'j30' %}style="display:none;"{% endif %}>
             <summary class="d-flex align-items-center gap-2 py-2 px-1">
                 <div class="db-ass-avatar rounded-circle d-flex align-items-center justify-content-center text-white"
@@ -61,12 +79,18 @@
                     <twig:UX:Icon name="hugeicons:dollar-send-02" style="width:13px;height:13px;" />
                 </div>
                 <span class="small fw-semibold flex-grow-1 text-truncate" style="color:#212529;"
-                      data-meta-tip="{{ (chargeLib ~ (tiers ? ' — ' ~ tiers : '') ~ "\n\n"
-                          ~ 'Montant TTC : ' ~ (d.montantFloat|number_format(2, ',', ' ')) ~ ' ' ~ deviseCode
-                          ~ ' · HT : ' ~ (d.montantHtFloat|number_format(2, ',', ' ')) ~ ' ' ~ deviseCode
-                          ~ ' · TVA déductible : ' ~ (d.tvaDeductibleFloat|number_format(2, ',', ' ')) ~ ' ' ~ deviseCode
-                          ~ "\n" ~ 'Statut : ' ~ d.statutLabel ~ ' · ' ~ d.moyenPaiementLabel
-                          ~ ' · ' ~ d.dateDepense|date('d/m/Y'))|e }}">
+                      data-dep-tip
+                      data-dep-tip-charge="{{ chargeLib|e }}"
+                      data-dep-tip-tiers="{{ tiers|e }}"
+                      data-dep-tip-compte="{{ d.charge ? (d.charge.compteOhada ~ ' — ' ~ d.charge.compteOhadaLabel)|e : '' }}"
+                      data-dep-tip-ttc="{{ d.montantFloat|number_format(2, ',', ' ') ~ ' ' ~ deviseCode }}"
+                      data-dep-tip-ht="{{ d.montantHtFloat|number_format(2, ',', ' ') ~ ' ' ~ deviseCode }}"
+                      data-dep-tip-tva="{{ d.tvaDeductibleFloat|number_format(2, ',', ' ') ~ ' ' ~ deviseCode }}"
+                      data-dep-tip-statut="{{ d.statutLabel|e }}"
+                      data-dep-tip-statut-color="{{ statutCouleur }}"
+                      data-dep-tip-moyen="{{ d.moyenPaiementLabel|e }}"
+                      data-dep-tip-date="{{ d.dateDepense|date('d/m/Y') }}"
+                      data-dep-tip-ref="{{ ref|e }}">
                     {{ chargeLib }}{% if tiers %} — {{ tiers }}{% endif %}
                 </span>
                 <span class="text-muted" style="font-size:.62rem;flex-shrink:0;white-space:nowrap;">

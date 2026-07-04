@@ -687,6 +687,244 @@ export function saveCookie(nom, valeur) {
     window.refreshDepenses = refreshDepenses;
 }());
 
+// ── Tooltip dépenses — data-dep-tip (suit la souris) — miroir data-cash-tip ──
+(function () {
+    var _tip = null;
+    var _active = false;
+
+    function getOrCreate() {
+        if (!_tip) {
+            _tip = document.createElement('div');
+            _tip.id = 'db-dep-tip';
+            document.body.appendChild(_tip);
+        }
+        return _tip;
+    }
+
+    function buildContent(el) {
+        var charge = el.dataset.depTipCharge || '—';
+        var tiers  = el.dataset.depTipTiers  || '';
+        var compte = el.dataset.depTipCompte || '';
+        var ttc    = el.dataset.depTipTtc    || '—';
+        var ht     = el.dataset.depTipHt     || '—';
+        var tva    = el.dataset.depTipTva    || '—';
+        var statut = el.dataset.depTipStatut || '—';
+        var sColor = el.dataset.depTipStatutColor || '#adb5bd';
+        var moyen  = el.dataset.depTipMoyen  || '—';
+        var date   = el.dataset.depTipDate   || '—';
+        var ref    = el.dataset.depTipRef    || '';
+
+        var rows = '<tr><td colspan="2" class="tip-section">Dépense</td></tr>' +
+            '<tr><td>Charge</td><td>' + charge + '</td></tr>';
+        if (tiers)  { rows += '<tr><td>Tiers</td><td>' + tiers + '</td></tr>'; }
+        if (compte) { rows += '<tr><td>Compte</td><td>' + compte + '</td></tr>'; }
+
+        rows += '<tr><td colspan="2" class="tip-section">Montants</td></tr>' +
+            '<tr><td>TTC</td><td class="tip-ttc">' + ttc + '</td></tr>' +
+            '<tr><td>HT</td><td>' + ht + '</td></tr>' +
+            '<tr><td>TVA déd.</td><td>' + tva + '</td></tr>' +
+            '<tr><td colspan="2" class="tip-section">Suivi</td></tr>' +
+            '<tr><td>Statut</td><td class="tip-statut" style="color:' + sColor + '">' + statut + '</td></tr>' +
+            '<tr><td>Moyen</td><td>' + moyen + '</td></tr>' +
+            '<tr><td>Date</td><td>' + date + '</td></tr>';
+        if (ref && ref !== '—') { rows += '<tr><td>Réf.</td><td>' + ref + '</td></tr>'; }
+
+        return '<table>' + rows + '</table>';
+    }
+
+    function positionTip(mx, my) {
+        var t = _tip;
+        if (!t) return;
+        var offset = 10;
+        var left = mx - t.offsetWidth - offset;
+        var top  = my - t.offsetHeight - offset;
+        if (left < 8) left = mx + offset;
+        if (top < 8) top = my + offset;
+        t.style.left = left + 'px';
+        t.style.top  = top  + 'px';
+    }
+
+    document.addEventListener('mouseover', function (e) {
+        var el = e.target.closest ? e.target.closest('[data-dep-tip]') : null;
+        if (!el) return;
+        var details = el.closest('details');
+        if (details && details.open) return;
+        var t = getOrCreate();
+        t.innerHTML = buildContent(el);
+        t.style.display = 'block';
+        _active = true;
+    });
+    document.addEventListener('mouseout', function (e) {
+        var el = e.target.closest ? e.target.closest('[data-dep-tip]') : null;
+        if (el && !el.contains(e.relatedTarget)) {
+            if (_tip) _tip.style.display = 'none';
+            _active = false;
+        }
+    });
+    document.addEventListener('mousemove', function (e) {
+        if (_active) positionTip(e.clientX, e.clientY);
+    });
+}());
+
+// ── Menu contextuel dépenses — dbDepCtxOpen (ajouter / modifier / supprimer) ──
+// Miroir strict du menu contextuel des notes (dbNoteCtxOpen).
+(function () {
+    var _depEl          = null; // details courant
+    var _did            = null; // dépense id
+    var _deid           = null; // entreprise id
+    var _diid           = null; // invite id
+    var _depPendingDel  = null;
+
+    function dbDepCtxOpen(event, el) {
+        event.preventDefault();
+        event.stopPropagation();
+        _depEl = el;
+        _did   = el.dataset.depId;
+        _deid  = el.dataset.entrepriseId;
+        _diid  = el.dataset.inviteId;
+
+        var menu = document.getElementById('dbDepCtxMenu');
+        if (!menu) return;
+        var mw = 220, mh = 150;
+        var left = (event.clientX + mw > window.innerWidth)  ? window.innerWidth  - mw - 6 : event.clientX;
+        var top  = (event.clientY + mh > window.innerHeight) ? window.innerHeight - mh - 6 : event.clientY;
+        menu.style.left    = left + 'px';
+        menu.style.top     = top  + 'px';
+        menu.style.display = 'block';
+
+        var addItem    = document.getElementById('dbDepCtxAddItem');
+        var editItem   = document.getElementById('dbDepCtxEditItem');
+        var deleteItem = document.getElementById('dbDepCtxDeleteItem');
+
+        if (addItem)    addItem.onclick    = dbDepCtxAdd;
+        if (editItem)   editItem.onclick   = dbDepCtxEdit;
+        if (deleteItem) deleteItem.onclick = dbDepCtxDelete;
+
+        setTimeout(function () {
+            document.addEventListener('click', function hide() {
+                var m = document.getElementById('dbDepCtxMenu');
+                if (m) m.style.display = 'none';
+                document.removeEventListener('click', hide);
+            }, { once: true });
+        }, 0);
+    }
+
+    function dbDepCtxAdd() {
+        var menu = document.getElementById('dbDepCtxMenu');
+        if (menu) menu.style.display = 'none';
+        // Contexte pris sur l'item d'ajout (entreprise/invité courants), robuste même
+        // si aucune ligne n'a encore été survolée.
+        var addItem = document.getElementById('dbDepCtxAddItem');
+        var eid = (addItem && addItem.dataset.entrepriseId) || _deid;
+        var iid = (addItem && addItem.dataset.inviteId)     || _diid;
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
+            detail: {
+                entityFormCanvas: {
+                    parametres: {
+                        titre_creation:      'Nouvelle Dépense',
+                        endpoint_form_url:   '/admin/depensecourtier/api/get-form',
+                        endpoint_submit_url: '/admin/depensecourtier/api/submit'
+                    }
+                },
+                isCreationMode: true,
+                context: {
+                    idEntreprise:     parseInt(eid) || undefined,
+                    idInvite:         parseInt(iid) || undefined,
+                    _dashboardReload: true
+                }
+            }
+        }));
+        setTimeout(function () { document.dispatchEvent(new CustomEvent('app:loading.stop')); }, 600);
+    }
+
+    function dbDepCtxEdit() {
+        var menu = document.getElementById('dbDepCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_did) return;
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
+            detail: {
+                entityFormCanvas: {
+                    parametres: {
+                        titre_modification:  'Modifier la dépense',
+                        endpoint_form_url:   '/admin/depensecourtier/api/get-form',
+                        endpoint_submit_url: '/admin/depensecourtier/api/submit'
+                    }
+                },
+                entity:         { id: parseInt(_did) },
+                isCreationMode: false,
+                context: {
+                    idEntreprise:     parseInt(_deid) || undefined,
+                    idInvite:         parseInt(_diid) || undefined,
+                    _dashboardReload: true
+                }
+            }
+        }));
+        setTimeout(function () { document.dispatchEvent(new CustomEvent('app:loading.stop')); }, 600);
+    }
+
+    function dbDepCtxDelete() {
+        var menu = document.getElementById('dbDepCtxMenu');
+        if (menu) menu.style.display = 'none';
+        if (!_depEl || !_did) return;
+
+        var nom = (_depEl.dataset.depNom || ('Dépense #' + _did));
+        _depPendingDel = _depEl;
+
+        document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
+            detail: {
+                title: 'Supprimer la dépense',
+                body: 'La dépense sera définitivement supprimée. Cette action est irréversible.',
+                itemDescriptions: [nom],
+                showIrreversible: true,
+                onConfirm: {
+                    type: 'app:db-dep.delete-execute',
+                    payload: { id: _did }
+                }
+            }
+        }));
+    }
+
+    document.addEventListener('cerveau:event', function (e) {
+        if (e.detail.type !== 'app:db-dep.delete-execute') return;
+        var p = e.detail.payload;
+        var did = p && p.id;
+        if (!did) return;
+
+        var elToRemove = _depPendingDel;
+        var csrf = document.getElementById('db-dep-csrf');
+        var csrfToken = csrf ? csrf.content : '';
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+
+        fetch('/admin/depensecourtier/api/delete/' + did, {
+            method:  'DELETE',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN':     csrfToken
+            }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+            document.dispatchEvent(new CustomEvent('ui:confirmation.close'));
+            if (elToRemove && elToRemove.parentNode) {
+                elToRemove.parentNode.removeChild(elToRemove);
+            }
+            _depPendingDel = null;
+        })
+        .catch(function () {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+            document.dispatchEvent(new CustomEvent('ui:confirmation.error', {
+                detail: { error: 'La suppression a échoué.' }
+            }));
+            _depPendingDel = null;
+        });
+    });
+
+    window.dbDepCtxOpen = dbDepCtxOpen;
+}());
+
 // ── Tooltip encaissements — data-cash-tip (suit la souris) ──────────────────
 (function () {
     var _tip = null;

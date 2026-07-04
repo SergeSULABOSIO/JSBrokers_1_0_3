@@ -288,6 +288,7 @@ class EntrepriseDashbordController extends AbstractController
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
 
         return $this->render('components/dashboard/_depenses.html.twig', [
+            'utilisateur'      => $this->getUser(),
             'entreprise'       => $entreprise,
             'dernieresDepenses' => $provider->getDernieresDepenses($entreprise),
             'deviseCode'       => $serviceMonnaies->getCodeMonnaieAffichage() ?? 'USD',
@@ -300,6 +301,8 @@ class EntrepriseDashbordController extends AbstractController
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
 
         return $this->render('components/dashboard/_depenses_list.html.twig', [
+            'utilisateur'      => $this->getUser(),
+            'entreprise'       => $entreprise,
             'dernieresDepenses' => $provider->getDernieresDepenses($entreprise),
             'deviseCode'       => $serviceMonnaies->getCodeMonnaieAffichage() ?? 'USD',
         ]);

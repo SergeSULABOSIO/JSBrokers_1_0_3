@@ -19,6 +19,16 @@
     {% endif %}
 {% endfor %}
 
+{# Résolution de l'inviteId courant (pour le menu contextuel : add/edit/delete). #}
+{% set currentInviteId = '' %}
+{% if utilisateur is defined %}
+    {% for inv in utilisateur.invites %}
+        {% if inv.entreprise is not null and inv.entreprise.id == entreprise.id %}
+            {% set currentInviteId = inv.id %}
+        {% endif %}
+    {% endfor %}
+{% endif %}
+
 <div class="px-3 pt-2 pb-2 bg-white">
         <div class="d-flex align-items-center gap-2">
             <div class="db-prod-tabs" id="dbDepToggleBar">
@@ -43,7 +53,44 @@
          class="card-body p-2 db-tasks-scroll"
          data-depenses-url="/admin/entreprise_dashbord/depenses-fragment/{{ entreprise.id }}">
         {% include 'components/dashboard/_depenses_list.html.twig' with {
+            'utilisateur': utilisateur|default(null),
+            'entreprise': entreprise,
             'dernieresDepenses': dernieresDepenses,
-            'deviseCode': deviseCode
+            'deviseCode': deviseCode,
+            'currentInviteId': currentInviteId
         } %}
     </div>
+
+{# ── CSRF pour la suppression ── #}
+<meta id="db-dep-csrf" content="{{ csrf_token('db-dep-delete') }}">
+
+{# ── Menu contextuel dépenses (clic droit) — pattern strict des menus contextuels ── #}
+<nav id="dbDepCtxMenu" class="context-menu" aria-label="Menu contextuel dépense" style="display:none;"
+     onmousedown="event.stopPropagation()">
+    <ul role="menu" class="list-unstyled mb-0">
+        <li role="menuitem" tabindex="-1" id="dbDepCtxAddItem"
+            class="d-flex align-items-center gap-2 px-3 py-2" style="cursor:pointer;"
+            data-entreprise-id="{{ entreprise.id }}" data-invite-id="{{ currentInviteId }}">
+            <span class="context-menu-icon" aria-hidden="true">
+                <twig:UX:Icon name="{{ resolve_icon_name('action:add') }}" style="width:16px;height:16px;" />
+            </span>
+            <span class="flex-grow-1">Ajouter une dépense</span>
+        </li>
+        <li role="separator" class="separator"></li>
+        <li role="menuitem" tabindex="-1" id="dbDepCtxEditItem"
+            class="d-flex align-items-center gap-2 px-3 py-2" style="cursor:pointer;">
+            <span class="context-menu-icon" aria-hidden="true">
+                <twig:UX:Icon name="{{ resolve_icon_name('action:edit') }}" style="width:16px;height:16px;" />
+            </span>
+            <span class="flex-grow-1">Modifier la dépense</span>
+        </li>
+        <li role="separator" class="separator"></li>
+        <li role="menuitem" tabindex="-1" id="dbDepCtxDeleteItem"
+            class="d-flex align-items-center gap-2 px-3 py-2 is-danger" style="cursor:pointer;">
+            <span class="context-menu-icon" aria-hidden="true">
+                <twig:UX:Icon name="{{ resolve_icon_name('action:delete') }}" style="width:16px;height:16px;" />
+            </span>
+            <span class="flex-grow-1">Supprimer</span>
+        </li>
+    </ul>
+</nav>
