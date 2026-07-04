@@ -30,7 +30,7 @@ class AutoriteFiscaleAutocompleteCanvasProvider
         $solde = $autorite->taxeSolde ?? 0.0;
 
         return sprintf(
-            '<div class="jsb-autocomplete-item" style="background-color: #ffffff;">
+            '<div class="jsb-autocomplete-item">
                 <div class="jsb-autocomplete-title">%s (%s)</div>
                 <div class="jsb-autocomplete-context">
                     <span>Taxe associée: <strong>%s (%s%% IARD / %s%% VIE)</strong></span>
