@@ -705,6 +705,35 @@ class DashboardDataProvider
         return $paiements;
     }
 
+    /**
+     * Dernières dépenses du cabinet (non annulées), les plus récentes d'abord —
+     * source du bloc « Dépenses » du tableau de bord. Miroir de
+     * getDerniersEncaissements() côté sortie de fonds.
+     *
+     * @return \App\Entity\DepenseCourtier[]
+     */
+    public function getDernieresDepenses(Entreprise $entreprise, int $limit = 10): array
+    {
+        $depenses = $this->em->createQuery(
+            'SELECT d, c, f FROM App\Entity\DepenseCourtier d
+             LEFT JOIN d.charge c
+             LEFT JOIN d.fournisseur f
+             WHERE d.entreprise = :e
+               AND d.statut != :annulee
+             ORDER BY d.dateDepense DESC'
+        )
+        ->setParameter('e', $entreprise)
+        ->setParameter('annulee', \App\Entity\Depense::STATUT_ANNULEE)
+        ->setMaxResults($limit)
+        ->getResult();
+
+        foreach ($depenses as $depense) {
+            $this->canvasBuilder->loadAllCalculatedValues($depense);
+        }
+
+        return $depenses;
+    }
+
     public function getDerniersSinistres(Entreprise $entreprise, int $limit = 25): array
     {
         $sinistres = $this->em->createQuery(

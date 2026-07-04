@@ -593,6 +593,100 @@ export function saveCookie(nom, valeur) {
     window.refreshEncaissements = refreshEncaissements;
 }());
 
+// ── Dernières dépenses (toggles + recherche) — miroir des encaissements ──────
+(function () {
+    var _activeDepMode = 'j30';
+
+    function dbDepApplyFilter() {
+        var searchInput = document.querySelector('[aria-label="Filtrer les dépenses"]');
+        var q = searchInput ? searchInput.value.toLowerCase() : '';
+        document.querySelectorAll('.db-dep-item').forEach(function (el) {
+            var matchMode   = el.dataset.group === _activeDepMode;
+            var matchSearch = !q || (el.dataset.searchText || '').indexOf(q) >= 0;
+            el.style.display = (matchMode && matchSearch) ? '' : 'none';
+        });
+    }
+
+    function dbDepToggle(btn) {
+        _activeDepMode = btn.dataset.mode;
+        document.querySelectorAll('#dbDepToggleBar .db-task-toggle').forEach(function (b) {
+            var isActive = b === btn;
+            b.classList.toggle('active', isActive);
+            b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+        dbDepApplyFilter();
+    }
+
+    function dbDepSearch() { dbDepApplyFilter(); }
+
+    window.dbDepToggle      = dbDepToggle;
+    window.dbDepSearch      = dbDepSearch;
+    window.dbDepApplyFilter = dbDepApplyFilter;
+}());
+
+// ── Auto-refresh dépenses (3 min) — miroir des encaissements ─────────────────
+(function () {
+    var _depTimer    = null;
+    var _depObserver = null;
+
+    function _depPad(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function _depSetStatus(txt) {
+        var el = document.getElementById('db-depenses-last-update');
+        if (el) el.textContent = txt;
+    }
+
+    function refreshDepenses() {
+        var list = document.getElementById('db-dep-list');
+        if (!list) return;
+        var details = list.closest('details');
+        if (details && !details.open) return;
+        _depSetStatus('Mise à jour en cours…');
+        dbFetch(list.dataset.depensesUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) {
+                if (!r) return;
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.text();
+            })
+            .then(function (html) {
+                if (!html) return;
+                list.innerHTML = html;
+                var now = new Date();
+                _depSetStatus('Dernière mise à jour à ' + _depPad(now.getHours()) + ':' + _depPad(now.getMinutes()));
+                window.dbDepApplyFilter();
+            })
+            .catch(function (err) {
+                _depSetStatus('Erreur de mise à jour');
+                console.warn('[dashboard] dépenses refresh failed:', err);
+            });
+    }
+
+    function initDbDep() {
+        var list = document.getElementById('db-dep-list');
+        if (!list) return;
+        var now = new Date();
+        _depSetStatus('Dernière mise à jour à ' + _depPad(now.getHours()) + ':' + _depPad(now.getMinutes()));
+        if (_depTimer) clearInterval(_depTimer);
+        _depTimer = setInterval(refreshDepenses, 180000);
+    }
+
+    function _depObserve() {
+        if (document.getElementById('db-dep-list')) { initDbDep(); return; }
+        if (_depObserver) _depObserver.disconnect();
+        _depObserver = new MutationObserver(function (mutations, obs) {
+            if (document.getElementById('db-dep-list')) {
+                obs.disconnect();
+                _depObserver = null;
+                initDbDep();
+            }
+        });
+        _depObserver.observe(document.body, { childList: true, subtree: true });
+    }
+    _depObserve();
+
+    window.refreshDepenses = refreshDepenses;
+}());
+
 // ── Tooltip encaissements — data-cash-tip (suit la souris) ──────────────────
 (function () {
     var _tip = null;
@@ -1537,6 +1631,70 @@ export function saveCookie(nom, valeur) {
     });
     document.addEventListener('mouseout', function (e) {
         var el = e.target.closest ? e.target.closest('[data-renew-tip]') : null;
+        if (el && !el.contains(e.relatedTarget)) {
+            if (_tip) _tip.style.display = 'none';
+            _active = false;
+        }
+    });
+    document.addEventListener('mousemove', function (e) {
+        if (_active) positionTip(e.clientX, e.clientY);
+    });
+}());
+
+// ── Tooltip KPIs comptables — data-compta-tip (suit la souris) ──────────────
+// Calqué à 100 % sur l'infobulle « Renouvellements » (data-renew-tip) : élément
+// sombre flottant ajouté au <body>, positionné au curseur via mousemove. Contenu :
+// deux paragraphes — ce que l'indicateur représente (intro) puis son mode de
+// calcul (section « Calcul »).
+(function () {
+    var _tip = null;
+    var _active = false;
+
+    function getOrCreate() {
+        if (!_tip) {
+            _tip = document.createElement('div');
+            _tip.id = 'db-compta-tip';
+            document.body.appendChild(_tip);
+        }
+        return _tip;
+    }
+
+    function escapeHtml(s) {
+        return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function buildContent(el) {
+        var label  = el.dataset.tipLabel  || '';
+        var intro  = el.dataset.tipIntro  || '';
+        var calcul = el.dataset.tipCalcul || '';
+        return (label ? '<div class="tip-title">' + escapeHtml(label) + '</div>' : '') +
+            '<p class="tip-intro">' + escapeHtml(intro) + '</p>' +
+            '<div class="tip-section">Calcul</div>' +
+            '<p class="tip-calcul">' + escapeHtml(calcul) + '</p>';
+    }
+
+    function positionTip(mx, my) {
+        var t = _tip;
+        if (!t) return;
+        var offset = 10;
+        var left = mx - t.offsetWidth - offset;
+        var top  = my - t.offsetHeight - offset;
+        if (left < 8) left = mx + offset;
+        if (top < 8) top = my + offset;
+        t.style.left = left + 'px';
+        t.style.top  = top  + 'px';
+    }
+
+    document.addEventListener('mouseover', function (e) {
+        var el = e.target.closest ? e.target.closest('[data-compta-tip]') : null;
+        if (!el) return;
+        var t = getOrCreate();
+        t.innerHTML = buildContent(el);
+        t.style.display = 'block';
+        _active = true;
+    });
+    document.addEventListener('mouseout', function (e) {
+        var el = e.target.closest ? e.target.closest('[data-compta-tip]') : null;
         if (el && !el.contains(e.relatedTarget)) {
             if (_tip) _tip.style.display = 'none';
             _active = false;

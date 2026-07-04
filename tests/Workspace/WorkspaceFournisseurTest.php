@@ -292,7 +292,8 @@ class WorkspaceFournisseurTest extends WebTestCase
         $this->assertResponseIsSuccessful();
         $this->assertSame('', trim((string) $this->client->getResponse()->getContent()), 'Le bloc Comptabilité doit être vide pour un invité hors périmètre.');
 
-        // Propriétaire : KPIs comptables rendus.
+        // Propriétaire : KPIs comptables rendus, avec infobulle qui suit le curseur
+        // (pattern data-compta-tip, calqué sur data-renew-tip) et ses deux paragraphes.
         $this->client->loginUser($this->user(self::OWNER_EMAIL));
         $this->client->request('GET', $url);
         $this->assertResponseIsSuccessful();
@@ -300,10 +301,65 @@ class WorkspaceFournisseurTest extends WebTestCase
         $this->assertStringContainsString('Commissions encaissées', $html);
         $this->assertStringContainsString('Résultat net', $html);
         $this->assertStringContainsString('fournisseur', $html, 'Le pouls des fournisseurs actifs doit être affiché.');
+        $this->assertStringContainsString('data-compta-tip', $html, "Les KPIs doivent porter l'infobulle qui suit le curseur.");
+        $this->assertStringContainsString('data-tip-intro', $html, "L'infobulle doit contenir le paragraphe de représentation.");
+        $this->assertStringContainsString('data-tip-calcul', $html, "L'infobulle doit contenir le paragraphe de mode de calcul.");
 
         // Le tableau de bord du propriétaire embarque le bloc (gate Twig).
         $this->client->request('GET', sprintf('/admin/entreprise_dashbord/workspace/%d', $e->getId()));
         $this->assertResponseIsSuccessful();
         $this->assertStringContainsString('block/compta', (string) $this->client->getResponse()->getContent(), 'Le bloc Comptabilité doit être déclaré dans le tableau de bord.');
+    }
+
+    public function testBlocDepensesDuTableauDeBord(): void
+    {
+        ['owner' => $owner, 'guest' => $guest, 'entreprise' => $e] = $this->seed([], []);
+        $em = $this->em();
+
+        // Une dépense récente (fournisseur enregistré) à faire remonter dans le bloc.
+        $fournisseur = new Fournisseur();
+        $fournisseur->setNom('GBS Internet');
+        $fournisseur->setEntreprise($e);
+        $em->persist($fournisseur);
+
+        $charge = new ChargeCourtier();
+        $charge->setCode('NET')->setLibelle('Frais de fourniture d\'Internet')->setCompteOhada('60');
+        $charge->setEntreprise($e);
+        $em->persist($charge);
+
+        $depense = new DepenseCourtier();
+        $depense->setCharge($charge)->setFournisseur($fournisseur)
+            ->setDateDepense(new \DateTimeImmutable('now'))
+            ->setMontant('600.00')->setTauxTva('16.00')
+            ->setMoyenPaiement('banque')->setStatut('payee');
+        $depense->setEntreprise($e);
+        $em->persist($depense);
+        $em->flush();
+
+        $url = sprintf('/admin/entreprise_dashbord/block/depenses/%d', $e->getId());
+
+        // Invité sans droit Dépenses : réponse vide (défense en profondeur).
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $this->client->request('GET', $url);
+        $this->assertResponseIsSuccessful();
+        $this->assertSame('', trim((string) $this->client->getResponse()->getContent()), 'Le bloc Dépenses doit être vide pour un invité hors périmètre.');
+
+        // Propriétaire : la dépense remonte, avec le tiers et le montant en sortie.
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+        $this->client->request('GET', $url);
+        $this->assertResponseIsSuccessful();
+        $html = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('GBS Internet', $html, 'La dépense doit afficher son fournisseur.');
+        $this->assertStringContainsString('db-dep-list', $html, 'Le conteneur de liste (auto-refresh) doit être présent.');
+        $this->assertStringContainsString('depenses-fragment', $html, "L'URL de rafraîchissement doit être déclarée.");
+
+        // Fragment de rafraîchissement (miroir encaissements-fragment) : rend les lignes.
+        $this->client->request('GET', sprintf('/admin/entreprise_dashbord/depenses-fragment/%d', $e->getId()));
+        $this->assertResponseIsSuccessful();
+        $this->assertStringContainsString('GBS Internet', (string) $this->client->getResponse()->getContent());
+
+        // Le tableau de bord du propriétaire embarque le bloc (gate Twig).
+        $this->client->request('GET', sprintf('/admin/entreprise_dashbord/workspace/%d', $e->getId()));
+        $this->assertStringContainsString('block/depenses', (string) $this->client->getResponse()->getContent(), 'Le bloc Dépenses doit être déclaré dans le tableau de bord.');
     }
 }

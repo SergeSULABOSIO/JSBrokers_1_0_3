@@ -171,13 +171,67 @@ class EntrepriseDashbordController extends AbstractController
         return $this->render('components/dashboard/_block_compta.html.twig', [
             'entreprise'        => $entreprise,
             'exercice'          => $exercice,
-            'resultat'          => $documents['resultat'],
-            'tft'               => $documents['tft'],
+            // KPIs comptables prêts à afficher : chacun porte son infobulle enrichie
+            // (paragraphe 1 = ce que l'indicateur représente pour le courtier ;
+            // paragraphe 2 = comment il est calculé), rendue via le pattern des
+            // infobulles sombres du tableau de bord (data-meta-tip, séparateur \n\n).
+            'kpis'              => $this->buildComptaKpis($documents),
             'depensesPayees'    => $depensesPayees,
             'depensesEngagees'  => $depensesEngagees,
             'fournisseursActifs' => $fournisseurRepository->count(['entreprise' => $entreprise, 'actif' => true]),
             'deviseCode'        => $serviceMonnaies->getCodeMonnaieAffichage() ?? 'USD',
         ]);
+    }
+
+    /**
+     * Construit les cinq KPIs comptables affichés dans le bloc « Comptabilité »,
+     * chacun avec sa valeur et son infobulle explicative en deux paragraphes :
+     *  - `intro`  : ce que l'indicateur représente pour le courtier ;
+     *  - `calcul` : comment il est calculé.
+     * L'infobulle suit le curseur (pattern data-compta-tip, calqué à 100 % sur
+     * l'infobulle « Renouvellements » data-renew-tip : fond sombre, flottante).
+     *
+     * @param array $documents Structure de DocumentsComptablesBuilder (resultat + tft).
+     *
+     * @return array<int, array{label:string, valeur:float, intro:string, calcul:string}>
+     */
+    private function buildComptaKpis(array $documents): array
+    {
+        $resultat = $documents['resultat'];
+        $tft      = $documents['tft'];
+
+        return [
+            [
+                'label'  => 'Commissions encaissées',
+                'valeur' => $resultat['totalProduits'],
+                'intro'  => "Le chiffre d'affaires de votre cabinet : le total des commissions de courtage réellement encaissées sur l'exercice, exprimé hors taxes.",
+                'calcul' => "Somme des produits (compte 706), c'est-à-dire la part hors taxe des paiements reçus sur vos notes de débit (factures de commission), diminuée des éventuels avoirs.",
+            ],
+            [
+                'label'  => 'Charges',
+                'valeur' => $resultat['totalCharges'],
+                'intro'  => "Ce que votre activité vous coûte sur l'exercice : rétro-commissions versées aux intermédiaires, taxes à votre charge et dépenses de fonctionnement du cabinet.",
+                'calcul' => "Somme des comptes de charges (classe 6) — rémunérations d'intermédiaires (632), impôts et taxes du courtier (641) et dépenses (montant hors taxe déductible).",
+            ],
+            [
+                'label'  => 'Résultat net',
+                'valeur' => $resultat['resultat'],
+                'intro'  => "Le bénéfice (ou la perte) de votre cabinet sur l'exercice : ce qu'il vous reste une fois toutes les charges déduites de vos commissions.",
+                'calcul' => "Commissions encaissées − Charges. Un montant négatif, affiché en rouge, signale une perte.",
+            ],
+            [
+                'label'  => 'Décaissements',
+                'valeur' => $tft['decaissements'],
+                'intro'  => "L'argent réellement sorti de votre trésorerie sur l'exercice : paiements effectués aux intermédiaires, aux autorités fiscales et à vos fournisseurs.",
+                'calcul' => "Somme des sorties de trésorerie (crédits des comptes Banque 521 et Caisse 571), hors apport en capital.",
+            ],
+            [
+                'label'  => 'Trésorerie',
+                'valeur' => $tft['cloture'],
+                'intro'  => "Ce dont votre cabinet dispose en banque et en caisse à la clôture de l'exercice.",
+                'calcul' => "Trésorerie d'ouverture + encaissements − décaissements + apports en capital (solde de clôture des comptes 521 et 571).",
+            ],
+        ];
     }
 
     #[Route('/block/renewals/{idEntreprise}', name: 'block_renewals', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
@@ -224,6 +278,30 @@ class EntrepriseDashbordController extends AbstractController
 
         return $this->render('components/dashboard/_encaissements_list.html.twig', [
             'derniersEncaissements' => $provider->getDerniersEncaissements($entreprise),
+        ]);
+    }
+
+    #[Route('/block/depenses/{idEntreprise}', name: 'block_depenses', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadBlockDepenses(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): Response
+    {
+        if ($denied = $this->denyBlockIfCannotRead('DepenseCourtier')) { return $denied; }
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
+        return $this->render('components/dashboard/_depenses.html.twig', [
+            'entreprise'       => $entreprise,
+            'dernieresDepenses' => $provider->getDernieresDepenses($entreprise),
+            'deviseCode'       => $serviceMonnaies->getCodeMonnaieAffichage() ?? 'USD',
+        ]);
+    }
+
+    #[Route('/depenses-fragment/{idEntreprise}', name: 'depenses_fragment', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function loadDepensesFragment(int $idEntreprise, DashboardDataProvider $provider, ServiceMonnaies $serviceMonnaies): Response
+    {
+        $entreprise = $this->entrepriseRepository->find($idEntreprise);
+
+        return $this->render('components/dashboard/_depenses_list.html.twig', [
+            'dernieresDepenses' => $provider->getDernieresDepenses($entreprise),
+            'deviseCode'       => $serviceMonnaies->getCodeMonnaieAffichage() ?? 'USD',
         ]);
     }
 

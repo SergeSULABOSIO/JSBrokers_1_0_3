@@ -1,0 +1,132 @@
+{% set _now = date() %}
+{% set countJ30 = 0 %}
+{% set countJ60 = 0 %}
+{% set countJ61plus = 0 %}
+{% for d in dernieresDepenses %}
+    {% set _diff = (_now|date('U') - d.dateDepense|date('U')) / 86400 %}
+    {% if _diff <= 30 %}
+        {% set countJ30 = countJ30 + 1 %}
+    {% elseif _diff <= 60 %}
+        {% set countJ60 = countJ60 + 1 %}
+    {% else %}
+        {% set countJ61plus = countJ61plus + 1 %}
+    {% endif %}
+{% endfor %}
+
+{% if dernieresDepenses|length > 0 %}
+    {% if countJ30 == 0 %}
+    <p class="db-dep-item text-muted small px-2 py-4 text-center" data-group="j30">
+        <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucune dépense dans les 30 derniers jours.
+    </p>
+    {% endif %}
+    {% if countJ60 == 0 %}
+    <p class="db-dep-item text-muted small px-2 py-4 text-center" data-group="j60" style="display:none;">
+        <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucune dépense entre 31 et 60 jours.
+    </p>
+    {% endif %}
+    {% if countJ61plus == 0 %}
+    <p class="db-dep-item text-muted small px-2 py-4 text-center" data-group="j61plus" style="display:none;">
+        <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucune dépense au-delà de 60 jours.
+    </p>
+    {% endif %}
+
+    {% for d in dernieresDepenses %}
+        {% set _diff = (_now|date('U') - d.dateDepense|date('U')) / 86400 %}
+        {% if _diff <= 30 %}
+            {% set group = 'j30' %}
+        {% elseif _diff <= 60 %}
+            {% set group = 'j60' %}
+        {% else %}
+            {% set group = 'j61plus' %}
+        {% endif %}
+
+        {% set chargeLib = d.charge ? d.charge.libelle : 'Dépense' %}
+        {% set tiers      = d.tiersLibelle ?? '' %}
+        {% set ref        = d.reference ?? '—' %}
+        {% set searchText = (chargeLib ~ '|' ~ tiers ~ '|' ~ ref ~ '|' ~ (d.description ?? ''))|lower %}
+
+        {# Statut : couleur sémantique (payée = décaissée, engagée = en attente). #}
+        {% set statutCouleur = d.statut == 'payee' ? '#198754' : '#e69500' %}
+
+        <details class="db-ass-details db-dep-item"
+                 data-group="{{ group }}"
+                 data-search-text="{{ searchText|e }}"
+                 {% if group != 'j30' %}style="display:none;"{% endif %}>
+            <summary class="d-flex align-items-center gap-2 py-2 px-1">
+                <div class="db-ass-avatar rounded-circle d-flex align-items-center justify-content-center text-white"
+                     style="width:26px;height:26px;background:#0047AB;flex-shrink:0;">
+                    <twig:UX:Icon name="hugeicons:dollar-send-02" style="width:13px;height:13px;" />
+                </div>
+                <span class="small fw-semibold flex-grow-1 text-truncate" style="color:#212529;"
+                      data-meta-tip="{{ (chargeLib ~ (tiers ? ' — ' ~ tiers : '') ~ "\n\n"
+                          ~ 'Montant TTC : ' ~ (d.montantFloat|number_format(2, ',', ' ')) ~ ' ' ~ deviseCode
+                          ~ ' · HT : ' ~ (d.montantHtFloat|number_format(2, ',', ' ')) ~ ' ' ~ deviseCode
+                          ~ ' · TVA déductible : ' ~ (d.tvaDeductibleFloat|number_format(2, ',', ' ')) ~ ' ' ~ deviseCode
+                          ~ "\n" ~ 'Statut : ' ~ d.statutLabel ~ ' · ' ~ d.moyenPaiementLabel
+                          ~ ' · ' ~ d.dateDepense|date('d/m/Y'))|e }}">
+                    {{ chargeLib }}{% if tiers %} — {{ tiers }}{% endif %}
+                </span>
+                <span class="text-muted" style="font-size:.62rem;flex-shrink:0;white-space:nowrap;">
+                    {{ d.dateDepense|date('d/m/Y') }}
+                </span>
+                <span class="fw-semibold small" style="color:#b3261e;flex-shrink:0;">
+                    −{{ d.montantFloat|number_format(0, ',', ' ') }}&nbsp;{{ deviseCode }}
+                </span>
+                <twig:UX:Icon name="mdi:chevron-down" class="db-ass-chevron"
+                              style="width:14px;height:14px;color:#6c757d;" />
+            </summary>
+
+            <div class="px-2 py-2 bg-light rounded-bottom" style="font-size:.73rem;">
+
+                {# Tiers (fournisseur enregistré ou bénéficiaire occasionnel) #}
+                <div class="mb-2">
+                    <span style="color:#0047AB;">
+                        <twig:UX:Icon name="tabler:building-store" style="width:11px;height:11px;" class="me-1" />
+                        <strong>{{ tiers ?: 'Aucun tiers renseigné' }}</strong>
+                    </span>
+                    {% if d.charge %}
+                    <div class="text-muted mt-1" style="padding-left:15px;">
+                        Compte OHADA {{ d.charge.compteOhada }} — {{ d.charge.compteOhadaLabel }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                {# Montants + statut #}
+                <div class="d-flex gap-3 flex-wrap pt-1" style="border-top:1px dashed #dee2e6;">
+                    <span style="color:#b3261e;">
+                        <twig:UX:Icon name="hugeicons:dollar-send-02" style="width:11px;height:11px;" class="me-1" />
+                        TTC&nbsp;:&nbsp;<strong>{{ d.montantFloat|number_format(2, ',', ' ') }}&nbsp;{{ deviseCode }}</strong>
+                    </span>
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="tabler:receipt-tax" style="width:11px;height:11px;" class="me-1" />
+                        HT&nbsp;:&nbsp;<strong>{{ d.montantHtFloat|number_format(2, ',', ' ') }}&nbsp;{{ deviseCode }}</strong>
+                    </span>
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="tabler:tax" style="width:11px;height:11px;" class="me-1" />
+                        TVA déd.&nbsp;:&nbsp;<strong>{{ d.tvaDeductibleFloat|number_format(2, ',', ' ') }}&nbsp;{{ deviseCode }}</strong>
+                    </span>
+                    <span style="color:{{ statutCouleur }};">
+                        <twig:UX:Icon name="mdi:progress-check" style="width:11px;height:11px;" class="me-1" />
+                        <strong>{{ d.statutLabel }}</strong>
+                    </span>
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="hugeicons:wallet-02" style="width:11px;height:11px;" class="me-1" />
+                        {{ d.moyenPaiementLabel }}
+                    </span>
+                    {% if ref != '—' %}
+                    <span style="color:#6c757d;">
+                        <twig:UX:Icon name="hugeicons:document-validation" style="width:11px;height:11px;" class="me-1" />
+                        Réf.&nbsp;:&nbsp;<strong>{{ ref }}</strong>
+                    </span>
+                    {% endif %}
+                </div>
+
+            </div>
+        </details>
+    {% endfor %}
+{% else %}
+    <p class="text-muted small mb-0 px-2 py-3 text-center">Aucune dépense enregistrée.</p>
+{% endif %}
