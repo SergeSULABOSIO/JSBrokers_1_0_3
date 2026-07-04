@@ -23,6 +23,9 @@ class PortefeuilleType extends AbstractType
                 'label' => "Gestionnaire de compte",
                 'placeholder' => "Désigner l'invité responsable",
                 'required' => true,
+                // Rend la liste déroulante sur <body> : sinon elle est tronquée par le
+                // conteneur défilant de la fiche (.form-column { overflow-y:auto }).
+                'tom_select_options' => ['dropdownParent' => 'body'],
             ])
             ->add('clients', ClientAutocompleteField::class, [
                 'label' => "Clients du portefeuille",
@@ -30,6 +33,7 @@ class PortefeuilleType extends AbstractType
                 'required' => false,
                 'multiple' => true,
                 'by_reference' => false,
+                'tom_select_options' => ['dropdownParent' => 'body'],
             ])
         ;
     }
