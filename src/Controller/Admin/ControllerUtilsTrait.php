@@ -21,6 +21,7 @@ use App\Entity\Entreprise;
 use App\Entity\Feedback;
 use App\Entity\Fournisseur;
 use App\Entity\Groupe;
+use App\Entity\Portefeuille;
 use App\Entity\Invite;
 use App\Entity\ModelePieceSinistre;
 use App\Entity\Monnaie;
@@ -1197,6 +1198,7 @@ trait ControllerUtilsTrait
             // PRODUCTION
             '_view_manager_production.html.twig' => [
                 Groupe::class => 'App\Controller\Admin\GroupeController::index',
+                Portefeuille::class => 'App\Controller\Admin\PortefeuilleController::index',
                 Client::class => 'App\Controller\Admin\ClientController::index',
                 Assureur::class => 'App\Controller\Admin\AssureurController::index',
                 Contact::class => 'App\Controller\Admin\ContactController::index',

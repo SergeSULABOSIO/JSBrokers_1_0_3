@@ -355,6 +355,23 @@ class PortefeuilleFilterTest extends WebTestCase
         $this->assertNull($survivor->getPortefeuille(), 'Le client doit être détaché du portefeuille supprimé.');
     }
 
+    public function testWorkspaceLoadsPortefeuilleComponent(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        // La rubrique « Portefeuilles » de l'espace de travail doit être routée vers son
+        // contrôleur (non-régression : « Action de contrôleur non trouvée pour Portefeuille »).
+        $this->client->request(
+            'GET',
+            sprintf('/espacedetravail/api/load-component/%d/%d', $owner->getId(), $e->getId()),
+            ['component' => '_view_manager_production.html.twig', 'entity' => 'Portefeuille']
+        );
+
+        $this->assertResponseIsSuccessful('La rubrique Portefeuilles doit être routée vers PortefeuilleController.');
+        $this->assertStringContainsString(self::PF_NOM, (string) $this->client->getResponse()->getContent(), 'La liste des portefeuilles doit contenir le portefeuille de test.');
+    }
+
     public function testRenewalsBlockShowsPortefeuilleAndGestionnaire(): void
     {
         ['entreprise' => $e] = $this->seed();
