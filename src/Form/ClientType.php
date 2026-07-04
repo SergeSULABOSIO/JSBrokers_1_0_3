@@ -77,6 +77,9 @@ class ClientType extends AbstractType
                 'label' => 'Portefeuille',
                 'placeholder' => 'Sélectionner un portefeuille',
                 'required' => false,
+                // Liste déroulante rendue sur <body> pour ne pas être tronquée par le
+                // conteneur défilant de la fiche (.form-column { overflow-y:auto }).
+                'tom_select_options' => ['dropdownParent' => 'body'],
             ])
             ->add('exonere', ChoiceType::class, [
                 'label' => "Exonéré de taxes ?",
