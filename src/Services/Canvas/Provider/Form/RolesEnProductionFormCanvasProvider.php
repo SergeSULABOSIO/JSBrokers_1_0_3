@@ -30,7 +30,7 @@ class RolesEnProductionFormCanvasProvider implements FormCanvasProviderInterface
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Droits d'accès — module Production",
-                "description" => "Vous définissez ce que ce collaborateur peut consulter et modifier sur le portefeuille de l'entreprise (groupes, clients, assureurs, contacts, risques, avenants, partenaires, cotations). Ces droits s'appliquent dès l'enregistrement : n'accordez que le nécessaire.",
+                "description" => "Vous définissez ce que ce collaborateur peut consulter et modifier sur le portefeuille de l'entreprise (groupes, clients, portefeuilles, assureurs, contacts, risques, avenants, partenaires, cotations). Ces droits s'appliquent dès l'enregistrement : n'accordez que le nécessaire.",
                 // Libellés des puces de contexte (rappel des champs masqués pré-remplis).
                 "facts_labels" => [
                     "nom"    => "Libellé du rôle",
@@ -41,6 +41,7 @@ class RolesEnProductionFormCanvasProvider implements FormCanvasProviderInterface
             "field_icons" => [
                 "accessGroupe"     => "groupe",
                 "accessClient"     => "client",
+                "accessPortefeuille" => "portefeuille",
                 "accessAssureur"   => "assureur",
                 "accessContact"    => "contact",
                 "accessRisque"     => "risque",
@@ -66,16 +67,20 @@ class RolesEnProductionFormCanvasProvider implements FormCanvasProviderInterface
             ["couleur_fond" => "white", "hidden" => true, "colonnes" => [["champs" => ["nom"]]]],
             ["couleur_fond" => "white", "hidden" => true, "colonnes" => [["champs" => ["invite"]]]],
             ["couleur_fond" => "white", "colonnes" => [
-                ["champs" => ["accessGroupe"]], 
-                ["champs" => ["accessClient"]], 
-                ["champs" => ["accessAssureur"]]
+                ["champs" => ["accessGroupe"]],
+                ["champs" => ["accessClient"]],
+                ["champs" => ["accessPortefeuille"]]
             ]],
             ["couleur_fond" => "white", "colonnes" => [
-                ["champs" => ["accessContact"]], 
-                ["champs" => ["accessRisque"]], 
-                ["champs" => ["accessAvenant"]]
+                ["champs" => ["accessAssureur"]],
+                ["champs" => ["accessContact"]],
+                ["champs" => ["accessRisque"]]
             ]],
-            ["couleur_fond" => "white", "colonnes" => [["champs" => ["accessPartenaire"]], ["champs" => ["accessCotation"]]]],
+            ["couleur_fond" => "white", "colonnes" => [
+                ["champs" => ["accessAvenant"]],
+                ["champs" => ["accessPartenaire"]],
+                ["champs" => ["accessCotation"]]
+            ]],
         ];
     }
 }

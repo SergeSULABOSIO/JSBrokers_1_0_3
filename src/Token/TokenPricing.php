@@ -10,6 +10,7 @@ use App\Entity\Entreprise;
 use App\Entity\Feedback;
 use App\Entity\Fournisseur;
 use App\Entity\Piste;
+use App\Entity\Portefeuille;
 use App\Entity\Tache;
 
 /**
@@ -36,6 +37,9 @@ final class TokenPricing
         Piste::class           => 20,
         Tache::class           => 10,
         Feedback::class        => 8,
+        // Portefeuille client (regroupement de clients par gestionnaire de compte) :
+        // entrée explicite pour figurer dans le plan tarifaire éditable, au poids standard.
+        Portefeuille::class    => 5,
         // Comptabilité du courtier (workspace) : entrées explicites pour figurer
         // dans le plan tarifaire éditable (console), au poids standard.
         ChargeCourtier::class  => 5,
