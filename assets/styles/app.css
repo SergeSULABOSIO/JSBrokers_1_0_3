@@ -1,10 +1,68 @@
 /* ================================================================== */
+/* SECTION 0: DESIGN TOKENS — CHARTE GRAPHIQUE JS BROKERS             */
+/* ------------------------------------------------------------------ */
+/* Source unique de la palette (skill charte-couleurs). Ces variables  */
+/* sont globales (Asset Mapper charge app.css + interactive-menu.css)  */
+/* et donc réutilisables dans tous les fichiers CSS du projet.         */
+/* NB : le :root des squelettes (--sk-*) reste défini plus bas, à part.*/
+/* ================================================================== */
+:root {
+  /* --- Marque (cobalt) --- */
+  --cobalt: #0047AB;
+  --cobalt-dark: #003380;
+  --cobalt-hover: #0a58ca;
+  --blue-primary: #0d6efd;
+
+  /* --- Surfaces sombres (col-1, barre de recherche, panneaux) --- */
+  --bg-dark: #212529;
+  --bg-dark-secondary: #343a40;
+  --bg-dark-hover: #495057;
+
+  /* --- Surfaces claires (col-2/3/4) --- */
+  --bg-white: #ffffff;
+  --bg-body: #f3f3f3;
+  --bg-light: #f8f9fa;
+  --bg-muted: #e9ecef;
+  --bg-cobalt-subtle: #e8f0fb;
+
+  /* --- Textes --- */
+  --text-dark: #212529;
+  --text-dark-secondary: #343a40;
+  --text-body: #495057;
+  --text-muted: #6c757d;
+  --text-label: #adb5bd;
+  --text-white: #ffffff;
+
+  /* --- Bordures & séparateurs --- */
+  --border-light: #dee2e6;
+  --border-medium: #ced4da;
+  --border-subtle: #e0e0e0;
+  --border-dark: #495057;
+
+  /* --- États sémantiques (retours utilisateur uniquement) --- */
+  --danger: #dc3545;
+  --danger-dark: #842029;
+  --danger-bg: #f8d7da;
+
+  /* --- Focus & échelle de finition (additifs, non colorimétriques) --- */
+  --cobalt-focus-ring: rgba(0, 71, 171, 0.35);
+  --cobalt-shadow: rgba(0, 71, 171, 0.25);
+  --overlay-dark: rgba(0, 0, 0, 0.65);
+  --overlay-light: rgba(248, 249, 250, 0.85);
+  --nav-radius: 10px;
+  --nav-radius-sm: 8px;
+  --nav-transition: 0.15s ease;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.10);
+}
+
+/* ================================================================== */
 /* SECTION 1: STYLES GLOBAUX ET UTILITAIRES DE BASE                   */
 /* ================================================================== */
 
 /* --- 1.1 Styles de base (body, liens) --- */
 body {
-    background-color: #f3f3f3;
+    background-color: var(--bg-body);
 }
 
 a:link {
@@ -1008,10 +1066,11 @@ thead.sticky-header {
     --description-panel-side-gap: 10px;   /* NOUVEAU : Espace latéral sans transparence */
     --description-panel-bottom-gap: 10px; /* NOUVEAU : Espace inférieur sans transparence */
     position: relative; /* Requis pour positionner l'overlay */
-    color: #ffffff; /* Texte en blanc pour contraster avec l'overlay */
+    color: var(--text-white); /* Texte en blanc pour contraster avec l'overlay */
     font-size: 0.95rem;
     line-height: 1.6;
-    border-radius: .375rem;
+    border-radius: var(--nav-radius);
+    box-shadow: var(--shadow-sm);
     padding: var(--description-panel-top-gap) var(--description-panel-side-gap) var(--description-panel-bottom-gap);
     margin-bottom: 1rem;
     overflow: hidden; /* Assure que l'overlay respecte les coins arrondis */
@@ -1031,7 +1090,7 @@ thead.sticky-header {
     left: var(--description-panel-side-gap);
     right: var(--description-panel-side-gap);
     bottom: var(--description-panel-bottom-gap);
-    background-color: rgba(0, 0, 0, 0.65); /* Fond noir avec 65% d'opacité */
+    background-color: var(--overlay-dark); /* Fond noir avec 65% d'opacité */
     z-index: 1; /* Se place entre le fond et le texte */
     transition: background-color 0.3s ease-in-out; /* NOUVEAU : Transition douce pour l'overlay */
 }
@@ -1046,25 +1105,25 @@ thead.sticky-header {
 }
 
 .description-panel strong {
-    color: #ffffff; /* Texte important en blanc pur */
+    color: var(--text-white); /* Texte important en blanc pur */
     transition: color 0.3s ease-in-out; /* NOUVEAU : Transition douce */
 }
 
 .description-panel em {
-    color: #e9ecef; /* Un gris très clair pour le texte moins important */
+    color: var(--bg-muted); /* Un gris très clair pour le texte moins important */
     font-style: normal;
     transition: color 0.3s ease-in-out; /* NOUVEAU : Transition douce */
 }
 
 /* --- NOUVEAU : Styles au survol de la souris --- */
 .description-panel:hover::before {
-    background-color: rgba(248, 249, 250, 0.85); /* Fond gris clair semi-transparent */
+    background-color: var(--overlay-light); /* Fond gris clair semi-transparent */
 }
 
 .description-panel:hover p,
 .description-panel:hover strong,
 .description-panel:hover em {
-    color: #212529; /* Texte noir pour une lisibilité maximale sur fond clair */
+    color: var(--text-dark); /* Texte noir pour une lisibilité maximale sur fond clair */
 }
 
 /* ================================================================== */

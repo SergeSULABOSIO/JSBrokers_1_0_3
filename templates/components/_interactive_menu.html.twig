@@ -22,28 +22,28 @@
     .ws-welcome-emoji {
         display: inline-flex; align-items: center; justify-content: center;
         width: 72px; height: 72px; border-radius: 50%;
-        background-color: #e8f0fb; color: #0047AB; margin-bottom: 1rem;
+        background-color: var(--bg-cobalt-subtle); color: var(--cobalt); margin-bottom: 1rem;
     }
-    .ws-welcome-title { font-size: 1.5rem; font-weight: 700; color: #212529; margin: 0 0 .5rem; }
-    .ws-welcome-intro { color: #6c757d; margin: 0 auto; max-width: 520px; }
+    .ws-welcome-title { font-size: 1.5rem; font-weight: 700; color: var(--text-dark); margin: 0 0 .5rem; }
+    .ws-welcome-intro { color: var(--text-muted); margin: 0 auto; max-width: 520px; }
     .ws-welcome-steps { display: flex; flex-direction: column; gap: .75rem; margin-bottom: 1.5rem; }
     .ws-step-card {
         display: flex; align-items: center; gap: 1rem; width: 100%; text-align: left;
-        padding: 1rem 1.15rem; border: 1px solid #dee2e6; border-radius: 12px;
-        background-color: #ffffff; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease, transform .1s ease;
+        padding: 1rem 1.15rem; border: 1px solid var(--border-light); border-radius: 12px;
+        background-color: var(--bg-white); cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease, transform .1s ease;
     }
-    .ws-step-card:hover { border-color: #0047AB; box-shadow: 0 4px 16px rgba(0, 71, 171, .12); transform: translateY(-1px); }
-    .ws-step-card:focus-visible { outline: none; border-color: #0047AB; box-shadow: 0 0 0 .25rem rgba(0, 71, 171, .35); }
+    .ws-step-card:hover { border-color: var(--cobalt); box-shadow: 0 4px 16px rgba(0, 71, 171, .12); transform: translateY(-1px); }
+    .ws-step-card:focus-visible { outline: none; border-color: var(--cobalt); box-shadow: 0 0 0 .25rem var(--cobalt-focus-ring); }
     .ws-step-num {
         flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
         width: 28px; height: 28px; border-radius: 50%;
-        background-color: #0047AB; color: #ffffff; font-weight: 700; font-size: .9rem;
+        background-color: var(--cobalt); color: var(--text-white); font-weight: 700; font-size: .9rem;
     }
-    .ws-step-icon { flex: 0 0 auto; color: #0047AB; display: inline-flex; }
+    .ws-step-icon { flex: 0 0 auto; color: var(--cobalt); display: inline-flex; }
     .ws-step-text { display: flex; flex-direction: column; gap: .15rem; }
-    .ws-step-text strong { color: #212529; font-size: 1rem; }
-    .ws-step-text span { color: #6c757d; font-size: .88rem; }
-    .ws-welcome-hint { text-align: center; color: #6c757d; font-size: .85rem; margin: 0; }
+    .ws-step-text strong { color: var(--text-dark); font-size: 1rem; }
+    .ws-step-text span { color: var(--text-muted); font-size: .88rem; }
+    .ws-welcome-hint { text-align: center; color: var(--text-muted); font-size: .85rem; margin: 0; }
 </style>
 <div
     {{ stimulus_controller('workspace-manager') }}
