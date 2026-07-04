@@ -5,7 +5,7 @@
   left: 0;
   width: 100%;
   height: 6px; /* [cite_start] [cite: 235] */
-  background-color: #0047AB;
+  background-color: var(--cobalt);
   display: none; /* [cite_start] [cite: 236] */
   z-index: 9999;
   animation: progress-animation 1.5s infinite linear;
@@ -41,10 +41,16 @@ html {
 .menu-col-1 {
   width: 130px; /* [cite_start] [cite: 191] */
   flex-shrink: 0;
-  background-color: #343a40;
+  background-color: var(--bg-dark-secondary);
   display: flex;
   flex-direction: column;
-  color: #e9ecef;
+  color: var(--bg-muted);
+}
+
+.menu-col-1 nav {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .menu-col-1-row-1 {
@@ -53,6 +59,9 @@ html {
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Séparateur discret entre le tableau de bord et les groupes */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.5rem 0.4rem;
 }
 
 .menu-col-1-row-2 {
@@ -61,8 +70,10 @@ html {
   flex-direction: column;
 
   flex-grow: 1; /* On conserve cette propriété pour que la zone s'étende. [cite: 201] */
+  min-height: 0; /* Autorise le défilement interne au lieu de pousser la colonne */
   overflow-y: auto; /* [cite_start] [cite: 201] */
-  padding: 20px 0;
+  padding: 16px 8px;
+  gap: 4px;
 }
 
 .menu-col-1-row-3 {
@@ -71,29 +82,60 @@ html {
 }
 
 .nav-item {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 15px 15px 15px 12px; /* Padding gauche ajusté pour la nouvelle bordure */
+  padding: 14px 10px;
   cursor: pointer;
   text-align: center;
+  border-radius: var(--nav-radius-sm);
 
-  /* --- AJOUT 1/3 : Style par défaut pour la bordure --- */
-  border-left: 8px solid transparent; /* Bordure transparente par défaut */
-  transition: border-color 0.2s ease-in-out; /* Transition douce pour la couleur de la bordure */
+  /* --- Indicateur actif : barre gauche arrondie via ::before --- */
+  border-left: none;
+  transition: background-color var(--nav-transition), color var(--nav-transition);
+}
+
+/* Barre indicatrice gauche (remplace l'ancienne border-left, coins arrondis) */
+.nav-item::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  transform: translateY(-50%) scaleY(0.4);
+  width: 4px;
+  height: 60%;
+  border-radius: 4px;
+  background-color: transparent;
+  opacity: 0;
+  transition: opacity var(--nav-transition), transform var(--nav-transition), background-color var(--nav-transition);
 }
 
 .nav-icon {
-  width: 30px;
-  height: 30px;
-  margin-bottom: 8px;
-  color: #e9ecef;
+  width: 28px;
+  height: 28px;
+  margin-bottom: 6px;
+  color: var(--bg-muted);
+  transition: color var(--nav-transition);
 }
 
 .nav-text {
-  font-size: 0.9rem;
-  color: #e9ecef;
+  font-size: 0.82rem;
+  line-height: 1.2;
+  color: var(--bg-muted);
+  transition: color var(--nav-transition);
+}
+
+/* --- Survol : léger fond + indicateur discret --- */
+.nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.nav-item:hover::before {
+  opacity: 1;
+  transform: translateY(-50%) scaleY(1);
+  background-color: var(--border-light);
 }
 
 .nav-item:hover .nav-icon,
@@ -102,21 +144,28 @@ html {
   font-weight: bold;
 }
 
-/* --- AJOUT 2/3 : Style pour la bordure au survol --- */
-.nav-item:hover {
-  border-left-color: #dee2e6;
+/* --- Focus clavier visible (WCAG 2.4.7) --- */
+.nav-item:focus-visible {
+  outline: none;
+  background-color: rgba(255, 255, 255, 0.10);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.55);
+}
+
+/* --- Sélection (rubrique active du tableau de bord) --- */
+.nav-item.active {
+  background-color: rgba(255, 255, 255, 0.10);
+}
+
+.nav-item.active::before {
+  opacity: 1;
+  transform: translateY(-50%) scaleY(1);
+  background-color: var(--text-white);
 }
 
 .nav-item.active .nav-icon,
 .nav-item.active .nav-text {
-  color: white;
+  color: var(--text-white);
   font-weight: bold;
-}
-
-/* --- AJOUT 3/3 : Style pour la bordure et le soulignement à la sélection --- */
-.nav-item.active {
-  border-left-color: white; /* Bordure blanche */
-  /* text-decoration: underline; Texte souligné */
 }
 
 /* NOUVEAU : Style pour l'élément de menu qui doit être aligné en bas. */
@@ -136,19 +185,25 @@ a.nav-item-bottom:hover {
 .nav-item-disabled,
 .nav-item-disabled:hover {
     cursor: not-allowed;
-    border-left-color: transparent;
+    background-color: transparent;
+}
+
+.nav-item-disabled::before,
+.nav-item-disabled:hover::before {
+    opacity: 0;
 }
 
 .nav-item-disabled .nav-icon,
 .nav-item-disabled .nav-text,
 .nav-item-disabled:hover .nav-icon,
 .nav-item-disabled:hover .nav-text {
-    color: #6c757d; /* gris muted — état désactivé */
+    color: var(--text-muted); /* gris muted — état désactivé */
     font-weight: normal;
 }
 
 /* Lien de déconnexion : la classe .nav-item est conçue pour des <div>, on neutralise
-   la décoration du lien <a> et on applique la couleur dédiée #ff7676. */
+   la décoration du lien <a> et on applique la couleur dédiée #ff7676 (rouge clair
+   volontaire pour un contraste suffisant sur le fond sombre). */
 .nav-item-logout,
 .nav-item-logout:hover {
     text-decoration: none;
@@ -160,31 +215,39 @@ a.nav-item-bottom:hover {
 }
 
 /* Au survol, on éclaircit vers #ffc3c3 (override du gris clair hérité de .nav-item)
-   et on accorde la bordure gauche à cette même couleur. */
+   et on accorde l'indicateur gauche à cette même couleur. */
 .nav-item-logout:hover .nav-icon,
 .nav-item-logout:hover .nav-text {
     color: #ffc3c3;
     font-weight: bold;
 }
 
-.nav-item-logout:hover {
-    border-left-color: #ffc3c3;
+.nav-item-logout:hover::before {
+    opacity: 1;
+    transform: translateY(-50%) scaleY(1);
+    background-color: #ffc3c3;
 }
 
 /* NOUVEAU : Style pour le groupe qui contient la rubrique active.
    Ce style est persistant et doit prévaloir sur les autres états. */
 .nav-item.group-active {
-    border-left-color: #0047AB;
+    background-color: rgba(0, 71, 171, 0.18);
+}
+
+.nav-item.group-active::before {
+    opacity: 1;
+    transform: translateY(-50%) scaleY(1);
+    background-color: var(--cobalt);
 }
 
 .nav-item.group-active .nav-icon,
 .nav-item.group-active .nav-text {
-    color: white;
+    color: var(--text-white);
     font-weight: bold;
 }
 
-.nav-item.group-active:hover {
-    border-left-color: #0052ff; /* Reste bleu cobalt au survol */
+.nav-item.group-active:hover::before {
+    background-color: var(--cobalt-hover); /* Reste bleu cobalt au survol */
 }
 
 
@@ -192,22 +255,23 @@ a.nav-item-bottom:hover {
 .menu-col-2 {
   min-width: 350px; /* Example width */
   max-width: 350px;
-  background-color: #f8f9fa;
-  color: #343a40;
+  background-color: var(--bg-light);
+  color: var(--text-dark-secondary);
   display: flex;
   flex-direction: column;
   height: 100vh;
+  border-right: 1px solid var(--border-light);
 }
 
 .menu-col-2-row-1 {
   flex-shrink: 0;
-  padding: 0.5rem 1rem;
+  padding: 0.65rem 1rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  border-bottom: 1px solid #dee2e6;
+  border-bottom: 1px solid var(--border-light);
 }
 
 /* Logo + nom alignés sur une seule ligne pour une marque compacte */
@@ -227,30 +291,34 @@ a.nav-item-bottom:hover {
 /* Carte d'identité de l'entreprise courante */
 .menu-col-2-company {
   flex-shrink: 0;
+  margin: 0.85rem 1rem;
   padding: 1rem;
   text-align: center;
-  border-bottom: 1px solid #dee2e6;
+  background-color: var(--bg-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--nav-radius);
+  box-shadow: var(--shadow-sm);
 }
 
 .company-card-logo {
   width: 64px;
   height: 64px;
   object-fit: cover;
-  border-radius: 8px;
-  border: 1px solid #dee2e6;
+  border-radius: var(--nav-radius-sm);
+  border: 1px solid var(--border-light);
   margin-bottom: 0.5rem;
 }
 
 .company-card-name {
   font-size: 1.05rem;
   font-weight: 600;
-  color: #343a40;
+  color: var(--text-dark-secondary);
   margin: 0 0 0.25rem;
 }
 
 .company-card-address {
   font-size: 0.8rem;
-  color: #495057;
+  color: var(--text-body);
   margin: 0 0 0.75rem;
   line-height: 1.35;
 }
@@ -265,8 +333,8 @@ a.nav-item-bottom:hover {
   justify-content: space-between;
   align-items: baseline;
   gap: 0.5rem;
-  padding: 0.2rem 0;
-  border-top: 1px solid #f1f3f5;
+  padding: 0.3rem 0;
+  border-top: 1px solid var(--bg-light);
 }
 
 .company-card-line dt {
@@ -274,13 +342,13 @@ a.nav-item-bottom:hover {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  color: #0047AB;
+  color: var(--cobalt);
   flex-shrink: 0;
 }
 
 .company-card-line dd {
   font-size: 0.8rem;
-  color: #343a40;
+  color: var(--text-dark-secondary);
   margin: 0;
   text-align: right;
   word-break: break-word;
@@ -294,12 +362,12 @@ a.nav-item-bottom:hover {
 .company-title {
   font-size: 1.1rem;
   font-weight: bold;
-  color: #343a40;
+  color: var(--text-dark-secondary);
   margin: 0;
 }
 
 .company-description {
-  color: #495057;
+  color: var(--text-body);
   margin: 0.25rem 0 0;
   font-size: 0.75rem;
   line-height: 1.3;
@@ -308,13 +376,14 @@ a.nav-item-bottom:hover {
 .company-version {
   display: inline-block;
   font-size: 0.75rem;
-  color: #6c757d;
+  color: var(--text-muted);
   margin-top: 0.35rem;
   text-decoration: none;
+  transition: color var(--nav-transition);
 }
 
 a.company-version:hover {
-  color: #0047AB;
+  color: var(--cobalt);
   text-decoration: underline;
 }
 
@@ -322,31 +391,64 @@ a.company-version:hover {
   flex-grow: 1; /* [cite_start] [cite: 223] */
   overflow-y: auto; /* [cite_start] [cite: 223] */
   min-height: 0; /* Indispensable : permet le scroll de l'enfant flex au lieu de pousser la colonne */
+  padding: 0.5rem 0;
 }
 
 /* Style des rubriques dans la colonne 2 */
-.rubriques-list,
-.rubrique-item {
-  padding: 0 1rem;
+.rubriques-list {
+  padding: 0 0.75rem;
 }
 .rubrique-item {
+  position: relative;
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  min-height: 44px; /* Cible cliquable confortable (WCAG 2.5.5) */
+  padding: 10px 14px;
   cursor: pointer;
-  border-radius: 8px;
-  margin: 4px 0;
-  color: #343a40;
+  border-radius: var(--nav-radius-sm);
+  margin: 3px 0;
+  color: var(--text-dark-secondary);
+  transition: background-color var(--nav-transition), color var(--nav-transition), box-shadow var(--nav-transition);
 }
 .rubrique-icon {
   width: 18px; /* [cite_start] [cite: 226] */
   height: 18px; /* [cite_start] [cite: 226] */
   margin-right: 12px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: color var(--nav-transition);
 }
-.rubrique-item:hover,
+.rubrique-item:hover {
+  background-color: var(--bg-cobalt-subtle);
+  color: var(--cobalt);
+}
+.rubrique-item:hover .rubrique-icon {
+  color: var(--cobalt);
+}
+.rubrique-item:focus-visible {
+  outline: none;
+  background-color: var(--bg-cobalt-subtle);
+  box-shadow: 0 0 0 2px var(--cobalt-focus-ring);
+}
 .rubrique-item.active {
-  font-weight: bold;
-  background-color: #e9ecef;
+  font-weight: 700;
+  background-color: var(--bg-cobalt-subtle);
+  color: var(--cobalt);
+}
+.rubrique-item.active .rubrique-icon {
+  color: var(--cobalt);
+}
+/* Accent gauche cobalt sur la rubrique active (indice non colorimétrique = poids + accent) */
+.rubrique-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  border-radius: 3px;
+  background-color: var(--cobalt);
 }
 
 /* Colonne 3 : Espace de travail */
@@ -364,11 +466,13 @@ a.company-version:hover {
   display: flex;
   flex-direction: row;
   overflow-x: auto;
-  background-color: #f0f2f5;
-  border-bottom: 2px solid #dee2e6;
+  background-color: var(--bg-light);
+  border-bottom: 1px solid var(--border-light);
   min-height: 44px;
   align-items: flex-end;
   flex-shrink: 0;
+  gap: 2px;
+  padding: 6px 8px 0;
   scrollbar-width: thin;
 }
 
@@ -380,31 +484,36 @@ a.company-version:hover {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px 6px;
-  background-color: #e2e5ea;
-  border: none;
-  border-top: 2px solid transparent;
-  border-right: 1px solid #dee2e6;
+  padding: 8px 14px 7px;
+  background-color: var(--bg-muted);
+  border: 1px solid transparent;
+  border-bottom: none;
   cursor: pointer;
   font-size: 0.82rem;
-  color: #6c757d;
+  color: var(--text-muted);
   white-space: nowrap;
   user-select: none;
-  border-radius: 4px 4px 0 0;
-  transition: background-color 0.15s, color 0.15s;
+  border-radius: var(--nav-radius-sm) var(--nav-radius-sm) 0 0;
+  transition: background-color var(--nav-transition), color var(--nav-transition), box-shadow var(--nav-transition);
   max-width: 200px;
   font-family: inherit;
 }
 
 .workspace-tab-item:hover {
   background-color: #d0d5dd;
-  color: #343a40;
+  color: var(--text-dark-secondary);
+}
+
+.workspace-tab-item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--cobalt-focus-ring);
 }
 
 .workspace-tab-item.active {
-  background-color: #ffffff;
-  border-top: 2px solid #0047AB;
-  color: #0047AB;
+  background-color: var(--bg-white);
+  border-color: var(--border-light);
+  box-shadow: inset 0 2px 0 0 var(--cobalt);
+  color: var(--cobalt);
   font-weight: 600;
 }
 
@@ -438,21 +547,26 @@ a.company-version:hover {
 .workspace-tab-close svg {
   width: 14px;
   height: 14px;
-  color: #adb5bd;
-  transition: color 0.15s;
+  color: var(--text-label);
+  transition: color var(--nav-transition);
 }
 
 .workspace-tab-item:hover .workspace-tab-close svg,
 .workspace-tab-item.active .workspace-tab-close svg {
-  color: #6c757d;
+  color: var(--text-muted);
 }
 
 .workspace-tab-close:hover {
-  background-color: #f8d7da;
+  background-color: var(--danger-bg);
 }
 
 .workspace-tab-close:hover svg {
-  color: #842029;
+  color: var(--danger-dark);
+}
+
+.workspace-tab-close:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--cobalt-focus-ring);
 }
 
 /* --- Zone de panneaux col-3 --- */
@@ -477,26 +591,29 @@ a.company-version:hover {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #6c757d;
+  color: var(--text-muted);
   font-size: 1.2rem;
 }
 
 .menu-col-1 ::-webkit-scrollbar-track {
-  background: #343a40;
+  background: var(--bg-dark-secondary);
 }
 .menu-col-1 ::-webkit-scrollbar-thumb {
-  background: #e9ecef;
+  background: var(--bg-dark-hover);
+  border-radius: 4px;
 }
 /* Style pour la zone de description dans la colonne 2 */
 .description-wrapper {
-  padding: 2rem;
-  margin: 1.5rem;
-  background-color: rgba(0, 0, 0, 0.02); /* Fond très subtil */
-  border-left: 4px solid #ced4da;
-  color: #495057;
+  padding: 1.5rem;
+  margin: 1rem;
+  background-color: var(--bg-white); /* Carte claire posée sur le fond de colonne */
+  border: 1px solid var(--border-light);
+  border-left: 4px solid var(--cobalt);
+  color: var(--text-body);
   font-size: 0.95rem;
   line-height: 1.6; /* Hauteur de ligne pour une meilleure lisibilité */
-  border-radius: 0 8px 8px 0; /* Coins arrondis */
+  border-radius: var(--nav-radius-sm); /* Coins arrondis */
+  box-shadow: var(--shadow-sm);
 
   /* NOUVEAU : Animation d'apparition pour un effet de chargement subtil */
   animation: fadeInDescription 0.4s ease-in-out;
@@ -525,7 +642,7 @@ a.company-version:hover {
 
 /* NOUVEAU : Style pour le texte en gras (la partie "indispensable") pour plus d'impact */
 .description-wrapper strong {
-    color: #212529;
+    color: var(--text-dark);
     font-weight: 700;
 }
 
@@ -536,9 +653,9 @@ a.company-version:hover {
   min-width: 450px; /* Largeur doublée pour une meilleure visibilité */
   max-width: 450px;
   height: 100%; /* [cite: 29] */
-  background-color: #f8f9fa;
-  color: #343a40;
-  /* border-left: 1px solid #ccc; */
+  background-color: var(--bg-light);
+  color: var(--text-dark-secondary);
+  border-left: 1px solid var(--border-light);
   font-size: 0.9em; /* Texte légèrement plus petit [cite: 30] */
 }
 
@@ -555,7 +672,10 @@ a.company-version:hover {
   flex-shrink: 0;
   overflow-x: auto;
   white-space: nowrap; /* Empêche les onglets de passer à la ligne pour activer le défilement. */
-  border-bottom: 2px solid #dee2e6;
+  background-color: var(--bg-light);
+  border-bottom: 1px solid var(--border-light);
+  gap: 2px;
+  padding: 6px 8px 0;
 }
 
 .menu-col-4 .tab-content-container {
@@ -570,18 +690,30 @@ a.company-version:hover {
   align-items: center;
   padding: 8px 12px;
   cursor: pointer;
-  border-right: 1px solid #dee2e6;
-  background-color: #e9ecef;
+  border: 1px solid transparent;
+  border-bottom: none;
+  background-color: var(--bg-muted);
+  border-radius: var(--nav-radius-sm) var(--nav-radius-sm) 0 0;
+  color: var(--text-muted);
   white-space: nowrap;
+  transition: background-color var(--nav-transition), color var(--nav-transition), box-shadow var(--nav-transition);
 }
 
 .tab-item:hover {
-  background-color: #dee2e6;
+  background-color: #d0d5dd;
+  color: var(--text-dark-secondary);
+}
+
+.tab-item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--cobalt-focus-ring);
 }
 
 .tab-item.active {
-  background-color: #f8f9fa;
-  border-bottom: 2px solid transparent;
+  background-color: var(--bg-white);
+  border-color: var(--border-light);
+  box-shadow: inset 0 2px 0 0 var(--cobalt);
+  color: var(--cobalt);
 }
 
 .tab-item.active .tab-item-icon,
@@ -612,16 +744,21 @@ a.company-version:hover {
 .tab-item-close svg {
   width: 16px;
   height: 16px;
-  color: #dc3545;
+  color: var(--danger);
   transition: color 0.2s ease;
 }
 
 .tab-item-close:hover {
-  background-color: #f8d7da;
+  background-color: var(--danger-bg);
 }
 
 .tab-item-close:hover svg {
-  color: #842029;
+  color: var(--danger-dark);
+}
+
+.tab-item-close:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--cobalt-focus-ring);
 }
 
 /* Le contenu d'un onglet INACTIF (uniquement dans la colonne 4) */
@@ -646,11 +783,11 @@ a.company-version:hover {
 
 /* --- Styles pour l'accordéon --- */
 .accordion-item {
-  border: 1px solid #dee2e6;
-  border-radius: 6px; /* Bordures arrondies pour l'ensemble */
+  border: 1px solid var(--border-light);
+  border-radius: var(--nav-radius-sm); /* Bordures arrondies pour l'ensemble */
   margin-bottom: 8px; /* Espace entre les éléments de l'accordéon */
   overflow: hidden; /* Assure que le contenu ne dépasse pas les coins arrondis */
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Ombre légère pour un effet de profondeur */
+  box-shadow: var(--shadow-sm); /* Ombre légère pour un effet de profondeur */
 }
 
 /* Le titre cliquable de l'accordéon */
@@ -658,17 +795,22 @@ a.company-version:hover {
   display: flex; /* Permet d'aligner le titre et l'icône '+' */
   justify-content: flex-start;
   align-items: center; /* Centre verticalement les éléments */
-  background-color: #e9ecef;
-  color: #212529;
+  background-color: var(--bg-muted);
+  color: var(--text-dark);
   font-weight: bold;
-  padding: 5px 5px;
+  padding: 8px 10px;
   cursor: pointer;
   transition: background-color 0.2s ease; /* Transition douce pour le survol */
 }
 
 /* Effet au survol de la souris */
 .accordion-title:hover {
-  background-color: #dee2e6;
+  background-color: var(--border-light);
+}
+
+.accordion-title:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--cobalt-focus-ring);
 }
 
 .accordion-toggle {
@@ -681,8 +823,8 @@ a.company-version:hover {
 /* Le contenu de l'accordéon (panneau qui se déplie) */
 .accordion-content {
   padding: 0 15px; /* Padding horizontal, le vertical sera géré par l'animation */
-  background-color: #f8f9fa;
-  border-top: 1px solid #dee2e6;
+  background-color: var(--bg-white);
+  border-top: 1px solid var(--border-light);
 
   /* Propriétés pour l'animation de dépliage */
   max-height: 0;
@@ -703,18 +845,18 @@ a.company-version:hover {
 
 /* Le fond de la barre (la piste) */
 .tab-header::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--bg-light);
 }
 
 /* La partie mobile de la barre (le curseur) */
 .tab-header::-webkit-scrollbar-thumb {
-  background: #adb5bd;
+  background: var(--text-label);
   border-radius: 5px;
 }
 
 /* Le curseur au survol de la souris */
 .tab-header::-webkit-scrollbar-thumb:hover {
-  background: #6c757d;
+  background: var(--text-muted);
 }
 
 /* Style pour la liste numérotée des collections dans l'accordéon */
@@ -727,7 +869,7 @@ a.company-version:hover {
 
 .accordion-collection-list li {
   padding: 8px 0;
-  border-bottom: 1px solid #dee2e6;
+  border-bottom: 1px solid var(--border-light);
   font-size: 0.95em;
 }
 
@@ -738,15 +880,21 @@ a.company-version:hover {
 }
 
 .accordion-collection-list li a {
-  color: #0047AB;
+  color: var(--cobalt);
   text-decoration: none;
   font-weight: 500;
   transition: color 0.2s ease;
 }
 
 .accordion-collection-list li a:hover {
-  color: #003380;
+  color: var(--cobalt-dark);
   text-decoration: underline;
+}
+
+.accordion-collection-list li a:focus-visible {
+  outline: none;
+  border-radius: 3px;
+  box-shadow: 0 0 0 2px var(--cobalt-focus-ring);
 }
 
 /* Style pour la liste clé-valeur dans l'accordéon */
@@ -760,7 +908,7 @@ a.company-version:hover {
   display: flex;
   justify-content: space-between;
   padding: 6px 0;
-  border-bottom: 1px solid #e9e9e9;
+  border-bottom: 1px solid var(--bg-muted);
   font-size: 0.95em;
 }
 
@@ -769,7 +917,7 @@ a.company-version:hover {
 }
 
 .accordion-key-value-list li strong {
-  color: #495057;
+  color: var(--text-body);
   margin-right: 15px;
 }
 
@@ -790,9 +938,15 @@ a.company-version:hover {
   display: flex;
   align-items: center;
   padding: 8px 12px;
-  background-color: #343a40;
+  background-color: var(--bg-dark-secondary);
   border-radius: 25px;
   margin-bottom: 10px;
+  transition: box-shadow var(--nav-transition);
+}
+
+/* Focus clavier sur la barre de recherche (le champ n'a pas de bordure propre) */
+.accordion-search-bar:focus-within {
+  box-shadow: 0 0 0 3px var(--cobalt-focus-ring);
 }
 
 .accordion-search-bar .search-icon {
@@ -847,6 +1001,12 @@ a.company-version:hover {
   stroke-width: 10;
 }
 
+.accordion-search-bar .icon-button:focus-visible {
+  outline: none;
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.65);
+}
+
 .accordion-search-bar .separator {
   width: 2px;
   height: 22px;
@@ -857,8 +1017,8 @@ a.company-version:hover {
 
 /* Style pour le texte surligné dans les résultats */
 .search-highlight {
-  background-color: #0047AB;
-  color: white;
+  background-color: var(--cobalt);
+  color: var(--text-white);
   padding: 0 2px;
   border-radius: 3px;
 }
@@ -867,11 +1027,42 @@ a.company-version:hover {
 .no-results-message {
   padding: 20px;
   text-align: center;
-  color: #6c757d;
+  color: var(--text-muted);
   font-style: italic;
 }
 
 /* --- NOUVEAU : Styles pour le bouton "Ajouter" de l'accordéon collection --- */
 .collection-manager-accordion.is-disabled .title-right-block {
   display: none; /* Complètement caché et ne prend pas de place en mode désactivé */
+}
+
+/* --- Accessibilité : respect de la préférence « animations réduites » (WCAG 2.3.3) ---
+   Neutralise les transitions/animations décoratives ajoutées à la navigation pour les
+   utilisateurs sensibles au mouvement, sans changer aucun comportement fonctionnel. */
+@media (prefers-reduced-motion: reduce) {
+  .nav-item,
+  .nav-item::before,
+  .nav-icon,
+  .nav-text,
+  .rubrique-item,
+  .rubrique-icon,
+  .company-version,
+  .workspace-tab-item,
+  .workspace-tab-close,
+  .workspace-tab-close svg,
+  .tab-item,
+  .tab-item-close,
+  .tab-item-close svg,
+  .accordion-title,
+  .accordion-content,
+  .accordion-toggle,
+  .accordion-search-bar,
+  .menu-col-3 {
+    transition: none !important;
+  }
+
+  .description-wrapper,
+  .progress-bar {
+    animation: none !important;
+  }
 }
