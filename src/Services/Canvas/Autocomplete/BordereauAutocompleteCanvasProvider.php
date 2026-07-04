@@ -56,7 +56,7 @@ class BordereauAutocompleteCanvasProvider
 
         // 3. Construction du HTML
         return sprintf(
-            '<div class="jsb-autocomplete-item" style="background-color: #ffffff;">
+            '<div class="jsb-autocomplete-item">
                 <div class="jsb-autocomplete-title">%s <span class="jsb-autocomplete-title-suffix">(Réf: %s)</span></div>
                 <div class="jsb-autocomplete-context">
                     <span>Assureur: <strong>%s</strong></span>

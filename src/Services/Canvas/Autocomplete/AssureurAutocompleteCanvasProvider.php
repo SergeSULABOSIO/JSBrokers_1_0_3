@@ -33,7 +33,7 @@ class AssureurAutocompleteCanvasProvider
 
         // 3. Construction du HTML
         return sprintf(
-            '<div class="jsb-autocomplete-item" style="background-color: #ffffff;">
+            '<div class="jsb-autocomplete-item">
                 <div class="jsb-autocomplete-title">%s</div>
                 <div class="jsb-autocomplete-context">
                     <span>Email: <strong>%s</strong></span>
