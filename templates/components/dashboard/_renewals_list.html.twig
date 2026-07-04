@@ -49,7 +49,9 @@
         {% set clientNom   = avenant.cotation.piste.client.nom ?? '—' %}
         {% set assureurNom = avenant.cotation.assureur.nom ?? '—' %}
         {% set risqueNom   = avenant.cotation.piste.risque.nomComplet ?? '—' %}
-        {% set searchText  = (clientNom ~ '|' ~ assureurNom ~ '|' ~ risqueNom)|lower %}
+        {% set portefeuille = avenant.cotation.piste.client.portefeuille ?? null %}
+        {% set gestionnaireNom = portefeuille ? (portefeuille.gestionnaire.nom ?? portefeuille.gestionnaire.utilisateur.email ?? '') : '' %}
+        {% set searchText  = (clientNom ~ '|' ~ assureurNom ~ '|' ~ risqueNom ~ '|' ~ (portefeuille ? portefeuille.nom : '') ~ '|' ~ gestionnaireNom)|lower %}
 
         <details class="db-ass-details db-renew-item"
                  data-group="{{ group }}"
@@ -64,17 +66,32 @@
                      style="width:26px;height:26px;background:{{ urgencyColor }};flex-shrink:0;">
                     <twig:UX:Icon name="fluent:document-edit-16-regular" style="width:13px;height:13px;" />
                 </div>
-                <span class="small fw-semibold flex-grow-1 text-truncate"
-                      style="color:#212529;"
-                      data-renew-tip
-                      data-renew-prime="{{ avenant.primeTotale is not null ? avenant.primeTotale|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : '—' }}"
-                      data-renew-comm="{{ avenant.montantTTC is not null ? avenant.montantTTC|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : '—' }}"
-                      data-renew-retro="{{ avenant.retroCommission is not null ? avenant.retroCommission|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : '—' }}"
-                      data-renew-reserve="{{ avenant.reserve is not null ? avenant.reserve|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : '—' }}"
-                      data-renew-periode="{{ avenant.startingAt|date('d/m/Y') }} – {{ avenant.endingAt|date('d/m/Y') }}"
-                      data-renew-risque="{{ risqueNom }}"
-                      data-renew-assureur="{{ assureurNom }}"
-                      data-renew-piste="{{ avenant.pisteDeRenouvellement ? avenant.pisteDeRenouvellement.nom : '' }}">{{ clientNom }}</span>
+                <div class="d-flex flex-column flex-grow-1" style="min-width:0;">
+                    <span class="small fw-semibold text-truncate"
+                          style="color:#212529;"
+                          data-renew-tip
+                          data-renew-prime="{{ avenant.primeTotale is not null ? avenant.primeTotale|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : '—' }}"
+                          data-renew-comm="{{ avenant.montantTTC is not null ? avenant.montantTTC|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : '—' }}"
+                          data-renew-retro="{{ avenant.retroCommission is not null ? avenant.retroCommission|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : '—' }}"
+                          data-renew-reserve="{{ avenant.reserve is not null ? avenant.reserve|number_format(0, ',', ' ') ~ ' ' ~ deviseCode : '—' }}"
+                          data-renew-periode="{{ avenant.startingAt|date('d/m/Y') }} – {{ avenant.endingAt|date('d/m/Y') }}"
+                          data-renew-risque="{{ risqueNom }}"
+                          data-renew-assureur="{{ assureurNom }}"
+                          data-renew-portefeuille="{{ portefeuille ? portefeuille.nom : 'Sans portefeuille' }}"
+                          data-renew-gestionnaire="{{ gestionnaireNom }}"
+                          data-renew-piste="{{ avenant.pisteDeRenouvellement ? avenant.pisteDeRenouvellement.nom : '' }}">{{ clientNom }}</span>
+                    {% if portefeuille %}
+                        <span class="text-truncate" style="font-size:.62rem;color:#0047AB;" title="Portefeuille : {{ portefeuille.nom }}{% if gestionnaireNom %} — Gestionnaire : {{ gestionnaireNom }}{% endif %}">
+                            <twig:UX:Icon name="mdi:briefcase-account" style="width:10px;height:10px;" class="me-1" />
+                            {{ portefeuille.nom }}{% if gestionnaireNom %} · {{ gestionnaireNom }}{% endif %}
+                        </span>
+                    {% else %}
+                        <span class="text-truncate" style="font-size:.62rem;color:#adb5bd;font-style:italic;" title="Ce client n'est rattaché à aucun portefeuille">
+                            <twig:UX:Icon name="mdi:briefcase-off-outline" style="width:10px;height:10px;" class="me-1" />
+                            Sans portefeuille
+                        </span>
+                    {% endif %}
+                </div>
                 <span class="text-muted" style="font-size:.62rem;flex-shrink:0;white-space:nowrap;">
                     {{ avenant.startingAt|date('d/m/Y') }} – {{ avenant.endingAt|date('d/m/Y') }}
                 </span>

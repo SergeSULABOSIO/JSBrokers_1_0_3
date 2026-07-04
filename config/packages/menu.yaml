@@ -59,6 +59,7 @@ parameters:
                     description: "<p>Centralisez la gestion de vos polices, clients et partenaires. De la cotation à l'avenant, tout est à portée de clic.</p><p>Simplifiez vos opérations quotidiennes et offrez un service client réactif. Votre production devient fluide, rapide et sans erreur.</p><p><strong>L'excellence opérationnelle en production est le cœur de votre métier. Elle fidélise vos clients et renforce votre réputation.</strong></p>"
                     rubriques:
                         "Groupes": { icone: 'groupe', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Groupe' }
+                        "Portefeuilles": { icone: 'portefeuille', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Portefeuille' }
                         "Clients": { icone: 'client', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Client' }
                         'Assureurs': { icone: 'assureur', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Assureur' }
                         "Contacts": { icone: 'contact', composant_twig: '_view_manager_production.html.twig', entity_name: 'App\Entity\Contact' }

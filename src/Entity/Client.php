@@ -73,6 +73,15 @@ class Client
     #[Groups(['list:read'])]
     private ?Groupe $groupe = null;
 
+    // cascade persist (sans remove) : quand un portefeuille est créé/édité depuis sa
+    // fiche et se voit rattacher des clients (côté propriétaire de la relation), un
+    // flush intermédiaire ne doit pas échouer sur un portefeuille pas encore persisté.
+    // onDelete SET NULL : supprimer un portefeuille DÉTACHE ses clients (ne les supprime pas).
+    #[ORM\ManyToOne(inversedBy: 'clients', cascade: ['persist'])]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    #[Groups(['list:read'])]
+    private ?Portefeuille $portefeuille = null;
+
     /**
      * @var Collection<int, Note>
      */
@@ -412,6 +421,18 @@ class Client
     public function setGroupe(?Groupe $groupe): static
     {
         $this->groupe = $groupe;
+
+        return $this;
+    }
+
+    public function getPortefeuille(): ?Portefeuille
+    {
+        return $this->portefeuille;
+    }
+
+    public function setPortefeuille(?Portefeuille $portefeuille): static
+    {
+        $this->portefeuille = $portefeuille;
 
         return $this;
     }
