@@ -344,7 +344,9 @@ class WorkspaceFournisseurTest extends WebTestCase
         $this->assertResponseIsSuccessful();
         $this->assertSame('', trim((string) $this->client->getResponse()->getContent()), 'Le bloc Dépenses doit être vide pour un invité hors périmètre.');
 
-        // Propriétaire : la dépense remonte, avec le tiers et le montant en sortie.
+        // Propriétaire : la dépense remonte, avec le tiers et le montant en sortie,
+        // l'infobulle qui suit le curseur (data-dep-tip) et le menu contextuel
+        // (clic droit → ajouter / modifier / supprimer).
         $this->client->loginUser($this->user(self::OWNER_EMAIL));
         $this->client->request('GET', $url);
         $this->assertResponseIsSuccessful();
@@ -352,11 +354,21 @@ class WorkspaceFournisseurTest extends WebTestCase
         $this->assertStringContainsString('GBS Internet', $html, 'La dépense doit afficher son fournisseur.');
         $this->assertStringContainsString('db-dep-list', $html, 'Le conteneur de liste (auto-refresh) doit être présent.');
         $this->assertStringContainsString('depenses-fragment', $html, "L'URL de rafraîchissement doit être déclarée.");
+        $this->assertStringContainsString('data-dep-tip', $html, "L'infobulle qui suit le curseur doit être posée sur chaque dépense.");
+        $this->assertStringContainsString('dbDepCtxOpen(event,this)', $html, 'Le clic droit doit ouvrir le menu contextuel de la dépense.');
+        $this->assertStringContainsString('id="dbDepCtxMenu"', $html, 'Le menu contextuel dépense doit être présent.');
+        $this->assertStringContainsString('Ajouter une dépense', $html);
+        $this->assertStringContainsString('Modifier la dépense', $html);
+        $this->assertStringContainsString('db-dep-csrf', $html, 'Le jeton CSRF de suppression doit être présent.');
 
-        // Fragment de rafraîchissement (miroir encaissements-fragment) : rend les lignes.
+        // Fragment de rafraîchissement (miroir encaissements-fragment) : rend les lignes
+        // avec leurs data-attributs de menu contextuel.
         $this->client->request('GET', sprintf('/admin/entreprise_dashbord/depenses-fragment/%d', $e->getId()));
         $this->assertResponseIsSuccessful();
-        $this->assertStringContainsString('GBS Internet', (string) $this->client->getResponse()->getContent());
+        $fragment = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('GBS Internet', $fragment);
+        $this->assertStringContainsString('data-dep-id', $fragment, 'Chaque ligne doit porter son identifiant pour le menu contextuel.');
+        $this->assertStringContainsString('oncontextmenu', $fragment);
 
         // Le tableau de bord du propriétaire embarque le bloc (gate Twig).
         $this->client->request('GET', sprintf('/admin/entreprise_dashbord/workspace/%d', $e->getId()));

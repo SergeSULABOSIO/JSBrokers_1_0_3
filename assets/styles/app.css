@@ -3514,6 +3514,31 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 #db-cash-tip .tip-solde-due { color:#f87171; }
 #db-cash-tip .tip-sinistre  { color:#f87171; font-style:italic; font-weight:400; }
 
+/* ── Infobulle dépenses (data-dep-tip) — calquée sur data-cash-tip ── */
+#db-dep-tip {
+    position:fixed; z-index:9999; pointer-events:none;
+    background:#212529; color:#fff;
+    padding:8px 14px; border-radius:9px;
+    font-size:.68rem;
+    box-shadow:0 4px 18px rgba(0,0,0,.45);
+    display:none;
+    max-width:290px;
+}
+#db-dep-tip table { border-collapse:collapse; width:100%; min-width:230px; }
+#db-dep-tip td { padding:3px 0; vertical-align:top; overflow-wrap:anywhere; }
+#db-dep-tip tr + tr td:not(.tip-section) { border-top:1px solid rgba(255,255,255,.06); }
+#db-dep-tip td.tip-section {
+    color:rgba(255,255,255,.38); font-size:.58rem;
+    text-transform:uppercase; letter-spacing:.09em;
+    padding-top:8px; padding-bottom:2px;
+    border-top:1px solid rgba(255,255,255,.13) !important;
+}
+#db-dep-tip tr:first-child td.tip-section { padding-top:0; border-top:none !important; }
+#db-dep-tip td:first-child:not(.tip-section) { color:#9aa5b4; padding-right:16px; white-space:nowrap; }
+#db-dep-tip td:last-child:not(.tip-section) { text-align:right; font-weight:600; letter-spacing:.02em; }
+#db-dep-tip .tip-ttc { color:#f87171; }
+#db-dep-tip .tip-statut { font-weight:600; }
+
 /* ── Infobulle sinistres (data-sin-tip) ── */
 #db-sin-tip {
     position:fixed; z-index:9999; pointer-events:none;
