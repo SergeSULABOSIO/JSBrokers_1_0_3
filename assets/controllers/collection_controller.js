@@ -381,7 +381,11 @@ export default class extends Controller {
             this.pickerElement = holder.firstElementChild;
             if (!this.pickerElement) throw new Error('Contenu vide.');
 
-            document.body.appendChild(this.pickerElement);
+            // On rattache le picker DANS la modale parente (et non au <body>) : la modale
+            // Bootstrap piège le focus dans son propre sous-arbre ; un overlay hors modale
+            // ne pourrait pas recevoir la saisie clavier (champ de recherche inutilisable).
+            const host = this.element.closest('.modal') || document.body;
+            host.appendChild(this.pickerElement);
             this.pickerBase = this.pickerElement.dataset.pickerBase || '';
             this.pickerPreviousFocus = document.activeElement;
 
