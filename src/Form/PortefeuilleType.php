@@ -7,6 +7,7 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 class PortefeuilleType extends AbstractType
 {
@@ -27,13 +28,18 @@ class PortefeuilleType extends AbstractType
                 // conteneur défilant de la fiche (.form-column { overflow-y:auto }).
                 'tom_select_options' => ['dropdownParent' => 'body'],
             ])
-            ->add('clients', ClientAutocompleteField::class, [
+            // Liste des clients gérée comme une COLLECTION paginée (widget dédié piloté
+            // par le FormCanvasProvider), adaptée à un portefeuille de plusieurs dizaines
+            // de clients. `mapped => false` : chaque client est créé/détaché via son propre
+            // contrôleur (add = fiche client rattachée ; retrait = détachement non destructif).
+            ->add('clients', CollectionType::class, [
                 'label' => "Clients du portefeuille",
-                'placeholder' => "Rattacher des clients",
-                'required' => false,
-                'multiple' => true,
+                'entry_type' => ClientType::class,
                 'by_reference' => false,
-                'tom_select_options' => ['dropdownParent' => 'body'],
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => ['label' => false],
+                'mapped' => false,
             ])
         ;
     }
