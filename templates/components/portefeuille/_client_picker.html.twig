@@ -36,6 +36,20 @@
             Rattachez les clients <strong>sans portefeuille</strong> ; un client déjà rattaché ailleurs ne peut pas être déplacé ici.
         </p>
 
+        {# Statistiques : nombre de clients dans ce portefeuille vs total de l'espace.
+           data-picker-count-current est mis à jour en direct par le JS à chaque ajout/retrait. #}
+        <div class="jsb-picker-stats" role="status" aria-live="polite">
+            <span class="jsb-picker-stat">
+                <span class="jsb-picker-stat-num" data-picker-count-current>{{ clientsDansPortefeuille }}</span>
+                dans ce portefeuille
+            </span>
+            <span class="jsb-picker-stat-sep" aria-hidden="true">/</span>
+            <span class="jsb-picker-stat">
+                <span class="jsb-picker-stat-num">{{ clientsTotal }}</span>
+                au total
+            </span>
+        </div>
+
         <div class="jsb-picker-search">
             <span class="jsb-picker-search-icon" aria-hidden="true">
                 <twig:UX:Icon name="hugeicons:search-01" style="width:16px;height:16px;" />

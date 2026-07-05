@@ -413,6 +413,10 @@ class PortefeuilleFilterTest extends WebTestCase
         $crawler = $this->client->request('GET', sprintf('/admin/portefeuille/api/%d/client-picker', $pf->getId()));
         $this->assertResponseIsSuccessful('La boîte de sélection de clients doit se charger.');
 
+        // Statistiques d'entête : 1 client rattaché (clientIn) sur 2 au total (in + out).
+        $this->assertSame('1', trim($crawler->filter('[data-picker-count-current]')->text()), 'Le picker doit indiquer 1 client dans ce portefeuille.');
+        $this->assertStringContainsString('au total', $crawler->filter('.jsb-picker-stats')->text(), 'Le picker doit afficher le total de clients.');
+
         // Client SANS portefeuille : action « Ajouter » visible, pas de « Retirer » visible.
         $freeRow = $crawler->filter(sprintf('[data-picker-row][data-client-id="%d"]', $clientOut->getId()));
         $this->assertGreaterThan(0, $freeRow->filter('[data-picker-attach]:not([hidden])')->count(), "Le client libre doit exposer une action d'ajout visible.");

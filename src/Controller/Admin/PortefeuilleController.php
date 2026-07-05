@@ -121,9 +121,19 @@ class PortefeuilleController extends AbstractController
             ['nom' => 'ASC']
         );
 
+        // Statistiques d'entête : clients rattachés à CE portefeuille vs total de l'espace.
+        $clientsDansPortefeuille = 0;
+        foreach ($clients as $c) {
+            if ($c->getPortefeuille()?->getId() === $portefeuille->getId()) {
+                $clientsDansPortefeuille++;
+            }
+        }
+
         return $this->render('components/portefeuille/_client_picker.html.twig', [
-            'portefeuille' => $portefeuille,
-            'clients'      => $clients,
+            'portefeuille'            => $portefeuille,
+            'clients'                 => $clients,
+            'clientsTotal'            => count($clients),
+            'clientsDansPortefeuille' => $clientsDansPortefeuille,
         ]);
     }
 
