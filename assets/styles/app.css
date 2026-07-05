@@ -3886,6 +3886,14 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     color: #0047AB;
 }
 .jsb-picker-stat-sep { color: #ced4da; }
+/* Mise en évidence du mot-clé recherché dans les résultats (fond jaune, texte noir gras). */
+.jsb-picker-hl {
+    background: #ffe58f;
+    color: #000000;
+    font-weight: 700;
+    padding: 0 1px;
+    border-radius: 2px;
+}
 /* Champ de recherche : icône loupe + input, encadré discret. */
 .jsb-picker-search {
     flex: 0 0 auto;

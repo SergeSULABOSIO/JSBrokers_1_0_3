@@ -520,15 +520,50 @@ export default class extends Controller {
 
     _filterPicker(query) {
         if (!this.pickerElement) return;
-        const q = (query || '').trim().toLowerCase();
+        const raw = (query || '').trim();
+        const q = raw.toLowerCase();
         let visible = 0;
         this.pickerElement.querySelectorAll('[data-picker-row]').forEach((row) => {
             const match = q === '' || (row.dataset.search || '').includes(q);
             row.style.display = match ? '' : 'none';
-            if (match) visible++;
+            if (match) {
+                visible++;
+                // Surligne le mot-clé dans le nom et l'e-mail des lignes affichées.
+                row.querySelectorAll('.jsb-picker-client-nom, .jsb-picker-client-mail').forEach((el) => {
+                    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+                    this._highlightInto(el, el.dataset.orig, raw);
+                });
+            }
         });
         const empty = this.pickerElement.querySelector('[data-picker-empty]');
         if (empty) empty.hidden = visible !== 0;
+        // Compteur « affiché(s) » = nombre de lignes visibles après filtrage.
+        const shown = this.pickerElement.querySelector('[data-picker-count-shown]');
+        if (shown) shown.textContent = visible;
+    }
+
+    /**
+     * Réécrit le contenu de `el` à partir du texte original, en enveloppant chaque
+     * occurrence de `query` dans un <mark> (via des nœuds DOM : aucun risque d'injection).
+     */
+    _highlightInto(el, original, query) {
+        const q = (query || '').trim();
+        if (!q) { el.textContent = original; return; }
+
+        el.textContent = '';
+        const lower = original.toLowerCase();
+        const qlower = q.toLowerCase();
+        let i = 0;
+        let idx;
+        while ((idx = lower.indexOf(qlower, i)) !== -1) {
+            if (idx > i) el.appendChild(document.createTextNode(original.slice(i, idx)));
+            const mark = document.createElement('mark');
+            mark.className = 'jsb-picker-hl';
+            mark.textContent = original.slice(idx, idx + q.length);
+            el.appendChild(mark);
+            i = idx + q.length;
+        }
+        if (i < original.length) el.appendChild(document.createTextNode(original.slice(i)));
     }
 
     _pickerNotify(text, type) {
