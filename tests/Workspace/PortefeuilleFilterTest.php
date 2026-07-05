@@ -400,6 +400,23 @@ class PortefeuilleFilterTest extends WebTestCase
         $this->assertStringContainsString(self::PF_NOM, (string) $this->client->getResponse()->getContent(), 'La liste des portefeuilles doit contenir le portefeuille de test.');
     }
 
+    public function testEditFormShowsClientLikeCalculatedAttributes(): void
+    {
+        ['portefeuille' => $pf] = $this->seed();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        // Le volet gauche du formulaire d'édition doit afficher les attributs calculés,
+        // repris de l'entité Client (agrégés sur le portefeuille).
+        $this->client->request('GET', '/admin/portefeuille/api/get-form/' . $pf->getId());
+        $this->assertResponseIsSuccessful();
+        $html = (string) $this->client->getResponse()->getContent();
+
+        $this->assertStringContainsString('Attributs calculés', $html, 'Le volet des attributs calculés doit être rendu.');
+        foreach (['Nb. Clients', 'Prime Totale', 'Commission TTC', 'Indice de solvabilité'] as $label) {
+            $this->assertStringContainsString($label, $html, sprintf('L\'attribut « %s » (comme sur la fiche client) doit être présent.', $label));
+        }
+    }
+
     public function testRenewalsBlockShowsPortefeuilleAndGestionnaire(): void
     {
         ['entreprise' => $e] = $this->seed();
