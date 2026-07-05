@@ -79,9 +79,10 @@
                             'entite_nom': entite_nom, 
                             'entityCanvas': entityCanvas, 
                             'usage': usage|default('generic'),
-                            'parentEntity': parentEntity|default(null), 
-                            'totalizableField': totalizableField|default(null), 
-                            'totalizableFieldDetails': totalizableFieldDetails|default(null)
+                            'parentEntity': parentEntity|default(null),
+                            'totalizableField': totalizableField|default(null),
+                            'totalizableFieldDetails': totalizableFieldDetails|default(null),
+                            'listActionOptions': listActionOptions|default({})
                         }) }}
                     {% endfor %}
                 </tbody>

@@ -481,26 +481,27 @@ export default class extends Controller {
         }
     }
 
-    /** Reconstruit les cellules Statut + Action d'une ligne selon son nouvel état. */
+    /**
+     * Met à jour une ligne selon son nouvel état, SANS reconstruire les boutons : on
+     * bascule seulement la visibilité des boutons « Ajouter »/« Retirer » (déjà rendus
+     * côté serveur avec leurs icônes) et on rafraîchit la pastille de statut. Ainsi le
+     * bouton de retrait garde exactement l'icône de suppression standard de l'application.
+     */
     _pickerSetRowState(row, state) {
         if (!row) return;
         row.dataset.pickerState = state;
-        const clientId = row.dataset.clientId;
-        const clientNom = row.dataset.clientNom || 'ce client';
         const statusCell = row.querySelector('[data-picker-status]');
-        const actionCell = row.querySelector('[data-picker-action]');
+        const attachBtn = row.querySelector('[data-picker-attach]');
+        const detachBtn = row.querySelector('[data-picker-detach]');
+        const isCurrent = state === 'current';
 
-        if (state === 'current') {
-            if (statusCell) statusCell.innerHTML = '<span class="jsb-picker-chip jsb-picker-chip--current">Dans ce portefeuille</span>';
-            if (actionCell) actionCell.innerHTML =
-                `<button type="button" class="btn btn-sm btn-outline-danger jsb-picker-btn" data-picker-detach `
-                + `aria-label="Retirer le client ${this._esc(clientNom)} du portefeuille">Retirer</button>`;
-        } else { // free
-            if (statusCell) statusCell.innerHTML = '<span class="jsb-picker-chip jsb-picker-chip--free">Sans portefeuille</span>';
-            if (actionCell) actionCell.innerHTML =
-                `<button type="button" class="btn btn-sm btn-primary jsb-picker-btn" data-picker-attach `
-                + `aria-label="Ajouter le client ${this._esc(clientNom)} au portefeuille">Ajouter</button>`;
+        if (statusCell) {
+            statusCell.innerHTML = isCurrent
+                ? '<span class="jsb-picker-chip jsb-picker-chip--current">Dans ce portefeuille</span>'
+                : '<span class="jsb-picker-chip jsb-picker-chip--free">Sans portefeuille</span>';
         }
+        if (attachBtn) { attachBtn.hidden = isCurrent; attachBtn.disabled = false; }
+        if (detachBtn) { detachBtn.hidden = !isCurrent; detachBtn.disabled = false; }
     }
 
     _pickerProgress(active) {
@@ -519,12 +520,6 @@ export default class extends Controller {
         });
         const empty = this.pickerElement.querySelector('[data-picker-empty]');
         if (empty) empty.hidden = visible !== 0;
-    }
-
-    _esc(str) {
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML.replace(/"/g, '&quot;');
     }
 
     _pickerNotify(text, type) {

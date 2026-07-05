@@ -15,26 +15,27 @@
          aria-describedby="jsb-picker-desc"
          tabindex="-1">
 
+        {# Barre de titre alignée sur le pattern du dialogue d'édition (dialog-manager) :
+           pastille d'entité + titre .modal-title + bouton .btn-close. #}
+        <div class="modal-header jsb-picker-header">
+            <div class="d-flex align-items-center">
+                <span class="me-2 d-inline-flex" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('portefeuille') }}" style="width:22px;height:22px;color:#0047AB;" />
+                </span>
+                <h5 id="jsb-picker-title" class="modal-title mb-0">Ajouter des clients au portefeuille</h5>
+            </div>
+            <button type="button" class="btn-close" data-picker-close aria-label="Fermer la fenêtre de sélection"></button>
+        </div>
+
         {# Barre de progression : animée à chaque ajout/retrait (feedback visuel). #}
         <div class="jsb-picker-progress" data-picker-progress role="progressbar" aria-hidden="true">
             <div class="jsb-picker-progress-bar"></div>
         </div>
 
-        <header class="jsb-picker-head">
-            <div class="jsb-picker-head-text">
-                <h2 id="jsb-picker-title" class="jsb-picker-title">
-                    <twig:UX:Icon name="mdi:briefcase-account" style="width:20px;height:20px;" aria-hidden="true" />
-                    Ajouter des clients au portefeuille
-                </h2>
-                <p id="jsb-picker-desc" class="jsb-picker-sub">
-                    Portefeuille : <strong>{{ portefeuille.nom }}</strong>.
-                    Rattachez les clients <strong>sans portefeuille</strong> ; un client déjà rattaché ailleurs ne peut pas être déplacé ici.
-                </p>
-            </div>
-            <button type="button" class="jsb-picker-close" data-picker-close aria-label="Fermer la fenêtre de sélection">
-                <twig:UX:Icon name="hugeicons:cancel-01" style="width:18px;height:18px;" aria-hidden="true" />
-            </button>
-        </header>
+        <p id="jsb-picker-desc" class="jsb-picker-sub">
+            Portefeuille : <strong>{{ portefeuille.nom }}</strong>.
+            Rattachez les clients <strong>sans portefeuille</strong> ; un client déjà rattaché ailleurs ne peut pas être déplacé ici.
+        </p>
 
         <div class="jsb-picker-search">
             <span class="jsb-picker-search-icon" aria-hidden="true">
@@ -87,25 +88,30 @@
                                     {% endif %}
                                 </td>
                                 <td class="text-end" data-picker-action>
-                                    {% if isCurrent %}
-                                        <button type="button"
-                                                class="btn btn-sm btn-outline-danger jsb-picker-btn"
-                                                data-picker-detach
-                                                data-detach-url="/admin/portefeuille/api/{{ portefeuille.id }}/detach-client/{{ client.id }}"
-                                                aria-label="Retirer le client {{ client.nom }} du portefeuille">
-                                            <twig:UX:Icon name="fluent:delete-20-filled" style="width:15px;height:15px;" aria-hidden="true" />
-                                            Retirer
-                                        </button>
-                                    {% elseif assigned %}
+                                    {% if assigned and not isCurrent %}
+                                        {# Rattaché à un AUTRE portefeuille : pas d'action ici. #}
                                         <span class="text-muted small">Aucune action</span>
                                     {% else %}
+                                        {# Les DEUX boutons sont rendus (icônes serveur), on bascule leur
+                                           visibilité côté JS après ajout/retrait : l'icône reste cohérente
+                                           avec les boutons « supprimer » existants (alias action:delete). #}
                                         <button type="button"
                                                 class="btn btn-sm btn-primary jsb-picker-btn"
                                                 data-picker-attach
                                                 data-attach-url="/admin/portefeuille/api/{{ portefeuille.id }}/attach-client/{{ client.id }}"
-                                                aria-label="Ajouter le client {{ client.nom }} au portefeuille">
-                                            <twig:UX:Icon name="gridicons:add" style="width:15px;height:15px;" aria-hidden="true" />
+                                                aria-label="Ajouter le client {{ client.nom }} au portefeuille"
+                                                {{ isCurrent ? 'hidden' : '' }}>
+                                            <twig:UX:Icon name="{{ resolve_icon_name('action:add') }}" style="width:15px;height:15px;" aria-hidden="true" />
                                             Ajouter
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-danger jsb-picker-btn"
+                                                data-picker-detach
+                                                data-detach-url="/admin/portefeuille/api/{{ portefeuille.id }}/detach-client/{{ client.id }}"
+                                                aria-label="Retirer le client {{ client.nom }} du portefeuille"
+                                                {{ isCurrent ? '' : 'hidden' }}>
+                                            <twig:UX:Icon name="{{ resolve_icon_name('action:delete') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                                            Retirer
                                         </button>
                                     {% endif %}
                                 </td>
@@ -119,7 +125,10 @@
 
         <footer class="jsb-picker-foot">
             <span class="jsb-picker-hint text-muted small">Astuce : filtrez la liste puis cliquez sur « Ajouter » ou « Retirer ».</span>
-            <button type="button" class="btn btn-outline-secondary" data-picker-close>Fermer</button>
+            <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-picker-close>
+                <twig:UX:Icon name="{{ resolve_icon_name('action:close') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                Fermer
+            </button>
         </footer>
     </div>
 </div>

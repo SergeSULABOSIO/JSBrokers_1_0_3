@@ -74,15 +74,17 @@ class PortefeuilleFormCanvasProvider implements FormCanvasProviderInterface
                 // « Ajouter » ouvre une boîte de sélection de clients existants (sans
                 // portefeuille) à rattacher — pas un formulaire de création de client.
                 'pickerUrl'       => '/admin/portefeuille/api/%parentId%/client-picker',
-                // « Retrait » = détachement non destructif (client.portefeuille = null).
-                'itemDeleteUrl'   => '/admin/portefeuille/api/%parentId%/detach-client',
+                // « Retrait » = détachement non destructif (client.portefeuille = null),
+                // et non suppression du client en base. Pas de bouton d'édition ici.
+                'itemDeleteUrl'     => '/admin/portefeuille/api/%parentId%/detach-client',
+                'hideEditAction'    => true,
+                'deleteActionLabel' => 'Retirer du portefeuille',
+                'deleteActionIcon'  => 'mdi:account-arrow-right-outline',
                 // Rendu compact « collection totalisable » (comme les collections d'une
                 // cotation) : évite le débordement des colonnes numériques dans l'accordéon
-                // et affiche le total du portefeuille en entête + une ligne synthétique par
-                // client (Commission TTC + nombre de polices).
+                // et affiche le total du portefeuille en entête. Volontairement SANS champ
+                // secondaire : une ligne épurée par client (nom + commission TTC).
                 'totalizableField' => 'montantTTC',
-                'secondaryField'   => 'nombrePolices',
-                'secondaryLabel'   => '· Polices :',
             ],
         ]);
 

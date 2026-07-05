@@ -27,6 +27,11 @@ trait FormCanvasProviderTrait
             if (isset($config['pickerUrl'])) {
                 $extraOptions['pickerUrl'] = str_replace('%parentId%', (string) $parentId, $config['pickerUrl']);
             }
+            // Personnalisation des actions de ligne (bouton d'édition masqué, libellé/icône
+            // de l'action de suppression — ex. « Retirer » pour un détachement).
+            if (isset($config['hideEditAction']))    $extraOptions['hideEditAction'] = $config['hideEditAction'];
+            if (isset($config['deleteActionLabel']))  $extraOptions['deleteActionLabel'] = $config['deleteActionLabel'];
+            if (isset($config['deleteActionIcon']))   $extraOptions['deleteActionIcon'] = $config['deleteActionIcon'];
 
             if (isset($config['totalizableField']) && !$isParentNew) {
                 $total = 0;

@@ -3,12 +3,11 @@
     {# NOUVEAU RENDU pour les collections totalisables #}
     {% set value = attribute(item, totalizableField) %}
     {% set unit = totalizableFieldDetails.unite|default('') %}
-    {% set description = totalizableFieldDetails.description|default('') %}
 
+    {# Ligne épurée : la valeur totalisable (avec son unité) suffit ; l'intitulé du total
+       est déjà porté par l'entête de l'accordéon. On n'affiche plus la description en
+       toutes lettres, source de surcharge visuelle dans les collections. #}
     <strong>{{ value|number_format(2, ',', ' ') }} {{ unit }}</strong>
-    {% if description %}
-        <span class="text-muted ms-1">- {{ description }}</span>
-    {% endif %}
 
     {# CONCATÉNATION DE L'INFORMATION SECONDAIRE #}
     {% if secondaryField is defined and secondaryField is not null and attribute(item, secondaryField) is not null %}
