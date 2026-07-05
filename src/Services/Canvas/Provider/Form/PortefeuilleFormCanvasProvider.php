@@ -71,6 +71,10 @@ class PortefeuilleFormCanvasProvider implements FormCanvasProviderInterface
                 'entityRouteName' => 'client',
                 'formTitle'       => 'Client',
                 'parentFieldName' => 'portefeuille',
+                // « Ajouter » ouvre une boîte de sélection de clients existants (sans
+                // portefeuille) à rattacher — pas un formulaire de création de client.
+                'pickerUrl'       => '/admin/portefeuille/api/%parentId%/client-picker',
+                // « Retrait » = détachement non destructif (client.portefeuille = null).
                 'itemDeleteUrl'   => '/admin/portefeuille/api/%parentId%/detach-client',
             ],
         ]);

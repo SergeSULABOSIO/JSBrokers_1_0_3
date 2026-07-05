@@ -100,6 +100,63 @@ class PortefeuilleController extends AbstractController
     }
 
     /**
+     * Boîte de dialogue de SÉLECTION de clients existants à rattacher au portefeuille.
+     * Ouverte par le bouton « Ajouter » du widget collection. Liste les clients de
+     * l'espace de travail : ceux SANS portefeuille sont rattachables (bouton d'action),
+     * ceux déjà rattachés sont affichés à titre indicatif, sans action.
+     */
+    #[Route('/api/{id}/client-picker', name: 'api.client_picker', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function clientPicker(Portefeuille $portefeuille): Response
+    {
+        if (!$this->mayAccessEntity(Portefeuille::class, Invite::ACCESS_MODIFICATION)) {
+            throw $this->createAccessDeniedException("Ajout de clients hors de votre périmètre d'accès.");
+        }
+        $entreprise = $this->getEntreprise();
+        if ($entreprise === null || $portefeuille->getEntreprise()?->getId() !== $entreprise->getId()) {
+            throw $this->createNotFoundException("Portefeuille introuvable dans cet espace de travail.");
+        }
+
+        $clients = $this->em->getRepository(Client::class)->findBy(
+            ['entreprise' => $entreprise],
+            ['nom' => 'ASC']
+        );
+
+        return $this->render('components/portefeuille/_client_picker.html.twig', [
+            'portefeuille' => $portefeuille,
+            'clients'      => $clients,
+        ]);
+    }
+
+    /**
+     * Rattache un client EXISTANT et SANS portefeuille au portefeuille courant
+     * (client.portefeuille = portefeuille). Refuse un client déjà rattaché ailleurs.
+     */
+    #[Route('/api/{id}/attach-client/{clientId}', name: 'api.attach_client', requirements: ['id' => Requirement::DIGITS, 'clientId' => Requirement::DIGITS], methods: ['PUT'])]
+    public function attachClient(Portefeuille $portefeuille, int $clientId): JsonResponse
+    {
+        if (!$this->mayAccessEntity(Portefeuille::class, Invite::ACCESS_MODIFICATION)) {
+            return $this->accessDeniedJson();
+        }
+        $entreprise = $this->getEntreprise();
+        if ($entreprise === null || $portefeuille->getEntreprise()?->getId() !== $entreprise->getId()) {
+            return $this->json(['message' => "Portefeuille introuvable dans cet espace de travail."], Response::HTTP_NOT_FOUND);
+        }
+
+        $client = $this->em->getRepository(Client::class)->find($clientId);
+        if ($client === null || $client->getEntreprise()?->getId() !== $entreprise->getId()) {
+            return $this->json(['message' => "Client introuvable dans cet espace de travail."], Response::HTTP_NOT_FOUND);
+        }
+        if ($client->getPortefeuille() !== null) {
+            return $this->json(['message' => "Ce client appartient déjà à un portefeuille."], Response::HTTP_CONFLICT);
+        }
+
+        $client->setPortefeuille($portefeuille);
+        $this->em->flush();
+
+        return $this->json(['message' => "Client ajouté au portefeuille."]);
+    }
+
+    /**
      * Détache un client du portefeuille (client.portefeuille = null) SANS supprimer le
      * client : action de « retrait » du widget collection. Détruire le client serait
      * destructeur (il est partagé avec ses pistes, cotations, sinistres…).

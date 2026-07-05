@@ -400,6 +400,49 @@ class PortefeuilleFilterTest extends WebTestCase
         $this->assertStringContainsString(self::PF_NOM, (string) $this->client->getResponse()->getContent(), 'La liste des portefeuilles doit contenir le portefeuille de test.');
     }
 
+    public function testClientPickerListsOnlyUnassignedAsAddable(): void
+    {
+        ['portefeuille' => $pf, 'clientIn' => $clientIn, 'clientOut' => $clientOut] = $this->seed();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        $this->client->request('GET', sprintf('/admin/portefeuille/api/%d/client-picker', $pf->getId()));
+        $this->assertResponseIsSuccessful('La boîte de sélection de clients doit se charger.');
+        $html = (string) $this->client->getResponse()->getContent();
+
+        // Le client SANS portefeuille est rattachable (bouton d'ajout ciblant son endpoint)…
+        $this->assertStringContainsString(
+            sprintf('attach-client/%d', $clientOut->getId()),
+            $html,
+            "Le client sans portefeuille doit exposer une action d'ajout."
+        );
+        // …le client DÉJÀ rattaché n'a aucune action d'ajout.
+        $this->assertStringNotContainsString(
+            sprintf('attach-client/%d', $clientIn->getId()),
+            $html,
+            "Un client déjà rattaché ne doit pas exposer d'action d'ajout."
+        );
+    }
+
+    public function testAttachClientRequiresUnassignedClient(): void
+    {
+        ['portefeuille' => $pf, 'clientIn' => $clientIn, 'clientOut' => $clientOut] = $this->seed();
+        $clientOutId = $clientOut->getId();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        // Rattachement d'un client libre : succès, la relation est posée.
+        $this->client->request('PUT', sprintf('/admin/portefeuille/api/%d/attach-client/%d', $pf->getId(), $clientOutId));
+        $this->assertResponseIsSuccessful('Le rattachement d\'un client sans portefeuille doit réussir.');
+
+        $this->em()->clear();
+        $reloaded = $this->em()->getRepository(Client::class)->find($clientOutId);
+        $this->assertNotNull($reloaded->getPortefeuille());
+        $this->assertSame($pf->getId(), $reloaded->getPortefeuille()->getId(), 'Le client doit être rattaché au portefeuille.');
+
+        // Rattachement d'un client DÉJÀ dans un portefeuille : refusé (409), pas de vol.
+        $this->client->request('PUT', sprintf('/admin/portefeuille/api/%d/attach-client/%d', $pf->getId(), $clientIn->getId()));
+        $this->assertResponseStatusCodeSame(409, "Un client déjà rattaché ne doit pas pouvoir être réaffecté via l'ajout.");
+    }
+
     public function testEditFormShowsClientLikeCalculatedAttributes(): void
     {
         ['portefeuille' => $pf] = $this->seed();

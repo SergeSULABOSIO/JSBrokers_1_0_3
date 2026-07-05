@@ -29,6 +29,10 @@ export default class extends Controller {
         itemTitleEdit: String,
         parentFieldName: String,
         parentEntityId: Number,
+        // Optionnel : si défini, le bouton « Ajouter » ouvre une boîte de SÉLECTION de
+        // ressources existantes (ex. rattacher des clients à un portefeuille) au lieu du
+        // formulaire de création. Rétro-compatible : absent → comportement historique.
+        pickerUrl: String,
         disabled: Boolean,
         entiteNom: String,
         idEntreprise: Number,
@@ -59,6 +63,8 @@ export default class extends Controller {
         if (this.tooltipElement) {
             this.tooltipElement.remove();
         }
+        // Nettoie le sélecteur de clients s'il est resté ouvert.
+        this.closePicker();
     }
 
     /**
@@ -311,7 +317,14 @@ export default class extends Controller {
     addItem(event) {
         // ce qui évite de déclencher l'action 'toggleAccordion' du titre.
         event.stopPropagation();
- 
+
+        // Mode SÉLECTION : rattacher des ressources existantes (ex. clients d'un
+        // portefeuille) au lieu d'ouvrir un formulaire de création.
+        if (this.hasPickerUrlValue && this.pickerUrlValue) {
+            this.openPicker();
+            return;
+        }
+
         // Le "formCanvas" pour l'élément à créer (ex: un Contact).
         // C'est la configuration pour le dialogue.
         const formCanvas = {
@@ -340,6 +353,117 @@ export default class extends Controller {
             context: context,
             parentContext: parentContext // On passe le contexte parent pour le lien
         });
+    }
+
+    /**
+     * Ouvre la boîte de SÉLECTION de ressources existantes (mode picker) : récupère son
+     * HTML depuis pickerUrl, l'injecte au-dessus de la fiche et branche recherche,
+     * fermeture (bouton / clic hors modale / Échap) et ajout.
+     */
+    async openPicker() {
+        if (this.pickerElement) return; // déjà ouverte
+        try {
+            const response = await fetch(this.pickerUrlValue, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!response.ok) throw new Error(`Erreur serveur: ${response.status}`);
+            const html = await response.text();
+
+            const holder = document.createElement('div');
+            holder.innerHTML = html.trim();
+            this.pickerElement = holder.firstElementChild;
+            if (!this.pickerElement) throw new Error('Contenu vide.');
+
+            document.body.appendChild(this.pickerElement);
+            this.pickerPreviousFocus = document.activeElement;
+
+            // Fermeture au clavier (Échap) — Nielsen : sortie d'urgence / contrôle utilisateur.
+            this.boundPickerKeydown = (e) => { if (e.key === 'Escape') this.closePicker(); };
+            document.addEventListener('keydown', this.boundPickerKeydown);
+
+            // Délégation des clics (fermeture, ajout).
+            this.pickerElement.addEventListener('click', (e) => this._onPickerClick(e));
+
+            // Recherche : filtrage des lignes.
+            const searchInput = this.pickerElement.querySelector('[data-picker-search]');
+            if (searchInput) {
+                searchInput.addEventListener('input', () => this._filterPicker(searchInput.value));
+            }
+
+            // Focus initial (accessibilité : le focus entre dans la modale).
+            const focusTarget = searchInput || this.pickerElement.querySelector('[role="dialog"]');
+            if (focusTarget) focusTarget.focus();
+        } catch (error) {
+            this._pickerNotify("Impossible d'ouvrir la liste des clients.", 'error');
+        }
+    }
+
+    /** Ferme le picker et restaure le focus sur l'élément déclencheur. */
+    closePicker() {
+        if (this.boundPickerKeydown) {
+            document.removeEventListener('keydown', this.boundPickerKeydown);
+            this.boundPickerKeydown = null;
+        }
+        if (this.pickerElement) {
+            this.pickerElement.remove();
+            this.pickerElement = null;
+        }
+        if (this.pickerPreviousFocus && typeof this.pickerPreviousFocus.focus === 'function') {
+            this.pickerPreviousFocus.focus();
+        }
+    }
+
+    _onPickerClick(event) {
+        // Fermeture : bouton dédié ou clic sur l'arrière-plan.
+        if (event.target.closest('[data-picker-close]') || event.target.hasAttribute('data-picker-overlay')) {
+            this.closePicker();
+            return;
+        }
+        // Ajout d'un client.
+        const attachBtn = event.target.closest('[data-picker-attach]');
+        if (attachBtn) {
+            this._attachFromPicker(attachBtn);
+        }
+    }
+
+    async _attachFromPicker(button) {
+        const url = button.dataset.attachUrl;
+        if (!url) return;
+        button.disabled = true;
+        try {
+            const response = await fetch(url, { method: 'PUT', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.message || `Erreur serveur: ${response.status}`);
+
+            // Retour visuel dans la ligne (Nielsen : visibilité de l'état du système).
+            const cell = button.closest('td');
+            if (cell) cell.innerHTML = '<span class="text-success small fw-semibold">Ajouté ✓</span>';
+            const statusCell = button.closest('tr')?.querySelector('td:nth-child(2)');
+            if (statusCell) statusCell.innerHTML = '<span class="badge bg-success">Dans ce portefeuille</span>';
+
+            this._pickerNotify(data.message || 'Client ajouté au portefeuille.', 'success');
+            this.load(); // rafraîchit la collection derrière la modale
+        } catch (error) {
+            button.disabled = false;
+            this._pickerNotify(error.message || "Échec de l'ajout du client.", 'error');
+        }
+    }
+
+    _filterPicker(query) {
+        if (!this.pickerElement) return;
+        const q = (query || '').trim().toLowerCase();
+        let visible = 0;
+        this.pickerElement.querySelectorAll('[data-picker-row]').forEach((row) => {
+            const match = q === '' || (row.dataset.search || '').includes(q);
+            row.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+        const empty = this.pickerElement.querySelector('[data-picker-empty]');
+        if (empty) empty.hidden = visible !== 0;
+    }
+
+    _pickerNotify(text, type) {
+        document.dispatchEvent(new CustomEvent('app:notification.show', {
+            detail: { text, type: type === 'error' ? 'error' : 'success' }
+        }));
     }
 
     /**
