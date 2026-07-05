@@ -297,6 +297,7 @@ class IndicatorCalculationHelper
         $partenaireCible = $options['partenaireCible'] ?? null;
         $inviteCible = $options['inviteCible'] ?? null;
         $groupeCible = $options['groupeCible'] ?? null;
+        $portefeuilleCible = $options['portefeuilleCible'] ?? null;
         $avenantCible = $options['avenantCible'] ?? null;
         $clientCible = $options['clientCible'] ?? null;
         $trancheCible = $options['trancheCible'] ?? null;
@@ -348,6 +349,10 @@ class IndicatorCalculationHelper
             else $qb->andWhere('p.client = :clientCible')->setParameter('clientCible', $clientCible);
         }
         if ($groupeCible) $qb->join('p.client', 'cl_g')->andWhere('cl_g.groupe = :groupeCible')->setParameter('groupeCible', $groupeCible);
+        if ($portefeuilleCible) {
+            if ($portefeuilleCible->getId() === null) $qb->andWhere('1=0');
+            else $qb->join('p.client', 'cl_pf')->andWhere('cl_pf.portefeuille = :portefeuilleCible')->setParameter('portefeuilleCible', $portefeuilleCible);
+        }
         if ($partenaireCible) {
             if ($partenaireCible->getId() === null) $qb->andWhere('1=0');
             else $qb->andWhere('pa = :partenaireCible OR clpa = :partenaireCible')->setParameter('partenaireCible', $partenaireCible);
