@@ -3845,6 +3845,21 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     font-size: .82rem;
     color: #6c757d;
 }
+/* Statistiques d'entête : « N dans ce portefeuille / M au total ». */
+.jsb-picker-stats {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .1rem 1.25rem .55rem;
+    font-size: .8rem;
+    color: #6c757d;
+}
+.jsb-picker-stat-num {
+    font-weight: 700;
+    color: #0047AB;
+}
+.jsb-picker-stat-sep { color: #ced4da; }
 /* Champ de recherche : icône loupe + input, encadré discret. */
 .jsb-picker-search {
     flex: 0 0 auto;

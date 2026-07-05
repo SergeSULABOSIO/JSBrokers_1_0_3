@@ -471,6 +471,7 @@ export default class extends Controller {
             if (!response.ok) throw new Error(data.message || `Erreur serveur: ${response.status}`);
 
             this._pickerSetRowState(row, isAttach ? 'current' : 'free');
+            this._pickerUpdateCount(isAttach ? 1 : -1); // met à jour « N dans ce portefeuille »
             this._pickerNotify(data.message || (isAttach ? 'Client ajouté au portefeuille.' : 'Client retiré du portefeuille.'), 'success');
             this.load(); // rafraîchit la collection derrière la modale
         } catch (error) {
@@ -507,6 +508,14 @@ export default class extends Controller {
     _pickerProgress(active) {
         const bar = this.pickerElement?.querySelector('[data-picker-progress]');
         if (bar) bar.classList.toggle('is-active', !!active);
+    }
+
+    /** Met à jour en direct le compteur « N dans ce portefeuille ». */
+    _pickerUpdateCount(delta) {
+        const el = this.pickerElement?.querySelector('[data-picker-count-current]');
+        if (!el) return;
+        const current = parseInt(el.textContent, 10) || 0;
+        el.textContent = Math.max(0, current + delta);
     }
 
     _filterPicker(query) {
