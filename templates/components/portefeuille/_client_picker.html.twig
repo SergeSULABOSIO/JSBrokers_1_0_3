@@ -1,12 +1,13 @@
 {#
     Boîte de dialogue de sélection de clients existants à rattacher au portefeuille.
-    Construite selon /ergonomie-web (modale accessible : role=dialog, aria-modal,
-    aria-labelledby/-describedby, libellés explicites, statut jamais transmis par la
-    seule couleur, zones cliquables ≥ 44px) et /charte-couleurs (classes Bootstrap +
-    cobalt de marque, overlay --overlay-dark). L'ouverture/fermeture, la recherche et
-    l'action d'ajout sont pilotées par le contrôleur Stimulus « collection ».
+    Alignée sur le pattern des dialogues et le modèle de liste de l'application
+    (table.table-enhanced, entête collante), selon /ergonomie-web (role=dialog,
+    aria-modal, libellés, statut jamais transmis par la seule couleur, cibles ≥44px,
+    Échap, focus) et /charte-couleurs (cobalt de marque, overlay --overlay-dark).
+    Le badge « statut » n'utilise PAS .badge (globalement forcé en bleu) mais des
+    pastilles dédiées à bon contraste.
 #}
-<div class="jsb-picker-overlay" data-picker-overlay>
+<div class="jsb-picker-overlay" data-picker-overlay data-picker-base="/admin/portefeuille/api/{{ portefeuille.id }}">
     <div class="jsb-picker-modal"
          role="dialog"
          aria-modal="true"
@@ -14,15 +15,20 @@
          aria-describedby="jsb-picker-desc"
          tabindex="-1">
 
+        {# Barre de progression : animée à chaque ajout/retrait (feedback visuel). #}
+        <div class="jsb-picker-progress" data-picker-progress role="progressbar" aria-hidden="true">
+            <div class="jsb-picker-progress-bar"></div>
+        </div>
+
         <header class="jsb-picker-head">
-            <div>
+            <div class="jsb-picker-head-text">
                 <h2 id="jsb-picker-title" class="jsb-picker-title">
                     <twig:UX:Icon name="mdi:briefcase-account" style="width:20px;height:20px;" aria-hidden="true" />
                     Ajouter des clients au portefeuille
                 </h2>
                 <p id="jsb-picker-desc" class="jsb-picker-sub">
                     Portefeuille : <strong>{{ portefeuille.nom }}</strong>.
-                    Seuls les clients <strong>sans portefeuille</strong> peuvent être ajoutés ; un client déjà rattaché n'est pas proposé.
+                    Rattachez les clients <strong>sans portefeuille</strong> ; un client déjà rattaché ailleurs ne peut pas être déplacé ici.
                 </p>
             </div>
             <button type="button" class="jsb-picker-close" data-picker-close aria-label="Fermer la fenêtre de sélection">
@@ -31,8 +37,11 @@
         </header>
 
         <div class="jsb-picker-search">
+            <span class="jsb-picker-search-icon" aria-hidden="true">
+                <twig:UX:Icon name="hugeicons:search-01" style="width:16px;height:16px;" />
+            </span>
             <label for="jsb-picker-search-input" class="visually-hidden">Rechercher un client par nom ou e-mail</label>
-            <input type="search"
+            <input type="text"
                    id="jsb-picker-search-input"
                    class="form-control"
                    placeholder="Rechercher par nom ou e-mail…"
@@ -44,9 +53,9 @@
             {% if clients is empty %}
                 <p class="jsb-picker-empty" role="status">Aucun client n'existe encore dans cet espace de travail.</p>
             {% else %}
-                <table class="table jsb-picker-table">
+                <table class="table table-hover table-sm table-enhanced jsb-picker-table">
                     <caption class="visually-hidden">Liste des clients de l'espace de travail et leur statut de rattachement</caption>
-                    <thead>
+                    <thead class="table-light sticky-header">
                         <tr>
                             <th scope="col">Client</th>
                             <th scope="col">Statut</th>
@@ -58,30 +67,44 @@
                             {% set pf = client.portefeuille %}
                             {% set assigned = pf is not null %}
                             {% set isCurrent = assigned and pf.id == portefeuille.id %}
-                            <tr data-picker-row data-search="{{ (client.nom ~ ' ' ~ (client.email ?? ''))|lower|e('html_attr') }}">
+                            {% set state = isCurrent ? 'current' : (assigned ? 'other' : 'free') %}
+                            <tr data-picker-row
+                                data-picker-state="{{ state }}"
+                                data-client-id="{{ client.id }}"
+                                data-client-nom="{{ client.nom|e('html_attr') }}"
+                                data-search="{{ (client.nom ~ ' ' ~ (client.email ?? ''))|lower|e('html_attr') }}">
                                 <td>
                                     <span class="jsb-picker-client-nom">{{ client.nom }}</span>
                                     {% if client.email %}<span class="jsb-picker-client-mail">{{ client.email }}</span>{% endif %}
                                 </td>
-                                <td>
+                                <td data-picker-status>
                                     {% if isCurrent %}
-                                        <span class="badge bg-success">Dans ce portefeuille</span>
+                                        <span class="jsb-picker-chip jsb-picker-chip--current">Dans ce portefeuille</span>
                                     {% elseif assigned %}
-                                        <span class="badge bg-secondary">Rattaché : {{ pf.nom }}</span>
+                                        <span class="jsb-picker-chip jsb-picker-chip--other">Rattaché : {{ pf.nom }}</span>
                                     {% else %}
-                                        <span class="badge bg-light text-dark border">Sans portefeuille</span>
+                                        <span class="jsb-picker-chip jsb-picker-chip--free">Sans portefeuille</span>
                                     {% endif %}
                                 </td>
-                                <td class="text-end">
-                                    {% if assigned %}
+                                <td class="text-end" data-picker-action>
+                                    {% if isCurrent %}
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-danger jsb-picker-btn"
+                                                data-picker-detach
+                                                data-detach-url="/admin/portefeuille/api/{{ portefeuille.id }}/detach-client/{{ client.id }}"
+                                                aria-label="Retirer le client {{ client.nom }} du portefeuille">
+                                            <twig:UX:Icon name="fluent:delete-20-filled" style="width:15px;height:15px;" aria-hidden="true" />
+                                            Retirer
+                                        </button>
+                                    {% elseif assigned %}
                                         <span class="text-muted small">Aucune action</span>
                                     {% else %}
                                         <button type="button"
-                                                class="btn btn-sm btn-primary jsb-picker-add"
+                                                class="btn btn-sm btn-primary jsb-picker-btn"
                                                 data-picker-attach
                                                 data-attach-url="/admin/portefeuille/api/{{ portefeuille.id }}/attach-client/{{ client.id }}"
                                                 aria-label="Ajouter le client {{ client.nom }} au portefeuille">
-                                            <twig:UX:Icon name="gridicons:add" style="width:16px;height:16px;" aria-hidden="true" />
+                                            <twig:UX:Icon name="gridicons:add" style="width:15px;height:15px;" aria-hidden="true" />
                                             Ajouter
                                         </button>
                                     {% endif %}
@@ -95,6 +118,7 @@
         </div>
 
         <footer class="jsb-picker-foot">
+            <span class="jsb-picker-hint text-muted small">Astuce : filtrez la liste puis cliquez sur « Ajouter » ou « Retirer ».</span>
             <button type="button" class="btn btn-outline-secondary" data-picker-close>Fermer</button>
         </footer>
     </div>
