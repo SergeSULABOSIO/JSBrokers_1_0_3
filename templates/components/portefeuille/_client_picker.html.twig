@@ -32,22 +32,35 @@
             <div class="jsb-picker-progress-bar"></div>
         </div>
 
-        <p id="jsb-picker-desc" class="jsb-picker-sub">
-            Rattachez les clients <strong>sans portefeuille</strong> ; un client déjà rattaché ailleurs ne peut pas être déplacé ici.
-        </p>
+        {# Entête contextuel calqué sur le « form-intro » du formulaire d'édition :
+           pastille + titre + description enrichie, puis statistiques. #}
+        <div class="jsb-picker-intro">
+            <span class="jsb-picker-intro-icon" aria-hidden="true">
+                <twig:UX:Icon name="{{ resolve_icon_name('client') }}" style="width:26px;height:26px;" />
+            </span>
+            <div class="jsb-picker-intro-text">
+                <p class="jsb-picker-intro-title">Sélection des clients à rattacher</p>
+                <p id="jsb-picker-desc" class="jsb-picker-intro-desc">
+                    Choisissez les clients à intégrer à «&nbsp;<strong>{{ portefeuille.nom }}</strong>&nbsp;».
+                    Seuls les clients <strong>sans portefeuille</strong> sont rattachables : un client déjà
+                    rattaché à un autre portefeuille n'est pas déplaçable ici (retirez-le d'abord de son
+                    portefeuille d'origine). Le rattachement est immédiat et reste réversible via «&nbsp;Retirer&nbsp;».
+                </p>
 
-        {# Statistiques : nombre de clients dans ce portefeuille vs total de l'espace.
-           data-picker-count-current est mis à jour en direct par le JS à chaque ajout/retrait. #}
-        <div class="jsb-picker-stats" role="status" aria-live="polite">
-            <span class="jsb-picker-stat">
-                <span class="jsb-picker-stat-num" data-picker-count-current>{{ clientsDansPortefeuille }}</span>
-                dans ce portefeuille
-            </span>
-            <span class="jsb-picker-stat-sep" aria-hidden="true">/</span>
-            <span class="jsb-picker-stat">
-                <span class="jsb-picker-stat-num">{{ clientsTotal }}</span>
-                au total
-            </span>
+                {# Statistiques : clients dans ce portefeuille vs total de l'espace.
+                   data-picker-count-current est mis à jour en direct par le JS à chaque ajout/retrait. #}
+                <div class="jsb-picker-stats" role="status" aria-live="polite">
+                    <span class="jsb-picker-stat">
+                        <span class="jsb-picker-stat-num" data-picker-count-current>{{ clientsDansPortefeuille }}</span>
+                        dans ce portefeuille
+                    </span>
+                    <span class="jsb-picker-stat-sep" aria-hidden="true">/</span>
+                    <span class="jsb-picker-stat">
+                        <span class="jsb-picker-stat-num">{{ clientsTotal }}</span>
+                        au total
+                    </span>
+                </div>
+            </div>
         </div>
 
         <div class="jsb-picker-search">
