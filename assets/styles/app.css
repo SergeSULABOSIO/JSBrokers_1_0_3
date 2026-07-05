@@ -3837,21 +3837,47 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     font-weight: 600;
     color: #212529;
 }
-/* Sous-titre explicatif sous la barre de titre (esprit « form-intro » du dialogue). */
-.jsb-picker-sub {
+/* Entête contextuel calqué sur le « form-intro » du formulaire d'édition :
+   pastille cobalt-subtle + titre + description + statistiques. */
+.jsb-picker-intro {
     flex: 0 0 auto;
-    margin: 0;
-    padding: .7rem 1.25rem .2rem;
-    font-size: .82rem;
-    color: #6c757d;
+    display: flex;
+    align-items: flex-start;
+    gap: .9rem;
+    padding: .85rem 1.25rem 1rem;
+    border-bottom: 1px solid #f0f0f0;
 }
-/* Statistiques d'entête : « N dans ce portefeuille / M au total ». */
-.jsb-picker-stats {
+.jsb-picker-intro-icon {
     flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 11px;
+    background-color: #e8f0fb;
+    color: #0047AB;
+}
+.jsb-picker-intro-text { min-width: 0; }
+.jsb-picker-intro-title {
+    margin: 0 0 .15rem;
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: #212529;
+}
+.jsb-picker-intro-desc {
+    margin: 0;
+    font-size: .84rem;
+    line-height: 1.45;
+    color: #6c757d;
+    max-width: 78ch;
+}
+/* Statistiques : « N dans ce portefeuille / M au total ». */
+.jsb-picker-stats {
     display: flex;
     align-items: center;
     gap: .5rem;
-    padding: .1rem 1.25rem .55rem;
+    margin-top: .55rem;
     font-size: .8rem;
     color: #6c757d;
 }
