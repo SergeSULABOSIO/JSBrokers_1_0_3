@@ -416,6 +416,8 @@ class PortefeuilleFilterTest extends WebTestCase
         // Statistiques d'entête : 1 client rattaché (clientIn) sur 2 au total (in + out).
         $this->assertSame('1', trim($crawler->filter('[data-picker-count-current]')->text()), 'Le picker doit indiquer 1 client dans ce portefeuille.');
         $this->assertStringContainsString('au total', $crawler->filter('.jsb-picker-stats')->text(), 'Le picker doit afficher le total de clients.');
+        // Compteur d'éléments affichés (résultat du filtrage) : initialement = total (2).
+        $this->assertSame('2', trim($crawler->filter('[data-picker-count-shown]')->text()), 'Le picker doit afficher le nombre d\'éléments listés.');
 
         // Client SANS portefeuille : action « Ajouter » visible, pas de « Retirer » visible.
         $freeRow = $crawler->filter(sprintf('[data-picker-row][data-client-id="%d"]', $clientOut->getId()));
