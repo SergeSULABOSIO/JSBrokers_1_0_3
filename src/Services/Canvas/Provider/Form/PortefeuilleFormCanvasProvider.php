@@ -59,13 +59,21 @@ class PortefeuilleFormCanvasProvider implements FormCanvasProviderInterface
                     ["width" => 12, "champs" => ["gestionnaire"]],
                 ],
             ],
-            [
-                "couleur_fond" => "white",
-                "colonnes" => [
-                    ["width" => 12, "champs" => ["clients"]],
-                ],
-            ],
         ];
+
+        // Clients rattachés : widget COLLECTION paginé (comme les collections d'une cotation),
+        // adapté aux portefeuilles de plusieurs dizaines de clients. Le « retrait » d'un client
+        // pointe vers l'action de détachement (client.portefeuille = null), et non vers la
+        // suppression du client (qui est une entité partagée).
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, [
+            [
+                'fieldName'       => 'clients',
+                'entityRouteName' => 'client',
+                'formTitle'       => 'Client',
+                'parentFieldName' => 'portefeuille',
+                'itemDeleteUrl'   => '/admin/portefeuille/api/%parentId%/detach-client',
+            ],
+        ]);
 
         return [
             "parametres" => $parametres,

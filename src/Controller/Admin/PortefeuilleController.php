@@ -2,6 +2,7 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\Client;
 use App\Entity\Invite;
 use App\Entity\Portefeuille;
 use App\Form\PortefeuilleType;
@@ -15,6 +16,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Controller\Admin\ControllerUtilsTrait;
 use App\Entity\Traits\HandleChildAssociationTrait;
@@ -95,6 +97,33 @@ class PortefeuilleController extends AbstractController
     public function query(Request $request): Response
     {
         return $this->renderViewOrListComponent(Portefeuille::class, $request, true);
+    }
+
+    /**
+     * Détache un client du portefeuille (client.portefeuille = null) SANS supprimer le
+     * client : action de « retrait » du widget collection. Détruire le client serait
+     * destructeur (il est partagé avec ses pistes, cotations, sinistres…).
+     */
+    #[Route('/api/{id}/detach-client/{clientId}', name: 'api.detach_client', requirements: ['id' => Requirement::DIGITS, 'clientId' => Requirement::DIGITS], methods: ['DELETE'])]
+    public function detachClient(Portefeuille $portefeuille, int $clientId): JsonResponse
+    {
+        // Mutation d'un portefeuille → exige le droit de Modification (fail-closed).
+        if (!$this->mayAccessEntity(Portefeuille::class, Invite::ACCESS_MODIFICATION)) {
+            return $this->accessDeniedJson();
+        }
+        // Scoping : le portefeuille doit appartenir à l'espace de travail courant.
+        $entreprise = $this->getEntreprise();
+        if ($entreprise === null || $portefeuille->getEntreprise()?->getId() !== $entreprise->getId()) {
+            return $this->json(['message' => "Portefeuille introuvable dans cet espace de travail."], Response::HTTP_NOT_FOUND);
+        }
+
+        $client = $this->em->getRepository(Client::class)->find($clientId);
+        if ($client !== null && $client->getPortefeuille()?->getId() === $portefeuille->getId()) {
+            $client->setPortefeuille(null); // détache, ne supprime pas
+            $this->em->flush();
+        }
+
+        return $this->json(['message' => "Client détaché du portefeuille."]);
     }
 
     #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]

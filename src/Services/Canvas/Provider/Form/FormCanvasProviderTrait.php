@@ -16,6 +16,12 @@ trait FormCanvasProviderTrait
             if (isset($config['secondaryField'])) $extraOptions['secondaryField'] = $config['secondaryField'];
             if (isset($config['secondaryLabel'])) $extraOptions['secondaryLabel'] = $config['secondaryLabel'];
             if (isset($config['watchIds'])) $extraOptions['watchIds'] = $config['watchIds'];
+            // Permet de remplacer l'URL de suppression par défaut (child::delete) par une
+            // action non destructive — ex. « détacher » un client d'un portefeuille sans
+            // supprimer l'entité partagée. %parentId% est substitué par l'ID du parent.
+            if (isset($config['itemDeleteUrl'])) {
+                $extraOptions['itemDeleteUrl'] = str_replace('%parentId%', (string) $parentId, $config['itemDeleteUrl']);
+            }
 
             if (isset($config['totalizableField']) && !$isParentNew) {
                 $total = 0;

@@ -144,7 +144,9 @@ class PortefeuilleFilterTest extends WebTestCase
         $em->persist($portefeuille);
 
         $clientIn = $this->makeClient($entreprise, self::CLI_IN);
-        $clientIn->setPortefeuille($portefeuille);
+        // addClient() synchronise les DEUX côtés (client.portefeuille + collection en
+        // mémoire), pour que Portefeuille::getClients() soit cohérent dans le même EM.
+        $portefeuille->addClient($clientIn);
         $em->persist($clientIn);
 
         $clientOut = $this->makeClient($entreprise, self::CLI_OUT);
@@ -325,26 +327,27 @@ class PortefeuilleFilterTest extends WebTestCase
         $this->assertStringContainsString('Fiche portefeuille', $formHtml, 'Le canevas de formulaire du portefeuille doit être rendu.');
         $this->assertStringContainsString('Gestionnaire de compte', $formHtml, 'Le champ gestionnaire doit être présent dans le formulaire.');
 
-        // Création d'un portefeuille avec gestionnaire + rattachement du client "dehors".
+        // Création d'un portefeuille (nom + gestionnaire). Les clients sont gérés à part
+        // via le widget collection (mapped=false), pas dans la soumission du portefeuille.
         $this->client->request('POST', '/admin/portefeuille/api/submit', [
             'idEntreprise' => $e->getId(),
             'idInvite'     => $owner->getId(),
             'nom'          => 'PHPUNIT-PF-CREATED',
             'gestionnaire' => $gestionnaire->getId(),
-            'clients'      => [$clientOutId],
         ]);
         $this->assertResponseIsSuccessful();
         $this->assertStringContainsString('Enregistr', (string) $this->client->getResponse()->getContent());
 
-        // Le client a bien été rattaché (côté propriétaire de la relation).
-        $this->em()->clear();
         $created = $this->em()->getRepository(Portefeuille::class)->findOneBy(['nom' => 'PHPUNIT-PF-CREATED']);
         $this->assertNotNull($created);
-        $reloadedClient = $this->em()->getRepository(Client::class)->find($clientOutId);
-        $this->assertNotNull($reloadedClient->getPortefeuille());
-        $this->assertSame($created->getId(), $reloadedClient->getPortefeuille()->getId());
 
-        // Suppression du portefeuille : le client survit, simplement détaché.
+        // On rattache un client à ce portefeuille (comme le ferait la fiche client)…
+        $clientOut->setPortefeuille($created);
+        $this->em()->flush();
+        $this->em()->clear();
+
+        // …puis on supprime le portefeuille : le client survit, simplement détaché
+        // (FK ON DELETE SET NULL).
         $this->client->request('DELETE', '/admin/portefeuille/api/delete/' . $created->getId());
         $this->assertResponseIsSuccessful();
 
@@ -353,6 +356,31 @@ class PortefeuilleFilterTest extends WebTestCase
         $survivor = $this->em()->getRepository(Client::class)->find($clientOutId);
         $this->assertNotNull($survivor, 'Le client ne doit pas être supprimé avec le portefeuille.');
         $this->assertNull($survivor->getPortefeuille(), 'Le client doit être détaché du portefeuille supprimé.');
+    }
+
+    public function testClientsRenderedAsCollectionAndDetachIsNonDestructive(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e, 'portefeuille' => $pf, 'clientIn' => $clientIn] = $this->seed();
+        $pfId = $pf->getId();
+        $clientInId = $clientIn->getId();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        // La liste des clients du portefeuille est servie comme une collection (widget) :
+        // l'usage « dialog » renvoie le décompte et le HTML des lignes rattachées.
+        $this->client->request('GET', sprintf('/admin/portefeuille/api/%d/clients/dialog', $pfId));
+        $this->assertResponseIsSuccessful('La collection « clients » du portefeuille doit se charger.');
+        $payload = json_decode((string) $this->client->getResponse()->getContent(), true);
+        $this->assertSame(1, $payload['itemCount'] ?? null, 'La collection doit compter le client rattaché.');
+        $this->assertStringContainsString(self::CLI_IN, $payload['html'] ?? '', 'La ligne du client rattaché doit être rendue.');
+
+        // Le « retrait » d'un client DÉTACHE (portefeuille = null) sans supprimer le client.
+        $this->client->request('DELETE', sprintf('/admin/portefeuille/api/%d/detach-client/%d', $pfId, $clientInId));
+        $this->assertResponseIsSuccessful('Le détachement doit répondre 200.');
+
+        $this->em()->clear();
+        $survivor = $this->em()->getRepository(Client::class)->find($clientInId);
+        $this->assertNotNull($survivor, 'Le client ne doit pas être supprimé par le retrait du portefeuille.');
+        $this->assertNull($survivor->getPortefeuille(), 'Le client doit être détaché du portefeuille.');
     }
 
     public function testWorkspaceLoadsPortefeuilleComponent(): void
