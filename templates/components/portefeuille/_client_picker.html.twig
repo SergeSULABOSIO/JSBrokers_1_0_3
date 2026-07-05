@@ -22,7 +22,7 @@
                 <span class="me-2 d-inline-flex" aria-hidden="true">
                     <twig:UX:Icon name="{{ resolve_icon_name('portefeuille') }}" style="width:22px;height:22px;color:#0047AB;" />
                 </span>
-                <h5 id="jsb-picker-title" class="modal-title mb-0">Ajouter des clients au portefeuille</h5>
+                <h5 id="jsb-picker-title" class="modal-title mb-0">Ajouter des clients à «&nbsp;{{ portefeuille.nom }}&nbsp;»</h5>
             </div>
             <button type="button" class="btn-close" data-picker-close aria-label="Fermer la fenêtre de sélection"></button>
         </div>
@@ -33,7 +33,6 @@
         </div>
 
         <p id="jsb-picker-desc" class="jsb-picker-sub">
-            Portefeuille : <strong>{{ portefeuille.nom }}</strong>.
             Rattachez les clients <strong>sans portefeuille</strong> ; un client déjà rattaché ailleurs ne peut pas être déplacé ici.
         </p>
 
