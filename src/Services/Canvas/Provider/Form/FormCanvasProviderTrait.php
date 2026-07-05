@@ -22,6 +22,11 @@ trait FormCanvasProviderTrait
             if (isset($config['itemDeleteUrl'])) {
                 $extraOptions['itemDeleteUrl'] = str_replace('%parentId%', (string) $parentId, $config['itemDeleteUrl']);
             }
+            // Mode « sélection de ressources existantes » : le bouton Ajouter ouvre une
+            // boîte de choix (ex. clients d'un portefeuille) au lieu d'un formulaire.
+            if (isset($config['pickerUrl'])) {
+                $extraOptions['pickerUrl'] = str_replace('%parentId%', (string) $parentId, $config['pickerUrl']);
+            }
 
             if (isset($config['totalizableField']) && !$isParentNew) {
                 $total = 0;
