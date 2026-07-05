@@ -76,6 +76,13 @@ class PortefeuilleFormCanvasProvider implements FormCanvasProviderInterface
                 'pickerUrl'       => '/admin/portefeuille/api/%parentId%/client-picker',
                 // « Retrait » = détachement non destructif (client.portefeuille = null).
                 'itemDeleteUrl'   => '/admin/portefeuille/api/%parentId%/detach-client',
+                // Rendu compact « collection totalisable » (comme les collections d'une
+                // cotation) : évite le débordement des colonnes numériques dans l'accordéon
+                // et affiche le total du portefeuille en entête + une ligne synthétique par
+                // client (Commission TTC + nombre de polices).
+                'totalizableField' => 'montantTTC',
+                'secondaryField'   => 'nombrePolices',
+                'secondaryLabel'   => '· Polices :',
             ],
         ]);
 
