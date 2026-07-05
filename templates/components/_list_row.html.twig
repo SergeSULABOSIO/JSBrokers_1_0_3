@@ -129,11 +129,17 @@
     {% if usage is defined and usage == 'dialog' %}
         <td class="text-end pe-3">
             <div class="list-row-actions-container" data-collection-target="rowActions">
-                <button type="button" class="btn btn-sm btn-light btn-icon shadow-sm border-0" title="Modifier" data-action="click->collection#editItem" style="width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
-                    <twig:UX:Icon name="{{ resolve_icon_name('lucide:edit') }}" style="width: 20px; height: 20px;" class="text-primary"/>
-                </button>
-                <button type="button" class="btn btn-sm btn-light btn-icon shadow-sm border-0" title="Supprimer" data-action="click->collection#deleteItem" style="width: 30px; height: 30px; padding: 0; display: inline-flex; align-items-center; justify-content: center;">
-                    <twig:UX:Icon name="{{ resolve_icon_name('lucide:trash-2') }}" style="width: 20px; height: 20px;" class="text-danger" />
+                {# Bouton d'édition masquable par collection (ex. clients d'un portefeuille). #}
+                {% if not (listActionOptions.hideEditAction|default(false)) %}
+                    <button type="button" class="btn btn-sm btn-light btn-icon shadow-sm border-0" title="Modifier" data-action="click->collection#editItem" style="width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
+                        <twig:UX:Icon name="{{ resolve_icon_name('lucide:edit') }}" style="width: 20px; height: 20px;" class="text-primary"/>
+                    </button>
+                {% endif %}
+                {# Libellé/icône de l'action de suppression personnalisables : pour une
+                   collection « de rattachement » (portefeuille), l'action DÉTACHE et non
+                   supprime — d'où « Retirer » + icône adaptée. #}
+                <button type="button" class="btn btn-sm btn-light btn-icon shadow-sm border-0" title="{{ listActionOptions.deleteActionLabel|default('Supprimer') }}" data-action="click->collection#deleteItem" style="width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
+                    <twig:UX:Icon name="{{ resolve_icon_name(listActionOptions.deleteActionIcon|default('lucide:trash-2')) }}" style="width: 20px; height: 20px;" class="text-danger" />
                 </button>
             </div>
         </td>

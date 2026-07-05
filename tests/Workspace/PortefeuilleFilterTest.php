@@ -371,7 +371,12 @@ class PortefeuilleFilterTest extends WebTestCase
         $this->assertResponseIsSuccessful('La collection « clients » du portefeuille doit se charger.');
         $payload = json_decode((string) $this->client->getResponse()->getContent(), true);
         $this->assertSame(1, $payload['itemCount'] ?? null, 'La collection doit compter le client rattaché.');
-        $this->assertStringContainsString(self::CLI_IN, $payload['html'] ?? '', 'La ligne du client rattaché doit être rendue.');
+        $collHtml = $payload['html'] ?? '';
+        $this->assertStringContainsString(self::CLI_IN, $collHtml, 'La ligne du client rattaché doit être rendue.');
+        // L'action de suppression doit être un RETRAIT (détachement), pas une suppression BD,
+        // et il ne doit pas y avoir de bouton d'édition.
+        $this->assertStringContainsString('Retirer du portefeuille', $collHtml, "Le bouton doit être libellé « Retirer du portefeuille ».");
+        $this->assertStringNotContainsString('collection#editItem', $collHtml, "La collection des clients ne doit pas exposer de bouton d'édition.");
 
         // Le « retrait » d'un client DÉTACHE (portefeuille = null) sans supprimer le client.
         $this->client->request('DELETE', sprintf('/admin/portefeuille/api/%d/detach-client/%d', $pfId, $clientInId));
@@ -400,27 +405,25 @@ class PortefeuilleFilterTest extends WebTestCase
         $this->assertStringContainsString(self::PF_NOM, (string) $this->client->getResponse()->getContent(), 'La liste des portefeuilles doit contenir le portefeuille de test.');
     }
 
-    public function testClientPickerListsOnlyUnassignedAsAddable(): void
+    public function testClientPickerOffersAddForFreeAndRemoveForCurrent(): void
     {
         ['portefeuille' => $pf, 'clientIn' => $clientIn, 'clientOut' => $clientOut] = $this->seed();
         $this->client->loginUser($this->user(self::OWNER_EMAIL));
 
-        $this->client->request('GET', sprintf('/admin/portefeuille/api/%d/client-picker', $pf->getId()));
+        $crawler = $this->client->request('GET', sprintf('/admin/portefeuille/api/%d/client-picker', $pf->getId()));
         $this->assertResponseIsSuccessful('La boîte de sélection de clients doit se charger.');
-        $html = (string) $this->client->getResponse()->getContent();
 
-        // Le client SANS portefeuille est rattachable (bouton d'ajout ciblant son endpoint)…
-        $this->assertStringContainsString(
-            sprintf('attach-client/%d', $clientOut->getId()),
-            $html,
-            "Le client sans portefeuille doit exposer une action d'ajout."
-        );
-        // …le client DÉJÀ rattaché n'a aucune action d'ajout.
-        $this->assertStringNotContainsString(
-            sprintf('attach-client/%d', $clientIn->getId()),
-            $html,
-            "Un client déjà rattaché ne doit pas exposer d'action d'ajout."
-        );
+        // Client SANS portefeuille : action « Ajouter » visible, pas de « Retirer » visible.
+        $freeRow = $crawler->filter(sprintf('[data-picker-row][data-client-id="%d"]', $clientOut->getId()));
+        $this->assertGreaterThan(0, $freeRow->filter('[data-picker-attach]:not([hidden])')->count(), "Le client libre doit exposer une action d'ajout visible.");
+        $this->assertSame(0, $freeRow->filter('[data-picker-detach]:not([hidden])')->count(), 'Le client libre ne doit pas exposer de retrait visible.');
+
+        // Client de CE portefeuille : action « Retirer » visible, portant l'icône de
+        // suppression standard (comme les autres boutons de suppression de l'app).
+        $currentRow = $crawler->filter(sprintf('[data-picker-row][data-client-id="%d"]', $clientIn->getId()));
+        $this->assertGreaterThan(0, $currentRow->filter('[data-picker-detach]:not([hidden])')->count(), 'Le client du portefeuille doit exposer un retrait visible.');
+        $this->assertGreaterThan(0, $currentRow->filter('[data-picker-detach] svg')->count(), "Le bouton « Retirer » doit porter une icône de suppression.");
+        $this->assertSame(0, $currentRow->filter('[data-picker-attach]:not([hidden])')->count(), "Le client déjà rattaché ne doit pas exposer d'ajout visible.");
     }
 
     public function testAttachClientRequiresUnassignedClient(): void

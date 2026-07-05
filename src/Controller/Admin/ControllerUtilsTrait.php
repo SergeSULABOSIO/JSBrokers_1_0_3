@@ -381,7 +381,8 @@ trait ControllerUtilsTrait
         ?string $secondaryField = null,
         ?string $secondaryLabel = null,
         int $page = 1,
-        int $limit = 20
+        int $limit = 20,
+        array $listActionOptions = []
     ): Response {
         // Pagination pour les onglets génériques (non dialog).
         $dataArray = ($data instanceof \Doctrine\Common\Collections\Collection) ? $data->toArray() : (array)$data;
@@ -460,6 +461,7 @@ trait ControllerUtilsTrait
             'totalizableFieldDetails' => $totalizableFieldDetails,
             'secondaryFieldDetails' => $secondaryFieldDetails,
             'paginationMeta' => $paginationMeta,
+            'listActionOptions' => $listActionOptions,
         ];
 
         if ($usage === "dialog") {
@@ -1007,6 +1009,14 @@ trait ControllerUtilsTrait
         $totalizableField = $collectionOptions['totalizableField'] ?? null;
         $secondaryField = $collectionOptions['secondaryField'] ?? null;
         $secondaryLabel = $collectionOptions['secondaryLabel'] ?? null;
+        // Personnalisation des actions de ligne (ex. portefeuille : « Retirer » au lieu de
+        // « Supprimer », et pas de bouton d'édition). Valeurs par défaut = comportement
+        // historique (édition + suppression standard).
+        $listActionOptions = [
+            'hideEditAction'    => (bool) ($collectionOptions['hideEditAction'] ?? false),
+            'deleteActionLabel' => $collectionOptions['deleteActionLabel'] ?? null,
+            'deleteActionIcon'  => $collectionOptions['deleteActionIcon'] ?? null,
+        ];
 
         // --- NOUVELLE LOGIQUE DE RÉPONSE JSON ---
         if ($usage === 'dialog') {
@@ -1040,7 +1050,7 @@ trait ControllerUtilsTrait
                 }
             }
 
-            $html = $this->renderCollectionOrList('dialog', $entityClass, $parentEntity, $id, $data, $collectionName, $totalizableField, $secondaryField, $secondaryLabel, 1, PHP_INT_MAX)->getContent();
+            $html = $this->renderCollectionOrList('dialog', $entityClass, $parentEntity, $id, $data, $collectionName, $totalizableField, $secondaryField, $secondaryLabel, 1, PHP_INT_MAX, $listActionOptions)->getContent();
 
             return new JsonResponse([
                 'html' => $html,
@@ -1059,7 +1069,7 @@ trait ControllerUtilsTrait
         $entityClass = $collectionMap[$collectionName];
         // Preload des relations avant renderCollectionOrList (évite N×M lazy-loads).
         $this->canvasBuilder->batchPreloadForCollection($data->toArray());
-        return $this->renderCollectionOrList($usage, $entityClass, $parentEntity, $id, $data, $collectionName, $totalizableField, $secondaryField, $secondaryLabel, $page);
+        return $this->renderCollectionOrList($usage, $entityClass, $parentEntity, $id, $data, $collectionName, $totalizableField, $secondaryField, $secondaryLabel, $page, 20, $listActionOptions);
     }
 
     /**
