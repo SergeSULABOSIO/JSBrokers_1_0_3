@@ -3849,18 +3849,25 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 .jsb-picker-search {
     flex: 0 0 auto;
     position: relative;
-    padding: .5rem 1.25rem .85rem;
+    /* Padding vertical symétrique : le repère « top:50% » de l'icône coïncide alors
+       exactement avec le centre du champ. */
+    padding: .75rem 1.25rem;
 }
 .jsb-picker-search-icon {
     position: absolute;
-    left: 1.6rem;
+    /* Centrée dans la zone de padding gauche du champ (1.25rem de gouttière + ~0.7rem). */
+    left: 1.95rem;
     top: 50%;
     transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
     color: #6c757d;
     pointer-events: none;
 }
 .jsb-picker-search .form-control {
-    padding-left: 2.2rem;
+    padding-left: 2.5rem;
     background-color: #f8f9fa !important;
     border: 1px solid #dee2e6;
     border-radius: 8px;
