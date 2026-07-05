@@ -3784,10 +3784,11 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     background: rgba(0, 0, 0, 0.65);
 }
 .jsb-picker-modal {
+    position: relative;
     display: flex;
     flex-direction: column;
     width: 100%;
-    max-width: 640px;
+    max-width: 680px;
     max-height: 85vh;
     background: #ffffff;
     border-radius: 12px;
@@ -3795,12 +3796,41 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     overflow: hidden;
     outline: none;
 }
+/* Barre de progression (feedback à chaque ajout/retrait) : rail discret + segment
+   cobalt animé quand .is-active. */
+.jsb-picker-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: #e9ecef;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity .15s ease-in-out;
+}
+.jsb-picker-progress.is-active { opacity: 1; }
+.jsb-picker-progress-bar {
+    position: absolute;
+    height: 100%;
+    width: 40%;
+    background: #0047AB;
+    border-radius: 3px;
+    transform: translateX(-100%);
+}
+.jsb-picker-progress.is-active .jsb-picker-progress-bar {
+    animation: jsbPickerIndeterminate 1s ease-in-out infinite;
+}
+@keyframes jsbPickerIndeterminate {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(320%); }
+}
 .jsb-picker-head {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: 1rem;
-    padding: 1rem 1.25rem;
+    padding: 1.1rem 1.25rem 1rem;
     border-bottom: 1px solid #dee2e6;
 }
 .jsb-picker-title {
@@ -3833,28 +3863,61 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 }
 .jsb-picker-close:hover { background: #ececec; }
 .jsb-picker-close:focus-visible { outline: 2px solid #0d6efd; outline-offset: 2px; }
+/* Champ de recherche : icône loupe + input, encadré discret. */
 .jsb-picker-search {
+    position: relative;
     padding: .85rem 1.25rem;
     border-bottom: 1px solid #f0f0f0;
+}
+.jsb-picker-search-icon {
+    position: absolute;
+    left: 1.6rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    pointer-events: none;
+}
+.jsb-picker-search .form-control {
+    padding-left: 2.2rem;
+    background-color: #f8f9fa !important;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    font-weight: normal;
+}
+.jsb-picker-search .form-control:focus {
+    border-color: #0047AB;
+    box-shadow: 0 0 0 .2rem rgba(0, 71, 171, 0.15) !important;
 }
 .jsb-picker-listwrap {
     overflow-y: auto;
     padding: .25rem 1.25rem 1rem;
 }
 .jsb-picker-table { margin: 0; }
-.jsb-picker-table th {
-    position: sticky;
-    top: 0;
-    background: #f8f9fa;
-    color: #495057;
+.jsb-picker-table thead th {
+    color: #6c757d;
     font-size: .72rem;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: .02em;
 }
-.jsb-picker-table td { vertical-align: middle; }
+.jsb-picker-table tbody td { vertical-align: middle; padding-top: .55rem; padding-bottom: .55rem; }
 .jsb-picker-client-nom { display: block; font-weight: 600; color: #212529; }
 .jsb-picker-client-mail { display: block; font-size: .78rem; color: #6c757d; }
-.jsb-picker-add { display: inline-flex; align-items: center; gap: .3rem; min-height: 32px; }
+.jsb-picker-btn { display: inline-flex; align-items: center; gap: .3rem; min-height: 32px; white-space: nowrap; }
+/* Pastilles de statut (PAS .badge, forcé en bleu !important globalement) — paires
+   fond/texte à bon contraste (charte : états sémantiques). */
+.jsb-picker-chip {
+    display: inline-block;
+    padding: .22rem .55rem;
+    border-radius: 999px;
+    font-size: .72rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+.jsb-picker-chip--free    { background: #e9ecef; color: #495057; }
+.jsb-picker-chip--current { background: #d1e7dd; color: #0f5132; }
+.jsb-picker-chip--other   { background: #fff3cd; color: #664d03; }
 .jsb-picker-empty {
     padding: 1.5rem .5rem;
     text-align: center;
@@ -3863,10 +3926,12 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 }
 .jsb-picker-foot {
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: space-between;
     gap: .5rem;
     padding: .85rem 1.25rem;
     border-top: 1px solid #dee2e6;
     background: #f8f9fa;
 }
+.jsb-picker-hint { margin: 0; }
 

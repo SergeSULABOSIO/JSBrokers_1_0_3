@@ -321,7 +321,7 @@ export default class extends Controller {
         // Mode SÉLECTION : rattacher des ressources existantes (ex. clients d'un
         // portefeuille) au lieu d'ouvrir un formulaire de création.
         if (this.hasPickerUrlValue && this.pickerUrlValue) {
-            this.openPicker();
+            this.openPicker(event.currentTarget);
             return;
         }
 
@@ -358,10 +358,19 @@ export default class extends Controller {
     /**
      * Ouvre la boîte de SÉLECTION de ressources existantes (mode picker) : récupère son
      * HTML depuis pickerUrl, l'injecte au-dessus de la fiche et branche recherche,
-     * fermeture (bouton / clic hors modale / Échap) et ajout.
+     * fermeture (bouton / clic hors modale / Échap), ajout et retrait.
      */
-    async openPicker() {
-        if (this.pickerElement) return; // déjà ouverte
+    async openPicker(triggerButton = null) {
+        // Garde anti double-ouverture (clics répétés / requête en vol).
+        if (this.pickerElement || this.pickerOpening) return;
+        this.pickerOpening = true;
+        // Feedback immédiat sur le bouton déclencheur (évite l'impression d'hésitation
+        // le temps du chargement de la liste).
+        if (triggerButton) {
+            triggerButton.disabled = true;
+            triggerButton.dataset.prevHtml = triggerButton.innerHTML;
+            triggerButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> <span>Ouverture…</span>';
+        }
         try {
             const response = await fetch(this.pickerUrlValue, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
             if (!response.ok) throw new Error(`Erreur serveur: ${response.status}`);
@@ -373,19 +382,22 @@ export default class extends Controller {
             if (!this.pickerElement) throw new Error('Contenu vide.');
 
             document.body.appendChild(this.pickerElement);
+            this.pickerBase = this.pickerElement.dataset.pickerBase || '';
             this.pickerPreviousFocus = document.activeElement;
 
             // Fermeture au clavier (Échap) — Nielsen : sortie d'urgence / contrôle utilisateur.
             this.boundPickerKeydown = (e) => { if (e.key === 'Escape') this.closePicker(); };
             document.addEventListener('keydown', this.boundPickerKeydown);
 
-            // Délégation des clics (fermeture, ajout).
+            // Délégation des clics (fermeture, ajout, retrait).
             this.pickerElement.addEventListener('click', (e) => this._onPickerClick(e));
 
-            // Recherche : filtrage des lignes.
+            // Recherche : filtrage des lignes (input + saisie clavier, robustesse navigateurs).
             const searchInput = this.pickerElement.querySelector('[data-picker-search]');
             if (searchInput) {
-                searchInput.addEventListener('input', () => this._filterPicker(searchInput.value));
+                const handler = () => this._filterPicker(searchInput.value);
+                searchInput.addEventListener('input', handler);
+                searchInput.addEventListener('keyup', handler);
             }
 
             // Focus initial (accessibilité : le focus entre dans la modale).
@@ -393,6 +405,15 @@ export default class extends Controller {
             if (focusTarget) focusTarget.focus();
         } catch (error) {
             this._pickerNotify("Impossible d'ouvrir la liste des clients.", 'error');
+        } finally {
+            this.pickerOpening = false;
+            if (triggerButton) {
+                triggerButton.disabled = false;
+                if (triggerButton.dataset.prevHtml !== undefined) {
+                    triggerButton.innerHTML = triggerButton.dataset.prevHtml;
+                    delete triggerButton.dataset.prevHtml;
+                }
+            }
         }
     }
 
@@ -417,34 +438,70 @@ export default class extends Controller {
             this.closePicker();
             return;
         }
-        // Ajout d'un client.
         const attachBtn = event.target.closest('[data-picker-attach]');
-        if (attachBtn) {
-            this._attachFromPicker(attachBtn);
-        }
+        if (attachBtn) { this._pickerAction(attachBtn, 'attach'); return; }
+        const detachBtn = event.target.closest('[data-picker-detach]');
+        if (detachBtn) { this._pickerAction(detachBtn, 'detach'); }
     }
 
-    async _attachFromPicker(button) {
-        const url = button.dataset.attachUrl;
-        if (!url) return;
+    /**
+     * Ajoute (attach, PUT) ou retire (detach, DELETE) un client depuis le picker, avec
+     * barre de progression, mise à jour de la ligne et rafraîchissement de la collection.
+     */
+    async _pickerAction(button, mode) {
+        const row = button.closest('[data-picker-row]');
+        const clientId = row?.dataset.clientId;
+        if (!clientId || !this.pickerBase) return;
+
+        const isAttach = mode === 'attach';
+        const url = `${this.pickerBase}/${isAttach ? 'attach-client' : 'detach-client'}/${clientId}`;
+
         button.disabled = true;
+        this._pickerProgress(true);
         try {
-            const response = await fetch(url, { method: 'PUT', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            const response = await fetch(url, {
+                method: isAttach ? 'PUT' : 'DELETE',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
             const data = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(data.message || `Erreur serveur: ${response.status}`);
 
-            // Retour visuel dans la ligne (Nielsen : visibilité de l'état du système).
-            const cell = button.closest('td');
-            if (cell) cell.innerHTML = '<span class="text-success small fw-semibold">Ajouté ✓</span>';
-            const statusCell = button.closest('tr')?.querySelector('td:nth-child(2)');
-            if (statusCell) statusCell.innerHTML = '<span class="badge bg-success">Dans ce portefeuille</span>';
-
-            this._pickerNotify(data.message || 'Client ajouté au portefeuille.', 'success');
+            this._pickerSetRowState(row, isAttach ? 'current' : 'free');
+            this._pickerNotify(data.message || (isAttach ? 'Client ajouté au portefeuille.' : 'Client retiré du portefeuille.'), 'success');
             this.load(); // rafraîchit la collection derrière la modale
         } catch (error) {
             button.disabled = false;
-            this._pickerNotify(error.message || "Échec de l'ajout du client.", 'error');
+            this._pickerNotify(error.message || "Action impossible.", 'error');
+        } finally {
+            this._pickerProgress(false);
         }
+    }
+
+    /** Reconstruit les cellules Statut + Action d'une ligne selon son nouvel état. */
+    _pickerSetRowState(row, state) {
+        if (!row) return;
+        row.dataset.pickerState = state;
+        const clientId = row.dataset.clientId;
+        const clientNom = row.dataset.clientNom || 'ce client';
+        const statusCell = row.querySelector('[data-picker-status]');
+        const actionCell = row.querySelector('[data-picker-action]');
+
+        if (state === 'current') {
+            if (statusCell) statusCell.innerHTML = '<span class="jsb-picker-chip jsb-picker-chip--current">Dans ce portefeuille</span>';
+            if (actionCell) actionCell.innerHTML =
+                `<button type="button" class="btn btn-sm btn-outline-danger jsb-picker-btn" data-picker-detach `
+                + `aria-label="Retirer le client ${this._esc(clientNom)} du portefeuille">Retirer</button>`;
+        } else { // free
+            if (statusCell) statusCell.innerHTML = '<span class="jsb-picker-chip jsb-picker-chip--free">Sans portefeuille</span>';
+            if (actionCell) actionCell.innerHTML =
+                `<button type="button" class="btn btn-sm btn-primary jsb-picker-btn" data-picker-attach `
+                + `aria-label="Ajouter le client ${this._esc(clientNom)} au portefeuille">Ajouter</button>`;
+        }
+    }
+
+    _pickerProgress(active) {
+        const bar = this.pickerElement?.querySelector('[data-picker-progress]');
+        if (bar) bar.classList.toggle('is-active', !!active);
     }
 
     _filterPicker(query) {
@@ -458,6 +515,12 @@ export default class extends Controller {
         });
         const empty = this.pickerElement.querySelector('[data-picker-empty]');
         if (empty) empty.hidden = visible !== 0;
+    }
+
+    _esc(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML.replace(/"/g, '&quot;');
     }
 
     _pickerNotify(text, type) {
