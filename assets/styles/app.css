@@ -2485,8 +2485,12 @@ thead.sticky-header {
 .criterion-block.has-error {
     border-left-color: #dc3545;
 }
-/* La <legend> native se place hors flux : on la réintègre comme un vrai en-tête. */
+/* La <legend> native se place hors flux : on la réintègre comme un vrai en-tête,
+   en ligne avec son icône de signification. */
 .criterion-block .criterion-header {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
     float: none;
     width: 100%;
     padding: 0.45rem 0.875rem;
@@ -2499,10 +2503,24 @@ thead.sticky-header {
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
+/* Icône d'en-tête : neutre au repos, cobalt quand le critère est actif (hérite de la
+   couleur du texte de l'en-tête via currentColor). */
+.criterion-header__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: #6c757d;
+}
+.criterion-header__icon svg { width: 100%; height: 100%; }
+.criterion-header__label { min-width: 0; }
 .criterion-block.is-active .criterion-header {
     color: #0047AB;
     border-bottom-color: rgba(0, 71, 171, 0.2);
 }
+.criterion-block.is-active .criterion-header__icon { color: #0047AB; }
 .criterion-block .criterion-body { padding: 0.75rem; }
 
 /* Ligne de champ : opérateur/mode + valeur alignés, responsive. */

@@ -348,6 +348,11 @@ export default class extends Controller {
                     state.elementId = elementId;
                     state.serverRootName = serverRootName;
                     wsStateTarget[tabId] = state;
+                } else {
+                    // L'état existait déjà (chargements concurrents) : on met tout de même à
+                    // jour les compteurs de la barre de statut fournis par le list-manager.
+                    wsStateTarget[tabId].pageItemCount = state.pageItemCount;
+                    wsStateTarget[tabId].totalItems = state.totalItems;
                 }
 
                 // Si l'onglet qui vient d'être initialisé est l'onglet actuellement actif,

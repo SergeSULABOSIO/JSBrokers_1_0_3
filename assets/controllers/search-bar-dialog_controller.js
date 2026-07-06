@@ -32,9 +32,14 @@ export default class extends BaseController {
         this.activeFilters = {};
         this.autocompleteUrl = '';
         this.tomSelects = [];
+        this.iconCache = new Map(); // cache local des SVG d'icônes de critères
 
         this.boundOpenDialog = this.openDialog.bind(this);
         document.addEventListener('dialog:search.open-request', this.boundOpenDialog);
+
+        // Icônes des critères : rendues via le mécanisme partagé (ui:icon.request → app:icon.loaded).
+        this.boundHandleIconLoaded = this.handleIconLoaded.bind(this);
+        document.addEventListener('app:icon.loaded', this.boundHandleIconLoaded);
 
         // Nettoyage des instances Tom Select à la fermeture (évite les fuites/doublons).
         this.advancedSearchModalTarget.addEventListener('hidden.bs.modal', () => this.destroyTomSelects());
@@ -42,6 +47,7 @@ export default class extends BaseController {
 
     disconnect() {
         document.removeEventListener('dialog:search.open-request', this.boundOpenDialog);
+        document.removeEventListener('app:icon.loaded', this.boundHandleIconLoaded);
         this.destroyTomSelects();
     }
 
@@ -62,6 +68,7 @@ export default class extends BaseController {
         this.modal.show();
 
         this.initTomSelects();
+        this.loadCriterionIcons();
         this.refreshAllBlocks();
     }
 
@@ -88,11 +95,49 @@ export default class extends BaseController {
         const type = this.esc(criterion.Type);
         const field = this.renderField(criterion, id);
 
+        // Icône « de signification » : placeholder rempli après rendu via le mécanisme
+        // partagé d'icônes. Alias fourni par le serveur (searchCanvas.Icone).
+        const iconAlias = this.esc(criterion.Icone || 'action:filter');
+        const iconId = `jsb-crit-icon-${id}`;
+
         return `
         <fieldset class="criterion-block" data-criterion-block data-criterion-name="${name}" data-criterion-type="${type}">
-            <legend class="criterion-header">${this.esc(criterion.Display)}</legend>
+            <legend class="criterion-header">
+                <span class="criterion-header__icon" id="${iconId}" data-icon-alias="${iconAlias}" aria-hidden="true"></span>
+                <span class="criterion-header__label">${this.esc(criterion.Display)}</span>
+            </legend>
             <div class="criterion-body">${field}</div>
         </fieldset>`;
+    }
+
+    /**
+     * Demande le rendu des icônes des en-têtes de critères (mécanisme partagé du Cerveau).
+     */
+    loadCriterionIcons() {
+        const spans = this.advancedFormContainerTarget.querySelectorAll('.criterion-header__icon[data-icon-alias]');
+        spans.forEach(span => {
+            const alias = span.dataset.iconAlias;
+            if (!alias) return;
+            if (this.iconCache.has(alias)) {
+                span.innerHTML = this.iconCache.get(alias);
+            } else {
+                this.notifyCerveau('ui:icon.request', { iconName: alias, iconSize: 16, requesterId: span.id });
+            }
+        });
+    }
+
+    /**
+     * Injecte le SVG d'icône reçu dans le placeholder d'en-tête correspondant.
+     */
+    handleIconLoaded(event) {
+        const { html, requesterId, iconName } = event.detail;
+        if (iconName && html && !html.trim().startsWith('<!--')) {
+            this.iconCache.set(iconName, html);
+        }
+        if (requesterId && requesterId.startsWith('jsb-crit-icon-')) {
+            const span = document.getElementById(requesterId);
+            if (span && html) span.innerHTML = html;
+        }
     }
 
     /**

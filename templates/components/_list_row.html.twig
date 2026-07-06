@@ -120,8 +120,12 @@
                     {% endif %}
                     {% if affichage is not null and affichage|trim != '' %}
                         {% if rendus > 0 %}<span class="mx-2 text-secondary" aria-hidden="true">{{ col_principale.textes_secondaires_separateurs|default(' &bull; ')|raw }}</span>{% endif %}
+                        {# Pattern « liste des clients » : chaque info secondaire est précédée de
+                           son icône. L'icône explicite du canevas prime ; sinon on la déduit du
+                           code d'attribut (secondary_icon), pour couvrir toutes les listes. #}
+                        {% set sec_icone = texte.icone|default(secondary_icon(texte.attribut_code)) %}
                         <span class="d-inline-flex align-items-center">
-                            {% if texte.icone is defined %}<twig:UX:Icon name="{{ resolve_icon_name(texte.icone) }}" style="width: {{ texte.icone_taille | default('1.1em') }}; height: {{ texte.icone_taille | default('1.1em') }}; margin-right: 4px;" />{% endif %}
+                            <twig:UX:Icon name="{{ resolve_icon_name(sec_icone) }}" style="width: {{ texte.icone_taille | default('1.1em') }}; height: {{ texte.icone_taille | default('1.1em') }}; margin-right: 4px;" />
                             {{ texte.attribut_prefixe | default('') }}{{ affichage }}
                         </span>
                         {% set rendus = rendus + 1 %}
