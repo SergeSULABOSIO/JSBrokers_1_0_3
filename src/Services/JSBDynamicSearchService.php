@@ -4,12 +4,17 @@ namespace App\Services;
 
 
 use App\Entity\Entreprise;
+use App\Services\Search\PortefeuilleScope;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Doctrine\ORM\QueryBuilder;
+use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\EntityManagerInterface;
 
 class JSBDynamicSearchService
 {
     private EntityManagerInterface $em;
+    private LoggerInterface $logger;
 
     /**
      * @var string[] Liste blanche des entités autorisées pour la recherche.
@@ -56,16 +61,19 @@ class JSBDynamicSearchService
 
     /**
      * @var string[] Liste blanche des opérateurs de comparaison autorisés.
+     * NB : la recherche par plage passe par le format { from, to } (CAS 1), il n'y a
+     * donc pas d'opérateur BETWEEN à gérer ici.
      */
-    private array $allowedOperators = ['=', '!=', '<', '<=', '>', '>=', 'LIKE', 'BETWEEN'];
+    private array $allowedOperators = ['=', '!=', '<', '<=', '>', '>=', 'LIKE'];
 
     /**
      * Le service a besoin de l'EntityManager de Doctrine pour fonctionner.
      * Symfony l'injectera automatiquement ici.
      */
-    public function __construct(EntityManagerInterface $em)
+    public function __construct(EntityManagerInterface $em, ?LoggerInterface $logger = null)
     {
         $this->em = $em;
+        $this->logger = $logger ?? new NullLogger();
     }
 
     /**
@@ -191,6 +199,39 @@ class JSBDynamicSearchService
             $currentAlias = $rootAlias;
             $actualField = $field;
 
+            // CAS 0 : Périmètre « Mon portefeuille » (critère synthétique). On filtre les
+            // éléments rattachés — directement ou indirectement — à un portefeuille géré par
+            // l'invité (Portefeuille.gestionnaire = :id), via un OU sur les chemins déclarés
+            // pour l'entité (cf. PortefeuilleScope). Les entités polymorphes (Tâche, Feedback)
+            // ont plusieurs chemins ; un élément est visible si AU MOINS un s'applique.
+            if ($field === PortefeuilleScope::CRITERION_KEY) {
+                $inviteId = is_array($value) ? ($value['value'] ?? null) : $value;
+                $shortName = (new \ReflectionClass($entityClass))->getShortName();
+                $paths = PortefeuilleScope::pathsFor($shortName);
+
+                if ($inviteId === null || $inviteId === '' || empty($paths)) {
+                    continue; // rien à appliquer (entité non concernée ou id manquant)
+                }
+
+                $orParts = [];
+                foreach ($paths as $path) {
+                    $finalAlias = $this->joinPath($qb, $rootAlias, $metadata, $path, $joinedEntities, $suffix);
+                    if ($finalAlias === null) {
+                        $this->logger->warning('[JSBDynamicSearch] Chemin de périmètre invalide ignoré.', [
+                            'entity' => $entityClass, 'path' => $path,
+                        ]);
+                        continue;
+                    }
+                    $orParts[] = $qb->expr()->eq("{$finalAlias}.id", ':scopeInvite' . $suffix);
+                }
+
+                if (!empty($orParts)) {
+                    $qb->andWhere($qb->expr()->orX(...$orParts))
+                       ->setParameter('scopeInvite' . $suffix, $inviteId);
+                }
+                continue;
+            }
+
             // CAS 1 : C'est une plage de dates (recherche avancée pour les champs de type DateTimeRange).
             // La valeur est un tableau comme { from: 'YYYY-MM-DD', to: 'YYYY-MM-DD' }.
             if (is_array($value) && (isset($value['from']) || isset($value['to'])) && !isset($value['operator'])) {
@@ -246,16 +287,30 @@ class JSBDynamicSearchService
                         $currentMeta = $this->em->getClassMetadata($currentMeta->getAssociationTargetClass($segment));
                     }
 
-                    // Chemin invalide (segment inexistant) : on ignore le critère sans casser la requête.
+                    // Chemin invalide (segment inexistant) : on ignore le critère mais on
+                    // le trace pour faciliter le débogage (typo de code de champ, etc.).
                     if (!$pathIsValid) {
+                        $this->logger->warning('[JSBDynamicSearch] Chemin de relation invalide ignoré.', [
+                            'entity' => $entityClass,
+                            'field'  => $actualField,
+                        ]);
                         continue;
                     }
 
-                    // Le champ cible sur lequel chercher (ex: 'nom') est fourni dans le critère.
-                    $targetField = $value['targetField'] ?? 'nom';
-
-                    $qb->andWhere($qb->expr()->like("{$joinAlias}.{$targetField}", ':' . $parameterName))
-                        ->setParameter($parameterName, '%' . $filterValue . '%');
+                    // Filtrage par IDENTITÉ (nouveau sélecteur autocomplété) : le critère porte
+                    // l'id de l'entité liée et un opérateur d'égalité, sans targetField texte.
+                    if (in_array($operator, ['=', '!='], true) && !isset($value['targetField'])) {
+                        $comparison = $operator === '!='
+                            ? $qb->expr()->neq("{$joinAlias}.id", ':' . $parameterName)
+                            : $qb->expr()->eq("{$joinAlias}.id", ':' . $parameterName);
+                        $qb->andWhere($comparison)->setParameter($parameterName, $filterValue);
+                    } else {
+                        // Recherche texte de repli (recherche simple) : LIKE sur le champ
+                        // d'affichage de la relation (ex: 'nom'), fourni dans le critère.
+                        $targetField = $value['targetField'] ?? 'nom';
+                        $qb->andWhere($qb->expr()->like("{$joinAlias}.{$targetField}", ':' . $parameterName))
+                            ->setParameter($parameterName, '%' . $filterValue . '%');
+                    }
                 }
                 // SOUS-CAS 2.2 : Le champ est un attribut simple (texte, nombre, etc.).
                 else {
@@ -267,7 +322,14 @@ class JSBDynamicSearchService
                     if (!$doctrineOperator) continue;
 
                     $qb->andWhere($qb->expr()->{$doctrineOperator}($currentAlias . '.' . $actualField, ':' . $parameterName));
-                    $paramValue = ($operator === 'LIKE') ? '%' . $filterValue . '%' : $filterValue;
+                    // Mode de correspondance texte : 'starts' => "valeur%", sinon "%valeur%".
+                    // (le mode 'exact' est envoyé par le frontend avec l'opérateur '=').
+                    if ($operator === 'LIKE') {
+                        $mode = $value['mode'] ?? 'contains';
+                        $paramValue = $mode === 'starts' ? $filterValue . '%' : '%' . $filterValue . '%';
+                    } else {
+                        $paramValue = $filterValue;
+                    }
                     $qb->setParameter($parameterName, $paramValue);
                 }
             }
@@ -287,5 +349,38 @@ class JSBDynamicSearchService
                 ))->setParameter($parameterName, $entity);
             }
         }
+    }
+
+    /**
+     * Traverse un chemin de relations pointillé (ex. « cotation.piste.client.portefeuille »)
+     * en enchaînant des leftJoin, et retourne l'alias final. Les jointures sont dédupliquées
+     * via $joinedEntities (clé = préfixe du chemin), ce qui permet de partager les segments
+     * communs entre plusieurs chemins (ex. les chemins d'une Tâche/Feedback). Les associations
+     * étant toutes « to-one », aucun risque de multiplication de lignes.
+     *
+     * @param array<string, string> $joinedEntities Registre des jointures déjà posées (par référence).
+     * @return string|null L'alias final, ou null si un segment n'est pas une association valide.
+     */
+    private function joinPath(QueryBuilder $qb, string $rootAlias, ClassMetadata $rootMeta, string $path, array &$joinedEntities, string $suffix): ?string
+    {
+        $joinAlias = $rootAlias;
+        $currentMeta = $rootMeta;
+        $pathKey = $rootAlias;
+
+        foreach (explode('.', $path) as $segment) {
+            if (!$currentMeta->hasAssociation($segment)) {
+                return null;
+            }
+            $pathKey .= '.' . $segment;
+            if (!isset($joinedEntities[$pathKey])) {
+                $newAlias = 'sc_' . substr(md5($pathKey), 0, 10) . $suffix;
+                $qb->leftJoin("{$joinAlias}.{$segment}", $newAlias);
+                $joinedEntities[$pathKey] = $newAlias;
+            }
+            $joinAlias = $joinedEntities[$pathKey];
+            $currentMeta = $this->em->getClassMetadata($currentMeta->getAssociationTargetClass($segment));
+        }
+
+        return $joinAlias;
     }
 }

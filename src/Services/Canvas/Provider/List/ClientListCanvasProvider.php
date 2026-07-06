@@ -24,9 +24,12 @@ class ClientListCanvasProvider implements ListCanvasProviderInterface
                 "texte_principal" => ["attribut_code" => "nom", "icone" => "mdi:account-group"],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
-                    ["attribut_code" => "groupeNom"],
-                    ["attribut_code" => "email"],
-                    ["attribut_code" => "telephone"],
+                    // Portefeuille d'affectation en tête (avec icône) : information de
+                    // rattachement la plus utile pour scanner la liste des clients.
+                    ["attribut_code" => "portefeuilleNom", "icone" => "lucide:folder"],
+                    ["attribut_code" => "groupeNom", "icone" => "lucide:users"],
+                    ["attribut_code" => "email", "icone" => "lucide:mail"],
+                    ["attribut_code" => "telephone", "icone" => "lucide:phone"],
                 ],
             ],
             "colonnes_numeriques" => [

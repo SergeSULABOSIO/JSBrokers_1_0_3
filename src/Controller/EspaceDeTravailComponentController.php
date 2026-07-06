@@ -17,7 +17,9 @@ use Twig\Environment;
 use Psr\Log\LoggerInterface;
 use App\Constantes\Constante;
 use App\Entity\Client;
+use App\Entity\Invite;
 use App\Entity\Utilisateur;
+use Symfony\Component\PropertyAccess\PropertyAccess;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -155,5 +157,81 @@ class EspaceDeTravailComponentController extends AbstractController
         // La logique de validation et de récupération est maintenant dans le trait.
         // On retourne les entités en utilisant le groupe de sérialisation
         return $this->json($this->getEntitiesForType($entityType), 200, [], ['groups' => 'list:read']);
+    }
+
+    /**
+     * Endpoint générique d'autocomplétion pour les critères de type « relation » de la
+     * recherche avancée du workspace. Renvoie les entités de l'entité cible correspondant
+     * à la saisie, filtrées par l'entreprise du workspace courant (via le service de
+     * recherche, qui applique le scope entreprise + getConnectedTo).
+     *
+     * Format de réponse compatible Tom Select : { results: [{ value, text }], next_page }.
+     */
+    #[Route('/api/search-autocomplete/{idInvite}/{idEntreprise}',
+        name: 'api_search_autocomplete',
+        requirements: ['idInvite' => Requirement::DIGITS, 'idEntreprise' => Requirement::DIGITS],
+        methods: ['GET']
+    )]
+    public function searchAutocomplete(int $idInvite, int $idEntreprise, Request $request): JsonResponse
+    {
+        $access = $this->validateWorkspaceAccess($idEntreprise, $idInvite);
+
+        // Synchronise l'entreprise « connectée » (voir index()) pour que le scope de
+        // recherche et l'autocomplétion reflètent bien le workspace courant.
+        /** @var Utilisateur $user */
+        $user = $this->getUser();
+        if ($user->getConnectedTo() !== $access['entreprise']) {
+            $user->setConnectedTo($access['entreprise']);
+            $this->em->flush();
+        }
+
+        $empty = new JsonResponse(['results' => [], 'next_page' => null]);
+
+        $entityType = (string) $request->query->get('entity', '');
+        $displayField = (string) $request->query->get('displayField', 'nom');
+        // Tom Select envoie « query » ; on accepte « q » en repli.
+        $query = trim((string) ($request->query->get('query') ?? $request->query->get('q', '')));
+
+        // Sécurité : entité dans la liste blanche + périmètre de lecture de l'invité.
+        if (!in_array($entityType, JSBDynamicSearchService::$allowedEntities, true)) {
+            return $empty;
+        }
+        $entityClass = 'App\\Entity\\' . $entityType;
+        if (!$this->mayAccessEntity($entityClass, Invite::ACCESS_LECTURE)) {
+            return $empty;
+        }
+
+        // Sécurité : le champ d'affichage doit être un identifiant simple (anti-injection DQL).
+        if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $displayField)) {
+            $displayField = 'nom';
+        }
+
+        // On délègue au service de recherche : LIKE sur le displayField, scope entreprise appliqué.
+        $criteria = $query !== ''
+            ? [$displayField => ['operator' => 'LIKE', 'value' => $query, 'targetField' => $displayField]]
+            : [];
+
+        try {
+            $result = $this->searchService->search($entityClass, $criteria, $access['entreprise'], null, 1, 20);
+        } catch (\Throwable $e) {
+            return $empty;
+        }
+
+        $accessor = PropertyAccess::createPropertyAccessor();
+        $results = [];
+        foreach ($result['data'] as $entity) {
+            $label = null;
+            try {
+                $label = $accessor->getValue($entity, $displayField);
+            } catch (\Throwable) {
+                // displayField absent sur cette entité : on retombe sur __toString / id.
+            }
+            if ($label === null || $label === '') {
+                $label = method_exists($entity, '__toString') ? (string) $entity : ('#' . $entity->getId());
+            }
+            $results[] = ['value' => $entity->getId(), 'text' => (string) $label];
+        }
+
+        return new JsonResponse(['results' => $results, 'next_page' => null]);
     }
 }

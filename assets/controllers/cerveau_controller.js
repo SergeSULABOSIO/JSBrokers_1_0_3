@@ -29,6 +29,8 @@ export default class extends Controller {
             activeTabName: 'Principal', // NOUVEAU
             result: 'Prêt',
             selectionCount: 0,
+            pageItemCount: 0,   // Nombre d'éléments affichés sur la page courante
+            totalItems: null,   // Nombre total d'éléments résultant de la recherche
             timestamp: null // NOUVEAU : Ajout du timestamp à l'état
         };
         /**
@@ -55,6 +57,8 @@ export default class extends Controller {
             elementId: null,
             serverRootName: null,
             currentPage: 1,
+            pageItemCount: 0, // éléments affichés sur la page courante (par onglet)
+            totalItems: null, // total de la recherche (par onglet)
         };
 
         this.currentIdInvite = null;
@@ -141,6 +145,9 @@ export default class extends Controller {
                 const storedState = this._getCurrentWsTabState()[this.activeTabId];
                 if (storedState) {
                     this.displayState.selectionCount = storedState.selectionState.length;
+                    // Restaure les compteurs mémorisés pour cet onglet (page + total).
+                    this.displayState.pageItemCount = storedState.pageItemCount ?? 0;
+                    this.displayState.totalItems = storedState.totalItems ?? null;
                     this._publishSelectionStatus();
 
                     this.broadcast('app:context.changed', {
@@ -317,11 +324,18 @@ export default class extends Controller {
                 this._loadTabContent(payload);
                 break;
             // NOUVEAU : La liste a fini son rendu. C'est le signal final du rafraîchissement.
-            case 'app:list.rendered':
-                // Met à jour le statut et arrête l'indicateur de chargement.
-                this._publishSelectionStatus(`Liste chargée : ${payload.itemCount} élément(s)`);
+            case 'app:list.rendered': {
+                // Mémorise les compteurs (page + total) pour l'onglet courant et rafraîchit
+                // la barre de statut avec « X affiché(s) sur Y ».
+                const renderedState = this._getActiveTabState();
+                renderedState.pageItemCount = payload.itemCount ?? 0;
+                renderedState.totalItems = payload.totalItems ?? payload.itemCount ?? null;
+                this.displayState.pageItemCount = renderedState.pageItemCount;
+                this.displayState.totalItems = renderedState.totalItems;
+                this._publishSelectionStatus();
                 this.broadcast('app:loading.stop');
                 break;
+            }
             // NOUVEAU : Stocke l'état initial d'un onglet nouvellement créé.
             case 'ui:tab.initialized':
                 const { tabId, state, elementId, serverRootName, workspaceTabId: initWsId } = payload;
@@ -347,6 +361,9 @@ export default class extends Controller {
                     const activeTabState = wsStateTarget[tabId];
 
                     this.displayState.selectionCount = activeTabState.selectionState.length;
+                    // Compteurs initiaux (page + total) fournis par le list-manager.
+                    this.displayState.pageItemCount = activeTabState.pageItemCount ?? 0;
+                    this.displayState.totalItems = activeTabState.totalItems ?? null;
                     this._publishSelectionStatus(); // Affiche "0 sélection(s)"
 
                     // On publie le nouveau contexte pour que la toolbar, la barre des totaux et la barre de recherche se mettent à jour.
@@ -766,10 +783,18 @@ export default class extends Controller {
             messageParts.push(`<span class="fw-bold text-dark">${tabName}</span>`);
         }
 
-        // Si une action est fournie, elle est affichée. Sinon, on affiche le nombre de sélections.
+        // Si une action transitoire est fournie, elle est affichée. Sinon, on affiche les
+        // compteurs de la recherche (éléments affichés sur la page / total) puis la sélection.
         if (action) {
             messageParts.push(`<span>${action}</span>`);
         } else {
+            const total = this.displayState.totalItems;
+            if (total !== null && total !== undefined) {
+                const page = this.displayState.pageItemCount ?? 0;
+                messageParts.push(
+                    `<span><strong class="text-dark">${page}</strong> affiché(s) sur <strong class="text-dark">${total}</strong></span>`
+                );
+            }
             messageParts.push(`<span>${selectionCount} sélection(s)</span>`);
         }
 

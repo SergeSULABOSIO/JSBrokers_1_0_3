@@ -36,8 +36,12 @@ export default class extends Controller {
 
         // Écoute le clic droit UNIQUEMENT sur sa propre ligne (this.element est le <tr>)
         this.element.addEventListener('contextmenu', this.boundHandleContextMenu);
-        // Écoute le changement d'état de sa propre case à cocher
-        this.checkboxTarget.addEventListener('change', this.boundHandleCheckboxChange);
+        // Écoute le changement d'état de sa propre case à cocher.
+        // En collection embarquée (dialog), la colonne case à cocher n'est pas rendue :
+        // la cible est absente, on garde donc l'accès conditionnel.
+        if (this.hasCheckboxTarget) {
+            this.checkboxTarget.addEventListener('change', this.boundHandleCheckboxChange);
+        }
     }
 
     /**
@@ -46,7 +50,9 @@ export default class extends Controller {
      */
     disconnect() {
         this.element.removeEventListener('contextmenu', this.boundHandleContextMenu);
-        this.checkboxTarget.removeEventListener('change', this.boundHandleCheckboxChange);
+        if (this.hasCheckboxTarget) {
+            this.checkboxTarget.removeEventListener('change', this.boundHandleCheckboxChange);
+        }
     }
 
     /**
@@ -56,6 +62,11 @@ export default class extends Controller {
      * @fires cerveau:event
      */
     handleContextMenu(event) {
+        // En collection embarquée (dialog), pas de case à cocher ni de menu contextuel :
+        // on laisse le menu natif du navigateur et on n'émet aucune demande.
+        if (!this.hasCheckboxTarget) {
+            return;
+        }
         event.preventDefault();
         event.stopPropagation();
 
@@ -112,6 +123,11 @@ export default class extends Controller {
     toggleSelection(event) {
         // Ne pas interférer si le clic était sur un élément interactif.
         if (event.target.closest('a, button, input, label')) {
+            return;
+        }
+        // En collection embarquée (dialog), pas de case à cocher : la sélection de ligne
+        // n'a pas de débouché, on ne fait rien.
+        if (!this.hasCheckboxTarget) {
             return;
         }
         // CORRECTION : Inverse l'état de la checkbox pour un feedback visuel immédiat.

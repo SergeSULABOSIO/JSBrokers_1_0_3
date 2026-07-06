@@ -100,9 +100,15 @@
                                         {{ value|date('d/m/Y') }}
                                     {% elseif attr.format is defined and attr.format == 'Pourcentage' %}
                                         {{ value|number_format(2, ',', ' ') }} %
+                                    {% elseif attr.format is defined and attr.format == 'Nombre' and value is not null %}
+                                        {# Nombres : les compteurs (Nb. Clients, Nb. Pistes…) s'affichent en ENTIER,
+                                           sans décimales parasites. Le format « Nombre » servant aussi à des taux
+                                           décimaux (ex. 98,75 %), on ne garde les 2 décimales que si la valeur
+                                           n'est pas entière. #}
+                                        {{ value == value|round ? value|number_format(0, ',', ' ') : value|number_format(2, ',', ' ') }} {{ attr.unite|default('') }}
                                     {% else %}
-                                        {# Affichage par défaut pour Monetaire, Nombre, ou Texte brut. Le test 'is number' n'est pas standard. #}
-                                        {% set is_numeric_format = attr.format is defined and (attr.format == 'Monetaire' or attr.format == 'Nombre') %}
+                                        {# Affichage par défaut pour Monetaire (toujours 2 décimales) ou Texte brut. #}
+                                        {% set is_numeric_format = attr.format is defined and attr.format == 'Monetaire' %}
                                         {{ (is_numeric_format and value is not null) ? value|number_format(2, ',', ' ') : value }} {{ attr.unite|default('') }}
                                     {% endif %}
                                 </dd>
