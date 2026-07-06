@@ -253,7 +253,20 @@ export default class extends Controller {
                 parentId: this.collectionTabsParentId,
             });
 
-            if (newContent && collectionUrl) {
+            if (newContent && newContent.dataset.loaded === 'true') {
+                // PERSISTANCE : le contenu de cet onglet a déjà été chargé → on le
+                // ré-affiche tel quel (page courante, défilement, lignes cochées
+                // conservés), exactement comme l'onglet principal. Le cerveau vient
+                // de rediffuser l'état mémorisé (toolbar/totaux/recherche) ; les
+                // données se rafraîchissent par les canaux existants : bouton
+                // « Actualiser », recherche/pagination, et rafraîchissements
+                // automatiques après création/modification/suppression. Les onglets
+                // sont détruits quand la sélection parente change (_removeCollectionTabs),
+                // donc jamais de contenu d'un autre parent.
+                newContent.style.display = 'block';
+                this.isLoadingValue = false;
+                this._processNextQueuedTab();
+            } else if (newContent && collectionUrl) {
                 newContent.style.display = 'block';
                 newContent.innerHTML = this._getListSkeletonHtml();
                 this.notifyCerveau('app:tab-content.load-request', {
@@ -299,6 +312,14 @@ export default class extends Controller {
         const contentContainer = this.tabContentContainerTarget.querySelector(`#${tabId}`);
         if (contentContainer) {
             contentContainer.innerHTML = html;
+            // PERSISTANCE : marque le contenu comme chargé — les prochaines activations
+            // l'afficheront sans re-fetch. En cas d'échec (le cerveau signale `failed`),
+            // on ne marque pas : la prochaine activation retentera le chargement.
+            if (event.detail.failed) {
+                delete contentContainer.dataset.loaded;
+            } else {
+                contentContainer.dataset.loaded = 'true';
+            }
             // Le contenu est chargé, on peut maintenant notifier le cerveau du changement de contexte.
             this.notifyCerveau('ui:tab.context-changed', {
                 tabId: tabId,
@@ -410,8 +431,13 @@ export default class extends Controller {
 
     _removeCollectionTabs() {
         this.tabsContainerTarget.querySelectorAll('[data-tab-type="collection"]').forEach(tab => {
-            const content = this.tabContentContainerTarget.querySelector(`[data-content-id="${tab.dataset.tabId}"]`);
-            if (content) content.remove();
+            // CORRECTION : les panneaux de contenu sont identifiés par leur `id`
+            // (posé dans _createTab), PAS par data-content-id — l'ancien sélecteur
+            // ne matchait jamais et les panneaux s'accumulaient dans le DOM.
+            // querySelectorAll : purge aussi d'éventuels doublons hérités.
+            this.tabContentContainerTarget
+                .querySelectorAll(`[id="${tab.dataset.tabId}"]`)
+                .forEach(content => content.remove());
             tab.remove();
         });
     }

@@ -491,7 +491,9 @@ export default class extends Controller {
             this.broadcast('view-manager:tab-content.loaded', { tabId, html, tabName, workspaceTabId });
         } catch (error) {
             console.error(`[Cerveau] Erreur lors du chargement du contenu pour l'onglet ${tabId}:`, error);
-            this.broadcast('view-manager:tab-content.loaded', { tabId, html: `<div class="alert alert-danger m-3">${error.message}</div>`, tabName, workspaceTabId });
+            // `failed: true` : le view-manager ne marquera pas ce contenu comme chargé
+            // (persistance) — la prochaine activation de l'onglet retentera le fetch.
+            this.broadcast('view-manager:tab-content.loaded', { tabId, html: `<div class="alert alert-danger m-3">${error.message}</div>`, tabName, workspaceTabId, failed: true });
         }
     }
 
