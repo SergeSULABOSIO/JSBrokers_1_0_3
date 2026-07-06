@@ -2,10 +2,14 @@
 
 namespace App\Services\Canvas;
 
+use App\Services\Canvas\Provider\Icon\IconCanvasProvider;
+
 class SearchCanvasProvider
 {
-    public function __construct(private EntityCanvasProvider $entityCanvasProvider)
-    {
+    public function __construct(
+        private EntityCanvasProvider $entityCanvasProvider,
+        private IconCanvasProvider $iconCanvasProvider,
+    ) {
     }
 
     /**
@@ -88,6 +92,10 @@ class SearchCanvasProvider
                 default:
                     continue 2; // On saute ce champ si son type n'est pas géré.
             }
+
+            // Icône « de signification » du critère (alias IconCanvasProvider), pour le
+            // dialogue de recherche avancée. Purement présentationnel.
+            $criterion['Icone'] = $this->criterionIcon($criterion);
             $searchCriteria[] = $criterion;
         }
 
@@ -108,6 +116,7 @@ class SearchCanvasProvider
                 'targetField' => 'nom',
                 'targetEntity' => 'Invite',
                 'isDefault' => false,
+                'Icone' => 'portefeuille',
             ]);
         }
 
@@ -122,5 +131,43 @@ class SearchCanvasProvider
     {
         $pos = strrpos($fqcn, '\\');
         return $pos === false ? $fqcn : substr($fqcn, $pos + 1);
+    }
+
+    /**
+     * Choisit une icône (alias IconCanvasProvider) adaptée à un critère de recherche.
+     * - Relation : icône de l'entité cible si un alias existe (ex. « client », « assureur »),
+     *   sinon une icône de filtre générique.
+     * - Autres types : icône représentative (date, compteur, case à cocher, description).
+     */
+    private function criterionIcon(array $criterion): string
+    {
+        switch ($criterion['Type'] ?? '') {
+            case 'DateTimeRange':
+                return 'action:calendar';
+            case 'Number':
+                return 'action:count';
+            case 'Boolean':
+                return 'action:check';
+            case 'Relation':
+                $alias = $this->toKebabCase($criterion['targetEntity'] ?? '');
+                return ($alias !== '' && $this->iconCanvasProvider->resolveIconName($alias) !== null)
+                    ? $alias
+                    : 'action:filter';
+            case 'Text':
+            default:
+                return 'action:description';
+        }
+    }
+
+    /**
+     * Convertit un nom court d'entité (CamelCase) en alias kebab-case.
+     * Ex. : "CompteBancaire" => "compte-bancaire".
+     */
+    private function toKebabCase(string $name): string
+    {
+        if ($name === '') {
+            return '';
+        }
+        return strtolower(preg_replace('/(?<!^)[A-Z]/', '-$0', $name));
     }
 }
