@@ -48,7 +48,8 @@
     data-bordereau-analysis-mapped-columns-value="{{ mappedColumns|json_encode|e('html_attr') }}"
     data-bordereau-analysis-analysis-results-value="{{ analysisResults|json_encode|e('html_attr') }}"
     data-bordereau-analysis-analysis-results-html-value="{{ analysisResultsHtml|json_encode|e('html_attr') }}"
-    data-bordereau-analysis-analysis-stats-value="{{ analysisStats|default({})|json_encode|e('html_attr') }}"
+    {# Valeur Stimulus Object : repli '{}' littéral (`{}` Twig = tableau PHP vide → json `[]`, refusé). #}
+    data-bordereau-analysis-analysis-stats-value="{{ (analysisStats is defined and analysisStats is not empty ? analysisStats|json_encode : '{}')|e('html_attr') }}"
     data-bordereau-analysis-system-field-formats-value="{{ viewData.system_field_formats|json_encode|e('html_attr') }}"
     data-bordereau-analysis-current-analysis-step-value="{{ currentAnalysisStep|default(0) }}"
 >

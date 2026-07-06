@@ -7,7 +7,8 @@
   role="toolbar"
   aria-label="Barre d'outils de la liste"
   data-controller="toolbar dark-tooltip"
-  data-toolbar-entity-form-canvas-value="{{ entityFormCanvas|json_encode }}"
+  {# Valeur Stimulus Object : repli '{}' littéral (jamais `{}` Twig → json `[]`). #}
+  data-toolbar-entity-form-canvas-value="{{ entityFormCanvas is defined and entityFormCanvas is not empty ? entityFormCanvas|json_encode : '{}' }}"
 >
     {# Groupe 1 : Action destructrice (toujours visible) #}
     <button
