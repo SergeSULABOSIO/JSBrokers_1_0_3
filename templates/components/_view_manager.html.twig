@@ -25,15 +25,25 @@
                 {# NOUVEAU : On utilise la fonction `resolve_icon_name` pour gérer les alias d'icônes #}
                 <twig:UX:Icon
                     name="{{ resolve_icon_name(entityCanvas.parametres.icone | default('lucide:file-text')) }}"
-                    style="width: 40px; height: 40px; color: #343a40;"
-                    data-view-manager-target="rubriqueIcon"
+                    class="rubrique-icon"
                     aria-hidden="true"
                 />
             </div>
             {# NOUVEAU : Ajout de min-width: 0 pour résoudre un bug de dépassement de flexbox qui empêchait le défilement des onglets. #}
             <div class="flex-grow-1" style="min-width: 0;">
-                <h2 class="rubrique-title" data-view-manager-target="rubriqueName">{{ entityCanvas.parametres.description | default('Rubrique') }}</h2>
-                <div class="list-tabs-container" role="tablist" aria-label="Onglets de navigation" data-view-manager-target="tabsContainer">
+                <h2 class="rubrique-title">
+                    {{ entityCanvas.parametres.description | default('Rubrique') }}
+                    {# Guidage : rappel de l'élément sélectionné dont les onglets
+                       contextuels (collections) sont ouverts — rempli/masqué par
+                       view-manager#_updateSelectionContext. #}
+                    <span class="rubrique-context d-none" data-view-manager-target="selectionContext"></span>
+                </h2>
+                <div class="list-tabs-container"
+                     role="tablist"
+                     aria-label="Onglets de la rubrique {{ entite_nom }}"
+                     data-view-manager-target="tabsContainer"
+                     data-action="keydown->view-manager#handleTabKeydown scroll->view-manager#updateTabsOverflow"
+                >
                     <button class="list-tab active" role="tab" id="tab-principal" aria-selected="true" aria-controls="principal" data-tab-id="principal" data-action="click->view-manager#switchTab">Principal</button>
                 </div>
             </div>
