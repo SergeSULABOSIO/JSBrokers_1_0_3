@@ -411,8 +411,10 @@ textarea:hover,
     margin-bottom: 7px;
 }
 
-/* Icône de la rubrique (entête) — remplace les styles inline */
-.rubrique-icon {
+/* Icône de la rubrique (entête du view-manager) — remplace les styles inline.
+   NE PAS nommer `.rubrique-icon` : cette classe existe déjà dans
+   interactive-menu.css (icônes 18px du menu) et gagnerait la cascade. */
+.rubrique-header-icon {
     width: 40px;
     height: 40px;
     color: #343a40; /* --text-dark-secondary : couleur des titres */
