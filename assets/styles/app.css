@@ -979,6 +979,14 @@ thead.sticky-header {
     font-weight: bold;
     color: #0047AB;
 }
+.list-row-secondary {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    width: 0;          /* Ne contribue pas à la largeur intrinsèque de la colonne (table auto-layout) */
+    min-width: 100%;   /* ... mais occupe toute la largeur réelle du <td> au rendu */
+}
 .table-enhanced tbody tr.row-selected {
     background-color: #e8f0fb;
 }
@@ -992,6 +1000,13 @@ thead.sticky-header {
 /* NOUVEAU : Alignement pour les en-têtes de colonnes numériques */
 .table-enhanced .th-numeric {
     text-align: right;
+}
+.table-enhanced .td-numeric {
+    white-space: nowrap;               /* Jamais de montant replié sur deux lignes ("USD" / "1 160,00") */
+    font-variant-numeric: tabular-nums; /* Chiffres à chasse fixe : décimales alignées verticalement */
+}
+.table-enhanced .td-numeric .td-numeric-unit {
+    font-weight: 400;                  /* L'unité répétée à chaque cellule est dé-emphasée, la valeur reste en gras */
 }
 
 /* --- 3.7 États de chargement et vides --- */

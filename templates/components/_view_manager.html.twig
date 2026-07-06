@@ -55,7 +55,12 @@
     {# ================================================================== #}
     {# SECTION 2 : ZONE DE CONTENU DYNAMIQUE (LISTES)                     #}
     {# ================================================================== #}
-    <div class="flex-grow-1" style="overflow-y: auto; min-height: 0;" data-view-manager-target="tabContentContainer">
+    {# `overflow: auto` (et non overflow-y seul) : quand les colonnes numériques
+       (nowrap) rendent le tableau plus large que le panneau, le défilement
+       horizontal doit se faire ICI — sur le même conteneur que le défilement
+       vertical — pour que l'entête sticky du tableau garde son ancrage
+       (`position: sticky` s'accroche au plus proche ancêtre défilant). #}
+    <div class="flex-grow-1" style="overflow: auto; min-height: 0;" data-view-manager-target="tabContentContainer">
         <div
             id="principal" {# CORRECTION: L'ID doit être 'principal' pour correspondre à l'onglet et aux commandes du cerveau. #}
             role="tabpanel"

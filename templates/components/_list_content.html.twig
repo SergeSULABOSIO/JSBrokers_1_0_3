@@ -1,8 +1,11 @@
+{# `entityCanvas` est indispensable à _list_row : icône principale + data-canvas
+   de la checkbox (sinon payload du menu contextuel invalide après refresh AJAX). #}
 {% for entity in data %}
-    {{ include('components/_list_row.html.twig', { 
-        'entity': entity, 
-        'listeCanvas': listeCanvas, 
+    {{ include('components/_list_row.html.twig', {
+        'entity': entity,
+        'listeCanvas': listeCanvas,
         'entite_nom': entite_nom,
+        'entityCanvas': entityCanvas|default(null),
         'usage': usage|default(null),
         'parentEntity': parentEntity|default(null),
         'totalizableField': totalizableField|default(null),
