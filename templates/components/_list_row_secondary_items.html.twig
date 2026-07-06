@@ -1,0 +1,41 @@
+{#
+    Items de la ligne secondaire d'un élément de liste (rendu commun).
+
+    Ergonomie (Bastien & Scapin > Charge de travail) : on n'affiche QUE les
+    valeurs secondaires réellement renseignées. Le séparateur est porté PAR
+    l'item (en tête, sauf pour le premier rendu) : ainsi, quel que soit le
+    nombre d'items masqués par le contrôleur `responsive-cell` (masquage
+    depuis la fin), aucun « • » orphelin ne subsiste. Chaque donnée porte une
+    icône de signification (portefeuille, groupe, e-mail, téléphone…) pour un
+    scan visuel immédiat.
+
+    Chaque item est une cible `secondaryItem` du contrôleur `responsive-cell`,
+    qui les masque un par un depuis la fin quand la place manque : l'ordre des
+    `textes_secondaires` du canvas fait office de priorité d'affichage.
+
+    Paramètres attendus :
+    - `entity` : l'objet de données de la ligne.
+    - `col_principale` : `listeCanvas.colonne_principale` (textes secondaires + séparateur).
+#}
+{% set rendus = 0 %}
+{% for texte in col_principale.textes_secondaires %}
+    {% set valeur = attribute(entity, texte.attribut_code) %}
+    {% if texte.attribut_type|default('') == 'date' and valeur is not null %}
+        {% set affichage = valeur|date('d/m/Y') %}
+    {% elseif texte.attribut_type|default('') == 'text' and texte.attribut_taille_max is defined and texte.attribut_taille_max is not null and valeur is not null and valeur|length > texte.attribut_taille_max %}
+        {% set affichage = valeur|slice(0, texte.attribut_taille_max) ~ '...' %}
+    {% else %}
+        {% set affichage = valeur %}
+    {% endif %}
+    {% if affichage is not null and affichage|trim != '' %}
+        {# L'icône explicite du canevas prime ; sinon on la déduit du code
+           d'attribut (secondary_icon), pour couvrir toutes les listes. #}
+        {% set sec_icone = texte.icone|default(secondary_icon(texte.attribut_code)) %}
+        <span class="d-inline-flex align-items-center flex-shrink-0" data-responsive-cell-target="secondaryItem">
+            {% if rendus > 0 %}<span class="mx-2 text-secondary" aria-hidden="true">{{ col_principale.textes_secondaires_separateurs|default(' &bull; ')|raw }}</span>{% endif %}
+            <twig:UX:Icon name="{{ resolve_icon_name(sec_icone) }}" style="width: {{ texte.icone_taille | default('1.1em') }}; height: {{ texte.icone_taille | default('1.1em') }}; margin-right: 4px;" aria-hidden="true" />
+            {{ texte.attribut_prefixe | default('') }}{{ affichage }}
+        </span>
+        {% set rendus = rendus + 1 %}
+    {% endif %}
+{% endfor %}

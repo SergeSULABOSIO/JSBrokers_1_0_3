@@ -87,8 +87,11 @@
             {% endif %}
         </div>
 
-        {# Ligne 2: Textes secondaires #}
-        <small class="text-secondary d-flex align-items-center mt-1" data-responsive-cell-target="secondaryInfo">
+        {# Ligne 2: Textes secondaires.
+           `.list-row-secondary` découple ce bloc de la largeur intrinsèque de la
+           colonne (width:0 / min-width:100%) : le masquage progressif opéré par
+           `responsive-cell` ne re-modifie pas la largeur du <td> (anti-oscillation). #}
+        <small class="text-secondary mt-1 list-row-secondary" data-responsive-cell-target="secondaryInfo">
             {# CORRECTION : La logique d'affichage est maintenant conditionnelle pour éviter les régressions. #}
             {% if usage is defined and usage == 'dialog' and totalizableField is defined and totalizableField is not null %}
                 {# CAS 1 : Collection totalisable dans une boîte de dialogue. On utilise le nouveau rendu. #}
@@ -103,34 +106,19 @@
                 } %}
             {% else %}
                 {# CAS 3 : Toutes les autres listes (principales, onglets).
-                   Ergonomie (Bastien & Scapin > Charge de travail) : on n'affiche QUE les
-                   valeurs secondaires réellement renseignées et on n'insère un séparateur
-                   qu'ENTRE deux valeurs présentes — fini les « • • » orphelins des champs
-                   vides. Chaque donnée porte une icône de signification (portefeuille,
-                   groupe, e-mail, téléphone) pour un scan visuel immédiat. #}
-                {% set rendus = 0 %}
-                {% for texte in col_principale.textes_secondaires %}
-                    {% set valeur = attribute(entity, texte.attribut_code) %}
-                    {% if texte.attribut_type|default('') == 'date' and valeur is not null %}
-                        {% set affichage = valeur|date('d/m/Y') %}
-                    {% elseif texte.attribut_type|default('') == 'text' and texte.attribut_taille_max is defined and texte.attribut_taille_max is not null and valeur is not null and valeur|length > texte.attribut_taille_max %}
-                        {% set affichage = valeur|slice(0, texte.attribut_taille_max) ~ '...' %}
-                    {% else %}
-                        {% set affichage = valeur %}
-                    {% endif %}
-                    {% if affichage is not null and affichage|trim != '' %}
-                        {% if rendus > 0 %}<span class="mx-2 text-secondary" aria-hidden="true">{{ col_principale.textes_secondaires_separateurs|default(' &bull; ')|raw }}</span>{% endif %}
-                        {# Pattern « liste des clients » : chaque info secondaire est précédée de
-                           son icône. L'icône explicite du canevas prime ; sinon on la déduit du
-                           code d'attribut (secondary_icon), pour couvrir toutes les listes. #}
-                        {% set sec_icone = texte.icone|default(secondary_icon(texte.attribut_code)) %}
-                        <span class="d-inline-flex align-items-center">
-                            <twig:UX:Icon name="{{ resolve_icon_name(sec_icone) }}" style="width: {{ texte.icone_taille | default('1.1em') }}; height: {{ texte.icone_taille | default('1.1em') }}; margin-right: 4px;" />
-                            {{ texte.attribut_prefixe | default('') }}{{ affichage }}
-                        </span>
-                        {% set rendus = rendus + 1 %}
-                    {% endif %}
-                {% endfor %}
+                   Rendu commun des items secondaires (filtrage des vides, icônes,
+                   séparateur porté par l'item) + cibles `secondaryItem` pour le
+                   masquage progressif selon la largeur disponible. #}
+                {% include 'components/_list_row_secondary_items.html.twig' with {
+                    'entity': entity,
+                    'col_principale': col_principale
+                } only %}
+                {# Indicateur de troncature : rendu visible par `responsive-cell`
+                   dès qu'au moins un item est masqué ; son `title` liste les
+                   valeurs masquées. `aria-hidden` car les items masqués restent
+                   dans l'arbre d'accessibilité (visually-hidden) — l'annoncer
+                   créerait un doublon vocal. #}
+                <span class="d-none flex-shrink-0 ms-1" data-responsive-cell-target="moreIndicator" aria-hidden="true">&hellip;</span>
             {% endif %}
         </small>
     </td>
@@ -139,10 +127,17 @@
     {# On n'affiche les colonnes numériques que si on n'est PAS dans une collection totalisable de dialogue #}
     {% if not (usage is defined and usage == 'dialog' and totalizableField is defined and totalizableField is not null) %}
         {% for colonne in listeCanvas.colonnes_numeriques %}
-            <td class="text-end fw-bold">
+            <td class="text-end fw-bold td-numeric">
                 <small>
                     {% set valeur_numerique = attribute(entity, colonne.attribut_code) %}
-                    {{ colonne.attribut_unité }} {{ valeur_numerique | number_format(2, ',', ' ') }}
+                    {% if valeur_numerique is null or valeur_numerique is same as('') %}
+                        {# Signifiance : une valeur ABSENTE n'est pas un zéro — « — »
+                           plutôt qu'un « 0,00 » trompeur (+ texte pour lecteurs d'écran). #}
+                        <span class="text-secondary" aria-hidden="true">&mdash;</span>
+                        <span class="visually-hidden">non renseigné</span>
+                    {% else %}
+                        <span class="text-secondary td-numeric-unit">{{ colonne.attribut_unité }}</span> {{ valeur_numerique | number_format(2, ',', ' ') }}
+                    {% endif %}
                 </small>
             </td>
         {% endfor %}
