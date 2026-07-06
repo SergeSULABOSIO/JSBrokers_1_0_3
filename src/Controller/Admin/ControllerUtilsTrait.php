@@ -387,6 +387,21 @@ trait ControllerUtilsTrait
         // Pagination pour les onglets génériques (non dialog).
         $dataArray = ($data instanceof \Doctrine\Common\Collections\Collection) ? $data->toArray() : (array)$data;
         $dataArray = array_reverse($dataArray); // derniers éléments (ID le plus élevé) en premier
+
+        // PÉRIMÈTRE PORTEFEUILLE : les onglets de collection appliquent la même logique
+        // de filtrage par défaut que les listes principales (getInitialSearchCriteria) :
+        // pour une entité enfant scopable (Cotation, Tâche…), seuls les éléments rattachés
+        // à un portefeuille géré par l'invité sont affichés au chargement. Le critère est
+        // renvoyé au frontend (badge « Mon portefeuille » retirable) et le moteur de
+        // recherche le ré-applique aux refresh/paginations. Sans objet pour les dialogues
+        // (édition des éléments du parent).
+        $initialSearchCriteria = [];
+        if ($usage !== 'dialog') {
+            $initialSearchCriteria = $this->getInitialSearchCriteria($entityClass, $this->getInvite()->getId(), $this->getEntreprise());
+            if ($initialSearchCriteria !== []) {
+                $dataArray = $this->filterByPortefeuilleScope($dataArray, $entityClass, $this->getInvite()->getId());
+            }
+        }
         $totalItems = count($dataArray);
         if ($usage !== 'dialog') {
             $data = array_slice($dataArray, ($page - 1) * $limit, $limit);
@@ -466,6 +481,9 @@ trait ControllerUtilsTrait
             'secondaryFieldDetails' => $secondaryFieldDetails,
             'paginationMeta' => $paginationMeta,
             'listActionOptions' => $listActionOptions,
+            // Amorce l'état du Cerveau pour cet onglet (badge « Mon portefeuille »
+            // + persistance du périmètre en refresh/pagination), comme en liste principale.
+            'initialSearchCriteria' => $initialSearchCriteria,
         ];
 
         if ($usage === "dialog") {
@@ -1347,6 +1365,46 @@ trait ControllerUtilsTrait
                 'operator' => '=', 'value' => $idInvite, 'label' => $label,
             ],
         ];
+    }
+
+    /**
+     * Applique en mémoire le « périmètre portefeuille » à une collection déjà chargée
+     * (onglets de collection : les éléments viennent du getter du parent, pas du moteur
+     * de recherche). Même sémantique que JSBDynamicSearchService : l'élément est retenu
+     * si AU MOINS un des chemins de PortefeuilleScope mène à un portefeuille dont le
+     * gestionnaire est l'invité connecté.
+     *
+     * @param array<int, object> $items
+     * @return array<int, object>
+     */
+    protected function filterByPortefeuilleScope(array $items, string $entityClass, int $idInvite): array
+    {
+        $shortName = (new \ReflectionClass($entityClass))->getShortName();
+        $paths = \App\Services\Search\PortefeuilleScope::pathsFor($shortName);
+        if ($paths === []) {
+            return $items;
+        }
+
+        return array_values(array_filter($items, function (object $item) use ($paths, $idInvite): bool {
+            foreach ($paths as $path) {
+                $value = $item;
+                foreach (explode('.', $path) as $segment) {
+                    if (!is_object($value)) {
+                        $value = null;
+                        break;
+                    }
+                    $getter = 'get' . ucfirst($segment);
+                    $value = method_exists($value, $getter) ? $value->$getter() : null;
+                    if ($value === null) {
+                        break;
+                    }
+                }
+                if ($value instanceof \App\Entity\Invite && $value->getId() === $idInvite) {
+                    return true;
+                }
+            }
+            return false;
+        }));
     }
 
     protected function getEntitiesForType(string $entityType): array
