@@ -41,6 +41,9 @@ export default class extends BaseController {
         // Critères actifs par défaut au premier chargement (JSON). Amorce l'état de
         // recherche du Cerveau pour cet onglet (badge + persistance en pagination).
         initialCriteria: Object,
+        // Canvas de recherche de l'entité listée : mémorisé dans l'état d'onglet du
+        // Cerveau pour recontextualiser la barre de recherche à chaque activation.
+        searchCanvas: Array,
     };
 
     /**
@@ -144,6 +147,9 @@ export default class extends BaseController {
             searchCriteria: initialCriteria,
             pageItemCount: this.nbElementsValue,
             totalItems: initialTotal,
+            // Contexte de la barre de recherche : critères de l'entité de CET onglet.
+            searchCanvas: this.hasSearchCanvasValue ? this.searchCanvasValue : [],
+            entiteNom: this.entiteValue,
         };
 
         // CORRECTION : Pour l'onglet principal, le tabId logique est 'principal'.

@@ -68,7 +68,20 @@ export default class extends BaseController {
      */
     handleContextChanged(event) {
         if (this.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
-        const { searchCriteria, isTabSwitch } = event.detail;
+        const { searchCriteria, isTabSwitch, searchCanvas, entiteNom } = event.detail;
+
+        // Recontextualisation : si le cerveau fournit le canvas de recherche de
+        // l'onglet actif (entité principale OU collection), la barre bascule ses
+        // critères dessus. `null` = inconnu (onglet en cours de chargement) : on
+        // conserve les critères courants en attendant 'ui:tab.initialized'.
+        if (Array.isArray(searchCanvas) && searchCanvas.length > 0) {
+            this.criteriaValue = searchCanvas;
+            if (entiteNom) {
+                this.nomEntiteValue = entiteNom;
+            }
+            this.populateSimpleSearchSelector();
+            this.updateSimpleSearchPlaceholder();
+        }
 
         // On met à jour notre copie locale des critères
         this.currentCriteria = searchCriteria || {};
