@@ -12,8 +12,9 @@ export default class extends Controller {
      * @property {HTMLElement[]} tabContentContainerTargets - Le conteneur pour le contenu des onglets.
      * @property {HTMLElement[]} displayTargets - L'élément où afficher les messages de statut.
      * @property {HTMLTemplateElement} collectionTabTemplateTarget - Le template pour un onglet de collection.
+     * @property {HTMLElement} selectionContextTarget - La pastille d'entête rappelant l'élément sélectionné (Guidage).
      */
-    static targets = ["tabsContainer", "tabContentContainer", "display", "collectionTabTemplate"];
+    static targets = ["tabsContainer", "tabContentContainer", "display", "collectionTabTemplate", "selectionContext"];
     
     static values = {
         idEntreprise: Number,
@@ -89,6 +90,11 @@ export default class extends Controller {
         document.addEventListener('app:display.update', this.boundHandleDisplayUpdate);
         document.addEventListener('view-manager:tab-content.loaded', this.boundHandleTabContentLoaded);
         document.addEventListener('workspace:tab-became-active', this.boundHandleTabBecameActive);
+
+        // Affordance de débordement de la barre d'onglets : recalculée quand la
+        // barre change de taille (le scroll est couvert par data-action côté template).
+        this.tabsOverflowObserver = new ResizeObserver(() => this.updateTabsOverflow());
+        this.tabsOverflowObserver.observe(this.tabsContainerTarget);
     }
 
     /**
@@ -100,6 +106,7 @@ export default class extends Controller {
         document.removeEventListener('app:display.update', this.boundHandleDisplayUpdate);
         document.removeEventListener('view-manager:tab-content.loaded', this.boundHandleTabContentLoaded);
         document.removeEventListener('workspace:tab-became-active', this.boundHandleTabBecameActive);
+        this.tabsOverflowObserver.disconnect();
     }
 
 
@@ -151,6 +158,11 @@ export default class extends Controller {
             const collections = this._findCollectionsInCanvas(canvas);
             collections.forEach(collectionInfo => this._createTab(collectionInfo, entities[0], entityType));
         }
+
+        // Guidage : la pastille d'entête rappelle QUEL élément a ouvert les
+        // onglets contextuels ; l'affordance de débordement suit le nombre d'onglets.
+        this._updateSelectionContext(isSingleSelection && canvas ? entities[0] : null, canvas);
+        this.updateTabsOverflow();
     }
 
     /**
@@ -206,9 +218,12 @@ export default class extends Controller {
         // Activation du nouvel onglet
         this.activeTabId = newTabId;
         clickedTab.classList.add('active');
-        // Synchronise aria-selected sur tous les onglets (WCAG 4.1.2)
+        // Synchronise aria-selected + roving tabindex (pattern ARIA « Tabs ») :
+        // seul l'onglet actif est dans l'ordre de tabulation, les flèches
+        // gauche/droite parcourent les autres (handleTabKeydown).
         this.tabsContainerTarget.querySelectorAll('[role="tab"]').forEach(tab => {
             tab.setAttribute('aria-selected', tab === clickedTab ? 'true' : 'false');
+            tab.setAttribute('tabindex', tab === clickedTab ? '0' : '-1');
         });
 
         const newContent = this.tabContentContainerTarget.querySelector(`#${this.activeTabId}`);
@@ -318,6 +333,63 @@ export default class extends Controller {
         this.element.dispatchEvent(event);
     }
 
+    /**
+     * Navigation clavier du tablist (pattern ARIA « Tabs », activation manuelle) :
+     * flèches gauche/droite (cycliques), Début/Fin déplacent le focus ; Entrée/Espace
+     * activent (comportement natif du <button>, rien à câbler).
+     * @param {KeyboardEvent} event
+     */
+    handleTabKeydown(event) {
+        const moves = { ArrowLeft: -1, ArrowRight: 1, Home: 0, End: 0 };
+        if (!(event.key in moves)) return;
+
+        const tabs = [...this.tabsContainerTarget.querySelectorAll('[role="tab"]')];
+        const current = tabs.indexOf(document.activeElement);
+        if (current === -1) return;
+
+        event.preventDefault();
+        let next;
+        if (event.key === 'Home') next = 0;
+        else if (event.key === 'End') next = tabs.length - 1;
+        else next = (current + moves[event.key] + tabs.length) % tabs.length;
+        tabs[next].focus();
+    }
+
+    /**
+     * Affordance de débordement de la barre d'onglets : pose les classes
+     * `is-overflowing-left/right` (fondu CSS) selon la position de défilement.
+     * Appelé au scroll (data-action), au redimensionnement (ResizeObserver)
+     * et après chaque création/suppression d'onglets.
+     */
+    updateTabsOverflow() {
+        const el = this.tabsContainerTarget;
+        const canScroll = el.scrollWidth > el.clientWidth + 1;
+        el.classList.toggle('is-overflowing-left', canScroll && el.scrollLeft > 1);
+        el.classList.toggle('is-overflowing-right', canScroll && el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+    }
+
+    /**
+     * Guidage : affiche dans l'entête le libellé de l'élément sélectionné dont
+     * les onglets contextuels sont ouverts ; masque la pastille sans sélection.
+     * @param {object|null} entity - L'entité sélectionnée (ou null).
+     * @param {object|null} canvas - Son canvas, pour trouver l'attribut principal.
+     * @private
+     */
+    _updateSelectionContext(entity, canvas) {
+        if (!this.hasSelectionContextTarget) return;
+        if (!entity) {
+            this.selectionContextTarget.textContent = '';
+            this.selectionContextTarget.classList.add('d-none');
+            return;
+        }
+        // Même résolution de l'attribut principal que workspace-manager (_buildGenericDescription).
+        const mainField = canvas?.liste?.find(attr => attr.col_principale)?.texte_principal?.attribut_code || 'nom';
+        const label = entity[mainField] || entity.nom || entity.libelle || entity.intitule || `#${entity.id}`;
+        this.selectionContextTarget.textContent = label;
+        this.selectionContextTarget.title = label; // texte complet si la pastille tronque (ellipsis)
+        this.selectionContextTarget.classList.remove('d-none');
+    }
+
     // --- Méthodes privées d'aide ---
 
     _findCollectionsInCanvas(canvas) {
@@ -353,6 +425,8 @@ export default class extends Controller {
         tab.setAttribute('id', `tab-${tabId}`);
         tab.setAttribute('aria-selected', 'false');
         tab.setAttribute('aria-controls', tabId);
+        // Roving tabindex : seul l'onglet actif est tabbable, les flèches font le reste.
+        tab.setAttribute('tabindex', '-1');
         this.tabsContainerTarget.appendChild(tab);
 
         // On prépare le conteneur de contenu en clonant le template

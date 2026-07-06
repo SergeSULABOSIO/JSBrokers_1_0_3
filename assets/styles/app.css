@@ -411,17 +411,60 @@ textarea:hover,
     margin-bottom: 7px;
 }
 
+/* Icône de la rubrique (entête) — remplace les styles inline */
+.rubrique-icon {
+    width: 40px;
+    height: 40px;
+    color: #343a40; /* --text-dark-secondary : couleur des titres */
+}
+
+/* Pastille de contexte : rappelle l'élément sélectionné dont les onglets
+   contextuels sont ouverts (Guidage / visibilité de l'état du système). */
+.rubrique-context {
+    display: inline-block;
+    max-width: 40ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+    margin-left: 8px;
+    padding: 1px 10px;
+    border-radius: 999px;
+    background-color: #e8f0fb; /* --bg-cobalt-subtle */
+    color: #0047AB;            /* --text-cobalt */
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
 /* Barre d'onglets */
 .list-tabs-container {
     display: flex;
-    /* border-bottom: 1px solid #dee2e6; */
     margin-top: 3px;
-    /* NOUVEAU : Permet le défilement horizontal quand les onglets dépassent */
+    /* Défilement horizontal quand les onglets dépassent */
     overflow-x: auto;
     white-space: nowrap;
-    /* NOUVEAU : Ajoute un padding en bas pour la barre de défilement et le compense avec une marge négative pour ne pas décaler le layout */
-    padding-bottom: 0px; /* Réduit pour rapprocher la barre de défilement */
-    margin-bottom: -5px; /* Ajusté pour compenser le nouveau padding */
+    /* La scrollbar fine (3px WebKit / thin Firefox) est dessinée dans la boîte :
+       la marge négative résorbe la hauteur qu'elle ajoute sous les onglets. */
+    padding-bottom: 0;
+    margin-bottom: -5px;
+    /* Firefox : équivalent du style ::-webkit-scrollbar ci-dessous */
+    scrollbar-width: thin;
+    scrollbar-color: #0047AB transparent;
+}
+
+/* Affordance de débordement : fondu sur le bord où des onglets sont hors champ
+   (classes posées par view-manager#updateTabsOverflow). */
+.list-tabs-container.is-overflowing-right {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+}
+.list-tabs-container.is-overflowing-left {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 32px);
+    mask-image: linear-gradient(to right, transparent, #000 32px);
+}
+.list-tabs-container.is-overflowing-left.is-overflowing-right {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent);
+    mask-image: linear-gradient(to right, transparent, #000 32px, #000 calc(100% - 32px), transparent);
 }
 
 .list-tabs-container::-webkit-scrollbar {
@@ -458,6 +501,13 @@ textarea:hover,
     font-weight: bold;
     color: #212529;
     border-bottom-color: #0047AB;
+}
+
+/* Focus clavier : anneau cobalt de la charte (cohérent avec .list-row-action-btn).
+   En inset car le conteneur défilant (overflow-x) rognerait un halo extérieur. */
+.list-tab:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px rgba(0, 71, 171, 0.35); /* --cobalt-focus-ring */
 }
 
 /* --- 3.2 Barre d'outils contextuelle --- */
