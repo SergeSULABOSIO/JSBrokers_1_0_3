@@ -156,12 +156,27 @@ export default class extends Controller {
                         formCanvas: storedState.activeTabFormCanvas,
                         isTabSwitch: true,
                         searchCriteria: storedState.searchCriteria || {},
+                        searchCanvas: storedState.searchCanvas || null,
+                        entiteNom: storedState.entiteNom || null,
                         workspaceTabId: this.currentWorkspaceTabId,
                     });
                 } else {
-                    // patiemment que l'événement 'ui:tab.initialized' arrive pour ce même onglet.
+                    // L'onglet n'a pas encore d'état (contenu en cours de chargement) :
+                    // on RÉINITIALISE immédiatement tout le chrome contextuel (toolbar,
+                    // totaux, badges de recherche) au lieu de le laisser refléter
+                    // l'onglet précédent. Le vrai contexte arrivera via 'ui:tab.initialized'.
                     this.displayState.selectionCount = 0;
                     this._publishSelectionStatus('Chargement...');
+                    this.broadcast('app:context.changed', {
+                        selection: [],
+                        numericAttributesAndValues: {},
+                        formCanvas: null,
+                        isTabSwitch: true,
+                        searchCriteria: {},
+                        searchCanvas: null, // null = « inconnu » : la barre de recherche garde ses critères en attendant
+                        entiteNom: null,
+                        workspaceTabId: this.currentWorkspaceTabId,
+                    });
                 }
                 break;
             case 'ui:context.reset':
@@ -378,6 +393,8 @@ export default class extends Controller {
                         formCanvas: activeTabState.activeTabFormCanvas,
                         isTabSwitch: true, // On signale que c'est un changement d'onglet
                         searchCriteria: activeTabState.searchCriteria,
+                        searchCanvas: activeTabState.searchCanvas || null,
+                        entiteNom: activeTabState.entiteNom || null,
                         workspaceTabId: this.currentWorkspaceTabId,
                     });
                 }
@@ -556,6 +573,8 @@ export default class extends Controller {
             contextMenuPosition: contextMenuPosition, // On passe la position (ou null)
             isTabSwitch: isTabSwitch,
             searchCriteria: activeTabState.searchCriteria,
+            searchCanvas: activeTabState.searchCanvas || null,
+            entiteNom: activeTabState.entiteNom || null,
             formCanvas: activeTabState.activeTabFormCanvas,
             workspaceTabId: this.currentWorkspaceTabId,
         });

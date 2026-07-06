@@ -242,6 +242,17 @@ export default class extends Controller {
             const { tabId, collectionUrl } = clickedTab.dataset;
             console.log(`[${++window.logSequence}] [VIEW-MANAGER:${this.workspaceTabId}] _activateTab → fetch tabId=${tabId} url=${collectionUrl}`);
 
+            // Contextualisation IMMÉDIATE : le cerveau bascule son onglet actif dès
+            // l'activation (et non après le chargement du contenu) — il restaure
+            // l'état mémorisé de l'onglet ou réinitialise le chrome (toolbar,
+            // totaux, recherche) pendant le chargement. Sans cela, les barres
+            // continuaient de refléter la sélection de l'onglet précédent.
+            this.notifyCerveau('ui:tab.context-changed', {
+                tabId: newTabId,
+                tabName: clickedTab.textContent,
+                parentId: this.collectionTabsParentId,
+            });
+
             if (newContent && collectionUrl) {
                 newContent.style.display = 'block';
                 newContent.innerHTML = this._getListSkeletonHtml();

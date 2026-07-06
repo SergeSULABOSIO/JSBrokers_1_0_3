@@ -449,6 +449,10 @@ trait ControllerUtilsTrait
             'entityCanvas' => $entityCanvas,
             'numericAttributesAndValues' => $this->canvasBuilder->getNumericAttributesAndValuesForCollection($data), // NOUVEAU : Pour la barre des totaux.
             'entityFormCanvas' => $entityFormCanvas,
+            // Canvas de recherche de l'entité ENFANT : permet à la barre de recherche
+            // (partagée dans l'entête) de basculer ses critères quand l'onglet de
+            // collection devient actif.
+            'searchCanvas' => $this->canvasBuilder->getSearchCanvas($entityClass),
             'serverRootName' => $this->getServerRootName($entityClass),
             'idInvite' => $this->getInvite()->getId(),
             'idEntreprise' => $this->getEntreprise()->getId(),

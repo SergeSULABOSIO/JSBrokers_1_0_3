@@ -22,6 +22,10 @@
         data-list-manager-id-entreprise-value="{{ idEntreprise }}"
         data-list-manager-id-invite-value="{{ idInvite }}"
         data-list-manager-entity-form-canvas-value='{{ entityFormCanvas|json_encode|e('html_attr') }}'
+        {# Canvas de recherche de l'entité listée : transmis au cerveau via
+           ui:tab.initialized pour que la barre de recherche se recontextualise
+           à chaque activation d'onglet. #}
+        data-list-manager-search-canvas-value='{{ (searchCanvas|default([]))|json_encode|e('html_attr') }}'
         data-list-manager-numeric-attributes-and-values-value='{{ numericAttributesAndValues|default({})|json_encode|e('html_attr') }}'
         data-list-manager-list-url-value="{{ listUrl | default('') }}"
         data-list-manager-pagination-value='{{ paginationMeta|default({})|json_encode|e('html_attr') }}'
