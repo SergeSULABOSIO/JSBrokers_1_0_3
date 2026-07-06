@@ -44,7 +44,13 @@
                      data-view-manager-target="tabsContainer"
                      data-action="keydown->view-manager#handleTabKeydown scroll->view-manager#updateTabsOverflow"
                 >
-                    <button class="list-tab active" role="tab" id="tab-principal" aria-selected="true" aria-controls="principal" data-tab-id="principal" data-action="click->view-manager#switchTab">Principal</button>
+                    <button class="list-tab active" role="tab" id="tab-principal" aria-selected="true" aria-controls="principal" data-tab-id="principal" data-action="click->view-manager#switchTab">
+                        {# Signifiance : l'onglet principal porte l'icône de l'entité de la
+                           rubrique, comme les onglets de collection portent celle de leur
+                           entité cible. Décorative (aria-hidden), le libellé reste le texte. #}
+                        <span class="list-tab-icon" aria-hidden="true"><twig:UX:Icon name="{{ resolve_icon_name(entityCanvas.parametres.icone | default('lucide:file-text')) }}" /></span>
+                        Principal
+                    </button>
                 </div>
             </div>
         </div>
