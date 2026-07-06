@@ -1124,6 +1124,19 @@ export default class extends Controller {
             return;
         }
 
+        // Cache PERSISTANT (localStorage) : survit aux rechargements de page — aucune
+        // requête serveur pour une icône déjà vue lors d'une session précédente.
+        // try/catch : localStorage peut être indisponible (mode privé, quota).
+        const storageKey = `jsb-icon-v1::${cacheKey}`;
+        try {
+            const stored = window.localStorage.getItem(storageKey);
+            if (stored) {
+                this._iconCache.set(cacheKey, Promise.resolve(stored));
+                this.broadcast('app:icon.loaded', { iconName, html: stored, requesterId });
+                return;
+            }
+        } catch { /* localStorage indisponible : on retombe sur le fetch */ }
+
         const url = `/api/icon/api/get-icon?name=${encodeURIComponent(iconName)}&size=${iconSize}`;
 
         // Stocker la promesse immédiatement → requêtes simultanées partagent ce fetch
@@ -1142,6 +1155,8 @@ export default class extends Controller {
         try {
             const html = await fetchPromise;
             this._iconCache.set(cacheKey, Promise.resolve(html));
+            // Persistance pour les prochaines sessions (silencieux si quota/indisponible).
+            try { window.localStorage.setItem(storageKey, html); } catch { /* no-op */ }
             this.broadcast('app:icon.loaded', { iconName, html, requesterId });
         } catch (error) {
             console.error(`[Cerveau] Failed to fetch icon '${iconName}':`, error);

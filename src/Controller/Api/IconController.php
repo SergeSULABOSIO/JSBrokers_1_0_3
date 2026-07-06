@@ -36,9 +36,18 @@ class IconController extends AbstractController
         }
 
         // On rend un template générique qui utilise ux_icon avec le nom résolu.
-        return $this->render('segments/icones/_generic_icon.html.twig', [
-            'icon_name' => $realIconName, 
+        $response = $this->render('segments/icones/_generic_icon.html.twig', [
+            'icon_name' => $realIconName,
             'size' => (int)$size . 'px'
         ]);
+
+        // Cache navigateur : une icône est un contenu statique (l'URL porte nom + taille).
+        // 7 jours en cache public → le navigateur ne re-sollicite pas le serveur, même
+        // entre deux sessions. Le cache localStorage du cerveau complète côté client.
+        $response->setPublic();
+        $response->setMaxAge(604800);
+        $response->headers->set('Cache-Control', 'public, max-age=604800, immutable');
+
+        return $response;
     }
 }

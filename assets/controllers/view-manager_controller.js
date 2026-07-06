@@ -85,6 +85,8 @@ export default class extends Controller {
         this.boundHandleDisplayUpdate = this.handleDisplayUpdate.bind(this);
         this.boundHandleTabContentLoaded = this.handleTabContentLoaded.bind(this);
         this.boundHandleTabBecameActive = this.handleTabBecameActive.bind(this);
+        this.boundHandleIconLoaded = this.handleIconLoaded.bind(this);
+        document.addEventListener('app:icon.loaded', this.boundHandleIconLoaded);
 
         document.addEventListener('app:context.changed', this.boundHandleSelection);
         document.addEventListener('app:display.update', this.boundHandleDisplayUpdate);
@@ -106,7 +108,27 @@ export default class extends Controller {
         document.removeEventListener('app:display.update', this.boundHandleDisplayUpdate);
         document.removeEventListener('view-manager:tab-content.loaded', this.boundHandleTabContentLoaded);
         document.removeEventListener('workspace:tab-became-active', this.boundHandleTabBecameActive);
+        document.removeEventListener('app:icon.loaded', this.boundHandleIconLoaded);
         this.tabsOverflowObserver.disconnect();
+    }
+
+    /**
+     * Injecte l'icône d'un onglet de collection quand le cerveau la fournit
+     * (réponse à ui:icon.request émis par _createTab).
+     * @param {CustomEvent} event - L'événement `app:icon.loaded`.
+     */
+    handleIconLoaded(event) {
+        const { html, requesterId } = event.detail;
+        if (!requesterId || !String(requesterId).startsWith('tab-icon-') || !html) return;
+        const holder = this.tabsContainerTarget.querySelector(`[id="${requesterId}"]`);
+        if (!holder) return;
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        const svg = tempDiv.querySelector('svg');
+        if (svg) {
+            svg.setAttribute('aria-hidden', 'true');
+            holder.replaceChildren(svg);
+        }
     }
 
 
@@ -234,7 +256,8 @@ export default class extends Controller {
             this.isLoadingValue = false;
             this.notifyCerveau('ui:tab.context-changed', {
                 tabId: this.activeTabId,
-                tabName: clickedTab.textContent,
+                // trim : le libellé peut être précédé d'une icône (nœuds/espaces).
+                tabName: clickedTab.textContent.trim(),
                 parentId: this.collectionTabsParentId,
             });
             this._processNextQueuedTab();
@@ -249,7 +272,7 @@ export default class extends Controller {
             // continuaient de refléter la sélection de l'onglet précédent.
             this.notifyCerveau('ui:tab.context-changed', {
                 tabId: newTabId,
-                tabName: clickedTab.textContent,
+                tabName: clickedTab.textContent.trim(),
                 parentId: this.collectionTabsParentId,
             });
 
@@ -272,7 +295,7 @@ export default class extends Controller {
                 this.notifyCerveau('app:tab-content.load-request', {
                     tabId,
                     url: collectionUrl,
-                    tabName: clickedTab.textContent,
+                    tabName: clickedTab.textContent.trim(),
                     workspaceTabId: this.workspaceTabId
                 });
                 // isLoadingValue reste true ; libéré dans handleTabContentLoaded
@@ -456,7 +479,18 @@ export default class extends Controller {
             collectionUrl: collectionUrl, // L'URL est maintenant une donnée pour le cerveau
             entityName: collectionInfo.targetEntity
         });
-        tab.textContent = collectionInfo.intitule;
+        // Signifiance : chaque onglet porte l'icône de son entité cible (alias hérité
+        // via EntityCanvasProvider) devant son libellé. L'icône est décorative
+        // (aria-hidden), injectée par le circuit d'icônes du cerveau (handleIconLoaded).
+        if (collectionInfo.icone) {
+            const iconHolder = document.createElement('span');
+            iconHolder.className = 'list-tab-icon';
+            iconHolder.setAttribute('aria-hidden', 'true');
+            iconHolder.id = `tab-icon-${tabId}`;
+            tab.appendChild(iconHolder);
+            this.notifyCerveau('ui:icon.request', { iconName: collectionInfo.icone, iconSize: 18, requesterId: iconHolder.id });
+        }
+        tab.appendChild(document.createTextNode(collectionInfo.intitule));
         // ARIA : pattern tablist/tab/tabpanel (WCAG 4.1.2)
         tab.setAttribute('role', 'tab');
         tab.setAttribute('id', `tab-${tabId}`);
