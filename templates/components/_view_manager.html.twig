@@ -43,7 +43,11 @@
                 {{ include("components/_toolbar.html.twig") }}
             </div>
             <div class="flex-grow-1" style="min-width: 0;">
-                {{ include('components/_search_bar.html.twig', {'entite_nom': entite_nom, 'searchCanvas': searchCanvas}) }}
+                {{ include('components/_search_bar.html.twig', {
+                    'entite_nom': entite_nom,
+                    'searchCanvas': searchCanvas,
+                    'autocomplete_url': path('app_espace_de_travail_component.api_search_autocomplete', {idInvite: idInvite, idEntreprise: idEntreprise})
+                }) }}
             </div>
         </div>
     </div>
@@ -75,7 +79,8 @@
                 'idEntreprise': idEntreprise,
                 'idInvite': idInvite,
                 'listUrl': mainListUrl,
-                'paginationMeta': paginationMeta
+                'paginationMeta': paginationMeta,
+                'initialSearchCriteria': initialSearchCriteria|default([])
             }) }}
         </div>
 

@@ -53,7 +53,11 @@ class ClientIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
         return [
             'civiliteString' => $this->getClientCiviliteString($entity),
-            'groupeNom' => $entity->getGroupe() ? $entity->getGroupe()->getNom() : 'Aucun groupe',
+            // Nom du groupe / portefeuille pour la ligne secondaire de la liste. On renvoie
+            // null (et non un libellé « Aucun … ») quand la relation est absente : la ligne
+            // masque alors proprement l'information plutôt que d'afficher un texte parasite.
+            'groupeNom' => $entity->getGroupe()?->getNom(),
+            'portefeuilleNom' => $entity->getPortefeuille()?->getNom(),
             'nombrePistes' => $entity->getPistes()->count(),
             'nombreSinistres' => $entity->getNotificationSinistres()->count(),
             'nombrePolices' => $this->countClientPolices($entity),

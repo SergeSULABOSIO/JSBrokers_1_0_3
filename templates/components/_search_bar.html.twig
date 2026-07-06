@@ -4,6 +4,7 @@
     data-controller="search-bar"
     data-search-bar-nom-entite-value="{{ entite_nom|default('') }}"
     data-search-bar-criteria-value="{{ searchCanvas|json_encode|e('html_attr') }}"
+    data-search-bar-autocomplete-url-value="{{ autocomplete_url|default('') }}"
 >
     {# ── Ligne principale (pill) ── #}
     <div class="jsb-search-bar__row">

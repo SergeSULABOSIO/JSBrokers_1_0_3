@@ -25,6 +25,7 @@
         data-list-manager-numeric-attributes-and-values-value='{{ numericAttributesAndValues|default({})|json_encode|e('html_attr') }}'
         data-list-manager-list-url-value="{{ listUrl | default('') }}"
         data-list-manager-pagination-value='{{ paginationMeta|default({})|json_encode|e('html_attr') }}'
+        data-list-manager-initial-criteria-value='{{ (initialSearchCriteria is defined and initialSearchCriteria is not empty ? initialSearchCriteria : {})|json_encode|e('html_attr') }}'
     >
         {% if usage|default('generic') != 'dialog' %}
         <div class="jsb-list-controls-bar" data-list-manager-target="controlsBar">
@@ -42,12 +43,18 @@
             <table class="table table-hover table-sm table-enhanced" aria-label="Liste de {{ entite_nom }}">
                 <thead class="table-light sticky-header">
                     <tr class="text-center">
-                        <th scope="col" style="width: 80px;">
-                            <div class="form-check m-2 justify-content-start">
-                                <input class="form-check-input" type="checkbox" data-action="change->list-manager#toggleAll" data-list-manager-target="selectAllCheckbox" aria-label="Tout sélectionner">
-                                <label class="text-secondary">Id.</label>
-                            </div>
-                        </th>
+                        {# Colonne Id. + case « tout sélectionner » : réservée aux listes principales.
+                           En collection embarquée (dialog), aucune action en lot n'existe (le bandeau
+                           d'actions groupées est masqué) : on supprime cette colonne pour épurer le
+                           scan visuel et réduire la charge informationnelle. #}
+                        {% if usage|default('generic') != 'dialog' %}
+                            <th scope="col" style="width: 80px;">
+                                <div class="form-check m-2 justify-content-start">
+                                    <input class="form-check-input" type="checkbox" data-action="change->list-manager#toggleAll" data-list-manager-target="selectAllCheckbox" aria-label="Tout sélectionner">
+                                    <label class="text-secondary">Id.</label>
+                                </div>
+                            </th>
+                        {% endif %}
                         {% if listeCanvas.colonne_principale is defined %}
                             <th scope="col">
                                 <div class='d-flex justify-content-start text-secondary m-2'>{{ listeCanvas.colonne_principale.titre_colonne | default('Titre principal') }}</div>

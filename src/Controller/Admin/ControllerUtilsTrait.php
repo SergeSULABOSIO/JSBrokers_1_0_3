@@ -558,8 +558,14 @@ trait ControllerUtilsTrait
             $template = 'components/_view_manager.html.twig';
             // Chargement automatique de la première page (20 premiers éléments).
             $entreprise = $this->entrepriseRepository->find($idEntreprise);
+            // Filtre(s) actif(s) par défaut au premier chargement (ex. rubrique Client :
+            // périmètre du portefeuille de l'invité). Vide pour la plupart des entités.
+            // Le même jeu de critères est renvoyé au frontend pour amorcer l'état du Cerveau
+            // (badge de filtre + persistance en pagination), et rester retirable par l'usager.
+            $initialCriteria = [];
             if ($entreprise) {
-                $searchResult = $this->searchService->search($entityClass, [], $entreprise, null, 1, 20);
+                $initialCriteria = $this->getInitialSearchCriteria($entityClass, (int)$idInvite, $entreprise);
+                $searchResult = $this->searchService->search($entityClass, $initialCriteria, $entreprise, null, 1, 20);
                 $data = $searchResult['data'];
 
                 // MÉTRAGE TOKENS (lecture) au chargement initial de la liste. En cas
@@ -624,6 +630,8 @@ trait ControllerUtilsTrait
             'idEntreprise' => $idEntreprise,
             'mainListUrl' => $mainListUrl, // On passe l'URL au template
             'paginationMeta' => $paginationMeta ?? ['currentPage' => 1, 'totalPages' => 0, 'totalItems' => 0, 'itemsPerPage' => 20],
+            // Critères actifs par défaut (amorçage de l'état Cerveau + badge de filtre).
+            'initialSearchCriteria' => $initialCriteria ?? [],
         ];
 
         // dd("Paramètres - searchCanvas:", $parameters["searchCanvas"]);
@@ -1297,6 +1305,46 @@ trait ControllerUtilsTrait
      * @return array La collection d'entités trouvées.
      * @throws AccessDeniedException Si le type d'entité n'est pas autorisé.
      */
+    /**
+     * Critères de recherche actifs par défaut au premier chargement d'une liste.
+     *
+     * Pour les rubriques soumises au « périmètre portefeuille » (cf. PortefeuilleScope :
+     * Client, Piste, Cotation, Avenant, Sinistres, Tâche, Feedback…), on applique par défaut
+     * le critère synthétique « Mon portefeuille » = l'invité connecté. L'invité ne voit alors
+     * que les éléments rattachés — directement ou indirectement — à un portefeuille qu'il
+     * gère. Le critère reste retirable (badge de la barre ou champ du dialogue avancé) ; le
+     * libellé décrit le périmètre réel (nom du portefeuille, nombre, ou « aucun portefeuille »).
+     *
+     * @return array<string, mixed>
+     */
+    protected function getInitialSearchCriteria(string $entityClass, int $idInvite, \App\Entity\Entreprise $entreprise): array
+    {
+        $shortName = (new \ReflectionClass($entityClass))->getShortName();
+        if (!\App\Services\Search\PortefeuilleScope::isScopable($shortName)) {
+            return [];
+        }
+
+        $invite = $this->em->getRepository(\App\Entity\Invite::class)->find($idInvite);
+        if (!$invite) {
+            return [];
+        }
+
+        $portefeuilles = $this->em->getRepository(\App\Entity\Portefeuille::class)
+            ->findBy(['gestionnaire' => $invite]);
+        $nb = count($portefeuilles);
+        $label = match (true) {
+            $nb === 1 => $portefeuilles[0]->getNom(),
+            $nb > 1   => $nb . ' portefeuilles',
+            default   => 'aucun portefeuille',
+        };
+
+        return [
+            \App\Services\Search\PortefeuilleScope::CRITERION_KEY => [
+                'operator' => '=', 'value' => $idInvite, 'label' => $label,
+            ],
+        ];
+    }
+
     protected function getEntitiesForType(string $entityType): array
     {
         // Sécurité : Vérifier si l'entité est dans la liste autorisée du service de recherche.

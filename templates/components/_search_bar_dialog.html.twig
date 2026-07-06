@@ -22,7 +22,11 @@
             </div>
             <div class="modal-body bg-white">
                 <form aria-label="Formulaire de recherche avancée">
-                    <div data-search-bar-dialog-target="advancedFormContainer" class="form-scrollable-content"></div>
+                    <div
+                        data-search-bar-dialog-target="advancedFormContainer"
+                        class="form-scrollable-content jsb-advanced-form"
+                        data-action="input->search-bar-dialog#onFieldInput change->search-bar-dialog#onFieldInput click->search-bar-dialog#onFieldInput"
+                    ></div>
                     <div class="d-flex justify-content-end mt-4 border-top pt-3 gap-2">
                         <button type="button" class="btn btn-outline-secondary"
                             data-action="click->search-bar-dialog#resetForm">

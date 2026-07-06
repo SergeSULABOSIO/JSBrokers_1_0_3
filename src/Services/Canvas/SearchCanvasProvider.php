@@ -49,10 +49,19 @@ class SearchCanvasProvider
                     $criterion['Type'] = 'Text';
                     $criterion['Valeur'] = '';
                     break;
-                case 'Relation': // Les relations sont souvent recherchées via un champ texte.
-                    $criterion['Type'] = 'Text'; // Pour le frontend, c'est un champ texte.
+                case 'Relation':
+                    // Une relation est désormais un vrai sélecteur autocomplété côté frontend :
+                    // on conserve le nom court de l'entité cible (pour l'endpoint générique
+                    // d'autocomplétion) et le champ d'affichage (libellé + recherche texte de
+                    // repli). `targetField` reste fourni pour la rétrocompatibilité de la
+                    // recherche simple (LIKE sur le displayField).
+                    $criterion['Type'] = 'Relation';
                     $criterion['Valeur'] = '';
-                    $criterion['targetField'] = $field['displayField'] ?? 'nom'; // On spécifie sur quel champ de la relation chercher.
+                    $criterion['displayField'] = $field['displayField'] ?? 'nom';
+                    $criterion['targetField'] = $field['displayField'] ?? 'nom';
+                    $criterion['targetEntity'] = isset($field['targetEntity'])
+                        ? $this->shortEntityName($field['targetEntity'])
+                        : null;
                     break;
 
                 case 'Nombre':
@@ -68,7 +77,8 @@ class SearchCanvasProvider
                     break;
 
                 case 'Booleen':
-                    $criterion['Type'] = 'Options'; // Un booléen peut être représenté par des options "Oui/Non".
+                    // Booléen tri-état : « Tous » (option vide côté frontend) / Oui / Non.
+                    $criterion['Type'] = 'Boolean';
                     $criterion['Valeur'] = [
                         '1' => 'Oui',
                         '0' => 'Non',
@@ -80,6 +90,37 @@ class SearchCanvasProvider
             }
             $searchCriteria[] = $criterion;
         }
+
+        // Critère synthétique « Mon portefeuille » pour les rubriques soumises au périmètre
+        // portefeuille (Client, Piste, Cotation, Avenant, Sinistres, Tâche, Feedback…).
+        // Porté par la clé spéciale PortefeuilleScope::CRITERION_KEY, il permet de retirer,
+        // via le badge ou le dialogue avancé, le périmètre appliqué par défaut au chargement
+        // (cf. ControllerUtilsTrait::getInitialSearchCriteria). Le moteur l'étend au(x)
+        // chemin(s) de relation propre(s) à l'entité (cf. JSBDynamicSearchService).
+        $shortName = (new \ReflectionClass($entityClassName))->getShortName();
+        if (\App\Services\Search\PortefeuilleScope::isScopable($shortName)) {
+            array_unshift($searchCriteria, [
+                'Nom' => \App\Services\Search\PortefeuilleScope::CRITERION_KEY,
+                'Display' => 'Mon portefeuille',
+                'Type' => 'Relation',
+                'Valeur' => '',
+                'displayField' => 'nom',
+                'targetField' => 'nom',
+                'targetEntity' => 'Invite',
+                'isDefault' => false,
+            ]);
+        }
+
         return $searchCriteria;
+    }
+
+    /**
+     * Retourne le nom court d'une entité à partir de son FQCN.
+     * Ex. : "App\Entity\Client" => "Client".
+     */
+    private function shortEntityName(string $fqcn): string
+    {
+        $pos = strrpos($fqcn, '\\');
+        return $pos === false ? $fqcn : substr($fqcn, $pos + 1);
     }
 }

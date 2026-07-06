@@ -38,6 +38,9 @@ export default class extends BaseController {
         listUrl: String,
         numericAttributesAndValues: String,
         pagination: Object,
+        // Critères actifs par défaut au premier chargement (JSON). Amorce l'état de
+        // recherche du Cerveau pour cet onglet (badge + persistance en pagination).
+        initialCriteria: Object,
     };
 
     /**
@@ -64,6 +67,7 @@ export default class extends BaseController {
 
         // Defer so child controllers (list-summary) connect and register listeners before the first broadcast.
         requestAnimationFrame(() => this._initializeAndNotifyState());
+        this._lastPagination = this.paginationValue || {}; // méta courante pour les compteurs
         this._renderPagination(this.paginationValue);
 
         document.addEventListener('app:context.changed', this.boundHandleGlobalSelectionUpdate);
@@ -121,11 +125,25 @@ export default class extends BaseController {
         }
 
         // 2. Construit l'objet d'état complet.
+        // Amorce les critères de recherche avec le filtre par défaut fourni par le serveur
+        // (ex. périmètre « Mon portefeuille » de la rubrique Clients). Ainsi la barre de
+        // recherche affiche le badge correspondant et la pagination conserve le filtre.
+        const initialCriteria = (this.initialCriteriaValue && !Array.isArray(this.initialCriteriaValue))
+            ? this.initialCriteriaValue
+            : {};
+        // Compteurs initiaux : éléments affichés sur la première page (rendus côté serveur)
+        // et total de la recherche (méta de pagination), pour la barre de statut.
+        const initialTotal = (this.paginationValue && this.paginationValue.totalItems != null)
+            ? this.paginationValue.totalItems
+            : this.nbElementsValue;
         const initialState = {
             selectionState: [],
             selectionIds: new Set(),
             numericAttributesAndValues: initialNumericData,
-            activeTabFormCanvas: this.entityFormCanvasValue
+            activeTabFormCanvas: this.entityFormCanvasValue,
+            searchCriteria: initialCriteria,
+            pageItemCount: this.nbElementsValue,
+            totalItems: initialTotal,
         };
 
         // CORRECTION : Pour l'onglet principal, le tabId logique est 'principal'.
@@ -326,7 +344,10 @@ export default class extends BaseController {
         this.listContainerTarget.classList.toggle('d-none', !hasRows);
         this.emptyStateContainerTarget.classList.toggle('d-none', hasRows);
 
-        if (pagination) this._renderPagination(pagination);
+        if (pagination) {
+            this._renderPagination(pagination);
+            this._lastPagination = pagination; // mémorisé pour les compteurs de la barre de statut
+        }
 
         this._postDataLoadActions();
     }
@@ -337,9 +358,13 @@ export default class extends BaseController {
      */
     _postDataLoadActions() {
         // Notifie le cerveau que le rendu est terminé et fournit le nombre d'éléments.
-        this.notifyCerveau('app:list.rendered', {
-            itemCount: this.rowCheckboxTargets.length
-        });
+        // On compte les lignes réelles (data-item-id) et non les cases à cocher : en
+        // collection embarquée (dialog), la colonne case à cocher n'est pas rendue.
+        const itemCount = this.donneesTarget.querySelectorAll('[data-item-id]').length;
+        const totalItems = (this._lastPagination && this._lastPagination.totalItems != null)
+            ? this._lastPagination.totalItems
+            : itemCount;
+        this.notifyCerveau('app:list.rendered', { itemCount, totalItems });
     }
 
     /**

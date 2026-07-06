@@ -27,34 +27,38 @@
         {% endif %}
     "
 >
-    {# Colonne 1 : Statique (Case à cocher et ID) #}
-    <td class="p-3 m-2" style="width:80px">
-        <div class="form-group">
-            {% set serialization_context = {
-                'groups': 'list:read',
-                'enable_max_depth': true
-            } %}
-            <input
-                type="checkbox"
-                id="check_{{ entity.id }}"
-                name="check_[]"
-                value="selectionnee"
-                class="form-check-input"
-                data-list-manager-target="rowCheckbox" {# Cible pour le contrôleur de liste (tout cocher) #}
-                data-list-row-target="checkbox" {# Cible pour le contrôleur de ligne #}
-                data-action="change->list-manager#handleRowSelection" {# NOUVEAU : Notifie le parent list-manager #}
-                aria-label="Sélectionner l'élément #{{ entity.id }}"
-                data-list-row-idobjet-value="{{ entity.id }}"
-                {# On passe l'objet entier au contrôleur Stimulus pour l'événement double-clic #}
-                data-entity-type="{{entite_nom}}" 
-                data-entity='{{ entity|serialize('json', serialization_context)|e('html_attr') }}' 
-                data-canvas='{{ entityCanvas|json_encode|e('html_attr') }}' 
-            >
-            <label for="check_{{ entity.id }}" class="text-secondary">
-                {{ entity.id }}
-            </label>
-        </div>
-    </td>
+    {# Colonne 1 : Statique (Case à cocher et ID) — réservée aux listes principales.
+       En collection embarquée (dialog), la sélection en lot n'a aucun débouché : on masque
+       cette colonne. Le contrôleur `list-row` fonctionne sans case (cibles gardées). #}
+    {% if not (usage is defined and usage == 'dialog') %}
+        <td class="p-3 m-2" style="width:80px">
+            <div class="form-group">
+                {% set serialization_context = {
+                    'groups': 'list:read',
+                    'enable_max_depth': true
+                } %}
+                <input
+                    type="checkbox"
+                    id="check_{{ entity.id }}"
+                    name="check_[]"
+                    value="selectionnee"
+                    class="form-check-input"
+                    data-list-manager-target="rowCheckbox" {# Cible pour le contrôleur de liste (tout cocher) #}
+                    data-list-row-target="checkbox" {# Cible pour le contrôleur de ligne #}
+                    data-action="change->list-manager#handleRowSelection" {# NOUVEAU : Notifie le parent list-manager #}
+                    aria-label="Sélectionner l'élément #{{ entity.id }}"
+                    data-list-row-idobjet-value="{{ entity.id }}"
+                    {# On passe l'objet entier au contrôleur Stimulus pour l'événement double-clic #}
+                    data-entity-type="{{entite_nom}}"
+                    data-entity='{{ entity|serialize('json', serialization_context)|e('html_attr') }}'
+                    data-canvas='{{ entityCanvas|json_encode|e('html_attr') }}'
+                >
+                <label for="check_{{ entity.id }}" class="text-secondary">
+                    {{ entity.id }}
+                </label>
+            </div>
+        </td>
+    {% endif %}
 
     {# Colonne 2 : Cellule principale dynamique #}
     <td class="p-2" data-controller="responsive-cell">
@@ -98,15 +102,30 @@
                     'secondaryFieldDetails': secondaryFieldDetails|default(null)
                 } %}
             {% else %}
-                {# CAS 3 : Toutes les autres listes (principales, onglets). On restaure l'ancien affichage complet. #}
+                {# CAS 3 : Toutes les autres listes (principales, onglets).
+                   Ergonomie (Bastien & Scapin > Charge de travail) : on n'affiche QUE les
+                   valeurs secondaires réellement renseignées et on n'insère un séparateur
+                   qu'ENTRE deux valeurs présentes — fini les « • • » orphelins des champs
+                   vides. Chaque donnée porte une icône de signification (portefeuille,
+                   groupe, e-mail, téléphone) pour un scan visuel immédiat. #}
+                {% set rendus = 0 %}
                 {% for texte in col_principale.textes_secondaires %}
-                    <span class="d-inline-flex align-items-center">
-                        {% if texte.icone is defined %}<twig:UX:Icon name="{{ resolve_icon_name(texte.icone) }}" style="width: {{ texte.icone_taille | default('1.1em') }}; height: {{ texte.icone_taille | default('1.1em') }}; margin-right: 4px;" />{% endif %}
-                        {{ texte.attribut_prefixe | default('') }}
-                        {% set valeur = attribute(entity, texte.attribut_code) %}
-                        {% if texte.attribut_type|default('') == 'date' and valeur is not null %}{{ valeur|date('d/m/Y') }}{% elseif texte.attribut_type|default('') == 'text' and texte.attribut_taille_max is defined and texte.attribut_taille_max is not null and valeur is not null and valeur|length > texte.attribut_taille_max %}{{ valeur|slice(0, texte.attribut_taille_max) ~ '...' }}{% else %}{{ valeur }}{% endif %}
-                    </span>
-                    {% if not loop.last %}<span class="mx-2">{{ col_principale.textes_secondaires_separateurs|default(' &bull; ')|raw }}</span>{% endif %}
+                    {% set valeur = attribute(entity, texte.attribut_code) %}
+                    {% if texte.attribut_type|default('') == 'date' and valeur is not null %}
+                        {% set affichage = valeur|date('d/m/Y') %}
+                    {% elseif texte.attribut_type|default('') == 'text' and texte.attribut_taille_max is defined and texte.attribut_taille_max is not null and valeur is not null and valeur|length > texte.attribut_taille_max %}
+                        {% set affichage = valeur|slice(0, texte.attribut_taille_max) ~ '...' %}
+                    {% else %}
+                        {% set affichage = valeur %}
+                    {% endif %}
+                    {% if affichage is not null and affichage|trim != '' %}
+                        {% if rendus > 0 %}<span class="mx-2 text-secondary" aria-hidden="true">{{ col_principale.textes_secondaires_separateurs|default(' &bull; ')|raw }}</span>{% endif %}
+                        <span class="d-inline-flex align-items-center">
+                            {% if texte.icone is defined %}<twig:UX:Icon name="{{ resolve_icon_name(texte.icone) }}" style="width: {{ texte.icone_taille | default('1.1em') }}; height: {{ texte.icone_taille | default('1.1em') }}; margin-right: 4px;" />{% endif %}
+                            {{ texte.attribut_prefixe | default('') }}{{ affichage }}
+                        </span>
+                        {% set rendus = rendus + 1 %}
+                    {% endif %}
                 {% endfor %}
             {% endif %}
         </small>
@@ -128,17 +147,18 @@
     {# NOUVEAU : Colonne pour les actions, uniquement en contexte de dialogue/collection #}
     {% if usage is defined and usage == 'dialog' %}
         <td class="text-end pe-3">
+            {% set delete_label = listActionOptions.deleteActionLabel|default('Supprimer') %}
             <div class="list-row-actions-container" data-collection-target="rowActions">
                 {# Bouton d'édition masquable par collection (ex. clients d'un portefeuille). #}
                 {% if not (listActionOptions.hideEditAction|default(false)) %}
-                    <button type="button" class="btn btn-sm btn-light btn-icon shadow-sm border-0" title="Modifier" data-action="click->collection#editItem" style="width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
+                    <button type="button" class="btn btn-sm btn-light list-row-action-btn shadow-sm border-0" title="Modifier" aria-label="Modifier l'élément #{{ entity.id }}" data-action="click->collection#editItem">
                         <twig:UX:Icon name="{{ resolve_icon_name('lucide:edit') }}" style="width: 20px; height: 20px;" class="text-primary"/>
                     </button>
                 {% endif %}
                 {# Libellé/icône de l'action de suppression personnalisables : pour une
                    collection « de rattachement » (portefeuille), l'action DÉTACHE et non
                    supprime — d'où « Retirer » + icône adaptée. #}
-                <button type="button" class="btn btn-sm btn-light btn-icon shadow-sm border-0" title="{{ listActionOptions.deleteActionLabel|default('Supprimer') }}" data-action="click->collection#deleteItem" style="width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center;">
+                <button type="button" class="btn btn-sm btn-light list-row-action-btn list-row-action-btn--danger shadow-sm border-0" title="{{ delete_label }}" aria-label="{{ delete_label }} #{{ entity.id }}" data-action="click->collection#deleteItem">
                     <twig:UX:Icon name="{{ resolve_icon_name(listActionOptions.deleteActionIcon|default('lucide:trash-2')) }}" style="width: 20px; height: 20px;" class="text-danger" />
                 </button>
             </div>

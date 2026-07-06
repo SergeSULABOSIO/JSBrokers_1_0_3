@@ -658,17 +658,16 @@ export default class extends Controller {
      * @private
      */
     _getSkeletonHtml() {
+        // Le squelette reflète la structure d'une collection embarquée (dialog) :
+        // colonne principale + colonne d'actions, SANS colonne Id./case à cocher.
         const skeletonRow = `
             <tr>
-                <td class="p-3 m-2" style="width:80px">
-                    <div class="skeleton-line" style="width: 40px; height: 24px; border-radius: var(--bs-border-radius-sm);"></div>
-                </td>
                 <td class="p-2">
                     <div class="skeleton-line" style="width: 70%; height: 16px;"></div>
                     <div class="skeleton-line" style="width: 50%; height: 12px; margin-top: 8px;"></div>
                 </td>
                 <td class="text-end pe-3">
-                    <div class="skeleton-line" style="width: 65px; height: 30px; border-radius: var(--bs-border-radius);"></div>
+                    <div class="skeleton-line" style="width: 65px; height: 34px; border-radius: var(--bs-border-radius);"></div>
                 </td>
             </tr>
         `;
