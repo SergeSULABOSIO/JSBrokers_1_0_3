@@ -21,15 +21,21 @@
         data-list-manager-server-root-name-value="{{ serverRootName }}"
         data-list-manager-id-entreprise-value="{{ idEntreprise }}"
         data-list-manager-id-invite-value="{{ idInvite }}"
-        data-list-manager-entity-form-canvas-value='{{ entityFormCanvas|json_encode|e('html_attr') }}'
+        {# GOTCHA Twig/Stimulus : `{}` en Twig est un tableau PHP vide que json_encode
+           sérialise en `[]` — or les valeurs Stimulus typées `Object` REFUSENT `[]`
+           (TypeError au premier accès, qui avorte _initializeAndNotifyState et donc
+           ui:tab.initialized). Pour tout repli vide d'une valeur Object, émettre la
+           chaîne littérale '{}'. #}
+        data-list-manager-entity-form-canvas-value='{{ (entityFormCanvas is defined and entityFormCanvas is not empty ? entityFormCanvas|json_encode : '{}')|e('html_attr') }}'
         {# Canvas de recherche de l'entité listée : transmis au cerveau via
            ui:tab.initialized pour que la barre de recherche se recontextualise
-           à chaque activation d'onglet. #}
+           à chaque activation d'onglet. (Valeur Stimulus de type Array : `[]` est
+           un repli valide ici.) #}
         data-list-manager-search-canvas-value='{{ (searchCanvas|default([]))|json_encode|e('html_attr') }}'
         data-list-manager-numeric-attributes-and-values-value='{{ numericAttributesAndValues|default({})|json_encode|e('html_attr') }}'
         data-list-manager-list-url-value="{{ listUrl | default('') }}"
-        data-list-manager-pagination-value='{{ paginationMeta|default({})|json_encode|e('html_attr') }}'
-        data-list-manager-initial-criteria-value='{{ (initialSearchCriteria is defined and initialSearchCriteria is not empty ? initialSearchCriteria : {})|json_encode|e('html_attr') }}'
+        data-list-manager-pagination-value='{{ (paginationMeta is defined and paginationMeta is not empty ? paginationMeta|json_encode : '{}')|e('html_attr') }}'
+        data-list-manager-initial-criteria-value='{{ (initialSearchCriteria is defined and initialSearchCriteria is not empty ? initialSearchCriteria|json_encode : '{}')|e('html_attr') }}'
     >
         {% if usage|default('generic') != 'dialog' %}
         <div class="jsb-list-controls-bar" data-list-manager-target="controlsBar">
