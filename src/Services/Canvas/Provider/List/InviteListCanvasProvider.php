@@ -25,6 +25,9 @@ class InviteListCanvasProvider implements ListCanvasProviderInterface
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
                     ["attribut_prefixe" => "Statut: ", "attribut_code" => "status_string"],
+                    // Rattachement portefeuille : toujours renseigné (« Aucun portefeuille »
+                    // si l'invité n'en gère pas) — même icône dossier que la liste Clients.
+                    ["attribut_code" => "portefeuilleNom", "icone" => "lucide:folder"],
                 ],
             ],
             "colonnes_numeriques" => [

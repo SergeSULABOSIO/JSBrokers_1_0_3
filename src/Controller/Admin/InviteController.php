@@ -3,6 +3,7 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Invite;
+use App\Entity\Portefeuille;
 use App\Form\InviteType;
 use App\Entity\Utilisateur;
 use App\Constantes\Constante;
@@ -207,6 +208,60 @@ class InviteController extends AbstractController
         } catch (\Throwable) {
             return $this->json(['success' => false, 'message' => $this->translator->trans('invite_email_sending_error')], 500);
         }
+    }
+
+    /**
+     * Contexte « portefeuille lié » d'un invité, pour les actions spéciales de la
+     * rubrique (miroir de BordereauController::getLinkedNoteContext). Répond selon
+     * l'état réel : mode 'edit' (portefeuille existant, cardinalité 1 assumée via
+     * first()) ou 'create' (canevas d'un portefeuille vierge, le gestionnaire sera
+     * prérempli par PortefeuilleController::getFormApi via le parentContext).
+     */
+    #[Route('/api/get-portefeuille-context/{id}', name: 'api.get_portefeuille_context', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function getPortefeuilleContext(Invite $invite, Request $request): JsonResponse
+    {
+        $portefeuille = $invite->getPortefeuilles()->first() ?: null;
+
+        // Ouvrir le formulaire = mutation à venir : Modification si un portefeuille
+        // existe, Écriture s'il s'agit d'en créer un (fail-closed).
+        $level = $portefeuille ? Invite::ACCESS_MODIFICATION : Invite::ACCESS_ECRITURE;
+        if (!$this->mayAccessEntity(Portefeuille::class, $level)) {
+            return $this->accessDeniedJson();
+        }
+        // Scoping : l'invité doit appartenir à l'espace de travail courant.
+        if ($invite->getEntreprise()?->getId() !== $this->getEntreprise()->getId()) {
+            return $this->json(['message' => "Invité introuvable dans cet espace de travail."], Response::HTTP_NOT_FOUND);
+        }
+
+        $idEntreprise = (int) $request->query->get('idEntreprise', 0);
+
+        return $this->json([
+            'mode'         => $portefeuille ? 'edit' : 'create',
+            'inviteId'     => $invite->getId(),
+            'portefeuille' => $portefeuille ? $this->serializer->normalize($portefeuille, null, ['groups' => ['list:read']]) : null,
+            'formCanvas'   => $this->canvasBuilder->getEntityFormCanvas($portefeuille ?? new Portefeuille(), $idEntreprise),
+        ]);
+    }
+
+    /**
+     * Supprime le portefeuille dont l'invité est gestionnaire ({id} = id de l'INVITÉ).
+     * Les clients sont détachés (Client.portefeuille → SET NULL), pas supprimés.
+     * Le gating Suppression + le métrage sont délégués à handleDeleteApi (trait).
+     */
+    #[Route('/api/delete-portefeuille/{id}', name: 'api.delete_portefeuille', requirements: ['id' => Requirement::DIGITS], methods: ['DELETE'])]
+    public function deletePortefeuille(Invite $invite): JsonResponse
+    {
+        // Scoping : l'invité doit appartenir à l'espace de travail courant.
+        if ($invite->getEntreprise()?->getId() !== $this->getEntreprise()->getId()) {
+            return $this->json(['message' => "Invité introuvable dans cet espace de travail."], Response::HTTP_NOT_FOUND);
+        }
+
+        $portefeuille = $invite->getPortefeuilles()->first() ?: null;
+        if ($portefeuille === null) {
+            return $this->json(['message' => "Cet invité ne gère aucun portefeuille."], Response::HTTP_NOT_FOUND);
+        }
+
+        return $this->handleDeleteApi($portefeuille);
     }
 
     #[Route('/api/{id}/{collectionName}/{usage?}', name: 'api.get_collection', requirements: ['id' => Requirement::DIGITS], defaults: ['usage' => 'generic'], methods: ['GET'])]

@@ -30,7 +30,7 @@ class Portefeuille
     /**
      * L'invité désigné comme gestionnaire de compte responsable du portefeuille.
      */
-    #[ORM\ManyToOne]
+    #[ORM\ManyToOne(inversedBy: 'portefeuilles')]
     #[ORM\JoinColumn(nullable: false)]
     #[Groups(['list:read'])]
     private ?Invite $gestionnaire = null;

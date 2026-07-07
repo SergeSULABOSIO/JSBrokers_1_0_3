@@ -119,6 +119,32 @@ class Client
     #[Groups(['list:read'])]
     public ?string $civiliteString = null;
 
+    // Booléen strict (jamais null côté liste, cf. ClientIndicatorStrategy) : condition
+    // des attribute_actions « portefeuille » — en JS, `undefined == false` vaut false.
+    #[Groups(['list:read'])]
+    public ?bool $hasPortefeuille = null;
+
+    // Lignes secondaires de la liste (déclarées ici pour éviter les propriétés
+    // dynamiques dépréciées en PHP 8.2 ; null = information masquée sur la ligne).
+    #[Groups(['list:read'])]
+    public ?string $portefeuilleNom = null;
+
+    #[Groups(['list:read'])]
+    public ?string $groupeNom = null;
+
+    // Codes/taux de taxes calculés (ClientIndicatorStrategy) — déclarés pour la même raison.
+    #[Groups(['list:read'])]
+    public ?string $taxeCourtierCode = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeCourtierTaux = null;
+
+    #[Groups(['list:read'])]
+    public ?string $taxeAssureurCode = null;
+
+    #[Groups(['list:read'])]
+    public ?float $taxeAssureurTaux = null;
+
     #[Groups(['list:read'])]
     public ?int $nombrePistes = null;
 

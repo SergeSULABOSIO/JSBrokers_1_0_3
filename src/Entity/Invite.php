@@ -125,6 +125,15 @@ class Invite
     #[ORM\OneToMany(targetEntity: RolesEnAdministration::class, mappedBy: 'invite', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $rolesEnAdministration;
 
+    /**
+     * Portefeuilles dont l'invité est le gestionnaire. Côté inverse pur (la FK vit sur
+     * Portefeuille.gestionnaire) : aucune migration. Pas de cascade : supprimer un
+     * invité ne doit pas emporter ses portefeuilles.
+     * @var Collection<int, Portefeuille>
+     */
+    #[ORM\OneToMany(targetEntity: Portefeuille::class, mappedBy: 'gestionnaire')]
+    private Collection $portefeuilles;
+
     // Attributs calculés
     #[Groups(['list:read'])]
     public ?string $ageInvitation = null;
@@ -140,6 +149,18 @@ class Invite
 
     #[Groups(['list:read'])]
     public ?string $status_string = null;
+
+    // Toujours renseigné en booléen par InviteIndicatorStrategy (jamais null côté
+    // liste) : sert de condition aux attribute_actions « portefeuille » de la toolbar,
+    // où `undefined == false` vaut false en JS.
+    #[Groups(['list:read'])]
+    public ?bool $hasPortefeuille = null;
+
+    // Ligne secondaire de la liste : nom du portefeuille géré, ou « Aucun portefeuille ».
+    // Contrairement au client (info masquée si absente), l'ABSENCE est ici une information
+    // métier à afficher explicitement.
+    #[Groups(['list:read'])]
+    public ?string $portefeuilleNom = null;
 
     // Nullable : une invitation peut exister AVANT que la personne invitée n'ait un
     // compte JS Brokers (invitation « en attente », identifiée par l'email ci-dessous).
@@ -175,6 +196,7 @@ class Invite
         $this->rolesEnProduction = new ArrayCollection();
         $this->rolesEnSinistre = new ArrayCollection();
         $this->rolesEnAdministration = new ArrayCollection();
+        $this->portefeuilles = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
     }
 
@@ -578,6 +600,14 @@ class Invite
     public function getRolesEnAdministration(): Collection
     {
         return $this->rolesEnAdministration;
+    }
+
+    /**
+     * @return Collection<int, Portefeuille>
+     */
+    public function getPortefeuilles(): Collection
+    {
+        return $this->portefeuilles;
     }
 
     public function addRolesEnAdministration(RolesEnAdministration $rolesEnAdministration): static
