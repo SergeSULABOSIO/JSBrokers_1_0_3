@@ -436,10 +436,16 @@ export default class extends Controller {
             case 'client:portefeuille.detach-request': // confirmation validée → DELETE effectif
                 this._handleClientPortefeuilleDetach(payload);
                 break;
-            case 'client:portefeuille.updated': // succès d'une affectation/transfert via le picker
+            case 'client:portefeuille.updated': { // succès d'une affectation/transfert via le picker
                 this._showNotification(payload.message || 'Portefeuille mis à jour.', 'success');
+                // Barre de progression du workspace + squelette de la liste pendant le
+                // rafraîchissement (arrêtés par app:list.rendered), comme la pagination.
+                const pfUpdatedState = this._getActiveTabState();
+                this._publishSelectionStatus('Actualisation de la liste...');
+                this.broadcast('app:loading.start', { originatorId: pfUpdatedState.elementId, workspaceTabId: this.currentWorkspaceTabId });
                 this._requestListRefresh(this.getActiveTabId());
                 break;
+            }
             case 'ui:bordereau.edit-linked-note':
                 this.handleBordereauEditLinkedNote(payload);
                 break;
@@ -1616,6 +1622,11 @@ export default class extends Controller {
 
             this._showNotification(data.message || 'Client retiré du portefeuille.', 'success');
             this._setSelectionState([]); // la sélection ne reflète plus l'état, on la vide
+            // Barre de progression du workspace + squelette de la liste pendant le
+            // rafraîchissement (arrêtés par app:list.rendered), comme la pagination.
+            const detachState = this._getActiveTabState();
+            this._publishSelectionStatus('Actualisation de la liste...');
+            this.broadcast('app:loading.start', { originatorId: detachState.elementId, workspaceTabId: this.currentWorkspaceTabId });
             this._requestListRefresh(this.getActiveTabId());
             this.broadcast('ui:confirmation.close');
         } catch (error) {
