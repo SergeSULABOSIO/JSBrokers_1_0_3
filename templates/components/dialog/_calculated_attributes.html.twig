@@ -22,6 +22,13 @@
                     data-event-name="{{ action.event }}"
                     data-event-url="{{ action.url }}"
                     data-event-payload="{{ {id: entity.id}|json_encode }}"
+                    {# Condition éventuelle de l'action : évaluée côté JS contre l'entité
+                       (dialog-instance#initializeAttributeToolbar), même sémantique que la
+                       toolbar de liste (toolbar_controller). #}
+                    {% if action.condition is defined %}
+                        data-condition-field="{{ action.condition.field }}"
+                        data-condition-value="{{ action.condition.value|json_encode }}"
+                    {% endif %}
                 >
                     {# Icône chargée par son alias via JS ; décorative → masquée aux lecteurs d'écran (WCAG 1.1.1) #}
                     <span class="button-icon" data-icon-alias="{{ action.icon }}" aria-hidden="true"></span>

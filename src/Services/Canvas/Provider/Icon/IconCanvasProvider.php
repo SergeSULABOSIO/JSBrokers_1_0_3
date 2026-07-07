@@ -66,6 +66,7 @@ class IconCanvasProvider
         'action:copy'         => 'hugeicons:copy-01',
         'action:delete'       => 'fluent:delete-20-filled',
         'action:description'  => 'fluent:text-description-16-filled',
+        'action:detach'       => 'mdi:link-variant-off', // retrait non destructif d'un rattachement
         'action:disable'      => 'material-symbols:person-add-disabled',
         'action:download'     => 'hugeicons:download-01',
         'action:edit'         => 'tabler:edit',
@@ -92,6 +93,7 @@ class IconCanvasProvider
         'action:save'         => 'fa-solid:save',
         'action:search'       => 'hugeicons:search-01',
         'action:settings'     => 'material-symbols:settings',
+        'action:transfer'     => 'mdi:swap-horizontal', // transfert vers un autre rattachement
         'action:upload'       => 'hugeicons:upload-01',
         'action:view'         => 'hugeicons:view',
     ];

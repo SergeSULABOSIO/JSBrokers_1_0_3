@@ -71,8 +71,23 @@ class PortefeuilleController extends AbstractController
             Portefeuille::class,
             PortefeuilleType::class,
             $portefeuille,
-            function (Portefeuille $portefeuille, Invite $invite) {
+            function (Portefeuille $portefeuille, Invite $invite) use ($request) {
                 $portefeuille->setEntreprise($invite->getEntreprise());
+
+                // Pré-remplissage du gestionnaire depuis l'action « Ajouter un
+                // portefeuille » d'un invité (parentContext transmis par dialog-instance,
+                // même mécanique que la note pré-remplie depuis un bordereau).
+                $gestionnaireId = $request->query->get('parent_id');
+                $parentField = $request->query->get('parent_field_name');
+                if ($parentField === 'gestionnaire' && $gestionnaireId) {
+                    $gestionnaire = $this->em->find(Invite::class, (int) $gestionnaireId);
+                    if ($gestionnaire && $gestionnaire->getEntreprise()?->getId() === $invite->getEntreprise()?->getId()) {
+                        $portefeuille->setGestionnaire($gestionnaire);
+                        if (!$portefeuille->getNom() && $gestionnaire->getNom()) {
+                            $portefeuille->setNom('Portefeuille de ' . $gestionnaire->getNom());
+                        }
+                    }
+                }
             }
         );
     }

@@ -32,6 +32,12 @@ class InviteIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'rolePrincipal' => $this->getInviteRolePrincipal($entity),
             'proprietaireString' => $this->getInviteProprietaireString($entity),
             'status_string' => $this->getInviteStatusString($entity),
+            // Booléen strict (jamais null) : condition des actions « portefeuille »
+            // de la toolbar, comparée en == lâche côté JS.
+            'hasPortefeuille' => !$entity->getPortefeuilles()->isEmpty(),
+            // Ligne secondaire : l'absence de portefeuille est une information métier,
+            // affichée explicitement (pas de null masquant comme sur la fiche client).
+            'portefeuilleNom' => $this->getInvitePortefeuilleNom($entity),
         ];
     }
 
@@ -80,6 +86,13 @@ class InviteIndicatorStrategy implements IndicatorCalculationStrategyInterface
     private function getInviteProprietaireString(Invite $invite): string
     {
         return $invite->isProprietaire() ? 'Oui' : 'Non';
+    }
+
+    private function getInvitePortefeuilleNom(Invite $invite): string
+    {
+        $portefeuille = $invite->getPortefeuilles()->first();
+
+        return $portefeuille ? (string) $portefeuille->getNom() : 'Aucun portefeuille';
     }
 
     private function getInviteStatusString(Invite $invite): string

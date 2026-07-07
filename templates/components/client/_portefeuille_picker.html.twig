@@ -1,0 +1,157 @@
+{#
+    Boîte de dialogue de sélection d'un portefeuille CIBLE pour un client (actions
+    « Affecter à un portefeuille » / « Transférer vers un autre portefeuille » de la
+    rubrique Clients). Miroir visuel du picker de clients de la fiche Portefeuille
+    (_client_picker.html.twig : mêmes classes jsb-picker-*), selon /ergonomie-web
+    (role=dialog, aria-modal, libellés explicites, information jamais transmise par la
+    seule couleur, cibles ≥44px, Échap, restitution du focus) et /charte-couleurs.
+    Piloté par le contrôleur Stimulus dédié « portefeuille-picker » (auto-connecté à
+    l'insertion dans le DOM par le cerveau) — PAS par collection_controller.
+#}
+{% set actuel = client.portefeuille %}
+<div class="jsb-picker-overlay"
+     data-controller="portefeuille-picker"
+     data-portefeuille-picker-client-nom-value="{{ client.nom|e('html_attr') }}"
+     data-picker-overlay>
+    <div class="jsb-picker-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="jsb-pf-picker-title"
+         aria-describedby="jsb-pf-picker-desc"
+         tabindex="-1">
+
+        <div class="modal-header jsb-picker-header">
+            <div class="d-flex align-items-center">
+                <span class="me-2 d-inline-flex" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('portefeuille') }}" style="width:22px;height:22px;color:#0047AB;" />
+                </span>
+                <h5 id="jsb-pf-picker-title" class="modal-title mb-0">
+                    {% if isTransfert %}
+                        Transférer «&nbsp;{{ client.nom }}&nbsp;» vers un autre portefeuille
+                    {% else %}
+                        Affecter «&nbsp;{{ client.nom }}&nbsp;» à un portefeuille
+                    {% endif %}
+                </h5>
+            </div>
+            <button type="button" class="btn-close" data-picker-close aria-label="Fermer la fenêtre de sélection"></button>
+        </div>
+
+        {# Barre de progression : animée pendant l'appel d'affectation (feedback visuel). #}
+        <div class="jsb-picker-progress" data-picker-progress role="progressbar" aria-hidden="true">
+            <div class="jsb-picker-progress-bar"></div>
+        </div>
+
+        {# Entête contextuel : rappel de l'objet de l'action et, en transfert, de
+           l'état actuel (portefeuille + gestionnaire) — Nielsen 1 & 6. #}
+        <div class="jsb-picker-intro">
+            <span class="jsb-picker-intro-icon" aria-hidden="true">
+                <twig:UX:Icon name="{{ resolve_icon_name('client') }}" style="width:26px;height:26px;" />
+            </span>
+            <div class="jsb-picker-intro-text">
+                <p class="jsb-picker-intro-title">Choix du portefeuille de rattachement</p>
+                <p id="jsb-pf-picker-desc" class="jsb-picker-intro-desc">
+                    {% if isTransfert %}
+                        «&nbsp;<strong>{{ client.nom }}</strong>&nbsp;» appartient actuellement au portefeuille
+                        «&nbsp;<strong>{{ actuel.nom }}</strong>&nbsp;»{% if actuel.gestionnaire %} (gestionnaire&nbsp;: {{ actuel.gestionnaire.nom }}){% endif %}.
+                        Choisissez le portefeuille de destination : le transfert est immédiat et reste réversible.
+                    {% else %}
+                        Choisissez le portefeuille auquel rattacher «&nbsp;<strong>{{ client.nom }}</strong>&nbsp;».
+                        L'affectation est immédiate et reste réversible via «&nbsp;Retirer du portefeuille&nbsp;».
+                    {% endif %}
+                </p>
+
+                <div class="jsb-picker-stats" role="status" aria-live="polite">
+                    <span class="jsb-picker-stat">
+                        <span class="jsb-picker-stat-num">{{ portefeuilles|length }}</span>
+                        portefeuille(s) dans l'espace
+                    </span>
+                    <span class="jsb-picker-stat-sep" aria-hidden="true">·</span>
+                    <span class="jsb-picker-stat">
+                        <span class="jsb-picker-stat-num" data-picker-count-shown>{{ portefeuilles|length }}</span>
+                        affiché(s)
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="jsb-picker-search">
+            <span class="jsb-picker-search-icon" aria-hidden="true">
+                <twig:UX:Icon name="hugeicons:search-01" style="width:16px;height:16px;" />
+            </span>
+            <label for="jsb-pf-picker-search-input" class="visually-hidden">Rechercher un portefeuille par nom ou gestionnaire</label>
+            <input type="text"
+                   id="jsb-pf-picker-search-input"
+                   class="form-control"
+                   placeholder="Rechercher par nom ou gestionnaire…"
+                   autocomplete="off"
+                   data-picker-search>
+        </div>
+
+        {# Zone d'erreur API (rendue visible par le JS) — Nielsen 9 : message en langage
+           naturel, au-dessus de la liste pour être perçu sans défilement. #}
+        <p class="jsb-picker-empty text-danger" data-picker-error role="alert" hidden></p>
+
+        <div class="jsb-picker-listwrap">
+            {% if portefeuilles is empty %}
+                <p class="jsb-picker-empty" role="status">
+                    Aucun portefeuille n'existe encore dans cet espace de travail.
+                    Créez-en un depuis la rubrique «&nbsp;Portefeuilles&nbsp;» (module Production), puis relancez l'affectation.
+                </p>
+            {% else %}
+                <table class="jsb-picker-table">
+                    <caption class="visually-hidden">Liste des portefeuilles de l'espace de travail</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Portefeuille</th>
+                            <th scope="col">Clients</th>
+                            <th scope="col" class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody data-picker-tbody>
+                        {% for pf in portefeuilles %}
+                            {% set isCurrent = actuel is not null and pf.id == actuel.id %}
+                            <tr data-picker-row
+                                data-portefeuille-id="{{ pf.id }}"
+                                data-search="{{ (pf.nom ~ ' ' ~ (pf.gestionnaire ? pf.gestionnaire.nom : ''))|lower|e('html_attr') }}">
+                                <td>
+                                    <span class="jsb-picker-client-nom">{{ pf.nom }}</span>
+                                    {% if pf.gestionnaire %}
+                                        <span class="jsb-picker-client-mail">Gestionnaire&nbsp;: {{ pf.gestionnaire.nom }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ pf.clients|length }} client(s)</td>
+                                <td class="text-end">
+                                    {% if isCurrent %}
+                                        {# Portefeuille ACTUEL : badge texte, aucune action — prévention
+                                           des erreurs (Nielsen 5), information pas seulement par la couleur. #}
+                                        <span class="jsb-picker-chip jsb-picker-chip--current">Actuel</span>
+                                    {% else %}
+                                        <button type="button"
+                                                class="btn btn-sm btn-primary jsb-picker-btn"
+                                                data-picker-affect
+                                                data-affect-url="/admin/client/api/{{ client.id }}/affecter-portefeuille/{{ pf.id }}"
+                                                aria-label="{{ isTransfert ? 'Transférer' : 'Affecter' }} le client {{ client.nom }} vers le portefeuille {{ pf.nom }}">
+                                            <twig:UX:Icon name="{{ resolve_icon_name(isTransfert ? 'action:transfer' : 'action:add') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                                            {{ isTransfert ? 'Transférer ici' : 'Affecter ici' }}
+                                        </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <p class="jsb-picker-empty" data-picker-empty role="status" hidden>Aucun portefeuille ne correspond à votre recherche.</p>
+            {% endif %}
+        </div>
+
+        <footer class="jsb-picker-foot">
+            <span class="jsb-picker-hint text-muted small">
+                Astuce&nbsp;: filtrez la liste puis cliquez sur «&nbsp;{{ isTransfert ? 'Transférer ici' : 'Affecter ici' }}&nbsp;».
+            </span>
+            <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-picker-close>
+                <twig:UX:Icon name="{{ resolve_icon_name('action:close') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                Fermer
+            </button>
+        </footer>
+    </div>
+</div>

@@ -47,6 +47,33 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                     "event" => "ui:soa.copy-link-request",
                     "url"   => "/admin/soa/client/%id%/apercu",
                 ],
+                // Actions « portefeuille » conditionnelles (pattern Invité→Portefeuille) :
+                // condition évaluée côté front contre l'attribut calculé hasPortefeuille
+                // (ClientIndicatorStrategy). Affecter et Transférer ouvrent le même picker
+                // de portefeuilles ; le backend adapte le mode à l'état réel du client.
+                [
+                    "label"     => "Affecter à un portefeuille",
+                    "icon"      => "portefeuille",
+                    "event"     => "ui:client.portefeuille-picker-request",
+                    "url"       => "/admin/client/api/%id%/portefeuille-picker",
+                    "condition" => ["field" => "hasPortefeuille", "value" => false],
+                ],
+                [
+                    "label"     => "Transférer vers un autre portefeuille",
+                    "icon"      => "action:transfer",
+                    "event"     => "ui:client.portefeuille-picker-request",
+                    "url"       => "/admin/client/api/%id%/portefeuille-picker",
+                    "condition" => ["field" => "hasPortefeuille", "value" => true],
+                ],
+                [
+                    "label"     => "Retirer du portefeuille",
+                    "icon"      => "action:detach",
+                    "event"     => "ui:client.retirer-portefeuille",
+                    // Pas de %id% : l'id du client est transmis dans le payload et le
+                    // cerveau fait DELETE {url}/{id} après confirmation.
+                    "url"       => "/admin/client/api/retirer-portefeuille",
+                    "condition" => ["field" => "hasPortefeuille", "value" => true],
+                ],
             ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [

@@ -552,6 +552,22 @@ export default class extends Controller {
         const attributeToolbar = this.element.querySelector('.attributes-toolbar');
         if (!attributeToolbar) return;
 
+        // Actions conditionnelles : le template rend TOUS les boutons ; on masque ici
+        // ceux dont la condition échoue contre l'entité, avec la même comparaison lâche
+        // que la toolbar de liste (toolbar_controller). Une action sans condition reste
+        // toujours visible.
+        attributeToolbar.querySelectorAll('button[data-condition-field]').forEach(button => {
+            const field = button.dataset.conditionField;
+            let expected;
+            try {
+                expected = JSON.parse(button.dataset.conditionValue);
+            } catch (e) {
+                expected = button.dataset.conditionValue;
+            }
+            const matches = (this.entity || {})[field] == expected;
+            button.classList.toggle('d-none', !matches);
+        });
+
         const iconContainers = attributeToolbar.querySelectorAll('.button-icon[data-icon-alias]');
         iconContainers.forEach(container => {
             const iconAlias = container.dataset.iconAlias;

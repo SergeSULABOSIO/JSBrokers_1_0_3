@@ -106,6 +106,101 @@ class ClientController extends AbstractController
         return $this->renderViewOrListComponent(Client::class, $request, true);
     }
 
+    /**
+     * Boîte de SÉLECTION d'un portefeuille cible pour un client (actions « Affecter à un
+     * portefeuille » / « Transférer vers un autre portefeuille » de la rubrique Clients).
+     * Miroir du picker de clients de la fiche Portefeuille : liste les portefeuilles de
+     * l'espace ; en mode transfert, le portefeuille actuel est marqué « Actuel » sans action.
+     * Déclarée AVANT la route fourre-tout api/{id}/{collectionName}/{usage}.
+     */
+    #[Route('/api/{id}/portefeuille-picker', name: 'api.portefeuille_picker', requirements: ['id' => Requirement::DIGITS], methods: ['GET'], priority: 1)]
+    public function portefeuillePicker(Client $client): Response
+    {
+        // Mutation d'un client à venir → exige le droit de Modification (fail-closed).
+        if (!$this->mayAccessEntity(Client::class, \App\Entity\Invite::ACCESS_MODIFICATION)) {
+            throw $this->createAccessDeniedException("Affectation de portefeuille hors de votre périmètre d'accès.");
+        }
+        // Scoping : le client doit appartenir à l'espace de travail courant.
+        $entreprise = $this->getEntreprise();
+        if ($entreprise === null || $client->getEntreprise()?->getId() !== $entreprise->getId()) {
+            throw $this->createNotFoundException("Client introuvable dans cet espace de travail.");
+        }
+
+        $portefeuilles = $this->em->getRepository(\App\Entity\Portefeuille::class)->findBy(
+            ['entreprise' => $entreprise],
+            ['nom' => 'ASC']
+        );
+
+        return $this->render('components/client/_portefeuille_picker.html.twig', [
+            'client'        => $client,
+            'portefeuilles' => $portefeuilles,
+            'isTransfert'   => $client->getPortefeuille() !== null,
+        ]);
+    }
+
+    /**
+     * Affecte un client à un portefeuille cible — couvre l'AFFECTATION (client libre)
+     * et le TRANSFERT (client déjà rattaché ailleurs). Refuse le portefeuille actuel (409).
+     */
+    #[Route('/api/{id}/affecter-portefeuille/{portefeuilleId}', name: 'api.affecter_portefeuille', requirements: ['id' => Requirement::DIGITS, 'portefeuilleId' => Requirement::DIGITS], methods: ['PUT'])]
+    public function affecterPortefeuille(Client $client, int $portefeuilleId): Response
+    {
+        if (!$this->mayAccessEntity(Client::class, \App\Entity\Invite::ACCESS_MODIFICATION)) {
+            return $this->accessDeniedJson();
+        }
+        $entreprise = $this->getEntreprise();
+        if ($entreprise === null || $client->getEntreprise()?->getId() !== $entreprise->getId()) {
+            return $this->json(['message' => "Client introuvable dans cet espace de travail."], Response::HTTP_NOT_FOUND);
+        }
+
+        $portefeuille = $this->em->getRepository(\App\Entity\Portefeuille::class)->find($portefeuilleId);
+        if ($portefeuille === null || $portefeuille->getEntreprise()?->getId() !== $entreprise->getId()) {
+            return $this->json(['message' => "Portefeuille introuvable dans cet espace de travail."], Response::HTTP_NOT_FOUND);
+        }
+
+        $ancien = $client->getPortefeuille();
+        if ($ancien !== null && $ancien->getId() === $portefeuille->getId()) {
+            return $this->json(['message' => "Ce client appartient déjà à ce portefeuille."], Response::HTTP_CONFLICT);
+        }
+
+        $client->setPortefeuille($portefeuille);
+        $this->em->flush();
+
+        $message = $ancien !== null
+            ? sprintf('« %s » transféré de « %s » vers « %s ».', $client->getNom(), $ancien->getNom(), $portefeuille->getNom())
+            : sprintf('« %s » affecté au portefeuille « %s ».', $client->getNom(), $portefeuille->getNom());
+
+        return $this->json(['message' => $message]);
+    }
+
+    /**
+     * Retire le client de son portefeuille (client.portefeuille = null) SANS le supprimer :
+     * détachement non destructif, le client reste réaffectable à tout moment.
+     */
+    #[Route('/api/retirer-portefeuille/{id}', name: 'api.retirer_portefeuille', requirements: ['id' => Requirement::DIGITS], methods: ['DELETE'])]
+    public function retirerPortefeuille(Client $client): Response
+    {
+        if (!$this->mayAccessEntity(Client::class, \App\Entity\Invite::ACCESS_MODIFICATION)) {
+            return $this->accessDeniedJson();
+        }
+        $entreprise = $this->getEntreprise();
+        if ($entreprise === null || $client->getEntreprise()?->getId() !== $entreprise->getId()) {
+            return $this->json(['message' => "Client introuvable dans cet espace de travail."], Response::HTTP_NOT_FOUND);
+        }
+
+        $portefeuille = $client->getPortefeuille();
+        if ($portefeuille === null) {
+            return $this->json(['message' => "Ce client n'appartient à aucun portefeuille."], Response::HTTP_NOT_FOUND);
+        }
+
+        $client->setPortefeuille(null); // détache, ne supprime pas
+        $this->em->flush();
+
+        return $this->json([
+            'message' => sprintf('« %s » retiré du portefeuille « %s ». Le client n\'est pas supprimé.', $client->getNom(), $portefeuille->getNom()),
+        ]);
+    }
+
     #[Route('/api/{id}/{collectionName}/{usage}', name: 'api.get_collection', methods: ['GET'])]
     public function getCollectionListApi(int $id, string $collectionName, ?string $usage = "generic"): Response
     {

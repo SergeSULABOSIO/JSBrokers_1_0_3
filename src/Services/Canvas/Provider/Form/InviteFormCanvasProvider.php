@@ -67,6 +67,34 @@ class InviteFormCanvasProvider implements FormCanvasProviderInterface
                     "event" => "ui:invite.resend-request",
                     "url"   => "/admin/invite/api/resend-invitation/%id%",
                 ],
+                // Actions « portefeuille » conditionnelles, sur le modèle des actions
+                // linked-note du Bordereau : la condition est évaluée côté front contre
+                // l'attribut calculé hasPortefeuille (InviteIndicatorStrategy). Ajout et
+                // Édition partagent le même endpoint : le backend répond selon l'état
+                // réel du portefeuille (la condition n'est qu'un confort UI).
+                [
+                    "label"     => "Ajouter un portefeuille",
+                    "icon"      => "portefeuille",
+                    "event"     => "ui:invite.portefeuille-form-request",
+                    "url"       => "/admin/invite/api/get-portefeuille-context/%id%",
+                    "condition" => ["field" => "hasPortefeuille", "value" => false],
+                ],
+                [
+                    "label"     => "Éditer le portefeuille",
+                    "icon"      => "action:edit",
+                    "event"     => "ui:invite.portefeuille-form-request",
+                    "url"       => "/admin/invite/api/get-portefeuille-context/%id%",
+                    "condition" => ["field" => "hasPortefeuille", "value" => true],
+                ],
+                [
+                    "label"     => "Supprimer le portefeuille",
+                    "icon"      => "action:delete",
+                    "event"     => "ui:invite.delete-portefeuille",
+                    // Pas de %id% : l'id de l'invité est transmis en `ids` par le flux
+                    // générique app:api.delete-request après confirmation.
+                    "url"       => "/admin/invite/api/delete-portefeuille",
+                    "condition" => ["field" => "hasPortefeuille", "value" => true],
+                ],
             ],
         ];
         $layout = $this->buildInviteLayout($object, $isParentNew);

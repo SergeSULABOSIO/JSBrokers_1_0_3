@@ -58,6 +58,9 @@ class ClientIndicatorStrategy implements IndicatorCalculationStrategyInterface
             // masque alors proprement l'information plutôt que d'afficher un texte parasite.
             'groupeNom' => $entity->getGroupe()?->getNom(),
             'portefeuilleNom' => $entity->getPortefeuille()?->getNom(),
+            // Booléen strict (jamais null) : condition des actions « portefeuille »
+            // de la toolbar/menu contextuel/volet dialogue, comparée en == lâche côté JS.
+            'hasPortefeuille' => $entity->getPortefeuille() !== null,
             'nombrePistes' => $entity->getPistes()->count(),
             'nombreSinistres' => $entity->getNotificationSinistres()->count(),
             'nombrePolices' => $this->countClientPolices($entity),

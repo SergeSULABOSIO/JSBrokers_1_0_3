@@ -421,6 +421,25 @@ export default class extends Controller {
             case 'ui:invite.resend-request':
                 this.handleInviteResendRequest(payload);
                 break;
+            case 'ui:invite.portefeuille-form-request':
+                this.handleInvitePortefeuilleFormRequest(payload);
+                break;
+            case 'ui:invite.delete-portefeuille':
+                this.handleInviteDeletePortefeuille(payload);
+                break;
+            case 'ui:client.portefeuille-picker-request':
+                this.handleClientPortefeuillePickerRequest(payload);
+                break;
+            case 'ui:client.retirer-portefeuille':
+                this.handleClientRetirerPortefeuille(payload);
+                break;
+            case 'client:portefeuille.detach-request': // confirmation validée → DELETE effectif
+                this._handleClientPortefeuilleDetach(payload);
+                break;
+            case 'client:portefeuille.updated': // succès d'une affectation/transfert via le picker
+                this._showNotification(payload.message || 'Portefeuille mis à jour.', 'success');
+                this._requestListRefresh(this.getActiveTabId());
+                break;
             case 'ui:bordereau.edit-linked-note':
                 this.handleBordereauEditLinkedNote(payload);
                 break;
@@ -1128,14 +1147,19 @@ export default class extends Controller {
         // requête serveur pour une icône déjà vue lors d'une session précédente.
         // try/catch : localStorage peut être indisponible (mode privé, quota).
         const storageKey = `jsb-icon-v1::${cacheKey}`;
+        let stored = null;
         try {
-            const stored = window.localStorage.getItem(storageKey);
-            if (stored) {
-                this._iconCache.set(cacheKey, Promise.resolve(stored));
-                this.broadcast('app:icon.loaded', { iconName, html: stored, requesterId });
-                return;
-            }
+            stored = window.localStorage.getItem(storageKey);
         } catch { /* localStorage indisponible : on retombe sur le fetch */ }
+        if (stored) {
+            this._iconCache.set(cacheKey, Promise.resolve(stored));
+            // Diffusion différée d'un microtask : le demandeur émet souvent sa requête
+            // en pleine construction (porte-icône pas encore dans le DOM, écouteur
+            // app:icon.loaded pas encore abonné) — une réponse synchrone serait perdue.
+            await Promise.resolve();
+            this.broadcast('app:icon.loaded', { iconName, html: stored, requesterId });
+            return;
+        }
 
         const url = `/api/icon/api/get-icon?name=${encodeURIComponent(iconName)}&size=${iconSize}`;
 
@@ -1393,6 +1417,193 @@ export default class extends Controller {
             this._showNotification(error.message || "Impossible d'ouvrir la note.", 'error');
         } finally {
             this.broadcast('app:loading.stop');
+        }
+    }
+
+    /**
+     * Ouvre le dialogue du Portefeuille lié à un invité (actions « Ajouter/Éditer le
+     * portefeuille » de la rubrique Invités), sur le modèle de handleBordereauEditLinkedNote.
+     * Le backend répond selon l'état réel : { mode: 'edit'|'create', inviteId, portefeuille, formCanvas }.
+     * En création, le parentContext 'gestionnaire' est transmis au get-form du Portefeuille
+     * (mécanique générique de dialog-instance) pour préremplir l'invité gestionnaire.
+     * @param {object} payload
+     * @param {string} payload.url - URL de type '/admin/invite/api/get-portefeuille-context/{id}'
+     */
+    async handleInvitePortefeuilleFormRequest(payload) {
+        if (!payload.url) {
+            console.error("[Cerveau] handleInvitePortefeuilleFormRequest() : URL manquante.", payload);
+            this._showNotification("Impossible d'ouvrir le portefeuille : URL manquante.", 'error');
+            return;
+        }
+        try {
+            this.broadcast('app:loading.start');
+            const url = new URL(payload.url, window.location.origin);
+            if (this.currentIdEntreprise) {
+                url.searchParams.set('idEntreprise', this.currentIdEntreprise);
+            }
+            const response = await fetch(url.toString());
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.message || `Erreur serveur ${response.status}`);
+            const { mode, inviteId, portefeuille, formCanvas } = result;
+            const isCreation = mode === 'create';
+            this.openDialogBox({
+                entity:           isCreation ? {} : portefeuille,
+                entityFormCanvas: formCanvas,
+                isCreationMode:   isCreation,
+                context: {
+                    idEntreprise: this.currentIdEntreprise,
+                    idInvite:     this.currentIdInvite,
+                },
+                // Format attendu par dialog-instance ({ id, fieldName }) : il le traduit
+                // en query params parent_id/parent_field_name du get-form (préremplissage)
+                // et le réinjecte à la soumission (le gestionnaire reste l'invité ciblé).
+                parentContext: isCreation
+                    ? { fieldName: 'gestionnaire', id: inviteId }
+                    : null,
+            });
+        } catch (error) {
+            console.error("[Cerveau] handleInvitePortefeuilleFormRequest() failed:", error);
+            this._showNotification(error.message || "Impossible d'ouvrir le portefeuille.", 'error');
+        } finally {
+            this.broadcast('app:loading.stop');
+        }
+    }
+
+    /**
+     * Demande de suppression du portefeuille d'un invité (action « Supprimer le
+     * portefeuille »). On NE réécrit PAS la suppression : on formate un payload de
+     * confirmation et on réutilise le flux générique app:api.delete-request
+     * (cf. case 'app:delete-request'), qui fera DELETE {url}/{inviteId} puis
+     * rafraîchira la liste — hasPortefeuille est alors recalculé.
+     * @param {object} payload
+     * @param {string} payload.url - '/admin/invite/api/delete-portefeuille' (sans id)
+     * @param {Array}  [payload.selection] - fourni par la toolbar / le menu contextuel
+     * @param {number} [payload.id] - fourni par le volet du dialogue d'édition
+     */
+    handleInviteDeletePortefeuille(payload) {
+        const inviteId = payload.selection?.[0]?.id ?? payload.id;
+        if (!payload.url || !inviteId) {
+            console.error("[Cerveau] handleInviteDeletePortefeuille() : URL ou id manquant.", payload);
+            this._showNotification("Impossible de supprimer le portefeuille : contexte manquant.", 'error');
+            return;
+        }
+        const inviteName = payload.selection?.[0]?.name || `Invité #${inviteId}`;
+        this._requestDeleteConfirmation({
+            onConfirm: {
+                type: 'app:api.delete-request',
+                payload: {
+                    ids: [inviteId],
+                    url: payload.url,
+                    originatorId: this.getActiveTabId(),
+                    isFromCollectionWidget: false,
+                },
+            },
+            title: 'Confirmation de suppression',
+            body: "Vous êtes sur le point de supprimer le portefeuille de cet invité. Ses clients seront détachés du portefeuille, pas supprimés.",
+            itemDescriptions: [inviteName],
+        });
+    }
+
+    /**
+     * Ouvre le picker de PORTEFEUILLE cible pour un client (actions « Affecter à un
+     * portefeuille » / « Transférer vers un autre portefeuille » de la rubrique Clients).
+     * Récupère le HTML du picker et l'insère dans le DOM : le contrôleur Stimulus dédié
+     * « portefeuille-picker » s'auto-connecte et porte tout le comportement (focus,
+     * fermeture, filtre, action PUT). Gotcha : quand un dialogue Bootstrap est ouvert
+     * (action lancée depuis le volet du formulaire d'édition), il piège le focus dans
+     * son sous-arbre → on insère le picker DANS la modale ouverte, sinon dans <body>
+     * (même parade que collection_controller.openPicker).
+     * @param {object} payload
+     * @param {string} payload.url - URL de type '/admin/client/api/{id}/portefeuille-picker'
+     */
+    async handleClientPortefeuillePickerRequest(payload) {
+        if (!payload.url) {
+            console.error("[Cerveau] handleClientPortefeuillePickerRequest() : URL manquante.", payload);
+            this._showNotification("Impossible d'ouvrir la sélection de portefeuille : URL manquante.", 'error');
+            return;
+        }
+        // Garde anti double-ouverture (double clic / menu contextuel + toolbar).
+        if (document.querySelector('[data-controller~="portefeuille-picker"]')) return;
+        try {
+            this.broadcast('app:loading.start');
+            const response = await fetch(payload.url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!response.ok) throw new Error(`Erreur serveur ${response.status}`);
+            const html = await response.text();
+
+            const holder = document.createElement('div');
+            holder.innerHTML = html.trim();
+            const picker = holder.firstElementChild;
+            if (!picker) throw new Error('Contenu du picker vide.');
+
+            const host = document.querySelector('.modal.show') || document.body;
+            host.appendChild(picker); // → connect() du contrôleur portefeuille-picker
+        } catch (error) {
+            console.error("[Cerveau] handleClientPortefeuillePickerRequest() failed:", error);
+            this._showNotification(error.message || "Impossible d'ouvrir la sélection de portefeuille.", 'error');
+        } finally {
+            this.broadcast('app:loading.stop');
+        }
+    }
+
+    /**
+     * Demande de retrait d'un client de son portefeuille (action « Retirer du
+     * portefeuille »). Confirmation via la modale générique — broadcast DIRECT de
+     * ui:confirmation.request (PAS _requestDeleteConfirmation, dont le garde exige des
+     * ids de suppression) ; l'action étant un détachement réversible, l'alerte
+     * « irréversible » est masquée. À la confirmation, la modale renvoie
+     * client:portefeuille.detach-request au cerveau (cf. _handleClientPortefeuilleDetach).
+     * @param {object} payload
+     * @param {string} payload.url - '/admin/client/api/retirer-portefeuille' (sans id)
+     * @param {Array}  [payload.selection] - fourni par la toolbar / le menu contextuel
+     * @param {number} [payload.id] - fourni par le volet du dialogue d'édition
+     */
+    handleClientRetirerPortefeuille(payload) {
+        const clientId = payload.selection?.[0]?.id ?? payload.id;
+        if (!payload.url || !clientId) {
+            console.error("[Cerveau] handleClientRetirerPortefeuille() : URL ou id manquant.", payload);
+            this._showNotification("Impossible de retirer le client : contexte manquant.", 'error');
+            return;
+        }
+        const clientName = payload.selection?.[0]?.name || `Client #${clientId}`;
+        this.broadcast('ui:confirmation.request', {
+            title: 'Retirer du portefeuille',
+            body: "Ce client sera retiré de son portefeuille actuel. Il n'est pas supprimé et pourra être réaffecté à tout moment.",
+            itemDescriptions: [clientName],
+            showIrreversible: false,
+            onConfirm: {
+                type: 'client:portefeuille.detach-request',
+                payload: { url: payload.url, clientId },
+            },
+        });
+    }
+
+    /**
+     * Exécute le retrait après confirmation : DELETE {url}/{clientId}, puis notification
+     * (message serveur), fermeture de la confirmation et rafraîchissement de la liste
+     * active (hasPortefeuille et la ligne secondaire se recalculent au refresh).
+     * @private
+     */
+    async _handleClientPortefeuilleDetach(payload) {
+        const { url, clientId } = payload;
+        if (!url || !clientId) {
+            this.broadcast('ui:confirmation.error', { error: 'Contexte de retrait manquant.' });
+            return;
+        }
+        try {
+            const response = await fetch(`${url}/${clientId}`, {
+                method: 'DELETE',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.message || `Erreur serveur ${response.status}`);
+
+            this._showNotification(data.message || 'Client retiré du portefeuille.', 'success');
+            this._setSelectionState([]); // la sélection ne reflète plus l'état, on la vide
+            this._requestListRefresh(this.getActiveTabId());
+            this.broadcast('ui:confirmation.close');
+        } catch (error) {
+            console.error("[Cerveau] _handleClientPortefeuilleDetach() failed:", error);
+            this.broadcast('ui:confirmation.error', { error: error.message || 'Le retrait a échoué.' });
         }
     }
 
