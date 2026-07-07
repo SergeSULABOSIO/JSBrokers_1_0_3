@@ -3,9 +3,14 @@
 namespace App\Services\Canvas\Provider\List;
 
 use App\Entity\Portefeuille;
+use App\Services\ServiceMonnaies;
 
 class PortefeuilleListCanvasProvider implements ListCanvasProviderInterface
 {
+    public function __construct(private ServiceMonnaies $serviceMonnaies)
+    {
+    }
+
     public function supports(string $entityClassName): bool
     {
         return $entityClassName === Portefeuille::class;
@@ -23,7 +28,34 @@ class PortefeuilleListCanvasProvider implements ListCanvasProviderInterface
                     ["attribut_code" => "nombreClients", "attribut_label" => "Clients : "],
                 ],
             ],
-            "colonnes_numeriques" => [],
+            // Agrégats monétaires des clients du portefeuille, hydratés par
+            // PortefeuilleIndicatorStrategy (mêmes codes que la fiche Portefeuille).
+            "colonnes_numeriques" => [
+                [
+                    "titre_colonne" => "Primes",
+                    "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    "attribut_code" => "primeTotale",
+                    "attribut_type" => "nombre",
+                ],
+                [
+                    "titre_colonne" => "Sinistres",
+                    "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    "attribut_code" => "indemnisationVersee",
+                    "attribut_type" => "nombre",
+                ],
+                [
+                    "titre_colonne" => "Commissions",
+                    "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    "attribut_code" => "montantTTC",
+                    "attribut_type" => "nombre",
+                ],
+                [
+                    "titre_colonne" => "Réserve",
+                    "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
+                    "attribut_code" => "reserve",
+                    "attribut_type" => "nombre",
+                ],
+            ],
         ];
     }
 }
