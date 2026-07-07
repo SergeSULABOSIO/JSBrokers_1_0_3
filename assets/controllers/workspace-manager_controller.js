@@ -44,14 +44,17 @@ export default class extends Controller {
     connect() {
         this.nomControleur = "WorkspaceManager";
         this.activeRubriqueState = null;
-        this._restoreWorkspaceTabsFromStorage();
 
         this.boundOpenTabInVisualization = this.openTabInVisualization.bind(this);
         document.addEventListener('app:liste-element:openned', this.boundOpenTabInVisualization);
 
         // NOUVEAU : Écoute la réponse du Cerveau pour afficher une icône chargée dynamiquement.
+        // Abonné AVANT la restauration des onglets : celle-ci émet des ui:icon.request
+        // dont la réponse peut être quasi immédiate (cache d'icônes du cerveau).
         this.boundHandleIconLoaded = this.handleIconLoaded.bind(this);
         document.addEventListener('app:icon.loaded', this.boundHandleIconLoaded);
+
+        this._restoreWorkspaceTabsFromStorage();
 
         // NOUVEAU : Écoute la réponse du Cerveau pour afficher le composant chargé.
         this.boundHandleComponentLoaded = this.handleComponentLoaded.bind(this);
@@ -1431,12 +1434,6 @@ export default class extends Controller {
         if (tabData.tabKey) tabEl.dataset.tabKey = tabData.tabKey;
         tabEl.querySelector('.workspace-tab-title').textContent = tabData.title || tabData.entityName || tabData.componentName;
 
-        if (tabData.iconAlias) {
-            const requesterId = `ws-icon-${tabData.id}`;
-            tabEl.querySelector('.workspace-tab-icon').id = requesterId;
-            this.notifyCerveau('ui:icon.request', { iconName: tabData.iconAlias, requesterId, iconSize: 16 });
-        }
-
         const panel = document.createElement('div');
         panel.className = 'workspace-tab-panel';
         panel.dataset.tabId = tabData.id;
@@ -1445,6 +1442,14 @@ export default class extends Controller {
 
         this.workspaceTabBarTarget.appendChild(tabEl);
         this.workspaceTabPanelsTarget.appendChild(panel);
+
+        // Icône demandée APRÈS insertion dans le DOM : handleIconLoaded cherche le
+        // porte-icône via querySelector — une réponse rapide le manquerait sinon.
+        if (tabData.iconAlias) {
+            const requesterId = `ws-icon-${tabData.id}`;
+            tabEl.querySelector('.workspace-tab-icon').id = requesterId;
+            this.notifyCerveau('ui:icon.request', { iconName: tabData.iconAlias, requesterId, iconSize: 16 });
+        }
     }
 
     /**

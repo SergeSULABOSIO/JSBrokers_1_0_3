@@ -254,6 +254,21 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             return;
         }
 
+        // 1bis. Cache persistant (localStorage, clés partagées avec le cerveau) :
+        // zéro requête serveur pour une icône déjà vue, même après rechargement.
+        // Diffusion différée d'un microtask : le demandeur peut être en pleine
+        // construction (écouteur pas encore abonné) — cf. gotcha du circuit d'icônes.
+        let stored = null;
+        try {
+            stored = window.localStorage.getItem(`jsb-icon-v1::${iconName}::${iconSize}`);
+        } catch { /* localStorage indisponible : on retombe sur le fetch */ }
+        if (stored) {
+            this.iconCache.set(iconName, stored);
+            await Promise.resolve();
+            this._dispatchIconLoaded(stored, requesterId, iconName);
+            return;
+        }
+
         // 2. Vérifier si une requête est déjà en cours pour cette icône
         if (this.inFlightIcons.has(iconName)) {
             console.log(`%c[Parent] 1c. Icône '${iconName}' déjà en cours de téléchargement. Mise en attente...`, 'color: blue;');
@@ -276,6 +291,8 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
 
                 if (html && !html.trim().startsWith('<!--')) {
                     this.iconCache.set(iconName, html);
+                    // Persistance pour les prochaines sessions (silencieux si quota/indisponible).
+                    try { window.localStorage.setItem(`jsb-icon-v1::${iconName}::${iconSize}`, html); } catch { /* no-op */ }
                 }
                 return html;
             } catch (error) {
@@ -2609,6 +2626,20 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             }));
             return;
         }
+        // Cache persistant (localStorage, clés partagées avec le cerveau) — diffusion
+        // différée d'un microtask, cf. gotcha du circuit d'icônes.
+        const storageKey = `jsb-icon-v1::${iconName}::${iconSize || 24}`;
+        let stored = null;
+        try { stored = window.localStorage.getItem(storageKey); } catch { /* no-op */ }
+        if (stored) {
+            this.iconCache.set(iconName, stored);
+            await Promise.resolve();
+            document.dispatchEvent(new CustomEvent('app:icon.loaded', {
+                bubbles: true,
+                detail: { html: stored, requesterId, iconName }
+            }));
+            return;
+        }
         try {
             const url = `/api/icon/api/get-icon?name=${encodeURIComponent(iconName)}&size=${iconSize || 24}`;
             const response = await fetch(url);
@@ -2616,6 +2647,7 @@ export default class extends BaseController { // NOUVEAU : Ajout du bouton de re
             const html = await response.text();
             if (html && !html.trim().startsWith('<!--')) {
                 this.iconCache.set(iconName, html);
+                try { window.localStorage.setItem(storageKey, html); } catch { /* no-op */ }
             }
             document.dispatchEvent(new CustomEvent('app:icon.loaded', {
                 bubbles: true,

@@ -4,6 +4,7 @@ namespace App\Controller\Api;
 
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\EventListener\AbstractSessionListener;
 use Symfony\Component\Routing\Annotation\Route;
 use App\Services\Canvas\Provider\Icon\IconCanvasProvider;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -47,6 +48,12 @@ class IconController extends AbstractController
         $response->setPublic();
         $response->setMaxAge(604800);
         $response->headers->set('Cache-Control', 'public, max-age=604800, immutable');
+        // GOTCHA : la requête étant authentifiée (session), AbstractSessionListener
+        // réécrit sinon Cache-Control en « private, must-revalidate, max-age=0 » —
+        // le cache 7 j ci-dessus serait neutralisé et chaque icône re-sollicitée.
+        // Ce header (retiré de la réponse par Symfony) désactive cette réécriture ;
+        // sans donnée de session dans le SVG rendu, le cache public est sans risque.
+        $response->headers->set(AbstractSessionListener::NO_AUTO_CACHE_CONTROL_HEADER, 'true');
 
         return $response;
     }

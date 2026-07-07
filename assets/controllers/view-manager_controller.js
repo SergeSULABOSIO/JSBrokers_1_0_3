@@ -488,7 +488,6 @@ export default class extends Controller {
             iconHolder.setAttribute('aria-hidden', 'true');
             iconHolder.id = `tab-icon-${tabId}`;
             tab.appendChild(iconHolder);
-            this.notifyCerveau('ui:icon.request', { iconName: collectionInfo.icone, iconSize: 18, requesterId: iconHolder.id });
         }
         tab.appendChild(document.createTextNode(collectionInfo.intitule));
         // ARIA : pattern tablist/tab/tabpanel (WCAG 4.1.2)
@@ -499,6 +498,12 @@ export default class extends Controller {
         // Roving tabindex : seul l'onglet actif est tabbable, les flèches font le reste.
         tab.setAttribute('tabindex', '-1');
         this.tabsContainerTarget.appendChild(tab);
+
+        // Icône demandée APRÈS insertion : handleIconLoaded cherche le porte-icône
+        // dans tabsContainerTarget — une réponse rapide (cache) le manquerait sinon.
+        if (collectionInfo.icone) {
+            this.notifyCerveau('ui:icon.request', { iconName: collectionInfo.icone, iconSize: 18, requesterId: `tab-icon-${tabId}` });
+        }
 
         // On prépare le conteneur de contenu en clonant le template
         const contentContainer = this.collectionTabTemplateTarget.content.cloneNode(true).firstElementChild;
