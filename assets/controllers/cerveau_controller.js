@@ -715,10 +715,22 @@ export default class extends Controller {
             return;
         }
 
+        // Les critères ACTIFS de l'onglet (dont le périmètre par défaut « Mon
+        // portefeuille » amorcé au chargement) sont TOUJOURS retransmis : sans eux,
+        // un rafraîchissement (après enregistrement, transfert de portefeuille,
+        // refresh manuel…) relançait la requête SANS filtre — un client transféré
+        // hors du périmètre restait affiché. Un payload explicite garde la priorité.
         fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({ ...payload, page: payload.page ?? tabState.currentPage ?? 1 }),
+            body: JSON.stringify({
+                criteria: tabState.searchCriteria || {},
+                // Le contexte parent est dérivé de l'onglet ACTIF : on ne l'ajoute que
+                // si c'est bien lui qu'on rafraîchit (cas des onglets de collection).
+                parentContext: targetTabId === this.activeTabId ? this._getParentContextForSearch() : null,
+                ...payload,
+                page: payload.page ?? tabState.currentPage ?? 1,
+            }),
         })
             .then(response => {
                 const contentType = response.headers.get("content-type");
