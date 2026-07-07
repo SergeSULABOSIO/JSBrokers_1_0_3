@@ -4051,9 +4051,14 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     0%   { transform: translateX(-100%); }
     100% { transform: translateX(320%); }
 }
-/* Barre de titre : reprend le pattern .modal-header du dialogue d'édition. */
+/* Barre de titre : reprend le pattern .modal-header du dialogue d'édition.
+   La signature cobalt (.app-dialog .modal-header) est rendue INTRINSÈQUE : le picker
+   des clients, toujours ouvert depuis la fiche Portefeuille (donc DANS .app-dialog),
+   en héritait par contexte ; le picker de portefeuilles, ouvert depuis la toolbar de
+   la liste (inséré dans <body>), la perdait — même markup, rendu différent. */
 .jsb-picker-header {
     flex: 0 0 auto;
+    border-bottom: 3px solid #0047AB;
 }
 .jsb-picker-header .modal-title {
     font-size: 1.05rem;
