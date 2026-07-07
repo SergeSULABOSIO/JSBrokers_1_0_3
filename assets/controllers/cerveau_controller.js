@@ -1535,7 +1535,12 @@ export default class extends Controller {
             const picker = holder.firstElementChild;
             if (!picker) throw new Error('Contenu du picker vide.');
 
-            const host = document.querySelector('.modal.show') || document.body;
+            // Hôte = la modale ouverte la plus HAUTE (dernière .modal.show réellement
+            // visible), sinon <body>. On filtre sur la visibilité : un `.show` résiduel
+            // sur une modale masquée détournerait le picker vers un conteneur invisible.
+            const host = Array.from(document.querySelectorAll('.modal.show'))
+                .filter(m => getComputedStyle(m).display !== 'none')
+                .pop() || document.body;
             host.appendChild(picker); // → connect() du contrôleur portefeuille-picker
         } catch (error) {
             console.error("[Cerveau] handleClientPortefeuillePickerRequest() failed:", error);

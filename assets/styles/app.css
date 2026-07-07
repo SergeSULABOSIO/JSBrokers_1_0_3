@@ -4051,13 +4051,23 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     0%   { transform: translateX(-100%); }
     100% { transform: translateX(320%); }
 }
-/* Barre de titre : reprend le pattern .modal-header du dialogue d'édition.
-   La signature cobalt (.app-dialog .modal-header) est rendue INTRINSÈQUE : le picker
-   des clients, toujours ouvert depuis la fiche Portefeuille (donc DANS .app-dialog),
-   en héritait par contexte ; le picker de portefeuilles, ouvert depuis la toolbar de
-   la liste (inséré dans <body>), la perdait — même markup, rendu différent. */
+/* Barre de titre : reprend le pattern .modal-header du dialogue d'édition, rendu
+   AUTOSUFFISANT. Deux styles venaient du contexte .modal et disparaissaient quand le
+   picker est inséré dans <body> (ouverture depuis la toolbar/menu contextuel de la
+   liste, sans dialogue ouvert) :
+   1) le padding Bootstrap de .modal-header vaut var(--bs-modal-header-padding),
+      définie UNIQUEMENT sous .modal → hors modale, gouttières effondrées à 0
+      (icône/titre/✕ collés) ;
+   2) la signature cobalt venait de .app-dialog .modal-header.
+   Tout est donc porté explicitement par .jsb-picker-header, quel que soit le point
+   d'insertion — même rendu pour les pickers clients ET portefeuilles, partout. */
 .jsb-picker-header {
     flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    padding: 1rem 1.25rem;
     border-bottom: 3px solid #0047AB;
 }
 .jsb-picker-header .modal-title {
