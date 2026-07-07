@@ -7,7 +7,10 @@
     Le badge « statut » n'utilise PAS .badge (globalement forcé en bleu) mais des
     pastilles dédiées à bon contraste.
 #}
-<div class="jsb-picker-overlay" data-picker-overlay data-picker-base="/admin/portefeuille/api/{{ portefeuille.id }}">
+{# En mode « standalone » (ouvert depuis la liste des portefeuilles, sans dialogue
+   d'édition), le picker embarque son contrôleur Stimulus dédié qui porte tout le
+   comportement ; sinon il reste piloté par collection_controller (openPicker). #}
+<div class="jsb-picker-overlay"{% if standalone|default(false) %} data-controller="client-picker"{% endif %} data-picker-overlay data-picker-base="/admin/portefeuille/api/{{ portefeuille.id }}">
     <div class="jsb-picker-modal"
          role="dialog"
          aria-modal="true"
@@ -80,6 +83,10 @@
                    autocomplete="off"
                    data-picker-search>
         </div>
+
+        {# Zone d'erreur API (rendue visible par le JS en mode standalone) — Nielsen 9 :
+           message en langage naturel, au-dessus de la liste pour être perçu sans défilement. #}
+        <p class="jsb-picker-empty text-danger" data-picker-error role="alert" hidden></p>
 
         <div class="jsb-picker-listwrap">
             {% if clients is empty %}

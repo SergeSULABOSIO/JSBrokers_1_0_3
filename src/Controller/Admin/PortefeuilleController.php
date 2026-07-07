@@ -116,12 +116,14 @@ class PortefeuilleController extends AbstractController
 
     /**
      * Boîte de dialogue de SÉLECTION de clients existants à rattacher au portefeuille.
-     * Ouverte par le bouton « Ajouter » du widget collection. Liste les clients de
-     * l'espace de travail : ceux SANS portefeuille sont rattachables (bouton d'action),
-     * ceux déjà rattachés sont affichés à titre indicatif, sans action.
+     * Ouverte par le bouton « Ajouter » du widget collection, ou directement depuis la
+     * liste des portefeuilles via l'action spéciale « Ajouter des clients au
+     * portefeuille » (?standalone=1 : le picker embarque alors son contrôleur Stimulus).
+     * Liste les clients de l'espace de travail : ceux SANS portefeuille sont rattachables
+     * (bouton d'action), ceux déjà rattachés sont affichés à titre indicatif, sans action.
      */
     #[Route('/api/{id}/client-picker', name: 'api.client_picker', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
-    public function clientPicker(Portefeuille $portefeuille): Response
+    public function clientPicker(Portefeuille $portefeuille, Request $request): Response
     {
         if (!$this->mayAccessEntity(Portefeuille::class, Invite::ACCESS_MODIFICATION)) {
             throw $this->createAccessDeniedException("Ajout de clients hors de votre périmètre d'accès.");
@@ -149,6 +151,10 @@ class PortefeuilleController extends AbstractController
             'clients'                 => $clients,
             'clientsTotal'            => count($clients),
             'clientsDansPortefeuille' => $clientsDansPortefeuille,
+            // Mode « standalone » (action spéciale depuis la liste des portefeuilles) :
+            // le picker embarque son contrôleur Stimulus dédié au lieu d'être piloté
+            // par le widget collection du dialogue d'édition.
+            'standalone'              => $request->query->getBoolean('standalone'),
         ]);
     }
 

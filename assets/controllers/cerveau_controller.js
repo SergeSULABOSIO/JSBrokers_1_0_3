@@ -430,6 +430,9 @@ export default class extends Controller {
             case 'ui:client.portefeuille-picker-request':
                 this.handleClientPortefeuillePickerRequest(payload);
                 break;
+            case 'ui:portefeuille.client-picker-request':
+                this.handlePortefeuilleClientPickerRequest(payload);
+                break;
             case 'ui:client.retirer-portefeuille':
                 this.handleClientRetirerPortefeuille(payload);
                 break;
@@ -1525,26 +1528,59 @@ export default class extends Controller {
     /**
      * Ouvre le picker de PORTEFEUILLE cible pour un client (actions « Affecter à un
      * portefeuille » / « Transférer vers un autre portefeuille » de la rubrique Clients).
-     * Récupère le HTML du picker et l'insère dans le DOM : le contrôleur Stimulus dédié
-     * « portefeuille-picker » s'auto-connecte et porte tout le comportement (focus,
-     * fermeture, filtre, action PUT). Gotcha : quand un dialogue Bootstrap est ouvert
-     * (action lancée depuis le volet du formulaire d'édition), il piège le focus dans
-     * son sous-arbre → on insère le picker DANS la modale ouverte, sinon dans <body>
-     * (même parade que collection_controller.openPicker).
+     * Le contrôleur Stimulus « portefeuille-picker » s'auto-connecte à l'insertion et
+     * porte tout le comportement (cf. _openStandalonePicker).
      * @param {object} payload
      * @param {string} payload.url - URL de type '/admin/client/api/{id}/portefeuille-picker'
      */
     async handleClientPortefeuillePickerRequest(payload) {
-        if (!payload.url) {
-            console.error("[Cerveau] handleClientPortefeuillePickerRequest() : URL manquante.", payload);
-            this._showNotification("Impossible d'ouvrir la sélection de portefeuille : URL manquante.", 'error');
+        await this._openStandalonePicker(payload.url, {
+            controllerName: 'portefeuille-picker',
+            errorLabel: "la sélection de portefeuille",
+        });
+    }
+
+    /**
+     * Ouvre le picker de CLIENTS à rattacher au portefeuille sélectionné (action
+     * spéciale « Ajouter des clients au portefeuille » de la rubrique Portefeuilles),
+     * SANS passer par le dialogue d'édition. Le HTML est demandé en mode standalone
+     * (?standalone=1) : le picker embarque alors le contrôleur Stimulus « client-picker »
+     * qui porte l'ajout/retrait, notifie le toast à chaque succès et reste ouvert.
+     * @param {object} payload
+     * @param {string} payload.url - URL de type '/admin/portefeuille/api/{id}/client-picker'
+     */
+    async handlePortefeuilleClientPickerRequest(payload) {
+        const url = payload.url
+            ? payload.url + (payload.url.includes('?') ? '&' : '?') + 'standalone=1'
+            : null;
+        await this._openStandalonePicker(url, {
+            controllerName: 'client-picker',
+            errorLabel: "la sélection de clients",
+        });
+    }
+
+    /**
+     * Mécanique COMMUNE d'ouverture d'un picker autonome : récupère le HTML du picker
+     * et l'insère dans le DOM ; le contrôleur Stimulus dédié (`controllerName`)
+     * s'auto-connecte et porte tout le comportement (focus, fermeture, filtre, actions).
+     * Gotcha : quand un dialogue Bootstrap est ouvert (action lancée depuis le volet du
+     * formulaire d'édition), il piège le focus dans son sous-arbre → on insère le picker
+     * DANS la modale ouverte, sinon dans <body> (même parade que collection_controller.openPicker).
+     * @param {?string} url - URL du HTML du picker (déjà résolue, %id% remplacé)
+     * @param {{controllerName: string, errorLabel: string}} options
+     * @private
+     */
+    async _openStandalonePicker(url, { controllerName, errorLabel }) {
+        if (!url) {
+            console.error(`[Cerveau] _openStandalonePicker(${controllerName}) : URL manquante.`);
+            this._showNotification(`Impossible d'ouvrir ${errorLabel} : URL manquante.`, 'error');
             return;
         }
         // Garde anti double-ouverture (double clic / menu contextuel + toolbar).
-        if (document.querySelector('[data-controller~="portefeuille-picker"]')) return;
+        if (document.querySelector(`[data-controller~="${controllerName}"]`)) return;
         try {
             this.broadcast('app:loading.start');
-            const response = await fetch(payload.url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
             if (!response.ok) throw new Error(`Erreur serveur ${response.status}`);
             const html = await response.text();
 
@@ -1559,10 +1595,10 @@ export default class extends Controller {
             const host = Array.from(document.querySelectorAll('.modal.show'))
                 .filter(m => getComputedStyle(m).display !== 'none')
                 .pop() || document.body;
-            host.appendChild(picker); // → connect() du contrôleur portefeuille-picker
+            host.appendChild(picker); // → connect() du contrôleur Stimulus dédié
         } catch (error) {
-            console.error("[Cerveau] handleClientPortefeuillePickerRequest() failed:", error);
-            this._showNotification(error.message || "Impossible d'ouvrir la sélection de portefeuille.", 'error');
+            console.error(`[Cerveau] _openStandalonePicker(${controllerName}) failed:`, error);
+            this._showNotification(error.message || `Impossible d'ouvrir ${errorLabel}.`, 'error');
         } finally {
             this.broadcast('app:loading.stop');
         }

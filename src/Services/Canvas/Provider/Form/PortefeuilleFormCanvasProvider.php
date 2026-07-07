@@ -33,6 +33,18 @@ class PortefeuilleFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/portefeuille/api/delete",
             "endpoint_form_url" => "/admin/portefeuille/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Action spéciale (toolbar, menu contextuel, volet du dialogue d'édition) :
+            // ouvre DIRECTEMENT la boîte de sélection de clients à rattacher au
+            // portefeuille sélectionné, sans passer par le dialogue d'édition. Le mode
+            // « standalone » est ajouté par le cerveau (contrôleur Stimulus autonome).
+            "attribute_actions" => [
+                [
+                    "label" => "Ajouter des clients au portefeuille",
+                    "icon"  => "client",
+                    "event" => "ui:portefeuille.client-picker-request",
+                    "url"   => "/admin/portefeuille/api/%id%/client-picker",
+                ],
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Fiche portefeuille",
