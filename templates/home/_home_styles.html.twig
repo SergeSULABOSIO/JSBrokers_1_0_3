@@ -302,6 +302,9 @@
         width: 100%; height: auto; border-radius: 10px;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
     }
+    /* Visuels source en portrait : recadrés en carré (object-fit) pour garder la
+       même emprise verticale que les autres blocs de la section. */
+    .feature-row__media--portrait img { aspect-ratio: 1 / 1; object-fit: cover; }
 
     /* ---------- Pied de page public ---------- */
     .public-footer {
