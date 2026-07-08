@@ -109,6 +109,8 @@
                     <li>{{ "security_fitures_production_partners" | trans }}</li>
                     <li>{{ "security_fitures_production_reinsurers" | trans }}</li>
                     <li>{{ "security_fitures_production_policies" | trans }}</li>
+                    <li>{{ "security_fitures_production_renewals" | trans }}</li>
+                    <li>{{ "security_fitures_production_search" | trans }}</li>
                 </ul>
             </div>
             <div class="feature-row__media">
@@ -194,6 +196,55 @@
             <div class="feature-row__media">
                 <img src="{{ asset('images/fitures/reporting.jpg') }}"
                      alt="{{ "security_fitures_reporting" | trans }}" loading="lazy">
+            </div>
+        </div>
+
+        {# Bloc 5 — Collaboration & accès sécurisés (cobalt) #}
+        <div class="feature-row feature-row--cobalt">
+            <div class="feature-row__body">
+                <h3 class="feature-row__title">
+                    {{ ux_icon(resolve_icon_name('groupe'), {height: '22px', width: '22px'}) }}
+                    {{ "security_fitures_collab" | trans }}
+                </h3>
+                <p class="feature-row__desc">{{ "security_fitures_collab_description" | trans | raw }}</p>
+                <p class="feature-row__intro">{{ "security_fitures_to_achieve_this" | trans }}</p>
+                <ul class="feature-row__list">
+                    <li>{{ "security_fitures_collab_invitations" | trans }}</li>
+                    <li>{{ "security_fitures_collab_roles" | trans }}</li>
+                    <li>{{ "security_fitures_collab_perimetre" | trans }}</li>
+                    <li>{{ "security_fitures_collab_delegation" | trans }}</li>
+                    <li>{{ "security_fitures_collab_portfolios" | trans }}</li>
+                    <li>{{ "security_fitures_collab_email" | trans }}</li>
+                </ul>
+            </div>
+            <div class="feature-row__media feature-row__media--portrait">
+                <img src="{{ asset('images/fitures/invite.png') }}"
+                     alt="{{ "security_fitures_collab" | trans }}" loading="lazy">
+            </div>
+        </div>
+
+        {# Bloc 6 — Comptabilité & fiscalité OHADA (clair, image à gauche) #}
+        <div class="feature-row feature-row--light feature-row--reverse">
+            <div class="feature-row__body">
+                <h3 class="feature-row__title">
+                    {{ ux_icon(resolve_icon_name('document-comptable'), {height: '22px', width: '22px'}) }}
+                    {{ "security_fitures_compta" | trans }}
+                </h3>
+                <p class="feature-row__desc">{{ "security_fitures_compta_description" | trans | raw }}</p>
+                <p class="feature-row__intro">{{ "security_fitures_to_achieve_this" | trans }}</p>
+                <ul class="feature-row__list">
+                    <li>{{ "security_fitures_compta_journal" | trans }}</li>
+                    <li>{{ "security_fitures_compta_bilan" | trans }}</li>
+                    <li>{{ "security_fitures_compta_tresorerie" | trans }}</li>
+                    <li>{{ "security_fitures_compta_charges" | trans }}</li>
+                    <li>{{ "security_fitures_compta_fournisseurs" | trans }}</li>
+                    <li>{{ "security_fitures_compta_tva" | trans }}</li>
+                    <li>{{ "security_fitures_compta_export" | trans }}</li>
+                </ul>
+            </div>
+            <div class="feature-row__media feature-row__media--portrait">
+                <img src="{{ asset('images/fitures/classeur.png') }}"
+                     alt="{{ "security_fitures_compta" | trans }}" loading="lazy">
             </div>
         </div>
     </section>
