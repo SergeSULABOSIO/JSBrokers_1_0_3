@@ -228,9 +228,11 @@ class AvenantPisteDeriveeActionsTest extends WebTestCase
 
         $canvasBuilder->loadAllCalculatedValues($withP);
         $this->assertTrue($withP->hasPisteDerivee, "L'avenant lié à une piste dérivée doit exposer hasPisteDerivee = true.");
+        $this->assertSame('Piste dérivée', $withP->pisteDeriveeLibelle, "Le libellé de la ligne secondaire doit signaler la piste dérivée.");
 
         $canvasBuilder->loadAllCalculatedValues($without);
         $this->assertFalse($without->hasPisteDerivee, "L'avenant sans piste dérivée doit exposer hasPisteDerivee = false (booléen, jamais null).");
+        $this->assertNull($without->pisteDeriveeLibelle, "Sans piste dérivée, aucun libellé n'est rendu sur la ligne secondaire (économie d'espace).");
     }
 
     public function testAvenantFormCanvasExposesConditionalPisteDeriveeActions(): void
