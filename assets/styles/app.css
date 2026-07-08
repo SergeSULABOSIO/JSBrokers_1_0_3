@@ -253,11 +253,13 @@ textarea:hover,
 
 /*
  * Liste déroulante d'autocomplétion (Tom Select).
- * Les champs relation/collection rendus dans une fiche utilisent
- * `dropdownParent: 'body'` : leur menu est donc rattaché à <body> pour échapper au
- * conteneur défilant de la fiche (.form-column { overflow-y:auto }) qui le tronquait.
- * Sur <body>, le menu doit repasser AU-DESSUS de la modale (z-index ~1055) sinon il
- * s'affiche derrière la fiche et paraît « ne pas apparaître ».
+ * TOUS les champs relation reçoivent `dropdownParent: 'body'` via le hook global
+ * `autocomplete:pre-connect` (assets/autocomplete-dropdown-global.js) : le menu est
+ * rattaché à <body> pour échapper aux conteneurs défilants de la fiche
+ * (.form-column { overflow-y:auto }, .modal-body { overflow-y:hidden }) qui le tronquaient.
+ * Le z-index 1060 ci-dessous est le repli (au-dessus d'une modale simple à 1055) ;
+ * dans les dialogues imbriqués (1075, 1095…), le même hook pose à l'ouverture du menu
+ * un z-index inline !important au-dessus de la modale ouverte la plus haute.
  */
 .ts-dropdown {
     z-index: 1060 !important;
