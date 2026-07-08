@@ -14,6 +14,7 @@ use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
 use App\Services\CanvasBuilder;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
+use App\Services\ReconductionPartageService;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
 use Symfony\Component\HttpFoundation\Request;
@@ -43,6 +44,7 @@ class PisteController extends AbstractController
         private JSBDynamicSearchService $searchService,
         private SerializerInterface $serializer,
         private IndicatorCalculationHelper $indicatorHelper,
+        private ReconductionPartageService $reconductionPartage,
         CanvasBuilder $canvasBuilder
     ) {
         $this->canvasBuilder = $canvasBuilder;
@@ -155,8 +157,27 @@ class PisteController extends AbstractController
                     if ($idAvenant) {
                         $avenant = $this->em->find(Avenant::class, $idAvenant);
                         if ($avenant && $avenant->getEntreprise() === $piste->getEntreprise()) {
+                            // On persiste la piste AVANT de la référencer depuis l'avenant
+                            // managé : Avenant::pisteDeRenouvellement n'a pas de cascade
+                            // persist, et un flush anticipé (métrage de tokens) rejetterait
+                            // sinon une piste « nouvelle » atteinte via cette relation.
+                            $this->em->persist($piste);
                             $avenant->setPisteDeRenouvellement($piste);
                             $piste->setAvenantDeBase($avenant);
+
+                            // Reconduction du partage partenaire (partenaires + conditions
+                            // exceptionnelles) depuis la piste de l'avenant de base. Fait au
+                            // submit car la collection de conditions n'est ni mappée ni rendue
+                            // sur le formulaire de renouvellement.
+                            $src = $avenant->getCotation()?->getPiste();
+                            if ($src) {
+                                $this->reconductionPartage->reconduire(
+                                    $src,
+                                    $piste,
+                                    $piste->getEntreprise(),
+                                    $inviteConnecte
+                                );
+                            }
                         }
                     }
                 }

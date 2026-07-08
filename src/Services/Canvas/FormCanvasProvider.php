@@ -2,6 +2,7 @@
 
 namespace App\Services\Canvas;
 use App\Services\Canvas\Provider\Form\FormCanvasProviderInterface;
+use Doctrine\Persistence\Proxy;
 use Symfony\Component\DependencyInjection\Attribute\TaggedIterator;
 
 class FormCanvasProvider
@@ -19,7 +20,10 @@ class FormCanvasProvider
 
     public function getCanvas(object $object, ?int $idEntreprise): array
     {
-        $entityClassName = get_class($object);
+        // Proxy-safe : une association lazy (ex. Avenant::pisteDeRenouvellement) est un
+        // proxy Doctrine dont get_class() renvoie « Proxies\__CG__\… », qui ne matche
+        // aucun supports(). On remonte à la classe réelle (le proxy étend l'entité).
+        $entityClassName = $object instanceof Proxy ? get_parent_class($object) : get_class($object);
 
         foreach ($this->providers as $provider) {
             if ($provider->supports($entityClassName)) {

@@ -19,6 +19,20 @@ use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 
 class PisteType extends AbstractType
 {
+    /**
+     * Libellés des types d'avenant (valeur → texte). Source unique, utilisée à la fois
+     * pour les choix du champ et pour la synchronisation dynamique du préfixe du nom
+     * côté client (contrôleur Stimulus « piste-name-sync »).
+     */
+    private const TYPE_AVENANT_LABELS = [
+        Piste::AVENANT_SOUSCRIPTION   => "Souscription",
+        Piste::AVENANT_INCORPORATION  => "Incorporation",
+        Piste::AVENANT_PROROGATION    => "Prorogation",
+        Piste::AVENANT_ANNULATION     => "Annulation",
+        Piste::AVENANT_RENOUVELLEMENT => "Renouvellement",
+        Piste::AVENANT_RESILIATION    => "Résiliation",
+    ];
+
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
         private TranslatorInterface $translatorInterface
@@ -42,14 +56,8 @@ class PisteType extends AbstractType
                 'expanded' => true,
                 'label_html' => true,
                 'required' => true,
-                'choices'  => [
-                    "Souscription"      => Piste::AVENANT_SOUSCRIPTION,
-                    "Incorporation"     => Piste::AVENANT_INCORPORATION,
-                    "Prorogation"       => Piste::AVENANT_PROROGATION,
-                    "Annulation"        => Piste::AVENANT_ANNULATION,
-                    "Renouvellement"    => Piste::AVENANT_RENOUVELLEMENT,
-                    "Résiliation"       => Piste::AVENANT_RESILIATION,
-                ],
+                // Choix dérivés de la source unique TYPE_AVENANT_LABELS (label => valeur).
+                'choices'  => array_flip(self::TYPE_AVENANT_LABELS),
                 'choice_label' => function ($choice, $key, $value) {
                     $desc = match ($choice) {
                         Piste::AVENANT_SOUSCRIPTION => "Création d'une nouvelle police d'assurance.",
@@ -187,6 +195,13 @@ class PisteType extends AbstractType
             'data_class' => Piste::class,
             'csrf_protection' => false,
             'allow_extra_fields' => true,
+            // Synchronisation dynamique du préfixe du nom avec le type d'avenant choisi
+            // (contrôleur Stimulus « piste-name-sync » posé sur le <form>). Les libellés
+            // sont transmis depuis la source unique TYPE_AVENANT_LABELS.
+            'attr' => [
+                'data-controller' => 'piste-name-sync',
+                'data-piste-name-sync-labels-value' => json_encode(self::TYPE_AVENANT_LABELS),
+            ],
         ]);
     }
 
