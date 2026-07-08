@@ -7,6 +7,8 @@ import './bootstrap.js';
  */
 import './styles/app.css';
 import './styles/interactive-menu.css';
+// Correctif global des menus d'autocomplétion (champs relation) dans les dialogues.
+import './autocomplete-dropdown-global.js';
 import { Chart } from 'chart.js';
 console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
 

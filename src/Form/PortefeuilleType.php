@@ -24,9 +24,6 @@ class PortefeuilleType extends AbstractType
                 'label' => "Gestionnaire de compte",
                 'placeholder' => "Désigner l'invité responsable",
                 'required' => true,
-                // Rend la liste déroulante sur <body> : sinon elle est tronquée par le
-                // conteneur défilant de la fiche (.form-column { overflow-y:auto }).
-                'tom_select_options' => ['dropdownParent' => 'body'],
             ])
             // Liste des clients gérée comme une COLLECTION paginée (widget dédié piloté
             // par le FormCanvasProvider), adaptée à un portefeuille de plusieurs dizaines
