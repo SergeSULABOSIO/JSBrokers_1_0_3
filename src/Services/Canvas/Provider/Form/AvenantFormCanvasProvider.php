@@ -34,6 +34,35 @@ class AvenantFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/avenant/api/delete",
             "endpoint_form_url" => "/admin/avenant/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Actions « piste dérivée » conditionnelles (pattern Invité→Portefeuille) :
+            // condition évaluée côté front contre l'attribut calculé hasPisteDerivee
+            // (AvenantIndicatorStrategy). Ajouter/Éditer ouvrent le même endpoint de
+            // contexte ; le backend adapte le mode (create/edit) à l'état réel de l'avenant.
+            "attribute_actions" => [
+                [
+                    "label"     => "Ajouter une piste dérivée",
+                    "icon"      => "piste",
+                    "event"     => "ui:avenant.piste-derivee-form-request",
+                    "url"       => "/admin/avenant/api/get-piste-derivee-context/%id%",
+                    "condition" => ["field" => "hasPisteDerivee", "value" => false],
+                ],
+                [
+                    "label"     => "Éditer la piste dérivée",
+                    "icon"      => "action:edit",
+                    "event"     => "ui:avenant.piste-derivee-form-request",
+                    "url"       => "/admin/avenant/api/get-piste-derivee-context/%id%",
+                    "condition" => ["field" => "hasPisteDerivee", "value" => true],
+                ],
+                [
+                    "label"     => "Supprimer la piste dérivée",
+                    "icon"      => "action:delete",
+                    // Pas de %id% : l'id de l'avenant est transmis en `ids` par le flux
+                    // générique app:api.delete-request après confirmation.
+                    "event"     => "ui:avenant.delete-piste-derivee",
+                    "url"       => "/admin/avenant/api/delete-piste-derivee",
+                    "condition" => ["field" => "hasPisteDerivee", "value" => true],
+                ],
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Fiche avenant",

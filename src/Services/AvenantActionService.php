@@ -37,7 +37,8 @@ class AvenantActionService
         private PisteRepository $pisteRepository,
         private CotationRepository $cotationRepository,
         private TypeRevenuRepository $typeRevenuRepository,
-        private ChargementRepository $chargementRepository
+        private ChargementRepository $chargementRepository,
+        private ReconductionPartageService $reconductionPartage
     ) {}
 
     /**
@@ -116,6 +117,14 @@ class AvenantActionService
             $piste->setEntreprise($entreprise);
             $piste->setInvite($invite);
             $this->em->persist($piste);
+
+            // Reconduction du partage partenaire depuis la piste d'exercice antérieure
+            // (même client + risque) : le partenaire et ses conditions de partage sont
+            // repris à l'identique pour que la rétrocommission suive les mêmes proportions.
+            $pistePrecedente = $this->pisteRepository->findLatestPrevious($client, $risque, $entreprise, $exercice);
+            if ($pistePrecedente) {
+                $this->reconductionPartage->reconduire($pistePrecedente, $piste, $entreprise, $invite);
+            }
         }
 
         // ÉTAPE 4 — Création d'une nouvelle Cotation propre à cet avenant.

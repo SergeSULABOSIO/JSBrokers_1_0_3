@@ -151,22 +151,10 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
 
         // On vérifie d'abord s'il y a des conditions de partage exceptionnelles sur la piste.
         if (!$piste->getConditionsPartageExceptionnelles()->isEmpty()) {
+            $risqueActuel = $piste->getRisque();
             foreach ($piste->getConditionsPartageExceptionnelles() as $condition) {
-                // On vérifie si la condition s'applique à ce risque.
-                $critereRisque = $condition->getCritereRisque();
-                $produitsCibles = $condition->getProduits();
-                $risqueActuel = $piste->getRisque();
-
-                $isApplicable = false;
-                if ($critereRisque === $condition::CRITERE_PAS_RISQUES_CIBLES) {
-                    $isApplicable = true;
-                } elseif ($critereRisque === $condition::CRITERE_INCLURE_TOUS_CES_RISQUES && $produitsCibles->contains($risqueActuel)) {
-                    $isApplicable = true;
-                } elseif ($critereRisque === $condition::CRITERE_EXCLURE_TOUS_CES_RISQUES && !$produitsCibles->contains($risqueActuel)) {
-                    $isApplicable = true;
-                }
-
-                if ($isApplicable) {
+                // Règle d'applicabilité centralisée sur l'entité (cf. ConditionPartage::sappliqueAuRisque).
+                if ($condition->sappliqueAuRisque($risqueActuel)) {
                     // La première condition applicable trouvée détermine le taux.
                     return $condition->getTaux() ?? 0.0;
                 }

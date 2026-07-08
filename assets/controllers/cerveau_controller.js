@@ -427,6 +427,12 @@ export default class extends Controller {
             case 'ui:invite.delete-portefeuille':
                 this.handleInviteDeletePortefeuille(payload);
                 break;
+            case 'ui:avenant.piste-derivee-form-request':
+                this.handleAvenantPisteDeriveeFormRequest(payload);
+                break;
+            case 'ui:avenant.delete-piste-derivee':
+                this.handleAvenantDeletePisteDerivee(payload);
+                break;
             case 'ui:client.portefeuille-picker-request':
                 this.handleClientPortefeuillePickerRequest(payload);
                 break;
@@ -1522,6 +1528,99 @@ export default class extends Controller {
             title: 'Confirmation de suppression',
             body: "Vous êtes sur le point de supprimer le portefeuille de cet invité. Ses clients seront détachés du portefeuille, pas supprimés.",
             itemDescriptions: [inviteName],
+        });
+    }
+
+    /**
+     * Ouvre le dialogue de la Piste dérivée liée à un avenant (actions « Ajouter/
+     * Éditer la piste dérivée » de la rubrique Avenant), miroir de
+     * handleInvitePortefeuilleFormRequest. Le backend répond selon l'état réel :
+     * { mode:'edit'|'create', avenantId, piste, formCanvas }.
+     * En création, on réutilise le préremplissage riche de PisteController : on cible
+     * son get-form avec ?idAvenant=… (contexte client/risque/partenaires) et on
+     * réinjecte idAvenant au submit via le parentContext (liaison + reconduction du
+     * partage, déjà en place côté serveur).
+     * @param {object} payload
+     * @param {string} payload.url - '/admin/avenant/api/get-piste-derivee-context/{id}'
+     */
+    async handleAvenantPisteDeriveeFormRequest(payload) {
+        if (!payload.url) {
+            console.error("[Cerveau] handleAvenantPisteDeriveeFormRequest() : URL manquante.", payload);
+            this._showNotification("Impossible d'ouvrir la piste dérivée : URL manquante.", 'error');
+            return;
+        }
+        try {
+            this.broadcast('app:loading.start');
+            const url = new URL(payload.url, window.location.origin);
+            if (this.currentIdEntreprise) {
+                url.searchParams.set('idEntreprise', this.currentIdEntreprise);
+            }
+            const response = await fetch(url.toString());
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.message || `Erreur serveur ${response.status}`);
+            const { mode, avenantId, piste, formCanvas } = result;
+            const isCreation = mode === 'create';
+
+            // Création : on baigne l'idAvenant dans l'URL du get-form de la Piste pour
+            // déclencher le préremplissage (client/risque/partenaires) côté PisteController.
+            if (isCreation && formCanvas?.parametres?.endpoint_form_url) {
+                const sep = formCanvas.parametres.endpoint_form_url.includes('?') ? '&' : '?';
+                formCanvas.parametres.endpoint_form_url += `${sep}idAvenant=${avenantId}`;
+            }
+
+            this.openDialogBox({
+                entity:           isCreation ? {} : piste,
+                entityFormCanvas: formCanvas,
+                isCreationMode:   isCreation,
+                context: {
+                    idEntreprise: this.currentIdEntreprise,
+                    idInvite:     this.currentIdInvite,
+                },
+                // Réinjecte idAvenant dans le POST du submit (dialog-instance) : la piste
+                // est liée à l'avenant de base et le partage est reconduit (submitApi).
+                parentContext: isCreation
+                    ? { fieldName: 'idAvenant', id: avenantId }
+                    : null,
+            });
+        } catch (error) {
+            console.error("[Cerveau] handleAvenantPisteDeriveeFormRequest() failed:", error);
+            this._showNotification(error.message || "Impossible d'ouvrir la piste dérivée.", 'error');
+        } finally {
+            this.broadcast('app:loading.stop');
+        }
+    }
+
+    /**
+     * Demande de suppression de la piste dérivée d'un avenant (action « Supprimer la
+     * piste dérivée »), miroir de handleInviteDeletePortefeuille. On réutilise le flux
+     * générique app:api.delete-request qui fera DELETE {url}/{avenantId} après
+     * confirmation (le backend supprime la piste et conserve l'avenant de base).
+     * @param {object} payload
+     * @param {string} payload.url - '/admin/avenant/api/delete-piste-derivee' (sans id)
+     * @param {Array}  [payload.selection] - fourni par la toolbar / le menu contextuel
+     * @param {number} [payload.id] - fourni par le volet du dialogue d'édition
+     */
+    handleAvenantDeletePisteDerivee(payload) {
+        const avenantId = payload.selection?.[0]?.id ?? payload.id;
+        if (!payload.url || !avenantId) {
+            console.error("[Cerveau] handleAvenantDeletePisteDerivee() : URL ou id manquant.", payload);
+            this._showNotification("Impossible de supprimer la piste dérivée : contexte manquant.", 'error');
+            return;
+        }
+        const avenantName = payload.selection?.[0]?.name || `Avenant #${avenantId}`;
+        this._requestDeleteConfirmation({
+            onConfirm: {
+                type: 'app:api.delete-request',
+                payload: {
+                    ids: [avenantId],
+                    url: payload.url,
+                    originatorId: this.getActiveTabId(),
+                    isFromCollectionWidget: false,
+                },
+            },
+            title: 'Confirmation de suppression',
+            body: "Vous êtes sur le point de supprimer la piste dérivée de cet avenant. L'avenant de base est conservé ; la piste et ses cotations/tranches sont supprimées.",
+            itemDescriptions: [avenantName],
         });
     }
 

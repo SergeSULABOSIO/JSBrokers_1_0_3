@@ -247,4 +247,23 @@ class ConditionPartage
     {
         return $this->nom ?? 'Nouvelle condition';
     }
+
+    /**
+     * Indique si cette condition de partage s'applique au risque donné.
+     *
+     * Règle unique (partagée par le calcul du taux de rétrocommission et par la
+     * reconduction du partage sur les avenants dérivés) :
+     *  - CRITERE_PAS_RISQUES_CIBLES : toujours applicable ;
+     *  - CRITERE_INCLURE_TOUS_CES_RISQUES : applicable si le risque est ciblé ;
+     *  - CRITERE_EXCLURE_TOUS_CES_RISQUES : applicable si le risque n'est PAS ciblé.
+     */
+    public function sappliqueAuRisque(?Risque $risque): bool
+    {
+        return match ($this->critereRisque) {
+            self::CRITERE_PAS_RISQUES_CIBLES => true,
+            self::CRITERE_INCLURE_TOUS_CES_RISQUES => $risque !== null && $this->produits->contains($risque),
+            self::CRITERE_EXCLURE_TOUS_CES_RISQUES => $risque === null || !$this->produits->contains($risque),
+            default => false,
+        };
+    }
 }

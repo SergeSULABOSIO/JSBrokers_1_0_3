@@ -22,6 +22,10 @@ class Avenant
     public const RENEWAL_STATUS_ONCE_OFF    = 1;
 
     // NOUVEAU : Attributs calculés spécifiques à l'avenant
+    // Présence d'une piste dérivée (renouvellement/prorogation/ajustement lié à cet
+    // avenant de base) : sert de condition aux attribute_actions « piste dérivée ».
+    #[Groups(['list:read'])]
+    public ?bool $hasPisteDerivee = null;
     #[Groups(['list:read'])]
     public ?string $dureeCouverture = null;
     #[Groups(['list:read'])]
