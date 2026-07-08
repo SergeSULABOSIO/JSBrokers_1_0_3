@@ -32,6 +32,7 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
         if (!$cotation) {
             return [
                 'hasPisteDerivee' => $entity->getPisteDeRenouvellement() !== null,
+                'pisteDeriveeLibelle' => $entity->getPisteDeRenouvellement() !== null ? 'Piste dérivée' : null,
                 'dureeCouverture' => $this->calculateDureeCouvertureAvenant($entity),
                 'joursRestants' => $this->calculateJoursRestantsAvenant($entity),
                 'ageAvenant' => $this->calculateAgeAvenant($entity),
@@ -47,6 +48,7 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
         return [
             // Indicateurs de base de l'avenant
             'hasPisteDerivee' => $entity->getPisteDeRenouvellement() !== null,
+            'pisteDeriveeLibelle' => $entity->getPisteDeRenouvellement() !== null ? 'Piste dérivée' : null,
             'dureeCouverture' => $this->calculateDureeCouvertureAvenant($entity),
             'joursRestants' => $this->calculateJoursRestantsAvenant($entity),
             'ageAvenant' => $this->calculateAgeAvenant($entity),

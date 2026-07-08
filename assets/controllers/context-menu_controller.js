@@ -226,7 +226,10 @@ export default class extends Controller {
         let separatorInserted = false;
 
         actions.forEach(action => {
-            if (action.condition && !separatorInserted) {
+            // Séparateur interne UNIQUEMENT entre un bloc d'actions inconditionnelles et
+            // les actions conditionnelles. Sans action inconditionnelle en amont
+            // (conteneur encore vide), le séparateur fixe suffit — évite le doublon.
+            if (action.condition && !separatorInserted && this.specificActionsContainerTarget.children.length > 0) {
                 const sep = document.createElement('li');
                 sep.setAttribute('role', 'separator');
                 sep.className = 'separator';

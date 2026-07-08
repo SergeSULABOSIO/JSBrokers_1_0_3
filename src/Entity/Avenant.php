@@ -26,6 +26,10 @@ class Avenant
     // avenant de base) : sert de condition aux attribute_actions « piste dérivée ».
     #[Groups(['list:read'])]
     public ?bool $hasPisteDerivee = null;
+    // Libellé de la ligne secondaire de la liste : « Piste dérivée » UNIQUEMENT si
+    // l'avenant en a une ; null sinon (l'item n'est alors pas rendu — économie d'espace).
+    #[Groups(['list:read'])]
+    public ?string $pisteDeriveeLibelle = null;
     #[Groups(['list:read'])]
     public ?string $dureeCouverture = null;
     #[Groups(['list:read'])]

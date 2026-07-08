@@ -30,6 +30,9 @@ class AvenantListCanvasProvider implements ListCanvasProviderInterface
                     ["attribut_prefixe" => "Avt n°", "attribut_code" => "numero"],
                     ["attribut_code" => "risqueCode"],
                     ["attribut_code" => "periodeCouverture"],
+                    // Présence d'une piste dérivée : toujours renseigné (« Aucune piste
+                    // dérivée » à défaut), sur le modèle du portefeuille des invités.
+                    ["attribut_code" => "pisteDeriveeLibelle", "icone" => "piste"],
                 ],
             ],
             "colonnes_numeriques" => [

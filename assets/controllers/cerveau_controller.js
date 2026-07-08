@@ -1561,13 +1561,12 @@ export default class extends Controller {
             const { mode, avenantId, piste, formCanvas } = result;
             const isCreation = mode === 'create';
 
-            // Création : on baigne l'idAvenant dans l'URL du get-form de la Piste pour
-            // déclencher le préremplissage (client/risque/partenaires) côté PisteController.
-            if (isCreation && formCanvas?.parametres?.endpoint_form_url) {
-                const sep = formCanvas.parametres.endpoint_form_url.includes('?') ? '&' : '?';
-                formCanvas.parametres.endpoint_form_url += `${sep}idAvenant=${avenantId}`;
-            }
-
+            // idAvenant est transmis via le CONTEXTE du dialogue (et NON baké dans
+            // endpoint_form_url : sinon le rechargement en édition après création
+            // produirait « get-form?idAvenant=X/{id} », id après la query → route
+            // rechargée en mode création, collections invisibles). Le cerveau ajoute
+            // context.idAvenant en query au get-form (préremplissage) et dialog-instance
+            // fusionne tout le contexte dans le POST du submit (liaison + reconduction).
             this.openDialogBox({
                 entity:           isCreation ? {} : piste,
                 entityFormCanvas: formCanvas,
@@ -1575,12 +1574,9 @@ export default class extends Controller {
                 context: {
                     idEntreprise: this.currentIdEntreprise,
                     idInvite:     this.currentIdInvite,
+                    ...(isCreation ? { idAvenant: avenantId } : {}),
                 },
-                // Réinjecte idAvenant dans le POST du submit (dialog-instance) : la piste
-                // est liée à l'avenant de base et le partage est reconduit (submitApi).
-                parentContext: isCreation
-                    ? { fieldName: 'idAvenant', id: avenantId }
-                    : null,
+                parentContext: null,
             });
         } catch (error) {
             console.error("[Cerveau] handleAvenantPisteDeriveeFormRequest() failed:", error);
