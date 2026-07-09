@@ -81,8 +81,8 @@ class PublicSoaController extends AbstractController
         }
 
         return $this->render('components/soa/_documents_picker.html.twig', [
-            'avenant'            => $avenant,
-            'client'             => $client,
+            'titre'              => 'Documents de la police « ' . ($avenant->getReferencePolice() ?: '—') . ' »',
+            'contexteNom'        => $client->getNom(),
             'items'              => $this->documentsCollector->collect($avenant),
             'downloadUrlPattern' => '/soa/' . $token . '/document/%did%/telecharger',
         ]);

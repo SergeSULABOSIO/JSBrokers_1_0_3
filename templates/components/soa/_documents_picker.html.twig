@@ -12,8 +12,10 @@
     Le template est donc AUTONOME : styles embarqués (aucune dépendance app.css),
     comportements accrochés aux attributs data-picker-* uniquement.
 
-    Contexte attendu : avenant, client, items (collector), downloadUrlPattern
-    (URL de téléchargement contenant %did%).
+    Contexte attendu : titre (barre de titre, contextualisé par rubrique),
+    contexteNom (nom du dossier/client repris dans la description), items
+    (SoaPoliceDocumentsCollector) et downloadUrlPattern (URL de téléchargement
+    contenant %did%).
 #}
 {% set familleStyles = {
     'pdf':     { bg: '#fdecea', fg: '#c0392b', label: 'PDF' },
@@ -68,12 +70,37 @@
         .soa-docs-intro-text { min-width: 0; }
         .soa-docs-intro-title { margin: 0 0 .15rem; font-size: 1.02rem; font-weight: 700; color: #212529; }
         .soa-docs-intro-desc { margin: 0; font-size: .84rem; line-height: 1.45; color: #6c757d; max-width: 78ch; }
-        .soa-docs-search { padding: .7rem 1.25rem 0; }
-        .soa-docs-search input {
-            width: 100%; border: 1px solid #ced4da; border-radius: 8px;
-            padding: .5rem .75rem; font-size: .85rem;
+        /* Champ de recherche : pattern EXACT des pickers clients/portefeuilles
+           (.jsb-picker-search d'app.css, redéfini ici car les pages standalone/
+           publiques ne chargent pas app.css — Bootstrap CDN fournit .form-control). */
+        .jsb-picker-search {
+            flex: 0 0 auto;
+            position: relative;
+            padding: .75rem 1.25rem;
         }
-        .soa-docs-search input:focus { outline: 2px solid #0047AB; outline-offset: 1px; border-color: #0047AB; }
+        .jsb-picker-search-icon {
+            position: absolute;
+            left: 1.95rem;
+            top: 50%;
+            transform: translateY(-50%);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 0;
+            color: #6c757d;
+            pointer-events: none;
+        }
+        .jsb-picker-search .form-control {
+            padding-left: 2.5rem;
+            background-color: #f8f9fa !important;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            font-weight: normal;
+        }
+        .jsb-picker-search .form-control:focus {
+            border-color: #0047AB;
+            box-shadow: 0 0 0 .2rem rgba(0, 71, 171, 0.15) !important;
+        }
         .soa-docs-body { padding: .5rem 1.25rem 1rem; overflow-y: auto; }
         .soa-docs-table { width: 100%; border-collapse: collapse; font-size: .84rem; }
         .soa-docs-table th {
@@ -90,7 +117,9 @@
             flex-shrink: 0;
         }
         .soa-docs-nomcell { display: flex; align-items: center; gap: .6rem; }
-        .soa-docs-nom { font-weight: 600; color: #212529; word-break: break-word; }
+        .soa-docs-nom { display: block; font-weight: 600; color: #212529; word-break: break-word; }
+        /* Info secondaire sous le nom : classeur de rangement du document. */
+        .soa-docs-classeur { display: block; font-size: .74rem; color: #6c757d; }
         .soa-docs-niveau {
             display: inline-block; background: #e8f0fb; color: #0047AB;
             font-size: .72rem; font-weight: 600; padding: .2rem .55rem; border-radius: 20px;
@@ -110,11 +139,21 @@
             font-size: .78rem; color: #6c757d;
         }
         .soa-docs-foot button {
+            display: inline-flex; align-items: center; gap: .4rem;
             border: 1px solid #ced4da; background: #fff; color: #343a40;
             padding: .5rem 1rem; border-radius: 8px; font-size: .84rem; cursor: pointer;
             min-height: 40px;
         }
         .soa-docs-foot button:hover, .soa-docs-foot button:focus { background: #eef2f7; }
+        /* Surlignage du mot-clé filtré (même rendu que .jsb-picker-hl d'app.css,
+           redéfini ici car les pages standalone/publiques ne chargent pas app.css). */
+        .jsb-picker-hl {
+            background: #ffe58f;
+            color: #000000;
+            font-weight: 700;
+            padding: 0 1px;
+            border-radius: 2px;
+        }
         @media (max-width: 640px) {
             .soa-docs-table th:nth-child(4), .soa-docs-table td:nth-child(4) { display: none; }
         }
@@ -131,9 +170,7 @@
                 <span class="soa-docs-header-icon" aria-hidden="true">
                     <twig:UX:Icon name="{{ resolve_icon_name('document') }}" style="width:22px;height:22px;" />
                 </span>
-                <h5 id="soa-docs-title">
-                    Documents de la police «&nbsp;{{ avenant.referencePolice|default('—') }}&nbsp;»
-                </h5>
+                <h5 id="soa-docs-title">{{ titre }}</h5>
             </span>
             <button type="button" class="soa-docs-close" data-picker-close aria-label="Fermer la liste des documents">&times;</button>
         </div>
@@ -143,10 +180,10 @@
                 <twig:UX:Icon name="{{ resolve_icon_name('classeur') }}" style="width:26px;height:26px;" />
             </span>
             <div class="soa-docs-intro-text">
-                <p class="soa-docs-intro-title">Dossier documentaire de la police</p>
+                <p class="soa-docs-intro-title">Dossier documentaire</p>
                 <p id="soa-docs-desc" class="soa-docs-intro-desc">
-                    Tous les documents enregistrés concernant cette police de
-                    «&nbsp;<strong>{{ client.nom }}</strong>&nbsp;», quel que soit le niveau du dossier
+                    Tous les documents enregistrés concernant ce dossier de
+                    «&nbsp;<strong>{{ contexteNom }}</strong>&nbsp;», quel que soit le niveau
                     où ils ont été attachés (piste, cotation, police, client).
                     Cliquez sur «&nbsp;Télécharger&nbsp;» pour récupérer un fichier.
                 </p>
@@ -154,11 +191,15 @@
         </div>
 
         {% if items is not empty %}
-            <div class="soa-docs-search">
-                <label for="soa-docs-search-input" class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Filtrer les documents par nom ou niveau</label>
+            <div class="jsb-picker-search">
+                <span class="jsb-picker-search-icon" aria-hidden="true">
+                    <twig:UX:Icon name="hugeicons:search-01" style="width:16px;height:16px;" />
+                </span>
+                <label for="soa-docs-search-input" class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Rechercher un document par nom, niveau ou format</label>
                 <input type="text"
                        id="soa-docs-search-input"
-                       placeholder="Filtrer par nom, niveau ou format…"
+                       class="form-control"
+                       placeholder="Rechercher par nom, niveau ou format…"
                        autocomplete="off"
                        data-picker-search>
             </div>
@@ -167,11 +208,11 @@
         <div class="soa-docs-body">
             {% if items is empty %}
                 <p class="soa-docs-empty" role="status">
-                    Aucun document n'est enregistré pour cette police, à quelque niveau que ce soit.
+                    Aucun document n'est enregistré pour ce dossier, à quelque niveau que ce soit.
                 </p>
             {% else %}
                 <table class="soa-docs-table">
-                    <caption class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Documents attachés à la police {{ avenant.referencePolice|default('') }}</caption>
+                    <caption class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">{{ titre }}</caption>
                     <thead>
                         <tr>
                             <th scope="col">Document</th>
@@ -185,19 +226,25 @@
                         {% for item in items %}
                             {% set style = familleStyles[item.famille]|default(familleStyles['autre']) %}
                             {% set formatLabel = item.extension ? item.extension|upper : 'Inconnu' %}
+                            {% set classeurNom = item.document.classeur ? item.document.classeur.nom : null %}
                             <tr data-picker-row
-                                data-search="{{ (item.document.nom ~ ' ' ~ item.niveau ~ ' ' ~ formatLabel)|lower|e('html_attr') }}">
+                                data-search="{{ (item.document.nom ~ ' ' ~ item.niveau ~ ' ' ~ formatLabel ~ ' ' ~ (classeurNom ?? ''))|lower|e('html_attr') }}">
                                 <td>
                                     <span class="soa-docs-nomcell">
                                         {# Pastille de format : l'information est doublée en texte
                                            (colonne Format) — jamais par la seule couleur (WCAG 1.4.1). #}
                                         <span class="soa-docs-pastille" style="background:{{ style.bg }}; color:{{ style.fg }};" aria-hidden="true">{{ style.label }}</span>
-                                        <span class="soa-docs-nom">{{ item.document.nom }}</span>
+                                        <span>
+                                            <span class="soa-docs-nom" data-picker-hl>{{ item.document.nom }}</span>
+                                            {% if classeurNom %}
+                                                <span class="soa-docs-classeur">Classeur&nbsp;: <span data-picker-hl>{{ classeurNom }}</span></span>
+                                            {% endif %}
+                                        </span>
                                     </span>
                                 </td>
-                                <td><span class="soa-docs-niveau">{{ item.niveau }}</span></td>
+                                <td><span class="soa-docs-niveau" data-picker-hl>{{ item.niveau }}</span></td>
                                 <td style="white-space:nowrap;">{{ item.document.createdAt ? item.document.createdAt|date('d/m/Y') : '—' }}</td>
-                                <td>{{ formatLabel }}</td>
+                                <td><span data-picker-hl>{{ formatLabel }}</span></td>
                                 <td style="text-align:right;">
                                     <a class="soa-docs-dl"
                                        href="{{ downloadUrlPattern|replace({'%did%': item.document.id}) }}"
@@ -216,7 +263,10 @@
 
         <footer class="soa-docs-foot">
             <span>{{ items|length }} document(s) — le téléchargement s'ouvre dans votre navigateur.</span>
-            <button type="button" data-picker-close>Fermer</button>
+            <button type="button" data-picker-close>
+                <twig:UX:Icon name="{{ resolve_icon_name('action:close') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                Fermer
+            </button>
         </footer>
     </div>
 </div>

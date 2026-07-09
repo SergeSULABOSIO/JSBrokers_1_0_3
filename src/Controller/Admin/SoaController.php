@@ -4,8 +4,10 @@ namespace App\Controller\Admin;
 
 use App\Entity\Avenant;
 use App\Entity\Client;
+use App\Entity\Cotation;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
+use App\Entity\Piste;
 use App\Entity\SoaAccesToken;
 use App\Entity\SoaEnvoi;
 use App\Services\CanvasBuilder;
@@ -102,10 +104,18 @@ class SoaController extends AbstractController
         ]);
     }
 
+    /** Rubriques ouvertes au picker de documents générique (route api.documents_picker). */
+    private const DOCUMENTS_TYPES = [
+        'client'   => Client::class,
+        'piste'    => Piste::class,
+        'cotation' => Cotation::class,
+        'avenant'  => Avenant::class,
+    ];
+
     /**
      * Picker « Documents de la police » : tous les documents enregistrés concernant
      * cet avenant, quel que soit le niveau d'attache (piste, cotation, police, client).
-     * Téléchargements via la route admin existante admin.document.api.download.
+     * Route historique des surfaces SOA (bouton des tables de polices, menu contextuel).
      */
     #[Route('/api/police/{id}/documents', name: 'api.police_documents', methods: ['GET'])]
     public function policeDocuments(Avenant $avenant): Response
@@ -113,16 +123,56 @@ class SoaController extends AbstractController
         if (!$this->mayAccessEntity(Client::class, Invite::ACCESS_LECTURE)) {
             throw $this->createAccessDeniedException("Les documents de la police sont hors de votre périmètre d'accès.");
         }
-        $client = $this->documentsCollector->clientDeLaPolice($avenant);
-        if ($client === null) {
-            throw $this->createNotFoundException("Police sans client rattaché.");
+
+        return $this->renderDocumentsPicker($avenant);
+    }
+
+    /**
+     * Picker de documents GÉNÉRIQUE des rubriques du workspace : action spéciale
+     * « Voir les documents » des rubriques Client, Piste, Cotation et Avenant
+     * (barre d'outils, menu contextuel, volet du dialogue d'édition). Périmètre :
+     * ascendants directs + entité + descendants (cf. SoaPoliceDocumentsCollector).
+     */
+    #[Route('/api/documents/{type}/{id}', name: 'api.documents_picker', requirements: ['type' => 'client|piste|cotation|avenant', 'id' => '\d+'], methods: ['GET'])]
+    public function documentsPicker(string $type, int $id): Response
+    {
+        $entityClass = self::DOCUMENTS_TYPES[$type];
+        // Le droit s'évalue sur la rubrique d'origine (respecte le périmètre par entité des rôles invités).
+        if (!$this->mayAccessEntity($entityClass, Invite::ACCESS_LECTURE)) {
+            throw $this->createAccessDeniedException("Les documents de ce dossier sont hors de votre périmètre d'accès.");
         }
-        $this->assertClientDansEspace($client);
+
+        $entity = $this->em->getRepository($entityClass)->find($id);
+        if ($entity === null) {
+            throw $this->createNotFoundException("Dossier introuvable.");
+        }
+
+        return $this->renderDocumentsPicker($entity);
+    }
+
+    /**
+     * Rendu partagé du picker de documents (scoping workspace via AuditableTrait,
+     * titre contextualisé par rubrique, téléchargements via la route admin existante).
+     * @param Client|Piste|Cotation|Avenant $entity
+     */
+    private function renderDocumentsPicker(object $entity): Response
+    {
+        $entreprise = $this->getEntreprise();
+        if ($entreprise === null || $entity->getEntreprise()?->getId() !== $entreprise->getId()) {
+            throw $this->createNotFoundException("Dossier introuvable dans cet espace de travail.");
+        }
+
+        [$titre, $contexteNom] = match (true) {
+            $entity instanceof Avenant  => ['Documents de la police « ' . ($entity->getReferencePolice() ?: '—') . ' »', $this->documentsCollector->clientDeLaPolice($entity)?->getNom() ?? ($entity->getReferencePolice() ?: 'cette police')],
+            $entity instanceof Client   => ['Documents du client « ' . $entity->getNom() . ' »', $entity->getNom()],
+            $entity instanceof Piste    => ['Documents de la piste « ' . $entity->getNom() . ' »', $entity->getClient()?->getNom() ?? $entity->getNom()],
+            $entity instanceof Cotation => ['Documents de la cotation « ' . $entity->getNom() . ' »', $entity->getPiste()?->getClient()?->getNom() ?? $entity->getNom()],
+        };
 
         return $this->render('components/soa/_documents_picker.html.twig', [
-            'avenant'            => $avenant,
-            'client'             => $client,
-            'items'              => $this->documentsCollector->collect($avenant),
+            'titre'              => $titre,
+            'contexteNom'        => $contexteNom,
+            'items'              => $this->documentsCollector->collectFor($entity),
             'downloadUrlPattern' => '/admin/document/api/%did%/download',
         ]);
     }

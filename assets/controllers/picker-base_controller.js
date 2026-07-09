@@ -93,7 +93,9 @@ export default class extends Controller {
             if (match) {
                 visible++;
                 // Surligne le mot-clé dans les libellés des lignes affichées.
-                row.querySelectorAll('.jsb-picker-client-nom, .jsb-picker-client-mail').forEach((el) => {
+                // [data-picker-hl] = hook générique pour les pickers qui n'utilisent
+                // pas les classes jsb-picker-client-* (ex. picker de documents).
+                row.querySelectorAll('.jsb-picker-client-nom, .jsb-picker-client-mail, [data-picker-hl]').forEach((el) => {
                     if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
                     this._highlightInto(el, el.dataset.orig, raw);
                 });
