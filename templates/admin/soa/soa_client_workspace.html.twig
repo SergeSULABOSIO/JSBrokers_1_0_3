@@ -535,6 +535,8 @@
                             <thead>
                                 <tr>
                                     <th scope="col">Réf. Police</th>
+                                    <th scope="col" class="text-start">Risque</th>
+                                    <th scope="col" class="text-start">Assureur</th>
                                     <th scope="col">Tranche</th>
                                     <th scope="col">Échéance</th>
                                     <th scope="col">Prime totale</th>
@@ -554,6 +556,8 @@
                                     <tr data-id="{{ tranche.id }}"
                                         data-label="{{ tranche.nom }}{{ tranche.payableAt ? ' — éch. ' ~ tranche.payableAt|date('d/m/Y') : '' }}">
                                         <td>{{ cotation.avenants is not empty ? cotation.avenants.first.referencePolice|default('—') : '—' }}</td>
+                                        <td class="text-start">{{ piste.risque ? piste.risque.nomComplet : '—' }}</td>
+                                        <td class="text-start">{{ cotation.assureur ? cotation.assureur.nom : '—' }}</td>
                                         <td>{{ tranche.nom }}</td>
                                         <td style="white-space:nowrap;">{{ tranche.payableAt ? tranche.payableAt|date('d/m/Y') : '—' }}</td>
                                         <td>{{ (tranche.primeTranche|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>
@@ -983,6 +987,13 @@
                     <twig:UX:Icon name="{{ resolve_icon_name('action:copy') }}" style="width:16px;height:16px;" />
                 </span>
                 <span class="flex-grow-1">Copier le lien client</span>
+            </li>
+            <li role="menuitem" tabindex="-1" data-menu-key="documents"
+                data-action="click->soa-context-menu#onItemClick">
+                <span class="context-menu-icon" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('document') }}" style="width:16px;height:16px;" />
+                </span>
+                <span class="flex-grow-1">Documents de la police</span>
             </li>
             <li role="separator" class="separator" data-menu-key="sep-actions"></li>
             <li role="menuitem" tabindex="-1" data-menu-key="create"

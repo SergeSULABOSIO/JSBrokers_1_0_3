@@ -36,7 +36,7 @@ const SECTIONS = {
         deleteBody: 'Le contact sera définitivement supprimé. Cette action est irréversible.',
     },
     polices: {
-        items: ['refresh', 'apercu', 'edit'],
+        items: ['refresh', 'apercu', 'documents', 'edit'],
         editLabel: 'Editer la police',
         titres: { modification: 'Modifier la police' },
         api: '/admin/avenant/api',
@@ -306,7 +306,7 @@ export default class extends Controller {
         // Calcul des items visibles : les actions de ligne exigent une ligne valide,
         // les actions de création exigent d'être dans le tableau de la section.
         const visible = config.items.filter((key) => {
-            if (key === 'edit' || key === 'delete') return hasRow;
+            if (key === 'edit' || key === 'delete' || key === 'documents') return hasRow;
             if (key === 'create') return config.pisteCreate ? hasRow : inTable;
             return true;
         });
@@ -461,6 +461,12 @@ export default class extends Controller {
                 // Copie le lien PUBLIC tokenisé (crée/prolonge le jeton côté serveur).
                 this._dispatchCerveau('ui:soa.copy-link-request', {
                     url: `/admin/soa/api/client/${this.clientIdValue}/lien-public`,
+                });
+                break;
+            case 'documents':
+                // Picker des documents de la police (tous niveaux du pipe).
+                this._dispatchCerveau('ui:soa.docs-picker-request', {
+                    url: `/admin/soa/api/police/${row.dataset.id}/documents`,
                 });
                 break;
             case 'create':

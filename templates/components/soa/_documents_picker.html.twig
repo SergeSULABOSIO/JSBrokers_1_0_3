@@ -1,0 +1,196 @@
+{#
+    Picker « Documents de la police » du SOA : liste TOUS les documents enregistrés
+    sur le serveur concernant une police, quel que soit le niveau d'attache
+    (Piste, Cotation, Police, Client — cf. SoaPoliceDocumentsCollector), avec
+    pastille de format, niveau, date d'enregistrement et téléchargement direct.
+
+    Servi sur TROIS surfaces :
+      - onglet SOA du workspace (inséré par le cerveau, comportement Stimulus
+        « soa-docs-picker » hérité de picker-base : focus, Échap, filtre) ;
+      - aperçu courtier et page publique client (pages autonomes sans Stimulus :
+        ouverture/fermeture/filtre par le JS inline de _soa_scripts.html.twig).
+    Le template est donc AUTONOME : styles embarqués (aucune dépendance app.css),
+    comportements accrochés aux attributs data-picker-* uniquement.
+
+    Contexte attendu : avenant, client, items (collector), downloadUrlPattern
+    (URL de téléchargement contenant %did%).
+#}
+{% set familleStyles = {
+    'pdf':     { bg: '#fdecea', fg: '#c0392b', label: 'PDF' },
+    'word':    { bg: '#e8effa', fg: '#2b579a', label: 'DOC' },
+    'excel':   { bg: '#e6f2ec', fg: '#217346', label: 'XLS' },
+    'ppt':     { bg: '#fdeee8', fg: '#d24726', label: 'PPT' },
+    'image':   { bg: '#f1ebfa', fg: '#6f42c1', label: 'IMG' },
+    'archive': { bg: '#eef0f2', fg: '#5a6268', label: 'ZIP' },
+    'autre':   { bg: '#eef0f2', fg: '#5a6268', label: 'FIC' },
+} %}
+<div class="soa-docs-overlay"
+     data-controller="soa-docs-picker"
+     data-picker-overlay
+     data-soa-docs-picker-root>
+    <style>
+        .soa-docs-overlay {
+            position: fixed; inset: 0; z-index: 10050;
+            background: rgba(13, 36, 64, .55);
+            display: flex; align-items: center; justify-content: center;
+            padding: 1rem;
+        }
+        .soa-docs-modal {
+            background: #fff; border-radius: 12px; width: 100%; max-width: 820px;
+            max-height: 88vh; display: flex; flex-direction: column;
+            box-shadow: 0 12px 40px rgba(0,0,0,.30); overflow: hidden;
+        }
+        .soa-docs-header {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: .75rem; padding: .9rem 1.25rem; border-bottom: 3px solid #0047AB;
+        }
+        .soa-docs-header h5 { margin: 0; font-size: 1rem; font-weight: 700; color: #0d2440; }
+        .soa-docs-close {
+            border: 0; background: transparent; font-size: 1.4rem; line-height: 1;
+            color: #5a6268; cursor: pointer; padding: .25rem .5rem; border-radius: 6px;
+            min-width: 44px; min-height: 40px;
+        }
+        .soa-docs-close:hover, .soa-docs-close:focus { background: #eef2f7; color: #0d2440; }
+        .soa-docs-intro {
+            padding: .7rem 1.25rem; background: #f6f8fb; border-bottom: 1px solid #e3e8ef;
+            font-size: .82rem; color: #495057;
+        }
+        .soa-docs-search { padding: .7rem 1.25rem 0; }
+        .soa-docs-search input {
+            width: 100%; border: 1px solid #ced4da; border-radius: 8px;
+            padding: .5rem .75rem; font-size: .85rem;
+        }
+        .soa-docs-search input:focus { outline: 2px solid #0047AB; outline-offset: 1px; border-color: #0047AB; }
+        .soa-docs-body { padding: .5rem 1.25rem 1rem; overflow-y: auto; }
+        .soa-docs-table { width: 100%; border-collapse: collapse; font-size: .84rem; }
+        .soa-docs-table th {
+            text-align: left; color: #5a6268; font-size: .72rem; text-transform: uppercase;
+            letter-spacing: .04em; padding: .55rem .5rem; border-bottom: 2px solid #0047AB;
+            white-space: nowrap;
+        }
+        .soa-docs-table td { padding: .5rem; border-bottom: 1px solid #e9ecef; vertical-align: middle; }
+        .soa-docs-table tbody tr:hover { background: #f2f6fc; }
+        .soa-docs-pastille {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 38px; height: 26px; border-radius: 6px;
+            font-size: .66rem; font-weight: 700; letter-spacing: .03em;
+            flex-shrink: 0;
+        }
+        .soa-docs-nomcell { display: flex; align-items: center; gap: .6rem; }
+        .soa-docs-nom { font-weight: 600; color: #212529; word-break: break-word; }
+        .soa-docs-niveau {
+            display: inline-block; background: #e8f0fb; color: #0047AB;
+            font-size: .72rem; font-weight: 600; padding: .2rem .55rem; border-radius: 20px;
+            white-space: nowrap;
+        }
+        .soa-docs-dl {
+            display: inline-flex; align-items: center; gap: .35rem;
+            background: #0047AB; color: #fff !important; text-decoration: none;
+            font-size: .78rem; font-weight: 600; padding: .45rem .8rem; border-radius: 8px;
+            white-space: nowrap; min-height: 34px;
+        }
+        .soa-docs-dl:hover, .soa-docs-dl:focus { background: #003a8c; color: #fff; }
+        .soa-docs-empty { color: #6c757d; font-size: .85rem; font-style: italic; padding: .9rem .25rem; margin: 0; }
+        .soa-docs-foot {
+            display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+            padding: .7rem 1.25rem; border-top: 1px solid #e3e8ef; background: #f8f9fa;
+            font-size: .78rem; color: #6c757d;
+        }
+        .soa-docs-foot button {
+            border: 1px solid #ced4da; background: #fff; color: #343a40;
+            padding: .5rem 1rem; border-radius: 8px; font-size: .84rem; cursor: pointer;
+            min-height: 40px;
+        }
+        .soa-docs-foot button:hover, .soa-docs-foot button:focus { background: #eef2f7; }
+        @media (max-width: 640px) {
+            .soa-docs-table th:nth-child(4), .soa-docs-table td:nth-child(4) { display: none; }
+        }
+    </style>
+    <div class="soa-docs-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="soa-docs-title"
+         aria-describedby="soa-docs-desc"
+         tabindex="-1">
+
+        <div class="soa-docs-header">
+            <h5 id="soa-docs-title">
+                Documents de la police «&nbsp;{{ avenant.referencePolice|default('—') }}&nbsp;»
+            </h5>
+            <button type="button" class="soa-docs-close" data-picker-close aria-label="Fermer la liste des documents">&times;</button>
+        </div>
+
+        <p id="soa-docs-desc" class="soa-docs-intro mb-0">
+            Tous les documents enregistrés concernant cette police de
+            «&nbsp;<strong>{{ client.nom }}</strong>&nbsp;», quel que soit le niveau du dossier
+            où ils ont été attachés (piste, cotation, police, client).
+            Cliquez sur «&nbsp;Télécharger&nbsp;» pour récupérer un fichier.
+        </p>
+
+        {% if items is not empty %}
+            <div class="soa-docs-search">
+                <label for="soa-docs-search-input" class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Filtrer les documents par nom ou niveau</label>
+                <input type="text"
+                       id="soa-docs-search-input"
+                       placeholder="Filtrer par nom, niveau ou format…"
+                       autocomplete="off"
+                       data-picker-search>
+            </div>
+        {% endif %}
+
+        <div class="soa-docs-body">
+            {% if items is empty %}
+                <p class="soa-docs-empty" role="status">
+                    Aucun document n'est enregistré pour cette police, à quelque niveau que ce soit.
+                </p>
+            {% else %}
+                <table class="soa-docs-table">
+                    <caption class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Documents attachés à la police {{ avenant.referencePolice|default('') }}</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Document</th>
+                            <th scope="col">Niveau</th>
+                            <th scope="col">Enregistré le</th>
+                            <th scope="col">Format</th>
+                            <th scope="col"><span class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">Action</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                            {% set style = familleStyles[item.famille]|default(familleStyles['autre']) %}
+                            {% set formatLabel = item.extension ? item.extension|upper : 'Inconnu' %}
+                            <tr data-picker-row
+                                data-search="{{ (item.document.nom ~ ' ' ~ item.niveau ~ ' ' ~ formatLabel)|lower|e('html_attr') }}">
+                                <td>
+                                    <span class="soa-docs-nomcell">
+                                        {# Pastille de format : l'information est doublée en texte
+                                           (colonne Format) — jamais par la seule couleur (WCAG 1.4.1). #}
+                                        <span class="soa-docs-pastille" style="background:{{ style.bg }}; color:{{ style.fg }};" aria-hidden="true">{{ style.label }}</span>
+                                        <span class="soa-docs-nom">{{ item.document.nom }}</span>
+                                    </span>
+                                </td>
+                                <td><span class="soa-docs-niveau">{{ item.niveau }}</span></td>
+                                <td style="white-space:nowrap;">{{ item.document.createdAt ? item.document.createdAt|date('d/m/Y') : '—' }}</td>
+                                <td>{{ formatLabel }}</td>
+                                <td style="text-align:right;">
+                                    <a class="soa-docs-dl"
+                                       href="{{ downloadUrlPattern|replace({'%did%': item.document.id}) }}"
+                                       aria-label="Télécharger le document {{ item.document.nom }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+                                        Télécharger
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <p class="soa-docs-empty" data-picker-empty role="status" hidden>Aucun document ne correspond à votre filtre.</p>
+            {% endif %}
+        </div>
+
+        <footer class="soa-docs-foot">
+            <span>{{ items|length }} document(s) — le téléchargement s'ouvre dans votre navigateur.</span>
+            <button type="button" data-picker-close>Fermer</button>
+        </footer>
+    </div>
+</div>
