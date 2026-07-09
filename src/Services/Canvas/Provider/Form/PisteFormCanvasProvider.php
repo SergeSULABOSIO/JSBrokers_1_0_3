@@ -34,6 +34,15 @@ class PisteFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/piste/api/delete",
             "endpoint_form_url" => "/admin/piste/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Picker de documents générique (client + piste + cotations + polices).
+            "attribute_actions" => [
+                [
+                    "label" => "Voir les documents",
+                    "icon"  => "classeur",
+                    "event" => "ui:soa.docs-picker-request",
+                    "url"   => "/admin/soa/api/documents/piste/%id%",
+                ],
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Fiche piste",

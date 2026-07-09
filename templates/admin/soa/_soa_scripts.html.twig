@@ -124,6 +124,20 @@
         (function () {
             var previousFocus = null;
 
+            /* Barre de progression indéterminée en haut de fenêtre (créée à la demande),
+               activée pendant le chargement du picker — même signal que le workspace. */
+            function topProgress(active) {
+                var bar = document.querySelector('.soa-progress-top');
+                if (!bar) {
+                    bar = document.createElement('div');
+                    bar.className = 'soa-progress-top';
+                    bar.setAttribute('role', 'progressbar');
+                    bar.setAttribute('aria-hidden', 'true');
+                    document.body.appendChild(bar);
+                }
+                bar.classList.toggle('is-active', !!active);
+            }
+
             function closePicker() {
                 var overlay = document.querySelector('[data-soa-docs-picker-root]');
                 if (!overlay) return;
@@ -147,13 +161,41 @@
 
                 var search = overlay.querySelector('[data-picker-search]');
                 if (search) {
+                    /* Surligne chaque occurrence du mot-clé dans un élément [data-picker-hl]
+                       (même logique que picker-base._highlightInto : nœuds DOM, zéro innerHTML
+                       de texte utilisateur → aucun risque d'injection). */
+                    var highlightInto = function (el, original, query) {
+                        var q = (query || '').trim();
+                        if (!q) { el.textContent = original; return; }
+                        el.textContent = '';
+                        var lower = original.toLowerCase();
+                        var qlower = q.toLowerCase();
+                        var i = 0;
+                        var idx;
+                        while ((idx = lower.indexOf(qlower, i)) !== -1) {
+                            if (idx > i) el.appendChild(document.createTextNode(original.slice(i, idx)));
+                            var mark = document.createElement('mark');
+                            mark.className = 'jsb-picker-hl';
+                            mark.textContent = original.slice(idx, idx + q.length);
+                            el.appendChild(mark);
+                            i = idx + q.length;
+                        }
+                        if (i < original.length) el.appendChild(document.createTextNode(original.slice(i)));
+                    };
                     var filter = function () {
-                        var q = search.value.trim().toLowerCase();
+                        var raw = search.value.trim();
+                        var q = raw.toLowerCase();
                         var visible = 0;
                         overlay.querySelectorAll('[data-picker-row]').forEach(function (row) {
                             var match = q === '' || (row.dataset.search || '').indexOf(q) !== -1;
                             row.style.display = match ? '' : 'none';
-                            if (match) visible++;
+                            if (match) {
+                                visible++;
+                                row.querySelectorAll('[data-picker-hl]').forEach(function (el) {
+                                    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+                                    highlightInto(el, el.dataset.orig, raw);
+                                });
+                            }
                         });
                         var empty = overlay.querySelector('[data-picker-empty]');
                         if (empty) empty.hidden = visible !== 0;
@@ -172,7 +214,12 @@
                 if (document.querySelector('[data-soa-docs-picker-root]')) return; // déjà ouvert
 
                 previousFocus = btn;
+                // Double feedback immédiat (Nielsen 1) : barre de progression en haut
+                // de fenêtre + spinner local sur le bouton déclencheur.
                 btn.disabled = true;
+                btn.classList.add('is-loading');
+                btn.setAttribute('aria-busy', 'true');
+                topProgress(true);
                 fetch(btn.dataset.soaDocsUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                     .then(function (response) {
                         if (!response.ok) throw new Error('HTTP ' + response.status);
@@ -189,7 +236,12 @@
                     .catch(function () {
                         window.alert("Impossible de charger les documents de la police. Réessayez ou contactez votre courtier.");
                     })
-                    .finally(function () { btn.disabled = false; });
+                    .finally(function () {
+                        btn.disabled = false;
+                        btn.classList.remove('is-loading');
+                        btn.removeAttribute('aria-busy');
+                        topProgress(false);
+                    });
             });
         }());
 

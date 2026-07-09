@@ -139,6 +139,36 @@
         border-radius: 6px; cursor: pointer; white-space: nowrap;
     }
     .soa-docs-btn:hover, .soa-docs-btn:focus { background: #0047AB; color: #fff; }
+    /* Feedback local pendant l'ouverture du picker : l'icône laisse place à un
+       spinner et le bouton se fige (Nielsen 1 — visibilité de l'état du système). */
+    .soa-docs-btn.is-loading { opacity: .7; pointer-events: none; }
+    .soa-docs-btn.is-loading svg { display: none; }
+    .soa-docs-btn.is-loading::before {
+        content: '';
+        width: 12px; height: 12px; flex-shrink: 0;
+        border: 2px solid currentColor; border-top-color: transparent;
+        border-radius: 50%;
+        animation: soaSpin .7s linear infinite;
+    }
+    @keyframes soaSpin { to { transform: rotate(360deg); } }
+    /* Barre de progression indéterminée en haut de fenêtre (même signal que le
+       workspace) : activée pendant le chargement du picker de documents. */
+    .soa-progress-top {
+        position: fixed; top: 0; left: 0; right: 0; height: 3px;
+        z-index: 11000; background: rgba(0, 71, 171, .15);
+        overflow: hidden; display: none;
+    }
+    .soa-progress-top.is-active { display: block; }
+    .soa-progress-top::before {
+        content: '';
+        position: absolute; top: 0; bottom: 0; width: 35%;
+        background: #0047AB;
+        animation: soaProgressSlide 1.1s ease-in-out infinite;
+    }
+    @keyframes soaProgressSlide {
+        0% { transform: translateX(-110%); }
+        100% { transform: translateX(400%); }
+    }
     @media print { .soa-docs-btn { display: none !important; } }
     /* Bandeau de validité du lien (page publique) */
     .soa-lien-validite {

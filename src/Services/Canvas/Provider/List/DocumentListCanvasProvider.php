@@ -32,6 +32,9 @@ class DocumentListCanvasProvider implements ListCanvasProviderInterface
                         "attribut_type" => "date",
                     ],
                     ["attribut_code" => "parent_string"],
+                    // Classeur de rangement (« Classé dans : … » / « Non classé »),
+                    // calculé par DocumentIndicatorStrategy.
+                    ["attribut_code" => "classeur_string", "icone" => "classeur"],
                 ],
             ],
         ];

@@ -34,6 +34,15 @@ class CotationFormCanvasProvider implements FormCanvasProviderInterface
             'endpoint_submit_url' => '/admin/cotation/api/submit',
             'endpoint_delete_url' => '/admin/cotation/api/delete',
             'isCreationMode' => $isCreateMode,
+            // Picker de documents générique (client + piste parente + cotation + polices).
+            "attribute_actions" => [
+                [
+                    "label" => "Voir les documents",
+                    "icon"  => "classeur",
+                    "event" => "ui:soa.docs-picker-request",
+                    "url"   => "/admin/soa/api/documents/cotation/%id%",
+                ],
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Fiche cotation",

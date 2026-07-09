@@ -4,15 +4,23 @@ namespace App\Service\Soa;
 
 use App\Entity\Avenant;
 use App\Entity\Client;
+use App\Entity\Cotation;
 use App\Entity\Document;
+use App\Entity\Piste;
 
 /**
- * Rassemble tous les documents enregistrés sur le serveur concernant une police
- * (avenant), quel que soit le niveau du pipe où ils ont été attachés :
- * Piste → Cotation → Police (avenant) → Client. Chaque entrée est enrichie du
- * niveau d'attache et de la famille de format (pastille pdf/word/excel…).
- * Utilisé par le picker « Documents de la police » des deux SOA (courtier et
- * client public).
+ * Rassemble tous les documents enregistrés sur le serveur concernant un dossier
+ * du pipe commercial (Client, Piste, Cotation ou Avenant/Police), quel que soit
+ * le niveau où ils ont été attachés. Règle de périmètre : les ASCENDANTS directs
+ * (contexte), l'entité elle-même et ses DESCENDANTS :
+ *   - Client   → client + toutes ses pistes + leurs cotations + leurs polices ;
+ *   - Piste    → client + la piste + ses cotations + leurs polices ;
+ *   - Cotation → client + piste parente + la cotation + ses polices ;
+ *   - Avenant  → client + piste + cotation parentes + la police.
+ * Chaque entrée est enrichie du niveau d'attache et de la famille de format
+ * (pastille pdf/word/excel…). Utilisé par le picker « Documents » des deux SOA
+ * (courtier et client public) et par les actions spéciales des rubriques du
+ * workspace (Client, Piste, Cotation, Avenant).
  */
 class SoaPoliceDocumentsCollector
 {
@@ -27,20 +35,80 @@ class SoaPoliceDocumentsCollector
     ];
 
     /**
+     * @param Client|Piste|Cotation|Avenant $entity
      * @return array<int, array{document: Document, niveau: string, extension: string, famille: string}>
      */
-    public function collect(Avenant $avenant): array
+    public function collectFor(object $entity): array
     {
-        $cotation = $avenant->getCotation();
-        $piste    = $cotation?->getPiste();
-        $client   = $piste?->getClient();
+        $client    = null;
+        $pistes    = [];
+        $cotations = [];
+        $avenants  = [];
 
-        $sources = [
-            ['niveau' => 'Piste',    'documents' => $piste?->getDocuments() ?? []],
-            ['niveau' => 'Cotation', 'documents' => $cotation?->getDocuments() ?? []],
-            ['niveau' => 'Police',   'documents' => $avenant->getDocuments()],
-            ['niveau' => 'Client',   'documents' => $client?->getDocuments() ?? []],
-        ];
+        if ($entity instanceof Client) {
+            $client = $entity;
+            foreach ($entity->getPistes() as $piste) {
+                $pistes[] = $piste;
+            }
+            foreach ($pistes as $piste) {
+                foreach ($piste->getCotations() as $cotation) {
+                    $cotations[] = $cotation;
+                }
+            }
+            foreach ($cotations as $cotation) {
+                foreach ($cotation->getAvenants() as $avenant) {
+                    $avenants[] = $avenant;
+                }
+            }
+        } elseif ($entity instanceof Piste) {
+            $client = $entity->getClient();
+            $pistes = [$entity];
+            foreach ($entity->getCotations() as $cotation) {
+                $cotations[] = $cotation;
+            }
+            foreach ($cotations as $cotation) {
+                foreach ($cotation->getAvenants() as $avenant) {
+                    $avenants[] = $avenant;
+                }
+            }
+        } elseif ($entity instanceof Cotation) {
+            $piste  = $entity->getPiste();
+            $client = $piste?->getClient();
+            if ($piste !== null) {
+                $pistes = [$piste];
+            }
+            $cotations = [$entity];
+            foreach ($entity->getAvenants() as $avenant) {
+                $avenants[] = $avenant;
+            }
+        } elseif ($entity instanceof Avenant) {
+            $cotation = $entity->getCotation();
+            $piste    = $cotation?->getPiste();
+            $client   = $piste?->getClient();
+            if ($piste !== null) {
+                $pistes = [$piste];
+            }
+            if ($cotation !== null) {
+                $cotations = [$cotation];
+            }
+            $avenants = [$entity];
+        } else {
+            throw new \InvalidArgumentException(sprintf('Type non supporté par le collecteur de documents : %s', get_debug_type($entity)));
+        }
+
+        $sources = [];
+        foreach ($pistes as $piste) {
+            $sources[] = ['niveau' => 'Piste', 'documents' => $piste->getDocuments()];
+        }
+        foreach ($cotations as $cotation) {
+            $sources[] = ['niveau' => 'Cotation', 'documents' => $cotation->getDocuments()];
+        }
+        foreach ($avenants as $avenant) {
+            $sources[] = ['niveau' => 'Police', 'documents' => $avenant->getDocuments()];
+        }
+        if ($client !== null) {
+            $sources[] = ['niveau' => 'Client', 'documents' => $client->getDocuments()];
+        }
 
         $items = [];
         $vus   = [];
@@ -63,6 +131,14 @@ class SoaPoliceDocumentsCollector
         }
 
         return $items;
+    }
+
+    /**
+     * @return array<int, array{document: Document, niveau: string, extension: string, famille: string}>
+     */
+    public function collect(Avenant $avenant): array
+    {
+        return $this->collectFor($avenant);
     }
 
     /** Le client (assuré) auquel appartient la police — null si le pipe est incomplet. */

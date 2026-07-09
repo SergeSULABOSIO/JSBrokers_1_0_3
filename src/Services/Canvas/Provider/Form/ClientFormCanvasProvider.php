@@ -55,6 +55,13 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                     "event" => "ui:soa.send-request",
                     "url"   => "/admin/soa/client/%id%/envoi-picker",
                 ],
+                // Picker de documents générique (tous les niveaux du dossier du client).
+                [
+                    "label" => "Voir les documents",
+                    "icon"  => "classeur",
+                    "event" => "ui:soa.docs-picker-request",
+                    "url"   => "/admin/soa/api/documents/client/%id%",
+                ],
                 // Révocation du lien public : visible seulement quand un lien actif existe
                 // (attribut calculé hasLienSoa, ClientIndicatorStrategy). Confirmation
                 // générique non-delete côté cerveau, puis DELETE.

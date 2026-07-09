@@ -3,6 +3,7 @@
 namespace App\Tests\Workspace;
 
 use App\Entity\Avenant;
+use App\Entity\Classeur;
 use App\Entity\Client;
 use App\Entity\Contact;
 use App\Entity\Cotation;
@@ -89,6 +90,7 @@ class SoaAccesClientTest extends WebTestCase
             // Ordre des FK : document/envoi/token → tranche → avenant → cotation → piste
             // → risque → contact → client → invite → entreprise → utilisateur.
             $conn->executeStatement("DELETE d FROM document d JOIN entreprise e ON d.entreprise_id = e.id WHERE e.nom = :nom", ['nom' => $nom]);
+            $conn->executeStatement("DELETE cl FROM classeur cl JOIN entreprise e ON cl.entreprise_id = e.id WHERE e.nom = :nom", ['nom' => $nom]);
             $conn->executeStatement("DELETE s FROM soa_envoi s JOIN entreprise e ON s.entreprise_id = e.id WHERE e.nom = :nom", ['nom' => $nom]);
             $conn->executeStatement("DELETE t FROM soa_acces_token t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :nom", ['nom' => $nom]);
             $conn->executeStatement("DELETE tr FROM tranche tr JOIN entreprise e ON tr.entreprise_id = e.id WHERE e.nom = :nom", ['nom' => $nom]);
@@ -270,15 +272,40 @@ class SoaAccesClientTest extends WebTestCase
             'cotation' => ['nom' => 'Tableau de garanties', 'fichier' => 'phpunit-soa-cotation.xlsx', 'attach' => fn (Document $d) => $d->setCotation($cotation)],
             'avenant'  => ['nom' => 'Police signee', 'fichier' => 'phpunit-soa-avenant.pdf', 'attach' => fn (Document $d) => $d->setAvenant($avenant)],
         ];
+        // Classeur de rangement (info secondaire de la liste du picker).
+        $classeur = (new Classeur())->setNom('Classeur Polices 2026')->setDescription('Classeur de test');
+        $classeur->setEntreprise($entreprise);
+        $em->persist($classeur);
+
         $docs = [];
         foreach ($docsSpec as $niveau => $spec) {
             $doc = (new Document())->setNom($spec['nom']);
             $doc->setNomFichierStocke($spec['fichier']);
             $spec['attach']($doc);
             $doc->setEntreprise($entreprise);
+            if ($niveau === 'avenant') {
+                $doc->setClasseur($classeur);
+            }
             $em->persist($doc);
             $docs[$niveau] = $doc;
         }
+
+        // Deuxième piste du même client, SANS cotation, avec son propre document :
+        // discrimine les périmètres du picker générique (client = tout ; piste 1 ≠ piste 2).
+        $piste2 = (new Piste())
+            ->setNom('Piste SOA Docs 2')
+            ->setClient($clientA)
+            ->setRisque($risque)
+            ->setTypeAvenant(Piste::AVENANT_SOUSCRIPTION)
+            ->setDescriptionDuRisque('Seconde piste')
+            ->setExercice(2026);
+        $piste2->setEntreprise($entreprise);
+        $em->persist($piste2);
+        $docPiste2 = (new Document())->setNom('Note de la seconde piste');
+        $docPiste2->setNomFichierStocke('phpunit-soa-piste2.pdf');
+        $docPiste2->setPiste($piste2);
+        $docPiste2->setEntreprise($entreprise);
+        $em->persist($docPiste2);
 
         // Pipe minimal + document pour le client de l'AUTRE entreprise (isolation).
         $risqueB = (new Risque())
@@ -322,13 +349,16 @@ class SoaAccesClientTest extends WebTestCase
         if (!is_dir(self::uploadsDir())) {
             mkdir(self::uploadsDir(), 0777, true);
         }
-        foreach (array_merge(array_column($docsSpec, 'fichier'), ['phpunit-soa-clientB.pdf']) as $fichier) {
+        foreach (array_merge(array_column($docsSpec, 'fichier'), ['phpunit-soa-clientB.pdf', 'phpunit-soa-piste2.pdf']) as $fichier) {
             file_put_contents(self::uploadsDir() . '/' . $fichier, '%PDF-1.4 contenu de test PHPUnit');
         }
 
         $ids = [
             'avenant' => $avenant->getId(),
             'avenantB' => $avenantB->getId(),
+            'piste' => $piste->getId(),
+            'piste2' => $piste2->getId(),
+            'cotation' => $cotation->getId(),
             'docs' => array_map(fn (Document $d) => $d->getId(), $docs),
             'docB' => $docB->getId(),
         ];
@@ -337,6 +367,9 @@ class SoaAccesClientTest extends WebTestCase
         return [
             'avenant' => $em->getRepository(Avenant::class)->find($ids['avenant']),
             'avenantB' => $em->getRepository(Avenant::class)->find($ids['avenantB']),
+            'piste' => $em->getRepository(Piste::class)->find($ids['piste']),
+            'piste2' => $em->getRepository(Piste::class)->find($ids['piste2']),
+            'cotation' => $em->getRepository(Cotation::class)->find($ids['cotation']),
             'docs' => array_map(fn (int $id) => $em->getRepository(Document::class)->find($id), $ids['docs']),
             'docB' => $em->getRepository(Document::class)->find($ids['docB']),
         ];
@@ -714,7 +747,11 @@ class SoaAccesClientTest extends WebTestCase
             $this->assertStringContainsString($nom, $html, sprintf('Le document « %s » doit être listé.', $nom));
         }
         foreach (['Piste', 'Cotation', 'Police', 'Client'] as $niveau) {
-            $this->assertStringContainsString('soa-docs-niveau">' . $niveau . '<', $html, sprintf('Le niveau %s doit être indiqué.', $niveau));
+            $this->assertMatchesRegularExpression(
+                '#soa-docs-niveau"[^>]*>' . $niveau . '<#',
+                $html,
+                sprintf('Le niveau %s doit être indiqué.', $niveau)
+            );
         }
         // Pastilles de format + formats en texte + téléchargement admin.
         foreach (['>PDF<', '>DOC<', '>XLS<'] as $pastille) {
@@ -812,6 +849,106 @@ class SoaAccesClientTest extends WebTestCase
             (string) $this->client->getResponse()->getContent(),
             "L'aperçu courtier doit exposer le bouton Documents (route admin)."
         );
+    }
+
+    // ── Picker de documents générique (action spéciale des rubriques) ────────
+
+    public function testDocumentsPickerGeneriqueParRubrique(): void
+    {
+        $ctx = $this->seedPolice($this->seed());
+        $clientA = $ctx['avenant']->getCotation()->getPiste()->getClient();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        $tousLesDocs = ['Contrat cadre du client', 'Etude de risque initiale', 'Tableau de garanties', 'Police signee', 'Note de la seconde piste'];
+
+        // CLIENT : la totalité du dossier (les 5 documents, toutes pistes confondues).
+        $this->client->request('GET', sprintf('/admin/soa/api/documents/client/%d', $clientA->getId()));
+        $this->assertResponseIsSuccessful();
+        $html = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('Documents du client «', $html, 'Le titre doit être contextualisé Client.');
+        foreach ($tousLesDocs as $nom) {
+            $this->assertStringContainsString($nom, $html, sprintf('Vue client : « %s » attendu.', $nom));
+        }
+        $this->assertStringContainsString('Classeur Polices 2026', $html, 'Le classeur du document doit apparaître en info secondaire.');
+
+        // PISTE 1 : son sous-arbre + le client — SANS le document de la piste 2.
+        $this->client->request('GET', sprintf('/admin/soa/api/documents/piste/%d', $ctx['piste']->getId()));
+        $this->assertResponseIsSuccessful();
+        $html = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('Documents de la piste «', $html);
+        $this->assertStringContainsString('Etude de risque initiale', $html);
+        $this->assertStringContainsString('Contrat cadre du client', $html, 'Le client (ascendant) fait partie du périmètre.');
+        $this->assertStringNotContainsString('Note de la seconde piste', $html, "La piste 2 n'est pas dans le périmètre de la piste 1.");
+
+        // COTATION : piste parente + cotation + polices + client.
+        $this->client->request('GET', sprintf('/admin/soa/api/documents/cotation/%d', $ctx['cotation']->getId()));
+        $this->assertResponseIsSuccessful();
+        $html = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('Documents de la cotation «', $html);
+        foreach (['Etude de risque initiale', 'Tableau de garanties', 'Police signee', 'Contrat cadre du client'] as $nom) {
+            $this->assertStringContainsString($nom, $html, sprintf('Vue cotation : « %s » attendu.', $nom));
+        }
+        $this->assertStringNotContainsString('Note de la seconde piste', $html);
+
+        // AVENANT (route générique) : même périmètre que la route police historique.
+        $this->client->request('GET', sprintf('/admin/soa/api/documents/avenant/%d', $ctx['avenant']->getId()));
+        $this->assertResponseIsSuccessful();
+        $html = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('Documents de la police «', $html);
+        $this->assertStringContainsString('Police signee', $html);
+
+        // Isolation : dossier d'une autre entreprise → 404, type inconnu → route non matchée.
+        $this->client->request('GET', sprintf('/admin/soa/api/documents/avenant/%d', $ctx['avenantB']->getId()));
+        $this->assertResponseStatusCodeSame(404, 'Un dossier hors workspace doit être refusé.');
+        $this->client->request('GET', '/admin/soa/api/documents/groupe/1');
+        $this->assertResponseStatusCodeSame(404, 'Un type hors liste blanche ne matche pas la route.');
+    }
+
+    public function testGetFormExposeActionVoirLesDocuments(): void
+    {
+        $ctx = $this->seedPolice($this->seed());
+        $clientA = $ctx['avenant']->getCotation()->getPiste()->getClient();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        $cas = [
+            'client'   => sprintf('/admin/client/api/get-form/%d', $clientA->getId()),
+            'piste'    => sprintf('/admin/piste/api/get-form/%d', $ctx['piste']->getId()),
+            'cotation' => sprintf('/admin/cotation/api/get-form/%d', $ctx['cotation']->getId()),
+            'avenant'  => sprintf('/admin/avenant/api/get-form/%d', $ctx['avenant']->getId()),
+        ];
+        foreach ($cas as $type => $url) {
+            $this->client->request('GET', $url);
+            $this->assertResponseIsSuccessful(sprintf('Le formulaire %s doit se charger.', $type));
+            $this->assertStringContainsString(
+                sprintf('/admin/soa/api/documents/%s/', $type),
+                (string) $this->client->getResponse()->getContent(),
+                sprintf("La rubrique %s doit exposer l'action « Voir les documents ».", $type)
+            );
+        }
+    }
+
+    // ── Rubrique Documents : classeur en ligne secondaire ────────────────────
+
+    public function testListeDocumentsAfficheLeClasseurEnLigneSecondaire(): void
+    {
+        $ctx = $this->seedPolice($this->seed());
+        $clientA = $ctx['avenant']->getCotation()->getPiste()->getClient();
+        $entreprise = $clientA->getEntreprise();
+        $invite = $this->em()->getRepository(Invite::class)->findOneBy(['entreprise' => $entreprise]);
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        $this->client->request(
+            'GET',
+            sprintf('/espacedetravail/api/load-component/%d/%d', $invite->getId(), $entreprise->getId()),
+            ['component' => '_view_manager_administration.html.twig', 'entity' => 'Document']
+        );
+        $this->assertResponseIsSuccessful('La liste des documents doit se charger.');
+        $html = (string) $this->client->getResponse()->getContent();
+
+        // NB : les apostrophes sont échappées en HTML (&#039;) — assertions en deux temps.
+        $this->assertStringContainsString('Classé dans', $html, 'Le document classé doit afficher son classeur.');
+        $this->assertStringContainsString('Classeur Polices 2026', $html, 'Le nom du classeur doit apparaître en ligne secondaire.');
+        $this->assertStringContainsString('Non classé', $html, 'Les documents sans classeur affichent « Non classé ».');
     }
 
     /** Découpe le HTML autour d'une section du SOA (de son id au </section> suivant). */

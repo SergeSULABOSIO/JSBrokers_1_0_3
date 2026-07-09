@@ -62,6 +62,13 @@ class AvenantFormCanvasProvider implements FormCanvasProviderInterface
                     "url"       => "/admin/avenant/api/delete-piste-derivee",
                     "condition" => ["field" => "hasPisteDerivee", "value" => true],
                 ],
+                // Picker de documents générique (pipe complet de la police).
+                [
+                    "label" => "Voir les documents",
+                    "icon"  => "classeur",
+                    "event" => "ui:soa.docs-picker-request",
+                    "url"   => "/admin/soa/api/documents/avenant/%id%",
+                ],
             ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
