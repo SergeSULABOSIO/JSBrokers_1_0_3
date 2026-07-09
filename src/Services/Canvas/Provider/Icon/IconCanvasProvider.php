@@ -92,6 +92,7 @@ class IconCanvasProvider
         'action:role'         => 'carbon:user-role',
         'action:save'         => 'fa-solid:save',
         'action:search'       => 'hugeicons:search-01',
+        'action:send-email'   => 'hugeicons:mail-send-01',
         'action:settings'     => 'material-symbols:settings',
         'action:transfer'     => 'mdi:swap-horizontal', // transfert vers un autre rattachement
         'action:upload'       => 'hugeicons:upload-01',

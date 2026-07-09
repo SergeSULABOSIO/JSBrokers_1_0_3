@@ -1,0 +1,559 @@
+{# templates/admin/soa/_soa_sections.html.twig
+   Corps du document SOA (sections numérotées), partagé entre l'aperçu courtier
+   et la page publique client.
+
+   Les sections « données de travail du courtier » (pistes, cotations, tâches,
+   ratio S/P, indice de solvabilité) ne se rendent que si leur clé de contexte
+   existe / si vueClient est faux : le SoaContextBuilder ne les calcule pas en
+   vue client, la garde Twig suit donc le contexte.
+   La numérotation est dynamique pour rester continue quelle que soit la vue.
+#}
+{% set renewalLabels = {0: 'Perdu', 1: 'Ponctuel', 2: 'Renouvelé', 3: 'Prolongé', 4: 'En cours', 5: 'En renouvellement', 6: 'Résilié'} %}
+{% set feedbackTypeLabels = {0: 'Réunion', 1: 'Appel', 2: 'Email', 3: 'SMS', 4: 'Autre'} %}
+{% set contactTypeLabels = {0: 'Production', 1: 'Sinistre', 2: 'Administration', 3: 'Autres'} %}
+{% set vueClient = vueClient|default(false) %}
+{% set num = 0 %}
+
+{# ── RÉCAPITULATIF GLOBAL ────────────────────────────────────────── #}
+{% set num = num + 1 %}
+<section aria-labelledby="soa-section-recap">
+    <div class="soa-section-title d-flex align-items-center gap-2"
+         data-soa-tip="Synthèse financière consolidée du client : primes, commissions, taxes et indemnisations avec leurs soldes. Donne la position globale du compte en un coup d'œil.">
+        <twig:UX:Icon name="{{ resolve_icon_name('dashboard') }}" width="16px" height="16px" aria-hidden="true" />
+        <h2 id="soa-section-recap">{{ num }}. Récapitulatif Global</h2>
+    </div>
+    <div class="soa-section-body">
+        <table class="soa-table">
+            <caption class="visually-hidden">Synthèse financière globale du client {{ client.nom }}</caption>
+            <thead>
+                <tr>
+                    <th scope="col">Rubrique</th>
+                    <th scope="col">Dû / Total</th>
+                    <th scope="col">Payé / Versé</th>
+                    <th scope="col">Solde</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set pctComm = client.montant_du|default(0) > 0 ? (client.montant_paye|default(0) / client.montant_du) : null %}
+                {% set primePayeeAff = client.primePayee|default(0) %}
+                {% set primeSoldeAff = client.primeSoldeDue|default(0) %}
+                <tr>
+                    <td><strong>Primes d'assurance</strong></td>
+                    <td>{{ (client.primeTotale|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                    <td>{{ primePayeeAff|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                    <td class="{{ primeSoldeAff > 0 ? 'text-solde-due' : 'text-solde-ok' }}">
+                        {{ primeSoldeAff|number_format(2, ',', ' ') }} {{ monnaie }}
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Indemnisations sinistres</strong></td>
+                    <td>{{ (client.indemnisationDue|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                    <td>{{ (client.indemnisationVersee|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                    <td class="{{ client.indemnisationSolde|default(0) > 0 ? 'text-solde-due' : 'text-solde-ok' }}">
+                        {{ (client.indemnisationSolde|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+    </div>
+</section>
+
+{# ── CONTACTS ────────────────────────────────────────────────────── #}
+{% set num = num + 1 %}
+<section aria-labelledby="soa-section-contacts">
+    <div class="soa-section-title d-flex align-items-center gap-2"
+         data-soa-tip="Personnes de référence chez le client (production, sinistre, administration). Facilite la communication et fluidifie le suivi de la relation.">
+        <twig:UX:Icon name="{{ resolve_icon_name('contact') }}" width="16px" height="16px" aria-hidden="true" />
+        <h2 id="soa-section-contacts">{{ num }}. Contacts</h2>
+    </div>
+    <div class="soa-section-body">
+        {% if client.contacts is empty %}
+            <p class="soa-empty-notice">Aucun contact enregistré.</p>
+        {% else %}
+            <table class="soa-table">
+                <caption class="visually-hidden">Contacts du client {{ client.nom }}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Nom</th>
+                        <th scope="col" class="text-start">Fonction</th>
+                        <th scope="col" class="text-start">Type</th>
+                        <th scope="col">Téléphone</th>
+                        <th scope="col">Email</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for contact in client.contacts %}
+                        <tr>
+                            <td class="text-start">{{ contact.nom }}</td>
+                            <td class="text-start">{{ contact.fonction|default('—') }}</td>
+                            <td class="text-start">{{ contactTypeLabels[contact.type]|default('—') }}</td>
+                            <td>{{ contact.telephone }}</td>
+                            <td>{{ contact.email|default('—') }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+</section>
+
+{# ── PORTEFEUILLE DE POLICES ACTIVES ─────────────────────────────── #}
+{% set num = num + 1 %}
+<section aria-labelledby="soa-section-polices">
+    <div class="soa-section-title d-flex align-items-center gap-2"
+         data-soa-tip="Polices en cours du client : assureur, période de couverture, prime et solde. C'est le cœur du chiffre d'affaires récurrent à protéger.">
+        <twig:UX:Icon name="{{ resolve_icon_name('document') }}" width="16px" height="16px" aria-hidden="true" />
+        <h2 id="soa-section-polices">{{ num }}. Portefeuille de Polices Actives</h2>
+    </div>
+    <div class="soa-section-body">
+        {% if polices is empty %}
+            <p class="soa-empty-notice">Aucune police active.</p>
+        {% else %}
+            <table class="soa-table">
+                <caption class="visually-hidden">Polices d'assurance actives pour {{ client.nom }}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Réf. Police</th>
+                        <th scope="col">Risque couvert</th>
+                        <th scope="col">Assureur</th>
+                        <th scope="col">Période</th>
+                        <th scope="col">Statut</th>
+                        <th scope="col">Prime TTC</th>
+                        <th scope="col">Payée</th>
+                        <th scope="col">Solde</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in polices %}
+                        {% set avenant = item.avenant %}
+                        {% set cotation = item.cotation %}
+                        {% set piste = item.piste %}
+                        <tr>
+                            <td><strong>{{ avenant.referencePolice|default('—') }}</strong></td>
+                            <td>{{ piste.risque ? piste.risque.nomComplet : '—' }}</td>
+                            <td>{{ cotation.assureur ? cotation.assureur.nom : '—' }}</td>
+                            <td style="white-space:nowrap;">
+                                {{ avenant.startingAt ? avenant.startingAt|date('d/m/Y') : '—' }}
+                                →
+                                {{ avenant.endingAt ? avenant.endingAt|date('d/m/Y') : '—' }}
+                            </td>
+                            <td>
+                                <span class="badge"
+                                      style="background-color: {% if avenant.renewalStatus == 4 or avenant.renewalStatus == 5 %}#0047AB{% elseif avenant.renewalStatus == 6 %}#dc3545{% else %}#6c757d{% endif %}; color:#fff; font-size:.72rem;">
+                                    {{ renewalLabels[avenant.renewalStatus]|default('—') }}
+                                </span>
+                            </td>
+                            {% set aPayee = pctComm is not null ? (avenant.primeTotale|default(0) * pctComm) : 0 %}
+                            {% set aSolde = avenant.primeTotale|default(0) - aPayee %}
+                            <td>{{ (avenant.primeTotale|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                            <td>{{ aPayee|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                            <td class="{{ aSolde > 0 ? 'text-solde-due' : 'text-solde-ok' }}">
+                                {{ aSolde|number_format(2, ',', ' ') }} {{ monnaie }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+</section>
+
+{# ── PISTES EN COURS (vue courtier uniquement) ───────────────────── #}
+{% if pistesEnCours is defined %}
+{% set num = num + 1 %}
+<section aria-labelledby="soa-section-pistes">
+    <div class="soa-section-title d-flex align-items-center gap-2"
+         data-soa-tip="Opportunités commerciales en cours de prospection pour ce client. Mesure le potentiel de croissance à court terme du portefeuille.">
+        <twig:UX:Icon name="{{ resolve_icon_name('piste') }}" width="16px" height="16px" aria-hidden="true" />
+        <h2 id="soa-section-pistes">{{ num }}. Pistes en Cours</h2>
+    </div>
+    <div class="soa-section-body">
+        {% if pistesEnCours is empty %}
+            <p class="soa-empty-notice">Aucune piste commerciale en cours.</p>
+        {% else %}
+            <table class="soa-table">
+                <caption class="visually-hidden">Pistes commerciales en cours pour {{ client.nom }}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Piste</th>
+                        <th scope="col">Risque</th>
+                        <th scope="col">Prime potentielle</th>
+                        <th scope="col">Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for piste in pistesEnCours %}
+                        <tr>
+                            <td><strong>{{ piste.nom }}</strong></td>
+                            <td>{{ piste.risque ? piste.risque.nomComplet : '—' }}</td>
+                            <td>{{ piste.primePotentielle is not null ? piste.primePotentielle|number_format(2, ',', ' ') ~ ' ' ~ monnaie : '—' }}</td>
+                            <td class="text-muted">{% set desc = piste.descriptionDuRisque|default('')|striptags|trim %}{{ desc ?: '—' }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+
+{# ── COTATIONS EN COURS (vue courtier uniquement) ────────────────── #}
+{% if cotationsEnCours is defined %}
+{% set num = num + 1 %}
+<section aria-labelledby="soa-section-cotations">
+    <div class="soa-section-title d-flex align-items-center gap-2"
+         data-soa-tip="Devis émis pour lesquels aucune police n'a encore été générée. Affaires en attente de concrétisation, à relancer activement.">
+        <twig:UX:Icon name="{{ resolve_icon_name('cotation') }}" width="16px" height="16px" aria-hidden="true" />
+        <h2 id="soa-section-cotations">{{ num }}. Cotations en Cours</h2>
+    </div>
+    <div class="soa-section-body">
+        {% if cotationsEnCours is empty %}
+            <p class="soa-empty-notice">Aucune cotation en cours sans police générée.</p>
+        {% else %}
+            <table class="soa-table">
+                <caption class="visually-hidden">Cotations en cours pour {{ client.nom }}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Cotation</th>
+                        <th scope="col">Piste parente</th>
+                        <th scope="col">Assureur</th>
+                        <th scope="col">Durée</th>
+                        <th scope="col">Prime TTC</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in cotationsEnCours %}
+                        <tr>
+                            <td><strong>{{ item.cotation.nom }}</strong></td>
+                            <td>{{ item.piste.nom }}</td>
+                            <td>{{ item.cotation.assureur ? item.cotation.assureur.nom : '—' }}</td>
+                            <td>{{ item.cotation.duree|default('—') }}</td>
+                            <td>{{ (item.cotation.primeTotale|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+
+{# ── ÉCHÉANCIER DES PRIMES ───────────────────────────────────────── #}
+{% set num = num + 1 %}
+<section aria-labelledby="soa-section-echeancier">
+    <div class="soa-section-title d-flex align-items-center gap-2"
+         data-soa-tip="Calendrier des tranches de prime à encaisser, avec les retards éventuels. Outil clé du suivi de trésorerie et du recouvrement.">
+        <twig:UX:Icon name="{{ resolve_icon_name('tranche') }}" width="16px" height="16px" aria-hidden="true" />
+        <h2 id="soa-section-echeancier">{{ num }}. Échéancier des Primes</h2>
+    </div>
+    <div class="soa-section-body">
+        {% if tranches is empty %}
+            <p class="soa-empty-notice">Aucune tranche de prime enregistrée.</p>
+        {% else %}
+            <table class="soa-table">
+                <caption class="visually-hidden">Échéancier des tranches de prime pour {{ client.nom }}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Réf. Police</th>
+                        <th scope="col">Tranche</th>
+                        <th scope="col">Échéance</th>
+                        <th scope="col">Prime totale</th>
+                        <th scope="col">Prime payée</th>
+                        <th scope="col">Solde</th>
+                        <th scope="col">Retard</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in tranches %}
+                        {% set tranche = item.tranche %}
+                        {% set cotation = item.cotation %}
+                        {% set piste = item.piste %}
+                        {% set tPct = client.montant_du|default(0) > 0 ? (client.montant_paye|default(0) / client.montant_du) : null %}
+                        {% set tPayee = tPct is not null ? (tranche.primeTranche|default(0) * tPct) : tranche.primePayee|default(0) %}
+                        {% set tSolde = tranche.primeTranche|default(0) - tPayee %}
+                        <tr>
+                            <td>{{ cotation.avenants is not empty ? cotation.avenants.first.referencePolice|default('—') : '—' }}</td>
+                            <td>{{ tranche.nom }}</td>
+                            <td style="white-space:nowrap;">{{ tranche.payableAt ? tranche.payableAt|date('d/m/Y') : '—' }}</td>
+                            <td>{{ (tranche.primeTranche|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                            <td>{{ tPayee|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                            <td class="{{ tSolde > 0 ? 'text-solde-due' : 'text-solde-ok' }}">
+                                {{ tSolde|number_format(2, ',', ' ') }} {{ monnaie }}
+                            </td>
+                            <td>
+                                {% if tranche.retardPaiement and tranche.retardPaiement != 'Non' and tranche.retardPaiement != 'N/A' %}
+                                    <span class="badge-retard">{{ tranche.retardPaiement }}</span>
+                                {% else %}
+                                    <span class="text-solde-ok" style="font-size:.8rem;">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+</section>
+
+{# ── SINISTRES ───────────────────────────────────────────────────── #}
+{% set num = num + 1 %}
+<section aria-labelledby="soa-section-sinistres">
+    <div class="soa-section-title d-flex align-items-center gap-2"
+         data-soa-tip="Sinistres déclarés par le client, leur évaluation et les indemnisations versées. Reflète la sinistralité et l'exposition au risque.">
+        <twig:UX:Icon name="{{ resolve_icon_name('sinistre') }}" width="16px" height="16px" aria-hidden="true" />
+        <h2 id="soa-section-sinistres">{{ num }}. Sinistres</h2>
+    </div>
+    <div class="soa-section-body">
+        {% if sinistres is empty %}
+            <p class="soa-empty-notice">Aucun sinistre enregistré.</p>
+        {% else %}
+            <table class="soa-table">
+                <caption class="visually-hidden">Sinistres de {{ client.nom }}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Réf. Sinistre</th>
+                        <th scope="col" class="soa-circonstance">Circonstance</th>
+                        <th scope="col">Risque</th>
+                        <th scope="col">Date de survenance</th>
+                        <th scope="col">Évaluation</th>
+                        <th scope="col">Indemnisé</th>
+                        <th scope="col">Solde</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sinistre in sinistres %}
+                        <tr>
+                            <td><strong>{{ sinistre.referenceSinistre|default('—') }}</strong></td>
+                            <td class="soa-circonstance" title="{{ sinistre.descriptionDeFait|default('')|striptags }}">
+                                <span class="soa-circonstance-clamp">{{ sinistre.descriptionDeFait ? sinistre.descriptionDeFait|striptags : '—' }}</span>
+                            </td>
+                            <td>{{ sinistre.risque ? sinistre.risque.nomComplet : '—' }}</td>
+                            <td style="white-space:nowrap;">{{ sinistre.occuredAt ? sinistre.occuredAt|date('d/m/Y') : '—' }}</td>
+                            <td>{{ (sinistre.evaluationChiffree|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                            <td>{{ (sinistre.compensationVersee|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                            <td class="{{ sinistre.compensationSoldeAverser|default(0) > 0 ? 'text-solde-due' : 'text-solde-ok' }}">
+                                {{ (sinistre.compensationSoldeAverser|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+</section>
+
+{% if not vueClient %}
+{# ── RATIO S/P (vue courtier uniquement) ─────────────────────────── #}
+{% set spTaux = client.tauxSP|default(0) %}
+{% set spClass = spTaux == 0 ? 'secondary' : (spTaux < 70 ? 'success' : (spTaux <= 80 ? 'warning' : (spTaux <= 100 ? 'warning' : 'danger'))) %}
+{% set spBarWidth = spTaux > 100 ? 100 : spTaux %}
+{% set num = num + 1 %}
+<section aria-labelledby="soa-section-sp">
+    <div class="soa-section-title d-flex align-items-center gap-2"
+         data-soa-tip="Part des primes encaissées absorbée par les sinistres. Indicateur de rentabilité technique : sous 70 % il est excellent, au-delà de 100 % le portefeuille est en perte.">
+        <twig:UX:Icon name="{{ resolve_icon_name('tranche') }}" width="16px" height="16px" aria-hidden="true" />
+        <h2 id="soa-section-sp">{{ num }}. Ratio Sinistres / Primes (S/P)</h2>
+    </div>
+    <div class="soa-section-body">
+        <p style="font-size:.85rem; color:#495057; margin-bottom:1rem;">
+            Le ratio S/P mesure la part des primes encaissées absorbée par les indemnisations de sinistres.
+            En assurance IARD, un ratio inférieur à 70&nbsp;% est considéré comme excellent&nbsp;;
+            au-delà de 100&nbsp;%, le portefeuille est en pertes techniques.
+        </p>
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div style="font-size:2rem; font-weight:700;" class="text-{{ spClass }}">
+                {{ spTaux|number_format(1, ',') }}&nbsp;%
+            </div>
+            <div>
+                <div class="progress" style="width:220px; height:10px; border-radius:6px;">
+                    <div class="progress-bar bg-{{ spClass }}" role="progressbar"
+                         style="width:{{ spBarWidth }}%"
+                         aria-valuenow="{{ spTaux }}" aria-valuemin="0" aria-valuemax="100">
+                    </div>
+                </div>
+                <div style="font-size:.82rem; color:#6c757d; margin-top:.3rem;">
+                    {{ client.tauxSPInterpretation }}
+                </div>
+            </div>
+        </div>
+        <table class="soa-table" style="max-width:480px;">
+            <thead>
+                <tr>
+                    <th scope="col">Rubrique</th>
+                    <th scope="col">Montant</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Sinistres évalués</td>
+                    <td>{{ (client.indemnisationDue|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                </tr>
+                <tr>
+                    <td>Indemnisations versées</td>
+                    <td>{{ (client.indemnisationVersee|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                </tr>
+                <tr>
+                    <td>Solde restant</td>
+                    <td class="{{ client.indemnisationSolde|default(0) > 0 ? 'text-solde-due' : 'text-solde-ok' }}">
+                        {{ (client.indemnisationSolde|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+{# ── INDICE DE SOLVABILITÉ (vue courtier uniquement) ─────────────── #}
+{% set solvIndice = client.indiceSolvabilite|default(0) %}
+{% set solvClass = solvIndice == 0 ? 'secondary' : (solvIndice >= 80 ? 'success' : (solvIndice >= 60 ? 'warning' : 'danger')) %}
+{% set solvBarWidth = solvIndice > 100 ? 100 : solvIndice %}
+{% set num = num + 1 %}
+<section aria-labelledby="soa-section-solvabilite">
+    <div class="soa-section-title d-flex align-items-center gap-2"
+         data-soa-tip="Part des primes émises effectivement réglée par le client. Mesure sa fiabilité de paiement : sous 60 %, le risque d'impayés impose un suivi de recouvrement.">
+        <twig:UX:Icon name="{{ resolve_icon_name('paiement') }}" width="16px" height="16px" aria-hidden="true" />
+        <h2 id="soa-section-solvabilite">{{ num }}. Indice de Solvabilité</h2>
+    </div>
+    <div class="soa-section-body">
+        <p style="font-size:.85rem; color:#495057; margin-bottom:1rem;">
+            L'indice de solvabilité mesure la part des primes émises effectivement réglée par le client.
+            Un indice supérieur ou égal à 80&nbsp;% traduit un client fiable dans ses paiements&nbsp;;
+            en dessous de 60&nbsp;%, le risque d'impayés est élevé et un suivi de recouvrement s'impose.
+        </p>
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div style="font-size:2rem; font-weight:700;" class="text-{{ solvClass }}">
+                {{ solvIndice|number_format(1, ',') }}&nbsp;%
+            </div>
+            <div>
+                <div class="progress" style="width:220px; height:10px; border-radius:6px;">
+                    <div class="progress-bar bg-{{ solvClass }}" role="progressbar"
+                         style="width:{{ solvBarWidth }}%"
+                         aria-valuenow="{{ solvIndice }}" aria-valuemin="0" aria-valuemax="100">
+                    </div>
+                </div>
+                <div style="font-size:.82rem; color:#6c757d; margin-top:.3rem;">
+                    {{ client.indiceSolvabiliteInterpretation }}
+                </div>
+            </div>
+        </div>
+        <table class="soa-table" style="max-width:480px;">
+            <thead>
+                <tr>
+                    <th scope="col">Rubrique</th>
+                    <th scope="col">Montant</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Primes émises (TTC)</td>
+                    <td>{{ (client.primeTotale|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                </tr>
+                <tr>
+                    <td>Primes réglées</td>
+                    <td>{{ (client.primePayee|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>
+                </tr>
+                <tr>
+                    <td>Solde restant dû</td>
+                    <td class="{{ client.primeSoldeDue|default(0) > 0 ? 'text-solde-due' : 'text-solde-ok' }}">
+                        {{ (client.primeSoldeDue|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{# ── TÂCHES (vue courtier uniquement) ────────────────────────────── #}
+{% if taches is defined %}
+{% set num = num + 1 %}
+<section aria-labelledby="soa-section-taches">
+    <div class="soa-section-title d-flex align-items-center gap-2"
+         data-soa-tip="Actions de suivi liées au client, actives et clôturées, avec leur dernier feedback. Pilote la relation commerciale et les relances.">
+        <twig:UX:Icon name="{{ resolve_icon_name('tache') }}" width="16px" height="16px" aria-hidden="true" />
+        <h2 id="soa-section-taches">{{ num }}. Tâches</h2>
+    </div>
+    <div class="soa-section-body">
+        {% set tachesActives = taches|filter(t => not t.closed) %}
+        {% set tachesCloses  = taches|filter(t => t.closed) %}
+
+        <h3 class="h6 mb-2" style="color:#0047AB;">
+            Tâches actives
+            <span class="badge" style="background-color:#0047AB; color:#fff; font-size:.72rem; margin-left:.3rem;">{{ tachesActives|length }}</span>
+        </h3>
+        {% if tachesActives is empty %}
+            <p class="soa-empty-notice">Aucune tâche active.</p>
+        {% else %}
+            <table class="soa-table mb-3">
+                <caption class="visually-hidden">Tâches actives pour {{ client.nom }}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Tâche</th>
+                        <th scope="col">Contexte</th>
+                        <th scope="col">Échéance</th>
+                        <th scope="col">Dernier feedback</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tache in tachesActives %}
+                        {% set dernierFeedback = tache.feedbacks|last %}
+                        <tr class="tache-active-row">
+                            <td><strong>{{ tache.description|striptags|trim }}</strong></td>
+                            <td class="text-muted" style="font-size:.8rem;">{{ tache.contexteTache|default('')|striptags|trim ?: '—' }}</td>
+                            <td style="white-space:nowrap;">{{ tache.toBeEndedAt ? tache.toBeEndedAt|date('d/m/Y') : '—' }}</td>
+                            <td style="font-size:.8rem;">
+                                {% if dernierFeedback %}
+                                    <span class="badge" style="background-color:#495057; color:#fff; font-size:.72rem;">{{ feedbackTypeLabels[dernierFeedback.type]|default('?') }}</span>
+                                    {{ dernierFeedback.description|default('')|striptags|trim }}
+                                    {% if dernierFeedback.nextActionAt %}
+                                        <br><small class="text-muted">Proch. action : {{ dernierFeedback.nextActionAt|date('d/m/Y') }}</small>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+
+        <h3 class="h6 mb-2 mt-3" style="color:#198754;">
+            Tâches clôturées
+            <span class="badge" style="background-color:#198754; color:#fff; font-size:.72rem; margin-left:.3rem;">{{ tachesCloses|length }}</span>
+        </h3>
+        {% if tachesCloses is empty %}
+            <p class="soa-empty-notice">Aucune tâche clôturée.</p>
+        {% else %}
+            <table class="soa-table">
+                <caption class="visually-hidden">Tâches clôturées pour {{ client.nom }}</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Tâche</th>
+                        <th scope="col">Contexte</th>
+                        <th scope="col">Dernier feedback</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tache in tachesCloses %}
+                        {% set dernierFeedback = tache.feedbacks|last %}
+                        <tr class="tache-closed-row">
+                            <td><s>{{ tache.description|striptags|trim }}</s></td>
+                            <td class="text-muted" style="font-size:.8rem;">{{ tache.contexteTache|default('')|striptags|trim ?: '—' }}</td>
+                            <td style="font-size:.8rem;">
+                                {% if dernierFeedback %}
+                                    <span class="badge" style="background-color:#495057; color:#fff; font-size:.72rem;">{{ feedbackTypeLabels[dernierFeedback.type]|default('?') }}</span>
+                                    {{ dernierFeedback.description|default('')|striptags|trim }}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+</section>
+{% endif %}

@@ -3,19 +3,20 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Client;
-use App\Entity\Avenant;
-use App\Entity\Entreprise;
+use App\Entity\Invite;
+use App\Entity\SoaAccesToken;
 use App\Services\CanvasBuilder;
-use App\Services\ServiceMonnaies;
+use App\Service\Soa\SoaClientNotifier;
+use App\Service\Soa\SoaContextBuilder;
 use App\Repository\EntrepriseRepository;
 use App\Repository\InviteRepository;
-use App\Repository\RisqueRepository;
+use App\Repository\SoaAccesTokenRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/admin/soa', name: 'admin.soa.')]
@@ -23,6 +24,9 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 class SoaController extends AbstractController
 {
     use ControllerUtilsTrait;
+
+    /** Libellés des types de contact (Contact::TYPE_CONTACT_*), pour le choix du destinataire. */
+    private const CONTACT_TYPE_LABELS = [0 => 'Production', 1 => 'Sinistre', 2 => 'Administration', 3 => 'Autres'];
 
     protected function getCollectionMap(): array
     {
@@ -38,8 +42,9 @@ class SoaController extends AbstractController
         private EntityManagerInterface $em,
         private EntrepriseRepository $entrepriseRepository,
         private InviteRepository $inviteRepository,
-        private ServiceMonnaies $serviceMonnaies,
-        private RisqueRepository $risqueRepository,
+        private SoaContextBuilder $soaContextBuilder,
+        private SoaAccesTokenRepository $soaAccesTokenRepository,
+        private SoaClientNotifier $soaClientNotifier,
         CanvasBuilder $canvasBuilder,
     ) {
         $this->canvasBuilder = $canvasBuilder;
@@ -66,183 +71,147 @@ class SoaController extends AbstractController
         return $this->render('admin/soa/soa_client_standalone.html.twig', $context);
     }
 
-    private function buildSoaContext(Client $client): array
+    /**
+     * Boîte de choix du destinataire pour l'envoi du SOA par e-mail (action « Envoyer
+     * le SOA par e-mail » de la rubrique Clients). Liste l'e-mail du client et ceux de
+     * ses contacts ; l'envoi effectif passe par la route `api.client_envoyer`.
+     */
+    #[Route('/client/{id}/envoi-picker', name: 'client_envoi_picker', methods: ['GET'])]
+    public function envoiPicker(Client $client): Response
     {
-        $entreprise = $this->getEntreprise();
-
-        $this->canvasBuilder->loadAllCalculatedValues($client);
-
-        foreach ($client->getPartenaires() as $partenaire) {
-            $this->canvasBuilder->loadAllCalculatedValues($partenaire);
+        if (!$this->mayAccessEntity(Client::class, Invite::ACCESS_LECTURE)) {
+            throw $this->createAccessDeniedException("L'envoi du relevé de compte est hors de votre périmètre d'accès.");
         }
+        $this->assertClientDansEspace($client);
 
-        $polices          = [];
-        $pistesEnCours    = [];
-        $cotationsEnCours = [];
-        $tranches         = [];
-        $taches           = [];
-        $tacheIds         = [];
-
-        foreach ($client->getPistes() as $piste) {
-            $pisteHasAvenant = false;
-            foreach ($piste->getCotations() as $c) {
-                if (!$c->getAvenants()->isEmpty()) { $pisteHasAvenant = true; break; }
-            }
-            if (!$piste->isClosed() && $piste->getAvenantDeBase() === null && !$pisteHasAvenant) {
-                $pistesEnCours[] = $piste;
-            }
-
-            foreach ($piste->getCotations() as $cotation) {
-                $avenants = $cotation->getAvenants();
-
-                if ($avenants->isEmpty() && !$piste->isClosed()) {
-                    $this->canvasBuilder->loadAllCalculatedValues($cotation);
-                    $cotationsEnCours[] = ['cotation' => $cotation, 'piste' => $piste];
-                } else {
-                    foreach ($avenants as $avenant) {
-                        $this->canvasBuilder->loadAllCalculatedValues($avenant);
-                        $polices[] = ['avenant' => $avenant, 'cotation' => $cotation, 'piste' => $piste];
-                    }
-                    foreach ($cotation->getTranches() as $tranche) {
-                        $this->canvasBuilder->loadAllCalculatedValues($tranche);
-                        $tranches[] = ['tranche' => $tranche, 'cotation' => $cotation, 'piste' => $piste];
-                    }
-                }
-
-                foreach ($cotation->getTaches() as $tache) {
-                    if (!in_array($tache->getId(), $tacheIds, true)) {
-                        $taches[]   = $tache;
-                        $tacheIds[] = $tache->getId();
-                    }
-                }
-            }
-
-            foreach ($piste->getTaches() as $tache) {
-                if (!in_array($tache->getId(), $tacheIds, true)) {
-                    $taches[]   = $tache;
-                    $tacheIds[] = $tache->getId();
-                }
-            }
-        }
-
-        $sinistres = [];
-        foreach ($client->getNotificationSinistres() as $sinistre) {
-            $this->canvasBuilder->loadAllCalculatedValues($sinistre);
-            $sinistres[] = $sinistre;
-
-            foreach ($sinistre->getTaches() as $tache) {
-                if (!in_array($tache->getId(), $tacheIds, true)) {
-                    $taches[]   = $tache;
-                    $tacheIds[] = $tache->getId();
-                }
-            }
-        }
-
-        foreach ($taches as $tache) {
-            $this->canvasBuilder->loadAllCalculatedValues($tache);
-        }
-
-        usort($tranches, static function (array $a, array $b): int {
-            $dateA = $a['tranche']->getPayableAt();
-            $dateB = $b['tranche']->getPayableAt();
-            if ($dateA === null && $dateB === null) return 0;
-            if ($dateA === null) return 1;
-            if ($dateB === null) return -1;
-            return $dateA <=> $dateB;
-        });
-
-        return [
-            'client'           => $client,
-            'entreprise'       => $entreprise,
-            'idEntreprise'     => $entreprise?->getId(),
-            'idInvite'         => $this->getInvite()->getId(),
-            'monnaie'          => $this->serviceMonnaies->getCodeMonnaieAffichage(),
-            'soaRef'           => 'SOA-' . $client->getId() . '-' . date('Y'),
-            'soaDate'          => new \DateTimeImmutable(),
-            'apercuUrl'        => $this->generateUrl('admin.soa.client_apercu', ['id' => $client->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
-            'polices'          => $polices,
-            'pistesEnCours'    => $pistesEnCours,
-            'cotationsEnCours' => $cotationsEnCours,
-            'tranches'         => $tranches,
-            'sinistres'        => $sinistres,
-            'taches'           => $taches,
-            'crossSelling'     => $this->buildCrossSellingOpportunites($client, $entreprise),
-        ];
+        return $this->render('components/soa/_envoi_picker.html.twig', [
+            'client'        => $client,
+            'destinataires' => $this->collecterDestinataires($client),
+            'validiteJours' => SoaAccesToken::VALIDITE_JOURS,
+        ]);
     }
 
     /**
-     * Détermine les opportunités de cross-selling avec le client :
-     * - 'nouveaux'   : risques du catalogue de l'entreprise jamais abordés avec le client (aucune piste) ;
-     * - 'aRelancer'  : risques abordés par le passé mais sans suite (pistes fermées, polices perdues ou résiliées).
-     * Les risques avec une piste ouverte ou une police valide sont exclus (déjà couverts ou en négociation).
+     * Envoie au destinataire choisi le lien public du SOA. Le jeton actif du client est
+     * PROLONGÉ (expiresAt = maintenant + 30 j) pour que les destinataires successifs
+     * partagent le même lien ; à défaut un jeton est créé. Le jeton est persisté AVANT
+     * l'envoi : un échec SMTP ne l'annule pas (un renvoi réutilisera le même lien).
      */
-    private function buildCrossSellingOpportunites(Client $client, ?Entreprise $entreprise): array
+    #[Route('/api/client/{id}/envoyer', name: 'api.client_envoyer', methods: ['POST'])]
+    public function envoyer(Client $client, Request $request): JsonResponse
     {
-        if ($entreprise === null) {
-            return ['nouveaux' => [], 'aRelancer' => []];
+        if (!$this->mayAccessEntity(Client::class, Invite::ACCESS_LECTURE)) {
+            return $this->accessDeniedJson();
+        }
+        $entreprise = $this->getEntreprise();
+        if ($entreprise === null || $client->getEntreprise()?->getId() !== $entreprise->getId()) {
+            return $this->json(['success' => false, 'message' => "Client introuvable dans cet espace de travail."], Response::HTTP_NOT_FOUND);
         }
 
-        // Catalogue strictement issu de la BD, restreint à l'entreprise courante.
-        $catalogue = $this->risqueRepository->findCatalogueForEntreprise($entreprise);
-        if ($catalogue === []) {
-            return ['nouveaux' => [], 'aRelancer' => []];
+        $payload = json_decode($request->getContent(), true) ?: [];
+        $email   = mb_strtolower(trim((string) ($payload['email'] ?? '')));
+        $message = isset($payload['message']) ? (string) $payload['message'] : null;
+
+        // L'adresse doit appartenir STRICTEMENT à l'ensemble proposé (client + contacts) :
+        // l'endpoint ne doit pas pouvoir servir de relais d'e-mail vers une adresse arbitraire.
+        $destinataire = null;
+        foreach ($this->collecterDestinataires($client) as $candidat) {
+            if (mb_strtolower($candidat['email']) === $email) {
+                $destinataire = $candidat;
+                break;
+            }
+        }
+        if ($destinataire === null) {
+            return $this->json(['success' => false, 'message' => "Ce destinataire ne fait pas partie des adresses connues du client."], Response::HTTP_BAD_REQUEST);
         }
 
-        // Ensemble des IDs du catalogue : garde-fou d'isolation par entreprise.
-        $catalogueIds = [];
-        foreach ($catalogue as $risqueCatalogue) {
-            $catalogueIds[$risqueCatalogue->getId()] = true;
+        $token = $this->soaAccesTokenRepository->findActifPourClient($client, $entreprise);
+        if ($token === null) {
+            $token = (new SoaAccesToken())
+                ->setToken(bin2hex(random_bytes(32)))
+                ->setClient($client);
+            $token->setEntreprise($entreprise);
+            $token->setInvite($this->getInvite());
+            $this->em->persist($token);
+        }
+        $token->setExpiresAt(new \DateTimeImmutable('+' . SoaAccesToken::VALIDITE_JOURS . ' days'));
+        $this->em->flush();
+
+        $envoye = $this->soaClientNotifier->envoyerLien(
+            $token,
+            $destinataire['email'],
+            $destinataire['nom'],
+            $message,
+        );
+
+        if (!$envoye) {
+            return $this->json([
+                'success' => false,
+                'message' => "L'e-mail n'a pas pu être envoyé. Le lien d'accès reste valable : réessayez dans quelques instants.",
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
-        // Statut par risque : 'actif' (couvert ou en négociation) > 'policePerdue' > 'pisteFermee'
-        $statuts = [];
-        $dernierePisteFermee = []; // risqueId => Piste fermée la plus récente (pour "Editer la piste")
-        foreach ($client->getPistes() as $piste) {
-            $risque = $piste->getRisque();
-            // On ne calcule un statut que pour les risques réellement persistés sous l'entreprise courante.
-            if ($risque === null || !isset($catalogueIds[$risque->getId()])) {
+        return $this->json([
+            'success' => true,
+            'message' => sprintf(
+                'Relevé de compte envoyé à %s (%s). Lien valable jusqu\'au %s.',
+                $destinataire['nom'],
+                $destinataire['email'],
+                $token->getExpiresAt()->format('d/m/Y'),
+            ),
+        ]);
+    }
+
+    private function buildSoaContext(Client $client): array
+    {
+        $this->assertClientDansEspace($client);
+
+        return $this->soaContextBuilder->build($client, $this->getEntreprise(), $this->getInvite());
+    }
+
+    /** Scoping : le client doit appartenir à l'espace de travail courant (404 sinon). */
+    private function assertClientDansEspace(Client $client): void
+    {
+        $entreprise = $this->getEntreprise();
+        if ($entreprise === null || $client->getEntreprise()?->getId() !== $entreprise->getId()) {
+            throw $this->createNotFoundException("Client introuvable dans cet espace de travail.");
+        }
+    }
+
+    /**
+     * Adresses e-mail exploitables pour l'envoi du SOA : celle du client puis celles de
+     * ses contacts, dédoublonnées (insensible à la casse).
+     * @return array<int, array{email: string, nom: string, detail: string}>
+     */
+    private function collecterDestinataires(Client $client): array
+    {
+        $destinataires = [];
+        $vus           = [];
+
+        $emailClient = trim((string) $client->getEmail());
+        if ($emailClient !== '') {
+            $destinataires[] = ['email' => $emailClient, 'nom' => (string) $client->getNom(), 'detail' => 'Client'];
+            $vus[mb_strtolower($emailClient)] = true;
+        }
+
+        foreach ($client->getContacts() as $contact) {
+            $email = trim((string) $contact->getEmail());
+            if ($email === '' || isset($vus[mb_strtolower($email)])) {
                 continue;
             }
-            $risqueId = $risque->getId();
+            $vus[mb_strtolower($email)] = true;
 
-            $aUnAvenant      = false;
-            $aPoliceValide   = false;
-            foreach ($piste->getCotations() as $cotation) {
-                foreach ($cotation->getAvenants() as $avenant) {
-                    $aUnAvenant = true;
-                    if (!in_array($avenant->getRenewalStatus(), [Avenant::RENEWAL_STATUS_LOST, Avenant::RENEWAL_STATUS_CANCELLED], true)) {
-                        $aPoliceValide = true;
-                        break 2;
-                    }
-                }
-            }
-
-            if (!$piste->isClosed() || $aPoliceValide) {
-                $statuts[$risqueId] = 'actif';
-            } elseif (($statuts[$risqueId] ?? null) !== 'actif') {
-                $statuts[$risqueId] = $aUnAvenant ? 'policePerdue' : 'pisteFermee';
-                $existante = $dernierePisteFermee[$risqueId] ?? null;
-                if ($existante === null || $piste->getId() > $existante->getId()) {
-                    $dernierePisteFermee[$risqueId] = $piste;
-                }
-            }
+            $details = array_filter([
+                $contact->getFonction(),
+                self::CONTACT_TYPE_LABELS[$contact->getType()] ?? null,
+            ]);
+            $destinataires[] = [
+                'email'  => $email,
+                'nom'    => (string) $contact->getNom(),
+                'detail' => $details !== [] ? implode(' — ', $details) : 'Contact',
+            ];
         }
 
-        $nouveaux  = [];
-        $aRelancer = [];
-        foreach ($catalogue as $risque) {
-            $statut = $statuts[$risque->getId()] ?? null;
-            if ($statut === null) {
-                $nouveaux[] = $risque;
-            } elseif ($statut !== 'actif') {
-                $aRelancer[] = [
-                    'risque' => $risque,
-                    'motif'  => $statut === 'policePerdue' ? 'Police perdue ou résiliée' : 'Piste(s) fermée(s) sans souscription',
-                    'piste'  => $dernierePisteFermee[$risque->getId()] ?? null,
-                ];
-            }
-        }
-
-        return ['nouveaux' => $nouveaux, 'aRelancer' => $aRelancer];
+        return $destinataires;
     }
 }

@@ -47,6 +47,12 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                     "event" => "ui:soa.copy-link-request",
                     "url"   => "/admin/soa/client/%id%/apercu",
                 ],
+                [
+                    "label" => "Envoyer le SOA par e-mail",
+                    "icon"  => "action:send-email",
+                    "event" => "ui:soa.send-request",
+                    "url"   => "/admin/soa/client/%id%/envoi-picker",
+                ],
                 // Actions « portefeuille » conditionnelles (pattern Invité→Portefeuille) :
                 // condition évaluée côté front contre l'attribut calculé hasPortefeuille
                 // (ClientIndicatorStrategy). Affecter et Transférer ouvrent le même picker
