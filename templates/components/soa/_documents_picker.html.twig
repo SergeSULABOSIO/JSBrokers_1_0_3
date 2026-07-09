@@ -45,16 +45,29 @@
             gap: .75rem; padding: .9rem 1.25rem; border-bottom: 3px solid #0047AB;
         }
         .soa-docs-header h5 { margin: 0; font-size: 1rem; font-weight: 700; color: #0d2440; }
+        .soa-docs-header-title { display: flex; align-items: center; gap: .6rem; min-width: 0; }
+        .soa-docs-header-icon { flex-shrink: 0; display: inline-flex; color: #0047AB; }
         .soa-docs-close {
             border: 0; background: transparent; font-size: 1.4rem; line-height: 1;
             color: #5a6268; cursor: pointer; padding: .25rem .5rem; border-radius: 6px;
             min-width: 44px; min-height: 40px;
         }
         .soa-docs-close:hover, .soa-docs-close:focus { background: #eef2f7; color: #0d2440; }
+        /* Bloc d'introduction : pastille + titre + description (pattern des pickers
+           clients/portefeuilles — jsb-picker-intro d'app.css, repris ici car les
+           pages standalone/publiques ne chargent pas app.css). */
         .soa-docs-intro {
-            padding: .7rem 1.25rem; background: #f6f8fb; border-bottom: 1px solid #e3e8ef;
-            font-size: .82rem; color: #495057;
+            display: flex; align-items: flex-start; gap: .9rem;
+            padding: .85rem 1.25rem 1rem; border-bottom: 1px solid #f0f0f0;
         }
+        .soa-docs-intro-icon {
+            flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+            width: 46px; height: 46px; border-radius: 11px;
+            background-color: #e8f0fb; color: #0047AB;
+        }
+        .soa-docs-intro-text { min-width: 0; }
+        .soa-docs-intro-title { margin: 0 0 .15rem; font-size: 1.02rem; font-weight: 700; color: #212529; }
+        .soa-docs-intro-desc { margin: 0; font-size: .84rem; line-height: 1.45; color: #6c757d; max-width: 78ch; }
         .soa-docs-search { padding: .7rem 1.25rem 0; }
         .soa-docs-search input {
             width: 100%; border: 1px solid #ced4da; border-radius: 8px;
@@ -114,18 +127,31 @@
          tabindex="-1">
 
         <div class="soa-docs-header">
-            <h5 id="soa-docs-title">
-                Documents de la police «&nbsp;{{ avenant.referencePolice|default('—') }}&nbsp;»
-            </h5>
+            <span class="soa-docs-header-title">
+                <span class="soa-docs-header-icon" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('document') }}" style="width:22px;height:22px;" />
+                </span>
+                <h5 id="soa-docs-title">
+                    Documents de la police «&nbsp;{{ avenant.referencePolice|default('—') }}&nbsp;»
+                </h5>
+            </span>
             <button type="button" class="soa-docs-close" data-picker-close aria-label="Fermer la liste des documents">&times;</button>
         </div>
 
-        <p id="soa-docs-desc" class="soa-docs-intro mb-0">
-            Tous les documents enregistrés concernant cette police de
-            «&nbsp;<strong>{{ client.nom }}</strong>&nbsp;», quel que soit le niveau du dossier
-            où ils ont été attachés (piste, cotation, police, client).
-            Cliquez sur «&nbsp;Télécharger&nbsp;» pour récupérer un fichier.
-        </p>
+        <div class="soa-docs-intro">
+            <span class="soa-docs-intro-icon" aria-hidden="true">
+                <twig:UX:Icon name="{{ resolve_icon_name('classeur') }}" style="width:26px;height:26px;" />
+            </span>
+            <div class="soa-docs-intro-text">
+                <p class="soa-docs-intro-title">Dossier documentaire de la police</p>
+                <p id="soa-docs-desc" class="soa-docs-intro-desc">
+                    Tous les documents enregistrés concernant cette police de
+                    «&nbsp;<strong>{{ client.nom }}</strong>&nbsp;», quel que soit le niveau du dossier
+                    où ils ont été attachés (piste, cotation, police, client).
+                    Cliquez sur «&nbsp;Télécharger&nbsp;» pour récupérer un fichier.
+                </p>
+            </div>
+        </div>
 
         {% if items is not empty %}
             <div class="soa-docs-search">
