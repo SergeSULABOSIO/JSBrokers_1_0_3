@@ -1,0 +1,116 @@
+{#
+    Boîte de dialogue d'ENVOI DU SOA PAR E-MAIL au client (action « Envoyer le SOA
+    par e-mail » de la rubrique Clients). Miroir visuel des pickers jsb-picker-*
+    (_portefeuille_picker.html.twig), selon /ergonomie-web (role=dialog, aria-modal,
+    fieldset/legend, libellés explicites, cibles ≥44px, Échap, restitution du focus,
+    prévention des erreurs : état vide explicite quand aucune adresse n'existe)
+    et /charte-couleurs. Piloté par le contrôleur Stimulus « soa-envoi-picker »
+    (auto-connecté à l'insertion dans le DOM par le cerveau).
+#}
+<div class="jsb-picker-overlay"
+     data-controller="soa-envoi-picker"
+     data-soa-envoi-picker-send-url-value="/admin/soa/api/client/{{ client.id }}/envoyer"
+     data-picker-overlay>
+    <div class="jsb-picker-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="jsb-soa-picker-title"
+         aria-describedby="jsb-soa-picker-desc"
+         tabindex="-1">
+
+        <div class="modal-header jsb-picker-header">
+            <div class="d-flex align-items-center">
+                <span class="me-2 d-inline-flex" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:send-email') }}" style="width:22px;height:22px;color:#0047AB;" />
+                </span>
+                <h5 id="jsb-soa-picker-title" class="modal-title mb-0">
+                    Envoyer le relevé de compte de «&nbsp;{{ client.nom }}&nbsp;»
+                </h5>
+            </div>
+            <button type="button" class="btn-close" data-picker-close aria-label="Fermer la fenêtre d'envoi"></button>
+        </div>
+
+        {# Barre de progression : animée pendant l'envoi (feedback visuel — Nielsen 1). #}
+        <div class="jsb-picker-progress" data-picker-progress role="progressbar" aria-hidden="true">
+            <div class="jsb-picker-progress-bar"></div>
+        </div>
+
+        <div class="jsb-picker-intro">
+            <span class="jsb-picker-intro-icon" aria-hidden="true">
+                <twig:UX:Icon name="{{ resolve_icon_name('client') }}" style="width:26px;height:26px;" />
+            </span>
+            <div class="jsb-picker-intro-text">
+                <p class="jsb-picker-intro-title">Accès en ligne au relevé de compte (SOA)</p>
+                <p id="jsb-soa-picker-desc" class="jsb-picker-intro-desc">
+                    Le destinataire recevra un e-mail avec un lien d'accès personnel au relevé de
+                    «&nbsp;<strong>{{ client.nom }}</strong>&nbsp;» (vue client&nbsp;: polices, échéancier, sinistres —
+                    sans vos données de travail). Le lien est <strong>valable {{ validiteJours }} jours</strong>&nbsp;;
+                    chaque nouvel envoi le prolonge d'autant.
+                </p>
+            </div>
+        </div>
+
+        {# Zone d'erreur API (rendue visible par le JS) — Nielsen 9. #}
+        <p class="jsb-picker-empty text-danger" data-picker-error role="alert" hidden></p>
+
+        <div class="jsb-picker-listwrap" style="padding: .25rem 1.25rem 1rem;">
+            {% if destinataires is empty %}
+                {# Prévention des erreurs (Nielsen 5) : pas d'adresse → on explique quoi faire. #}
+                <p class="jsb-picker-empty" role="status">
+                    Aucune adresse e-mail n'est enregistrée pour ce client ni pour ses contacts.
+                    Renseignez d'abord un e-mail sur la fiche du client (ou ajoutez-lui un contact
+                    avec e-mail), puis relancez l'envoi.
+                </p>
+            {% else %}
+                <fieldset class="border-0 p-0 m-0">
+                    <legend class="fs-6 fw-semibold mb-2" style="color:#0d2440;">Destinataire</legend>
+                    {% for d in destinataires %}
+                        <div class="form-check mb-2">
+                            <input class="form-check-input"
+                                   type="radio"
+                                   name="soa-destinataire"
+                                   id="soa-dest-{{ loop.index }}"
+                                   value="{{ d.email|e('html_attr') }}"
+                                   data-destinataire-nom="{{ d.nom|e('html_attr') }}"
+                                   {{ loop.first ? 'checked' : '' }}>
+                            <label class="form-check-label" for="soa-dest-{{ loop.index }}" style="min-height:44px; display:flex; flex-direction:column; justify-content:center;">
+                                <span class="fw-semibold">{{ d.nom }} <span class="text-muted fw-normal">({{ d.detail }})</span></span>
+                                <span class="text-muted small">{{ d.email }}</span>
+                            </label>
+                        </div>
+                    {% endfor %}
+                </fieldset>
+
+                <div class="mt-3">
+                    <label for="soa-envoi-message" class="form-label fw-semibold" style="color:#0d2440;">
+                        Message d'accompagnement <span class="text-muted fw-normal">(facultatif)</span>
+                    </label>
+                    <textarea id="soa-envoi-message"
+                              class="form-control"
+                              rows="3"
+                              maxlength="1000"
+                              placeholder="Un mot personnel qui apparaîtra dans l'e-mail…"
+                              data-picker-message></textarea>
+                </div>
+            {% endif %}
+        </div>
+
+        <footer class="jsb-picker-foot">
+            <span class="jsb-picker-hint text-muted small">
+                L'e-mail part au nom de JS Brokers, avec vos coordonnées de courtier en pied.
+            </span>
+            <span class="d-inline-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-picker-close>
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:close') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                    Annuler
+                </button>
+                {% if destinataires is not empty %}
+                    <button type="button" class="btn btn-primary jsb-picker-btn" data-picker-send>
+                        <twig:UX:Icon name="{{ resolve_icon_name('action:send-email') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                        Envoyer le relevé
+                    </button>
+                {% endif %}
+            </span>
+        </footer>
+    </div>
+</div>

@@ -415,6 +415,12 @@ export default class extends Controller {
             case 'ui:soa.copy-link-request':
                 this.handleSoaCopyLinkRequest(payload);
                 break;
+            case 'ui:soa.send-request':
+                this.handleSoaSendRequest(payload);
+                break;
+            case 'client:soa.envoye': // succès d'un envoi du SOA par e-mail via le picker
+                this._showNotification(payload.message || 'Relevé de compte envoyé.', 'success');
+                break;
             case 'ui:bordereau.analysis-request':
                 this.handleBordereauAnalysisRequest(payload);
                 break;
@@ -1332,6 +1338,21 @@ export default class extends Controller {
             console.error('[Cerveau] Erreur lors de la copie du lien SOA :', error);
             this._showNotification('Impossible de copier le lien. Veuillez réessayer.', 'error');
         }
+    }
+
+    /**
+     * Ouvre la boîte d'ENVOI DU SOA PAR E-MAIL au client (choix du destinataire parmi
+     * l'e-mail du client et ceux de ses contacts + message d'accompagnement facultatif).
+     * Le contrôleur Stimulus « soa-envoi-picker » s'auto-connecte à l'insertion et porte
+     * tout le comportement (cf. _openStandalonePicker).
+     * @param {object} payload
+     * @param {string} payload.url - URL de type '/admin/soa/client/{id}/envoi-picker'
+     */
+    async handleSoaSendRequest(payload) {
+        await this._openStandalonePicker(payload.url, {
+            controllerName: 'soa-envoi-picker',
+            errorLabel: "l'envoi du relevé de compte",
+        });
     }
 
     /**

@@ -1,0 +1,170 @@
+{# templates/admin/soa/_soa_styles.html.twig
+   Feuille de style partagée des rendus autonomes du SOA (aperçu courtier et page publique client).
+#}
+<style>
+    @page { size: A4 portrait; margin: 10mm 12mm; }
+
+    body { background-color: #f3f3f3; }
+
+    .soa-actions-bar {
+        padding: 1rem;
+        text-align: center;
+        background-color: #343a40;
+        border-bottom: 3px solid #0047AB;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+    .soa-container {
+        max-width: 1200px;
+        margin: 2rem auto;
+        background-color: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 12px rgba(0,0,0,.07);
+    }
+    .soa-header {
+        padding: 1.75rem 2rem;
+        background-color: #0047AB;
+        color: #ffffff;
+    }
+    .soa-header h1 { color: #ffffff; font-size: 1.4rem; margin-bottom: 0; }
+    .soa-header .soa-ref { font-size: 0.85rem; opacity: .85; }
+    .soa-header .client-bloc { background: rgba(255,255,255,.12); border-radius: 6px; padding: .75rem 1rem; }
+    .soa-section-title {
+        background-color: #f0f2f5;
+        color: #212529;
+        padding: .55rem 1rem .55rem 1.1rem;
+        font-size: .82rem;
+        font-weight: 700;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+        border-left: 4px solid #0047AB;
+        cursor: pointer;
+        user-select: none;
+    }
+    .soa-section-title h2 { font-size: inherit; font-weight: inherit; margin: 0; color: #212529; }
+    .soa-section-title:hover { background-color: #e2e6ea; }
+    .soa-toggle-chevron { flex-shrink: 0; margin-left: auto; opacity: .55; line-height: 0; transition: transform 250ms ease; }
+    .soa-section-title.soa-open .soa-toggle-chevron { transform: rotate(180deg); }
+    /* Infobulle de section (design dark, repris du tableau de bord) */
+    .soa-section-tip {
+        position: fixed;
+        z-index: 9999;
+        pointer-events: none;
+        background: #212529;
+        color: #fff;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: .72rem;
+        line-height: 1.4;
+        box-shadow: 0 4px 18px rgba(0,0,0,.45);
+        max-width: 300px;
+        display: none;
+    }
+    .soa-section-tip .soa-tip-title { display: block; font-weight: 700; color: #fff; margin-bottom: 3px; }
+    .soa-section-tip .soa-tip-desc { display: block; font-weight: 400; color: #c7ccd4; }
+    .soa-section-body { padding: 0; overflow: hidden; transition: max-height 280ms ease; }
+    .soa-section-body-inner { padding: 1rem 1.5rem; overflow-x: auto; }
+    .soa-table { width: 100%; font-size: .85rem; border-collapse: collapse; }
+    .soa-table thead { border-bottom: 2px solid #0047AB; }
+    .soa-table thead th {
+        background-color: #f0f2f5;
+        color: #343a40;
+        padding: .45rem .6rem;
+        text-align: right;
+        white-space: nowrap;
+    }
+    .soa-table thead th:first-child { text-align: left; }
+    .soa-table tbody td {
+        padding: .4rem .6rem;
+        text-align: right;
+        border-bottom: 1px solid #dee2e6;
+        vertical-align: middle;
+    }
+    .soa-table tbody td:first-child { text-align: left; }
+    .soa-table .soa-circonstance {
+        text-align: left;
+        max-width: 230px;
+        white-space: normal;
+    }
+    .soa-circonstance-clamp {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .soa-table tbody tr:nth-child(even) { background-color: #f8f9fa; }
+    .soa-table tfoot td {
+        padding: .45rem .6rem;
+        font-weight: 600;
+        text-align: right;
+        border-top: 2px solid #dee2e6;
+        background-color: #f0f0f0;
+    }
+    .soa-table tfoot td:first-child { text-align: left; }
+    .text-solde-ok { color: #198754; font-weight: 600; }
+    .text-solde-due { color: #dc3545; font-weight: 600; }
+    .badge-retard {
+        background-color: #ffc107;
+        color: #664d03;
+        font-size: .75rem;
+        padding: .2rem .45rem;
+        border-radius: 4px;
+        white-space: nowrap;
+    }
+    .soa-footer {
+        padding: 1.25rem 2rem;
+        background-color: #f8f9fa;
+        border-top: 2px solid #0047AB;
+        text-align: center;
+    }
+    .soa-empty-notice {
+        color: #6c757d;
+        font-size: .85rem;
+        font-style: italic;
+        padding: .5rem 0;
+    }
+    .tache-active-row { border-left: 3px solid #0047AB; }
+    .tache-closed-row { border-left: 3px solid #198754; opacity: .8; }
+    .soa-table tbody tr { transition: background-color .15s ease; }
+    .soa-table tbody tr:hover { background-color: #e8edf5 !important; }
+    /* Bandeau de validité du lien (page publique) */
+    .soa-lien-validite {
+        background-color: #eef4ff;
+        border-bottom: 1px solid #d4e2fb;
+        color: #1a3d7c;
+        font-size: .82rem;
+        padding: .55rem 2rem;
+        text-align: center;
+    }
+
+    @media (max-width: 768px) {
+        .soa-container { margin: .5rem; }
+    }
+
+    @media print {
+        body { background-color: #fff; margin: 0; padding: 0; }
+        .soa-actions-bar { display: none !important; }
+        .soa-container {
+            margin: 0;
+            border: none;
+            border-top: 3px solid #0047AB !important;
+            box-shadow: none !important;
+            max-width: 100%;
+        }
+        .soa-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .soa-section-title { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .soa-table thead th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        section { page-break-inside: avoid; }
+        .soa-footer { page-break-inside: avoid; }
+        /* Toutes les sections dépliées à l'impression */
+        .soa-section-body { max-height: none !important; overflow: visible !important; transition: none !important; }
+        .soa-section-body-inner { overflow-x: visible !important; }
+        .soa-toggle-chevron { display: none !important; }
+        .soa-section-title { cursor: default !important; }
+        .soa-section-tip { display: none !important; }
+    }
+</style>

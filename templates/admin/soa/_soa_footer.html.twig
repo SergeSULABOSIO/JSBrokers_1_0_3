@@ -1,0 +1,21 @@
+{# templates/admin/soa/_soa_footer.html.twig
+   Pied du document SOA : identité et coordonnées du courtier émetteur.
+   Partagé entre l'aperçu courtier et la page publique client.
+#}
+<footer class="soa-footer">
+    <p class="mb-1 fw-bold text-dark">{{ entreprise.nom|default('JS Brokers') }}</p>
+    <p class="text-muted small fst-italic mb-1">
+        {{ entreprise.adresse|default('') }}<br>
+        Tel : {{ entreprise.telephone|default('N/A') }} — {{ entreprise.siteweb|default('') }}<br>
+        RCCM : {{ entreprise.rccm|default('N/A') }} / ID.NAT : {{ entreprise.idnat|default('N/A') }} / N° Impôt : {{ entreprise.numimpot|default('N/A') }}
+    </p>
+    {% if vueClient|default(false) %}
+        <p class="text-muted small mb-1">
+            Une question sur ce relevé ? Contactez votre courtier
+            {{ entreprise.nom|default('JS Brokers') }}{% if entreprise.telephone|default('') %} au {{ entreprise.telephone }}{% endif %}.
+        </p>
+    {% endif %}
+    <p class="text-muted" style="font-size:.72rem; opacity:.7; margin-top:.4rem;">
+        Document confidentiel — réservé à l'usage exclusif de {{ client.nom }}. Toute reproduction est interdite.
+    </p>
+</footer>

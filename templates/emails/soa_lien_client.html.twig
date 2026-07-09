@@ -1,0 +1,26 @@
+{% extends 'emails/_layout.html.twig' %}
+{% import 'emails/_macros.html.twig' as m %}
+
+{# E-mail au client (assuré) : lien d'accès public à son relevé de compte (SOA).
+   `locale` est fourni par SoaClientNotifier → rendu dans la langue du destinataire. #}
+{% set lang = locale|default('fr') %}
+
+{% block subject %}JS Brokers — {{ 'email_soa_subject'|trans({}, 'messages', lang) }}{% endblock %}
+
+{% block content %}
+    {{ m.heading('document', 'email_soa_heading'|trans({}, 'messages', lang)) }}
+    {{ m.paragraph('email_soa_greeting'|trans({'%name%': recipientName}, 'messages', lang)) }}
+    {{ m.paragraph('email_soa_intro'|trans({'%entreprise%': entrepriseNom, '%client%': clientNom}, 'messages', lang)) }}
+
+    {% if messageCourtier %}
+        {{ m.heading('feedback', 'email_soa_message_heading'|trans({'%entreprise%': entrepriseNom}, 'messages', lang)) }}
+        {{ m.paragraph(messageCourtier|e|nl2br) }}
+    {% endif %}
+
+    {{ m.button(soaUrl, 'email_soa_button'|trans({}, 'messages', lang)) }}
+
+    {{ m.paragraph('email_soa_validity'|trans({'%date%': expiresAt|date('d/m/Y')}, 'messages', lang)) }}
+
+    {{ m.note('email_soa_security_note'|trans({}, 'messages', lang)) }}
+    {{ m.note('email_soa_contact'|trans({'%entreprise%': entrepriseNom, '%tel%': entrepriseTel ? ' — ' ~ entrepriseTel : ''}, 'messages', lang)) }}
+{% endblock %}

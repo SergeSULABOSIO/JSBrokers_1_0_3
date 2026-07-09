@@ -1,0 +1,46 @@
+{# templates/admin/soa/_soa_header.html.twig
+   En-tête du document SOA (identité du courtier, référence, bloc client).
+   Partagé entre l'aperçu courtier et la page publique client.
+#}
+<header class="soa-header">
+    <div class="row align-items-start">
+        <div class="col-7">
+            {% if entreprise and entreprise.thumbnail %}
+                <img src="{{ asset('images/entreprises/' ~ entreprise.thumbnail) }}"
+                     alt="{{ entreprise.nom|default('JS Brokers') }}"
+                     style="max-height: 52px; margin-bottom: .5rem;">
+            {% else %}
+                <img src="{{ asset('images/entreprises/logo.jpg') }}"
+                     alt="JS Brokers"
+                     style="max-height: 52px; margin-bottom: .5rem;">
+            {% endif %}
+            <div>
+                <span class="fw-bold" style="font-size: 1rem;">{{ entreprise.nom|default('JS Brokers') }}</span><br>
+                <small style="opacity:.8;">{{ entreprise.adresse|default('') }}</small>
+            </div>
+        </div>
+        <div class="col-5 text-end">
+            <h1>Relevé de Compte</h1>
+            <div class="soa-ref">Réf. : <strong>{{ soaRef }}</strong></div>
+            <div class="soa-ref">Édité le {{ soaDate|date('d/m/Y') }}</div>
+            <div class="soa-ref" style="opacity:.8;"><small>Dernière mise à jour : {{ soaDate|date('d/m/Y') }} à {{ soaDate|date('H:i') }}</small></div>
+        </div>
+    </div>
+    <hr style="border-color: rgba(255,255,255,.3); margin: 1rem 0 .75rem;">
+    <div class="client-bloc">
+        <div class="row">
+            <div class="col-md-6">
+                <div style="font-size:.75rem; text-transform:uppercase; opacity:.75; margin-bottom:.2rem;">Client</div>
+                <div class="fw-bold" style="font-size:1.05rem;">{{ client.nom }}</div>
+                {% if client.adresse %}<div style="opacity:.85; font-size:.85rem;">{{ client.adresse }}</div>{% endif %}
+            </div>
+            <div class="col-md-6 text-md-end" style="font-size:.82rem; opacity:.9;">
+                {% if client.email %}<div>{{ client.email }}</div>{% endif %}
+                {% if client.telephone %}<div>{{ client.telephone }}</div>{% endif %}
+                {% if client.numimpot %}<div>N° Impôt : {{ client.numimpot }}</div>{% endif %}
+                {% if client.rccm %}<div>RCCM : {{ client.rccm }}</div>{% endif %}
+                {% if client.idnat %}<div>ID.NAT : {{ client.idnat }}</div>{% endif %}
+            </div>
+        </div>
+    </div>
+</header>
