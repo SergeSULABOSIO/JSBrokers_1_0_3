@@ -41,17 +41,29 @@ class ClientFormCanvasProvider implements FormCanvasProviderInterface
                     "event" => "ui:soa.view-request",
                     "url"   => "/admin/soa/client/%id%/workspace",
                 ],
+                // Copie le lien PUBLIC tokenisé (utilisable par l'assuré sans compte) :
+                // le POST crée/prolonge le jeton et retourne l'URL à mettre au presse-papiers.
                 [
-                    "label" => "Copier le lien du SOA",
+                    "label" => "Copier le lien client (SOA)",
                     "icon"  => "action:copy",
                     "event" => "ui:soa.copy-link-request",
-                    "url"   => "/admin/soa/client/%id%/apercu",
+                    "url"   => "/admin/soa/api/client/%id%/lien-public",
                 ],
                 [
                     "label" => "Envoyer le SOA par e-mail",
                     "icon"  => "action:send-email",
                     "event" => "ui:soa.send-request",
                     "url"   => "/admin/soa/client/%id%/envoi-picker",
+                ],
+                // Révocation du lien public : visible seulement quand un lien actif existe
+                // (attribut calculé hasLienSoa, ClientIndicatorStrategy). Confirmation
+                // générique non-delete côté cerveau, puis DELETE.
+                [
+                    "label"     => "Révoquer le lien du SOA",
+                    "icon"      => "action:disable",
+                    "event"     => "ui:soa.revoke-request",
+                    "url"       => "/admin/soa/api/client/%id%/revoquer-lien",
+                    "condition" => ["field" => "hasLienSoa", "value" => true],
                 ],
                 // Actions « portefeuille » conditionnelles (pattern Invité→Portefeuille) :
                 // condition évaluée côté front contre l'attribut calculé hasPortefeuille

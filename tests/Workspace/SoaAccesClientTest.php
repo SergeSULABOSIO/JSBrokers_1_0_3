@@ -75,7 +75,8 @@ class SoaAccesClientTest extends WebTestCase
         );
 
         foreach ($noms as $nom) {
-            // Ordre des FK : token → contact → client → invite → entreprise → utilisateur.
+            // Ordre des FK : envoi/token → contact → client → invite → entreprise → utilisateur.
+            $conn->executeStatement("DELETE s FROM soa_envoi s JOIN entreprise e ON s.entreprise_id = e.id WHERE e.nom = :nom", ['nom' => $nom]);
             $conn->executeStatement("DELETE t FROM soa_acces_token t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :nom", ['nom' => $nom]);
             $conn->executeStatement("DELETE ct FROM contact ct JOIN client c ON ct.client_id = c.id JOIN entreprise e ON c.entreprise_id = e.id WHERE e.nom = :nom", ['nom' => $nom]);
             $conn->executeStatement("DELETE c FROM client c JOIN entreprise e ON c.entreprise_id = e.id WHERE e.nom = :nom", ['nom' => $nom]);
@@ -214,6 +215,12 @@ class SoaAccesClientTest extends WebTestCase
 
         $this->postEnvoyer($clientB->getId(), ['email' => self::CLI_EMAIL]);
         $this->assertResponseStatusCodeSame(404, "L'envoi doit refuser un client hors workspace.");
+
+        $this->client->request('POST', sprintf('/admin/soa/api/client/%d/lien-public', $clientB->getId()));
+        $this->assertResponseStatusCodeSame(404, 'La copie du lien doit refuser un client hors workspace.');
+
+        $this->client->request('DELETE', sprintf('/admin/soa/api/client/%d/revoquer-lien', $clientB->getId()));
+        $this->assertResponseStatusCodeSame(404, 'La révocation doit refuser un client hors workspace.');
     }
 
     public function testSoaApercuStillWorksForOwnClient(): void
@@ -404,5 +411,113 @@ class SoaAccesClientTest extends WebTestCase
     {
         $this->client->request('GET', '/soa/pas-un-token');
         $this->assertResponseStatusCodeSame(404, 'Un jeton hors format [a-f0-9]{64} ne matche pas la route.');
+    }
+
+    // ── Copie du lien public ──────────────────────────────────────────────────
+
+    public function testLienPublicReturnsSharableUrlAndReusesToken(): void
+    {
+        ['clientA' => $clientA] = $this->seed();
+        $clientId = $clientA->getId();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        $this->client->request('POST', sprintf('/admin/soa/api/client/%d/lien-public', $clientId));
+        $this->assertResponseIsSuccessful('La génération du lien public doit réussir.');
+        $payload = json_decode((string) $this->client->getResponse()->getContent(), true);
+        $this->assertTrue($payload['success']);
+        $this->assertMatchesRegularExpression('#/soa/[a-f0-9]{64}$#', $payload['url'], "L'URL retournée doit être le lien public tokenisé.");
+        $this->assertStringContainsString('valable jusqu', strtolower($payload['message']), 'Le message annonce la validité.');
+
+        // Le lien copié fonctionne pour le client (sans session).
+        $this->em()->clear();
+        $token = $this->em()->getRepository(SoaAccesToken::class)->findOneBy(['client' => $clientId]);
+        $this->assertStringEndsWith('/soa/' . $token->getToken(), $payload['url']);
+
+        // Second appel : même jeton (prolongé), pas de nouveau lien.
+        $this->client->request('POST', sprintf('/admin/soa/api/client/%d/lien-public', $clientId));
+        $this->assertResponseIsSuccessful();
+        $payload2 = json_decode((string) $this->client->getResponse()->getContent(), true);
+        $this->assertSame($payload['url'], $payload2['url'], 'Copies successives = même lien.');
+    }
+
+    // ── Révocation du lien ────────────────────────────────────────────────────
+
+    public function testRevoquerLienInvalidatesPublicAccess(): void
+    {
+        ['clientA' => $clientA, 'entreprise' => $entreprise] = $this->seed();
+        $clientId = $clientA->getId();
+        $token = $this->createToken($clientA, $entreprise);
+        $tokenValue = $token->getToken();
+        $this->em()->clear();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        // Le lien fonctionne avant révocation.
+        $this->client->request('GET', '/soa/' . $tokenValue);
+        $this->assertResponseIsSuccessful();
+
+        // L'indicateur calculé expose un lien actif (condition de l'action côté front).
+        $canvasBuilder = static::getContainer()->get(\App\Services\CanvasBuilder::class);
+        $reloadedClient = $this->em()->getRepository(Client::class)->find($clientId);
+        $canvasBuilder->loadAllCalculatedValues($reloadedClient);
+        $this->assertTrue($reloadedClient->hasLienSoa, 'hasLienSoa doit être vrai quand un jeton actif existe.');
+
+        // Révocation.
+        $this->client->request('DELETE', sprintf('/admin/soa/api/client/%d/revoquer-lien', $clientId));
+        $this->assertResponseIsSuccessful('La révocation doit réussir.');
+        $payload = json_decode((string) $this->client->getResponse()->getContent(), true);
+        $this->assertStringContainsString('révoqué', $payload['message']);
+
+        // Le lien ne fonctionne plus, avec la réponse uniforme.
+        $this->client->request('GET', '/soa/' . $tokenValue);
+        $this->assertResponseStatusCodeSame(404, 'Un lien révoqué ne doit plus servir le SOA.');
+
+        // L'indicateur retombe à faux et une seconde révocation n'a rien à faire.
+        $this->em()->clear();
+        $reloadedClient = $this->em()->getRepository(Client::class)->find($clientId);
+        $canvasBuilder->loadAllCalculatedValues($reloadedClient);
+        $this->assertFalse($reloadedClient->hasLienSoa, 'hasLienSoa doit retomber à faux après révocation.');
+
+        $this->client->request('DELETE', sprintf('/admin/soa/api/client/%d/revoquer-lien', $clientId));
+        $this->assertResponseStatusCodeSame(404, 'Sans lien actif, la révocation doit répondre 404.');
+    }
+
+    // ── Historique des envois ─────────────────────────────────────────────────
+
+    public function testHistoriqueDesEnvoisLoggedAndDisplayed(): void
+    {
+        ['clientA' => $clientA] = $this->seed();
+        $clientId = $clientA->getId();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        // Avant tout envoi : pas de bloc d'historique dans le dialogue.
+        $this->client->request('GET', sprintf('/admin/soa/client/%d/envoi-picker', $clientId));
+        $this->assertResponseIsSuccessful();
+        $this->assertStringNotContainsString('Derniers envois', (string) $this->client->getResponse()->getContent());
+
+        // Deux envois vers deux destinataires.
+        $this->postEnvoyer($clientId, ['email' => self::CLI_EMAIL, 'message' => 'Premier envoi.']);
+        $this->assertResponseIsSuccessful();
+        $this->postEnvoyer($clientId, ['email' => self::CONTACT_EMAIL]);
+        $this->assertResponseIsSuccessful();
+
+        // Journal persisté : destinataire, expéditeur, validité figée, message.
+        $this->em()->clear();
+        $envois = $this->em()->getRepository(\App\Entity\SoaEnvoi::class)->findBy(['client' => $clientId], ['id' => 'ASC']);
+        $this->assertCount(2, $envois, 'Chaque envoi doit être journalisé.');
+        $this->assertSame(self::CLI_EMAIL, $envois[0]->getEmailDestinataire());
+        $this->assertSame('Premier envoi.', $envois[0]->getMessage());
+        $this->assertNotNull($envois[0]->getLienExpireAt());
+        $this->assertSame('Administrateur', $envois[0]->getInvite()?->getNom(), "L'expéditeur (invité) doit être tracé.");
+        $this->assertSame(self::CONTACT_EMAIL, $envois[1]->getEmailDestinataire());
+        $this->assertNull($envois[1]->getMessage(), 'Sans message, le journal stocke null.');
+
+        // Le dialogue affiche l'historique (plus récent en premier).
+        $this->client->request('GET', sprintf('/admin/soa/client/%d/envoi-picker', $clientId));
+        $this->assertResponseIsSuccessful();
+        $html = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('Derniers envois', $html);
+        $this->assertStringContainsString(self::CLI_EMAIL, $html);
+        $this->assertStringContainsString(self::CONTACT_EMAIL, $html);
+        $this->assertStringContainsString('Administrateur', $html, "L'expéditeur apparaît dans l'historique.");
     }
 }

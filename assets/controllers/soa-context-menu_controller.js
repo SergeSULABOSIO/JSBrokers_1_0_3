@@ -23,7 +23,7 @@ function getSoaTip() {
  */
 const SECTIONS = {
     recap: {
-        items: ['refresh', 'apercu'],
+        items: ['refresh', 'apercu', 'send', 'copylink'],
     },
     contacts: {
         items: ['refresh', 'apercu', 'create', 'edit', 'delete'],
@@ -450,6 +450,19 @@ export default class extends Controller {
             case 'apercu':
                 window.open(this.apercuUrlValue, '_blank', 'noopener');
                 break;
+            case 'send':
+                // Même circuit que l'action « Envoyer le SOA par e-mail » de la fiche
+                // client : le cerveau ouvre le picker de destinataire (soa-envoi-picker).
+                this._dispatchCerveau('ui:soa.send-request', {
+                    url: `/admin/soa/client/${this.clientIdValue}/envoi-picker`,
+                });
+                break;
+            case 'copylink':
+                // Copie le lien PUBLIC tokenisé (crée/prolonge le jeton côté serveur).
+                this._dispatchCerveau('ui:soa.copy-link-request', {
+                    url: `/admin/soa/api/client/${this.clientIdValue}/lien-public`,
+                });
+                break;
             case 'create':
                 if (config.pisteCreate) {
                     // Pré-remplissage serveur : client courant + risque de la ligne.
@@ -473,6 +486,13 @@ export default class extends Controller {
                 this._requestDelete(config, row);
                 break;
         }
+    }
+
+    /** Émet un événement à destination du cerveau (écouté sur document). */
+    _dispatchCerveau(type, payload = {}) {
+        document.dispatchEvent(new CustomEvent('cerveau:event', {
+            detail: { type, source: this.nomControleur, payload, timestamp: Date.now() },
+        }));
     }
 
     /**

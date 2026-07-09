@@ -421,6 +421,12 @@ export default class extends Controller {
             case 'client:soa.envoye': // succès d'un envoi du SOA par e-mail via le picker
                 this._showNotification(payload.message || 'Relevé de compte envoyé.', 'success');
                 break;
+            case 'ui:soa.revoke-request':
+                this.handleSoaRevokeRequest(payload);
+                break;
+            case 'client:soa.revoke-execute': // confirmation validée → DELETE effectif
+                this._handleSoaRevokeExecute(payload);
+                break;
             case 'ui:bordereau.analysis-request':
                 this.handleBordereauAnalysisRequest(payload);
                 break;
@@ -1320,9 +1326,11 @@ export default class extends Controller {
     }
 
     /**
-     * Copie le lien standalone du SOA dans le presse-papiers.
+     * Copie dans le presse-papiers le lien PUBLIC du SOA (utilisable par l'assuré
+     * sans compte) : le POST crée ou prolonge le jeton d'accès côté serveur (+30 j,
+     * même règle que l'envoi par e-mail) et retourne l'URL tokenisée.
      * @param {object} payload
-     * @param {string} payload.url - URL de type '/admin/soa/client/{id}/apercu'
+     * @param {string} payload.url - URL de type '/admin/soa/api/client/{id}/lien-public'
      */
     async handleSoaCopyLinkRequest(payload) {
         if (!payload.url) {
@@ -1331,12 +1339,81 @@ export default class extends Controller {
             return;
         }
         try {
-            const absoluteUrl = new URL(payload.url, window.location.origin).href;
-            await navigator.clipboard.writeText(absoluteUrl);
-            this._showNotification('Lien du relevé de compte copié dans le presse-papiers.', 'success');
+            this.broadcast('app:loading.start');
+            const response = await fetch(payload.url, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.url) throw new Error(data.message || `Erreur serveur ${response.status}`);
+
+            await navigator.clipboard.writeText(data.url);
+            this._showNotification(data.message || 'Lien client copié dans le presse-papiers.', 'success');
         } catch (error) {
             console.error('[Cerveau] Erreur lors de la copie du lien SOA :', error);
-            this._showNotification('Impossible de copier le lien. Veuillez réessayer.', 'error');
+            this._showNotification(error.message || 'Impossible de copier le lien. Veuillez réessayer.', 'error');
+        } finally {
+            this.broadcast('app:loading.stop');
+        }
+    }
+
+    /**
+     * Demande de révocation du lien public du SOA (action conditionnelle « Révoquer le
+     * lien du SOA », visible quand hasLienSoa est vrai). Confirmation via la modale
+     * générique — broadcast DIRECT de ui:confirmation.request (même parade que le
+     * retrait de portefeuille : action non-delete, l'alerte « irréversible » est
+     * masquée car un nouvel envoi recrée un lien).
+     * @param {object} payload
+     * @param {string} payload.url - '/admin/soa/api/client/{id}/revoquer-lien' (id déjà résolu)
+     * @param {Array}  [payload.selection] - fourni par la toolbar / le menu contextuel
+     */
+    handleSoaRevokeRequest(payload) {
+        if (!payload.url) {
+            console.error('[Cerveau] handleSoaRevokeRequest() : URL manquante.', payload);
+            this._showNotification('Impossible de révoquer le lien : contexte manquant.', 'error');
+            return;
+        }
+        const clientName = payload.selection?.[0]?.name || 'le client sélectionné';
+        this.broadcast('ui:confirmation.request', {
+            title: 'Révoquer le lien du SOA',
+            body: "Le lien d'accès en ligne au relevé de compte sera immédiatement invalidé : les e-mails déjà envoyés ne permettront plus de le consulter. Vous pourrez générer un nouveau lien à tout moment (envoi ou copie).",
+            itemDescriptions: [clientName],
+            showIrreversible: false,
+            onConfirm: {
+                type: 'client:soa.revoke-execute',
+                payload: { url: payload.url },
+            },
+        });
+    }
+
+    /**
+     * Exécute la révocation après confirmation : DELETE, puis notification (message
+     * serveur), fermeture de la confirmation et rafraîchissement de la liste active
+     * (hasLienSoa se recalcule au refresh → l'action disparaît).
+     * @private
+     */
+    async _handleSoaRevokeExecute(payload) {
+        if (!payload.url) {
+            this.broadcast('ui:confirmation.error', { error: 'Contexte de révocation manquant.' });
+            return;
+        }
+        try {
+            const response = await fetch(payload.url, {
+                method: 'DELETE',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.message || `Erreur serveur ${response.status}`);
+
+            this._showNotification(data.message || 'Lien du relevé de compte révoqué.', 'success');
+            const revokeState = this._getActiveTabState();
+            this._publishSelectionStatus('Actualisation de la liste...');
+            this.broadcast('app:loading.start', { originatorId: revokeState.elementId, workspaceTabId: this.currentWorkspaceTabId });
+            this._requestListRefresh(this.getActiveTabId());
+            this.broadcast('ui:confirmation.close');
+        } catch (error) {
+            console.error('[Cerveau] _handleSoaRevokeExecute() failed:', error);
+            this.broadcast('ui:confirmation.error', { error: error.message || 'La révocation a échoué.' });
         }
     }
 
