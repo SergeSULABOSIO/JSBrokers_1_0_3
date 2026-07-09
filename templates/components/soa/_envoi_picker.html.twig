@@ -93,6 +93,37 @@
                               data-picker-message></textarea>
                 </div>
             {% endif %}
+
+            {# Historique des envois : contexte avant renvoi (Nielsen 1 & 6 — l'état du
+               partage est visible, pas à mémoriser). Liste bornée aux 5 derniers. #}
+            {% if historique is not empty %}
+                <section class="mt-3" aria-labelledby="soa-envoi-historique-titre">
+                    <h6 id="soa-envoi-historique-titre" class="fw-semibold mb-2" style="color:#0d2440;">
+                        Derniers envois
+                    </h6>
+                    <table class="table table-sm mb-0" style="font-size:.82rem;">
+                        <caption class="visually-hidden">Historique des derniers envois du relevé de compte</caption>
+                        <thead>
+                            <tr class="text-muted">
+                                <th scope="col" class="fw-semibold">Date</th>
+                                <th scope="col" class="fw-semibold">Destinataire</th>
+                                <th scope="col" class="fw-semibold">Par</th>
+                                <th scope="col" class="fw-semibold">Lien valable jusqu'au</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for envoi in historique %}
+                                <tr>
+                                    <td style="white-space:nowrap;">{{ envoi.createdAt|date('d/m/Y H:i') }}</td>
+                                    <td>{{ envoi.nomDestinataire }} <span class="text-muted">&lt;{{ envoi.emailDestinataire }}&gt;</span></td>
+                                    <td>{{ envoi.invite ? envoi.invite.nom : '—' }}</td>
+                                    <td style="white-space:nowrap;">{{ envoi.lienExpireAt|date('d/m/Y') }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </section>
+            {% endif %}
         </div>
 
         <footer class="jsb-picker-foot">

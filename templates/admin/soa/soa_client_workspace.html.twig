@@ -970,6 +970,20 @@
                 </span>
                 <span class="flex-grow-1">Aperçu client</span>
             </li>
+            <li role="menuitem" tabindex="-1" data-menu-key="send"
+                data-action="click->soa-context-menu#onItemClick">
+                <span class="context-menu-icon" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:send-email') }}" style="width:16px;height:16px;" />
+                </span>
+                <span class="flex-grow-1">Envoyer par e-mail au client</span>
+            </li>
+            <li role="menuitem" tabindex="-1" data-menu-key="copylink"
+                data-action="click->soa-context-menu#onItemClick">
+                <span class="context-menu-icon" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:copy') }}" style="width:16px;height:16px;" />
+                </span>
+                <span class="flex-grow-1">Copier le lien client</span>
+            </li>
             <li role="separator" class="separator" data-menu-key="sep-actions"></li>
             <li role="menuitem" tabindex="-1" data-menu-key="create"
                 data-action="click->soa-context-menu#onItemClick">

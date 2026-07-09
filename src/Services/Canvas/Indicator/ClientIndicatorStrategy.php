@@ -7,6 +7,7 @@ use App\Entity\Note;
 use App\Entity\Taxe;
 use App\Repository\AvenantRepository;
 use App\Repository\BordereauRepository;
+use App\Repository\SoaAccesTokenRepository;
 use App\Repository\TaxeRepository;
 
 class ClientIndicatorStrategy implements IndicatorCalculationStrategyInterface
@@ -16,6 +17,7 @@ class ClientIndicatorStrategy implements IndicatorCalculationStrategyInterface
         private TaxeRepository $taxeRepository,
         private AvenantRepository $avenantRepository,
         private BordereauRepository $bordereauRepository,
+        private SoaAccesTokenRepository $soaAccesTokenRepository,
     ) {
     }
 
@@ -61,6 +63,11 @@ class ClientIndicatorStrategy implements IndicatorCalculationStrategyInterface
             // Booléen strict (jamais null) : condition des actions « portefeuille »
             // de la toolbar/menu contextuel/volet dialogue, comparée en == lâche côté JS.
             'hasPortefeuille' => $entity->getPortefeuille() !== null,
+            // Booléen strict : condition de l'action « Révoquer le lien du SOA ».
+            // Garde sur l'ID : en mode création (get-form), le client n'est pas encore
+            // persisté et ne peut pas être lié à la requête du repository.
+            'hasLienSoa' => $entity->getId() !== null
+                && $this->soaAccesTokenRepository->findActifPourClient($entity, $entity->getEntreprise()) !== null,
             'nombrePistes' => $entity->getPistes()->count(),
             'nombreSinistres' => $entity->getNotificationSinistres()->count(),
             'nombrePolices' => $this->countClientPolices($entity),

@@ -124,6 +124,11 @@ class Client
     #[Groups(['list:read'])]
     public ?bool $hasPortefeuille = null;
 
+    // Booléen strict : condition de l'action « Révoquer le lien du SOA » (un lien
+    // d'accès public actif existe pour ce client dans l'entreprise courante).
+    #[Groups(['list:read'])]
+    public ?bool $hasLienSoa = null;
+
     // Lignes secondaires de la liste (déclarées ici pour éviter les propriétés
     // dynamiques dépréciées en PHP 8.2 ; null = information masquée sur la ligne).
     #[Groups(['list:read'])]
