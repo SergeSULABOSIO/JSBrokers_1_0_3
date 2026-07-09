@@ -131,6 +131,15 @@
     .tache-closed-row { border-left: 3px solid #198754; opacity: .8; }
     .soa-table tbody tr { transition: background-color .15s ease; }
     .soa-table tbody tr:hover { background-color: #e8edf5 !important; }
+    /* Bouton « Documents » des polices (ouvre le picker des documents) */
+    .soa-docs-btn {
+        display: inline-flex; align-items: center; gap: .35rem;
+        border: 1px solid #0047AB; background: #fff; color: #0047AB;
+        font-size: .76rem; font-weight: 600; padding: .3rem .6rem;
+        border-radius: 6px; cursor: pointer; white-space: nowrap;
+    }
+    .soa-docs-btn:hover, .soa-docs-btn:focus { background: #0047AB; color: #fff; }
+    @media print { .soa-docs-btn { display: none !important; } }
     /* Bandeau de validité du lien (page publique) */
     .soa-lien-validite {
         background-color: #eef4ff;

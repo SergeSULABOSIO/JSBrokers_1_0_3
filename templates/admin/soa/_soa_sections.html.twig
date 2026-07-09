@@ -122,6 +122,7 @@
                         <th scope="col">Prime TTC</th>
                         <th scope="col">Payée</th>
                         <th scope="col">Solde</th>
+                        {% if soaDocsUrlPattern is defined %}<th scope="col">Documents</th>{% endif %}
                     </tr>
                 </thead>
                 <tbody>
@@ -151,6 +152,19 @@
                             <td class="{{ aSolde > 0 ? 'text-solde-due' : 'text-solde-ok' }}">
                                 {{ aSolde|number_format(2, ',', ' ') }} {{ monnaie }}
                             </td>
+                            {% if soaDocsUrlPattern is defined %}
+                                <td style="text-align:center;">
+                                    {# Ouvre le picker des documents de la police (JS inline de _soa_scripts). #}
+                                    <button type="button"
+                                            class="soa-docs-btn"
+                                            data-soa-docs-url="{{ soaDocsUrlPattern|replace({'%aid%': avenant.id}) }}"
+                                            aria-haspopup="dialog"
+                                            aria-label="Voir les documents de la police {{ avenant.referencePolice|default('') }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.5L9.5 0H4zm5 1.5L12.5 5H9V1.5zM4.5 8h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1zm0 2.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1z"/></svg>
+                                        Documents
+                                    </button>
+                                </td>
+                            {% endif %}
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -256,6 +270,8 @@
                 <thead>
                     <tr>
                         <th scope="col">Réf. Police</th>
+                        <th scope="col" class="text-start">Risque</th>
+                        <th scope="col" class="text-start">Assureur</th>
                         <th scope="col">Tranche</th>
                         <th scope="col">Échéance</th>
                         <th scope="col">Prime totale</th>
@@ -274,6 +290,8 @@
                         {% set tSolde = tranche.primeTranche|default(0) - tPayee %}
                         <tr>
                             <td>{{ cotation.avenants is not empty ? cotation.avenants.first.referencePolice|default('—') : '—' }}</td>
+                            <td class="text-start">{{ piste.risque ? piste.risque.nomComplet : '—' }}</td>
+                            <td class="text-start">{{ cotation.assureur ? cotation.assureur.nom : '—' }}</td>
                             <td>{{ tranche.nom }}</td>
                             <td style="white-space:nowrap;">{{ tranche.payableAt ? tranche.payableAt|date('d/m/Y') : '—' }}</td>
                             <td>{{ (tranche.primeTranche|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>

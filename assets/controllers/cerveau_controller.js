@@ -424,6 +424,9 @@ export default class extends Controller {
             case 'ui:soa.revoke-request':
                 this.handleSoaRevokeRequest(payload);
                 break;
+            case 'ui:soa.docs-picker-request':
+                this.handleSoaDocsPickerRequest(payload);
+                break;
             case 'client:soa.revoke-execute': // confirmation validée → DELETE effectif
                 this._handleSoaRevokeExecute(payload);
                 break;
@@ -1355,6 +1358,21 @@ export default class extends Controller {
         } finally {
             this.broadcast('app:loading.stop');
         }
+    }
+
+    /**
+     * Ouvre le picker « Documents de la police » du SOA (menu contextuel de la
+     * section Polices) : tous les documents attachés au pipe de la police (piste,
+     * cotation, police, client), avec téléchargement direct. Le contrôleur Stimulus
+     * « soa-docs-picker » s'auto-connecte à l'insertion (cf. _openStandalonePicker).
+     * @param {object} payload
+     * @param {string} payload.url - URL de type '/admin/soa/api/police/{id}/documents'
+     */
+    async handleSoaDocsPickerRequest(payload) {
+        await this._openStandalonePicker(payload.url, {
+            controllerName: 'soa-docs-picker',
+            errorLabel: 'les documents de la police',
+        });
     }
 
     /**

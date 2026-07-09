@@ -2,6 +2,7 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\Avenant;
 use App\Entity\Client;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
@@ -10,6 +11,7 @@ use App\Entity\SoaEnvoi;
 use App\Services\CanvasBuilder;
 use App\Service\Soa\SoaClientNotifier;
 use App\Service\Soa\SoaContextBuilder;
+use App\Service\Soa\SoaPoliceDocumentsCollector;
 use App\Repository\EntrepriseRepository;
 use App\Repository\InviteRepository;
 use App\Repository\SoaAccesTokenRepository;
@@ -50,6 +52,7 @@ class SoaController extends AbstractController
         private SoaAccesTokenRepository $soaAccesTokenRepository,
         private SoaEnvoiRepository $soaEnvoiRepository,
         private SoaClientNotifier $soaClientNotifier,
+        private SoaPoliceDocumentsCollector $documentsCollector,
         CanvasBuilder $canvasBuilder,
     ) {
         $this->canvasBuilder = $canvasBuilder;
@@ -72,6 +75,8 @@ class SoaController extends AbstractController
     public function clientApercu(Client $client): Response
     {
         $context = $this->buildSoaContext($client);
+        // Bouton « Documents » des polices (picker ouvert par le JS inline de la page).
+        $context['soaDocsUrlPattern'] = '/admin/soa/api/police/%aid%/documents';
 
         return $this->render('admin/soa/soa_client_standalone.html.twig', $context);
     }
@@ -94,6 +99,31 @@ class SoaController extends AbstractController
             'destinataires' => $this->collecterDestinataires($client),
             'validiteJours' => SoaAccesToken::VALIDITE_JOURS,
             'historique'    => $this->soaEnvoiRepository->findDerniersPourClient($client, $this->getEntreprise()),
+        ]);
+    }
+
+    /**
+     * Picker « Documents de la police » : tous les documents enregistrés concernant
+     * cet avenant, quel que soit le niveau d'attache (piste, cotation, police, client).
+     * Téléchargements via la route admin existante admin.document.api.download.
+     */
+    #[Route('/api/police/{id}/documents', name: 'api.police_documents', methods: ['GET'])]
+    public function policeDocuments(Avenant $avenant): Response
+    {
+        if (!$this->mayAccessEntity(Client::class, Invite::ACCESS_LECTURE)) {
+            throw $this->createAccessDeniedException("Les documents de la police sont hors de votre périmètre d'accès.");
+        }
+        $client = $this->documentsCollector->clientDeLaPolice($avenant);
+        if ($client === null) {
+            throw $this->createNotFoundException("Police sans client rattaché.");
+        }
+        $this->assertClientDansEspace($client);
+
+        return $this->render('components/soa/_documents_picker.html.twig', [
+            'avenant'            => $avenant,
+            'client'             => $client,
+            'items'              => $this->documentsCollector->collect($avenant),
+            'downloadUrlPattern' => '/admin/document/api/%did%/download',
         ]);
     }
 

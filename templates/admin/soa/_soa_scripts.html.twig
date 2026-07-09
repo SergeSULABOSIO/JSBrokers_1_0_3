@@ -116,6 +116,83 @@
             });
         }());
 
+        /* ── Picker « Documents de la police » (pages autonomes, sans Stimulus) ──
+           Ouverture au clic sur un bouton [data-soa-docs-url] : le HTML du picker
+           (components/soa/_documents_picker.html.twig) est chargé puis inséré dans
+           <body>. Fermeture par ✕ / clic sur l'arrière-plan / Échap, restitution du
+           focus au bouton déclencheur, filtre sur les lignes [data-picker-row]. */
+        (function () {
+            var previousFocus = null;
+
+            function closePicker() {
+                var overlay = document.querySelector('[data-soa-docs-picker-root]');
+                if (!overlay) return;
+                overlay.remove();
+                document.removeEventListener('keydown', onKeydown);
+                if (previousFocus && document.contains(previousFocus)) previousFocus.focus();
+                previousFocus = null;
+            }
+
+            function onKeydown(e) {
+                if (e.key === 'Escape') closePicker();
+            }
+
+            function wirePicker(overlay) {
+                overlay.addEventListener('click', function (e) {
+                    if (e.target.closest('[data-picker-close]') || e.target === overlay) {
+                        closePicker();
+                    }
+                });
+                document.addEventListener('keydown', onKeydown);
+
+                var search = overlay.querySelector('[data-picker-search]');
+                if (search) {
+                    var filter = function () {
+                        var q = search.value.trim().toLowerCase();
+                        var visible = 0;
+                        overlay.querySelectorAll('[data-picker-row]').forEach(function (row) {
+                            var match = q === '' || (row.dataset.search || '').indexOf(q) !== -1;
+                            row.style.display = match ? '' : 'none';
+                            if (match) visible++;
+                        });
+                        var empty = overlay.querySelector('[data-picker-empty]');
+                        if (empty) empty.hidden = visible !== 0;
+                    };
+                    search.addEventListener('input', filter);
+                    search.focus();
+                } else {
+                    var dialog = overlay.querySelector('[role="dialog"]');
+                    if (dialog) dialog.focus();
+                }
+            }
+
+            document.addEventListener('click', function (e) {
+                var btn = e.target.closest('[data-soa-docs-url]');
+                if (!btn) return;
+                if (document.querySelector('[data-soa-docs-picker-root]')) return; // déjà ouvert
+
+                previousFocus = btn;
+                btn.disabled = true;
+                fetch(btn.dataset.soaDocsUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function (response) {
+                        if (!response.ok) throw new Error('HTTP ' + response.status);
+                        return response.text();
+                    })
+                    .then(function (html) {
+                        var holder = document.createElement('div');
+                        holder.innerHTML = html.trim();
+                        var overlay = holder.firstElementChild;
+                        if (!overlay) throw new Error('Contenu vide');
+                        document.body.appendChild(overlay);
+                        wirePicker(overlay);
+                    })
+                    .catch(function () {
+                        window.alert("Impossible de charger les documents de la police. Réessayez ou contactez votre courtier.");
+                    })
+                    .finally(function () { btn.disabled = false; });
+            });
+        }());
+
         /* ── Auto-impression via ?print ── */
         const params = new URLSearchParams(window.location.search);
         if (params.has('print')) { window.print(); }
