@@ -1,0 +1,162 @@
+{#
+  Panneau de chat de l'assistant IA — injecté dans la COLONNE 4 (visualisation)
+  via l'événement `app:workspace.open-html-in-visualization` (workspace-manager).
+
+  Interface type « chat Claude » aux couleurs JS Brokers : bulles assistant à
+  gauche (fond blanc bordé), bulles utilisateur à droite (fond cobalt subtil
+  #e8f0fb — jamais de cobalt plein sous du texte courant), refus périmètre
+  signalé par un liseré avertissement. AUCUN <script> inline : l'interactivité
+  est portée par le contrôleur Stimulus `assistant-chat` (instancié
+  automatiquement dans le HTML injecté).
+#}
+<div class="jsb-ai-chat"
+     data-controller="assistant-chat"
+     data-assistant-chat-send-url-value="{{ path('admin.assistantia.api.message.send', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
+     data-assistant-chat-assistant-nom-value="{{ assistantNom }}">
+    <style>
+        .jsb-ai-chat { display:flex; flex-direction:column; height:100%; min-height:0; background:#f8f9fa; }
+
+        /* ── Entête ── */
+        .jsb-ai-chat .aic-header {
+            display:flex; align-items:center; gap:.65rem; flex:0 0 auto;
+            padding:.75rem 1rem; background:#ffffff; border-bottom:1px solid #dee2e6;
+        }
+        .jsb-ai-chat .aic-avatar {
+            width:40px; height:40px; border-radius:50%; flex:0 0 auto;
+            background:#0047AB; color:#ffffff; font-weight:700; font-size:1.05rem;
+            display:flex; align-items:center; justify-content:center;
+        }
+        .jsb-ai-chat .aic-header-txt { min-width:0; }
+        .jsb-ai-chat .aic-header-nom { color:#212529; font-weight:700; font-size:1rem; margin:0; }
+        .jsb-ai-chat .aic-header-sub { color:#6c757d; font-size:.78rem; margin:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .jsb-ai-chat .aic-close {
+            margin-left:auto; background:none; border:none; color:#6c757d; cursor:pointer;
+            width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+        }
+        .jsb-ai-chat .aic-close:hover { background:#e9ecef; color:#212529; }
+        .jsb-ai-chat .aic-close:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+
+        /* ── Fil de messages ── */
+        .jsb-ai-chat .aic-messages { flex:1 1 auto; min-height:0; overflow-y:auto; padding:1rem; display:flex; flex-direction:column; gap:.75rem; }
+        .jsb-ai-chat .aic-msg { display:flex; gap:.5rem; max-width:92%; }
+        .jsb-ai-chat .aic-msg--assistant { align-self:flex-start; }
+        .jsb-ai-chat .aic-msg--user { align-self:flex-end; flex-direction:row-reverse; }
+        .jsb-ai-chat .aic-msg-avatar {
+            width:28px; height:28px; border-radius:50%; flex:0 0 auto; margin-top:2px;
+            background:#0047AB; color:#ffffff; font-weight:700; font-size:.8rem;
+            display:flex; align-items:center; justify-content:center;
+        }
+        .jsb-ai-chat .aic-msg-body { min-width:0; display:flex; flex-direction:column; gap:.15rem; }
+        .jsb-ai-chat .aic-msg-text {
+            margin:0; padding:.6rem .8rem; border-radius:12px;
+            color:#212529; font-size:.9rem; line-height:1.5; white-space:pre-wrap; word-break:break-word;
+        }
+        .jsb-ai-chat .aic-msg--assistant .aic-msg-text { background:#ffffff; border:1px solid #dee2e6; border-top-left-radius:4px; }
+        .jsb-ai-chat .aic-msg--user .aic-msg-text { background:#e8f0fb; border-top-right-radius:4px; }
+        .jsb-ai-chat .aic-msg--refus .aic-msg-text { border-left:3px solid #ffc107; }
+        .jsb-ai-chat .aic-msg-time { color:#6c757d; font-size:.7rem; }
+        .jsb-ai-chat .aic-msg--user .aic-msg-time { text-align:right; }
+
+        /* Bulles système (402 tokens / erreur réseau). */
+        .jsb-ai-chat .aic-notice { margin:0; padding:.6rem .8rem; border-radius:8px; font-size:.85rem; align-self:center; max-width:92%; }
+        .jsb-ai-chat .aic-notice--warning { background:#fff3cd; color:#664d03; }
+        .jsb-ai-chat .aic-notice--error { background:#f8d7da; color:#842029; }
+
+        /* Indicateur « réfléchit… ». */
+        .jsb-ai-chat .aic-typing { flex:0 0 auto; display:flex; align-items:center; gap:.45rem; padding:.25rem 1rem .5rem; color:#6c757d; font-size:.82rem; }
+        .jsb-ai-chat .aic-typing[hidden] { display:none; }
+        .jsb-ai-chat .aic-typing .dot {
+            width:6px; height:6px; border-radius:50%; background:#6c757d;
+            animation: aic-blink 1.2s infinite ease-in-out;
+        }
+        .jsb-ai-chat .aic-typing .dot:nth-child(2) { animation-delay:.2s; }
+        .jsb-ai-chat .aic-typing .dot:nth-child(3) { animation-delay:.4s; }
+        @keyframes aic-blink { 0%, 80%, 100% { opacity:.25; } 40% { opacity:1; } }
+
+        /* ── Zone de saisie ── */
+        .jsb-ai-chat .aic-composer {
+            flex:0 0 auto; display:flex; align-items:flex-end; gap:.5rem;
+            padding:.75rem 1rem; background:#ffffff; border-top:1px solid #dee2e6;
+        }
+        .jsb-ai-chat .aic-input {
+            flex:1 1 auto; resize:none; min-height:42px; max-height:160px;
+            border:1px solid #ced4da; border-radius:10px; padding:.55rem .75rem;
+            font-size:.9rem; color:#000000; line-height:1.45;
+        }
+        .jsb-ai-chat .aic-input:focus { outline:none; border-color:#0047AB; box-shadow:0 0 0 .25rem rgba(0,71,171,.35); }
+        .jsb-ai-chat .aic-send {
+            flex:0 0 auto; width:42px; height:42px; border-radius:10px; border:none; cursor:pointer;
+            background:#0047AB; color:#ffffff; display:flex; align-items:center; justify-content:center;
+        }
+        .jsb-ai-chat .aic-send:hover { background:#003380; }
+        .jsb-ai-chat .aic-send:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+        .jsb-ai-chat .aic-send:disabled { opacity:.65; pointer-events:none; }
+        .jsb-ai-chat .visually-hidden {
+            position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+            overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+        }
+    </style>
+
+    {# ── Entête ── #}
+    <div class="aic-header">
+        <span class="aic-avatar" aria-hidden="true">{{ assistantNom|first|upper }}</span>
+        <div class="aic-header-txt">
+            <p class="aic-header-nom">{{ assistantNom }}</p>
+            <p class="aic-header-sub">Assistant IA · {{ entreprise.nom }}</p>
+        </div>
+        <button type="button" class="aic-close" data-action="click->workspace-manager#closeTab"
+                aria-label="Fermer la conversation">
+            <twig:UX:Icon name="{{ resolve_icon_name('action:exit') }}" style="width:20px;height:20px;" />
+        </button>
+    </div>
+
+    {# ── Fil de messages ── #}
+    <div class="aic-messages" role="log" aria-live="polite"
+         aria-label="Conversation avec {{ assistantNom }}"
+         data-assistant-chat-target="messages">
+        {% if conversation.messages is empty %}
+            <div class="aic-msg aic-msg--assistant">
+                <span class="aic-msg-avatar" aria-hidden="true">{{ assistantNom|first|upper }}</span>
+                <div class="aic-msg-body">
+                    <p class="aic-msg-text">Bonjour ! Je suis {{ assistantNom }}, l'assistant IA de {{ entreprise.nom }}. Posez-moi une question sur les données de votre espace de travail — par exemple « Combien de clients avons-nous ? » ou « Quel est mon périmètre d'accès ? ».</p>
+                </div>
+            </div>
+        {% endif %}
+        {% for message in conversation.messages %}
+            {% set estAssistant = message.role == 'assistant' %}
+            {% set estRefus = estAssistant and (message.meta.refus ?? false) %}
+            <div class="aic-msg aic-msg--{{ estAssistant ? 'assistant' : 'user' }}{{ estRefus ? ' aic-msg--refus' }}">
+                {% if estAssistant %}
+                    <span class="aic-msg-avatar" aria-hidden="true">{{ assistantNom|first|upper }}</span>
+                {% endif %}
+                <div class="aic-msg-body">
+                    <p class="aic-msg-text">{{ message.contenu }}</p>
+                    <span class="aic-msg-time">{{ message.createdAt|date('H:i') }}</span>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    {# ── Indicateur de génération ── #}
+    <div class="aic-typing" hidden data-assistant-chat-target="typing" aria-live="polite">
+        <span class="dot" aria-hidden="true"></span>
+        <span class="dot" aria-hidden="true"></span>
+        <span class="dot" aria-hidden="true"></span>
+        {{ assistantNom }} réfléchit…
+    </div>
+
+    {# ── Zone de saisie ── #}
+    <div class="aic-composer">
+        <label class="visually-hidden" for="aic-input-{{ conversation.id }}">Votre message à {{ assistantNom }}</label>
+        <textarea id="aic-input-{{ conversation.id }}" class="aic-input" rows="1"
+                  placeholder="Posez votre question à {{ assistantNom }}…"
+                  maxlength="4000"
+                  data-assistant-chat-target="input"
+                  data-action="keydown->assistant-chat#keydown input->assistant-chat#autoGrow"></textarea>
+        <button type="button" class="aic-send" data-assistant-chat-target="send"
+                data-action="click->assistant-chat#send"
+                aria-label="Envoyer le message">
+            <twig:UX:Icon name="{{ resolve_icon_name('action:send-email') }}" style="width:20px;height:20px;" />
+        </button>
+    </div>
+</div>

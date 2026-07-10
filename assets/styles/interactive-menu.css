@@ -781,6 +781,17 @@ a.company-version:hover {
   visibility: visible;
 }
 
+/* Panneau HTML arbitraire ouvert en col-4 via app:workspace.open-html-in-visualization
+   (ex. chat de l'assistant IA) : occupe toute la hauteur, le défilement est géré
+   à l'intérieur du panneau (fil de messages), pas par le conteneur d'onglets. */
+.menu-col-4 .tab-content--html.active {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+}
+
 /* --- Styles pour l'accordéon --- */
 .accordion-item {
   border: 1px solid var(--border-light);
