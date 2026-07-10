@@ -8,7 +8,10 @@ import { Controller } from '@hotwired/stimulus';
  * Tout contenu est injecté via textContent (échappement systématique).
  */
 export default class extends Controller {
-    static targets = ['messages', 'input', 'send', 'typing'];
+    static targets = ['messages', 'input', 'send', 'typing', 'count'];
+
+    /** Seuil d'affichage du compteur de caractères restants (proche de maxlength). */
+    static COUNT_THRESHOLD = 400;
 
     static values = {
         sendUrl: String,
@@ -18,8 +21,37 @@ export default class extends Controller {
     connect() {
         this.sending = false;
         this.scrollToBottom();
+        this.onInput();
         if (this.hasInputTarget) {
             this.inputTarget.focus();
+        }
+    }
+
+    /**
+     * À chaque saisie : hauteur auto, bouton d'envoi actif seulement si le
+     * message est non vide (prévention des envois vides), compteur de
+     * caractères restants affiché à l'approche de la limite.
+     */
+    onInput() {
+        this.autoGrow();
+        this.updateSendState();
+        this.updateCount();
+    }
+
+    updateSendState() {
+        if (!this.hasSendTarget || !this.hasInputTarget) return;
+        this.sendTarget.disabled = this.sending || this.inputTarget.value.trim() === '';
+    }
+
+    updateCount() {
+        if (!this.hasCountTarget || !this.hasInputTarget) return;
+        const max = Number(this.inputTarget.getAttribute('maxlength')) || 4000;
+        const restants = max - this.inputTarget.value.length;
+        const proche = restants <= this.constructor.COUNT_THRESHOLD;
+        this.countTarget.hidden = !proche;
+        if (proche) {
+            this.countTarget.textContent = `${restants} caractère${restants > 1 ? 's' : ''} restant${restants > 1 ? 's' : ''}`;
+            this.countTarget.classList.toggle('aic-count--limite', restants <= 50);
         }
     }
 
@@ -46,7 +78,7 @@ export default class extends Controller {
         this.sendTarget.disabled = true;
         const userBubble = this.appendMessage('user', contenu);
         this.inputTarget.value = '';
-        this.autoGrow();
+        this.onInput();
         this.typingTarget.hidden = false;
         this.scrollToBottom();
 
@@ -78,8 +110,7 @@ export default class extends Controller {
         } finally {
             this.typingTarget.hidden = true;
             this.sending = false;
-            this.sendTarget.disabled = false;
-            this.autoGrow();
+            this.onInput(); // recalcul : bouton actif seulement si le champ est non vide
             this.inputTarget.focus();
             this.scrollToBottom();
         }
