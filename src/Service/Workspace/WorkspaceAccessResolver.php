@@ -265,6 +265,23 @@ class WorkspaceAccessResolver
         return $menuData;
     }
 
+    /**
+     * Libellés lisibles des entités gouvernées par la carte de permissions
+     * (nom court => libellé de rubrique du menu). Permet à l'assistant IA de
+     * dériver son lexique métier sans dupliquer la carte (DRY).
+     *
+     * @return array<string, string>
+     */
+    public function libellesEntites(): array
+    {
+        $labels = [];
+        foreach (self::MAP as $entityShortName => [, , , $label]) {
+            $labels[$entityShortName] = $label;
+        }
+
+        return $labels;
+    }
+
     /** L'invité a-t-il au moins un périmètre (sinon : coquille « aucun accès ») ? */
     public function hasAnyPerimetre(Invite $invite): bool
     {

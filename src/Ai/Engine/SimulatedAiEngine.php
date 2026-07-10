@@ -1,0 +1,187 @@
+<?php
+
+namespace App\Ai\Engine;
+
+use App\Ai\AiReply;
+use App\Ai\AiRequest;
+use App\Ai\AiText;
+use App\Ai\Tool\AiToolInterface;
+use App\Ai\Tool\AiToolResult;
+use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
+
+/**
+ * Moteur simulé de l'assistant IA : routage DÉTERMINISTE par mots-clés, sans
+ * appel réseau. Assez riche pour prouver tout le circuit (identité du
+ * personnage, restitution du périmètre, réponse à une vraie question de
+ * données via un outil, refus poli hors périmètre, repli guidé) — c'est aussi
+ * le moteur des tests fonctionnels une fois le bridge réel branché.
+ */
+final class SimulatedAiEngine implements AiEngineInterface
+{
+    /** @var iterable<AiToolInterface> */
+    private iterable $tools;
+
+    public function __construct(
+        #[AutowireIterator('app.ai_tool')] iterable $tools,
+    ) {
+        $this->tools = $tools;
+    }
+
+    public function name(): string
+    {
+        return 'simulated';
+    }
+
+    public function reply(AiRequest $request): AiReply
+    {
+        $question = $request->lastUserMessage();
+        $normalized = AiText::normalize($question);
+        $nom = $request->systemContext['assistantNom'];
+        $entreprise = $request->systemContext['entrepriseNom'];
+
+        // 1) Identité / salutations : l'assistant se présente.
+        if (preg_match('/\b(qui es[ -]tu|ton nom|tu t appelles|comment tu t appelles|presente[ -]toi|bonjour|salut|hello|bonsoir)\b/', $normalized)) {
+            return new AiReply(sprintf(
+                "Bonjour ! Je suis %s, l'assistant IA de %s. Je connais les données de votre espace de travail "
+                . "(dans les limites de vos droits d'accès) et je peux par exemple compter vos enregistrements "
+                . "(« Combien de clients avons-nous ? ») ou donner un indicateur calculé "
+                . "(« Quelle est la prime totale du client X ? »). Comment puis-je vous aider ?",
+                $nom,
+                $entreprise,
+            ));
+        }
+
+        // 2) Périmètre : restitution lisible des droits de l'invité.
+        if (preg_match('/\b(perimetre|droits?|acces|autorisations?|permissions?)\b/', $normalized)) {
+            return new AiReply($this->describePerimetre($request));
+        }
+
+        // 3) Question de données : premier outil dont le match aboutit.
+        foreach ($this->tools as $tool) {
+            $args = $tool->match($question, $request->scope);
+            if ($args === null) {
+                continue;
+            }
+
+            $result = $tool->execute($args, $request->scope);
+
+            if ($result->status === AiToolResult::STATUS_HORS_PERIMETRE) {
+                return new AiReply($this->refusPoli($result->data['libelle'] ?? 'ces données', $nom), refused: true, toolUsed: $tool->name());
+            }
+            if ($result->status === AiToolResult::STATUS_INTROUVABLE) {
+                return new AiReply(sprintf(
+                    "Je n'ai rien trouvé qui corresponde à votre demande%s. Pouvez-vous préciser (nom exact, catégorie) ?",
+                    ($result->data['precision'] ?? '') !== '' ? sprintf(' (« %s »)', $result->data['precision']) : '',
+                ), toolUsed: $tool->name());
+            }
+
+            return new AiReply($this->formatToolReply($tool->name(), $result->data), toolUsed: $tool->name());
+        }
+
+        // 4) Repli : réponse polie + exemples construits depuis le périmètre réel
+        //    (donc jamais hors périmètre).
+        return new AiReply($this->repliGuide($request));
+    }
+
+    /** Refus poli standardisé : limitation technique liée aux droits, sans détail des données. */
+    private function refusPoli(string $libelle, string $nom): string
+    {
+        return sprintf(
+            "Je suis désolé, mais je ne peux pas répondre à cette question : mes connaissances sont "
+            . "strictement limitées à votre périmètre d'accès dans cet espace de travail, et les données "
+            . "« %s » n'en font pas partie. Si vous pensez en avoir besoin, rapprochez-vous du propriétaire "
+            . "de l'espace de travail pour faire élargir vos droits. — %s",
+            $libelle,
+            $nom,
+        );
+    }
+
+    /** Phrase de réponse par outil (le futur LLM formulera lui-même à partir des données). */
+    private function formatToolReply(string $toolName, array $data): string
+    {
+        return match ($toolName) {
+            'compter_entites' => sprintf(
+                'Votre espace de travail compte actuellement %d enregistrement%s dans la rubrique « %s ».',
+                $data['count'],
+                $data['count'] > 1 ? 's' : '',
+                $data['libelle'],
+            ),
+            'indicateur_calcule' => sprintf(
+                'Pour le client « %s », l\'indicateur « %s » vaut actuellement %s %s (valeur calculée en temps réel).',
+                $data['client'],
+                $data['indicateur'],
+                number_format($data['valeur'], 2, ',', ' '),
+                $data['unite'],
+            ),
+            default => trim(implode(' · ', array_map(
+                fn ($k, $v) => sprintf('%s : %s', $k, is_scalar($v) ? (string) $v : json_encode($v, JSON_UNESCAPED_UNICODE)),
+                array_keys($data),
+                $data,
+            ))),
+        };
+    }
+
+    /** Restitue le périmètre (structure de WorkspaceAccessResolver::describePerimetreDetailed). */
+    private function describePerimetre(AiRequest $request): string
+    {
+        $perimetre = $request->systemContext['perimetre'];
+
+        if (($perimetre['owner'] ?? false) === true) {
+            return "Vous êtes propriétaire de cet espace de travail : vous avez un accès complet à toutes "
+                . 'les rubriques, et je peux donc répondre à vos questions sur l\'ensemble des données de '
+                . "l'entreprise.";
+        }
+
+        $modules = $perimetre['modules'] ?? [];
+        if (empty($modules)) {
+            return "Aucun droit d'accès ne vous a encore été attribué dans cet espace de travail : je ne "
+                . "peux donc répondre à aucune question sur les données. Rapprochez-vous du propriétaire "
+                . "de l'espace pour obtenir un périmètre.";
+        }
+
+        $lignes = [];
+        foreach ($modules as $module) {
+            $entites = array_map(
+                fn (array $e) => sprintf('%s (%s)', $e['nom'], implode(', ', $e['niveaux'])),
+                $module['entites'],
+            );
+            $lignes[] = sprintf('%s : %s', $module['nom'], implode(' · ', $entites));
+        }
+
+        return "Voici votre périmètre d'accès actuel — je ne peux répondre qu'aux questions portant sur "
+            . "ces rubriques :\n" . implode("\n", $lignes);
+    }
+
+    /** Repli : exemples de questions dérivés du périmètre réel de l'invité. */
+    private function repliGuide(AiRequest $request): string
+    {
+        $nom = $request->systemContext['assistantNom'];
+        $perimetre = $request->systemContext['perimetre'];
+
+        $exemples = [];
+        if (($perimetre['owner'] ?? false) === true) {
+            $exemples = [
+                'Combien de clients avons-nous ?',
+                'Quelle est la prime totale du client X ?',
+                'Quel est mon périmètre d\'accès ?',
+            ];
+        } else {
+            foreach (($perimetre['modules'] ?? []) as $module) {
+                foreach ($module['entites'] as $entite) {
+                    $exemples[] = sprintf('Combien de %s avons-nous ?', mb_strtolower($entite['nom'], 'UTF-8'));
+                    if (count($exemples) >= 2) {
+                        break 2;
+                    }
+                }
+            }
+            $exemples[] = 'Quel est mon périmètre d\'accès ?';
+        }
+
+        return sprintf(
+            "Je n'ai pas compris votre demande — je suis %s et je réponds aux questions sur les données de "
+            . "votre espace de travail. Essayez par exemple :\n- %s",
+            $nom,
+            implode("\n- ", $exemples),
+        );
+    }
+}

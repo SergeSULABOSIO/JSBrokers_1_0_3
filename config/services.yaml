@@ -64,6 +64,18 @@ services:
         App\Services\Canvas\Indicator\IndicatorCalculationStrategyInterface:
             tags: ['app.indicator_calculation_strategy']
 
+        # Outils de données de l'assistant IA (consommés par le moteur via
+        # AutowireIterator, exposables en tool-calling au futur LLM réel).
+        App\Ai\Tool\AiToolInterface:
+            tags: ['app.ai_tool']
+
+    # Moteur de l'assistant IA : implémentation par défaut = simulateur
+    # déterministe (repli/tests). Le jour où le LLM réel est choisi (bridge
+    # Symfony AI / Anthropic…), on ajoute son adaptateur et on repointe cet
+    # alias dessus — aucun autre changement applicatif (même pattern que le
+    # PSP de paiement ci-dessous).
+    App\Ai\Engine\AiEngineInterface: '@App\Ai\Engine\SimulatedAiEngine'
+
     # PSP de paiement : implémentation par défaut = simulateur (repli/tests). Le
     # jour où un PSP réel est choisi, on ajoute son adaptateur et on repointe cet
     # alias dessus — aucun autre changement applicatif.
