@@ -73,6 +73,78 @@ export default class extends Controller {
         await this.openChat(chatUrl, convTitre, convId);
     }
 
+    /**
+     * Renommage INLINE : le titre laisse place à un champ de saisie dans la
+     * ligne. Entrée ou perte de focus = enregistrer, Échap = annuler.
+     */
+    startRename(event) {
+        const renameButton = event.currentTarget;
+        const item = renameButton.closest('.ai-conv-item');
+        if (!item || item.querySelector('.ai-conv-edit')) return; // déjà en édition
+
+        const openButton = item.querySelector('.ai-conv-open');
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'ai-conv-edit form-control form-control-sm';
+        input.maxLength = 120;
+        input.value = renameButton.dataset.convTitre || '';
+        input.setAttribute('aria-label', 'Nouveau titre de la conversation');
+        openButton.style.display = 'none';
+        item.insertBefore(input, openButton);
+        input.focus();
+        input.select();
+
+        let done = false; // Entrée déclenche aussi blur : une seule issue.
+        const finish = async (save) => {
+            if (done) return;
+            done = true;
+
+            const nouveauTitre = input.value.trim();
+            const ancienTitre = renameButton.dataset.convTitre || '';
+            if (save && nouveauTitre !== '' && nouveauTitre !== ancienTitre) {
+                await this.executeRename(item, renameButton.dataset.renameUrl, nouveauTitre);
+            }
+
+            input.remove();
+            openButton.style.display = '';
+            openButton.focus();
+        };
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+            else if (e.key === 'Escape') { e.stopPropagation(); finish(false); }
+        });
+        input.addEventListener('blur', () => finish(true));
+    }
+
+    /** Enregistre le nouveau titre puis synchronise la ligne ET l'onglet col-4. */
+    async executeRename(item, renameUrl, titre) {
+        try {
+            const response = await fetch(renameUrl, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ titre }),
+            });
+            if (!response.ok) {
+                throw new Error(`Renommage impossible (HTTP ${response.status}).`);
+            }
+            const data = await response.json();
+
+            // Ligne : titre affiché + datasets des trois boutons (open/rename/delete).
+            const titleSpan = item.querySelector('[data-role="conv-titre"]');
+            if (titleSpan) titleSpan.textContent = data.titre;
+            item.querySelectorAll('[data-conv-titre]').forEach((el) => { el.dataset.convTitre = data.titre; });
+
+            // Onglet de chat ouvert en col-4 pour cette conversation : titre synchronisé.
+            const convId = item.dataset.convId;
+            const tabTitle = document.querySelector(`[data-entity-id='ia-conv-${convId}'][data-entity-type='html'] [data-role="tab-title"]`);
+            if (tabTitle) tabTitle.textContent = data.titre;
+        } catch (error) {
+            console.error('AssistantIa - renommage de conversation échoué :', error);
+            await this.refreshComponent(); // resynchronise l'affichage avec le serveur
+        }
+    }
+
     /** Demande confirmation avant suppression (modale générique du Cerveau). */
     requestDelete(event) {
         const { deleteUrl, convId, convTitre } = event.currentTarget.dataset;

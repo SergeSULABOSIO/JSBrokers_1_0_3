@@ -382,6 +382,54 @@ class AssistantIaWorkspaceTest extends WebTestCase
         );
     }
 
+    public function testRenommageConversation(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $guest, 'Ancien titre');
+
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $this->client->request(
+            'PATCH',
+            sprintf('/admin/assistant-ia/api/conversations/%d/%d', $e->getId(), $conversation->getId()),
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode(['titre' => 'Dossier flotte auto'])
+        );
+        $this->assertResponseIsSuccessful();
+        $this->assertSame('Dossier flotte auto', $this->jsonResponse()['titre']);
+
+        // Persisté et visible dans la liste du composant.
+        $this->client->request('GET', sprintf('/admin/assistant-ia/workspace/%d', $e->getId()));
+        $this->assertStringContainsString('Dossier flotte auto', (string) $this->client->getResponse()->getContent());
+    }
+
+    public function testRenommageInvalideOuDAutruiRefuse(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $guest, 'Privée');
+        $url = sprintf('/admin/assistant-ia/api/conversations/%d/%d', $e->getId(), $conversation->getId());
+
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+
+        // Titre vide → 400.
+        $this->client->request('PATCH', $url, [], [], ['CONTENT_TYPE' => 'application/json'], json_encode(['titre' => '  ']));
+        $this->assertResponseStatusCodeSame(400);
+
+        // Titre trop long (> 120) → 400.
+        $this->client->request('PATCH', $url, [], [], ['CONTENT_TYPE' => 'application/json'], json_encode(['titre' => str_repeat('a', 121)]));
+        $this->assertResponseStatusCodeSame(400);
+
+        // Le propriétaire ne peut pas renommer la conversation d'un autre invité → 404.
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+        $this->client->request('PATCH', $url, [], [], ['CONTENT_TYPE' => 'application/json'], json_encode(['titre' => 'Piratage']));
+        $this->assertResponseStatusCodeSame(404);
+
+        // Le titre d'origine est intact.
+        $this->em()->clear();
+        $this->assertSame('Privée', $this->em()->getRepository(AssistantConversation::class)->find($conversation->getId())->getTitre());
+    }
+
     public function testSuppressionConversationDAutruiRefusee(): void
     {
         ['guest' => $guest, 'entreprise' => $e] = $this->seed();

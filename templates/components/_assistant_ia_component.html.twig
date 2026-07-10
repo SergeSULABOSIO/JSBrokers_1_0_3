@@ -47,10 +47,19 @@
         /* Liste des conversations. */
         .jsb-ai .ai-conv-list { list-style:none; margin:.75rem 0 0; padding:0; }
         .jsb-ai .ai-conv-item {
-            display:flex; align-items:center; gap:.75rem;
+            display:flex; align-items:center; gap:.65rem;
             padding:.65rem .5rem; border-bottom:1px solid #f0f0f0;
         }
         .jsb-ai .ai-conv-item:last-child { border-bottom:none; }
+        /* Pastille d'icône de la conversation. */
+        .jsb-ai .ai-conv-ic {
+            width:36px; height:36px; border-radius:50%; flex:0 0 auto;
+            background:#e8f0fb; color:#0047AB;
+            display:flex; align-items:center; justify-content:center;
+        }
+        /* Champ d'édition inline du titre (renommage). */
+        .jsb-ai .ai-conv-edit { flex:1 1 auto; min-width:0; font-size:.92rem; font-weight:600; color:#000000; }
+        .jsb-ai .ai-conv-edit:focus { border-color:#0047AB; box-shadow:0 0 0 .25rem rgba(0,71,171,.35); }
         .jsb-ai .ai-conv-open {
             flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:.1rem;
             background:none; border:none; text-align:left; padding:.15rem .35rem; border-radius:8px; cursor:pointer;
@@ -59,11 +68,14 @@
         .jsb-ai .ai-conv-open:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
         .jsb-ai .ai-conv-titre { color:#212529; font-weight:600; font-size:.92rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .jsb-ai .ai-conv-date { color:#6c757d; font-size:.78rem; }
+        .jsb-ai .ai-conv-rename,
         .jsb-ai .ai-conv-delete {
             flex:0 0 auto; background:none; border:none; color:#6c757d; cursor:pointer;
             width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center;
         }
+        .jsb-ai .ai-conv-rename:hover { color:#0047AB; background:#f8f9fa; }
         .jsb-ai .ai-conv-delete:hover { color:#dc3545; background:#f8f9fa; }
+        .jsb-ai .ai-conv-rename:focus-visible,
         .jsb-ai .ai-conv-delete:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
 
         /* État vide. */
@@ -118,24 +130,38 @@
         {% else %}
             <ul class="ai-conv-list" aria-labelledby="ai-conv-titre-liste">
                 {% for conversation in conversations %}
-                    <li class="ai-conv-item">
+                    {% set titre = conversation.titre ?? 'Nouvelle conversation' %}
+                    <li class="ai-conv-item" data-conv-id="{{ conversation.id }}">
+                        <span class="ai-conv-ic" aria-hidden="true">
+                            <twig:UX:Icon name="{{ resolve_icon_name('assistant-ia') }}" style="width:18px;height:18px;" />
+                        </span>
                         <button type="button" class="ai-conv-open"
                                 data-action="click->assistant-ia#open"
                                 data-conv-id="{{ conversation.id }}"
-                                data-conv-titre="{{ conversation.titre ?? 'Nouvelle conversation' }}"
+                                data-conv-titre="{{ titre }}"
                                 data-chat-url="{{ path('admin.assistantia.chat', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
                                 title="Ouvrir cette conversation dans la colonne de visualisation">
-                            <span class="ai-conv-titre">{{ conversation.titre ?? 'Nouvelle conversation' }}</span>
+                            <span class="ai-conv-titre" data-role="conv-titre">{{ titre }}</span>
                             <span class="ai-conv-date">
                                 {{ (conversation.updatedAt ?? conversation.createdAt)|date('d/m/Y H:i') }}
                             </span>
                         </button>
+                        <button type="button" class="ai-conv-rename"
+                                data-action="click->assistant-ia#startRename"
+                                data-conv-id="{{ conversation.id }}"
+                                data-conv-titre="{{ titre }}"
+                                data-rename-url="{{ path('admin.assistantia.api.conversation.rename', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
+                                title="Renommer la conversation"
+                                aria-label="Renommer la conversation « {{ titre }} »">
+                            <twig:UX:Icon name="{{ resolve_icon_name('action:edit') }}" style="width:18px;height:18px;" />
+                        </button>
                         <button type="button" class="ai-conv-delete"
                                 data-action="click->assistant-ia#requestDelete"
                                 data-conv-id="{{ conversation.id }}"
-                                data-conv-titre="{{ conversation.titre ?? 'Nouvelle conversation' }}"
+                                data-conv-titre="{{ titre }}"
                                 data-delete-url="{{ path('admin.assistantia.api.conversation.delete', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
-                                aria-label="Supprimer la conversation « {{ conversation.titre ?? 'Nouvelle conversation' }} »">
+                                title="Supprimer la conversation"
+                                aria-label="Supprimer la conversation « {{ titre }} »">
                             <twig:UX:Icon name="{{ resolve_icon_name('action:delete') }}" style="width:18px;height:18px;" />
                         </button>
                     </li>
