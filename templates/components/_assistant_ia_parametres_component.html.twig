@@ -1,0 +1,79 @@
+{#
+  Composant « Paramètres IA » (groupe IA) — colonne 3.
+
+  Nommage du personnage de l'assistant, unique par entreprise. Réservé au
+  propriétaire / gestionnaire d'invités (contrôleur fail-closed). Soumission
+  AJAX portée par le contrôleur Stimulus `assistant-ia-parametres` (un POST
+  classique naviguerait hors de l'espace de travail) ; AUCUN <script> inline.
+#}
+<div class="jsb-ai-params"
+     data-controller="assistant-ia-parametres"
+     data-assistant-ia-parametres-url-value="{{ path('admin.assistantia.workspace_parametres', {idEntreprise: idEntreprise}) }}">
+    <style>
+        .jsb-ai-params { padding: 1.25rem 1.5rem; }
+        .jsb-ai-params .aip-head { display:flex; align-items:center; gap:.75rem; margin:0 0 1rem; }
+        .jsb-ai-params .aip-head-ic {
+            width:44px; height:44px; border-radius:12px; flex:0 0 auto;
+            background:#e8f0fb; color:#0047AB; display:flex; align-items:center; justify-content:center;
+        }
+        .jsb-ai-params .aip-head h2 { font-size:1.25rem; font-weight:700; color:#212529; margin:0; }
+        .jsb-ai-params .aip-head p { color:#6c757d; font-size:.88rem; margin:.15rem 0 0; }
+
+        .jsb-ai-params .aip-panel { background:#ffffff; border:1px solid #dee2e6; border-radius:12px; padding:1.25rem; max-width:560px; }
+        .jsb-ai-params .form-label { color:#343a40; font-weight:600; }
+        .jsb-ai-params .form-text { color:#6c757d; }
+        .jsb-ai-params .form-control:focus { border-color:#0047AB; box-shadow:0 0 0 .25rem rgba(0,71,171,.35); }
+        .jsb-ai-params .btn-cobalt { background:#0047AB; border-color:#0047AB; color:#ffffff; }
+        .jsb-ai-params .btn-cobalt:hover { background:#003380; border-color:#003380; color:#ffffff; }
+        .jsb-ai-params .btn-cobalt:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+        .jsb-ai-params .btn-cobalt:disabled { opacity:.65; pointer-events:none; }
+
+        .jsb-ai-params .aip-feedback { border-radius:8px; padding:.65rem .9rem; font-size:.9rem; margin:0 0 1rem; }
+        .jsb-ai-params .aip-feedback--success { background:#d1e7dd; color:#0f5132; }
+        .jsb-ai-params .aip-feedback--error { background:#f8d7da; color:#842029; }
+    </style>
+
+    {# ── Entête ── #}
+    <div class="aip-head">
+        <div class="aip-head-ic" aria-hidden="true">
+            <twig:UX:Icon name="{{ resolve_icon_name('assistant-ia-parametres') }}" style="width:24px;height:24px;" />
+        </div>
+        <div>
+            <h2>Paramètres de l'assistant IA</h2>
+            <p>
+                Donnez une identité à l'assistant de votre cabinet : son nom sera visible
+                par tous les collaborateurs de l'espace de travail.
+            </p>
+        </div>
+    </div>
+
+    <div class="aip-panel">
+        {% if enregistre %}
+            <p class="aip-feedback aip-feedback--success" role="status">
+                Le nom de votre assistant a bien été enregistré : il s'appelle désormais
+                « {{ assistantNom }} ».
+            </p>
+        {% endif %}
+        {% if erreur %}
+            <p class="aip-feedback aip-feedback--error" role="alert">{{ erreur }}</p>
+        {% endif %}
+
+        <form data-action="submit->assistant-ia-parametres#save" data-assistant-ia-parametres-target="form">
+            <div class="mb-3">
+                <label class="form-label" for="aip-nom">Nom de l'assistant</label>
+                <input type="text" class="form-control" id="aip-nom" name="nom"
+                       value="{{ assistantNom }}" minlength="2" maxlength="60" required
+                       placeholder="Ex. Modogo"
+                       aria-describedby="aip-nom-aide">
+                <div class="form-text" id="aip-nom-aide">
+                    Entre 2 et 60 caractères. Sans personnalisation, l'assistant s'appelle
+                    « {{ nomParDefaut }} ».
+                </div>
+            </div>
+            <button type="submit" class="btn btn-cobalt" data-assistant-ia-parametres-target="submit">
+                <twig:UX:Icon name="{{ resolve_icon_name('action:save') }}" style="width:18px;height:18px;" />
+                <span class="ms-1">Enregistrer</span>
+            </button>
+        </form>
+    </div>
+</div>
