@@ -185,8 +185,13 @@ class AssistantIaController extends AbstractController
         [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
         $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
 
-        $this->em->remove($conversation);
-        $this->em->flush();
+        // Suppression en UNE requête SQL : la FK ON DELETE CASCADE de la base
+        // emporte les messages. $em->remove() chargerait toute la collection
+        // puis émettrait un DELETE par message (orphanRemoval) — inutilement
+        // lent sur une longue conversation.
+        $this->em->createQuery('DELETE FROM App\Entity\AssistantConversation c WHERE c.id = :id')
+            ->setParameter('id', $conversation->getId())
+            ->execute();
 
         return $this->json(['success' => true]);
     }

@@ -30,9 +30,19 @@
         .jsb-ai .ai-panel { background:#ffffff; border:1px solid #dee2e6; border-radius:12px; padding:1.1rem 1.25rem; margin-bottom:1rem; }
         .jsb-ai .ai-toolbar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.75rem; }
         .jsb-ai .ai-toolbar h3 { font-size:.95rem; font-weight:700; color:#343a40; margin:0; }
-        .jsb-ai .btn-cobalt { background:#0047AB; border-color:#0047AB; color:#ffffff; display:inline-flex; align-items:center; gap:.4rem; }
+        .jsb-ai .btn-cobalt { background:#0047AB; border-color:#0047AB; color:#ffffff; display:inline-flex; align-items:center; gap:.45rem; }
         .jsb-ai .btn-cobalt:hover { background:#003380; border-color:#003380; color:#ffffff; }
         .jsb-ai .btn-cobalt:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+        /* Bouton « Nouvelle conversation » : relief cobalt + états visibles. */
+        .jsb-ai .ai-new-btn {
+            border-radius:10px; padding:.45rem .9rem; font-weight:600;
+            box-shadow:0 2px 6px rgba(0,71,171,.25);
+            transition: background-color .15s ease, box-shadow .15s ease, transform .1s ease;
+        }
+        .jsb-ai .ai-new-btn:hover { box-shadow:0 4px 12px rgba(0,71,171,.25); }
+        .jsb-ai .ai-new-btn:active { transform:scale(.97); }
+        .jsb-ai .ai-new-btn:disabled { opacity:.65; pointer-events:none; }
+        .jsb-ai .ai-new-btn .spinner-border { width:1rem; height:1rem; border-width:.16em; }
 
         /* Liste des conversations. */
         .jsb-ai .ai-conv-list { list-style:none; margin:.75rem 0 0; padding:0; }
@@ -83,9 +93,15 @@
     <div class="ai-panel">
         <div class="ai-toolbar">
             <h3 id="ai-conv-titre-liste">Vos conversations</h3>
-            <button type="button" class="btn btn-sm btn-cobalt" data-action="click->assistant-ia#create">
-                <twig:UX:Icon name="{{ resolve_icon_name('action:add') }}" style="width:18px;height:18px;" />
-                Nouvelle conversation
+            <button type="button" class="btn btn-sm btn-cobalt ai-new-btn"
+                    data-action="click->assistant-ia#create"
+                    data-assistant-ia-target="createButton">
+                <span class="spinner-border" role="status" aria-hidden="true"
+                      style="display:none;" data-role="spinner"></span>
+                <span data-role="icon" style="display:inline-flex;">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:add') }}" style="width:18px;height:18px;" />
+                </span>
+                <span data-role="label">Nouvelle conversation</span>
             </button>
         </div>
 
