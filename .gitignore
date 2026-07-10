@@ -23,3 +23,10 @@
 /public/assets/
 /assets/vendor/
 ###< symfony/asset-mapper ###
+
+###> vich/uploader-bundle ###
+# Fichiers uploadés par les utilisateurs (documents VichUploader) : données,
+# pas du code — jamais versionnés. Le .gitkeep préserve le dossier au clone.
+/public/uploads/documents/*
+!/public/uploads/documents/.gitkeep
+###< vich/uploader-bundle ###
