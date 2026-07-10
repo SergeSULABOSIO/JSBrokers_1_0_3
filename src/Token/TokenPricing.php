@@ -2,6 +2,7 @@
 
 namespace App\Token;
 
+use App\Entity\AssistantMessage;
 use App\Entity\Avenant;
 use App\Entity\ChargeCourtier;
 use App\Entity\Cotation;
@@ -45,6 +46,10 @@ final class TokenPricing
         ChargeCourtier::class  => 5,
         DepenseCourtier::class => 5,
         Fournisseur::class     => 5,
+        // Assistant IA : chaque message envoyé à l'assistant est métré comme une
+        // écriture (≈ 2 écritures standard — le traitement IA coûte plus qu'un
+        // simple enregistrement). Paramétrable en console comme les autres poids.
+        AssistantMessage::class => 10,
     ];
 
     /** Poids par défaut en écriture pour toute entité non explicitement listée. */
