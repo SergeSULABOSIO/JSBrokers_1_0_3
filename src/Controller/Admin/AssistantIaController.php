@@ -178,6 +178,27 @@ class AssistantIaController extends AbstractController
         ]);
     }
 
+    /** Renomme une conversation de l'invité. */
+    #[Route('/api/conversations/{idEntreprise}/{idConversation}', name: 'api.conversation.rename', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS], methods: ['PATCH'])]
+    public function renameConversation(int $idEntreprise, int $idConversation, Request $request): JsonResponse
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+
+        $payload = json_decode($request->getContent(), true) ?: [];
+        $titre = trim((string) ($payload['titre'] ?? ''));
+        if ($titre === '' || mb_strlen($titre) > 120) {
+            return $this->json([
+                'message' => 'Le titre doit contenir entre 1 et 120 caractères.',
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        $conversation->setTitre($titre);
+        $this->em->flush();
+
+        return $this->json(['success' => true, 'titre' => $conversation->getTitre()]);
+    }
+
     /** Supprime une conversation de l'invité (messages en cascade). */
     #[Route('/api/conversations/{idEntreprise}/{idConversation}', name: 'api.conversation.delete', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS], methods: ['DELETE'])]
     public function deleteConversation(int $idEntreprise, int $idConversation): JsonResponse
