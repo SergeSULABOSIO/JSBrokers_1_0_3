@@ -22,21 +22,11 @@
         .jsb-ai-params .aip-head h2 { font-size:1.25rem; font-weight:700; color:#212529; margin:0; }
         .jsb-ai-params .aip-head p { color:#6c757d; font-size:.88rem; margin:.15rem 0 0; }
 
-        /* Carte du formulaire : champs à gauche, illustration à droite (modèle console). */
+        /* Carte du formulaire (modèle console, sans illustration). */
         .jsb-ai-params .aip-panel {
             background:#ffffff; border:1px solid #dee2e6; border-radius:12px;
-            padding:1.25rem; max-width:720px;
+            padding:1.25rem; max-width:640px;
         }
-        .jsb-ai-params .aip-grid { display:flex; gap:1.25rem; align-items:stretch; }
-        .jsb-ai-params .aip-grid-fields { flex:1 1 auto; min-width:0; }
-        .jsb-ai-params .aip-thumb {
-            flex:0 0 168px; border-radius:12px; border:1px solid #dee2e6; background:#f8f9fa;
-            display:flex; align-items:center; justify-content:center;
-            transition: box-shadow .2s ease;
-        }
-        .jsb-ai-params .aip-thumb:hover { box-shadow:0 4px 16px rgba(0,71,171,.12); }
-        .jsb-ai-params .aip-thumb svg { width:64px; height:64px; color:#0047AB; }
-        @media (max-width: 720px) { .jsb-ai-params .aip-thumb { display:none; } }
 
         /* Section à légende cobalt (modèle .cs-fieldset / .cs-legend du coupon). */
         .jsb-ai-params .aip-fieldset {
@@ -110,33 +100,26 @@
         {% endif %}
 
         <form data-action="submit->assistant-ia-parametres#save" data-assistant-ia-parametres-target="form">
-            <div class="aip-grid">
-                <div class="aip-grid-fields">
-                    <fieldset class="aip-fieldset">
-                        <legend class="aip-legend">
-                            <twig:UX:Icon name="{{ resolve_icon_name('assistant-ia') }}" style="width:16px;height:16px;" />
-                            Identité du personnage
-                        </legend>
-                        <label class="form-label" for="aip-nom">Nom de l'assistant</label>
-                        <div class="aip-inputbox">
-                            <span class="aip-input-ic" aria-hidden="true">
-                                <twig:UX:Icon name="{{ resolve_icon_name('utilisateur') }}" style="width:20px;height:20px;" />
-                            </span>
-                            <input type="text" class="form-control" id="aip-nom" name="nom"
-                                   value="{{ assistantNom }}" minlength="2" maxlength="60" required
-                                   placeholder="Ex. Modogo"
-                                   aria-describedby="aip-nom-aide">
-                        </div>
-                        <div class="form-text" id="aip-nom-aide">
-                            Entre 2 et 60 caractères. Sans personnalisation, l'assistant s'appelle
-                            « {{ nomParDefaut }} ».
-                        </div>
-                    </fieldset>
+            <fieldset class="aip-fieldset">
+                <legend class="aip-legend">
+                    <twig:UX:Icon name="{{ resolve_icon_name('assistant-ia') }}" style="width:16px;height:16px;" />
+                    Identité du personnage
+                </legend>
+                <label class="form-label" for="aip-nom">Nom de l'assistant</label>
+                <div class="aip-inputbox">
+                    <span class="aip-input-ic" aria-hidden="true">
+                        <twig:UX:Icon name="{{ resolve_icon_name('utilisateur') }}" style="width:20px;height:20px;" />
+                    </span>
+                    <input type="text" class="form-control" id="aip-nom" name="nom"
+                           value="{{ assistantNom }}" minlength="2" maxlength="60" required
+                           placeholder="Ex. Modogo"
+                           aria-describedby="aip-nom-aide">
                 </div>
-                <div class="aip-thumb" aria-hidden="true">
-                    <twig:UX:Icon name="{{ resolve_icon_name('assistant-ia-parametres') }}" />
+                <div class="form-text" id="aip-nom-aide">
+                    Entre 2 et 60 caractères. Sans personnalisation, l'assistant s'appelle
+                    « {{ nomParDefaut }} ».
                 </div>
-            </div>
+            </fieldset>
 
             <div class="aip-actions">
                 <button type="submit" class="btn btn-cobalt" data-assistant-ia-parametres-target="submit">
