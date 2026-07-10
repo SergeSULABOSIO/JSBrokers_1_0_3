@@ -2,9 +2,12 @@
   Composant « Paramètres IA » (groupe IA) — colonne 3.
 
   Nommage du personnage de l'assistant, unique par entreprise. Réservé au
-  propriétaire / gestionnaire d'invités (contrôleur fail-closed). Soumission
-  AJAX portée par le contrôleur Stimulus `assistant-ia-parametres` (un POST
-  classique naviguerait hors de l'espace de travail) ; AUCUN <script> inline.
+  propriétaire / gestionnaire d'invités (contrôleur fail-closed). Rendu inspiré
+  du formulaire console (coupon) : fieldset à légende cobalt avec icône, champ
+  blanc 48px sur panneau clair, illustration latérale, action à icône. Champ à
+  icône incrustée (alias `utilisateur` = identité du personnage). Soumission
+  AJAX portée par le contrôleur Stimulus `assistant-ia-parametres` ; AUCUN
+  <script> inline.
 #}
 <div class="jsb-ai-params"
      data-controller="assistant-ia-parametres"
@@ -19,14 +22,62 @@
         .jsb-ai-params .aip-head h2 { font-size:1.25rem; font-weight:700; color:#212529; margin:0; }
         .jsb-ai-params .aip-head p { color:#6c757d; font-size:.88rem; margin:.15rem 0 0; }
 
-        .jsb-ai-params .aip-panel { background:#ffffff; border:1px solid #dee2e6; border-radius:12px; padding:1.25rem; max-width:560px; }
-        .jsb-ai-params .form-label { color:#343a40; font-weight:600; }
+        /* Carte du formulaire : champs à gauche, illustration à droite (modèle console). */
+        .jsb-ai-params .aip-panel {
+            background:#ffffff; border:1px solid #dee2e6; border-radius:12px;
+            padding:1.25rem; max-width:720px;
+        }
+        .jsb-ai-params .aip-grid { display:flex; gap:1.25rem; align-items:stretch; }
+        .jsb-ai-params .aip-grid-fields { flex:1 1 auto; min-width:0; }
+        .jsb-ai-params .aip-thumb {
+            flex:0 0 168px; border-radius:12px; border:1px solid #dee2e6; background:#f8f9fa;
+            display:flex; align-items:center; justify-content:center;
+            transition: box-shadow .2s ease;
+        }
+        .jsb-ai-params .aip-thumb:hover { box-shadow:0 4px 16px rgba(0,71,171,.12); }
+        .jsb-ai-params .aip-thumb svg { width:64px; height:64px; color:#0047AB; }
+        @media (max-width: 720px) { .jsb-ai-params .aip-thumb { display:none; } }
+
+        /* Section à légende cobalt (modèle .cs-fieldset / .cs-legend du coupon). */
+        .jsb-ai-params .aip-fieldset {
+            border:1px solid #dee2e6; border-radius:10px; background:#f8f9fa;
+            padding:1.15rem 1.25rem 1rem; margin:0;
+        }
+        .jsb-ai-params .aip-legend {
+            display:inline-flex; align-items:center; gap:.45rem;
+            font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; font-weight:700;
+            color:#0047AB; margin-bottom:1rem; padding:0; width:auto; float:none;
+        }
+        .jsb-ai-params .form-label { font-weight:600; color:#343a40; margin-bottom:.35rem; }
         .jsb-ai-params .form-text { color:#6c757d; }
+
+        /* Champ à icône incrustée (identité du personnage). */
+        .jsb-ai-params .aip-inputbox { position:relative; }
+        .jsb-ai-params .aip-inputbox .aip-input-ic {
+            position:absolute; left:.8rem; top:50%; transform:translateY(-50%);
+            color:#6c757d; display:flex; pointer-events:none;
+        }
+        .jsb-ai-params .aip-inputbox .form-control {
+            height:48px; font-size:1rem; color:#000000; background:#ffffff;
+            padding-left:2.6rem;
+        }
         .jsb-ai-params .form-control:focus { border-color:#0047AB; box-shadow:0 0 0 .25rem rgba(0,71,171,.35); }
-        .jsb-ai-params .btn-cobalt { background:#0047AB; border-color:#0047AB; color:#ffffff; }
-        .jsb-ai-params .btn-cobalt:hover { background:#003380; border-color:#003380; color:#ffffff; }
+        .jsb-ai-params .aip-inputbox:focus-within .aip-input-ic { color:#0047AB; }
+
+        /* Action d'enregistrement (relief cobalt, états visibles). */
+        .jsb-ai-params .aip-actions { display:flex; justify-content:flex-end; margin-top:1.1rem; }
+        .jsb-ai-params .btn-cobalt {
+            background:#0047AB; border-color:#0047AB; color:#ffffff;
+            display:inline-flex; align-items:center; gap:.45rem;
+            border-radius:10px; padding:.55rem 1.1rem; font-weight:600; min-height:44px;
+            box-shadow:0 2px 6px rgba(0,71,171,.25);
+            transition: background-color .15s ease, box-shadow .15s ease, transform .1s ease;
+        }
+        .jsb-ai-params .btn-cobalt:hover { background:#003380; border-color:#003380; color:#ffffff; box-shadow:0 4px 12px rgba(0,71,171,.25); }
+        .jsb-ai-params .btn-cobalt:active { transform:scale(.97); }
         .jsb-ai-params .btn-cobalt:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
         .jsb-ai-params .btn-cobalt:disabled { opacity:.65; pointer-events:none; }
+        .jsb-ai-params .btn-cobalt .spinner-border { width:1rem; height:1rem; border-width:.16em; }
 
         .jsb-ai-params .aip-feedback { border-radius:8px; padding:.65rem .9rem; font-size:.9rem; margin:0 0 1rem; }
         .jsb-ai-params .aip-feedback--success { background:#d1e7dd; color:#0f5132; }
@@ -59,21 +110,44 @@
         {% endif %}
 
         <form data-action="submit->assistant-ia-parametres#save" data-assistant-ia-parametres-target="form">
-            <div class="mb-3">
-                <label class="form-label" for="aip-nom">Nom de l'assistant</label>
-                <input type="text" class="form-control" id="aip-nom" name="nom"
-                       value="{{ assistantNom }}" minlength="2" maxlength="60" required
-                       placeholder="Ex. Modogo"
-                       aria-describedby="aip-nom-aide">
-                <div class="form-text" id="aip-nom-aide">
-                    Entre 2 et 60 caractères. Sans personnalisation, l'assistant s'appelle
-                    « {{ nomParDefaut }} ».
+            <div class="aip-grid">
+                <div class="aip-grid-fields">
+                    <fieldset class="aip-fieldset">
+                        <legend class="aip-legend">
+                            <twig:UX:Icon name="{{ resolve_icon_name('assistant-ia') }}" style="width:16px;height:16px;" />
+                            Identité du personnage
+                        </legend>
+                        <label class="form-label" for="aip-nom">Nom de l'assistant</label>
+                        <div class="aip-inputbox">
+                            <span class="aip-input-ic" aria-hidden="true">
+                                <twig:UX:Icon name="{{ resolve_icon_name('utilisateur') }}" style="width:20px;height:20px;" />
+                            </span>
+                            <input type="text" class="form-control" id="aip-nom" name="nom"
+                                   value="{{ assistantNom }}" minlength="2" maxlength="60" required
+                                   placeholder="Ex. Modogo"
+                                   aria-describedby="aip-nom-aide">
+                        </div>
+                        <div class="form-text" id="aip-nom-aide">
+                            Entre 2 et 60 caractères. Sans personnalisation, l'assistant s'appelle
+                            « {{ nomParDefaut }} ».
+                        </div>
+                    </fieldset>
+                </div>
+                <div class="aip-thumb" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('assistant-ia-parametres') }}" />
                 </div>
             </div>
-            <button type="submit" class="btn btn-cobalt" data-assistant-ia-parametres-target="submit">
-                <twig:UX:Icon name="{{ resolve_icon_name('action:save') }}" style="width:18px;height:18px;" />
-                <span class="ms-1">Enregistrer</span>
-            </button>
+
+            <div class="aip-actions">
+                <button type="submit" class="btn btn-cobalt" data-assistant-ia-parametres-target="submit">
+                    <span class="spinner-border" role="status" aria-hidden="true"
+                          style="display:none;" data-role="spinner"></span>
+                    <span data-role="icon" style="display:inline-flex;">
+                        <twig:UX:Icon name="{{ resolve_icon_name('action:save') }}" style="width:18px;height:18px;" />
+                    </span>
+                    <span data-role="label">Enregistrer</span>
+                </button>
+            </div>
         </form>
     </div>
 </div>
