@@ -1,0 +1,137 @@
+{#
+  Composant « Assistant » (groupe IA) de l'espace de travail — colonne 3.
+
+  Entête personnage (nom choisi par l'entreprise) + liste des conversations de
+  L'INVITÉ CONNECTÉ uniquement (confidentialité entre collègues) + création /
+  suppression. L'ouverture d'une conversation injecte le chat dans la colonne
+  n°4 (visualisation) via l'événement `app:workspace.open-html-in-visualization`.
+
+  Charte JS Brokers (cobalt #0047AB) ; AUCUN <script> inline (non exécuté dans
+  les partials AJAX) : l'interactivité est portée par le contrôleur Stimulus
+  `assistant-ia`, qui recharge ce composant en AJAX après création/suppression.
+#}
+<div class="jsb-ai"
+     data-controller="assistant-ia"
+     data-assistant-ia-component-url-value="{{ path('admin.assistantia.workspace', {idEntreprise: idEntreprise}) }}"
+     data-assistant-ia-create-url-value="{{ path('admin.assistantia.api.conversation.create', {idEntreprise: idEntreprise}) }}"
+     data-assistant-ia-assistant-nom-value="{{ assistantNom }}">
+    <style>
+        .jsb-ai { padding: 1.25rem 1.5rem; }
+
+        /* Entête du personnage. */
+        .jsb-ai .ai-head { display:flex; align-items:center; gap:.75rem; margin:0 0 1rem; }
+        .jsb-ai .ai-head-ic {
+            width:44px; height:44px; border-radius:12px; flex:0 0 auto;
+            background:#e8f0fb; color:#0047AB; display:flex; align-items:center; justify-content:center;
+        }
+        .jsb-ai .ai-head h2 { font-size:1.25rem; font-weight:700; color:#212529; margin:0; }
+        .jsb-ai .ai-head p { color:#6c757d; font-size:.88rem; margin:.15rem 0 0; }
+
+        .jsb-ai .ai-panel { background:#ffffff; border:1px solid #dee2e6; border-radius:12px; padding:1.1rem 1.25rem; margin-bottom:1rem; }
+        .jsb-ai .ai-toolbar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.75rem; }
+        .jsb-ai .ai-toolbar h3 { font-size:.95rem; font-weight:700; color:#343a40; margin:0; }
+        .jsb-ai .btn-cobalt { background:#0047AB; border-color:#0047AB; color:#ffffff; display:inline-flex; align-items:center; gap:.4rem; }
+        .jsb-ai .btn-cobalt:hover { background:#003380; border-color:#003380; color:#ffffff; }
+        .jsb-ai .btn-cobalt:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+
+        /* Liste des conversations. */
+        .jsb-ai .ai-conv-list { list-style:none; margin:.75rem 0 0; padding:0; }
+        .jsb-ai .ai-conv-item {
+            display:flex; align-items:center; gap:.75rem;
+            padding:.65rem .5rem; border-bottom:1px solid #f0f0f0;
+        }
+        .jsb-ai .ai-conv-item:last-child { border-bottom:none; }
+        .jsb-ai .ai-conv-open {
+            flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:.1rem;
+            background:none; border:none; text-align:left; padding:.15rem .35rem; border-radius:8px; cursor:pointer;
+        }
+        .jsb-ai .ai-conv-open:hover { background:#f8f9fa; }
+        .jsb-ai .ai-conv-open:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+        .jsb-ai .ai-conv-titre { color:#212529; font-weight:600; font-size:.92rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .jsb-ai .ai-conv-date { color:#6c757d; font-size:.78rem; }
+        .jsb-ai .ai-conv-delete {
+            flex:0 0 auto; background:none; border:none; color:#6c757d; cursor:pointer;
+            width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+        }
+        .jsb-ai .ai-conv-delete:hover { color:#dc3545; background:#f8f9fa; }
+        .jsb-ai .ai-conv-delete:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+
+        /* État vide. */
+        .jsb-ai .ai-empty { text-align:center; padding:1.75rem 1rem; color:#6c757d; }
+        .jsb-ai .ai-empty .ai-empty-ic {
+            width:56px; height:56px; margin:0 auto .75rem; border-radius:50%;
+            background:#e8f0fb; color:#0047AB; display:flex; align-items:center; justify-content:center;
+        }
+        .jsb-ai .ai-hint { color:#6c757d; font-size:.82rem; margin:.75rem 0 0; }
+    </style>
+
+    {# ── Entête ── #}
+    <div class="ai-head">
+        <div class="ai-head-ic" aria-hidden="true">
+            <twig:UX:Icon name="{{ resolve_icon_name('assistant-ia') }}" style="width:24px;height:24px;" />
+        </div>
+        <div>
+            <h2>{{ assistantNom }} — Assistant IA</h2>
+            <p>
+                Posez vos questions sur les données de votre espace de travail :
+                {{ assistantNom }} répond dans les limites de votre périmètre d'accès.
+            </p>
+        </div>
+    </div>
+
+    {# ── Conversations ── #}
+    <div class="ai-panel">
+        <div class="ai-toolbar">
+            <h3 id="ai-conv-titre-liste">Vos conversations</h3>
+            <button type="button" class="btn btn-sm btn-cobalt" data-action="click->assistant-ia#create">
+                <twig:UX:Icon name="{{ resolve_icon_name('action:add') }}" style="width:18px;height:18px;" />
+                Nouvelle conversation
+            </button>
+        </div>
+
+        {% if conversations is empty %}
+            <div class="ai-empty">
+                <div class="ai-empty-ic" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('feedback') }}" style="width:28px;height:28px;" />
+                </div>
+                <p class="mb-0">
+                    Aucune conversation pour l'instant.<br>
+                    Démarrez-en une : {{ assistantNom }} vous attend.
+                </p>
+            </div>
+        {% else %}
+            <ul class="ai-conv-list" aria-labelledby="ai-conv-titre-liste">
+                {% for conversation in conversations %}
+                    <li class="ai-conv-item">
+                        <button type="button" class="ai-conv-open"
+                                data-action="click->assistant-ia#open"
+                                data-conv-id="{{ conversation.id }}"
+                                data-conv-titre="{{ conversation.titre ?? 'Nouvelle conversation' }}"
+                                data-chat-url="{{ path('admin.assistantia.chat', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
+                                title="Ouvrir cette conversation dans la colonne de visualisation">
+                            <span class="ai-conv-titre">{{ conversation.titre ?? 'Nouvelle conversation' }}</span>
+                            <span class="ai-conv-date">
+                                {{ (conversation.updatedAt ?? conversation.createdAt)|date('d/m/Y H:i') }}
+                            </span>
+                        </button>
+                        <button type="button" class="ai-conv-delete"
+                                data-action="click->assistant-ia#requestDelete"
+                                data-conv-id="{{ conversation.id }}"
+                                data-conv-titre="{{ conversation.titre ?? 'Nouvelle conversation' }}"
+                                data-delete-url="{{ path('admin.assistantia.api.conversation.delete', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
+                                aria-label="Supprimer la conversation « {{ conversation.titre ?? 'Nouvelle conversation' }} »">
+                            <twig:UX:Icon name="{{ resolve_icon_name('action:delete') }}" style="width:18px;height:18px;" />
+                        </button>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        {% if peutParametrer %}
+            <p class="ai-hint">
+                Astuce : vous pouvez renommer votre assistant dans la rubrique
+                « Paramètres IA » du groupe IA.
+            </p>
+        {% endif %}
+    </div>
+</div>

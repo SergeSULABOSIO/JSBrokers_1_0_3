@@ -1268,6 +1268,9 @@ trait ControllerUtilsTrait
             '_support_component.html.twig' => 'App\Controller\Admin\SupportController::loadWorkspaceComponent',
             // DOCUMENTS COMPTABLES (états OHADA du courtier, générés à la volée)
             '_document_comptable_component.html.twig' => 'App\Controller\Admin\DocumentComptableWorkspaceController::loadWorkspaceComponent',
+            // GROUPE IA : assistant conversationnel + paramètres du personnage
+            '_assistant_ia_component.html.twig' => 'App\Controller\Admin\AssistantIaController::loadWorkspaceComponent',
+            '_assistant_ia_parametres_component.html.twig' => 'App\Controller\Admin\AssistantIaController::loadParametresComponent',
         ];
     }
 
