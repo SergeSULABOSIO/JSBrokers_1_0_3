@@ -14,13 +14,16 @@
      data-assistant-ia-parametres-url-value="{{ path('admin.assistantia.workspace_parametres', {idEntreprise: idEntreprise}) }}">
     <style>
         .jsb-ai-params { padding: 1.25rem 1.5rem; }
-        .jsb-ai-params .aip-head { display:flex; align-items:center; gap:.75rem; margin:0 0 1rem; }
-        .jsb-ai-params .aip-head-ic {
-            width:44px; height:44px; border-radius:12px; flex:0 0 auto;
-            background:#e8f0fb; color:#0047AB; display:flex; align-items:center; justify-content:center;
+        /* Entête au modèle de l'édition d'entreprise (.ent-head) : titre à icône
+           cobalt + message contextuel adressé à l'utilisateur, séparé par un filet. */
+        .jsb-ai-params .aip-head { margin:0 0 1.5rem; }
+        .jsb-ai-params .aip-head h2 {
+            display:flex; align-items:center; gap:.55rem;
+            font-size:1.6rem; font-weight:700; color:#212529; margin:0 0 .25rem;
         }
-        .jsb-ai-params .aip-head h2 { font-size:1.25rem; font-weight:700; color:#212529; margin:0; }
-        .jsb-ai-params .aip-head p { color:#6c757d; font-size:.88rem; margin:.15rem 0 0; }
+        .jsb-ai-params .aip-head-icon { flex:0 0 auto; color:#0047AB; }
+        .jsb-ai-params .aip-head p { color:#6c757d; margin:0; }
+        .jsb-ai-params .aip-head hr { margin:.75rem 0 0; border-color:#dee2e6; opacity:1; }
 
         /* Carte du formulaire (modèle console, sans illustration). */
         .jsb-ai-params .aip-panel {
@@ -74,18 +77,19 @@
         .jsb-ai-params .aip-feedback--error { background:#f8d7da; color:#842029; }
     </style>
 
-    {# ── Entête ── #}
+    {# ── Entête (modèle édition d'entreprise) ── #}
     <div class="aip-head">
-        <div class="aip-head-ic" aria-hidden="true">
-            <twig:UX:Icon name="{{ resolve_icon_name('assistant-ia-parametres') }}" style="width:24px;height:24px;" />
-        </div>
-        <div>
-            <h2>Paramètres de l'assistant IA</h2>
-            <p>
-                Donnez une identité à l'assistant de votre cabinet : son nom sera visible
-                par tous les collaborateurs de l'espace de travail.
-            </p>
-        </div>
+        <h2>
+            {{ ux_icon(resolve_icon_name('assistant-ia-parametres'), {height: '28px', width: '28px', class: 'aip-head-icon'}) }}
+            Paramètres de l'assistant IA de {{ entrepriseNom }}
+        </h2>
+        <p>
+            <strong>{{ utilisateurNom }}</strong>,<br>
+            vous êtes sur le point de personnaliser l'assistant IA de <strong>{{ entrepriseNom }}</strong>.<br>
+            Merci de renseigner le nom de votre assistant dans le formulaire ci-dessous :
+            il s'adressera sous cette identité à tous les collaborateurs de l'espace de travail.
+        </p>
+        <hr>
     </div>
 
     <div class="aip-panel">
