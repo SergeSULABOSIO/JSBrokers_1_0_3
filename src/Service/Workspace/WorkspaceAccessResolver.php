@@ -110,6 +110,10 @@ class WorkspaceAccessResolver
         'RolesEnProduction',
         'RolesEnSinistre',
         'RolesEnAdministration',
+        // Paramètres de l'assistant IA (nom du personnage de l'entreprise) :
+        // configurer l'assistant relève de l'administration de l'espace, même
+        // cercle que la gestion des invités — sans nouveau champ de rôle (KISS).
+        'AssistantParametres',
     ];
 
     public function __construct(

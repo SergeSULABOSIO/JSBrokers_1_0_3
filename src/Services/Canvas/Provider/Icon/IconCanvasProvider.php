@@ -9,6 +9,8 @@ class IconCanvasProvider
      */
     private const ICON_ALIAS_MAP = [
         // --- Icônes d'Entités ---
+        'assistant-ia'    => 'jsb:assistant-ia',          // icône locale (bulle de chat + étincelle IA)
+        'assistant-ia-parametres' => 'jsb:assistant-ia-settings', // icône locale (tête de robot)
         'assureur'        => 'wpf:security-checked',
         'autorite-fiscale'=> 'hugeicons:bank',
         'avenant'         => 'fluent:document-edit-16-regular',
