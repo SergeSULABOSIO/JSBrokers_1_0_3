@@ -73,24 +73,40 @@
         .jsb-ai-chat .aic-typing .dot:nth-child(3) { animation-delay:.4s; }
         @keyframes aic-blink { 0%, 80%, 100% { opacity:.25; } 40% { opacity:1; } }
 
-        /* ── Zone de saisie ── */
+        /* ── Zone de saisie (groupe champ + envoi, focus-within visible) ── */
         .jsb-ai-chat .aic-composer {
-            flex:0 0 auto; display:flex; align-items:flex-end; gap:.5rem;
-            padding:.75rem 1rem; background:#ffffff; border-top:1px solid #dee2e6;
+            flex:0 0 auto; display:flex; flex-direction:column; gap:.35rem;
+            padding:.75rem 1rem .6rem; background:#ffffff; border-top:1px solid #dee2e6;
         }
+        .jsb-ai-chat .aic-inputbox {
+            display:flex; align-items:flex-end; gap:.5rem;
+            border:1px solid #ced4da; border-radius:12px; background:#ffffff;
+            padding:.3rem .35rem .3rem .7rem;
+            transition: border-color .15s ease, box-shadow .15s ease;
+        }
+        .jsb-ai-chat .aic-inputbox:focus-within { border-color:#0047AB; box-shadow:0 0 0 .25rem rgba(0,71,171,.35); }
+        .jsb-ai-chat .aic-input-ic { flex:0 0 auto; align-self:center; display:flex; color:#6c757d; }
         .jsb-ai-chat .aic-input {
-            flex:1 1 auto; resize:none; min-height:42px; max-height:160px;
-            border:1px solid #ced4da; border-radius:10px; padding:.55rem .75rem;
+            flex:1 1 auto; resize:none; min-height:40px; max-height:160px;
+            border:none; background:transparent; padding:.5rem .25rem;
             font-size:.9rem; color:#000000; line-height:1.45;
         }
-        .jsb-ai-chat .aic-input:focus { outline:none; border-color:#0047AB; box-shadow:0 0 0 .25rem rgba(0,71,171,.35); }
+        .jsb-ai-chat .aic-input:focus { outline:none; box-shadow:none; }
         .jsb-ai-chat .aic-send {
-            flex:0 0 auto; width:42px; height:42px; border-radius:10px; border:none; cursor:pointer;
+            flex:0 0 auto; width:44px; height:44px; border-radius:10px; border:none; cursor:pointer;
             background:#0047AB; color:#ffffff; display:flex; align-items:center; justify-content:center;
+            transition: background-color .15s ease, opacity .15s ease;
         }
         .jsb-ai-chat .aic-send:hover { background:#003380; }
         .jsb-ai-chat .aic-send:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
         .jsb-ai-chat .aic-send:disabled { opacity:.65; pointer-events:none; }
+        /* Pied du composer : indice de raccourcis + compteur près de la limite. */
+        .jsb-ai-chat .aic-composer-foot {
+            display:flex; justify-content:space-between; gap:.75rem;
+            font-size:.72rem; color:#6c757d; padding:0 .25rem;
+        }
+        .jsb-ai-chat .aic-count[hidden] { display:none; }
+        .jsb-ai-chat .aic-count--limite { color:#664d03; font-weight:600; }
         .jsb-ai-chat .visually-hidden {
             position:absolute; width:1px; height:1px; padding:0; margin:-1px;
             overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
@@ -147,16 +163,29 @@
 
     {# ── Zone de saisie ── #}
     <div class="aic-composer">
-        <label class="visually-hidden" for="aic-input-{{ conversation.id }}">Votre message à {{ assistantNom }}</label>
-        <textarea id="aic-input-{{ conversation.id }}" class="aic-input" rows="1"
-                  placeholder="Posez votre question à {{ assistantNom }}…"
-                  maxlength="4000"
-                  data-assistant-chat-target="input"
-                  data-action="keydown->assistant-chat#keydown input->assistant-chat#autoGrow"></textarea>
-        <button type="button" class="aic-send" data-assistant-chat-target="send"
-                data-action="click->assistant-chat#send"
-                aria-label="Envoyer le message">
-            <twig:UX:Icon name="{{ resolve_icon_name('action:send-email') }}" style="width:20px;height:20px;" />
-        </button>
+        <div class="aic-inputbox">
+            <span class="aic-input-ic" aria-hidden="true">
+                <twig:UX:Icon name="{{ resolve_icon_name('feedback') }}" style="width:20px;height:20px;" />
+            </span>
+            <label class="visually-hidden" for="aic-input-{{ conversation.id }}">Votre message à {{ assistantNom }}</label>
+            <textarea id="aic-input-{{ conversation.id }}" class="aic-input" rows="1"
+                      placeholder="Posez votre question à {{ assistantNom }}…"
+                      maxlength="4000"
+                      aria-describedby="aic-hint-{{ conversation.id }} aic-count-{{ conversation.id }}"
+                      data-assistant-chat-target="input"
+                      data-action="keydown->assistant-chat#keydown input->assistant-chat#onInput"></textarea>
+            <button type="button" class="aic-send" disabled
+                    data-assistant-chat-target="send"
+                    data-action="click->assistant-chat#send"
+                    aria-label="Envoyer le message"
+                    title="Envoyer le message">
+                <twig:UX:Icon name="{{ resolve_icon_name('action:send-email') }}" style="width:20px;height:20px;" />
+            </button>
+        </div>
+        <div class="aic-composer-foot">
+            <span class="aic-hint" id="aic-hint-{{ conversation.id }}">Entrée : envoyer · Maj + Entrée : retour à la ligne</span>
+            <span class="aic-count" id="aic-count-{{ conversation.id }}" hidden
+                  aria-live="polite" data-assistant-chat-target="count"></span>
+        </div>
     </div>
 </div>
