@@ -126,11 +126,13 @@ class AssistantIaController extends AbstractController
         }
 
         return $this->render('components/_assistant_ia_parametres_component.html.twig', [
-            'assistantNom' => $parametres?->getNom() ?? AssistantParametres::NOM_PAR_DEFAUT,
-            'nomParDefaut' => AssistantParametres::NOM_PAR_DEFAUT,
-            'idEntreprise' => $idEntreprise,
-            'enregistre'   => $enregistre,
-            'erreur'       => $erreur,
+            'assistantNom'   => $parametres?->getNom() ?? AssistantParametres::NOM_PAR_DEFAUT,
+            'nomParDefaut'   => AssistantParametres::NOM_PAR_DEFAUT,
+            'idEntreprise'   => $idEntreprise,
+            'enregistre'     => $enregistre,
+            'erreur'         => $erreur,
+            'utilisateurNom' => $this->currentUser()->getNom(),
+            'entrepriseNom'  => $entreprise->getNom(),
         ]);
     }
 
