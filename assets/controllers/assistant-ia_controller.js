@@ -37,7 +37,7 @@ export default class extends Controller {
         if (this.creating) return;
         this.creating = true;
         this._setCreateBusy(true);
-        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        this._loading(true);
 
         try {
             const response = await fetch(this.createUrlValue, { method: 'POST' });
@@ -51,7 +51,7 @@ export default class extends Controller {
             console.error('AssistantIa - création de conversation échouée :', error);
             this._setCreateBusy(false);
         } finally {
-            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+            this._loading(false);
             this.creating = false;
         }
     }
@@ -117,8 +117,13 @@ export default class extends Controller {
         input.addEventListener('blur', () => finish(true));
     }
 
-    /** Enregistre le nouveau titre puis synchronise la ligne ET l'onglet col-4. */
+    /**
+     * Enregistre le nouveau titre puis synchronise la ligne ET l'onglet col-4.
+     * Feedback : barre de progression globale pendant l'enregistrement, toast
+     * global (notification-manager) au succès comme à l'échec.
+     */
     async executeRename(item, renameUrl, titre) {
+        this._loading(true);
         try {
             const response = await fetch(renameUrl, {
                 method: 'PATCH',
@@ -139,10 +144,28 @@ export default class extends Controller {
             const convId = item.dataset.convId;
             const tabTitle = document.querySelector(`[data-entity-id='ia-conv-${convId}'][data-entity-type='html'] [data-role="tab-title"]`);
             if (tabTitle) tabTitle.textContent = data.titre;
+
+            this._notify('success', `Conversation renommée en « ${data.titre} ».`);
         } catch (error) {
             console.error('AssistantIa - renommage de conversation échoué :', error);
+            this._notify('error', 'Le renommage de la conversation a échoué. Réessayez.');
             await this.refreshComponent(); // resynchronise l'affichage avec le serveur
+        } finally {
+            this._loading(false);
         }
+    }
+
+    /** Barre de progression globale du workspace (écoutée par workspace-manager). */
+    _loading(on) {
+        document.dispatchEvent(new CustomEvent(on ? 'app:loading.start' : 'app:loading.stop'));
+    }
+
+    /** Toast global (pattern existant géré par notification-manager). */
+    _notify(type, text) {
+        if (!text) return;
+        document.dispatchEvent(new CustomEvent('app:notification.show', {
+            detail: { type, text },
+        }));
     }
 
     /** Demande confirmation avant suppression (modale générique du Cerveau). */
@@ -213,12 +236,12 @@ export default class extends Controller {
     /** Récupère le partial du chat puis demande son ouverture en colonne 4. */
     async openChat(chatUrl, titre, convId) {
         if (!chatUrl) return;
-        document.dispatchEvent(new CustomEvent('app:loading.start'));
+        this._loading(true);
         let response;
         try {
             response = await fetch(chatUrl);
         } finally {
-            document.dispatchEvent(new CustomEvent('app:loading.stop'));
+            this._loading(false);
         }
         if (!response.ok) {
             console.error(`AssistantIa - chargement du chat impossible (HTTP ${response.status}).`);
