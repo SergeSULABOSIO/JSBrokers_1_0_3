@@ -70,6 +70,11 @@ export default class extends Controller {
         this.boundInjectHtml = this.injectHtmlInNewTab.bind(this);
         document.addEventListener('app:workspace.inject-html', this.boundInjectHtml);
 
+        // NOUVEAU : Ouvre un panneau HTML arbitraire dans la COLONNE 4 (visualisation),
+        // ex. le chat de l'assistant IA (inject-html ci-dessus cible la col-3).
+        this.boundOpenHtmlInVisualization = this.openHtmlTabInVisualization.bind(this);
+        document.addEventListener('app:workspace.open-html-in-visualization', this.boundOpenHtmlInVisualization);
+
         this.boundReloadActiveTab = this.reloadActiveWorkspaceTab.bind(this);
         document.addEventListener('app:workspace.reload-active-tab', this.boundReloadActiveTab);
 
@@ -162,6 +167,7 @@ export default class extends Controller {
         document.removeEventListener('app:workspace.load-default', this.boundLoadDefault);
         document.removeEventListener('app:workspace.close-active-tab', this.boundCloseActiveTab);
         document.removeEventListener('app:workspace.inject-html', this.boundInjectHtml);
+        document.removeEventListener('app:workspace.open-html-in-visualization', this.boundOpenHtmlInVisualization);
         document.removeEventListener('app:workspace.reload-active-tab', this.boundReloadActiveTab);
         document.removeEventListener('app:loading.start', this.boundHandleLoadingStart);
         document.removeEventListener('app:loading.stop', this.boundHandleLoadingStop);
@@ -353,6 +359,82 @@ export default class extends Controller {
         this.activateTab({ currentTarget: tabElement });
 
         console.log(this.nomControleur + " - Onglet ouvert:", entity);
+    }
+
+    /**
+     * NOUVEAU : Ouvre un panneau HTML arbitraire dans un onglet de la COLONNE 4
+     * (visualisation) — miroir simplifié de createTab, sans accordéon d'attributs.
+     * Utilisé par l'assistant IA pour afficher le chat d'une conversation.
+     * `dataset.entityType = 'html'` ne peut pas entrer en collision avec un nom
+     * court d'entité réel ; openTabInVisualization/createTab/closeTab restent
+     * strictement inchangés (zéro régression).
+     *
+     * @param {CustomEvent} event detail = { html, title, iconAlias, tabKey }
+     */
+    openHtmlTabInVisualization(event) {
+        const { html, title, iconAlias, tabKey } = event.detail || {};
+        if (!html || !tabKey) {
+            console.error("WorkspaceManager - open-html-in-visualization : detail.html et detail.tabKey sont requis.", event.detail);
+            return;
+        }
+
+        const revealColumn = () => {
+            this.element.classList.add('visualization-visible');
+            this.visualizationColumnTarget.style.display = 'flex';
+        };
+
+        // Onglet déjà ouvert pour cette clé : on rafraîchit son contenu (l'état
+        // de référence est côté serveur) et on l'active.
+        const existingTab = this.tabContainerTarget.querySelector(`[data-entity-id='${tabKey}'][data-entity-type='html']`);
+        if (existingTab) {
+            const existingContent = this.tabContentContainerTarget.querySelector(`#${existingTab.dataset.tabContentId}`);
+            if (existingContent) {
+                existingContent.innerHTML = html;
+            }
+            this.activateTab({ currentTarget: existingTab });
+            revealColumn();
+            return;
+        }
+
+        const tabElement = this.tabTemplateTarget.content.cloneNode(true).firstElementChild;
+        tabElement.dataset.entityId = tabKey;
+        tabElement.dataset.entityType = 'html';
+        if (title) {
+            tabElement.title = title;
+        }
+
+        // Icône chargée dynamiquement via le Cerveau (même mécanique que createTab).
+        const iconContainer = tabElement.querySelector('.tab-item-icon');
+        if (iconContainer && iconAlias) {
+            const requesterId = `tab-icon-html-${tabKey}`;
+            iconContainer.id = requesterId;
+            this.notifyCerveau('ui:icon.request', { iconName: iconAlias, requesterId: requesterId, iconSize: 18 });
+        }
+
+        tabElement.querySelector('[data-role="tab-title"]').textContent = title || tabKey;
+
+        const contentElement = document.createElement('div');
+        contentElement.className = 'tab-content tab-content--html';
+        contentElement.innerHTML = html;
+
+        const tabId = `tab-content-html-${tabKey}`;
+        contentElement.id = tabId;
+        tabElement.dataset.tabContentId = tabId;
+
+        // ARIA : même pattern tablist/tab/tabpanel que createTab (WCAG 4.1.2).
+        const tabAriaId = `tab-html-${tabKey}`;
+        tabElement.setAttribute('role', 'tab');
+        tabElement.setAttribute('id', tabAriaId);
+        tabElement.setAttribute('aria-selected', 'false');
+        tabElement.setAttribute('aria-controls', tabId);
+        contentElement.setAttribute('role', 'tabpanel');
+        contentElement.setAttribute('aria-labelledby', tabAriaId);
+        contentElement.setAttribute('tabindex', '0');
+
+        this.tabContainerTarget.appendChild(tabElement);
+        this.tabContentContainerTarget.appendChild(contentElement);
+        this.activateTab({ currentTarget: tabElement });
+        revealColumn();
     }
 
     /**

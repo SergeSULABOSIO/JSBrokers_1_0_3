@@ -1,0 +1,152 @@
+import { Controller } from '@hotwired/stimulus';
+
+/**
+ * @class AssistantChatController
+ * @description Chat de l'assistant IA (panneau de la colonne 4). Envoi des
+ * messages en JSON, bulle utilisateur optimiste, indicateur « {nom}
+ * réfléchit… », gestion du 402 (solde de tokens épuisé) et des erreurs réseau.
+ * Tout contenu est injecté via textContent (échappement systématique).
+ */
+export default class extends Controller {
+    static targets = ['messages', 'input', 'send', 'typing'];
+
+    static values = {
+        sendUrl: String,
+        assistantNom: String,
+    };
+
+    connect() {
+        this.sending = false;
+        this.scrollToBottom();
+        if (this.hasInputTarget) {
+            this.inputTarget.focus();
+        }
+    }
+
+    /** Entrée = envoyer, Maj+Entrée = retour à la ligne. */
+    keydown(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            this.send();
+        }
+    }
+
+    /** Zone de saisie auto-extensible (max ~8 lignes). */
+    autoGrow() {
+        const input = this.inputTarget;
+        input.style.height = 'auto';
+        input.style.height = `${Math.min(input.scrollHeight, 160)}px`;
+    }
+
+    async send() {
+        const contenu = this.inputTarget.value.trim();
+        if (contenu === '' || this.sending) return;
+
+        this.sending = true;
+        this.sendTarget.disabled = true;
+        const userBubble = this.appendMessage('user', contenu);
+        this.inputTarget.value = '';
+        this.autoGrow();
+        this.typingTarget.hidden = false;
+        this.scrollToBottom();
+
+        try {
+            const response = await fetch(this.sendUrlValue, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contenu }),
+            });
+
+            if (response.status === 402) {
+                const data = await response.json().catch(() => ({}));
+                userBubble.remove();
+                this.inputTarget.value = contenu;
+                this.appendNotice('warning', this.tokensMessage(data));
+            } else if (!response.ok) {
+                userBubble.remove();
+                this.inputTarget.value = contenu;
+                this.appendNotice('error', "L'envoi a échoué. Vérifiez votre connexion puis réessayez.");
+            } else {
+                const data = await response.json();
+                this.appendMessage('assistant', data.assistant.contenu, data.assistant.refus === true);
+            }
+        } catch (error) {
+            console.error('AssistantChat - envoi échoué :', error);
+            userBubble.remove();
+            this.inputTarget.value = contenu;
+            this.appendNotice('error', "L'envoi a échoué. Vérifiez votre connexion puis réessayez.");
+        } finally {
+            this.typingTarget.hidden = true;
+            this.sending = false;
+            this.sendTarget.disabled = false;
+            this.autoGrow();
+            this.inputTarget.focus();
+            this.scrollToBottom();
+        }
+    }
+
+    /** Message 402 : solde et date de renouvellement si fournis par l'API. */
+    tokensMessage(data) {
+        let message = 'Solde de tokens insuffisant';
+        if (typeof data.available === 'number' && typeof data.required === 'number') {
+            message += ` (${data.available}/${data.required})`;
+        }
+        message += '. Rechargez votre solde';
+        if (data.nextRenewalAt) {
+            const date = new Date(data.nextRenewalAt);
+            message += ` ou attendez le renouvellement du ${date.toLocaleString('fr-FR')}`;
+        }
+        return `${message}.`;
+    }
+
+    /**
+     * Ajoute une bulle de message au fil (structure identique à celle rendue
+     * côté serveur dans _assistant_ia_chat.html.twig).
+     */
+    appendMessage(role, texte, refus = false) {
+        const bubble = document.createElement('div');
+        bubble.className = `aic-msg aic-msg--${role}${refus ? ' aic-msg--refus' : ''}`;
+
+        if (role === 'assistant') {
+            const avatar = document.createElement('span');
+            avatar.className = 'aic-msg-avatar';
+            avatar.setAttribute('aria-hidden', 'true');
+            avatar.textContent = (this.assistantNomValue || 'A').charAt(0).toUpperCase();
+            bubble.appendChild(avatar);
+        }
+
+        const body = document.createElement('div');
+        body.className = 'aic-msg-body';
+
+        const content = document.createElement('p');
+        content.className = 'aic-msg-text';
+        content.textContent = texte; // Échappement garanti.
+        body.appendChild(content);
+
+        const time = document.createElement('span');
+        time.className = 'aic-msg-time';
+        time.textContent = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        body.appendChild(time);
+
+        bubble.appendChild(body);
+        this.messagesTarget.appendChild(bubble);
+        this.scrollToBottom();
+        return bubble;
+    }
+
+    /** Bulle système (avertissement 402 / erreur réseau). */
+    appendNotice(kind, texte) {
+        const notice = document.createElement('p');
+        notice.className = `aic-notice aic-notice--${kind}`;
+        notice.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+        notice.textContent = texte;
+        this.messagesTarget.appendChild(notice);
+        this.scrollToBottom();
+    }
+
+    scrollToBottom() {
+        if (this.hasMessagesTarget) {
+            this.messagesTarget.scrollTop = this.messagesTarget.scrollHeight;
+        }
+    }
+}
