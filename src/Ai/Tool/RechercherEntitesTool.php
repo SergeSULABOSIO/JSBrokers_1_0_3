@@ -6,8 +6,6 @@ use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
-use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\PropertyAccess\PropertyAccess;
 
 /**
  * Liste (ou recherche par texte) les enregistrements d'une rubrique du
@@ -23,17 +21,11 @@ final class RechercherEntitesTool implements AiToolInterface
     /** Taille de page fixe côté serveur : maîtrise des tokens restitués au modèle. */
     private const PAGE_SIZE = 20;
 
-    /**
-     * Champs candidats au libellé/filtre texte, par ordre de préférence. Le
-     * premier présent dans les métadonnées Doctrine de l'entité est retenu.
-     */
-    private const DISPLAY_FIELD_CANDIDATES = ['nom', 'titre', 'libelle', 'intitule', 'reference', 'numero', 'description'];
-
     public function __construct(
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly JSBDynamicSearchService $searchService,
-        private readonly EntityManagerInterface $em,
         private readonly EntiteLexique $lexique,
+        private readonly EntiteLibelle $libelleur,
     ) {
     }
 
@@ -108,7 +100,7 @@ final class RechercherEntitesTool implements AiToolInterface
 
         $filtre = trim((string) ($args['filtre'] ?? ''));
         $page = max(1, (int) ($args['page'] ?? 1));
-        $displayField = $this->displayField($fqcn);
+        $displayField = $this->libelleur->displayField($fqcn);
 
         // Le filtre texte exige un champ de libellé persisté ; sans lui, on
         // liste sans filtrer et on le signale au modèle (filtreIgnore).
@@ -121,21 +113,12 @@ final class RechercherEntitesTool implements AiToolInterface
             return AiToolResult::introuvable($labels[$shortName]);
         }
 
-        $accessor = PropertyAccess::createPropertyAccessor();
         $items = [];
         foreach ($result['data'] as $entity) {
-            $libelle = null;
-            if ($displayField !== null) {
-                try {
-                    $libelle = $accessor->getValue($entity, $displayField);
-                } catch (\Throwable) {
-                    // Champ illisible sur cette instance : repli __toString / id.
-                }
-            }
-            if ($libelle === null || $libelle === '') {
-                $libelle = method_exists($entity, '__toString') ? (string) $entity : ('#' . $entity->getId());
-            }
-            $items[] = ['id' => $entity->getId(), 'libelle' => (string) $libelle];
+            $items[] = [
+                'id'      => $entity->getId(),
+                'libelle' => $this->libelleur->libelle($entity, $displayField),
+            ];
         }
 
         return AiToolResult::ok(array_filter([
@@ -148,18 +131,5 @@ final class RechercherEntitesTool implements AiToolInterface
             'totalItems'   => (int) $result['totalItems'],
             'items'        => $items,
         ], static fn ($v) => $v !== null));
-    }
-
-    /** Premier champ persisté de l'entité utilisable comme libellé, ou null. */
-    private function displayField(string $fqcn): ?string
-    {
-        $metadata = $this->em->getClassMetadata($fqcn);
-        foreach (self::DISPLAY_FIELD_CANDIDATES as $candidate) {
-            if ($metadata->hasField($candidate)) {
-                return $candidate;
-            }
-        }
-
-        return null;
     }
 }

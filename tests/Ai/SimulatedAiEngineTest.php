@@ -181,6 +181,39 @@ class SimulatedAiEngineTest extends TestCase
         $this->assertStringContainsString('zzz', $reply->content);
     }
 
+    public function testActionOuvertureDialogueRemonteDansLaReponse(): void
+    {
+        $uiAction = ['type' => 'open-dialog', 'entite' => 'Client', 'mode' => 'creation'];
+        $tool = $this->makeTool(
+            'crée',
+            AiToolResult::ok(
+                ['entite' => 'Client', 'libelle' => 'Clients', 'mode' => 'creation'],
+                $uiAction,
+            ),
+            'ouvrir_dialogue',
+        );
+        $engine = new SimulatedAiEngine([$tool]);
+        $reply = $engine->reply($this->makeRequest('Crée un nouveau client'));
+
+        $this->assertStringContainsString('formulaire', $reply->content);
+        $this->assertStringContainsString('Clients', $reply->content);
+        $this->assertSame([$uiAction], $reply->actions);
+        $this->assertSame('ouvrir_dialogue', $reply->toolUsed);
+    }
+
+    public function testReponseSansActionResteVide(): void
+    {
+        $tool = $this->makeTool(
+            'combien de clients',
+            AiToolResult::ok(['entite' => 'Client', 'libelle' => 'Clients', 'count' => 3]),
+            'compter_entites',
+        );
+        $engine = new SimulatedAiEngine([$tool]);
+        $reply = $engine->reply($this->makeRequest('Combien de clients avons-nous ?'));
+
+        $this->assertSame([], $reply->actions);
+    }
+
     public function testRefusPoliHorsPerimetre(): void
     {
         $tool = $this->makeTool('combien de clients', AiToolResult::horsPerimetre('Clients'), 'compter_entites');

@@ -61,6 +61,7 @@ final class AnthropicAiEngine implements AiEngineInterface
 
         $refused = false;
         $toolUsed = null;
+        $actions = [];
 
         for ($round = 0; $round <= self::MAX_TOOL_ROUNDS; $round++) {
             $response = $this->call($request, $messages);
@@ -75,7 +76,7 @@ final class AnthropicAiEngine implements AiEngineInterface
             }
 
             if (($response['stop_reason'] ?? null) !== 'tool_use') {
-                return new AiReply($this->extractText($response), refused: $refused, toolUsed: $toolUsed);
+                return new AiReply($this->extractText($response), refused: $refused, toolUsed: $toolUsed, actions: $actions);
             }
 
             // Tool-calling : exécuter TOUS les appels demandés (fail-closed dans
@@ -90,6 +91,9 @@ final class AnthropicAiEngine implements AiEngineInterface
                 $toolUsed = (string) $block['name'];
                 if ($result->status === AiToolResult::STATUS_HORS_PERIMETRE) {
                     $refused = true;
+                }
+                if ($result->uiAction !== null) {
+                    $actions[] = $result->uiAction;
                 }
                 $toolResults[] = [
                     'type'        => 'tool_result',
@@ -108,6 +112,7 @@ final class AnthropicAiEngine implements AiEngineInterface
             . 'question de façon plus ciblée, je réessaierai.',
             refused: $refused,
             toolUsed: $toolUsed,
+            actions: $actions,
         );
     }
 

@@ -12,6 +12,9 @@
 <div class="jsb-ai-chat"
      data-controller="assistant-chat"
      data-assistant-chat-send-url-value="{{ path('admin.assistantia.api.message.send', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
+     data-assistant-chat-dialog-context-url-value="{{ path('admin.assistantia.api.dialog_context', {idEntreprise: idEntreprise}) }}"
+     data-assistant-chat-id-entreprise-value="{{ idEntreprise }}"
+     data-assistant-chat-id-invite-value="{{ idInvite }}"
      data-assistant-chat-assistant-nom-value="{{ assistantNom }}">
     <style>
         .jsb-ai-chat { display:flex; flex-direction:column; height:100%; min-height:0; background:#f8f9fa; }
