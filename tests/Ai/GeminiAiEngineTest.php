@@ -4,10 +4,7 @@ namespace App\Tests\Ai;
 
 use App\Ai\AiContextBuilder;
 use App\Ai\AiRequest;
-use App\Ai\Engine\AiEngineResolver;
-use App\Ai\Engine\AnthropicAiEngine;
 use App\Ai\Engine\GeminiAiEngine;
-use App\Ai\Engine\SimulatedAiEngine;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolInterface;
 use App\Ai\Tool\AiToolResult;
@@ -18,12 +15,13 @@ use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 /**
- * Adaptateur API Claude (Messages API + tool-calling) testé avec un client
- * HTTP mocké — aucun appel réseau. Vérifie : réponse texte simple, boucle de
- * tool-calling (résultats renvoyés dans UN message user), refus périmètre
- * propagé, et sélection du moteur par le résolveur selon la clé API.
+ * Adaptateur API Gemini (generateContent + function calling) testé avec un
+ * client HTTP mocké — aucun appel réseau. Vérifie : réponse texte simple,
+ * boucle functionCall/functionResponse (résultats regroupés dans UN message
+ * user, rôle « model » pour l'assistant), refus périmètre propagé, blocage
+ * de sécurité Gemini géré.
  */
-class AnthropicAiEngineTest extends TestCase
+class GeminiAiEngineTest extends TestCase
 {
     private function makeRequest(string $question): AiRequest
     {
@@ -77,22 +75,22 @@ class AnthropicAiEngineTest extends TestCase
         };
     }
 
-    private function makeEngine(MockHttpClient $http, array $tools = []): AnthropicAiEngine
+    private function makeEngine(MockHttpClient $http, array $tools = []): GeminiAiEngine
     {
         $contextBuilder = $this->createMock(AiContextBuilder::class);
         $contextBuilder->method('toSystemPrompt')->willReturn('SYSTEM');
 
-        return new AnthropicAiEngine($http, $contextBuilder, $tools, 'sk-ant-test', 'claude-opus-4-8');
+        return new GeminiAiEngine($http, $contextBuilder, $tools, 'gm-test', 'gemini-2.5-flash');
+    }
+
+    private static function texte(string $text): array
+    {
+        return ['candidates' => [['finishReason' => 'STOP', 'content' => ['role' => 'model', 'parts' => [['text' => $text]]]]]];
     }
 
     public function testReponseTexteSimple(): void
     {
-        $http = new MockHttpClient([
-            new MockResponse(json_encode([
-                'stop_reason' => 'end_turn',
-                'content'     => [['type' => 'text', 'text' => 'Bonjour ! Je suis Jess.']],
-            ])),
-        ]);
+        $http = new MockHttpClient([new MockResponse(json_encode(self::texte('Bonjour ! Je suis Jess.')))]);
 
         $reply = $this->makeEngine($http)->reply($this->makeRequest('Qui es-tu ?'));
 
@@ -102,21 +100,16 @@ class AnthropicAiEngineTest extends TestCase
         $this->assertSame(1, $http->getRequestsCount());
     }
 
-    public function testBoucleToolCalling(): void
+    public function testBoucleFunctionCalling(): void
     {
         $bodies = [];
         $reponses = [
-            [
-                'stop_reason' => 'tool_use',
-                'content'     => [
-                    ['type' => 'text', 'text' => 'Je compte vos clients.'],
-                    ['type' => 'tool_use', 'id' => 'tu_1', 'name' => 'compter_entites', 'input' => ['entite' => 'Client']],
-                ],
-            ],
-            [
-                'stop_reason' => 'end_turn',
-                'content'     => [['type' => 'text', 'text' => 'Vous avez 3 clients.']],
-            ],
+            ['candidates' => [[
+                'content' => ['role' => 'model', 'parts' => [
+                    ['functionCall' => ['name' => 'compter_entites', 'args' => ['entite' => 'Client']]],
+                ]],
+            ]]],
+            self::texte('Vous avez 3 clients.'),
         ];
         $i = 0;
         $http = new MockHttpClient(function ($method, $url, $options) use (&$bodies, &$i, $reponses) {
@@ -133,29 +126,30 @@ class AnthropicAiEngineTest extends TestCase
         $this->assertFalse($reply->refused);
         $this->assertSame(['entite' => 'Client'], $tool->receivedArgs);
 
-        // 1re requête : outils déclarés + prompt système.
-        $this->assertSame('SYSTEM', $bodies[0]['system']);
-        $this->assertSame('compter_entites', $bodies[0]['tools'][0]['name']);
+        // 1re requête : systemInstruction + functionDeclarations.
+        $this->assertSame('SYSTEM', $bodies[0]['systemInstruction']['parts'][0]['text']);
+        $this->assertSame('compter_entites', $bodies[0]['tools'][0]['functionDeclarations'][0]['name']);
 
-        // 2e requête : le tool_result est renvoyé dans UN message user, lié au bon id.
-        $dernier = end($bodies[1]['messages']);
+        // 2e requête : le tour du modèle est rejoué en rôle « model », puis la
+        // functionResponse arrive dans UN message user avec les données.
+        $messages = $bodies[1]['contents'];
+        $avantDernier = $messages[count($messages) - 2];
+        $dernier = end($messages);
+        $this->assertSame('model', $avantDernier['role']);
         $this->assertSame('user', $dernier['role']);
-        $this->assertSame('tool_result', $dernier['content'][0]['type']);
-        $this->assertSame('tu_1', $dernier['content'][0]['tool_use_id']);
-        $this->assertStringContainsString('"count":3', $dernier['content'][0]['content']);
+        $this->assertSame('compter_entites', $dernier['parts'][0]['functionResponse']['name']);
+        $this->assertSame(3, $dernier['parts'][0]['functionResponse']['response']['count']);
     }
 
     public function testRefusPerimetrePropage(): void
     {
         $reponses = [
-            [
-                'stop_reason' => 'tool_use',
-                'content'     => [['type' => 'tool_use', 'id' => 'tu_1', 'name' => 'compter_entites', 'input' => ['entite' => 'Client']]],
-            ],
-            [
-                'stop_reason' => 'end_turn',
-                'content'     => [['type' => 'text', 'text' => 'Désolé, les Clients sont hors de votre périmètre.']],
-            ],
+            ['candidates' => [[
+                'content' => ['role' => 'model', 'parts' => [
+                    ['functionCall' => ['name' => 'compter_entites', 'args' => ['entite' => 'Client']]],
+                ]],
+            ]]],
+            self::texte('Désolé, les Clients sont hors de votre périmètre.'),
         ];
         $i = 0;
         $http = new MockHttpClient(function () use (&$i, $reponses) {
@@ -169,29 +163,15 @@ class AnthropicAiEngineTest extends TestCase
         $this->assertStringContainsString('périmètre', $reply->content);
     }
 
-    public function testResolverChoisitLeMoteurSelonLesCles(): void
+    public function testBlocageSecuriteGereProprement(): void
     {
-        $contextBuilder = $this->createMock(AiContextBuilder::class);
-        $simulated = new SimulatedAiEngine([]);
-        $anthropic = $this->makeEngine(new MockHttpClient([]));
-        $gemini = new GeminiAiEngine(new MockHttpClient([]), $contextBuilder, [], 'gm-x', 'gemini-2.5-flash');
+        $http = new MockHttpClient([
+            new MockResponse(json_encode(['promptFeedback' => ['blockReason' => 'SAFETY'], 'candidates' => []])),
+        ]);
 
-        // Aucune clé → simulateur.
-        $aucune = new AiEngineResolver($simulated, $anthropic, $gemini, '', '');
-        $this->assertSame('simulated', $aucune->name());
+        $reply = $this->makeEngine($http)->reply($this->makeRequest('Question problématique'));
 
-        // Clé Gemini seule → Gemini.
-        $geminiSeul = new AiEngineResolver($simulated, $anthropic, $gemini, '', 'gm-xxx');
-        $this->assertSame('gemini', $geminiSeul->name());
-
-        // Les deux clés → priorité à Anthropic.
-        $lesDeux = new AiEngineResolver($simulated, $anthropic, $gemini, 'sk-ant-xxx', 'gm-xxx');
-        $this->assertSame('anthropic', $lesDeux->name());
-
-        // Forçage AI_ENGINE : prioritaire sur les clés (c'est la garde de .env.test).
-        $force = new AiEngineResolver($simulated, $anthropic, $gemini, 'sk-ant-xxx', 'gm-xxx', 'simulated');
-        $this->assertSame('simulated', $force->name());
-        $forceGemini = new AiEngineResolver($simulated, $anthropic, $gemini, 'sk-ant-xxx', 'gm-xxx', 'gemini');
-        $this->assertSame('gemini', $forceGemini->name());
+        $this->assertTrue($reply->refused);
+        $this->assertStringContainsString('Reformulez', $reply->content);
     }
 }
