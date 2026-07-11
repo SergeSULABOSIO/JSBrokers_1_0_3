@@ -3,6 +3,7 @@
 namespace App\Controller\Admin;
 
 use App\Ai\AiContextBuilder;
+use App\Ai\AiEngineFailure;
 use App\Ai\AiReply;
 use App\Ai\Engine\AiEngineInterface;
 use Psr\Log\LoggerInterface;
@@ -270,18 +271,16 @@ class AssistantIaController extends AbstractController
 
         $conversation->addMessage($messageUser);
 
-        // Le moteur réel (API Claude) peut échouer (réseau, quota, clé) : la
-        // conversation reste utilisable — réponse d'excuse persistée, pas de 500.
+        // Le moteur réel (API Claude/Gemini) peut échouer (réseau, quota, clé) :
+        // la conversation reste utilisable — réponse d'excuse persistée (honnête
+        // sur la cause quand elle est identifiable, cf. AiEngineFailure), pas de 500.
         $erreurMoteur = false;
         try {
             $reply = $this->aiEngine->reply($this->contextBuilder->build($entreprise, $invite, $conversation));
         } catch (\Throwable $e) {
             $this->logger->error('Assistant IA : le moteur a échoué.', ['exception' => $e]);
             $erreurMoteur = true;
-            $reply = new AiReply(
-                "Je rencontre un problème technique pour joindre mon moteur d'intelligence. "
-                . 'Réessayez dans un instant — votre message a bien été conservé.',
-            );
+            $reply = new AiReply(AiEngineFailure::messagePour($e));
         }
 
         $messageAssistant = (new AssistantMessage())
