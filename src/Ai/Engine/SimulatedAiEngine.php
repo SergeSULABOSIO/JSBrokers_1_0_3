@@ -75,7 +75,11 @@ final class SimulatedAiEngine implements AiEngineInterface
                 ), toolUsed: $tool->name());
             }
 
-            return new AiReply($this->formatToolReply($tool->name(), $result->data), toolUsed: $tool->name());
+            return new AiReply(
+                $this->formatToolReply($tool->name(), $result->data),
+                toolUsed: $tool->name(),
+                actions: $result->uiAction !== null ? [$result->uiAction] : [],
+            );
         }
 
         // 4) Repli : réponse polie + exemples construits depuis le périmètre réel
@@ -114,6 +118,12 @@ final class SimulatedAiEngine implements AiEngineInterface
                 $data['unite'],
             ),
             'rechercher_entites' => $this->formatListe($data),
+            'ouvrir_dialogue' => sprintf(
+                'J\'ouvre le formulaire %s de la rubrique « %s »%s. Vérifiez les informations puis enregistrez.',
+                ($data['mode'] ?? 'creation') === 'edition' ? 'd\'édition' : 'de création',
+                $data['libelle'],
+                isset($data['cible']) ? sprintf(' pour « %s »', $data['cible']) : '',
+            ),
             default => trim(implode(' · ', array_map(
                 fn ($k, $v) => sprintf('%s : %s', $k, is_scalar($v) ? (string) $v : json_encode($v, JSON_UNESCAPED_UNICODE)),
                 array_keys($data),

@@ -15,6 +15,9 @@ export default class extends Controller {
 
     static values = {
         sendUrl: String,
+        dialogContextUrl: String,
+        idEntreprise: Number,
+        idInvite: Number,
         assistantNom: String,
     };
 
@@ -101,6 +104,7 @@ export default class extends Controller {
             } else {
                 const data = await response.json();
                 this.appendMessage('assistant', data.assistant.contenu, data.assistant.refus === true);
+                await this.executeActions(data.assistant.actions);
             }
         } catch (error) {
             console.error('AssistantChat - envoi échoué :', error);
@@ -113,6 +117,57 @@ export default class extends Controller {
             this.onInput(); // recalcul : bouton actif seulement si le champ est non vide
             this.inputTarget.focus();
             this.scrollToBottom();
+        }
+    }
+
+    /**
+     * Traduit les directives d'intention de l'assistant (AiReply.actions) sur
+     * le bus d'événements du workspace. L'assistant n'écrit rien : une action
+     * 'open-dialog' ouvre le formulaire standard (validation serveur incluse),
+     * l'utilisateur relit et enregistre lui-même.
+     */
+    async executeActions(actions) {
+        if (!Array.isArray(actions)) return;
+        for (const action of actions) {
+            if (action && action.type === 'open-dialog') {
+                await this.openDialogAction(action);
+            }
+        }
+    }
+
+    /**
+     * Ouvre le dialogue demandé : récupère entité + canevas auprès de l'endpoint
+     * dialog-context (qui RE-VALIDE les droits, fail-closed) puis dispatche
+     * app:boite-dialogue:init-request — même payload que cerveau.openDialogBox
+     * (miroir de handleAvenantPisteDeriveeFormRequest).
+     */
+    async openDialogAction(action) {
+        if (!this.hasDialogContextUrlValue) return;
+        try {
+            const url = new URL(this.dialogContextUrlValue, window.location.origin);
+            url.searchParams.set('entite', action.entite || '');
+            url.searchParams.set('mode', action.mode || 'creation');
+            if (action.id) url.searchParams.set('id', action.id);
+
+            const response = await fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.message || `Erreur serveur ${response.status}`);
+
+            document.dispatchEvent(new CustomEvent('app:boite-dialogue:init-request', {
+                detail: {
+                    entity:           result.entity || {},
+                    entityFormCanvas: result.formCanvas,
+                    isCreationMode:   result.mode !== 'edition',
+                    context: {
+                        idEntreprise: this.idEntrepriseValue,
+                        idInvite:     this.idInviteValue,
+                    },
+                    parentContext: null,
+                },
+            }));
+        } catch (error) {
+            console.error('AssistantChat - ouverture de dialogue échouée :', error);
+            this.appendNotice('error', error.message || "L'ouverture du formulaire a échoué.");
         }
     }
 

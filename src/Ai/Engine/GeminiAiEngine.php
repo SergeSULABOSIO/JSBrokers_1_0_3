@@ -65,6 +65,7 @@ final class GeminiAiEngine implements AiEngineInterface
 
         $refused = false;
         $toolUsed = null;
+        $actions = [];
 
         for ($round = 0; $round <= self::MAX_TOOL_ROUNDS; $round++) {
             $response = $this->call($request, $contents);
@@ -82,7 +83,7 @@ final class GeminiAiEngine implements AiEngineInterface
             $functionCalls = array_values(array_filter($parts, static fn (array $p) => isset($p['functionCall'])));
 
             if ($functionCalls === []) {
-                return new AiReply($this->extractText($parts), refused: $refused, toolUsed: $toolUsed);
+                return new AiReply($this->extractText($parts), refused: $refused, toolUsed: $toolUsed, actions: $actions);
             }
 
             // Function calling : exécuter TOUS les appels demandés (fail-closed
@@ -96,6 +97,9 @@ final class GeminiAiEngine implements AiEngineInterface
                 $toolUsed = $name;
                 if ($result->status === AiToolResult::STATUS_HORS_PERIMETRE) {
                     $refused = true;
+                }
+                if ($result->uiAction !== null) {
+                    $actions[] = $result->uiAction;
                 }
                 $responseParts[] = [
                     'functionResponse' => [
@@ -112,6 +116,7 @@ final class GeminiAiEngine implements AiEngineInterface
             . 'question de façon plus ciblée, je réessaierai.',
             refused: $refused,
             toolUsed: $toolUsed,
+            actions: $actions,
         );
     }
 

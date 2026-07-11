@@ -161,7 +161,8 @@ class AssistantIaWorkspaceTest extends WebTestCase
      *
      * @return array{owner: Invite, guest: Invite, entreprise: Entreprise}
      */
-    private function seed(bool $withClientRole = true): array
+    /** @param int[] $clientAccess niveaux du rôle Client de l'invité (si $withClientRole) */
+    private function seed(bool $withClientRole = true, array $clientAccess = [Invite::ACCESS_LECTURE]): array
     {
         $em = $this->em();
 
@@ -188,7 +189,7 @@ class AssistantIaWorkspaceTest extends WebTestCase
         if ($withClientRole) {
             $role = new RolesEnProduction();
             $role->setNom('Rôle test IA');
-            $role->setAccessClient([Invite::ACCESS_LECTURE]);
+            $role->setAccessClient($clientAccess);
             $role->setEntreprise($entreprise);
             $guestInvite->addRolesEnProduction($role);
             $em->persist($role);
@@ -552,6 +553,81 @@ class AssistantIaWorkspaceTest extends WebTestCase
             $data['assistant']['contenu'],
             'Le refus ne doit révéler AUCUNE donnée (fail-closed).'
         );
+    }
+
+    public function testActionOuvrirDialogueCreation(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed(
+            withClientRole: true,
+            clientAccess: [Invite::ACCESS_LECTURE, Invite::ACCESS_ECRITURE],
+        );
+        $conversation = $this->makeConversation($e, $guest);
+
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $this->postMessage($e->getId(), $conversation->getId(), 'Crée un nouveau client');
+        $this->assertResponseIsSuccessful();
+        $data = $this->jsonResponse();
+
+        // La directive d'intention est remontée au chat (qui ouvrira le dialogue).
+        $this->assertFalse($data['assistant']['refus']);
+        $this->assertSame(
+            [['type' => 'open-dialog', 'entite' => 'Client', 'mode' => 'creation']],
+            $data['assistant']['actions'],
+        );
+        $this->assertStringContainsString('formulaire', $data['assistant']['contenu']);
+
+        $meta = $this->em()->getRepository(AssistantMessage::class)
+            ->findOneBy(['role' => AssistantMessage::ROLE_ASSISTANT], ['id' => 'DESC'])
+            ->getMeta();
+        $this->assertSame('ouvrir_dialogue', $meta['tool']);
+    }
+
+    public function testActionOuvrirDialogueRefuseeSansEcriture(): void
+    {
+        // Lecture seule : ouvrir un formulaire de création est une mutation à venir.
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: true);
+        $conversation = $this->makeConversation($e, $guest);
+
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $this->postMessage($e->getId(), $conversation->getId(), 'Crée un nouveau client');
+        $this->assertResponseIsSuccessful();
+        $data = $this->jsonResponse();
+
+        $this->assertTrue($data['assistant']['refus'], 'Sans niveau Écriture, la création doit être refusée.');
+        $this->assertSame([], $data['assistant']['actions'], 'Aucune directive UI ne doit fuiter sur un refus.');
+    }
+
+    public function testDialogContextEndpointFailClosed(): void
+    {
+        ['entreprise' => $e] = $this->seed(
+            withClientRole: true,
+            clientAccess: [Invite::ACCESS_LECTURE, Invite::ACCESS_ECRITURE, Invite::ACCESS_MODIFICATION],
+        );
+        $this->seedClients($e, ['Client Alpha']);
+        $idClient = $this->em()->getRepository(Client::class)->findOneBy(['nom' => 'Client Alpha'])->getId();
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+
+        // Création : canevas de formulaire, pas d'entité.
+        $this->client->request('GET', sprintf('/admin/assistant-ia/api/dialog-context/%d?entite=Client&mode=creation', $e->getId()));
+        $this->assertResponseIsSuccessful();
+        $data = $this->jsonResponse();
+        $this->assertSame('creation', $data['mode']);
+        $this->assertNull($data['entity']);
+        $this->assertNotEmpty($data['formCanvas']);
+
+        // Édition : entité normalisée + canevas.
+        $this->client->request('GET', sprintf('/admin/assistant-ia/api/dialog-context/%d?entite=Client&mode=edition&id=%d', $e->getId(), $idClient));
+        $this->assertResponseIsSuccessful();
+        $data = $this->jsonResponse();
+        $this->assertSame('Client Alpha', $data['entity']['nom']);
+
+        // Entité hors périmètre (aucun rôle Avenant) : 403 fail-closed.
+        $this->client->request('GET', sprintf('/admin/assistant-ia/api/dialog-context/%d?entite=Avenant&mode=creation', $e->getId()));
+        $this->assertResponseStatusCodeSame(403);
+
+        // Entité inconnue : 400.
+        $this->client->request('GET', sprintf('/admin/assistant-ia/api/dialog-context/%d?entite=Inexistante&mode=creation', $e->getId()));
+        $this->assertResponseStatusCodeSame(400);
     }
 
     public function testIndicateurCalculeClient(): void

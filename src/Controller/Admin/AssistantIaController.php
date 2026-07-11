@@ -16,9 +16,12 @@ use App\Repository\AssistantConversationRepository;
 use App\Repository\AssistantParametresRepository;
 use App\Repository\EntrepriseRepository;
 use App\Service\Workspace\WorkspaceAccessResolver;
+use App\Services\CanvasBuilder;
+use App\Services\JSBDynamicSearchService;
 use App\Token\InsufficientTokensException;
 use App\Token\TokenAccountService;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -62,6 +65,9 @@ class AssistantIaController extends AbstractController
         private AiEngineInterface $aiEngine,
         private EntityManagerInterface $em,
         private LoggerInterface $logger,
+        private CanvasBuilder $canvasBuilder,
+        private JSBDynamicSearchService $searchService,
+        private NormalizerInterface $normalizer,
     ) {
     }
 
@@ -155,6 +161,7 @@ class AssistantIaController extends AbstractController
             'assistantNom'  => $this->parametresRepository->nomPour($entreprise),
             'entreprise'    => $entreprise,
             'idEntreprise'  => $idEntreprise,
+            'idInvite'      => $invite->getId(),
         ]);
     }
 
@@ -281,10 +288,11 @@ class AssistantIaController extends AbstractController
             ->setRole(AssistantMessage::ROLE_ASSISTANT)
             ->setContenu($reply->content)
             ->setMeta(array_filter([
-                'engine' => $this->aiEngine->name(),
-                'tool'   => $reply->toolUsed,
-                'refus'  => $reply->refused ?: null,
-                'erreur' => $erreurMoteur ?: null,
+                'engine'  => $this->aiEngine->name(),
+                'tool'    => $reply->toolUsed,
+                'refus'   => $reply->refused ?: null,
+                'erreur'  => $erreurMoteur ?: null,
+                'actions' => $reply->actions ?: null,
             ]));
         $conversation->addMessage($messageAssistant);
 
@@ -304,9 +312,60 @@ class AssistantIaController extends AbstractController
                 'id'        => $messageAssistant->getId(),
                 'contenu'   => $messageAssistant->getContenu(),
                 'refus'     => $reply->refused,
+                'actions'   => $reply->actions,
                 'createdAt' => $messageAssistant->getCreatedAt()?->format(\DateTimeImmutable::ATOM),
             ],
             'conversationTitre' => $conversation->getTitre(),
+        ]);
+    }
+
+    /**
+     * Contexte d'ouverture de dialogue demandé par une ACTION de l'assistant
+     * (directive uiAction 'open-dialog') : entité normalisée + canevas de
+     * formulaire, patron AvenantController::getPisteDeriveeContext. La
+     * directive émise par l'outil n'est PAS une autorisation : cet endpoint
+     * re-valide tout (fail-closed) car c'est une requête HTTP distincte.
+     */
+    #[Route('/api/dialog-context/{idEntreprise}', name: 'api.dialog_context', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function dialogContext(int $idEntreprise, Request $request): JsonResponse
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if ($invite === null) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+
+        $shortName = (string) $request->query->get('entite', '');
+        $mode = (string) $request->query->get('mode', 'creation');
+        $id = (int) $request->query->get('id', 0);
+
+        $labels = $this->accessResolver->libellesEntites();
+        $fqcn = 'App\\Entity\\' . $shortName;
+        if (!isset($labels[$shortName]) || !class_exists($fqcn) || !in_array($mode, ['creation', 'edition'], true)) {
+            return $this->json(['message' => 'Demande invalide.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        // FAIL-CLOSED : mêmes niveaux que l'outil ouvrir_dialogue — Écriture en
+        // création, Modification en édition.
+        $level = $mode === 'edition' ? Invite::ACCESS_MODIFICATION : Invite::ACCESS_ECRITURE;
+        if (!$this->accessResolver->can($invite, $shortName, $level)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+
+        $entity = null;
+        if ($mode === 'edition') {
+            // Scoping : l'enregistrement doit exister DANS cette entreprise.
+            $result = $this->searchService->search($fqcn, ['id' => $id], $entreprise, null, 1, 1);
+            $entity = $result['data'][0] ?? null;
+            if (($result['status']['code'] ?? 500) !== 200 || $entity === null) {
+                return $this->json(['message' => 'Enregistrement introuvable.'], Response::HTTP_NOT_FOUND);
+            }
+        }
+
+        return $this->json([
+            'mode'       => $mode,
+            'entite'     => $shortName,
+            'entity'     => $entity !== null ? $this->normalizer->normalize($entity, null, ['groups' => ['list:read']]) : null,
+            'formCanvas' => $this->canvasBuilder->getEntityFormCanvas($entity ?? new $fqcn(), $idEntreprise),
         ]);
     }
 
