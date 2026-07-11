@@ -493,6 +493,47 @@ class AssistantIaWorkspaceTest extends WebTestCase
         $this->assertSame('compter_entites', $meta['tool']);
     }
 
+    public function testListeDesClientsDansPerimetre(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: true);
+        $this->seedClients($e, ['Client Alpha', 'Client Beta', 'Client Gamma']);
+        $conversation = $this->makeConversation($e, $guest);
+
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $this->postMessage($e->getId(), $conversation->getId(), 'Liste nos clients');
+        $this->assertResponseIsSuccessful();
+        $data = $this->jsonResponse();
+
+        $this->assertFalse($data['assistant']['refus']);
+        $this->assertStringContainsString('3 enregistrements', $data['assistant']['contenu']);
+        foreach (['Client Alpha', 'Client Beta', 'Client Gamma'] as $nom) {
+            $this->assertStringContainsString($nom, $data['assistant']['contenu']);
+        }
+
+        $meta = $this->em()->getRepository(AssistantMessage::class)
+            ->findOneBy(['role' => AssistantMessage::ROLE_ASSISTANT], ['id' => 'DESC'])
+            ->getMeta();
+        $this->assertSame('rechercher_entites', $meta['tool']);
+    }
+
+    public function testRechercheFiltreeEtHorsPerimetreAuNiveauOutil(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: true);
+        $this->seedClients($e, ['Client Alpha', 'Client Beta', 'Client Gamma']);
+        $tool = static::getContainer()->get(\App\Ai\Tool\RechercherEntitesTool::class);
+        $scope = new \App\Ai\Scope\AiScope($e, $guest);
+
+        // Filtre texte : LIKE sur le champ de libellé, scopé à l'entreprise.
+        $result = $tool->execute(['entite' => 'Client', 'filtre' => 'Beta'], $scope);
+        $this->assertSame(\App\Ai\Tool\AiToolResult::STATUS_OK, $result->status);
+        $this->assertSame(1, $result->data['totalItems']);
+        $this->assertSame('Client Beta', $result->data['items'][0]['libelle']);
+
+        // FAIL-CLOSED : une entité hors du périmètre de lecture est refusée.
+        $horsPerimetre = $tool->execute(['entite' => 'Avenant'], $scope);
+        $this->assertSame(\App\Ai\Tool\AiToolResult::STATUS_HORS_PERIMETRE, $horsPerimetre->status);
+    }
+
     public function testRefusPoliHorsPerimetre(): void
     {
         ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: false);

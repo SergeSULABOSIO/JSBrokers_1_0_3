@@ -44,8 +44,8 @@ final class SimulatedAiEngine implements AiEngineInterface
             return new AiReply(sprintf(
                 "Bonjour ! Je suis %s, l'assistant IA de %s. Je connais les données de votre espace de travail "
                 . "(dans les limites de vos droits d'accès) et je peux par exemple compter vos enregistrements "
-                . "(« Combien de clients avons-nous ? ») ou donner un indicateur calculé "
-                . "(« Quelle est la prime totale du client X ? »). Comment puis-je vous aider ?",
+                . "(« Combien de clients avons-nous ? »), les lister (« Liste nos clients ») ou donner un "
+                . "indicateur calculé (« Quelle est la prime totale du client X ? »). Comment puis-je vous aider ?",
                 $nom,
                 $entreprise,
             ));
@@ -113,12 +113,48 @@ final class SimulatedAiEngine implements AiEngineInterface
                 number_format($data['valeur'], 2, ',', ' '),
                 $data['unite'],
             ),
+            'rechercher_entites' => $this->formatListe($data),
             default => trim(implode(' · ', array_map(
                 fn ($k, $v) => sprintf('%s : %s', $k, is_scalar($v) ? (string) $v : json_encode($v, JSON_UNESCAPED_UNICODE)),
                 array_keys($data),
                 $data,
             ))),
         };
+    }
+
+    /** Restitution d'une page de liste (rechercher_entites) : total, items, invite à paginer. */
+    private function formatListe(array $data): string
+    {
+        if (($data['totalItems'] ?? 0) === 0) {
+            return sprintf(
+                'La rubrique « %s » ne contient aucun enregistrement%s.',
+                $data['libelle'],
+                isset($data['filtre']) ? sprintf(' correspondant à « %s »', $data['filtre']) : '',
+            );
+        }
+
+        $lignes = array_map(
+            static fn (array $item) => '- ' . $item['libelle'],
+            $data['items'] ?? [],
+        );
+
+        $texte = sprintf(
+            'La rubrique « %s » contient %d enregistrement%s%s (page %d/%d) :%s%s',
+            $data['libelle'],
+            $data['totalItems'],
+            $data['totalItems'] > 1 ? 's' : '',
+            isset($data['filtre']) ? sprintf(' correspondant à « %s »', $data['filtre']) : '',
+            $data['page'],
+            $data['totalPages'],
+            "\n",
+            implode("\n", $lignes),
+        );
+
+        if (($data['totalPages'] ?? 1) > 1 && $data['page'] < $data['totalPages']) {
+            $texte .= "\nDemandez la page suivante pour voir la suite.";
+        }
+
+        return $texte;
     }
 
     /** Restitue le périmètre (structure de WorkspaceAccessResolver::describePerimetreDetailed). */

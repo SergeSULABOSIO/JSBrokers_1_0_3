@@ -131,6 +131,56 @@ class SimulatedAiEngineTest extends TestCase
         $this->assertSame('compter_entites', $reply->toolUsed);
     }
 
+    public function testListeDEnregistrementsAvecPagination(): void
+    {
+        $tool = $this->makeTool(
+            'liste',
+            AiToolResult::ok([
+                'entite'     => 'Client',
+                'libelle'    => 'Clients',
+                'page'       => 1,
+                'totalPages' => 2,
+                'totalItems' => 22,
+                'items'      => [
+                    ['id' => 1, 'libelle' => 'Client Alpha'],
+                    ['id' => 2, 'libelle' => 'Client Beta'],
+                ],
+            ]),
+            'rechercher_entites',
+        );
+        $engine = new SimulatedAiEngine([$tool]);
+        $reply = $engine->reply($this->makeRequest('Liste nos clients'));
+
+        $this->assertStringContainsString('22 enregistrements', $reply->content);
+        $this->assertStringContainsString('- Client Alpha', $reply->content);
+        $this->assertStringContainsString('- Client Beta', $reply->content);
+        $this->assertStringContainsString('page 1/2', $reply->content);
+        $this->assertStringContainsString('page suivante', $reply->content);
+        $this->assertSame('rechercher_entites', $reply->toolUsed);
+    }
+
+    public function testListeVideResteExplicite(): void
+    {
+        $tool = $this->makeTool(
+            'liste',
+            AiToolResult::ok([
+                'entite'     => 'Client',
+                'libelle'    => 'Clients',
+                'filtre'     => 'zzz',
+                'page'       => 1,
+                'totalPages' => 1,
+                'totalItems' => 0,
+                'items'      => [],
+            ]),
+            'rechercher_entites',
+        );
+        $engine = new SimulatedAiEngine([$tool]);
+        $reply = $engine->reply($this->makeRequest('Liste les clients zzz'));
+
+        $this->assertStringContainsString('aucun enregistrement', $reply->content);
+        $this->assertStringContainsString('zzz', $reply->content);
+    }
+
     public function testRefusPoliHorsPerimetre(): void
     {
         $tool = $this->makeTool('combien de clients', AiToolResult::horsPerimetre('Clients'), 'compter_entites');

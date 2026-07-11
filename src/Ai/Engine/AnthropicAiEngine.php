@@ -29,9 +29,10 @@ final class AnthropicAiEngine implements AiEngineInterface
 {
     private const API_URL = 'https://api.anthropic.com/v1/messages';
     private const API_VERSION = '2023-06-01';
-    private const MAX_OUTPUT_TOKENS = 1024;
+    /** Assez ample pour restituer une page de liste (rechercher_entites) sans troncature. */
+    private const MAX_OUTPUT_TOKENS = 4096;
     /** Garde-fou : nombre maximal d'allers-retours de tool-calling par message. */
-    private const MAX_TOOL_ROUNDS = 5;
+    private const MAX_TOOL_ROUNDS = 8;
 
     /** @var iterable<AiToolInterface> */
     private iterable $tools;

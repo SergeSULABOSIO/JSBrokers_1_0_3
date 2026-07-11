@@ -29,9 +29,10 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 final class GeminiAiEngine implements AiEngineInterface
 {
     private const API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-    private const MAX_OUTPUT_TOKENS = 1024;
+    /** Assez ample pour restituer une page de liste (rechercher_entites) sans troncature. */
+    private const MAX_OUTPUT_TOKENS = 4096;
     /** Garde-fou : nombre maximal d'allers-retours de function calling par message. */
-    private const MAX_TOOL_ROUNDS = 5;
+    private const MAX_TOOL_ROUNDS = 8;
 
     /** @var iterable<AiToolInterface> */
     private iterable $tools;
