@@ -45,7 +45,8 @@ final class SimulatedAiEngine implements AiEngineInterface
                 "Bonjour ! Je suis %s, l'assistant IA de %s. Je connais les données de votre espace de travail "
                 . "(dans les limites de vos droits d'accès) et je peux par exemple compter vos enregistrements "
                 . "(« Combien de clients avons-nous ? »), les lister (« Liste nos clients ») ou donner un "
-                . "indicateur calculé (« Quelle est la prime totale du client X ? »). Comment puis-je vous aider ?",
+                . "indicateur calculé (« Quelle est la prime totale du client X ? »). Demandez-moi "
+                . "« Que peux-tu faire ? » pour l'inventaire complet de mes capacités. Comment puis-je vous aider ?",
                 $nom,
                 $entreprise,
             ));
@@ -118,6 +119,11 @@ final class SimulatedAiEngine implements AiEngineInterface
                 $data['unite'],
             ),
             'rechercher_entites' => $this->formatListe($data),
+            'consulter_guide' => sprintf(
+                "D'après la fiche « %s » :\n%s",
+                $data['titre'],
+                trim((string) $data['contenu']),
+            ),
             'ouvrir_dialogue' => sprintf(
                 'J\'ouvre le formulaire %s de la rubrique « %s »%s. Vérifiez les informations puis enregistrez.',
                 ($data['mode'] ?? 'creation') === 'edition' ? 'd\'édition' : 'de création',
