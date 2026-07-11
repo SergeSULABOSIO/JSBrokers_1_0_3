@@ -6,6 +6,7 @@ use App\Ai\AiContextBuilder;
 use App\Ai\AiRequest;
 use App\Ai\Engine\AiEngineResolver;
 use App\Ai\Engine\AnthropicAiEngine;
+use App\Ai\Engine\GeminiAiEngine;
 use App\Ai\Engine\SimulatedAiEngine;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolInterface;
@@ -168,15 +169,29 @@ class AnthropicAiEngineTest extends TestCase
         $this->assertStringContainsString('périmètre', $reply->content);
     }
 
-    public function testResolverChoisitLeMoteurSelonLaCle(): void
+    public function testResolverChoisitLeMoteurSelonLesCles(): void
     {
+        $contextBuilder = $this->createMock(AiContextBuilder::class);
         $simulated = new SimulatedAiEngine([]);
         $anthropic = $this->makeEngine(new MockHttpClient([]));
+        $gemini = new GeminiAiEngine(new MockHttpClient([]), $contextBuilder, [], 'gm-x', 'gemini-2.5-flash');
 
-        $sansCle = new AiEngineResolver($simulated, $anthropic, '');
-        $this->assertSame('simulated', $sansCle->name());
+        // Aucune clé → simulateur.
+        $aucune = new AiEngineResolver($simulated, $anthropic, $gemini, '', '');
+        $this->assertSame('simulated', $aucune->name());
 
-        $avecCle = new AiEngineResolver($simulated, $anthropic, 'sk-ant-xxx');
-        $this->assertSame('anthropic', $avecCle->name());
+        // Clé Gemini seule → Gemini.
+        $geminiSeul = new AiEngineResolver($simulated, $anthropic, $gemini, '', 'gm-xxx');
+        $this->assertSame('gemini', $geminiSeul->name());
+
+        // Les deux clés → priorité à Anthropic.
+        $lesDeux = new AiEngineResolver($simulated, $anthropic, $gemini, 'sk-ant-xxx', 'gm-xxx');
+        $this->assertSame('anthropic', $lesDeux->name());
+
+        // Forçage AI_ENGINE : prioritaire sur les clés (c'est la garde de .env.test).
+        $force = new AiEngineResolver($simulated, $anthropic, $gemini, 'sk-ant-xxx', 'gm-xxx', 'simulated');
+        $this->assertSame('simulated', $force->name());
+        $forceGemini = new AiEngineResolver($simulated, $anthropic, $gemini, 'sk-ant-xxx', 'gm-xxx', 'gemini');
+        $this->assertSame('gemini', $forceGemini->name());
     }
 }
