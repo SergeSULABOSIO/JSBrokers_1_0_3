@@ -630,6 +630,43 @@ class AssistantIaWorkspaceTest extends WebTestCase
         $this->assertResponseStatusCodeSame(400);
     }
 
+    public function testInventaireDesCapacites(): void
+    {
+        // Aucun rôle requis : l'inventaire est de la documentation, pas des données.
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: false);
+        $conversation = $this->makeConversation($e, $guest);
+
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $this->postMessage($e->getId(), $conversation->getId(), 'Que peux-tu faire ?');
+        $this->assertResponseIsSuccessful();
+        $data = $this->jsonResponse();
+
+        $this->assertFalse($data['assistant']['refus']);
+        $this->assertStringContainsString('Ce que l\'assistant peut faire', $data['assistant']['contenu']);
+        $this->assertStringContainsString('Combien de clients avons-nous ?', $data['assistant']['contenu']);
+        $this->assertStringContainsString('n\'écrit jamais en base', $data['assistant']['contenu']);
+
+        $meta = $this->em()->getRepository(AssistantMessage::class)
+            ->findOneBy(['role' => AssistantMessage::ROLE_ASSISTANT], ['id' => 'DESC'])
+            ->getMeta();
+        $this->assertSame('consulter_guide', $meta['tool']);
+    }
+
+    public function testQuestionDeMethodeServieParUneFiche(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: false);
+        $conversation = $this->makeConversation($e, $guest);
+
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $this->postMessage($e->getId(), $conversation->getId(), 'Comment fonctionnent les bordereaux ?');
+        $this->assertResponseIsSuccessful();
+        $data = $this->jsonResponse();
+
+        $this->assertFalse($data['assistant']['refus']);
+        $this->assertStringContainsString('Bordereaux', $data['assistant']['contenu']);
+        $this->assertStringContainsString('note liée', $data['assistant']['contenu']);
+    }
+
     public function testIndicateurCalculeClient(): void
     {
         ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: true);

@@ -2,6 +2,7 @@
 
 namespace App\Ai;
 
+use App\Ai\Guide\GuideRepository;
 use App\Ai\Scope\AiScope;
 use App\Entity\AssistantConversation;
 use App\Entity\AssistantMessage;
@@ -23,6 +24,7 @@ class AiContextBuilder
     public function __construct(
         private readonly AssistantParametresRepository $parametresRepository,
         private readonly WorkspaceAccessResolver $accessResolver,
+        private readonly GuideRepository $guides,
     ) {
     }
 
@@ -57,6 +59,7 @@ class AiContextBuilder
     {
         $ctx = $request->systemContext;
         $perimetre = json_encode($ctx['perimetre'], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        $catalogue = $this->catalogueGuides();
 
         return <<<PROMPT
         Tu es {$ctx['assistantNom']}, l'assistant IA de l'entreprise de courtage « {$ctx['entrepriseNom']} »
@@ -77,10 +80,32 @@ class AiContextBuilder
           d'afficher la suite (paramètre page).
         - Réponds en texte simple : pas de tableaux ni de mise en forme Markdown (gras, titres) —
           l'interface les afficherait bruts. De simples tirets suffisent pour les listes.
+        - Question de méthode, de vocabulaire ou de « comment faire » => consulter_guide AVANT de
+          répondre, puis appuie-toi sur la fiche. Fiches disponibles :
+        {$catalogue}
+        - « Que peux-tu faire ? » (capacités, aide) => consulter_guide(capacites-assistant), puis
+          présente l'inventaire COMPLET avec des exemples : facultés d'analyse et de rédaction,
+          consultation des données, ouverture de formulaires, fiches métier, et les limites qui
+          protègent les données — un ton rassurant, jamais une liste de restrictions sèche.
         Le périmètre d'accès de ton interlocuteur est strictement limité à :
         {$perimetre}
         Pour toute demande hors de ce périmètre, refuse poliment en expliquant tes limitations techniques
         liées aux droits d'accès, sans révéler la moindre donnée.
         PROMPT;
+    }
+
+    /**
+     * Catalogue des fiches de connaissance, une ligne « - slug : description »
+     * par fiche — la divulgation progressive : le CONTENU d'une fiche n'entre
+     * dans le contexte que via l'outil consulter_guide.
+     */
+    private function catalogueGuides(): string
+    {
+        $lignes = [];
+        foreach ($this->guides->catalogue() as $slug => $fiche) {
+            $lignes[] = sprintf('- %s : %s', $slug, $fiche['description']);
+        }
+
+        return implode("\n", $lignes);
     }
 }
