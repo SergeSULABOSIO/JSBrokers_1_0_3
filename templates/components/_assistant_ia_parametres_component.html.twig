@@ -75,6 +75,57 @@
         .jsb-ai-params .aip-feedback { border-radius:8px; padding:.65rem .9rem; font-size:.9rem; margin:0 0 1rem; }
         .jsb-ai-params .aip-feedback--success { background:#d1e7dd; color:#0f5132; }
         .jsb-ai-params .aip-feedback--error { background:#f8d7da; color:#842029; }
+
+        /* ── Documentation des capacités (avant le formulaire) ─────────────────
+           Cartes en grille responsive, une par outil de l'assistant : icône en
+           pastille cobalt-subtil, titre, apport concret et exemple de question.
+           Couleurs strictement dans la charte (cobalt #0047AB en accent seul,
+           textes gris Bootstrap sur fonds clairs — contrastes AA). */
+        .jsb-ai-params .aip-doc { max-width:980px; margin:0 0 1.75rem; }
+        .jsb-ai-params .aip-doc h3 {
+            display:flex; align-items:center; gap:.5rem;
+            font-size:1.15rem; font-weight:700; color:#212529; margin:0 0 .3rem;
+        }
+        .jsb-ai-params .aip-doc h3 .aip-doc-ic { color:#0047AB; flex:0 0 auto; }
+        .jsb-ai-params .aip-doc > p { color:#6c757d; margin:0 0 1.1rem; max-width:70ch; }
+        .jsb-ai-params .aip-doc h4 {
+            font-size:.78rem; text-transform:uppercase; letter-spacing:.04em;
+            font-weight:700; color:#0047AB; margin:1.35rem 0 .7rem;
+        }
+        .jsb-ai-params .aip-doc-grid {
+            list-style:none; margin:0; padding:0;
+            display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:.8rem;
+        }
+        .jsb-ai-params .aip-doc-card {
+            display:flex; gap:.8rem; align-items:flex-start;
+            background:#ffffff; border:1px solid #dee2e6; border-radius:10px;
+            padding:.85rem .95rem;
+        }
+        .jsb-ai-params .aip-doc-card-ic {
+            flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
+            width:38px; height:38px; border-radius:9px;
+            background:#e8f0fb; color:#0047AB;
+        }
+        .jsb-ai-params .aip-doc-card h5 { font-size:.95rem; font-weight:700; color:#212529; margin:0 0 .2rem; }
+        .jsb-ai-params .aip-doc-card p { font-size:.875rem; color:#495057; margin:0; }
+        .jsb-ai-params .aip-doc-ex {
+            display:block; margin-top:.3rem; font-size:.85rem; font-style:italic; color:#6c757d;
+        }
+
+        /* Encadré des limites : fond cobalt-subtil, information rassurante (role=note). */
+        .jsb-ai-params .aip-doc-limites {
+            background:#e8f0fb; border:1px solid #dee2e6; border-radius:10px;
+            padding:1rem 1.1rem; margin-top:1.35rem;
+        }
+        .jsb-ai-params .aip-doc-limites h4 {
+            display:flex; align-items:center; gap:.45rem; margin:0 0 .55rem; color:#0047AB;
+        }
+        .jsb-ai-params .aip-doc-limites ul { list-style:none; margin:0; padding:0; display:grid; gap:.4rem; }
+        .jsb-ai-params .aip-doc-limites li {
+            display:flex; gap:.5rem; align-items:flex-start;
+            font-size:.875rem; color:#212529;
+        }
+        .jsb-ai-params .aip-doc-limites li .aip-lim-ic { color:#0047AB; flex:0 0 auto; margin-top:.1rem; }
     </style>
 
     {# ── Entête (modèle édition d'entreprise) ── #}
@@ -91,6 +142,165 @@
         </p>
         <hr>
     </div>
+
+    {# ── Documentation des capacités : ce que l'assistant sait faire, outil par
+          outil, et ses limites protectrices — pour que l'utilisateur sache quoi
+          lui demander AVANT de le personnaliser. #}
+    <section class="aip-doc" aria-labelledby="aip-doc-titre">
+        <h3 id="aip-doc-titre">
+            <span class="aip-doc-ic" aria-hidden="true">
+                <twig:UX:Icon name="{{ resolve_icon_name('assistant-ia') }}" style="width:22px;height:22px;" />
+            </span>
+            Ce que {{ assistantNom }} sait faire pour vous
+        </h3>
+        <p>
+            Votre assistant répond en langage naturel, dans les limites des droits d'accès
+            de chaque collaborateur. Voici ses capacités, avec des exemples de questions à lui poser.
+        </p>
+
+        <h4>Consulter et analyser vos données</h4>
+        <ul class="aip-doc-grid">
+            <li class="aip-doc-card">
+                <span class="aip-doc-card-ic" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:count') }}" style="width:20px;height:20px;" />
+                </span>
+                <div>
+                    <h5>Compter vos enregistrements</h5>
+                    <p>Dénombre instantanément les fiches d'une rubrique : clients, avenants, pistes, sinistres…
+                        <span class="aip-doc-ex">« Combien de clients avons-nous ? »</span></p>
+                </div>
+            </li>
+            <li class="aip-doc-card">
+                <span class="aip-doc-card-ic" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:search') }}" style="width:20px;height:20px;" />
+                </span>
+                <div>
+                    <h5>Rechercher et lister</h5>
+                    <p>Liste les fiches d'une rubrique, avec filtre sur le nom et pagination.
+                        <span class="aip-doc-ex">« Liste nos avenants » · « Cherche les clients dont le nom contient TRANS »</span></p>
+                </div>
+            </li>
+            <li class="aip-doc-card">
+                <span class="aip-doc-card-ic" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:description') }}" style="width:20px;height:20px;" />
+                </span>
+                <div>
+                    <h5>Lire une fiche en détail</h5>
+                    <p>Restitue les attributs enregistrés d'une fiche précise : adresse, contacts, statut, références…
+                        <span class="aip-doc-ex">« Quelle est l'adresse du client Kin Avia ? »</span></p>
+                </div>
+            </li>
+            <li class="aip-doc-card">
+                <span class="aip-doc-card-ic" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('revenu') }}" style="width:20px;height:20px;" />
+                </span>
+                <div>
+                    <h5>Calculer vos indicateurs financiers</h5>
+                    <p>Prime totale, commissions, taux de sinistralité… calculés en temps réel pour un client,
+                       un portefeuille, un avenant — ou toute l'entreprise, avec période au choix.
+                        <span class="aip-doc-ex">« Quelle est la commission totale de l'entreprise ce trimestre ? »</span></p>
+                </div>
+            </li>
+            <li class="aip-doc-card">
+                <span class="aip-doc-card-ic" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('document-comptable') }}" style="width:20px;height:20px;" />
+                </span>
+                <div>
+                    <h5>Lire vos états comptables</h5>
+                    <p>Trésorerie, compte de résultat, bilan, balance, TVA : les états SYSCOHADA du cabinet,
+                       générés à l'instant de la demande.
+                        <span class="aip-doc-ex">« Quel est le solde de la trésorerie ? »</span></p>
+                </div>
+            </li>
+            <li class="aip-doc-card">
+                <span class="aip-doc-card-ic" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('tranche') }}" style="width:20px;height:20px;" />
+                </span>
+                <div>
+                    <h5>Établir des statistiques</h5>
+                    <p>Comptes, sommes, moyennes et répartitions sur vos données, par groupe ou par période.
+                        <span class="aip-doc-ex">« Répartition des clients par groupe ? »</span></p>
+                </div>
+            </li>
+        </ul>
+
+        <h4>Agir dans votre espace de travail et vous guider</h4>
+        <ul class="aip-doc-grid">
+            <li class="aip-doc-card">
+                <span class="aip-doc-card-ic" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:edit') }}" style="width:20px;height:20px;" />
+                </span>
+                <div>
+                    <h5>Préparer vos saisies</h5>
+                    <p>Ouvre le formulaire de création ou de modification d'une fiche — c'est toujours
+                       vous qui vérifiez et enregistrez.
+                        <span class="aip-doc-ex">« Crée un nouveau client » · « Modifie l'avenant X »</span></p>
+                </div>
+            </li>
+            <li class="aip-doc-card">
+                <span class="aip-doc-card-ic" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:open') }}" style="width:20px;height:20px;" />
+                </span>
+                <div>
+                    <h5>Naviguer pour vous</h5>
+                    <p>Ouvre directement la rubrique demandée dans votre espace de travail.
+                        <span class="aip-doc-ex">« Ouvre la rubrique bordereaux »</span></p>
+                </div>
+            </li>
+            <li class="aip-doc-card">
+                <span class="aip-doc-card-ic" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:view') }}" style="width:20px;height:20px;" />
+                </span>
+                <div>
+                    <h5>Afficher une fiche à l'écran</h5>
+                    <p>Ouvre l'enregistrement demandé dans la colonne de visualisation, avec ses indicateurs.
+                        <span class="aip-doc-ex">« Visualise le client Kin Avia »</span></p>
+                </div>
+            </li>
+            <li class="aip-doc-card">
+                <span class="aip-doc-card-ic" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:information') }}" style="width:20px;height:20px;" />
+                </span>
+                <div>
+                    <h5>Expliquer le métier et la plateforme</h5>
+                    <p>S'appuie sur des fiches de connaissance : cycle de production, bordereaux,
+                       indicateurs, rôles et droits d'accès…
+                        <span class="aip-doc-ex">« Comment fonctionnent les bordereaux ? » · « Que peux-tu faire ? »</span></p>
+                </div>
+            </li>
+        </ul>
+
+        {# Limites présentées comme une protection (jamais une liste de restrictions sèche). #}
+        <aside class="aip-doc-limites" role="note" aria-labelledby="aip-doc-limites-titre">
+            <h4 id="aip-doc-limites-titre">
+                <twig:UX:Icon name="{{ resolve_icon_name('action:password') }}" style="width:16px;height:16px;" aria-hidden="true" />
+                Ses limites protègent vos données
+            </h4>
+            <ul>
+                <li>
+                    <span class="aip-lim-ic" aria-hidden="true">
+                        <twig:UX:Icon name="{{ resolve_icon_name('action:check') }}" style="width:16px;height:16px;" />
+                    </span>
+                    <span>Il ne voit que le périmètre d'accès du collaborateur qui l'interroge :
+                          sans droit de lecture sur une rubrique, la donnée n'existe pas pour lui.</span>
+                </li>
+                <li>
+                    <span class="aip-lim-ic" aria-hidden="true">
+                        <twig:UX:Icon name="{{ resolve_icon_name('action:check') }}" style="width:16px;height:16px;" />
+                    </span>
+                    <span>Il n'écrit jamais directement dans vos données : toute création ou modification
+                          passe par un formulaire que le collaborateur valide lui-même.</span>
+                </li>
+                <li>
+                    <span class="aip-lim-ic" aria-hidden="true">
+                        <twig:UX:Icon name="{{ resolve_icon_name('action:check') }}" style="width:16px;height:16px;" />
+                    </span>
+                    <span>Il n'invente jamais de chiffres : tout provient de vos données, calculé
+                          à l'instant de la demande — et il n'a accès ni à internet ni aux autres espaces de travail.</span>
+                </li>
+            </ul>
+        </aside>
+    </section>
 
     <div class="aip-panel">
         {% if enregistre %}

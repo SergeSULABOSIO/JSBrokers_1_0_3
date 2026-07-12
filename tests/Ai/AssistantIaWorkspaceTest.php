@@ -302,10 +302,17 @@ class AssistantIaWorkspaceTest extends WebTestCase
         $this->assertResponseIsSuccessful();
         $this->assertStringContainsString(self::DENIED_MARKER, (string) $this->client->getResponse()->getContent());
 
-        // Propriétaire : formulaire rendu.
+        // Propriétaire : formulaire rendu, précédé de la documentation des
+        // capacités (outil par outil) et des limites protectrices.
         $this->client->loginUser($this->user(self::OWNER_EMAIL));
         $this->client->request('GET', sprintf('/admin/assistant-ia/workspace-parametres/%d', $e->getId()));
         $this->assertResponseIsSuccessful();
+        $content = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('sait faire pour vous', $content);
+        $this->assertStringContainsString('Compter vos enregistrements', $content);
+        $this->assertStringContainsString('limites protègent vos données', $content);
+        // Nom par défaut du personnage : « Ket ».
+        $this->assertStringContainsString('Ket', $content);
         $this->assertStringContainsString('jsb-ai-params', (string) $this->client->getResponse()->getContent());
     }
 
@@ -458,8 +465,8 @@ class AssistantIaWorkspaceTest extends WebTestCase
         $this->assertResponseIsSuccessful();
         $data = $this->jsonResponse();
 
-        // Sans personnalisation, le personnage porte le nom par défaut « Jess ».
-        $this->assertStringContainsString('Jess', $data['assistant']['contenu']);
+        // Sans personnalisation, le personnage porte le nom par défaut « Ket ».
+        $this->assertStringContainsString('Ket', $data['assistant']['contenu']);
         $this->assertStringContainsString(self::ENTREPRISE_NOM, $data['assistant']['contenu']);
         $this->assertSame('Bonjour, qui es-tu ?', $data['conversationTitre'], 'Le titre est dérivé du premier message.');
 

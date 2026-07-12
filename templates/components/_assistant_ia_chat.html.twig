@@ -58,6 +58,24 @@
         .jsb-ai-chat .aic-msg--assistant .aic-msg-text { background:#ffffff; border:1px solid #dee2e6; border-top-left-radius:4px; }
         .jsb-ai-chat .aic-msg--user .aic-msg-text { background:#e8f0fb; border-top-right-radius:4px; }
         .jsb-ai-chat .aic-msg--refus .aic-msg-text { border-left:3px solid #ffc107; }
+
+        /* Feedback local sur chaque bulle : SURVOL (liseré cobalt + élévation
+           légère) et CLIC (enfoncement bref) — l'utilisateur « sent » chaque
+           message sous la souris. Transition douce, couleurs de la charte. */
+        .jsb-ai-chat .aic-msg .aic-msg-text {
+            transition: border-color .15s ease, box-shadow .15s ease, transform .08s ease;
+            cursor: default;
+        }
+        .jsb-ai-chat .aic-msg:hover .aic-msg-text {
+            border-color:#0047AB;
+            box-shadow:0 3px 10px rgba(0,71,171,.12);
+        }
+        /* Bulle utilisateur sans bordure de base : on en révèle une au survol
+           (transparente au repos pour éviter tout saut de mise en page). */
+        .jsb-ai-chat .aic-msg--user .aic-msg-text { border:1px solid transparent; }
+        /* Le liseré d'avertissement d'un refus reste jaune, même au survol. */
+        .jsb-ai-chat .aic-msg--refus:hover .aic-msg-text { border-left-color:#ffc107; }
+        .jsb-ai-chat .aic-msg:active .aic-msg-text { transform:scale(.985); }
         .jsb-ai-chat .aic-msg-time { color:#6c757d; font-size:.7rem; }
         .jsb-ai-chat .aic-msg--user .aic-msg-time { text-align:right; }
 
