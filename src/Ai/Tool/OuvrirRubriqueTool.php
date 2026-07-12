@@ -30,9 +30,10 @@ final class OuvrirRubriqueTool implements AiToolInterface
     public function description(): string
     {
         return "Ouvre dans l'espace de travail la RUBRIQUE (liste complète) d'une catégorie de "
-            . 'données : l\'utilisateur voit la liste à l\'écran avec ses filtres et outils. À '
-            . 'appeler quand l\'utilisateur demande d\'ouvrir/afficher une rubrique ou d\'aller '
-            . 'dans une section (« ouvre les bordereaux », « montre-moi la rubrique clients »).';
+            . 'données — ou le TABLEAU DE BORD (entite=TableauDeBord) : l\'utilisateur voit la '
+            . 'vue à l\'écran, ajoutée aux onglets et activée. À appeler quand l\'utilisateur '
+            . 'demande d\'ouvrir/afficher une rubrique, une section ou le tableau de bord '
+            . '(« ouvre les bordereaux », « ouvre le tableau de bord »).';
     }
 
     public function schema(): array
@@ -42,18 +43,27 @@ final class OuvrirRubriqueTool implements AiToolInterface
             'properties' => [
                 'entite' => [
                     'type' => 'string',
-                    'description' => "Nom court de l'entité de la rubrique à ouvrir.",
-                    'enum' => $this->lexique->nomsCourts(),
+                    'description' => "Nom court de l'entité de la rubrique à ouvrir, ou TableauDeBord.",
+                    'enum' => array_merge(['TableauDeBord'], $this->lexique->nomsCourts()),
                 ],
             ],
             'required' => ['entite'],
         ];
     }
 
-    /** Chemin simulé : le mot « rubrique/section/module » + une entité du lexique. */
+    /**
+     * Chemin simulé : « tableau de bord / dashboard » (vue spéciale, sans mot
+     * « rubrique » requis), sinon « rubrique/section/module » + entité du lexique.
+     */
     public function match(string $question, AiScope $scope): ?array
     {
         $normalized = AiText::normalize($question);
+
+        if (preg_match('/\b(tableau de bord|dashboard)\b/', $normalized)
+            && preg_match('/\b(ouvre[sz]?|ouvrir|affiche[rsz]?|montre[rsz]?|va|aller)\b/', $normalized)) {
+            return ['entite' => 'TableauDeBord'];
+        }
+
         if (!preg_match('/\b(rubrique|section|module)\b/', $normalized)) {
             return null;
         }
@@ -66,6 +76,20 @@ final class OuvrirRubriqueTool implements AiToolInterface
     public function execute(array $args, AiScope $scope): AiToolResult
     {
         $shortName = (string) ($args['entite'] ?? '');
+
+        // TABLEAU DE BORD : vue spéciale hors carte de rubriques, accessible à
+        // tous les invités (son contenu est de toute façon filtré au périmètre).
+        if ($shortName === 'TableauDeBord') {
+            return AiToolResult::ok(
+                [
+                    'entite'  => 'TableauDeBord',
+                    'libelle' => 'Tableau de bord',
+                    'note'    => 'Le tableau de bord s\'ouvre dans un onglet de l\'espace de travail et devient actif.',
+                ],
+                uiAction: ['type' => 'open-rubrique', 'entite' => 'TableauDeBord'],
+            );
+        }
+
         $labels = $this->accessResolver->libellesEntites();
         if (!isset($labels[$shortName])) {
             return AiToolResult::introuvable($shortName);

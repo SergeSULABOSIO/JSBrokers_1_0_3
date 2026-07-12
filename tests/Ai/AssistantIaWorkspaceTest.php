@@ -647,6 +647,53 @@ class AssistantIaWorkspaceTest extends WebTestCase
         $this->assertSame('ouvrir_rubrique', $meta['tool']);
     }
 
+    /** ouvrir_rubrique : le tableau de bord (vue spéciale hors rubriques) s'ouvre aussi. */
+    public function testActionOuvrirTableauDeBord(): void
+    {
+        // Aucun rôle requis : le tableau de bord est accessible à tout invité
+        // (son contenu est de toute façon filtré au périmètre).
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: false);
+        $conversation = $this->makeConversation($e, $guest);
+
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $this->postMessage($e->getId(), $conversation->getId(), 'Ouvre le tableau de bord');
+        $this->assertResponseIsSuccessful();
+        $data = $this->jsonResponse();
+
+        $this->assertFalse($data['assistant']['refus']);
+        $this->assertStringContainsString('Tableau de bord', $data['assistant']['contenu']);
+        $this->assertSame(
+            [['type' => 'open-rubrique', 'entite' => 'TableauDeBord']],
+            $data['assistant']['actions'],
+        );
+
+        $meta = $this->em()->getRepository(AssistantMessage::class)
+            ->findOneBy(['role' => AssistantMessage::ROLE_ASSISTANT], ['id' => 'DESC'])
+            ->getMeta();
+        $this->assertSame('ouvrir_rubrique', $meta['tool']);
+    }
+
+    /** quitter_workspace : directive de fermeture — la confirmation reste manuelle côté UI. */
+    public function testActionQuitterWorkspace(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: false);
+        $conversation = $this->makeConversation($e, $guest);
+
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $this->postMessage($e->getId(), $conversation->getId(), 'Ferme l\'espace de travail');
+        $this->assertResponseIsSuccessful();
+        $data = $this->jsonResponse();
+
+        $this->assertFalse($data['assistant']['refus']);
+        $this->assertStringContainsString('confirmez', $data['assistant']['contenu']);
+        $this->assertSame([['type' => 'close-workspace']], $data['assistant']['actions']);
+
+        $meta = $this->em()->getRepository(AssistantMessage::class)
+            ->findOneBy(['role' => AssistantMessage::ROLE_ASSISTANT], ['id' => 'DESC'])
+            ->getMeta();
+        $this->assertSame('quitter_workspace', $meta['tool']);
+    }
+
     /** visualiser_fiche : ouverture d'un enregistrement en colonne de visualisation. */
     public function testActionVisualiserFiche(): void
     {
