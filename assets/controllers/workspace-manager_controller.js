@@ -87,6 +87,12 @@ export default class extends Controller {
         this.boundOpenRubriqueByEntity = this.openRubriqueByEntity.bind(this);
         document.addEventListener('app:workspace.open-rubrique', this.boundOpenRubriqueByEntity);
 
+        // NOUVEAU : Demande de fermeture de l'espace de travail à la demande
+        // (assistant IA) — rejoue le clic sur le bouton « Fermer » : même boîte
+        // de confirmation, même exécution après validation manuelle.
+        this.boundRequestLogoutViaBus = this.requestLogoutViaBus.bind(this);
+        document.addEventListener('app:workspace.request-logout', this.boundRequestLogoutViaBus);
+
         // --- NOUVEAU : Gestion de la barre de progression pour l'actualisation de la liste ---
         // Écoute les ordres du Cerveau pour afficher/masquer la barre de progression.
         this.boundHandleLoadingStart = this.handleLoadingStart.bind(this);
@@ -178,6 +184,7 @@ export default class extends Controller {
         document.removeEventListener('app:workspace.inject-html', this.boundInjectHtml);
         document.removeEventListener('app:workspace.open-html-in-visualization', this.boundOpenHtmlInVisualization);
         document.removeEventListener('app:workspace.open-rubrique', this.boundOpenRubriqueByEntity);
+        document.removeEventListener('app:workspace.request-logout', this.boundRequestLogoutViaBus);
         document.removeEventListener('app:workspace.reload-active-tab', this.boundReloadActiveTab);
         document.removeEventListener('app:loading.start', this.boundHandleLoadingStart);
         document.removeEventListener('app:loading.stop', this.boundHandleLoadingStop);
@@ -204,6 +211,35 @@ export default class extends Controller {
                 onConfirm: {
                     type: 'app:workspace.logout-execute',
                     payload: { url },
+                },
+            },
+        }));
+    }
+
+    /**
+     * Demande de fermeture émise sur le bus (assistant IA) : cible le bouton
+     * « Fermer » réel du menu (retour à la page personnelle, sans déconnexion)
+     * et soumet une boîte de confirmation — RIEN ne s'exécute sans validation
+     * manuelle de l'utilisateur. La navigation effective passe par le même
+     * exécuteur que le flux historique (app:workspace.logout-execute).
+     * @param {CustomEvent} _event
+     */
+    requestLogoutViaBus(_event) {
+        const lien = this.element.querySelector('a.nav-item-logout');
+        if (!lien?.href) {
+            console.warn('WorkspaceManager - requestLogoutViaBus : bouton « Fermer » introuvable.');
+            return;
+        }
+        const nom = this.entrepriseNomValue || 'cette entreprise';
+        const safeNom = nom.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
+            detail: {
+                title: "Fermer l'espace de travail",
+                body: `<p>Vous êtes sur le point de fermer l'espace de travail de <strong>${safeNom}</strong> et de revenir à votre page personnelle.</p><p>Voulez-vous continuer ?</p>`,
+                showIrreversible: false,
+                onConfirm: {
+                    type: 'app:workspace.logout-execute',
+                    payload: { url: lien.href },
                 },
             },
         }));
@@ -910,6 +946,15 @@ export default class extends Controller {
     openRubriqueByEntity(event) {
         const entityName = event.detail?.entityName;
         if (!entityName) return;
+
+        // Vue spéciale : le tableau de bord n'est pas une rubrique de groupe —
+        // même geste que le clic sur l'item de menu (onglet créé et activé).
+        if (entityName === 'TableauDeBord') {
+            if (this.hasDashboardItemTarget) {
+                this.dashboardItemTarget.click();
+            }
+            return;
+        }
 
         const selector = `[data-workspace-manager-entity-name-param='${entityName}']`;
 

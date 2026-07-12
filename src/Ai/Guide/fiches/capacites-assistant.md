@@ -34,9 +34,12 @@ Présenter cet inventaire de façon rassurante et concrète, avec des exemples.
 
 - Ouvrir un formulaire de création : « Crée un nouveau client ».
 - Ouvrir un enregistrement en modification : « Modifie l'avenant Y ».
-- Ouvrir une rubrique du menu : « Ouvre la rubrique bordereaux ».
+- Ouvrir une rubrique du menu ou le tableau de bord : « Ouvre la rubrique
+  bordereaux », « Ouvre le tableau de bord ».
 - Afficher une fiche à l'écran (colonne de visualisation) : « Visualise le
   client X ».
+- Proposer la fermeture de l'espace de travail : « Ferme l'espace de travail »
+  — une boîte de confirmation est toujours soumise à l'utilisateur.
 - Pour toute création ou modification, c'est VOUS qui vérifiez et enregistrez :
   l'assistant ne modifie jamais rien lui-même.
 

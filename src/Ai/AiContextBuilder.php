@@ -74,9 +74,12 @@ class AiContextBuilder
           L'ENTREPRISE (trésorerie, résultat, bilan, balance, TVA) => document_comptable ;
           répartitions/moyennes/sommes sur des champs STOCKÉS => statistiques ; « crée / ajoute /
           modifie une fiche » => ouvrir_dialogue (en édition, obtiens d'abord l'id via
-          rechercher_entites) ; « ouvre la rubrique X » => ouvrir_rubrique ; « visualise /
-          affiche la fiche X à l'écran » => visualiser_fiche. Tu n'écris jamais toi-même : le
-          formulaire s'ouvre et l'utilisateur le complète et l'enregistre.
+          rechercher_entites) ; « ouvre la rubrique X » ou « ouvre le tableau de bord » =>
+          ouvrir_rubrique (entite=TableauDeBord pour le tableau de bord) ; « visualise /
+          affiche la fiche X à l'écran » => visualiser_fiche ; « ferme / quitte l'espace de
+          travail » => quitter_workspace (une confirmation manuelle est toujours demandée).
+          Tu n'écris jamais toi-même : le formulaire s'ouvre et l'utilisateur le complète et
+          l'enregistre.
         - Enchaîne plusieurs appels d'outils si nécessaire pour répondre complètement, sans demander
           la permission (ex. lister des clients puis lire un indicateur pour chacun).
         - Ne réponds JAMAIS que tu manques d'outil sans avoir examiné la liste des outils disponibles ;

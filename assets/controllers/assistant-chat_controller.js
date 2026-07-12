@@ -144,6 +144,11 @@ export default class extends Controller {
                         detail: { entityName: action.entite },
                     }));
                     break;
+                case 'close-workspace':
+                    // Fermeture de l'espace de travail : le workspace-manager ouvre
+                    // la boîte de confirmation — l'utilisateur valide manuellement.
+                    document.dispatchEvent(new CustomEvent('app:workspace.request-logout'));
+                    break;
             }
         }
     }

@@ -132,9 +132,11 @@ final class SimulatedAiEngine implements AiEngineInterface
                 trim((string) $data['contenu']),
             ),
             'ouvrir_rubrique' => sprintf(
-                'J\'ouvre la rubrique « %s » dans votre espace de travail.',
+                'J\'ouvre « %s » dans votre espace de travail.',
                 $data['libelle'],
             ),
+            'quitter_workspace' => 'Je vous présente la demande de fermeture de l\'espace de travail : '
+                . 'confirmez (ou annulez) dans la boîte de dialogue qui s\'ouvre.',
             'visualiser_fiche' => ($data['ambigu'] ?? false)
                 ? $this->formatCandidats($data)
                 : sprintf(
