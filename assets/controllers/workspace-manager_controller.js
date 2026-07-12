@@ -56,6 +56,10 @@ export default class extends Controller {
 
         this._restoreWorkspaceTabsFromStorage();
 
+        // Restaure le panneau HTML persisté de la colonne 4 (ex. chat de
+        // l'assistant IA) — fire-and-forget : ne bloque pas le chargement.
+        this._restoreHtmlVisualizationTab();
+
         // NOUVEAU : Écoute la réponse du Cerveau pour afficher le composant chargé.
         this.boundHandleComponentLoaded = this.handleComponentLoaded.bind(this);
         document.addEventListener('workspace:component.loaded', this.boundHandleComponentLoaded);
@@ -375,13 +379,22 @@ export default class extends Controller {
      * court d'entité réel ; openTabInVisualization/createTab/closeTab restent
      * strictement inchangés (zéro régression).
      *
-     * @param {CustomEvent} event detail = { html, title, iconAlias, tabKey }
+     * @param {CustomEvent} event detail = { html, title, iconAlias, tabKey, sourceUrl? }
      */
     openHtmlTabInVisualization(event) {
-        const { html, title, iconAlias, tabKey } = event.detail || {};
+        const { html, title, iconAlias, tabKey, sourceUrl } = event.detail || {};
         if (!html || !tabKey) {
             console.error("WorkspaceManager - open-html-in-visualization : detail.html et detail.tabKey sont requis.", event.detail);
             return;
+        }
+
+        // Persistance : un panneau qui fournit son URL source (ex. chat de
+        // l'assistant IA) est restauré au rechargement de la page (re-fetch).
+        if (sourceUrl) {
+            localStorage.setItem(
+                `visualizationHtmlTab_${this.idEntrepriseValue}`,
+                JSON.stringify({ tabKey, title, iconAlias, sourceUrl }),
+            );
         }
 
         const revealColumn = () => {
@@ -813,6 +826,18 @@ export default class extends Controller {
         } else {
             contentToClose = event.currentTarget.closest('.tab-content');
             tabToClose = this.tabContainerTarget.querySelector(`[data-tab-content-id='${contentToClose.id}']`);
+        }
+
+        // Fermeture volontaire d'un panneau HTML persisté (ex. chat IA) : on
+        // oublie sa restauration — le user ne veut plus le retrouver au reload.
+        if (tabToClose?.dataset.entityType === 'html') {
+            const storageKey = `visualizationHtmlTab_${this.idEntrepriseValue}`;
+            try {
+                const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
+                if (saved?.tabKey === tabToClose.dataset.entityId) {
+                    localStorage.removeItem(storageKey);
+                }
+            } catch { localStorage.removeItem(storageKey); }
         }
 
         if (tabToClose) tabToClose.remove();
@@ -1655,6 +1680,40 @@ export default class extends Controller {
         // Activer l'onglet précédemment actif (lazy-load déclenché automatiquement)
         const targetId = (activeTabId && tabs.find(t => t.id === activeTabId)) ? activeTabId : tabs[tabs.length - 1].id;
         this._activateWorkspaceTabById(targetId);
+    }
+
+    /**
+     * Restaure le panneau HTML de la colonne de visualisation persisté par
+     * openHtmlTabInVisualization (ex. chat de l'assistant IA) : le HTML est
+     * re-fetché depuis sa sourceUrl — l'état de référence est côté serveur.
+     * Un échec (conversation supprimée, session expirée) purge la persistance
+     * en silence : le user retrouve simplement son workspace sans le panneau.
+     */
+    async _restoreHtmlVisualizationTab() {
+        const storageKey = `visualizationHtmlTab_${this.idEntrepriseValue}`;
+        let saved;
+        try { saved = JSON.parse(localStorage.getItem(storageKey) || 'null'); } catch { saved = null; }
+        if (!saved?.sourceUrl || !saved?.tabKey) return;
+
+        try {
+            const response = await fetch(saved.sourceUrl);
+            if (!response.ok) {
+                localStorage.removeItem(storageKey);
+                return;
+            }
+            const html = await response.text();
+            this.openHtmlTabInVisualization({
+                detail: {
+                    html,
+                    title: saved.title,
+                    iconAlias: saved.iconAlias,
+                    tabKey: saved.tabKey,
+                    sourceUrl: saved.sourceUrl,
+                },
+            });
+        } catch (e) {
+            console.warn('WorkspaceManager - restauration du panneau HTML impossible :', e);
+        }
     }
 
     /**
