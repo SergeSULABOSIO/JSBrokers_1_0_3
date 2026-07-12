@@ -41,13 +41,22 @@ class HomeFeaturesSectionTest extends WebTestCase
         $this->assertResponseIsSuccessful();
 
         $rows = $crawler->filter('#features .feature-row');
-        $this->assertSame(6, $rows->count(),
-            'La section Fonctionnalités doit compter 6 blocs (4 historiques + collaboration + comptabilité).');
+        $this->assertSame(7, $rows->count(),
+            'La section Fonctionnalités doit compter 7 blocs (assistant IA en tête + 4 historiques + collaboration + comptabilité).');
 
-        // Alternance visuelle : blocs impairs cobalt, blocs pairs clairs et inversés.
+        // Le bloc de TÊTE est l'assistant IA (variante dédiée, hors alternance :
+        // c'est sa mise en valeur), sur fond cobalt.
+        $this->assertStringContainsString('feature-row--ia', (string) $rows->eq(0)->attr('class'),
+            'Le premier bloc doit être celui de l\'assistant IA.');
+        $this->assertStringContainsString('feature-row--cobalt', (string) $rows->eq(0)->attr('class'));
+
+        // Alternance visuelle des blocs suivants : cobalt puis clair inversé.
         $rows->each(function (Crawler $row, int $i) {
+            if ($i === 0) {
+                return; // bloc IA traité ci-dessus
+            }
             $class = $row->attr('class');
-            if ($i % 2 === 0) {
+            if ($i % 2 === 1) {
                 $this->assertStringContainsString('feature-row--cobalt', $class,
                     "Le bloc n°" . ($i + 1) . " doit être sur fond cobalt.");
             } else {
