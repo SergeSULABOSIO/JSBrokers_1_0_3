@@ -82,8 +82,17 @@ class AssistantIaController extends AbstractController
     public function loadWorkspaceComponent(int $idEntreprise): Response
     {
         [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
-        if ($invite === null) {
+
+        // FAIL-CLOSED : accès au MODULE (pseudo-entité AssistantIa — rôle
+        // Administration). Le menu n'est que cosmétique, on re-vérifie ici.
+        if (!$this->moduleAutorise($invite)) {
             return $this->render('components/_access_denied.html.twig', ['entiteNom' => 'Assistant IA']);
+        }
+
+        // PREMIUM : l'assistant est réservé aux comptes disposant d'un solde
+        // de tokens payant (l'allocation gratuite ne suffit pas).
+        if (!$this->tokenAccountService->estComptePayant($entreprise)) {
+            return $this->renderPremium($entreprise, $invite);
         }
 
         return $this->render('components/_assistant_ia_component.html.twig', [
@@ -155,6 +164,12 @@ class AssistantIaController extends AbstractController
     public function chat(int $idEntreprise, int $idConversation): Response
     {
         [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            return $this->render('components/_access_denied.html.twig', ['entiteNom' => 'Assistant IA']);
+        }
+        if (!$this->tokenAccountService->estComptePayant($entreprise)) {
+            return $this->renderPremium($entreprise, $invite);
+        }
         $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
 
         return $this->render('components/_assistant_ia_chat.html.twig', [
@@ -171,8 +186,11 @@ class AssistantIaController extends AbstractController
     public function createConversation(int $idEntreprise): JsonResponse
     {
         [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
-        if ($invite === null) {
+        if (!$this->moduleAutorise($invite)) {
             return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        if ($blocage = $this->blocagePremium($entreprise)) {
+            return $blocage;
         }
 
         $conversation = (new AssistantConversation())
@@ -238,6 +256,12 @@ class AssistantIaController extends AbstractController
     public function sendMessage(int $idEntreprise, int $idConversation, Request $request): JsonResponse
     {
         [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        if ($blocage = $this->blocagePremium($entreprise)) {
+            return $blocage;
+        }
         $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
 
         $payload = json_decode($request->getContent(), true) ?: [];
@@ -329,7 +353,7 @@ class AssistantIaController extends AbstractController
     public function dialogContext(int $idEntreprise, Request $request): JsonResponse
     {
         [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
-        if ($invite === null) {
+        if (!$this->moduleAutorise($invite)) {
             return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
         }
 
@@ -379,7 +403,7 @@ class AssistantIaController extends AbstractController
     public function visualContext(int $idEntreprise, Request $request): JsonResponse
     {
         [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
-        if ($invite === null) {
+        if (!$this->moduleAutorise($invite)) {
             return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
         }
 
@@ -420,6 +444,42 @@ class AssistantIaController extends AbstractController
             'entity'       => $normalized,
             'entityCanvas' => $entityCanvas,
         ]);
+    }
+
+    /**
+     * L'invité a-t-il accès au MODULE Assistant IA ? Pseudo-entité « AssistantIa »
+     * de la carte de permissions (RolesEnAdministration::accessAssistantIa) —
+     * fail-closed pour les invités, accès total inconditionnel du propriétaire.
+     */
+    private function moduleAutorise(?Invite $invite): bool
+    {
+        return $invite !== null && $this->accessResolver->canRead($invite, 'AssistantIa');
+    }
+
+    /** Panneau « fonctionnalité premium » (compte sans solde payant), col-3 ou col-4. */
+    private function renderPremium(Entreprise $entreprise, Invite $invite): Response
+    {
+        return $this->render('components/_assistant_ia_premium.html.twig', [
+            'assistantNom'    => $this->parametresRepository->nomPour($entreprise),
+            'entrepriseNom'   => (string) $entreprise->getNom(),
+            // Seul le propriétaire peut acheter des tokens : le CTA lui est réservé.
+            'estProprietaire' => $entreprise->getUtilisateur()?->getId() === $invite->getUtilisateur()?->getId(),
+        ]);
+    }
+
+    /** Blocage JSON des APIs quand le compte n'a pas de solde payant (402 premium). */
+    private function blocagePremium(Entreprise $entreprise): ?JsonResponse
+    {
+        if ($this->tokenAccountService->estComptePayant($entreprise)) {
+            return null;
+        }
+
+        return $this->json([
+            'message' => "L'assistant IA est réservé aux comptes disposant d'un solde de tokens "
+                . 'payant. Rechargez votre solde pour l\'activer.',
+            'blocked' => true,
+            'premium' => true,
+        ], Response::HTTP_PAYMENT_REQUIRED);
     }
 
     /**

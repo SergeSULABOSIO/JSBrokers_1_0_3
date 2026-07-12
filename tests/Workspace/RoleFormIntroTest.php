@@ -158,7 +158,8 @@ class RoleFormIntroTest extends WebTestCase
             'rolesenmarketing'      => ['module Marketing', 3],
             // 9 cartes depuis l'ajout du droit dédié « Portefeuilles ».
             'rolesenproduction'     => ['module Production', 9],
-            'rolesenadministration' => ['module Administration', 3],
+            // 4 cartes depuis l'ajout du droit dédié « Assistant IA » (accessAssistantIa).
+            'rolesenadministration' => ['module Administration', 4],
             'rolesensinistre'       => ['module Sinistre', 3],
         ];
 

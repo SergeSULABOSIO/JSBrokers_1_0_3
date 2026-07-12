@@ -96,6 +96,10 @@ class WorkspaceAccessResolver
         // ADMINISTRATION (Invite est géré à part, cf. isRoleManagementEntity)
         'Document'                   => ['Administration', 'getRolesEnAdministration', 'getAccessDocument', 'Documents'],
         'Classeur'                   => ['Administration', 'getRolesEnAdministration', 'getAccessClasseur', 'Classeurs'],
+        // IA — PSEUDO-entité (pas de classe Doctrine, comme DocumentComptable) :
+        // gouverne l'accès au module Assistant IA (chat, conversations). Fail-closed
+        // pour les invités ; le propriétaire garde son accès total inconditionnel.
+        'AssistantIa'                => ['IA', 'getRolesEnAdministration', 'getAccessAssistantIa', 'Assistant IA'],
     ];
 
     /**

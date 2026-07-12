@@ -165,12 +165,22 @@ class AssistantIaWorkspaceTest extends WebTestCase
      *
      * @return array{owner: Invite, guest: Invite, entreprise: Entreprise}
      */
-    /** @param int[] $clientAccess niveaux du rôle Client de l'invité (si $withClientRole) */
-    private function seed(bool $withClientRole = true, array $clientAccess = [Invite::ACCESS_LECTURE]): array
+    /**
+     * @param int[] $clientAccess niveaux du rôle Client de l'invité (si $withClientRole)
+     * @param bool  $withIaRole   accorde à l'invité la Lecture du MODULE Assistant IA
+     *                            (rôle Administration — nouvelle politique : sans lui, refus)
+     * @param bool  $comptePayant crédite le propriétaire en tokens payants (l'assistant
+     *                            est réservé aux comptes payants)
+     */
+    private function seed(bool $withClientRole = true, array $clientAccess = [Invite::ACCESS_LECTURE], bool $withIaRole = true, bool $comptePayant = true): array
     {
         $em = $this->em();
 
         $ownerUser = $this->makeUser(self::OWNER_EMAIL);
+        if ($comptePayant) {
+            // Compte « payant » : l'assistant exige un solde prépayé > 0.
+            $ownerUser->setPaidTokens(1_000_000);
+        }
         $entreprise = $this->makeEntreprise(self::ENTREPRISE_NOM, $ownerUser);
         $ownerUser->setConnectedTo($entreprise);
 
@@ -197,6 +207,16 @@ class AssistantIaWorkspaceTest extends WebTestCase
             $role->setEntreprise($entreprise);
             $guestInvite->addRolesEnProduction($role);
             $em->persist($role);
+        }
+
+        if ($withIaRole) {
+            // Accès au MODULE Assistant IA (pseudo-entité AssistantIa, rôle Administration).
+            $roleIa = new \App\Entity\RolesEnAdministration();
+            $roleIa->setNom('Rôle module IA');
+            $roleIa->setAccessAssistantIa([Invite::ACCESS_LECTURE]);
+            $roleIa->setEntreprise($entreprise);
+            $guestInvite->addRolesEnAdministration($roleIa);
+            $em->persist($roleIa);
         }
 
         $em->flush();
@@ -248,27 +268,45 @@ class AssistantIaWorkspaceTest extends WebTestCase
 
     // ── Menu & gating ─────────────────────────────────────────────────────────
 
-    public function testRubriqueAssistantVisiblePourInviteSansRoleEtParametresMasques(): void
+    /**
+     * NOUVELLE POLITIQUE : la rubrique Assistant est gouvernée par la pseudo-entité
+     * « AssistantIa » (RolesEnAdministration::accessAssistantIa). Sans ce rôle,
+     * l'invité ne voit pas la rubrique (menu filtré) et le composant est refusé
+     * (fail-closed). Avec le rôle, tout s'ouvre.
+     */
+    public function testRubriqueAssistantGateeParRoleModuleIa(): void
     {
-        ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: false);
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: false, withIaRole: false);
         $this->client->loginUser($this->user(self::GUEST_EMAIL));
 
         $this->client->request('GET', sprintf('/espacedetravail/%d/%d', $guest->getId(), $e->getId()));
         $this->assertResponseIsSuccessful();
         $content = (string) $this->client->getResponse()->getContent();
 
-        $this->assertStringContainsString(
+        $this->assertStringNotContainsString(
             '_assistant_ia_component.html.twig',
             $content,
-            'La rubrique « Assistant » (sans entity_name) doit rester visible même sans aucun rôle.'
+            'Sans rôle module IA, la rubrique « Assistant » doit disparaître du menu.'
         );
         $this->assertStringNotContainsString(
             '_assistant_ia_parametres_component.html.twig',
             $content,
-            'La rubrique « Paramètres IA » doit être masquée pour un invité non gestionnaire.'
+            'La rubrique « Paramètres IA » reste masquée pour un invité non gestionnaire.'
         );
 
-        // Le composant lui-même se charge pour cet invité sans rôle.
+        // Défense en profondeur : le composant lui-même est refusé (le menu n'est
+        // que cosmétique).
+        $this->client->request('GET', sprintf('/admin/assistant-ia/workspace/%d', $e->getId()));
+        $this->assertResponseIsSuccessful();
+        $this->assertStringContainsString(self::DENIED_MARKER, (string) $this->client->getResponse()->getContent());
+    }
+
+    /** Avec le rôle module IA (seed par défaut), le composant se charge pour l'invité. */
+    public function testComposantAssistantAccessibleAvecRoleModuleIa(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: false);
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+
         $this->client->request('GET', sprintf(
             '/espacedetravail/api/load-component/%d/%d?component=_assistant_ia_component.html.twig',
             $guest->getId(),
@@ -276,6 +314,45 @@ class AssistantIaWorkspaceTest extends WebTestCase
         ));
         $this->assertResponseIsSuccessful();
         $this->assertStringContainsString('jsb-ai', (string) $this->client->getResponse()->getContent());
+    }
+
+    /**
+     * PREMIUM : sans solde de tokens payant, le composant affiche le panneau de
+     * mise en valeur (CTA réservé au propriétaire) et l'envoi de message est
+     * bloqué en 402 « premium » sans rien persister.
+     */
+    public function testAssistantReserveAuxComptesPayants(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed(comptePayant: false);
+        $conversation = $this->makeConversation($e, $guest);
+
+        // Composant : panneau premium (pas le chat).
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $this->client->request('GET', sprintf('/admin/assistant-ia/workspace/%d', $e->getId()));
+        $this->assertResponseIsSuccessful();
+        $content = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('Fonctionnalité premium', $content);
+        $this->assertStringNotContainsString('jsb-ai-chat', $content);
+        // Invité : pas de CTA d'achat (réservé au propriétaire).
+        $this->assertStringNotContainsString('Recharger mon solde', $content);
+
+        // Propriétaire : le CTA d'achat est présent.
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+        $this->client->request('GET', sprintf('/admin/assistant-ia/workspace/%d', $e->getId()));
+        $this->assertStringContainsString('Recharger mon solde', (string) $this->client->getResponse()->getContent());
+
+        // API : blocage 402 « premium », rien n'est persisté.
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $this->postMessage($e->getId(), $conversation->getId(), 'Bonjour ?');
+        $this->assertResponseStatusCodeSame(402);
+        $data = $this->jsonResponse();
+        $this->assertTrue($data['premium']);
+
+        $conn = $this->em()->getConnection();
+        $this->assertSame(
+            0,
+            (int) $conn->fetchOne('SELECT COUNT(*) FROM assistant_message WHERE conversation_id = :id', ['id' => $conversation->getId()]),
+        );
     }
 
     public function testMenuProprietaireContientParametresIa(): void
@@ -998,10 +1075,11 @@ class AssistantIaWorkspaceTest extends WebTestCase
         ['guest' => $guest, 'entreprise' => $e] = $this->seed();
         $conversation = $this->makeConversation($e, $guest);
 
-        // On vide le solde du PROPRIÉTAIRE (payeur) dans une fenêtre fraîche.
+        // Compte PAYANT (paid > 0 : la garde premium passe) mais INSOLVABLE :
+        // 1 token payant + 0 gratuit < coût du message → 402 « solde insuffisant ».
         $owner = $this->user(self::OWNER_EMAIL);
         $owner->setFreeTokens(0);
-        $owner->setPaidTokens(0);
+        $owner->setPaidTokens(1);
         $owner->setFreeWindowStartedAt(new \DateTimeImmutable());
         $this->em()->flush();
 
@@ -1041,10 +1119,16 @@ class AssistantIaWorkspaceTest extends WebTestCase
 
         $this->client->loginUser($this->user(self::OTHER_EMAIL));
 
+        // La garde MODULE ferme désormais la porte en premier (invité d'une autre
+        // entreprise = pas d'accès au module ici) : accès restreint, et surtout
+        // AUCUNE donnée de la conversation ne fuite.
         $this->client->request('GET', sprintf('/admin/assistant-ia/chat/%d/%d', $e->getId(), $conversation->getId()));
-        $this->assertResponseStatusCodeSame(404);
+        $this->assertResponseIsSuccessful();
+        $content = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString(self::DENIED_MARKER, $content);
+        $this->assertStringNotContainsString('Conversation privée A', $content);
 
         $this->postMessage($e->getId(), $conversation->getId(), 'Je ne devrais pas pouvoir écrire ici.');
-        $this->assertResponseStatusCodeSame(404);
+        $this->assertResponseStatusCodeSame(403);
     }
 }

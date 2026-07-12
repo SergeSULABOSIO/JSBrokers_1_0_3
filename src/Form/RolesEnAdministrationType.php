@@ -71,6 +71,18 @@ class RolesEnAdministrationType extends AbstractType
                     "Suppression" => Invite::ACCESS_SUPPRESSION,
                 ],
             ])
+            ->add('accessAssistantIa', ChoiceType::class, [
+                'label' => "Droit d'accès sur l'assistant IA",
+                'multiple' => true,
+                'expanded' => true,
+                'required' => false,
+                'choices'  => [
+                    "Lecture" => Invite::ACCESS_LECTURE,
+                    "Ecriture" => Invite::ACCESS_ECRITURE,
+                    "Modification" => Invite::ACCESS_MODIFICATION,
+                    "Suppression" => Invite::ACCESS_SUPPRESSION,
+                ],
+            ])
             ->add('invite', InviteAutocompleteField::class, [
                 'label' => "Collaborateur",
                 'required' => true,

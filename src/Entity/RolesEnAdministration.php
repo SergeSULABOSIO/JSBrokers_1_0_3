@@ -35,6 +35,14 @@ class RolesEnAdministration implements OwnerAwareInterface
     #[Groups(['list:read'])]
     private array $accessInvite = [];
 
+    /**
+     * Accès au module Assistant IA (pseudo-entité « AssistantIa » de la carte
+     * de permissions — chat et conversations du workspace). Lecture suffit.
+     */
+    #[ORM\Column(type: Types::ARRAY)]
+    #[Groups(['list:read'])]
+    private array $accessAssistantIa = [];
+
     public function getId(): ?int
     {
         return $this->id;
@@ -84,6 +92,18 @@ class RolesEnAdministration implements OwnerAwareInterface
     public function setAccessInvite(array $accessInvite): static
     {
         $this->accessInvite = $accessInvite;
+
+        return $this;
+    }
+
+    public function getAccessAssistantIa(): array
+    {
+        return $this->accessAssistantIa;
+    }
+
+    public function setAccessAssistantIa(array $accessAssistantIa): static
+    {
+        $this->accessAssistantIa = $accessAssistantIa;
 
         return $this;
     }

@@ -97,7 +97,9 @@ export default class extends Controller {
                 const data = await response.json().catch(() => ({}));
                 userBubble.remove();
                 this.inputTarget.value = contenu;
-                this.appendNotice('warning', this.tokensMessage(data));
+                // Deux blocages distincts : premium (pas de solde payant) vs
+                // solde insuffisant (message chiffré construit localement).
+                this.appendNotice('warning', data.premium ? (data.message || 'Fonctionnalité premium.') : this.tokensMessage(data));
             } else if (!response.ok) {
                 userBubble.remove();
                 this.inputTarget.value = contenu;

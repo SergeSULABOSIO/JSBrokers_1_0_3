@@ -1,0 +1,66 @@
+{#
+  Panneau « fonctionnalité premium » de l'assistant IA — rendu à la place du
+  composant (col-3) ou du chat (col-4) quand le compte de l'entreprise n'a pas
+  de solde de tokens payant. Ton positif (mise en valeur, pas une punition) :
+  ce que l'assistant sait faire + CTA de recharge (propriétaire uniquement —
+  un invité est orienté vers le propriétaire). Couleurs de la charte.
+#}
+<div class="jsb-ai-premium">
+    <style>
+        .jsb-ai-premium { padding: 1.5rem; display:flex; justify-content:center; }
+        .jsb-ai-premium .aiw-card {
+            max-width: 560px; width:100%;
+            background:#ffffff; border:1px solid #dee2e6; border-radius:14px;
+            padding:1.75rem 1.6rem; text-align:center;
+        }
+        .jsb-ai-premium .aiw-icon {
+            display:inline-flex; align-items:center; justify-content:center;
+            width:64px; height:64px; border-radius:16px; margin-bottom:1rem;
+            background:#e8f0fb; color:#0047AB;
+        }
+        .jsb-ai-premium .aiw-flag {
+            display:inline-flex; align-items:center; gap:.35rem;
+            font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+            color:#0047AB; background:#e8f0fb; border-radius:999px; padding:.3rem .7rem;
+            margin-bottom:.75rem;
+        }
+        .jsb-ai-premium h2 { font-size:1.35rem; font-weight:700; color:#212529; margin:0 0 .6rem; }
+        .jsb-ai-premium p { color:#495057; margin:0 0 .5rem; }
+        .jsb-ai-premium .aiw-hint { color:#6c757d; font-size:.9rem; }
+        .jsb-ai-premium .btn-cobalt {
+            background:#0047AB; border-color:#0047AB; color:#ffffff;
+            display:inline-flex; align-items:center; gap:.45rem; margin-top:1rem;
+            border-radius:10px; padding:.6rem 1.2rem; font-weight:600; min-height:44px;
+            box-shadow:0 2px 6px rgba(0,71,171,.25); text-decoration:none;
+        }
+        .jsb-ai-premium .btn-cobalt:hover { background:#003380; border-color:#003380; color:#ffffff; }
+        .jsb-ai-premium .btn-cobalt:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+    </style>
+
+    <div class="aiw-card" role="status">
+        <span class="aiw-icon" aria-hidden="true">
+            <twig:UX:Icon name="{{ resolve_icon_name('assistant-ia') }}" style="width:34px;height:34px;" />
+        </span>
+        <p class="aiw-flag">
+            <twig:UX:Icon name="{{ resolve_icon_name('action:premium') }}" style="width:14px;height:14px;" aria-hidden="true" />
+            Fonctionnalité premium
+        </p>
+        <h2>{{ assistantNom }}, votre assistant IA, est prêt à travailler</h2>
+        <p>
+            Questions en langage naturel, indicateurs calculés en temps réel, états comptables,
+            navigation et préparation de vos saisies — dans les limites des droits de chaque collaborateur.
+        </p>
+        <p class="aiw-hint">
+            L'assistant IA est réservé aux comptes disposant d'un <strong>solde de tokens payant</strong>.
+            {% if not estProprietaire %}
+                Rapprochez-vous du propriétaire de l'espace de travail de {{ entrepriseNom }} pour l'activer.
+            {% endif %}
+        </p>
+        {% if estProprietaire %}
+            <a href="{{ path('admin.token.buy') }}" class="btn-cobalt">
+                <twig:UX:Icon name="{{ resolve_icon_name('action:cart') }}" style="width:18px;height:18px;" aria-hidden="true" />
+                <span>Recharger mon solde et activer l'assistant</span>
+            </a>
+        {% endif %}
+    </div>
+</div>

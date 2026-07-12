@@ -89,10 +89,11 @@ parameters:
                     icone: 'assistant-ia'
                     description: "<p>Votre assistant IA connaît les données de votre espace de travail et répond à vos questions en langage naturel, dans les limites de votre périmètre d'accès.</p><p>Comptages, indicateurs calculés, périmètre : demandez-lui, il va chercher l'information à votre place.</p><p><strong>Un collaborateur infatigable, qui connaît votre cabinet dans les moindres détails et respecte vos droits d'accès.</strong></p>"
                     rubriques:
-                        # « Assistant » est SANS entity_name : la rubrique reste visible pour tout
-                        # invité (comme Support) — la connaissance de l'assistant est de toute façon
-                        # fail-closed au moment de répondre (chaque outil IA vérifie canRead).
-                        "Assistant": { icone: 'assistant-ia', composant_twig: '_assistant_ia_component.html.twig' }
+                        # PSEUDO-entité 'AssistantIa' (pattern DocumentComptable) : la rubrique
+                        # n'apparaît que si l'invité a la Lecture du module IA
+                        # (RolesEnAdministration::accessAssistantIa) — propriétaire toujours.
+                        # Les données restent de toute façon fail-closed outil par outil.
+                        "Assistant": { icone: 'assistant-ia', composant_twig: '_assistant_ia_component.html.twig', entity_name: 'AssistantIa' }
                         # Paramètres (nom du personnage) : gatés comme la gestion des invités
                         # (WorkspaceAccessResolver::ROLE_MANAGEMENT_ENTITIES → canManageInvites).
                         "Paramètres IA": { icone: 'assistant-ia-parametres', composant_twig: '_assistant_ia_parametres_component.html.twig', entity_name: 'App\Entity\AssistantParametres' }

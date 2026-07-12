@@ -30,7 +30,7 @@ class RolesEnAdministrationFormCanvasProvider implements FormCanvasProviderInter
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Droits d'accès — module Administration",
-                "description" => "Vous définissez ce que ce collaborateur peut consulter et modifier sur l'administration de l'espace de travail (documents, classeurs, collaborateurs invités). Ces droits s'appliquent dès l'enregistrement : n'accordez que le nécessaire.",
+                "description" => "Vous définissez ce que ce collaborateur peut consulter et modifier sur l'administration de l'espace de travail (documents, classeurs, collaborateurs invités, assistant IA). Ces droits s'appliquent dès l'enregistrement : n'accordez que le nécessaire.",
                 // Libellés des puces de contexte (rappel des champs masqués pré-remplis).
                 "facts_labels" => [
                     "nom"    => "Libellé du rôle",
@@ -39,9 +39,10 @@ class RolesEnAdministrationFormCanvasProvider implements FormCanvasProviderInter
             ],
             // Mini-pastille par carte de droits : icône de l'entité concernée (alias IconCanvasProvider).
             "field_icons" => [
-                "accessDocument" => "document",
-                "accessClasseur" => "classeur",
-                "accessInvite"   => "invite",
+                "accessDocument"    => "document",
+                "accessClasseur"    => "classeur",
+                "accessInvite"      => "invite",
+                "accessAssistantIa" => "assistant-ia",
             ],
         ];
         $layout = $this->buildRolesEnAdministrationLayout();
@@ -61,9 +62,10 @@ class RolesEnAdministrationFormCanvasProvider implements FormCanvasProviderInter
             ["couleur_fond" => "white", "hidden" => true, "colonnes" => [["champs" => ["nom"]]]],
             ["couleur_fond" => "white", "hidden" => true, "colonnes" => [["champs" => ["invite"]]]],
             ["couleur_fond" => "white", "colonnes" => [
-                ["champs" => ["accessDocument"]], 
-                ["champs" => ["accessClasseur"]], 
-                ["champs" => ["accessInvite"]]
+                ["champs" => ["accessDocument"]],
+                ["champs" => ["accessClasseur"]],
+                ["champs" => ["accessInvite"]],
+                ["champs" => ["accessAssistantIa"]]
             ]],
         ];
     }
