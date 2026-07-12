@@ -27,6 +27,46 @@ export default class extends Controller {
         loadingText: { type: String, default: 'Veuillez patienter…' },
     };
 
+    connect() {
+        // Fin de l'attente : que la soumission ait réussi ou échoué, l'issue est une
+        // navigation complète — `pageshow` couvre le chargement de la page suivante
+        // ET la restauration depuis le bfcache (retour arrière), où le DOM occupé
+        // (spinner, bouton désactivé) serait sinon figé tel quel.
+        this.boundReset = this.reset.bind(this);
+        window.addEventListener('pageshow', this.boundReset);
+    }
+
+    disconnect() {
+        window.removeEventListener('pageshow', this.boundReset);
+    }
+
+    /**
+     * Rétablit l'état de repos : bouton de soumission et liens repassés en état
+     * actif avec leur libellé d'origine, garde anti double-soumission levée.
+     */
+    reset() {
+        this.busy = false;
+
+        if (this.hasButtonTarget) {
+            const button = this.buttonTarget;
+            if (button.dataset.originalLabel !== undefined) {
+                button.innerHTML = button.dataset.originalLabel;
+            }
+            button.removeAttribute('aria-busy');
+            button.disabled = false;
+        }
+
+        // Liens passés en état occupé via navigating().
+        this.element.querySelectorAll('a[aria-busy="true"]').forEach((link) => {
+            if (link.dataset.originalLabel !== undefined) {
+                link.innerHTML = link.dataset.originalLabel;
+            }
+            link.removeAttribute('aria-busy');
+            link.classList.remove('disabled');
+            link.style.pointerEvents = '';
+        });
+    }
+
     /**
      * Retour visuel sur un lien de navigation (ex. « Annuler ») : au clic, le lien
      * passe en état occupé (spinner + libellé) le temps que la nouvelle page charge.
