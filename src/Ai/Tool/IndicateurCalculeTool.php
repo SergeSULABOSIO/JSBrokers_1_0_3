@@ -7,30 +7,57 @@ use App\Ai\Scope\AiScope;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\Canvas\CalculationProvider;
 use App\Services\Canvas\CanvasHelper;
-use App\Services\CanvasBuilder;
 use App\Services\JSBDynamicSearchService;
 
 /**
  * Lit un indicateur CALCULÉ (prime totale, commission nette, taux de
- * sinistralité…) — la valeur n'existe pas en base, elle est produite par la
- * stratégie d'indicateurs de l'entité (CanvasBuilder::loadAllCalculatedValues,
- * une stratégie par entité du workspace) ou, au niveau ENTREPRISE, par les
- * indicateurs globaux (CalculationProvider::getIndicateursGlobaux, avec
- * période optionnelle). Dictionnaire des indicateurs (codes, intitulés,
- * unités) partagé avec la colonne de visualisation via CanvasHelper (DRY).
+ * sinistralité…) — la valeur n'existe pas en base, elle est produite par le
+ * moteur d'indicateurs globaux (CalculationProvider::getIndicateursGlobaux) :
+ * au niveau ENTREPRISE (sans cible), ou CIBLÉ sur un enregistrement (option
+ * clientCible/avenantCible/… du moteur), avec période du/au optionnelle.
+ * Dictionnaire des indicateurs (codes, intitulés, unités) partagé avec la
+ * colonne de visualisation via CanvasHelper (DRY).
  *
- * FAIL-CLOSED : canRead sur l'entité ciblée (niveau entreprise = droit de
- * lecture sur l'entité Entreprise) ; résolution de cible strictement scopée
- * à l'entreprise (JSBDynamicSearchService).
+ * GOTCHA (bug KIN AVIA) : ne JAMAIS lire $entity->{$code} après
+ * loadAllCalculatedValues — les stratégies posent des clés métier camelCase
+ * (montantTTC, primeTotale…), pas les codes du dictionnaire → 0 systématique.
+ * Le moteur ciblé renvoie, lui, exactement les codes (c'est ce que les
+ * stratégies elles-mêmes consomment).
+ *
+ * FAIL-CLOSED : canRead sur l'entité ciblée (niveau entreprise = lecture des
+ * Propositions/Cotation, source des agrégats) ; résolution de cible
+ * strictement scopée à l'entreprise (JSBDynamicSearchService).
  */
 final class IndicateurCalculeTool implements AiToolInterface
 {
     /** Nombre maximal de candidats restitués sur un nom ambigu. */
     private const MAX_CANDIDATS = 6;
 
+    /**
+     * Entités ciblables par le moteur d'indicateurs : nom court => option
+     * « cible » de getIndicateursGlobaux (cf. IndicatorCalculationHelper).
+     */
+    private const CIBLES = [
+        'Client'               => 'clientCible',
+        'Assureur'             => 'assureurCible',
+        'Risque'               => 'risqueCible',
+        'Partenaire'           => 'partenaireCible',
+        'Invite'               => 'inviteCible',
+        'Groupe'               => 'groupeCible',
+        'Portefeuille'         => 'portefeuilleCible',
+        'Avenant'              => 'avenantCible',
+        'Cotation'             => 'cotationCible',
+        'Piste'                => 'pisteCible',
+        'Tranche'              => 'trancheCible',
+        'TypeRevenu'           => 'typeRevenuCible',
+        'RevenuPourCourtier'   => 'revenuPourCourtierCible',
+        'Paiement'             => 'paiementCible',
+        'NotificationSinistre' => 'notificationSinistreCible',
+        'ConditionPartage'     => 'conditionPartageCible',
+    ];
+
     public function __construct(
         private readonly WorkspaceAccessResolver $accessResolver,
-        private readonly CanvasBuilder $canvasBuilder,
         private readonly CanvasHelper $canvasHelper,
         private readonly CalculationProvider $calculationProvider,
         private readonly JSBDynamicSearchService $searchService,
@@ -67,7 +94,7 @@ final class IndicateurCalculeTool implements AiToolInterface
                 'entite' => [
                     'type' => 'string',
                     'description' => "Entité porteuse de l'indicateur (défaut Client ; Entreprise = totaux du cabinet).",
-                    'enum' => array_merge(['Entreprise'], $this->lexique->nomsCourts()),
+                    'enum' => array_merge(['Entreprise'], array_keys(self::CIBLES)),
                 ],
                 'cible' => [
                     'type' => 'string',
@@ -79,11 +106,11 @@ final class IndicateurCalculeTool implements AiToolInterface
                 ],
                 'du' => [
                     'type' => 'string',
-                    'description' => 'Début de période AAAA-MM-JJ (niveau Entreprise uniquement, optionnel).',
+                    'description' => 'Début de période AAAA-MM-JJ (optionnel).',
                 ],
                 'au' => [
                     'type' => 'string',
-                    'description' => 'Fin de période AAAA-MM-JJ (niveau Entreprise uniquement, optionnel).',
+                    'description' => 'Fin de période AAAA-MM-JJ (optionnel).',
                 ],
             ],
             'required' => ['code'],
@@ -133,6 +160,7 @@ final class IndicateurCalculeTool implements AiToolInterface
         }
 
         $shortName = (string) ($args['entite'] ?? 'Client');
+        $options = $this->optionsPeriode($args);
 
         // Niveau ENTREPRISE : indicateurs globaux du cabinet (hors carte de rubriques).
         // FAIL-CLOSED : les agrégats sont dérivés des cotations/avenants — la lecture
@@ -142,12 +170,19 @@ final class IndicateurCalculeTool implements AiToolInterface
                 return AiToolResult::horsPerimetre("Indicateurs financiers de l'entreprise");
             }
 
-            return $this->indicateurEntreprise($code, $indicateur, $args, $scope);
+            return $this->lireIndicateur($code, $indicateur, $options, $scope, 'Entreprise', (string) $scope->entreprise->getNom());
         }
 
         $labels = $this->accessResolver->libellesEntites();
         if (!isset($labels[$shortName])) {
             return AiToolResult::introuvable($shortName);
+        }
+        if (!isset(self::CIBLES[$shortName])) {
+            return AiToolResult::introuvable(sprintf(
+                'indicateurs indisponibles pour %s — entités ciblables : Entreprise, %s',
+                $shortName,
+                implode(', ', array_keys(self::CIBLES)),
+            ));
         }
 
         // FAIL-CLOSED : l'indicateur d'une entité est une donnée de cette entité.
@@ -190,38 +225,24 @@ final class IndicateurCalculeTool implements AiToolInterface
         }
 
         $entity = $entities[0];
-        $this->canvasBuilder->loadAllCalculatedValues($entity);
-        $valeur = $entity->{$code} ?? null;
+        // Moteur CIBLÉ : les stats sont indexées par les codes du dictionnaire —
+        // jamais de lecture $entity->{$code} (cf. GOTCHA de classe).
+        $options[self::CIBLES[$shortName]] = $entity;
 
-        return AiToolResult::ok([
-            'entite'     => $shortName,
-            'cible'      => $this->libelleur->libelle($entity, $displayField),
-            'indicateur' => $indicateur['intitule'],
-            'code'       => $code,
-            'valeur'     => $valeur === null ? 0.0 : (float) $valeur,
-            'unite'      => $indicateur['unite'],
-        ]);
+        return $this->lireIndicateur($code, $indicateur, $options, $scope, $shortName, $this->libelleur->libelle($entity, $displayField));
     }
 
-    /** Indicateur global du cabinet (getIndicateursGlobaux), période entre/et optionnelle. */
-    private function indicateurEntreprise(string $code, array $indicateur, array $args, AiScope $scope): AiToolResult
+    /** Lit le code demandé dans les indicateurs globaux (ciblés ou non) du moteur. */
+    private function lireIndicateur(string $code, array $indicateur, array $options, AiScope $scope, string $entiteNom, string $cibleNom): AiToolResult
     {
-        $options = [];
-        foreach (['du' => 'entre', 'au' => 'et'] as $arg => $option) {
-            $valeur = trim((string) ($args[$arg] ?? ''));
-            if ($valeur !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $valeur)) {
-                $options[$option] = $valeur;
-            }
-        }
-
         $stats = $this->calculationProvider->getIndicateursGlobaux($scope->entreprise, false, $options);
         if (!array_key_exists($code, $stats)) {
-            return AiToolResult::introuvable(sprintf('%s (niveau entreprise)', $code));
+            return AiToolResult::introuvable(sprintf('%s (indicateurs disponibles : %s)', $code, implode(', ', array_keys($stats))));
         }
 
         $data = [
-            'entite'     => 'Entreprise',
-            'cible'      => (string) $scope->entreprise->getNom(),
+            'entite'     => $entiteNom,
+            'cible'      => $cibleNom,
             'indicateur' => $indicateur['intitule'],
             'code'       => $code,
             'valeur'     => (float) $stats[$code],
@@ -235,6 +256,20 @@ final class IndicateurCalculeTool implements AiToolInterface
         }
 
         return AiToolResult::ok($data);
+    }
+
+    /** Période du/au => options entre/et du moteur d'indicateurs (dates validées). */
+    private function optionsPeriode(array $args): array
+    {
+        $options = [];
+        foreach (['du' => 'entre', 'au' => 'et'] as $arg => $option) {
+            $valeur = trim((string) ($args[$arg] ?? ''));
+            if ($valeur !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $valeur)) {
+                $options[$option] = $valeur;
+            }
+        }
+
+        return $options;
     }
 
     /** Dictionnaire des indicateurs calculés (mêmes définitions que la colonne de visualisation). */
