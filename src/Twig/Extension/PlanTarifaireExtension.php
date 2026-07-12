@@ -3,6 +3,7 @@
 namespace App\Twig\Extension;
 
 use App\Entity\Article;
+use App\Entity\AssistantMessage;
 use App\Entity\Assureur;
 use App\Entity\AutoriteFiscale;
 use App\Entity\Avenant;
@@ -122,6 +123,12 @@ class PlanTarifaireExtension extends AbstractExtension
         Document::class      => ['fr' => 'Document',       'en' => 'Document',        'icon' => 'document'],
         Classeur::class      => ['fr' => 'Classeur',       'en' => 'Binder',          'icon' => 'classeur'],
         Invite::class        => ['fr' => 'Invité',         'en' => 'Invitee',         'icon' => 'invite'],
+
+        // ── IA ───────────────────────────────────────────────────────────────
+        // Chaque message envoyé à l'assistant IA est métré comme une écriture :
+        // exposé ici pour que son poids soit réglable en Console (et lisible sur
+        // la page publique « Fonctionnement des tokens »).
+        AssistantMessage::class => ['fr' => 'Message à l\'assistant IA', 'en' => 'AI assistant message', 'icon' => 'assistant-ia'],
 
         // ── Rôles collaborateurs (par pôle) ──────────────────────────────────
         RolesEnAdministration::class => ['fr' => 'Rôle en administration', 'en' => 'Administration role', 'icon' => 'role'],

@@ -215,6 +215,7 @@ class ConsolePlanTarifairePacksTest extends WebTestCase
             \App\Entity\RolesEnSinistre::class,
             \App\Entity\RolesEnMarketing::class,
             \App\Entity\RolesEnAdministration::class,
+            \App\Entity\AssistantMessage::class, // message au chat de l'assistant IA
         ];
         foreach ($attendues as $fqcn) {
             $this->assertArrayHasKey($fqcn, $catalogue, sprintf('%s doit être proposée au paramétrage du poids d\'écriture.', $fqcn));
@@ -250,6 +251,36 @@ class ConsolePlanTarifairePacksTest extends WebTestCase
         $params = static::getContainer()->get(ParametresTokenService::class);
         $params->refresh();
         $this->assertSame(40, $params->weightFor(\App\Entity\ChargementPourPrime::class));
+    }
+
+    /**
+     * Le poids d'écriture d'un MESSAGE À L'ASSISTANT IA est réglable en Console
+     * comme les autres entités : défini via le formulaire du plan tarifaire, il est
+     * persisté et relayé par le service de facturation (repli constante = 10 sinon).
+     */
+    public function testSuperAdminSetsAssistantMessageWeight(): void
+    {
+        $this->client->loginUser($this->user(self::SUPER));
+
+        $crawler = $this->client->request('GET', '/console/plan-tarifaire');
+        $this->assertResponseIsSuccessful();
+
+        $form = $crawler->filter('form')->form();
+        $form['plan_tarifaire[freeAllowance]'] = '1000';
+        $form['plan_tarifaire[freeWindowHours]'] = '8';
+        $form['plan_tarifaire[readWeight]'] = '2';
+        $form['plan_tarifaire[defaultWriteWeight]'] = '5';
+        $form['plan_tarifaire[usdPerToken]'] = '0.001';
+        $form['plan_tarifaire[writeWeightsJson]'] = json_encode([
+            \App\Entity\AssistantMessage::class => 25,
+        ]);
+        $this->client->submit($form);
+
+        $this->assertResponseRedirects('/console/plan-tarifaire');
+
+        $params = static::getContainer()->get(ParametresTokenService::class);
+        $params->refresh();
+        $this->assertSame(25, $params->weightFor(\App\Entity\AssistantMessage::class));
     }
 
     /**
