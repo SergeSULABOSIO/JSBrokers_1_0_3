@@ -169,7 +169,9 @@
                 {% endif %}
                 <div class="aic-msg-body">
                     <p class="aic-msg-text">{{ message.contenu }}</p>
-                    <span class="aic-msg-time">{{ message.createdAt|date('H:i') }}</span>
+                    {# Heure seule pour les messages du jour, date + heure au-delà. #}
+                    {% set memeJour = message.createdAt|date('Y-m-d') == 'now'|date('Y-m-d') %}
+                    <span class="aic-msg-time">{{ message.createdAt|date(memeJour ? 'H:i' : 'd/m/Y H:i') }}</span>
                 </div>
             </div>
         {% endfor %}
@@ -180,7 +182,9 @@
         <span class="dot" aria-hidden="true"></span>
         <span class="dot" aria-hidden="true"></span>
         <span class="dot" aria-hidden="true"></span>
-        {{ assistantNom }} réfléchit…
+        {# Libellé contextuel : « réfléchit… » pendant l'attente serveur,
+           « écrit… » pendant le déploiement mot à mot de la réponse. #}
+        <span data-assistant-chat-target="typingLabel">{{ assistantNom }} réfléchit…</span>
     </div>
 
     {# ── Zone de saisie ── #}

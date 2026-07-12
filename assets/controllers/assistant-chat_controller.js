@@ -3,15 +3,23 @@ import { Controller } from '@hotwired/stimulus';
 /**
  * @class AssistantChatController
  * @description Chat de l'assistant IA (panneau de la colonne 4). Envoi des
- * messages en JSON, bulle utilisateur optimiste, indicateur « {nom}
- * réfléchit… », gestion du 402 (solde de tokens épuisé) et des erreurs réseau.
- * Tout contenu est injecté via textContent (échappement systématique).
+ * messages en JSON, bulle utilisateur optimiste, indicateur contextuel
+ * (« {nom} réfléchit… » pendant l'attente serveur puis « {nom} écrit… »
+ * pendant le déploiement mot à mot de la réponse), gestion du 402 (solde de
+ * tokens épuisé) et des erreurs réseau. Tout contenu est injecté via
+ * textContent (échappement systématique).
  */
 export default class extends Controller {
-    static targets = ['messages', 'input', 'send', 'typing', 'count'];
+    static targets = ['messages', 'input', 'send', 'typing', 'typingLabel', 'count'];
 
     /** Seuil d'affichage du compteur de caractères restants (proche de maxlength). */
     static COUNT_THRESHOLD = 400;
+
+    /** Bornes du rythme de déploiement mot à mot (ms par mot). */
+    static TYPE_DELAY_MAX = 45;
+    static TYPE_DELAY_MIN = 12;
+    /** Durée totale visée pour le déploiement d'une réponse (ms). */
+    static TYPE_TOTAL_TARGET = 6000;
 
     static values = {
         sendUrl: String,
@@ -83,6 +91,7 @@ export default class extends Controller {
         const userBubble = this.appendMessage('user', contenu);
         this.inputTarget.value = '';
         this.onInput();
+        this.setTypingLabel('réfléchit…');
         this.typingTarget.hidden = false;
         this.scrollToBottom();
 
@@ -106,7 +115,10 @@ export default class extends Controller {
                 this.appendNotice('error', "L'envoi a échoué. Vérifiez votre connexion puis réessayez.");
             } else {
                 const data = await response.json();
-                this.appendMessage('assistant', data.assistant.contenu, data.assistant.refus === true);
+                // La réponse se déploie mot après mot (façon ChatGPT/Claude) ;
+                // l'indicateur bascule de « réfléchit… » à « écrit… ».
+                this.setTypingLabel('écrit…');
+                await this.typeMessage(data.assistant.contenu, data.assistant.refus === true);
                 await this.executeActions(data.assistant.actions);
             }
         } catch (error) {
@@ -233,6 +245,42 @@ export default class extends Controller {
             message += ` ou attendez le renouvellement du ${date.toLocaleString('fr-FR')}`;
         }
         return `${message}.`;
+    }
+
+    /** Libellé contextuel de l'indicateur (« {nom} réfléchit… » / « {nom} écrit… »). */
+    setTypingLabel(verbe) {
+        if (!this.hasTypingLabelTarget) return;
+        this.typingLabelTarget.textContent = `${this.assistantNomValue || 'Assistant'} ${verbe}`;
+    }
+
+    /**
+     * Déploie la réponse de l'assistant mot après mot dans une bulle (effet
+     * machine à écrire). Le rythme s'adapte à la longueur pour que les
+     * réponses longues ne s'éternisent pas ; si le panneau est fermé en cours
+     * de route, le texte complet est posé d'un coup et la boucle s'arrête.
+     */
+    async typeMessage(texte, refus = false) {
+        const bubble = this.appendMessage('assistant', '', refus);
+        const content = bubble.querySelector('.aic-msg-text');
+        // Le fil est une zone aria-live : on masque la bulle pendant le
+        // déploiement pour éviter une annonce du lecteur d'écran à chaque mot,
+        // puis on la révèle entière (une seule annonce).
+        bubble.setAttribute('aria-hidden', 'true');
+        const mots = texte.match(/\S+\s*/g) || [texte];
+        const delai = Math.max(
+            this.constructor.TYPE_DELAY_MIN,
+            Math.min(this.constructor.TYPE_DELAY_MAX, Math.round(this.constructor.TYPE_TOTAL_TARGET / mots.length))
+        );
+        for (const mot of mots) {
+            if (!this.element.isConnected) {
+                break;
+            }
+            content.textContent += mot;
+            this.scrollToBottom();
+            await new Promise((resolve) => setTimeout(resolve, delai));
+        }
+        content.textContent = texte; // garantit le texte intégral quoi qu'il arrive
+        bubble.removeAttribute('aria-hidden');
     }
 
     /**
