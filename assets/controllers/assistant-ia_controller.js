@@ -254,6 +254,9 @@ export default class extends Controller {
                 title: titre || this.assistantNomValue || 'Assistant IA',
                 iconAlias: 'assistant-ia',
                 tabKey: `ia-conv-${convId}`,
+                // Permet au workspace-manager de RESTAURER ce panneau au rechargement
+                // de la page (le HTML est re-fetché depuis cette URL).
+                sourceUrl: chatUrl,
             },
         }));
     }
