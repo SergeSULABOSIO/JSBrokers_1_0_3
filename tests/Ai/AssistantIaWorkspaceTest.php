@@ -106,6 +106,10 @@ class AssistantIaWorkspaceTest extends WebTestCase
             ['emails' => \Doctrine\DBAL\ArrayParameterType::STRING]
         );
 
+        // Plan tarifaire : singleton global — réinitialisé pour que les tests qui le
+        // personnalisent (poids du message IA) n'influencent pas les autres.
+        $conn->executeStatement('DELETE FROM plateforme_parametres');
+
         foreach ([
             'roles_en_finance', 'roles_en_marketing', 'roles_en_production',
             'roles_en_sinistre', 'roles_en_administration',
@@ -470,6 +474,32 @@ class AssistantIaWorkspaceTest extends WebTestCase
         $logs = static::getContainer()->get(TokenConsumptionRepository::class)
             ->findBy(['entiteNom' => 'AssistantMessage']);
         $this->assertCount(1, $logs, 'Un message envoyé = une consommation de tokens journalisée.');
+    }
+
+    /**
+     * Le poids d'écriture d'un message IA défini dans le plan tarifaire (Console)
+     * est EFFECTIVEMENT appliqué au métrage du chat : la consommation journalisée
+     * porte le poids personnalisé, pas la constante (repli 10).
+     */
+    public function testPoidsMessageIaPersonnaliseAppliqueAuMetrage(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $guest);
+
+        // Personnalise le plan comme le ferait la Console (singleton BDD).
+        $params = static::getContainer()->get(\App\Repository\PlateformeParametresRepository::class)->getSingleton();
+        $params->setWriteWeights([AssistantMessage::class => 25]);
+        $this->em()->flush();
+        static::getContainer()->get(\App\Token\ParametresTokenService::class)->refresh();
+
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $this->postMessage($e->getId(), $conversation->getId(), 'Bonjour !');
+        $this->assertResponseIsSuccessful();
+
+        $log = static::getContainer()->get(TokenConsumptionRepository::class)
+            ->findOneBy(['entiteNom' => 'AssistantMessage'], ['id' => 'DESC']);
+        $this->assertNotNull($log);
+        $this->assertSame(25, $log->getPoidsUnitaire(), 'Le métrage doit lire le poids du plan tarifaire, pas la constante.');
     }
 
     public function testReponseDonneesReellesDansPerimetre(): void
