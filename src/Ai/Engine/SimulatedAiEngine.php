@@ -119,6 +119,7 @@ final class SimulatedAiEngine implements AiEngineInterface
                 $data['unite'],
             ),
             'rechercher_entites' => $this->formatListe($data),
+            'document_comptable' => $this->formatDocumentComptable($data),
             'consulter_guide' => sprintf(
                 "D'après la fiche « %s » :\n%s",
                 $data['titre'],
@@ -136,6 +137,47 @@ final class SimulatedAiEngine implements AiEngineInterface
                 $data,
             ))),
         };
+    }
+
+    /**
+     * Restitution d'un document comptable : la trésorerie (le cas le plus demandé)
+     * est détaillée poste par poste ; les autres états sont restitués en compact
+     * (le LLM réel, lui, formule librement à partir des mêmes données).
+     */
+    private function formatDocumentComptable(array $data): string
+    {
+        $fmt = static fn (float $m) => number_format($m, 2, ',', ' ');
+
+        if ($data['document'] === 'tresorerie') {
+            $t = $data['donnees'];
+
+            return sprintf(
+                "Trésorerie de l'exercice %d (montants en %s) :\n"
+                . "- Trésorerie d'ouverture : %s\n"
+                . "- Encaissements : %s · Décaissements : %s\n"
+                . "- Flux d'exploitation : %s · Flux de financement : %s\n"
+                . "- Variation : %s\n"
+                . 'Le solde actuel (trésorerie de clôture) est de %s %s.',
+                $data['exercice'],
+                $data['monnaie'],
+                $fmt($t['ouverture']),
+                $fmt($t['encaissements']),
+                $fmt($t['decaissements']),
+                $fmt($t['fluxExploitation']),
+                $fmt($t['fluxFinancement']),
+                $fmt($t['variation']),
+                $fmt($t['cloture']),
+                $data['monnaie'],
+            );
+        }
+
+        return sprintf(
+            "%s — exercice %d (montants en %s) :\n%s",
+            $data['titre'],
+            $data['exercice'],
+            $data['monnaie'],
+            json_encode($data['donnees'], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
+        );
     }
 
     /** Restitution d'une page de liste (rechercher_entites) : total, items, invite à paginer. */

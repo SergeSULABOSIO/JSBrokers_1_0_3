@@ -21,6 +21,9 @@ Présenter cet inventaire de façon rassurante et concrète, avec des exemples.
   « Cherche les clients dont le nom contient TRANS ».
 - Lire les indicateurs financiers calculés d'un client : « Quelle est la prime
   totale du client X ? », « Son taux de sinistralité ? »
+- Lire les documents comptables du cabinet (générés en temps réel) : « Quel est
+  le solde de la trésorerie ? », « Quel est le résultat net de l'exercice ? »,
+  bilan, balance, formation du résultat.
 
 ## 3. Agir dans l'interface (toujours sous votre contrôle)
 

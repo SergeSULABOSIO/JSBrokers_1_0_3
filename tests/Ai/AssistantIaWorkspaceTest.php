@@ -697,6 +697,50 @@ class AssistantIaWorkspaceTest extends WebTestCase
         $this->assertStringContainsString('note liée', $data['assistant']['contenu']);
     }
 
+    /**
+     * Finances de l'entreprise : le propriétaire (accès complet) obtient le solde
+     * de trésorerie via l'outil document_comptable — même moteur que la rubrique
+     * « Documents comptables » du workspace (états générés à la volée).
+     */
+    public function testSoldeTresorerieViaDocumentComptable(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $owner);
+
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+        $this->postMessage($e->getId(), $conversation->getId(), 'Quel est le solde de la trésorerie ?');
+        $this->assertResponseIsSuccessful();
+        $data = $this->jsonResponse();
+
+        $this->assertFalse($data['assistant']['refus']);
+        $this->assertStringContainsString('Trésorerie', $data['assistant']['contenu']);
+        $this->assertStringContainsString('USD', $data['assistant']['contenu']);
+        // Aucune opération seedée : la trésorerie de clôture vaut 0,00 — la preuve
+        // que la réponse vient du moteur comptable, pas d'une invention.
+        $this->assertStringContainsString('0,00', $data['assistant']['contenu']);
+
+        $meta = $this->em()->getRepository(AssistantMessage::class)
+            ->findOneBy(['role' => AssistantMessage::ROLE_ASSISTANT], ['id' => 'DESC'])
+            ->getMeta();
+        $this->assertSame('document_comptable', $meta['tool']);
+    }
+
+    /** Les documents comptables restent fail-closed : sans droit Finances, refus poli. */
+    public function testTresorerieRefuseeHorsPerimetre(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: true);
+        $conversation = $this->makeConversation($e, $guest);
+
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $this->postMessage($e->getId(), $conversation->getId(), 'Quel est le solde de la trésorerie ?');
+        $this->assertResponseIsSuccessful();
+        $data = $this->jsonResponse();
+
+        $this->assertTrue($data['assistant']['refus'], 'Sans accès Finances, la trésorerie doit être refusée.');
+        $this->assertStringContainsString('périmètre', $data['assistant']['contenu']);
+        $this->assertStringNotContainsString('0,00', $data['assistant']['contenu'], 'Aucun montant ne doit fuiter.');
+    }
+
     public function testIndicateurCalculeClient(): void
     {
         ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: true);
