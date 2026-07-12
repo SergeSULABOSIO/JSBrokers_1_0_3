@@ -16,6 +16,7 @@ export default class extends Controller {
     static values = {
         sendUrl: String,
         dialogContextUrl: String,
+        visualContextUrl: String,
         idEntreprise: Number,
         idInvite: Number,
         assistantNom: String,
@@ -129,9 +130,51 @@ export default class extends Controller {
     async executeActions(actions) {
         if (!Array.isArray(actions)) return;
         for (const action of actions) {
-            if (action && action.type === 'open-dialog') {
-                await this.openDialogAction(action);
+            if (!action) continue;
+            switch (action.type) {
+                case 'open-dialog':
+                    await this.openDialogAction(action);
+                    break;
+                case 'open-visualization':
+                    await this.openVisualizationAction(action);
+                    break;
+                case 'open-rubrique':
+                    // Navigation pure : le workspace-manager rejoue le clic de menu.
+                    document.dispatchEvent(new CustomEvent('app:workspace.open-rubrique', {
+                        detail: { entityName: action.entite },
+                    }));
+                    break;
             }
+        }
+    }
+
+    /**
+     * Ouvre une fiche dans la colonne de visualisation : récupère le contexte
+     * (entité + canvas) auprès de l'endpoint visual-context (qui RE-VALIDE les
+     * droits, fail-closed) puis rejoue le circuit standard des listes
+     * (app:liste-element:openned).
+     */
+    async openVisualizationAction(action) {
+        if (!this.hasVisualContextUrlValue) return;
+        try {
+            const url = new URL(this.visualContextUrlValue, window.location.origin);
+            url.searchParams.set('entite', action.entite || '');
+            url.searchParams.set('id', action.id || '');
+
+            const response = await fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.message || `Erreur serveur ${response.status}`);
+
+            document.dispatchEvent(new CustomEvent('app:liste-element:openned', {
+                detail: {
+                    entity:       result.entity,
+                    entityType:   result.entityType,
+                    entityCanvas: result.entityCanvas,
+                },
+            }));
+        } catch (error) {
+            console.error('AssistantChat - visualisation échouée :', error);
+            this.appendNotice('error', error.message || "L'ouverture de la fiche a échoué.");
         }
     }
 

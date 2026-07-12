@@ -78,6 +78,11 @@ export default class extends Controller {
         this.boundReloadActiveTab = this.reloadActiveWorkspaceTab.bind(this);
         document.addEventListener('app:workspace.reload-active-tab', this.boundReloadActiveTab);
 
+        // NOUVEAU : Ouvre la rubrique d'une entité à la demande (assistant IA) —
+        // même geste que le clic sur le menu (groupe puis rubrique).
+        this.boundOpenRubriqueByEntity = this.openRubriqueByEntity.bind(this);
+        document.addEventListener('app:workspace.open-rubrique', this.boundOpenRubriqueByEntity);
+
         // --- NOUVEAU : Gestion de la barre de progression pour l'actualisation de la liste ---
         // Écoute les ordres du Cerveau pour afficher/masquer la barre de progression.
         this.boundHandleLoadingStart = this.handleLoadingStart.bind(this);
@@ -168,6 +173,7 @@ export default class extends Controller {
         document.removeEventListener('app:workspace.close-active-tab', this.boundCloseActiveTab);
         document.removeEventListener('app:workspace.inject-html', this.boundInjectHtml);
         document.removeEventListener('app:workspace.open-html-in-visualization', this.boundOpenHtmlInVisualization);
+        document.removeEventListener('app:workspace.open-rubrique', this.boundOpenRubriqueByEntity);
         document.removeEventListener('app:workspace.reload-active-tab', this.boundReloadActiveTab);
         document.removeEventListener('app:loading.start', this.boundHandleLoadingStart);
         document.removeEventListener('app:loading.stop', this.boundHandleLoadingStop);
@@ -869,8 +875,53 @@ export default class extends Controller {
 
 
     /**
+     * Ouvre la rubrique (liste) d'une entité à la demande — événement
+     * `app:workspace.open-rubrique` { entityName } émis par le chat de
+     * l'assistant IA. Même chemin que restoreLastState : si la rubrique n'est
+     * pas dans le groupe affiché, on clique d'abord son groupe (retrouvé via
+     * les templates de rubriques), puis la rubrique elle-même.
+     * @param {CustomEvent} event
+     */
+    openRubriqueByEntity(event) {
+        const entityName = event.detail?.entityName;
+        if (!entityName) return;
+
+        const selector = `[data-workspace-manager-entity-name-param='${entityName}']`;
+
+        // Cas 1 : la rubrique est déjà visible dans le groupe courant.
+        const visible = this.rubriquesContainerTarget.querySelector(selector);
+        if (visible) {
+            this.loadComponent({ currentTarget: visible });
+            return;
+        }
+
+        // Cas 2 : retrouver son groupe via les templates (id = "rubriques-<nom_du_groupe>").
+        const templateItem = this.rubriquesTemplateTarget.content.querySelector(selector);
+        const groupContainer = templateItem?.closest('[id^="rubriques-"]');
+        if (!groupContainer) {
+            console.warn(`WorkspaceManager - openRubriqueByEntity : rubrique introuvable pour '${entityName}'.`);
+            return;
+        }
+        const groupId = groupContainer.id.replace(/^rubriques-/, '');
+        const groupElement = Array.from(this.element.querySelectorAll('[data-workspace-manager-group-name-param]'))
+            .find(g => g.dataset.workspaceManagerGroupNameParam.replace(/ /g, '_') === groupId);
+        if (!groupElement) {
+            console.warn(`WorkspaceManager - openRubriqueByEntity : groupe introuvable pour '${entityName}'.`);
+            return;
+        }
+
+        groupElement.click();
+        requestAnimationFrame(() => {
+            const rubriqueElement = this.rubriquesContainerTarget.querySelector(selector);
+            if (rubriqueElement) {
+                this.loadComponent({ currentTarget: rubriqueElement });
+            }
+        });
+    }
+
+    /**
      * Affiche les rubriques (sous-menus) pour un groupe de navigation donné.
-     * @param {HTMLElement} groupElement 
+     * @param {HTMLElement} groupElement
      */
     displayRubriquesForGroup(groupElement) {
         if (!groupElement || !groupElement.dataset.workspaceManagerGroupNameParam) {

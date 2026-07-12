@@ -19,18 +19,26 @@ Présenter cet inventaire de façon rassurante et concrète, avec des exemples.
 - Compter les enregistrements d'une rubrique : « Combien de clients avons-nous ? »
 - Lister et rechercher, avec filtre et pagination : « Liste nos avenants »,
   « Cherche les clients dont le nom contient TRANS ».
-- Lire les indicateurs financiers calculés d'un client : « Quelle est la prime
-  totale du client X ? », « Son taux de sinistralité ? »
+- Lire la fiche complète d'un enregistrement : « Quelle est l'adresse du client
+  X ? », « Donne-moi les détails de l'assureur Y ».
+- Lire les indicateurs financiers calculés — d'un enregistrement (client,
+  portefeuille, avenant, assureur, partenaire…) OU de toute l'entreprise, avec
+  période : « Prime totale du client X ? », « Commissions de l'entreprise ce
+  trimestre ? »
 - Lire les documents comptables du cabinet (générés en temps réel) : « Quel est
-  le solde de la trésorerie ? », « Quel est le résultat net de l'exercice ? »,
-  bilan, balance, formation du résultat.
+  le solde de la trésorerie ? », résultat, bilan, balance, TVA (suivi fiscal).
+- Calculer des statistiques et répartitions : « Répartition des clients par
+  groupe ? », comptes, sommes et moyennes sur les champs enregistrés.
 
 ## 3. Agir dans l'interface (toujours sous votre contrôle)
 
 - Ouvrir un formulaire de création : « Crée un nouveau client ».
 - Ouvrir un enregistrement en modification : « Modifie l'avenant Y ».
-- Dans les deux cas, c'est VOUS qui vérifiez et enregistrez : l'assistant ne
-  modifie jamais rien lui-même.
+- Ouvrir une rubrique du menu : « Ouvre la rubrique bordereaux ».
+- Afficher une fiche à l'écran (colonne de visualisation) : « Visualise le
+  client X ».
+- Pour toute création ou modification, c'est VOUS qui vérifiez et enregistrez :
+  l'assistant ne modifie jamais rien lui-même.
 
 ## 4. Expliquer le métier et la plateforme
 

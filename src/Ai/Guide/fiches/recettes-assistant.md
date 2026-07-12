@@ -23,6 +23,19 @@ complète en texte simple.
 2. `ouvrir_dialogue` (creation ou edition + id) : le formulaire s'ouvre chez
    l'utilisateur, qui saisit et enregistre lui-même — l'assistant n'écrit jamais.
 
+**Détail d'une fiche** — « Quelle est l'adresse du client X ? » :
+1. `lire_fiche` (entite, nom ou id). Si la réponse liste des candidats (nom
+   ambigu), demander à l'utilisateur de préciser, puis relancer avec l'id.
+
+**Analyse financière du cabinet** — « Nos commissions ce trimestre ? » :
+1. `indicateur_calcule` (entite=Entreprise, code, du/au) pour les montants
+   calculés ; `document_comptable` pour les états (trésorerie, résultat, TVA) ;
+   `statistiques` pour les répartitions sur champs stockés.
+
+**Navigation** — « Ouvre les bordereaux », « Visualise le client X » :
+1. `ouvrir_rubrique` (liste à l'écran) ou `visualiser_fiche` (fiche en colonne
+   de visualisation, id via `rechercher_entites` si besoin).
+
 **Question de méthode ou de notion** — « Comment marchent les bordereaux ? » :
 1. `consulter_guide` sur la fiche adéquate, puis répondre à partir de son contenu
    (jamais de connaissance inventée).

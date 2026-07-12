@@ -565,6 +565,38 @@ class AssistantIaWorkspaceTest extends WebTestCase
         $this->assertSame(\App\Ai\Tool\AiToolResult::STATUS_HORS_PERIMETRE, $horsPerimetre->status);
     }
 
+    /**
+     * statistiques : agrégations DQL sur champs stockés — comptage global,
+     * répartition par champ scalaire, auto-aide sur champ invalide, fail-closed.
+     */
+    public function testStatistiquesAuNiveauOutil(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: true);
+        $this->seedClients($e, ['Client Alpha', 'Client Beta', 'Client Gamma']);
+        $tool = static::getContainer()->get(\App\Ai\Tool\StatistiquesTool::class);
+        $scope = new \App\Ai\Scope\AiScope($e, $guest);
+
+        // Comptage simple, scopé à l'entreprise.
+        $result = $tool->execute(['entite' => 'Client', 'operation' => 'compte'], $scope);
+        $this->assertSame(\App\Ai\Tool\AiToolResult::STATUS_OK, $result->status);
+        $this->assertSame(3.0, $result->data['valeur']);
+
+        // Répartition par champ scalaire (exonere = false pour les 3 clients seedés).
+        $groupes = $tool->execute(['entite' => 'Client', 'operation' => 'compte', 'groupePar' => 'exonere'], $scope);
+        $this->assertSame(\App\Ai\Tool\AiToolResult::STATUS_OK, $groupes->status);
+        $this->assertCount(1, $groupes->data['groupes']);
+        $this->assertSame(3.0, $groupes->data['groupes'][0]['valeur']);
+
+        // Champ numérique invalide : l'outil liste les champs valides (auto-correction).
+        $invalide = $tool->execute(['entite' => 'Client', 'operation' => 'somme', 'champ' => 'nimporte'], $scope);
+        $this->assertSame(\App\Ai\Tool\AiToolResult::STATUS_INTROUVABLE, $invalide->status);
+        $this->assertStringContainsString('champs numériques', $invalide->data['precision']);
+
+        // FAIL-CLOSED : entité hors périmètre de lecture.
+        $refus = $tool->execute(['entite' => 'Avenant', 'operation' => 'compte'], $scope);
+        $this->assertSame(\App\Ai\Tool\AiToolResult::STATUS_HORS_PERIMETRE, $refus->status);
+    }
+
     public function testRefusPoliHorsPerimetre(): void
     {
         ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: false);
@@ -583,6 +615,70 @@ class AssistantIaWorkspaceTest extends WebTestCase
             $data['assistant']['contenu'],
             'Le refus ne doit révéler AUCUNE donnée (fail-closed).'
         );
+    }
+
+    /** ouvrir_rubrique : navigation vers la liste d'une entité (intention UI). */
+    public function testActionOuvrirRubrique(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: true);
+        $conversation = $this->makeConversation($e, $guest);
+
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $this->postMessage($e->getId(), $conversation->getId(), 'Ouvre la rubrique clients');
+        $this->assertResponseIsSuccessful();
+        $data = $this->jsonResponse();
+
+        $this->assertFalse($data['assistant']['refus']);
+        $this->assertSame(
+            [['type' => 'open-rubrique', 'entite' => 'Client']],
+            $data['assistant']['actions'],
+        );
+
+        $meta = $this->em()->getRepository(AssistantMessage::class)
+            ->findOneBy(['role' => AssistantMessage::ROLE_ASSISTANT], ['id' => 'DESC'])
+            ->getMeta();
+        $this->assertSame('ouvrir_rubrique', $meta['tool']);
+    }
+
+    /** visualiser_fiche : ouverture d'un enregistrement en colonne de visualisation. */
+    public function testActionVisualiserFiche(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: true);
+        $this->seedClients($e, ['Client Alpha']);
+        $idClient = $this->em()->getRepository(Client::class)->findOneBy(['nom' => 'Client Alpha'])->getId();
+        $conversation = $this->makeConversation($e, $guest);
+
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $this->postMessage($e->getId(), $conversation->getId(), 'Visualise le client Alpha');
+        $this->assertResponseIsSuccessful();
+        $data = $this->jsonResponse();
+
+        $this->assertFalse($data['assistant']['refus']);
+        $this->assertStringContainsString('Client Alpha', $data['assistant']['contenu']);
+        $this->assertSame(
+            [['type' => 'open-visualization', 'entite' => 'Client', 'id' => $idClient]],
+            $data['assistant']['actions'],
+        );
+    }
+
+    /** Endpoint visual-context : entité + canvas pour le circuit d'ouverture, fail-closed. */
+    public function testVisualContextEndpointFailClosed(): void
+    {
+        ['entreprise' => $e] = $this->seed(withClientRole: true);
+        $this->seedClients($e, ['Client Alpha']);
+        $idClient = $this->em()->getRepository(Client::class)->findOneBy(['nom' => 'Client Alpha'])->getId();
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+
+        $this->client->request('GET', sprintf('/admin/assistant-ia/api/visual-context/%d?entite=Client&id=%d', $e->getId(), $idClient));
+        $this->assertResponseIsSuccessful();
+        $data = $this->jsonResponse();
+        $this->assertSame('Client', $data['entityType']);
+        $this->assertSame('Client Alpha', $data['entity']['nom']);
+        $this->assertNotEmpty($data['entityCanvas']);
+
+        // Hors périmètre de lecture : 403 fail-closed.
+        $this->client->request('GET', sprintf('/admin/assistant-ia/api/visual-context/%d?entite=Avenant&id=1', $e->getId()));
+        $this->assertResponseStatusCodeSame(403);
     }
 
     public function testActionOuvrirDialogueCreation(): void

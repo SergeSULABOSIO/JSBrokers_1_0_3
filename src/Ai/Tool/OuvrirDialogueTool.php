@@ -76,6 +76,10 @@ final class OuvrirDialogueTool implements AiToolInterface
     public function match(string $question, AiScope $scope): ?array
     {
         $normalized = AiText::normalize($question);
+        // « ouvre la rubrique X » relève de ouvrir_rubrique, pas d'un formulaire.
+        if (preg_match('/\b(rubrique|section|module)\b/', $normalized)) {
+            return null;
+        }
         if (!preg_match('/\b(cree[rsz]?|ajoute[rsz]?|nouveau|nouvelle|ouvre[sz]?|ouvrir)\b/', $normalized)) {
             return null;
         }
