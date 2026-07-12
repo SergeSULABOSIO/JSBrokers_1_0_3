@@ -369,6 +369,60 @@ class AssistantIaController extends AbstractController
     }
 
     /**
+     * Contexte de VISUALISATION demandé par une action de l'assistant (directive
+     * 'open-visualization') : entité normalisée (valeurs calculées chargées) +
+     * canvas d'entité — le payload attendu par `app:liste-element:openned`
+     * (même circuit que l'ouverture depuis une liste). Re-validation fail-closed
+     * complète : la directive n'est pas une autorisation.
+     */
+    #[Route('/api/visual-context/{idEntreprise}', name: 'api.visual_context', requirements: ['idEntreprise' => Requirement::DIGITS], methods: ['GET'])]
+    public function visualContext(int $idEntreprise, Request $request): JsonResponse
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if ($invite === null) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+
+        $shortName = (string) $request->query->get('entite', '');
+        $id = (int) $request->query->get('id', 0);
+
+        $labels = $this->accessResolver->libellesEntites();
+        $fqcn = 'App\\Entity\\' . $shortName;
+        if (!isset($labels[$shortName]) || !class_exists($fqcn) || $id <= 0) {
+            return $this->json(['message' => 'Demande invalide.'], Response::HTTP_BAD_REQUEST);
+        }
+        if (!$this->accessResolver->canRead($invite, $shortName)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+
+        // Scoping : l'enregistrement doit exister DANS cette entreprise.
+        $result = $this->searchService->search($fqcn, ['id' => $id], $entreprise, null, 1, 1);
+        $entity = $result['data'][0] ?? null;
+        if (($result['status']['code'] ?? 500) !== 200 || $entity === null) {
+            return $this->json(['message' => 'Enregistrement introuvable.'], Response::HTTP_NOT_FOUND);
+        }
+
+        // Même contenu qu'une ligne de liste : attributs sérialisés + valeurs
+        // CALCULÉES fusionnées (hors groupes list:read — on les ajoute depuis le
+        // canvas, comme le font les listes du workspace).
+        $this->canvasBuilder->loadAllCalculatedValues($entity);
+        $entityCanvas = $this->canvasBuilder->getEntityCanvas($fqcn);
+        $normalized = (array) $this->normalizer->normalize($entity, null, ['groups' => ['list:read']]);
+        foreach (($entityCanvas['liste'] ?? []) as $fieldDef) {
+            $code = (string) ($fieldDef['code'] ?? '');
+            if ($code !== '' && !array_key_exists($code, $normalized) && isset($entity->{$code})) {
+                $normalized[$code] = $entity->{$code};
+            }
+        }
+
+        return $this->json([
+            'entityType'   => $shortName,
+            'entity'       => $normalized,
+            'entityCanvas' => $entityCanvas,
+        ]);
+    }
+
+    /**
      * Charge l'entreprise (404 sinon) et résout l'invité connecté, en refusant
      * tout invité rattaché à une AUTRE entreprise que celle demandée.
      *

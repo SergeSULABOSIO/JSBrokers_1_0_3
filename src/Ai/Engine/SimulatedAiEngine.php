@@ -131,6 +131,17 @@ final class SimulatedAiEngine implements AiEngineInterface
                 $data['titre'],
                 trim((string) $data['contenu']),
             ),
+            'ouvrir_rubrique' => sprintf(
+                'J\'ouvre la rubrique « %s » dans votre espace de travail.',
+                $data['libelle'],
+            ),
+            'visualiser_fiche' => ($data['ambigu'] ?? false)
+                ? $this->formatCandidats($data)
+                : sprintf(
+                    'J\'ouvre la fiche « %s » (rubrique %s) dans votre colonne de visualisation.',
+                    $data['cible'],
+                    $data['libelle'],
+                ),
             'ouvrir_dialogue' => sprintf(
                 'J\'ouvre le formulaire %s de la rubrique « %s »%s. Vérifiez les informations puis enregistrez.',
                 ($data['mode'] ?? 'creation') === 'edition' ? 'd\'édition' : 'de création',
