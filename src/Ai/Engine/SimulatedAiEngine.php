@@ -111,14 +111,20 @@ final class SimulatedAiEngine implements AiEngineInterface
                 $data['count'] > 1 ? 's' : '',
                 $data['libelle'],
             ),
-            'indicateur_calcule' => sprintf(
-                'Pour le client « %s », l\'indicateur « %s » vaut actuellement %s %s (valeur calculée en temps réel).',
-                $data['client'],
-                $data['indicateur'],
-                number_format($data['valeur'], 2, ',', ' '),
-                $data['unite'],
-            ),
+            'indicateur_calcule' => ($data['ambigu'] ?? false)
+                ? $this->formatCandidats($data)
+                : sprintf(
+                    'Pour « %s », l\'indicateur « %s » vaut actuellement %s %s (valeur calculée en temps réel%s).',
+                    $data['cible'],
+                    $data['indicateur'],
+                    number_format($data['valeur'], 2, ',', ' '),
+                    $data['unite'],
+                    isset($data['du']) || isset($data['au'])
+                        ? sprintf(', période %s → %s', $data['du'] ?? '…', $data['au'] ?? '…')
+                        : '',
+                ),
             'rechercher_entites' => $this->formatListe($data),
+            'lire_fiche' => $this->formatFiche($data),
             'document_comptable' => $this->formatDocumentComptable($data),
             'consulter_guide' => sprintf(
                 "D'après la fiche « %s » :\n%s",
@@ -137,6 +143,43 @@ final class SimulatedAiEngine implements AiEngineInterface
                 $data,
             ))),
         };
+    }
+
+    /** Liste des candidats sur une cible ambiguë (partagé lire_fiche / indicateur_calcule). */
+    private function formatCandidats(array $data): string
+    {
+        $lignes = array_map(
+            static fn (array $c) => sprintf('- %s (id %d)', $c['libelle'], $c['id']),
+            $data['candidats'],
+        );
+
+        return sprintf(
+            "Plusieurs enregistrements de la rubrique « %s » correspondent — lequel voulez-vous ?\n%s",
+            $data['libelle'],
+            implode("\n", $lignes),
+        );
+    }
+
+    /** Restitution d'une fiche (lire_fiche) : candidats si ambigu, sinon attributs scalaires. */
+    private function formatFiche(array $data): string
+    {
+        if (($data['ambigu'] ?? false) === true) {
+            return $this->formatCandidats($data);
+        }
+
+        $lignes = [];
+        foreach ($data['fiche'] as $champ => $valeur) {
+            if (is_scalar($valeur)) {
+                $lignes[] = sprintf('- %s : %s', $champ, is_bool($valeur) ? ($valeur ? 'oui' : 'non') : (string) $valeur);
+            }
+        }
+
+        return sprintf(
+            "Fiche « %s » (rubrique %s) :\n%s",
+            $data['nom'],
+            $data['libelle'],
+            $lignes === [] ? '(aucun attribut renseigné)' : implode("\n", $lignes),
+        );
     }
 
     /**
