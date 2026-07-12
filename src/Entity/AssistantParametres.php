@@ -14,7 +14,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\HasLifecycleCallbacks]
 class AssistantParametres
 {
-    public const NOM_PAR_DEFAUT = 'Jess';
+    public const NOM_PAR_DEFAUT = 'Ket';
 
     #[ORM\Id]
     #[ORM\GeneratedValue]

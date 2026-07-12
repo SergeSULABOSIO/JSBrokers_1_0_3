@@ -1695,6 +1695,13 @@ export default class extends Controller {
         try { saved = JSON.parse(localStorage.getItem(storageKey) || 'null'); } catch { saved = null; }
         if (!saved?.sourceUrl || !saved?.tabKey) return;
 
+        // Feedback visuel : barre de progression globale pendant le re-fetch.
+        // Le yield (microtask) laisse connect() finir d'abonner les listeners
+        // app:loading.* AVANT le dispatch — même précaution que le circuit
+        // d'icônes (jamais de réponse dans la pile de la requête).
+        await Promise.resolve();
+        document.dispatchEvent(new CustomEvent('app:loading.start'));
+
         try {
             const response = await fetch(saved.sourceUrl);
             if (!response.ok) {
@@ -1713,6 +1720,8 @@ export default class extends Controller {
             });
         } catch (e) {
             console.warn('WorkspaceManager - restauration du panneau HTML impossible :', e);
+        } finally {
+            document.dispatchEvent(new CustomEvent('app:loading.stop'));
         }
     }
 
