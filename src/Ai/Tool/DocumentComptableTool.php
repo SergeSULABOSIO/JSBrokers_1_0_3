@@ -5,6 +5,7 @@ namespace App\Ai\Tool;
 use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
 use App\Comptabilite\CourtierEcritureComptableService;
+use App\Comptabilite\CourtierSuiviFiscalService;
 use App\Service\Workspace\WorkspaceAccessResolver;
 
 /**
@@ -36,11 +37,13 @@ final class DocumentComptableTool implements AiToolInterface
         'formation_resultat' => 'Formation du résultat (TFR)',
         'balance'            => 'Balance générale',
         'journal'            => 'Journal (totaux)',
+        'suivi_fiscal'       => 'Suivi fiscal (TVA et taxes)',
     ];
 
     public function __construct(
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly CourtierEcritureComptableService $comptabilite,
+        private readonly CourtierSuiviFiscalService $suiviFiscal,
     ) {
     }
 
@@ -84,6 +87,7 @@ final class DocumentComptableTool implements AiToolInterface
         $normalized = AiText::normalize($question);
 
         foreach ([
+            'suivi_fiscal'       => '/\btva\b|\bsuivi fiscal\b|\bfiscalite\b/',
             'formation_resultat' => '/\bformation du resultat\b|\btfr\b/',
             'bilan'              => '/\bbilan\b/',
             'balance'            => '/\bbalance\b/',
@@ -113,7 +117,30 @@ final class DocumentComptableTool implements AiToolInterface
 
         $exercices = $this->comptabilite->exercicesDisponibles($scope->entreprise);
         $exercice = (int) ($args['exercice'] ?? 0) ?: $exercices[0];
-        $docs = $this->comptabilite->documents($scope->entreprise, $exercice);
+
+        // Suivi fiscal : service dédié (même rubrique, même garde) — totaux annuels
+        // par redevable + détail des seuls mois mouvementés (compacité tokens).
+        if ($document === 'suivi_fiscal') {
+            $suivi = $this->suiviFiscal->suivi($scope->entreprise, $exercice);
+            $donnees = [
+                'tva' => [
+                    'totaux' => $suivi['assureur']['totaux'],
+                    'mois'   => array_values(array_filter(
+                        $suivi['assureur']['lignes'],
+                        static fn (array $l) => $l['collectee'] != 0.0 || $l['deductible'] != 0.0 || $l['reverse'] != 0.0,
+                    )),
+                ],
+                'taxeCourtier' => [
+                    'totaux' => $suivi['courtier']['totaux'],
+                    'mois'   => array_values(array_filter(
+                        $suivi['courtier']['lignes'],
+                        static fn (array $l) => $l['du'] != 0.0 || $l['paye'] != 0.0,
+                    )),
+                ],
+            ];
+        } else {
+            $donnees = $this->extraire($document, $this->comptabilite->documents($scope->entreprise, $exercice));
+        }
 
         return AiToolResult::ok([
             'document'  => $document,
@@ -121,7 +148,7 @@ final class DocumentComptableTool implements AiToolInterface
             'exercice'  => $exercice,
             'exercices' => $exercices,
             'monnaie'   => 'USD',
-            'donnees'   => $this->extraire($document, $docs),
+            'donnees'   => $donnees,
         ]);
     }
 

@@ -741,6 +741,87 @@ class AssistantIaWorkspaceTest extends WebTestCase
         $this->assertStringNotContainsString('0,00', $data['assistant']['contenu'], 'Aucun montant ne doit fuiter.');
     }
 
+    /** lire_fiche : le détail (attributs stockés) d'un enregistrement nommé. */
+    public function testLireFicheClient(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: true);
+        $this->seedClients($e, ['Client Alpha']);
+        $conversation = $this->makeConversation($e, $guest);
+
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $this->postMessage($e->getId(), $conversation->getId(), 'Donne-moi les détails du client Alpha');
+        $this->assertResponseIsSuccessful();
+        $data = $this->jsonResponse();
+
+        $this->assertFalse($data['assistant']['refus']);
+        $this->assertStringContainsString('Client Alpha', $data['assistant']['contenu']);
+        $this->assertStringContainsString('Fiche', $data['assistant']['contenu']);
+
+        $meta = $this->em()->getRepository(AssistantMessage::class)
+            ->findOneBy(['role' => AssistantMessage::ROLE_ASSISTANT], ['id' => 'DESC'])
+            ->getMeta();
+        $this->assertSame('lire_fiche', $meta['tool']);
+    }
+
+    /** lire_fiche : un nom ambigu rend les candidats (id + libellé), sans fiche. */
+    public function testLireFicheAmbigueProposeLesCandidats(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: true);
+        $this->seedClients($e, ['Client Alpha', 'Client Beta', 'Client Gamma']);
+        $conversation = $this->makeConversation($e, $guest);
+
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $this->postMessage($e->getId(), $conversation->getId(), 'Donne-moi les détails du client Client');
+        $this->assertResponseIsSuccessful();
+        $data = $this->jsonResponse();
+
+        $this->assertFalse($data['assistant']['refus']);
+        $this->assertStringContainsString('lequel', $data['assistant']['contenu']);
+        $this->assertStringContainsString('Client Beta', $data['assistant']['contenu']);
+    }
+
+    /** indicateur_calcule généralisé : les totaux du CABINET (niveau Entreprise). */
+    public function testIndicateurEntreprise(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $owner);
+
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+        $this->postMessage($e->getId(), $conversation->getId(), 'Quelle est la prime totale de l\'entreprise ?');
+        $this->assertResponseIsSuccessful();
+        $data = $this->jsonResponse();
+
+        $this->assertFalse($data['assistant']['refus']);
+        $this->assertStringContainsString('Prime Totale', $data['assistant']['contenu']);
+        $this->assertStringContainsString(self::ENTREPRISE_NOM, $data['assistant']['contenu']);
+        $this->assertStringContainsString('0,00', $data['assistant']['contenu']);
+
+        $meta = $this->em()->getRepository(AssistantMessage::class)
+            ->findOneBy(['role' => AssistantMessage::ROLE_ASSISTANT], ['id' => 'DESC'])
+            ->getMeta();
+        $this->assertSame('indicateur_calcule', $meta['tool']);
+    }
+
+    /** Suivi fiscal (TVA) : 7e document de document_comptable, même garde Finances. */
+    public function testSuiviFiscalTva(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $owner);
+
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+        $this->postMessage($e->getId(), $conversation->getId(), 'Où en est la TVA ?');
+        $this->assertResponseIsSuccessful();
+        $data = $this->jsonResponse();
+
+        $this->assertFalse($data['assistant']['refus']);
+        $this->assertStringContainsString('Suivi fiscal', $data['assistant']['contenu']);
+
+        $meta = $this->em()->getRepository(AssistantMessage::class)
+            ->findOneBy(['role' => AssistantMessage::ROLE_ASSISTANT], ['id' => 'DESC'])
+            ->getMeta();
+        $this->assertSame('document_comptable', $meta['tool']);
+    }
+
     public function testIndicateurCalculeClient(): void
     {
         ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: true);
