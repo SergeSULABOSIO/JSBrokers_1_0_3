@@ -217,6 +217,51 @@
     .pp-feature--off { color: #6c757d; }                 /* non inclus : neutre (pas d'alarme rouge) */
     .pp-feature--off .pp-feature__icon { color: #adb5bd; }
     .pp-value { font-weight: 700; color: #0047AB; }        /* valeur quantitative mise en avant */
+    /* Assistant IA : l'argument premium des paquets — pastille cobalt-subtile en tête. */
+    .pp-feature--ia {
+        font-weight: 700; color: #0047AB;
+        background: #e8f0fb; border-radius: 8px; padding: .55rem .6rem;
+    }
+
+    /* ── Assistant IA (hero + bloc feature) ─────────────────────────────────── */
+    /* Badge du hero : lien-ancre vers le bloc IA (fond translucide sur cobalt). */
+    .public-hero__flag {
+        display: inline-flex; align-items: center; gap: .45rem;
+        font-size: .85rem; font-weight: 700; letter-spacing: .02em;
+        color: #ffffff; text-decoration: none;
+        background: rgba(255, 255, 255, 0.14); border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 999px; padding: .4rem .95rem; margin-bottom: 1.1rem;
+    }
+    .public-hero__flag:hover { background: rgba(255, 255, 255, 0.24); color: #ffffff; }
+    .public-hero__flag:focus-visible { outline: 2px solid #ffffff; outline-offset: 2px; }
+
+    /* Surtitre « Nouveau » du bloc feature IA (sur fond cobalt). */
+    .feature-row__flag {
+        display: inline-flex; align-items: center; gap: .4rem;
+        font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+        color: #ffffff; background: rgba(255, 255, 255, 0.16);
+        border-radius: 999px; padding: .3rem .7rem; margin: 0 0 .75rem;
+    }
+
+    /* Démonstration de chat (remplace l'image du bloc) : carte blanche, bulles
+       assistant/utilisateur — mêmes codes visuels que le vrai chat du workspace. */
+    .ia-demo {
+        background: #ffffff; border: 1px solid #dee2e6; border-radius: 14px;
+        padding: 1rem 1.1rem; width: 100%; max-width: 420px;
+        display: flex; flex-direction: column; gap: .6rem;
+        box-shadow: 0 12px 34px rgba(0, 0, 0, 0.18);
+    }
+    .ia-demo__head {
+        display: flex; align-items: center; gap: .45rem; margin: 0 0 .2rem;
+        font-size: .8rem; font-weight: 700; color: #0047AB;
+        text-transform: uppercase; letter-spacing: .04em;
+    }
+    .ia-demo__msg {
+        margin: 0; padding: .55rem .8rem; border-radius: 12px;
+        font-size: .875rem; line-height: 1.45; color: #212529; max-width: 92%;
+    }
+    .ia-demo__msg--user { align-self: flex-end; background: #e8f0fb; border-top-right-radius: 4px; }
+    .ia-demo__msg--bot { align-self: flex-start; background: #f8f9fa; border: 1px solid #dee2e6; border-top-left-radius: 4px; }
 
     /* Pied : bouton d'appel à l'action (zone cliquable ≥ 48px, WCAG 2.5.5). */
     .pp-foot { padding: 1.25rem 1.5rem 1.5rem; margin-top: auto; }

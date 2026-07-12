@@ -10,6 +10,11 @@
     </header>
 
     <ul class="pp-features">
+        {# Assistant IA : non inclus dans l'offre gratuite — réservé aux paquets payants. #}
+        <li class="pp-feature pp-feature--off">
+            {{ ux_icon('mdi:minus-circle-outline', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
+            <span>{{ "security_pricing_basic_option_ia" | trans }}</span>
+        </li>
         <li class="pp-feature pp-feature--off">
             {{ ux_icon('mdi:minus-circle-outline', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
             <span>{{ "security_pricing_basic_option_assistance" | trans }}</span>

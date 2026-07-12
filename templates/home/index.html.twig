@@ -36,6 +36,11 @@
     {# ---------- Hero ---------- #}
     <section class="public-hero">
         <div class="public-hero__inner">
+            {# Badge « Nouveau » : l'assistant IA, l'argument différenciant — ancre vers son bloc. #}
+            <a href="#feature-ia" class="public-hero__flag" data-controller="ripple">
+                {{ ux_icon(resolve_icon_name('assistant-ia'), {height: '16px', width: '16px', 'aria-hidden': 'true'}) }}
+                <span>{{ "security_hero_ia_badge" | trans }}</span>
+            </a>
             <h1>{{ "security_Work_faster_and_efficiently" | trans }}</h1>
             <p class="public-hero__lead">{{ "security_Work_faster__description" | trans | raw }}</p>
             <div class="public-hero__actions">
@@ -76,6 +81,45 @@
         <div class="public-section__head">
             <h2>{{ "security_some_key_fitures" | trans }}</h2>
             <p>{{ "security_some_key_fitures_description" | trans | raw }}</p>
+        </div>
+
+        {# Bloc 0 — ASSISTANT IA (cobalt, en tête : la valeur ajoutée différenciante).
+           Variante --ia : HORS de l'alternance cobalt/clair des blocs historiques.
+           Pas d'image : une démonstration de chat en HTML/CSS pur, plus parlante. #}
+        <div class="feature-row feature-row--cobalt feature-row--ia" id="feature-ia">
+            <div class="feature-row__body">
+                <p class="feature-row__flag">
+                    {{ ux_icon(resolve_icon_name('assistant-ia'), {height: '14px', width: '14px', 'aria-hidden': 'true'}) }}
+                    {{ "security_fitures_ia_badge" | trans }}
+                </p>
+                <h3 class="feature-row__title">
+                    {{ ux_icon(resolve_icon_name('assistant-ia'), {height: '22px', width: '22px'}) }}
+                    {{ "security_fitures_ia" | trans }}
+                </h3>
+                <p class="feature-row__desc">{{ "security_fitures_ia_description" | trans | raw }}</p>
+                <p class="feature-row__intro">{{ "security_fitures_to_achieve_this" | trans }}</p>
+                <ul class="feature-row__list">
+                    <li>{{ "security_fitures_ia_ask" | trans }}</li>
+                    <li>{{ "security_fitures_ia_indicators" | trans }}</li>
+                    <li>{{ "security_fitures_ia_compta" | trans }}</li>
+                    <li>{{ "security_fitures_ia_actions" | trans }}</li>
+                    <li>{{ "security_fitures_ia_guides" | trans }}</li>
+                    <li>{{ "security_fitures_ia_perimetre" | trans }}</li>
+                </ul>
+            </div>
+            <div class="feature-row__media">
+                {# Démonstration visuelle : un échange type avec l'assistant. #}
+                <div class="ia-demo" role="img" aria-label="{{ 'security_fitures_ia' | trans }}">
+                    <p class="ia-demo__head">
+                        {{ ux_icon(resolve_icon_name('assistant-ia'), {height: '16px', width: '16px', 'aria-hidden': 'true'}) }}
+                        <span>{{ "security_fitures_ia_demo_title" | trans }}</span>
+                    </p>
+                    <p class="ia-demo__msg ia-demo__msg--user">{{ "security_fitures_ia_demo_q" | trans }}</p>
+                    <p class="ia-demo__msg ia-demo__msg--bot">{{ "security_fitures_ia_demo_a" | trans }}</p>
+                    <p class="ia-demo__msg ia-demo__msg--user">{{ "security_fitures_ia_demo_q2" | trans }}</p>
+                    <p class="ia-demo__msg ia-demo__msg--bot">{{ "security_fitures_ia_demo_a2" | trans }}</p>
+                </div>
+            </div>
         </div>
 
         {# Bloc 1 — Marketing & CRM + Production (cobalt) #}
