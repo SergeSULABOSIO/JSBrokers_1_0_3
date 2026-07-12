@@ -65,6 +65,19 @@ class TokenAccountService
         return $this->getBalance($owner)['nextRenewalAt'];
     }
 
+    /**
+     * Le compte de l'entreprise est-il « payant » ? = son PROPRIÉTAIRE dispose
+     * d'un solde de tokens PRÉPAYÉS strictement positif. Gouverne l'accès aux
+     * fonctionnalités premium (assistant IA) : l'allocation gratuite ne suffit
+     * pas — et un solde payant épuisé referme l'accès jusqu'à la recharge.
+     */
+    public function estComptePayant(Entreprise $entreprise): bool
+    {
+        $owner = $entreprise->getUtilisateur();
+
+        return $owner instanceof Utilisateur && $owner->getPaidTokens() > 0;
+    }
+
     /** Le propriétaire peut-il couvrir un coût donné ? (renouvellement pris en compte) */
     public function canAfford(Utilisateur $owner, int $cost): bool
     {
