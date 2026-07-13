@@ -83,10 +83,11 @@
             <p>{{ "security_some_key_fitures_description" | trans | raw }}</p>
         </div>
 
-        {# Bloc 0 — ASSISTANT IA (cobalt, en tête : la valeur ajoutée différenciante).
-           Variante --ia : HORS de l'alternance cobalt/clair des blocs historiques.
+        {# Bloc 0 — ASSISTANT IA (clair, en tête : la valeur ajoutée différenciante).
+           Même pattern que « Sinistres » : carte claire, média à gauche — l'alternance
+           de la section place les blocs impairs sur fond blanc, les pairs sur cobalt.
            Pas d'image : une démonstration de chat en HTML/CSS pur, plus parlante. #}
-        <div class="feature-row feature-row--cobalt feature-row--ia" id="feature-ia">
+        <div class="feature-row feature-row--light feature-row--reverse feature-row--ia" id="feature-ia">
             <div class="feature-row__body">
                 <p class="feature-row__flag">
                     {{ ux_icon(resolve_icon_name('assistant-ia'), {height: '14px', width: '14px', 'aria-hidden': 'true'}) }}

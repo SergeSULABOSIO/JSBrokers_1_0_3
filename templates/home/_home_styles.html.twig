@@ -235,21 +235,23 @@
     .public-hero__flag:hover { background: rgba(255, 255, 255, 0.24); color: #ffffff; }
     .public-hero__flag:focus-visible { outline: 2px solid #ffffff; outline-offset: 2px; }
 
-    /* Surtitre « Nouveau » du bloc feature IA (sur fond cobalt). */
+    /* Surtitre « Nouveau » du bloc feature IA (sur carte claire) : cobalt sur
+       pastille cobalt très clair, mêmes codes que les ✓ des listes claires. */
     .feature-row__flag {
         display: inline-flex; align-items: center; gap: .4rem;
         font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
-        color: #ffffff; background: rgba(255, 255, 255, 0.16);
+        color: #0047AB; background: #e8f0fb;
         border-radius: 999px; padding: .3rem .7rem; margin: 0 0 .75rem;
     }
 
     /* Démonstration de chat (remplace l'image du bloc) : carte blanche, bulles
-       assistant/utilisateur — mêmes codes visuels que le vrai chat du workspace. */
+       assistant/utilisateur — mêmes codes visuels que le vrai chat du workspace.
+       Centrée dans sa colonne ; ombre cobalt douce, adaptée à la carte claire. */
     .ia-demo {
         background: #ffffff; border: 1px solid #dee2e6; border-radius: 14px;
-        padding: 1rem 1.1rem; width: 100%; max-width: 420px;
+        padding: 1rem 1.1rem; width: 100%; max-width: 420px; margin-inline: auto;
         display: flex; flex-direction: column; gap: .6rem;
-        box-shadow: 0 12px 34px rgba(0, 0, 0, 0.18);
+        box-shadow: 0 8px 24px rgba(0, 71, 171, 0.10);
     }
     .ia-demo__head {
         display: flex; align-items: center; gap: .45rem; margin: 0 0 .2rem;
