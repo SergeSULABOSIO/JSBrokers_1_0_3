@@ -42,6 +42,32 @@ export default class extends Controller {
         // Annonce silencieuse de l'état du contexte (badges « déjà en
         // contexte » des listes) — les puces initiales sont rendues serveur.
         this.emitContexteOperation({ phase: 'announce', objets: this.contexteObjets() });
+
+        // Infobulle sombre des puces de contexte (pattern du bloc Pistes du
+        // tableau de bord : élément flottant au <body>, suit le curseur).
+        // Délégation sur la barre de contexte : survit aux re-rendus innerHTML.
+        this._ctxTip = null;
+        this._ctxTipActive = false;
+        this._onCtxTipOver = this._ctxTipOver.bind(this);
+        this._onCtxTipOut = this._ctxTipOut.bind(this);
+        this._onCtxTipMove = this._ctxTipMove.bind(this);
+        if (this.hasContextBarTarget) {
+            this.contextBarTarget.addEventListener('mouseover', this._onCtxTipOver);
+            this.contextBarTarget.addEventListener('mouseout', this._onCtxTipOut);
+            document.addEventListener('mousemove', this._onCtxTipMove);
+        }
+    }
+
+    disconnect() {
+        if (this.hasContextBarTarget) {
+            this.contextBarTarget.removeEventListener('mouseover', this._onCtxTipOver);
+            this.contextBarTarget.removeEventListener('mouseout', this._onCtxTipOut);
+        }
+        document.removeEventListener('mousemove', this._onCtxTipMove);
+        if (this._ctxTip) {
+            this._ctxTip.remove();
+            this._ctxTip = null;
+        }
     }
 
     /**
@@ -394,6 +420,101 @@ export default class extends Controller {
             type: chip.dataset.entityType,
             id: parseInt(chip.dataset.entityId, 10),
         })).filter((o) => o.type && Number.isInteger(o.id));
+    }
+
+    // ── Infobulle sombre des puces (pattern data-piste-tip du tableau de bord) ──
+
+    _ctxTipOver(event) {
+        const chip = event.target.closest ? event.target.closest('[data-ctx-tip]') : null;
+        if (!chip || event.target.closest('.aic-chip-remove')) return;
+        const tip = this._ctxTipCreate();
+        this._ctxTipBuild(tip, chip);
+        tip.style.display = 'block';
+        this._ctxTipActive = true;
+    }
+
+    _ctxTipOut(event) {
+        const chip = event.target.closest ? event.target.closest('[data-ctx-tip]') : null;
+        if (chip && !chip.contains(event.relatedTarget)) {
+            if (this._ctxTip) this._ctxTip.style.display = 'none';
+            this._ctxTipActive = false;
+        }
+    }
+
+    /** Suit le curseur : au-dessus à gauche, repli sous/à droite près des bords. */
+    _ctxTipMove(event) {
+        if (!this._ctxTipActive || !this._ctxTip) return;
+        const tip = this._ctxTip;
+        const offset = 10;
+        let left = event.clientX - tip.offsetWidth - offset;
+        let top = event.clientY - tip.offsetHeight - offset;
+        if (left < 8) left = event.clientX + offset;
+        if (top < 8) top = event.clientY + offset;
+        tip.style.left = `${left}px`;
+        tip.style.top = `${top}px`;
+    }
+
+    _ctxTipCreate() {
+        if (this._ctxTip) return this._ctxTip;
+        const tip = document.createElement('div');
+        tip.className = 'jsb-ctx-tip';
+        tip.setAttribute('role', 'tooltip');
+        document.body.appendChild(tip);
+        this._ctxTip = tip;
+        return tip;
+    }
+
+    /**
+     * Contenu : la fiche EXACTE capturée par l'assistant (posée en data-ctx-fiche
+     * par le partial serveur), rendue en tableau sombre — construction DOM via
+     * textContent (échappement garanti). Sans fiche : objet supprimé/hors périmètre.
+     */
+    _ctxTipBuild(tip, chip) {
+        tip.textContent = '';
+        const table = document.createElement('table');
+
+        const addRow = (cells, classes = []) => {
+            const tr = document.createElement('tr');
+            cells.forEach(({ text, colspan, className }) => {
+                const td = document.createElement('td');
+                td.textContent = text;
+                if (colspan) td.setAttribute('colspan', String(colspan));
+                if (className) td.className = className;
+                tr.appendChild(td);
+            });
+            table.appendChild(tr);
+        };
+
+        addRow([{ text: chip.dataset.ctxTypeLabel || chip.dataset.entityType || 'Objet', colspan: 2, className: 'tip-section' }]);
+        addRow([{ text: 'Nom' }, { text: chip.dataset.ctxLabel || '—' }]);
+
+        let fiche = null;
+        try {
+            fiche = JSON.parse(chip.dataset.ctxFiche || 'null');
+        } catch { /* fiche illisible : traitée comme absente */ }
+
+        if (fiche && typeof fiche === 'object') {
+            addRow([{ text: 'Fiche capturée par l\'assistant', colspan: 2, className: 'tip-section' }]);
+            for (const [cle, valeur] of Object.entries(fiche)) {
+                addRow([{ text: cle }, { text: this._ctxTipFormat(valeur) }]);
+            }
+        } else {
+            addRow([{ text: 'Détails indisponibles (objet supprimé ou hors de votre périmètre).', colspan: 2, className: 'tip-libelle' }]);
+        }
+
+        tip.appendChild(table);
+    }
+
+    /** Valeur de fiche lisible : booléens en clair, structures résumées, textes bornés. */
+    _ctxTipFormat(valeur) {
+        if (valeur === null || valeur === undefined || valeur === '') return '—';
+        if (typeof valeur === 'boolean') return valeur ? 'Oui' : 'Non';
+        if (Array.isArray(valeur)) return `${valeur.length} élément(s)`;
+        if (typeof valeur === 'object') {
+            return String(valeur.nom ?? valeur.libelle ?? valeur.titre ?? valeur.id ?? '—');
+        }
+        const texte = String(valeur);
+        return texte.length > 120 ? `${texte.slice(0, 120)}…` : texte;
     }
 
     /** Émet le cycle de feedback contexte vers le cerveau (médiateur). */

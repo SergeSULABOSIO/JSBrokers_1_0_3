@@ -181,11 +181,12 @@ class AssistantIaController extends AbstractController
         $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
 
         return $this->render('components/_assistant_ia_chat.html.twig', [
-            'conversation'  => $conversation,
-            'assistantNom'  => $this->parametresRepository->nomPour($entreprise),
-            'entreprise'    => $entreprise,
-            'idEntreprise'  => $idEntreprise,
-            'idInvite'      => $invite->getId(),
+            'conversation'    => $conversation,
+            'assistantNom'    => $this->parametresRepository->nomPour($entreprise),
+            'entreprise'      => $entreprise,
+            'idEntreprise'    => $idEntreprise,
+            'idInvite'        => $invite->getId(),
+            'fichesContextes' => $this->fichesContextes($conversation),
         ]);
     }
 
@@ -502,10 +503,31 @@ class AssistantIaController extends AbstractController
                 $conversation->getContextes()->toArray(),
             )),
             'html'    => $this->renderView('components/_assistant_ia_chat_contextes.html.twig', [
-                'conversation' => $conversation,
+                'conversation'    => $conversation,
+                'fichesContextes' => $this->fichesContextes($conversation),
             ]),
             'ignores' => $ignores,
         ]);
+    }
+
+    /**
+     * Fiches des objets attachés, indexées « Type#id » pour les infobulles des
+     * puces : EXACTEMENT ce que l'assistant capture dans son contexte (même
+     * source que le prompt — AiContextBuilder, re-validation fail-closed).
+     * Un objet devenu introuvable/inaccessible n'a simplement pas de fiche.
+     */
+    private function fichesContextes(AssistantConversation $conversation): array
+    {
+        $fiches = [];
+        foreach ($this->contextBuilder->objetsAttaches(
+            $conversation,
+            $conversation->getEntreprise(),
+            $conversation->getInvite(),
+        ) as $objet) {
+            $fiches[$objet['type'] . '#' . $objet['id']] = $objet['fiche'];
+        }
+
+        return $fiches;
     }
 
     /**

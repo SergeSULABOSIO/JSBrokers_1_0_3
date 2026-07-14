@@ -548,6 +548,10 @@ class AssistantIaContexteTest extends WebTestCase
         $this->assertStringContainsString('aic-chip', $content);
         $this->assertStringContainsString('Chip Alpha', $content);
         $this->assertStringContainsString('1 objet en contexte', $content);
+        // Infobulle : la fiche capturée par l'assistant est embarquée sur la
+        // puce (data-ctx-fiche, même source que le prompt).
+        $this->assertStringContainsString('data-ctx-fiche', $content);
+        $this->assertStringContainsString('data-ctx-tip', $content);
     }
 
     public function testEnvoiMessageAvecEtSansContexte(): void

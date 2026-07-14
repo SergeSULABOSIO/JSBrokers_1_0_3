@@ -66,8 +66,10 @@ class AiContextBuilder
      * entreprise) : un objet supprimé ou devenu inaccessible est ignoré
      * silencieusement — la puce reste affichée côté chat, l'assistant dira
      * simplement qu'il ne trouve pas la donnée.
+     * PUBLIC : également source des infobulles des puces de contexte du chat
+     * (l'utilisateur voit EXACTEMENT ce que l'assistant capture).
      */
-    private function objetsAttaches(AssistantConversation $conversation, Entreprise $entreprise, Invite $invite): array
+    public function objetsAttaches(AssistantConversation $conversation, Entreprise $entreprise, Invite $invite): array
     {
         $labels = $this->accessResolver->libellesEntites();
         $objets = [];
