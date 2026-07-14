@@ -54,6 +54,7 @@ Quand l'activité du courtier grandit, il recharge son compte avec des **paquets
 
 - tokens **cumulables et sans expiration** ;
 - les tokens payés sont consommés en priorité sur le quota gratuit ;
+- accès à l'**Assistant IA** (fonctionnalité premium, réservée aux comptes disposant d'un solde payant — voir section 3.7) ;
 - assistance technique personnalisée incluse ;
 - **coupons de réduction** applicables à l'achat, avec promotions affichées publiquement sur la page tarifs ;
 - paiement en ligne par carte, **facture PDF** générée automatiquement, numérotée séquentiellement, jointe par e-mail et téléchargeable à tout moment ;
@@ -71,7 +72,7 @@ Quand l'activité du courtier grandit, il recharge son compte avec des **paquets
 
 Le Workspace est **le produit que nous vendons**. Chaque utilisateur peut y créer une ou plusieurs **entreprises** (ses cabinets) ; chaque entreprise dispose de son propre espace de travail avec un **tableau de bord** central et un menu organisé par domaines métier. La navigation se fait par onglets : le courtier ouvre en parallèle un client, une piste et un bordereau, comme il ouvrirait plusieurs dossiers sur son bureau.
 
-Le menu du Workspace reflète les cinq grands domaines de l'activité d'un cabinet, plus la comptabilité du cabinet lui-même.
+Le menu du Workspace reflète les cinq grands domaines de l'activité d'un cabinet, plus la comptabilité du cabinet lui-même et un groupe **IA** dédié à l'assistant conversationnel.
 
 ### 3.1 Marketing & CRM — de la piste au client
 
@@ -136,7 +137,26 @@ C'est un différenciateur majeur : le Workspace inclut une comptabilité conform
 
 Le courtier n'a plus besoin d'un outil comptable séparé pour les obligations courantes de son cabinet.
 
-### 3.7 L'expérience utilisateur
+### 3.7 L'Assistant IA — un collaborateur numérique dans le cabinet
+
+*« Posez votre question, l'assistant connaît votre portefeuille. »*
+
+Fonctionnalité **premium** (réservée aux comptes disposant d'un solde de tokens payant), l'Assistant IA est un agent conversationnel intégré au Workspace, que chaque cabinet peut **nommer à son goût**. Il répond en langage naturel à partir des **données réelles** de l'entreprise — jamais d'invention : chaque réponse passe par des outils internes qui interrogent la plateforme.
+
+Ce qu'il sait faire :
+
+- **Consulter** : compter, lister et rechercher les enregistrements ; lire la fiche complète d'un client, d'un avenant… ; suivre les **relations entre les fiches**, même à plusieurs niveaux (« les tâches de cette piste », « les avenants de ce client ») ;
+- **Analyser** : indicateurs calculés (primes, commissions, sinistralité) par fiche ou pour tout le cabinet, états comptables OHADA en direct, **vigie des échéances** (renouvellements, tâches en retard) et **revues de portefeuille** (meilleurs assureurs, clients, risques, production mensuelle) ;
+- **Agir, sans jamais écrire à la place de l'utilisateur** : ouvrir une rubrique ou une fiche à l'écran, préparer un **formulaire pré-rempli** avec les valeurs dictées (c'est l'utilisateur qui vérifie et enregistre), lancer un export Excel/PDF, préparer l'envoi d'un relevé de compte (SOA) à un client.
+
+Deux garde-fous structurants :
+
+- **Le périmètre d'accès est inviolable** : l'assistant ne voit que ce que son interlocuteur a le droit de voir. Un collaborateur limité à la Production n'obtiendra jamais un chiffre de trésorerie par ce biais — l'assistant refuse poliment.
+- **La consommation est métrée** : chaque message consomme des tokens, comme le reste de la plateforme.
+
+**Le contexte de conversation enrichi** : depuis n'importe quelle liste du Workspace, le courtier sélectionne un ou plusieurs objets (clients, pistes, notes…) et les **attache au chat** en un clic (barre d'outils ou clic droit). Les objets attachés apparaissent en puces au-dessus de la zone de saisie — le survol d'une puce révèle **exactement la fiche que l'assistant a capturée** —, un badge signale dans les listes les objets déjà en contexte, et l'assistant s'appuie en priorité sur ces fiches pour répondre. Chaque objet attaché est facturé une fois, à 80 % du prix d'un message.
+
+### 3.8 L'expérience utilisateur
 
 Le Workspace est une application web moderne : formulaires contextuels en dialogues superposables, champs à autocomplétion, sélecteurs dédiés (affectation de clients à un portefeuille en quelques clics), notifications, e-mails à l'identité visuelle JS Brokers, et interface **bilingue français / anglais**. L'ensemble respecte une charte graphique unifiée autour du bleu cobalt JS Brokers (détaillée en annexe, section 8).
 
@@ -217,7 +237,8 @@ Le troisième maillon est le site public, conçu pour qu'un courtier passe de la
 3. **Un freemium sans risque.** Le courtier essaie tout, gratuitement ; il ne paie que ce qu'il consomme. L'adoption ne demande ni engagement ni négociation commerciale.
 4. **La collaboration à périmètre maîtrisé.** Un cabinet peut faire entrer toute son équipe dans l'outil en gardant un contrôle fin de qui voit et fait quoi — condition indispensable dans un métier où la confidentialité du portefeuille est stratégique.
 5. **Une seule plateforme pour tout le cycle.** Prospection, production, sinistres, facturation, comptabilité, fiscalité : le courtier n'a plus à faire dialoguer cinq outils.
-6. **Une entreprise pilotée par sa propre Console.** Nous appliquons à nous-mêmes ce que nous vendons : mesure, rigueur comptable et relation client outillée.
+6. **Un assistant IA qui connaît le portefeuille — et respecte les droits.** Un agent conversationnel branché sur les données réelles du cabinet, capable d'analyser, de naviguer et de préparer des actions, sans jamais franchir le périmètre d'accès de son interlocuteur ni écrire à sa place.
+7. **Une entreprise pilotée par sa propre Console.** Nous appliquons à nous-mêmes ce que nous vendons : mesure, rigueur comptable et relation client outillée.
 
 ---
 
@@ -239,6 +260,7 @@ Pour les collaborateurs qui ne viennent pas du monde de l'assurance :
 | **OHADA** | Organisation pour l'Harmonisation en Afrique du Droit des Affaires — son référentiel comptable s'impose aux entreprises de 17 pays africains. |
 | **TFR / TFT** | Tableau de Formation du Résultat / Tableau des Flux de Trésorerie — deux états comptables OHADA. |
 | **Token** | L'unité de consommation de la plateforme JS Brokers : chaque action en consomme quelques-uns. |
+| **Assistant IA** | L'agent conversationnel intégré au Workspace (fonctionnalité premium) : il répond sur les données réelles du cabinet, dans les limites du périmètre d'accès de chacun. |
 | **Workspace** | L'espace de travail d'un cabinet de courtage sur JS Brokers. |
 | **Console** | L'espace interne de pilotage réservé à l'équipe JS Brokers. |
 
