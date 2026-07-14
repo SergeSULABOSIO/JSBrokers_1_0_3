@@ -3725,19 +3725,23 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 #db-bord-tip .tip-section:first-child { border-top: none; padding-top: 3px; }
 #db-bord-tip .tip-statut { font-weight: 600; }
 
-#db-piste-tip {
+/* Infobulle sombre partagée : bloc Pistes du tableau de bord (#db-piste-tip)
+   et puces de contexte du chat IA (.jsb-ctx-tip) — MÊME rendu, même pattern
+   (élément flottant au <body>, suit le curseur). */
+#db-piste-tip,
+.jsb-ctx-tip {
     position: fixed; z-index: 9999; pointer-events: none; display: none;
     background: #1e2227; color: #e9ecef; border-radius: 6px;
     font-size: .72rem; padding: 6px 0; min-width: 200px; max-width: 280px;
     box-shadow: 0 4px 16px rgba(0,0,0,.35);
 }
-#db-piste-tip table { width: 100%; border-collapse: collapse; }
-#db-piste-tip td { padding: 3px 10px; vertical-align: top; overflow-wrap: anywhere; }
-#db-piste-tip td:first-child:not([colspan]) { color: #adb5bd; white-space: nowrap; padding-right: 6px; }
-#db-piste-tip .tip-section { color: #0d6efd; font-weight: 600; padding-top: 6px; padding-bottom: 2px; border-top: 1px solid #3d4349; font-size: .68rem; letter-spacing: .03em; text-transform: uppercase; }
-#db-piste-tip .tip-section:first-child { border-top: none; padding-top: 3px; }
-#db-piste-tip .tip-risque { color: #fbbf24; }
-#db-piste-tip .tip-libelle { color: #9ca3af; font-style: italic; font-size: .68rem; padding-top: 1px; padding-bottom: 3px; }
+#db-piste-tip table, .jsb-ctx-tip table { width: 100%; border-collapse: collapse; }
+#db-piste-tip td, .jsb-ctx-tip td { padding: 3px 10px; vertical-align: top; overflow-wrap: anywhere; }
+#db-piste-tip td:first-child:not([colspan]), .jsb-ctx-tip td:first-child:not([colspan]) { color: #adb5bd; white-space: nowrap; padding-right: 6px; }
+#db-piste-tip .tip-section, .jsb-ctx-tip .tip-section { color: #0d6efd; font-weight: 600; padding-top: 6px; padding-bottom: 2px; border-top: 1px solid #3d4349; font-size: .68rem; letter-spacing: .03em; text-transform: uppercase; }
+#db-piste-tip .tip-section:first-child, .jsb-ctx-tip .tip-section:first-child { border-top: none; padding-top: 3px; }
+#db-piste-tip .tip-risque, .jsb-ctx-tip .tip-risque { color: #fbbf24; }
+#db-piste-tip .tip-libelle, .jsb-ctx-tip .tip-libelle { color: #9ca3af; font-style: italic; font-size: .68rem; padding-top: 1px; padding-bottom: 3px; }
 
 /* ── Blocs details collapsibles (top listes) ── */
 .db-block-details > summary { list-style:none; cursor:pointer; border-radius:.375rem .375rem 0 0; transition: background .15s ease; }

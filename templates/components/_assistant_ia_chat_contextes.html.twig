@@ -20,10 +20,18 @@
     </div>
     <ul class="aic-context-chips" aria-label="Objets attachés à la conversation">
         {% for ctx in conversation.contextes %}
+            {# Fiche capturée par l'assistant (même source que le prompt) : porte
+               l'infobulle sombre au survol — pattern du bloc Pistes du tableau
+               de bord (suit le curseur). Pas de `title` natif : il doublerait
+               l'infobulle. Fiche absente = objet supprimé / hors périmètre. #}
+            {% set fiche = fichesContextes[ctx.entityType ~ '#' ~ ctx.entityId]|default(null) %}
             <li class="aic-chip"
                 data-entity-type="{{ ctx.entityType }}"
                 data-entity-id="{{ ctx.entityId }}"
-                title="{{ token_entite_label('App\\Entity\\' ~ ctx.entityType) }} : {{ ctx.label }}">
+                data-ctx-tip
+                data-ctx-type-label="{{ token_entite_label('App\\Entity\\' ~ ctx.entityType) }}"
+                data-ctx-label="{{ ctx.label }}"
+                {% if fiche is not null %}data-ctx-fiche="{{ fiche|json_encode|e('html_attr') }}"{% endif %}>
                 <span class="aic-chip-icon" aria-hidden="true">
                     {{ ux_icon(resolve_icon_name(token_entite_icon('App\\Entity\\' ~ ctx.entityType)), {height: '13px', width: '13px'}) }}
                 </span>
