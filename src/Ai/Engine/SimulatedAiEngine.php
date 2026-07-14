@@ -145,17 +145,130 @@ final class SimulatedAiEngine implements AiEngineInterface
                     $data['libelle'],
                 ),
             'ouvrir_dialogue' => sprintf(
-                'J\'ouvre le formulaire %s de la rubrique « %s »%s. Vérifiez les informations puis enregistrez.',
+                'J\'ouvre le formulaire %s de la rubrique « %s »%s%s. Vérifiez les informations puis enregistrez.',
                 ($data['mode'] ?? 'creation') === 'edition' ? 'd\'édition' : 'de création',
                 $data['libelle'],
                 isset($data['cible']) ? sprintf(' pour « %s »', $data['cible']) : '',
+                isset($data['precharge']) ? sprintf(', pré-rempli (%s)', implode(', ', $data['precharge'])) : '',
             ),
+            'vigie_echeances' => $this->formatVigie($data),
+            'analyse_portefeuille' => $this->formatAnalysePortefeuille($data),
+            'exporter_etat' => sprintf(
+                'Je lance le téléchargement : %s%s — il s\'ouvre dans un nouvel onglet.',
+                $data['libelle'],
+                isset($data['cible']) ? sprintf(' pour « %s »', $data['cible']) : '',
+            ),
+            'preparer_envoi_soa' => ($data['ambigu'] ?? false)
+                ? $this->formatCandidats($data)
+                : sprintf(
+                    'J\'ouvre la boîte d\'envoi du relevé de compte de « %s » : choisissez le '
+                    . 'destinataire et confirmez vous-même l\'envoi.',
+                    $data['client'],
+                ),
             default => trim(implode(' · ', array_map(
                 fn ($k, $v) => sprintf('%s : %s', $k, is_scalar($v) ? (string) $v : json_encode($v, JSON_UNESCAPED_UNICODE)),
                 array_keys($data),
                 $data,
             ))),
         };
+    }
+
+    /** Brief des échéances (vigie_echeances) : un paragraphe par volet, mention des volets hors périmètre. */
+    private function formatVigie(array $data): string
+    {
+        $titres = [
+            'renouvellements' => sprintf('Polices à renouveler sous %d jours', $data['horizonJours'] ?? 30),
+            'taches'          => 'Tâches non closes',
+            'pistes'          => 'Pistes en cours',
+            'sinistres'       => 'Derniers sinistres',
+        ];
+
+        $blocs = [];
+        foreach ($data['volets'] ?? [] as $volet => $contenu) {
+            $lignes = array_map(
+                static fn (array $l) => '- ' . implode(' · ', array_map(
+                    static fn ($v) => is_bool($v) ? ($v ? 'en retard' : '') : (string) $v,
+                    array_filter($l, static fn ($v, $k) => $k !== 'id' && $v !== false, ARRAY_FILTER_USE_BOTH),
+                )),
+                $contenu['lignes'],
+            );
+            $blocs[] = sprintf(
+                "%s (%d%s) :\n%s",
+                $titres[$volet] ?? $volet,
+                $contenu['total'],
+                ($contenu['tronque'] ?? false) ? ', premiers éléments' : '',
+                $lignes === [] ? '(rien à signaler)' : implode("\n", $lignes),
+            );
+        }
+
+        $texte = "Voici votre brief :\n" . implode("\n\n", $blocs);
+        if (!empty($data['horsPerimetre'])) {
+            $texte .= sprintf(
+                "\n\n(Volets omis, hors de votre périmètre d'accès : %s.)",
+                implode(', ', $data['horsPerimetre']),
+            );
+        }
+
+        return $texte;
+    }
+
+    /** Analyses agrégées du portefeuille (analyse_portefeuille) : classement, production ou encaissements. */
+    private function formatAnalysePortefeuille(array $data): string
+    {
+        $fmt = static fn (float $m) => number_format($m, 2, ',', ' ');
+
+        if (($data['analyse'] ?? '') === 'production_mensuelle') {
+            $lignes = [];
+            foreach ($data['mois'] as $mois => $montant) {
+                $lignes[] = sprintf('- Mois %02d : %s', $mois, $fmt($montant));
+            }
+
+            return sprintf(
+                "Production encaissée %d (total %s) :\n%s",
+                $data['annee'],
+                $fmt($data['total']),
+                implode("\n", $lignes),
+            );
+        }
+
+        if (($data['analyse'] ?? '') === 'encaissements') {
+            $lignes = array_map(
+                static fn (array $l) => sprintf(
+                    '- %s : %s%s',
+                    $l['paidAt'] ?? '?',
+                    $fmt($l['montant'] ?? 0),
+                    isset($l['reference']) ? sprintf(' (%s)', $l['reference']) : '',
+                ),
+                $data['lignes'],
+            );
+
+            return "Derniers encaissements :\n" . ($lignes === [] ? '(aucun)' : implode("\n", $lignes));
+        }
+
+        $lignes = [];
+        foreach ($data['lignes'] as $i => $l) {
+            $lignes[] = sprintf(
+                '%d. %s — %d police%s, primes %s, commissions %s%s',
+                $i + 1,
+                $l['nom'],
+                $l['nbPolices'],
+                $l['nbPolices'] > 1 ? 's' : '',
+                $fmt($l['primesTotales']),
+                $fmt($l['commissionsTtc']),
+                isset($l['ratioSP']) ? sprintf(', S/P %s%%', $l['ratioSP']) : '',
+            );
+        }
+
+        $texte = sprintf(
+            "Classement « %s » :\n%s",
+            str_replace('_', ' ', (string) $data['analyse']),
+            $lignes === [] ? '(aucune donnée)' : implode("\n", $lignes),
+        );
+        if (isset($data['note'])) {
+            $texte .= "\n(" . $data['note'] . ')';
+        }
+
+        return $texte;
     }
 
     /** Liste des candidats sur une cible ambiguë (partagé lire_fiche / indicateur_calcule). */

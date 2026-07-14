@@ -163,8 +163,44 @@ export default class extends Controller {
                     // la boîte de confirmation — l'utilisateur valide manuellement.
                     document.dispatchEvent(new CustomEvent('app:workspace.request-logout'));
                     break;
+                case 'open-url':
+                    this.openUrlAction(action);
+                    break;
+                case 'open-soa-envoi':
+                    this.openSoaEnvoiAction(action);
+                    break;
             }
         }
+    }
+
+    /**
+     * Ouvre une URL d'export (Excel comptable, note/bordereau PDF) dans un
+     * nouvel onglet. Garde-fou : uniquement un chemin relatif de l'application
+     * (/admin/…) — la route cible porte sa propre sécurité (périmètre, métrage).
+     */
+    openUrlAction(action) {
+        const url = String(action.url || '');
+        if (!url.startsWith('/admin/') || url.startsWith('//') || url.includes(':')) return;
+        window.open(url, '_blank', 'noopener');
+    }
+
+    /**
+     * Prépare l'envoi du SOA d'un client : même événement que l'action « Envoyer
+     * le SOA par e-mail » du menu contextuel — le cerveau ouvre le picker de
+     * destinataires (re-validation serveur), l'utilisateur confirme lui-même.
+     */
+    openSoaEnvoiAction(action) {
+        const id = parseInt(action.clientId, 10);
+        if (!Number.isInteger(id) || id <= 0) return;
+        document.dispatchEvent(new CustomEvent('cerveau:event', {
+            bubbles: true,
+            detail: {
+                type:      'ui:soa.send-request',
+                source:    'assistant-chat',
+                payload:   { url: `/admin/soa/client/${id}/envoi-picker` },
+                timestamp: Date.now(),
+            },
+        }));
     }
 
     /**
@@ -210,6 +246,12 @@ export default class extends Controller {
             url.searchParams.set('entite', action.entite || '');
             url.searchParams.set('mode', action.mode || 'creation');
             if (action.id) url.searchParams.set('id', action.id);
+            // Pré-remplissage proposé par l'assistant : transmis au serveur qui
+            // le WHITELISTE (champs scalaires mappés uniquement) — seule sa
+            // réponse (result.prefill) sera posée dans le formulaire.
+            if (action.valeurs && typeof action.valeurs === 'object') {
+                url.searchParams.set('valeurs', JSON.stringify(action.valeurs));
+            }
 
             const response = await fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
             const result = await response.json().catch(() => ({}));
@@ -225,6 +267,7 @@ export default class extends Controller {
                         idInvite:     this.idInviteValue,
                     },
                     parentContext: null,
+                    prefill:       result.prefill || null,
                 },
             }));
         } catch (error) {

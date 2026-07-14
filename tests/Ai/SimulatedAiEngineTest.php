@@ -226,6 +226,56 @@ class SimulatedAiEngineTest extends TestCase
         $this->assertStringNotContainsString('3', $reply->content);
     }
 
+    public function testBriefVigieRestitueVoletsEtOmissions(): void
+    {
+        $tool = $this->makeTool(
+            'échéances',
+            AiToolResult::ok([
+                'date'         => '2026-07-13',
+                'horizonJours' => 30,
+                'volets'       => [
+                    'renouvellements' => [
+                        'lignes'  => [['id' => 5, 'client' => 'Alpha SA', 'echeance' => '2026-07-20', 'joursRestants' => 7]],
+                        'total'   => 1,
+                        'tronque' => false,
+                    ],
+                ],
+                'horsPerimetre' => ['Sinistres'],
+            ]),
+            'vigie_echeances',
+        );
+        $engine = new SimulatedAiEngine([$tool]);
+        $reply = $engine->reply($this->makeRequest('Quelles sont mes échéances ?'));
+
+        $this->assertStringContainsString('Polices à renouveler sous 30 jours', $reply->content);
+        $this->assertStringContainsString('Alpha SA', $reply->content);
+        $this->assertStringContainsString('Volets omis', $reply->content);
+        $this->assertStringContainsString('Sinistres', $reply->content);
+        $this->assertSame('vigie_echeances', $reply->toolUsed);
+    }
+
+    public function testAnalysePortefeuilleRestitueLeClassement(): void
+    {
+        $tool = $this->makeTool(
+            'top',
+            AiToolResult::ok([
+                'analyse' => 'top_assureurs',
+                'lignes'  => [[
+                    'nom' => 'Assureur Alpha', 'nbPolices' => 12,
+                    'primesTotales' => 1000.5, 'commissionsTtc' => 150.0,
+                    'partMarche' => 45.5, 'ratioSP' => 20.0,
+                ]],
+            ]),
+            'analyse_portefeuille',
+        );
+        $engine = new SimulatedAiEngine([$tool]);
+        $reply = $engine->reply($this->makeRequest('Top des assureurs'));
+
+        $this->assertStringContainsString('1. Assureur Alpha', $reply->content);
+        $this->assertStringContainsString('12 polices', $reply->content);
+        $this->assertStringContainsString('S/P 20%', $reply->content);
+    }
+
     public function testRepliGuideProposeDesExemplesDuPerimetre(): void
     {
         $perimetre = [

@@ -885,6 +885,33 @@ class AssistantIaWorkspaceTest extends WebTestCase
         // Entité inconnue : 400.
         $this->client->request('GET', sprintf('/admin/assistant-ia/api/dialog-context/%d?entite=Inexistante&mode=creation', $e->getId()));
         $this->assertResponseStatusCodeSame(400);
+
+        // Pré-remplissage : whitelisté côté serveur — champs scalaires mappés
+        // retenus, id/relations/inconnus écartés (seule cette réponse touche le DOM).
+        $valeurs = rawurlencode(json_encode([
+            'nom'        => 'Kabila Corp',
+            'id'         => 999,
+            'entreprise' => 5,
+            'inexistant' => 'x',
+        ]));
+        $this->client->request('GET', sprintf(
+            '/admin/assistant-ia/api/dialog-context/%d?entite=Client&mode=creation&valeurs=%s',
+            $e->getId(),
+            $valeurs,
+        ));
+        $this->assertResponseIsSuccessful();
+        $data = $this->jsonResponse();
+        $this->assertSame(['nom' => 'Kabila Corp'], $data['prefill']);
+
+        // En édition, aucun pré-remplissage n'est retourné.
+        $this->client->request('GET', sprintf(
+            '/admin/assistant-ia/api/dialog-context/%d?entite=Client&mode=edition&id=%d&valeurs=%s',
+            $e->getId(),
+            $idClient,
+            $valeurs,
+        ));
+        $this->assertResponseIsSuccessful();
+        $this->assertNull($this->jsonResponse()['prefill']);
     }
 
     public function testInventaireDesCapacites(): void

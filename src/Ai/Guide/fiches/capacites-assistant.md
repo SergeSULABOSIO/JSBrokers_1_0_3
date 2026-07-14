@@ -29,11 +29,25 @@ Présenter cet inventaire de façon rassurante et concrète, avec des exemples.
   le solde de la trésorerie ? », résultat, bilan, balance, TVA (suivi fiscal).
 - Calculer des statistiques et répartitions : « Répartition des clients par
   groupe ? », comptes, sommes et moyennes sur les champs enregistrés.
+- Donner le brief des échéances : « Quelles sont mes échéances ? » — polices à
+  renouveler sous N jours, tâches non closes (dont en retard), pistes en cours,
+  derniers sinistres.
+- Analyser le portefeuille : « Top 5 de nos assureurs ? », « Nos meilleurs
+  clients ? » — classements par primes, commissions, sinistralité et part de
+  marché ; production encaissée par mois ; derniers encaissements.
 
 ## 3. Agir dans l'interface (toujours sous votre contrôle)
 
-- Ouvrir un formulaire de création : « Crée un nouveau client ».
+- Ouvrir un formulaire de création : « Crée un nouveau client » — et le
+  PRÉ-REMPLIR avec les valeurs que vous dictez : « Crée un client Kabila Corp,
+  téléphone +243… » (uniquement vos valeurs, jamais des valeurs inventées).
 - Ouvrir un enregistrement en modification : « Modifie l'avenant Y ».
+- Lancer le téléchargement d'un état : classeur comptable Excel (« Exporte le
+  classeur comptable »), note ou bordereau en PDF — générés par les circuits
+  d'export standards.
+- Préparer l'envoi du relevé de compte (SOA) d'un client : « Envoie le SOA du
+  client X » — l'assistant ouvre la boîte d'envoi pré-ciblée, VOUS choisissez
+  le destinataire et confirmez l'envoi.
 - Ouvrir une rubrique du menu ou le tableau de bord : « Ouvre la rubrique
   bordereaux », « Ouvre le tableau de bord ».
 - Afficher une fiche à l'écran (colonne de visualisation) : « Visualise le
@@ -54,5 +68,8 @@ Présenter cet inventaire de façon rassurante et concrète, avec des exemples.
 - L'assistant ne voit QUE votre périmètre d'accès : sans droit de lecture sur une
   rubrique, la donnée n'existe pas pour lui.
 - Il n'écrit jamais en base : toute saisie passe par un formulaire que vous validez.
+  Le pré-remplissage n'utilise QUE les valeurs que vous avez dictées.
+- Il n'envoie jamais rien lui-même : un envoi (relevé SOA) est toujours confirmé
+  par vous dans la boîte d'envoi.
 - Il n'a pas accès à internet ni à d'autres espaces de travail, et n'invente
   jamais de chiffres : tout vient des outils, calculé à l'instant de la demande.
