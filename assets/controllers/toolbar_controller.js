@@ -144,15 +144,19 @@ export default class extends Controller {
         // Règle : "Supprimer" est visible dès qu'il y a au moins une sélection (unique ou multiple).
         this.toggleButton(this.btsupprimerTarget, canDelete);
 
-        // Gérer les actions spécifiques à l'entité, avec filtrage conditionnel par état
+        // Gérer les actions spécifiques à l'entité, avec filtrage conditionnel par état.
+        // Une action déclarée `multi: true` est visible dès 1 sélection (unique ou
+        // multiple) ; les autres restent strictement réservées à la sélection UNIQUE
+        // (comportement historique inchangé).
         const rawActions   = canvasParams.attribute_actions || [];
         const entityData   = this.selectos[0]?.entity || {};
         const specificActions = rawActions.filter(action => {
+            const countOk = action.multi === true ? selectionCount >= 1 : selectionCount === 1;
+            if (!countOk) return false;
             if (!action.condition) return true;
             return entityData[action.condition.field] == action.condition.value;
         });
-        const canShowSpecificActions = selectionCount === 1 && specificActions.length > 0;
-        this.updateSpecificActionButtons(canShowSpecificActions ? specificActions : []);
+        this.updateSpecificActionButtons(specificActions);
     }
 
     /**

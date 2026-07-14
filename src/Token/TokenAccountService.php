@@ -2,6 +2,8 @@
 
 namespace App\Token;
 
+use App\Entity\AssistantConversationContexte;
+use App\Entity\AssistantMessage;
 use App\Entity\Entreprise;
 use App\Entity\TokenConsumption;
 use App\Entity\Utilisateur;
@@ -191,6 +193,49 @@ class TokenAccountService
             TokenConsumption::SENS_SORTIE,
             $count,
             $unit,
+        );
+    }
+
+    /**
+     * Métrage de l'attache de $nbObjets au contexte d'une conversation IA.
+     * Coût unitaire = 80 % du poids d'un message assistant (suit le poids
+     * paramétré en console). Bloquant, débité en une fois AVANT persistance ;
+     * une ligne de journal par objet attaché.
+     *
+     * @throws InsufficientTokensException si le solde du propriétaire est insuffisant.
+     */
+    public function meterContexteIa(Entreprise $entreprise, ?Utilisateur $acteur, int $nbObjets): void
+    {
+        if ($nbObjets <= 0) {
+            return;
+        }
+
+        $owner = $entreprise->getUtilisateur();
+        if (!$owner instanceof Utilisateur) {
+            return; // Pas de propriétaire identifiable : on ne facture pas.
+        }
+
+        $unit = $this->coutContexteIa();
+        $this->guardAndConsume($owner, $nbObjets * $unit);
+
+        for ($i = 0; $i < $nbObjets; $i++) {
+            $this->log(
+                $entreprise,
+                $owner,
+                $acteur,
+                $this->shortName(AssistantConversationContexte::class),
+                TokenConsumption::SENS_ENTREE,
+                1,
+                $unit,
+            );
+        }
+    }
+
+    /** Coût unitaire d'un objet attaché au contexte IA (80 % du poids message). */
+    public function coutContexteIa(): int
+    {
+        return (int) ceil(
+            TokenPricing::CONTEXTE_IA_RATIO * $this->parametres->weightFor(AssistantMessage::class),
         );
     }
 

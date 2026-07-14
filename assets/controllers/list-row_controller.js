@@ -11,11 +11,13 @@ export default class extends Controller {
      * @property {HTMLElement[]} texteprincipalTargets - La cible pour le texte principal de la ligne.
      * @property {HTMLElement[]} textesecondaireTargets - La cible pour le texte secondaire de la ligne.
      * @property {HTMLInputElement[]} checkboxTargets - La cible pour la case à cocher de la ligne.
+     * @property {HTMLElement[]} ctxBadgeTargets - Badge « déjà dans le contexte du chat IA » (basculé par list-manager).
      */
     static targets = [
         'texteprincipal',
         'textesecondaire',
-        'checkbox'
+        'checkbox',
+        'ctxBadge'
     ];
 
     /**
@@ -103,6 +105,17 @@ export default class extends Controller {
             return null;
         }
         return payload;
+    }
+
+    /**
+     * Bascule le badge « déjà dans le contexte du chat IA » de la ligne
+     * (piloté par list-manager sur l'événement app:assistant.contexte.updated).
+     * @param {boolean} enContexte
+     */
+    setContexteBadge(enContexte) {
+        if (this.hasCtxBadgeTarget) {
+            this.ctxBadgeTarget.hidden = !enContexte;
+        }
     }
 
     /**

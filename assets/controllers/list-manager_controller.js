@@ -78,6 +78,12 @@ export default class extends BaseController {
         document.addEventListener('app:list.toggle-all-request', this.boundToggleAll);
         this.element.addEventListener('list-manager:context-menu-requested', this.boundHandleContextMenuRequest);
 
+        // Badges « déjà dans le contexte du chat IA » : synchronisés sur l'état
+        // diffusé par le cerveau (pas de filtre par onglet : le chat actif est
+        // global au workspace).
+        this.boundHandleAssistantContexteUpdated = this.handleAssistantContexteUpdated.bind(this);
+        document.addEventListener('app:assistant.contexte.updated', this.boundHandleAssistantContexteUpdated);
+
         // CORRECTION : On se base sur la présence réelle de lignes dans le DOM,
         // et non plus sur la valeur 'nbelements'. C'est plus robuste et cohérent
         // avec la logique de handleListRefreshed.
@@ -98,6 +104,7 @@ export default class extends BaseController {
         document.removeEventListener('app:list.refreshed', this.boundHandleListRefreshed);
         document.removeEventListener('app:list.toggle-all-request', this.boundToggleAll);
         this.element.removeEventListener('list-manager:context-menu-requested', this.boundHandleContextMenuRequest);
+        document.removeEventListener('app:assistant.contexte.updated', this.boundHandleAssistantContexteUpdated);
         document.removeEventListener('app:loading.start', this.boundHandleLoadingStart);
         this.element.removeEventListener('click', this.boundHandlePaginationClick);
         this.element.removeEventListener('change', this.boundHandlePaginationJump);
@@ -371,6 +378,35 @@ export default class extends BaseController {
             ? this._lastPagination.totalItems
             : itemCount;
         this.notifyCerveau('app:list.rendered', { itemCount, totalItems });
+
+        // Les lignes viennent d'être re-rendues (badges masqués côté serveur) :
+        // ré-applique l'état « déjà dans le contexte du chat IA » mémorisé.
+        this._applyAssistantContexteBadges();
+    }
+
+    /**
+     * Synchronise les badges « déjà dans le contexte du chat IA » des lignes
+     * avec l'état diffusé par le cerveau (attache, retrait, vidage, annonce).
+     * @param {CustomEvent} event - app:assistant.contexte.updated {objets: [{type, id}]}
+     */
+    handleAssistantContexteUpdated(event) {
+        this._assistantContexte = event.detail?.objets || [];
+        this._applyAssistantContexteBadges();
+    }
+
+    /**
+     * Applique l'état mémorisé du contexte du chat IA aux lignes rendues :
+     * badge visible si (type d'entité + id) figure dans le contexte actif.
+     * @private
+     */
+    _applyAssistantContexteBadges() {
+        const keys = new Set((this._assistantContexte || []).map(o => `${o.type}#${o.id}`));
+        this.rowCheckboxTargets.forEach(checkbox => {
+            const rowElement = checkbox.closest('[data-controller~="list-row"]');
+            if (!rowElement) return;
+            const rowController = this.application.getControllerForElementAndIdentifier(rowElement, 'list-row');
+            rowController?.setContexteBadge(keys.has(`${checkbox.dataset.entityType}#${checkbox.dataset.listRowIdobjetValue}`));
+        });
     }
 
     /**

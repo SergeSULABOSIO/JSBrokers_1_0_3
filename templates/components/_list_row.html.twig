@@ -85,6 +85,15 @@
             {% else %}
                 "{{ valeur_principale }}"
             {% endif %}
+
+            {# Badge « déjà dans le contexte du chat IA » : rendu masqué (le chat
+               actif est une notion cliente), basculé par list-manager via
+               l'événement app:assistant.contexte.updated. #}
+            <span class="jsb-ctx-badge" hidden data-list-row-target="ctxBadge"
+                  title="Déjà dans le contexte du chat de l'assistant IA">
+                <twig:UX:Icon name="{{ resolve_icon_name('assistant-ia') }}" style="width: 13px; height: 13px;" />
+                <span class="visually-hidden">Déjà dans le contexte du chat de l'assistant IA</span>
+            </span>
         </div>
 
         {# Ligne 2: Textes secondaires.

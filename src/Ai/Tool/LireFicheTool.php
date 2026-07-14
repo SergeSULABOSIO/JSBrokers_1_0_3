@@ -3,10 +3,10 @@
 namespace App\Ai\Tool;
 
 use App\Ai\AiText;
+use App\Ai\FicheNormaliseur;
 use App\Ai\Scope\AiScope;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
-use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 
 /**
  * Lit la FICHE COMPLÈTE d'un enregistrement (attributs stockés) : là où
@@ -30,7 +30,7 @@ final class LireFicheTool implements AiToolInterface
         private readonly JSBDynamicSearchService $searchService,
         private readonly EntiteLexique $lexique,
         private readonly EntiteLibelle $libelleur,
-        private readonly NormalizerInterface $normalizer,
+        private readonly FicheNormaliseur $ficheNormaliseur,
     ) {
     }
 
@@ -153,22 +153,7 @@ final class LireFicheTool implements AiToolInterface
             'libelle' => $labels[$shortName],
             'id'      => $entity->getId(),
             'nom'     => $this->libelleur->libelle($entity, $displayField),
-            'fiche'   => $this->fiche($entity),
+            'fiche'   => $this->ficheNormaliseur->fiche($entity),
         ]);
-    }
-
-    /**
-     * Attributs de la fiche : sérialisation `list:read` (même contrat que les
-     * listes du workspace) élaguée des valeurs vides — chaque champ non rempli
-     * coûterait des tokens pour rien.
-     */
-    private function fiche(object $entity): array
-    {
-        $data = (array) $this->normalizer->normalize($entity, null, ['groups' => ['list:read']]);
-
-        return array_filter(
-            $data,
-            static fn ($v) => $v !== null && $v !== '' && $v !== [],
-        );
     }
 }

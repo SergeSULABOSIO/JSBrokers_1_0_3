@@ -55,6 +55,14 @@ final class TokenPricing
     /** Poids par défaut en écriture pour toute entité non explicitement listée. */
     public const DEFAULT_WRITE_WEIGHT = 5;
 
+    /**
+     * Assistant IA : coût d'un objet attaché au contexte d'une conversation,
+     * exprimé en RATIO du poids d'un message (décision produit : 80 %). Facturé
+     * une seule fois, à l'attache ; suit dynamiquement le poids message
+     * paramétré en console.
+     */
+    public const CONTEXTE_IA_RATIO = 0.8;
+
     /** Poids en tokens d'une entité envoyée vers le frontend (LECTURE / sortie). */
     public const READ_WEIGHT = 2;
 

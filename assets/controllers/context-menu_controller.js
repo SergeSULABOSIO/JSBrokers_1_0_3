@@ -150,16 +150,20 @@ export default class extends Controller {
             }
         }
 
-        // Gérer les actions spécifiques avec filtrage conditionnel par état
+        // Gérer les actions spécifiques avec filtrage conditionnel par état.
+        // Une action déclarée `multi: true` est visible dès 1 sélection (unique ou
+        // multiple) ; les autres restent strictement réservées à la sélection UNIQUE
+        // (comportement historique inchangé).
         const rawActions  = this.entityFormCanvas?.parametres?.attribute_actions || [];
         const entityData  = this.entities[0]?.entity || {};
         const specificActions = rawActions.filter(action => {
+            const countOk = action.multi === true ? hasSelection : isSingleSelection;
+            if (!countOk) return false;
             if (!action.condition) return true;
             return entityData[action.condition.field] == action.condition.value;
         });
-        const canShowSpecificActions = isSingleSelection && specificActions.length > 0;
         if (this.hasSpecificActionsContainerTarget) {
-            this.updateSpecificActionButtons(canShowSpecificActions ? specificActions : []);
+            this.updateSpecificActionButtons(specificActions);
         }
     }
 

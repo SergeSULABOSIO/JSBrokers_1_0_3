@@ -23,6 +23,10 @@ export default class extends Controller {
         window.logSequence = window.logSequence || 0; // Initialise le compteur de log global
         this.nomControleur = "Cerveau";
         this.currentIdEntreprise = null;
+        // Objets attachés au contexte du chat IA actif ({type, id}) : alimente
+        // les badges « déjà en contexte » des listes, y compris celles ouvertes
+        // après l'attache (re-diffusé sur ui:tab.initialized).
+        this.assistantContexteActif = [];
         this.displayState = {
             rubricName: 'Tableau de bord',
             action: 'Initialisation',
@@ -398,6 +402,12 @@ export default class extends Controller {
                         workspaceTabId: this.currentWorkspaceTabId,
                     });
                 }
+
+                // Badges « déjà en contexte » du chat IA : une liste ouverte APRÈS
+                // l'attache reçoit l'état courant dès son initialisation.
+                if (this.assistantContexteActif.length > 0) {
+                    this.broadcast('app:assistant.contexte.updated', { objets: this.assistantContexteActif });
+                }
                 break;
             case 'ui:dialog.content-request':
                 this.handleDialogContentRequest(event.detail);
@@ -429,6 +439,12 @@ export default class extends Controller {
                 break;
             case 'client:soa.revoke-execute': // confirmation validée → DELETE effectif
                 this._handleSoaRevokeExecute(payload);
+                break;
+            case 'ui:assistant.add-to-chat': // action « Ajouter au chat avec l'assistant IA » (toolbar / menu contextuel)
+                this.handleAssistantAddToChat(payload);
+                break;
+            case 'ui:assistant.contexte-operation': // cycle de feedback des opérations sur le contexte du chat IA
+                this._handleAssistantContexteOperation(payload);
                 break;
             case 'ui:bordereau.analysis-request':
                 this.handleBordereauAnalysisRequest(payload);
@@ -1448,6 +1464,129 @@ export default class extends Controller {
             controllerName: 'soa-envoi-picker',
             errorLabel: "l'envoi du relevé de compte",
         });
+    }
+
+    /**
+     * « Ajouter au chat avec l'assistant IA » (toolbar / menu contextuel,
+     * multi-sélection) : attache les objets sélectionnés au contexte de la
+     * conversation du chat ACTIF en colonne 4 — ou crée une conversation,
+     * l'alimente puis l'ouvre s'il n'y a aucun chat. La sécurité (module IA,
+     * premium, canRead par objet, scoping entreprise) est re-validée côté
+     * serveur, fail-closed : ici on ne fait qu'orchestrer.
+     * @param {object} payload
+     * @param {Array<object>} payload.selection - Selectos ({id, entityType, entity, ...}).
+     */
+    async handleAssistantAddToChat(payload) {
+        const objets = (payload.selection || [])
+            .map(s => ({ type: s.entityType, id: parseInt(s.id, 10) }))
+            .filter(o => o.type && Number.isInteger(o.id) && o.id > 0);
+        if (objets.length === 0) return;
+
+        // Chat déjà ouvert : priorité au panneau VISIBLE (onglet actif de la
+        // col-4), sinon le dernier ouvert. Le chat fait le POST lui-même (il
+        // possède son URL) et émet le cycle ui:assistant.contexte-operation —
+        // source UNIQUE du feedback (barre + toast), pas de doublon ici.
+        const chats = [...document.querySelectorAll('[data-controller="assistant-chat"]')];
+        const chatActif = chats.find(el => el.offsetParent !== null) || chats.at(-1);
+        if (chatActif) {
+            chatActif.dispatchEvent(new CustomEvent('assistant:contexte.attach-request', { detail: { objets } }));
+            return;
+        }
+
+        // Aucun chat ouvert : create → attach → ouverture du partial en col-4
+        // (les puces arrivent déjà rendues côté serveur).
+        this._handleAssistantContexteOperation({ phase: 'start' });
+        let fin;
+        try {
+            const createResp = await fetch(`/admin/assistant-ia/api/conversations/${this.currentIdEntreprise}`, { method: 'POST' });
+            const conv = await createResp.json().catch(() => ({}));
+            if (!createResp.ok) throw new Error(conv.message || 'Création de la conversation impossible.');
+
+            const attachResp = await fetch(`/admin/assistant-ia/api/contextes/${this.currentIdEntreprise}/${conv.id}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ objets }),
+            });
+            const attach = await attachResp.json().catch(() => ({}));
+            if (!attachResp.ok) throw new Error(attach.message || 'Ajout au contexte impossible.');
+
+            const chatResp = await fetch(conv.chatUrl);
+            if (!chatResp.ok) throw new Error('Chargement du chat impossible.');
+            document.dispatchEvent(new CustomEvent('app:workspace.open-html-in-visualization', {
+                detail: {
+                    html:      await chatResp.text(),
+                    title:     conv.titre || 'Assistant IA',
+                    iconAlias: 'assistant-ia',
+                    tabKey:    `ia-conv-${conv.id}`,
+                    sourceUrl: conv.chatUrl,
+                },
+            }));
+
+            const attaches = attach.contextes || [];
+            fin = {
+                phase:  'end',
+                objets: attaches.map(c => ({ type: c.entityType, id: c.entityId })),
+                level:  'success',
+                message: attaches.length === 0
+                    ? 'Aucun objet ajouté au contexte (hors périmètre ou introuvable).'
+                    : (attaches.length === 1
+                        ? `« ${attaches[0].label} » attaché au contexte du chat de l'assistant IA.`
+                        : `${attaches.length} objets attachés au contexte du chat de l'assistant IA.`),
+            };
+            if (attaches.length === 0) {
+                fin.level = 'warning';
+            } else if (attach.ignores > 0) {
+                fin.message += ` ${attach.ignores} objet(s) hors périmètre ignoré(s).`;
+                fin.level = 'warning';
+            }
+        } catch (error) {
+            console.error('[Cerveau] handleAssistantAddToChat :', error);
+            fin = {
+                phase:   'end',
+                message: error.message || "L'ajout au chat de l'assistant a échoué.",
+                level:   'error',
+                objets:  this.assistantContexteActif,
+            };
+        } finally {
+            this._handleAssistantContexteOperation(fin);
+        }
+    }
+
+    /**
+     * Cycle de feedback des opérations sur le contexte du chat IA (attache,
+     * retrait individuel, vidage) : start → barre de progression du haut de
+     * page ; end → arrêt de la barre + toast + mémorisation de l'état + synchro
+     * des badges « déjà en contexte » des listes ; announce → synchro
+     * silencieuse (connexion / re-rendu d'un chat, aucun toast).
+     * @param {object} payload
+     * @param {'start'|'end'|'announce'} payload.phase
+     * @param {string} [payload.message] - Toast (phase end).
+     * @param {'success'|'error'|'info'|'warning'} [payload.level]
+     * @param {Array<{type: string, id: number}>} [payload.objets] - État complet du contexte.
+     */
+    _handleAssistantContexteOperation(payload) {
+        switch (payload.phase) {
+            case 'start':
+                this.broadcast('app:loading.start');
+                break;
+            case 'end':
+                this.broadcast('app:loading.stop');
+                if (payload.message) {
+                    this._showNotification(payload.message, payload.level || 'info');
+                }
+                this._publishAssistantContexte(payload.objets);
+                break;
+            case 'announce':
+                this._publishAssistantContexte(payload.objets);
+                break;
+        }
+    }
+
+    /** Mémorise l'état du contexte du chat actif et le diffuse aux listes (badges). */
+    _publishAssistantContexte(objets) {
+        if (!Array.isArray(objets)) return;
+        this.assistantContexteActif = objets;
+        this.broadcast('app:assistant.contexte.updated', { objets });
     }
 
     /**

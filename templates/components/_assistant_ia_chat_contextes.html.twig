@@ -1,0 +1,40 @@
+{#
+    Objets attachés au contexte de la conversation IA — chemin de rendu UNIQUE
+    des puces : inclus au rendu initial du chat ET re-rendu par les endpoints
+    API contexte (clé `html` de la réponse ; le contrôleur Stimulus
+    assistant-chat remplace le innerHTML de la barre de contexte).
+    Chaque puce porte type + id en data-* : c'est la source lue par le front
+    pour annoncer l'état du contexte (badges « déjà en contexte » des listes).
+#}
+{% if conversation.contextes|length > 0 %}
+    <div class="aic-context-head">
+        <span class="aic-context-count" role="status">
+            {{ conversation.contextes|length }} objet{{ conversation.contextes|length > 1 ? 's' : '' }} en contexte
+        </span>
+        <button type="button" class="aic-context-clear"
+                data-action="click->assistant-chat#clearContextes"
+                title="Retirer tous les objets du contexte de la conversation">
+            {{ ux_icon(resolve_icon_name('action:delete'), {height: '13px', width: '13px'}) }}
+            <span>Tout retirer</span>
+        </button>
+    </div>
+    <ul class="aic-context-chips" aria-label="Objets attachés à la conversation">
+        {% for ctx in conversation.contextes %}
+            <li class="aic-chip"
+                data-entity-type="{{ ctx.entityType }}"
+                data-entity-id="{{ ctx.entityId }}"
+                title="{{ token_entite_label('App\\Entity\\' ~ ctx.entityType) }} : {{ ctx.label }}">
+                <span class="aic-chip-icon" aria-hidden="true">
+                    {{ ux_icon(resolve_icon_name(token_entite_icon('App\\Entity\\' ~ ctx.entityType)), {height: '13px', width: '13px'}) }}
+                </span>
+                <span class="aic-chip-label">{{ ctx.label }}</span>
+                <button type="button" class="aic-chip-remove"
+                        data-contexte-id="{{ ctx.id }}"
+                        data-action="click->assistant-chat#removeContexte"
+                        aria-label="Retirer {{ ctx.label }} du contexte">
+                    {{ ux_icon(resolve_icon_name('action:close'), {height: '11px', width: '11px'}) }}
+                </button>
+            </li>
+        {% endfor %}
+    </ul>
+{% endif %}
