@@ -14,6 +14,7 @@ use App\Services\ServiceMonnaies;
 use App\Repository\NoteRepository;
 use App\Repository\InviteRepository;
 use App\Repository\EntrepriseRepository;
+use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\ServiceTcpdf;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -46,7 +47,36 @@ class EtatsController extends AbstractController
         private Constante $constante,
         private ServiceMonnaies $serviceMonnaies,
         private ServiceTaxes $serviceTaxes,
+        private WorkspaceAccessResolver $accessResolver,
     ) {}
+
+    /**
+     * FAIL-CLOSED : imprimer une note = lire la rubrique Notes. L'invité doit
+     * appartenir à l'entreprise demandée et avoir la lecture sur Note ; la note
+     * doit appartenir à cette entreprise (sinon « introuvable », sans fuite).
+     */
+    private function resolveNoteImprimable(?Entreprise $entreprise, $idNote): ?Note
+    {
+        if ($entreprise === null) {
+            return null;
+        }
+
+        /** @var Utilisateur $utilisateur */
+        $utilisateur = $this->getUser();
+        $invite = $this->accessResolver->resolveConnectedInvite($utilisateur);
+        if ($invite === null || $invite->getEntreprise()?->getId() !== $entreprise->getId()
+            || !$this->accessResolver->canRead($invite, 'Note')) {
+            throw $this->createAccessDeniedException("L'impression des notes est hors de votre périmètre d'accès.");
+        }
+
+        /** @var ?Note $note */
+        $note = $this->noteRepository->find($idNote);
+        if ($note === null || $note->getEntreprise()?->getId() !== $entreprise->getId()) {
+            return null;
+        }
+
+        return $note;
+    }
 
 
     #[Route(
@@ -66,8 +96,7 @@ class EtatsController extends AbstractController
         /** @var Entreprise $entreprise */
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
 
-        /** @var Note $note */
-        $note = $this->noteRepository->find($idNote);
+        $note = $this->resolveNoteImprimable($entreprise, $idNote);
 
         if ($note != null) {
             return $this->produirePDF($serviceTcpdf, $entreprise, $utilisateur, $note, self::TYPE_OUTPUT_NOTE);
@@ -94,8 +123,7 @@ class EtatsController extends AbstractController
         /** @var Entreprise $entreprise */
         $entreprise = $this->entrepriseRepository->find($idEntreprise);
 
-        /** @var Note $note */
-        $note = $this->noteRepository->find($idNote);
+        $note = $this->resolveNoteImprimable($entreprise, $idNote);
 
         if ($note != null) {
             return $this->produirePDF($serviceTcpdf, $entreprise, $utilisateur, $note, self::TYPE_OUTPUT_BORDEREAU);

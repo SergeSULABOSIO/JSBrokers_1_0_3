@@ -11,7 +11,8 @@ use Symfony\Component\DomCrawler\Crawler;
  * Verrouille la structure de la section après l'ajout des blocs reflétant les
  * nouveautés du Workspace courtier (collaboration/rôles des invités et
  * comptabilité OHADA) :
- *  - 6 blocs .feature-row, alternance cobalt / clair-inversé préservée ;
+ *  - 7 blocs .feature-row (assistant IA en tête), alternance clair-inversé
+ *    (blocs impairs) / cobalt (blocs pairs) préservée ;
  *  - chaque bloc : un titre, une description, un surtitre de liste et une
  *    liste d'au moins 4 capacités ;
  *  - chaque visuel : un alt non vide (WCAG 1.1.1) et un chargement paresseux ;
@@ -44,17 +45,14 @@ class HomeFeaturesSectionTest extends WebTestCase
         $this->assertSame(7, $rows->count(),
             'La section Fonctionnalités doit compter 7 blocs (assistant IA en tête + 4 historiques + collaboration + comptabilité).');
 
-        // Le bloc de TÊTE est l'assistant IA (variante dédiée, hors alternance :
-        // c'est sa mise en valeur), sur fond cobalt.
+        // Le bloc de TÊTE est l'assistant IA (variante dédiée), sur fond clair
+        // avec média à gauche — même pattern que « Sinistres » : les blocs
+        // IMPAIRS (1er, 3e, …) sont clairs, les pairs cobalt.
         $this->assertStringContainsString('feature-row--ia', (string) $rows->eq(0)->attr('class'),
             'Le premier bloc doit être celui de l\'assistant IA.');
-        $this->assertStringContainsString('feature-row--cobalt', (string) $rows->eq(0)->attr('class'));
 
-        // Alternance visuelle des blocs suivants : cobalt puis clair inversé.
+        // Alternance visuelle stricte : clair inversé (blocs impairs) / cobalt (pairs).
         $rows->each(function (Crawler $row, int $i) {
-            if ($i === 0) {
-                return; // bloc IA traité ci-dessus
-            }
             $class = $row->attr('class');
             if ($i % 2 === 1) {
                 $this->assertStringContainsString('feature-row--cobalt', $class,
@@ -63,7 +61,7 @@ class HomeFeaturesSectionTest extends WebTestCase
                 $this->assertStringContainsString('feature-row--light', $class,
                     "Le bloc n°" . ($i + 1) . " doit être sur fond clair.");
                 $this->assertStringContainsString('feature-row--reverse', $class,
-                    "Le bloc n°" . ($i + 1) . " doit avoir son image à gauche (inversé).");
+                    "Le bloc n°" . ($i + 1) . " doit avoir son média à gauche (inversé).");
             }
         });
 

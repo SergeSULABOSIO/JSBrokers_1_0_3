@@ -222,6 +222,28 @@
                         <span class="aip-doc-ex">« Répartition des clients par groupe ? »</span></p>
                 </div>
             </li>
+            <li class="aip-doc-card">
+                <span class="aip-doc-card-ic" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:calendar') }}" style="width:20px;height:20px;" />
+                </span>
+                <div>
+                    <h5>Surveiller vos échéances</h5>
+                    <p>Le brief du jour : polices à renouveler sous N jours, tâches en retard,
+                       pistes en cours, derniers sinistres notifiés.
+                        <span class="aip-doc-ex">« Quelles sont mes échéances ? » · « Mes renouvellements sous 60 jours ? »</span></p>
+                </div>
+            </li>
+            <li class="aip-doc-card">
+                <span class="aip-doc-card-ic" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:analyser') }}" style="width:20px;height:20px;" />
+                </span>
+                <div>
+                    <h5>Analyser votre portefeuille</h5>
+                    <p>Classements par primes, commissions, sinistralité et part de marché ;
+                       production encaissée par mois ; derniers encaissements.
+                        <span class="aip-doc-ex">« Top 5 de nos assureurs ? » · « Production mensuelle 2026 ? »</span></p>
+                </div>
+            </li>
         </ul>
 
         <h4>Agir dans votre espace de travail et vous guider</h4>
@@ -232,9 +254,31 @@
                 </span>
                 <div>
                     <h5>Préparer vos saisies</h5>
-                    <p>Ouvre le formulaire de création ou de modification d'une fiche — c'est toujours
-                       vous qui vérifiez et enregistrez.
-                        <span class="aip-doc-ex">« Crée un nouveau client » · « Modifie l'avenant X »</span></p>
+                    <p>Ouvre le formulaire de création ou de modification d'une fiche, pré-rempli
+                       avec les valeurs que vous dictez — c'est toujours vous qui vérifiez et enregistrez.
+                        <span class="aip-doc-ex">« Crée un client Kabila Corp, tél. +243… » · « Modifie l'avenant X »</span></p>
+                </div>
+            </li>
+            <li class="aip-doc-card">
+                <span class="aip-doc-card-ic" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:download') }}" style="width:20px;height:20px;" />
+                </span>
+                <div>
+                    <h5>Lancer vos exports</h5>
+                    <p>Déclenche le téléchargement du classeur comptable Excel ou d'une note /
+                       bordereau en PDF, générés par les circuits d'export standards.
+                        <span class="aip-doc-ex">« Exporte le classeur comptable » · « Imprime la note X en PDF »</span></p>
+                </div>
+            </li>
+            <li class="aip-doc-card">
+                <span class="aip-doc-card-ic" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:send-email') }}" style="width:20px;height:20px;" />
+                </span>
+                <div>
+                    <h5>Préparer l'envoi d'un relevé SOA</h5>
+                    <p>Ouvre la boîte d'envoi du relevé de compte pré-ciblée sur le client —
+                       vous choisissez le destinataire et confirmez l'envoi.
+                        <span class="aip-doc-ex">« Envoie le SOA du client Kin Avia »</span></p>
                 </div>
             </li>
             <li class="aip-doc-card">
@@ -289,8 +333,10 @@
                     <span class="aip-lim-ic" aria-hidden="true">
                         <twig:UX:Icon name="{{ resolve_icon_name('action:check') }}" style="width:16px;height:16px;" />
                     </span>
-                    <span>Il n'écrit jamais directement dans vos données : toute création ou modification
-                          passe par un formulaire que le collaborateur valide lui-même.</span>
+                    <span>Il n'écrit jamais directement dans vos données et n'envoie jamais rien lui-même :
+                          toute création ou modification passe par un formulaire que le collaborateur valide,
+                          le pré-remplissage n'utilise que les valeurs dictées, et tout envoi (relevé SOA)
+                          est confirmé par le collaborateur dans la boîte d'envoi.</span>
                 </li>
                 <li>
                     <span class="aip-lim-ic" aria-hidden="true">

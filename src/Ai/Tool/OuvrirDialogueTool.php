@@ -27,6 +27,7 @@ final class OuvrirDialogueTool implements AiToolInterface
         private readonly JSBDynamicSearchService $searchService,
         private readonly EntiteLexique $lexique,
         private readonly EntiteLibelle $libelleur,
+        private readonly PrefillWhitelist $prefill,
     ) {
     }
 
@@ -40,7 +41,9 @@ final class OuvrirDialogueTool implements AiToolInterface
         return "Ouvre dans l'espace de travail de l'utilisateur le formulaire d'une entité : mode "
             . "« creation » (nouvel enregistrement vierge) ou « edition » (enregistrement existant, "
             . "id requis — obtiens-le d'abord via rechercher_entites si tu ne l'as pas). À appeler "
-            . 'quand l’utilisateur demande d’ouvrir, créer, ajouter ou modifier une fiche. '
+            . 'quand l’utilisateur demande d’ouvrir, créer, ajouter ou modifier une fiche. En mode '
+            . 'creation, tu peux PRÉ-REMPLIR le formulaire via « valeurs » avec STRICTEMENT les '
+            . 'valeurs dictées par l’utilisateur — n’invente ni ne devine JAMAIS une valeur. '
             . 'Cet outil n’écrit rien : l’utilisateur vérifie et enregistre lui-même le formulaire.';
     }
 
@@ -62,6 +65,14 @@ final class OuvrirDialogueTool implements AiToolInterface
                 'id' => [
                     'type' => 'integer',
                     'description' => "Identifiant de l'enregistrement à éditer (requis en mode edition).",
+                ],
+                'valeurs' => [
+                    'type' => 'object',
+                    'description' => 'Pré-remplissage facultatif (mode creation uniquement) : champ '
+                        . 'scalaire => valeur, STRICTEMENT telles que dictées par l\'utilisateur '
+                        . '(ex. {"nom": "Kabila Corp", "telephone": "+243..."}). Ne jamais inventer '
+                        . 'ni deviner une valeur. Les relations ne sont pas pré-remplissables.',
+                    'additionalProperties' => ['type' => ['string', 'number', 'boolean']],
                 ],
             ],
             'required' => ['entite', 'mode'],
@@ -131,21 +142,31 @@ final class OuvrirDialogueTool implements AiToolInterface
             $cible = $this->libelleur->libelle($entity, $this->libelleur->displayField($fqcn));
         }
 
+        // Pré-remplissage (création uniquement) : whitelist défense-en-profondeur —
+        // dialogContext() re-filtrera, seule SA réponse touche le DOM.
+        $valeurs = [];
+        if ($mode === 'creation') {
+            $valeurs = $this->prefill->filtrer($fqcn, (array) ($args['valeurs'] ?? []));
+        }
+
         return AiToolResult::ok(
             array_filter([
-                'entite'  => $shortName,
-                'libelle' => $labels[$shortName],
-                'mode'    => $mode,
-                'id'      => $id,
-                'cible'   => $cible,
-                'note'    => "Le formulaire s'ouvre dans l'espace de travail : l'utilisateur le "
-                    . 'complètera et l’enregistrera lui-même.',
+                'entite'    => $shortName,
+                'libelle'   => $labels[$shortName],
+                'mode'      => $mode,
+                'id'        => $id,
+                'cible'     => $cible,
+                'precharge' => $valeurs !== [] ? array_keys($valeurs) : null,
+                'note'      => "Le formulaire s'ouvre dans l'espace de travail"
+                    . ($valeurs !== [] ? ', pré-rempli avec les valeurs dictées' : '')
+                    . " : l'utilisateur le complètera et l’enregistrera lui-même.",
             ], static fn ($v) => $v !== null),
             uiAction: array_filter([
-                'type'   => 'open-dialog',
-                'entite' => $shortName,
-                'mode'   => $mode,
-                'id'     => $id,
+                'type'    => 'open-dialog',
+                'entite'  => $shortName,
+                'mode'    => $mode,
+                'id'      => $id,
+                'valeurs' => $valeurs !== [] ? $valeurs : null,
             ], static fn ($v) => $v !== null),
         );
     }

@@ -108,6 +108,11 @@ export default class extends Controller {
         this.isCreateMode = !(this.entity && this.entity.id);
         this.parentContext = detail.parentContext || null;
         this.formTemplateHTML = detail.formTemplateHTML || null;
+        // Pré-remplissage whitelisté par le serveur (assistant IA, mode création
+        // uniquement) : posé dans le formulaire après injection, une seule fois.
+        this.prefill = (this.isCreateMode && detail.prefill && typeof detail.prefill === 'object')
+            ? detail.prefill
+            : null;
 
         // Charge le contenu complet depuis le serveur
         this.loadContent(true);
@@ -245,6 +250,10 @@ export default class extends Controller {
 
         // Initialiser la logique de visibilité dynamique du formulaire
         this.initializeFormVisibility();
+
+        // Pré-remplissage assistant IA : après la visibilité initiale, avant que
+        // l'utilisateur ne relise (c'est lui qui enregistre).
+        this.applyPrefill();
 
         // NOUVEAU : Initialiser la logique de la barre d'outils des attributs
         this.initializeAttributeToolbar();
@@ -509,6 +518,45 @@ export default class extends Controller {
         // `reloadView` va appeler `loadContent`, qui affichera le squelette complet
         // avant de recevoir le contenu final.
         this.reloadView();
+    }
+
+    /**
+     * Pose le pré-remplissage whitelisté par le serveur (assistant IA) dans le
+     * formulaire fraîchement injecté : champs scalaires uniquement (les champs
+     * file/hidden/disabled sont ignorés), événements input+change dispatchés
+     * pour réveiller la logique de visibilité conditionnelle. Appliqué UNE
+     * seule fois (pas de ré-application au rechargement post-sauvegarde) —
+     * l'utilisateur relit et enregistre lui-même.
+     */
+    applyPrefill() {
+        if (!this.prefill) return;
+        const prefill = this.prefill;
+        this.prefill = null;
+
+        const form = this.element.querySelector('form');
+        if (!form) return;
+
+        for (const [champ, valeur] of Object.entries(prefill)) {
+            // Champs Symfony nommés entite[champ] (repli : nom brut).
+            const field = form.querySelector(`[name$="[${CSS.escape(champ)}]"], [name="${CSS.escape(champ)}"]`);
+            if (!field || field.type === 'file' || field.type === 'hidden' || field.disabled) continue;
+
+            if (field.type === 'checkbox') {
+                field.checked = valeur === true || valeur === 'true' || valeur === 1;
+            } else if (field.tagName === 'SELECT') {
+                // Uniquement si la valeur correspond à une option existante
+                // (valeur ou libellé) — jamais de valeur inventée.
+                const opt = [...field.options].find(
+                    (o) => o.value == valeur || o.textContent.trim().toLowerCase() === String(valeur).trim().toLowerCase(),
+                );
+                if (!opt) continue;
+                field.value = opt.value;
+            } else {
+                field.value = String(valeur);
+            }
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+            field.dispatchEvent(new Event('change', { bubbles: true }));
+        }
     }
 
     /**

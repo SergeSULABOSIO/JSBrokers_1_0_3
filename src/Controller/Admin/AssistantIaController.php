@@ -6,6 +6,7 @@ use App\Ai\AiContextBuilder;
 use App\Ai\AiEngineFailure;
 use App\Ai\AiReply;
 use App\Ai\Engine\AiEngineInterface;
+use App\Ai\Tool\PrefillWhitelist;
 use Psr\Log\LoggerInterface;
 use App\Entity\AssistantConversation;
 use App\Entity\AssistantMessage;
@@ -69,6 +70,7 @@ class AssistantIaController extends AbstractController
         private CanvasBuilder $canvasBuilder,
         private JSBDynamicSearchService $searchService,
         private NormalizerInterface $normalizer,
+        private PrefillWhitelist $prefillWhitelist,
     ) {
     }
 
@@ -384,11 +386,21 @@ class AssistantIaController extends AbstractController
             }
         }
 
+        // Pré-remplissage (création uniquement) : la proposition venue du front
+        // n'est JAMAIS posée telle quelle dans le DOM — seule cette réponse,
+        // whitelistée (champs scalaires mappés, plafonds), fait foi.
+        $prefill = [];
+        if ($mode === 'creation') {
+            $brut = json_decode((string) $request->query->get('valeurs', ''), true);
+            $prefill = \is_array($brut) ? $this->prefillWhitelist->filtrer($fqcn, $brut) : [];
+        }
+
         return $this->json([
             'mode'       => $mode,
             'entite'     => $shortName,
             'entity'     => $entity !== null ? $this->normalizer->normalize($entity, null, ['groups' => ['list:read']]) : null,
             'formCanvas' => $this->canvasBuilder->getEntityFormCanvas($entity ?? new $fqcn(), $idEntreprise),
+            'prefill'    => $prefill ?: null,
         ]);
     }
 
