@@ -148,11 +148,31 @@ final class GeminiAiEngine implements AiEngineInterface
             $declarations[] = [
                 'name'        => $tool->name(),
                 'description' => $tool->description(),
-                'parameters'  => $tool->schema(),
+                'parameters'  => $this->sanitizeSchema($tool->schema()),
             ];
         }
 
         return $declarations;
+    }
+
+    /**
+     * Le proto Schema de Gemini ne connaît qu'un SOUS-ENSEMBLE de JSON-Schema :
+     * un mot-clé inconnu (ex. additionalProperties, posé par ouvrir_dialogue
+     * pour le pré-remplissage libre) fait rejeter TOUTE la requête en 400
+     * INVALID_ARGUMENT. On élague donc récursivement ces mots-clés ici — le
+     * schéma des outils reste du JSON-Schema standard pour les autres moteurs
+     * (Claude les accepte) ; c'est le dialecte Gemini qui s'adapte.
+     */
+    private function sanitizeSchema(array $schema): array
+    {
+        unset($schema['additionalProperties']);
+        foreach ($schema as $key => $value) {
+            if (\is_array($value)) {
+                $schema[$key] = $this->sanitizeSchema($value);
+            }
+        }
+
+        return $schema;
     }
 
     private function executeTool(string $name, array $args, AiRequest $request): AiToolResult
