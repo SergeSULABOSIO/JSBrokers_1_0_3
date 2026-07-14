@@ -141,6 +141,79 @@ class GeminiAiEngineTest extends TestCase
         $this->assertSame(3, $dernier['parts'][0]['functionResponse']['response']['count']);
     }
 
+    /**
+     * Le proto Schema de Gemini rejette en 400 INVALID_ARGUMENT tout mot-clé
+     * JSON-Schema qu'il ne connaît pas (vécu : `additionalProperties` posé par
+     * ouvrir_dialogue pour le pré-remplissage libre → TOUS les messages du chat
+     * échouaient). Les déclarations envoyées doivent être élaguées, à tous les
+     * niveaux d'imbrication, sans perdre le reste du schéma.
+     */
+    public function testSchemaElaguePourLeDialecteGemini(): void
+    {
+        $bodies = [];
+        $http = new MockHttpClient(function ($method, $url, $options) use (&$bodies) {
+            $bodies[] = json_decode($options['body'], true);
+
+            return new MockResponse(json_encode(self::texte('OK')));
+        });
+
+        $tool = new class implements AiToolInterface {
+            public function name(): string
+            {
+                return 'ouvrir_dialogue';
+            }
+
+            public function description(): string
+            {
+                return 'Ouvre un formulaire.';
+            }
+
+            public function schema(): array
+            {
+                return [
+                    'type' => 'object',
+                    'properties' => [
+                        'entite'  => ['type' => 'string'],
+                        'valeurs' => [
+                            'type' => 'object',
+                            'description' => 'Pré-remplissage libre.',
+                            'additionalProperties' => ['type' => ['string', 'number', 'boolean']],
+                        ],
+                        'imbrique' => [
+                            'type'  => 'array',
+                            'items' => ['type' => 'object', 'additionalProperties' => true],
+                        ],
+                    ],
+                    'required' => ['entite'],
+                ];
+            }
+
+            public function match(string $question, AiScope $scope): ?array
+            {
+                return null;
+            }
+
+            public function execute(array $args, AiScope $scope): AiToolResult
+            {
+                return AiToolResult::ok([]);
+            }
+        };
+
+        $this->makeEngine($http, [$tool])->reply($this->makeRequest('Crée un client'));
+
+        $declaration = $bodies[0]['tools'][0]['functionDeclarations'][0];
+        $this->assertStringNotContainsString(
+            'additionalProperties',
+            json_encode($declaration),
+            'Aucun mot-clé inconnu du proto Schema Gemini ne doit partir sur le réseau.'
+        );
+        // Le reste du schéma est intact (structure, description, required).
+        $this->assertSame('object', $declaration['parameters']['properties']['valeurs']['type']);
+        $this->assertSame('Pré-remplissage libre.', $declaration['parameters']['properties']['valeurs']['description']);
+        $this->assertSame(['entite'], $declaration['parameters']['required']);
+        $this->assertSame('object', $declaration['parameters']['properties']['imbrique']['items']['type']);
+    }
+
     public function testRefusPerimetrePropage(): void
     {
         $reponses = [

@@ -261,10 +261,14 @@ class AssistantIaContexteTest extends WebTestCase
         return json_decode((string) $this->client->getResponse()->getContent(), true) ?? [];
     }
 
+    /** Consommations contexte du SEUL propriétaire du test (hermétique aux autres données). */
     private function nbConsommationsContexte(): int
     {
         return \count(static::getContainer()->get(TokenConsumptionRepository::class)
-            ->findBy(['entiteNom' => 'AssistantConversationContexte']));
+            ->findBy([
+                'entiteNom'    => 'AssistantConversationContexte',
+                'proprietaire' => $this->user(self::OWNER_EMAIL),
+            ]));
     }
 
     // ── Attache ──────────────────────────────────────────────────────────────
@@ -344,7 +348,10 @@ class AssistantIaContexteTest extends WebTestCase
 
         // Journalisation : une ligne par objet, au coût unitaire attendu.
         $logs = static::getContainer()->get(TokenConsumptionRepository::class)
-            ->findBy(['entiteNom' => 'AssistantConversationContexte']);
+            ->findBy([
+                'entiteNom'    => 'AssistantConversationContexte',
+                'proprietaire' => $this->user(self::OWNER_EMAIL),
+            ]);
         $this->assertCount(2, $logs);
         $this->assertSame(self::COUT_CONTEXTE, $logs[0]->getPoidsUnitaire());
     }
