@@ -155,8 +155,14 @@ class AiContextBuilder
         }
 
         return "\nL'utilisateur a ATTACHÉ les fiches suivantes au contexte de cette conversation : elles sont"
-            . "\ndéjà vérifiées et dans son périmètre. Appuie-toi dessus EN PRIORITÉ quand il y fait référence"
-            . "\n(sans re-lire la fiche via un outil, sauf pour un indicateur CALCULÉ) :\n"
+            . "\ndéjà vérifiées et dans son périmètre. Appuie-toi dessus EN PRIORITÉ quand il y fait référence,"
+            . "\nsans re-lire la fiche via un outil. ATTENTION : chaque fiche ne contient QUE les attributs"
+            . "\nSTOCKÉS de l'enregistrement — JAMAIS ses enregistrements liés (tâches, documents, avenants,"
+            . "\ncotations…) ni ses indicateurs calculés. Ne conclus donc JAMAIS à l'absence d'éléments liés"
+            . "\nà partir d'une fiche : cherche-les avec rechercher_entites et son paramètre lieA, qui suit"
+            . "\nles relations à plusieurs niveaux (ex. tâches de la piste 42 : entite=Tache,"
+            . "\nlieA={entite: \"Piste\", id: 42} ; tâches du client 82 via ses pistes : entite=Tache,"
+            . "\nlieA={entite: \"Client\", id: 82}) ; un chiffre calculé se lit via indicateur_calcule :\n"
             . json_encode($objets, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     }
 

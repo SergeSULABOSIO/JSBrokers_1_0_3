@@ -19,6 +19,8 @@ Présenter cet inventaire de façon rassurante et concrète, avec des exemples.
 - Compter les enregistrements d'une rubrique : « Combien de clients avons-nous ? »
 - Lister et rechercher, avec filtre et pagination : « Liste nos avenants »,
   « Cherche les clients dont le nom contient TRANS ».
+- Lister les enregistrements LIÉS à une fiche précise : « Les tâches de cette
+  piste ? », « Les avenants du client X ? » (via le lien entre les fiches).
 - Lire la fiche complète d'un enregistrement : « Quelle est l'adresse du client
   X ? », « Donne-moi les détails de l'assureur Y ».
 - Lire les indicateurs financiers calculés — d'un enregistrement (client,
