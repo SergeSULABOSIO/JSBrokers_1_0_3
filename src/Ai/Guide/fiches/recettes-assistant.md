@@ -49,6 +49,17 @@ complète en texte simple.
 1. `lire_fiche` (entite, nom ou id). Si la réponse liste des candidats (nom
    ambigu), demander à l'utilisateur de préciser, puis relancer avec l'id.
 
+**Éléments liés d'une fiche** — « Les tâches de cette piste ? », « Les avenants
+du client X ? » :
+1. Obtenir l'id de la fiche (fiche attachée au contexte, `rechercher_entites`
+   ou `lire_fiche`).
+2. `rechercher_entites` avec `lieA` : entite=Tache + lieA={entite: "Piste",
+   id: 42}. Fonctionne aussi à PLUSIEURS niveaux de relation : les tâches du
+   client 82 (via ses pistes) = entite=Tache + lieA={entite: "Client", id: 82}.
+   C'est le SEUL moyen fiable — une fiche (lue ou attachée) ne contient jamais
+   ses enregistrements liés : ne JAMAIS conclure à leur absence sans cette
+   recherche.
+
 **Analyse financière du cabinet** — « Nos commissions ce trimestre ? » :
 1. `indicateur_calcule` (entite=Entreprise, code, du/au) pour les montants
    calculés ; `document_comptable` pour les états (trésorerie, résultat, TVA) ;
