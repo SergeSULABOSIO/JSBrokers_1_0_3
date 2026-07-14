@@ -1049,6 +1049,24 @@ thead.sticky-header {
     font-weight: bold;
     color: #0047AB;
 }
+/* Badge « déjà dans le contexte du chat IA » : pastille cobalt subtile posée
+   à côté du libellé principal de la ligne, basculée (hidden) par list-manager
+   selon l'état du chat actif. Aucune contribution au layout quand masquée. */
+.jsb-ctx-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    width: 22px;
+    height: 22px;
+    margin-left: .35rem;
+    border-radius: 50%;
+    background: #e8f0fb;
+    color: #0047AB;
+}
+.jsb-ctx-badge[hidden] {
+    display: none;
+}
 .list-row-secondary {
     display: flex;
     align-items: center;

@@ -14,9 +14,12 @@
      data-assistant-chat-send-url-value="{{ path('admin.assistantia.api.message.send', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
      data-assistant-chat-dialog-context-url-value="{{ path('admin.assistantia.api.dialog_context', {idEntreprise: idEntreprise}) }}"
      data-assistant-chat-visual-context-url-value="{{ path('admin.assistantia.api.visual_context', {idEntreprise: idEntreprise}) }}"
+     data-assistant-chat-contexte-url-value="{{ path('admin.assistantia.api.contexte.attach', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
      data-assistant-chat-id-entreprise-value="{{ idEntreprise }}"
      data-assistant-chat-id-invite-value="{{ idInvite }}"
-     data-assistant-chat-assistant-nom-value="{{ assistantNom }}">
+     data-assistant-chat-id-conversation-value="{{ conversation.id }}"
+     data-assistant-chat-assistant-nom-value="{{ assistantNom }}"
+     data-action="assistant:contexte.attach-request->assistant-chat#attachFromEvent">
     <style>
         .jsb-ai-chat { display:flex; flex-direction:column; height:100%; min-height:0; background:#f8f9fa; }
 
@@ -100,6 +103,45 @@
             flex:0 0 auto; display:flex; flex-direction:column; gap:.35rem;
             padding:.75rem 1rem .6rem; background:#ffffff; border-top:1px solid #dee2e6;
         }
+
+        /* ── Objets attachés au contexte (puces au-dessus de la saisie) ── */
+        .jsb-ai-chat .aic-context { display:flex; flex-direction:column; gap:.3rem; }
+        .jsb-ai-chat .aic-context:empty { display:none; }
+        .jsb-ai-chat .aic-context-head {
+            display:flex; align-items:center; justify-content:space-between; gap:.75rem;
+        }
+        .jsb-ai-chat .aic-context-count { color:#6c757d; font-size:.74rem; }
+        .jsb-ai-chat .aic-context-clear {
+            display:inline-flex; align-items:center; gap:.25rem;
+            background:none; border:none; cursor:pointer;
+            color:#6c757d; font-size:.74rem; padding:.15rem .4rem; border-radius:6px;
+            transition: color .15s ease, background-color .15s ease;
+        }
+        .jsb-ai-chat .aic-context-clear:hover { color:#842029; background:#f8d7da; }
+        .jsb-ai-chat .aic-context-clear:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+        .jsb-ai-chat .aic-context-chips {
+            display:flex; flex-wrap:wrap; gap:.35rem;
+            list-style:none; margin:0; padding:0;
+        }
+        .jsb-ai-chat .aic-chip {
+            display:inline-flex; align-items:center; gap:.3rem; max-width:100%;
+            background:#e8f0fb; border:1px solid transparent; border-radius:999px;
+            padding:.2rem .3rem .2rem .6rem; font-size:.78rem; color:#212529;
+            transition: border-color .15s ease, box-shadow .15s ease;
+        }
+        .jsb-ai-chat .aic-chip:hover { border-color:#0047AB; box-shadow:0 2px 6px rgba(0,71,171,.25); }
+        .jsb-ai-chat .aic-chip-icon { display:flex; flex:0 0 auto; color:#0047AB; }
+        .jsb-ai-chat .aic-chip-label {
+            min-width:0; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+        }
+        .jsb-ai-chat .aic-chip-remove {
+            display:flex; align-items:center; justify-content:center; flex:0 0 auto;
+            width:22px; height:22px; border-radius:50%; border:none; cursor:pointer;
+            background:none; color:#6c757d;
+            transition: background-color .15s ease, color .15s ease;
+        }
+        .jsb-ai-chat .aic-chip-remove:hover { background:#0047AB; color:#ffffff; }
+        .jsb-ai-chat .aic-chip-remove:focus-visible { outline:2px solid #0047AB; outline-offset:1px; }
         .jsb-ai-chat .aic-inputbox {
             display:flex; align-items:flex-end; gap:.5rem;
             border:1px solid #ced4da; border-radius:12px; background:#ffffff;
@@ -189,6 +231,11 @@
 
     {# ── Zone de saisie ── #}
     <div class="aic-composer">
+        {# Objets attachés au contexte : re-rendus par les endpoints API (clé
+           `html`), le contrôleur Stimulus remplace ce innerHTML. #}
+        <div class="aic-context" data-assistant-chat-target="contextBar">
+            {% include 'components/_assistant_ia_chat_contextes.html.twig' with { conversation: conversation } only %}
+        </div>
         <div class="aic-inputbox">
             <span class="aic-input-ic" aria-hidden="true">
                 <twig:UX:Icon name="{{ resolve_icon_name('feedback') }}" style="width:20px;height:20px;" />

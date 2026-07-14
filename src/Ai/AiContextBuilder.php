@@ -10,11 +10,13 @@ use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Repository\AssistantParametresRepository;
 use App\Service\Workspace\WorkspaceAccessResolver;
+use App\Services\JSBDynamicSearchService;
 
 /**
  * Construit la requête normalisée adressée au moteur IA : nom du personnage
  * (paramètres de l'entreprise), périmètre d'accès de l'invité (source unique :
- * WorkspaceAccessResolver) et historique récent de la conversation.
+ * WorkspaceAccessResolver), historique récent de la conversation et fiches des
+ * objets ATTACHÉS au contexte par l'utilisateur (re-validées à chaque envoi).
  */
 class AiContextBuilder
 {
@@ -25,6 +27,8 @@ class AiContextBuilder
         private readonly AssistantParametresRepository $parametresRepository,
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly GuideRepository $guides,
+        private readonly JSBDynamicSearchService $searchService,
+        private readonly FicheNormaliseur $ficheNormaliseur,
     ) {
     }
 
@@ -45,6 +49,7 @@ class AiContextBuilder
                 'entrepriseNom' => (string) $entreprise->getNom(),
                 'perimetre'     => $this->accessResolver->describePerimetreDetailed($invite),
                 'date'          => (new \DateTimeImmutable('now'))->format('Y-m-d'),
+                'objetsAttaches' => $this->objetsAttaches($conversation, $entreprise, $invite),
             ],
             messages: $messages,
             scope: new AiScope($entreprise, $invite),
@@ -55,11 +60,47 @@ class AiContextBuilder
      * Sérialisation texte du contexte système — inutilisée par le moteur simulé,
      * prête pour le message système du futur bridge LLM (Symfony AI).
      */
+    /**
+     * Fiches des objets attachés à la conversation, re-validées FAIL-CLOSED au
+     * moment de l'envoi (whitelist + canRead selon le rôle + scoping
+     * entreprise) : un objet supprimé ou devenu inaccessible est ignoré
+     * silencieusement — la puce reste affichée côté chat, l'assistant dira
+     * simplement qu'il ne trouve pas la donnée.
+     */
+    private function objetsAttaches(AssistantConversation $conversation, Entreprise $entreprise, Invite $invite): array
+    {
+        $labels = $this->accessResolver->libellesEntites();
+        $objets = [];
+        foreach ($conversation->getContextes() as $contexte) {
+            $type = (string) $contexte->getEntityType();
+            $fqcn = 'App\\Entity\\' . $type;
+            if (!isset($labels[$type]) || !class_exists($fqcn)
+                || !$this->accessResolver->canRead($invite, $type)) {
+                continue;
+            }
+            $result = $this->searchService->search($fqcn, ['id' => $contexte->getEntityId()], $entreprise, null, 1, 1);
+            $entity = $result['data'][0] ?? null;
+            if (($result['status']['code'] ?? 500) !== 200 || $entity === null) {
+                continue;
+            }
+            $objets[] = [
+                'type'    => $type,
+                'libelle' => $labels[$type],
+                'id'      => $contexte->getEntityId(),
+                'nom'     => (string) $contexte->getLabel(),
+                'fiche'   => $this->ficheNormaliseur->fiche($entity),
+            ];
+        }
+
+        return $objets;
+    }
+
     public function toSystemPrompt(AiRequest $request): string
     {
         $ctx = $request->systemContext;
         $perimetre = json_encode($ctx['perimetre'], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         $catalogue = $this->catalogueGuides();
+        $sectionObjets = $this->sectionObjetsAttaches($ctx['objetsAttaches'] ?? []);
 
         return <<<PROMPT
         Tu es {$ctx['assistantNom']}, l'assistant IA de l'entreprise de courtage « {$ctx['entrepriseNom']} »
@@ -98,8 +139,25 @@ class AiContextBuilder
         Le périmètre d'accès de ton interlocuteur est strictement limité à :
         {$perimetre}
         Pour toute demande hors de ce périmètre, refuse poliment en expliquant tes limitations techniques
-        liées aux droits d'accès, sans révéler la moindre donnée.
+        liées aux droits d'accès, sans révéler la moindre donnée.{$sectionObjets}
         PROMPT;
+    }
+
+    /**
+     * Section du prompt système consacrée aux objets ATTACHÉS par l'utilisateur
+     * (déjà re-validés par objetsAttaches()) ; chaîne vide sans objet — le
+     * prompt reste alors strictement identique (non-régression).
+     */
+    private function sectionObjetsAttaches(array $objets): string
+    {
+        if ($objets === []) {
+            return '';
+        }
+
+        return "\nL'utilisateur a ATTACHÉ les fiches suivantes au contexte de cette conversation : elles sont"
+            . "\ndéjà vérifiées et dans son périmètre. Appuie-toi dessus EN PRIORITÉ quand il y fait référence"
+            . "\n(sans re-lire la fiche via un outil, sauf pour un indicateur CALCULÉ) :\n"
+            . json_encode($objets, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     }
 
     /**

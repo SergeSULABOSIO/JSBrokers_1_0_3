@@ -14,7 +14,7 @@ use App\Ai\Scope\AiScope;
 final class AiRequest
 {
     /**
-     * @param array{assistantNom: string, entrepriseNom: string, perimetre: array, date: string} $systemContext
+     * @param array{assistantNom: string, entrepriseNom: string, perimetre: array, date: string, objetsAttaches: array} $systemContext
      * @param list<array{role: string, content: string}> $messages Historique, du plus ancien au plus récent.
      */
     public function __construct(

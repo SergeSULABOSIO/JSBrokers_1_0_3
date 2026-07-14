@@ -38,6 +38,11 @@ class AssistantConversation
     #[ORM\OrderBy(['id' => 'ASC'])]
     private Collection $messages;
 
+    /** @var Collection<int, AssistantConversationContexte> */
+    #[ORM\OneToMany(targetEntity: AssistantConversationContexte::class, mappedBy: 'conversation', cascade: ['persist'], orphanRemoval: true)]
+    #[ORM\OrderBy(['id' => 'ASC'])]
+    private Collection $contextes;
+
     #[ORM\Column(type: 'datetime_immutable')]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -47,6 +52,7 @@ class AssistantConversation
     public function __construct()
     {
         $this->messages = new ArrayCollection();
+        $this->contextes = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -108,6 +114,40 @@ class AssistantConversation
             $message->setConversation(null);
         }
         return $this;
+    }
+
+    /** @return Collection<int, AssistantConversationContexte> */
+    public function getContextes(): Collection
+    {
+        return $this->contextes;
+    }
+
+    public function addContexte(AssistantConversationContexte $contexte): self
+    {
+        if (!$this->contextes->contains($contexte)) {
+            $this->contextes->add($contexte);
+            $contexte->setConversation($this);
+        }
+        return $this;
+    }
+
+    public function removeContexte(AssistantConversationContexte $contexte): self
+    {
+        if ($this->contextes->removeElement($contexte) && $contexte->getConversation() === $this) {
+            $contexte->setConversation(null);
+        }
+        return $this;
+    }
+
+    /** L'objet (type + id) est-il déjà attaché à cette conversation ? */
+    public function hasContexte(string $entityType, int $entityId): bool
+    {
+        foreach ($this->contextes as $contexte) {
+            if ($contexte->getEntityType() === $entityType && $contexte->getEntityId() === $entityId) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public function getCreatedAt(): ?\DateTimeImmutable

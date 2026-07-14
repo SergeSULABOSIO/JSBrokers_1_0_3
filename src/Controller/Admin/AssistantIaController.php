@@ -6,9 +6,11 @@ use App\Ai\AiContextBuilder;
 use App\Ai\AiEngineFailure;
 use App\Ai\AiReply;
 use App\Ai\Engine\AiEngineInterface;
+use App\Ai\Tool\EntiteLibelle;
 use App\Ai\Tool\PrefillWhitelist;
 use Psr\Log\LoggerInterface;
 use App\Entity\AssistantConversation;
+use App\Entity\AssistantConversationContexte;
 use App\Entity\AssistantMessage;
 use App\Entity\AssistantParametres;
 use App\Entity\Entreprise;
@@ -57,6 +59,9 @@ class AssistantIaController extends AbstractController
 {
     private const MAX_MESSAGE_LENGTH = 4000;
 
+    /** Nombre maximal d'objets attachés au contexte d'une même conversation. */
+    private const MAX_CONTEXTES = 20;
+
     public function __construct(
         private EntrepriseRepository $entrepriseRepository,
         private AssistantConversationRepository $conversationRepository,
@@ -71,6 +76,7 @@ class AssistantIaController extends AbstractController
         private JSBDynamicSearchService $searchService,
         private NormalizerInterface $normalizer,
         private PrefillWhitelist $prefillWhitelist,
+        private EntiteLibelle $libelleur,
     ) {
     }
 
@@ -341,6 +347,164 @@ class AssistantIaController extends AbstractController
                 'createdAt' => $messageAssistant->getCreatedAt()?->format(\DateTimeImmutable::ATOM),
             ],
             'conversationTitre' => $conversation->getTitre(),
+        ]);
+    }
+
+    /**
+     * Attache un lot d'objets du workspace au contexte de la conversation
+     * (sélection des listes → « Ajouter au chat avec l'assistant IA »).
+     * FAIL-CLOSED par objet : whitelist de la carte de permissions + canRead
+     * selon le rôle de l'invité + scoping entreprise — un objet invalide est
+     * ignoré (compteur `ignores`), pas de 403 global (sélection hétérogène).
+     * FACTURATION : chaque objet réellement attaché coûte 80 % du poids d'un
+     * message IA, métré en une fois AVANT persistance (402 si solde épuisé,
+     * rien n'est attaché). Idempotent sur les doublons (aucun débit).
+     */
+    #[Route('/api/contextes/{idEntreprise}/{idConversation}', name: 'api.contexte.attach', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS], methods: ['POST'])]
+    public function attachContextes(int $idEntreprise, int $idConversation, Request $request): JsonResponse
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        if ($blocage = $this->blocagePremium($entreprise)) {
+            return $blocage;
+        }
+        $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+
+        $payload = json_decode($request->getContent(), true) ?: [];
+        $objets = $payload['objets'] ?? null;
+        if (!\is_array($objets) || $objets === []) {
+            return $this->json(['message' => 'Aucun objet fourni.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        // 1) Validation de TOUT le lot avant le moindre débit ou persistance.
+        $labels = $this->accessResolver->libellesEntites();
+        $ignores = 0;
+        $aAttacher = [];
+        foreach ($objets as $objet) {
+            $type = (string) ($objet['type'] ?? '');
+            $id = (int) ($objet['id'] ?? 0);
+            $fqcn = 'App\\Entity\\' . $type;
+            if (!isset($labels[$type]) || !class_exists($fqcn) || $id <= 0
+                || !$this->accessResolver->canRead($invite, $type)) {
+                $ignores++;
+                continue;
+            }
+            if (isset($aAttacher[$type . '#' . $id]) || $conversation->hasContexte($type, $id)) {
+                continue; // Déjà attaché (ou doublon du lot) : idempotent, aucun débit.
+            }
+            // Scoping : l'enregistrement doit exister DANS cette entreprise.
+            $result = $this->searchService->search($fqcn, ['id' => $id], $entreprise, null, 1, 1);
+            $entity = $result['data'][0] ?? null;
+            if (($result['status']['code'] ?? 500) !== 200 || $entity === null) {
+                $ignores++;
+                continue;
+            }
+            if (\count($conversation->getContextes()) + \count($aAttacher) >= self::MAX_CONTEXTES) {
+                $ignores++;
+                continue;
+            }
+            $aAttacher[$type . '#' . $id] = [$type, $id, $entity];
+        }
+
+        // 2) MÉTRAGE avant persistance (patron sendMessage) : solde épuisé →
+        // 402, rien n'est attaché.
+        try {
+            $this->tokenAccountService->meterContexteIa($entreprise, $this->currentUser(), \count($aAttacher));
+        } catch (InsufficientTokensException $e) {
+            return $this->json([
+                'message'       => 'Quota de tokens épuisé. Rechargez votre solde ou attendez le renouvellement de votre allocation gratuite.',
+                'blocked'       => true,
+                'required'      => $e->required,
+                'available'     => $e->available,
+                'nextRenewalAt' => $e->nextRenewalAt?->format(\DateTimeImmutable::ATOM),
+            ], Response::HTTP_PAYMENT_REQUIRED);
+        }
+
+        // 3) Persistance, avec un instantané du libellé pour l'affichage.
+        foreach ($aAttacher as [$type, $id, $entity]) {
+            $displayField = $this->libelleur->displayField('App\\Entity\\' . $type);
+            $conversation->addContexte((new AssistantConversationContexte())
+                ->setEntityType($type)
+                ->setEntityId($id)
+                ->setLabel(mb_substr($this->libelleur->libelle($entity, $displayField), 0, 160)));
+        }
+        if ($aAttacher !== []) {
+            $this->em->flush();
+        }
+
+        return $this->reponseContextes($conversation, $ignores);
+    }
+
+    /** Retire UN objet du contexte de la conversation (par id de rattachement). */
+    #[Route('/api/contextes/{idEntreprise}/{idConversation}/{idContexte}', name: 'api.contexte.detach', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS, 'idContexte' => Requirement::DIGITS], methods: ['DELETE'])]
+    public function detachContexte(int $idEntreprise, int $idConversation, int $idContexte): JsonResponse
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+
+        // Recherche DANS la collection de la conversation (jamais par id global) :
+        // un id d'une autre conversation est simplement introuvable ici.
+        $contexte = null;
+        foreach ($conversation->getContextes() as $candidat) {
+            if ($candidat->getId() === $idContexte) {
+                $contexte = $candidat;
+                break;
+            }
+        }
+        if ($contexte === null) {
+            return $this->json(['message' => 'Objet de contexte introuvable.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $conversation->removeContexte($contexte); // orphanRemoval → suppression
+        $this->em->flush();
+
+        return $this->reponseContextes($conversation);
+    }
+
+    /** Vide le contexte de la conversation (tous les objets d'un coup). */
+    #[Route('/api/contextes/{idEntreprise}/{idConversation}', name: 'api.contexte.clear', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS], methods: ['DELETE'])]
+    public function clearContextes(int $idEntreprise, int $idConversation): JsonResponse
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+
+        foreach ($conversation->getContextes()->toArray() as $contexte) {
+            $conversation->removeContexte($contexte);
+        }
+        $this->em->flush();
+
+        return $this->reponseContextes($conversation);
+    }
+
+    /**
+     * Réponse commune des endpoints contexte : liste sérialisée + fragment HTML
+     * des puces re-rendu côté serveur (chemin de rendu unique, partagé avec le
+     * rendu initial du chat).
+     */
+    private function reponseContextes(AssistantConversation $conversation, int $ignores = 0): JsonResponse
+    {
+        return $this->json([
+            'contextes' => array_values(array_map(
+                static fn (AssistantConversationContexte $c) => [
+                    'id'         => $c->getId(),
+                    'entityType' => $c->getEntityType(),
+                    'entityId'   => $c->getEntityId(),
+                    'label'      => $c->getLabel(),
+                ],
+                $conversation->getContextes()->toArray(),
+            )),
+            'html'    => $this->renderView('components/_assistant_ia_chat_contextes.html.twig', [
+                'conversation' => $conversation,
+            ]),
+            'ignores' => $ignores,
         ]);
     }
 

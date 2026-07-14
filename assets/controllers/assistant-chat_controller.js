@@ -10,7 +10,7 @@ import { Controller } from '@hotwired/stimulus';
  * textContent (échappement systématique).
  */
 export default class extends Controller {
-    static targets = ['messages', 'input', 'send', 'typing', 'typingLabel', 'count'];
+    static targets = ['messages', 'input', 'send', 'typing', 'typingLabel', 'count', 'contextBar'];
 
     /** Seuil d'affichage du compteur de caractères restants (proche de maxlength). */
     static COUNT_THRESHOLD = 400;
@@ -25,8 +25,10 @@ export default class extends Controller {
         sendUrl: String,
         dialogContextUrl: String,
         visualContextUrl: String,
+        contexteUrl: String,
         idEntreprise: Number,
         idInvite: Number,
+        idConversation: Number,
         assistantNom: String,
     };
 
@@ -37,6 +39,9 @@ export default class extends Controller {
         if (this.hasInputTarget) {
             this.inputTarget.focus();
         }
+        // Annonce silencieuse de l'état du contexte (badges « déjà en
+        // contexte » des listes) — les puces initiales sont rendues serveur.
+        this.emitContexteOperation({ phase: 'announce', objets: this.contexteObjets() });
     }
 
     /**
@@ -274,6 +279,134 @@ export default class extends Controller {
             console.error('AssistantChat - ouverture de dialogue échouée :', error);
             this.appendNotice('error', error.message || "L'ouverture du formulaire a échoué.");
         }
+    }
+
+    // ── Objets attachés au contexte de la conversation ──────────────────────
+
+    /**
+     * Attache la sélection transmise par le cerveau (action « Ajouter au chat
+     * avec l'assistant IA » de la toolbar / du menu contextuel) : l'événement
+     * DOM `assistant:contexte.attach-request` est dispatché sur CE panneau.
+     */
+    async attachFromEvent(event) {
+        const objets = Array.isArray(event.detail?.objets) ? event.detail.objets : [];
+        if (objets.length === 0 || !this.hasContexteUrlValue) return;
+
+        await this.contexteOperation(
+            () => fetch(this.contexteUrlValue, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ objets }),
+            }),
+            (data) => {
+                // Libellé du toast : le nom de l'objet quand il est seul, le
+                // décompte au-delà (les doublons idempotents comptent « déjà là »).
+                const attaches = (data.contextes || []).filter((c) => objets.some(
+                    (o) => o.type === c.entityType && Number(o.id) === Number(c.entityId)
+                ));
+                if (data.ignores > 0) {
+                    this.appendNotice('warning', `${data.ignores} objet${data.ignores > 1 ? 's' : ''} hors périmètre ou introuvable${data.ignores > 1 ? 's' : ''} ignoré${data.ignores > 1 ? 's' : ''}.`);
+                }
+                if (attaches.length === 0) {
+                    return { message: 'Aucun objet ajouté au contexte.', level: 'warning' };
+                }
+                return {
+                    message: attaches.length === 1
+                        ? `« ${attaches[0].label} » attaché au contexte du chat actif.`
+                        : `${attaches.length} objets attachés au contexte du chat actif.`,
+                    level: 'success',
+                };
+            },
+        );
+    }
+
+    /** Retire UN objet du contexte (bouton × d'une puce). */
+    async removeContexte(event) {
+        const idContexte = parseInt(event.currentTarget.dataset.contexteId, 10);
+        if (!Number.isInteger(idContexte) || !this.hasContexteUrlValue) return;
+        const label = event.currentTarget.closest('.aic-chip')?.querySelector('.aic-chip-label')?.textContent?.trim();
+
+        await this.contexteOperation(
+            () => fetch(`${this.contexteUrlValue}/${idContexte}`, { method: 'DELETE' }),
+            () => ({
+                message: label ? `« ${label} » retiré du contexte de la conversation.` : 'Objet retiré du contexte.',
+                level: 'success',
+            }),
+        );
+    }
+
+    /** Vide le contexte (bouton « Tout retirer »). */
+    async clearContextes() {
+        if (!this.hasContexteUrlValue) return;
+
+        await this.contexteOperation(
+            () => fetch(this.contexteUrlValue, { method: 'DELETE' }),
+            () => ({ message: 'Contexte de la conversation vidé.', level: 'success' }),
+        );
+    }
+
+    /**
+     * Déroulé commun d'une opération sur le contexte : cycle de feedback
+     * `ui:assistant.contexte-operation` start/end (barre de progression + toast
+     * + synchro des badges de listes, routé par le cerveau), re-rendu des puces
+     * depuis le fragment HTML serveur (chemin de rendu unique), gestion du 402
+     * (premium / solde) identique à send().
+     */
+    async contexteOperation(doFetch, buildSuccess) {
+        this.emitContexteOperation({ phase: 'start' });
+        let message = "L'opération sur le contexte a échoué. Veuillez réessayer.";
+        let level = 'error';
+
+        try {
+            const response = await doFetch();
+            const data = await response.json().catch(() => ({}));
+
+            if (response.status === 402) {
+                message = data.premium ? (data.message || 'Fonctionnalité premium.') : this.tokensMessage(data);
+                this.appendNotice('warning', message);
+                level = 'warning';
+            } else if (!response.ok) {
+                message = data.message || message;
+                this.appendNotice('error', message);
+            } else {
+                this.renderContextes(data.html || '');
+                ({ message, level } = buildSuccess(data));
+            }
+        } catch (error) {
+            console.error('AssistantChat - opération contexte échouée :', error);
+            this.appendNotice('error', message);
+        } finally {
+            this.emitContexteOperation({ phase: 'end', message, level, objets: this.contexteObjets() });
+        }
+    }
+
+    /** Remplace les puces par le fragment rendu côté serveur (Twig échappe tout). */
+    renderContextes(html) {
+        if (this.hasContextBarTarget) {
+            this.contextBarTarget.innerHTML = html;
+        }
+    }
+
+    /** État courant du contexte, lu depuis les puces rendues serveur. */
+    contexteObjets() {
+        if (!this.hasContextBarTarget) return [];
+        return [...this.contextBarTarget.querySelectorAll('.aic-chip')].map((chip) => ({
+            type: chip.dataset.entityType,
+            id: parseInt(chip.dataset.entityId, 10),
+        })).filter((o) => o.type && Number.isInteger(o.id));
+    }
+
+    /** Émet le cycle de feedback contexte vers le cerveau (médiateur). */
+    emitContexteOperation(payload) {
+        document.dispatchEvent(new CustomEvent('cerveau:event', {
+            bubbles: true,
+            detail: {
+                type:      'ui:assistant.contexte-operation',
+                source:    'assistant-chat',
+                payload:   { idConversation: this.idConversationValue, ...payload },
+                timestamp: Date.now(),
+            },
+        }));
     }
 
     /** Message 402 : solde et date de renouvellement si fournis par l'API. */
