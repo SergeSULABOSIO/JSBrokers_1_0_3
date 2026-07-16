@@ -449,6 +449,10 @@ class IndicatorCalculationHelper
             $prime_nette += $this->getCotationMontantPrimeNette($cotation);
             $prime_cotation = $this->getCotationMontantPrimePayableParClient($cotation);
             $prime_totale += $prime_cotation;
+            // Prime encaissée : notes client réglées (prorata) + paiements SIGNALÉS
+            // (PaiementPrime déclaratif). Était initialisé à 0 sans jamais être
+            // accumulé → « solde de prime » toujours égal à la prime totale.
+            $prime_totale_payee += $this->getCotationMontantPrimePayableParClientPayee($cotation);
 
             $commission_ttc_cotation = $this->getCotationMontantCommissionTtc($cotation, -1, false);
             $commission_totale += $commission_ttc_cotation;
@@ -493,6 +497,15 @@ class IndicatorCalculationHelper
                 $taxe_courtier *= $pourcentage;
                 $taxe_assureur *= $pourcentage;
             }
+            // Les montants ENCAISSÉS/PAYÉS d'une tranche sont des faits propres à la
+            // tranche (notes de SES articles, paiements de prime SIGNALÉS sur elle) —
+            // jamais un prorata de la cotation. Mêmes chiffres que la fiche/liste
+            // (TrancheIndicatorStrategy), Ket et la visualisation restent cohérents.
+            $prime_totale_payee = $this->getTranchePrimePayee($trancheCible);
+            $commission_totale_encaissee = $this->getTrancheMontantCommissionEncaissee($trancheCible);
+            $retro_commission_partenaire_payee = $this->getTrancheMontantRetrocommissionsPayableParCourtierPayee($trancheCible, $partenaireCible);
+            $taxe_courtier_payee = $this->getTrancheMontantTaxePayee($trancheCible, false);
+            $taxe_assureur_payee = $this->getTrancheMontantTaxePayee($trancheCible, true);
         }
 
         $reserve = $commission_pure - $retro_commission_partenaire;
