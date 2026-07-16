@@ -151,6 +151,26 @@ final class SimulatedAiEngine implements AiEngineInterface
                 isset($data['cible']) ? sprintf(' pour « %s »', $data['cible']) : '',
                 isset($data['precharge']) ? sprintf(', pré-rempli (%s)', implode(', ', $data['precharge'])) : '',
             ),
+            'solde_tokens' => sprintf(
+                'Le compte de « %s » dispose actuellement de %s tokens (%s prépayés + %s de '
+                . 'l\'allocation gratuite%s).%s%s',
+                $data['entreprise'],
+                number_format($data['total'], 0, ',', ' '),
+                number_format($data['prepayes'], 0, ',', ' '),
+                number_format($data['gratuits'], 0, ',', ' '),
+                isset($data['allocationGratuite'])
+                    ? sprintf(' sur %s offerts', number_format($data['allocationGratuite'], 0, ',', ' '))
+                    : '',
+                isset($data['prochainRenouvellementGratuit'])
+                    ? sprintf(
+                        ' Prochain renouvellement de l\'allocation gratuite : %s.',
+                        $data['prochainRenouvellementGratuit'],
+                    )
+                    : '',
+                isset($data['logiqueConsommation'])
+                    ? "\n\nPour rappel : " . $data['logiqueConsommation']
+                    : '',
+            ),
             'vigie_echeances' => $this->formatVigie($data),
             'analyse_portefeuille' => $this->formatAnalysePortefeuille($data),
             'exporter_etat' => sprintf(
