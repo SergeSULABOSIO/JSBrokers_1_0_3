@@ -43,30 +43,35 @@
                  role="status" aria-live="polite" aria-atomic="true"
                  data-view-manager-target="display">Prêt.</div>
             <span class="jsb-list-controls-bar__sep" aria-hidden="true"></span>
-            {# Chips de filtre rapide (optionnels, déclarés par le canvas de liste via
-               `filtres_predefinis`) : chaque option pose/retire un critère de recherche
-               via le Cerveau (ui:filter.preset). L'état actif est synchronisé sur les
-               critères courants de l'onglet (badge de la barre de recherche compris). #}
-            {% for groupe in listeCanvas.filtres_predefinis | default([]) %}
-                <div class="jsb-preset-filters" role="group"
-                     aria-label="{{ groupe.libelle | default('Filtres rapides') }}"
-                     data-preset-criterion="{{ groupe.critere }}">
-                    {% for option in groupe.options %}
-                        <button type="button" class="jsb-preset-chip"
-                                data-action="click->list-manager#applyPresetFilter"
-                                data-criterion-key="{{ groupe.critere }}"
-                                data-criterion-value="{{ option.value }}"
-                                data-criterion-label="{{ option.label }}"
-                                aria-pressed="false">{{ option.label }}</button>
-                    {% endfor %}
-                </div>
-                <span class="jsb-list-controls-bar__sep" aria-hidden="true"></span>
-            {% endfor %}
             <div data-list-manager-target="paginationContainer" class="jsb-list-controls-bar__pagination"></div>
             <div class="jsb-list-controls-bar__totals">
                 {{ include('components/_list_summary.html.twig') }}
             </div>
         </div>
+        {# Chips de filtre rapide (optionnels, déclarés par le canvas de liste via
+           `filtres_predefinis`) : chaque option pose/retire un critère de recherche via
+           le Cerveau (ui:filter.preset). L'état actif est synchronisé sur les critères
+           courants de l'onglet (badge de la barre de recherche compris). Rangée DÉDIÉE
+           sous la barre de contrôles : elle était saturée (statut + pagination + totaux),
+           les chips s'y empilaient mal. #}
+        {% if listeCanvas.filtres_predefinis is defined and listeCanvas.filtres_predefinis is not empty %}
+            <div class="jsb-preset-filters-bar">
+                {% for groupe in listeCanvas.filtres_predefinis %}
+                    <div class="jsb-preset-filters" role="group"
+                         aria-label="{{ groupe.libelle | default('Filtres rapides') }}"
+                         data-preset-criterion="{{ groupe.critere }}">
+                        {% for option in groupe.options %}
+                            <button type="button" class="jsb-preset-chip"
+                                    data-action="click->list-manager#applyPresetFilter"
+                                    data-criterion-key="{{ groupe.critere }}"
+                                    data-criterion-value="{{ option.value }}"
+                                    data-criterion-label="{{ option.label }}"
+                                    aria-pressed="false">{{ option.label }}</button>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
         {% endif %}
         <div class="table-scroll-wrapper flex-grow-1" data-list-manager-target="listContainer">
             <table class="table table-hover table-sm table-enhanced" aria-label="Liste de {{ entite_nom }}">
