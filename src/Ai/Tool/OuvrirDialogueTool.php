@@ -44,7 +44,10 @@ final class OuvrirDialogueTool implements AiToolInterface
             . 'quand l’utilisateur demande d’ouvrir, créer, ajouter ou modifier une fiche. En mode '
             . 'creation, tu peux PRÉ-REMPLIR le formulaire via « valeurs » avec STRICTEMENT les '
             . 'valeurs dictées par l’utilisateur — n’invente ni ne devine JAMAIS une valeur. '
-            . 'Cet outil n’écrit rien : l’utilisateur vérifie et enregistre lui-même le formulaire.';
+            . 'Cet outil n’écrit rien : l’utilisateur vérifie et enregistre lui-même le formulaire. '
+            . 'EXCEPTION : pour signaler le paiement d\'une PRIME sur une tranche, utiliser '
+            . 'signaler_paiement_prime (jamais le formulaire Paiement, qui est un encaissement '
+            . 'de trésorerie du courtier).';
     }
 
     public function schema(): array
@@ -89,6 +92,12 @@ final class OuvrirDialogueTool implements AiToolInterface
         $normalized = AiText::normalize($question);
         // « ouvre la rubrique X » relève de ouvrir_rubrique, pas d'un formulaire.
         if (preg_match('/\b(rubrique|section|module)\b/', $normalized)) {
+            return null;
+        }
+        // « signaler le paiement d'une prime » relève de signaler_paiement_prime
+        // (PaiementPrime déclaratif rattaché à une tranche, formulaire prérempli) —
+        // surtout PAS du formulaire Paiement (trésorerie du courtier).
+        if (preg_match('/\bprimes?\b/', $normalized) && preg_match('/\b(paiements?|payee?s?|regle[es]?|signal\w*)\b/', $normalized)) {
             return null;
         }
         if (!preg_match('/\b(cree[rsz]?|ajoute[rsz]?|nouveau|nouvelle|ouvre[sz]?|ouvrir)\b/', $normalized)) {
