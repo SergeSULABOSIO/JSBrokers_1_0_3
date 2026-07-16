@@ -925,9 +925,14 @@ textarea:hover,
 
 /* --- 3.5 Barre des contrôles de liste (pagination + totaux) --- */
 
+/* Barre de contrôles adaptative : statut, pagination et totaux se replient sur la
+   ligne suivante (le composant le plus à DROITE d'abord) quand la place manque —
+   plus aucun écrasement/empilement. La hauteur réelle est re-mesurée par le
+   list-manager (--jsb-pgbar-h) pour le décalage du thead sticky. */
 .jsb-list-controls-bar {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 0.5rem;
     position: sticky;
     top: 0;
@@ -937,8 +942,10 @@ textarea:hover,
     padding: 0.25rem 0.75rem;
     min-height: 38px;
 }
-.jsb-list-controls-bar__pagination { flex: 1; min-width: 0; }
-.jsb-list-controls-bar__totals { flex-shrink: 0; }
+/* La pagination refuse de s'écraser sous son contenu (min-width) : à défaut de
+   place, c'est le bloc suivant (totaux) puis elle-même qui passent à la ligne. */
+.jsb-list-controls-bar__pagination { flex: 1 1 auto; min-width: max-content; }
+.jsb-list-controls-bar__totals { flex-shrink: 0; margin-left: auto; }
 .jsb-list-controls-bar__display {
     flex-shrink: 0;
     font-size: 0.8rem;
@@ -1032,6 +1039,7 @@ textarea:hover,
 .jsb-list-summary {
     display: flex;
     align-items: center;
+    flex-wrap: wrap; /* Totaliser / Total / Sélection se replient aussi au besoin */
     gap: 0.5rem;
     font-size: 0.8rem;
 }
