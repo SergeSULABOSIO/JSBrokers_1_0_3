@@ -282,6 +282,22 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
         $this->assertSame('Payée', $payees['data'][0]->statutPaiement);
         $this->assertSame(500.0, $payees['data'][0]->primeDeclareePayee);
         $this->assertSame('reglee', $payees['data'][0]->urgenceNiveau);
+
+        // Le moteur d'INDICATEURS GLOBAUX (chemin de l'outil IA indicateur_calcule et
+        // de la colonne de visualisation) voit aussi le paiement signalé : ciblé sur
+        // la tranche, « prime payée » = 500 et « solde de prime » = 0 (le compteur
+        // restait figé à zéro — solde toujours égal à la prime — avant correctif).
+        $helper = static::getContainer()->get(\App\Services\Canvas\Indicator\IndicatorCalculationHelper::class);
+        $trancheFraiche = $this->em()->getRepository(Tranche::class)->find($echue->getId());
+        $stats = $helper->getIndicateursGlobaux($entreprise, false, ['trancheCible' => $trancheFraiche]);
+        $this->assertEqualsWithDelta(500.0, $stats['prime_totale'], 0.01);
+        $this->assertEqualsWithDelta(500.0, $stats['prime_totale_payee'], 0.01, 'Le paiement signalé doit compter comme prime payée.');
+        $this->assertEqualsWithDelta(0.0, $stats['prime_totale_solde'], 0.01, 'Prime intégralement signalée payée : plus de solde.');
+
+        // Niveau entreprise : la prime payée agrégée reflète aussi le signalement.
+        $statsEntreprise = $helper->getIndicateursGlobaux($entreprise, false, []);
+        $this->assertEqualsWithDelta(500.0, $statsEntreprise['prime_totale_payee'], 0.01);
+        $this->assertEqualsWithDelta(500.0, $statsEntreprise['prime_totale_solde'], 0.01, '1000 de prime, 500 signalés payés : solde 500.');
     }
 
     public function testStatutInvalideRetombeSurCheminStandard(): void
