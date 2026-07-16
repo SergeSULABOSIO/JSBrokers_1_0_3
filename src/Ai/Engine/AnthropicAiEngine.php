@@ -81,7 +81,7 @@ final class AnthropicAiEngine implements AiEngineInterface
 
             // Tool-calling : exécuter TOUS les appels demandés (fail-closed dans
             // chaque outil) et renvoyer tous les résultats dans UN SEUL message user.
-            $messages[] = ['role' => 'assistant', 'content' => $response['content']];
+            $messages[] = ['role' => 'assistant', 'content' => $this->preserverInputsObjets($response['content'])];
             $toolResults = [];
             foreach ($response['content'] as $block) {
                 if (($block['type'] ?? null) !== 'tool_use') {
@@ -151,6 +151,23 @@ final class AnthropicAiEngine implements AiEngineInterface
         }
 
         return $definitions;
+    }
+
+    /**
+     * PHP décode « input: {} » (objet JSON vide) en TABLEAU vide ; ré-encodé
+     * tel quel dans l'écho du tour assistant, il redeviendrait [] (une liste),
+     * rejetée par l'API (input d'un tool_use = objet). On restitue l'objet
+     * vide — cas de tout outil SANS paramètre (solde_tokens, quitter_workspace).
+     */
+    private function preserverInputsObjets(array $blocks): array
+    {
+        foreach ($blocks as $i => $block) {
+            if (($block['type'] ?? null) === 'tool_use' && ($block['input'] ?? null) === []) {
+                $blocks[$i]['input'] = new \stdClass();
+            }
+        }
+
+        return $blocks;
     }
 
     private function executeTool(string $name, array $args, AiRequest $request): AiToolResult

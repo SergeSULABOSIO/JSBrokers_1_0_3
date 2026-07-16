@@ -88,7 +88,7 @@ final class GeminiAiEngine implements AiEngineInterface
 
             // Function calling : exécuter TOUS les appels demandés (fail-closed
             // dans chaque outil), réponses regroupées dans UN message user.
-            $contents[] = ['role' => 'model', 'parts' => $parts];
+            $contents[] = ['role' => 'model', 'parts' => $this->preserverArgsObjets($parts)];
             $responseParts = [];
             foreach ($functionCalls as $part) {
                 $name = (string) $part['functionCall']['name'];
@@ -173,6 +173,24 @@ final class GeminiAiEngine implements AiEngineInterface
         }
 
         return $schema;
+    }
+
+    /**
+     * PHP décode « args: {} » (objet JSON vide) en TABLEAU vide ; ré-encodé tel
+     * quel dans l'écho du tour model, il redeviendrait [] (une liste), rejetée
+     * par le proto Gemini (400 « Proto field is not repeating, cannot start
+     * list »). On restitue l'objet vide — cas de tout outil SANS paramètre
+     * (solde_tokens, quitter_workspace).
+     */
+    private function preserverArgsObjets(array $parts): array
+    {
+        foreach ($parts as $i => $part) {
+            if (isset($part['functionCall']) && ($part['functionCall']['args'] ?? null) === []) {
+                $parts[$i]['functionCall']['args'] = new \stdClass();
+            }
+        }
+
+        return $parts;
     }
 
     private function executeTool(string $name, array $args, AiRequest $request): AiToolResult

@@ -214,6 +214,40 @@ class GeminiAiEngineTest extends TestCase
         $this->assertSame('object', $declaration['parameters']['properties']['imbrique']['items']['type']);
     }
 
+    /**
+     * Un outil SANS paramètre (solde_tokens, quitter_workspace) est appelé avec
+     * « args: {} » ; PHP décode cet objet JSON vide en TABLEAU vide, que l'écho
+     * du tour model ré-encoderait en [] (une liste) — 400 INVALID_ARGUMENT
+     * « Proto field is not repeating, cannot start list » (vécu). L'objet vide
+     * doit repartir en {} sur le réseau.
+     */
+    public function testEchoDesArgsVidesResteUnObjet(): void
+    {
+        $bodies = [];
+        $reponses = [
+            ['candidates' => [[
+                'content' => ['role' => 'model', 'parts' => [
+                    ['functionCall' => ['name' => 'compter_entites', 'args' => new \stdClass()]],
+                ]],
+            ]]],
+            self::texte('Voici votre solde.'),
+        ];
+        $i = 0;
+        $http = new MockHttpClient(function ($method, $url, $options) use (&$bodies, &$i, $reponses) {
+            $bodies[] = (string) $options['body'];
+
+            return new MockResponse(json_encode($reponses[$i++]));
+        });
+
+        $tool = $this->makeTool(AiToolResult::ok(['total' => 1000]));
+        $reply = $this->makeEngine($http, [$tool])->reply($this->makeRequest('Solde des tokens ?'));
+
+        $this->assertSame('Voici votre solde.', $reply->content);
+        $this->assertSame([], $tool->receivedArgs);
+        $this->assertStringContainsString('"args":{}', $bodies[1]);
+        $this->assertStringNotContainsString('"args":[]', $bodies[1]);
+    }
+
     public function testRefusPerimetrePropage(): void
     {
         $reponses = [
