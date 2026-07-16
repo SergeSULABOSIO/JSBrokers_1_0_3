@@ -1003,42 +1003,47 @@ textarea:hover,
     border-bottom: 1px solid #dee2e6;
     padding: 0.35rem 0.75rem;
 }
+/* Groupe de boutons toggle (même rendu que les blocs du tableau de bord,
+   ex. Renouvellements : .db-prod-tabs/.db-task-toggle) : piste grise en pilule,
+   bouton actif = pastille blanche ombrée. Logique inchangée (is-active/aria-pressed). */
 .jsb-preset-filters {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 0.25rem;
+    background: #f0f2f5;
+    border-radius: 20px;
+    padding: 3px;
+    gap: 0;
     flex-shrink: 0;
 }
 .jsb-preset-chip {
-    border: 1px solid #dee2e6;
-    background: #ffffff;
-    color: #495057;
-    font-size: 0.75rem;
-    line-height: 1;
-    padding: 0.3rem 0.6rem;
-    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.68rem;
+    font-weight: 500;
+    line-height: 1.2;
+    padding: 3px 10px;
+    border-radius: 16px;
+    border: none;
+    background: transparent;
+    color: #6c757d;
     white-space: nowrap;
     cursor: pointer;
-    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    font-family: inherit;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
 }
 .jsb-preset-chip:hover {
-    background: #e9ecef;
     color: #212529;
 }
 .jsb-preset-chip:focus-visible {
-    outline: none;
-    border-color: #0047AB;
-    box-shadow: 0 0 0 0.2rem rgba(0, 71, 171, 0.35);
+    outline: 2px solid #0047AB;
+    outline-offset: 2px;
 }
 .jsb-preset-chip.is-active {
-    background: #0047AB;
-    border-color: #0047AB;
-    color: #ffffff;
-}
-.jsb-preset-chip.is-active:hover {
-    background: #003380;
-    border-color: #003380;
+    background: #ffffff;
+    color: #212529;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
 }
 
 .jsb-list-summary {
