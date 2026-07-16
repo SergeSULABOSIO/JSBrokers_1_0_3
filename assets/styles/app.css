@@ -953,6 +953,71 @@ textarea:hover,
     flex-shrink: 0;
 }
 
+/* Badge d'état des lignes de liste (déclaré par le canvas : ex. urgence de recouvrement
+   des tranches). Couleurs sémantiques de la charte : danger (retard avéré), orange
+   (échéance imminente), warning (échéance proche), neutre (lointaine), succès (réglée). */
+.jsb-state-badge {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    vertical-align: middle;
+    background: #e9ecef;
+    color: #495057;
+}
+.jsb-state-badge--critique { background: #f8d7da; color: #842029; }
+.jsb-state-badge--elevee { background: #e69500; color: #ffffff; }
+.jsb-state-badge--moderee { background: #fff3cd; color: #664d03; }
+.jsb-state-badge--faible { background: #e9ecef; color: #495057; }
+.jsb-state-badge--reglee { background: #d1e7dd; color: #0f5132; }
+/* Rétro partenaire à payer : information d'action (décaissement), teinte cobalt de marque. */
+.jsb-state-badge--retro { background: #e8f0fb; color: #0047AB; }
+/* Commission exigible : prime encaissée par l'assureur → à collecter MAINTENANT (cobalt plein). */
+.jsb-state-badge--exigible { background: #0047AB; color: #ffffff; }
+
+/* Chips de filtre rapide (barre de contrôles des listes : ex. statut de paiement des tranches).
+   Charte : neutre = surface blanche/bordure standard, actif = cobalt (#0047AB) texte blanc. */
+.jsb-preset-filters {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+}
+.jsb-preset-chip {
+    border: 1px solid #dee2e6;
+    background: #ffffff;
+    color: #495057;
+    font-size: 0.75rem;
+    line-height: 1;
+    padding: 0.3rem 0.6rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.jsb-preset-chip:hover {
+    background: #e9ecef;
+    color: #212529;
+}
+.jsb-preset-chip:focus-visible {
+    outline: none;
+    border-color: #0047AB;
+    box-shadow: 0 0 0 0.2rem rgba(0, 71, 171, 0.35);
+}
+.jsb-preset-chip.is-active {
+    background: #0047AB;
+    border-color: #0047AB;
+    color: #ffffff;
+}
+.jsb-preset-chip.is-active:hover {
+    background: #003380;
+    border-color: #003380;
+}
+
 .jsb-list-summary {
     display: flex;
     align-items: center;

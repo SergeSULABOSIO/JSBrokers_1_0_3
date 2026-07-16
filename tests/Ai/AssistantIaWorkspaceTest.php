@@ -554,9 +554,11 @@ class AssistantIaWorkspaceTest extends WebTestCase
             (int) $conn->fetchOne('SELECT COUNT(*) FROM assistant_message WHERE conversation_id = :id', ['id' => $conversation->getId()])
         );
 
-        // Le métrage tokens est journalisé (écriture AssistantMessage).
+        // Le métrage tokens est journalisé (écriture AssistantMessage). Scopé à
+        // l'entreprise du test : la table est partagée avec d'autres jeux de données
+        // de bdm_test (ex. harnais E2E) — une lecture globale rendait le test fragile.
         $logs = static::getContainer()->get(TokenConsumptionRepository::class)
-            ->findBy(['entiteNom' => 'AssistantMessage']);
+            ->findBy(['entiteNom' => 'AssistantMessage', 'entreprise' => $e]);
         $this->assertCount(1, $logs, 'Un message envoyé = une consommation de tokens journalisée.');
     }
 

@@ -86,6 +86,22 @@
                 "{{ valeur_principale }}"
             {% endif %}
 
+            {# Badges d'état déclarés par le canvas de liste (optionnels) : texte issu d'un
+               attribut calculé + niveau (suffixe de classe CSS), soit lu d'un attribut
+               (`attribut_niveau`), soit constant (`niveau_fixe`). Ex. Tranches : urgence de
+               recouvrement + rétro partenaire à payer. Texte vide = badge non rendu. #}
+            {% set badge_defs = col_principale.badges
+                | default(col_principale.badge is defined ? [col_principale.badge] : []) %}
+            {% for badge_def in badge_defs %}
+                {% set badge_texte = attribute(entity, badge_def.attribut_code) %}
+                {% set badge_niveau = badge_def.attribut_niveau is defined
+                    ? attribute(entity, badge_def.attribut_niveau)
+                    : badge_def.niveau_fixe|default('') %}
+                {% if badge_texte is not null and badge_texte|trim != '' %}
+                    <span class="jsb-state-badge{{ badge_niveau ? ' jsb-state-badge--' ~ badge_niveau : '' }}">{{ badge_texte }}</span>
+                {% endif %}
+            {% endfor %}
+
             {# Badge « déjà dans le contexte du chat IA » : rendu masqué (le chat
                actif est une notion cliente), basculé par list-manager via
                l'événement app:assistant.contexte.updated. #}

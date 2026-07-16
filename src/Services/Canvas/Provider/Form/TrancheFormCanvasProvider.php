@@ -17,7 +17,6 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
     {
         /** @var Tranche $object */
         $isParentNew = ($object->getId() === null);
-        $trancheId = $object->getId() ?? 0;
 
         $parametres = [
             "titre_creation" => "Nouvelle Tranche",
@@ -26,6 +25,17 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
             "endpoint_delete_url" => "/admin/tranche/api/delete",
             "endpoint_form_url" => "/admin/tranche/api/get-form",
             "isCreationMode" => $isParentNew,
+            // Action rapide « Signaler un paiement de prime » (menu contextuel, barre
+            // d'outils, volet du dialogue) : ouvre le dialogue de création PaiementPrime
+            // rattaché à la tranche. Toujours disponible (paiements partiels/correctifs).
+            "attribute_actions" => [
+                [
+                    "label" => "Signaler un paiement de prime",
+                    "icon"  => "paiement",
+                    "event" => "ui:tranche.signaler-paiement-prime",
+                    "url"   => "/admin/tranche/api/get-paiement-prime-context/%id%",
+                ],
+            ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
                 "titre" => "Tranche",
@@ -33,15 +43,16 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
             ],
             // Mini-pastille par carte de champ : icône illustrant le champ (alias IconCanvasProvider).
             "field_icons" => [
-                "nom"         => "action:edit",
-                "modeCalcul"  => "action:options",
-                "montantFlat" => "action:count",
-                "pourcentage" => "action:count",
-                "payableAt"   => "action:calendar",
-                "echeanceAt"  => "action:calendar",
+                "nom"            => "action:edit",
+                "modeCalcul"     => "action:options",
+                "montantFlat"    => "action:count",
+                "pourcentage"    => "action:count",
+                "payableAt"      => "action:calendar",
+                "echeanceAt"     => "action:calendar",
+                "paiementsPrime" => "paiement",
             ],
         ];
-        $layout = $this->buildTrancheLayout($trancheId, $isParentNew);
+        $layout = $this->buildTrancheLayout($object, $isParentNew);
 
         return [
             "parametres" => $parametres,
@@ -50,7 +61,7 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
         ];
     }
 
-    private function buildTrancheLayout(int $trancheId, bool $isParentNew): array
+    private function buildTrancheLayout(object $object, bool $isParentNew): array
     {
         // Conditions de visibilité pour les champs dynamiques
         $visibilityConditionPourcentage = [
@@ -83,6 +94,14 @@ class TrancheFormCanvasProvider implements FormCanvasProviderInterface
                 ["champs" => ["echeanceAt"], "width" => 6]
             ]],
         ];
+
+        // Signalements de paiement de la prime (marché où l'ASSUREUR encaisse) :
+        // trace déclarative qui rend la commission exigible — jamais la trésorerie.
+        $collections = [
+            ['fieldName' => 'paiementsPrime', 'entityRouteName' => 'paiementprime', 'formTitle' => 'Paiement de prime', 'parentFieldName' => 'tranche'],
+        ];
+        $this->addCollectionWidgetsToLayout($layout, $object, $isParentNew, $collections);
+
         return $layout;
     }
 }

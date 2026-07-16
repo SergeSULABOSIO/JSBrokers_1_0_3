@@ -3,6 +3,7 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Invite;
+use App\Entity\PaiementPrime;
 use App\Entity\Tranche;
 use App\Form\TrancheType;
 use App\Constantes\Constante;
@@ -79,6 +80,35 @@ class TrancheController extends AbstractController
                     ->setEcheanceAt(new DateTimeImmutable("+364 days"));
             }
         );
+    }
+
+    /**
+     * Contexte de l'action « Signaler un paiement de prime » (menu contextuel de la
+     * liste, barre d'outils, volet du dialogue) : renvoie le canevas de formulaire
+     * PaiementPrime ; le Cerveau ouvre le dialogue de création rattaché à la tranche
+     * (parentContext {id, fieldName: 'tranche'}). Le signalement est déclaratif —
+     * l'assureur a encaissé la prime, la trésorerie du courtier n'est pas concernée.
+     */
+    #[Route('/api/get-paiement-prime-context/{id}', name: 'api.get_paiement_prime_context', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function getPaiementPrimeContext(Tranche $tranche, Request $request): JsonResponse
+    {
+        // Mutation à venir (création d'un signalement) : Écriture sur Tranche (fail-closed) —
+        // PaiementPrime est une sous-entité structurelle gouvernée par sa tranche.
+        if (!$this->mayAccessEntity(Tranche::class, Invite::ACCESS_ECRITURE)) {
+            return $this->accessDeniedJson();
+        }
+        // Scoping : la tranche doit appartenir à l'espace de travail courant.
+        if ($tranche->getEntreprise()?->getId() !== $this->getEntreprise()->getId()) {
+            return $this->json(['message' => 'Tranche introuvable dans cet espace de travail.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $idEntreprise = (int) $request->query->get('idEntreprise', 0);
+
+        return $this->json([
+            'trancheId'  => $tranche->getId(),
+            'trancheNom' => $tranche->getNom(),
+            'formCanvas' => $this->canvasBuilder->getEntityFormCanvas(new PaiementPrime(), $idEntreprise),
+        ]);
     }
 
     #[Route('/api/submit', name: 'api.submit', methods: ['POST'])]

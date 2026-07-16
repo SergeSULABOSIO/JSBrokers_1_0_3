@@ -5,6 +5,8 @@ namespace App\Services;
 
 use App\Entity\Entreprise;
 use App\Services\Search\PortefeuilleScope;
+use App\Services\Search\TranchePaiementScope;
+use App\Services\Tranche\TranchePaiementService;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Doctrine\ORM\QueryBuilder;
@@ -47,6 +49,7 @@ class JSBDynamicSearchService
         'NotificationSinistre',
         'OffreIndemnisationSinistre',
         'Paiement',
+        'PaiementPrime',
         'Partenaire',
         'PieceSinistre',
         'Piste',
@@ -70,8 +73,11 @@ class JSBDynamicSearchService
      * Le service a besoin de l'EntityManager de Doctrine pour fonctionner.
      * Symfony l'injectera automatiquement ici.
      */
-    public function __construct(EntityManagerInterface $em, ?LoggerInterface $logger = null)
-    {
+    public function __construct(
+        EntityManagerInterface $em,
+        private readonly TranchePaiementService $tranchePaiement,
+        ?LoggerInterface $logger = null,
+    ) {
         $this->em = $em;
         $this->logger = $logger ?? new NullLogger();
     }
@@ -101,6 +107,40 @@ class JSBDynamicSearchService
                 "message" => "L'interrogation de l'entité '{$entityName}' n'est pas autorisée."
             ];
             return ['status' => $status, 'data' => [], 'totalItems' => 0];
+        }
+
+        // Critère synthétique « Statut de paiement » (Tranche uniquement) : le statut de
+        // règlement est dérivé à la volée (jamais stocké), impossible à filtrer/trier en SQL.
+        // On retire la clé des critères, on charge l'ensemble scopé (entreprise + autres
+        // critères) SANS pagination ni tri id, puis TranchePaiementService filtre par statut,
+        // trie par urgence et pagine en mémoire. Forme de retour identique à ce chemin-ci.
+        if ($entityName === 'Tranche' && array_key_exists(TranchePaiementScope::CRITERION_KEY, $criteria)) {
+            $raw = $criteria[TranchePaiementScope::CRITERION_KEY];
+            $statutPaiement = is_array($raw) ? (string) ($raw['value'] ?? '') : (string) $raw;
+            unset($criteria[TranchePaiementScope::CRITERION_KEY]);
+
+            if (TranchePaiementScope::estValide($statutPaiement)) {
+                try {
+                    $qb = $this->em->getRepository($entityClass)->createQueryBuilder('e');
+                    $this->applyCriteriaToQueryBuilder($qb, $criteria, $entreprise, $parentContext, $status);
+                    if ($status['error'] !== null) {
+                        return ['status' => $status, 'data' => [], 'totalItems' => 0];
+                    }
+
+                    return $this->tranchePaiement->filtrerTrierPaginer($qb->getQuery()->getResult(), $statutPaiement, $page, $limit);
+                } catch (\Exception $e) {
+                    return [
+                        'status' => [
+                            'error' => 'Une erreur inattendue est survenue: ' . $e->getMessage(),
+                            'code' => 500,
+                            'message' => 'Erreur interne du serveur.',
+                        ],
+                        'data' => [], 'totalItems' => 0, 'currentPage' => $page,
+                        'totalPages' => 1, 'itemsPerPage' => $limit,
+                    ];
+                }
+            }
+            // Statut vide ou inconnu : critère déjà retiré, la recherche standard reprend.
         }
 
         try {

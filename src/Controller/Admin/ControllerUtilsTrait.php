@@ -1345,6 +1345,20 @@ trait ControllerUtilsTrait
     protected function getInitialSearchCriteria(string $entityClass, int $idInvite, \App\Entity\Entreprise $entreprise): array
     {
         $shortName = (new \ReflectionClass($entityClass))->getShortName();
+
+        // Tranches : au premier chargement, la rubrique montre les impayées triées par
+        // urgence (retard décroissant puis échéances proches). Critère retirable comme
+        // les autres (badge de la barre ou dialogue avancé) → retour à « Toutes ».
+        if ($shortName === 'Tranche') {
+            return [
+                \App\Services\Search\TranchePaiementScope::CRITERION_KEY => [
+                    'operator' => '=',
+                    'value' => \App\Services\Search\TranchePaiementScope::STATUT_IMPAYEES,
+                    'label' => \App\Services\Search\TranchePaiementScope::libelle(\App\Services\Search\TranchePaiementScope::STATUT_IMPAYEES),
+                ],
+            ];
+        }
+
         if (!\App\Services\Search\PortefeuilleScope::isScopable($shortName)) {
             return [];
         }

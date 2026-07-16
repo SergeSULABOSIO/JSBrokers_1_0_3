@@ -49,6 +49,14 @@ class Tranche
     #[ORM\OneToMany(targetEntity: Article::class, mappedBy: 'tranche')]
     private Collection $articles;
 
+    /**
+     * @var Collection<int, PaiementPrime> Signalements de paiement de la prime par
+     *      l'assuré (encaissée par l'ASSUREUR — jamais la trésorerie du courtier) :
+     *      trace déclarative qui rend la commission de courtage exigible.
+     */
+    #[ORM\OneToMany(targetEntity: PaiementPrime::class, mappedBy: 'tranche', cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $paiementsPrime;
+
     #[Groups(['list:read'])]
     public ?string $contexteParent = null;
 
@@ -172,9 +180,52 @@ class Tranche
     #[Groups(['list:read'])]
     public ?\DateTimeInterface $dateDernierEncaissement = null;
 
+    // Urgence de recouvrement (prime et/ou commission à collecter) : libellé affiché
+    // en badge sur la liste + niveau technique (classe CSS / restitution assistant IA).
+    #[Groups(['list:read'])]
+    public ?string $urgenceRecouvrement = null;
+
+    #[Groups(['list:read'])]
+    public ?string $urgenceNiveau = null;
+
+    // Rétrocommission partenaire exigible (solde dû, commission partageable encaissée) :
+    // montant + libellé du badge « Rétro partenaire à payer » de la liste.
+    #[Groups(['list:read'])]
+    public ?float $retroCommissionExigible = null;
+
+    #[Groups(['list:read'])]
+    public ?string $retroAPayerAffiche = null;
+
+    // Commission de courtage exigible auprès de l'assureur (prime payée par l'assuré —
+    // facturée OU signalée via PaiementPrime — et commission non collectée).
+    #[Groups(['list:read'])]
+    public ?float $commissionExigible = null;
+
+    #[Groups(['list:read'])]
+    public ?string $commissionExigibleAffiche = null;
+
+    // Cumul des paiements de prime signalés (déclaratif, hors trésorerie courtier).
+    #[Groups(['list:read'])]
+    public ?float $primeDeclareePayee = null;
+
+    // Indicateurs d'affichage de la liste (taxes/commission/rétro-commission formatées) :
+    // déclarés pour éviter les propriétés dynamiques (dépréciées en PHP 8.2).
+    #[Groups(['list:read'])]
+    public ?string $taxeCourtierAffichee = null;
+
+    #[Groups(['list:read'])]
+    public ?string $taxeAssureurAffichee = null;
+
+    #[Groups(['list:read'])]
+    public ?string $commissionTTCAffichee = null;
+
+    #[Groups(['list:read'])]
+    public ?string $retroCommissionAffichee = null;
+
     public function __construct()
     {
         $this->articles = new ArrayCollection();
+        $this->paiementsPrime = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -260,6 +311,35 @@ class Tranche
     public function getArticles(): Collection
     {
         return $this->articles;
+    }
+
+    /**
+     * @return Collection<int, PaiementPrime>
+     */
+    public function getPaiementsPrime(): Collection
+    {
+        return $this->paiementsPrime;
+    }
+
+    public function addPaiementsPrime(PaiementPrime $paiementPrime): static
+    {
+        if (!$this->paiementsPrime->contains($paiementPrime)) {
+            $this->paiementsPrime->add($paiementPrime);
+            $paiementPrime->setTranche($this);
+        }
+
+        return $this;
+    }
+
+    public function removePaiementsPrime(PaiementPrime $paiementPrime): static
+    {
+        if ($this->paiementsPrime->removeElement($paiementPrime)) {
+            if ($paiementPrime->getTranche() === $this) {
+                $paiementPrime->setTranche(null);
+            }
+        }
+
+        return $this;
     }
 
     public function addArticle(Article $article): static
