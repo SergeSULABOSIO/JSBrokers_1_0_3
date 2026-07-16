@@ -979,11 +979,22 @@ textarea:hover,
 /* Commission exigible : prime encaissée par l'assureur → à collecter MAINTENANT (cobalt plein). */
 .jsb-state-badge--exigible { background: #0047AB; color: #ffffff; }
 
-/* Chips de filtre rapide (barre de contrôles des listes : ex. statut de paiement des tranches).
+/* Chips de filtre rapide : rangée dédiée sous la barre de contrôles, juste avant la
+   liste (la barre de contrôles — statut + pagination + totaux — était saturée).
    Charte : neutre = surface blanche/bordure standard, actif = cobalt (#0047AB) texte blanc. */
+.jsb-preset-filters-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    background: #ffffff;
+    border-bottom: 1px solid #dee2e6;
+    padding: 0.35rem 0.75rem;
+}
 .jsb-preset-filters {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 0.25rem;
     flex-shrink: 0;
 }
