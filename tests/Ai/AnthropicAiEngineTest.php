@@ -145,6 +145,42 @@ class AnthropicAiEngineTest extends TestCase
         $this->assertStringContainsString('"count":3', $dernier['content'][0]['content']);
     }
 
+    /**
+     * Un outil SANS paramètre (solde_tokens, quitter_workspace) est appelé avec
+     * « input: {} » ; PHP décode cet objet JSON vide en TABLEAU vide, que l'écho
+     * du tour assistant ré-encoderait en [] (une liste) — rejeté par l'API
+     * (l'input d'un tool_use doit être un objet). L'objet vide doit repartir
+     * en {} sur le réseau.
+     */
+    public function testEchoDesInputsVidesResteUnObjet(): void
+    {
+        $bodies = [];
+        $reponses = [
+            [
+                'stop_reason' => 'tool_use',
+                'content'     => [['type' => 'tool_use', 'id' => 'tu_1', 'name' => 'compter_entites', 'input' => new \stdClass()]],
+            ],
+            [
+                'stop_reason' => 'end_turn',
+                'content'     => [['type' => 'text', 'text' => 'Voici votre solde.']],
+            ],
+        ];
+        $i = 0;
+        $http = new MockHttpClient(function ($method, $url, $options) use (&$bodies, &$i, $reponses) {
+            $bodies[] = (string) $options['body'];
+
+            return new MockResponse(json_encode($reponses[$i++]));
+        });
+
+        $tool = $this->makeTool(AiToolResult::ok(['total' => 1000]));
+        $reply = $this->makeEngine($http, [$tool])->reply($this->makeRequest('Solde des tokens ?'));
+
+        $this->assertSame('Voici votre solde.', $reply->content);
+        $this->assertSame([], $tool->receivedArgs);
+        $this->assertStringContainsString('"input":{}', $bodies[1]);
+        $this->assertStringNotContainsString('"input":[]', $bodies[1]);
+    }
+
     public function testRefusPerimetrePropage(): void
     {
         $reponses = [
