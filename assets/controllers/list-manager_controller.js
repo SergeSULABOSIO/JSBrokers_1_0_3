@@ -79,6 +79,9 @@ export default class extends BaseController {
         if (this.hasControlsBarTarget && typeof ResizeObserver !== 'undefined') {
             this._controlsBarResizeObserver = new ResizeObserver(() => this._updateControlsBarHeight());
             this._controlsBarResizeObserver.observe(this.controlsBarTarget);
+            // La rangée des chips (collante elle aussi) peut passer sur plusieurs lignes.
+            const chipsBar = this.element.querySelector('.jsb-preset-filters-bar');
+            if (chipsBar) this._controlsBarResizeObserver.observe(chipsBar);
         }
 
         document.addEventListener('app:context.changed', this.boundHandleGlobalSelectionUpdate);
@@ -553,6 +556,10 @@ export default class extends BaseController {
             this.element.style.setProperty('--jsb-pgbar-h', `${h}px`);
             this.element.classList.add('list-manager-has-controls');
         }
+        // Rangée des chips de filtre (collante sous la barre de contrôles) : sa hauteur
+        // (variable, flex-wrap) s'ajoute au décalage du thead sticky.
+        const chipsBar = this.element.querySelector('.jsb-preset-filters-bar');
+        this.element.style.setProperty('--jsb-chipsbar-h', `${chipsBar ? chipsBar.offsetHeight : 0}px`);
     }
 
     /**

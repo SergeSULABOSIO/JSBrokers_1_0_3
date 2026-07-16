@@ -994,6 +994,11 @@ textarea:hover,
     align-items: center;
     flex-wrap: wrap;
     gap: 0.5rem;
+    /* Collante sous la barre de contrôles (hauteur dynamique --jsb-pgbar-h) :
+       la rangée des chips reste visible pendant le scroll, comme la ligne du dessus. */
+    position: sticky;
+    top: var(--jsb-pgbar-h, 38px);
+    z-index: 24;
     background: #ffffff;
     border-bottom: 1px solid #dee2e6;
     padding: 0.35rem 0.75rem;
@@ -1091,9 +1096,10 @@ textarea:hover,
 .table-scroll-wrapper {
 }
 
-/* Offset du thead quand la barre des contrôles est présente */
+/* Offset du thead quand la barre des contrôles est présente : il colle sous les
+   DEUX rangées collantes (contrôles + chips de filtre, hauteurs dynamiques). */
 .list-manager-has-controls thead.sticky-header th {
-    top: var(--jsb-pgbar-h, 0px);
+    top: calc(var(--jsb-pgbar-h, 0px) + var(--jsb-chipsbar-h, 0px));
 }
 
 thead.sticky-header {
