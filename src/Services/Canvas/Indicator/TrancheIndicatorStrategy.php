@@ -58,6 +58,9 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
         $montantTaxeAssureur = round($this->getTrancheTaxeAssureurMontant($entity), 2);
         $montantRetroCommission = round($this->getTrancheRetroCommission($entity), 2);
         $monnaieCode = $this->serviceMonnaies->getCodeMonnaieAffichage();
+        $urgence = $this->getTrancheUrgence($entity);
+        $retroExigible = $this->getTrancheRetroExigible($entity);
+        $commissionExigible = $this->getTrancheCommissionExigible($entity);
         return [
             'nomCompletAvecStatut' => $nomComplet,
             'clientDescription' => $this->calculationHelper->getClientDescriptionFromCotation($cotation),
@@ -97,6 +100,17 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'retroCommissionSolde' => $montantRetroCommission - round($this->calculationHelper->getTrancheMontantRetrocommissionsPayableParCourtierPayee($entity), 2),
             'reserve' => round($this->getTrancheMontantPur($entity) - $this->getTrancheRetroCommission($entity), 2),
             'statutPaiement' => $this->getTrancheStatutPaiement($entity),
+            'urgenceRecouvrement' => $urgence['libelle'],
+            'urgenceNiveau' => $urgence['niveau'],
+            'retroCommissionExigible' => $retroExigible,
+            'retroAPayerAffiche' => $retroExigible > 0
+                ? sprintf('Rétro partenaire à payer · %s %s', number_format($retroExigible, 2, ',', ' '), $monnaieCode)
+                : '',
+            'commissionExigible' => $commissionExigible,
+            'commissionExigibleAffiche' => $commissionExigible > 0
+                ? sprintf('Commission exigible · %s %s', number_format($commissionExigible, 2, ',', ' '), $monnaieCode)
+                : '',
+            'primeDeclareePayee' => round($this->calculationHelper->getTranchePrimeDeclareePayee($entity), 2),
             'tauxAvancement' => $this->getTrancheTauxAvancement($entity),
             'resteAPayer' => round($this->getTranchePrime($entity) - $this->calculationHelper->getTranchePrimePayee($entity), 2),
             'retardPaiement' => $this->getTrancheRetardPaiement($entity),
@@ -237,14 +251,26 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
         return $cotationRetro * $taux;
     }
 
+    /**
+     * Statut de règlement combiné : une tranche n'est « Payée » que si la prime client
+     * est encaissée ET la commission collectée. Les deux dettes ont des débiteurs
+     * différents (client / assureur), leurs soldes ne se compensent donc jamais.
+     */
     private function getTrancheStatutPaiement(Tranche $tranche): string
     {
-        $prime = $this->getTranchePrime($tranche);
-        $paye = $this->calculationHelper->getTranchePrimePayee($tranche);
+        $prime = round($this->getTranchePrime($tranche), 2);
+        $commission = round($this->getTrancheMontantTTC($tranche), 2);
 
-        if ($prime <= 0) return 'N/A';
-        if ($paye >= $prime) return 'Payée';
-        if ($paye > 0) return 'Partiellement payée';
+        if ($prime <= 0 && $commission <= 0) return 'N/A';
+
+        $primePayee = round($this->calculationHelper->getTranchePrimePayee($tranche), 2);
+        $commissionEncaissee = round($this->calculationHelper->getTrancheMontantCommissionEncaissee($tranche), 2);
+        $primeSoldee = $primePayee >= $prime;
+        $commissionSoldee = $commissionEncaissee >= $commission;
+
+        if ($primeSoldee && $commissionSoldee) return 'Payée';
+        if ($primeSoldee) return 'Prime payée, commission due';
+        if ($primePayee > 0 || $commissionEncaissee > 0) return 'Partiellement payée';
         return 'Non payée';
     }
 
@@ -257,7 +283,11 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
     private function getTrancheRetardPaiement(Tranche $tranche): string
     {
-        $solde = $this->getTranchePrime($tranche) - $this->calculationHelper->getTranchePrimePayee($tranche);
+        // Solde exigible combiné : prime due par le client + commission due par l'assureur.
+        // Chaque solde est plafonné à 0 (un trop-perçu ne compense pas l'autre dette).
+        $soldePrime = $this->getTranchePrime($tranche) - $this->calculationHelper->getTranchePrimePayee($tranche);
+        $soldeCommission = $this->getTrancheMontantTTC($tranche) - $this->calculationHelper->getTrancheMontantCommissionEncaissee($tranche);
+        $solde = round(max(0, $soldePrime) + max(0, $soldeCommission), 2);
         if ($solde <= 0) return 'Non';
 
         $echeance = $tranche->getEcheanceAt();
@@ -271,6 +301,137 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
         return 'Non';
     }
 
+    /**
+     * Niveau d'urgence du recouvrement (prime client et/ou commission à collecter).
+     * Un recouvrement méthodique s'ANTICIPE : les échéances qui approchent sont graduées
+     * avant même le retard avéré, pour maintenir le niveau d'encaissement.
+     *
+     * - critique : solde exigible ET échéance dépassée (retard avéré) ;
+     * - elevee   : solde exigible, échéance sous 7 jours ;
+     * - moderee  : solde exigible, échéance sous 30 jours ;
+     * - faible   : solde exigible, échéance lointaine ou non renseignée ;
+     * - reglee   : prime et commission soldées (rien à recouvrer).
+     *
+     * @return array{niveau: string, libelle: string} niveau '' = pas de badge (N/A).
+     */
+    private function getTrancheUrgence(Tranche $tranche): array
+    {
+        $statut = $this->getTrancheStatutPaiement($tranche);
+        if ($statut === 'N/A') {
+            return ['niveau' => '', 'libelle' => ''];
+        }
+        if ($statut === 'Payée') {
+            return ['niveau' => 'reglee', 'libelle' => 'Réglée'];
+        }
+
+        $echeance = $tranche->getEcheanceAt();
+        if (!$echeance) {
+            return ['niveau' => 'faible', 'libelle' => 'Faible · sans échéance'];
+        }
+
+        $now = new DateTimeImmutable();
+        if ($echeance < $now) {
+            $jours = $this->serviceDates->daysEntre($echeance, $now) ?? 0;
+
+            return ['niveau' => 'critique', 'libelle' => 'Critique · retard ' . $jours . ' j'];
+        }
+
+        $jours = $this->serviceDates->daysEntre($now, $echeance) ?? 0;
+        if ($jours <= 7) {
+            return ['niveau' => 'elevee', 'libelle' => 'Élevée · échéance J-' . $jours];
+        }
+        if ($jours <= 30) {
+            return ['niveau' => 'moderee', 'libelle' => 'Modérée · échéance J-' . $jours];
+        }
+
+        return ['niveau' => 'faible', 'libelle' => 'Faible · échéance J-' . $jours];
+    }
+
+    /**
+     * Rétrocommission partenaire EXIGIBLE : solde de rétro dû (rétro due − reversée),
+     * mais seulement une fois la commission de courtage PARTAGEABLE correspondante
+     * intégralement encaissée — avant cela, la dette envers le partenaire n'est pas
+     * encore née. Permet au courtier de payer ses partenaires au bon moment.
+     */
+    private function getTrancheRetroExigible(Tranche $tranche): float
+    {
+        $soldeRetro = round(
+            $this->getTrancheRetroCommission($tranche)
+            - $this->calculationHelper->getTrancheMontantRetrocommissionsPayableParCourtierPayee($tranche),
+            2
+        );
+        if ($soldeRetro <= 0) {
+            return 0.0;
+        }
+
+        $facteur = $this->calculateTrancheTauxFactor($tranche);
+        $duePartageable = round(
+            $this->calculationHelper->getCotationMontantCommissionTtc($tranche->getCotation(), -1, true) * $facteur,
+            2
+        );
+        if ($duePartageable <= 0) {
+            return 0.0;
+        }
+
+        $encaisseePartageable = round($this->getTrancheMontantCommissionPartageableEncaissee($tranche), 2);
+
+        return $encaisseePartageable >= $duePartageable ? $soldeRetro : 0.0;
+    }
+
+    /**
+     * Commission de courtage EXIGIBLE auprès de l'assureur : solde de commission dû,
+     * mais seulement une fois la prime intégralement payée par l'assuré — facturation
+     * du courtier OU signalement déclaratif (PaiementPrime). Tant que l'assureur n'a
+     * pas encaissé la prime, la commission n'est pas exigible, malgré sa date due.
+     * Cas sans prime (affaire à honoraires purs) : la commission est exigible d'office.
+     */
+    private function getTrancheCommissionExigible(Tranche $tranche): float
+    {
+        $soldeCommission = round(
+            $this->getTrancheMontantTTC($tranche)
+            - $this->calculationHelper->getTrancheMontantCommissionEncaissee($tranche),
+            2
+        );
+        if ($soldeCommission <= 0) {
+            return 0.0;
+        }
+
+        $prime = round($this->getTranchePrime($tranche), 2);
+        if ($prime <= 0) {
+            return $soldeCommission;
+        }
+
+        $primePayee = round($this->calculationHelper->getTranchePrimePayee($tranche), 2);
+
+        return $primePayee >= $prime ? $soldeCommission : 0.0;
+    }
+
+    /**
+     * Commission encaissée sur les seuls revenus PARTAGEABLES de la tranche (miroir de
+     * IndicatorCalculationHelper::getTrancheMontantCommissionEncaissee, filtré isShared).
+     */
+    private function getTrancheMontantCommissionPartageableEncaissee(Tranche $tranche): float
+    {
+        $montant = 0.0;
+        foreach ($tranche->getArticles() as $article) {
+            $note = $article->getNote();
+            $revenu = $article->getRevenuFacture();
+            if (!$note || !$revenu || !$revenu->getTypeRevenu()?->isShared()) {
+                continue;
+            }
+            if (!in_array($note->getAddressedTo(), [Note::TO_ASSUREUR, Note::TO_CLIENT], true)) {
+                continue;
+            }
+            $montantPayableNote = $this->calculationHelper->getNoteMontantPayable($note);
+            if ($montantPayableNote > 0) {
+                $proportionPaiement = $this->calculationHelper->getNoteMontantPaye($note) / $montantPayableNote;
+                $montant += $proportionPaiement * $this->calculationHelper->getArticleMontant($article);
+            }
+        }
+
+        return $montant;
+    }
+
     private function getTrancheDateDernierEncaissement(Tranche $tranche): ?\DateTimeInterface
     {
         $lastDate = null;
@@ -282,6 +443,12 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
                         $lastDate = $paiement->getPaidAt();
                     }
                 }
+            }
+        }
+        // Paiements de prime SIGNALÉS (l'assureur a encaissé — date d'information du courtier).
+        foreach ($tranche->getPaiementsPrime() as $paiementPrime) {
+            if ($paiementPrime->getPaidAt() && (!$lastDate || $paiementPrime->getPaidAt() > $lastDate)) {
+                $lastDate = $paiementPrime->getPaidAt();
             }
         }
         return $lastDate;

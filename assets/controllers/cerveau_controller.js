@@ -211,6 +211,25 @@ export default class extends Controller {
             case 'ui:search.reset-request':
                 this._handleSearchRequest({}); // On passe un objet vide pour réinitialiser.
                 break;
+            case 'ui:filter.preset': {
+                // Chip de filtre rapide (ex. statut de paiement des tranches) : pose ou
+                // retire (valeur vide = « Toutes ») le critère synthétique en conservant
+                // les autres filtres actifs, puis relance la recherche page 1. Le badge de
+                // la barre de recherche suit via app:context.changed après rafraîchissement.
+                const presetState = this._getActiveTabState();
+                const presetCriteria = { ...(presetState.searchCriteria || {}) };
+                if (payload.value === undefined || payload.value === null || payload.value === '') {
+                    delete presetCriteria[payload.key];
+                } else {
+                    presetCriteria[payload.key] = {
+                        operator: '=',
+                        value: payload.value,
+                        label: payload.label || String(payload.value),
+                    };
+                }
+                this._handleSearchRequest(presetCriteria);
+                break;
+            }
             case 'ui:toolbar.add-request':
                 // LOGIQUE DÉPLACÉE : Le cerveau reçoit une demande simple et la transforme en appel complexe.
                 this.broadcast('app:loading.start');
@@ -460,6 +479,9 @@ export default class extends Controller {
                 break;
             case 'ui:avenant.piste-derivee-form-request':
                 this.handleAvenantPisteDeriveeFormRequest(payload);
+                break;
+            case 'ui:tranche.signaler-paiement-prime':
+                this.handleTrancheSignalerPaiementPrime(payload);
                 break;
             case 'ui:avenant.delete-piste-derivee':
                 this.handleAvenantDeletePisteDerivee(payload);
@@ -1836,6 +1858,49 @@ export default class extends Controller {
         } catch (error) {
             console.error("[Cerveau] handleAvenantPisteDeriveeFormRequest() failed:", error);
             this._showNotification(error.message || "Impossible d'ouvrir la piste dérivée.", 'error');
+        } finally {
+            this.broadcast('app:loading.stop');
+        }
+    }
+
+    /**
+     * Action « Signaler un paiement de prime » d'une tranche (miroir simplifié de
+     * handleAvenantPisteDeriveeFormRequest) : récupère le canevas PaiementPrime auprès
+     * du backend (gating fail-closed + scoping), puis ouvre le dialogue de CRÉATION
+     * rattaché à la tranche via parentContext {id, fieldName: 'tranche'} — le get-form
+     * préremplit le montant avec le solde de prime restant, le submit associe l'enfant.
+     * @param {object} payload - { url } avec %id% déjà résolu par la surface appelante.
+     */
+    async handleTrancheSignalerPaiementPrime(payload) {
+        if (!payload.url) {
+            console.error("[Cerveau] handleTrancheSignalerPaiementPrime() : URL manquante.", payload);
+            this._showNotification("Impossible d'ouvrir le signalement : URL manquante.", 'error');
+            return;
+        }
+        try {
+            this.broadcast('app:loading.start');
+            const url = new URL(payload.url, window.location.origin);
+            if (this.currentIdEntreprise) {
+                url.searchParams.set('idEntreprise', this.currentIdEntreprise);
+            }
+            const response = await fetch(url.toString());
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.message || `Erreur serveur ${response.status}`);
+            const { trancheId, formCanvas } = result;
+
+            this.openDialogBox({
+                entity:           {},
+                entityFormCanvas: formCanvas,
+                isCreationMode:   true,
+                context: {
+                    idEntreprise: this.currentIdEntreprise,
+                    idInvite:     this.currentIdInvite,
+                },
+                parentContext: { id: trancheId, fieldName: 'tranche' },
+            });
+        } catch (error) {
+            console.error("[Cerveau] handleTrancheSignalerPaiementPrime() failed:", error);
+            this._showNotification(error.message || "Impossible d'ouvrir le signalement de paiement de prime.", 'error');
         } finally {
             this.broadcast('app:loading.stop');
         }

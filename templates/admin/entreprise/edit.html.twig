@@ -59,6 +59,17 @@
     .ent-head-icon { flex: 0 0 auto; color: #0047AB; }
     .ent-head p { color: #6c757d; margin: 0; }
 
+    /* Mention « marché sans encaissement de primes » : panneau d'information mis en
+       évidence (fond cobalt très clair + liseré cobalt, charte JS Brokers). */
+    .ent-market-notice {
+        display: flex; gap: .8rem; align-items: flex-start;
+        background-color: #e8f0fb; border: 1px solid #0047AB; border-left-width: 5px;
+        border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1.5rem;
+    }
+    .ent-market-notice-icon { flex: 0 0 auto; color: #0047AB; margin-top: .1rem; }
+    .ent-market-notice-title { display: block; color: #0047AB; margin-bottom: .25rem; }
+    .ent-market-notice-text { color: #212529; margin: 0; font-size: .92rem; }
+
     /* Carte formulaire */
     .ent-form-card {
         background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 12px;
@@ -230,6 +241,18 @@
                 {{ pageName }}
             </h1>
             <p>{{ "entreprise_edition_description_message" | trans({':user': utilisateur.nom, ':company': entreprise.nom}) | raw }}</p>
+        </div>
+
+        {# Cadre réglementaire du marché par défaut : le courtier ne collecte PAS les
+           primes (l'assureur facture et encaisse) — mention mise en évidence. #}
+        <div class="ent-market-notice" role="note">
+            <span class="ent-market-notice-icon" aria-hidden="true">
+                {{ ux_icon(resolve_icon_name('action:information'), {height: '22px', width: '22px'}) }}
+            </span>
+            <div>
+                <strong class="ent-market-notice-title">{{ 'entreprise_marche_notice_titre' | trans }}</strong>
+                <p class="ent-market-notice-text">{{ 'entreprise_marche_notice_texte' | trans | raw }}</p>
+            </div>
         </div>
 
         <div class="ent-form-card">

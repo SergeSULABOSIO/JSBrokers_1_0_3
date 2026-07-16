@@ -5,12 +5,15 @@ namespace App\Ai\Tool;
 use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
 use App\Services\DashboardDataProvider;
+use App\Services\Search\TranchePaiementScope;
+use App\Services\Tranche\TranchePaiementService;
 use App\Service\Workspace\WorkspaceAccessResolver;
 
 /**
  * Outil de données : le BRIEF des échéances du courtier — polices à renouveler
  * sous N jours, tâches non closes (dont celles en retard), pistes encore sans
- * police, derniers sinistres notifiés. Répond à « que dois-je surveiller ? ».
+ * police, derniers sinistres notifiés, tranches échues impayées (primes et
+ * commissions à relancer). Répond à « que dois-je surveiller ? ».
  *
  * Gating PAR VOLET (fail-closed) : chaque volet est adossé à une entité du
  * périmètre ; un volet hors périmètre est OMIS avec mention (l'assistant reste
@@ -27,6 +30,7 @@ final class VigieEcheancesTool implements AiToolInterface
         'taches'          => 'Tache',
         'pistes'          => 'Piste',
         'sinistres'       => 'NotificationSinistre',
+        'impayes'         => 'Tranche',
     ];
 
     /** Lignes restituées par volet (sortie compacte, économie de tokens). */
@@ -38,6 +42,7 @@ final class VigieEcheancesTool implements AiToolInterface
     public function __construct(
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly DashboardDataProvider $dashboard,
+        private readonly TranchePaiementService $tranchePaiement,
     ) {
     }
 
@@ -50,10 +55,11 @@ final class VigieEcheancesTool implements AiToolInterface
     {
         return 'Brief des échéances et points de vigilance du cabinet : polices à renouveler '
             . 'sous N jours (défaut 30), tâches non closes (dont en retard), pistes en cours '
-            . 'sans police, derniers sinistres notifiés. À appeler quand l\'utilisateur demande '
-            . 'ses échéances, ce qu\'il doit surveiller/faire, ses renouvellements à venir ou un '
-            . 'brief du jour. Pour lister/compter librement une rubrique, préférer '
-            . 'rechercher_entites / compter_entites.';
+            . 'sans police, derniers sinistres notifiés, tranches échues impayées (primes et '
+            . 'commissions à relancer). À appeler quand l\'utilisateur demande ses échéances, '
+            . 'ce qu\'il doit surveiller/faire, ses renouvellements à venir ou un brief du jour. '
+            . 'Pour le détail complet des impayés, préférer suivi_impayes ; pour lister/compter '
+            . 'librement une rubrique, préférer rechercher_entites / compter_entites.';
     }
 
     public function schema(): array
@@ -150,11 +156,31 @@ final class VigieEcheancesTool implements AiToolInterface
         ], static fn ($v) => $v !== null));
     }
 
-    /** @return array{lignes: array, total: int, tronque: bool} */
+    /** @return array{lignes: array, total: int, tronque: bool, totaux?: array} */
     private function collecter(string $volet, AiScope $scope, int $horizon): array
     {
         $entreprise = $scope->entreprise;
         $max = self::MAX_LIGNES_PAR_VOLET;
+
+        // Volet impayés : tranches échues (prime ou commission encore dues), les plus
+        // en retard d'abord — source unique TranchePaiementService (règle de la liste).
+        if ($volet === 'impayes') {
+            $resultat = $this->tranchePaiement->lister(
+                $entreprise,
+                TranchePaiementScope::STATUT_ECHUES,
+                null,
+                null,
+                1,
+                $max
+            );
+
+            return [
+                'lignes'  => array_map(fn (object $e) => $this->projeter($volet, $e), $resultat['items']),
+                'totaux'  => $resultat['totaux'],
+                'total'   => $resultat['totalItems'],
+                'tronque' => $resultat['totalItems'] > count($resultat['items']),
+            ];
+        }
 
         $items = match ($volet) {
             'renouvellements' => $this->dashboard->getAllRenouvellements($entreprise, $horizon),
@@ -211,6 +237,23 @@ final class VigieEcheancesTool implements AiToolInterface
                 'risque'    => $e->getRisque()?->getNomComplet(),
                 'notifieLe' => $e->getNotifiedAt()?->format('Y-m-d'),
             ], static fn ($v) => $v !== null && $v !== ''),
+            // Tranche échue impayée (indicateurs déjà calculés par TranchePaiementService).
+            'impayes' => array_filter([
+                'id'              => $e->getId(),
+                'tranche'         => $e->getNom(),
+                'client'          => $e->clientNom ?? null,
+                'police'          => $e->referencePolice ?? null,
+                'statut'          => $e->statutPaiement ?? null,
+                'urgence'         => $e->urgenceRecouvrement ?? null,
+                'echeance'        => $e->getEcheanceAt()?->format('Y-m-d'),
+                'joursRetard'     => $e->getEcheanceAt() !== null
+                    // Jour à jour : échéance ramenée à minuit (sinon l'heure tronque un jour).
+                    ? max(0, -((int) $aujourdhui->diff(\DateTimeImmutable::createFromInterface($e->getEcheanceAt())->setTime(0, 0))->format('%r%a')))
+                    : null,
+                'soldePrime'      => max(0.0, (float) ($e->primeSoldeDue ?? 0)),
+                'soldeCommission' => max(0.0, (float) ($e->solde_restant_du ?? 0)),
+                'retroAPayer'     => ($e->retroCommissionExigible ?? 0) > 0 ? (float) $e->retroCommissionExigible : null,
+            ], static fn ($v) => $v !== null && $v !== '' && $v !== 'N/A'),
         };
     }
 }

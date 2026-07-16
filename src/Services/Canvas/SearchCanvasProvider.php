@@ -120,6 +120,22 @@ class SearchCanvasProvider
             ]);
         }
 
+        // Critère synthétique « Statut de paiement » (Tranche) : le statut de règlement
+        // (prime + commission) est dérivé à la volée, donc absent du canevas d'entité.
+        // Porté par la clé spéciale TranchePaiementScope::CRITERION_KEY, il est intercepté
+        // par le moteur qui filtre/trie en mémoire (cf. TranchePaiementService). Le type
+        // 'Boolean' rend un <select> depuis la map de valeurs, badge inclus.
+        if ($shortName === 'Tranche') {
+            array_unshift($searchCriteria, [
+                'Nom' => \App\Services\Search\TranchePaiementScope::CRITERION_KEY,
+                'Display' => 'Statut de paiement',
+                'Type' => 'Boolean',
+                'Valeur' => \App\Services\Search\TranchePaiementScope::VALEURS,
+                'isDefault' => false,
+                'Icone' => $this->iconCanvasProvider->resolveIconName('paiement') !== null ? 'paiement' : 'action:check',
+            ]);
+        }
+
         return $searchCriteria;
     }
 

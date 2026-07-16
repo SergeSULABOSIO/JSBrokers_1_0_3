@@ -9,15 +9,18 @@ use App\Entity\Avenant;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Tache;
+use App\Entity\Tranche;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\DashboardDataProvider;
+use App\Services\Tranche\TranchePaiementService;
 use PHPUnit\Framework\TestCase;
 
 /**
  * Vigie des échéances : gating fail-closed PAR VOLET (un volet hors périmètre
  * est omis avec mention, jamais d'échec global tant qu'un volet reste lisible),
  * clamp de l'horizon, plafond de lignes, déclencheurs simulés. Tests purs :
- * résolveur d'accès et provider de tableau de bord doublés en mémoire.
+ * résolveur d'accès, provider de tableau de bord et suivi des paiements
+ * doublés en mémoire.
  */
 class VigieEcheancesToolTest extends TestCase
 {
@@ -26,19 +29,35 @@ class VigieEcheancesToolTest extends TestCase
         'Tache'                => 'Tâches',
         'Piste'                => 'Pistes',
         'NotificationSinistre' => 'Sinistres',
+        'Tranche'              => 'Tranches',
     ];
 
-    private function makeTool(array $canRead, ?DashboardDataProvider $dashboard = null): VigieEcheancesTool
-    {
+    private function makeTool(
+        array $canRead,
+        ?DashboardDataProvider $dashboard = null,
+        ?TranchePaiementService $tranchePaiement = null,
+    ): VigieEcheancesTool {
         $resolver = $this->createMock(WorkspaceAccessResolver::class);
         $resolver->method('libellesEntites')->willReturn(self::LIBELLES);
         $resolver->method('canRead')->willReturnCallback(
             static fn (Invite $invite, string $shortName) => $canRead[$shortName] ?? false,
         );
 
+        if ($tranchePaiement === null) {
+            $tranchePaiement = $this->createMock(TranchePaiementService::class);
+            $tranchePaiement->method('lister')->willReturn([
+                'items' => [],
+                'totaux' => ['nb' => 0, 'totalPrime' => 0.0, 'totalSoldePrime' => 0.0, 'totalSoldeCommission' => 0.0],
+                'totalItems' => 0,
+                'currentPage' => 1,
+                'totalPages' => 1,
+            ]);
+        }
+
         return new VigieEcheancesTool(
             $resolver,
             $dashboard ?? $this->createMock(DashboardDataProvider::class),
+            $tranchePaiement,
         );
     }
 
@@ -62,7 +81,7 @@ class VigieEcheancesToolTest extends TestCase
         $result = $tool->execute(['volet' => 'tout'], $this->makeScope());
 
         $this->assertSame(AiToolResult::STATUS_OK, $result->status);
-        $this->assertSame(['renouvellements', 'taches', 'pistes', 'sinistres'], array_keys($result->data['volets']));
+        $this->assertSame(['renouvellements', 'taches', 'pistes', 'sinistres', 'impayes'], array_keys($result->data['volets']));
         $this->assertSame(30, $result->data['horizonJours']);
         $this->assertArrayNotHasKey('horsPerimetre', $result->data);
         $this->assertSame('Relancer le client Alpha', $result->data['volets']['taches']['lignes'][0]['description']);
@@ -93,7 +112,7 @@ class VigieEcheancesToolTest extends TestCase
         $dashboard->expects($this->never())->method('getDerniersSinistres');
 
         $tool = $this->makeTool(
-            ['Avenant' => true, 'Tache' => true, 'Piste' => true, 'NotificationSinistre' => false],
+            ['Avenant' => true, 'Tache' => true, 'Piste' => true, 'NotificationSinistre' => false, 'Tranche' => true],
             $dashboard,
         );
         $result = $tool->execute(['volet' => 'tout'], $this->makeScope());
@@ -101,6 +120,42 @@ class VigieEcheancesToolTest extends TestCase
         $this->assertSame(AiToolResult::STATUS_OK, $result->status);
         $this->assertArrayNotHasKey('sinistres', $result->data['volets']);
         $this->assertSame(['Sinistres'], $result->data['horsPerimetre']);
+    }
+
+    public function testVoletImpayesRestitueSoldesEtTotaux(): void
+    {
+        $tranche = (new Tranche())
+            ->setNom('Tranche 1')
+            ->setPayableAt(new \DateTimeImmutable('-40 days'))
+            ->setEcheanceAt(new \DateTimeImmutable('-10 days'));
+        $tranche->clientNom = 'Client Alpha';
+        $tranche->statutPaiement = 'Non payée';
+        $tranche->urgenceRecouvrement = 'Critique · retard 10 j';
+        $tranche->primeSoldeDue = 800.0;
+        $tranche->solde_restant_du = 120.0;
+
+        $tranchePaiement = $this->createMock(TranchePaiementService::class);
+        $tranchePaiement->method('lister')->willReturn([
+            'items' => [$tranche],
+            'totaux' => ['nb' => 1, 'totalPrime' => 1000.0, 'totalSoldePrime' => 800.0, 'totalSoldeCommission' => 120.0],
+            'totalItems' => 1,
+            'currentPage' => 1,
+            'totalPages' => 1,
+        ]);
+
+        $tool = $this->makeTool(['Tranche' => true], null, $tranchePaiement);
+        $result = $tool->execute(['volet' => 'impayes'], $this->makeScope());
+
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        $volet = $result->data['volets']['impayes'];
+        $ligne = $volet['lignes'][0];
+        $this->assertSame('Client Alpha', $ligne['client']);
+        $this->assertSame(10, $ligne['joursRetard']);
+        $this->assertSame(800.0, $ligne['soldePrime']);
+        $this->assertSame(120.0, $ligne['soldeCommission']);
+        $this->assertSame('Critique · retard 10 j', $ligne['urgence']);
+        $this->assertSame(800.0, $volet['totaux']['totalSoldePrime']);
+        $this->assertFalse($volet['tronque']);
     }
 
     public function testTousVoletsHorsPerimetreRefuse(): void

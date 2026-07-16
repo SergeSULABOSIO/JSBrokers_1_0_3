@@ -178,6 +178,50 @@ export default class extends BaseController {
             state: initialState,
             workspaceTabId: workspaceTabId
         });
+
+        // Chips de filtre rapide : reflète le filtre initial fourni par le serveur
+        // (ex. « Impayées » de la rubrique Tranches).
+        this._syncPresetChips(initialCriteria);
+    }
+
+    // --- CHIPS DE FILTRE RAPIDE ---
+
+    /**
+     * Clic sur un chip de filtre rapide : demande au Cerveau de poser (ou retirer,
+     * pour l'option « Toutes » de valeur vide) le critère synthétique associé, en
+     * conservant les autres critères actifs de l'onglet.
+     * @param {Event} event
+     */
+    applyPresetFilter(event) {
+        const { criterionKey, criterionValue, criterionLabel } = event.currentTarget.dataset;
+        this._logDebug(`Filtre rapide « ${criterionLabel} » (${criterionKey}=${criterionValue}).`);
+        this.notifyCerveau('ui:filter.preset', {
+            key: criterionKey,
+            value: criterionValue,
+            label: criterionLabel,
+        });
+        // Retour visuel immédiat ; l'état de référence reviendra via app:context.changed.
+        this._syncPresetChips({ [criterionKey]: { value: criterionValue } });
+    }
+
+    /**
+     * Synchronise l'état actif des chips sur les critères de recherche courants :
+     * un chip est actif si la valeur du critère correspond ; l'option de valeur vide
+     * (« Toutes ») est active quand le critère est absent.
+     * @param {object} criteria
+     * @private
+     */
+    _syncPresetChips(criteria = {}) {
+        const chips = this.element.querySelectorAll('.jsb-preset-chip');
+        if (chips.length === 0) return;
+
+        chips.forEach(chip => {
+            const raw = criteria[chip.dataset.criterionKey];
+            const current = (raw && typeof raw === 'object') ? String(raw.value ?? '') : String(raw ?? '');
+            const isActive = current === String(chip.dataset.criterionValue ?? '');
+            chip.classList.toggle('is-active', isActive);
+            chip.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
     }
 
     // --- GESTION DE LA SÉLECTION ---
@@ -266,6 +310,13 @@ export default class extends BaseController {
      */
     handleGlobalSelectionUpdate(event) {
         if (this.workspaceTabId && event.detail.workspaceTabId !== this.workspaceTabId) return;
+
+        // Les chips de filtre rapide suivent les critères courants de l'onglet
+        // (pose/retrait via badge de la barre de recherche ou dialogue avancé compris).
+        if (event.detail.searchCriteria) {
+            this._syncPresetChips(event.detail.searchCriteria);
+        }
+
         const selectos = event.detail.selection || [];
         const selectionIds = new Set(selectos.map(s => String(s.id)));
         this.rowCheckboxTargets.forEach(checkbox => {

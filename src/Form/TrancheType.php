@@ -14,6 +14,7 @@ use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\PercentType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 class TrancheType extends AbstractType
 {
@@ -75,6 +76,16 @@ class TrancheType extends AbstractType
                 'attr' => [
                     'placeholder' => "Montant fixe",
                 ],
+            ])
+            ->add('paiementsPrime', CollectionType::class, [
+                'label' => 'Paiements de prime signalés',
+                'help' => "Règlements de la prime par l'assuré, encaissés par l'ASSUREUR (déclaratif : n'impacte jamais la trésorerie du cabinet, rend la commission exigible).",
+                'entry_type' => PaiementPrimeType::class,
+                'by_reference' => false,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'entry_options' => ['label' => false],
+                'mapped' => false, // logique API par élément (même pattern que Paiement.preuves)
             ])
             ->addEventListener(FormEvents::POST_SUBMIT, $this->ecouteurFormulaire->timeStamps())
             ->addEventListener(FormEvents::PRE_SET_DATA, function (FormEvent $event) {

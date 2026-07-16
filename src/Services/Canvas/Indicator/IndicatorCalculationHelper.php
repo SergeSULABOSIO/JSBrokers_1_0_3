@@ -1096,6 +1096,24 @@ class IndicatorCalculationHelper
                 }
             }
         }
+
+        // Marché par défaut (l'ASSUREUR facture et encaisse la prime) : les paiements
+        // SIGNALÉS par le courtier (PaiementPrime, purement déclaratifs — jamais sa
+        // trésorerie) comptent comme prime payée : ils déclenchent l'exigibilité de
+        // la commission de courtage.
+        $montant += $this->getTranchePrimeDeclareePayee($tranche);
+
+        return $montant;
+    }
+
+    /** Somme des paiements de prime SIGNALÉS sur la tranche (trace déclarative). */
+    public function getTranchePrimeDeclareePayee(Tranche $tranche): float
+    {
+        $montant = 0.0;
+        foreach ($tranche->getPaiementsPrime() as $paiementPrime) {
+            $montant += (float) ($paiementPrime->getMontant() ?? 0.0);
+        }
+
         return $montant;
     }
 

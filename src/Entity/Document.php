@@ -72,6 +72,10 @@ class Document
     #[ORM\ManyToOne(inversedBy: 'preuves')]
     private ?Paiement $paiement = null;
 
+    // Preuve d'un signalement de paiement de prime (déclaratif, hors trésorerie).
+    #[ORM\ManyToOne(inversedBy: 'preuves')]
+    private ?PaiementPrime $paiementPrime = null;
+
     #[ORM\ManyToOne(inversedBy: 'documents')]
     private ?Fournisseur $fournisseur = null;
 
@@ -292,6 +296,18 @@ class Document
     public function setPaiement(?Paiement $paiement): static
     {
         $this->paiement = $paiement;
+
+        return $this;
+    }
+
+    public function getPaiementPrime(): ?PaiementPrime
+    {
+        return $this->paiementPrime;
+    }
+
+    public function setPaiementPrime(?PaiementPrime $paiementPrime): static
+    {
+        $this->paiementPrime = $paiementPrime;
 
         return $this;
     }
