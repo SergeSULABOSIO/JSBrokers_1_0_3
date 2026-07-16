@@ -73,6 +73,14 @@ export default class extends BaseController {
         this._lastPagination = this.paginationValue || {}; // méta courante pour les compteurs
         this._renderPagination(this.paginationValue);
 
+        // Barre de contrôles adaptative (flex-wrap) : sa hauteur varie avec la largeur
+        // disponible — on re-mesure --jsb-pgbar-h à chaque redimensionnement pour que
+        // le décalage du thead sticky reste exact (pas seulement au rendu pagination).
+        if (this.hasControlsBarTarget && typeof ResizeObserver !== 'undefined') {
+            this._controlsBarResizeObserver = new ResizeObserver(() => this._updateControlsBarHeight());
+            this._controlsBarResizeObserver.observe(this.controlsBarTarget);
+        }
+
         document.addEventListener('app:context.changed', this.boundHandleGlobalSelectionUpdate);
         document.addEventListener('app:list.refreshed', this.boundHandleListRefreshed);
         document.addEventListener('app:list.toggle-all-request', this.boundToggleAll);
@@ -108,6 +116,7 @@ export default class extends BaseController {
         document.removeEventListener('app:loading.start', this.boundHandleLoadingStart);
         this.element.removeEventListener('click', this.boundHandlePaginationClick);
         this.element.removeEventListener('change', this.boundHandlePaginationJump);
+        this._controlsBarResizeObserver?.disconnect();
     }
 
     /**
