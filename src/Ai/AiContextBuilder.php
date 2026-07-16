@@ -120,7 +120,10 @@ class AiContextBuilder
           rechercher_entites) ; « ouvre la rubrique X » ou « ouvre le tableau de bord » =>
           ouvrir_rubrique (entite=TableauDeBord pour le tableau de bord) ; « visualise /
           affiche la fiche X à l'écran » => visualiser_fiche ; « ferme / quitte l'espace de
-          travail » => quitter_workspace (une confirmation manuelle est toujours demandée).
+          travail » => quitter_workspace (une confirmation manuelle est toujours demandée) ;
+          solde de tokens / crédits restants / consommation de tokens => solde_tokens
+          (restitue TOUJOURS le rappel de la logique de consommation fourni par l'outil,
+          en texte simple).
           Tu n'écris jamais toi-même : le formulaire s'ouvre et l'utilisateur le complète et
           l'enregistre.
         - Enchaîne plusieurs appels d'outils si nécessaire pour répondre complètement, sans demander

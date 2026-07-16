@@ -276,6 +276,33 @@ class SimulatedAiEngineTest extends TestCase
         $this->assertStringContainsString('S/P 20%', $reply->content);
     }
 
+    public function testSoldeTokensRestitueSoldeEtLogiqueDeConsommation(): void
+    {
+        $tool = $this->makeTool(
+            'tokens',
+            AiToolResult::ok([
+                'entreprise'                    => 'Courtage Test',
+                'total'                         => 9950,
+                'prepayes'                      => 9200,
+                'gratuits'                      => 750,
+                'allocationGratuite'            => 1000,
+                'prochainRenouvellementGratuit' => '2026-07-16 14:00',
+                'logiqueConsommation'           => 'chaque échange de données consomme des tokens.',
+            ]),
+            'solde_tokens',
+        );
+        $engine = new SimulatedAiEngine([$tool]);
+        $reply = $engine->reply($this->makeRequest('Quel est notre solde de tokens ?'));
+
+        $this->assertStringContainsString('9 950 tokens', $reply->content);
+        $this->assertStringContainsString('9 200 prépayés', $reply->content);
+        $this->assertStringContainsString('750', $reply->content);
+        $this->assertStringContainsString('1 000 offerts', $reply->content);
+        $this->assertStringContainsString('2026-07-16 14:00', $reply->content);
+        $this->assertStringContainsString('Pour rappel : chaque échange de données consomme des tokens.', $reply->content);
+        $this->assertSame('solde_tokens', $reply->toolUsed);
+    }
+
     public function testRepliGuideProposeDesExemplesDuPerimetre(): void
     {
         $perimetre = [
