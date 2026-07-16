@@ -200,8 +200,32 @@ export default class extends Controller {
                 case 'open-soa-envoi':
                     this.openSoaEnvoiAction(action);
                     break;
+                case 'signaler-paiement-prime':
+                    this.openSignalerPaiementPrimeAction(action);
+                    break;
             }
         }
+    }
+
+    /**
+     * Ouvre le formulaire « Signaler un paiement de prime » d'une tranche : même
+     * événement que l'action du menu contextuel des tranches — le cerveau récupère
+     * le contexte (endpoint qui RE-VALIDE les droits, fail-closed) et ouvre le
+     * dialogue de création PaiementPrime PRÉREMPLI (solde de prime restant, date du
+     * jour), rattaché à la tranche. L'utilisateur relit et enregistre lui-même.
+     */
+    openSignalerPaiementPrimeAction(action) {
+        const id = parseInt(action.trancheId, 10);
+        if (!Number.isInteger(id) || id <= 0) return;
+        document.dispatchEvent(new CustomEvent('cerveau:event', {
+            bubbles: true,
+            detail: {
+                type:      'ui:tranche.signaler-paiement-prime',
+                source:    'assistant-chat',
+                payload:   { url: `/admin/tranche/api/get-paiement-prime-context/${id}` },
+                timestamp: Date.now(),
+            },
+        }));
     }
 
     /**
