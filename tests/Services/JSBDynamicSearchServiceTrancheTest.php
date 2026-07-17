@@ -164,7 +164,9 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
         $em->persist($owner);
 
         $cotation = $this->makeCotationAvecPrime($entreprise, $owner, 'Cotation Paiements A', 1000.0);
-        $echue = $this->makeTranche($cotation, $entreprise, 'Tranche échue', 0.5, new \DateTimeImmutable('-10 days'));
+        // Pourcentage stocké en POINTS (50 = 50 %, cas des imports bordereau — tranche 71) :
+        // toute la chaîne doit normaliser via getTrancheTauxFactor, jamais le brut.
+        $echue = $this->makeTranche($cotation, $entreprise, 'Tranche échue', 50, new \DateTimeImmutable('-10 days'));
         $aEchoir = $this->makeTranche($cotation, $entreprise, 'Tranche à échoir', 0.5, new \DateTimeImmutable('+10 days'));
 
         $entrepriseB = $this->makeEntreprise(self::ENTREPRISE_B_NOM, $ownerUser);
@@ -298,6 +300,23 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
         $statsEntreprise = $helper->getIndicateursGlobaux($entreprise, false, []);
         $this->assertEqualsWithDelta(500.0, $statsEntreprise['prime_totale_payee'], 0.01);
         $this->assertEqualsWithDelta(500.0, $statsEntreprise['prime_totale_solde'], 0.01, '1000 de prime, 500 signalés payés : solde 500.');
+
+        // Tranche à MONTANT FIXE (pourcentage null) : la part = montantFlat / prime de
+        // la cotation — l'ancien code ne réduisait pas du tout (prime totale de la
+        // tranche = prime de toute la cotation, ex. réponse fantaisiste de Ket).
+        $flat = (new Tranche())
+            ->setNom('Tranche montant fixe')
+            ->setMontantFlat(200.0)
+            ->setPayableAt(new \DateTimeImmutable('-5 days'))
+            ->setEcheanceAt(new \DateTimeImmutable('+15 days'));
+        $flat->setCotation($this->em()->getRepository(\App\Entity\Cotation::class)->find($trancheFraiche->getCotation()->getId()));
+        $flat->setEntreprise($entreprise);
+        $this->em()->persist($flat);
+        $this->em()->flush();
+
+        $statsFlat = $helper->getIndicateursGlobaux($entreprise, false, ['trancheCible' => $flat]);
+        $this->assertEqualsWithDelta(200.0, $statsFlat['prime_totale'], 0.01, 'Part de la tranche fixe = 200/1000 de la prime de cotation.');
+        $this->assertEqualsWithDelta(0.0, $statsFlat['prime_totale_payee'], 0.01, 'Aucun paiement sur CETTE tranche.');
     }
 
     public function testStatutInvalideRetombeSurCheminStandard(): void

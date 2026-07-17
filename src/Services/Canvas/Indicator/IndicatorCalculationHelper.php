@@ -484,19 +484,21 @@ class IndicatorCalculationHelper
         }
 
         if ($trancheCible) {
-            $pourcentage = $trancheCible->getPourcentage();
-            if ($pourcentage !== null) {
-                $prime_totale *= $pourcentage;
-                $commission_totale *= $pourcentage;
-                $commission_nette *= $pourcentage;
-                $commission_pure *= $pourcentage;
-                $commission_partageable *= $pourcentage;
-                $prime_nette *= $pourcentage;
-                $retro_commission_partenaire *= $pourcentage;
-                $reserve *= $pourcentage;
-                $taxe_courtier *= $pourcentage;
-                $taxe_assureur *= $pourcentage;
-            }
+            // Part de la tranche via getTrancheTauxFactor — JAMAIS le pourcentage brut :
+            // il peut être stocké en points (100 = 100 %) et les tranches à montant fixe
+            // n'ont pas de pourcentage du tout (le prorata = montantFlat / prime totale).
+            // Le brut donnait ex. 1 381,48 × 100 = 138 148 de « prime totale » (Ket/visualisation).
+            $facteur = $this->getTrancheTauxFactor($trancheCible);
+            $prime_totale *= $facteur;
+            $commission_totale *= $facteur;
+            $commission_nette *= $facteur;
+            $commission_pure *= $facteur;
+            $commission_partageable *= $facteur;
+            $prime_nette *= $facteur;
+            $retro_commission_partenaire *= $facteur;
+            $reserve *= $facteur;
+            $taxe_courtier *= $facteur;
+            $taxe_assureur *= $facteur;
             // Les montants ENCAISSÉS/PAYÉS d'une tranche sont des faits propres à la
             // tranche (notes de SES articles, paiements de prime SIGNALÉS sur elle) —
             // jamais un prorata de la cotation. Mêmes chiffres que la fiche/liste

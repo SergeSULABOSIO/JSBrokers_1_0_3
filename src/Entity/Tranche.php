@@ -211,6 +211,12 @@ class Tranche
     // Indicateurs d'affichage de la liste (taxes/commission/rétro-commission formatées) :
     // déclarés pour éviter les propriétés dynamiques (dépréciées en PHP 8.2).
     #[Groups(['list:read'])]
+    public ?string $clientDescription = null;
+
+    #[Groups(['list:read'])]
+    public ?string $risqueDescription = null;
+
+    #[Groups(['list:read'])]
     public ?string $taxeCourtierAffichee = null;
 
     #[Groups(['list:read'])]
