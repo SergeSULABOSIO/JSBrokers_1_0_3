@@ -572,10 +572,13 @@ class AssistantIaContexteTest extends WebTestCase
             );
         };
 
-        // Non-régression : l'envoi fonctionne SANS contexte.
+        // Non-régression : l'envoi fonctionne SANS contexte — et le message ne
+        // porte alors AUCUN instantané (pas d'agrafe).
         $postMessage('Bonjour, qui es-tu ?');
         $this->assertResponseIsSuccessful();
-        $this->assertNotSame('', $this->jsonResponse()['assistant']['contenu']);
+        $reponse = $this->jsonResponse();
+        $this->assertNotSame('', $reponse['assistant']['contenu']);
+        $this->assertNull($reponse['user']['contexteObjets']);
 
         // Et il fonctionne toujours AVEC un contexte attaché (le moteur simulé
         // ignore les objets attachés, aucune erreur).
@@ -583,6 +586,31 @@ class AssistantIaContexteTest extends WebTestCase
         $this->assertResponseIsSuccessful();
         $postMessage('Combien de clients avons-nous ?');
         $this->assertResponseIsSuccessful();
-        $this->assertFalse($this->jsonResponse()['assistant']['refus']);
+        $reponse = $this->jsonResponse();
+        $this->assertFalse($reponse['assistant']['refus']);
+
+        // Instantané IMMUABLE : le message « transporte » les objets du contexte
+        // tels qu'ils étaient à l'envoi (réponse API + persistance).
+        $this->assertSame(
+            [['type' => 'Client', 'id' => $idClient, 'nom' => 'Msg Alpha']],
+            $reponse['user']['contexteObjets'],
+        );
+        $this->em()->clear();
+        $messageUser = $this->em()->getRepository(\App\Entity\AssistantMessage::class)->find($reponse['user']['id']);
+        $this->assertSame(
+            [['type' => 'Client', 'id' => $idClient, 'nom' => 'Msg Alpha']],
+            $messageUser->getContexteObjets(),
+            'Le cliché doit être persisté sur le message utilisateur.'
+        );
+
+        // Le rendu du chat porte l'agrafe (bouton data-msg-contextes) sur la
+        // bulle du message envoyé avec contexte.
+        $this->client->request('GET', sprintf('/admin/assistant-ia/chat/%d/%d', $e->getId(), $conversation->getId()));
+        $this->assertResponseIsSuccessful();
+        $content = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('aic-msg-attach', $content);
+        $this->assertStringContainsString('data-msg-contextes', $content);
+        // (borne avant l'apostrophe : elle est typographique dans le template)
+        $this->assertStringContainsString('1 objet en contexte à l', $content);
     }
 }
