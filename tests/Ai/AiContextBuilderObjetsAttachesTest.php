@@ -193,6 +193,13 @@ class AiContextBuilderObjetsAttachesTest extends KernelTestCase
         $prompt = $this->builder()->toSystemPrompt($request);
         $this->assertStringContainsString('ATTACHÉ', $prompt);
         $this->assertStringContainsString('Builder Client Alpha', $prompt);
+
+        // Sémantique de recentrage OBLIGATOIRE : les objets attachés sont les sujets
+        // principaux de la conversation, et la liste ACTUELLE prévaut sur l'historique
+        // (un objet remplacé/retiré ne doit plus guider les réponses).
+        $this->assertStringContainsString('SUJETS PRINCIPAUX', $prompt);
+        $this->assertStringContainsString('recentre ton raisonnement', $prompt);
+        $this->assertStringContainsString('PRÉVAUT sur l\'historique', $prompt);
     }
 
     public function testObjetSupprimeExcluSilencieusement(): void
