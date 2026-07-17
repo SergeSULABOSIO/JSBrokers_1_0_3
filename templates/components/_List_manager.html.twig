@@ -66,7 +66,12 @@
                                     data-criterion-key="{{ groupe.critere }}"
                                     data-criterion-value="{{ option.value }}"
                                     data-criterion-label="{{ option.label }}"
-                                    aria-pressed="false">{{ option.label }}</button>
+                                    aria-pressed="false">
+                                {%- if option.icon is defined and option.icon -%}
+                                    <span class="jsb-preset-chip__icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(option.icon), {width: '15px', height: '15px'}) }}</span>
+                                {%- endif -%}
+                                <span>{{ option.label }}</span>
+                            </button>
                         {% endfor %}
                     </div>
                 {% endfor %}

@@ -67,17 +67,18 @@ class TrancheListCanvasProvider implements ListCanvasProviderInterface
             ],
             // Chips de filtre rapide rendus par _List_manager (hors dialogues) : chaque option
             // pose/retire le critère synthétique « Statut de paiement » via le Cerveau.
+            // `icon` (optionnel) = alias IconCanvasProvider, résolu par resolve_icon_name().
             "filtres_predefinis" => [
                 [
                     "critere" => TranchePaiementScope::CRITERION_KEY,
                     "libelle" => "Statut de paiement",
                     "options" => [
-                        ["value" => TranchePaiementScope::STATUT_IMPAYEES, "label" => TranchePaiementScope::libelle(TranchePaiementScope::STATUT_IMPAYEES)],
-                        ["value" => TranchePaiementScope::STATUT_ECHUES, "label" => TranchePaiementScope::libelle(TranchePaiementScope::STATUT_ECHUES)],
-                        ["value" => TranchePaiementScope::STATUT_COMMISSION_EXIGIBLE, "label" => TranchePaiementScope::libelle(TranchePaiementScope::STATUT_COMMISSION_EXIGIBLE)],
-                        ["value" => TranchePaiementScope::STATUT_PAYEES, "label" => TranchePaiementScope::libelle(TranchePaiementScope::STATUT_PAYEES)],
-                        ["value" => TranchePaiementScope::STATUT_RETRO_A_PAYER, "label" => "Rétro à payer"],
-                        ["value" => "", "label" => "Toutes"],
+                        ["value" => TranchePaiementScope::STATUT_IMPAYEES, "label" => TranchePaiementScope::libelle(TranchePaiementScope::STATUT_IMPAYEES), "icon" => "action:alert"],
+                        ["value" => TranchePaiementScope::STATUT_ECHUES, "label" => TranchePaiementScope::libelle(TranchePaiementScope::STATUT_ECHUES), "icon" => "action:calendar"],
+                        ["value" => TranchePaiementScope::STATUT_COMMISSION_EXIGIBLE, "label" => TranchePaiementScope::libelle(TranchePaiementScope::STATUT_COMMISSION_EXIGIBLE), "icon" => "paiement"],
+                        ["value" => TranchePaiementScope::STATUT_PAYEES, "label" => TranchePaiementScope::libelle(TranchePaiementScope::STATUT_PAYEES), "icon" => "action:completed"],
+                        ["value" => TranchePaiementScope::STATUT_RETRO_A_PAYER, "label" => "Rétro à payer", "icon" => "depense"],
+                        ["value" => "", "label" => "Toutes", "icon" => "action:filter"],
                     ],
                 ],
             ],
