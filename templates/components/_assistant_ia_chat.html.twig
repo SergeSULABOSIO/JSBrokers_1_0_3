@@ -82,6 +82,18 @@
         .jsb-ai-chat .aic-msg-time { color:#6c757d; font-size:.7rem; }
         .jsb-ai-chat .aic-msg--user .aic-msg-time { text-align:right; }
 
+        /* Agrafe des messages utilisateur : instantané des objets du contexte à
+           l'envoi (pastille discrète, alignée à droite sous la bulle). */
+        .jsb-ai-chat .aic-msg-attach {
+            align-self:flex-end; display:inline-flex; align-items:center; gap:3px;
+            border:1px solid #dee2e6; background:#ffffff; color:#6c757d;
+            font-size:.68rem; line-height:1.2; padding:1px 7px; border-radius:999px;
+            cursor:pointer; font-family:inherit;
+            transition:border-color .15s ease, color .15s ease;
+        }
+        .jsb-ai-chat .aic-msg-attach:hover { border-color:#0047AB; color:#0047AB; }
+        .jsb-ai-chat .aic-msg-attach:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+
         /* Bulles système (402 tokens / erreur réseau). */
         .jsb-ai-chat .aic-notice { margin:0; padding:.6rem .8rem; border-radius:8px; font-size:.85rem; align-self:center; max-width:92%; }
         .jsb-ai-chat .aic-notice--warning { background:#fff3cd; color:#664d03; }
@@ -211,6 +223,22 @@
                 {% endif %}
                 <div class="aic-msg-body">
                     <p class="aic-msg-text">{{ message.contenu }}</p>
+                    {# Agrafe : instantané IMMUABLE des objets du contexte à l'envoi de CE
+                       message (le contexte courant de la conversation évolue, ce cliché
+                       jamais). Survol = infobulle sombre ; clic = épinglage. #}
+                    {% if not estAssistant and message.contexteObjets %}
+                        {% set agrafe = [] %}
+                        {% for o in message.contexteObjets %}
+                            {% set agrafe = agrafe|merge([o|merge({typeLabel: token_entite_label('App\\Entity\\' ~ o.type)})]) %}
+                        {% endfor %}
+                        <button type="button" class="aic-msg-attach"
+                                data-msg-contextes="{{ agrafe|json_encode|e('html_attr') }}"
+                                data-action="click->assistant-chat#toggleMsgContextes"
+                                aria-label="{{ message.contexteObjets|length }} objet{{ message.contexteObjets|length > 1 ? 's' : '' }} en contexte à l'envoi de ce message">
+                            {{ ux_icon(resolve_icon_name('lucide:paperclip'), {height: '11px', width: '11px'}) }}
+                            <span>{{ message.contexteObjets|length }}</span>
+                        </button>
+                    {% endif %}
                     {# Heure seule pour les messages du jour, date + heure au-delà. #}
                     {% set memeJour = message.createdAt|date('Y-m-d') == 'now'|date('Y-m-d') %}
                     <span class="aic-msg-time">{{ message.createdAt|date(memeJour ? 'H:i' : 'd/m/Y H:i') }}</span>

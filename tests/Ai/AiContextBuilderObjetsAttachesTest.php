@@ -202,6 +202,37 @@ class AiContextBuilderObjetsAttachesTest extends KernelTestCase
         $this->assertStringContainsString('PRÉVAUT sur l\'historique', $prompt);
     }
 
+    public function testHistoriqueAnnoteAvecLInstantaneDuMessage(): void
+    {
+        ['entreprise' => $e, 'owner' => $owner] = $this->seed();
+        $client = $this->makeClient($e, 'Builder Client Beta');
+        $conversation = $this->makeConversationAvecContexte($e, $owner, 'Client', $client->getId(), 'Builder Client Beta');
+
+        // Un message utilisateur PORTEUR d'un instantané (envoyé quand un AUTRE
+        // objet était en contexte) et un message sans instantané.
+        $conversation->addMessage((new \App\Entity\AssistantMessage())
+            ->setRole(\App\Entity\AssistantMessage::ROLE_USER)
+            ->setContenu('Quel est son solde ?')
+            ->setContexteObjets([['type' => 'Tranche', 'id' => 71, 'nom' => 'Tranche unique']]));
+        $conversation->addMessage((new \App\Entity\AssistantMessage())
+            ->setRole(\App\Entity\AssistantMessage::ROLE_ASSISTANT)
+            ->setContenu('Le solde est de 0,00 USD.'));
+        $this->em()->persist($conversation);
+        $this->em()->flush();
+
+        $request = $this->builder()->build($e, $owner, $conversation);
+
+        // Le message utilisateur transporte son cliché en tête de contenu — le
+        // moteur sait sur QUOI portait ce message, même si le contexte a changé.
+        $this->assertStringContainsString(
+            "[Objets en contexte à l'envoi de ce message : Tranche #71 — Tranche unique]",
+            $request->messages[0]['content'],
+        );
+        $this->assertStringContainsString('Quel est son solde ?', $request->messages[0]['content']);
+        // La réponse de l'assistant, elle, reste intacte (pas d'annotation).
+        $this->assertSame('Le solde est de 0,00 USD.', $request->messages[1]['content']);
+    }
+
     public function testObjetSupprimeExcluSilencieusement(): void
     {
         ['entreprise' => $e, 'owner' => $owner] = $this->seed();

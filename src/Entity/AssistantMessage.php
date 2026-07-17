@@ -35,6 +35,15 @@ class AssistantMessage
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $meta = null;
 
+    /**
+     * Instantané IMMUABLE des objets du contexte au moment de l'envoi (messages
+     * utilisateur uniquement) : [{type, id, nom}]. Le message « transporte » ses
+     * objets — la liste courante de la conversation évolue, ce cliché jamais.
+     * Null = aucun objet attaché à l'envoi (pas d'agrafe).
+     */
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $contexteObjets = null;
+
     #[ORM\Column(type: 'datetime_immutable')]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -84,6 +93,18 @@ class AssistantMessage
     public function setMeta(?array $meta): self
     {
         $this->meta = $meta;
+        return $this;
+    }
+
+    /** @return array<int, array{type: string, id: int, nom: string}>|null */
+    public function getContexteObjets(): ?array
+    {
+        return $this->contexteObjets;
+    }
+
+    public function setContexteObjets(?array $contexteObjets): self
+    {
+        $this->contexteObjets = $contexteObjets !== [] ? $contexteObjets : null;
         return $this;
     }
 

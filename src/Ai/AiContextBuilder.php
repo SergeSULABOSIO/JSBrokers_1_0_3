@@ -36,9 +36,19 @@ class AiContextBuilder
     {
         $messages = [];
         foreach ($conversation->getMessages() as $message) {
+            $contenu = (string) $message->getContenu();
+            // Chaque message utilisateur « transporte » son instantané de contexte :
+            // l'annotation lève l'ambiguïté temporelle pour le moteur (un message
+            // ancien portait peut-être sur un objet depuis remplacé — l'historique
+            // le dit désormais explicitement, la liste ACTUELLE restant la seule
+            // source des SUJETS PRINCIPAUX via le prompt système).
+            if ($message->getRole() === AssistantMessage::ROLE_USER
+                && ($objets = $message->getContexteObjets()) !== null) {
+                $contenu = $this->marqueurContexte($objets) . "\n" . $contenu;
+            }
             $messages[] = [
                 'role'    => $message->getRole() === AssistantMessage::ROLE_ASSISTANT ? 'assistant' : 'user',
-                'content' => (string) $message->getContenu(),
+                'content' => $contenu,
             ];
         }
         $messages = array_slice($messages, -self::MAX_MESSAGES);
@@ -178,6 +188,24 @@ class AiContextBuilder
             . "\nlieA={entite: \"Piste\", id: 42} ; tâches du client 82 via ses pistes : entite=Tache,"
             . "\nlieA={entite: \"Client\", id: 82}) ; un chiffre calculé se lit via indicateur_calcule :\n"
             . json_encode($objets, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    }
+
+    /**
+     * Marqueur compact préfixé aux messages utilisateur de l'historique : les
+     * objets qui étaient en contexte À L'ENVOI de ce message (type #id — nom).
+     * Libellés seulement — les fiches complètes ne concernent que la liste
+     * ACTUELLE (section SUJETS PRINCIPAUX du prompt système).
+     *
+     * @param array<int, array{type: string, id: int, nom: string}> $objets
+     */
+    private function marqueurContexte(array $objets): string
+    {
+        $items = array_map(
+            static fn (array $o) => sprintf('%s #%d — %s', $o['type'] ?? '?', (int) ($o['id'] ?? 0), $o['nom'] ?? ''),
+            $objets,
+        );
+
+        return '[Objets en contexte à l\'envoi de ce message : ' . implode(' ; ', $items) . ']';
     }
 
     /**

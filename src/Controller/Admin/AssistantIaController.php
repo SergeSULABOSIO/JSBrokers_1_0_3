@@ -286,7 +286,12 @@ class AssistantIaController extends AbstractController
 
         $messageUser = (new AssistantMessage())
             ->setRole(AssistantMessage::ROLE_USER)
-            ->setContenu($contenu);
+            ->setContenu($contenu)
+            // Instantané IMMUABLE : le message « transporte » les objets du contexte
+            // tels qu'ils étaient à l'envoi (agrafe sur la bulle + annotation de
+            // l'historique moteur) — la liste courante de la conversation, elle,
+            // continuera d'évoluer sans réécrire ce cliché.
+            ->setContexteObjets($this->instantaneContexte($conversation));
 
         // MÉTRAGE (écriture) avant moteur et persistance : si le solde est
         // épuisé, rien n'est traité ni enregistré.
@@ -336,9 +341,10 @@ class AssistantIaController extends AbstractController
 
         return $this->json([
             'user' => [
-                'id'        => $messageUser->getId(),
-                'contenu'   => $messageUser->getContenu(),
-                'createdAt' => $messageUser->getCreatedAt()?->format(\DateTimeImmutable::ATOM),
+                'id'             => $messageUser->getId(),
+                'contenu'        => $messageUser->getContenu(),
+                'contexteObjets' => $messageUser->getContexteObjets(),
+                'createdAt'      => $messageUser->getCreatedAt()?->format(\DateTimeImmutable::ATOM),
             ],
             'assistant' => [
                 'id'        => $messageAssistant->getId(),
@@ -349,6 +355,27 @@ class AssistantIaController extends AbstractController
             ],
             'conversationTitre' => $conversation->getTitre(),
         ]);
+    }
+
+    /**
+     * Instantané des objets du contexte de la conversation au moment de l'envoi :
+     * type + id + libellé (le cliché des puces telles que l'utilisateur les voit).
+     * Vide → null (setContexteObjets normalise) : la bulle ne portera pas d'agrafe.
+     *
+     * @return array<int, array{type: string, id: int, nom: string}>
+     */
+    private function instantaneContexte(AssistantConversation $conversation): array
+    {
+        $objets = [];
+        foreach ($conversation->getContextes() as $contexte) {
+            $objets[] = [
+                'type' => (string) $contexte->getEntityType(),
+                'id'   => (int) $contexte->getEntityId(),
+                'nom'  => (string) $contexte->getLabel(),
+            ];
+        }
+
+        return $objets;
     }
 
     /**

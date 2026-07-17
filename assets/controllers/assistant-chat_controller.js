@@ -48,20 +48,31 @@ export default class extends Controller {
         // Délégation sur la barre de contexte : survit aux re-rendus innerHTML.
         this._ctxTip = null;
         this._ctxTipActive = false;
+        this._ctxTipPinned = false;
         this._onCtxTipOver = this._ctxTipOver.bind(this);
         this._onCtxTipOut = this._ctxTipOut.bind(this);
         this._onCtxTipMove = this._ctxTipMove.bind(this);
         if (this.hasContextBarTarget) {
             this.contextBarTarget.addEventListener('mouseover', this._onCtxTipOver);
             this.contextBarTarget.addEventListener('mouseout', this._onCtxTipOut);
-            document.addEventListener('mousemove', this._onCtxTipMove);
         }
+        // Agrafes des bulles utilisateur (instantané de contexte du message) :
+        // même infobulle sombre, déléguée au fil de messages (survit aux ajouts).
+        if (this.hasMessagesTarget) {
+            this.messagesTarget.addEventListener('mouseover', this._onCtxTipOver);
+            this.messagesTarget.addEventListener('mouseout', this._onCtxTipOut);
+        }
+        document.addEventListener('mousemove', this._onCtxTipMove);
     }
 
     disconnect() {
         if (this.hasContextBarTarget) {
             this.contextBarTarget.removeEventListener('mouseover', this._onCtxTipOver);
             this.contextBarTarget.removeEventListener('mouseout', this._onCtxTipOut);
+        }
+        if (this.hasMessagesTarget) {
+            this.messagesTarget.removeEventListener('mouseover', this._onCtxTipOver);
+            this.messagesTarget.removeEventListener('mouseout', this._onCtxTipOut);
         }
         document.removeEventListener('mousemove', this._onCtxTipMove);
         if (this._ctxTip) {
@@ -119,7 +130,7 @@ export default class extends Controller {
 
         this.sending = true;
         this.sendTarget.disabled = true;
-        const userBubble = this.appendMessage('user', contenu);
+        const userBubble = this.appendMessage('user', contenu, false, this.contexteInstantane());
         this.inputTarget.value = '';
         this.onInput();
         this.setTypingLabel('réfléchit…');
@@ -435,6 +446,10 @@ export default class extends Controller {
         if (this.hasContextBarTarget) {
             this.contextBarTarget.innerHTML = html;
         }
+        // La puce survolée peut venir d'être retirée du DOM : le navigateur
+        // n'émet alors aucun mouseout — sans masquage explicite, l'infobulle
+        // resterait affichée et suivrait le curseur indéfiniment.
+        this._ctxTipHide();
     }
 
     /** État courant du contexte, lu depuis les puces rendues serveur. */
@@ -446,28 +461,75 @@ export default class extends Controller {
         })).filter((o) => o.type && Number.isInteger(o.id));
     }
 
+    /**
+     * Instantané complet (type, id, nom, libellé de type) du contexte courant,
+     * lu depuis les puces — même contenu que le cliché persisté côté serveur :
+     * la bulle optimiste porte immédiatement la même agrafe que le rendu final.
+     */
+    contexteInstantane() {
+        if (!this.hasContextBarTarget) return [];
+        return [...this.contextBarTarget.querySelectorAll('.aic-chip')].map((chip) => ({
+            type: chip.dataset.entityType,
+            id: parseInt(chip.dataset.entityId, 10),
+            nom: chip.dataset.ctxLabel || '',
+            typeLabel: chip.dataset.ctxTypeLabel || chip.dataset.entityType,
+        })).filter((o) => o.type && Number.isInteger(o.id));
+    }
+
     // ── Infobulle sombre des puces (pattern data-piste-tip du tableau de bord) ──
 
     _ctxTipOver(event) {
-        const chip = event.target.closest ? event.target.closest('[data-ctx-tip]') : null;
-        if (!chip || event.target.closest('.aic-chip-remove')) return;
+        if (this._ctxTipPinned) return; // infobulle épinglée par clic : ne pas écraser
+        const cible = event.target.closest ? event.target.closest('[data-ctx-tip], [data-msg-contextes]') : null;
+        if (!cible || event.target.closest('.aic-chip-remove')) return;
         const tip = this._ctxTipCreate();
-        this._ctxTipBuild(tip, chip);
+        if (cible.dataset.msgContextes !== undefined) {
+            this._ctxTipBuildMessage(tip, cible);
+        } else {
+            this._ctxTipBuild(tip, cible);
+        }
         tip.style.display = 'block';
         this._ctxTipActive = true;
     }
 
     _ctxTipOut(event) {
-        const chip = event.target.closest ? event.target.closest('[data-ctx-tip]') : null;
-        if (chip && !chip.contains(event.relatedTarget)) {
-            if (this._ctxTip) this._ctxTip.style.display = 'none';
-            this._ctxTipActive = false;
+        if (this._ctxTipPinned) return;
+        const cible = event.target.closest ? event.target.closest('[data-ctx-tip], [data-msg-contextes]') : null;
+        if (cible && !cible.contains(event.relatedTarget)) {
+            this._ctxTipHide();
         }
+    }
+
+    /**
+     * Clic sur l'agrafe d'un message : épingle l'infobulle (elle cesse de suivre
+     * le curseur — utile aussi au tactile) ; second clic = masquage.
+     */
+    toggleMsgContextes(event) {
+        const bouton = event.currentTarget;
+        if (this._ctxTipPinned) {
+            this._ctxTipHide();
+            return;
+        }
+        const tip = this._ctxTipCreate();
+        this._ctxTipBuildMessage(tip, bouton);
+        const rect = bouton.getBoundingClientRect();
+        tip.style.display = 'block';
+        tip.style.left = `${Math.max(8, rect.left - 220)}px`;
+        tip.style.top = `${rect.bottom + 6}px`;
+        this._ctxTipActive = true;
+        this._ctxTipPinned = true;
+    }
+
+    /** Masque l'infobulle et coupe le suivi du curseur. */
+    _ctxTipHide() {
+        if (this._ctxTip) this._ctxTip.style.display = 'none';
+        this._ctxTipActive = false;
+        this._ctxTipPinned = false;
     }
 
     /** Suit le curseur : au-dessus à gauche, repli sous/à droite près des bords. */
     _ctxTipMove(event) {
-        if (!this._ctxTipActive || !this._ctxTip) return;
+        if (!this._ctxTipActive || !this._ctxTip || this._ctxTipPinned) return;
         const tip = this._ctxTip;
         const offset = 10;
         let left = event.clientX - tip.offsetWidth - offset;
@@ -524,6 +586,47 @@ export default class extends Controller {
             }
         } else {
             addRow([{ text: 'Détails indisponibles (objet supprimé ou hors de votre périmètre).', colspan: 2, className: 'tip-libelle' }]);
+        }
+
+        tip.appendChild(table);
+    }
+
+    /**
+     * Contenu de l'agrafe d'un message : l'instantané IMMUABLE des objets qui
+     * étaient en contexte à l'envoi (posé en data-msg-contextes par le partial
+     * serveur ou la bulle optimiste) — construction DOM via textContent.
+     */
+    _ctxTipBuildMessage(tip, bouton) {
+        tip.textContent = '';
+        const table = document.createElement('table');
+
+        const addRow = (cells) => {
+            const tr = document.createElement('tr');
+            cells.forEach(({ text, colspan, className }) => {
+                const td = document.createElement('td');
+                td.textContent = text;
+                if (colspan) td.setAttribute('colspan', String(colspan));
+                if (className) td.className = className;
+                tr.appendChild(td);
+            });
+            table.appendChild(tr);
+        };
+
+        let objets = [];
+        try {
+            objets = JSON.parse(bouton.dataset.msgContextes || '[]');
+        } catch { /* instantané illisible : liste vide */ }
+
+        addRow([{ text: 'Objets en contexte à l\'envoi de ce message', colspan: 2, className: 'tip-section' }]);
+        if (!Array.isArray(objets) || objets.length === 0) {
+            addRow([{ text: 'Aucun objet.', colspan: 2, className: 'tip-libelle' }]);
+        } else {
+            objets.forEach((o) => {
+                addRow([
+                    { text: `${o.typeLabel || o.type || 'Objet'} #${o.id ?? '?'}` },
+                    { text: String(o.nom || '—') },
+                ]);
+            });
         }
 
         tip.appendChild(table);
@@ -608,7 +711,7 @@ export default class extends Controller {
      * Ajoute une bulle de message au fil (structure identique à celle rendue
      * côté serveur dans _assistant_ia_chat.html.twig).
      */
-    appendMessage(role, texte, refus = false) {
+    appendMessage(role, texte, refus = false, contexteObjets = null) {
         const bubble = document.createElement('div');
         bubble.className = `aic-msg aic-msg--${role}${refus ? ' aic-msg--refus' : ''}`;
 
@@ -627,6 +730,24 @@ export default class extends Controller {
         content.className = 'aic-msg-text';
         content.textContent = texte; // Échappement garanti.
         body.appendChild(content);
+
+        // Agrafe : instantané des objets du contexte à l'envoi (bulle utilisateur,
+        // structure identique au rendu serveur — l'infobulle/le clic marchent d'office
+        // via la délégation et l'action Stimulus).
+        if (role === 'user' && Array.isArray(contexteObjets) && contexteObjets.length > 0) {
+            const attache = document.createElement('button');
+            attache.type = 'button';
+            attache.className = 'aic-msg-attach';
+            attache.dataset.msgContextes = JSON.stringify(contexteObjets);
+            attache.setAttribute('data-action', 'click->assistant-chat#toggleMsgContextes');
+            attache.setAttribute('aria-label', `${contexteObjets.length} objet${contexteObjets.length > 1 ? 's' : ''} en contexte à l'envoi de ce message`);
+            // SVG statique (trombone lucide) : constante sûre, aucun contenu utilisateur.
+            attache.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>';
+            const compteur = document.createElement('span');
+            compteur.textContent = String(contexteObjets.length);
+            attache.appendChild(compteur);
+            body.appendChild(attache);
+        }
 
         const time = document.createElement('span');
         time.className = 'aic-msg-time';
