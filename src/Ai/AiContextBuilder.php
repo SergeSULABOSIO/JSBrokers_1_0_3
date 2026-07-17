@@ -159,8 +159,17 @@ class AiContextBuilder
             return '';
         }
 
-        return "\nL'utilisateur a ATTACHÉ les fiches suivantes au contexte de cette conversation : elles sont"
-            . "\ndéjà vérifiées et dans son périmètre. Appuie-toi dessus EN PRIORITÉ quand il y fait référence,"
+        return "\nSUJETS PRINCIPAUX — l'utilisateur a ATTACHÉ les fiches ci-dessous au contexte de cette"
+            . "\nconversation. RÈGLE IMPÉRATIVE : ces objets sont les SUJETS PRINCIPAUX de la conversation."
+            . "\nAvant CHAQUE réponse, relis cette liste et recentre ton raisonnement dessus : interprète toute"
+            . "\nquestion — même formulée sans les nommer (« quel est le solde ? », « et ses tâches ? »,"
+            . "\n« ce client ») — comme portant sur ces objets, sauf si l'utilisateur désigne EXPLICITEMENT"
+            . "\nautre chose. Cible tes appels d'outils sur eux : leurs id alimentent lieA, id/cible,"
+            . "\ntrancheId, etc. — jamais un autre enregistrement par défaut."
+            . "\nCette liste reflète l'état ACTUEL du contexte et PRÉVAUT sur l'historique de la conversation :"
+            . "\nsi un objet a été ajouté, remplacé ou retiré depuis les messages précédents, ajuste-toi"
+            . "\nimmédiatement à la liste ci-dessous — ne reste jamais sur un objet qui n'y figure plus."
+            . "\nLes fiches sont déjà vérifiées et dans le périmètre de l'utilisateur : appuie-toi dessus"
             . "\nsans re-lire la fiche via un outil. ATTENTION : chaque fiche ne contient QUE les attributs"
             . "\nSTOCKÉS de l'enregistrement — JAMAIS ses enregistrements liés (tâches, documents, avenants,"
             . "\ncotations…) ni ses indicateurs calculés. Ne conclus donc JAMAIS à l'absence d'éléments liés"
