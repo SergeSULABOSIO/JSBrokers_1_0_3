@@ -1003,47 +1003,58 @@ textarea:hover,
     border-bottom: 1px solid #dee2e6;
     padding: 0.35rem 0.75rem;
 }
-/* Groupe de boutons toggle (même rendu que les blocs du tableau de bord,
-   ex. Renouvellements : .db-prod-tabs/.db-task-toggle) : piste grise en pilule,
-   bouton actif = pastille blanche ombrée. Logique inchangée (is-active/aria-pressed). */
+/* Groupe de boutons toggle : piste grise en pilule, bouton actif = pastille
+   cobalt (#0047AB) texte blanc, survol = teinte cobalt + légère élévation.
+   Icône optionnelle (clé `icon` des options du canvas) devant le libellé.
+   Logique inchangée (is-active/aria-pressed). */
 .jsb-preset-filters {
     display: inline-flex;
     align-items: center;
     flex-wrap: wrap;
     background: #f0f2f5;
-    border-radius: 20px;
-    padding: 3px;
+    border-radius: 26px;
+    padding: 4px;
     gap: 0;
     flex-shrink: 0;
 }
 .jsb-preset-chip {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    font-size: 0.68rem;
+    gap: 6px;
+    font-size: 0.88rem;
     font-weight: 500;
     line-height: 1.2;
-    padding: 3px 10px;
-    border-radius: 16px;
+    padding: 4px 13px;
+    border-radius: 20px;
     border: none;
     background: transparent;
     color: #6c757d;
     white-space: nowrap;
     cursor: pointer;
     font-family: inherit;
-    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+.jsb-preset-chip__icon {
+    display: inline-flex; /* aligne verticalement le SVG sur le libellé */
 }
 .jsb-preset-chip:hover {
-    color: #212529;
+    color: #0047AB;
+    background: rgba(0, 71, 171, 0.08);
+    transform: translateY(-1px);
+}
+.jsb-preset-chip:active {
+    transform: none; /* effet d'enfoncement à la pression */
 }
 .jsb-preset-chip:focus-visible {
     outline: 2px solid #0047AB;
     outline-offset: 2px;
 }
-.jsb-preset-chip.is-active {
-    background: #ffffff;
-    color: #212529;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+.jsb-preset-chip.is-active,
+.jsb-preset-chip.is-active:hover {
+    background: #0047AB;
+    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 71, 171, 0.35);
+    transform: none;
 }
 
 .jsb-list-summary {
