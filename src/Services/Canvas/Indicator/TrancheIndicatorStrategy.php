@@ -375,7 +375,15 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
 
         $encaisseePartageable = round($this->getTrancheMontantCommissionPartageableEncaissee($tranche), 2);
 
-        return $encaisseePartageable >= $duePartageable ? $soldeRetro : 0.0;
+        // Circuit bordereau sans articles : un bordereau de production couvrant la
+        // tranche et intégralement encaissé prouve que la commission (partageable
+        // comprise) a été perçue — la dette rétro est donc née.
+        if ($encaisseePartageable >= $duePartageable
+            || $this->calculationHelper->isTrancheCouverteParBordereau($tranche, true)) {
+            return $soldeRetro;
+        }
+
+        return 0.0;
     }
 
     /**
