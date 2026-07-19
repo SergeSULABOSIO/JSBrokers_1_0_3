@@ -27,11 +27,21 @@ use Doctrine\ORM\EntityManagerInterface;
 use App\Services\ServiceDates;
 use App\Services\ServiceTaxes;
 use DateTimeImmutable;
+use Symfony\Contracts\Service\ResetInterface;
 
-class IndicatorCalculationHelper
+class IndicatorCalculationHelper implements ResetInterface
 {
     private array $claimsCache = [];
     private array $commissionHtCache = [];
+
+    /**
+     * Couverture bordereaux par entreprise (id) : avenants attestés par une ligne
+     * réconciliée d'un bordereau de production, et sous-ensemble dont le bordereau
+     * est intégralement encaissé. Voir getCouvertureBordereaux().
+     *
+     * @var array<int, array{couverts: array<int, true>, couvertsSoldes: array<int, true>}>
+     */
+    private array $couvertureBordereauxCache = [];
 
     public function __construct(
         private CotationRepository $cotationRepository,
@@ -41,6 +51,13 @@ class IndicatorCalculationHelper
         private ServiceDates $serviceDates,
         private EntityManagerInterface $em
     ) {
+    }
+
+    public function reset(): void
+    {
+        $this->claimsCache = [];
+        $this->commissionHtCache = [];
+        $this->couvertureBordereauxCache = [];
     }
 
     public function getInterpretationTauxSP(float $taux): string
@@ -751,6 +768,17 @@ class IndicatorCalculationHelper
                     }
                 }
             }
+
+            // Miroir « sans articles » du circuit bordereau : la note liée au bordereau
+            // peut ne porter aucun article (repli sur les montants du bordereau). Si un
+            // bordereau de production couvrant la tranche (ligne réconciliée) est
+            // intégralement encaissé, la commission de la tranche est réputée encaissée
+            // — plafonnée à son dû TTC, sans double compter les notes à articles.
+            if ($this->isTrancheCouverteParBordereau($tranche, true)) {
+                $du = $this->getCotationMontantCommissionTtc($tranche->getCotation(), -1, false)
+                    * $this->getTrancheTauxFactor($tranche);
+                $montant = max($montant, $du);
+            }
         }
         return $montant;
     }
@@ -1118,7 +1146,132 @@ class IndicatorCalculationHelper
         // la commission de courtage.
         $montant += $this->getTranchePrimeDeclareePayee($tranche);
 
+        // Inférences bordereau — faits dérivés (aucun PaiementPrime créé, se rétractent
+        // seuls si l'encaissement source est annulé), plafonnés par max() contre tout
+        // double comptage avec les paiements signalés :
+        // 1. notes ASSUREUR de la tranche soldées → commission reversée → l'assureur
+        //    détenait la prime ;
+        // 2. tranche couverte par une ligne RÉCONCILIÉE d'un bordereau de production
+        //    (analysisResults, type « match ») : le bordereau atteste que l'assureur a
+        //    encaissé la prime de l'avenant — sans articles, le bordereau porte déjà
+        //    l'information.
+        if ($this->isTrancheCommissionAssureurSoldee($tranche) || $this->isTrancheCouverteParBordereau($tranche)) {
+            $prime = $this->getCotationMontantPrimePayableParClient($tranche->getCotation())
+                * $this->getTrancheTauxFactor($tranche);
+            $montant = max($montant, $prime);
+        }
+
         return $montant;
+    }
+
+    /**
+     * Vrai si la tranche est facturée à l'ASSUREUR pour au moins une commission
+     * (typiquement la note liée à un bordereau de production) et que ces notes sont
+     * intégralement encaissées, au prorata des articles de la tranche. Même filtre
+     * d'articles que getTrancheMontantCommissionEncaissee, restreint au flux assureur.
+     */
+    public function isTrancheCommissionAssureurSoldee(Tranche $tranche): bool
+    {
+        $facture = 0.0;
+        $encaisse = 0.0;
+        foreach ($tranche->getArticles() as $article) {
+            $note = $article->getNote();
+            if (!$note || !$article->getRevenuFacture() || $note->getAddressedTo() !== Note::TO_ASSUREUR) {
+                continue;
+            }
+            $montantArticle = $this->getArticleMontant($article);
+            $facture += $montantArticle;
+            $montantPayableNote = $this->getNoteMontantPayable($note);
+            if ($montantPayableNote > 0) {
+                $encaisse += ($this->getNoteMontantPaye($note) / $montantPayableNote) * $montantArticle;
+            }
+        }
+
+        return round($facture, 2) > 0 && round($encaisse, 2) >= round($facture, 2);
+    }
+
+    /**
+     * Vrai si un avenant de la cotation de la tranche est attesté par une ligne
+     * RÉCONCILIÉE (type « match ») d'un bordereau de production : l'assureur y déclare
+     * avoir encaissé la prime de l'avenant. Avec $exigerSolde, exige en plus que le
+     * bordereau soit intégralement encaissé (commission effectivement reversée) —
+     * c'est le miroir « sans articles » de l'encaissement par notes.
+     */
+    public function isTrancheCouverteParBordereau(Tranche $tranche, bool $exigerSolde = false): bool
+    {
+        $cotation = $tranche->getCotation();
+        $entreprise = $tranche->getEntreprise();
+        if (!$cotation || !$entreprise) {
+            return false;
+        }
+
+        $couverture = $this->getCouvertureBordereaux($entreprise);
+        $cible = $exigerSolde ? $couverture['couvertsSoldes'] : $couverture['couverts'];
+        if ($cible === []) {
+            return false;
+        }
+
+        foreach ($cotation->getAvenants() as $avenant) {
+            if (isset($cible[(int) $avenant->getId()])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Construit (et met en cache par entreprise) la couverture des avenants par les
+     * bordereaux de production : seules comptent les lignes d'analysisResults de type
+     * « match » (correspondance parfaite ou réconciliée après création/mise à jour) —
+     * une ligne « discrepancy » reste en litige et n'atteste rien. « Soldé » = somme
+     * des paiements des notes du bordereau ≥ montants payables déclarés (> 0).
+     *
+     * @return array{couverts: array<int, true>, couvertsSoldes: array<int, true>}
+     */
+    private function getCouvertureBordereaux(Entreprise $entreprise): array
+    {
+        $entrepriseId = (int) $entreprise->getId();
+        if (isset($this->couvertureBordereauxCache[$entrepriseId])) {
+            return $this->couvertureBordereauxCache[$entrepriseId];
+        }
+
+        $couverts = [];
+        $couvertsSoldes = [];
+        $bordereaux = $this->em->getRepository(Bordereau::class)->findBy([
+            'entreprise' => $entreprise,
+            'type' => Bordereau::TYPE_BOREDERAU_PRODUCTION,
+        ]);
+        foreach ($bordereaux as $bordereau) {
+            $avenantIds = [];
+            foreach ($bordereau->getAnalysisResults() ?? [] as $ligne) {
+                if (($ligne['type'] ?? null) === 'match' && !empty($ligne['avenant_id'])) {
+                    $avenantIds[] = (int) $ligne['avenant_id'];
+                }
+            }
+            if ($avenantIds === []) {
+                continue;
+            }
+
+            $payable = round(
+                (float) ($bordereau->getMontantComHtPayableNow() ?? 0)
+                + (float) ($bordereau->getMontantTaxePayableNow() ?? 0),
+                2
+            );
+            $estSolde = $payable > 0 && round($this->getBordereauMontantEncaisse($bordereau), 2) >= $payable;
+
+            foreach ($avenantIds as $avenantId) {
+                $couverts[$avenantId] = true;
+                if ($estSolde) {
+                    $couvertsSoldes[$avenantId] = true;
+                }
+            }
+        }
+
+        return $this->couvertureBordereauxCache[$entrepriseId] = [
+            'couverts' => $couverts,
+            'couvertsSoldes' => $couvertsSoldes,
+        ];
     }
 
     /** Somme des paiements de prime SIGNALÉS sur la tranche (trace déclarative). */
