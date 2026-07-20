@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { renderAssistantMarkdown } from './assistant-markdown-render.js';
 
 /**
  * @class AssistantChatController
@@ -6,8 +7,9 @@ import { Controller } from '@hotwired/stimulus';
  * messages en JSON, bulle utilisateur optimiste, indicateur contextuel
  * (« {nom} réfléchit… » pendant l'attente serveur puis « {nom} écrit… »
  * pendant le déploiement mot à mot de la réponse), gestion du 402 (solde de
- * tokens épuisé) et des erreurs réseau. Tout contenu est injecté via
- * textContent (échappement systématique).
+ * tokens épuisé) et des erreurs réseau. Bulle utilisateur : textContent
+ * (échappement systématique). Bulle assistant : Markdown restreint rendu et
+ * sanitisé via assistant-markdown-render.js (jamais de HTML brut du LLM).
  */
 export default class extends Controller {
     static targets = ['messages', 'input', 'send', 'typing', 'typingLabel', 'count', 'contextBar'];
@@ -34,6 +36,7 @@ export default class extends Controller {
 
     connect() {
         this.sending = false;
+        this.renderHistoricalMarkdown();
         this.scrollToBottom();
         this.onInput();
         if (this.hasInputTarget) {
@@ -682,6 +685,9 @@ export default class extends Controller {
      * machine à écrire). Le rythme s'adapte à la longueur pour que les
      * réponses longues ne s'éternisent pas ; si le panneau est fermé en cours
      * de route, le texte complet est posé d'un coup et la boucle s'arrête.
+     * Le texte accumulé est reparsé en Markdown sanitisé à chaque mot : un
+     * Markdown partiel (ex. « **gras » non fermé) reste affiché tel quel
+     * jusqu'à ce que sa fermeture arrive dans un mot suivant — pas de crash.
      */
     async typeMessage(texte, refus = false) {
         const bubble = this.appendMessage('assistant', '', refus);
@@ -695,16 +701,31 @@ export default class extends Controller {
             this.constructor.TYPE_DELAY_MIN,
             Math.min(this.constructor.TYPE_DELAY_MAX, Math.round(this.constructor.TYPE_TOTAL_TARGET / mots.length))
         );
+        let accumule = '';
         for (const mot of mots) {
             if (!this.element.isConnected) {
                 break;
             }
-            content.textContent += mot;
+            accumule += mot;
+            content.innerHTML = renderAssistantMarkdown(accumule);
             this.scrollToBottom();
             await new Promise((resolve) => setTimeout(resolve, delai));
         }
-        content.textContent = texte; // garantit le texte intégral quoi qu'il arrive
+        content.innerHTML = renderAssistantMarkdown(texte); // garantit le texte intégral quoi qu'il arrive
         bubble.removeAttribute('aria-hidden');
+    }
+
+    /**
+     * Enrichit au chargement les bulles assistant déjà rendues par Twig
+     * (historique de la conversation) : le Markdown source est lu depuis
+     * l'attribut `data-md-source` (jamais depuis le textContent déjà rendu,
+     * pour éviter tout risque de double-échappement).
+     */
+    renderHistoricalMarkdown() {
+        if (!this.hasMessagesTarget) return;
+        this.messagesTarget.querySelectorAll('.aic-msg--assistant .aic-msg-text[data-md-source]').forEach((el) => {
+            el.innerHTML = renderAssistantMarkdown(el.dataset.mdSource);
+        });
     }
 
     /**

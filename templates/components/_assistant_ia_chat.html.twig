@@ -58,9 +58,49 @@
             margin:0; padding:.6rem .8rem; border-radius:12px;
             color:#212529; font-size:.9rem; line-height:1.5; white-space:pre-wrap; word-break:break-word;
         }
-        .jsb-ai-chat .aic-msg--assistant .aic-msg-text { background:#ffffff; border:1px solid #dee2e6; border-top-left-radius:4px; }
+        .jsb-ai-chat .aic-msg--assistant .aic-msg-text {
+            background:#ffffff; border:1px solid #dee2e6; border-top-left-radius:4px;
+            /* Contenu HTML structuré (Markdown rendu) : les éléments de bloc
+               gèrent déjà leurs propres marges, pre-wrap ne sert plus qu'à
+               préserver les sauts de ligne du texte brut utilisateur. */
+            white-space:normal;
+        }
         .jsb-ai-chat .aic-msg--user .aic-msg-text { background:#e8f0fb; border-top-right-radius:4px; }
         .jsb-ai-chat .aic-msg--refus .aic-msg-text { border-left:3px solid #ffc107; }
+
+        /* Rendu Markdown restreint des réponses assistant (voir
+           assistant-markdown-render.js) : sobre, densité compacte adaptée à
+           une bulle de largeur limitée. */
+        .jsb-ai-chat .aic-msg-text p { margin:0 0 .5rem; }
+        .jsb-ai-chat .aic-msg-text p:last-child { margin-bottom:0; }
+        .jsb-ai-chat .aic-msg-text ul,
+        .jsb-ai-chat .aic-msg-text ol { margin:0 0 .5rem; padding-left:1.2rem; }
+        .jsb-ai-chat .aic-msg-text ul:last-child,
+        .jsb-ai-chat .aic-msg-text ol:last-child { margin-bottom:0; }
+        .jsb-ai-chat .aic-msg-text li { margin-bottom:.15rem; }
+        .jsb-ai-chat .aic-msg-text strong { color:#212529; font-weight:700; }
+        .jsb-ai-chat .aic-msg-text code {
+            background:#f1f3f5; color:#212529; border-radius:4px;
+            padding:.05rem .3rem; font-size:.85em;
+        }
+        .jsb-ai-chat .aic-md-heading { margin:.2rem 0 .35rem; font-size:.92rem; font-weight:700; color:#343a40; }
+        .jsb-ai-chat .aic-msg-text table {
+            border-collapse:separate; border-spacing:0; width:100%; margin:.3rem 0 .5rem; font-size:.83rem;
+        }
+        .jsb-ai-chat .aic-msg-text th,
+        .jsb-ai-chat .aic-msg-text td { border-bottom:1px solid #dee2e6; padding:.3rem .5rem; text-align:left; }
+        .jsb-ai-chat .aic-msg-text th { color:#6c757d; font-weight:600; text-transform:uppercase; letter-spacing:.3px; font-size:.72rem; }
+        .jsb-ai-chat .aic-msg-text td { color:#495057; }
+        /* Pastilles : mêmes couleurs sémantiques que .jsb-state-badge (app.css). */
+        .jsb-ai-chat .aic-md-badge {
+            display:inline-block; padding:.1rem .5rem; border-radius:999px;
+            font-size:.75rem; font-weight:600; line-height:1.3; white-space:nowrap;
+        }
+        .jsb-ai-chat .aic-md-badge--success { background:#d1e7dd; color:#0f5132; }
+        .jsb-ai-chat .aic-md-badge--danger  { background:#f8d7da; color:#842029; }
+        .jsb-ai-chat .aic-md-badge--warning { background:#fff3cd; color:#664d03; }
+        .jsb-ai-chat .aic-md-badge--info    { background:#e8f0fb; color:#0047AB; }
+        .jsb-ai-chat .aic-md-badge--neutral { background:#e9ecef; color:#495057; }
 
         /* Feedback local sur chaque bulle : SURVOL (liseré cobalt + élévation
            légère) et CLIC (enfoncement bref) — l'utilisateur « sent » chaque
@@ -222,7 +262,11 @@
                     <span class="aic-msg-avatar" aria-hidden="true">{{ assistantNom|first|upper }}</span>
                 {% endif %}
                 <div class="aic-msg-body">
-                    <p class="aic-msg-text">{{ message.contenu }}</p>
+                    {% if estAssistant %}
+                        <p class="aic-msg-text" data-md-source="{{ message.contenu|e('html_attr') }}">{{ message.contenu }}</p>
+                    {% else %}
+                        <p class="aic-msg-text">{{ message.contenu }}</p>
+                    {% endif %}
                     {# Agrafe : instantané IMMUABLE des objets du contexte à l'envoi de CE
                        message (le contexte courant de la conversation évolue, ce cliché
                        jamais). Survol = infobulle sombre ; clic = épinglage. #}

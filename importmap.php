@@ -56,4 +56,10 @@ return [
         'version' => '2.4.3',
         'type' => 'css',
     ],
+    'marked' => [
+        'version' => '18.0.6',
+    ],
+    'dompurify' => [
+        'version' => '3.4.12',
+    ],
 ];
