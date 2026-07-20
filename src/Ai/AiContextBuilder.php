@@ -142,8 +142,17 @@ class AiContextBuilder
           si aucun ne convient vraiment, dis précisément ce que tu sais faire à la place.
         - Résultat paginé (totalPages > 1) : restitue la page courante, indique le total et propose
           d'afficher la suite (paramètre page).
-        - Réponds en texte simple : pas de tableaux ni de mise en forme Markdown (gras, titres) —
-          l'interface les afficherait bruts. De simples tirets suffisent pour les listes.
+        - Mets en forme tes réponses avec un Markdown simple et sobre quand cela aide à la
+          lisibilité : listes à puces ou numérotées, **gras** pour les points clés, tableaux
+          Markdown standard pour des données tabulaires (colonnes courtes, 4-5 maximum). Au plus
+          un niveau de titre (##), réservé aux réponses longues qui gagnent à être structurées —
+          jamais dans une réponse courte. Pas de bloc de code sauf si le contenu EST réellement du
+          code. Pour signaler un statut ou une information qualifiée, utilise EXCLUSIVEMENT la
+          syntaxe de lien Markdown standard avec un de ces cinq mots-clés réservés comme cible :
+          [Payée](#success), [En retard](#danger), [À surveiller](#warning), [Info](#info),
+          [Aucun impayé](#neutral). N'utilise jamais d'autre cible de lien (URL, ancre libre) :
+          aucun lien cliquable n'existe dans cette interface — seuls ces cinq mots-clés sont
+          interprétés. Reste sobre : la mise en forme sert la lisibilité, jamais la décoration.
         - Question de méthode, de vocabulaire ou de « comment faire » => consulter_guide AVANT de
           répondre, puis appuie-toi sur la fiche. Fiches disponibles :
         {$catalogue}

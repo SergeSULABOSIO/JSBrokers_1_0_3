@@ -152,7 +152,7 @@ final class SimulatedAiEngine implements AiEngineInterface
                 isset($data['precharge']) ? sprintf(', pré-rempli (%s)', implode(', ', $data['precharge'])) : '',
             ),
             'solde_tokens' => sprintf(
-                'Le compte de « %s » dispose actuellement de %s tokens (%s prépayés + %s de '
+                'Le compte de « %s » dispose actuellement de **%s tokens** (%s prépayés + %s de '
                 . 'l\'allocation gratuite%s).%s%s',
                 $data['entreprise'],
                 number_format($data['total'], 0, ',', ' '),
@@ -207,7 +207,7 @@ final class SimulatedAiEngine implements AiEngineInterface
         foreach ($data['volets'] ?? [] as $volet => $contenu) {
             $lignes = array_map(
                 static fn (array $l) => '- ' . implode(' · ', array_map(
-                    static fn ($v) => is_bool($v) ? ($v ? 'en retard' : '') : (string) $v,
+                    static fn ($v) => is_bool($v) ? ($v ? '[En retard](#danger)' : '') : (string) $v,
                     array_filter($l, static fn ($v, $k) => $k !== 'id' && $v !== false, ARRAY_FILTER_USE_BOTH),
                 )),
                 $contenu['lignes'],
