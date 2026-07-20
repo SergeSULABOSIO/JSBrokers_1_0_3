@@ -2,6 +2,7 @@
 
 namespace App\Services\Canvas\Indicator;
 
+use App\Entity\Avenant;
 use App\Entity\Entreprise;
 use App\Entity\Cotation;
 use App\Entity\Risque;
@@ -1225,7 +1226,16 @@ class IndicatorCalculationHelper implements ResetInterface
      * bordereaux de production : seules comptent les lignes d'analysisResults de type
      * « match » (correspondance parfaite ou réconciliée après création/mise à jour) —
      * une ligne « discrepancy » reste en litige et n'atteste rien. « Soldé » = somme
-     * des paiements des notes du bordereau ≥ montants payables déclarés (> 0).
+     * des paiements des notes du bordereau ≥ commission TTC RÉELLE agrégée de TOUS les
+     * avenants réconciliés (même calcul que BordereauIndicatorStrategy::getMontantsFromAvenants,
+     * PAS Bordereau.montantComHtPayableNow/montantTaxePayableNow — un champ auto-déclaré,
+     * pensé pour l'affichage d'un solde bordereau, qui peut sous-évaluer le vrai total dû
+     * si le bordereau a accumulé des réconciliations sans être remis à jour. Comparer
+     * l'encaissé à ce champ ferait passer « soldé » un bordereau dont seule une fraction
+     * du dû réel a été perçue, et gonflerait la « commission encaissée » de CHAQUE avenant
+     * matché à son montant plein — un seul paiement partiel se retrouvant ainsi compté en
+     * entier sur chacun d'eux (constaté : 166 463 $ de commission encaissée inférée pour
+     * un unique paiement réel de 75 908 $ sur le bordereau).
      *
      * @return array{couverts: array<int, true>, couvertsSoldes: array<int, true>}
      */
@@ -1253,11 +1263,14 @@ class IndicatorCalculationHelper implements ResetInterface
                 continue;
             }
 
-            $payable = round(
-                (float) ($bordereau->getMontantComHtPayableNow() ?? 0)
-                + (float) ($bordereau->getMontantTaxePayableNow() ?? 0),
-                2
-            );
+            $payable = 0.0;
+            foreach ($this->em->getRepository(Avenant::class)->findBy(['id' => $avenantIds]) as $avenant) {
+                $cotation = $avenant->getCotation();
+                if ($cotation) {
+                    $payable += $this->getCotationMontantCommissionTtc($cotation, -1, false);
+                }
+            }
+            $payable = round($payable, 2);
             $estSolde = $payable > 0 && round($this->getBordereauMontantEncaisse($bordereau), 2) >= $payable;
 
             foreach ($avenantIds as $avenantId) {
