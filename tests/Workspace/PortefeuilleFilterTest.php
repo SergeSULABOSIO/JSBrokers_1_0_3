@@ -4,6 +4,7 @@ namespace App\Tests\Workspace;
 
 use App\Entity\Assureur;
 use App\Entity\Avenant;
+use App\Entity\ChargementPourPrime;
 use App\Entity\Client;
 use App\Entity\Cotation;
 use App\Entity\Entreprise;
@@ -14,6 +15,7 @@ use App\Entity\OffreIndemnisationSinistre;
 use App\Entity\Piste;
 use App\Entity\Portefeuille;
 use App\Entity\Tache;
+use App\Entity\Tranche;
 use App\Entity\Utilisateur;
 use App\Services\Search\PortefeuilleScope;
 use Doctrine\ORM\EntityManagerInterface;
@@ -57,6 +59,8 @@ class PortefeuilleFilterTest extends WebTestCase
     private const TACHE_OUT = 'PHPUNIT-TACHE-OUT';
     private const FB_IN = 'PHPUNIT-FB-IN';
     private const FB_OUT = 'PHPUNIT-FB-OUT';
+    private const TRANCHE_IN = 'PHPUNIT-TRANCHE-IN';
+    private const TRANCHE_OUT = 'PHPUNIT-TRANCHE-OUT';
 
     private KernelBrowser $client;
 
@@ -100,8 +104,10 @@ class PortefeuilleFilterTest extends WebTestCase
         $conn->executeStatement("DELETE FROM offre_indemnisation_sinistre WHERE beneficiaire LIKE 'PHPUNIT-%'");
         $conn->executeStatement("DELETE FROM notification_sinistre WHERE reference_sinistre LIKE 'PHPUNIT-%'");
 
-        // Ordre des FK : avenant → cotation → piste → client → portefeuille → assureur
-        //               → invite → entreprise → utilisateur.
+        // Ordre des FK : avenant/tranche/chargement_pour_prime → cotation → piste → client
+        //               → portefeuille → assureur → invite → entreprise → utilisateur.
+        $conn->executeStatement("DELETE t FROM tranche t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :nom", ['nom' => $nom]);
+        $conn->executeStatement("DELETE c FROM chargement_pour_prime c JOIN entreprise e ON c.entreprise_id = e.id WHERE e.nom = :nom", ['nom' => $nom]);
         $conn->executeStatement("DELETE a FROM avenant a JOIN entreprise e ON a.entreprise_id = e.id WHERE e.nom = :nom", ['nom' => $nom]);
         $conn->executeStatement("DELETE c FROM cotation c JOIN entreprise e ON c.entreprise_id = e.id WHERE e.nom = :nom", ['nom' => $nom]);
         $conn->executeStatement("DELETE p FROM piste p JOIN entreprise e ON p.entreprise_id = e.id WHERE e.nom = :nom", ['nom' => $nom]);
@@ -183,9 +189,9 @@ class PortefeuilleFilterTest extends WebTestCase
         $em->persist($assureur);
 
         // Chaîne "dedans"
-        [$pisteIn, , ] = $this->makeChain($em, $entreprise, $assureur, $clientIn, self::PISTE_IN, self::COT_IN, self::POL_IN, self::SIN_IN, self::OFF_IN, self::TACHE_IN, self::FB_IN);
+        [$pisteIn, , , , , , , $trancheIn] = $this->makeChain($em, $entreprise, $assureur, $clientIn, self::PISTE_IN, self::COT_IN, self::POL_IN, self::SIN_IN, self::OFF_IN, self::TACHE_IN, self::FB_IN, self::TRANCHE_IN);
         // Chaîne "dehors" (témoin)
-        $this->makeChain($em, $entreprise, $assureur, $clientOut, self::PISTE_OUT, self::COT_OUT, self::POL_OUT, self::SIN_OUT, self::OFF_OUT, self::TACHE_OUT, self::FB_OUT);
+        [, , , , , , , $trancheOut] = $this->makeChain($em, $entreprise, $assureur, $clientOut, self::PISTE_OUT, self::COT_OUT, self::POL_OUT, self::SIN_OUT, self::OFF_OUT, self::TACHE_OUT, self::FB_OUT, self::TRANCHE_OUT);
 
         $em->flush();
 
@@ -195,6 +201,8 @@ class PortefeuilleFilterTest extends WebTestCase
             'portefeuille' => $portefeuille,
             'clientIn' => $clientIn,
             'clientOut' => $clientOut,
+            'trancheIn' => $trancheIn,
+            'trancheOut' => $trancheOut,
         ];
     }
 
@@ -210,13 +218,15 @@ class PortefeuilleFilterTest extends WebTestCase
 
     /**
      * Construit un chaînage complet rattaché à un client :
-     * Piste → Cotation → Avenant, plus NotificationSinistre (assuré = client) →
-     * OffreIndemnisationSinistre, ainsi qu'une Tâche (liée à la piste) → Feedback.
-     * Sert à tester le périmètre portefeuille sur toutes ces rubriques.
+     * Piste → Cotation → Avenant, plus une Tranche (avec prime réelle via
+     * ChargementPourPrime, pour être « impayée » et calculable), plus
+     * NotificationSinistre (assuré = client) → OffreIndemnisationSinistre, ainsi
+     * qu'une Tâche (liée à la piste) → Feedback. Sert à tester le périmètre
+     * portefeuille sur toutes ces rubriques.
      *
-     * @return array{0: Piste, 1: Cotation, 2: Avenant, 3: NotificationSinistre, 4: OffreIndemnisationSinistre, 5: Tache, 6: Feedback}
+     * @return array{0: Piste, 1: Cotation, 2: Avenant, 3: NotificationSinistre, 4: OffreIndemnisationSinistre, 5: Tache, 6: Feedback, 7: Tranche}
      */
-    private function makeChain(EntityManagerInterface $em, Entreprise $e, Assureur $ass, Client $client, string $pisteNom, string $cotNom, string $refPolice, string $sinRef, string $offBenef, string $tacheDesc, string $fbDesc): array
+    private function makeChain(EntityManagerInterface $em, Entreprise $e, Assureur $ass, Client $client, string $pisteNom, string $cotNom, string $refPolice, string $sinRef, string $offBenef, string $tacheDesc, string $fbDesc, string $trancheNom): array
     {
         $piste = new Piste();
         $piste->setNom($pisteNom);
@@ -243,6 +253,29 @@ class PortefeuilleFilterTest extends WebTestCase
         $avenant->setCotation($cotation);
         $avenant->setEntreprise($e);
         $em->persist($avenant);
+
+        // Prime réelle (ChargementPourPrime) pour que la tranche ait un statut de
+        // paiement calculable (sinon « N/A », invisible sous tout filtre statut).
+        // addChargement() (pas seulement setCotation()) synchronise la collection
+        // inverse en mémoire : sans ça, Cotation::getChargements() reste l'ArrayCollection
+        // vide du constructeur (le test ne fait pas d'em->clear() entre le seed et les
+        // requêtes, contrairement à JSBDynamicSearchServiceTrancheTest) et la prime
+        // calculée de la tranche reste 0 → statut « N/A », invisible sous tout filtre.
+        $chargement = new ChargementPourPrime();
+        $chargement->setNom('Prime ' . $trancheNom);
+        $chargement->setMontantFlatExceptionel(1000.0);
+        $chargement->setEntreprise($e);
+        $cotation->addChargement($chargement);
+        $em->persist($chargement);
+
+        $tranche = new Tranche();
+        $tranche->setNom($trancheNom);
+        $tranche->setPourcentage(100.0);
+        $tranche->setPayableAt(new \DateTimeImmutable('now'));
+        $tranche->setEcheanceAt(new \DateTimeImmutable('+30 days'));
+        $tranche->setCotation($cotation);
+        $tranche->setEntreprise($e);
+        $em->persist($tranche);
 
         // Sinistre déclaré par le client (assuré), puis offre d'indemnisation associée.
         // Ces entités portent une entreprise (AuditableTrait, colonne non nulle).
@@ -277,7 +310,7 @@ class PortefeuilleFilterTest extends WebTestCase
         $feedback->setEntreprise($e);
         $em->persist($feedback);
 
-        return [$piste, $cotation, $avenant, $notif, $offre, $tache, $feedback];
+        return [$piste, $cotation, $avenant, $notif, $offre, $tache, $feedback, $tranche];
     }
 
     /**
@@ -353,6 +386,23 @@ class PortefeuilleFilterTest extends WebTestCase
         $this->assertSame(1, $res['pagination']['totalItems'], 'Un seul avenant relève du portefeuille.');
         $this->assertStringContainsString(self::POL_IN, $res['html']);
         $this->assertStringNotContainsString(self::POL_OUT, $res['html']);
+    }
+
+    /**
+     * Tranche est soumise au même périmètre portefeuille qu'Avenant (chemin identique,
+     * une tranche relevant directement de la cotation) : un invité ne doit voir que les
+     * tranches des avenants des clients qu'il gère.
+     */
+    public function testFilterTranchesByPortefeuille(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        $res = $this->dynamicQuery('tranche', $owner->getId(), $e->getId(), $this->pfCriterion('cotation.piste.client.portefeuille'));
+
+        $this->assertSame(1, $res['pagination']['totalItems'], 'Une seule tranche relève du portefeuille.');
+        $this->assertStringContainsString(self::TRANCHE_IN, $res['html']);
+        $this->assertStringNotContainsString(self::TRANCHE_OUT, $res['html']);
     }
 
     /**
@@ -457,6 +507,84 @@ class PortefeuilleFilterTest extends WebTestCase
     }
 
     /**
+     * Rubrique Tranches : le périmètre « Mon portefeuille » (badge) se COMBINE, dès le
+     * premier chargement, avec le filtre « Impayées » propre à cette rubrique (les deux
+     * critères sont indépendants et retirables séparément). Sans ce périmètre, un invité
+     * gestionnaire de portefeuille verrait les tranches de TOUS les clients de
+     * l'entreprise — pas seulement les siens.
+     */
+    public function testTrancheListDefaultsToConnectedInvitePortefeuilleScope(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e, 'portefeuille' => $pf] = $this->seed();
+        $pf->setGestionnaire($this->em()->getRepository(Invite::class)->find($owner->getId()));
+        $this->em()->flush();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        $crawler = $this->client->request(
+            'GET',
+            sprintf('/admin/tranche/index/%d/%d', $owner->getId(), $e->getId())
+        );
+        $this->assertResponseIsSuccessful('La rubrique Tranches doit se charger.');
+        $html = (string) $this->client->getResponse()->getContent();
+
+        // Périmètre par défaut : seule la tranche du portefeuille géré est listée, bien
+        // que les deux tranches (dedans/dehors) soient également « impayées ».
+        $this->assertStringContainsString(self::TRANCHE_IN, $html, 'La tranche du portefeuille géré doit apparaître.');
+        $this->assertStringNotContainsString(self::TRANCHE_OUT, $html, 'La tranche hors portefeuille ne doit pas apparaître par défaut.');
+
+        // Les DEUX critères synthétiques coexistent (badges indépendants et retirables).
+        $decoded = html_entity_decode($html, ENT_QUOTES | ENT_HTML5);
+        $this->assertStringContainsString('__statut_paiement__', $decoded, 'Le filtre « Impayées » par défaut doit rester transmis.');
+        $this->assertStringContainsString('__mon_portefeuille__', $decoded, 'Le périmètre portefeuille doit être transmis en plus du filtre statut.');
+        $this->assertStringContainsString('Mon portefeuille', $decoded, 'Le critère synthétique « Mon portefeuille » doit être exposé dans le canevas de recherche de Tranche.');
+
+        // Barre des totaux : la SEULE tranche visible sous ce périmètre (TRANCHE_IN)
+        // doit embarquer ses indicateurs propres à Tranche (nomenclature primeTranche/
+        // montantCalculeTTC…, absente du trait générique avant correctif) — sinon la
+        // barre des totaux perd silencieusement « Prime Tranche », « Commission
+        // Exigible » et « Rétro Exigible » pour toute la rubrique. On extrait et
+        // décode l'attribut JSON dédié (pas une recherche de sous-chaîne sur le HTML
+        // brut : le JSON échappe les accents en é, invisibles en recherche texte).
+        preg_match(
+            '/data-list-manager-numeric-attributes-and-values-value=(["\'])(.*?)\1/s',
+            $html,
+            $matches
+        );
+        $this->assertNotEmpty($matches, 'L\'attribut des indicateurs numériques doit être présent sur le list-manager.');
+        $numericJson = html_entity_decode($matches[2], ENT_QUOTES | ENT_HTML5);
+        $numericData = json_decode($numericJson, true);
+        $this->assertIsArray($numericData, 'Le contenu de l\'attribut doit être un JSON valide.');
+        $trancheEntry = array_values($numericData)[0] ?? null;
+        $this->assertNotNull($trancheEntry, 'La barre des totaux doit embarquer les indicateurs de la tranche affichée.');
+
+        $descriptions = array_column($trancheEntry, 'description');
+        foreach (['Prime Tranche', 'Commission Exigible', 'Rétro Exigible', 'Montant TTC', 'Montant HT', 'Montant Dû', 'Reste à Payer', 'Prime Signalée Payée'] as $label) {
+            $this->assertContains($label, $descriptions, sprintf('La barre des totaux doit proposer « %s ».', $label));
+        }
+    }
+
+    /**
+     * Non-régression : un invité SANS portefeuille géré (gestionnaire = un autre invité)
+     * ne voit aucune tranche par défaut — le badge « aucun portefeuille » restreint à un
+     * périmètre vide plutôt que de retomber sur toutes les tranches de l'entreprise.
+     */
+    public function testTrancheListEmptyForInviteWithoutPortefeuille(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        // Le portefeuille de test reste géré par $gestionnaire (pas par $owner) : $owner
+        // n'est gestionnaire d'aucun portefeuille.
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        $this->client->request('GET', sprintf('/admin/tranche/index/%d/%d', $owner->getId(), $e->getId()));
+        $this->assertResponseIsSuccessful();
+        $html = (string) $this->client->getResponse()->getContent();
+
+        $this->assertStringNotContainsString(self::TRANCHE_IN, $html, 'Aucune tranche ne doit apparaître sans portefeuille géré.');
+        $this->assertStringNotContainsString(self::TRANCHE_OUT, $html, 'Aucune tranche ne doit apparaître sans portefeuille géré.');
+        $this->assertStringContainsString('aucun portefeuille', html_entity_decode($html, ENT_QUOTES | ENT_HTML5), 'Le libellé du périmètre doit refléter l\'absence de portefeuille géré.');
+    }
+
+    /**
      * Nouveau : le périmètre « Mon portefeuille » s'applique à toutes les rubriques liées,
      * quelle que soit la profondeur/indirection du lien vers le portefeuille — y compris les
      * entités polymorphes (Tâche, Feedback) reliées à une Piste/Cotation/Sinistre. Sous ce
@@ -473,7 +601,7 @@ class PortefeuilleFilterTest extends WebTestCase
         $scope = [PortefeuilleScope::CRITERION_KEY => ['operator' => '=', 'value' => $gestionnaire->getId()]];
 
         $rubrics = [
-            'client', 'piste', 'cotation', 'avenant',
+            'client', 'piste', 'cotation', 'avenant', 'tranche',
             'notificationsinistre', 'offreindemnisationsinistre', 'tache', 'feedback',
         ];
         foreach ($rubrics as $serverRoot) {
