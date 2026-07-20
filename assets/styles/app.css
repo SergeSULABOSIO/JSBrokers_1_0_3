@@ -960,6 +960,26 @@ textarea:hover,
     flex-shrink: 0;
 }
 
+/* Cluster de navigation (saut de page + précédent/suivant) : regroupé visuellement
+   dans une pastille grise pour le distinguer du décompte d'éléments (Nielsen #8,
+   esthétique/minimalisme). Survol/focus des boutons en teinte cobalt de marque
+   (Règle 4 de la charte couleurs) plutôt que le gris Bootstrap par défaut. */
+.jsb-pagination-nav {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 999px;
+    padding: 0.15rem 0.6rem;
+}
+.jsb-pagination-nav .btn-outline-secondary:not(:disabled):hover,
+.jsb-pagination-nav .btn-outline-secondary:not(:disabled):focus-visible {
+    color: #ffffff;
+    background-color: #0047AB;
+    border-color: #0047AB;
+}
+.jsb-pagination-nav .btn-outline-secondary:focus-visible {
+    box-shadow: 0 0 0 0.2rem rgba(0, 71, 171, 0.35);
+}
+
 /* Badge d'état des lignes de liste (déclaré par le canvas : ex. urgence de recouvrement
    des tranches). Couleurs sémantiques de la charte : danger (retard avéré), orange
    (échéance imminente), warning (échéance proche), neutre (lointaine), succès (réglée). */

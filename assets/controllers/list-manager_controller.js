@@ -67,6 +67,8 @@ export default class extends BaseController {
         this.element.addEventListener('click', this.boundHandlePaginationClick);
         this.boundHandlePaginationJump = this._handlePaginationJump.bind(this);
         this.element.addEventListener('change', this.boundHandlePaginationJump);
+        this.boundHandlePaginationJumpKeydown = this._handlePaginationJumpKeydown.bind(this);
+        this.element.addEventListener('keydown', this.boundHandlePaginationJumpKeydown);
 
         // Defer so child controllers (list-summary) connect and register listeners before the first broadcast.
         requestAnimationFrame(() => this._initializeAndNotifyState());
@@ -119,6 +121,7 @@ export default class extends BaseController {
         document.removeEventListener('app:loading.start', this.boundHandleLoadingStart);
         this.element.removeEventListener('click', this.boundHandlePaginationClick);
         this.element.removeEventListener('change', this.boundHandlePaginationJump);
+        this.element.removeEventListener('keydown', this.boundHandlePaginationJumpKeydown);
         this._controlsBarResizeObserver?.disconnect();
     }
 
@@ -516,22 +519,28 @@ export default class extends BaseController {
         const rangeTo   = Math.min(currentPage * limit, totalItems);
         const iconPrev = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>`;
         const iconNext = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>`;
+        // Même pictogramme que l'alias 'action:count' (jsb:hashtag) du IconCanvasProvider :
+        // compteur/quantité. Inline (comme les chevrons ci-dessus) pour éviter un aller-retour
+        // réseau à chaque changement de page.
+        const iconCount = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg>`;
         this.paginationContainerTarget.innerHTML = `
             <div class="d-flex align-items-center justify-content-between px-3 py-2 small gap-3">
-                <span class="text-muted text-nowrap">
+                <span class="text-muted text-nowrap d-inline-flex align-items-center gap-1">
+                    ${iconCount}
                     <strong style="color:#0047AB;">${rangeFrom}&nbsp;–&nbsp;${rangeTo}</strong>
                     &nbsp;sur&nbsp;
                     <strong style="color:#0047AB;">${totalItems}</strong>&nbsp;élément(s)
                 </span>
-                <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+                <div class="jsb-pagination-nav d-flex align-items-center gap-2 flex-wrap justify-content-end">
                     <label class="d-flex align-items-center gap-1 text-muted mb-0" style="white-space:nowrap;">
                         Page
                         <input type="number"
+                               inputmode="numeric"
                                class="form-control form-control-sm text-center"
                                style="width:52px;"
                                min="1" max="${totalPages}" value="${currentPage}"
                                data-pagination-jump-input
-                               aria-label="Aller à la page">
+                               aria-label="Aller à la page (1 à ${totalPages})">
                         / <strong>${totalPages}</strong>
                     </label>
                     <nav class="d-flex gap-1" aria-label="Navigation par page">
@@ -578,6 +587,17 @@ export default class extends BaseController {
     _handlePaginationJump(event) {
         const input = event.target.closest('[data-pagination-jump-input]');
         if (!input) return;
+        this._commitPaginationJump(input);
+    }
+
+    /**
+     * Valide et notifie le Cerveau du saut de page demandé. Factorisé pour être
+     * appelé aussi bien depuis le 'change' natif (blur, flèches du spinner) que
+     * depuis la touche Entrée ci-dessous, sans dupliquer la validation.
+     * @param {HTMLInputElement} input
+     * @private
+     */
+    _commitPaginationJump(input) {
         const page = parseInt(input.value, 10);
         const max  = parseInt(input.max, 10) || 1;
         if (isNaN(page) || page < 1 || page > max) {
@@ -585,6 +605,28 @@ export default class extends BaseController {
             return;
         }
         this.notifyCerveau('ui:pagination.page-changed', { page });
+    }
+
+    /**
+     * Valide la saisie au clavier sur le champ de saut de page : Entrée déclenche
+     * immédiatement la navigation (un input hors <form> ne soumet pas tout seul,
+     * et certains navigateurs émettent déjà un 'change' natif sur Entrée pour un
+     * input number — on bloque ce comportement par défaut pour ne committer
+     * qu'une seule fois, via le chemin partagé `_commitPaginationJump`).
+     * Échap restaure la page courante.
+     * @param {KeyboardEvent} event
+     * @private
+     */
+    _handlePaginationJumpKeydown(event) {
+        const input = event.target.closest('[data-pagination-jump-input]');
+        if (!input) return;
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            this._commitPaginationJump(input);
+        } else if (event.key === 'Escape') {
+            input.value = input.defaultValue;
+            input.blur();
+        }
     }
 
     /**
