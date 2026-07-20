@@ -3,7 +3,10 @@
 namespace App\Services\Canvas\Provider\Entity;
 
 use App\Entity\Article;
+use App\Entity\Assureur;
+use App\Entity\Client;
 use App\Entity\Cotation;
+use App\Entity\Risque;
 use App\Entity\Tranche;
 use App\Services\ServiceMonnaies;
 
@@ -32,6 +35,9 @@ class TrancheEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "id", "intitule" => "ID", "type" => "Entier"],
                 ["code" => "nom", "intitule" => "Nom", "type" => "Texte"],
                 ["code" => "cotation", "intitule" => "Cotation", "type" => "Relation", "targetEntity" => Cotation::class, "displayField" => "nom"],
+                ["code" => "cotation.assureur", "intitule" => "Assureur", "type" => "Relation", "targetEntity" => Assureur::class, "displayField" => "nom"],
+                ["code" => "cotation.piste.client", "intitule" => "Client", "type" => "Relation", "targetEntity" => Client::class, "displayField" => "nom"],
+                ["code" => "cotation.piste.risque", "intitule" => "Risque", "type" => "Relation", "targetEntity" => Risque::class, "displayField" => "nomComplet"],
                 ["code" => "montantFlat", "intitule" => "Montant Fixe", "type" => "Nombre", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage()],
                 ["code" => "pourcentage", "intitule" => "Pourcentage", "type" => "Nombre", "unite" => "%"],
                 ["code" => "payableAt", "intitule" => "Payable le", "type" => "Date"],

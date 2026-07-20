@@ -538,6 +538,14 @@ class PortefeuilleFilterTest extends WebTestCase
         $this->assertStringContainsString('__mon_portefeuille__', $decoded, 'Le périmètre portefeuille doit être transmis en plus du filtre statut.');
         $this->assertStringContainsString('Mon portefeuille', $decoded, 'Le critère synthétique « Mon portefeuille » doit être exposé dans le canevas de recherche de Tranche.');
 
+        // Recherche avancée : les critères assureur / assuré / risque (chemins de
+        // relation cotation.assureur / cotation.piste.client / cotation.piste.risque)
+        // doivent être exposés dans le canevas, pour pouvoir filtrer en plus de tout
+        // critère déjà actif (statut de paiement, périmètre portefeuille…).
+        $this->assertStringContainsString('cotation.assureur', $decoded, 'Le critère « Assureur » doit être exposé dans le canevas de recherche de Tranche.');
+        $this->assertStringContainsString('cotation.piste.client', $decoded, 'Le critère « Client » (assuré) doit être exposé dans le canevas de recherche de Tranche.');
+        $this->assertStringContainsString('cotation.piste.risque', $decoded, 'Le critère « Risque » doit être exposé dans le canevas de recherche de Tranche.');
+
         // Barre des totaux : la SEULE tranche visible sous ce périmètre (TRANCHE_IN)
         // doit embarquer ses indicateurs propres à Tranche (nomenclature primeTranche/
         // montantCalculeTTC…, absente du trait générique avant correctif) — sinon la

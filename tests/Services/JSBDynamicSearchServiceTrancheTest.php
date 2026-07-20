@@ -3,9 +3,11 @@
 namespace App\Tests\Services;
 
 use App\Entity\Article;
+use App\Entity\Assureur;
 use App\Entity\Avenant;
 use App\Entity\Bordereau;
 use App\Entity\ChargementPourPrime;
+use App\Entity\Client;
 use App\Entity\Cotation;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
@@ -14,6 +16,7 @@ use App\Entity\Paiement;
 use App\Entity\PaiementPrime;
 use App\Entity\Piste;
 use App\Entity\RevenuPourCourtier;
+use App\Entity\Risque;
 use App\Entity\Tranche;
 use App\Entity\TypeRevenu;
 use App\Entity\Utilisateur;
@@ -64,8 +67,8 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
         $emails = [self::OWNER_EMAIL];
 
         // Enfants avant parents : paiements/articles → notes/revenus → signalements →
-        // tranches/chargements → cotations → pistes → invites.
-        foreach (['paiement', 'article', 'note', 'bordereau', 'avenant', 'revenu_pour_courtier', 'type_revenu', 'paiement_prime', 'tranche', 'chargement_pour_prime', 'cotation', 'piste', 'invite'] as $table) {
+        // tranches/chargements → cotations → pistes → assureurs/clients/risques → invites.
+        foreach (['paiement', 'article', 'note', 'bordereau', 'avenant', 'revenu_pour_courtier', 'type_revenu', 'paiement_prime', 'tranche', 'chargement_pour_prime', 'cotation', 'piste', 'assureur', 'client', 'risque', 'invite'] as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom IN (:noms)",
                 ['noms' => $noms],
@@ -710,5 +713,146 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
 
         $this->assertNull($resultat['status']['error']);
         $this->assertSame(2, $resultat['totalItems'], 'Critère retiré, recherche standard scopée.');
+    }
+
+    /**
+     * Barre de recherche Tranches : filtrer par assureur / assuré (client) / risque
+     * (chemins `cotation.assureur`, `cotation.piste.client`, `cotation.piste.risque`),
+     * en plus de tout autre critère déjà actif. Vérifie le filtrage par identité
+     * (sélecteur autocomplété), le repli texte (LIKE), la composition ET entre
+     * plusieurs de ces critères, et la composition avec le critère synthétique
+     * « Statut de paiement » (chip déjà en place sur la rubrique).
+     */
+    public function testFiltreParAssureurClientRisqueSeComposeAvecAutresCriteres(): void
+    {
+        ['entreprise' => $entreprise, 'echue' => $echue, 'aEchoir' => $aEchoir, 'etrangere' => $etrangere] = $this->seed();
+        $em = $this->em();
+        $invite = $em->getRepository(Invite::class)->findOneBy(['entreprise' => $entreprise]);
+
+        $assureurA = (new Assureur())->setNom('Assureur A')->setEmail('assureur-a@test.local')
+            ->setNumimpot('IMP-A')->setIdnat('IDNAT-A')->setRccm('RCCM-A');
+        $assureurA->setEntreprise($entreprise);
+        $em->persist($assureurA);
+
+        $assureurB = (new Assureur())->setNom('Assureur B')->setEmail('assureur-b@test.local')
+            ->setNumimpot('IMP-B')->setIdnat('IDNAT-B')->setRccm('RCCM-B');
+        $assureurB->setEntreprise($entreprise);
+        $em->persist($assureurB);
+
+        $clientA = (new Client())->setNom('Client Assuré A')->setExonere(false);
+        $clientA->setEntreprise($entreprise);
+        $em->persist($clientA);
+
+        $clientB = (new Client())->setNom('Client Assuré B')->setExonere(false);
+        $clientB->setEntreprise($entreprise);
+        $em->persist($clientB);
+
+        $risqueA = (new Risque())->setNomComplet('Risque Incendie A')->setCode('RQ-A')
+            ->setDescription('Risque A')->setBranche(Risque::BRANCHE_IARD_OU_NON_VIE)->setImposable(true);
+        $risqueA->setEntreprise($entreprise);
+        $risqueA->setInvite($invite);
+        $em->persist($risqueA);
+
+        $risqueB = (new Risque())->setNomComplet('Risque Auto B')->setCode('RQ-B')
+            ->setDescription('Risque B')->setBranche(Risque::BRANCHE_IARD_OU_NON_VIE)->setImposable(true);
+        $risqueB->setEntreprise($entreprise);
+        $risqueB->setInvite($invite);
+        $em->persist($risqueB);
+
+        // La cotation du seed (porteuse de « echue » et « aEchoir ») est rattachée à
+        // l'assureur/client/risque « A ».
+        $cotationA = $em->getRepository(Cotation::class)->find($echue->getCotation()->getId());
+        $cotationA->setAssureur($assureurA);
+        $cotationA->getPiste()->setClient($clientA)->setRisque($risqueA);
+
+        // Deuxième cotation, même entreprise, rattachée à l'assureur/client/risque « B »,
+        // avec sa propre tranche impayée : témoin pour prouver l'isolation des filtres.
+        $cotationB = $this->makeCotationAvecPrime($entreprise, $invite, 'Cotation Filtre B', 600.0);
+        $cotationB->setAssureur($assureurB);
+        $cotationB->getPiste()->setClient($clientB)->setRisque($risqueB);
+        $trancheB = $this->makeTranche($cotationB, $entreprise, 'Tranche B', 100, new \DateTimeImmutable('-3 days'));
+
+        $em->flush();
+        $em->clear();
+
+        $entreprise = $em->getRepository(Entreprise::class)->find($entreprise->getId());
+        $echueId = $echue->getId();
+        $aEchoirId = $aEchoir->getId();
+        $trancheBId = $trancheB->getId();
+        $etrangereId = $etrangere->getId();
+        $assureurAId = $assureurA->getId();
+        $assureurBId = $assureurB->getId();
+        $clientAId = $clientA->getId();
+        $clientBId = $clientB->getId();
+        $risqueAId = $risqueA->getId();
+
+        $idsOf = static fn (array $resultat): array => array_map(static fn (Tranche $t) => $t->getId(), $resultat['data']);
+
+        // 1) Filtrage par identité (sélecteur autocomplété) sur chacun des 3 critères :
+        // seules les tranches de la cotation « A » remontent, jamais celle de « B », ni
+        // la tranche « étrangère » (autre entreprise, scoping AuditableTrait inchangé).
+        foreach ([
+            'cotation.assureur' => $assureurAId,
+            'cotation.piste.client' => $clientAId,
+            'cotation.piste.risque' => $risqueAId,
+        ] as $champ => $id) {
+            $resultat = $this->service()->search(Tranche::class, [$champ => ['operator' => '=', 'value' => $id]], $entreprise);
+            $this->assertNull($resultat['status']['error'], "Champ {$champ}");
+            $this->assertEqualsCanonicalizing([$echueId, $aEchoirId], $idsOf($resultat), "Filtrage par {$champ} (identité)");
+            $this->assertNotContains($trancheBId, $idsOf($resultat));
+            $this->assertNotContains($etrangereId, $idsOf($resultat));
+        }
+
+        // 2) Repli texte (LIKE sur le champ d'affichage), utilisé par la recherche
+        // simple ou en absence de sélection via l'autocomplete.
+        $parNom = $this->service()->search(
+            Tranche::class,
+            ['cotation.assureur' => ['operator' => 'LIKE', 'value' => 'Assureur A', 'targetField' => 'nom']],
+            $entreprise,
+        );
+        $this->assertEqualsCanonicalizing([$echueId, $aEchoirId], $idsOf($parNom));
+
+        $parNomB = $this->service()->search(
+            Tranche::class,
+            ['cotation.assureur' => ['operator' => 'LIKE', 'value' => 'Assureur B', 'targetField' => 'nom']],
+            $entreprise,
+        );
+        $this->assertSame([$trancheBId], $idsOf($parNomB));
+
+        // 3) Composition ET entre deux critères de relation : un assureur de la
+        // cotation A combiné à un client de la cotation B ne peut rien matcher — la
+        // preuve que les critères s'ADDITIONNENT (ET), jamais un OR silencieux.
+        $contradictoire = $this->service()->search(
+            Tranche::class,
+            [
+                'cotation.assureur' => ['operator' => '=', 'value' => $assureurAId],
+                'cotation.piste.client' => ['operator' => '=', 'value' => $clientBId],
+            ],
+            $entreprise,
+        );
+        $this->assertSame(0, $contradictoire['totalItems'], 'Critères contradictoires (A ∩ B) : aucune tranche.');
+
+        // 4) Composition avec le critère synthétique « Statut de paiement » (chip déjà
+        // actif sur la rubrique) : le filtre assureur s'ajoute à l'intérieur du chemin
+        // spécial in-memory de TranchePaiementScope, sans l'écraser.
+        $impayeesAssureurA = $this->service()->search(
+            Tranche::class,
+            [
+                TranchePaiementScope::CRITERION_KEY => 'impayees',
+                'cotation.assureur' => ['operator' => '=', 'value' => $assureurAId],
+            ],
+            $entreprise,
+        );
+        $this->assertEqualsCanonicalizing([$echueId, $aEchoirId], $idsOf($impayeesAssureurA));
+
+        $impayeesAssureurB = $this->service()->search(
+            Tranche::class,
+            [
+                TranchePaiementScope::CRITERION_KEY => 'impayees',
+                'cotation.assureur' => ['operator' => '=', 'value' => $assureurBId],
+            ],
+            $entreprise,
+        );
+        $this->assertSame([$trancheBId], $idsOf($impayeesAssureurB), 'Statut de paiement + assureur : intersection correcte.');
     }
 }
