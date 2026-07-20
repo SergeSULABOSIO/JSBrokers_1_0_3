@@ -552,6 +552,152 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
         $this->assertSame(0, $exigibles['totalItems'], 'Commission encaissée : l\'exigibilité s\'éteint.');
     }
 
+    /**
+     * Un bordereau de production réconcilie SOUVENT plusieurs avenants (parfois des
+     * dizaines). Un unique paiement partiel sur sa note ne doit JAMAIS être compté en
+     * ENTIER sur chacun d'eux : le seuil « bordereau soldé » doit se mesurer contre
+     * l'agrégat RÉEL des commissions des avenants réconciliés (comme l'affiche déjà
+     * Bordereau), pas contre le champ auto-déclaré montantComHtPayableNow — qui peut
+     * sous-évaluer ce total si le bordereau a accumulé des réconciliations sans être
+     * remis à jour. Reproduit le cas signalé : un paiement réel unique (75 908) ne doit
+     * JAMAIS produire une « commission encaissée » agrégée supérieure à lui-même
+     * (constaté : 166 463 avant correctif, deux avenants comptés plein pot chacun).
+     */
+    public function testBordereauMultiAvenantsNeSurestimePasLaCommissionEncaisseeeSurMontantSousEvalue(): void
+    {
+        $em = $this->em();
+        $helper = static::getContainer()->get(IndicatorCalculationHelper::class);
+
+        // Deux cotations INDÉPENDANTES (deux polices distinctes), chacune avec une
+        // commission ASSUREUR de 500 (agrégat réel = 1000), réconciliées par le MÊME
+        // bordereau. Mais Bordereau.montantComHtPayableNow est SOUS-ÉVALUÉ à 500 (ne
+        // reflète qu'une seule des deux lignes, cas réel d'un champ non remis à jour).
+        ['entreprise' => $entreprise, 'echue' => $trancheA] = $this->seed();
+        $invite = $em->getRepository(Invite::class)->findOneBy(['entreprise' => $entreprise]);
+
+        $piste2 = (new Piste())->setNom('Piste multi-avenants B')->setTypeAvenant(0)
+            ->setDescriptionDuRisque('Risque B')->setExercice(2026)
+            ->setEntreprise($entreprise)->setInvite($invite);
+        $em->persist($piste2);
+        $cotationB = (new Cotation())->setNom('Cotation multi-avenants B')->setDuree(365);
+        $cotationB->setPiste($piste2);
+        $cotationB->setEntreprise($entreprise);
+        $em->persist($cotationB);
+        $trancheB = (new Tranche())->setNom('Tranche multi-avenants B')->setPourcentage(100.0)
+            ->setPayableAt(new \DateTimeImmutable('-30 days'))->setEcheanceAt(new \DateTimeImmutable('+30 days'));
+        $trancheB->setCotation($cotationB);
+        $trancheB->setEntreprise($entreprise);
+        $em->persist($trancheB);
+
+        foreach ([['cotation' => $trancheA->getCotation(), 'suffixe' => 'A'], ['cotation' => $cotationB, 'suffixe' => 'B']] as ['cotation' => $cotation, 'suffixe' => $suffixe]) {
+            $typeRevenu = (new TypeRevenu())->setNom('Commission multi ' . $suffixe)
+                ->setMontantflat(500.0)->setShared(false)->setMultipayments(true)
+                ->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR);
+            $typeRevenu->setEntreprise($entreprise);
+            $em->persist($typeRevenu);
+            $revenu = (new RevenuPourCourtier())->setNom('Revenu multi ' . $suffixe)->setTypeRevenu($typeRevenu)->setCotation($cotation);
+            $revenu->setEntreprise($entreprise);
+            $em->persist($revenu);
+        }
+
+        $avenantA = new Avenant();
+        $avenantA->setCotation($trancheA->getCotation())->setReferencePolice('POL-MULTI-A')->setNumero('0')
+            ->setDescription('Avenant A')->setStartingAt(new \DateTimeImmutable('-60 days'))->setEndingAt(new \DateTimeImmutable('+305 days'));
+        $avenantA->setEntreprise($entreprise);
+        $avenantA->setInvite($invite);
+        $em->persist($avenantA);
+
+        $avenantB = new Avenant();
+        $avenantB->setCotation($cotationB)->setReferencePolice('POL-MULTI-B')->setNumero('0')
+            ->setDescription('Avenant B')->setStartingAt(new \DateTimeImmutable('-60 days'))->setEndingAt(new \DateTimeImmutable('+305 days'));
+        $avenantB->setEntreprise($entreprise);
+        $avenantB->setInvite($invite);
+        $em->persist($avenantB);
+        $em->flush();
+
+        $bordereau = new Bordereau();
+        $bordereau->setType(Bordereau::TYPE_BOREDERAU_PRODUCTION)
+            ->setNom('Bordereau multi-avenants')->setReference('BRD-MULTI')
+            ->setReceivedAt(new \DateTimeImmutable('-15 days'))
+            ->setPeriodeDebut(new \DateTimeImmutable('-45 days'))
+            ->setPeriodeFin(new \DateTimeImmutable('-15 days'))
+            // Sous-évalué : ne reflète que l'avenant A (500), pas l'agrégat réel (1000).
+            ->setMontantComHtPayableNow(500.0)
+            ->setMontantTaxePayableNow(0.0)
+            ->setAnalysisResults([
+                ['type' => 'match', 'row_index' => 0, 'reference_police' => 'POL-MULTI-A', 'avenant_id' => $avenantA->getId()],
+                ['type' => 'match', 'row_index' => 1, 'reference_police' => 'POL-MULTI-B', 'avenant_id' => $avenantB->getId()],
+            ])
+            ->setInvite($invite)
+            ->setEntreprise($entreprise);
+        $em->persist($bordereau);
+        $em->flush();
+
+        $trancheAId = $trancheA->getId();
+        $trancheBId = $trancheB->getId();
+        $bordereauId = $bordereau->getId();
+        $entrepriseId = $entreprise->getId();
+        $em->clear();
+        $helper->reset();
+
+        // 1) Paiement UNIQUE de 500 (= le champ sous-évalué, PAS l'agrégat réel de 1000) :
+        //    aucune des deux tranches ne doit être réputée encaissée — sinon 500 de vrai
+        //    argent produirait 1000 de commission encaissée inférée (le bug signalé).
+        $entreprise = $em->getRepository(Entreprise::class)->find($entrepriseId);
+        $bordereau = $em->getRepository(Bordereau::class)->find($bordereauId);
+        $invite = $em->getRepository(Invite::class)->findOneBy(['entreprise' => $entreprise]);
+        $note = new Note();
+        $note->setNom('Note multi-avenants')->setReference('NOTE-MULTI')
+            ->setType(Note::TYPE_NOTE_DE_DEBIT)->setAddressedTo(Note::TO_ASSUREUR)
+            ->setValidated(true)->setSignature('sig-test')->setBordereau($bordereau);
+        $note->setEntreprise($entreprise);
+        $note->setInvite($invite);
+        $em->persist($note);
+        $paiementPartiel = new Paiement();
+        $paiementPartiel->setMontant(500.0)->setPaidAt(new \DateTimeImmutable('-2 days'))
+            ->setReference('PAY-MULTI-1')->setNote($note);
+        $paiementPartiel->setEntreprise($entreprise);
+        $em->persist($paiementPartiel);
+        $em->flush();
+        $em->clear();
+        $helper->reset();
+
+        $trancheAFraiche = $em->getRepository(Tranche::class)->find($trancheAId);
+        $trancheBFraiche = $em->getRepository(Tranche::class)->find($trancheBId);
+        $this->assertEqualsWithDelta(
+            0.0,
+            $helper->getTrancheMontantCommissionEncaissee($trancheAFraiche),
+            0.01,
+            'Agrégat réel (1000) non atteint par le paiement (500) : AUCUNE tranche ne doit être réputée encaissée.'
+        );
+        $this->assertEqualsWithDelta(0.0, $helper->getTrancheMontantCommissionEncaissee($trancheBFraiche), 0.01);
+
+        // 2) Complément à 1000 (agrégat réel des deux avenants) : les deux tranches
+        //    deviennent réputées encaissées, chacune à hauteur de SA propre part —
+        //    jamais la totalité de l'agrégat du bordereau sur chacune.
+        $entreprise = $em->getRepository(Entreprise::class)->find($entrepriseId);
+        $note = $em->getRepository(Note::class)->findOneBy(['reference' => 'NOTE-MULTI']);
+        $paiementSolde = new Paiement();
+        $paiementSolde->setMontant(500.0)->setPaidAt(new \DateTimeImmutable('-1 day'))
+            ->setReference('PAY-MULTI-2')->setNote($note);
+        $paiementSolde->setEntreprise($entreprise);
+        $em->persist($paiementSolde);
+        $em->flush();
+        $em->clear();
+        $helper->reset();
+
+        $trancheAFraiche = $em->getRepository(Tranche::class)->find($trancheAId);
+        $trancheBFraiche = $em->getRepository(Tranche::class)->find($trancheBId);
+        // trancheA (= « échue » du seed commun) ne représente que 50 % de sa cotation :
+        // sa part de commission due est 500 x 50 % = 250. trancheB représente 100 % de
+        // la sienne : sa part est 500 (pleine). Somme des deux = 750 ≠ 1000 (le solde
+        // rétrocommission éventuel mis à part) — preuve que rien n'est jamais compté en
+        // double : chaque tranche ne reçoit QUE sa propre part du dû réel, jamais la
+        // totalité de l'agrégat du bordereau.
+        $this->assertEqualsWithDelta(250.0, $helper->getTrancheMontantCommissionEncaissee($trancheAFraiche), 0.01, 'Bordereau intégralement soldé (1000 encaissé = 1000 dû) : commission A réputée encaissée à hauteur de SA part (50 % de 500).');
+        $this->assertEqualsWithDelta(500.0, $helper->getTrancheMontantCommissionEncaissee($trancheBFraiche), 0.01, 'Commission B réputée encaissée à hauteur de SA part (100 % de 500).');
+    }
+
     public function testStatutInvalideRetombeSurCheminStandard(): void
     {
         ['entreprise' => $entreprise] = $this->seed();
