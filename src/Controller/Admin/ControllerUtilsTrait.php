@@ -1345,43 +1345,40 @@ trait ControllerUtilsTrait
     protected function getInitialSearchCriteria(string $entityClass, int $idInvite, \App\Entity\Entreprise $entreprise): array
     {
         $shortName = (new \ReflectionClass($entityClass))->getShortName();
+        $criteria = [];
 
         // Tranches : au premier chargement, la rubrique montre les impayées triées par
         // urgence (retard décroissant puis échéances proches). Critère retirable comme
         // les autres (badge de la barre ou dialogue avancé) → retour à « Toutes ».
+        // Se COMBINE avec le périmètre portefeuille ci-dessous (Tranche y est soumise
+        // au même titre que Cotation/Avenant : les deux badges coexistent).
         if ($shortName === 'Tranche') {
-            return [
-                \App\Services\Search\TranchePaiementScope::CRITERION_KEY => [
-                    'operator' => '=',
-                    'value' => \App\Services\Search\TranchePaiementScope::STATUT_IMPAYEES,
-                    'label' => \App\Services\Search\TranchePaiementScope::libelle(\App\Services\Search\TranchePaiementScope::STATUT_IMPAYEES),
-                ],
+            $criteria[\App\Services\Search\TranchePaiementScope::CRITERION_KEY] = [
+                'operator' => '=',
+                'value' => \App\Services\Search\TranchePaiementScope::STATUT_IMPAYEES,
+                'label' => \App\Services\Search\TranchePaiementScope::libelle(\App\Services\Search\TranchePaiementScope::STATUT_IMPAYEES),
             ];
         }
 
-        if (!\App\Services\Search\PortefeuilleScope::isScopable($shortName)) {
-            return [];
+        if (\App\Services\Search\PortefeuilleScope::isScopable($shortName)) {
+            $invite = $this->em->getRepository(\App\Entity\Invite::class)->find($idInvite);
+            if ($invite) {
+                $portefeuilles = $this->em->getRepository(\App\Entity\Portefeuille::class)
+                    ->findBy(['gestionnaire' => $invite]);
+                $nb = count($portefeuilles);
+                $label = match (true) {
+                    $nb === 1 => $portefeuilles[0]->getNom(),
+                    $nb > 1   => $nb . ' portefeuilles',
+                    default   => 'aucun portefeuille',
+                };
+
+                $criteria[\App\Services\Search\PortefeuilleScope::CRITERION_KEY] = [
+                    'operator' => '=', 'value' => $idInvite, 'label' => $label,
+                ];
+            }
         }
 
-        $invite = $this->em->getRepository(\App\Entity\Invite::class)->find($idInvite);
-        if (!$invite) {
-            return [];
-        }
-
-        $portefeuilles = $this->em->getRepository(\App\Entity\Portefeuille::class)
-            ->findBy(['gestionnaire' => $invite]);
-        $nb = count($portefeuilles);
-        $label = match (true) {
-            $nb === 1 => $portefeuilles[0]->getNom(),
-            $nb > 1   => $nb . ' portefeuilles',
-            default   => 'aucun portefeuille',
-        };
-
-        return [
-            \App\Services\Search\PortefeuilleScope::CRITERION_KEY => [
-                'operator' => '=', 'value' => $idInvite, 'label' => $label,
-            ],
-        ];
+        return $criteria;
     }
 
     /**

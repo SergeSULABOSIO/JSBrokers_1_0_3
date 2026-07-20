@@ -33,6 +33,7 @@ final class PortefeuilleScope
         'Piste' => ['client.portefeuille.gestionnaire'],
         'Cotation' => ['piste.client.portefeuille.gestionnaire'],
         'Avenant' => ['cotation.piste.client.portefeuille.gestionnaire'],
+        'Tranche' => ['cotation.piste.client.portefeuille.gestionnaire'],
         'NotificationSinistre' => ['assure.portefeuille.gestionnaire'],
         'OffreIndemnisationSinistre' => ['notificationSinistre.assure.portefeuille.gestionnaire'],
         'Tache' => [
