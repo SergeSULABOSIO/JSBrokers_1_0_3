@@ -523,8 +523,11 @@ export default class extends BaseController {
         // compteur/quantité. Inline (comme les chevrons ci-dessus) pour éviter un aller-retour
         // réseau à chaque changement de page.
         const iconCount = `<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg>`;
+        // Wrapper compact : largeur naturelle, pas de padding vertical (la hauteur est
+        // gouvernée par le socle .jsb-control-pill du conteneur). Plus de justify-between
+        // (la pagination ne s'étire plus), simple gap entre le décompte et la navigation.
         this.paginationContainerTarget.innerHTML = `
-            <div class="d-flex align-items-center justify-content-between px-3 py-2 small gap-3">
+            <div class="d-inline-flex align-items-center small gap-3">
                 <span class="text-muted text-nowrap d-inline-flex align-items-center gap-1">
                     ${iconCount}
                     <strong style="color:#0047AB;">${rangeFrom}&nbsp;–&nbsp;${rangeTo}</strong>

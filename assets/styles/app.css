@@ -925,9 +925,28 @@ textarea:hover,
 
 /* --- 3.5 Barre des contrôles de liste (pagination + totaux) --- */
 
-/* Barre de contrôles adaptative : statut, pagination et totaux se replient sur la
-   ligne suivante (le composant le plus à DROITE d'abord) quand la place manque —
-   plus aucun écrasement/empilement. La hauteur réelle est re-mesurée par le
+/* Socle commun des composants de contrôle (statut, pagination, totaux, tracks de chips).
+   Trois garanties partagées (DRY) : hauteur unique (--jsb-control-h), centrage vertical, et
+   bordure réservée en permanence (transparente) révélée au survol/focus — retour visuel simple
+   et cohérent de la présence du curseur SANS décalage de mise en page (ergonomie : Nielsen #1
+   visibilité de l'état du système, Bastien & Scapin > Guidage ; parité clavier via :focus-within
+   pour WCAG). */
+:root { --jsb-control-h: 35px; }
+.jsb-control-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--jsb-control-h);
+    padding: 0 0.5rem;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    transition: border-color .15s ease, background-color .15s ease;
+}
+.jsb-control-pill:hover,
+.jsb-control-pill:focus-within { border-color: #ced4da; }
+
+/* Barre de contrôles adaptative : statut, pagination et totaux s'empilent À GAUCHE et se
+   replient sur la ligne suivante (le dernier composant d'abord) quand la place manque —
+   plus aucun écrasement ni calage à droite. La hauteur réelle est re-mesurée par le
    list-manager (--jsb-pgbar-h) pour le décalage du thead sticky. */
 .jsb-list-controls-bar {
     display: flex;
@@ -942,22 +961,18 @@ textarea:hover,
     padding: 0.25rem 0.75rem;
     min-height: 38px;
 }
-/* La pagination refuse de s'écraser sous son contenu (min-width) : à défaut de
-   place, c'est le bloc suivant (totaux) puis elle-même qui passent à la ligne. */
-.jsb-list-controls-bar__pagination { flex: 1 1 auto; min-width: max-content; }
-.jsb-list-controls-bar__totals { flex-shrink: 0; margin-left: auto; }
+/* Tous les composants gardent leur largeur naturelle (flex: 0 0 auto) et s'alignent à
+   gauche : à défaut de place, c'est le dernier bloc (totaux) qui passe à la ligne. */
+.jsb-list-controls-bar__pagination { flex: 0 0 auto; }
+/* Liste mono-page : le conteneur pagination est vidé par le list-manager → on masque
+   la pastille pour ne pas laisser une pastille vide (padding + survol-bordure fantôme). */
+.jsb-list-controls-bar__pagination:empty { display: none; }
+.jsb-list-controls-bar__totals { flex: 0 0 auto; }
 .jsb-list-controls-bar__display {
-    flex-shrink: 0;
+    flex: 0 0 auto;
     font-size: 0.8rem;
     color: #6c757d;
     white-space: nowrap;
-    padding: 0 0.25rem;
-}
-.jsb-list-controls-bar__sep {
-    width: 1px;
-    height: 1rem;
-    background: #dee2e6;
-    flex-shrink: 0;
 }
 
 /* Cluster de navigation (saut de page + précédent/suivant) : regroupé visuellement
@@ -966,9 +981,20 @@ textarea:hover,
    (Règle 4 de la charte couleurs) plutôt que le gris Bootstrap par défaut. */
 .jsb-pagination-nav {
     background: #f8f9fa;
-    border: 1px solid #dee2e6;
     border-radius: 999px;
-    padding: 0.15rem 0.6rem;
+    padding: 0.1rem 0.5rem;
+}
+/* Contrôles compacts : sans cette réduction, l'input `form-control-sm` (~35px) et les
+   `btn-sm` dépassent le socle et rendent la pastille de pagination plus haute que les
+   autres. On neutralise le min-height Bootstrap et on réduit police/interligne pour que
+   les contrôles tiennent dans la hauteur unique --jsb-control-h (parité avec les chips). */
+.jsb-pagination-nav .btn-sm,
+.jsb-pagination-nav .form-control-sm {
+    min-height: 0;
+    padding-top: 0.15rem;
+    padding-bottom: 0.15rem;
+    font-size: 0.8rem;
+    line-height: 1.5;
 }
 .jsb-pagination-nav .btn-outline-secondary:not(:disabled):hover,
 .jsb-pagination-nav .btn-outline-secondary:not(:disabled):focus-visible {
