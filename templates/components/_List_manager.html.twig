@@ -39,12 +39,11 @@
     >
         {% if usage|default('generic') != 'dialog' %}
         <div class="jsb-list-controls-bar" data-list-manager-target="controlsBar">
-            <div class="jsb-list-controls-bar__display"
+            <div class="jsb-list-controls-bar__display jsb-control-pill"
                  role="status" aria-live="polite" aria-atomic="true"
                  data-view-manager-target="display">Prêt.</div>
-            <span class="jsb-list-controls-bar__sep" aria-hidden="true"></span>
-            <div data-list-manager-target="paginationContainer" class="jsb-list-controls-bar__pagination"></div>
-            <div class="jsb-list-controls-bar__totals">
+            <div data-list-manager-target="paginationContainer" class="jsb-list-controls-bar__pagination jsb-control-pill"></div>
+            <div class="jsb-list-controls-bar__totals jsb-control-pill">
                 {{ include('components/_list_summary.html.twig') }}
             </div>
         </div>
@@ -57,7 +56,7 @@
         {% if listeCanvas.filtres_predefinis is defined and listeCanvas.filtres_predefinis is not empty %}
             <div class="jsb-preset-filters-bar">
                 {% for groupe in listeCanvas.filtres_predefinis %}
-                    <div class="jsb-preset-filters" role="group"
+                    <div class="jsb-preset-filters jsb-control-pill" role="group"
                          aria-label="{{ groupe.libelle | default('Filtres rapides') }}"
                          data-preset-criterion="{{ groupe.critere }}">
                         {% for option in groupe.options %}
