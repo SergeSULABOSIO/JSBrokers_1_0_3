@@ -4,6 +4,7 @@ namespace App\Services;
 
 
 use App\Entity\Entreprise;
+use App\Services\Search\AvenantEcheanceScope;
 use App\Services\Search\PortefeuilleScope;
 use App\Services\Search\TranchePaiementScope;
 use App\Services\Tranche\TranchePaiementService;
@@ -128,6 +129,71 @@ class JSBDynamicSearchService
                     }
 
                     return $this->tranchePaiement->filtrerTrierPaginer($qb->getQuery()->getResult(), $statutPaiement, $page, $limit);
+                } catch (\Exception $e) {
+                    return [
+                        'status' => [
+                            'error' => 'Une erreur inattendue est survenue: ' . $e->getMessage(),
+                            'code' => 500,
+                            'message' => 'Erreur interne du serveur.',
+                        ],
+                        'data' => [], 'totalItems' => 0, 'currentPage' => $page,
+                        'totalPages' => 1, 'itemsPerPage' => $limit,
+                    ];
+                }
+            }
+            // Statut vide ou inconnu : critère déjà retiré, la recherche standard reprend.
+        }
+
+        // Critère synthétique « Échéance » (Avenant uniquement). À la différence de Tranche,
+        // l'échéance est une VRAIE colonne (Avenant.endingAt) : filtrage + tri par urgence
+        // directement en SQL (pas de service en mémoire). On retire la clé, on applique les
+        // autres critères (scope entreprise + « Mon portefeuille »), on borne endingAt selon
+        // le statut, on trie du plus proche (le plus urgent) au plus lointain, on pagine.
+        if ($entityName === 'Avenant' && array_key_exists(AvenantEcheanceScope::CRITERION_KEY, $criteria)) {
+            $raw = $criteria[AvenantEcheanceScope::CRITERION_KEY];
+            $statutEcheance = is_array($raw) ? (string) ($raw['value'] ?? '') : (string) $raw;
+            unset($criteria[AvenantEcheanceScope::CRITERION_KEY]);
+
+            if (AvenantEcheanceScope::estValide($statutEcheance)) {
+                try {
+                    $bornes = AvenantEcheanceScope::bornes($statutEcheance, new \DateTimeImmutable('today'));
+
+                    $qb = $this->em->getRepository($entityClass)->createQueryBuilder('e');
+                    $this->applyCriteriaToQueryBuilder($qb, $criteria, $entreprise, $parentContext, $status);
+                    if ($status['error'] !== null) {
+                        return ['status' => $status, 'data' => [], 'totalItems' => 0];
+                    }
+
+                    $countQb = $this->em->getRepository($entityClass)->createQueryBuilder('e_count');
+                    $this->applyCriteriaToQueryBuilder($countQb, $criteria, $entreprise, $parentContext, $status, '_count');
+
+                    // Bornes de la fenêtre d'échéance (convention [min, max[ à minuit).
+                    if ($bornes['min'] !== null) {
+                        $qb->andWhere('e.endingAt >= :echMin')->setParameter('echMin', $bornes['min']);
+                        $countQb->andWhere('e_count.endingAt >= :echMin_count')->setParameter('echMin_count', $bornes['min']);
+                    }
+                    if ($bornes['max'] !== null) {
+                        $qb->andWhere('e.endingAt < :echMax')->setParameter('echMax', $bornes['max']);
+                        $countQb->andWhere('e_count.endingAt < :echMax_count')->setParameter('echMax_count', $bornes['max']);
+                    }
+
+                    // Tri par urgence : échéance la plus proche (ou le retard le plus ancien) en tête.
+                    $qb->orderBy('e.endingAt', 'ASC');
+                    $qb->setFirstResult(($page - 1) * $limit)->setMaxResults($limit);
+                    $results = $qb->getQuery()->getResult();
+
+                    $identifierField = $this->em->getRepository($entityClass)->getClassMetadata()->getSingleIdentifierFieldName();
+                    $countQb->select("COUNT(DISTINCT e_count.{$identifierField})")->setMaxResults(null)->setFirstResult(null);
+                    $totalItems = (int) $countQb->getQuery()->getSingleScalarResult();
+
+                    return [
+                        'status' => ['error' => null, 'code' => 200, 'message' => 'Requête de filtre exécutée avec succès.'],
+                        'data' => $results,
+                        'totalItems' => $totalItems,
+                        'currentPage' => $page,
+                        'totalPages' => max(1, (int) ceil($totalItems / $limit)),
+                        'itemsPerPage' => $limit,
+                    ];
                 } catch (\Exception $e) {
                     return [
                         'status' => [

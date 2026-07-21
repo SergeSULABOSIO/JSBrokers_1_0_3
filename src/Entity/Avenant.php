@@ -34,6 +34,13 @@ class Avenant
     public ?string $dureeCouverture = null;
     #[Groups(['list:read'])]
     public ?string $joursRestants = null;
+    // Urgence d'échéance : libellé affiché en badge sur la liste (« Expiré depuis N j »,
+    // « Échéance dans N j »…) + niveau technique (classe CSS du badge). Dérivé de endingAt
+    // par AvenantEcheanceScope — miroir de Tranche::$urgenceRecouvrement / $urgenceNiveau.
+    #[Groups(['list:read'])]
+    public ?string $urgenceEcheance = null;
+    #[Groups(['list:read'])]
+    public ?string $urgenceEcheanceNiveau = null;
     #[Groups(['list:read'])]
     public ?string $ageAvenant = null;
     #[Groups(['list:read'])]
