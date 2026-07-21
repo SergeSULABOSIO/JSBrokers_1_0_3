@@ -52,4 +52,63 @@ final class TranchePaiementScope
     {
         return self::VALEURS[$statut] ?? $statut;
     }
+
+    /**
+     * Fragment de critère à passer au moteur de recherche pour restreindre à un statut de
+     * paiement. SOURCE UNIQUE partagée par les chips de la rubrique et les outils génériques
+     * de l'assistant IA (compter_entites / rechercher_entites) : le même critère traverse la
+     * même interception (filtrage/tri en mémoire par TranchePaiementService), donc Ket et la
+     * barre de chips donnent EXACTEMENT le même résultat. Retourne un tableau vide si
+     * l'entité n'est pas Tranche ou si le statut est absent/inconnu (filtre ignoré).
+     *
+     * @return array<string, array{operator: string, value: string, label: string}>
+     */
+    public static function critereRecherche(string $entityShortName, ?string $statut): array
+    {
+        if ($entityShortName !== 'Tranche' || !self::estValide($statut)) {
+            return [];
+        }
+
+        return [self::CRITERION_KEY => [
+            'operator' => '=',
+            'value' => $statut,
+            'label' => self::libelle($statut),
+        ]];
+    }
+
+    /**
+     * Détecte un statut de paiement dans une question en langage naturel déjà normalisée
+     * (AiText::normalize : minuscules, sans accents). Sert au moteur simulé pour que
+     * « combien de tranches impayées ? » applique le MÊME filtre que le chip correspondant.
+     */
+    public static function detecterDepuisTexte(string $texteNormalise): ?string
+    {
+        // Ordre volontaire : les statuts les plus spécifiques d'abord (« rétro à payer » et
+        // « commission exigible » sont des flux distincts qui mentionnent aussi « payer »).
+        if (preg_match('/\bretro(commissions?)?\b/', $texteNormalise)
+            && preg_match('/\b(payer|verser|reverser|dues?|exigibles?)\b/', $texteNormalise)) {
+            return self::STATUT_RETRO_A_PAYER;
+        }
+        if (preg_match('/\bcommissions?\b/', $texteNormalise)
+            && preg_match('/\bexigibles?\b|\ba collecter\b/', $texteNormalise)) {
+            return self::STATUT_COMMISSION_EXIGIBLE;
+        }
+        if (preg_match('/\bpartiellement\b/', $texteNormalise)) {
+            return self::STATUT_PARTIELLEMENT;
+        }
+        if (preg_match('/\b(echues?|en retard)\b/', $texteNormalise)) {
+            return self::STATUT_ECHUES;
+        }
+        if (preg_match('/\ba echoir\b/', $texteNormalise)) {
+            return self::STATUT_A_ECHOIR;
+        }
+        if (preg_match('/\bpayees?\b|\bsoldees?\b/', $texteNormalise)) {
+            return self::STATUT_PAYEES;
+        }
+        if (preg_match('/\bimpayees?\b|\bimpayes?\b|\barrieres?\b/', $texteNormalise)) {
+            return self::STATUT_IMPAYEES;
+        }
+
+        return null;
+    }
 }

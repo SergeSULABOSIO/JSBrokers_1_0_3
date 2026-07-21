@@ -6,6 +6,8 @@ use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
+use App\Services\Search\AvenantEcheanceScope;
+use App\Services\Search\TranchePaiementScope;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -53,6 +55,11 @@ final class RechercherEntitesTool implements AiToolInterface
             . 'aux enregistrements LIÉS à une fiche précise, même à plusieurs niveaux de relation '
             . '(ex. les tâches d’une piste, les tâches ou avenants d’un CLIENT via ses pistes) — '
             . 'SEUL moyen fiable de connaître les éléments liés : une fiche ne les contient jamais. '
+            . 'Les paramètres echeance (Avenant) et statutPaiement (Tranche) appliquent EXACTEMENT '
+            . 'les mêmes règles que les filtres rapides de ces rubriques, tri par urgence inclus : '
+            . 'à utiliser dès que la question porte sur une fenêtre d’échéance (« quels avenants '
+            . 'échoient dans les 30 jours ? ») ou un statut de paiement, afin que la réponse '
+            . 'coïncide avec ce que l’utilisateur voit à l’écran. '
             . 'Renvoie l’identifiant et le libellé de chaque enregistrement.';
     }
 
@@ -74,6 +81,21 @@ final class RechercherEntitesTool implements AiToolInterface
                     'type' => 'integer',
                     'minimum' => 1,
                     'description' => 'Numéro de page à restituer (défaut : 1).',
+                ],
+                'echeance' => [
+                    'type' => 'string',
+                    'enum' => array_keys(AvenantEcheanceScope::VALEURS),
+                    'description' => 'AVENANT uniquement : restreint à une fenêtre d\'échéance — '
+                        . 'echus (déjà expirés), sous_30j (échéance dans les 30 prochains jours), '
+                        . 'de_31_a_60j, au_dela_60j. Mêmes bornes que les filtres rapides de la '
+                        . 'rubrique, résultats triés du plus urgent au moins urgent.',
+                ],
+                'statutPaiement' => [
+                    'type' => 'string',
+                    'enum' => array_keys(TranchePaiementScope::VALEURS),
+                    'description' => 'TRANCHE uniquement : restreint à un statut de paiement — '
+                        . 'impayees, echues, a_echoir, partiellement, payees, retro_a_payer, '
+                        . 'commission_exigible. Mêmes règles que les filtres rapides de la rubrique.',
                 ],
                 'lieA' => [
                     'type' => 'object',
@@ -108,8 +130,21 @@ final class RechercherEntitesTool implements AiToolInterface
         }
 
         $shortName = $this->lexique->matchEntite($normalized);
+        if ($shortName === null) {
+            return null;
+        }
 
-        return $shortName === null ? null : ['entite' => $shortName];
+        // La liste doit coïncider avec ce que l'utilisateur voit dans la rubrique : si la
+        // question exprime une fenêtre d'échéance ou un statut de paiement, on applique le
+        // MÊME critère que le chip correspondant (sources uniques : les classes de scope).
+        $args = ['entite' => $shortName];
+        if ($shortName === 'Avenant' && ($f = AvenantEcheanceScope::detecterDepuisTexte($normalized)) !== null) {
+            $args['echeance'] = $f;
+        } elseif ($shortName === 'Tranche' && ($s = TranchePaiementScope::detecterDepuisTexte($normalized)) !== null) {
+            $args['statutPaiement'] = $s;
+        }
+
+        return $args;
     }
 
     public function execute(array $args, AiScope $scope): AiToolResult
@@ -168,7 +203,19 @@ final class RechercherEntitesTool implements AiToolInterface
             ? [$displayField => ['operator' => 'LIKE', 'value' => $filtre, 'mode' => 'contains']]
             : [];
 
-        $result = $this->searchService->search($fqcn, $criteria + $lienCriteria, $scope->entreprise, null, $page, self::PAGE_SIZE);
+        // Filtres rapides des rubriques (mêmes critères synthétiques que les chips, donc même
+        // moteur, mêmes bornes et même tri) : fenêtre d'échéance pour Avenant, statut de
+        // paiement pour Tranche. Ignorés si l'entité ne s'y prête pas.
+        $criteresRubrique = AvenantEcheanceScope::critereRecherche($shortName, $args['echeance'] ?? null)
+            + TranchePaiementScope::critereRecherche($shortName, $args['statutPaiement'] ?? null);
+        $filtreRubrique = null;
+        if (isset($criteresRubrique[AvenantEcheanceScope::CRITERION_KEY])) {
+            $filtreRubrique = AvenantEcheanceScope::libelle((string) $criteresRubrique[AvenantEcheanceScope::CRITERION_KEY]['value']);
+        } elseif (isset($criteresRubrique[TranchePaiementScope::CRITERION_KEY])) {
+            $filtreRubrique = TranchePaiementScope::libelle((string) $criteresRubrique[TranchePaiementScope::CRITERION_KEY]['value']);
+        }
+
+        $result = $this->searchService->search($fqcn, $criteria + $lienCriteria + $criteresRubrique, $scope->entreprise, null, $page, self::PAGE_SIZE);
         if (($result['status']['code'] ?? 500) !== 200) {
             return AiToolResult::introuvable($labels[$shortName]);
         }
@@ -186,6 +233,7 @@ final class RechercherEntitesTool implements AiToolInterface
             'libelle'      => $labels[$shortName],
             'filtre'       => $filtre !== '' ? $filtre : null,
             'filtreIgnore' => ($filtre !== '' && $displayField === null) ? true : null,
+            'filtreRubrique' => $filtreRubrique,
             'lien'         => $lien,
             'lienIgnore'   => $lienIgnore,
             'page'         => (int) $result['currentPage'],
