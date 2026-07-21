@@ -47,6 +47,57 @@ final class AvenantEcheanceScope
     }
 
     /**
+     * Fragment de critère à passer au moteur de recherche pour restreindre à une fenêtre
+     * d'échéance. SOURCE UNIQUE partagée par les chips de la rubrique et les outils de
+     * l'assistant IA (compter_entites / rechercher_entites) : le même critère traverse la
+     * même interception SQL, donc Ket et la barre de chips donnent EXACTEMENT le même
+     * résultat. Retourne un tableau vide si l'entité n'est pas Avenant ou si le statut est
+     * absent/inconnu (le filtre est alors simplement ignoré).
+     *
+     * @return array<string, array{operator: string, value: string, label: string}>
+     */
+    public static function critereRecherche(string $entityShortName, ?string $statut): array
+    {
+        if ($entityShortName !== 'Avenant' || !self::estValide($statut)) {
+            return [];
+        }
+
+        return [self::CRITERION_KEY => [
+            'operator' => '=',
+            'value' => $statut,
+            'label' => self::libelle($statut),
+        ]];
+    }
+
+    /**
+     * Détecte une fenêtre d'échéance dans une question en langage naturel déjà normalisée
+     * (AiText::normalize : minuscules, sans accents). Sert au moteur simulé de l'assistant
+     * pour que « combien d'avenants échoient dans les 30 jours ? » applique le MÊME filtre
+     * que le chip correspondant. Retourne null si aucune fenêtre n'est exprimée.
+     */
+    public static function detecterDepuisTexte(string $texteNormalise): ?string
+    {
+        // Ordre volontaire : les formulations les plus spécifiques d'abord (« au-delà de
+        // 60 » et « 31 à 60 » contiennent des nombres qui piégeraient la règle des 30 jours).
+        if (preg_match('/\b(echus?|echue?s?|expires?|expirees?|perimes?|depasses?)\b/', $texteNormalise)) {
+            return self::STATUT_ECHUS;
+        }
+        // « au-delà » / « au delà » : AiText::normalize retire les accents mais CONSERVE la
+        // ponctuation — le trait d'union doit donc être accepté au même titre que l'espace.
+        if (preg_match('/\b(?:au[- ]dela|plus) (?:de |des )?(?:60|61|soixante)\b/', $texteNormalise)) {
+            return self::STATUT_60_PLUS;
+        }
+        if (preg_match('/\b31 (?:a|et) 60\b|\bentre 31 et 60\b/', $texteNormalise)) {
+            return self::STATUT_31_60J;
+        }
+        if (preg_match('/\b(?:30|trente) (?:prochains? )?jours?\b|\b(?:sous|dans) (?:les )?(?:30|trente)\b/', $texteNormalise)) {
+            return self::STATUT_30J;
+        }
+
+        return null;
+    }
+
+    /**
      * Bornes de la fenêtre `endingAt` pour un statut donné, calculées à minuit à partir de la
      * date de référence (évite l'off-by-one : l'échéance est ramenée au jour). Convention
      * [min, max[ (max exclusif). `null` = borne ouverte.

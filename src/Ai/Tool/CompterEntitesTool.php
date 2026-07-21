@@ -6,6 +6,8 @@ use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
+use App\Services\Search\AvenantEcheanceScope;
+use App\Services\Search\TranchePaiementScope;
 
 /**
  * Compte les enregistrements d'une rubrique du workspace (clients, avenants,
@@ -31,7 +33,12 @@ final class CompterEntitesTool implements AiToolInterface
     {
         return "Compte le nombre d'enregistrements d'une catégorie de données de l'entreprise "
             . '(clients, avenants, pistes, notes, sinistres…). À appeler quand l’utilisateur '
-            . 'demande « combien de … » ou « le nombre de … ».';
+            . 'demande « combien de … » ou « le nombre de … ». Les paramètres echeance (Avenant) '
+            . 'et statutPaiement (Tranche) appliquent EXACTEMENT les mêmes règles que les filtres '
+            . 'rapides de ces rubriques : à utiliser dès que la question porte sur une fenêtre '
+            . 'd’échéance (« combien d’avenants échoient dans les 30 jours ? ») ou un statut de '
+            . 'paiement (« combien de tranches impayées ? »), afin que la réponse coïncide avec '
+            . 'ce que l’utilisateur voit à l’écran.';
     }
 
     public function schema(): array
@@ -43,6 +50,20 @@ final class CompterEntitesTool implements AiToolInterface
                     'type' => 'string',
                     'description' => "Nom court de l'entité à compter (ex. Client, Avenant, Piste).",
                     'enum' => $this->lexique->nomsCourts(),
+                ],
+                'echeance' => [
+                    'type' => 'string',
+                    'enum' => array_keys(AvenantEcheanceScope::VALEURS),
+                    'description' => 'AVENANT uniquement : restreint à une fenêtre d\'échéance — '
+                        . 'echus (déjà expirés), sous_30j (échéance dans les 30 prochains jours), '
+                        . 'de_31_a_60j, au_dela_60j. Mêmes bornes que les filtres rapides de la rubrique.',
+                ],
+                'statutPaiement' => [
+                    'type' => 'string',
+                    'enum' => array_keys(TranchePaiementScope::VALEURS),
+                    'description' => 'TRANCHE uniquement : restreint à un statut de paiement — '
+                        . 'impayees, echues, a_echoir, partiellement, payees, retro_a_payer, '
+                        . 'commission_exigible. Mêmes règles que les filtres rapides de la rubrique.',
                 ],
             ],
             'required' => ['entite'],
@@ -57,8 +78,21 @@ final class CompterEntitesTool implements AiToolInterface
         }
 
         $shortName = $this->lexique->matchEntite($normalized);
+        if ($shortName === null) {
+            return null;
+        }
 
-        return $shortName === null ? null : ['entite' => $shortName];
+        // Le comptage doit coïncider avec ce que l'utilisateur voit dans la rubrique : si la
+        // question exprime une fenêtre d'échéance ou un statut de paiement, on applique le
+        // MÊME critère que le chip correspondant (sources uniques : les classes de scope).
+        $args = ['entite' => $shortName];
+        if ($shortName === 'Avenant' && ($f = AvenantEcheanceScope::detecterDepuisTexte($normalized)) !== null) {
+            $args['echeance'] = $f;
+        } elseif ($shortName === 'Tranche' && ($s = TranchePaiementScope::detecterDepuisTexte($normalized)) !== null) {
+            $args['statutPaiement'] = $s;
+        }
+
+        return $args;
     }
 
     public function execute(array $args, AiScope $scope): AiToolResult
@@ -80,15 +114,28 @@ final class CompterEntitesTool implements AiToolInterface
             return AiToolResult::introuvable($shortName);
         }
 
-        $result = $this->searchService->search($fqcn, [], $scope->entreprise, null, 1, 1);
+        // Filtres rapides des rubriques (mêmes critères synthétiques que les chips, donc
+        // même moteur et même résultat) : fenêtre d'échéance pour Avenant, statut de
+        // paiement pour Tranche. Ignorés si l'entité ne s'y prête pas.
+        $criteres = AvenantEcheanceScope::critereRecherche($shortName, $args['echeance'] ?? null)
+            + TranchePaiementScope::critereRecherche($shortName, $args['statutPaiement'] ?? null);
+
+        $result = $this->searchService->search($fqcn, $criteres, $scope->entreprise, null, 1, 1);
         if (($result['status']['code'] ?? 500) !== 200) {
             return AiToolResult::introuvable($labels[$shortName]);
         }
 
-        return AiToolResult::ok([
+        $filtreApplique = $criteres === [] ? null : (
+            isset($criteres[AvenantEcheanceScope::CRITERION_KEY])
+                ? AvenantEcheanceScope::libelle((string) $criteres[AvenantEcheanceScope::CRITERION_KEY]['value'])
+                : TranchePaiementScope::libelle((string) $criteres[TranchePaiementScope::CRITERION_KEY]['value'])
+        );
+
+        return AiToolResult::ok(array_filter([
             'entite'  => $shortName,
             'libelle' => $labels[$shortName],
+            'filtre'  => $filtreApplique,
             'count'   => (int) $result['totalItems'],
-        ]);
+        ], static fn ($v) => $v !== null));
     }
 }

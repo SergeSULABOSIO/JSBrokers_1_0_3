@@ -56,10 +56,16 @@ final class VigieEcheancesTool implements AiToolInterface
         return 'Brief des échéances et points de vigilance du cabinet : polices à renouveler '
             . 'sous N jours (défaut 30), tâches non closes (dont en retard), pistes en cours '
             . 'sans police, derniers sinistres notifiés, tranches échues impayées (primes et '
-            . 'commissions à relancer). À appeler quand l\'utilisateur demande ses échéances, '
-            . 'ce qu\'il doit surveiller/faire, ses renouvellements à venir ou un brief du jour. '
-            . 'Pour le détail complet des impayés, préférer suivi_impayes ; pour lister/compter '
-            . 'librement une rubrique, préférer rechercher_entites / compter_entites.';
+            . 'commissions à relancer). À appeler quand l\'utilisateur demande ce qu\'il doit '
+            . 'surveiller/faire, ses renouvellements à venir ou un brief du jour. '
+            . 'ATTENTION — le volet renouvellements est le PIPELINE DE RENOUVELLEMENT : il ne '
+            . 'retient que les polices encore renouvelables et NON déjà reprises par une piste '
+            . 'de renouvellement active, et ignore les polices déjà expirées. Ses chiffres sont '
+            . 'donc volontairement plus restrictifs que la rubrique Avenants. Si la question '
+            . 'porte simplement sur les avenants qui arrivent à échéance (ou déjà échus) dans '
+            . 'une fenêtre de temps, utiliser rechercher_entites / compter_entites avec le '
+            . 'paramètre echeance : eux seuls reproduisent exactement les filtres rapides de la '
+            . 'rubrique. Pour le détail complet des impayés, préférer suivi_impayes.';
     }
 
     public function schema(): array
