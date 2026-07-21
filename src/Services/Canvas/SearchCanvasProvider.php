@@ -136,6 +136,22 @@ class SearchCanvasProvider
             ]);
         }
 
+        // Critère synthétique « Échéance » (Avenant) : l'échéance est une vraie colonne, mais
+        // la traduction valeur → fenêtre temporelle est portée par la clé spéciale
+        // AvenantEcheanceScope::CRITERION_KEY, interceptée par le moteur (filtre/tri SQL).
+        // Le type 'Boolean' rend un <select> depuis la map de valeurs, badge inclus — les
+        // chips de la liste et ce badge manipulent la même clé et restent synchronisés.
+        if ($shortName === 'Avenant') {
+            array_unshift($searchCriteria, [
+                'Nom' => \App\Services\Search\AvenantEcheanceScope::CRITERION_KEY,
+                'Display' => 'Échéance',
+                'Type' => 'Boolean',
+                'Valeur' => \App\Services\Search\AvenantEcheanceScope::VALEURS,
+                'isDefault' => false,
+                'Icone' => $this->iconCanvasProvider->resolveIconName('avenant') !== null ? 'avenant' : 'action:calendar',
+            ]);
+        }
+
         return $searchCriteria;
     }
 

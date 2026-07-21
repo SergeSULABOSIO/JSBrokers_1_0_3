@@ -1378,6 +1378,29 @@ trait ControllerUtilsTrait
             }
         }
 
+        // Avenants : au premier chargement, on met en avant l'urgence réelle. Les avenants
+        // DÉJÀ EXPIRÉS sont les plus urgents à traiter → si le périmètre de l'invité en
+        // contient au moins un, le chip « Échus » est actif par défaut ; sinon « Sous 30
+        // jours ». La sonde réutilise le moteur de recherche (même interception SQL + même
+        // scope, dont le portefeuille déjà posé ci-dessus) : zéro logique de scope dupliquée.
+        // Critère retirable comme les autres (badge/dialogue avancé), et il se COMBINE au
+        // périmètre portefeuille (les deux badges coexistent, comme pour Tranche).
+        if ($shortName === 'Avenant') {
+            $echeanceScope = \App\Services\Search\AvenantEcheanceScope::class;
+            $sonde = $criteria;
+            $sonde[$echeanceScope::CRITERION_KEY] = [
+                'operator' => '=', 'value' => $echeanceScope::STATUT_ECHUS,
+            ];
+            $aDesExpires = ($this->searchService->search($entityClass, $sonde, $entreprise, null, 1, 1)['totalItems'] ?? 0) > 0;
+
+            $statutParDefaut = $aDesExpires ? $echeanceScope::STATUT_ECHUS : $echeanceScope::STATUT_30J;
+            $criteria[$echeanceScope::CRITERION_KEY] = [
+                'operator' => '=',
+                'value' => $statutParDefaut,
+                'label' => $echeanceScope::libelle($statutParDefaut),
+            ];
+        }
+
         return $criteria;
     }
 

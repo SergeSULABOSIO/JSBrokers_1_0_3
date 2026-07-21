@@ -3,6 +3,7 @@
 namespace App\Services\Canvas\Provider\List;
 
 use App\Entity\Avenant;
+use App\Services\Search\AvenantEcheanceScope;
 use App\Services\ServiceMonnaies;
 
 class AvenantListCanvasProvider implements ListCanvasProviderInterface
@@ -24,6 +25,11 @@ class AvenantListCanvasProvider implements ListCanvasProviderInterface
                 "texte_principal" => [
                     "attribut_code" => "titrePrincipal",
                     "icone" => "mdi:file-document-edit",
+                ],
+                // Badge d'urgence d'échéance rendu par _list_row à côté du texte principal,
+                // coloré par niveau (critique/élevée/modérée/faible). Texte vide = pas de badge.
+                "badges" => [
+                    ["attribut_code" => "urgenceEcheance", "attribut_niveau" => "urgenceEcheanceNiveau"],
                 ],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
@@ -59,6 +65,22 @@ class AvenantListCanvasProvider implements ListCanvasProviderInterface
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                     "attribut_code" => "reserve",
                     "attribut_type" => "nombre",
+                ],
+            ],
+            // Chips de filtre rapide rendus par _List_manager (hors dialogues) : chaque option
+            // pose/retire le critère synthétique « Échéance » via le Cerveau. Le moteur filtre
+            // et trie par urgence (endingAt croissant) en SQL. `icon` = alias IconCanvasProvider.
+            "filtres_predefinis" => [
+                [
+                    "critere" => AvenantEcheanceScope::CRITERION_KEY,
+                    "libelle" => "Échéance",
+                    "options" => [
+                        ["value" => AvenantEcheanceScope::STATUT_ECHUS, "label" => AvenantEcheanceScope::libelle(AvenantEcheanceScope::STATUT_ECHUS), "icon" => "action:alert"],
+                        ["value" => AvenantEcheanceScope::STATUT_30J, "label" => AvenantEcheanceScope::libelle(AvenantEcheanceScope::STATUT_30J), "icon" => "action:calendar"],
+                        ["value" => AvenantEcheanceScope::STATUT_31_60J, "label" => AvenantEcheanceScope::libelle(AvenantEcheanceScope::STATUT_31_60J), "icon" => "action:renew"],
+                        ["value" => AvenantEcheanceScope::STATUT_60_PLUS, "label" => AvenantEcheanceScope::libelle(AvenantEcheanceScope::STATUT_60_PLUS), "icon" => "avenant"],
+                        ["value" => "", "label" => "Toutes", "icon" => "action:filter"],
+                    ],
                 ],
             ],
         ];

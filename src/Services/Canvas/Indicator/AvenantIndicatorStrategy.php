@@ -5,6 +5,7 @@ namespace App\Services\Canvas\Indicator;
 use App\Entity\Avenant;
 use App\Entity\Entreprise;
 use App\Repository\CotationRepository;
+use App\Services\Search\AvenantEcheanceScope;
 use App\Services\ServiceDates;
 use DateTimeImmutable;
 
@@ -35,6 +36,8 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
                 'pisteDeriveeLibelle' => $entity->getPisteDeRenouvellement() !== null ? 'Piste dérivée' : null,
                 'dureeCouverture' => $this->calculateDureeCouvertureAvenant($entity),
                 'joursRestants' => $this->calculateJoursRestantsAvenant($entity),
+            'urgenceEcheance' => $this->getUrgenceEcheance($entity)['libelle'],
+            'urgenceEcheanceNiveau' => $this->getUrgenceEcheance($entity)['niveau'],
                 'ageAvenant' => $this->calculateAgeAvenant($entity),
                 'typeAffaire' => $this->getAvenantTypeAffaire($entity),
                 'periodeCouverture' => $this->getAvenantPeriodeCouverture($entity),
@@ -51,6 +54,8 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'pisteDeriveeLibelle' => $entity->getPisteDeRenouvellement() !== null ? 'Piste dérivée' : null,
             'dureeCouverture' => $this->calculateDureeCouvertureAvenant($entity),
             'joursRestants' => $this->calculateJoursRestantsAvenant($entity),
+            'urgenceEcheance' => $this->getUrgenceEcheance($entity)['libelle'],
+            'urgenceEcheanceNiveau' => $this->getUrgenceEcheance($entity)['niveau'],
             'ageAvenant' => $this->calculateAgeAvenant($entity),
             'typeAffaire' => $this->getAvenantTypeAffaire($entity),
             'periodeCouverture' => $this->getAvenantPeriodeCouverture($entity),
@@ -118,6 +123,23 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
         }
         $jours = $this->serviceDates->daysEntre(new DateTimeImmutable(), $avenant->getEndingAt()) ?? 0;
         return $jours . ' jour(s)';
+    }
+
+    /**
+     * Urgence d'échéance pour le badge de la liste (libellé + niveau CSS). Source unique des
+     * seuils : AvenantEcheanceScope (mêmes bornes que le filtre SQL des chips). Un avenant sans
+     * échéance renvoie des valeurs nulles → aucun badge rendu.
+     *
+     * @return array{libelle: ?string, niveau: ?string}
+     */
+    private function getUrgenceEcheance(Avenant $avenant): array
+    {
+        $classe = AvenantEcheanceScope::classifier($avenant->getEndingAt(), new DateTimeImmutable('today'));
+
+        return [
+            'libelle' => $classe['libelle'] ?? null,
+            'niveau' => $classe['niveau'] ?? null,
+        ];
     }
 
     private function calculateAgeAvenant(Avenant $avenant): string
