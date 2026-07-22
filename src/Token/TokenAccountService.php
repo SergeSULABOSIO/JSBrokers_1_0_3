@@ -123,6 +123,40 @@ class TokenAccountService
     }
 
     /**
+     * Solde total disponible du PROPRIÉTAIRE de l'entreprise (renouvellement
+     * gratuit pris en compte), ou 0 si aucun propriétaire identifiable. Lecture
+     * seule — réutilisée pour présenter le budget d'une mission à l'utilisateur.
+     */
+    public function availableFor(Entreprise $entreprise): int
+    {
+        $owner = $entreprise->getUtilisateur();
+
+        return $owner instanceof Utilisateur ? $this->getBalance($owner)['total'] : 0;
+    }
+
+    /**
+     * ESTIME (sans rien débiter) le coût total en tokens d'un lot d'écritures,
+     * en réutilisant STRICTEMENT le même barème que meterWrite() (plan tarifaire
+     * dynamique via ParametresTokenService) : source de tarif unique, aucun
+     * calcul dupliqué. Chaque élément est une entité (objet) ou son FQCN.
+     *
+     * @param iterable<object|string> $entitiesOrClasses
+     */
+    public function estimateWriteCost(iterable $entitiesOrClasses): int
+    {
+        $total = 0;
+        foreach ($entitiesOrClasses as $item) {
+            $fqcn = is_object($item) ? $item::class : (string) $item;
+            if ($fqcn === '') {
+                continue;
+            }
+            $total += $this->parametres->weightFor($fqcn);
+        }
+
+        return $total;
+    }
+
+    /**
      * Débite un coût : on consomme d'abord le solde prépayé, puis l'allocation
      * gratuite (⇒ une fois le prépayé épuisé, on « bascule au mode gratuit »).
      * Jamais négatif. À n'appeler qu'après canAfford().

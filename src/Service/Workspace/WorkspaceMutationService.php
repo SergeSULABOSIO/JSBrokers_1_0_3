@@ -1,0 +1,319 @@
+<?php
+
+namespace App\Service\Workspace;
+
+use App\Ai\Mutation\MutationAllowlist;
+use App\Ai\Mutation\MutationOperation;
+use App\Ai\Scope\AiScope;
+use App\Entity\Entreprise;
+use App\Entity\Utilisateur;
+use App\Token\TokenAccountService;
+use App\Services\JSBDynamicSearchService;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Form\FormFactoryInterface;
+use Symfony\Component\Form\FormInterface;
+
+/**
+ * Cœur DÉTERMINISTE d'écriture/suppression pour l'assistant IA (Ket).
+ *
+ * Rejoue EXACTEMENT les gardes du CRUD HTTP (ControllerUtilsTrait) mais de façon
+ * appelable hors requête de formulaire, en réutilisant les briques existantes
+ * (DRY) : WorkspaceAccessResolver (fail-closed), JSBDynamicSearchService
+ * (scoping entreprise), le FormType de l'entité (transformation + validation +
+ * liaison des relations), TokenAccountService (métrage) et CascadeImpactAnalyzer
+ * (garde de suppression). Le LLM n'exécute rien : il assemble une intention, ce
+ * service la valide et l'exécute.
+ *
+ * Deux usages :
+ *  - analyserOperation() : DRY-RUN pur (aucune écriture) — sert le tool
+ *    preparer_operations (droits, scope, champs manquants/invalides, cascades) ;
+ *  - executer() : exécution réelle, à appeler DANS une transaction pilotée par
+ *    l'appelant (endpoint execute) ; lève MutationException → rollback global.
+ *
+ * commitWrite()/commitDelete() sont les deux plus petites unités partagées avec
+ * ControllerUtilsTrait (métrage + persistance / suppression), pour un point de
+ * passage unique.
+ */
+class WorkspaceMutationService
+{
+    public function __construct(
+        private readonly EntityManagerInterface $em,
+        private readonly FormFactoryInterface $formFactory,
+        private readonly WorkspaceAccessResolver $accessResolver,
+        private readonly TokenAccountService $tokenAccountService,
+        private readonly JSBDynamicSearchService $searchService,
+        private readonly CascadeImpactAnalyzer $cascadeAnalyzer,
+    ) {
+    }
+
+    // ───────────────────────── Unités partagées (DRY) ─────────────────────────
+
+    /**
+     * Métrage (écriture) puis persistance + flush — point de passage unique
+     * réutilisé par ControllerUtilsTrait et par l'exécuteur IA.
+     *
+     * @throws \App\Token\InsufficientTokensException si le solde du propriétaire est épuisé.
+     */
+    public function commitWrite(object $entity, Entreprise $entreprise, ?Utilisateur $acteur): void
+    {
+        $this->tokenAccountService->meterWrite($entity, $entreprise, $acteur);
+        $this->em->persist($entity);
+        $this->em->flush();
+    }
+
+    /** Suppression + flush — point de passage unique (contrôle d'accès à la charge de l'appelant). */
+    public function commitDelete(object $entity): void
+    {
+        $this->em->remove($entity);
+        $this->em->flush();
+    }
+
+    // ───────────────────────────── Chemin IA ──────────────────────────────────
+
+    /**
+     * DRY-RUN d'une opération : n'écrit RIEN. Renvoie un diagnostic structuré.
+     *
+     * @return array{
+     *     ok: bool, statut: string, entite: string, libelle: string,
+     *     cible: ?string, manquants: array<string,string[]>, impacts: string[], bloque: bool
+     * }
+     */
+    public function analyserOperation(MutationOperation $op, AiScope $scope): array
+    {
+        $labels = $this->accessResolver->libellesEntites();
+        $libelle = $labels[$op->entityShortName] ?? $op->entityShortName;
+        $base = [
+            'ok' => false, 'statut' => 'ok', 'entite' => $op->entityShortName,
+            'libelle' => $libelle, 'cible' => null, 'manquants' => [], 'impacts' => [], 'bloque' => false,
+        ];
+
+        // Périmètre + allowlist (fail-closed).
+        if (!$this->estAutorise($op, $scope)) {
+            return ['ok' => false, 'statut' => 'hors_perimetre'] + $base;
+        }
+        // Forme de l'opération.
+        if (!$op->estValide()) {
+            return ['ok' => false, 'statut' => 'introuvable'] + $base;
+        }
+
+        // Cible (edit/delete) résolue STRICTEMENT dans l'entreprise du scope.
+        $cible = null;
+        if (!$op->isCreate()) {
+            $cible = $this->trouverCible($op, $scope);
+            if ($cible === null) {
+                return ['ok' => false, 'statut' => 'introuvable'] + $base;
+            }
+            $base['cible'] = $this->libelleInstance($cible);
+        }
+
+        // Suppression : impacts de cascade + blocages FK.
+        if ($op->isDelete()) {
+            $impact = $this->cascadeAnalyzer->analyserSuppression($cible);
+            $base['impacts'] = $impact->descriptions();
+            $base['bloque'] = $impact->estBloque();
+
+            return ['ok' => !$impact->estBloque(), 'statut' => $impact->estBloque() ? 'bloque' : 'ok'] + $base;
+        }
+
+        // Create/edit : validation FormType sur une COPIE (jamais l'entité gérée —
+        // sûr vis-à-vis d'un flush ultérieur dans la même requête).
+        $copie = $op->isCreate() ? $this->nouvelleEntite($op, $scope) : clone $cible;
+        $form = $this->construireEtSoumettre($copie, $op);
+        if (!$form->isValid()) {
+            return ['ok' => false, 'statut' => 'invalide', 'manquants' => $this->erreurs($form)] + $base;
+        }
+
+        return ['ok' => true] + $base;
+    }
+
+    /**
+     * Exécute réellement une opération. À appeler DANS une transaction :
+     * lève MutationException (rollback) ou InsufficientTokensException.
+     *
+     * @return array{op: string, entite: string, libelle: string, cible: ?string, id: ?int}
+     */
+    public function executer(MutationOperation $op, AiScope $scope, ?Utilisateur $acteur): array
+    {
+        $labels = $this->accessResolver->libellesEntites();
+        $libelle = $labels[$op->entityShortName] ?? $op->entityShortName;
+
+        if (!$this->estAutorise($op, $scope)) {
+            throw MutationException::horsPerimetre(sprintf('Action hors de votre périmètre sur « %s ».', $libelle));
+        }
+        if (!$op->estValide()) {
+            throw MutationException::introuvable(sprintf('Opération invalide sur « %s ».', $libelle));
+        }
+
+        if ($op->isDelete()) {
+            $cible = $this->trouverCible($op, $scope) ?? throw MutationException::introuvable(
+                sprintf('%s #%d introuvable dans votre entreprise.', $libelle, (int) $op->targetId),
+            );
+            $impact = $this->cascadeAnalyzer->analyserSuppression($cible);
+            if ($impact->estBloque()) {
+                throw MutationException::bloque(implode(' ', $impact->blocages));
+            }
+            $cibleLabel = $this->libelleInstance($cible);
+            $this->commitDelete($cible);
+
+            return ['op' => $op->op, 'entite' => $op->entityShortName, 'libelle' => $libelle, 'cible' => $cibleLabel, 'id' => null];
+        }
+
+        // Create / edit.
+        if ($op->isCreate()) {
+            $entity = $this->nouvelleEntite($op, $scope);
+        } else {
+            $entity = $this->trouverCible($op, $scope) ?? throw MutationException::introuvable(
+                sprintf('%s #%d introuvable dans votre entreprise.', $libelle, (int) $op->targetId),
+            );
+        }
+
+        $form = $this->construireEtSoumettre($entity, $op);
+        if (!$form->isValid()) {
+            throw MutationException::invalide(
+                sprintf('Données invalides pour « %s ».', $libelle),
+                $this->erreurs($form),
+            );
+        }
+
+        $this->commitWrite($entity, $scope->entreprise, $acteur);
+
+        return [
+            'op'      => $op->op,
+            'entite'  => $op->entityShortName,
+            'libelle' => $libelle,
+            'cible'   => $this->libelleInstance($entity),
+            'id'      => method_exists($entity, 'getId') ? $entity->getId() : null,
+        ];
+    }
+
+    // ─────────────────────────────── Interne ──────────────────────────────────
+
+    /** Allowlist métier + accès fail-closed au niveau requis par l'opération. */
+    private function estAutorise(MutationOperation $op, AiScope $scope): bool
+    {
+        if (!MutationAllowlist::autorise($op->entityShortName)) {
+            return false; // paramétrage / rôles / hors liste : jamais mutable par Ket.
+        }
+        if ($this->accessResolver->isRoleManagementEntity($op->entityShortName)) {
+            return false; // ceinture + bretelles.
+        }
+
+        return $this->accessResolver->can($scope->invite, $op->entityShortName, $op->requiredLevel());
+    }
+
+    /** Résout l'enregistrement cible d'une op edit/delete dans l'entreprise du scope, ou null. */
+    private function trouverCible(MutationOperation $op, AiScope $scope): ?object
+    {
+        $fqcn = $op->fqcn();
+        if (!class_exists($fqcn) || $op->targetId === null) {
+            return null;
+        }
+        $result = $this->searchService->search($fqcn, ['id' => $op->targetId], $scope->entreprise, null, 1, 1);
+        if (($result['status']['code'] ?? 500) !== 200) {
+            return null;
+        }
+
+        return $result['data'][0] ?? null;
+    }
+
+    /** Nouvelle entité pré-scopée (entreprise/invité renseignés si AuditableTrait). */
+    private function nouvelleEntite(MutationOperation $op, AiScope $scope): object
+    {
+        $fqcn = $op->fqcn();
+        $entity = new $fqcn();
+        if (method_exists($entity, 'setEntreprise') && method_exists($entity, 'getEntreprise') && $entity->getEntreprise() === null) {
+            $entity->setEntreprise($scope->entreprise);
+        }
+        if (method_exists($entity, 'setInvite') && method_exists($entity, 'getInvite') && $entity->getInvite() === null) {
+            $entity->setInvite($scope->invite);
+        }
+
+        return $entity;
+    }
+
+    /**
+     * Construit le FormType de l'entité et lui soumet les champs proposés
+     * (clearMissing=false : édition partielle sûre). Pré-hydrate les parents
+     * ManyToOne pour que les champs autocomplete valident les id soumis — même
+     * logique que ControllerUtilsTrait::handleFormSubmission.
+     */
+    private function construireEtSoumettre(object $entity, MutationOperation $op): FormInterface
+    {
+        $fqcn = $op->fqcn();
+        $fields = $this->nettoyerChamps($op->fields);
+
+        // Pré-hydratation des parents ManyToOne (création surtout). API objet ORM 3.
+        try {
+            $meta = $this->em->getClassMetadata($fqcn);
+            foreach ($meta->getAssociationMappings() as $field => $mapping) {
+                if (!$mapping->isManyToOne()) {
+                    continue;
+                }
+                if (!empty($fields[$field])) {
+                    $parent = $this->em->getRepository((string) $mapping->targetEntity)->find($fields[$field]);
+                    $setter = 'set' . ucfirst($field);
+                    if ($parent !== null && method_exists($entity, $setter)) {
+                        $entity->{$setter}($parent);
+                    }
+                }
+            }
+        } catch (\Throwable) {
+            // Best-effort : le formulaire reste seul juge de la validité.
+        }
+
+        $formType = 'App\\Form\\' . $op->entityShortName . 'Type';
+        $form = $this->formFactory->create($formType, $entity);
+
+        // Champs multiples absents => tableau vide (miroir de handleFormSubmission).
+        foreach ($form->all() as $child) {
+            if ($child->getConfig()->getOption('multiple') === true && !array_key_exists($child->getName(), $fields)) {
+                $fields[$child->getName()] = [];
+            }
+        }
+
+        $form->submit($fields, false);
+
+        return $form;
+    }
+
+    /** Ne conserve que des paires champ(string) => valeur scalaire/null. */
+    private function nettoyerChamps(array $fields): array
+    {
+        $propres = [];
+        foreach ($fields as $champ => $valeur) {
+            if (is_string($champ) && (is_scalar($valeur) || $valeur === null)) {
+                $propres[$champ] = $valeur;
+            }
+        }
+
+        return $propres;
+    }
+
+    /** @return array<string, string[]> Erreurs de formulaire par champ. */
+    private function erreurs(FormInterface $form): array
+    {
+        $erreurs = [];
+        foreach ($form->getErrors(true) as $error) {
+            $champ = $error->getOrigin()?->getName() ?: '_global';
+            $erreurs[$champ][] = $error->getMessage();
+        }
+
+        return $erreurs;
+    }
+
+    /** Libellé lisible d'une instance (best-effort, comme les puces de contexte). */
+    private function libelleInstance(object $entity): string
+    {
+        foreach (['getNom', 'getLibelle', 'getTitre', 'getReference', 'getCode'] as $getter) {
+            if (method_exists($entity, $getter)) {
+                $val = $entity->{$getter}();
+                if (is_string($val) && trim(strip_tags($val)) !== '') {
+                    return trim(strip_tags($val));
+                }
+            }
+        }
+        $id = method_exists($entity, 'getId') ? $entity->getId() : null;
+
+        return $id !== null ? ('#' . $id) : '(sans libellé)';
+    }
+}

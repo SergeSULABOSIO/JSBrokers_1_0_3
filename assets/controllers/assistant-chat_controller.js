@@ -68,9 +68,17 @@ export default class extends Controller {
             this.messagesTarget.addEventListener('mouseout', this._onCtxTipOut);
         }
         document.addEventListener('mousemove', this._onCtxTipMove);
+
+        // Exécution d'un plan de mutation confirmé : la modale de confirmation
+        // notifie le bus cerveau:event ; on capte notre type dédié.
+        this._onMutationExecute = this.executeFromEvent.bind(this);
+        document.addEventListener('cerveau:event', this._onMutationExecute);
     }
 
     disconnect() {
+        if (this._onMutationExecute) {
+            document.removeEventListener('cerveau:event', this._onMutationExecute);
+        }
         if (this.hasContextBarTarget) {
             this.contextBarTarget.removeEventListener('mouseover', this._onCtxTipOver);
             this.contextBarTarget.removeEventListener('mouseout', this._onCtxTipOut);
@@ -219,8 +227,189 @@ export default class extends Controller {
                 case 'signaler-paiement-prime':
                     this.openSignalerPaiementPrimeAction(action);
                     break;
+                case 'ket-mutation.review':
+                    this.renderMutationReview(action);
+                    break;
             }
         }
+    }
+
+    /**
+     * Barre d'action sous le plan d'écriture/suppression préparé par Ket. Le
+     * plan lui-même (tableaux + budget) est déjà rendu dans le message. Ici on
+     * ajoute la décision : « Valider et exécuter » (ouvre la confirmation) /
+     * « Annuler » — ou, si le solde est insuffisant, un CTA d'achat de tokens.
+     */
+    renderMutationReview(action) {
+        if (!action || !action.idMessage) return;
+        const budget = action.budget || {};
+        const bar = document.createElement('div');
+        bar.className = 'aic-mutation-actions';
+
+        if (budget.suffisant === false) {
+            const notice = document.createElement('p');
+            notice.className = 'aic-notice aic-notice--warning';
+            notice.setAttribute('role', 'status');
+            notice.textContent = `Solde de tokens insuffisant pour cette mission (${formatNombre(budget.soldeDisponible || 0)}/${formatNombre(budget.coutEstime || 0)}).`;
+            bar.appendChild(notice);
+
+            const buy = document.createElement('a');
+            buy.className = 'btn btn-sm btn-primary aic-mutation-buy';
+            buy.href = '/admin/tokens/buy';
+            buy.target = '_blank';
+            buy.rel = 'noopener';
+            buy.textContent = 'Acheter des tokens';
+            bar.appendChild(buy);
+
+            const abort = document.createElement('button');
+            abort.type = 'button';
+            abort.className = 'btn btn-sm btn-link aic-mutation-abort';
+            abort.textContent = 'Abandonner la mission';
+            abort.addEventListener('click', () => bar.remove());
+            bar.appendChild(abort);
+        } else {
+            const exec = document.createElement('button');
+            exec.type = 'button';
+            exec.className = 'btn btn-sm btn-primary';
+            exec.textContent = 'Valider et exécuter';
+            exec.addEventListener('click', () => {
+                bar.remove();
+                this.openMutationConfirm(action);
+            });
+            bar.appendChild(exec);
+
+            const cancel = document.createElement('button');
+            cancel.type = 'button';
+            cancel.className = 'btn btn-sm btn-link aic-mutation-abort';
+            cancel.textContent = 'Annuler';
+            cancel.addEventListener('click', () => bar.remove());
+            bar.appendChild(cancel);
+        }
+
+        this.messagesTarget.appendChild(bar);
+        this.scrollToBottom();
+    }
+
+    /**
+     * Ouvre la modale de confirmation générique pour exécuter le plan. Une
+     * suppression déclenche l'alerte « irréversible » ET la confirmation
+     * renforcée par mot de passe (requirePassword). Les impacts de cascade
+     * sont listés. La confirmation renvoie l'événement ket:mutation.execute,
+     * capté par ce même contrôleur (executeFromEvent).
+     */
+    openMutationConfirm(action) {
+        const requirePassword = action.requiresPassword === true;
+        const impacts = Array.isArray(action.impacts) ? action.impacts : [];
+        const body = requirePassword
+            ? 'Cette mission comporte une SUPPRESSION définitive. Vérifiez le plan ci-dessus, puis confirmez avec votre mot de passe.'
+            : 'Vérifiez le plan ci-dessus, puis confirmez pour que j’exécute les opérations.';
+
+        document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
+            bubbles: true,
+            detail: {
+                title: requirePassword ? 'Confirmer la suppression' : 'Exécuter la mission',
+                body,
+                itemDescriptions: impacts,
+                showIrreversible: requirePassword,
+                requirePassword,
+                headerClass: requirePassword ? 'bg-danger text-white' : 'bg-primary text-white',
+                confirmClass: requirePassword ? 'btn btn-danger' : 'btn btn-primary',
+                onConfirm: {
+                    type: 'ket:mutation.execute',
+                    payload: { idMessage: action.idMessage },
+                },
+            },
+        }));
+    }
+
+    /**
+     * Capté depuis la modale de confirmation (via le bus cerveau:event) : lance
+     * l'exécution déterministe côté serveur puis rejoue le journal d'étapes.
+     */
+    executeFromEvent(event) {
+        const detail = event.detail;
+        if (!detail || detail.type !== 'ket:mutation.execute') return;
+        const payload = detail.payload || {};
+        this.executeMutationPlan(payload.idMessage, payload.password);
+    }
+
+    /** Appelle l'endpoint d'exécution, gère 402/403/422 et rejoue le journal. */
+    async executeMutationPlan(idMessage, password) {
+        const id = parseInt(idMessage, 10);
+        if (!Number.isInteger(id) || id <= 0) return;
+        const url = `/admin/assistant-ia/api/mutation/${this.idEntrepriseValue}/${this.idConversationValue}/${id}/execute`;
+
+        // Feedback « coulisses » : barre de progression globale pendant l'exécution.
+        document.dispatchEvent(new CustomEvent('app:loading.start', { bubbles: true }));
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: password || '' }),
+            });
+            const data = await response.json().catch(() => ({}));
+
+            if (response.ok && data.success) {
+                document.dispatchEvent(new CustomEvent('ui:confirmation.close', { bubbles: true }));
+                await this.renderMutationJournal(data.journal || []);
+                // Rafraîchit les listes éventuellement affichées (données modifiées).
+                document.dispatchEvent(new CustomEvent('app:workspace.data-changed', { bubbles: true }));
+                return;
+            }
+
+            // Échecs : on garde la modale ouverte avec un message (mot de passe à
+            // ressaisir, solde à recharger, données à corriger).
+            let message = data.message || "L'exécution a échoué.";
+            if (response.status === 402) {
+                message = `${data.message || 'Solde insuffisant.'} Rechargez votre solde puis réessayez.`;
+            }
+            document.dispatchEvent(new CustomEvent('ui:confirmation.error', {
+                bubbles: true,
+                detail: { error: message },
+            }));
+        } catch (error) {
+            console.error('Ket - exécution du plan échouée :', error);
+            document.dispatchEvent(new CustomEvent('ui:confirmation.error', {
+                bubbles: true,
+                detail: { error: "L'exécution a échoué. Vérifiez votre connexion puis réessayez." },
+            }));
+        } finally {
+            document.dispatchEvent(new CustomEvent('app:loading.stop', { bubbles: true }));
+        }
+    }
+
+    /**
+     * Rejoue le journal d'exécution ÉTAPE PAR ÉTAPE dans une bulle assistant :
+     * rappel du plan puis, séquentiellement, chaque opération cochée (feedback
+     * « coulisses » demandé). Réutilise le rendu Markdown sanitisé + pastilles.
+     */
+    async renderMutationJournal(journal) {
+        const bubble = this.appendMessage('assistant', '');
+        const content = bubble.querySelector('.aic-msg-text');
+        bubble.setAttribute('aria-hidden', 'true');
+
+        const verbe = { create: 'Création', edit: 'Modification', delete: 'Suppression' };
+        let lignes = ['**Exécution de la mission**', ''];
+        content.innerHTML = renderAssistantMarkdown(lignes.join('\n'));
+
+        for (const step of journal) {
+            await new Promise((resolve) => setTimeout(resolve, 420));
+            if (step.statut === 'echec') {
+                lignes.push(`- [Échec](#danger) ${step.message || 'une étape a échoué — rien n’a été conservé.'}`);
+            } else {
+                const label = verbe[step.op] || 'Opération';
+                const cible = step.cible ? ` « ${step.cible} »` : '';
+                lignes.push(`- [Fait](#success) ${label} — ${step.libelle || step.entite}${cible}`);
+            }
+            content.innerHTML = renderAssistantMarkdown(lignes.join('\n'));
+            this.scrollToBottom();
+        }
+
+        const fait = journal.filter((s) => s.statut === 'ok').length;
+        lignes.push('', `[Terminé](#success) ${fait} opération${fait > 1 ? 's' : ''} exécutée${fait > 1 ? 's' : ''} avec succès.`);
+        content.innerHTML = renderAssistantMarkdown(lignes.join('\n'));
+        bubble.removeAttribute('aria-hidden');
+        this.scrollToBottom();
     }
 
     /**
