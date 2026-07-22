@@ -48,17 +48,34 @@ final class EntiteLexique
         return array_keys($this->lexique());
     }
 
-    /** Première entité dont un mot-clé apparaît dans la question normalisée, ou null. */
+    /**
+     * Entité sur laquelle porte la question : celle dont un mot-clé apparaît le PLUS TÔT
+     * dans la phrase, le mot-clé le plus long l'emportant à position égale.
+     *
+     * L'ordre de la phrase prime sur l'ordre du lexique : « combien d'avenants dans mon
+     * portefeuille ? » interroge les AVENANTS — le portefeuille n'est là que pour désigner
+     * un périmètre. Retenir la première entité du lexique (son ordre vient de la carte de
+     * permissions, sans rapport avec la question) répondait sur la mauvaise rubrique.
+     */
     public function matchEntite(string $normalizedQuestion): ?string
     {
+        $meilleur = null;
         foreach ($this->lexique() as $shortName => $keywords) {
             foreach ($keywords as $keyword) {
-                if (preg_match('/\b' . preg_quote($keyword, '/') . '\b/', $normalizedQuestion)) {
-                    return $shortName;
+                if (!preg_match('/\b' . preg_quote($keyword, '/') . '\b/', $normalizedQuestion, $m, PREG_OFFSET_CAPTURE)) {
+                    continue;
+                }
+
+                $position = $m[0][1];
+                $longueur = strlen($keyword);
+                if ($meilleur === null
+                    || $position < $meilleur['position']
+                    || ($position === $meilleur['position'] && $longueur > $meilleur['longueur'])) {
+                    $meilleur = ['nom' => $shortName, 'position' => $position, 'longueur' => $longueur];
                 }
             }
         }
 
-        return null;
+        return $meilleur['nom'] ?? null;
     }
 }

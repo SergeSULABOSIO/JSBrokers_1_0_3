@@ -7,6 +7,8 @@ use App\Ai\Scope\AiScope;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
 use App\Services\Search\AvenantEcheanceScope;
+use App\Services\Search\PortefeuilleCritereFactory;
+use App\Services\Search\PortefeuilleScope;
 use App\Services\Search\TranchePaiementScope;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -38,6 +40,7 @@ final class RechercherEntitesTool implements AiToolInterface
         private readonly EntiteLexique $lexique,
         private readonly EntiteLibelle $libelleur,
         private readonly EntityManagerInterface $em,
+        private readonly PortefeuilleCritereFactory $portefeuilleCritere,
     ) {
     }
 
@@ -59,7 +62,8 @@ final class RechercherEntitesTool implements AiToolInterface
             . 'les mêmes règles que les filtres rapides de ces rubriques, tri par urgence inclus : '
             . 'à utiliser dès que la question porte sur une fenêtre d’échéance (« quels avenants '
             . 'échoient dans les 30 jours ? ») ou un statut de paiement, afin que la réponse '
-            . 'coïncide avec ce que l’utilisateur voit à l’écran. '
+            . 'coïncide avec ce que l’utilisateur voit à l’écran. La liste porte par défaut sur le '
+            . 'PORTEFEUILLE de l’utilisateur, comme la rubrique affichée (paramètre perimetre). '
             . 'Renvoie l’identifiant et le libellé de chaque enregistrement.';
     }
 
@@ -97,6 +101,7 @@ final class RechercherEntitesTool implements AiToolInterface
                         . 'impayees, echues, a_echoir, partiellement, payees, retro_a_payer, '
                         . 'commission_exigible. Mêmes règles que les filtres rapides de la rubrique.',
                 ],
+                'perimetre' => PortefeuilleScope::proprieteSchema(),
                 'lieA' => [
                     'type' => 'object',
                     'description' => 'Restreint aux enregistrements LIÉS à un enregistrement précis, '
@@ -142,6 +147,12 @@ final class RechercherEntitesTool implements AiToolInterface
             $args['echeance'] = $f;
         } elseif ($shortName === 'Tranche' && ($s = TranchePaiementScope::detecterDepuisTexte($normalized)) !== null) {
             $args['statutPaiement'] = $s;
+        }
+
+        // Le périmètre par défaut est celui de l'écran (portefeuille de l'invité) : seule une
+        // demande explicite d'élargissement est détectée ici.
+        if (($p = PortefeuilleScope::detecterPerimetreDepuisTexte($normalized)) !== null) {
+            $args['perimetre'] = $p;
         }
 
         return $args;
@@ -215,7 +226,15 @@ final class RechercherEntitesTool implements AiToolInterface
             $filtreRubrique = TranchePaiementScope::libelle((string) $criteresRubrique[TranchePaiementScope::CRITERION_KEY]['value']);
         }
 
-        $result = $this->searchService->search($fqcn, $criteria + $lienCriteria + $criteresRubrique, $scope->entreprise, null, $page, self::PAGE_SIZE);
+        // PÉRIMÈTRE : par défaut le portefeuille de l'invité, comme la rubrique à l'écran
+        // (fabrique partagée avec le contrôleur de liste → même critère, même SQL, mêmes
+        // enregistrements). Élargi à l'entreprise seulement sur demande explicite.
+        $perimetreEntreprise = PortefeuilleScope::estEntreprise($args['perimetre'] ?? null);
+        $criterePortefeuille = $perimetreEntreprise
+            ? []
+            : $this->portefeuilleCritere->pour($shortName, $scope->invite);
+
+        $result = $this->searchService->search($fqcn, $criteria + $lienCriteria + $criteresRubrique + $criterePortefeuille, $scope->entreprise, null, $page, self::PAGE_SIZE);
         if (($result['status']['code'] ?? 500) !== 200) {
             return AiToolResult::introuvable($labels[$shortName]);
         }
@@ -234,6 +253,7 @@ final class RechercherEntitesTool implements AiToolInterface
             'filtre'       => $filtre !== '' ? $filtre : null,
             'filtreIgnore' => ($filtre !== '' && $displayField === null) ? true : null,
             'filtreRubrique' => $filtreRubrique,
+            'perimetre'    => PortefeuilleScope::libellePerimetre($perimetreEntreprise, $criterePortefeuille),
             'lien'         => $lien,
             'lienIgnore'   => $lienIgnore,
             'page'         => (int) $result['currentPage'],

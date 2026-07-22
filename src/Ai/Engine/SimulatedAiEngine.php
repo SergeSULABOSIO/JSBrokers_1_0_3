@@ -7,6 +7,7 @@ use App\Ai\AiRequest;
 use App\Ai\AiText;
 use App\Ai\Tool\AiToolInterface;
 use App\Ai\Tool\AiToolResult;
+use App\Services\Search\PortefeuilleScope;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
@@ -106,10 +107,11 @@ final class SimulatedAiEngine implements AiEngineInterface
     {
         return match ($toolName) {
             'compter_entites' => sprintf(
-                'Votre espace de travail compte actuellement %d enregistrement%s dans la rubrique « %s ».',
+                'Votre espace de travail compte actuellement %d enregistrement%s dans la rubrique « %s »%s.',
                 $data['count'],
                 $data['count'] > 1 ? 's' : '',
                 $data['libelle'],
+                $this->mentionPerimetre($data),
             ),
             'indicateur_calcule' => ($data['ambigu'] ?? false)
                 ? $this->formatCandidats($data)
@@ -369,14 +371,38 @@ final class SimulatedAiEngine implements AiEngineInterface
         );
     }
 
+    /**
+     * Mention du périmètre appliqué par l'outil (« dans votre portefeuille X »). Sans elle,
+     * un chiffre de l'assistant ne serait pas comparable à ce que la rubrique affiche : les
+     * listes sont filtrées par défaut sur le portefeuille de l'invité.
+     */
+    private function mentionPerimetre(array $data): string
+    {
+        $perimetre = $data['perimetre'] ?? null;
+        if ($perimetre === null) {
+            return '';
+        }
+
+        if ($perimetre === PortefeuilleScope::LIBELLE_ENTREPRISE) {
+            return ', pour toute l\'entreprise';
+        }
+
+        if ($perimetre === 'aucun portefeuille') {
+            return ', dans votre portefeuille — vous n\'en gérez actuellement aucun';
+        }
+
+        return sprintf(' (périmètre : votre portefeuille « %s »)', $perimetre);
+    }
+
     /** Restitution d'une page de liste (rechercher_entites) : total, items, invite à paginer. */
     private function formatListe(array $data): string
     {
         if (($data['totalItems'] ?? 0) === 0) {
             return sprintf(
-                'La rubrique « %s » ne contient aucun enregistrement%s.',
+                'La rubrique « %s » ne contient aucun enregistrement%s%s.',
                 $data['libelle'],
                 isset($data['filtre']) ? sprintf(' correspondant à « %s »', $data['filtre']) : '',
+                $this->mentionPerimetre($data),
             );
         }
 
@@ -386,11 +412,12 @@ final class SimulatedAiEngine implements AiEngineInterface
         );
 
         $texte = sprintf(
-            'La rubrique « %s » contient %d enregistrement%s%s (page %d/%d) :%s%s',
+            'La rubrique « %s » contient %d enregistrement%s%s%s (page %d/%d) :%s%s',
             $data['libelle'],
             $data['totalItems'],
             $data['totalItems'] > 1 ? 's' : '',
             isset($data['filtre']) ? sprintf(' correspondant à « %s »', $data['filtre']) : '',
+            $this->mentionPerimetre($data),
             $data['page'],
             $data['totalPages'],
             "\n",
