@@ -131,7 +131,7 @@
                             {% for c in consumptions %}
                                 <tr>
                                     <td><strong>{{ c.entiteNom }}</strong></td>
-                                    <td class="tkp-num">{{ c.nombre }}</td>
+                                    <td class="tkp-num">{{ c.nombre|format_nombre }}</td>
                                     <td>
                                         {% if c.sens == 'entree' %}
                                             <span class="tkp-sens tkp-sens--entree">
@@ -145,8 +145,8 @@
                                             </span>
                                         {% endif %}
                                     </td>
-                                    <td class="tkp-num">{{ c.poidsUnitaire }}</td>
-                                    <td class="tkp-num">{{ c.poidsTotal }}</td>
+                                    <td class="tkp-num">{{ c.poidsUnitaire|format_nombre }}</td>
+                                    <td class="tkp-num">{{ c.poidsTotal|format_nombre }}</td>
                                     <td class="tkp-num">{{ (c.poidsTotal * usdPerToken)|number_format(4, '.', ' ') }} $</td>
                                     <td>{{ c.createdAt | format_datetime("short", "short", locale: app.user.locale) }}</td>
                                     <td>{{ c.entreprise ? c.entreprise.nom : '—' }}</td>

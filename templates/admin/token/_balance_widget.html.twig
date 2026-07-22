@@ -35,15 +35,17 @@
             {{ ux_icon('mdi:database', {height: '20px', width: '20px', class: 'tk-ic'}) }}
             {{ "token_widget_title" | trans }}
         </h2>
+        {# Compteurs écrits dans la notation de la langue active (cf. format_nombre) ;
+           le rafraîchissement JS applique exactement la même règle. #}
         <div class="tk-total">
-            <span data-token-balance-target="total">{{ balance.total }}</span>
+            <span data-token-balance-target="total">{{ balance.total|format_nombre }}</span>
             <small>{{ "token_unit" | trans }}</small>
         </div>
     </div>
 
     <div class="tk-detail">
-        <span>{{ "token_free" | trans }}: <strong data-token-balance-target="free">{{ balance.free }}</strong> / {{ allowance }}</span>
-        <span>{{ "token_paid" | trans }}: <strong data-token-balance-target="paid">{{ balance.paid }}</strong></span>
+        <span>{{ "token_free" | trans }}: <strong data-token-balance-target="free">{{ balance.free|format_nombre }}</strong> / {{ allowance|format_nombre }}</span>
+        <span>{{ "token_paid" | trans }}: <strong data-token-balance-target="paid">{{ balance.paid|format_nombre }}</strong></span>
     </div>
 
     <div class="tk-bar-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ pct }}"

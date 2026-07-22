@@ -3,6 +3,7 @@
 namespace App\Form;
 
 use App\DTO\TokenPurchaseDTO;
+use App\Services\ServiceNombres;
 use App\Token\ParametresTokenService;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
@@ -12,19 +13,22 @@ use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 
 class TokenPurchaseType extends AbstractType
 {
-    public function __construct(private ParametresTokenService $parametres)
-    {
+    public function __construct(
+        private ParametresTokenService $parametres,
+        private ServiceNombres $serviceNombres,
+    ) {
     }
 
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         // Libellés des paquets : « Intermédiaire — 10 000 tokens (10 $) ». Le nom
         // d'affichage est le `label` éditable du paquet, avec repli sur ucfirst(clé)
-        // pour les paquets historiques qui n'en ont pas.
+        // pour les paquets historiques qui n'en ont pas. Le volume suit la notation
+        // de la langue active (10 000 en français, 10,000 en anglais).
         $choices = [];
         foreach ($this->parametres->packs() as $key => $pack) {
             $nom = $pack['label'] ?? ucfirst($key);
-            $label = $nom . ' — ' . number_format($pack['tokens'], 0, ',', ' ')
+            $label = $nom . ' — ' . $this->serviceNombres->format($pack['tokens'])
                 . ' tokens (' . $pack['price'] . ' $)';
             $choices[$label] = $key;
         }

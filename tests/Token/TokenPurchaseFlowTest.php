@@ -204,6 +204,34 @@ class TokenPurchaseFlowTest extends WebTestCase
     }
 
     /**
+     * Les compteurs de tokens suivent la notation de la LANGUE ACTIVE : espace
+     * en français, virgule en anglais. Le rafraîchissement JS applique la même
+     * règle (assets/number-format.js), il ne doit donc plus rien réécrire
+     * différemment de ce rendu serveur.
+     */
+    public function testTokenCountsFollowActiveLanguage(): void
+    {
+        $em = $this->em();
+        $user = $this->user();
+        $user->setPaidTokens(8000);
+        $user->setFreeTokens(800);
+        $user->setFreeWindowStartedAt(new \DateTimeImmutable()); // fenêtre fraîche : pas de recharge
+        $em->flush();
+
+        $this->client->loginUser($this->user());
+
+        $crawler = $this->client->request('GET', '/admin/tokens?lang=fr');
+        $this->assertResponseIsSuccessful();
+        $this->assertSame('8 800', trim($crawler->filter('[data-token-balance-target="total"]')->text()));
+        $this->assertSame('8 000', trim($crawler->filter('[data-token-balance-target="paid"]')->text()));
+
+        $crawler = $this->client->request('GET', '/admin/tokens?lang=en');
+        $this->assertResponseIsSuccessful();
+        $this->assertSame('8,800', trim($crawler->filter('[data-token-balance-target="total"]')->text()));
+        $this->assertSame('8,000', trim($crawler->filter('[data-token-balance-target="paid"]')->text()));
+    }
+
+    /**
      * L'échéance de renouvellement est émise comme un INSTANT (ISO-8601 avec
      * décalage) porté par un <time>, et la page publie l'horloge de RÉFÉRENCE de
      * l'application : serveur et front s'alignent sur cette source unique au lieu

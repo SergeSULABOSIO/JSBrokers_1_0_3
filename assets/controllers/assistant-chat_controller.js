@@ -1,6 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 import { renderAssistantMarkdown } from './assistant-markdown-render.js';
 import { formatInstant } from '../datetime-format.js';
+import { formatNombre } from '../number-format.js';
 
 /**
  * @class AssistantChatController
@@ -665,11 +666,12 @@ export default class extends Controller {
     tokensMessage(data) {
         let message = 'Solde de tokens insuffisant';
         if (typeof data.available === 'number' && typeof data.required === 'number') {
-            message += ` (${data.available}/${data.required})`;
+            // Nombres écrits comme partout ailleurs : notation de la langue active.
+            message += ` (${formatNombre(data.available)}/${formatNombre(data.required)})`;
         }
         message += '. Rechargez votre solde';
         if (data.nextRenewalAt) {
-            // Même formatage local que le widget de solde (fuseau du lecteur).
+            // Même horloge de référence que le widget de solde.
             const date = formatInstant(data.nextRenewalAt);
             if (date) message += ` ou attendez le renouvellement du ${date}`;
         }

@@ -1,7 +1,7 @@
 {# Values read from the pricing plan (DB, editable in the Console; falls back to constants). #}
 {% set plan = plan_tarifaire() %}
 {% set readWeight = plan.readWeight %}
-{% set freeAllowance = plan.freeAllowance|number_format(0, '.', ',') %}
+{% set freeAllowance = plan.freeAllowance|format_nombre(0, 'en') %}
 {% set freeWindowHours = plan.freeWindowHours %}
 
 <p class="cgu-intro">
@@ -87,7 +87,7 @@
         <thead><tr><th>Pack</th><th>Price</th></tr></thead>
         <tbody>
             {% for key, p in plan.packs %}
-            <tr><td>{{ p.label|default(key|capitalize) }} — {{ p.tokens|number_format(0, '.', ',') }} tokens</td><td>${{ p.price }}</td></tr>
+            <tr><td>{{ p.label|default(key|capitalize) }} — {{ p.tokens|format_nombre(0, 'en') }} tokens</td><td>${{ p.price }}</td></tr>
             {% endfor %}
         </tbody>
     </table>

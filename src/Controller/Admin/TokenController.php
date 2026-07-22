@@ -10,6 +10,7 @@ use App\Payment\Gateway\PaymentGatewayInterface;
 use App\Payment\PaymentContext;
 use App\Repository\TokenConsumptionRepository;
 use App\Repository\TokenPurchaseRepository;
+use App\Services\ServiceNombres;
 use App\Services\TokenInvoicePdfService;
 use App\Token\CouponService;
 use App\Token\ParametresTokenService;
@@ -47,6 +48,7 @@ class TokenController extends AbstractController
         private PaymentGatewayInterface $gateway,
         private TokenPurchaseFulfillmentService $fulfillment,
         private TokenPurchaseRepository $purchaseRepository,
+        private ServiceNombres $serviceNombres,
     ) {}
 
     /** Page compte : solde + historique de consommation paginé + accès à l'achat. */
@@ -173,7 +175,7 @@ class TokenController extends AbstractController
                 $this->fulfillment->fulfill($purchase);
 
                 $this->addFlash('success', $this->translator->trans('token_buy.success', [
-                    ':tokens' => number_format($pack['tokens'], 0, ',', ' '),
+                    ':tokens' => $this->serviceNombres->format($pack['tokens']),
                 ]));
 
                 return $this->redirectToRoute('admin.token.index');
@@ -245,7 +247,7 @@ class TokenController extends AbstractController
         if ($result->isPaid()) {
             $this->fulfillment->fulfill($purchase);
             $this->addFlash('success', $this->translator->trans('token_buy.success', [
-                ':tokens' => number_format($purchase->getTokens(), 0, ',', ' '),
+                ':tokens' => $this->serviceNombres->format($purchase->getTokens()),
             ]));
         } else {
             $this->fulfillment->markFailed($purchase, $result->failureReason);

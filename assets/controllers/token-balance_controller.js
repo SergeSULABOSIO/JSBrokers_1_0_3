@@ -1,5 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
 import { formatInstant } from '../datetime-format.js';
+import { formatNombre } from '../number-format.js';
 
 /*
  * Affiche le solde de tokens en quasi temps réel : interroge périodiquement
@@ -100,7 +101,11 @@ export default class extends Controller {
         this.renewalAt = null;
     }
 
+    /**
+     * Notation de la langue ACTIVE de l'application, pas celle du navigateur :
+     * sinon le nombre réécrit ici différerait de celui rendu par Twig.
+     */
     fmt(n) {
-        return new Intl.NumberFormat().format(Number(n) || 0);
+        return formatNombre(n) || '0';
     }
 }

@@ -1,7 +1,7 @@
 {# Valeurs lues depuis le plan tarifaire (BDD éditable en Console, repli constantes). #}
 {% set plan = plan_tarifaire() %}
 {% set readWeight = plan.readWeight %}
-{% set freeAllowance = plan.freeAllowance|number_format(0, '.', ' ') %}
+{% set freeAllowance = plan.freeAllowance|format_nombre(0, 'fr') %}
 {% set freeWindowHours = plan.freeWindowHours %}
 
 <p class="cgu-intro">
@@ -87,7 +87,7 @@
         <thead><tr><th>Paquet</th><th>Prix</th></tr></thead>
         <tbody>
             {% for key, p in plan.packs %}
-            <tr><td>{{ p.label|default(key|capitalize) }} — {{ p.tokens|number_format(0, '.', ' ') }} tokens</td><td>{{ p.price }} $</td></tr>
+            <tr><td>{{ p.label|default(key|capitalize) }} — {{ p.tokens|format_nombre(0, 'fr') }} tokens</td><td>{{ p.price }} $</td></tr>
             {% endfor %}
         </tbody>
     </table>
