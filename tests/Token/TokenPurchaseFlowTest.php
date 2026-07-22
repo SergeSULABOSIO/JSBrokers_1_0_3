@@ -77,6 +77,25 @@ class TokenPurchaseFlowTest extends WebTestCase
     }
 
     /**
+     * Prix des paquets : le symbole se place selon la langue de la page —
+     * « 10 $ » côté français, « $10 » côté anglais.
+     */
+    public function testPackPricesPlaceCurrencySymbolPerLanguage(): void
+    {
+        $this->client->request('GET', '/fonctionnement-tokens?lang=fr');
+        $this->assertMatchesRegularExpression(
+            '/<td>\d{1,3}(?: \d{3})* \$<\/td>/',
+            (string) $this->client->getResponse()->getContent(),
+        );
+
+        $this->client->request('GET', '/fonctionnement-tokens?lang=en');
+        $this->assertMatchesRegularExpression(
+            '/<td>\$\d{1,3}(?:,\d{3})*<\/td>/',
+            (string) $this->client->getResponse()->getContent(),
+        );
+    }
+
+    /**
      * Le pied de page public est réutilisé sur la page « Fonctionnement des
      * tokens » : ses liens de section doivent rester navigables, c.-à-d. pointer
      * vers le portail (`/?lang=…#section`) et non vers une ancre locale morte.

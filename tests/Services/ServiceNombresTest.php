@@ -62,6 +62,26 @@ class ServiceNombresTest extends TestCase
         $this->assertSame('8 800', $this->service()->format(8800));
     }
 
+    /** Le symbole change de côté avec la langue : suffixe en français, préfixe en anglais. */
+    public function testPositionDuSymboleMonetaire(): void
+    {
+        $svc = $this->service('fr');
+
+        $this->assertSame('10,00 $', $svc->formatMontant(10));
+        $this->assertSame('$10.00', $svc->formatMontant(10, 2, 'en'));
+        $this->assertSame('1 234,56 $', $svc->formatMontant(1234.5649));
+        $this->assertSame('$1,234.56', $svc->formatMontant(1234.5649, 2, 'en'));
+        // Décimales et symbole restent paramétrables (prix entiers, autres devises).
+        $this->assertSame('10 $', $svc->formatMontant(10, 0));
+        $this->assertSame('0,0400 $', $svc->formatMontant(0.04, 4));
+        $this->assertSame('€10.00', $svc->formatMontant(10, 2, 'en', '€'));
+    }
+
+    public function testMontantNonNumerique(): void
+    {
+        $this->assertSame('', $this->service('fr')->formatMontant(null));
+    }
+
     public function testValeursNonNumeriques(): void
     {
         $svc = $this->service('fr');

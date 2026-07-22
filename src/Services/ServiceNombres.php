@@ -10,8 +10,9 @@ use Symfony\Component\Translation\LocaleSwitcher;
  * l'écran : anglais → « 8,800 » (virgule pour les milliers, point décimal),
  * toute autre langue (français) → « 8 800 » (espace pour les milliers, virgule
  * décimale), ce qui est la convention déjà appliquée aux montants de
- * l'application. Le miroir côté navigateur vit dans assets/number-format.js et
- * doit rester aligné sur cette règle.
+ * l'application. La POSITION du symbole monétaire suit la même règle de langue
+ * (« 10,00 $ » / « $10.00 »). Le miroir côté navigateur vit dans
+ * assets/number-format.js et doit rester aligné sur ces règles.
  */
 class ServiceNombres
 {
@@ -35,6 +36,31 @@ class ServiceNombres
         return self::anglais($locale ?? $this->localeCourante())
             ? number_format((float) $valeur, $decimales, '.', ',')
             : number_format((float) $valeur, $decimales, ',', ' ');
+    }
+
+    /**
+     * Formate un MONTANT : le symbole se place selon la langue — « 10,00 $ » en
+     * français (suffixe), « $10.00 » en anglais (préfixe collé).
+     *
+     * @param int|float|string|null $valeur
+     * @param int                   $decimales
+     * @param string|null           $locale   Langue forcée ; sinon la langue active.
+     * @param string                $symbole  Symbole monétaire (dollar par défaut).
+     */
+    public function formatMontant(
+        int|float|string|null $valeur,
+        int $decimales = 2,
+        ?string $locale = null,
+        string $symbole = '$',
+    ): string {
+        $nombre = $this->format($valeur, $decimales, $locale);
+        if ($nombre === '') {
+            return '';
+        }
+
+        return self::anglais($locale ?? $this->localeCourante())
+            ? $symbole . $nombre
+            : $nombre . ' ' . $symbole;
     }
 
     /** La langue demande-t-elle la notation anglaise (1,000.00) ? */

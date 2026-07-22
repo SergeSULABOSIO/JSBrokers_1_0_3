@@ -190,8 +190,9 @@ security_pricing_basic_option_email_value: "Unlimited"
 security_pricing_basic_option_fonctions: "Access to all other features"
 # GENERIC pricing card: every paid Console pack shares these labels; only the name
 # (label), the price and the token volume change (data-driven).
-security_pricing_pack_price: "$%price%"
-security_pricing_pack_promo_off: "$%amount% off"
+# The amount already carries its number formatting and currency symbol (placed
+# per language) from the format_montant filter: the sentence only holds words.
+security_pricing_pack_promo_off: "%amount% off"
 security_pricing_old_price: "Previous price:"
 security_pricing_new_price: "Discounted price:"
 security_pricing_promo_code: "Promo code:"
