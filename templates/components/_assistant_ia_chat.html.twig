@@ -84,13 +84,29 @@
             padding:.05rem .3rem; font-size:.85em;
         }
         .jsb-ai-chat .aic-md-heading { margin:.2rem 0 .35rem; font-size:.92rem; font-weight:700; color:#343a40; }
+        /* Un tableau large ne doit JAMAIS élargir ni écraser la bulle : il devient
+           lui-même la boîte défilante. `width:max-content` donne aux colonnes leur
+           largeur naturelle, `max-width:100%` les borne à la bulle (donc à la colonne
+           de visualisation) et `overflow-x:auto` ne montre la barre horizontale que
+           si ça dépasse — les messages sans tableau large restent inchangés. */
         .jsb-ai-chat .aic-msg-text table {
-            border-collapse:separate; border-spacing:0; width:100%; margin:.3rem 0 .5rem; font-size:.83rem;
+            border-collapse:separate; border-spacing:0; margin:.3rem 0 .5rem; font-size:.83rem;
+            display:block; width:max-content; max-width:100%; overflow-x:auto;
         }
+        /* nowrap l'emporte sur le word-break hérité de .aic-msg-text : une
+           référence de police ou un montant ne se casse plus en plusieurs lignes. */
         .jsb-ai-chat .aic-msg-text th,
-        .jsb-ai-chat .aic-msg-text td { border-bottom:1px solid #dee2e6; padding:.3rem .5rem; text-align:left; }
+        .jsb-ai-chat .aic-msg-text td { border-bottom:1px solid #dee2e6; padding:.3rem .5rem; text-align:left; white-space:nowrap; }
         .jsb-ai-chat .aic-msg-text th { color:#6c757d; font-weight:600; text-transform:uppercase; letter-spacing:.3px; font-size:.72rem; }
         .jsb-ai-chat .aic-msg-text td { color:#495057; }
+        /* Feedback local sur chaque LIGNE de données, dans la même langue que
+           les bulles et les listes du produit : SURVOL (fond #f8f9fa, idiome
+           .table-enhanced / .jsb-picker-table d'app.css, texte plus contrasté)
+           et CLIC (fond cobalt subtil, idiome .db-fb-item:active). L'entête
+           n'est pas concerné : seules les données sont survolables. */
+        .jsb-ai-chat .aic-msg-text tbody td { transition:background-color .12s ease, color .12s ease; }
+        .jsb-ai-chat .aic-msg-text tbody tr:hover td { background:#f8f9fa; color:#212529; }
+        .jsb-ai-chat .aic-msg-text tbody tr:active td { background:#e8f0fb; }
         /* Pastilles : mêmes couleurs sémantiques que .jsb-state-badge (app.css). */
         .jsb-ai-chat .aic-md-badge {
             display:inline-block; padding:.1rem .5rem; border-radius:999px;
