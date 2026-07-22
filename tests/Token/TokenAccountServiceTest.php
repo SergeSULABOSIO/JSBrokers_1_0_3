@@ -191,6 +191,56 @@ class TokenAccountServiceTest extends TestCase
         $this->assertSame(1000, $balance['free']); // renouvellement automatique
     }
 
+    /**
+     * Le renouvellement s'ancre sur la GRILLE des fenêtres (départ + n × 8 h) et
+     * non sur l'instant du retour de l'utilisateur : la date annoncée par l'UI
+     * est donc l'instant réel du renouvellement, sans dérive.
+     */
+    public function testFreeWindowIsAnchoredOnFixedGrid(): void
+    {
+        $svc = $this->makeService();
+        $owner = $this->owner();
+        $owner->setFreeTokens(0);
+        $start = new \DateTimeImmutable('-19 hours'); // 2 fenêtres pleines + 3 h
+        $owner->setFreeWindowStartedAt($start);
+
+        $balance = $svc->getBalance($owner);
+
+        $this->assertSame(1000, $balance['free']);
+        // Départ avancé de 16 h (2 × 8 h) exactement, PAS remis à « maintenant ».
+        $this->assertSame(
+            $start->modify('+16 hours')->format(\DateTimeImmutable::ATOM),
+            $balance['windowStartedAt']->format(\DateTimeImmutable::ATOM),
+        );
+        $this->assertSame(
+            $start->modify('+24 hours')->format(\DateTimeImmutable::ATOM),
+            $balance['nextRenewalAt']->format(\DateTimeImmutable::ATOM),
+        );
+    }
+
+    /** Retour très tardif : l'échéance reste calée sur la grille d'origine. */
+    public function testFreeWindowDoesNotDriftAfterLongAbsence(): void
+    {
+        $svc = $this->makeService();
+        $owner = $this->owner();
+        $owner->setFreeTokens(0);
+        $start = new \DateTimeImmutable('-100 hours'); // 12 fenêtres + 4 h
+        $owner->setFreeWindowStartedAt($start);
+
+        $balance = $svc->getBalance($owner);
+
+        $this->assertSame(1000, $balance['free']);
+        $this->assertSame(
+            $start->modify('+96 hours')->format(\DateTimeImmutable::ATOM),
+            $balance['windowStartedAt']->format(\DateTimeImmutable::ATOM),
+        );
+        // L'échéance reste sur la même minute de grille que le départ initial.
+        $this->assertSame(
+            $start->format('i:s'),
+            $balance['nextRenewalAt']->format('i:s'),
+        );
+    }
+
     public function testFreeWindowNotRenewedWithinEightHours(): void
     {
         $svc = $this->makeService();

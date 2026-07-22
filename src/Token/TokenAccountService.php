@@ -26,19 +26,51 @@ class TokenAccountService
 
     /**
      * Garantit que la fenêtre gratuite est à jour : si elle n'a jamais démarré
-     * ou si elle a expiré (≥ 8 h), on la réinitialise (allocation rechargée).
-     * Renouvellement paresseux — aucun cron nécessaire.
+     * ou si elle a expiré, on recharge l'allocation. Renouvellement paresseux —
+     * aucun cron nécessaire ; l'horloge du SERVEUR fait seule autorité.
+     *
+     * Le nouveau départ est ANCRÉ SUR LA GRILLE des fenêtres (start + n × durée)
+     * et non remis à « maintenant » : la date annoncée par l'UI est ainsi l'instant
+     * réel du renouvellement, et l'échéance ne dérive pas de cycle en cycle
+     * (ex. fenêtre de 8 h démarrée à 17:29 ⇒ 01:29, 09:29, 17:29… quelle que soit
+     * l'heure à laquelle l'utilisateur revient).
      */
     public function ensureFreshWindow(Utilisateur $owner): void
     {
         $now = new \DateTimeImmutable();
         $start = $owner->getFreeWindowStartedAt();
 
-        if ($start === null || $now >= $start->modify('+' . $this->parametres->freeWindowHours() . ' hours')) {
+        if ($start === null) {
+            // Premier usage : la grille démarre ici, allocation pleine.
             $owner->setFreeTokens($this->parametres->freeAllowance());
             $owner->setFreeWindowStartedAt($now);
             $this->em->flush();
+
+            return;
         }
+
+        $windowSeconds = $this->windowSeconds();
+        $elapsed = $now->getTimestamp() - $start->getTimestamp();
+        if ($elapsed < $windowSeconds) {
+            return; // Fenêtre encore en cours.
+        }
+
+        // Nombre ENTIER de fenêtres écoulées : le nouveau départ reste sur la
+        // grille et ne dépasse jamais l'instant présent.
+        $owner->setFreeTokens($this->parametres->freeAllowance());
+        $owner->setFreeWindowStartedAt(
+            $start->modify(sprintf('+%d seconds', intdiv($elapsed, $windowSeconds) * $windowSeconds)),
+        );
+        $this->em->flush();
+    }
+
+    /**
+     * Durée d'une fenêtre gratuite en secondes. Le paramètre est éditable en
+     * console : on le borne à 1 h minimum (garde anti division par zéro).
+     */
+    private function windowSeconds(): int
+    {
+        return max(1, $this->parametres->freeWindowHours()) * 3600;
     }
 
     /**
@@ -56,7 +88,7 @@ class TokenAccountService
             'paid'            => $owner->getPaidTokens(),
             'total'           => $owner->getTotalTokens(),
             'windowStartedAt' => $start,
-            'nextRenewalAt'   => $start?->modify('+' . $this->parametres->freeWindowHours() . ' hours'),
+            'nextRenewalAt'   => $start?->modify(sprintf('+%d seconds', $this->windowSeconds())),
             'allowance'       => $this->parametres->freeAllowance(),
         ];
     }

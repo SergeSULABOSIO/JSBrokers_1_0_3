@@ -148,5 +148,8 @@ class TokenMeteringFlowTest extends WebTestCase
         // La réponse reste 200 mais affiche le panneau de blocage à la place de la liste.
         $this->assertResponseIsSuccessful();
         $this->assertSelectorExists('.tokens-blocked');
+        // Échéance annoncée comme un instant, affiché dans l'horloge de référence
+        // de l'application (même règle que le widget de solde).
+        $this->assertSelectorExists('.tokens-blocked time[data-controller="app-datetime"][datetime]');
     }
 }

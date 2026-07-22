@@ -85,7 +85,8 @@ final class SoldeTokensTool implements AiToolInterface
             'prepayes'                      => $balance['paid'],
             'gratuits'                      => $balance['free'],
             'allocationGratuite'            => $balance['allowance'],
-            'prochainRenouvellementGratuit' => $balance['nextRenewalAt']?->format('Y-m-d H:i'),
+            // Décalage inclus : sans lui, l'heure annoncée par l'assistant serait ambiguë.
+            'prochainRenouvellementGratuit' => $balance['nextRenewalAt']?->format('Y-m-d H:i (P)'),
             'logiqueConsommation'           => $this->logiqueConsommation(),
         ]);
     }

@@ -1,5 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
 import { renderAssistantMarkdown } from './assistant-markdown-render.js';
+import { formatInstant } from '../datetime-format.js';
 
 /**
  * @class AssistantChatController
@@ -668,8 +669,9 @@ export default class extends Controller {
         }
         message += '. Rechargez votre solde';
         if (data.nextRenewalAt) {
-            const date = new Date(data.nextRenewalAt);
-            message += ` ou attendez le renouvellement du ${date.toLocaleString('fr-FR')}`;
+            // Même formatage local que le widget de solde (fuseau du lecteur).
+            const date = formatInstant(data.nextRenewalAt);
+            if (date) message += ` ou attendez le renouvellement du ${date}`;
         }
         return `${message}.`;
     }
