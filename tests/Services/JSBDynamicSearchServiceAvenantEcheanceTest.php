@@ -3,6 +3,7 @@
 namespace App\Tests\Services;
 
 use App\Controller\Admin\AvenantController;
+use App\Entity\Assureur;
 use App\Entity\Avenant;
 use App\Entity\Client;
 use App\Entity\Cotation;
@@ -10,8 +11,10 @@ use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Piste;
 use App\Entity\Portefeuille;
+use App\Entity\Risque;
 use App\Entity\Utilisateur;
 use App\Services\Canvas\Indicator\AvenantIndicatorStrategy;
+use App\Services\Canvas\SearchCanvasProvider;
 use App\Services\JSBDynamicSearchService;
 use App\Services\Search\AvenantEcheanceScope;
 use App\Services\Search\PortefeuilleScope;
@@ -60,9 +63,10 @@ class JSBDynamicSearchServiceAvenantEcheanceTest extends KernelTestCase
         $conn = $this->em()->getConnection();
         $noms = [self::ENTREPRISE_NOM, self::ENTREPRISE_B_NOM];
 
-        // Enfants avant parents (contraintes FK) : avenant → cotation → piste → client →
-        // portefeuille → invite, puis l'entreprise et l'utilisateur propriétaire.
-        foreach (['avenant', 'cotation', 'piste', 'client', 'portefeuille', 'invite'] as $table) {
+        // Enfants avant parents (contraintes FK) : avenant → cotation → piste →
+        // assureur/client/risque → portefeuille → invite, puis l'entreprise et
+        // l'utilisateur propriétaire.
+        foreach (['avenant', 'cotation', 'piste', 'assureur', 'client', 'risque', 'portefeuille', 'invite'] as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom IN (:noms)",
                 ['noms' => $noms],
@@ -103,9 +107,17 @@ class JSBDynamicSearchServiceAvenantEcheanceTest extends KernelTestCase
     /**
      * Une cotation rattachée à un client. Si $portefeuille est fourni, le client y est
      * rattaché (chemin du périmètre portefeuille : cotation.piste.client.portefeuille).
+     * $assureur/$risque alimentent les chemins de recherche cotation.assureur et
+     * cotation.piste.risque.
      */
-    private function makeCotation(Entreprise $entreprise, Invite $invite, string $nom, ?Portefeuille $portefeuille): Cotation
-    {
+    private function makeCotation(
+        Entreprise $entreprise,
+        Invite $invite,
+        string $nom,
+        ?Portefeuille $portefeuille,
+        ?Assureur $assureur = null,
+        ?Risque $risque = null
+    ): Cotation {
         $em = $this->em();
 
         $client = (new Client())->setNom('Client ' . $nom)->setExonere(false);
@@ -118,14 +130,37 @@ class JSBDynamicSearchServiceAvenantEcheanceTest extends KernelTestCase
         $piste = (new Piste())
             ->setNom('Piste ' . $nom)->setTypeAvenant(0)->setDescriptionDuRisque('Risque échéance')
             ->setExercice(2026)->setClient($client)->setEntreprise($entreprise)->setInvite($invite);
+        $piste->setRisque($risque);
         $em->persist($piste);
 
         $cotation = (new Cotation())->setNom($nom)->setDuree(365);
         $cotation->setPiste($piste);
+        $cotation->setAssureur($assureur);
         $cotation->setEntreprise($entreprise);
         $em->persist($cotation);
 
         return $cotation;
+    }
+
+    private function makeAssureur(Entreprise $entreprise, string $nom, string $suffixe): Assureur
+    {
+        $assureur = (new Assureur())->setNom($nom)->setEmail('assureur-' . strtolower($suffixe) . '@test.local')
+            ->setNumimpot('IMP-' . $suffixe)->setIdnat('IDNAT-' . $suffixe)->setRccm('RCCM-' . $suffixe);
+        $assureur->setEntreprise($entreprise);
+        $this->em()->persist($assureur);
+
+        return $assureur;
+    }
+
+    private function makeRisque(Entreprise $entreprise, Invite $invite, string $nomComplet, string $code): Risque
+    {
+        $risque = (new Risque())->setNomComplet($nomComplet)->setCode($code)
+            ->setDescription('Risque ' . $code)->setBranche(Risque::BRANCHE_IARD_OU_NON_VIE)->setImposable(true);
+        $risque->setEntreprise($entreprise);
+        $risque->setInvite($invite);
+        $this->em()->persist($risque);
+
+        return $risque;
     }
 
     private function makeAvenant(Cotation $cotation, Entreprise $entreprise, Invite $invite, string $ref, \DateTimeImmutable $endingAt): Avenant
@@ -335,5 +370,166 @@ class JSBDynamicSearchServiceAvenantEcheanceTest extends KernelTestCase
             $criteresB[AvenantEcheanceScope::CRITERION_KEY]['value'],
             'Aucun expiré dans le périmètre → défaut « Sous 30 jours ».'
         );
+    }
+
+    /**
+     * Recherche avancée : les critères « Assureur », « Client » et « Risque » doivent être
+     * exposés au dialogue comme de vraies relations autocomplétées (mêmes chemins que la
+     * rubrique Tranches), sans quoi la barre ne peut jamais les proposer.
+     */
+    public function testCanevasDeRechercheExposeAssureurClientRisque(): void
+    {
+        /** @var SearchCanvasProvider $provider */
+        $provider = static::getContainer()->get(SearchCanvasProvider::class);
+
+        $parNom = [];
+        foreach ($provider->getCanvas(Avenant::class) as $critere) {
+            $parNom[$critere['Nom']] = $critere;
+        }
+
+        foreach ([
+            'cotation.assureur' => ['Assureur', 'Assureur', 'nom'],
+            'cotation.piste.client' => ['Client', 'Client', 'nom'],
+            'cotation.piste.risque' => ['Risque', 'Risque', 'nomComplet'],
+        ] as $code => [$display, $targetEntity, $displayField]) {
+            $this->assertArrayHasKey($code, $parNom, sprintf('Le critère « %s » doit être exposé dans le canevas de recherche d\'Avenant.', $display));
+            $this->assertSame('Relation', $parNom[$code]['Type'], sprintf('« %s » doit être un sélecteur autocomplété.', $display));
+            $this->assertSame($display, $parNom[$code]['Display']);
+            $this->assertSame($targetEntity, $parNom[$code]['targetEntity'], 'L\'entité cible pilote l\'endpoint d\'autocomplétion.');
+            $this->assertSame($displayField, $parNom[$code]['displayField'], 'Le champ d\'affichage doit être une colonne persistée (LIKE SQL).');
+        }
+    }
+
+    /**
+     * Rubrique Avenants : filtrer par assureur / assuré (client) / risque via les chemins
+     * `cotation.assureur`, `cotation.piste.client` et `cotation.piste.risque`, en plus de
+     * tout critère déjà actif. Vérifie le filtrage par identité (sélecteur autocomplété),
+     * le repli texte (LIKE), la composition ET entre ces critères, et leur composition avec
+     * les critères synthétiques propres à la rubrique — chip « Échéance » (chemin SQL
+     * spécifique d'Avenant) et périmètre « Mon portefeuille ».
+     */
+    public function testFiltreParAssureurClientRisqueSeComposeAvecAutresCriteres(): void
+    {
+        $s = $this->seed();
+        $em = $this->em();
+        $entrepriseA = $em->getRepository(Entreprise::class)->find($s['entrepriseA']);
+        $inviteA = $em->getRepository(Invite::class)->find($s['inviteA']);
+
+        // Jeu « A » posé sur la cotation du portefeuille (porteuse des 5 avenants du seed).
+        $assureurA = $this->makeAssureur($entrepriseA, 'Assureur A', 'A');
+        $risqueA = $this->makeRisque($entrepriseA, $inviteA, 'Risque Incendie A', 'RQ-A');
+        $cotationA = $em->getRepository(Avenant::class)->find($s['echu'])->getCotation();
+        $cotationA->setAssureur($assureurA);
+        $cotationA->getPiste()->setRisque($risqueA);
+        $clientA = $cotationA->getPiste()->getClient();
+        $portefeuille = $clientA->getPortefeuille();
+
+        // Jeu « B » : cotation + avenant expiré témoin, même entreprise, HORS portefeuille.
+        $assureurB = $this->makeAssureur($entrepriseA, 'Assureur B', 'B');
+        $risqueB = $this->makeRisque($entrepriseA, $inviteA, 'Risque Auto B', 'RQ-B');
+        $cotationB = $this->makeCotation($entrepriseA, $inviteA, 'Cotation Filtre B', null, $assureurB, $risqueB);
+        $avenantB = $this->makeAvenant($cotationB, $entrepriseA, $inviteA, 'POL-FILTRE-B', new \DateTimeImmutable('-10 days'));
+
+        $em->flush();
+
+        $clientAId = $clientA->getId();
+        $clientBId = $cotationB->getPiste()->getClient()->getId();
+        $assureurAId = $assureurA->getId();
+        $assureurBId = $assureurB->getId();
+        $risqueAId = $risqueA->getId();
+        $avenantBId = $avenantB->getId();
+        $portefeuilleAvenants = [$s['echu'], $s['sous30Proche'], $s['sous30Loin'], $s['entre3160'], $s['auDela']];
+
+        // 1) Filtrage par IDENTITÉ (sélecteur autocomplété) sur chacun des 3 critères :
+        // seuls les avenants de la cotation « A » remontent — jamais celui de « B », jamais
+        // celui de la cotation hors portefeuille (sans assureur/risque, autre client), ni
+        // l'avenant de l'entreprise B (scoping entreprise).
+        foreach ([
+            'cotation.assureur' => $assureurAId,
+            'cotation.piste.client' => $clientAId,
+            'cotation.piste.risque' => $risqueAId,
+        ] as $champ => $id) {
+            $resultat = $this->service()->search(Avenant::class, [$champ => ['operator' => '=', 'value' => $id]], $entrepriseA);
+            $this->assertNull($resultat['status']['error'], "Champ {$champ}");
+            $this->assertEqualsCanonicalizing($portefeuilleAvenants, $this->ids($resultat), "Filtrage par {$champ} (identité)");
+            $this->assertNotContains($avenantBId, $this->ids($resultat));
+            $this->assertNotContains($s['echuHorsPf'], $this->ids($resultat));
+            $this->assertNotContains($s['futurB'], $this->ids($resultat));
+        }
+
+        // 2) Repli texte (LIKE sur le champ d'affichage), utilisé par la recherche simple
+        // ou en l'absence de sélection dans l'autocomplete.
+        $parNom = $this->service()->search(
+            Avenant::class,
+            ['cotation.assureur' => ['operator' => 'LIKE', 'value' => 'Assureur A', 'targetField' => 'nom']],
+            $entrepriseA,
+        );
+        $this->assertEqualsCanonicalizing($portefeuilleAvenants, $this->ids($parNom));
+
+        $parNomB = $this->service()->search(
+            Avenant::class,
+            ['cotation.assureur' => ['operator' => 'LIKE', 'value' => 'Assureur B', 'targetField' => 'nom']],
+            $entrepriseA,
+        );
+        $this->assertSame([$avenantBId], $this->ids($parNomB));
+
+        // 3) Composition ET entre deux critères de relation : l'assureur de « A » combiné au
+        // client de « B » ne peut rien matcher — preuve que les critères s'ADDITIONNENT.
+        $contradictoire = $this->service()->search(
+            Avenant::class,
+            [
+                'cotation.assureur' => ['operator' => '=', 'value' => $assureurAId],
+                'cotation.piste.client' => ['operator' => '=', 'value' => $clientBId],
+            ],
+            $entrepriseA,
+        );
+        $this->assertSame(0, $contradictoire['totalItems'], 'Critères contradictoires (A ∩ B) : aucun avenant.');
+
+        // 4) Composition avec le chip « Échéance » (actif par défaut sur la rubrique) : le
+        // filtre s'applique À L'INTÉRIEUR du chemin SQL spécifique d'Avenant, sans l'écraser
+        // — y compris pour le comptage total.
+        $echusAssureurA = $this->service()->search(
+            Avenant::class,
+            [
+                AvenantEcheanceScope::CRITERION_KEY => AvenantEcheanceScope::STATUT_ECHUS,
+                'cotation.assureur' => ['operator' => '=', 'value' => $assureurAId],
+            ],
+            $entrepriseA,
+        );
+        $this->assertSame([$s['echu']], $this->ids($echusAssureurA), 'Échus + assureur A : le seul expiré de cette cotation.');
+        $this->assertSame(1, $echusAssureurA['totalItems'], 'Le comptage total doit refléter le même filtre.');
+
+        $echusAssureurB = $this->service()->search(
+            Avenant::class,
+            [
+                AvenantEcheanceScope::CRITERION_KEY => AvenantEcheanceScope::STATUT_ECHUS,
+                'cotation.piste.risque' => ['operator' => '=', 'value' => $risqueB->getId()],
+            ],
+            $entrepriseA,
+        );
+        $this->assertSame([$avenantBId], $this->ids($echusAssureurB), 'Échus + risque B : intersection correcte.');
+
+        // 5) Composition avec le périmètre « Mon portefeuille » : le filtre relation s'ajoute
+        // au périmètre de sécurité, il ne l'élargit jamais.
+        $this->assertNotNull($portefeuille, 'Le client du seed doit bien être rattaché au portefeuille.');
+        $perimetreEtRisque = $this->service()->search(
+            Avenant::class,
+            [
+                PortefeuilleScope::CRITERION_KEY => ['operator' => '=', 'value' => $s['inviteA']],
+                'cotation.piste.risque' => ['operator' => '=', 'value' => $risqueAId],
+            ],
+            $entrepriseA,
+        );
+        $this->assertEqualsCanonicalizing($portefeuilleAvenants, $this->ids($perimetreEtRisque));
+
+        $perimetreEtRisqueB = $this->service()->search(
+            Avenant::class,
+            [
+                PortefeuilleScope::CRITERION_KEY => ['operator' => '=', 'value' => $s['inviteA']],
+                'cotation.piste.risque' => ['operator' => '=', 'value' => $risqueB->getId()],
+            ],
+            $entrepriseA,
+        );
+        $this->assertSame(0, $perimetreEtRisqueB['totalItems'], 'Le risque « B » est hors portefeuille : aucun avenant visible.');
     }
 }
