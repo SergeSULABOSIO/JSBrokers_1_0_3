@@ -190,8 +190,9 @@ security_pricing_basic_option_email_value: "Illimité"
 security_pricing_basic_option_fonctions: "Accès à toutes les autres fonctions"
 # Carte de tarif GÉNÉRIQUE : tout paquet payant de la Console partage ces libellés ;
 # seuls le nom (label), le prix TTC et le volume de tokens varient (données).
-security_pricing_pack_price: "%price% $"
-security_pricing_pack_promo_off: "%amount% $ de remise"
+# Le montant est déjà formaté (nombre + symbole placé selon la langue) par le
+# filtre format_montant : la phrase ne porte plus que les mots.
+security_pricing_pack_promo_off: "%amount% de remise"
 security_pricing_old_price: "Ancien prix :"
 security_pricing_new_price: "Prix réduit :"
 security_pricing_promo_code: "Code promo :"

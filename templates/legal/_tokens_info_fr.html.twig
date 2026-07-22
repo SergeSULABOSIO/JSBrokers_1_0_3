@@ -87,7 +87,7 @@
         <thead><tr><th>Paquet</th><th>Prix</th></tr></thead>
         <tbody>
             {% for key, p in plan.packs %}
-            <tr><td>{{ p.label|default(key|capitalize) }} — {{ p.tokens|format_nombre(0, 'fr') }} tokens</td><td>{{ p.price }} $</td></tr>
+            <tr><td>{{ p.label|default(key|capitalize) }} — {{ p.tokens|format_nombre(0, 'fr') }} tokens</td><td>{{ p.price|format_montant(0, 'fr') }}</td></tr>
             {% endfor %}
         </tbody>
     </table>

@@ -23,13 +23,13 @@ class TokenPurchaseType extends AbstractType
     {
         // Libellés des paquets : « Intermédiaire — 10 000 tokens (10 $) ». Le nom
         // d'affichage est le `label` éditable du paquet, avec repli sur ucfirst(clé)
-        // pour les paquets historiques qui n'en ont pas. Le volume suit la notation
-        // de la langue active (10 000 en français, 10,000 en anglais).
+        // pour les paquets historiques qui n'en ont pas. Volume et prix suivent la
+        // langue active : « 10 000 tokens (10 $) » / « 10,000 tokens ($10) ».
         $choices = [];
         foreach ($this->parametres->packs() as $key => $pack) {
             $nom = $pack['label'] ?? ucfirst($key);
             $label = $nom . ' — ' . $this->serviceNombres->format($pack['tokens'])
-                . ' tokens (' . $pack['price'] . ' $)';
+                . ' tokens (' . $this->serviceNombres->formatMontant($pack['price'], 0) . ')';
             $choices[$label] = $key;
         }
 

@@ -1,5 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
-import { formatNombre } from '../number-format.js';
+import { formatMontant } from '../number-format.js';
 
 /*
  * Aperçu en direct de la remise d'un coupon sur la page d'achat de tokens.
@@ -61,6 +61,6 @@ export default class extends Controller {
 
     /** Montant écrit dans la notation de la langue active, comme le rendu serveur. */
     money(n) {
-        return (formatNombre(n, 2) || formatNombre(0, 2)) + ' $';
+        return formatMontant(n, 2) || formatMontant(0, 2);
     }
 }

@@ -133,9 +133,9 @@ class TokenMeteringFlowTest extends WebTestCase
     }
 
     /**
-     * Page « Détails de consommation » : la colonne Coût suit la notation de la
-     * langue active, comme les compteurs de la même ligne — décimale virgule et
-     * milliers espace en français, l'inverse en anglais.
+     * Page « Détails de consommation » : la colonne Coût suit la langue active,
+     * notation ET position du symbole — « 0,0400 $ » en français, « $0.0400 »
+     * en anglais.
      */
     public function testCostColumnFollowsActiveLanguage(): void
     {
@@ -149,7 +149,7 @@ class TokenMeteringFlowTest extends WebTestCase
         );
 
         $this->assertMatchesRegularExpression('/^\d{1,3}(?: \d{3})*,\d{4} \$$/', $cout('fr'));
-        $this->assertMatchesRegularExpression('/^\d{1,3}(?:,\d{3})*\.\d{4} \$$/', $cout('en'));
+        $this->assertMatchesRegularExpression('/^\$\d{1,3}(?:,\d{3})*\.\d{4}$/', $cout('en'));
     }
 
     public function testReadBlockedWhenOwnerHasNoTokens(): void
