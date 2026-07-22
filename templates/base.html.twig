@@ -3,6 +3,10 @@
 	<head>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
+		{# Horloge de RÉFÉRENCE de l'application (APP_TIMEZONE, posée par App\Kernel::boot).
+		   Lue telle quelle sur l'horloge PHP courante : une seule source de vérité, que le
+		   serveur ET le front suivent pour afficher exactement la même heure. #}
+		<meta name="app-timezone" content="{{ 'now'|date('e') }}">
 		<title>
 			{% block title %}
 				{{ "base_welcome" | trans }}

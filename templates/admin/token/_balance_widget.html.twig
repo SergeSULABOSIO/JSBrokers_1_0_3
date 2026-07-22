@@ -53,7 +53,11 @@
     {% if balance.nextRenewalAt %}
         <p class="tk-renewal">
             {{ "token_next_renewal" | trans }}
-            <strong data-token-balance-target="renewal">{{ balance.nextRenewalAt | format_datetime("medium", "short", locale: app.user.locale) }}</strong>
+            {# Instant émis par le serveur, affiché dans l'horloge de référence de
+               l'application (cf. app-datetime). Le texte rendu ici sert de repli sans JS. #}
+            <strong><time data-token-balance-target="renewal"
+                          data-controller="app-datetime"
+                          datetime="{{ balance.nextRenewalAt | date('c') }}">{{ balance.nextRenewalAt | format_datetime("medium", "short", locale: app.user.locale) }}</time></strong>
         </p>
     {% endif %}
 

@@ -204,6 +204,33 @@ class TokenPurchaseFlowTest extends WebTestCase
     }
 
     /**
+     * L'échéance de renouvellement est émise comme un INSTANT (ISO-8601 avec
+     * décalage) porté par un <time>, et la page publie l'horloge de RÉFÉRENCE de
+     * l'application : serveur et front s'alignent sur cette source unique au lieu
+     * de diverger d'une heure. Le texte reste rendu par le serveur (repli sans JS).
+     */
+    public function testRenewalDateIsExposedAsAnInstant(): void
+    {
+        $this->client->loginUser($this->user());
+        $crawler = $this->client->request('GET', '/admin/tokens');
+        $this->assertResponseIsSuccessful();
+
+        // Source de vérité publiée une seule fois, pour tout le front.
+        $this->assertSame(
+            date_default_timezone_get(),
+            $crawler->filter('meta[name="app-timezone"]')->attr('content'),
+        );
+
+        $time = $crawler->filter('time[data-token-balance-target="renewal"]');
+        $this->assertCount(1, $time, 'Le widget doit exposer l\'échéance dans un <time>.');
+        $this->assertSame('app-datetime', $time->attr('data-controller'));
+
+        $instant = $time->attr('datetime');
+        $this->assertNotNull(\DateTimeImmutable::createFromFormat(\DateTimeImmutable::ATOM, $instant), $instant);
+        $this->assertNotSame('', trim($time->text()), 'Le repli sans JS doit rester lisible.');
+    }
+
+    /**
      * Modernisation : la barre de titre de l'espace compte affiche le sélecteur
      * de langue à drapeaux, et le pied de page officiel JS Brokers est présent.
      */

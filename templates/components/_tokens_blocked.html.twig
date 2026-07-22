@@ -28,7 +28,9 @@
     {% if nextRenewalAt %}
         <p class="tb-meta">
             {{ "token_blocked_next_renewal" | trans }}
-            <strong>{{ nextRenewalAt | format_datetime("medium", "short", locale: app.user.locale) }}</strong>
+            {# Même instant, même horloge de référence que le widget de solde (cf. app-datetime). #}
+            <strong><time data-controller="app-datetime"
+                          datetime="{{ nextRenewalAt | date('c') }}">{{ nextRenewalAt | format_datetime("medium", "short", locale: app.user.locale) }}</time></strong>
         </p>
     {% endif %}
 

@@ -67,7 +67,11 @@ class SoldeTokensToolTest extends TestCase
         $this->assertSame(9200, $result->data['prepayes']);
         $this->assertSame(750, $result->data['gratuits']);
         $this->assertSame(1000, $result->data['allocationGratuite']);
-        $this->assertSame('2026-07-16 14:00', $result->data['prochainRenouvellementGratuit']);
+        // Décalage horaire inclus : l'assistant ne doit jamais annoncer une heure ambiguë.
+        $this->assertSame(
+            '2026-07-16 14:00 (' . (new \DateTimeImmutable('2026-07-16 14:00'))->format('P') . ')',
+            $result->data['prochainRenouvellementGratuit'],
+        );
         $this->assertNull($result->uiAction);
     }
 
