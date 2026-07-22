@@ -389,6 +389,26 @@ class PortefeuilleFilterTest extends WebTestCase
     }
 
     /**
+     * Rubrique Avenants : filtrer par CLIENT (assuré) via le chemin de relation
+     * `cotation.piste.client`, comme le fait déjà la rubrique Tranches. Les axes
+     * assureur/risque partagent le même mécanisme (chemins pointillés du même canevas)
+     * et sont couverts en détail par JSBDynamicSearchServiceAvenantEcheanceTest.
+     */
+    public function testFilterAvenantsByClient(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        $res = $this->dynamicQuery('avenant', $owner->getId(), $e->getId(), [
+            'cotation.piste.client' => ['operator' => 'LIKE', 'value' => self::CLI_IN, 'targetField' => 'nom'],
+        ]);
+
+        $this->assertSame(1, $res['pagination']['totalItems'], 'Un seul avenant relève de ce client.');
+        $this->assertStringContainsString(self::POL_IN, $res['html']);
+        $this->assertStringNotContainsString(self::POL_OUT, $res['html']);
+    }
+
+    /**
      * Tranche est soumise au même périmètre portefeuille qu'Avenant (chemin identique,
      * une tranche relevant directement de la cotation) : un invité ne doit voir que les
      * tranches des avenants des clients qu'il gère.
