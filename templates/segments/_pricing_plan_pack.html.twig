@@ -69,7 +69,7 @@
         <li class="pp-feature">
             {{ ux_icon('mdi:check-circle', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}
             <span>{{ "security_pricing_pack_option_volume" | trans }}
-                <strong class="pp-value">{{ pack.tokens|number_format(0, '.', (lang|default(app.request.locale) == 'en' ? ',' : ' ')) }}</strong></span>
+                <strong class="pp-value">{{ pack.tokens|format_nombre(0, lang|default(app.request.locale)) }}</strong></span>
         </li>
         <li class="pp-feature">
             {{ ux_icon('mdi:check-circle', {class: 'pp-feature__icon', 'aria-hidden': 'true'}) }}

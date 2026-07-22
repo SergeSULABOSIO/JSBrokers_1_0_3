@@ -1,3 +1,5 @@
+import { documentLocale } from './locale.js';
+
 /*
  * Formatage des INSTANTS envoyés par le serveur (ISO-8601 avec décalage).
  *
@@ -14,11 +16,6 @@
 /** Fuseau de référence publié par le serveur (null = réglage du poste, dernier recours). */
 export function appTimezone() {
     return document.querySelector('meta[name="app-timezone"]')?.content || null;
-}
-
-/** Locale d'affichage : celle du document, repli sur le français. */
-export function documentLocale() {
-    return document.documentElement.lang || 'fr';
 }
 
 /**
