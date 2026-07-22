@@ -55,6 +55,10 @@ final class PortefeuilleScope
         'Cotation' => ['piste.client.portefeuille.gestionnaire'],
         'Avenant' => ['cotation.piste.client.portefeuille.gestionnaire'],
         'Tranche' => ['cotation.piste.client.portefeuille.gestionnaire'],
+        // Sous-entité structurelle de la Tranche (signalement déclaratif du paiement de
+        // la prime) : même périmètre que sa tranche, un cran plus loin. N'affecte PAS le
+        // widget de collection du dialogue Tranche, exempté du filtre (usage 'dialog').
+        'PaiementPrime' => ['tranche.cotation.piste.client.portefeuille.gestionnaire'],
         'NotificationSinistre' => ['assure.portefeuille.gestionnaire'],
         'OffreIndemnisationSinistre' => ['notificationSinistre.assure.portefeuille.gestionnaire'],
         'Tache' => [

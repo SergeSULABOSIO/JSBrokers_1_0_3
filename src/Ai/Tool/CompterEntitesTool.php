@@ -85,6 +85,11 @@ final class CompterEntitesTool implements AiToolInterface
         if (!preg_match('/\b(combien|nombre|compte[sz]?)\b/', $normalized)) {
             return null;
         }
+        // Le paiement d'une PRIME a son outil dédié : sans cette garde, « combien de
+        // paiements de prime… » comptait la rubrique Paiements (trésorerie du courtier).
+        if (PaiementPrimeIntent::concerne($normalized)) {
+            return null;
+        }
 
         $shortName = $this->lexique->matchEntite($normalized);
         if ($shortName === null) {

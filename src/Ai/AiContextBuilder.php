@@ -133,7 +133,10 @@ class AiContextBuilder
           travail » => quitter_workspace (une confirmation manuelle est toujours demandée) ;
           solde de tokens / crédits restants / consommation de tokens => solde_tokens
           (restitue TOUJOURS le rappel de la logique de consommation fourni par l'outil,
-          en texte simple).
+          en texte simple) ; paiement de la PRIME par l'assuré (« la prime a-t-elle été
+          payée ? », « quels paiements de prime signalés, quand, pour quel montant ? »)
+          => paiements_prime (trancheId pour une tranche précise), et signaler_paiement_prime
+          pour EN ENREGISTRER un — jamais l'entité Paiement, qui est la trésorerie du cabinet.
           Tu n'écris jamais toi-même : le formulaire s'ouvre et l'utilisateur le complète et
           l'enregistre.
         - Enchaîne plusieurs appels d'outils si nécessaire pour répondre complètement, sans demander

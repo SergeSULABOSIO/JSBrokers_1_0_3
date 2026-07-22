@@ -196,10 +196,14 @@ class TranchePaiementService
     }
 
     /**
+     * Hydrate les valeurs calculées d'un lot de tranches (primeTranche, primePayee,
+     * primeDeclareePayee, primeSoldeDue, statutPaiement, urgenceRecouvrement,
+     * commissionExigible…). SOURCE UNIQUE de ce calcul pour la rubrique Tranches, les
+     * chips de statut et les outils de l'assistant IA : personne ne recalcule à côté.
+     *
      * @param Tranche[] $tranches
-     * @return Tranche[] Tranches filtrées et triées (ensemble complet, non paginé).
      */
-    private function preparerFiltrerTrier(array $tranches, string $statut): array
+    public function chargerIndicateurs(array $tranches): void
     {
         if (count($tranches) > self::MAX_TRANCHES_EN_MEMOIRE) {
             $this->logger->warning('[TranchePaiement] Volume de tranches inhabituel pour le filtrage en mémoire.', [
@@ -212,6 +216,15 @@ class TranchePaiementService
         foreach ($tranches as $tranche) {
             $this->canvasBuilder->loadAllCalculatedValues($tranche);
         }
+    }
+
+    /**
+     * @param Tranche[] $tranches
+     * @return Tranche[] Tranches filtrées et triées (ensemble complet, non paginé).
+     */
+    private function preparerFiltrerTrier(array $tranches, string $statut): array
+    {
+        $this->chargerIndicateurs($tranches);
 
         if (TranchePaiementScope::estValide($statut)) {
             $tranches = array_values(array_filter(
