@@ -82,6 +82,11 @@ final class LireFicheTool implements AiToolInterface
         if (!preg_match('/\b(details?|fiche|coordonnees?|adresse|telephones?|e?mails?|informations?)\b/', $normalized)) {
             return null;
         }
+        // Le paiement d'une PRIME a son outil dédié : sans cette garde, « les informations
+        // du paiement de prime… » lisait une fiche de la rubrique Paiements (trésorerie).
+        if (PaiementPrimeIntent::concerne($normalized)) {
+            return null;
+        }
 
         $shortName = $this->lexique->matchEntite($normalized);
         if ($shortName === null) {

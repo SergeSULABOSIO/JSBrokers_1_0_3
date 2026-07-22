@@ -94,10 +94,10 @@ final class OuvrirDialogueTool implements AiToolInterface
         if (preg_match('/\b(rubrique|section|module)\b/', $normalized)) {
             return null;
         }
-        // « signaler le paiement d'une prime » relève de signaler_paiement_prime
-        // (PaiementPrime déclaratif rattaché à une tranche, formulaire prérempli) —
-        // surtout PAS du formulaire Paiement (trésorerie du courtier).
-        if (preg_match('/\bprimes?\b/', $normalized) && preg_match('/\b(paiements?|payee?s?|regle[es]?|signal\w*)\b/', $normalized)) {
+        // Le paiement d'une PRIME relève des outils dédiés (signaler_paiement_prime pour
+        // l'action, paiements_prime pour la lecture) — surtout PAS du formulaire Paiement,
+        // qui est la trésorerie du courtier (garde partagée, cf. PaiementPrimeIntent).
+        if (PaiementPrimeIntent::concerne($normalized)) {
             return null;
         }
         if (!preg_match('/\b(cree[rsz]?|ajoute[rsz]?|nouveau|nouvelle|ouvre[sz]?|ouvrir)\b/', $normalized)) {

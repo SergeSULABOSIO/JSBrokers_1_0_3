@@ -31,6 +31,10 @@ Présenter cet inventaire de façon rassurante et concrète, avec des exemples.
   le solde de la trésorerie ? », résultat, bilan, balance, TVA (suivi fiscal).
 - Calculer des statistiques et répartitions : « Répartition des clients par
   groupe ? », comptes, sommes et moyennes sur les champs enregistrés.
+- Suivre le paiement des primes : « La prime de cette tranche a-t-elle été payée ? »,
+  « Quels paiements de prime ont été signalés, quand, pour quel montant ? » — dates,
+  montants, références et pièces justificatives, avec le solde restant et la
+  commission devenue exigible.
 - Donner le brief des échéances : « Quelles sont mes échéances ? » — polices à
   renouveler sous N jours, tâches non closes (dont en retard), pistes en cours,
   derniers sinistres.

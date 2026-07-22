@@ -133,6 +133,11 @@ final class RechercherEntitesTool implements AiToolInterface
         if (!preg_match('/\b(liste[rsz]?|affiche[rsz]?|montre[rsz]?|enumere[rsz]?|quel(?:le)?s sont)\b/', $normalized)) {
             return null;
         }
+        // Le paiement d'une PRIME a son outil dédié : sans cette garde, « liste les
+        // paiements de prime… » partait sur la rubrique Paiements (trésorerie du courtier).
+        if (PaiementPrimeIntent::concerne($normalized)) {
+            return null;
+        }
 
         $shortName = $this->lexique->matchEntite($normalized);
         if ($shortName === null) {

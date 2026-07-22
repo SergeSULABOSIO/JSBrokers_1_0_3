@@ -44,7 +44,9 @@ final class SignalerPaiementPrimeTool implements AiToolInterface
             . 'rechercher_entites si besoin). NE PAS utiliser ouvrir_dialogue avec l\'entité '
             . 'Paiement pour cela : Paiement = encaissement de trésorerie du courtier, ce '
             . 'qui est un tout autre circuit. Le formulaire s\'ouvre prérempli (solde de '
-            . 'prime restant, date du jour) : l\'utilisateur vérifie et enregistre lui-même.';
+            . 'prime restant, date du jour) : l\'utilisateur vérifie et enregistre lui-même. '
+            . 'Cet outil CRÉE : pour seulement CONSULTER les signalements déjà enregistrés '
+            . '(dates, montants, références), utiliser paiements_prime.';
     }
 
     public function schema(): array
@@ -70,6 +72,13 @@ final class SignalerPaiementPrimeTool implements AiToolInterface
     public function match(string $question, AiScope $scope): ?array
     {
         $normalized = AiText::normalize($question);
+
+        // « quels paiements de prime ont ete signales ? » : l'accent tombe à la
+        // normalisation, le participe devient indiscernable de l'impératif. Une
+        // formulation interrogative est une LECTURE (paiements_prime), pas une saisie.
+        if (PaiementPrimeIntent::estInterrogatif($normalized)) {
+            return null;
+        }
 
         $parleDePrimePayee = preg_match('/\b(signale[rsz]?|enregistre[rsz]?|trace[rsz]?|declare[rsz]?)\b/', $normalized)
             && preg_match('/\bprimes?\b/', $normalized)
