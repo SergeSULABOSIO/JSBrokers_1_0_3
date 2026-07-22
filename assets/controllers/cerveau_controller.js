@@ -524,6 +524,11 @@ export default class extends Controller {
                 break;
             case 'ui:dialog.closed':
                 break;
+            case 'ket:mutation.execute':
+                // Exécution d'un plan de mutation de l'assistant IA : traitée
+                // directement par assistant-chat_controller (qui appelle l'endpoint
+                // et rejoue le journal). No-op ici — évite l'avertissement générique.
+                break;
             default:
                 console.warn(`-> ATTENTION: Aucun gestionnaire défini pour l'événement "${type}".`);
         }

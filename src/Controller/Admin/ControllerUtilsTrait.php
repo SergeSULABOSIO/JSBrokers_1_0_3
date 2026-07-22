@@ -44,6 +44,7 @@ use App\Services\JSBDynamicSearchService;
 use App\Token\InsufficientTokensException;
 use App\Token\TokenAccountService;
 use App\Service\Workspace\WorkspaceAccessResolver;
+use App\Service\Workspace\WorkspaceMutationService;
 use App\Service\Workspace\InvitePerimetreNotifier;
 use Symfony\Contracts\Service\Attribute\Required;
 use Doctrine\Common\Collections\Collection;
@@ -129,6 +130,20 @@ trait ControllerUtilsTrait
     public function setPortefeuilleCritereFactory(\App\Services\Search\PortefeuilleCritereFactory $factory): void
     {
         $this->portefeuilleCritereFactory = $factory;
+    }
+
+    /**
+     * Cœur de mutation partagé (métrage + persistance / suppression). Injecté par
+     * setter autowiré (#[Required]) comme les autres services du trait. Point de
+     * passage UNIQUE réutilisé aussi par l'assistant IA (DRY) : le CRUD HTTP et
+     * l'exécuteur de Ket écrivent/suppriment par les mêmes gardes.
+     */
+    private WorkspaceMutationService $workspaceMutationService;
+
+    #[Required]
+    public function setWorkspaceMutationService(WorkspaceMutationService $workspaceMutationService): void
+    {
+        $this->workspaceMutationService = $workspaceMutationService;
     }
 
     /**
@@ -929,17 +944,15 @@ trait ControllerUtilsTrait
                 }
             }
 
-            // MÉTRAGE TOKENS (écriture) : bloquant. On débite le propriétaire de
-            // l'entreprise courante AVANT la persistance ; si le solde est épuisé,
-            // rien n'est enregistré et on renvoie un 402 explicite.
+            // MÉTRAGE TOKENS (écriture) + PERSISTANCE : bloquant, via le point de
+            // passage unique partagé avec l'assistant IA (WorkspaceMutationService).
+            // On débite le propriétaire AVANT la persistance ; solde épuisé => 402,
+            // rien n'est enregistré.
             try {
-                $this->tokenAccountService->meterWrite($entity, $currentEntreprise, $this->getUser());
+                $this->workspaceMutationService->commitWrite($entity, $currentEntreprise, $this->getUser());
             } catch (InsufficientTokensException $e) {
                 return $this->tokensBlockedJson($e);
             }
-
-            $this->em->persist($entity);
-            $this->em->flush();
 
             // NOTIFICATION PÉRIMÈTRE : si un rôle (RolesEn*) vient d'être enregistré, on
             // informe l'invité concerné de son nouveau périmètre d'action. Ne se déclenche
@@ -986,8 +999,8 @@ trait ControllerUtilsTrait
 
         try {
             $entityName = $this->getEntityName($entity);
-            $this->em->remove($entity);
-            $this->em->flush();
+            // Suppression via le point de passage unique partagé (DRY).
+            $this->workspaceMutationService->commitDelete($entity);
 
             // Périmètre réduit : on notifie l'invité concerné le cas échéant.
             $this->notifyPerimetreIfRoleEntity($roleInvite);

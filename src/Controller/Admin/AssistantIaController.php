@@ -19,7 +19,11 @@ use App\Entity\Utilisateur;
 use App\Repository\AssistantConversationRepository;
 use App\Repository\AssistantParametresRepository;
 use App\Repository\EntrepriseRepository;
+use App\Ai\Mutation\MutationPlan;
+use App\Ai\Scope\AiScope;
+use App\Service\Workspace\MutationException;
 use App\Service\Workspace\WorkspaceAccessResolver;
+use App\Service\Workspace\WorkspaceMutationService;
 use App\Services\CanvasBuilder;
 use App\Services\JSBDynamicSearchService;
 use App\Token\InsufficientTokensException;
@@ -30,6 +34,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -77,6 +82,8 @@ class AssistantIaController extends AbstractController
         private NormalizerInterface $normalizer,
         private PrefillWhitelist $prefillWhitelist,
         private EntiteLibelle $libelleur,
+        private WorkspaceMutationService $mutationService,
+        private UserPasswordHasherInterface $passwordHasher,
     ) {
     }
 
@@ -321,15 +328,21 @@ class AssistantIaController extends AbstractController
             $reply = new AiReply(AiEngineFailure::messagePour($e));
         }
 
+        // Un plan de mutation préparé par Ket (uiAction ket-mutation.review) est
+        // STOCKÉ côté serveur (meta du message) : l'endpoint d'exécution le
+        // rechargera et le re-validera intégralement — jamais de confiance au client.
+        $mutationPlan = $this->extraireMutationPlan($reply->actions ?? []);
+
         $messageAssistant = (new AssistantMessage())
             ->setRole(AssistantMessage::ROLE_ASSISTANT)
             ->setContenu($reply->content)
             ->setMeta(array_filter([
-                'engine'  => $this->aiEngine->name(),
-                'tool'    => $reply->toolUsed,
-                'refus'   => $reply->refused ?: null,
-                'erreur'  => $erreurMoteur ?: null,
-                'actions' => $reply->actions ?: null,
+                'engine'       => $this->aiEngine->name(),
+                'tool'         => $reply->toolUsed,
+                'refus'        => $reply->refused ?: null,
+                'erreur'       => $erreurMoteur ?: null,
+                'actions'      => $reply->actions ?: null,
+                'mutationPlan' => $mutationPlan,
             ]));
         $conversation->addMessage($messageAssistant);
 
@@ -350,10 +363,185 @@ class AssistantIaController extends AbstractController
                 'id'        => $messageAssistant->getId(),
                 'contenu'   => $messageAssistant->getContenu(),
                 'refus'     => $reply->refused,
-                'actions'   => $reply->actions,
+                // Les actions renvoyées portent l'id du message : une action
+                // ket-mutation.review sait ainsi vers quel endpoint d'exécution pointer.
+                'actions'   => $this->actionsAvecMessage($reply->actions ?? [], (int) $messageAssistant->getId()),
                 'createdAt' => $messageAssistant->getCreatedAt()?->format(\DateTimeImmutable::ATOM),
             ],
             'conversationTitre' => $conversation->getTitre(),
+        ]);
+    }
+
+    /**
+     * Extrait le plan de mutation (plan + budget + exige-mdp) d'une éventuelle
+     * action ket-mutation.review, pour stockage serveur. null si absent.
+     *
+     * @param array<int, array> $actions
+     */
+    private function extraireMutationPlan(array $actions): ?array
+    {
+        foreach ($actions as $action) {
+            if (($action['type'] ?? null) === 'ket-mutation.review' && isset($action['plan'])) {
+                return [
+                    'plan'             => $action['plan'],
+                    'budget'           => $action['budget'] ?? null,
+                    'requiresPassword' => (bool) ($action['requiresPassword'] ?? false),
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Recopie les actions en injectant l'id du message assistant dans l'action
+     * ket-mutation.review (le front en dérive l'URL d'exécution).
+     *
+     * @param array<int, array> $actions
+     */
+    private function actionsAvecMessage(array $actions, int $idMessage): array
+    {
+        return array_map(static function (array $action) use ($idMessage) {
+            if (($action['type'] ?? null) === 'ket-mutation.review') {
+                $action['idMessage'] = $idMessage;
+            }
+
+            return $action;
+        }, $actions);
+    }
+
+    /**
+     * Exécute un plan de mutation préparé par Ket (create/edit/delete), stocké
+     * dans la meta du message assistant qui l'a présenté. HORS-LLM, déterministe :
+     *  1) recharge et RE-VALIDE le plan intégralement (droits, scope, cibles) ;
+     *  2) contrôle de SOLVABILITÉ (coût estimé ≤ solde), sinon 402 + CTA d'achat ;
+     *  3) si une suppression est présente, exige le MOT DE PASSE (403 sinon) ;
+     *  4) exécute en UNE transaction (rollback global au moindre échec) ;
+     *  5) renvoie le JOURNAL d'étapes (rejoué séquentiellement côté chat).
+     */
+    #[Route('/api/mutation/{idEntreprise}/{idConversation}/{idMessage}/execute', name: 'api.mutation.execute', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS, 'idMessage' => Requirement::DIGITS], methods: ['POST'])]
+    public function executeMutation(int $idEntreprise, int $idConversation, int $idMessage, Request $request): JsonResponse
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        if ($blocage = $this->blocagePremium($entreprise)) {
+            return $blocage;
+        }
+        $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+
+        // Le plan est relu depuis la meta du message (jamais depuis le client).
+        $message = null;
+        foreach ($conversation->getMessages() as $m) {
+            if ($m->getId() === $idMessage) {
+                $message = $m;
+                break;
+            }
+        }
+        $meta = $message?->getMeta() ?? [];
+        $stored = $meta['mutationPlan'] ?? null;
+        if ($message === null || !is_array($stored) || !isset($stored['plan'])) {
+            return $this->json(['message' => 'Plan introuvable ou expiré.'], Response::HTTP_NOT_FOUND);
+        }
+        if (($meta['mutationPlanExecuted'] ?? false) === true) {
+            return $this->json(['message' => 'Ce plan a déjà été exécuté.'], Response::HTTP_CONFLICT);
+        }
+
+        $plan = MutationPlan::fromArray((array) $stored['plan']);
+        if ($plan->estVide()) {
+            return $this->json(['message' => 'Plan vide.'], Response::HTTP_BAD_REQUEST);
+        }
+        $scope = new AiScope($entreprise, $invite);
+
+        // 2) SOLVABILITÉ (pré-vol strict) : seules les écritures sont facturées.
+        $facturables = [];
+        foreach ($plan->operations as $op) {
+            if (!$op->isDelete()) {
+                $facturables[] = $op->fqcn();
+            }
+        }
+        $cout = $this->tokenAccountService->estimateWriteCost($facturables);
+        $solde = $this->tokenAccountService->availableFor($entreprise);
+        if ($solde < $cout) {
+            return $this->json([
+                'message'         => 'Solde de tokens insuffisant pour exécuter cette mission.',
+                'blocked'         => true,
+                'coutEstime'      => $cout,
+                'soldeDisponible' => $solde,
+                'buyUrl'          => $this->generateUrl('admin.token.buy'),
+            ], Response::HTTP_PAYMENT_REQUIRED);
+        }
+
+        // 3) Autorisation renforcée pour les suppressions : mot de passe (jamais journalisé).
+        if ($plan->contientSuppression()) {
+            $payload = json_decode($request->getContent(), true) ?: [];
+            $password = (string) ($payload['password'] ?? '');
+            if ($password === '' || !$this->passwordHasher->isPasswordValid($this->currentUser(), $password)) {
+                return $this->json([
+                    'message' => 'Mot de passe incorrect. La suppression n’a pas été exécutée.',
+                    'blocked' => true,
+                ], Response::HTTP_FORBIDDEN);
+            }
+        }
+
+        // 4) Exécution atomique + journal.
+        $journal = [];
+        $acteur = $this->currentUser();
+        try {
+            $this->em->wrapInTransaction(function () use ($plan, $scope, $acteur, &$journal): void {
+                foreach ($plan->operationsOrdonnees() as $op) {
+                    $step = $this->mutationService->executer($op, $scope, $acteur);
+                    $journal[] = $step + ['statut' => 'ok'];
+                }
+            });
+        } catch (InsufficientTokensException $e) {
+            return $this->json([
+                'message'         => 'Solde de tokens épuisé en cours d’exécution. Aucune modification n’a été conservée.',
+                'blocked'         => true,
+                'coutEstime'      => $cout,
+                'soldeDisponible' => $this->tokenAccountService->availableFor($entreprise),
+                'buyUrl'          => $this->generateUrl('admin.token.buy'),
+            ], Response::HTTP_PAYMENT_REQUIRED);
+        } catch (MutationException $e) {
+            // Transaction annulée : les étapes déjà jouées ont été ROLLBACK.
+            $journal[] = [
+                'op'      => '',
+                'entite'  => '',
+                'libelle' => '',
+                'cible'   => null,
+                'statut'  => 'echec',
+                'message' => $e->getMessage(),
+            ];
+
+            return $this->json([
+                'success'   => false,
+                'statut'    => $e->statut,
+                'message'   => $e->getMessage(),
+                'erreurs'   => $e->erreursChamps,
+                'journal'   => $journal,
+                'rolledBack' => true,
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        } catch (\Throwable $e) {
+            $this->logger->error('Ket : échec d’exécution du plan de mutation.', ['exception' => $e]);
+
+            return $this->json([
+                'success'    => false,
+                'message'    => 'Une erreur technique a interrompu l’exécution. Aucune modification n’a été conservée.',
+                'journal'    => $journal,
+                'rolledBack' => true,
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
+
+        // Marque le plan comme exécuté (anti-rejeu) après succès.
+        $meta['mutationPlanExecuted'] = true;
+        $message->setMeta($meta);
+        $this->em->flush();
+
+        return $this->json([
+            'success' => true,
+            'message' => 'Mission exécutée avec succès.',
+            'journal' => $journal,
         ]);
     }
 
