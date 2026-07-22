@@ -132,6 +132,26 @@ class TokenMeteringFlowTest extends WebTestCase
         $this->assertNotEmpty($logs, 'Une consommation en sortie doit être journalisée.');
     }
 
+    /**
+     * Page « Détails de consommation » : la colonne Coût suit la notation de la
+     * langue active, comme les compteurs de la même ligne — décimale virgule et
+     * milliers espace en français, l'inverse en anglais.
+     */
+    public function testCostColumnFollowsActiveLanguage(): void
+    {
+        $this->client->loginUser($this->user());
+        $this->client->request('GET', $this->listUrl()); // génère une consommation
+
+        $cout = fn (string $lang): string => trim(
+            $this->client->request('GET', '/admin/tokens?lang=' . $lang)
+                ->filter('.tkp-table tbody tr')->first()
+                ->filter('td.tkp-num')->eq(3)->text()
+        );
+
+        $this->assertMatchesRegularExpression('/^\d{1,3}(?: \d{3})*,\d{4} \$$/', $cout('fr'));
+        $this->assertMatchesRegularExpression('/^\d{1,3}(?:,\d{3})*\.\d{4} \$$/', $cout('en'));
+    }
+
     public function testReadBlockedWhenOwnerHasNoTokens(): void
     {
         // On vide le solde du propriétaire dans une fenêtre fraîche (pas de renouvellement).

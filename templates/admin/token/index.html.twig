@@ -147,7 +147,7 @@
                                     </td>
                                     <td class="tkp-num">{{ c.poidsUnitaire|format_nombre }}</td>
                                     <td class="tkp-num">{{ c.poidsTotal|format_nombre }}</td>
-                                    <td class="tkp-num">{{ (c.poidsTotal * usdPerToken)|number_format(4, '.', ' ') }} $</td>
+                                    <td class="tkp-num">{{ (c.poidsTotal * usdPerToken)|format_nombre(4) }} $</td>
                                     <td>{{ c.createdAt | format_datetime("short", "short", locale: app.user.locale) }}</td>
                                     <td>{{ c.entreprise ? c.entreprise.nom : '—' }}</td>
                                     <td>{{ c.acteur ? c.acteur.nom : '—' }}</td>
@@ -195,7 +195,7 @@
                                     <td>{{ (p.paidAt ?: p.createdAt) | format_datetime("short", "short", locale: app.user.locale) }}</td>
                                     <td><code>{{ p.reference }}</code></td>
                                     <td>{{ token_pack_label(p.pack) }}</td>
-                                    <td class="tkp-num">{{ p.montantUsd|number_format(2, '.', ' ') }} $</td>
+                                    <td class="tkp-num">{{ p.montantUsd|format_nombre(2) }} $</td>
                                     <td>{{ ('token_status.' ~ p.status) | trans }}</td>
                                     <td>
                                         {% if p.isPaid %}
