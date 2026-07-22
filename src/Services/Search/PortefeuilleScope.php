@@ -25,6 +25,27 @@ final class PortefeuilleScope
     public const CRITERION_KEY = '__mon_portefeuille__';
 
     /**
+     * Valeurs du périmètre de restitution des outils de l'assistant IA. Par défaut, Ket
+     * répond dans le portefeuille de l'invité — EXACTEMENT ce que la rubrique affiche à
+     * l'écran (le critère ci-dessus y est posé par défaut). L'élargissement à l'entreprise
+     * entière reste possible, mais seulement sur demande explicite de l'utilisateur.
+     */
+    public const PERIMETRE_PORTEFEUILLE = 'mon_portefeuille';
+    public const PERIMETRE_ENTREPRISE = 'entreprise';
+
+    /** @var array<string, string> Valeur => libellé (enum des schémas d'outils IA). */
+    public const PERIMETRES = [
+        self::PERIMETRE_PORTEFEUILLE => 'Mon portefeuille',
+        self::PERIMETRE_ENTREPRISE => "Toute l'entreprise",
+    ];
+
+    /**
+     * Libellé du périmètre « entreprise entière », restitué par les outils IA lorsque
+     * l'utilisateur a explicitement demandé de sortir de son portefeuille.
+     */
+    public const LIBELLE_ENTREPRISE = "toute l'entreprise";
+
+    /**
      * @var array<string, string[]> Nom court d'entité => chemins de relation vers
      *      « …portefeuille.gestionnaire » (combinés en OU).
      */
@@ -67,5 +88,78 @@ final class PortefeuilleScope
     public static function isScopable(string $entityShortName): bool
     {
         return isset(self::PATHS[$entityShortName]);
+    }
+
+    /**
+     * Fragment de schéma JSON décrivant l'argument `perimetre` des outils de données de
+     * l'assistant. Factorisé ici pour que les trois outils concernés (compter_entites,
+     * rechercher_entites, suivi_impayes) décrivent au modèle EXACTEMENT la même règle.
+     *
+     * @return array{type: string, enum: string[], description: string}
+     */
+    public static function proprieteSchema(): array
+    {
+        return [
+            'type' => 'string',
+            'enum' => array_keys(self::PERIMETRES),
+            'description' => 'Périmètre des données. Par défaut (' . self::PERIMETRE_PORTEFEUILLE
+                . '), les résultats sont restreints aux enregistrements rattachés au portefeuille '
+                . "géré par l'utilisateur — EXACTEMENT ce que la rubrique affiche à l'écran, filtres "
+                . "rapides compris. N'utiliser « " . self::PERIMETRE_ENTREPRISE . " » que si "
+                . "l'utilisateur demande EXPLICITEMENT l'ensemble de l'entreprise, tous les "
+                . 'portefeuilles ou tous les collaborateurs.',
+        ];
+    }
+
+    /**
+     * L'argument `perimetre` demande-t-il l'entreprise entière ? Toute autre valeur (absente,
+     * vide ou inconnue) retombe sur le défaut : le portefeuille de l'invité.
+     */
+    public static function estEntreprise(?string $perimetre): bool
+    {
+        return $perimetre === self::PERIMETRE_ENTREPRISE;
+    }
+
+    /**
+     * Libellé du périmètre effectivement appliqué, restitué au modèle pour qu'il l'annonce
+     * dans sa réponse. `null` quand la notion ne s'applique pas (entité non scopable : le
+     * résultat couvre alors naturellement toute l'entreprise, sans ambiguïté à lever).
+     *
+     * @param array<string, array{label?: string}> $critereApplique Retour de PortefeuilleCritereFactory::pour()
+     */
+    public static function libellePerimetre(bool $elargiEntreprise, array $critereApplique): ?string
+    {
+        if ($elargiEntreprise) {
+            return self::LIBELLE_ENTREPRISE;
+        }
+
+        return $critereApplique[self::CRITERION_KEY]['label'] ?? null;
+    }
+
+    /**
+     * Détecte une demande EXPLICITE d'élargissement à l'entreprise entière dans une question
+     * en langage naturel déjà normalisée (AiText::normalize : minuscules, sans accents — la
+     * ponctuation, elle, est CONSERVÉE). Miroir de AvenantEcheanceScope::detecterDepuisTexte
+     * pour le moteur simulé. Retourne null quand rien n'est exprimé : le défaut (portefeuille
+     * de l'invité) s'applique alors, comme à l'écran.
+     */
+    public static function detecterPerimetreDepuisTexte(string $texteNormalise): ?string
+    {
+        $motifs = [
+            '/\btout(?:e|es)? (?:l\'|la |le )?(?:entreprise|societe|cabinet|boite)\b/',
+            '/\b(?:pour|dans|sur) (?:l\'|la )?(?:entreprise|societe|cabinet) (?:entiere|complete|globale)\b/',
+            '/\btous les portefeuilles\b|\bl\'ensemble des portefeuilles\b/',
+            '/\b(?:hors|au[- ]dela de) mon portefeuille\b/',
+            '/\b(?:tous|toutes) (?:les )?(?:collaborateurs|gestionnaires|agents)\b/',
+            '/\bglobalement\b|\bau (?:niveau|total) (?:de l\'|du )?(?:entreprise|cabinet)\b/',
+        ];
+
+        foreach ($motifs as $motif) {
+            if (preg_match($motif, $texteNormalise)) {
+                return self::PERIMETRE_ENTREPRISE;
+            }
+        }
+
+        return null;
     }
 }

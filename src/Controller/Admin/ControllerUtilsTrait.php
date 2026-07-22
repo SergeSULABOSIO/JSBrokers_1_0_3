@@ -119,6 +119,19 @@ trait ControllerUtilsTrait
     }
 
     /**
+     * Fabrique du critère « Mon portefeuille ». SOURCE UNIQUE partagée avec les outils de
+     * l'assistant IA : les listes du workspace et Ket posent littéralement le même critère,
+     * donc répondent le même nombre à la même question.
+     */
+    private \App\Services\Search\PortefeuilleCritereFactory $portefeuilleCritereFactory;
+
+    #[Required]
+    public function setPortefeuilleCritereFactory(\App\Services\Search\PortefeuilleCritereFactory $factory): void
+    {
+        $this->portefeuilleCritereFactory = $factory;
+    }
+
+    /**
      * L'invité connecté a-t-il le droit d'agir au niveau $level sur cette entité ?
      * Point de contrôle unique réutilisé par tous les points de passage CRUD génériques.
      */
@@ -1360,23 +1373,10 @@ trait ControllerUtilsTrait
             ];
         }
 
-        if (\App\Services\Search\PortefeuilleScope::isScopable($shortName)) {
-            $invite = $this->em->getRepository(\App\Entity\Invite::class)->find($idInvite);
-            if ($invite) {
-                $portefeuilles = $this->em->getRepository(\App\Entity\Portefeuille::class)
-                    ->findBy(['gestionnaire' => $invite]);
-                $nb = count($portefeuilles);
-                $label = match (true) {
-                    $nb === 1 => $portefeuilles[0]->getNom(),
-                    $nb > 1   => $nb . ' portefeuilles',
-                    default   => 'aucun portefeuille',
-                };
-
-                $criteria[\App\Services\Search\PortefeuilleScope::CRITERION_KEY] = [
-                    'operator' => '=', 'value' => $idInvite, 'label' => $label,
-                ];
-            }
-        }
+        // Périmètre portefeuille : critère produit par la fabrique partagée avec les outils
+        // de l'assistant IA (source unique — cf. PortefeuilleCritereFactory), pour que la
+        // rubrique et Ket ne puissent plus diverger.
+        $criteria += $this->portefeuilleCritereFactory->pourInviteId($shortName, $idInvite);
 
         // Avenants : au premier chargement, on met en avant l'urgence réelle. Les avenants
         // DÉJÀ EXPIRÉS sont les plus urgents à traiter → si le périmètre de l'invité en

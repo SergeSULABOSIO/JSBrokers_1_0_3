@@ -7,6 +7,8 @@ use App\Ai\Scope\AiScope;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
 use App\Services\Search\AvenantEcheanceScope;
+use App\Services\Search\PortefeuilleCritereFactory;
+use App\Services\Search\PortefeuilleScope;
 use App\Services\Search\TranchePaiementScope;
 
 /**
@@ -14,6 +16,10 @@ use App\Services\Search\TranchePaiementScope;
  * pistes…) pour l'entreprise active. Lexique dérivé des libellés de la carte
  * de permissions (EntiteLexique, DRY) ; comptage délégué à
  * JSBDynamicSearchService, dont le scoping entreprise est systématique.
+ *
+ * Le comptage est en outre restreint PAR DÉFAUT au portefeuille de l'invité —
+ * exactement comme la rubrique correspondante à l'écran, qui pose le même
+ * critère par défaut (cf. PortefeuilleCritereFactory, source unique).
  */
 final class CompterEntitesTool implements AiToolInterface
 {
@@ -21,6 +27,7 @@ final class CompterEntitesTool implements AiToolInterface
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly JSBDynamicSearchService $searchService,
         private readonly EntiteLexique $lexique,
+        private readonly PortefeuilleCritereFactory $portefeuilleCritere,
     ) {
     }
 
@@ -38,7 +45,8 @@ final class CompterEntitesTool implements AiToolInterface
             . 'rapides de ces rubriques : à utiliser dès que la question porte sur une fenêtre '
             . 'd’échéance (« combien d’avenants échoient dans les 30 jours ? ») ou un statut de '
             . 'paiement (« combien de tranches impayées ? »), afin que la réponse coïncide avec '
-            . 'ce que l’utilisateur voit à l’écran.';
+            . 'ce que l’utilisateur voit à l’écran. Le comptage porte par défaut sur le '
+            . 'PORTEFEUILLE de l’utilisateur, comme la rubrique affichée (paramètre perimetre).';
     }
 
     public function schema(): array
@@ -65,6 +73,7 @@ final class CompterEntitesTool implements AiToolInterface
                         . 'impayees, echues, a_echoir, partiellement, payees, retro_a_payer, '
                         . 'commission_exigible. Mêmes règles que les filtres rapides de la rubrique.',
                 ],
+                'perimetre' => PortefeuilleScope::proprieteSchema(),
             ],
             'required' => ['entite'],
         ];
@@ -90,6 +99,12 @@ final class CompterEntitesTool implements AiToolInterface
             $args['echeance'] = $f;
         } elseif ($shortName === 'Tranche' && ($s = TranchePaiementScope::detecterDepuisTexte($normalized)) !== null) {
             $args['statutPaiement'] = $s;
+        }
+
+        // Le périmètre par défaut est celui de l'écran (portefeuille de l'invité) : seule une
+        // demande explicite d'élargissement est détectée ici.
+        if (($p = PortefeuilleScope::detecterPerimetreDepuisTexte($normalized)) !== null) {
+            $args['perimetre'] = $p;
         }
 
         return $args;
@@ -120,22 +135,36 @@ final class CompterEntitesTool implements AiToolInterface
         $criteres = AvenantEcheanceScope::critereRecherche($shortName, $args['echeance'] ?? null)
             + TranchePaiementScope::critereRecherche($shortName, $args['statutPaiement'] ?? null);
 
+        // PÉRIMÈTRE : par défaut le portefeuille de l'invité, comme la rubrique à l'écran.
+        // Le critère provient de la fabrique partagée avec le contrôleur de liste, donc il
+        // traverse la même interception SQL et produit le même nombre — par construction.
+        $perimetreEntreprise = PortefeuilleScope::estEntreprise($args['perimetre'] ?? null);
+        $criterePortefeuille = $perimetreEntreprise
+            ? []
+            : $this->portefeuilleCritere->pour($shortName, $scope->invite);
+        $criteres += $criterePortefeuille;
+
         $result = $this->searchService->search($fqcn, $criteres, $scope->entreprise, null, 1, 1);
         if (($result['status']['code'] ?? 500) !== 200) {
             return AiToolResult::introuvable($labels[$shortName]);
         }
 
-        $filtreApplique = $criteres === [] ? null : (
-            isset($criteres[AvenantEcheanceScope::CRITERION_KEY])
-                ? AvenantEcheanceScope::libelle((string) $criteres[AvenantEcheanceScope::CRITERION_KEY]['value'])
-                : TranchePaiementScope::libelle((string) $criteres[TranchePaiementScope::CRITERION_KEY]['value'])
-        );
+        $filtreApplique = match (true) {
+            isset($criteres[AvenantEcheanceScope::CRITERION_KEY]) => AvenantEcheanceScope::libelle(
+                (string) $criteres[AvenantEcheanceScope::CRITERION_KEY]['value']
+            ),
+            isset($criteres[TranchePaiementScope::CRITERION_KEY]) => TranchePaiementScope::libelle(
+                (string) $criteres[TranchePaiementScope::CRITERION_KEY]['value']
+            ),
+            default => null,
+        };
 
         return AiToolResult::ok(array_filter([
-            'entite'  => $shortName,
-            'libelle' => $labels[$shortName],
-            'filtre'  => $filtreApplique,
-            'count'   => (int) $result['totalItems'],
+            'entite'    => $shortName,
+            'libelle'   => $labels[$shortName],
+            'filtre'    => $filtreApplique,
+            'perimetre' => PortefeuilleScope::libellePerimetre($perimetreEntreprise, $criterePortefeuille),
+            'count'     => (int) $result['totalItems'],
         ], static fn ($v) => $v !== null));
     }
 }

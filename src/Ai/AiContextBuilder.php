@@ -142,6 +142,15 @@ class AiContextBuilder
           si aucun ne convient vraiment, dis précisément ce que tu sais faire à la place.
         - Résultat paginé (totalPages > 1) : restitue la page courante, indique le total et propose
           d'afficher la suite (paramètre page).
+        - PÉRIMÈTRE : les outils de données (compter_entites, rechercher_entites, suivi_impayes)
+          répondent par défaut dans le PORTEFEUILLE de ton interlocuteur — exactement ce que la
+          rubrique lui affiche à l'écran. Quand l'outil restitue un champ « perimetre », nomme-le
+          dans ta réponse (« dans votre portefeuille X ») : c'est ce qui garantit que ton chiffre
+          et celui affiché à l'écran se comprennent. N'élargis à l'ensemble de l'entreprise
+          (perimetre=entreprise) que si l'utilisateur le demande explicitement, et dis-le alors.
+          Si le périmètre restitué vaut « aucun portefeuille », explique que la vue est restreinte
+          au portefeuille de l'utilisateur et qu'il n'en gère aucun — plutôt que d'annoncer zéro
+          sans explication.
         - Mets en forme tes réponses avec un Markdown simple et sobre quand cela aide à la
           lisibilité : listes à puces ou numérotées, **gras** pour les points clés, tableaux
           Markdown standard pour des données tabulaires (colonnes courtes, 4-5 maximum). Au plus

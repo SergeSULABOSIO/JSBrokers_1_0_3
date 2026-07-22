@@ -62,8 +62,8 @@ class RechercherEntitesLieATest extends KernelTestCase
             ['emails' => $emails],
             ['emails' => \Doctrine\DBAL\ArrayParameterType::STRING]
         );
-        // Enfants avant parents : tâches → pistes → clients.
-        foreach (['tache', 'piste', 'client'] as $table) {
+        // Enfants avant parents : tâches → pistes → clients → portefeuilles.
+        foreach (['tache', 'piste', 'client', 'portefeuille'] as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom IN (:noms)",
                 ['noms' => $noms],
@@ -188,11 +188,20 @@ class RechercherEntitesLieATest extends KernelTestCase
         $guest->addRolesEnMarketing($role);
         $em->persist($role);
 
+        // Portefeuille du propriétaire : les listes (et donc l'assistant) sont bornées par
+        // défaut aux enregistrements qui en relèvent.
+        $portefeuille = new \App\Entity\Portefeuille();
+        $portefeuille->setNom('Portefeuille LieA');
+        $portefeuille->setGestionnaire($owner);
+        $portefeuille->setEntreprise($entreprise);
+        $em->persist($portefeuille);
+
         // Généalogie complète : client (grand-père) → piste (père) → tâches (fils).
         $client = new Client();
         $client->setNom('Client LieA Grand-Père');
         $client->setExonere(false);
         $client->setEntreprise($entreprise);
+        $portefeuille->addClient($client);
         $em->persist($client);
 
         $piste = $this->makePiste('Piste LieA Cible', $entreprise, $owner, $client);
@@ -312,7 +321,12 @@ class RechercherEntitesLieATest extends KernelTestCase
         $this->assertSame(AiToolResult::STATUS_HORS_PERIMETRE, $result->status);
     }
 
-    public function testSansLieAComportementInchange(): void
+    /**
+     * Sans lieA, la liste reste bornée au périmètre portefeuille — comme la rubrique Tâches
+     * à l'écran : la tâche orpheline (rattachée à aucune piste, donc à aucun portefeuille)
+     * n'apparaît que si l'utilisateur demande explicitement toute l'entreprise.
+     */
+    public function testSansLieALePerimetrePortefeuilleSApplique(): void
     {
         ['owner' => $owner, 'entreprise' => $e] = $this->seed();
         $scope = new AiScope($e, $owner);
@@ -320,8 +334,15 @@ class RechercherEntitesLieATest extends KernelTestCase
         $result = $this->tool()->execute(['entite' => 'Tache'], $scope);
 
         $this->assertSame(AiToolResult::STATUS_OK, $result->status);
-        $this->assertSame(3, $result->data['totalItems'], 'Sans lieA, toutes les tâches de l\'entreprise (non-régression).');
+        $this->assertSame(2, $result->data['totalItems'], 'Les tâches relevant du portefeuille de l\'invité.');
+        $this->assertSame('Portefeuille LieA', $result->data['perimetre']);
         $this->assertArrayNotHasKey('lien', $result->data);
         $this->assertArrayNotHasKey('lienIgnore', $result->data);
+
+        $global = $this->tool()->execute([
+            'entite' => 'Tache',
+            'perimetre' => \App\Services\Search\PortefeuilleScope::PERIMETRE_ENTREPRISE,
+        ], $scope);
+        $this->assertSame(3, $global->data['totalItems'], 'Élargi : la tâche orpheline réapparaît.');
     }
 }

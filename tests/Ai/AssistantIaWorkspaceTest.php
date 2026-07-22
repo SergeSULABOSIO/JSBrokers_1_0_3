@@ -92,7 +92,8 @@ class AssistantIaWorkspaceTest extends WebTestCase
             ['noms' => $noms],
             ['noms' => \Doctrine\DBAL\ArrayParameterType::STRING]
         );
-        foreach (['assistant_conversation', 'assistant_parametres', 'client'] as $table) {
+        // « client » avant « portefeuille » : le client porte la clé étrangère.
+        foreach (['assistant_conversation', 'assistant_parametres', 'client', 'portefeuille'] as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom IN (:noms)",
                 ['noms' => $noms],
@@ -224,14 +225,30 @@ class AssistantIaWorkspaceTest extends WebTestCase
         return ['owner' => $ownerInvite, 'guest' => $guestInvite, 'entreprise' => $entreprise];
     }
 
-    private function seedClients(Entreprise $entreprise, array $noms): void
+    /**
+     * $gestionnaire : rattache les clients créés à un portefeuille géré par cet invité. Les
+     * rubriques (et donc les outils de l'assistant) sont bornées par défaut au portefeuille
+     * de l'invité connecté — sans ce rattachement, la liste est légitimement vide.
+     */
+    private function seedClients(Entreprise $entreprise, array $noms, ?Invite $gestionnaire = null): void
     {
         $em = $this->em();
+
+        $portefeuille = null;
+        if ($gestionnaire !== null) {
+            $portefeuille = new \App\Entity\Portefeuille();
+            $portefeuille->setNom('Portefeuille de ' . $gestionnaire->getNom());
+            $portefeuille->setGestionnaire($gestionnaire);
+            $portefeuille->setEntreprise($entreprise);
+            $em->persist($portefeuille);
+        }
+
         foreach ($noms as $nom) {
             $client = new Client();
             $client->setNom($nom);
             $client->setExonere(false);
             $client->setEntreprise($entreprise);
+            $portefeuille?->addClient($client);
             $em->persist($client);
         }
         $em->flush();
@@ -591,7 +608,7 @@ class AssistantIaWorkspaceTest extends WebTestCase
     public function testReponseDonneesReellesDansPerimetre(): void
     {
         ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: true);
-        $this->seedClients($e, ['Client Alpha', 'Client Beta', 'Client Gamma']);
+        $this->seedClients($e, ['Client Alpha', 'Client Beta', 'Client Gamma'], $guest);
         $conversation = $this->makeConversation($e, $guest);
 
         $this->client->loginUser($this->user(self::GUEST_EMAIL));
@@ -613,7 +630,7 @@ class AssistantIaWorkspaceTest extends WebTestCase
     public function testListeDesClientsDansPerimetre(): void
     {
         ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: true);
-        $this->seedClients($e, ['Client Alpha', 'Client Beta', 'Client Gamma']);
+        $this->seedClients($e, ['Client Alpha', 'Client Beta', 'Client Gamma'], $guest);
         $conversation = $this->makeConversation($e, $guest);
 
         $this->client->loginUser($this->user(self::GUEST_EMAIL));
@@ -636,11 +653,11 @@ class AssistantIaWorkspaceTest extends WebTestCase
     public function testRechercheFiltreeEtHorsPerimetreAuNiveauOutil(): void
     {
         ['guest' => $guest, 'entreprise' => $e] = $this->seed(withClientRole: true);
-        $this->seedClients($e, ['Client Alpha', 'Client Beta', 'Client Gamma']);
+        $this->seedClients($e, ['Client Alpha', 'Client Beta', 'Client Gamma'], $guest);
         $tool = static::getContainer()->get(\App\Ai\Tool\RechercherEntitesTool::class);
         $scope = new \App\Ai\Scope\AiScope($e, $guest);
 
-        // Filtre texte : LIKE sur le champ de libellé, scopé à l'entreprise.
+        // Filtre texte : LIKE sur le champ de libellé, scopé à l'entreprise ET au portefeuille.
         $result = $tool->execute(['entite' => 'Client', 'filtre' => 'Beta'], $scope);
         $this->assertSame(\App\Ai\Tool\AiToolResult::STATUS_OK, $result->status);
         $this->assertSame(1, $result->data['totalItems']);

@@ -5,6 +5,8 @@ namespace App\Ai\Tool;
 use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
 use App\Entity\Tranche;
+use App\Services\Search\PortefeuilleCritereFactory;
+use App\Services\Search\PortefeuilleScope;
 use App\Services\Search\TranchePaiementScope;
 use App\Services\Tranche\TranchePaiementService;
 use App\Service\Workspace\WorkspaceAccessResolver;
@@ -29,6 +31,7 @@ final class SuiviImpayesTool implements AiToolInterface
     public function __construct(
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly TranchePaiementService $tranchePaiement,
+        private readonly PortefeuilleCritereFactory $portefeuilleCritere,
     ) {
     }
 
@@ -46,8 +49,9 @@ final class SuiviImpayesTool implements AiToolInterface
             . '— facturée ou signalée). Signale aussi les rétrocommissions partenaires à payer '
             . '(exigibles dès que la commission partageable est encaissée). À appeler pour : '
             . 'impayés, arriérés, relances à faire, primes ou commissions en retard/dues/exigibles, '
-            . 'qui doit payer, soldes dus, rétros à verser aux partenaires. Restreignable à un '
-            . 'client ou une cotation via lieA.';
+            . 'qui doit payer, soldes dus, rétros à verser aux partenaires. Porte par défaut sur le '
+            . 'PORTEFEUILLE de l\'utilisateur, comme la rubrique Tranches affichée (paramètre '
+            . 'perimetre). Restreignable à un client ou une cotation via lieA.';
     }
 
     public function schema(): array
@@ -76,6 +80,7 @@ final class SuiviImpayesTool implements AiToolInterface
                     'minimum' => 1,
                     'description' => 'Page de résultats (défaut 1, ' . self::MAX_LIGNES . ' lignes par page).',
                 ],
+                'perimetre' => PortefeuilleScope::proprieteSchema(),
             ],
             'required' => [],
         ];
@@ -116,6 +121,12 @@ final class SuiviImpayesTool implements AiToolInterface
             $args['statut'] = TranchePaiementScope::STATUT_ECHUES;
         }
 
+        // Le périmètre par défaut est celui de l'écran (portefeuille de l'invité) : seule une
+        // demande explicite d'élargissement est détectée ici.
+        if (($p = PortefeuilleScope::detecterPerimetreDepuisTexte($normalized)) !== null) {
+            $args['perimetre'] = $p;
+        }
+
         return $args;
     }
 
@@ -143,6 +154,14 @@ final class SuiviImpayesTool implements AiToolInterface
             }
         }
 
+        // PÉRIMÈTRE : par défaut le portefeuille de l'invité, comme le badge « Mon
+        // portefeuille » posé par défaut sur la rubrique Tranches. Le libellé vient de la
+        // fabrique partagée avec le contrôleur de liste (source unique).
+        $perimetreEntreprise = PortefeuilleScope::estEntreprise($args['perimetre'] ?? null);
+        $criterePortefeuille = $perimetreEntreprise
+            ? []
+            : $this->portefeuilleCritere->pour('Tranche', $scope->invite);
+
         $page = max(1, (int) ($args['page'] ?? 1));
         $resultat = $this->tranchePaiement->lister(
             $scope->entreprise,
@@ -150,12 +169,14 @@ final class SuiviImpayesTool implements AiToolInterface
             $lieAEntite,
             $lieAId,
             $page,
-            self::MAX_LIGNES
+            self::MAX_LIGNES,
+            $criterePortefeuille === [] ? null : $scope->invite
         );
 
         return AiToolResult::ok(array_filter([
             'date' => (new \DateTimeImmutable('now'))->format('Y-m-d'),
             'statut' => TranchePaiementScope::libelle($statut),
+            'perimetre' => PortefeuilleScope::libellePerimetre($perimetreEntreprise, $criterePortefeuille),
             'lignes' => array_map(fn (Tranche $t) => $this->projeter($t), $resultat['items']),
             'totaux' => $resultat['totaux'],
             'total' => $resultat['totalItems'],

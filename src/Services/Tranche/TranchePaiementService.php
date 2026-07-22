@@ -3,8 +3,10 @@
 namespace App\Services\Tranche;
 
 use App\Entity\Entreprise;
+use App\Entity\Invite;
 use App\Entity\Tranche;
 use App\Services\CanvasBuilder;
+use App\Services\Search\PortefeuilleScope;
 use App\Services\Search\TranchePaiementScope;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -66,19 +68,59 @@ class TranchePaiementService
      * client ou une cotation), filtre par statut, trie par urgence, pagine, et ajoute les
      * totaux calculés sur l'ENSEMBLE filtré (pas seulement la page).
      *
+     * $invitePortefeuille restreint au PÉRIMÈTRE PORTEFEUILLE de cet invité, comme le badge
+     * « Mon portefeuille » posé par défaut sur la rubrique Tranches : le chemin de relations
+     * vient de PortefeuilleScope (source unique), pour que le suivi des impayés annoncé par
+     * l'assistant coïncide avec la liste affichée. `null` = toute l'entreprise (chemin
+     * historique, conservé pour la vigie des échéances qui raisonne au niveau du cabinet).
+     *
      * @return array{items: Tranche[], totaux: array, totalItems: int, currentPage: int, totalPages: int}
      */
-    public function lister(Entreprise $entreprise, string $statut, ?string $lieAEntite = null, ?int $lieAId = null, int $page = 1, int $limit = 10): array
+    public function lister(Entreprise $entreprise, string $statut, ?string $lieAEntite = null, ?int $lieAId = null, int $page = 1, int $limit = 10, ?Invite $invitePortefeuille = null): array
     {
         $qb = $this->em->getRepository(Tranche::class)->createQueryBuilder('t')
             ->andWhere('t.entreprise = :entreprise')
             ->setParameter('entreprise', $entreprise);
 
+        // Jointures mutualisées : le rattachement (lieA=Client) et le périmètre portefeuille
+        // empruntent le même début de chemin (cotation → piste), à ne joindre qu'une fois.
+        // L'alias dérive du chemin parcouru, donc deux chemins qui se recouvrent partagent
+        // naturellement leurs jointures.
+        $joints = [];
+        $joindreChemin = static function (array $segments) use ($qb, &$joints): string {
+            $alias = 't';
+            $parcouru = [];
+            foreach ($segments as $segment) {
+                $parcouru[] = $segment;
+                $suivant = 'j_' . implode('_', $parcouru);
+                if (!isset($joints[$suivant])) {
+                    $qb->join("{$alias}.{$segment}", $suivant);
+                    $joints[$suivant] = true;
+                }
+                $alias = $suivant;
+            }
+
+            return $alias;
+        };
+
         if ($lieAId !== null && $lieAEntite === 'Cotation') {
             $qb->andWhere('t.cotation = :lieA')->setParameter('lieA', $lieAId);
         } elseif ($lieAId !== null && $lieAEntite === 'Client') {
-            $qb->join('t.cotation', 'lc')->join('lc.piste', 'lp')
-                ->andWhere('lp.client = :lieA')->setParameter('lieA', $lieAId);
+            $alias = $joindreChemin(['cotation', 'piste']);
+            $qb->andWhere("{$alias}.client = :lieA")->setParameter('lieA', $lieAId);
+        }
+
+        // Périmètre portefeuille : chemin de relations emprunté à PortefeuilleScope (source
+        // unique partagée avec le moteur de recherche des listes) — le dernier segment est le
+        // gestionnaire, comparé à l'invité.
+        if ($invitePortefeuille !== null) {
+            $segments = explode('.', PortefeuilleScope::pathsFor('Tranche')[0] ?? '');
+            $gestionnaire = array_pop($segments);
+            if ($gestionnaire !== null && $segments !== []) {
+                $alias = $joindreChemin($segments);
+                $qb->andWhere("{$alias}.{$gestionnaire} = :invitePortefeuille")
+                    ->setParameter('invitePortefeuille', $invitePortefeuille);
+            }
         }
 
         $filtrees = $this->preparerFiltrerTrier($qb->getQuery()->getResult(), $statut);

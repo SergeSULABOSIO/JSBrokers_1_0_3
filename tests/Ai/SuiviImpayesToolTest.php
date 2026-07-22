@@ -9,8 +9,10 @@ use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Tranche;
 use App\Service\Workspace\WorkspaceAccessResolver;
+use App\Services\Search\PortefeuilleCritereFactory;
 use App\Services\Search\TranchePaiementScope;
 use App\Services\Tranche\TranchePaiementService;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -39,7 +41,12 @@ class SuiviImpayesToolTest extends TestCase
             ]);
         }
 
-        return new SuiviImpayesTool($resolver, $tranchePaiement);
+        // Fabrique réelle sur un EntityManager muet : l'invité de ces tests purs n'a pas
+        // d'identifiant, la fabrique retourne donc un critère vide sans jamais interroger la
+        // base — le périmètre portefeuille est neutre ici, ce qui est bien le but.
+        $portefeuilleCritere = new PortefeuilleCritereFactory($this->createMock(EntityManagerInterface::class));
+
+        return new SuiviImpayesTool($resolver, $tranchePaiement, $portefeuilleCritere);
     }
 
     private function makeScope(): AiScope
