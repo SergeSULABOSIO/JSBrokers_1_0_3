@@ -44,6 +44,9 @@ export default class extends Controller {
     connect() {
         this.sending = false;
         this.renderHistoricalMarkdown();
+        // Reconstruit la barre de décision des plans EN ATTENTE après un rechargement
+        // (F5) : le live la crée via executeActions, l'historique la restaure ici.
+        this.restoreMutationReviews();
         this.scrollToBottom();
         this.onInput();
         if (this.hasInputTarget) {
@@ -245,7 +248,28 @@ export default class extends Controller {
      * ajoute la décision : « Valider et exécuter » (ouvre la confirmation) /
      * « Annuler » — ou, si le solde est insuffisant, un CTA d'achat de tokens.
      */
-    renderMutationReview(action) {
+    /**
+     * Reconstruit, au chargement, les barres de décision des plans NON exécutés
+     * portés par l'historique (attribut data-mutation-review posé côté serveur).
+     * Indispensable après un F5 : sans cela, seul le texte du plan resterait.
+     */
+    restoreMutationReviews() {
+        if (!this.hasMessagesTarget) return;
+        this.messagesTarget.querySelectorAll('.aic-msg[data-mutation-review]').forEach((el) => {
+            let action;
+            try {
+                action = JSON.parse(el.dataset.mutationReview);
+            } catch (e) {
+                return;
+            }
+            el.removeAttribute('data-mutation-review'); // évite tout doublon
+            if (action && action.idMessage) {
+                this.renderMutationReview(action, el);
+            }
+        });
+    }
+
+    renderMutationReview(action, anchor = null) {
         if (!action || !action.idMessage) return;
         const budget = action.budget || {};
         const cout = budget.coutEstime || 0;
@@ -259,13 +283,11 @@ export default class extends Controller {
         bar.setAttribute('aria-label', 'Décision sur le plan préparé par l’assistant');
 
         // Budget TOUJOURS affiché (garantie serveur, indépendante de la prose du
-        // modèle), en pastilles lisibles : coût · solde · reste.
-        const budgetRow = document.createElement('div');
-        budgetRow.className = 'aic-mut-budget';
-        budgetRow.appendChild(this._budgetChip('Coût estimé', `${formatNombre(cout)} tokens`));
-        budgetRow.appendChild(this._budgetChip('Solde', formatNombre(solde)));
-        budgetRow.appendChild(this._budgetChip('Reste', formatNombre(reste), suffisant ? 'ok' : 'danger'));
-        bar.appendChild(budgetRow);
+        // modèle), en texte simple sur une ligne : coût · solde · reste.
+        const budgetLine = document.createElement('p');
+        budgetLine.className = 'aic-mutation-budget';
+        budgetLine.textContent = `Budget : ${formatNombre(cout)} tokens · solde ${formatNombre(solde)} · reste ${formatNombre(reste)}`;
+        bar.appendChild(budgetLine);
 
         if (!suffisant) {
             const notice = document.createElement('p');
@@ -308,20 +330,14 @@ export default class extends Controller {
             bar.appendChild(cancel);
         }
 
-        this.messagesTarget.appendChild(bar);
+        // Live : la barre suit le dernier message (append). Restauration après F5 :
+        // on l'insère juste après le message qui porte le plan.
+        if (anchor && anchor.parentNode) {
+            anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+        } else {
+            this.messagesTarget.appendChild(bar);
+        }
         this.scrollToBottom();
-    }
-
-    /** Pastille budget lisible « Libellé : valeur » (variante ok/danger sur la valeur). */
-    _budgetChip(label, value, variant = '') {
-        const chip = document.createElement('span');
-        chip.className = 'aic-mut-chip' + (variant ? ` aic-mut-chip--${variant}` : '');
-        const l = document.createElement('span');
-        l.textContent = `${label} :`;
-        const v = document.createElement('b');
-        v.textContent = value;
-        chip.append(l, v);
-        return chip;
     }
 
     /**

@@ -386,6 +386,9 @@ class AssistantIaController extends AbstractController
                     'plan'             => $action['plan'],
                     'budget'           => $action['budget'] ?? null,
                     'requiresPassword' => (bool) ($action['requiresPassword'] ?? false),
+                    // Impacts de cascade conservés pour reconstruire la barre de
+                    // décision après un rechargement de page (F5).
+                    'impacts'          => $action['impacts'] ?? [],
                 ];
             }
         }

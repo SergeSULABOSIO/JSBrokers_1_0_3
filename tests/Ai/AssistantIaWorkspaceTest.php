@@ -874,6 +874,60 @@ class AssistantIaWorkspaceTest extends WebTestCase
         $this->assertSame([], $data['assistant']['actions'], 'Aucune directive UI ne doit fuiter sur un refus.');
     }
 
+    public function testPlanEnAttentePorteLaBarreDeDecisionDansLHistorique(): void
+    {
+        // Après un rechargement (F5), la barre « Valider et exécuter » doit être
+        // reconstruite : le partial du chat porte donc data-mutation-review sur le
+        // message tant que le plan n'est pas exécuté.
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $owner);
+
+        $message = (new AssistantMessage())
+            ->setRole(AssistantMessage::ROLE_ASSISTANT)
+            ->setContenu('Voici le plan préparé.')
+            ->setMeta([
+                'mutationPlan' => [
+                    'plan'             => [['op' => 'edit', 'entite' => 'Client', 'targetId' => 63, 'fields' => ['telephone' => '+243900']]],
+                    'budget'           => ['coutEstime' => 10, 'soldeDisponible' => 1000, 'resteApres' => 990, 'suffisant' => true],
+                    'requiresPassword' => false,
+                    'impacts'          => [],
+                ],
+            ]);
+        $conversation->addMessage($message);
+        $this->em()->persist($message);
+        $this->em()->flush();
+
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+        $this->client->request('GET', sprintf('/admin/assistant-ia/chat/%d/%d', $e->getId(), $conversation->getId()));
+        $this->assertResponseIsSuccessful();
+        $this->assertStringContainsString('data-mutation-review', (string) $this->client->getResponse()->getContent());
+    }
+
+    public function testPlanDejaExecuteNAPlusDeBarreDeDecision(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $owner);
+
+        $message = (new AssistantMessage())
+            ->setRole(AssistantMessage::ROLE_ASSISTANT)
+            ->setContenu('Plan déjà exécuté.')
+            ->setMeta([
+                'mutationPlan'         => [
+                    'plan'   => [['op' => 'edit', 'entite' => 'Client', 'targetId' => 63, 'fields' => ['telephone' => '+243900']]],
+                    'budget' => ['coutEstime' => 10, 'soldeDisponible' => 1000, 'resteApres' => 990, 'suffisant' => true],
+                ],
+                'mutationPlanExecuted' => true,
+            ]);
+        $conversation->addMessage($message);
+        $this->em()->persist($message);
+        $this->em()->flush();
+
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+        $this->client->request('GET', sprintf('/admin/assistant-ia/chat/%d/%d', $e->getId(), $conversation->getId()));
+        $this->assertResponseIsSuccessful();
+        $this->assertStringNotContainsString('data-mutation-review', (string) $this->client->getResponse()->getContent());
+    }
+
     public function testDialogContextEndpointFailClosed(): void
     {
         ['entreprise' => $e] = $this->seed(
