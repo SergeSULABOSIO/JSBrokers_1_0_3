@@ -164,16 +164,8 @@
         }
         .jsb-ai-chat .aic-mutation-actions .aic-notice { flex:1 1 100%; align-self:stretch; margin:.1rem 0 0; }
 
-        /* Budget en pastilles lisibles (coût · solde · reste). */
-        .jsb-ai-chat .aic-mut-budget { flex:1 1 100%; display:flex; flex-wrap:wrap; gap:.4rem; margin:0 0 .15rem; }
-        .jsb-ai-chat .aic-mut-chip {
-            display:inline-flex; align-items:baseline; gap:.3rem;
-            padding:.22rem .55rem; border-radius:6px; background:#f8f9fa;
-            border:1px solid #e0e0e0; font-size:.74rem; color:#6c757d;
-        }
-        .jsb-ai-chat .aic-mut-chip b { font-size:.82rem; color:#212529; font-weight:700; }
-        .jsb-ai-chat .aic-mut-chip--ok b { color:#198754; }
-        .jsb-ai-chat .aic-mut-chip--danger b { color:#dc3545; }
+        /* Budget en texte simple sur une ligne (coût · solde · reste). */
+        .jsb-ai-chat .aic-mutation-budget { flex:1 1 100%; margin:0 0 .1rem; font-size:.8rem; color:#495057; font-weight:600; }
 
         /* Boutons d'action (charte cobalt + états accessibles). */
         .jsb-ai-chat .aic-mut-btn {
@@ -308,7 +300,16 @@
         {% for message in conversation.messages %}
             {% set estAssistant = message.role == 'assistant' %}
             {% set estRefus = estAssistant and (message.meta.refus ?? false) %}
-            <div class="aic-msg aic-msg--{{ estAssistant ? 'assistant' : 'user' }}{{ estRefus ? ' aic-msg--refus' }}">
+            {# Plan de mutation EN ATTENTE (non encore exécuté) : on porte sa charge sur
+               le message pour que la barre de décision soit reconstruite après un F5. #}
+            {% set planEnAttente = estAssistant and (message.meta.mutationPlan ?? null) is not null and not (message.meta.mutationPlanExecuted ?? false) %}
+            <div class="aic-msg aic-msg--{{ estAssistant ? 'assistant' : 'user' }}{{ estRefus ? ' aic-msg--refus' }}"
+                {%- if planEnAttente %} data-mutation-review="{{ {
+                    idMessage: message.id,
+                    budget: message.meta.mutationPlan.budget,
+                    requiresPassword: message.meta.mutationPlan.requiresPassword ?? false,
+                    impacts: message.meta.mutationPlan.impacts ?? []
+                }|json_encode|e('html_attr') }}"{% endif %}>
                 {% if estAssistant %}
                     <span class="aic-msg-avatar" aria-hidden="true">{{ assistantNom|first|upper }}</span>
                 {% endif %}
