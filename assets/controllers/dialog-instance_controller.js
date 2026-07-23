@@ -989,10 +989,20 @@ export default class extends Controller {
 
     /**
      * Déclenche manuellement la soumission du formulaire interne.
+     *
+     * La validation HTML5 native (attribut `required`) peut BLOQUER SILENCIEUSEMENT
+     * form.requestSubmit() quand un champ requis vide se trouve dans une SECTION
+     * MASQUÉE par la visibilité dynamique (cas fréquent d'une fiche créée
+     * partiellement — ex. par l'assistant) : le clic « Enregistrer » ne fait alors
+     * rien de visible (le navigateur ne peut pas focaliser un champ caché). La
+     * validation de référence est de toute façon côté SERVEUR (FormType +
+     * contraintes d'entité), dont les erreurs sont affichées par le dialogue
+     * (handleFailedSubmit). On soumet donc en contournant la validation native.
      */
     triggerSubmit() {
         const form = this.contentTarget.querySelector('form');
         if (form) { // Search within modal-content
+            form.noValidate = true;
             form.requestSubmit();
         }
     }
