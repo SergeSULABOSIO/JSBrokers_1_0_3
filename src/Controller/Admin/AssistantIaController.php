@@ -549,6 +549,43 @@ class AssistantIaController extends AbstractController
     }
 
     /**
+     * Marque un plan de mutation comme ANNULÉ (décision explicite de l'utilisateur).
+     * La décision est PERSISTÉE dans la meta du message : après rechargement, le fil
+     * se souvient que ce plan a été annulé (feedback permanent, plus de barre de
+     * décision). Un plan déjà exécuté ne peut pas être annulé.
+     */
+    #[Route('/api/mutation/{idEntreprise}/{idConversation}/{idMessage}/cancel', name: 'api.mutation.cancel', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS, 'idMessage' => Requirement::DIGITS], methods: ['POST'])]
+    public function cancelMutation(int $idEntreprise, int $idConversation, int $idMessage): JsonResponse
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+
+        $message = null;
+        foreach ($conversation->getMessages() as $m) {
+            if ($m->getId() === $idMessage) {
+                $message = $m;
+                break;
+            }
+        }
+        $meta = $message?->getMeta() ?? [];
+        if ($message === null || !isset($meta['mutationPlan'])) {
+            return $this->json(['message' => 'Plan introuvable.'], Response::HTTP_NOT_FOUND);
+        }
+        if (($meta['mutationPlanExecuted'] ?? false) === true) {
+            return $this->json(['message' => 'Ce plan a déjà été exécuté.'], Response::HTTP_CONFLICT);
+        }
+
+        $meta['mutationPlanCancelled'] = true;
+        $message->setMeta($meta);
+        $this->em->flush();
+
+        return $this->json(['success' => true, 'message' => 'Plan annulé.']);
+    }
+
+    /**
      * Instantané des objets du contexte de la conversation au moment de l'envoi :
      * type + id + libellé (le cliché des puces telles que l'utilisateur les voit).
      * Vide → null (setContexteObjets normalise) : la bulle ne portera pas d'agrafe.

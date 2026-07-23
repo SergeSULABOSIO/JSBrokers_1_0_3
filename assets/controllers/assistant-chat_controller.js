@@ -297,10 +297,10 @@ export default class extends Controller {
             bar.appendChild(notice);
 
             bar.appendChild(this._mutBtn('primary', this.constructor.ICON_WALLET, 'Acheter des tokens', null, '/admin/tokens/buy'));
-            bar.appendChild(this._mutBtn('ghost', this.constructor.ICON_X, 'Abandonner', () => bar.remove()));
+            bar.appendChild(this._mutBtn('ghost', this.constructor.ICON_X, 'Abandonner', () => this.cancelMutationPlan(action.idMessage, bar)));
         } else {
             const exec = this._mutBtn('primary', this.constructor.ICON_CHECK, 'Valider et exécuter');
-            const cancel = this._mutBtn('ghost', this.constructor.ICON_X, 'Annuler', () => bar.remove());
+            const cancel = this._mutBtn('ghost', this.constructor.ICON_X, 'Annuler', () => this.cancelMutationPlan(action.idMessage, bar));
 
             exec.addEventListener('click', async () => {
                 if (action.requiresPassword === true) {
@@ -318,7 +318,8 @@ export default class extends Controller {
                 if (label) label.textContent = 'Exécution…';
                 const ok = await this.executeMutationPlan(action.idMessage, null, false);
                 if (ok) {
-                    bar.remove();
+                    // Décision mémorisée : la barre laisse place à un feedback permanent.
+                    this._replaceBar(bar, this._planStatusNote('done', 'Plan exécuté — les données ont été enregistrées.'));
                 } else {
                     exec.disabled = false;
                     cancel.disabled = false;
@@ -338,6 +339,49 @@ export default class extends Controller {
             this.messagesTarget.appendChild(bar);
         }
         this.scrollToBottom();
+    }
+
+    /**
+     * Annule un plan (décision explicite) : remplace la barre par un feedback
+     * PERMANENT et mémorise la décision côté serveur (survit au rechargement).
+     */
+    async cancelMutationPlan(idMessage, barEl) {
+        const note = this._planStatusNote('cancelled', 'Plan annulé — aucune donnée n’a été modifiée.');
+        this._replaceBar(barEl, note);
+
+        const id = parseInt(idMessage, 10);
+        if (!Number.isInteger(id) || id <= 0) return;
+        try {
+            await fetch(`/admin/assistant-ia/api/mutation/${this.idEntrepriseValue}/${this.idConversationValue}/${id}/cancel`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: '{}',
+            });
+        } catch (error) {
+            console.error('Ket - annulation non mémorisée :', error);
+        }
+    }
+
+    /** Remplace la barre de décision par un élément (ou l'ajoute si la barre a disparu). */
+    _replaceBar(barEl, replacement) {
+        if (barEl && barEl.parentNode) {
+            barEl.parentNode.replaceChild(replacement, barEl);
+        } else if (this.hasMessagesTarget) {
+            this.messagesTarget.appendChild(replacement);
+        }
+        this.scrollToBottom();
+    }
+
+    /** Note de statut PERMANENTE d'un plan (validé / annulé) — même rendu que le serveur. */
+    _planStatusNote(kind, text) {
+        const p = document.createElement('p');
+        p.className = `aic-plan-status aic-plan-status--${kind}`;
+        p.setAttribute('role', 'status');
+        p.innerHTML = kind === 'done' ? this.constructor.ICON_CHECK : this.constructor.ICON_X;
+        const span = document.createElement('span');
+        span.textContent = text;
+        p.appendChild(span);
+        return p;
     }
 
     /**

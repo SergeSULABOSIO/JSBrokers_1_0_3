@@ -182,6 +182,16 @@
         .jsb-ai-chat .aic-mut-btn:focus-visible { outline:none; box-shadow:0 0 0 3px rgba(0,71,171,0.35); }
         .jsb-ai-chat .aic-mut-btn:disabled { opacity:.65; pointer-events:none; }
 
+        /* Décision MÉMORISÉE d'un plan (feedback permanent dans le fil). */
+        .jsb-ai-chat .aic-plan-status {
+            display:inline-flex; align-items:center; gap:.4rem; align-self:flex-start;
+            max-width:96%; margin:.1rem 0 .5rem; padding:.35rem .7rem;
+            font-size:.8rem; font-weight:600; border-radius:8px;
+        }
+        .jsb-ai-chat .aic-plan-status svg { width:14px; height:14px; flex:0 0 auto; }
+        .jsb-ai-chat .aic-plan-status--done { color:#0f5132; background:#d1e7dd; }
+        .jsb-ai-chat .aic-plan-status--cancelled { color:#495057; background:#e9ecef; }
+
         /* Indicateur « réfléchit… ». */
         .jsb-ai-chat .aic-typing { flex:0 0 auto; display:flex; align-items:center; gap:.45rem; padding:.25rem 1rem .5rem; color:#6c757d; font-size:.82rem; }
         .jsb-ai-chat .aic-typing[hidden] { display:none; }
@@ -300,9 +310,12 @@
         {% for message in conversation.messages %}
             {% set estAssistant = message.role == 'assistant' %}
             {% set estRefus = estAssistant and (message.meta.refus ?? false) %}
-            {# Plan de mutation EN ATTENTE (non encore exécuté) : on porte sa charge sur
-               le message pour que la barre de décision soit reconstruite après un F5. #}
-            {% set planEnAttente = estAssistant and (message.meta.mutationPlan ?? null) is not null and not (message.meta.mutationPlanExecuted ?? false) %}
+            {# Décision d'un plan de mutation, MÉMORISÉE dans le fil : en attente
+               (barre reconstruite après F5), exécuté ou annulé (feedback permanent). #}
+            {% set hasPlan = estAssistant and (message.meta.mutationPlan ?? null) is not null %}
+            {% set planExecute = hasPlan and (message.meta.mutationPlanExecuted ?? false) %}
+            {% set planAnnule = hasPlan and (message.meta.mutationPlanCancelled ?? false) %}
+            {% set planEnAttente = hasPlan and not planExecute and not planAnnule %}
             <div class="aic-msg aic-msg--{{ estAssistant ? 'assistant' : 'user' }}{{ estRefus ? ' aic-msg--refus' }}"
                 {%- if planEnAttente %} data-mutation-review="{{ {
                     idMessage: message.id,
@@ -340,6 +353,18 @@
                     <span class="aic-msg-time">{{ message.createdAt|date(memeJour ? 'H:i' : 'd/m/Y H:i') }}</span>
                 </div>
             </div>
+            {# Décision mémorisée : feedback PERMANENT sous le plan (validé / annulé). #}
+            {% if planExecute %}
+                <p class="aic-plan-status aic-plan-status--done" role="status">
+                    {{ ux_icon(resolve_icon_name('lucide:check-check'), {height: '14px', width: '14px'}) }}
+                    <span>Plan exécuté — les données ont été enregistrées.</span>
+                </p>
+            {% elseif planAnnule %}
+                <p class="aic-plan-status aic-plan-status--cancelled" role="status">
+                    {{ ux_icon(resolve_icon_name('lucide:x'), {height: '14px', width: '14px'}) }}
+                    <span>Plan annulé — aucune donnée n’a été modifiée.</span>
+                </p>
+            {% endif %}
         {% endfor %}
     </div>
 
