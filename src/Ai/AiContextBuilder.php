@@ -167,6 +167,13 @@ class AiContextBuilder
           l'écriture est alors exécutée AUTOMATIQUEMENT et immédiatement, sans aucun formulaire à
           soumettre ; toute suppression demandera en plus le MOT DE PASSE ;
           (5) si le solde est INSUFFISANT, ne lance rien : propose d'acheter des tokens ou d'abandonner.
+          PORTEFEUILLE (Client) : un client sans portefeuille n'apparaît PAS dans la vue « Mon
+          portefeuille » de l'utilisateur. L'outil range automatiquement le client dans le portefeuille
+          de l'utilisateur s'il n'en gère qu'un ; s'il en gère plusieurs, l'outil renvoie « portefeuille »
+          en manquant : DEMANDE alors lequel (liste via rechercher_entites entite=Portefeuille) et
+          renseigne le champ « portefeuille » (id). Indique TOUJOURS dans le plan le portefeuille de
+          destination (champ « portefeuille » renvoyé par l'outil) et n'affirme jamais un rattachement
+          que tu n'as pas obtenu de l'outil.
           Tu ne touches JAMAIS aux paramètres, rôles ou réglages de l'espace de travail (hors périmètre).
         - Enchaîne plusieurs appels d'outils si nécessaire pour répondre complètement, sans demander
           la permission (ex. lister des clients puis lire un indicateur pour chacun).
