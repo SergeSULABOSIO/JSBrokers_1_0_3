@@ -457,11 +457,13 @@ class AssistantIaController extends AbstractController
         }
         $scope = new AiScope($entreprise, $invite);
 
-        // 2) SOLVABILITÉ (pré-vol strict) : seules les écritures sont facturées.
+        // 2) SOLVABILITÉ (pré-vol strict) : seules les écritures sont facturées —
+        // tête ET enfants de collection (source unique du chiffrage, identique au
+        // budget présenté par preparer_operations).
         $facturables = [];
         foreach ($plan->operations as $op) {
-            if (!$op->isDelete()) {
-                $facturables[] = $op->fqcn();
+            foreach ($this->mutationService->facturablesArbre($op, $scope) as $fqcn) {
+                $facturables[] = $fqcn;
             }
         }
         $cout = $this->tokenAccountService->estimateWriteCost($facturables);
@@ -495,7 +497,7 @@ class AssistantIaController extends AbstractController
             $this->em->wrapInTransaction(function () use ($plan, $scope, $acteur, &$journal): void {
                 foreach ($plan->operationsOrdonnees() as $op) {
                     $step = $this->mutationService->executer($op, $scope, $acteur);
-                    $journal[] = $step + ['statut' => 'ok'];
+                    $this->aplatirEtapeJournal($step, 0, $journal);
                 }
             });
         } catch (InsufficientTokensException $e) {
@@ -546,6 +548,24 @@ class AssistantIaController extends AbstractController
             'message' => 'Mission exécutée avec succès.',
             'journal' => $journal,
         ]);
+    }
+
+    /**
+     * Aplatit une étape d'exécution (tête + descendants de collection) en une liste
+     * plate de lignes de journal, chacune portant son `niveau` d'indentation. Le
+     * front rejoue ces lignes séquentiellement (pastilles), l'arborescence étant
+     * signalée par le niveau.
+     *
+     * @param array<int,array> $journal (par référence)
+     */
+    private function aplatirEtapeJournal(array $step, int $niveau, array &$journal): void
+    {
+        $enfants = $step['enfants'] ?? [];
+        unset($step['enfants']);
+        $journal[] = $step + ['statut' => 'ok', 'niveau' => $niveau];
+        foreach ($enfants as $enfant) {
+            $this->aplatirEtapeJournal($enfant, $niveau + 1, $journal);
+        }
     }
 
     /**

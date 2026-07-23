@@ -542,12 +542,14 @@ export default class extends Controller {
 
         for (const step of journal) {
             await new Promise((resolve) => setTimeout(resolve, 420));
+            // Indentation selon le niveau dans l'arbre (élément de collection, etc.).
+            const indent = '  '.repeat(Math.max(0, parseInt(step.niveau, 10) || 0));
             if (step.statut === 'echec') {
-                lignes.push(`- [Échec](#danger) ${step.message || 'une étape a échoué — rien n’a été conservé.'}`);
+                lignes.push(`${indent}- [Échec](#danger) ${step.message || 'une étape a échoué — rien n’a été conservé.'}`);
             } else {
                 const label = verbe[step.op] || 'Opération';
                 const cible = step.cible ? ` « ${step.cible} »` : '';
-                lignes.push(`- [Fait](#success) ${label} — ${step.libelle || step.entite}${cible}`);
+                lignes.push(`${indent}- [Fait](#success) ${label} — ${step.libelle || step.entite}${cible}`);
             }
             content.innerHTML = renderAssistantMarkdown(lignes.join('\n'));
             this.scrollToBottom();

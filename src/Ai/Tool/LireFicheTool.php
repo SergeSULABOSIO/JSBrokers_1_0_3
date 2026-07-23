@@ -5,8 +5,10 @@ namespace App\Ai\Tool;
 use App\Ai\AiText;
 use App\Ai\FicheNormaliseur;
 use App\Ai\Scope\AiScope;
+use App\Service\Workspace\FormTreeInspector;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
+use App\Token\TokenAccountService;
 
 /**
  * Lit la FICHE COMPLÈTE d'un enregistrement (attributs stockés) : là où
@@ -31,6 +33,8 @@ final class LireFicheTool implements AiToolInterface
         private readonly EntiteLexique $lexique,
         private readonly EntiteLibelle $libelleur,
         private readonly FicheNormaliseur $ficheNormaliseur,
+        private readonly FormTreeInspector $formTreeInspector,
+        private readonly TokenAccountService $tokenAccountService,
     ) {
     }
 
@@ -153,12 +157,58 @@ final class LireFicheTool implements AiToolInterface
 
         $entity = $entities[0];
 
-        return AiToolResult::ok([
+        $data = [
             'entite'  => $shortName,
             'libelle' => $labels[$shortName],
             'id'      => $entity->getId(),
             'nom'     => $this->libelleur->libelle($entity, $displayField),
             'fiche'   => $this->ficheNormaliseur->fiche($entity),
-        ]);
+        ];
+
+        // Membres des collections ÉDITABLES (mêmes que la surface d'écriture de Ket) :
+        // exposés avec leur id pour cibler edit/delete. Facturés en LECTURE.
+        $collections = $this->collectionsEditablesLisibles($entity, $shortName, $scope);
+        if ($collections !== []) {
+            $data['collectionsEditables'] = $collections;
+        }
+
+        return AiToolResult::ok($data);
+    }
+
+    /**
+     * Pour chaque collection éditable déclarée par le formulaire de l'entité,
+     * restitue ses membres (id + libellé + attributs stockés) afin que Ket puisse
+     * cibler une édition/suppression par id — puis MÈTRE cette lecture (barème en
+     * vigueur, comme toute lecture d'entité).
+     *
+     * @return array<string, array{entite:string, membres:array<int,array>}>
+     */
+    private function collectionsEditablesLisibles(object $entity, string $shortName, AiScope $scope): array
+    {
+        $acteur = $scope->invite->getUtilisateur();
+        $out = [];
+        foreach ($this->formTreeInspector->collectionsEditables($shortName) as $nom => $ce) {
+            if (!method_exists($entity, $ce->getter)) {
+                continue;
+            }
+            $membres = [];
+            foreach ($entity->{$ce->getter}() as $membre) {
+                if (!is_object($membre) || !method_exists($membre, 'getId')) {
+                    continue;
+                }
+                $membres[] = [
+                    'id'      => $membre->getId(),
+                    'libelle' => trim(strip_tags((string) $membre)),
+                    'champs'  => $this->ficheNormaliseur->fiche($membre),
+                ];
+            }
+            if ($membres === []) {
+                continue;
+            }
+            $this->tokenAccountService->meterRead($ce->childFqcn, count($membres), $scope->entreprise, $acteur);
+            $out[$nom] = ['entite' => $ce->childShortName, 'membres' => $membres];
+        }
+
+        return $out;
     }
 }

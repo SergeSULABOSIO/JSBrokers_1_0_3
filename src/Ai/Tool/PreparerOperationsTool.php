@@ -88,6 +88,28 @@ final class PreparerOperationsTool implements AiToolInterface
                                     . '{"portefeuille": 42}). Jamais l\'id ni les champs d\'audit.',
                                 'additionalProperties' => ['type' => ['string', 'number', 'boolean']],
                             ],
+                            'collections' => [
+                                'type' => 'object',
+                                'description' => 'Sous-opérations sur les collections ÉDITABLES du parent, telles '
+                                    . 'qu\'exposées par son formulaire (parité avec l\'écran), RÉCURSIF. Clé = nom '
+                                    . 'de la collection (ex. "chargements" d\'une Cotation) ; valeur = liste d\'éléments '
+                                    . 'à créer/modifier/supprimer. Chaque élément de "chargements" porte "nom", '
+                                    . '"montantFlatExceptionel" et "type" (= id d\'un Chargement, à résoudre par son '
+                                    . 'nom au préalable). N\'indique le nom court de l\'entité enfant nulle part : il '
+                                    . 'est déduit du formulaire parent.',
+                                'additionalProperties' => [
+                                    'type' => 'array',
+                                    'items' => [
+                                        'type' => 'object',
+                                        'properties' => [
+                                            'op'     => ['type' => 'string', 'enum' => MutationOperation::OPS],
+                                            'id'     => ['type' => 'integer', 'minimum' => 1, 'description' => 'Id de l\'élément (edit/delete).'],
+                                            'champs' => ['type' => 'object', 'additionalProperties' => ['type' => ['string', 'number', 'boolean']]],
+                                        ],
+                                        'required' => ['op'],
+                                    ],
+                                ],
+                            ],
                         ],
                         'required' => ['op', 'entite'],
                     ],
@@ -122,6 +144,7 @@ final class PreparerOperationsTool implements AiToolInterface
         $lignes = [];
         $manquants = [];
         $blocages = [];
+        $facturables = [];
         $n = 0;
         foreach ($plan->operations as $op) {
             $n++;
@@ -135,6 +158,13 @@ final class PreparerOperationsTool implements AiToolInterface
                 return AiToolResult::introuvable(sprintf('%s %s', $analyse['libelle'], $op->targetId ? '#' . $op->targetId : ''));
             }
 
+            // Budget : FQCN de chaque nœud écrit RÉELLEMENT (tête + enfants de
+            // collection, TOUTES imbrications). Source UNIQUE du chiffrage,
+            // partagée à l'identique avec le pré-vol de l'endpoint d'exécution.
+            foreach ($this->mutationService->facturablesArbre($op, $scope) as $fqcn) {
+                $facturables[] = $fqcn;
+            }
+
             $lignes[] = [
                 'n'            => $n,
                 'op'           => $op->op,
@@ -142,6 +172,7 @@ final class PreparerOperationsTool implements AiToolInterface
                 'libelle'      => $analyse['libelle'],
                 'cible'        => $analyse['cible'],
                 'champs'       => array_keys($op->fields),
+                'collections'  => $this->resumerCollections($op),
                 'impacts'      => $analyse['impacts'],
                 'portefeuille' => $analyse['portefeuille'] ?? null,
             ];
@@ -177,13 +208,9 @@ final class PreparerOperationsTool implements AiToolInterface
             ]);
         }
 
-        // Budget en tokens : seules les écritures (create/edit) sont facturées ; les suppressions sont gratuites.
-        $facturables = [];
-        foreach ($plan->operations as $op) {
-            if (!$op->isDelete()) {
-                $facturables[] = $op->fqcn();
-            }
-        }
+        // Budget en tokens : chaque nœud écrit réellement (tête ET enfants de
+        // collection) est facturé ; les suppressions sont gratuites. $facturables
+        // a été agrégé sur tout l'arbre pendant l'analyse.
         $cout = $this->tokenAccountService->estimateWriteCost($facturables);
         $solde = $this->tokenAccountService->availableFor($scope->entreprise);
         $suffisant = $solde >= $cout;
@@ -222,5 +249,32 @@ final class PreparerOperationsTool implements AiToolInterface
                 ) ?: [[]])),
             ],
         );
+    }
+
+    /**
+     * Résumé lisible des sous-opérations de collection d'une opération (récursif),
+     * pour la présentation du plan : nom de collection => liste { op, champs, id,
+     * collections }. Le nom court d'entité enfant n'est pas exposé (déduit serveur).
+     *
+     * @return array<string, array<int, array>>
+     */
+    private function resumerCollections(MutationOperation $op): array
+    {
+        $resume = [];
+        foreach ($op->collections as $nom => $enfants) {
+            foreach ($enfants as $enfant) {
+                $item = ['op' => $enfant->op, 'champs' => array_keys($enfant->fields)];
+                if ($enfant->targetId !== null) {
+                    $item['id'] = $enfant->targetId;
+                }
+                $sous = $this->resumerCollections($enfant);
+                if ($sous !== []) {
+                    $item['collections'] = $sous;
+                }
+                $resume[$nom][] = $item;
+            }
+        }
+
+        return $resume;
     }
 }

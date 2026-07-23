@@ -22,12 +22,32 @@ final class MutationPlan
         return $this->operations === [];
     }
 
-    /** Une suppression est-elle présente ? (déclenche l'autorisation renforcée). */
+    /**
+     * Une suppression est-elle présente À N'IMPORTE QUEL NIVEAU de l'arbre ?
+     * (déclenche l'autorisation renforcée par mot de passe). Parcours récursif :
+     * un delete d'un enfant de collection compte autant qu'un delete de tête.
+     */
     public function contientSuppression(): bool
     {
         foreach ($this->operations as $op) {
-            if ($op->isDelete()) {
+            if (self::noeudContientSuppression($op)) {
                 return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static function noeudContientSuppression(MutationOperation $op): bool
+    {
+        if ($op->isDelete()) {
+            return true;
+        }
+        foreach ($op->collections as $enfants) {
+            foreach ($enfants as $enfant) {
+                if (self::noeudContientSuppression($enfant)) {
+                    return true;
+                }
             }
         }
 
@@ -43,12 +63,24 @@ final class MutationPlan
      */
     public function operationsOrdonnees(): array
     {
+        return self::ordonner($this->operations);
+    }
+
+    /**
+     * Ordonne une liste d'opérations (tête ou enfants de collection) : créations
+     * d'abord, puis éditions, puis suppressions ; ordre stable au sein d'un même
+     * type. Helper partagé (DRY) avec le tri des sous-opérations de collection.
+     *
+     * @param MutationOperation[] $ops
+     * @return MutationOperation[]
+     */
+    public static function ordonner(array $ops): array
+    {
         $rang = [
             MutationOperation::OP_CREATE => 0,
             MutationOperation::OP_EDIT   => 1,
             MutationOperation::OP_DELETE => 2,
         ];
-        $ops = $this->operations;
         // tri stable (usort ne l'est pas partout) : on décore par l'index d'origine.
         $decore = [];
         foreach ($ops as $i => $op) {

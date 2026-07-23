@@ -13,6 +13,13 @@ use App\Entity\Invite;
  *
  * `fields` = champs scalaires/relations (par id) proposés ; jamais l'id, ni les
  * champs d'audit — le service applique la whitelist et la validation FormType.
+ *
+ * `collections` = sous-opérations RÉCURSIVES sur les collections éditables du
+ * nœud, telles qu'exposées par son FormType (ex. `chargements` d'une Cotation).
+ * Structure : nom de collection => liste de MutationOperation enfant, chaque
+ * enfant pouvant lui-même porter des `collections` (parité formulaire récursive
+ * avec l'UI). Le nom court d'entité d'un enfant est DÉRIVÉ côté serveur du
+ * FormType parent (entry_type / targetEntity), jamais dicté par le LLM.
  */
 final class MutationOperation
 {
@@ -23,13 +30,15 @@ final class MutationOperation
     public const OPS = [self::OP_CREATE, self::OP_EDIT, self::OP_DELETE];
 
     /**
-     * @param array<string, scalar|null> $fields
+     * @param array<string, scalar|null>        $fields
+     * @param array<string, MutationOperation[]> $collections nom de collection => ops enfant
      */
     public function __construct(
         public readonly string $op,
         public readonly string $entityShortName,
         public readonly ?int $targetId = null,
         public readonly array $fields = [],
+        public readonly array $collections = [],
     ) {
     }
 
@@ -87,17 +96,70 @@ final class MutationOperation
             entityShortName: (string) ($data['entite'] ?? $data['entityShortName'] ?? ''),
             targetId: ($id !== null && $id > 0) ? $id : null,
             fields: $fields,
+            collections: self::collectionsFromArray($data['collections'] ?? []),
         );
+    }
+
+    /**
+     * Décode récursivement la structure `collections` : nom de collection => liste
+     * d'ops enfant. Ignore silencieusement les entrées malformées (fail-closed :
+     * ce qui n'est pas une op valide n'est pas exécuté).
+     *
+     * @return array<string, MutationOperation[]>
+     */
+    private static function collectionsFromArray(mixed $raw): array
+    {
+        if (!is_array($raw)) {
+            return [];
+        }
+        $collections = [];
+        foreach ($raw as $nom => $enfants) {
+            if (!is_string($nom) || !is_array($enfants)) {
+                continue;
+            }
+            $ops = [];
+            foreach ($enfants as $enfant) {
+                if (is_array($enfant)) {
+                    $ops[] = self::fromArray($enfant);
+                }
+            }
+            if ($ops !== []) {
+                $collections[$nom] = $ops;
+            }
+        }
+
+        return $collections;
     }
 
     /** Sérialisation pour stockage (meta du message) et re-validation d'exécution. */
     public function toArray(): array
     {
-        return [
+        $data = [
             'op'       => $this->op,
             'entite'   => $this->entityShortName,
             'targetId' => $this->targetId,
             'fields'   => $this->fields,
         ];
+        if ($this->collections !== []) {
+            $data['collections'] = [];
+            foreach ($this->collections as $nom => $enfants) {
+                $data['collections'][$nom] = array_map(
+                    static fn (MutationOperation $enfant) => $enfant->toArray(),
+                    $enfants,
+                );
+            }
+        }
+
+        return $data;
+    }
+
+    /**
+     * Retourne une copie de l'opération avec un nom court d'entité dérivé côté
+     * serveur (les enfants de collection sont typés d'après le FormType parent,
+     * jamais d'après le LLM). Immutabilité préservée.
+     */
+    public function withEntityShortName(string $shortName): self
+    {
+        return new self($this->op, $shortName, $this->targetId, $this->fields, $this->collections);
     }
 }
