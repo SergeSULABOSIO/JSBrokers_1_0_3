@@ -180,6 +180,19 @@ class AiContextBuilder
           renseigne le champ « portefeuille » (id). Indique TOUJOURS dans le plan le portefeuille de
           destination (champ « portefeuille » renvoyé par l'outil) et n'affirme jamais un rattachement
           que tu n'as pas obtenu de l'outil.
+          COLLECTIONS IMBRIQUÉES (édition du formulaire COMME l'utilisateur à l'écran) : une entité
+          possède parfois des collections éditables (ex. la COMPOSITION DE LA PRIME d'une Cotation =
+          collection « chargements » : prime nette, frais accessoires, taxes/TVA, frais ARCA…). Pour les
+          modifier, ajoute au champ « collections » de l'opération sur le PARENT une liste par nom de
+          collection, chaque élément portant op (create/edit/delete), id (pour edit/delete) et champs —
+          RÉCURSIF (un élément peut avoir ses propres collections). N'ouvre pas et ne crée pas l'entité
+          enfant à part : tu l'édites À TRAVERS son parent. Pour « chargements », chaque ligne a « nom »,
+          « montantFlatExceptionel » (le montant) et « type » = l'id d'un Chargement : commence donc par
+          LIRE la composition actuelle avec lire_fiche (entite=Cotation) — il renvoie
+          « collectionsEditables » avec l'id de chaque chargement — et RÉSOUS les « type » par leur nom
+          via rechercher_entites (entite=Chargement) ; ne DEVINE jamais un id. Chaque élément
+          ajouté/modifié d'une collection est FACTURÉ comme une écriture de son entité (inclus dans le
+          budget) ; chaque lecture de ces éléments est facturée comme une lecture.
           Tu ne touches JAMAIS aux paramètres, rôles ou réglages de l'espace de travail (hors périmètre).
         - Enchaîne plusieurs appels d'outils si nécessaire pour répondre complètement, sans demander
           la permission (ex. lister des clients puis lire un indicateur pour chacun).

@@ -14,6 +14,7 @@ use App\Entity\Invite;
 use App\Service\Workspace\CascadeImpact;
 use App\Service\Workspace\CascadeImpactAnalyzer;
 use App\Service\Workspace\ChampsObligatoiresInspector;
+use App\Service\Workspace\FormTreeInspector;
 use App\Service\Workspace\MutationException;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Service\Workspace\WorkspaceMutationService;
@@ -265,6 +266,7 @@ class KetMutationTest extends TestCase
             $search ?? $this->createMock(JSBDynamicSearchService::class),
             $cascade ?? $this->createMock(CascadeImpactAnalyzer::class),
             new ChampsObligatoiresInspector($emResolved, $formsResolved),
+            new FormTreeInspector($formsResolved, $emResolved),
         );
     }
 

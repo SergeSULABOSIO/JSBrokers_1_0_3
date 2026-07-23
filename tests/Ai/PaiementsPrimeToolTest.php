@@ -311,7 +311,15 @@ class PaiementsPrimeToolTest extends TestCase
 
         $rechercher = new RechercherEntitesTool($resolver, $search, $lexique, $libelleur, $em, $this->fabriquePortefeuille());
         $compter = new CompterEntitesTool($resolver, $search, $lexique, $this->fabriquePortefeuille());
-        $lireFiche = new LireFicheTool($resolver, $search, $lexique, $libelleur, new FicheNormaliseur($this->createMock(NormalizerInterface::class)));
+        $lireFiche = new LireFicheTool(
+            $resolver,
+            $search,
+            $lexique,
+            $libelleur,
+            new FicheNormaliseur($this->createMock(NormalizerInterface::class)),
+            $this->createMock(\App\Service\Workspace\FormTreeInspector::class),
+            $this->createMock(\App\Token\TokenAccountService::class),
+        );
 
         $this->assertNull($rechercher->match('Liste les paiements de prime de la tranche 12', $scope));
         $this->assertNull($compter->match('Combien de paiements de prime ont été signalés ?', $scope));

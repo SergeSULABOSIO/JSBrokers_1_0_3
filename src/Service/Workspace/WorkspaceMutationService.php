@@ -4,6 +4,7 @@ namespace App\Service\Workspace;
 
 use App\Ai\Mutation\MutationAllowlist;
 use App\Ai\Mutation\MutationOperation;
+use App\Ai\Mutation\MutationPlan;
 use App\Ai\Scope\AiScope;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
@@ -51,6 +52,7 @@ class WorkspaceMutationService
         private readonly JSBDynamicSearchService $searchService,
         private readonly CascadeImpactAnalyzer $cascadeAnalyzer,
         private readonly ChampsObligatoiresInspector $champsInspector,
+        private readonly FormTreeInspector $formTreeInspector,
     ) {
     }
 
@@ -131,23 +133,144 @@ class WorkspaceMutationService
         // Création : champs OBLIGATOIRES (non-nullables sans défaut) manquants —
         // détectés AVANT le form (que clearMissing=false ne validerait pas), afin
         // que Ket les demande plutôt que de provoquer une erreur SQL à l'exécution.
+        $manquants = [];
         if ($op->isCreate()) {
             // Portefeuille (auto si unique, sinon à demander) + champs obligatoires.
             $manquants = $this->resoudrePortefeuille($copie, $op, $scope) + $this->champsRequisManquants($copie, $op);
-            if ($manquants !== []) {
-                return ['ok' => false, 'statut' => 'invalide', 'manquants' => $manquants] + $base;
-            }
-            if (method_exists($copie, 'getPortefeuille') && $copie->getPortefeuille() !== null) {
+            if ($manquants === [] && method_exists($copie, 'getPortefeuille') && $copie->getPortefeuille() !== null) {
                 $base['portefeuille'] = $this->libelleInstance($copie->getPortefeuille());
             }
         }
 
-        $form = $this->construireEtSoumettre($copie, $op);
-        if (!$form->isValid()) {
-            return ['ok' => false, 'statut' => 'invalide', 'manquants' => $this->erreurs($form)] + $base;
+        // La tête n'est validée par son FormType que si elle porte des champs à
+        // écrire (une édition « conteneur », dont seules des collections changent,
+        // n'a pas de champ propre à valider et ne re-persiste pas la tête).
+        if ($manquants === [] && $this->estEcritureReelle($op)) {
+            $form = $this->construireEtSoumettre($copie, $op);
+            if (!$form->isValid()) {
+                $manquants = $this->erreurs($form);
+            }
+        }
+
+        // Collections imbriquées (récursif) : parité formulaire avec l'UI. Le
+        // chiffrage (facturables) n'est PAS recalculé ici : source unique =
+        // facturablesArbre() (utilisée à l'identique par le budget et l'exécution).
+        $impacts = [];
+        $bloque = false;
+        $this->analyserCollections($copie, $op, $scope, $op->entityShortName, '', 0, $manquants, $impacts, $bloque);
+
+        $base['impacts'] = array_merge($base['impacts'], $impacts);
+
+        if ($bloque) {
+            return ['ok' => false, 'statut' => 'bloque', 'manquants' => $manquants] + $base;
+        }
+        if ($manquants !== []) {
+            return ['ok' => false, 'statut' => 'invalide', 'manquants' => $manquants] + $base;
         }
 
         return ['ok' => true] + $base;
+    }
+
+    /**
+     * Parcourt récursivement les collections éditables déclarées par le FormType
+     * du parent (FormTreeInspector = surface exacte de l'UI) et valide chaque
+     * sous-opération SANS rien écrire. Enrichit, par référence :
+     *  - $manquants : champ (préfixé du chemin) => messages ;
+     *  - $impacts   : descriptions de cascade des suppressions ;
+     *  - $bloque    : true si une suppression est bloquée par une contrainte.
+     *
+     * @param array<string,string[]> $manquants
+     * @param string[]               $impacts
+     */
+    private function analyserCollections(
+        object $parent,
+        MutationOperation $parentOp,
+        AiScope $scope,
+        string $parentShortName,
+        string $cheminPrefixe,
+        int $profondeur,
+        array &$manquants,
+        array &$impacts,
+        bool &$bloque,
+    ): void {
+        if ($parentOp->collections === [] || $profondeur >= FormTreeInspector::PROFONDEUR_MAX) {
+            return;
+        }
+
+        foreach ($parentOp->collections as $nomCollection => $enfants) {
+            $chemin = $cheminPrefixe . $nomCollection;
+            $ce = $this->formTreeInspector->collectionEditable($parentShortName, $nomCollection);
+            if ($ce === null) {
+                $manquants[$chemin] = ['Collection non éditable depuis ce formulaire.'];
+                continue;
+            }
+
+            $index = 0;
+            foreach ($enfants as $enfant) {
+                $enfant = $enfant->withEntityShortName($ce->childShortName);
+                $cheminEnfant = sprintf('%s[%d]', $chemin, $index++);
+
+                // Contrôle d'accès par nœud (identique à l'UI : structurel = ouvert,
+                // entité métier de la carte = fail-closed).
+                if (!$this->accessResolver->can($scope->invite, $ce->childShortName, $enfant->requiredLevel())) {
+                    $manquants[$cheminEnfant] = ['Hors de votre périmètre d\'accès.'];
+                    continue;
+                }
+
+                if ($enfant->isDelete()) {
+                    $cible = $this->resoudreEnfantDansCollection($parent, $ce, $enfant->targetId);
+                    if ($cible === null) {
+                        $manquants[$cheminEnfant] = ['Élément introuvable dans la collection.'];
+                        continue;
+                    }
+                    if (!$ce->allowDelete) {
+                        $manquants[$cheminEnfant] = ['La suppression n\'est pas autorisée pour cette collection.'];
+                        continue;
+                    }
+                    $impact = $this->cascadeAnalyzer->analyserSuppression($cible);
+                    foreach ($impact->descriptions() as $d) {
+                        $impacts[] = $d;
+                    }
+                    if ($impact->estBloque()) {
+                        $bloque = true;
+                    }
+                    continue;
+                }
+
+                // create / edit.
+                if ($enfant->isCreate()) {
+                    if (!$ce->allowAdd) {
+                        $manquants[$cheminEnfant] = ['L\'ajout n\'est pas autorisé pour cette collection.'];
+                        continue;
+                    }
+                    $copieEnfant = $this->nouvelleEntite($enfant, $scope);
+                    $this->lierAuParent($copieEnfant, $parent, $ce);
+                    $reqManquants = $this->champsRequisManquants($copieEnfant, $enfant, [$ce->mappedBy]);
+                    foreach ($reqManquants as $champ => $msgs) {
+                        $manquants[$cheminEnfant . '.' . $champ] = $msgs;
+                    }
+                } else {
+                    $cible = $this->resoudreEnfantDansCollection($parent, $ce, $enfant->targetId);
+                    if ($cible === null) {
+                        $manquants[$cheminEnfant] = ['Élément introuvable dans la collection.'];
+                        continue;
+                    }
+                    $copieEnfant = clone $cible;
+                }
+
+                if ($this->estEcritureReelle($enfant)) {
+                    $form = $this->construireEtSoumettre($copieEnfant, $enfant, $ce->childFormType);
+                    if (!$form->isValid()) {
+                        foreach ($this->erreurs($form) as $champ => $msgs) {
+                            $manquants[$cheminEnfant . '.' . $champ] = $msgs;
+                        }
+                    }
+                }
+
+                // Récursion : les collections de l'enfant.
+                $this->analyserCollections($copieEnfant, $enfant, $scope, $ce->childShortName, $cheminEnfant . '.', $profondeur + 1, $manquants, $impacts, $bloque);
+            }
+        }
     }
 
     /**
@@ -191,21 +314,30 @@ class WorkspaceMutationService
             if ($manquants !== []) {
                 throw MutationException::invalide(sprintf('Informations obligatoires manquantes pour « %s ».', $libelle), $manquants);
             }
+            $form = $this->construireEtSoumettre($entity, $op);
+            if (!$form->isValid()) {
+                throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelle), $this->erreurs($form));
+            }
+            $this->commitWrite($entity, $scope->entreprise, $acteur);
         } else {
             $entity = $this->trouverCible($op, $scope) ?? throw MutationException::introuvable(
                 sprintf('%s #%d introuvable dans votre entreprise.', $libelle, (int) $op->targetId),
             );
+            // Édition « conteneur » (seules des collections changent) : la tête n'est
+            // ni re-validée ni re-facturée si elle ne porte aucun champ propre.
+            if ($this->estEcritureReelle($op)) {
+                $form = $this->construireEtSoumettre($entity, $op);
+                if (!$form->isValid()) {
+                    throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelle), $this->erreurs($form));
+                }
+                $this->commitWrite($entity, $scope->entreprise, $acteur);
+            }
         }
 
-        $form = $this->construireEtSoumettre($entity, $op);
-        if (!$form->isValid()) {
-            throw MutationException::invalide(
-                sprintf('Données invalides pour « %s ».', $libelle),
-                $this->erreurs($form),
-            );
-        }
-
-        $this->commitWrite($entity, $scope->entreprise, $acteur);
+        // Collections imbriquées (récursif) : chaque nœud écrit est métré et persisté
+        // exactement comme via son propre formulaire dans l'UI.
+        $enfants = [];
+        $this->executerCollections($entity, $op, $scope, $acteur, $op->entityShortName, 0, $enfants);
 
         return [
             'op'      => $op->op,
@@ -213,7 +345,101 @@ class WorkspaceMutationService
             'libelle' => $libelle,
             'cible'   => $this->libelleInstance($entity),
             'id'      => method_exists($entity, 'getId') ? $entity->getId() : null,
+            'enfants' => $enfants,
         ];
+    }
+
+    /**
+     * Exécute réellement les sous-opérations de collection d'un nœud parent (déjà
+     * persisté), récursivement. Réplique le chemin de sauvegarde de l'UI
+     * (handleFormSubmission) par élément : pré-scoping, liaison au parent,
+     * soumission du FormType enfant, métrage + persistance. Journalise chaque
+     * étape dans $enfants (avec ses propres descendants).
+     *
+     * @param array<int,array> $enfants (par référence)
+     */
+    private function executerCollections(
+        object $parent,
+        MutationOperation $parentOp,
+        AiScope $scope,
+        ?Utilisateur $acteur,
+        string $parentShortName,
+        int $profondeur,
+        array &$enfants,
+    ): void {
+        if ($parentOp->collections === [] || $profondeur >= FormTreeInspector::PROFONDEUR_MAX) {
+            return;
+        }
+
+        foreach ($parentOp->collections as $nomCollection => $ops) {
+            $ce = $this->formTreeInspector->collectionEditable($parentShortName, $nomCollection);
+            if ($ce === null) {
+                throw MutationException::horsPerimetre(sprintf('Collection « %s » non éditable.', $nomCollection));
+            }
+
+            foreach (MutationPlan::ordonner($ops) as $enfantOp) {
+                $enfantOp = $enfantOp->withEntityShortName($ce->childShortName);
+                $libelleEnfant = $this->accessResolver->libellesEntites()[$ce->childShortName] ?? $ce->childShortName;
+
+                if (!$this->accessResolver->can($scope->invite, $ce->childShortName, $enfantOp->requiredLevel())) {
+                    throw MutationException::horsPerimetre(sprintf('Action hors de votre périmètre sur « %s ».', $libelleEnfant));
+                }
+
+                if ($enfantOp->isDelete()) {
+                    $cible = $this->resoudreEnfantDansCollection($parent, $ce, $enfantOp->targetId)
+                        ?? throw MutationException::introuvable(sprintf('Élément #%d introuvable dans « %s ».', (int) $enfantOp->targetId, $nomCollection));
+                    if (!$ce->allowDelete) {
+                        throw MutationException::horsPerimetre(sprintf('Suppression interdite dans « %s ».', $nomCollection));
+                    }
+                    $impact = $this->cascadeAnalyzer->analyserSuppression($cible);
+                    if ($impact->estBloque()) {
+                        throw MutationException::bloque(implode(' ', $impact->blocages));
+                    }
+                    $cibleLabel = $this->libelleInstance($cible);
+                    $this->retirerDuParent($parent, $cible, $ce);
+                    $this->em->flush();
+                    $enfants[] = ['op' => 'delete', 'entite' => $ce->childShortName, 'libelle' => $libelleEnfant, 'cible' => $cibleLabel, 'id' => null, 'enfants' => []];
+                    continue;
+                }
+
+                if ($enfantOp->isCreate()) {
+                    if (!$ce->allowAdd) {
+                        throw MutationException::horsPerimetre(sprintf('Ajout interdit dans « %s ».', $nomCollection));
+                    }
+                    $entiteEnfant = $this->nouvelleEntite($enfantOp, $scope);
+                    $this->lierAuParent($entiteEnfant, $parent, $ce);
+                    $manquants = $this->champsRequisManquants($entiteEnfant, $enfantOp, [$ce->mappedBy]);
+                    if ($manquants !== []) {
+                        throw MutationException::invalide(sprintf('Informations obligatoires manquantes pour « %s ».', $libelleEnfant), $manquants);
+                    }
+                } else {
+                    $entiteEnfant = $this->resoudreEnfantDansCollection($parent, $ce, $enfantOp->targetId)
+                        ?? throw MutationException::introuvable(sprintf('Élément #%d introuvable dans « %s ».', (int) $enfantOp->targetId, $nomCollection));
+                }
+
+                if ($this->estEcritureReelle($enfantOp)) {
+                    // Le FormType enfant ne porte pas la relation parente (posée en amont
+                    // via lierAuParent) ; clearMissing=false la préserve à la soumission.
+                    $form = $this->construireEtSoumettre($entiteEnfant, $enfantOp, $ce->childFormType);
+                    if (!$form->isValid()) {
+                        throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelleEnfant), $this->erreurs($form));
+                    }
+                    $this->commitWrite($entiteEnfant, $scope->entreprise, $acteur);
+                }
+
+                $petitsEnfants = [];
+                $this->executerCollections($entiteEnfant, $enfantOp, $scope, $acteur, $ce->childShortName, $profondeur + 1, $petitsEnfants);
+
+                $enfants[] = [
+                    'op'      => $enfantOp->op,
+                    'entite'  => $ce->childShortName,
+                    'libelle' => $libelleEnfant,
+                    'cible'   => $this->libelleInstance($entiteEnfant),
+                    'id'      => method_exists($entiteEnfant, 'getId') ? $entiteEnfant->getId() : null,
+                    'enfants' => $petitsEnfants,
+                ];
+            }
+        }
     }
 
     // ─────────────────────────────── Interne ──────────────────────────────────
@@ -229,6 +455,101 @@ class WorkspaceMutationService
         }
 
         return $this->accessResolver->can($scope->invite, $op->entityShortName, $op->requiredLevel());
+    }
+
+    /**
+     * Le nœud représente-t-il une écriture RÉELLE (donc facturée et validée par son
+     * FormType) ? Un create l'est toujours ; un edit l'est s'il porte au moins un
+     * champ propre (une édition « conteneur » qui ne change que des collections ne
+     * re-persiste pas la tête) ; un delete ne l'est jamais (gratuit).
+     */
+    private function estEcritureReelle(MutationOperation $op): bool
+    {
+        if ($op->isCreate()) {
+            return true;
+        }
+        if ($op->isDelete()) {
+            return false;
+        }
+
+        return $this->nettoyerChamps($op->fields) !== [];
+    }
+
+    /**
+     * FQCN de chaque nœud FACTURÉ (écriture réelle) du sous-arbre d'une opération —
+     * source unique du budget, partagée par le tool de préparation et l'endpoint
+     * d'exécution (garantit un chiffrage identique). Les enfants sont typés d'après
+     * le FormType du parent (jamais d'après le LLM).
+     *
+     * @return string[]
+     */
+    public function facturablesArbre(MutationOperation $op, AiScope $scope): array
+    {
+        $out = [];
+        $this->collecterFacturables($op, $op->entityShortName, 0, $out);
+
+        return $out;
+    }
+
+    /** @param string[] $out */
+    private function collecterFacturables(MutationOperation $op, string $shortName, int $profondeur, array &$out): void
+    {
+        if ($this->estEcritureReelle($op)) {
+            $out[] = 'App\\Entity\\' . $shortName;
+        }
+        if ($op->collections === [] || $profondeur >= FormTreeInspector::PROFONDEUR_MAX) {
+            return;
+        }
+        foreach ($op->collections as $nomCollection => $enfants) {
+            $ce = $this->formTreeInspector->collectionEditable($shortName, $nomCollection);
+            if ($ce === null) {
+                continue;
+            }
+            foreach ($enfants as $enfant) {
+                $this->collecterFacturables($enfant, $ce->childShortName, $profondeur + 1, $out);
+            }
+        }
+    }
+
+    /** Pose la relation inverse (ManyToOne) de l'enfant vers le parent + l'ajoute à la collection. */
+    private function lierAuParent(object $enfant, object $parent, CollectionEditable $ce): void
+    {
+        if (method_exists($enfant, $ce->setterInverse)) {
+            $enfant->{$ce->setterInverse}($parent);
+        }
+        if (method_exists($parent, $ce->adder)) {
+            $parent->{$ce->adder}($enfant);
+        }
+    }
+
+    /** Retire l'enfant du parent (orphanRemoval le supprime), avec repli sur em->remove(). */
+    private function retirerDuParent(object $parent, object $enfant, CollectionEditable $ce): void
+    {
+        if (method_exists($parent, $ce->remover)) {
+            $parent->{$ce->remover}($enfant);
+
+            return;
+        }
+        $this->em->remove($enfant);
+    }
+
+    /**
+     * Retrouve un élément d'une collection du parent par son id — GARANTIT à la fois
+     * l'appartenance au parent et le périmètre entreprise (l'élément est atteint via
+     * la collection déjà scopée du parent, jamais par une requête globale).
+     */
+    private function resoudreEnfantDansCollection(object $parent, CollectionEditable $ce, ?int $id): ?object
+    {
+        if ($id === null || !method_exists($parent, $ce->getter)) {
+            return null;
+        }
+        foreach ($parent->{$ce->getter}() as $element) {
+            if (method_exists($element, 'getId') && (int) $element->getId() === $id) {
+                return $element;
+            }
+        }
+
+        return null;
     }
 
     /** Résout l'enregistrement cible d'une op edit/delete dans l'entreprise du scope, ou null. */
@@ -255,7 +576,7 @@ class WorkspaceMutationService
      *
      * @return array<string, string[]>
      */
-    private function champsRequisManquants(object $entity, MutationOperation $op): array
+    private function champsRequisManquants(object $entity, MutationOperation $op, array $ignorer = []): array
     {
         try {
             $meta = $this->em->getClassMetadata($op->fqcn());
@@ -267,7 +588,7 @@ class WorkspaceMutationService
 
         // Champs scalaires obligatoires (prédicat partagé avec l'inventaire).
         foreach ($meta->getFieldNames() as $field) {
-            if (!$this->champsInspector->scalaireRequis($meta, $entity, $field)) {
+            if (in_array($field, $ignorer, true) || !$this->champsInspector->scalaireRequis($meta, $entity, $field)) {
                 continue;
             }
             if (array_key_exists($field, $fields) && $fields[$field] !== null && $fields[$field] !== '') {
@@ -276,9 +597,10 @@ class WorkspaceMutationService
             $manquants[$field] = ['Champ obligatoire à renseigner.'];
         }
 
-        // Relations ManyToOne obligatoires (hors entreprise/invite auto-scopés).
+        // Relations ManyToOne obligatoires (hors entreprise/invite auto-scopés, et
+        // hors relation parente déjà posée par le rattachement à la collection).
         foreach ($meta->getAssociationMappings() as $field => $mapping) {
-            if (!$this->champsInspector->relationRequise($field, $mapping)) {
+            if (in_array($field, $ignorer, true) || !$this->champsInspector->relationRequise($field, $mapping)) {
                 continue;
             }
             if (!empty($fields[$field]) || $this->champsInspector->valeurNonNulle($entity, $meta, $field)) {
@@ -498,7 +820,7 @@ class WorkspaceMutationService
      * ManyToOne pour que les champs autocomplete valident les id soumis — même
      * logique que ControllerUtilsTrait::handleFormSubmission.
      */
-    private function construireEtSoumettre(object $entity, MutationOperation $op): FormInterface
+    private function construireEtSoumettre(object $entity, MutationOperation $op, ?string $formTypeOverride = null): FormInterface
     {
         $fqcn = $op->fqcn();
         $fields = $this->nettoyerChamps($op->fields);
@@ -531,7 +853,9 @@ class WorkspaceMutationService
             // Best-effort : le formulaire reste seul juge de la validité.
         }
 
-        $formType = 'App\\Form\\' . $op->entityShortName . 'Type';
+        // FormType : par défaut App\Form\{Entité}Type ; pour un enfant de collection,
+        // on passe l'entry_type EXACT déclaré par le formulaire parent (contrat UI).
+        $formType = $formTypeOverride ?? ('App\\Form\\' . $op->entityShortName . 'Type');
         $form = $this->formFactory->create($formType, $entity);
 
         // Champs multiples absents => tableau vide (miroir de handleFormSubmission).
