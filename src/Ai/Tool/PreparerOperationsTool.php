@@ -136,13 +136,14 @@ final class PreparerOperationsTool implements AiToolInterface
             }
 
             $lignes[] = [
-                'n'       => $n,
-                'op'      => $op->op,
-                'entite'  => $op->entityShortName,
-                'libelle' => $analyse['libelle'],
-                'cible'   => $analyse['cible'],
-                'champs'  => array_keys($op->fields),
-                'impacts' => $analyse['impacts'],
+                'n'            => $n,
+                'op'           => $op->op,
+                'entite'       => $op->entityShortName,
+                'libelle'      => $analyse['libelle'],
+                'cible'        => $analyse['cible'],
+                'champs'       => array_keys($op->fields),
+                'impacts'      => $analyse['impacts'],
+                'portefeuille' => $analyse['portefeuille'] ?? null,
             ];
 
             if ($analyse['statut'] === 'invalide') {

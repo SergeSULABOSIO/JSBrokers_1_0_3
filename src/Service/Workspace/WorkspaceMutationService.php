@@ -86,6 +86,7 @@ class WorkspaceMutationService
         $base = [
             'ok' => false, 'statut' => 'ok', 'entite' => $op->entityShortName,
             'libelle' => $libelle, 'cible' => null, 'manquants' => [], 'impacts' => [], 'bloque' => false,
+            'portefeuille' => null,
         ];
 
         // Périmètre + allowlist (fail-closed).
@@ -124,9 +125,13 @@ class WorkspaceMutationService
         // détectés AVANT le form (que clearMissing=false ne validerait pas), afin
         // que Ket les demande plutôt que de provoquer une erreur SQL à l'exécution.
         if ($op->isCreate()) {
-            $manquants = $this->champsRequisManquants($copie, $op);
+            // Portefeuille (auto si unique, sinon à demander) + champs obligatoires.
+            $manquants = $this->resoudrePortefeuille($copie, $op, $scope) + $this->champsRequisManquants($copie, $op);
             if ($manquants !== []) {
                 return ['ok' => false, 'statut' => 'invalide', 'manquants' => $manquants] + $base;
+            }
+            if (method_exists($copie, 'getPortefeuille') && $copie->getPortefeuille() !== null) {
+                $base['portefeuille'] = $this->libelleInstance($copie->getPortefeuille());
             }
         }
 
@@ -173,8 +178,9 @@ class WorkspaceMutationService
         // Create / edit.
         if ($op->isCreate()) {
             $entity = $this->nouvelleEntite($op, $scope);
-            // Garde : champ obligatoire manquant => 422 propre (jamais d'erreur SQL).
-            $manquants = $this->champsRequisManquants($entity, $op);
+            // Portefeuille (auto/à demander) + champs obligatoires => 422 propre
+            // si incomplet (jamais d'erreur SQL, jamais d'enregistrement « perdu »).
+            $manquants = $this->resoudrePortefeuille($entity, $op, $scope) + $this->champsRequisManquants($entity, $op);
             if ($manquants !== []) {
                 throw MutationException::invalide(sprintf('Informations obligatoires manquantes pour « %s ».', $libelle), $manquants);
             }
@@ -286,6 +292,54 @@ class WorkspaceMutationService
         }
 
         return $manquants;
+    }
+
+    /**
+     * Portefeuille de destination d'une création (Client notamment). Un
+     * enregistrement sans portefeuille n'apparaît pas dans la vue « Mon
+     * portefeuille » de l'utilisateur, d'où :
+     *  - si l'utilisateur ne l'a pas précisé et gère UN SEUL portefeuille => on
+     *    l'y range automatiquement (le portefeuille « de l'utilisateur ») ;
+     *  - s'il en gère plusieurs => on renvoie « portefeuille » en manquant pour
+     *    que Ket LUI DEMANDE lequel ;
+     *  - s'il n'en gère aucun (ex. propriétaire) => laissé libre.
+     *
+     * Effet de bord assumé : l'auto-affectation est posée sur l'entité (rejouée
+     * à l'identique au dry-run et à l'exécution).
+     *
+     * @return array<string, string[]> manquants éventuels (clé « portefeuille »)
+     */
+    private function resoudrePortefeuille(object $entity, MutationOperation $op, AiScope $scope): array
+    {
+        if (!$op->isCreate()
+            || !method_exists($entity, 'getPortefeuille')
+            || !method_exists($entity, 'setPortefeuille')
+            || $entity->getPortefeuille() !== null) {
+            return [];
+        }
+        $fields = $this->nettoyerChamps($op->fields);
+        if (!empty($fields['portefeuille'])) {
+            return []; // précisé par l'utilisateur : le FormType le liera.
+        }
+
+        $geres = [];
+        foreach ($scope->invite->getPortefeuilles() as $pf) {
+            $ent = method_exists($pf, 'getEntreprise') ? $pf->getEntreprise() : null;
+            if ($ent === null || $ent->getId() === $scope->entreprise->getId()) {
+                $geres[] = $pf;
+            }
+        }
+
+        if (count($geres) === 1) {
+            $entity->setPortefeuille($geres[0]);
+
+            return [];
+        }
+        if (count($geres) >= 2) {
+            return ['portefeuille' => ['Précisez le portefeuille de destination (vous en gérez plusieurs).']];
+        }
+
+        return [];
     }
 
     /** Le champ a-t-il une valeur par défaut côté BDD (options.default) ? */

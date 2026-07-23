@@ -7,6 +7,7 @@ use App\Ai\Scope\AiScope;
 use App\Entity\Client;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
+use App\Entity\Portefeuille;
 use App\Entity\Utilisateur;
 use App\Service\Workspace\MutationException;
 use App\Service\Workspace\WorkspaceMutationService;
@@ -56,9 +57,10 @@ class WorkspaceMutationServiceTest extends WebTestCase
         foreach ([self::OWNER_A, self::OWNER_B, self::INTRUS] as $email) {
             $conn->executeStatement('UPDATE utilisateur SET connected_to_id = NULL WHERE email = :e', ['e' => $email]);
         }
-        // 2) Ordre des FK : client → invite → entreprise → utilisateur.
+        // 2) Ordre des FK : client → portefeuille → invite → entreprise → utilisateur.
         foreach ([self::ENT_A, self::ENT_B] as $nom) {
             $conn->executeStatement('DELETE c FROM client c JOIN entreprise e ON c.entreprise_id = e.id WHERE e.nom = :n', ['n' => $nom]);
+            $conn->executeStatement('DELETE pf FROM portefeuille pf JOIN entreprise e ON pf.entreprise_id = e.id WHERE e.nom = :n', ['n' => $nom]);
             $conn->executeStatement('DELETE i FROM invite i JOIN entreprise e ON i.entreprise_id = e.id WHERE e.nom = :n', ['n' => $nom]);
             $conn->executeStatement('DELETE FROM entreprise WHERE nom = :n', ['n' => $nom]);
         }
@@ -168,6 +170,39 @@ class WorkspaceMutationServiceTest extends WebTestCase
         $this->assertFalse($res['ok']);
         $this->assertSame('invalide', $res['statut']);
         $this->assertArrayHasKey('exonere', $res['manquants']);
+    }
+
+    public function testCreationRangeDansLePortefeuilleUniqueDeLInvite(): void
+    {
+        // L'invité gère UN portefeuille : un client créé sans portefeuille précisé
+        // y est rangé automatiquement (sinon invisible dans « Mon portefeuille »).
+        $owner = $this->seedUser(self::OWNER_A);
+        $ent = $this->seedEntreprise(self::ENT_A, $owner);
+        $inv = $this->seedOwnerInvite($ent, $owner);
+        $pf = (new Portefeuille())->setNom('PF Unique')->setGestionnaire($inv)->setEntreprise($ent);
+        $this->em->persist($pf);
+        $owner->setConnectedTo($ent);
+        $this->em->flush();
+        [$entId, $invId, $pfId] = [$ent->getId(), $inv->getId(), $pf->getId()];
+
+        // Rechargement propre : la collection getPortefeuilles() de l'invité vient de la BDD.
+        $this->em->clear();
+        $ent = $this->em->getRepository(Entreprise::class)->find($entId);
+        $inv = $this->em->getRepository(Invite::class)->find($invId);
+        $owner = $this->em->getRepository(Utilisateur::class)->findOneBy(['email' => self::OWNER_A]);
+        $this->client->loginUser($owner);
+
+        $this->service->executer(
+            new MutationOperation('create', 'Client', null, ['nom' => 'Client PF', 'exonere' => false]),
+            new AiScope($ent, $inv),
+            $owner,
+        );
+
+        $this->em->clear();
+        $c = $this->em->getRepository(Client::class)->findOneBy(['nom' => 'Client PF']);
+        $this->assertNotNull($c);
+        $this->assertNotNull($c->getPortefeuille(), 'Le client doit être rangé dans le portefeuille de l’invité.');
+        $this->assertSame($pfId, $c->getPortefeuille()->getId());
     }
 
     public function testCreationRefuseUnChampObligatoireManquant(): void
