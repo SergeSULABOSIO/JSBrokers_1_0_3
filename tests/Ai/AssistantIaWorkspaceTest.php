@@ -925,7 +925,65 @@ class AssistantIaWorkspaceTest extends WebTestCase
         $this->client->loginUser($this->user(self::OWNER_EMAIL));
         $this->client->request('GET', sprintf('/admin/assistant-ia/chat/%d/%d', $e->getId(), $conversation->getId()));
         $this->assertResponseIsSuccessful();
-        $this->assertStringNotContainsString('data-mutation-review', (string) $this->client->getResponse()->getContent());
+        $content = (string) $this->client->getResponse()->getContent();
+        $this->assertStringNotContainsString('data-mutation-review', $content, 'Plus de barre pour un plan exécuté.');
+        $this->assertStringContainsString('aic-plan-status--done', $content, 'Feedback permanent « exécuté » attendu.');
+    }
+
+    public function testAnnulationDunPlanEstMemoriseeDansLeFil(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $owner);
+
+        $message = (new AssistantMessage())
+            ->setRole(AssistantMessage::ROLE_ASSISTANT)
+            ->setContenu('Voici le plan préparé.')
+            ->setMeta([
+                'mutationPlan' => [
+                    'plan'             => [['op' => 'edit', 'entite' => 'Client', 'targetId' => 63, 'fields' => ['telephone' => '+243900']]],
+                    'budget'           => ['coutEstime' => 10, 'soldeDisponible' => 1000, 'resteApres' => 990, 'suffisant' => true],
+                    'requiresPassword' => false,
+                    'impacts'          => [],
+                ],
+            ]);
+        $conversation->addMessage($message);
+        $this->em()->persist($message);
+        $this->em()->flush();
+        $idMessage = $message->getId();
+
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        // Décision « annuler » mémorisée côté serveur.
+        $this->client->request('POST', sprintf('/admin/assistant-ia/api/mutation/%d/%d/%d/cancel', $e->getId(), $conversation->getId(), $idMessage));
+        $this->assertResponseIsSuccessful();
+
+        // Rechargement : feedback permanent « annulé » + plus de barre de décision.
+        $this->client->request('GET', sprintf('/admin/assistant-ia/chat/%d/%d', $e->getId(), $conversation->getId()));
+        $this->assertResponseIsSuccessful();
+        $content = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('aic-plan-status--cancelled', $content, 'Feedback permanent « annulé » attendu.');
+        $this->assertStringNotContainsString('data-mutation-review', $content, 'Plus de barre après annulation.');
+    }
+
+    public function testAnnulationImpossibleSurPlanDejaExecute(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $owner);
+
+        $message = (new AssistantMessage())
+            ->setRole(AssistantMessage::ROLE_ASSISTANT)
+            ->setContenu('Plan exécuté.')
+            ->setMeta([
+                'mutationPlan'         => ['plan' => [['op' => 'edit', 'entite' => 'Client', 'targetId' => 63, 'fields' => []]]],
+                'mutationPlanExecuted' => true,
+            ]);
+        $conversation->addMessage($message);
+        $this->em()->persist($message);
+        $this->em()->flush();
+
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+        $this->client->request('POST', sprintf('/admin/assistant-ia/api/mutation/%d/%d/%d/cancel', $e->getId(), $conversation->getId(), $message->getId()));
+        $this->assertResponseStatusCodeSame(409);
     }
 
     public function testDialogContextEndpointFailClosed(): void
