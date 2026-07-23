@@ -79,7 +79,12 @@
                     </div>
                 </div>
             {% endif %}
-            {{ form_start(form) }}
+            {# novalidate : la validation HTML5 native bloque silencieusement la soumission
+               quand un champ `required` vide est dans une section masquée (le navigateur ne
+               peut focaliser un champ caché). La validation de référence est côté SERVEUR ;
+               un contrôle JS léger (dialog-instance#triggerSubmit) signale, lui, les seuls
+               champs requis VISIBLES avant l'envoi. Robuste y compris sur la touche Entrée. #}
+            {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
             {% if formCanvas.form_layout is defined and formCanvas.form_layout is not empty %}
                 {# Pour chaque ligne définie dans la configuration du layout... #}
                 {% for row in formCanvas.form_layout %}
