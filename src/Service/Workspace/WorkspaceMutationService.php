@@ -37,6 +37,15 @@ use Symfony\Component\Form\FormInterface;
  */
 class WorkspaceMutationService
 {
+    /** Types de champs scalaires pilotables par l'IA (miroir de PrefillWhitelist). */
+    private const TYPES_SCALAIRES = [
+        'string', 'text', 'integer', 'smallint', 'bigint', 'float', 'decimal',
+        'boolean', 'date', 'date_immutable', 'datetime', 'datetime_immutable',
+    ];
+
+    /** Champs jamais exposés/pilotés (système + scoping auto). */
+    private const CHAMPS_SYSTEME = ['id', 'createdAt', 'updatedAt'];
+
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly FormFactoryInterface $formFactory,
@@ -256,42 +265,210 @@ class WorkspaceMutationService
             return [];
         }
         $fields = $this->nettoyerChamps($op->fields);
-        $ignore = ['id', 'createdAt', 'updatedAt'];
         $manquants = [];
 
-        // Champs scalaires non-nullables sans défaut.
+        // Champs scalaires obligatoires (prédicat partagé avec l'inventaire).
         foreach ($meta->getFieldNames() as $field) {
-            if (in_array($field, $ignore, true) || $meta->isNullable($field)) {
+            if (!$this->scalaireRequis($meta, $entity, $field)) {
                 continue;
             }
             if (array_key_exists($field, $fields) && $fields[$field] !== null && $fields[$field] !== '') {
                 continue; // fourni par l'utilisateur.
-            }
-            if ($this->aUnDefaut($meta, $field) || $this->valeurNonNulle($entity, $meta, $field)) {
-                continue; // défaut BDD, ou déjà initialisé (défaut PHP).
             }
             $manquants[$field] = ['Champ obligatoire à renseigner.'];
         }
 
         // Relations ManyToOne obligatoires (hors entreprise/invite auto-scopés).
         foreach ($meta->getAssociationMappings() as $field => $mapping) {
-            if (!$mapping->isManyToOne() || !$mapping->isOwningSide()
-                || in_array($field, ['entreprise', 'invite'], true)) {
+            if (!$this->relationRequise($field, $mapping)) {
                 continue;
             }
-            $requis = false;
-            foreach (($mapping->joinColumns ?? []) as $jc) {
-                if (($jc->nullable ?? true) === false) {
-                    $requis = true;
-                }
-            }
-            if (!$requis || !empty($fields[$field]) || $this->valeurNonNulle($entity, $meta, $field)) {
+            if (!empty($fields[$field]) || $this->valeurNonNulle($entity, $meta, $field)) {
                 continue;
             }
             $manquants[$field] = ['Relation obligatoire à préciser (identifiant).'];
         }
 
         return $manquants;
+    }
+
+    /** Un champ scalaire est-il OBLIGATOIRE (non-nullable, sans défaut BDD/PHP, hors système) ? */
+    private function scalaireRequis(ClassMetadata $meta, object $entity, string $field): bool
+    {
+        if (in_array($field, self::CHAMPS_SYSTEME, true) || $meta->isNullable($field)) {
+            return false;
+        }
+
+        return !$this->aUnDefaut($meta, $field) && !$this->valeurNonNulle($entity, $meta, $field);
+    }
+
+    /** Une relation ManyToOne est-elle OBLIGATOIRE (colonne non-null, hors entreprise/invite auto) ? */
+    private function relationRequise(string $field, object $mapping): bool
+    {
+        if (!$mapping->isManyToOne() || !$mapping->isOwningSide() || in_array($field, ['entreprise', 'invite'], true)) {
+            return false;
+        }
+        foreach (($mapping->joinColumns ?? []) as $jc) {
+            if (($jc->nullable ?? true) === false) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * INVENTAIRE des champs pilotables d'une entité, groupés pour une présentation
+     * transparente : OBLIGATOIRES (à fournir), FACULTATIFS (au choix) et AUTO
+     * (renseignés par Ket d'après le contexte : entreprise, invité, et portefeuille
+     * de l'invité s'il n'en gère qu'un). Cohérent par construction avec l'exécution
+     * (mêmes prédicats scalaireRequis/relationRequise et portefeuillesGeres).
+     *
+     * @param object|null $cible Enregistrement à éditer (mode édition) ; null = création.
+     *
+     * @return array{entite:string,libelle:string,mode:string,obligatoires:array,facultatifs:array,auto:array}
+     */
+    public function inventaireChamps(string $shortName, AiScope $scope, ?object $cible = null): array
+    {
+        $libelle = $this->accessResolver->libellesEntites()[$shortName] ?? $shortName;
+        $mode = $cible !== null ? 'edition' : 'creation';
+        $vide = ['entite' => $shortName, 'libelle' => $libelle, 'mode' => $mode, 'obligatoires' => [], 'facultatifs' => [], 'auto' => []];
+
+        $fqcn = 'App\\Entity\\' . $shortName;
+        if (!class_exists($fqcn)) {
+            return $vide;
+        }
+        try {
+            $meta = $this->em->getClassMetadata($fqcn);
+        } catch (\Throwable) {
+            return $vide;
+        }
+
+        $labels = $this->libellesFormulaire($shortName, $fqcn);
+        $entity = $cible ?? new $fqcn();
+        $obligatoires = [];
+        $facultatifs = [];
+        $auto = [];
+
+        // AUTO : entreprise + invité (contexte de l'espace).
+        if ($meta->hasAssociation('entreprise')) {
+            $auto[] = ['champ' => 'entreprise', 'libelle' => $labels['entreprise'] ?? 'Entreprise', 'valeur' => (string) $scope->entreprise->getNom()];
+        }
+        if ($meta->hasAssociation('invite')) {
+            $auto[] = ['champ' => 'invite', 'libelle' => $labels['invite'] ?? 'Créateur', 'valeur' => 'vous'];
+        }
+        // AUTO/obligatoire : portefeuille selon ce que gère l'invité (création).
+        $portefeuilleObligatoire = false;
+        if ($mode === 'creation' && $meta->hasAssociation('portefeuille')) {
+            $geres = $this->portefeuillesGeres($scope);
+            if (count($geres) === 1) {
+                $auto[] = ['champ' => 'portefeuille', 'libelle' => $labels['portefeuille'] ?? 'Portefeuille', 'valeur' => $this->libelleInstance($geres[0])];
+            } elseif (count($geres) >= 2) {
+                $portefeuilleObligatoire = true; // à choisir explicitement
+            }
+        }
+        $autoChamps = array_column($auto, 'champ');
+
+        // Champs scalaires pilotables.
+        foreach ($meta->getFieldNames() as $field) {
+            if (in_array($field, self::CHAMPS_SYSTEME, true) || in_array($field, $autoChamps, true)) {
+                continue;
+            }
+            if (!in_array((string) $meta->getTypeOfField($field), self::TYPES_SCALAIRES, true)) {
+                continue;
+            }
+            $item = $this->itemChamp($field, $labels, $meta, $cible, $mode);
+            if ($mode === 'creation' && $this->scalaireRequis($meta, $entity, $field)) {
+                $obligatoires[] = $item;
+            } else {
+                $facultatifs[] = $item;
+            }
+        }
+
+        // Relations ManyToOne pilotables (par identifiant).
+        foreach ($meta->getAssociationMappings() as $field => $mapping) {
+            if (!$mapping->isManyToOne() || !$mapping->isOwningSide()
+                || in_array($field, self::CHAMPS_SYSTEME, true) || in_array($field, $autoChamps, true)) {
+                continue;
+            }
+            $item = $this->itemChamp($field, $labels, $meta, $cible, $mode);
+            $requis = $mode === 'creation'
+                && ($this->relationRequise($field, $mapping) || ($field === 'portefeuille' && $portefeuilleObligatoire));
+            if ($requis) {
+                $obligatoires[] = $item;
+            } else {
+                $facultatifs[] = $item;
+            }
+        }
+
+        return ['entite' => $shortName, 'libelle' => $libelle, 'mode' => $mode, 'obligatoires' => $obligatoires, 'facultatifs' => $facultatifs, 'auto' => $auto];
+    }
+
+    /** Construit une entrée d'inventaire (avec valeur actuelle en édition). */
+    private function itemChamp(string $field, array $labels, ClassMetadata $meta, ?object $cible, string $mode): array
+    {
+        $item = ['champ' => $field, 'libelle' => $labels[$field] ?? $this->humaniser($field)];
+        if ($mode === 'edition') {
+            $item['valeurActuelle'] = $this->valeurLisible($cible, $meta, $field);
+        }
+
+        return $item;
+    }
+
+    /** Libellés lisibles des champs, lus depuis le FormType (jamais les listes de choix). */
+    private function libellesFormulaire(string $shortName, string $fqcn): array
+    {
+        $labels = [];
+        try {
+            $form = $this->formFactory->create('App\\Form\\' . $shortName . 'Type', new $fqcn());
+            foreach ($form->all() as $child) {
+                $lbl = $child->getConfig()->getOption('label');
+                if (is_string($lbl) && trim($lbl) !== '') {
+                    $labels[$child->getName()] = $lbl;
+                }
+            }
+        } catch (\Throwable) {
+            // Pas de FormType exploitable : on retombera sur l'humanisation.
+        }
+
+        return $labels;
+    }
+
+    /** Humanise un nom de champ technique (fallback quand le FormType n'a pas de libellé). */
+    private function humaniser(string $field): string
+    {
+        $s = (string) preg_replace('/(?<!^)[A-Z]/', ' $0', $field);
+        $s = str_replace('_', ' ', $s);
+
+        return ucfirst(mb_strtolower(trim($s)));
+    }
+
+    /** Valeur lisible d'un champ pour l'édition (booléens en clair, relations libellées, dates formatées). */
+    private function valeurLisible(?object $entity, ClassMetadata $meta, string $field): string
+    {
+        if ($entity === null) {
+            return '—';
+        }
+        try {
+            $v = $meta->getFieldValue($entity, $field);
+        } catch (\Throwable) {
+            return '—';
+        }
+        if ($v === null || $v === '') {
+            return '—';
+        }
+        if (is_bool($v)) {
+            return $v ? 'Oui' : 'Non';
+        }
+        if ($v instanceof \DateTimeInterface) {
+            return $v->format('d/m/Y');
+        }
+        if (is_object($v)) {
+            return $this->libelleInstance($v);
+        }
+        $s = (string) $v;
+
+        return mb_strlen($s) > 80 ? mb_substr($s, 0, 77) . '…' : $s;
     }
 
     /**
@@ -322,13 +499,7 @@ class WorkspaceMutationService
             return []; // précisé par l'utilisateur : le FormType le liera.
         }
 
-        $geres = [];
-        foreach ($scope->invite->getPortefeuilles() as $pf) {
-            $ent = method_exists($pf, 'getEntreprise') ? $pf->getEntreprise() : null;
-            if ($ent === null || $ent->getId() === $scope->entreprise->getId()) {
-                $geres[] = $pf;
-            }
-        }
+        $geres = $this->portefeuillesGeres($scope);
 
         if (count($geres) === 1) {
             $entity->setPortefeuille($geres[0]);
@@ -340,6 +511,25 @@ class WorkspaceMutationService
         }
 
         return [];
+    }
+
+    /**
+     * Portefeuilles gérés par l'invité dans l'entreprise du scope (source unique
+     * partagée par l'auto-affectation et l'inventaire des champs).
+     *
+     * @return object[]
+     */
+    private function portefeuillesGeres(AiScope $scope): array
+    {
+        $geres = [];
+        foreach ($scope->invite->getPortefeuilles() as $pf) {
+            $ent = method_exists($pf, 'getEntreprise') ? $pf->getEntreprise() : null;
+            if ($ent === null || $ent->getId() === $scope->entreprise->getId()) {
+                $geres[] = $pf;
+            }
+        }
+
+        return $geres;
     }
 
     /** Le champ a-t-il une valeur par défaut côté BDD (options.default) ? */

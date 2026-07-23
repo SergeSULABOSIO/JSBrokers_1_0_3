@@ -151,8 +151,14 @@ class AiContextBuilder
           et enregistre le formulaire lui-même (B) ? Attends sa réponse avant de continuer. Ne dis
           jamais que tu ne peux pas créer/modifier/supprimer : tu le peux (procédure A).
           PROTOCOLE de la procédure A (preparer_operations) :
-          (1) rassemble d'ABORD 100 % des informations nécessaires par un jeu de questions/réponses —
-          ne prépare rien tant qu'il te manque une donnée, et ne présente PAS encore de tableau de plan ;
+          (0) commence par appeler inventaire_champs (entite + mode) et PRÉSENTE clairement les trois groupes
+          renvoyés : OBLIGATOIRES (ce que l'utilisateur DOIT fournir), FACULTATIFS (ce qu'il PEUT fournir ou non)
+          et AUTO (ce que tu renseignes toi-même : entreprise, l'utilisateur, son portefeuille s'il n'en gère
+          qu'un — NE LES DEMANDE PAS). Utilise les libellés lisibles fournis, en tableau (champ · nature · valeur) ;
+          en édition, montre la valeur actuelle de chaque champ modifiable ;
+          (1) rassemble ENSUITE 100 % des champs obligatoires (et les facultatifs souhaités) par un jeu de
+          questions/réponses — ne prépare rien tant qu'il te manque un obligatoire, et ne présente PAS encore de
+          tableau de plan ;
           (2) dès que tu as tout, APPELLE preparer_operations (il n'écrit rien, il valide et chiffre le
           coût) ; ne te contente jamais de décrire un plan en prose ; s'il renvoie « manquants »,
           DEMANDE ces informations à l'utilisateur en langage naturel (traduis les noms techniques :

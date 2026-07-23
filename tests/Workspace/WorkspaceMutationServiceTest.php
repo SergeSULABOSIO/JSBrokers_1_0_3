@@ -151,6 +151,55 @@ class WorkspaceMutationServiceTest extends WebTestCase
         $this->assertFalse($created->isExonere(), 'Le booléen envoyé par le LLM est normalisé et persisté.');
     }
 
+    public function testInventaireChampsCreationClient(): void
+    {
+        $owner = $this->seedUser(self::OWNER_A);
+        $ent = $this->seedEntreprise(self::ENT_A, $owner);
+        $inv = $this->seedOwnerInvite($ent, $owner);
+        $owner->setConnectedTo($ent);
+        $this->em->flush();
+        $this->client->loginUser($owner);
+
+        $inventaire = $this->service->inventaireChamps('Client', new AiScope($ent, $inv));
+
+        $this->assertSame('creation', $inventaire['mode']);
+        $obligatoires = array_column($inventaire['obligatoires'], 'champ');
+        $auto = array_column($inventaire['auto'], 'champ');
+        $facultatifs = array_column($inventaire['facultatifs'], 'champ');
+
+        // Cohérence avec l'exécution : nom + exonere sont bien obligatoires.
+        $this->assertContains('nom', $obligatoires);
+        $this->assertContains('exonere', $obligatoires);
+        // Ket complète seule l'entreprise et l'invité.
+        $this->assertContains('entreprise', $auto);
+        $this->assertContains('invite', $auto);
+        // Champs libres proposés (non obligatoires).
+        $this->assertContains('telephone', $facultatifs);
+        $this->assertContains('email', $facultatifs);
+        // Libellé humain issu du FormType.
+        $nom = array_values(array_filter($inventaire['obligatoires'], static fn ($c) => $c['champ'] === 'nom'))[0];
+        $this->assertSame('Nom', $nom['libelle']);
+    }
+
+    public function testInventaireChampsEditionExposeLesValeursActuelles(): void
+    {
+        $owner = $this->seedUser(self::OWNER_A);
+        $ent = $this->seedEntreprise(self::ENT_A, $owner);
+        $inv = $this->seedOwnerInvite($ent, $owner);
+        $client = $this->seedClient($ent, $inv, 'Client Existant');
+        $client->setTelephone('+243111222333');
+        $owner->setConnectedTo($ent);
+        $this->em->flush();
+        $this->client->loginUser($owner);
+
+        $inventaire = $this->service->inventaireChamps('Client', new AiScope($ent, $inv), $client);
+
+        $this->assertSame('edition', $inventaire['mode']);
+        $this->assertSame([], $inventaire['obligatoires'], 'En édition, rien n’est obligatoire (la fiche existe).');
+        $tel = array_values(array_filter($inventaire['facultatifs'], static fn ($c) => $c['champ'] === 'telephone'))[0];
+        $this->assertSame('+243111222333', $tel['valeurActuelle']);
+    }
+
     public function testDryRunDemandeLesChampsObligatoires(): void
     {
         // Au DRY-RUN déjà, un champ obligatoire non fourni doit sortir en
