@@ -3,6 +3,7 @@
 namespace App\Ai\Tool;
 
 use App\Ai\AiText;
+use App\Ai\Mutation\MutationAllowlist;
 use App\Ai\Scope\AiScope;
 use App\Entity\Invite;
 use App\Service\Workspace\WorkspaceAccessResolver;
@@ -38,16 +39,16 @@ final class OuvrirDialogueTool implements AiToolInterface
 
     public function description(): string
     {
-        return "Ouvre dans l'espace de travail de l'utilisateur le formulaire d'une entité : mode "
-            . "« creation » (nouvel enregistrement vierge) ou « edition » (enregistrement existant, "
-            . "id requis — obtiens-le d'abord via rechercher_entites si tu ne l'as pas). À appeler "
-            . 'quand l’utilisateur demande d’ouvrir, créer, ajouter ou modifier une fiche. En mode '
-            . 'creation, tu peux PRÉ-REMPLIR le formulaire via « valeurs » avec STRICTEMENT les '
-            . 'valeurs dictées par l’utilisateur — n’invente ni ne devine JAMAIS une valeur. '
-            . 'Cet outil n’écrit rien : l’utilisateur vérifie et enregistre lui-même le formulaire. '
-            . 'EXCEPTION : pour signaler le paiement d\'une PRIME sur une tranche, utiliser '
-            . 'signaler_paiement_prime (jamais le formulaire Paiement, qui est un encaissement '
-            . 'de trésorerie du courtier).';
+        return "Ouvre dans l'espace de travail le formulaire d'une entité (mode « creation » vierge "
+            . "ou « edition », id requis via rechercher_entites) que l'utilisateur remplira et "
+            . "enregistrera LUI-MÊME. À n'utiliser QUE si l'utilisateur demande EXPLICITEMENT d'ouvrir "
+            . "un formulaire à remplir lui-même, OU pour une entité NON gérée par preparer_operations. "
+            . 'NE PAS utiliser pour créer/modifier un Client, une Tâche, une Note, une Piste ou un '
+            . 'Avenant : pour ces cinq entités, tu enregistres TOI-MÊME via preparer_operations '
+            . '(n’ouvre pas de formulaire à soumettre à la main). En creation, pré-remplissage possible '
+            . 'via « valeurs » avec STRICTEMENT les valeurs dictées (jamais inventées). EXCEPTION : '
+            . 'pour signaler le paiement d\'une PRIME sur une tranche, utiliser signaler_paiement_prime '
+            . '(jamais le formulaire Paiement, qui est la trésorerie du courtier).';
     }
 
     public function schema(): array
@@ -128,10 +129,31 @@ final class OuvrirDialogueTool implements AiToolInterface
         }
 
         // FAIL-CLOSED : ouvrir un formulaire prépare une mutation — Écriture
-        // en création, Modification en édition.
+        // en création, Modification en édition. (Le contrôle d'accès passe AVANT
+        // la redirection : un invité sans droit reçoit un refus, pas une redirection.)
         $level = $mode === 'edition' ? Invite::ACCESS_MODIFICATION : Invite::ACCESS_ECRITURE;
         if (!$this->accessResolver->can($scope->invite, $shortName, $level)) {
             return AiToolResult::horsPerimetre($labels[$shortName]);
+        }
+
+        // GARDE-FOU (défense en profondeur) : pour les entités que Ket sait
+        // ENREGISTRER lui-même (allowlist de mutation), on n'ouvre JAMAIS un
+        // formulaire à faire soumettre à la main — on redirige le modèle vers
+        // preparer_operations (il exécute lui-même après validation). Aucune
+        // uiAction open-dialog n'est émise. Garantit le comportement attendu
+        // même si le modèle se trompe d'outil.
+        if (MutationAllowlist::autorise($shortName)) {
+            return AiToolResult::ok([
+                'rediriger'  => 'preparer_operations',
+                'entite'     => $shortName,
+                'libelle'    => $labels[$shortName],
+                'note'       => sprintf(
+                    'N’ouvre pas de formulaire pour « %s » : tu sais l’enregistrer toi-même. Utilise '
+                    . 'preparer_operations (créer/modifier/supprimer) — après validation de l’utilisateur, '
+                    . 'c’est TOI qui écris, sans formulaire à soumettre.',
+                    $labels[$shortName],
+                ),
+            ]);
         }
 
         $id = null;
