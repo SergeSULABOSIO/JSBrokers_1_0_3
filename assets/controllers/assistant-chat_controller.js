@@ -25,6 +25,11 @@ export default class extends Controller {
     /** Durée totale visée pour le déploiement d'une réponse (ms). */
     static TYPE_TOTAL_TARGET = 6000;
 
+    /** Icônes SVG (lucide, stroke currentColor) des boutons de décision — statiques, sûres. */
+    static ICON_CHECK = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+    static ICON_X = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+    static ICON_WALLET = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>';
+
     static values = {
         sendUrl: String,
         dialogContextUrl: String,
@@ -243,64 +248,104 @@ export default class extends Controller {
     renderMutationReview(action) {
         if (!action || !action.idMessage) return;
         const budget = action.budget || {};
+        const cout = budget.coutEstime || 0;
+        const solde = budget.soldeDisponible || 0;
+        const reste = budget.resteApres ?? Math.max(0, solde - cout);
+        const suffisant = budget.suffisant !== false;
+
         const bar = document.createElement('div');
         bar.className = 'aic-mutation-actions';
+        bar.setAttribute('role', 'group');
+        bar.setAttribute('aria-label', 'Décision sur le plan préparé par l’assistant');
 
-        // Ligne budget TOUJOURS affichée (garantie serveur, indépendante de la
-        // prose du modèle) : coût estimé · solde · reste après.
-        const budgetLine = document.createElement('p');
-        budgetLine.className = 'aic-mutation-budget';
-        budgetLine.textContent = `Budget : ${formatNombre(budget.coutEstime || 0)} tokens · solde ${formatNombre(budget.soldeDisponible || 0)} · reste ${formatNombre(budget.resteApres ?? Math.max(0, (budget.soldeDisponible || 0) - (budget.coutEstime || 0)))}`;
-        bar.appendChild(budgetLine);
+        // Budget TOUJOURS affiché (garantie serveur, indépendante de la prose du
+        // modèle), en pastilles lisibles : coût · solde · reste.
+        const budgetRow = document.createElement('div');
+        budgetRow.className = 'aic-mut-budget';
+        budgetRow.appendChild(this._budgetChip('Coût estimé', `${formatNombre(cout)} tokens`));
+        budgetRow.appendChild(this._budgetChip('Solde', formatNombre(solde)));
+        budgetRow.appendChild(this._budgetChip('Reste', formatNombre(reste), suffisant ? 'ok' : 'danger'));
+        bar.appendChild(budgetRow);
 
-        if (budget.suffisant === false) {
+        if (!suffisant) {
             const notice = document.createElement('p');
             notice.className = 'aic-notice aic-notice--warning';
             notice.setAttribute('role', 'status');
-            notice.textContent = 'Solde de tokens insuffisant pour cette mission.';
+            notice.textContent = 'Solde de tokens insuffisant pour exécuter cette mission.';
             bar.appendChild(notice);
 
-            const buy = document.createElement('a');
-            buy.className = 'btn btn-sm btn-primary aic-mutation-buy';
-            buy.href = '/admin/tokens/buy';
-            buy.target = '_blank';
-            buy.rel = 'noopener';
-            buy.textContent = 'Acheter des tokens';
-            bar.appendChild(buy);
-
-            const abort = document.createElement('button');
-            abort.type = 'button';
-            abort.className = 'btn btn-sm btn-link aic-mutation-abort';
-            abort.textContent = 'Abandonner la mission';
-            abort.addEventListener('click', () => bar.remove());
-            bar.appendChild(abort);
+            bar.appendChild(this._mutBtn('primary', this.constructor.ICON_WALLET, 'Acheter des tokens', null, '/admin/tokens/buy'));
+            bar.appendChild(this._mutBtn('ghost', this.constructor.ICON_X, 'Abandonner', () => bar.remove()));
         } else {
-            const exec = document.createElement('button');
-            exec.type = 'button';
-            exec.className = 'btn btn-sm btn-primary';
-            exec.textContent = 'Valider et exécuter';
-            exec.addEventListener('click', () => {
-                bar.remove();
+            const exec = this._mutBtn('primary', this.constructor.ICON_CHECK, 'Valider et exécuter');
+            const cancel = this._mutBtn('ghost', this.constructor.ICON_X, 'Annuler', () => bar.remove());
+
+            exec.addEventListener('click', async () => {
                 if (action.requiresPassword === true) {
-                    // Suppression : confirmation renforcée par mot de passe.
+                    // Suppression : confirmation renforcée par mot de passe (modale).
+                    bar.remove();
                     this.openMutationConfirm(action);
+                    return;
+                }
+                // Écriture pure : exécution IMMÉDIATE, sans boîte de dialogue.
+                // État « en cours » + récupération si échec (on ne perd pas le bouton).
+                const label = exec.querySelector('.aic-mut-label');
+                const prev = label ? label.textContent : '';
+                exec.disabled = true;
+                cancel.disabled = true;
+                if (label) label.textContent = 'Exécution…';
+                const ok = await this.executeMutationPlan(action.idMessage, null, false);
+                if (ok) {
+                    bar.remove();
                 } else {
-                    // Écriture pure : exécution IMMÉDIATE, sans boîte de dialogue.
-                    this.executeMutationPlan(action.idMessage, null, false);
+                    exec.disabled = false;
+                    cancel.disabled = false;
+                    if (label) label.textContent = prev;
                 }
             });
-            bar.appendChild(exec);
 
-            const cancel = document.createElement('button');
-            cancel.type = 'button';
-            cancel.className = 'btn btn-sm btn-link aic-mutation-abort';
-            cancel.textContent = 'Annuler';
-            cancel.addEventListener('click', () => bar.remove());
+            bar.appendChild(exec);
             bar.appendChild(cancel);
         }
 
         this.messagesTarget.appendChild(bar);
         this.scrollToBottom();
+    }
+
+    /** Pastille budget lisible « Libellé : valeur » (variante ok/danger sur la valeur). */
+    _budgetChip(label, value, variant = '') {
+        const chip = document.createElement('span');
+        chip.className = 'aic-mut-chip' + (variant ? ` aic-mut-chip--${variant}` : '');
+        const l = document.createElement('span');
+        l.textContent = `${label} :`;
+        const v = document.createElement('b');
+        v.textContent = value;
+        chip.append(l, v);
+        return chip;
+    }
+
+    /**
+     * Bouton d'action conforme à la charte (cobalt/ghost) : icône signifiante +
+     * libellé explicite, zone cliquable suffisante, focus visible (CSS). `href`
+     * => rendu <a> (lien d'achat), sinon <button>.
+     */
+    _mutBtn(variant, iconSvg, label, onClick = null, href = null) {
+        const el = document.createElement(href ? 'a' : 'button');
+        el.className = `aic-mut-btn aic-mut-btn--${variant}`;
+        if (href) {
+            el.href = href;
+            el.target = '_blank';
+            el.rel = 'noopener';
+        } else {
+            el.type = 'button';
+        }
+        el.innerHTML = iconSvg; // constante statique (aucun contenu utilisateur)
+        const span = document.createElement('span');
+        span.className = 'aic-mut-label';
+        span.textContent = label;
+        el.appendChild(span);
+        if (onClick) el.addEventListener('click', onClick);
+        return el;
     }
 
     /**
@@ -355,7 +400,7 @@ export default class extends Controller {
      */
     async executeMutationPlan(idMessage, password, viaModal = true) {
         const id = parseInt(idMessage, 10);
-        if (!Number.isInteger(id) || id <= 0) return;
+        if (!Number.isInteger(id) || id <= 0) return false;
         const url = `/admin/assistant-ia/api/mutation/${this.idEntrepriseValue}/${this.idConversationValue}/${id}/execute`;
 
         // Feedback « coulisses » : barre de progression globale pendant l'exécution.
@@ -373,7 +418,7 @@ export default class extends Controller {
                 await this.renderMutationJournal(data.journal || []);
                 // Rafraîchit les listes éventuellement affichées (données modifiées).
                 document.dispatchEvent(new CustomEvent('app:workspace.data-changed', { bubbles: true }));
-                return;
+                return true;
             }
 
             // Échecs (mot de passe, solde, validation) : message dans la modale
@@ -390,6 +435,7 @@ export default class extends Controller {
             } else {
                 this.appendNotice(response.status === 402 ? 'warning' : 'error', message);
             }
+            return false;
         } catch (error) {
             console.error('Ket - exécution du plan échouée :', error);
             const msg = "L'exécution a échoué. Vérifiez votre connexion puis réessayez.";
@@ -398,6 +444,7 @@ export default class extends Controller {
             } else {
                 this.appendNotice('error', msg);
             }
+            return false;
         } finally {
             document.dispatchEvent(new CustomEvent('app:loading.stop', { bubbles: true }));
         }

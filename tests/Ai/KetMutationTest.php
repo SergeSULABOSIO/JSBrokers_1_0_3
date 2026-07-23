@@ -72,6 +72,19 @@ class KetMutationTest extends TestCase
         $this->assertTrue($plan->contientSuppression());
     }
 
+    public function testOperationLitLesChampsEnvoyesParLeLLM(): void
+    {
+        // Le schéma de l'outil expose la clé « champs » : elle doit être lue
+        // (sinon les valeurs dictées sont perdues → rien n'est modifié en base).
+        $op = MutationOperation::fromArray([
+            'op' => 'edit', 'entite' => 'Client', 'id' => 63,
+            'champs' => ['telephone' => '+243999888777'],
+        ]);
+
+        $this->assertSame(63, $op->targetId);
+        $this->assertSame('+243999888777', $op->fields['telephone']);
+    }
+
     public function testPlanSerialisationAllerRetour(): void
     {
         $plan = new MutationPlan([
@@ -167,6 +180,23 @@ class KetMutationTest extends TestCase
         $this->assertIsArray($result->uiAction);
         $this->assertSame('ket-mutation.review', $result->uiAction['type']);
         $this->assertFalse($result->uiAction['requiresPassword'], 'Pas de suppression → pas de mot de passe');
+    }
+
+    public function testLePlanStockeConserveLesChamps(): void
+    {
+        // Régression : les valeurs voyagent jusqu'au plan (uiAction) stocké côté
+        // serveur — sinon l'exécution ne modifie rien.
+        $tool = $this->makeTool([]);
+
+        $result = $tool->execute([
+            'operations' => [
+                ['op' => 'edit', 'entite' => 'Client', 'id' => 63, 'champs' => ['telephone' => '+243900112233']],
+            ],
+        ], $this->makeScope());
+
+        $this->assertTrue($result->data['pret']);
+        $this->assertSame('+243900112233', $result->uiAction['plan'][0]['fields']['telephone']);
+        $this->assertSame(63, $result->uiAction['plan'][0]['targetId']);
     }
 
     public function testBudgetInsuffisantProposeAchatOuAbandon(): void

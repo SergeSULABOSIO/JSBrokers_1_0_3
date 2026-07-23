@@ -70,8 +70,11 @@ final class MutationOperation
 
     public static function fromArray(array $data): self
     {
+        // `champs` = clé exposée au LLM par le schéma de preparer_operations ;
+        // `fields` = clé de sérialisation interne (toArray) ; `valeurs` = alias
+        // toléré. Lire les trois évite de perdre les valeurs dictées par le modèle.
         $fields = [];
-        foreach ((array) ($data['fields'] ?? $data['valeurs'] ?? []) as $champ => $valeur) {
+        foreach ((array) ($data['champs'] ?? $data['fields'] ?? $data['valeurs'] ?? []) as $champ => $valeur) {
             if (is_string($champ) && (is_scalar($valeur) || $valeur === null)) {
                 $fields[$champ] = $valeur;
             }
