@@ -35,16 +35,28 @@ class KetMutationTest extends TestCase
 
     public function testAllowlistNAutoriseQueLesDonneesMetier(): void
     {
+        // Parité lecture/écriture : les 31 entités interrogeables sont mutables,
+        // paramétrage et référentiels compris.
         $membres = [
-            'Client', 'Piste', 'Avenant', 'Cotation', 'Portefeuille', 'Assureur', 'Risque',
-            'Partenaire', 'Groupe', 'Note', 'DepenseCourtier', 'Tache', 'Feedback',
-            'PieceSinistre', 'NotificationSinistre', 'OffreIndemnisationSinistre', 'Document', 'Classeur',
+            // Production
+            'Client', 'Cotation', 'Avenant', 'Piste', 'Portefeuille', 'Assureur', 'Risque', 'Partenaire', 'Groupe', 'Contact',
+            // Finances
+            'Note', 'DepenseCourtier', 'ChargeCourtier', 'Paiement', 'Bordereau', 'Tranche', 'RevenuPourCourtier',
+            'Chargement', 'TypeRevenu', 'Taxe', 'Monnaie', 'CompteBancaire', 'Fournisseur',
+            // Marketing
+            'Tache', 'Feedback',
+            // Sinistre
+            'PieceSinistre', 'NotificationSinistre', 'OffreIndemnisationSinistre', 'ModelePieceSinistre',
+            // Administration
+            'Document', 'Classeur',
         ];
+        $this->assertCount(31, $membres);
         foreach ($membres as $membre) {
             $this->assertTrue(MutationAllowlist::autorise($membre), $membre . ' doit être mutable');
         }
-        // Paramétrage / référentiels / rôles / hors liste : jamais mutable par Ket.
-        foreach (['Monnaie', 'Taxe', 'TypeRevenu', 'ModelePieceSinistre', 'Invite', 'RolesEnProduction', 'AssistantParametres', 'Entreprise'] as $exclu) {
+        // Restent EXCLUS fail-closed : gestion des rôles/invités + pseudo-entités
+        // sans classe Doctrine + entité hors carte d'accès.
+        foreach (['Invite', 'RolesEnProduction', 'RolesEnFinance', 'AssistantParametres', 'DocumentComptable', 'AssistantIa', 'Entreprise'] as $exclu) {
             $this->assertFalse(MutationAllowlist::autorise($exclu), $exclu . ' ne doit pas être mutable');
         }
     }
@@ -286,12 +298,13 @@ class KetMutationTest extends TestCase
 
     public function testDryRunRefuseEntiteHorsAllowlist(): void
     {
-        // Monnaie n'est pas dans l'allowlist : refus AVANT toute recherche/formulaire.
+        // RolesEnProduction (gestion des rôles) n'est pas dans l'allowlist : refus
+        // AVANT toute recherche/formulaire, même avec un droit accordé par le resolver.
         $search = $this->createMock(JSBDynamicSearchService::class);
         $search->expects($this->never())->method('search');
 
         $service = $this->makeMutationService($this->resolver(true), $search);
-        $analyse = $service->analyserOperation(new MutationOperation('edit', 'Monnaie', 5), $this->makeScope());
+        $analyse = $service->analyserOperation(new MutationOperation('edit', 'RolesEnProduction', 5), $this->makeScope());
 
         $this->assertSame('hors_perimetre', $analyse['statut']);
     }

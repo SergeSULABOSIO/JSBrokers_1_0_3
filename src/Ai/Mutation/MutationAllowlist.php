@@ -6,52 +6,60 @@ use App\Entity\Invite;
 
 /**
  * Périmètre des entités que l'assistant IA (Ket) est autorisé à ÉCRIRE ou
- * SUPPRIMER — volontairement DISTINCT de la carte complète de
- * WorkspaceAccessResolver.
+ * SUPPRIMER.
  *
- * Politique (validée) : Ket n'agit QUE sur des DONNÉES MÉTIER de l'utilisateur,
- * dans les strictes limites des rôles en vigueur. Les entités de PARAMÉTRAGE /
- * CONFIGURATION de l'espace de travail (référentiels : monnaies, taxes, types,
- * modèles…) et de GESTION des rôles/invités (Invite, RolesEn*, AssistantParametres)
- * sont EXCLUES d'office — même pour le propriétaire. Fail-closed : une entité qui
- * ne figure pas ici n'est jamais mutable par Ket.
+ * Politique (validée par le propriétaire, 2026-07-23) : PARITÉ LECTURE/ÉCRITURE —
+ * Ket peut muter TOUTE entité interrogeable de l'espace de travail (toute entrée
+ * de WorkspaceAccessResolver::MAP ayant une classe Doctrine), paramétrage et
+ * référentiels inclus. Restent hors périmètre les seules PSEUDO-entités sans
+ * classe (DocumentComptable, AssistantIa) et la GESTION des rôles/invités (Invite,
+ * RolesEn*, AssistantParametres) — cf. WorkspaceAccessResolver::isRoleManagementEntity,
+ * ceinture + bretelles. Fail-closed : une entité absente d'ici n'est jamais mutable.
  *
- * Démarrage sur un sous-ensemble à faible surface de risque ; étendre = ajouter
- * un nom court métier à MEMBRES (les gardes d'accès restent celles du resolver).
+ * L'accès effectif reste gouverné par les rôles (le resolver) : figurer ici lève
+ * l'interdit d'écriture propre à Ket, cela n'accorde aucun droit par soi-même.
  */
 final class MutationAllowlist
 {
     /**
-     * Noms courts d'entités MÉTIER ouvertes à l'écriture/suppression par Ket.
-     * Ne JAMAIS y ajouter une entité de paramétrage/référentiel (Monnaie, Taxe,
-     * TypeRevenu, ModelePieceSinistre…) ni de rôles/invités.
+     * Noms courts d'entités ouvertes à l'écriture/suppression par Ket = l'ensemble
+     * des entités interrogeables (parité avec la lecture).
      *
-     * Garde-fou d'extension : n'ajouter qu'une entité dont les setters ManyToOne
-     * ne maintiennent PAS de collection inverse en cascade-persist — sinon la
-     * validation FormType du dry-run (WorkspaceMutationService::analyserOperation)
-     * pourrait rattacher l'entité de test à un parent géré et la persister au
-     * flush suivant. Toutes les entités ci-dessous ont été vérifiées conformes :
-     * aucun de leurs setters ManyToOne ne maintient de collection inverse, et le
-     * chemin de dry-run (PreparerOperationsTool) ne flush jamais — double garde.
-     *
-     * Chaque entité dispose d'un FormType App\Form\{Nom}Type et d'une entrée dans
-     * WorkspaceAccessResolver::MAP (l'accès reste gouverné par les rôles ; figurer
-     * ici n'accorde aucun droit, cela lève seulement l'interdit d'écriture de Ket).
+     * Garde-fou d'extension (à re-vérifier pour toute NOUVELLE entité de la carte
+     * d'accès) : n'ajouter qu'une entité (a) dotée d'un FormType App\Form\{Nom}Type
+     * et (b) dont aucun setter ManyToOne ne maintient de collection inverse en
+     * cascade-persist — sinon la validation FormType du dry-run
+     * (WorkspaceMutationService::analyserOperation) pourrait rattacher l'entité de
+     * test à un parent géré et la persister au flush suivant. Les 31 entités
+     * ci-dessous ont été vérifiées conformes ; de plus le chemin de dry-run
+     * (PreparerOperationsTool) ne flush jamais — double garde.
      */
     public const MEMBRES = [
         // Production
         'Client',
-        'Piste',
-        'Avenant',
         'Cotation',       // « Propositions »
+        'Avenant',
+        'Piste',
         'Portefeuille',
         'Assureur',
         'Risque',
         'Partenaire',     // « Intermédiaires »
         'Groupe',
+        'Contact',
         // Finances
         'Note',
         'DepenseCourtier', // « Dépenses »
+        'ChargeCourtier',  // « Charges »
+        'Paiement',
+        'Bordereau',
+        'Tranche',
+        'RevenuPourCourtier', // « Revenus »
+        'Chargement',      // « Types Chargements »
+        'TypeRevenu',
+        'Taxe',
+        'Monnaie',
+        'CompteBancaire',
+        'Fournisseur',
         // Marketing
         'Tache',
         'Feedback',
@@ -59,6 +67,7 @@ final class MutationAllowlist
         'PieceSinistre',
         'NotificationSinistre',
         'OffreIndemnisationSinistre', // « Règlements »
+        'ModelePieceSinistre',        // « Types pièces »
         // Administration
         'Document',
         'Classeur',
