@@ -53,8 +53,8 @@ class InventaireChampsToolTest extends TestCase
         $mutation = $this->createMock(WorkspaceMutationService::class);
         $mutation->expects($this->never())->method('inventaireChamps');
 
-        // Monnaie = paramétrage, hors allowlist de mutation.
-        $result = $this->makeTool(true, $mutation)->execute(['entite' => 'Monnaie', 'mode' => 'creation'], $this->makeScope());
+        // RolesEnProduction = gestion des rôles, hors allowlist de mutation.
+        $result = $this->makeTool(true, $mutation)->execute(['entite' => 'RolesEnProduction', 'mode' => 'creation'], $this->makeScope());
 
         $this->assertSame(AiToolResult::STATUS_INTROUVABLE, $result->status);
     }
