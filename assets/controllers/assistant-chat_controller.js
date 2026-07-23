@@ -246,11 +246,18 @@ export default class extends Controller {
         const bar = document.createElement('div');
         bar.className = 'aic-mutation-actions';
 
+        // Ligne budget TOUJOURS affichée (garantie serveur, indépendante de la
+        // prose du modèle) : coût estimé · solde · reste après.
+        const budgetLine = document.createElement('p');
+        budgetLine.className = 'aic-mutation-budget';
+        budgetLine.textContent = `Budget : ${formatNombre(budget.coutEstime || 0)} tokens · solde ${formatNombre(budget.soldeDisponible || 0)} · reste ${formatNombre(budget.resteApres ?? Math.max(0, (budget.soldeDisponible || 0) - (budget.coutEstime || 0)))}`;
+        bar.appendChild(budgetLine);
+
         if (budget.suffisant === false) {
             const notice = document.createElement('p');
             notice.className = 'aic-notice aic-notice--warning';
             notice.setAttribute('role', 'status');
-            notice.textContent = `Solde de tokens insuffisant pour cette mission (${formatNombre(budget.soldeDisponible || 0)}/${formatNombre(budget.coutEstime || 0)}).`;
+            notice.textContent = 'Solde de tokens insuffisant pour cette mission.';
             bar.appendChild(notice);
 
             const buy = document.createElement('a');
@@ -274,7 +281,13 @@ export default class extends Controller {
             exec.textContent = 'Valider et exécuter';
             exec.addEventListener('click', () => {
                 bar.remove();
-                this.openMutationConfirm(action);
+                if (action.requiresPassword === true) {
+                    // Suppression : confirmation renforcée par mot de passe.
+                    this.openMutationConfirm(action);
+                } else {
+                    // Écriture pure : exécution IMMÉDIATE, sans boîte de dialogue.
+                    this.executeMutationPlan(action.idMessage, null, false);
+                }
             });
             bar.appendChild(exec);
 
@@ -330,11 +343,17 @@ export default class extends Controller {
         const detail = event.detail;
         if (!detail || detail.type !== 'ket:mutation.execute') return;
         const payload = detail.payload || {};
-        this.executeMutationPlan(payload.idMessage, payload.password);
+        // Déclenché par la modale de confirmation (suppression + mot de passe).
+        this.executeMutationPlan(payload.idMessage, payload.password, true);
     }
 
-    /** Appelle l'endpoint d'exécution, gère 402/403/422 et rejoue le journal. */
-    async executeMutationPlan(idMessage, password) {
+    /**
+     * Appelle l'endpoint d'exécution, gère 402/403/422 et rejoue le journal.
+     * `viaModal` = true quand l'appel vient de la modale de confirmation
+     * (suppression) : les erreurs y sont affichées ; false pour une écriture
+     * pure exécutée directement (erreurs affichées en bulle du chat).
+     */
+    async executeMutationPlan(idMessage, password, viaModal = true) {
         const id = parseInt(idMessage, 10);
         if (!Number.isInteger(id) || id <= 0) return;
         const url = `/admin/assistant-ia/api/mutation/${this.idEntrepriseValue}/${this.idConversationValue}/${id}/execute`;
@@ -350,29 +369,35 @@ export default class extends Controller {
             const data = await response.json().catch(() => ({}));
 
             if (response.ok && data.success) {
-                document.dispatchEvent(new CustomEvent('ui:confirmation.close', { bubbles: true }));
+                if (viaModal) document.dispatchEvent(new CustomEvent('ui:confirmation.close', { bubbles: true }));
                 await this.renderMutationJournal(data.journal || []);
                 // Rafraîchit les listes éventuellement affichées (données modifiées).
                 document.dispatchEvent(new CustomEvent('app:workspace.data-changed', { bubbles: true }));
                 return;
             }
 
-            // Échecs : on garde la modale ouverte avec un message (mot de passe à
-            // ressaisir, solde à recharger, données à corriger).
+            // Échecs (mot de passe, solde, validation) : message dans la modale
+            // si elle est ouverte, sinon en bulle système du chat.
             let message = data.message || "L'exécution a échoué.";
             if (response.status === 402) {
                 message = `${data.message || 'Solde insuffisant.'} Rechargez votre solde puis réessayez.`;
             }
-            document.dispatchEvent(new CustomEvent('ui:confirmation.error', {
-                bubbles: true,
-                detail: { error: message },
-            }));
+            if (viaModal) {
+                document.dispatchEvent(new CustomEvent('ui:confirmation.error', {
+                    bubbles: true,
+                    detail: { error: message },
+                }));
+            } else {
+                this.appendNotice(response.status === 402 ? 'warning' : 'error', message);
+            }
         } catch (error) {
             console.error('Ket - exécution du plan échouée :', error);
-            document.dispatchEvent(new CustomEvent('ui:confirmation.error', {
-                bubbles: true,
-                detail: { error: "L'exécution a échoué. Vérifiez votre connexion puis réessayez." },
-            }));
+            const msg = "L'exécution a échoué. Vérifiez votre connexion puis réessayez.";
+            if (viaModal) {
+                document.dispatchEvent(new CustomEvent('ui:confirmation.error', { bubbles: true, detail: { error: msg } }));
+            } else {
+                this.appendNotice('error', msg);
+            }
         } finally {
             document.dispatchEvent(new CustomEvent('app:loading.stop', { bubbles: true }));
         }

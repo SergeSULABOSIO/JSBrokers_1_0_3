@@ -8,7 +8,7 @@ use App\Ai\Tool\EntiteLexique;
 use App\Ai\Tool\EntiteLibelle;
 use App\Ai\Tool\OuvrirDialogueTool;
 use App\Ai\Tool\PrefillWhitelist;
-use App\Entity\Client;
+use App\Entity\Assureur;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Service\Workspace\WorkspaceAccessResolver;
@@ -22,16 +22,20 @@ use PHPUnit\Framework\TestCase;
  * Pré-remplissage d'ouvrir_dialogue : les valeurs dictées passent la whitelist
  * (défense en profondeur — dialogContext re-filtrera) et voyagent dans la
  * uiAction open-dialog ; rien ne passe en mode édition ; l'outil n'écrit rien.
+ *
+ * Testé sur une entité NON mutable par Ket (Assureur) : pour les entités de
+ * l'allowlist de mutation (Client, Tâche…), l'outil redirige désormais vers
+ * preparer_operations (cf. testRedirigeLesEntitesMutables).
  */
 class OuvrirDialogueToolPrefillTest extends TestCase
 {
-    private function makeTool(): OuvrirDialogueTool
+    private function makeTool(string $entite = 'Assureur', string $fqcn = Assureur::class): OuvrirDialogueTool
     {
         $resolver = $this->createMock(WorkspaceAccessResolver::class);
-        $resolver->method('libellesEntites')->willReturn(['Client' => 'Clients']);
+        $resolver->method('libellesEntites')->willReturn([$entite => $entite . 's']);
         $resolver->method('can')->willReturn(true);
 
-        $metadata = new ClassMetadata(Client::class);
+        $metadata = new ClassMetadata($fqcn);
         foreach (['nom' => 'string', 'telephone' => 'string'] as $champ => $type) {
             $metadata->fieldMappings[$champ] = FieldMapping::fromMappingArray(
                 ['fieldName' => $champ, 'type' => $type, 'columnName' => $champ],
@@ -57,7 +61,7 @@ class OuvrirDialogueToolPrefillTest extends TestCase
     public function testValeursWhitelisteesVoyagentDansLaUiAction(): void
     {
         $result = $this->makeTool()->execute([
-            'entite'  => 'Client',
+            'entite'  => 'Assureur',
             'mode'    => 'creation',
             'valeurs' => ['nom' => 'Kabila Corp', 'id' => 999, 'inconnu' => 'x'],
         ], $this->makeScope());
@@ -71,12 +75,29 @@ class OuvrirDialogueToolPrefillTest extends TestCase
     public function testSansValeursLaUiActionResteInchangee(): void
     {
         $result = $this->makeTool()->execute(
-            ['entite' => 'Client', 'mode' => 'creation'],
+            ['entite' => 'Assureur', 'mode' => 'creation'],
             $this->makeScope(),
         );
 
         $this->assertSame(AiToolResult::STATUS_OK, $result->status);
         $this->assertArrayNotHasKey('valeurs', $result->uiAction);
         $this->assertArrayNotHasKey('precharge', $result->data);
+    }
+
+    /**
+     * Garde-fou : pour une entité que Ket sait enregistrer elle-même (allowlist),
+     * ouvrir_dialogue N'OUVRE PAS de formulaire — il redirige vers
+     * preparer_operations (aucune uiAction open-dialog).
+     */
+    public function testRedirigeLesEntitesMutables(): void
+    {
+        $result = $this->makeTool('Client', \App\Entity\Client::class)->execute(
+            ['entite' => 'Client', 'mode' => 'creation', 'valeurs' => ['nom' => 'Orange RDC SA']],
+            $this->makeScope(),
+        );
+
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        $this->assertNull($result->uiAction, 'Aucun formulaire ne doit s’ouvrir pour une entité mutable.');
+        $this->assertSame('preparer_operations', $result->data['rediriger']);
     }
 }

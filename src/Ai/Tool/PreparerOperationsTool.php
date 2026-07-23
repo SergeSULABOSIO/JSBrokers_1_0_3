@@ -39,16 +39,18 @@ final class PreparerOperationsTool implements AiToolInterface
 
     public function description(): string
     {
-        return "Prépare une ou plusieurs opérations d'ÉCRITURE sur les données de l'utilisateur : "
+        return "L'outil par lequel TU crées, modifies et supprimes toi-même les données de l'utilisateur : "
             . 'créer (op=create), modifier (op=edit, id requis) ou supprimer (op=delete, id requis) '
             . 'un enregistrement. Entités autorisées UNIQUEMENT : ' . implode(', ', MutationAllowlist::membres()) . '. '
-            . "N'APPELLE cet outil que lorsque tu disposes de 100 % des informations nécessaires (pose "
-            . "d'abord toutes les questions utiles à l'utilisateur). L'outil N'ÉCRIT RIEN : il renvoie un "
-            . 'PLAN numéroté et le BUDGET en tokens que tu présenteras clairement (tableaux + listes) pour '
-            . "que l'utilisateur VALIDE avant exécution. En édition/suppression, obtiens l'id via "
-            . "rechercher_entites. Si l'outil renvoie « manquants », repose les questions correspondantes ; "
-            . 's’il renvoie « bloque », explique le blocage sans exécuter. Une suppression demandera une '
-            . 'confirmation par mot de passe. Ne devine jamais une valeur : uniquement ce que l’utilisateur a dicté.';
+            . "C'est l'outil À UTILISER dès que l'utilisateur veut créer/modifier/supprimer l'une de ces "
+            . "entités (n'ouvre PAS de formulaire via ouvrir_dialogue pour cela). N'APPELLE cet outil que "
+            . "lorsque tu disposes de 100 % des informations (pose d'abord toutes les questions utiles). "
+            . "L'outil N'ÉCRIT RIEN : il valide, chiffre le coût, et renvoie un PLAN numéroté + le BUDGET en "
+            . 'tokens que tu présentes clairement (tableaux + listes). Après validation de l’utilisateur, '
+            . "l'écriture est exécutée AUTOMATIQUEMENT — c'est TOI qui enregistres, sans formulaire à "
+            . "soumettre à la main. En édition/suppression, obtiens l'id via rechercher_entites. Si l'outil "
+            . 'renvoie « manquants », repose les questions ; s’il renvoie « bloque », explique le blocage '
+            . 'sans exécuter. Une suppression demandera le mot de passe. Ne devine jamais une valeur.';
     }
 
     public function schema(): array
