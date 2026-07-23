@@ -126,6 +126,53 @@ class WorkspaceMutationServiceTest extends WebTestCase
         $this->assertSame('+243999888777', $reloaded->getTelephone(), 'Le téléphone a été réellement persisté.');
     }
 
+    public function testCreationEnregistreReellementLaFiche(): void
+    {
+        $owner = $this->seedUser(self::OWNER_A);
+        $ent = $this->seedEntreprise(self::ENT_A, $owner);
+        $inv = $this->seedOwnerInvite($ent, $owner);
+        $owner->setConnectedTo($ent);
+        $this->em->flush();
+        $this->client->loginUser($owner);
+
+        $op = new MutationOperation('create', 'Client', null, [
+            'nom' => 'Orange RDC', 'telephone' => '+243828727706',
+            'email' => 'infos@orange.com', 'adresse' => 'Gombe, Kinshasa', 'exonere' => false,
+        ]);
+        $step = $this->service->executer($op, new AiScope($ent, $inv), $owner);
+        $this->assertSame('create', $step['op']);
+
+        $this->em->clear();
+        $created = $this->em->getRepository(Client::class)->findOneBy(['nom' => 'Orange RDC']);
+        $this->assertNotNull($created, 'Le client a été réellement créé.');
+        $this->assertSame('+243828727706', $created->getTelephone());
+        $this->assertFalse($created->isExonere(), 'Le booléen envoyé par le LLM est normalisé et persisté.');
+    }
+
+    public function testCreationRefuseUnChampObligatoireManquant(): void
+    {
+        // « exonere » (non-nullable, sans défaut) non fourni : refus PROPRE (422)
+        // au lieu d'une erreur SQL 500 — Ket doit demander l'information.
+        $owner = $this->seedUser(self::OWNER_A);
+        $ent = $this->seedEntreprise(self::ENT_A, $owner);
+        $inv = $this->seedOwnerInvite($ent, $owner);
+        $owner->setConnectedTo($ent);
+        $this->em->flush();
+        $this->client->loginUser($owner);
+
+        try {
+            $this->service->executer(
+                new MutationOperation('create', 'Client', null, ['nom' => 'Sans Exonere']),
+                new AiScope($ent, $inv),
+                $owner,
+            );
+            $this->fail('Une MutationException était attendue (champ obligatoire manquant).');
+        } catch (MutationException $e) {
+            $this->assertSame(MutationException::INVALIDE, $e->statut);
+            $this->assertArrayHasKey('exonere', $e->erreursChamps);
+        }
+    }
+
     public function testSuppressionSupprimeReellementLaFiche(): void
     {
         $owner = $this->seedUser(self::OWNER_A);

@@ -10,6 +10,7 @@ use App\Entity\Utilisateur;
 use App\Token\TokenAccountService;
 use App\Services\JSBDynamicSearchService;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Mapping\ClassMetadata;
 use Symfony\Component\Form\FormFactoryInterface;
 use Symfony\Component\Form\FormInterface;
 
@@ -118,6 +119,17 @@ class WorkspaceMutationService
         // Create/edit : validation FormType sur une COPIE (jamais l'entité gérée —
         // sûr vis-à-vis d'un flush ultérieur dans la même requête).
         $copie = $op->isCreate() ? $this->nouvelleEntite($op, $scope) : clone $cible;
+
+        // Création : champs OBLIGATOIRES (non-nullables sans défaut) manquants —
+        // détectés AVANT le form (que clearMissing=false ne validerait pas), afin
+        // que Ket les demande plutôt que de provoquer une erreur SQL à l'exécution.
+        if ($op->isCreate()) {
+            $manquants = $this->champsRequisManquants($copie, $op);
+            if ($manquants !== []) {
+                return ['ok' => false, 'statut' => 'invalide', 'manquants' => $manquants] + $base;
+            }
+        }
+
         $form = $this->construireEtSoumettre($copie, $op);
         if (!$form->isValid()) {
             return ['ok' => false, 'statut' => 'invalide', 'manquants' => $this->erreurs($form)] + $base;
@@ -161,6 +173,11 @@ class WorkspaceMutationService
         // Create / edit.
         if ($op->isCreate()) {
             $entity = $this->nouvelleEntite($op, $scope);
+            // Garde : champ obligatoire manquant => 422 propre (jamais d'erreur SQL).
+            $manquants = $this->champsRequisManquants($entity, $op);
+            if ($manquants !== []) {
+                throw MutationException::invalide(sprintf('Informations obligatoires manquantes pour « %s ».', $libelle), $manquants);
+            }
         } else {
             $entity = $this->trouverCible($op, $scope) ?? throw MutationException::introuvable(
                 sprintf('%s #%d introuvable dans votre entreprise.', $libelle, (int) $op->targetId),
@@ -216,6 +233,84 @@ class WorkspaceMutationService
         return $result['data'][0] ?? null;
     }
 
+    /**
+     * Champs OBLIGATOIRES non fournis pour une création : colonnes non-nullables
+     * SANS valeur par défaut (BDD ou PHP) et non couvertes par le scoping auto
+     * (entreprise/invite) ni l'audit. Détecté sur les métadonnées Doctrine pour
+     * que Ket les demande AVANT d'exécuter — évite l'échec SQL au flush (ex. la
+     * colonne `exonere` d'un Client). Renvoie [champ => [message]].
+     *
+     * @return array<string, string[]>
+     */
+    private function champsRequisManquants(object $entity, MutationOperation $op): array
+    {
+        try {
+            $meta = $this->em->getClassMetadata($op->fqcn());
+        } catch (\Throwable) {
+            return [];
+        }
+        $fields = $this->nettoyerChamps($op->fields);
+        $ignore = ['id', 'createdAt', 'updatedAt'];
+        $manquants = [];
+
+        // Champs scalaires non-nullables sans défaut.
+        foreach ($meta->getFieldNames() as $field) {
+            if (in_array($field, $ignore, true) || $meta->isNullable($field)) {
+                continue;
+            }
+            if (array_key_exists($field, $fields) && $fields[$field] !== null && $fields[$field] !== '') {
+                continue; // fourni par l'utilisateur.
+            }
+            if ($this->aUnDefaut($meta, $field) || $this->valeurNonNulle($entity, $meta, $field)) {
+                continue; // défaut BDD, ou déjà initialisé (défaut PHP).
+            }
+            $manquants[$field] = ['Champ obligatoire à renseigner.'];
+        }
+
+        // Relations ManyToOne obligatoires (hors entreprise/invite auto-scopés).
+        foreach ($meta->getAssociationMappings() as $field => $mapping) {
+            if (!$mapping->isManyToOne() || !$mapping->isOwningSide()
+                || in_array($field, ['entreprise', 'invite'], true)) {
+                continue;
+            }
+            $requis = false;
+            foreach (($mapping->joinColumns ?? []) as $jc) {
+                if (($jc->nullable ?? true) === false) {
+                    $requis = true;
+                }
+            }
+            if (!$requis || !empty($fields[$field]) || $this->valeurNonNulle($entity, $meta, $field)) {
+                continue;
+            }
+            $manquants[$field] = ['Relation obligatoire à préciser (identifiant).'];
+        }
+
+        return $manquants;
+    }
+
+    /** Le champ a-t-il une valeur par défaut côté BDD (options.default) ? */
+    private function aUnDefaut(ClassMetadata $meta, string $field): bool
+    {
+        try {
+            $mapping = $meta->getFieldMapping($field);
+        } catch (\Throwable) {
+            return false;
+        }
+        $options = is_object($mapping) ? ($mapping->options ?? []) : ($mapping['options'] ?? []);
+
+        return is_array($options) && array_key_exists('default', $options);
+    }
+
+    /** La valeur de l'entité pour ce champ est-elle déjà non nulle (défaut PHP) ? */
+    private function valeurNonNulle(object $entity, ClassMetadata $meta, string $field): bool
+    {
+        try {
+            return $meta->getFieldValue($entity, $field) !== null;
+        } catch (\Throwable) {
+            return false; // propriété typée non initialisée => considérée manquante.
+        }
+    }
+
     /** Nouvelle entité pré-scopée (entreprise/invité renseignés si AuditableTrait). */
     private function nouvelleEntite(MutationOperation $op, AiScope $scope): object
     {
@@ -242,7 +337,8 @@ class WorkspaceMutationService
         $fqcn = $op->fqcn();
         $fields = $this->nettoyerChamps($op->fields);
 
-        // Pré-hydratation des parents ManyToOne (création surtout). API objet ORM 3.
+        // Pré-hydratation des parents ManyToOne (création surtout) + normalisation
+        // des champs booléens. API objet ORM 3.
         try {
             $meta = $this->em->getClassMetadata($fqcn);
             foreach ($meta->getAssociationMappings() as $field => $mapping) {
@@ -255,6 +351,14 @@ class WorkspaceMutationService
                     if ($parent !== null && method_exists($entity, $setter)) {
                         $entity->{$setter}($parent);
                     }
+                }
+            }
+            // Un champ booléen peut arriver sous mille formes du LLM (true/false,
+            // "oui"/"non", "true"/"1"…). Les choix booléens Symfony attendent
+            // '1'/'0' : on normalise pour que la soumission bind sans erreur.
+            foreach ($fields as $champ => $valeur) {
+                if (is_string($champ) && $meta->hasField($champ) && $meta->getTypeOfField($champ) === 'boolean') {
+                    $fields[$champ] = $this->versBooleen($valeur) ? '1' : '0';
                 }
             }
         } catch (\Throwable) {
@@ -274,6 +378,20 @@ class WorkspaceMutationService
         $form->submit($fields, false);
 
         return $form;
+    }
+
+    /** Interprète une valeur « booléenne » tolérante venue du LLM. */
+    private function versBooleen(mixed $valeur): bool
+    {
+        if (is_bool($valeur)) {
+            return $valeur;
+        }
+        if (is_int($valeur) || is_float($valeur)) {
+            return (float) $valeur != 0.0;
+        }
+        $v = mb_strtolower(trim((string) $valeur));
+
+        return in_array($v, ['1', 'true', 'vrai', 'oui', 'yes', 'y', 'o', 'x'], true);
     }
 
     /** Ne conserve que des paires champ(string) => valeur scalaire/null. */
