@@ -17,8 +17,13 @@ final class EntiteLibelle
     /**
      * Champs candidats au libellé/filtre texte, par ordre de préférence. Le
      * premier présent dans les métadonnées Doctrine de l'entité est retenu.
+     *
+     * `nomComplet` (nom métier lisible, ex. Risque) est prioritaire sur `description`
+     * (texte libre) : sans lui, un Risque était étiqueté par sa description — souvent
+     * vide ou parasite — masquant son vrai nom à l'assistant (invisible en liste ET
+     * introuvable au filtre texte, qui portait alors sur la description).
      */
-    private const DISPLAY_FIELD_CANDIDATES = ['nom', 'titre', 'libelle', 'intitule', 'reference', 'numero', 'description'];
+    private const DISPLAY_FIELD_CANDIDATES = ['nom', 'nomComplet', 'titre', 'libelle', 'intitule', 'reference', 'numero', 'description'];
 
     private readonly PropertyAccessorInterface $accessor;
 
