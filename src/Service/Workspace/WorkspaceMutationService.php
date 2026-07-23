@@ -43,9 +43,6 @@ class WorkspaceMutationService
         'boolean', 'date', 'date_immutable', 'datetime', 'datetime_immutable',
     ];
 
-    /** Champs jamais exposés/pilotés (système + scoping auto). */
-    private const CHAMPS_SYSTEME = ['id', 'createdAt', 'updatedAt'];
-
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly FormFactoryInterface $formFactory,
@@ -53,6 +50,7 @@ class WorkspaceMutationService
         private readonly TokenAccountService $tokenAccountService,
         private readonly JSBDynamicSearchService $searchService,
         private readonly CascadeImpactAnalyzer $cascadeAnalyzer,
+        private readonly ChampsObligatoiresInspector $champsInspector,
     ) {
     }
 
@@ -269,7 +267,7 @@ class WorkspaceMutationService
 
         // Champs scalaires obligatoires (prédicat partagé avec l'inventaire).
         foreach ($meta->getFieldNames() as $field) {
-            if (!$this->scalaireRequis($meta, $entity, $field)) {
+            if (!$this->champsInspector->scalaireRequis($meta, $entity, $field)) {
                 continue;
             }
             if (array_key_exists($field, $fields) && $fields[$field] !== null && $fields[$field] !== '') {
@@ -280,41 +278,16 @@ class WorkspaceMutationService
 
         // Relations ManyToOne obligatoires (hors entreprise/invite auto-scopés).
         foreach ($meta->getAssociationMappings() as $field => $mapping) {
-            if (!$this->relationRequise($field, $mapping)) {
+            if (!$this->champsInspector->relationRequise($field, $mapping)) {
                 continue;
             }
-            if (!empty($fields[$field]) || $this->valeurNonNulle($entity, $meta, $field)) {
+            if (!empty($fields[$field]) || $this->champsInspector->valeurNonNulle($entity, $meta, $field)) {
                 continue;
             }
             $manquants[$field] = ['Relation obligatoire à préciser (identifiant).'];
         }
 
         return $manquants;
-    }
-
-    /** Un champ scalaire est-il OBLIGATOIRE (non-nullable, sans défaut BDD/PHP, hors système) ? */
-    private function scalaireRequis(ClassMetadata $meta, object $entity, string $field): bool
-    {
-        if (in_array($field, self::CHAMPS_SYSTEME, true) || $meta->isNullable($field)) {
-            return false;
-        }
-
-        return !$this->aUnDefaut($meta, $field) && !$this->valeurNonNulle($entity, $meta, $field);
-    }
-
-    /** Une relation ManyToOne est-elle OBLIGATOIRE (colonne non-null, hors entreprise/invite auto) ? */
-    private function relationRequise(string $field, object $mapping): bool
-    {
-        if (!$mapping->isManyToOne() || !$mapping->isOwningSide() || in_array($field, ['entreprise', 'invite'], true)) {
-            return false;
-        }
-        foreach (($mapping->joinColumns ?? []) as $jc) {
-            if (($jc->nullable ?? true) === false) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**
@@ -344,7 +317,7 @@ class WorkspaceMutationService
             return $vide;
         }
 
-        $labels = $this->libellesFormulaire($shortName, $fqcn);
+        $labels = $this->champsInspector->libellesFormulaire($shortName, $fqcn);
         $entity = $cible ?? new $fqcn();
         $obligatoires = [];
         $facultatifs = [];
@@ -371,14 +344,14 @@ class WorkspaceMutationService
 
         // Champs scalaires pilotables.
         foreach ($meta->getFieldNames() as $field) {
-            if (in_array($field, self::CHAMPS_SYSTEME, true) || in_array($field, $autoChamps, true)) {
+            if (in_array($field, ChampsObligatoiresInspector::CHAMPS_SYSTEME, true) || in_array($field, $autoChamps, true)) {
                 continue;
             }
             if (!in_array((string) $meta->getTypeOfField($field), self::TYPES_SCALAIRES, true)) {
                 continue;
             }
             $item = $this->itemChamp($field, $labels, $meta, $cible, $mode);
-            if ($mode === 'creation' && $this->scalaireRequis($meta, $entity, $field)) {
+            if ($mode === 'creation' && $this->champsInspector->scalaireRequis($meta, $entity, $field)) {
                 $obligatoires[] = $item;
             } else {
                 $facultatifs[] = $item;
@@ -388,12 +361,12 @@ class WorkspaceMutationService
         // Relations ManyToOne pilotables (par identifiant).
         foreach ($meta->getAssociationMappings() as $field => $mapping) {
             if (!$mapping->isManyToOne() || !$mapping->isOwningSide()
-                || in_array($field, self::CHAMPS_SYSTEME, true) || in_array($field, $autoChamps, true)) {
+                || in_array($field, ChampsObligatoiresInspector::CHAMPS_SYSTEME, true) || in_array($field, $autoChamps, true)) {
                 continue;
             }
             $item = $this->itemChamp($field, $labels, $meta, $cible, $mode);
             $requis = $mode === 'creation'
-                && ($this->relationRequise($field, $mapping) || ($field === 'portefeuille' && $portefeuilleObligatoire));
+                && ($this->champsInspector->relationRequise($field, $mapping) || ($field === 'portefeuille' && $portefeuilleObligatoire));
             if ($requis) {
                 $obligatoires[] = $item;
             } else {
@@ -407,40 +380,12 @@ class WorkspaceMutationService
     /** Construit une entrée d'inventaire (avec valeur actuelle en édition). */
     private function itemChamp(string $field, array $labels, ClassMetadata $meta, ?object $cible, string $mode): array
     {
-        $item = ['champ' => $field, 'libelle' => $labels[$field] ?? $this->humaniser($field)];
+        $item = ['champ' => $field, 'libelle' => $labels[$field] ?? $this->champsInspector->humaniser($field)];
         if ($mode === 'edition') {
             $item['valeurActuelle'] = $this->valeurLisible($cible, $meta, $field);
         }
 
         return $item;
-    }
-
-    /** Libellés lisibles des champs, lus depuis le FormType (jamais les listes de choix). */
-    private function libellesFormulaire(string $shortName, string $fqcn): array
-    {
-        $labels = [];
-        try {
-            $form = $this->formFactory->create('App\\Form\\' . $shortName . 'Type', new $fqcn());
-            foreach ($form->all() as $child) {
-                $lbl = $child->getConfig()->getOption('label');
-                if (is_string($lbl) && trim($lbl) !== '') {
-                    $labels[$child->getName()] = $lbl;
-                }
-            }
-        } catch (\Throwable) {
-            // Pas de FormType exploitable : on retombera sur l'humanisation.
-        }
-
-        return $labels;
-    }
-
-    /** Humanise un nom de champ technique (fallback quand le FormType n'a pas de libellé). */
-    private function humaniser(string $field): string
-    {
-        $s = (string) preg_replace('/(?<!^)[A-Z]/', ' $0', $field);
-        $s = str_replace('_', ' ', $s);
-
-        return ucfirst(mb_strtolower(trim($s)));
     }
 
     /** Valeur lisible d'un champ pour l'édition (booléens en clair, relations libellées, dates formatées). */
@@ -530,29 +475,6 @@ class WorkspaceMutationService
         }
 
         return $geres;
-    }
-
-    /** Le champ a-t-il une valeur par défaut côté BDD (options.default) ? */
-    private function aUnDefaut(ClassMetadata $meta, string $field): bool
-    {
-        try {
-            $mapping = $meta->getFieldMapping($field);
-        } catch (\Throwable) {
-            return false;
-        }
-        $options = is_object($mapping) ? ($mapping->options ?? []) : ($mapping['options'] ?? []);
-
-        return is_array($options) && array_key_exists('default', $options);
-    }
-
-    /** La valeur de l'entité pour ce champ est-elle déjà non nulle (défaut PHP) ? */
-    private function valeurNonNulle(object $entity, ClassMetadata $meta, string $field): bool
-    {
-        try {
-            return $meta->getFieldValue($entity, $field) !== null;
-        } catch (\Throwable) {
-            return false; // propriété typée non initialisée => considérée manquante.
-        }
     }
 
     /** Nouvelle entité pré-scopée (entreprise/invité renseignés si AuditableTrait). */

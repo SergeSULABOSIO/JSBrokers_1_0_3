@@ -45,6 +45,7 @@ use App\Token\InsufficientTokensException;
 use App\Token\TokenAccountService;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Service\Workspace\WorkspaceMutationService;
+use App\Service\Workspace\ChampsObligatoiresInspector;
 use App\Service\Workspace\InvitePerimetreNotifier;
 use Symfony\Contracts\Service\Attribute\Required;
 use Doctrine\Common\Collections\Collection;
@@ -144,6 +145,30 @@ trait ControllerUtilsTrait
     public function setWorkspaceMutationService(WorkspaceMutationService $workspaceMutationService): void
     {
         $this->workspaceMutationService = $workspaceMutationService;
+    }
+
+    /**
+     * Inspecteur des champs obligatoires (source UNIQUE de la notion « obligatoire »,
+     * dérivée des métadonnées Doctrine et partagée avec l'assistant IA). Injecté par
+     * setter autowiré (#[Required]) comme les autres services du trait. Permet de
+     * transformer un champ obligatoire vide en erreur 422 propre au lieu d'un 500 au
+     * flush — la validation HTML5 native étant neutralisée dans les modales.
+     */
+    private ChampsObligatoiresInspector $champsObligatoiresInspector;
+
+    #[Required]
+    public function setChampsObligatoiresInspector(ChampsObligatoiresInspector $champsObligatoiresInspector): void
+    {
+        $this->champsObligatoiresInspector = $champsObligatoiresInspector;
+    }
+
+    /**
+     * Dernier identifiant d'un chemin de propriété (« a.b[nom] » → « nom »), pour
+     * rattacher une erreur de liaison au bon champ de formulaire.
+     */
+    private function extraireChampChemin(string $propertyPath): string
+    {
+        return preg_match('/([A-Za-z_][A-Za-z0-9_]*)\]?$/', $propertyPath, $m) ? $m[1] : $propertyPath;
     }
 
     /**
@@ -900,9 +925,46 @@ trait ControllerUtilsTrait
                 $submittedData[$child->getName()] = [];
             }
         }
-        $form->submit($submittedData, false); // Le paramètre `false` est maintenant sûr.
+        // GARDE-FOU LIAISON : un champ obligatoire soumis VIDE est converti en `null`
+        // par Symfony (empty_data), que le setter typé non-nullable de l'entité refuse
+        // → TypeError levée DANS submit(), AVANT toute validation (500 opaque). On la
+        // rattrape en erreur de champ PROPRE (422), pour TOUS les formulaires à la fois.
+        try {
+            $form->submit($submittedData, false); // Le paramètre `false` est maintenant sûr.
+        } catch (\Symfony\Component\PropertyAccess\Exception\InvalidTypeException $e) {
+            $champ = $this->extraireChampChemin($e->propertyPath);
+            $message = $e->actualType === 'null'
+                ? 'Ce champ est obligatoire.'
+                : 'La valeur fournie pour ce champ est invalide.';
 
-        if ($form->isSubmitted() && $form->isValid()) {
+            return $this->json([
+                'message' => 'Veuillez corriger les erreurs ci-dessous.',
+                'errors' => [$champ => [$message]],
+                'labels' => [$champ => $this->champsObligatoiresInspector->libelleChamp($entityClass, $champ)],
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        // GARDE-FOU OBLIGATION (générique, source unique partagée avec l'assistant IA) :
+        // la validation HTML5 native étant neutralisée dans les modales, un champ
+        // obligatoire (colonne non-nullable, sans défaut) laissé vide échouerait au
+        // flush Doctrine (500). On le rattrape ici en erreur de champ PROPRE.
+        //
+        // Périmètre du contrôle, choisi pour n'introduire AUCUN faux positif :
+        //  - CRÉATION : tous les champs du formulaire (un obligatoire absent = manquant) ;
+        //  - ÉDITION  : uniquement les champs RÉELLEMENT SOUMIS (que l'utilisateur a
+        //    touchés). On ne bloque donc jamais l'édition d'un autre champ à cause d'une
+        //    valeur préexistante vide (donnée héritée), tout en rattrapant le cas où
+        //    l'utilisateur vide lui-même un champ obligatoire.
+        // Dans les deux cas, restreint aux champs EXPOSÉS par le formulaire : un champ
+        // obligatoire renseigné ailleurs (beforePersist, auto-scoping entreprise/invité)
+        // n'est jamais signalé à tort.
+        $champsFormulaire = array_keys($form->all());
+        $champsPilotables = $isCreationMode
+            ? $champsFormulaire
+            : array_values(array_intersect($champsFormulaire, array_keys($data)));
+        $champsManquants = $this->champsObligatoiresInspector->champsManquants($entity, $champsPilotables);
+
+        if ($form->isSubmitted() && $form->isValid() && empty($champsManquants)) {
             // NOUVEAU : Logique pour associer l'entreprise et/ou l'invité si les IDs sont fournis
             // NOUVEAU : Exécuter une logique personnalisée avant la persistance (ex: définir l'auteur)
 
@@ -975,8 +1037,28 @@ trait ControllerUtilsTrait
         foreach ($form->getErrors(true) as $error) {
             $errors[$error->getOrigin()->getName()][] = $error->getMessage();
         }
+        // Champs obligatoires vides non déjà signalés par une contrainte du formulaire.
+        foreach ($champsManquants as $champ => $messages) {
+            if (!isset($errors[$champ])) {
+                $errors[$champ] = $messages;
+            }
+        }
 
-        return $this->json(['message' => 'Veuillez corriger les erreurs ci-dessous.', 'errors' => $errors], 422);
+        // Libellés LISIBLES (tels qu'affichés dans le formulaire) pour que le dialogue
+        // nomme chaque champ fautif côté client — plutôt que son code technique.
+        $labels = [];
+        foreach (array_keys($errors) as $champ) {
+            if ($champ === '') {
+                continue; // erreur globale : pas de champ associé.
+            }
+            $labels[$champ] = $this->champsObligatoiresInspector->libelleChamp($entityClass, $champ);
+        }
+
+        return $this->json([
+            'message' => 'Veuillez corriger les erreurs ci-dessous.',
+            'errors' => $errors,
+            'labels' => $labels,
+        ], 422);
     }
 
     /**

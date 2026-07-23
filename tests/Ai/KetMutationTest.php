@@ -13,6 +13,7 @@ use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Service\Workspace\CascadeImpact;
 use App\Service\Workspace\CascadeImpactAnalyzer;
+use App\Service\Workspace\ChampsObligatoiresInspector;
 use App\Service\Workspace\MutationException;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Service\Workspace\WorkspaceMutationService;
@@ -236,13 +237,17 @@ class KetMutationTest extends TestCase
         ?EntityManagerInterface $em = null,
         ?FormFactoryInterface $forms = null,
     ): WorkspaceMutationService {
+        $emResolved = $em ?? $this->createMock(EntityManagerInterface::class);
+        $formsResolved = $forms ?? $this->formFactoryJamaisAppele();
+
         return new WorkspaceMutationService(
-            $em ?? $this->createMock(EntityManagerInterface::class),
-            $forms ?? $this->formFactoryJamaisAppele(),
+            $emResolved,
+            $formsResolved,
             $resolver,
             $this->createMock(TokenAccountService::class),
             $search ?? $this->createMock(JSBDynamicSearchService::class),
             $cascade ?? $this->createMock(CascadeImpactAnalyzer::class),
+            new ChampsObligatoiresInspector($emResolved, $formsResolved),
         );
     }
 

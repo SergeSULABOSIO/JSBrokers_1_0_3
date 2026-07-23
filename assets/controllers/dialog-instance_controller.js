@@ -379,7 +379,11 @@ export default class extends Controller {
   
         // Affiche un message de feedback pendant la soumission.
         this.showFeedback('warning', 'Enregistrement en cours, veuillez patienter...');
- 
+
+        // On efface les erreurs de la tentative PRÉCÉDENTE avant d'envoyer : sans cela,
+        // les messages « invalid-feedback » s'empilaient sous les champs à chaque essai.
+        this.clearFieldErrors();
+
         this.isReloading = false; // On réinitialise le drapeau de rechargement.
 
         // On remplace le corps de la modale par un squelette de chargement
@@ -481,18 +485,26 @@ export default class extends Controller {
             errors: error.errors || {}
         });
 
-        // 3. On affiche le message d'erreur principal dans le pied de page.
-        this.showFeedback('error', error.message || 'Une erreur est survenue.');
+        // Nombre de champs concernés (hors erreur globale, clé '').
+        const fieldKeys = error.errors ? Object.keys(error.errors).filter(k => k !== '') : [];
+        const nb = fieldKeys.length;
+
+        // 3. On affiche le message d'erreur principal dans le pied de page, en précisant
+        //    le NOMBRE de champs à corriger pour orienter l'utilisateur.
+        const baseMessage = error.message || 'Une erreur est survenue.';
+        const message = nb > 0 ? `${baseMessage} (${nb} champ${nb > 1 ? 's' : ''} à corriger)` : baseMessage;
+        this.showFeedback('error', message);
         this.feedbackOnNextLoad = null; // On s'assure qu'aucun message de succès ne remplace l'erreur.
 
-        // 4. On affiche les erreurs spécifiques aux champs, si elles existent.
-        if (error.errors && Object.keys(error.errors).some(k => k !== '')) {
-            this.displayErrors(error.errors);
-        }
-
-        // 5. CRUCIAL : On ré-initialise la visibilité des champs dynamiques (tranche, quantité)
-        // après la restauration du DOM.
+        // 4. On ré-applique D'ABORD la visibilité dynamique (tranche, quantité…), PUIS on
+        //    affiche les erreurs de champ : displayErrors peut révéler une section masquée
+        //    contenant un champ fautif, révélation qui serait sinon écrasée ici.
         this.initializeFormVisibility();
+
+        // 5. On affiche les erreurs spécifiques aux champs, avec leur libellé lisible.
+        if (nb > 0) {
+            this.displayErrors(error.errors, error.labels || {});
+        }
     }
 
     /**
@@ -875,35 +887,72 @@ export default class extends Controller {
     }
 
     /**
-     * Affiche les erreurs de validation renvoyées par le serveur
-     * à côté des champs de formulaire correspondants.
-     * @param {object} errors - Un objet où les clés sont les noms des champs et les valeurs sont les messages d'erreur.
+     * Efface toutes les erreurs de champ affichées précédemment (classes `is-invalid`
+     * et messages `invalid-feedback` que NOUS avons insérés). À appeler avant chaque
+     * nouvelle soumission pour éviter l'empilement des messages d'un essai à l'autre.
      */
-    displayErrors(errors) {
-        this.feedbackContainer = this.feedbackContainerTarget;
+    clearFieldErrors() {
+        const form = this.contentTarget?.querySelector('form');
+        if (!form) return;
+        form.querySelectorAll('.invalid-feedback.d-block').forEach(el => el.remove());
+        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    }
 
+    /**
+     * Affiche les erreurs de validation renvoyées par le serveur à côté des champs
+     * correspondants, en préfixant chaque message du LIBELLÉ lisible du champ, puis
+     * défile jusqu'au premier champ fautif (qu'elle révèle s'il est dans une section
+     * masquée par la visibilité dynamique).
+     * @param {object} errors - `{ nomChamp: [messages] }`.
+     * @param {object} labels - `{ nomChamp: 'Libellé lisible' }` (facultatif).
+     */
+    displayErrors(errors, labels = {}) {
         const form = this.contentTarget.querySelector('form');
+        if (!form) return;
+
+        let firstInvalid = null;
+
         for (const [fieldName, messages] of Object.entries(errors)) {
-            // Si le nom du champ est vide, c'est une erreur globale.
+            // Si le nom du champ est vide, c'est une erreur globale (déjà dans le pied de page).
             if (fieldName === '') {
-                // Les erreurs globales (sans nom de champ) sont déjà gérées par la méthode showFeedback.
                 continue;
             }
 
-            // Recherche plus robuste pour les formulaires imbriqués.
-            // Au lieu de chercher `[name="revenuFacture"]`, on cherche `[name$="[revenuFacture]"]`,
-            // ce qui correspond à `articles[0][revenuFacture]` ou tout autre nom de champ se terminant ainsi.
+            // Recherche robuste pour les formulaires imbriqués : `[name$="[revenuFacture]"]`
+            // couvre `articles[0][revenuFacture]` comme tout champ se terminant ainsi.
             const input = form.querySelector(`[name$="[${fieldName}]"]`) || form.querySelector(`[name="${fieldName}"]`);
+            if (!input) {
+                continue;
+            }
 
-            if (input) {
-                // Ajoute la classe Bootstrap pour le style d'erreur
-                input.classList.add('is-invalid');
- 
-                // Crée et insère le message d'erreur juste après le champ
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'invalid-feedback d-block'; // d-block pour le forcer à être visible
-                errorDiv.textContent = messages.join(', ');
-                input.parentNode.insertBefore(errorDiv, input.nextSibling);
+            input.classList.add('is-invalid');
+
+            // On révèle toutes les sections ancêtres masquées (`d-none`) afin que
+            // l'utilisateur puisse VOIR et corriger un champ fautif caché par la
+            // visibilité dynamique (sinon le focus/scroll serait sans effet visible).
+            let ancetre = input.closest('.d-none');
+            while (ancetre && form.contains(ancetre)) {
+                ancetre.classList.remove('d-none');
+                ancetre = ancetre.parentElement?.closest('.d-none') ?? null;
+            }
+
+            // Message préfixé du libellé lisible (« Libellé : message »).
+            const label = labels[fieldName];
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'invalid-feedback d-block'; // d-block pour forcer l'affichage.
+            errorDiv.textContent = label ? `${label} : ${messages.join(', ')}` : messages.join(', ');
+            input.parentNode.insertBefore(errorDiv, input.nextSibling);
+
+            if (!firstInvalid) {
+                firstInvalid = input;
+            }
+        }
+
+        // Défilement + focus sur le premier champ fautif pour un repérage immédiat.
+        if (firstInvalid) {
+            firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (typeof firstInvalid.focus === 'function') {
+                firstInvalid.focus({ preventScroll: true });
             }
         }
     }
@@ -1001,10 +1050,58 @@ export default class extends Controller {
      */
     triggerSubmit() {
         const form = this.contentTarget.querySelector('form');
-        if (form) { // Search within modal-content
-            form.noValidate = true;
-            form.requestSubmit();
+        if (!form) return;
+
+        form.noValidate = true; // filet : jamais de blocage natif sur un champ caché.
+
+        // Pré-validation INTELLIGENTE : on signale immédiatement les champs `required`
+        // VIDES et VISIBLES (feedback instantané, sans aller-retour serveur), tout en
+        // IGNORANT les champs requis d'une section masquée (qui provoquaient le blocage
+        // silencieux du bouton). S'il reste des champs visibles à remplir, on n'envoie pas.
+        if (!this.validateVisibleRequired(form)) {
+            return;
         }
+
+        form.requestSubmit();
+    }
+
+    /**
+     * Contrôle client léger des champs `required` VIDES et VISIBLES. Marque les fautifs,
+     * défile/focus le premier et renvoie `false` s'il y en a. Les champs requis dans une
+     * section masquée sont ignorés (la validation serveur reste la référence).
+     * @param {HTMLFormElement} form
+     * @returns {boolean} `true` si aucun champ visible requis n'est vide.
+     */
+    validateVisibleRequired(form) {
+        this.clearFieldErrors();
+
+        let firstInvalid = null;
+        form.querySelectorAll('[required]').forEach(champ => {
+            // offsetParent === null ⇒ champ (ou un ancêtre) masqué : on l'ignore.
+            if (champ.offsetParent === null || champ.disabled) return;
+
+            const valeur = (champ.value ?? '').toString().trim();
+            if (valeur !== '') return;
+
+            champ.classList.add('is-invalid');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'invalid-feedback d-block';
+            errorDiv.textContent = 'Ce champ est obligatoire.';
+            champ.parentNode.insertBefore(errorDiv, champ.nextSibling);
+            if (!firstInvalid) firstInvalid = champ;
+        });
+
+        if (firstInvalid) {
+            const nb = form.querySelectorAll('.is-invalid').length;
+            this.showFeedback('error', `Veuillez corriger les erreurs ci-dessous. (${nb} champ${nb > 1 ? 's' : ''} à corriger)`);
+            firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (typeof firstInvalid.focus === 'function') {
+                firstInvalid.focus({ preventScroll: true });
+            }
+            return false;
+        }
+
+        return true;
     }
 
     /**
