@@ -35,11 +35,16 @@ class KetMutationTest extends TestCase
 
     public function testAllowlistNAutoriseQueLesDonneesMetier(): void
     {
-        foreach (['Client', 'Tache', 'Note', 'Piste', 'Avenant'] as $membre) {
-            $this->assertTrue(MutationAllowlist::autorise($membre));
+        $membres = [
+            'Client', 'Piste', 'Avenant', 'Cotation', 'Portefeuille', 'Assureur', 'Risque',
+            'Partenaire', 'Groupe', 'Note', 'DepenseCourtier', 'Tache', 'Feedback',
+            'PieceSinistre', 'NotificationSinistre', 'OffreIndemnisationSinistre', 'Document', 'Classeur',
+        ];
+        foreach ($membres as $membre) {
+            $this->assertTrue(MutationAllowlist::autorise($membre), $membre . ' doit être mutable');
         }
-        // Paramétrage / rôles / hors liste : jamais mutable par Ket.
-        foreach (['Monnaie', 'Taxe', 'Invite', 'RolesEnProduction', 'AssistantParametres', 'Entreprise'] as $exclu) {
+        // Paramétrage / référentiels / rôles / hors liste : jamais mutable par Ket.
+        foreach (['Monnaie', 'Taxe', 'TypeRevenu', 'ModelePieceSinistre', 'Invite', 'RolesEnProduction', 'AssistantParametres', 'Entreprise'] as $exclu) {
             $this->assertFalse(MutationAllowlist::autorise($exclu), $exclu . ' ne doit pas être mutable');
         }
     }
