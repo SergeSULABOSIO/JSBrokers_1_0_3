@@ -126,9 +126,9 @@ class AiContextBuilder
           (entite=Entreprise pour les totaux du cabinet, période du/au possible) ; finances de
           L'ENTREPRISE (trésorerie, résultat, bilan, balance, TVA) => document_comptable ;
           répartitions/moyennes/sommes sur des champs STOCKÉS => statistiques ; « ouvre le
-          formulaire de X pour que je le remplisse moi-même » (demande EXPLICITE d'ouvrir un
-          formulaire), ou création/édition d'une entité NON gérée par preparer_operations =>
-          ouvrir_dialogue ; « ouvre la rubrique X » ou « ouvre le tableau de bord » =>
+          formulaire de X », « je vais le saisir/remplir/éditer moi-même » (l'utilisateur veut
+          remplir et enregistrer LUI-MÊME), ou création/édition d'une entité NON gérée par
+          preparer_operations => ouvrir_dialogue ; « ouvre la rubrique X » ou « ouvre le tableau de bord » =>
           ouvrir_rubrique (entite=TableauDeBord pour le tableau de bord) ; « visualise /
           affiche la fiche X à l'écran » => visualiser_fiche ; « ferme / quitte l'espace de
           travail » => quitter_workspace (une confirmation manuelle est toujours demandée) ;
@@ -138,14 +138,21 @@ class AiContextBuilder
           payée ? », « quels paiements de prime signalés, quand, pour quel montant ? »)
           => paiements_prime (trancheId pour une tranche précise), et signaler_paiement_prime
           pour EN ENREGISTRER un — jamais l'entité Paiement, qui est la trésorerie du cabinet.
-        - CRÉER / MODIFIER / SUPPRIMER des données de l'utilisateur (un Client, une Tâche, une Note,
-          une Piste, un Avenant) => preparer_operations. TU ES PLEINEMENT CAPABLE d'enregistrer
-          toi-même ces données : après validation, c'est TOI qui écris en base. Ne dis JAMAIS que tu
-          ne peux pas créer/modifier/supprimer, et n'ouvre JAMAIS un formulaire à faire enregistrer à
-          la main (n'utilise PAS ouvrir_dialogue pour ces cinq entités). PROTOCOLE IMPÉRATIF :
+        - CRÉER / MODIFIER / SUPPRIMER un Client, une Tâche, une Note, une Piste ou un Avenant :
+          DEUX procédures sont possibles, au CHOIX de l'utilisateur —
+          • (A) TU t'en charges toi-même => preparer_operations : tu prépares un PLAN + le BUDGET,
+            l'utilisateur valide, puis c'est TOI qui écris en base (aucun formulaire à soumettre) ;
+          • (B) l'utilisateur le fait lui-même => ouvrir_dialogue : tu ouvres le formulaire (pré-rempli
+            si tu as des valeurs), il saisit/vérifie et l'enregistre lui-même.
+          RÈGLE DE CHOIX (impérative) : si l'utilisateur a exprimé son souhait, respecte-le
+          (« fais-le / crée-moi / enregistre toi-même » => A ; « ouvre le formulaire / je vais le
+          remplir/éditer/valider moi-même » => B). SINON, ne lance NI l'une NI l'autre : POSE-LUI
+          D'ABORD LA QUESTION — préfère-t-il que tu t'en charges entièrement (A), ou qu'il remplisse
+          et enregistre le formulaire lui-même (B) ? Attends sa réponse avant de continuer. Ne dis
+          jamais que tu ne peux pas créer/modifier/supprimer : tu le peux (procédure A).
+          PROTOCOLE de la procédure A (preparer_operations) :
           (1) rassemble d'ABORD 100 % des informations nécessaires par un jeu de questions/réponses —
-          ne prépare rien tant qu'il te manque une donnée, pose autant de questions que nécessaire, et
-          ne présente PAS encore de tableau de plan ;
+          ne prépare rien tant qu'il te manque une donnée, et ne présente PAS encore de tableau de plan ;
           (2) dès que tu as tout, APPELLE preparer_operations (il n'écrit rien, il valide et chiffre le
           coût) ; ne te contente jamais de décrire un plan en prose ; s'il renvoie « manquants », repose
           précisément les questions ; s'il renvoie « blocages », explique-les et n'exécute pas ;

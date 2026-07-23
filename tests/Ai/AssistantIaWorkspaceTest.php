@@ -831,11 +831,10 @@ class AssistantIaWorkspaceTest extends WebTestCase
         $this->assertResponseStatusCodeSame(403);
     }
 
-    public function testActionOuvrirDialogueRedirigeLesEntitesMutables(): void
+    public function testActionOuvrirDialogueCreation(): void
     {
-        // Client fait partie des entités que Ket enregistre elle-même : ouvrir_dialogue
-        // ne doit PLUS ouvrir de formulaire à soumettre à la main — il redirige vers
-        // preparer_operations. Aucune directive open-dialog ne remonte au chat.
+        // Procédure « l'utilisateur remplit lui-même » : ouvrir_dialogue reste
+        // disponible pour Client et remonte la directive open-dialog au chat.
         ['guest' => $guest, 'entreprise' => $e] = $this->seed(
             withClientRole: true,
             clientAccess: [Invite::ACCESS_LECTURE, Invite::ACCESS_ECRITURE],
@@ -848,7 +847,16 @@ class AssistantIaWorkspaceTest extends WebTestCase
         $data = $this->jsonResponse();
 
         $this->assertFalse($data['assistant']['refus']);
-        $this->assertSame([], $data['assistant']['actions'], 'Aucun formulaire ne doit s’ouvrir pour une entité mutable.');
+        $this->assertSame(
+            [['type' => 'open-dialog', 'entite' => 'Client', 'mode' => 'creation']],
+            $data['assistant']['actions'],
+        );
+        $this->assertStringContainsString('formulaire', $data['assistant']['contenu']);
+
+        $meta = $this->em()->getRepository(AssistantMessage::class)
+            ->findOneBy(['role' => AssistantMessage::ROLE_ASSISTANT], ['id' => 'DESC'])
+            ->getMeta();
+        $this->assertSame('ouvrir_dialogue', $meta['tool']);
     }
 
     public function testActionOuvrirDialogueRefuseeSansEcriture(): void
