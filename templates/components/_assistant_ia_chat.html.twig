@@ -155,11 +155,40 @@
         .jsb-ai-chat .aic-notice--warning { background:#fff3cd; color:#664d03; }
         .jsb-ai-chat .aic-notice--error { background:#f8d7da; color:#842029; }
 
-        /* Barre de décision sous un plan de mutation préparé par Ket. */
-        .jsb-ai-chat .aic-mutation-actions { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; align-self:flex-start; max-width:92%; margin:.15rem 0 .35rem; }
-        .jsb-ai-chat .aic-mutation-actions .aic-notice { flex:1 1 100%; align-self:stretch; }
-        .jsb-ai-chat .aic-mutation-budget { flex:1 1 100%; margin:0; font-size:.8rem; color:#495057; font-weight:600; }
-        .jsb-ai-chat .aic-mutation-abort { text-decoration:none; }
+        /* Panneau de décision sous un plan de mutation préparé par Ket. */
+        .jsb-ai-chat .aic-mutation-actions {
+            display:flex; flex-wrap:wrap; align-items:center; gap:.5rem .6rem;
+            align-self:flex-start; max-width:96%; margin:.4rem 0 .55rem;
+            padding:.75rem .85rem; background:#ffffff; border:1px solid #dee2e6;
+            border-left:3px solid #0047AB; border-radius:10px;
+        }
+        .jsb-ai-chat .aic-mutation-actions .aic-notice { flex:1 1 100%; align-self:stretch; margin:.1rem 0 0; }
+
+        /* Budget en pastilles lisibles (coût · solde · reste). */
+        .jsb-ai-chat .aic-mut-budget { flex:1 1 100%; display:flex; flex-wrap:wrap; gap:.4rem; margin:0 0 .15rem; }
+        .jsb-ai-chat .aic-mut-chip {
+            display:inline-flex; align-items:baseline; gap:.3rem;
+            padding:.22rem .55rem; border-radius:6px; background:#f8f9fa;
+            border:1px solid #e0e0e0; font-size:.74rem; color:#6c757d;
+        }
+        .jsb-ai-chat .aic-mut-chip b { font-size:.82rem; color:#212529; font-weight:700; }
+        .jsb-ai-chat .aic-mut-chip--ok b { color:#198754; }
+        .jsb-ai-chat .aic-mut-chip--danger b { color:#dc3545; }
+
+        /* Boutons d'action (charte cobalt + états accessibles). */
+        .jsb-ai-chat .aic-mut-btn {
+            display:inline-flex; align-items:center; gap:.4rem;
+            min-height:38px; padding:.45rem .9rem; font-size:.85rem; font-weight:600;
+            line-height:1; border-radius:8px; border:1px solid transparent; cursor:pointer;
+            text-decoration:none; transition:background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+        }
+        .jsb-ai-chat .aic-mut-btn svg { width:15px; height:15px; flex:0 0 auto; }
+        .jsb-ai-chat .aic-mut-btn--primary { background:#0047AB; color:#ffffff; }
+        .jsb-ai-chat .aic-mut-btn--primary:hover { background:#003380; color:#ffffff; }
+        .jsb-ai-chat .aic-mut-btn--ghost { background:transparent; color:#495057; border-color:#ced4da; }
+        .jsb-ai-chat .aic-mut-btn--ghost:hover { background:#e9ecef; color:#212529; }
+        .jsb-ai-chat .aic-mut-btn:focus-visible { outline:none; box-shadow:0 0 0 3px rgba(0,71,171,0.35); }
+        .jsb-ai-chat .aic-mut-btn:disabled { opacity:.65; pointer-events:none; }
 
         /* Indicateur « réfléchit… ». */
         .jsb-ai-chat .aic-typing { flex:0 0 auto; display:flex; align-items:center; gap:.45rem; padding:.25rem 1rem .5rem; color:#6c757d; font-size:.82rem; }
