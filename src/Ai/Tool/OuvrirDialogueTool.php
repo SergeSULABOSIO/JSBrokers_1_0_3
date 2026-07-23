@@ -3,7 +3,6 @@
 namespace App\Ai\Tool;
 
 use App\Ai\AiText;
-use App\Ai\Mutation\MutationAllowlist;
 use App\Ai\Scope\AiScope;
 use App\Entity\Invite;
 use App\Service\Workspace\WorkspaceAccessResolver;
@@ -41,14 +40,15 @@ final class OuvrirDialogueTool implements AiToolInterface
     {
         return "Ouvre dans l'espace de travail le formulaire d'une entité (mode « creation » vierge "
             . "ou « edition », id requis via rechercher_entites) que l'utilisateur remplira et "
-            . "enregistrera LUI-MÊME. À n'utiliser QUE si l'utilisateur demande EXPLICITEMENT d'ouvrir "
-            . "un formulaire à remplir lui-même, OU pour une entité NON gérée par preparer_operations. "
-            . 'NE PAS utiliser pour créer/modifier un Client, une Tâche, une Note, une Piste ou un '
-            . 'Avenant : pour ces cinq entités, tu enregistres TOI-MÊME via preparer_operations '
-            . '(n’ouvre pas de formulaire à soumettre à la main). En creation, pré-remplissage possible '
-            . 'via « valeurs » avec STRICTEMENT les valeurs dictées (jamais inventées). EXCEPTION : '
-            . 'pour signaler le paiement d\'une PRIME sur une tranche, utiliser signaler_paiement_prime '
-            . '(jamais le formulaire Paiement, qui est la trésorerie du courtier).';
+            . "enregistrera LUI-MÊME. À utiliser quand l'utilisateur veut SAISIR/VALIDER lui-même "
+            . '(« ouvre le formulaire », « je vais le remplir/éditer moi-même »), ou pour une entité '
+            . 'non gérée par preparer_operations. Pour un Client/Tâche/Note/Piste/Avenant, deux '
+            . 'procédures coexistent : ici (l\'utilisateur enregistre lui-même) OU preparer_operations '
+            . '(c\'est toi qui enregistres) — si l\'utilisateur n\'a pas dit laquelle il veut, '
+            . 'DEMANDE-LUI d\'abord au lieu d\'ouvrir le formulaire. En creation, pré-remplissage '
+            . 'possible via « valeurs » avec STRICTEMENT les valeurs dictées (jamais inventées). '
+            . 'EXCEPTION : pour signaler le paiement d\'une PRIME sur une tranche, utiliser '
+            . 'signaler_paiement_prime (jamais le formulaire Paiement, qui est la trésorerie du courtier).';
     }
 
     public function schema(): array
@@ -129,31 +129,10 @@ final class OuvrirDialogueTool implements AiToolInterface
         }
 
         // FAIL-CLOSED : ouvrir un formulaire prépare une mutation — Écriture
-        // en création, Modification en édition. (Le contrôle d'accès passe AVANT
-        // la redirection : un invité sans droit reçoit un refus, pas une redirection.)
+        // en création, Modification en édition.
         $level = $mode === 'edition' ? Invite::ACCESS_MODIFICATION : Invite::ACCESS_ECRITURE;
         if (!$this->accessResolver->can($scope->invite, $shortName, $level)) {
             return AiToolResult::horsPerimetre($labels[$shortName]);
-        }
-
-        // GARDE-FOU (défense en profondeur) : pour les entités que Ket sait
-        // ENREGISTRER lui-même (allowlist de mutation), on n'ouvre JAMAIS un
-        // formulaire à faire soumettre à la main — on redirige le modèle vers
-        // preparer_operations (il exécute lui-même après validation). Aucune
-        // uiAction open-dialog n'est émise. Garantit le comportement attendu
-        // même si le modèle se trompe d'outil.
-        if (MutationAllowlist::autorise($shortName)) {
-            return AiToolResult::ok([
-                'rediriger'  => 'preparer_operations',
-                'entite'     => $shortName,
-                'libelle'    => $labels[$shortName],
-                'note'       => sprintf(
-                    'N’ouvre pas de formulaire pour « %s » : tu sais l’enregistrer toi-même. Utilise '
-                    . 'preparer_operations (créer/modifier/supprimer) — après validation de l’utilisateur, '
-                    . 'c’est TOI qui écris, sans formulaire à soumettre.',
-                    $labels[$shortName],
-                ),
-            ]);
         }
 
         $id = null;

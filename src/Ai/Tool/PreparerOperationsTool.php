@@ -42,8 +42,9 @@ final class PreparerOperationsTool implements AiToolInterface
         return "L'outil par lequel TU crées, modifies et supprimes toi-même les données de l'utilisateur : "
             . 'créer (op=create), modifier (op=edit, id requis) ou supprimer (op=delete, id requis) '
             . 'un enregistrement. Entités autorisées UNIQUEMENT : ' . implode(', ', MutationAllowlist::membres()) . '. '
-            . "C'est l'outil À UTILISER dès que l'utilisateur veut créer/modifier/supprimer l'une de ces "
-            . "entités (n'ouvre PAS de formulaire via ouvrir_dialogue pour cela). N'APPELLE cet outil que "
+            . "À utiliser quand l'utilisateur veut que TOI tu t'en charges (« fais-le / crée-moi / "
+            . "enregistre toi-même »). S'il préfère remplir et enregistrer le formulaire LUI-MÊME, "
+            . "utilise plutôt ouvrir_dialogue ; s'il n'a pas précisé, DEMANDE-LUI d'abord. N'APPELLE cet outil que "
             . "lorsque tu disposes de 100 % des informations (pose d'abord toutes les questions utiles). "
             . "L'outil N'ÉCRIT RIEN : il valide, chiffre le coût, et renvoie un PLAN numéroté + le BUDGET en "
             . 'tokens que tu présentes clairement (tableaux + listes). Après validation de l’utilisateur, '
