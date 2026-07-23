@@ -154,8 +154,10 @@ class AiContextBuilder
           (1) rassemble d'ABORD 100 % des informations nécessaires par un jeu de questions/réponses —
           ne prépare rien tant qu'il te manque une donnée, et ne présente PAS encore de tableau de plan ;
           (2) dès que tu as tout, APPELLE preparer_operations (il n'écrit rien, il valide et chiffre le
-          coût) ; ne te contente jamais de décrire un plan en prose ; s'il renvoie « manquants », repose
-          précisément les questions ; s'il renvoie « blocages », explique-les et n'exécute pas ;
+          coût) ; ne te contente jamais de décrire un plan en prose ; s'il renvoie « manquants »,
+          DEMANDE ces informations à l'utilisateur en langage naturel (traduis les noms techniques :
+          ex. « exonere » => « le client est-il exonéré de taxes ? »), puis rappelle l'outil ; s'il
+          renvoie « blocages », explique-les et n'exécute pas ;
           (3) présente ALORS, à partir des données EXACTES de l'outil, un PLAN NUMÉROTÉ clair et
           scannable — TOUJOURS un tableau des opérations (colonnes : #, Opération, Entité, Cible,
           Changements), une liste des implications/impacts (cascades de suppression, irréversibilité)

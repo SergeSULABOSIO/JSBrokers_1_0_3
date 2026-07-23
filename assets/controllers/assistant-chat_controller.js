@@ -316,10 +316,14 @@ export default class extends Controller {
                 exec.disabled = true;
                 cancel.disabled = true;
                 if (label) label.textContent = 'Exécution…';
-                const ok = await this.executeMutationPlan(action.idMessage, null, false);
-                if (ok) {
+                const status = await this.executeMutationPlan(action.idMessage, null, false);
+                if (status === 'success') {
                     // Décision mémorisée : la barre laisse place à un feedback permanent.
                     this._replaceBar(bar, this._planStatusNote('done', 'Plan exécuté — les données ont été enregistrées.'));
+                } else if (status === 'missing') {
+                    // Ket a demandé les informations manquantes : on retire la barre
+                    // périmée (l'utilisateur va préciser, un nouveau plan suivra).
+                    bar.remove();
                 } else {
                     exec.disabled = false;
                     cancel.disabled = false;
@@ -460,7 +464,7 @@ export default class extends Controller {
      */
     async executeMutationPlan(idMessage, password, viaModal = true) {
         const id = parseInt(idMessage, 10);
-        if (!Number.isInteger(id) || id <= 0) return false;
+        if (!Number.isInteger(id) || id <= 0) return 'error';
         const url = `/admin/assistant-ia/api/mutation/${this.idEntrepriseValue}/${this.idConversationValue}/${id}/execute`;
 
         // Feedback « coulisses » : barre de progression globale pendant l'exécution.
@@ -478,10 +482,22 @@ export default class extends Controller {
                 await this.renderMutationJournal(data.journal || []);
                 // Rafraîchit les listes éventuellement affichées (données modifiées).
                 document.dispatchEvent(new CustomEvent('app:workspace.data-changed', { bubbles: true }));
-                return true;
+                return 'success';
             }
 
-            // Échecs (mot de passe, solde, validation) : message dans la modale
+            // Informations obligatoires manquantes (422) : Ket DEMANDE plutôt que
+            // d'afficher une erreur — la question reste dans le fil.
+            const champs = data && typeof data.erreurs === 'object' && data.erreurs ? Object.keys(data.erreurs) : [];
+            if (response.status === 422 && champs.length > 0) {
+                if (viaModal) document.dispatchEvent(new CustomEvent('ui:confirmation.close', { bubbles: true }));
+                this.appendMessage(
+                    'assistant',
+                    `Je ne peux pas exécuter ce plan tel quel : il me manque des informations obligatoires (${champs.join(', ')}). Indiquez-les-moi et je vous représente le plan à jour.`,
+                );
+                return 'missing';
+            }
+
+            // Autres échecs (mot de passe, solde, technique) : message dans la modale
             // si elle est ouverte, sinon en bulle système du chat.
             let message = data.message || "L'exécution a échoué.";
             if (response.status === 402) {
@@ -495,7 +511,7 @@ export default class extends Controller {
             } else {
                 this.appendNotice(response.status === 402 ? 'warning' : 'error', message);
             }
-            return false;
+            return 'error';
         } catch (error) {
             console.error('Ket - exécution du plan échouée :', error);
             const msg = "L'exécution a échoué. Vérifiez votre connexion puis réessayez.";
@@ -504,7 +520,7 @@ export default class extends Controller {
             } else {
                 this.appendNotice('error', msg);
             }
-            return false;
+            return 'error';
         } finally {
             document.dispatchEvent(new CustomEvent('app:loading.stop', { bubbles: true }));
         }

@@ -149,6 +149,27 @@ class WorkspaceMutationServiceTest extends WebTestCase
         $this->assertFalse($created->isExonere(), 'Le booléen envoyé par le LLM est normalisé et persisté.');
     }
 
+    public function testDryRunDemandeLesChampsObligatoires(): void
+    {
+        // Au DRY-RUN déjà, un champ obligatoire non fourni doit sortir en
+        // « manquants » (statut invalide) pour que Ket le DEMANDE avant tout plan.
+        $owner = $this->seedUser(self::OWNER_A);
+        $ent = $this->seedEntreprise(self::ENT_A, $owner);
+        $inv = $this->seedOwnerInvite($ent, $owner);
+        $owner->setConnectedTo($ent);
+        $this->em->flush();
+        $this->client->loginUser($owner);
+
+        $res = $this->service->analyserOperation(
+            new MutationOperation('create', 'Client', null, ['nom' => 'Orange RDC']),
+            new AiScope($ent, $inv),
+        );
+
+        $this->assertFalse($res['ok']);
+        $this->assertSame('invalide', $res['statut']);
+        $this->assertArrayHasKey('exonere', $res['manquants']);
+    }
+
     public function testCreationRefuseUnChampObligatoireManquant(): void
     {
         // « exonere » (non-nullable, sans défaut) non fourni : refus PROPRE (422)
