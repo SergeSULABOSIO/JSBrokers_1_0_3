@@ -25,9 +25,19 @@ aucune commission.
    enregistré, soit rien ne l'est. Une suppression demande en plus votre mot de
    passe.
 
-L'assistant ne doit JAMAIS vous faire valider plusieurs plans successifs pour un
-même objet métier. La seule exception est votre demande explicite de vous arrêter
-à une étape.
+## Un seul plan en attente à la fois
+
+Ce n'est pas une consigne de bonne conduite : c'est un **verrou**. Tant qu'un plan
+attend votre décision, l'assistant ne PEUT pas en préparer un second — l'outil le
+lui refuse. Vous ne vous retrouverez donc jamais avec deux barres « Valider et
+exécuter » à trancher l'une après l'autre.
+
+Vous gardez la main dans tous les cas :
+
+- **Valider** : le plan s'exécute, la voie est libre pour la suite.
+- **Annuler** : rien n'est écrit, la voie est libre.
+- **« Non, plutôt ceci »** : dites-le simplement. L'assistant annule le plan en
+  attente et vous en présente un nouveau — jamais deux en concurrence.
 
 ## Deux façons de rattacher les étapes
 

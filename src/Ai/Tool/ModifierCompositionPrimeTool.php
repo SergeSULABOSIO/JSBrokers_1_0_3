@@ -79,6 +79,12 @@ final class ModifierCompositionPrimeTool implements AiToolInterface
                         'required' => ['nom', 'montant'],
                     ],
                 ],
+                'remplacerPlanEnAttente' => [
+                    'type' => 'boolean',
+                    'description' => 'Ne mets true QUE si un plan attend déjà une décision ET que l\'utilisateur '
+                        . 'demande de le CHANGER : le plan en attente sera annulé et remplacé. Sinon, tant qu\'un '
+                        . 'plan attend, la préparation est refusée (jamais deux plans à valider).',
+                ],
                 'remplacer' => [
                     'type' => 'boolean',
                     'description' => 'true = la liste fournie REMPLACE toute la composition (les composantes '
@@ -206,7 +212,12 @@ final class ModifierCompositionPrimeTool implements AiToolInterface
             ]],
         ]];
 
-        return $this->preparer->execute(['operations' => $operations], $scope);
+        // Le verrou anti-empilement de plans vit dans l'outil délégué (source
+        // unique) : on lui transmet simplement l'intention de remplacement.
+        return $this->preparer->execute([
+            'operations'             => $operations,
+            'remplacerPlanEnAttente' => ($args['remplacerPlanEnAttente'] ?? false) === true,
+        ], $scope);
     }
 
     /** Cotation de l'entreprise du scope, ou null (fail-closed via le scoping du search). */

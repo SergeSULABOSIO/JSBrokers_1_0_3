@@ -3,9 +3,11 @@
 namespace App\Tests\Ai;
 
 use App\Ai\Mutation\MutationOperation;
+use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Tool\PreparerOperationsTool;
 use App\Service\Workspace\WorkspaceMutationService;
 use App\Token\TokenAccountService;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -22,6 +24,7 @@ class MutationCollectionsSchemaTest extends TestCase
         $tool = new PreparerOperationsTool(
             $this->createMock(WorkspaceMutationService::class),
             $this->createMock(TokenAccountService::class),
+            new PlanEnAttente($this->createMock(EntityManagerInterface::class)),
         );
         $col = $tool->schema()['properties']['operations']['items']['properties']['collections'];
 
