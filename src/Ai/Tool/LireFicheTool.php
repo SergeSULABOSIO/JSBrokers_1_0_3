@@ -198,7 +198,7 @@ final class LireFicheTool implements AiToolInterface
                 }
                 $membres[] = [
                     'id'      => $membre->getId(),
-                    'libelle' => trim(strip_tags((string) $membre)),
+                    'libelle' => $this->libelleMembre($membre),
                     'champs'  => $this->ficheNormaliseur->fiche($membre),
                 ];
             }
@@ -210,5 +210,25 @@ final class LireFicheTool implements AiToolInterface
         }
 
         return $out;
+    }
+
+    /**
+     * Libellé sûr d'un membre de collection : best-effort par getters usuels, SANS
+     * cast (string) — toutes les entités n'ont pas de __toString (ex.
+     * RevenuPourCourtier), et le cast planterait tout l'appel de l'outil.
+     */
+    private function libelleMembre(object $membre): string
+    {
+        foreach (['getNom', 'getLibelle', 'getTitre', 'getReference', 'getCode'] as $getter) {
+            if (method_exists($membre, $getter)) {
+                $val = $membre->{$getter}();
+                if (is_string($val) && trim(strip_tags($val)) !== '') {
+                    return trim(strip_tags($val));
+                }
+            }
+        }
+        $id = method_exists($membre, 'getId') ? $membre->getId() : null;
+
+        return $id !== null ? ('#' . $id) : '(sans libellé)';
     }
 }
