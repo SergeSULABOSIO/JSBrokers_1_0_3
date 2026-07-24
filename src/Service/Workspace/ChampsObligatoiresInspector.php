@@ -4,7 +4,9 @@ namespace App\Service\Workspace;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
+use Symfony\Component\Form\Extension\Core\Type\PercentType;
 use Symfony\Component\Form\FormFactoryInterface;
+use Symfony\Component\Form\ResolvedFormTypeInterface;
 
 /**
  * Source UNIQUE de la notion « champ obligatoire » d'une entité, dérivée des
@@ -165,6 +167,50 @@ class ChampsObligatoiresInspector
         }
 
         return $labels;
+    }
+
+    /**
+     * Champs dont le FORMULAIRE attend un POURCENTAGE alors que la base stocke une
+     * FRACTION (`PercentType` en mode « fractional », le défaut Symfony : l'écran
+     * affiche 15, la colonne contient 0.15).
+     *
+     * Piège majeur pour l'assistant : la valeur qu'il LIT (0.15) n'est pas celle
+     * qu'il doit ÉCRIRE (15). La recopier telle quelle divise le taux par 100, en
+     * silence. On expose donc la liste pour l'annoncer explicitement dans
+     * l'inventaire des champs et dans la lecture de fiche — au lieu de la coder en
+     * dur entité par entité, on la DÉDUIT du formulaire, comme le reste.
+     *
+     * @return string[] noms de champs
+     */
+    public function champsPourcentage(string $shortName, string $fqcn): array
+    {
+        $champs = [];
+        try {
+            $form = $this->formFactory->create('App\\Form\\' . $shortName . 'Type', new $fqcn());
+            foreach ($form->all() as $child) {
+                $config = $child->getConfig();
+                if (!$this->estPercentType($config->getType()) || $config->getOption('type') === 'integer') {
+                    continue;
+                }
+                $champs[] = $child->getName();
+            }
+        } catch (\Throwable) {
+            return [];
+        }
+
+        return $champs;
+    }
+
+    private function estPercentType(?ResolvedFormTypeInterface $type): bool
+    {
+        while ($type !== null) {
+            if ($type->getInnerType() instanceof PercentType) {
+                return true;
+            }
+            $type = $type->getParent();
+        }
+
+        return false;
     }
 
     /** Humanise un nom de champ technique (fallback quand le FormType n'a pas de libellé). */

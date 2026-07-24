@@ -2,6 +2,7 @@
 
 namespace App\Ai\Parcours;
 
+use App\Ai\FicheNormaliseur;
 use App\Ai\Mutation\MutationAllowlist;
 use App\Ai\Scope\AiScope;
 use App\Entity\Invite;
@@ -39,6 +40,7 @@ class ParcoursBuilder
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly FormTreeInspector $formTreeInspector,
         private readonly JSBDynamicSearchService $searchService,
+        private readonly FicheNormaliseur $ficheNormaliseur,
     ) {
     }
 
@@ -247,11 +249,18 @@ class ParcoursBuilder
     }
 
     /**
-     * Valeurs d'un référentiel (id + nom), scopées à l'entreprise : évite à Ket un
+     * Valeurs d'un référentiel, scopées à l'entreprise : évite à Ket un
      * aller-retour de recherche pour résoudre un « type » par son nom — et évite
      * surtout de l'omettre (chargement sans type => commission à 0).
      *
-     * @return array<int, array{id: int, nom: string}>
+     * Chaque valeur est restituée AVEC SES ATTRIBUTS (stockés ET calculés), pas
+     * seulement son nom : c'est ce qui permet de CHOISIR. « Le revenu selon le
+     * taux relatif au risque » ne se résout pas sur une liste de libellés — il
+     * faut voir le taux, le mode de calcul, le chargement de base et le
+     * redevable de chaque type. Avec un nom seul, l'étape est indécidable, et
+     * une étape indécidable finit abandonnée en silence.
+     *
+     * @return array<int, array{id: int, nom: string, attributs: array}>
      */
     private function valeursReferentiel(string $entite, AiScope $scope): array
     {
@@ -274,7 +283,14 @@ class ParcoursBuilder
             if (trim($nom) === '') {
                 continue;
             }
-            $valeurs[] = ['id' => (int) $item->getId(), 'nom' => trim(strip_tags($nom))];
+            $attributs = $this->ficheNormaliseur->ficheEnrichie($item);
+            unset($attributs['id'], $attributs['nom']); // déjà portés par l'entrée.
+
+            $valeurs[] = [
+                'id'        => (int) $item->getId(),
+                'nom'       => trim(strip_tags($nom)),
+                'attributs' => $attributs,
+            ];
         }
 
         return $valeurs;
