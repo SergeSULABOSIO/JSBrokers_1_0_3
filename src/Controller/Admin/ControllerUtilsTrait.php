@@ -1468,6 +1468,18 @@ trait ControllerUtilsTrait
             ];
         }
 
+        // Cotations (propositions) : au premier chargement, on met en avant le travail
+        // commercial restant → les propositions « En attente » (non transformées en police).
+        // Critère retirable comme les autres (badge de la barre ou dialogue avancé) → « Toutes ».
+        // Se COMBINE avec le périmètre portefeuille ci-dessous (les deux badges coexistent).
+        if ($shortName === 'Cotation') {
+            $criteria[\App\Services\Search\CotationSouscriptionScope::CRITERION_KEY] = [
+                'operator' => '=',
+                'value' => \App\Services\Search\CotationSouscriptionScope::STATUT_EN_ATTENTE,
+                'label' => \App\Services\Search\CotationSouscriptionScope::libelle(\App\Services\Search\CotationSouscriptionScope::STATUT_EN_ATTENTE),
+            ];
+        }
+
         // Périmètre portefeuille : critère produit par la fabrique partagée avec les outils
         // de l'assistant IA (source unique — cf. PortefeuilleCritereFactory), pour que la
         // rubrique et Ket ne puissent plus diverger.

@@ -18,6 +18,7 @@ use App\Entity\Tranche;
 use App\Entity\Utilisateur;
 use App\Services\JSBDynamicSearchService;
 use App\Services\Search\AvenantEcheanceScope;
+use App\Services\Search\CotationSouscriptionScope;
 use App\Services\Search\PortefeuilleCritereFactory;
 use App\Services\Search\PortefeuilleScope;
 use App\Services\Search\TranchePaiementScope;
@@ -140,6 +141,14 @@ class CoherenceChipsAssistantTest extends KernelTestCase
             ->setMontantFlatExceptionel(1000.0)->setCotation($cotation);
         $chargement->setEntreprise($entreprise);
         $em->persist($chargement);
+
+        // Cotation « en attente » (AUCUN avenant) DANS le portefeuille de l'invité : la
+        // cotation ci-dessus deviendra « souscrite » (ses 4 avenants), celle-ci reste « en
+        // attente ». De quoi éprouver les deux chips de souscription de la rubrique Propositions.
+        $cotationEnAttente = (new Cotation())->setNom('Cotation En Attente')->setDuree(365);
+        $cotationEnAttente->setPiste($piste);
+        $cotationEnAttente->setEntreprise($entreprise);
+        $em->persist($cotationEnAttente);
 
         // Un avenant par fenêtre d'échéance (échu / sous 30 j / 31-60 j / au-delà de 60 j).
         foreach ([['ECHU', '-10 days'], ['J10', '+10 days'], ['J45', '+45 days'], ['J90', '+90 days']] as [$ref, $delta]) {
@@ -319,6 +328,50 @@ class CoherenceChipsAssistantTest extends KernelTestCase
                 "Chip « {$statut} » : mêmes tranches, même ordre d'urgence."
             );
         }
+    }
+
+    /**
+     * Idem pour la rubrique Propositions (Cotations) : le statut de souscription (« souscrite »
+     * dès qu'un avenant existe, « en attente » sinon) est filtré en SQL (EXISTS / NOT EXISTS).
+     * Les outils génériques de Ket doivent passer par le même critère synthétique et donc par
+     * le même moteur, scope portefeuille inclus.
+     */
+    public function testCotationsChaqueChipCoincideAvecLAssistant(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+        $scope = new AiScope($entreprise, $invite);
+
+        foreach (array_keys(CotationSouscriptionScope::VALEURS) as $statut) {
+            $chip = $this->service()->search(
+                Cotation::class,
+                $this->criteresRubrique('Cotation', $invite, CotationSouscriptionScope::CRITERION_KEY, $statut),
+                $entreprise,
+            );
+            $idsChip = array_map(static fn (Cotation $c) => $c->getId(), $chip['data']);
+
+            $compte = $this->compter()->execute(['entite' => 'Cotation', 'validation' => $statut], $scope);
+            $this->assertSame(AiToolResult::STATUS_OK, $compte->status, "Chip {$statut}");
+            $this->assertSame(
+                (int) $chip['totalItems'],
+                $compte->data['count'],
+                "Chip « {$statut} » : le comptage de Ket doit égaler celui de la rubrique."
+            );
+
+            $liste = $this->rechercher()->execute(['entite' => 'Cotation', 'validation' => $statut], $scope);
+            $this->assertSame(AiToolResult::STATUS_OK, $liste->status);
+            $this->assertSame(
+                $idsChip,
+                array_column($liste->data['items'], 'id'),
+                "Chip « {$statut} » : mêmes propositions, même ordre."
+            );
+        }
+
+        // Preuve que chaque chip isole bien sa moitié : une cotation souscrite (avec avenants)
+        // et une en attente (sans) coexistent dans le portefeuille de l'invité.
+        $souscrites = $this->compter()->execute(['entite' => 'Cotation', 'validation' => CotationSouscriptionScope::STATUT_SOUSCRITES], $scope);
+        $enAttente = $this->compter()->execute(['entite' => 'Cotation', 'validation' => CotationSouscriptionScope::STATUT_EN_ATTENTE], $scope);
+        $this->assertSame(1, $souscrites->data['count'], 'La seule cotation à avenants du portefeuille.');
+        $this->assertSame(1, $enAttente->data['count'], 'La seule cotation sans avenant du portefeuille (« Cotation Voisine » est hors périmètre).');
     }
 
     /**

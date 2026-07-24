@@ -152,6 +152,23 @@ class SearchCanvasProvider
             ]);
         }
 
+        // Critère synthétique « Statut de souscription » (Cotation) : une cotation est
+        // « souscrite » dès qu'elle porte un avenant (présence exprimable en SQL, EXISTS),
+        // absente du canevas d'entité car dérivée. Porté par la clé spéciale
+        // CotationSouscriptionScope::CRITERION_KEY, interceptée par le moteur. Le type
+        // 'Boolean' rend un <select> depuis la map de valeurs, badge inclus — les chips de la
+        // rubrique et ce badge manipulent la même clé et restent synchronisés.
+        if ($shortName === 'Cotation') {
+            array_unshift($searchCriteria, [
+                'Nom' => \App\Services\Search\CotationSouscriptionScope::CRITERION_KEY,
+                'Display' => 'Statut',
+                'Type' => 'Boolean',
+                'Valeur' => \App\Services\Search\CotationSouscriptionScope::VALEURS,
+                'isDefault' => false,
+                'Icone' => $this->iconCanvasProvider->resolveIconName('cotation') !== null ? 'cotation' : 'action:check',
+            ]);
+        }
+
         return $searchCriteria;
     }
 
