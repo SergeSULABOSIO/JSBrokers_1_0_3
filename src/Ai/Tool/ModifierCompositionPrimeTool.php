@@ -105,12 +105,17 @@ final class ModifierCompositionPrimeTool implements AiToolInterface
             return AiToolResult::introuvable(sprintf('Cotation #%d', $cotationId));
         }
 
-        // Index des chargements existants par nom (pour mise à jour idempotente).
+        // Index des chargements existants par nom (id + valeurs actuelles) pour une
+        // mise à jour IDEMPOTENTE : on ne propose que ce qui change réellement.
         $existantsParNom = [];
         foreach ($cotation->getChargements() as $ch) {
             $nom = mb_strtolower(trim((string) $ch->getNom()));
             if ($nom !== '' && !isset($existantsParNom[$nom])) {
-                $existantsParNom[$nom] = $ch->getId();
+                $existantsParNom[$nom] = [
+                    'id'      => $ch->getId(),
+                    'montant' => (float) ($ch->getMontantFlatExceptionel() ?? 0.0),
+                    'typeId'  => $ch->getType()?->getId(),
+                ];
             }
         }
 
@@ -118,6 +123,7 @@ final class ModifierCompositionPrimeTool implements AiToolInterface
         $nomsFournis = [];
         $elements = [];
         $cacheTypes = [];
+        $primeTotale = 0.0;
 
         foreach ($composantes as $composante) {
             if (!is_array($composante)) {
@@ -128,12 +134,14 @@ final class ModifierCompositionPrimeTool implements AiToolInterface
                 continue;
             }
             $montant = (float) $composante['montant'];
+            $primeTotale += $montant;
             $cle = mb_strtolower($nom);
             $nomsFournis[$cle] = true;
 
             $champs = ['montantFlatExceptionel' => $montant];
             // Type de chargement optionnel : résolu par son nom vers un Chargement existant.
             $typeNom = trim((string) ($composante['type'] ?? ''));
+            $typeId = null;
             if ($typeNom !== '') {
                 $typeId = $cacheTypes[$typeNom] ??= $this->resoudreType($typeNom, $scope);
                 if ($typeId !== null) {
@@ -142,14 +150,18 @@ final class ModifierCompositionPrimeTool implements AiToolInterface
             }
 
             if (isset($existantsParNom[$cle])) {
-                $elements[] = ['op' => 'edit', 'id' => $existantsParNom[$cle], 'champs' => $champs];
+                $ex = $existantsParNom[$cle];
+                // Idempotence : rien à faire si le montant (et le type éventuel) sont
+                // déjà ceux demandés — évite un plan et une barre de validation inutiles.
+                $montantIdentique = abs($ex['montant'] - $montant) < 0.005;
+                $typeIdentique = $typeId === null || $typeId === $ex['typeId'];
+                if ($montantIdentique && $typeIdentique) {
+                    continue;
+                }
+                $elements[] = ['op' => 'edit', 'id' => $ex['id'], 'champs' => $champs];
             } else {
                 $elements[] = ['op' => 'create', 'champs' => ['nom' => $nom] + $champs];
             }
-        }
-
-        if ($elements === []) {
-            return AiToolResult::introuvable('composition de prime');
         }
 
         // Remplacement : supprimer les chargements existants non repris.
@@ -160,6 +172,21 @@ final class ModifierCompositionPrimeTool implements AiToolInterface
                     $elements[] = ['op' => 'delete', 'id' => $ch->getId()];
                 }
             }
+        }
+
+        // Aucun changement réel (composition déjà à jour) : on NE présente PAS de
+        // plan ni de bouton « Valider et exécuter » — juste une confirmation. C'est
+        // ce qui évite qu'une simple demande de confirmation ré-affiche une barre de
+        // validation pour une opération déjà exécutée.
+        if ($elements === []) {
+            return AiToolResult::ok([
+                'pret'        => false,
+                'dejaAJour'   => true,
+                'primeTotale' => round($primeTotale, 2),
+                'note'        => 'La composition de la prime est DÉJÀ à jour (aucune modification à '
+                    . 'apporter). Confirme-le simplement à l\'utilisateur, avec la prime totale ; '
+                    . 'NE prépare PAS de plan et ne propose PAS de bouton de validation.',
+            ]);
         }
 
         // Traduction en opération générique + délégation au moteur unique.

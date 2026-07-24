@@ -286,6 +286,57 @@ class CollectionMutationTest extends WebTestCase
         $this->assertSame('create', $chargements[0]['op']);
     }
 
+    public function testCompositionIdentiqueNeRepresentePasDePlan(): void
+    {
+        // Idempotence : une composition déjà à jour (mêmes montants) ne doit PAS
+        // reproduire un plan ni une barre « Valider et exécuter » — juste une
+        // confirmation. C'est ce qui évite la barre parasite après exécution.
+        [$ent, $inv, $owner] = $this->seedWorkspace();
+        $cot = $this->seedCotation($ent, $inv, 'Offre déjà à jour');
+        $this->seedChargement($cot, $ent, $inv, 'Prime nette', 9000);
+        $this->seedChargement($cot, $ent, $inv, 'TVA', 1600);
+        $this->em->flush();
+        $cotId = $cot->getId();
+        $this->client->loginUser($owner);
+
+        $tool = static::getContainer()->get(ModifierCompositionPrimeTool::class);
+        $result = $tool->execute([
+            'cotationId'  => $cotId,
+            'composantes' => [
+                ['nom' => 'Prime nette', 'montant' => 9000],
+                ['nom' => 'TVA', 'montant' => 1600],
+            ],
+        ], new AiScope($ent, $inv));
+
+        $this->assertFalse($result->data['pret'] ?? true, 'Aucun plan à présenter.');
+        $this->assertTrue($result->data['dejaAJour'] ?? false, 'La composition est signalée déjà à jour.');
+        $this->assertNull($result->uiAction, 'Aucune barre de validation (uiAction) ne doit être émise.');
+        $this->assertSame(10600.0, $result->data['primeTotale']);
+    }
+
+    public function testModificationDUnMontantRepresenteUnPlan(): void
+    {
+        // À l'inverse : changer un montant DOIT reproduire un plan (edit) facturé.
+        [$ent, $inv, $owner] = $this->seedWorkspace();
+        $cot = $this->seedCotation($ent, $inv, 'Offre à corriger');
+        $this->seedChargement($cot, $ent, $inv, 'Prime nette', 9000);
+        $this->em->flush();
+        $cotId = $cot->getId();
+        $this->client->loginUser($owner);
+
+        $tool = static::getContainer()->get(ModifierCompositionPrimeTool::class);
+        $result = $tool->execute([
+            'cotationId'  => $cotId,
+            'composantes' => [['nom' => 'Prime nette', 'montant' => 12000]],
+        ], new AiScope($ent, $inv));
+
+        $this->assertTrue($result->data['pret'] ?? false, 'Un vrai changement doit produire un plan.');
+        $this->assertGreaterThan(0, $result->data['budget']['coutEstime']);
+        $chargements = $result->uiAction['plan'][0]['collections']['chargements'] ?? [];
+        $this->assertCount(1, $chargements);
+        $this->assertSame('edit', $chargements[0]['op'], 'Composante existante => édition (pas de doublon).');
+    }
+
     public function testCollectionInconnueRefusee(): void
     {
         [$ent, $inv, $owner] = $this->seedWorkspace();
