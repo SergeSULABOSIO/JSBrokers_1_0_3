@@ -55,9 +55,13 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
             'retroCommissionReversee' => round($this->getRevenuRetroCommissionReversee($entity), 2),
             'retroCommissionSolde' => round($this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1, []) - $this->getRevenuRetroCommissionReversee($entity), 2),
             'taxeCourtierMontant' => round($this->calculationHelper->getRevenuMontantTaxeCourtier($entity), 2),
-            'taxeCourtierTaux' => round($this->getTaxeTaux($entity, Taxe::REDEVABLE_COURTIER) * 100, 2),
+            // Le taux de taxe est stocké en POURCENTAGE ENTIER (2 = 2%, 16 = 16%) —
+            // getMontantTaxe le divise d'ailleurs par 100. On l'affiche donc TEL QUEL,
+            // sans ×100 (qui donnait 200% / 1600%). Ne pas confondre avec les taux
+            // stockés en fraction (part partenaire, % du risque) qui, eux, ×100.
+            'taxeCourtierTaux' => round($this->getTaxeTaux($entity, Taxe::REDEVABLE_COURTIER), 2),
             'taxeAssureurMontant' => round($this->calculationHelper->getRevenuMontantTaxeAssureur($entity), 2),
-            'taxeAssureurTaux' => round($this->getTaxeTaux($entity, Taxe::REDEVABLE_ASSUREUR) * 100, 2),
+            'taxeAssureurTaux' => round($this->getTaxeTaux($entity, Taxe::REDEVABLE_ASSUREUR), 2),
             'estPartageable' => ($entity->getTypeRevenu() && $entity->getTypeRevenu()->isShared()) ? 'Oui' : 'Non',
             'taxeCourtierPayee' => round($this->getRevenuTaxePayee($entity, Taxe::REDEVABLE_COURTIER), 2),
             'taxeCourtierSolde' => round($this->calculationHelper->getRevenuMontantTaxeCourtier($entity) - $this->getRevenuTaxePayee($entity, Taxe::REDEVABLE_COURTIER), 2),

@@ -3391,7 +3391,7 @@ class Constante
         foreach ($this->serviceTaxes->getTaxesPayableParAssureur() as $taxe) {
             $strTaux = "";
             if ($taxe->getTauxIARD() == $taxe->getTauxVIE()) {
-                $strTaux = " (" . ($taxe->getTauxIARD() * 100) . "%)";
+                $strTaux = " (" . $taxe->getTauxIARD() . "%)";
             }
             $nomsTaxesAssureurs .= "" . $taxe->getCode() . $strTaux;
             if ($multiple == true) {
@@ -3409,7 +3409,7 @@ class Constante
         foreach ($this->serviceTaxes->getTaxesPayableParCourtier() as $taxe) {
             $strTaux = "";
             if ($taxe->getTauxIARD() == $taxe->getTauxVIE()) {
-                $strTaux = " (" . ($taxe->getTauxIARD() * 100) . "%)";
+                $strTaux = " (" . $taxe->getTauxIARD() . "%)";
             }
             $nomsTaxesCourtiers .= "" . $taxe->getCode() . $strTaux;
             if ($multiple == true) {
@@ -3493,9 +3493,9 @@ class Constante
         if ($taxe != null) {
             $txt = "";
             if ($taxe->getTauxIARD() == $taxe->getTauxVIE()) {
-                $txt = $taxe->getCode() . " (" . ($taxe->getTauxIARD() * 100) . "%)";
+                $txt = $taxe->getCode() . " (" . $taxe->getTauxIARD() . "%)";
             } else {
-                $txt = $taxe->getCode() . " (Iard@" . ($taxe->getTauxIARD() * 100) . "%) & (Vie@" . ($taxe->getTauxVIE() * 100) . "%)";
+                $txt = $taxe->getCode() . " (Iard@" . $taxe->getTauxIARD() . "%) & (Vie@" . $taxe->getTauxVIE() . "%)";
             }
             return strtoupper($txt);
         } else {
@@ -6364,7 +6364,7 @@ class Constante
         if ($taxe != null) {
             $codeTaxe = $taxe->getCode();
             if ($taxe->getTauxIARD() == $taxe->getTauxVIE()) {
-                return strtoupper($codeTaxe . " (" . (round($taxe->getTauxIARD() * 100, 2)) . "%)");
+                return strtoupper($codeTaxe . " (" . (round($taxe->getTauxIARD(), 2)) . "%)");
             } else {
                 return strtoupper($codeTaxe . "");
             }
@@ -6378,7 +6378,7 @@ class Constante
         if ($taxe != null) {
             $codeTaxe = $taxe->getCode();
             if ($taxe->getTauxIARD() == $taxe->getTauxVIE()) {
-                return $codeTaxe . " (" . (round($taxe->getTauxIARD() * 100, 2)) . "%)";
+                return $codeTaxe . " (" . (round($taxe->getTauxIARD(), 2)) . "%)";
             } else {
                 return $codeTaxe;
             }

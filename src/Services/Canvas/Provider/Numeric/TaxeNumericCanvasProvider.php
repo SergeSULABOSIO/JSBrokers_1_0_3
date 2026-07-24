@@ -19,12 +19,14 @@ class TaxeNumericCanvasProvider implements NumericCanvasProviderInterface
         return array_merge([
             "tauxIARD" => [
                 "description" => "Taux IARD",
-                "value" => (float)($object->getTauxIARD() ?? '0') * 100,
+                // Taux stocké en POURCENTAGE ENTIER (TaxeType : PercentType type=integer,
+                // « 16 pour 16% ») → afficher tel quel, sans ×100 (qui donnait 1600%).
+                "value" => (float)($object->getTauxIARD() ?? '0'),
                 "unit" => "%",
             ],
             "tauxVIE" => [
                 "description" => "Taux VIE",
-                "value" => (float)($object->getTauxVIE() ?? '0') * 100,
+                "value" => (float)($object->getTauxVIE() ?? '0'),
                 "unit" => "%",
             ],
         ], $this->getCalculatedIndicatorsNumericAttributes($object));
