@@ -45,7 +45,9 @@ final class ModifierCompositionPrimeTool implements AiToolInterface
             . 'nette, frais accessoires, taxes/TVA, frais ARCA, etc. À appeler dès que l\'utilisateur '
             . 'donne ou corrige les montants de la prime d\'une cotation (« la prime nette est 9000, la '
             . 'TVA 1600… », « fixe la composition de la prime »). Fournis cotationId et composantes '
-            . '(chaque composante = nom + montant, et éventuellement le type de chargement). L\'outil '
+            . '(chaque composante = nom + montant ; le type de chargement est déduit automatiquement du '
+            . 'nom, ex. « Prime nette » → type « Prime nette », essentiel pour que la commission se '
+            . 'calcule). L\'outil '
             . 'prépare un PLAN + BUDGET à valider (comme preparer_operations) ; après validation, c\'est '
             . 'TOI qui enregistres. NE tente PAS de mettre ces montants dans les champs de la cotation : '
             . 'ils y seraient ignorés. Récupère l\'id de la cotation via rechercher_entites/lire_fiche.';
@@ -139,14 +141,15 @@ final class ModifierCompositionPrimeTool implements AiToolInterface
             $nomsFournis[$cle] = true;
 
             $champs = ['montantFlatExceptionel' => $montant];
-            // Type de chargement optionnel : résolu par son nom vers un Chargement existant.
-            $typeNom = trim((string) ($composante['type'] ?? ''));
-            $typeId = null;
-            if ($typeNom !== '') {
-                $typeId = $cacheTypes[$typeNom] ??= $this->resoudreType($typeNom, $scope);
-                if ($typeId !== null) {
-                    $champs['type'] = $typeId;
-                }
+            // Type de chargement : explicite si fourni, SINON déduit du nom de la
+            // composante (« Prime nette » → type « Prime nette », « TVA » → « Tva pour
+            // prime »…). Indispensable : le calcul de commission retrouve la base
+            // (prime nette) en matchant le TYPE du chargement au type-chargement du
+            // TypeRevenu — jamais par le nom. Un chargement sans type => commission 0.
+            $typeNom = trim((string) ($composante['type'] ?? '')) ?: $nom;
+            $typeId = $cacheTypes[$typeNom] ??= $this->resoudreType($typeNom, $scope);
+            if ($typeId !== null) {
+                $champs['type'] = $typeId;
             }
 
             if (isset($existantsParNom[$cle])) {
@@ -215,7 +218,11 @@ final class ModifierCompositionPrimeTool implements AiToolInterface
         return $cotation instanceof Cotation ? $cotation : null;
     }
 
-    /** Résout un type de chargement par son nom (dans l'entreprise), ou null si introuvable/ambigu. */
+    /**
+     * Résout un type de chargement par son nom (dans l'entreprise). Préfère une
+     * correspondance EXACTE (insensible à la casse) parmi les candidats « contient »,
+     * sinon prend le premier. null si aucun candidat.
+     */
     private function resoudreType(string $nom, AiScope $scope): ?int
     {
         $result = $this->searchService->search(
@@ -224,13 +231,22 @@ final class ModifierCompositionPrimeTool implements AiToolInterface
             $scope->entreprise,
             null,
             1,
-            1,
+            10,
         );
         if (($result['status']['code'] ?? 500) !== 200) {
             return null;
         }
-        $type = $result['data'][0] ?? null;
+        $candidats = array_filter($result['data'] ?? [], static fn ($c) => $c instanceof Chargement);
+        if ($candidats === []) {
+            return null;
+        }
+        $cible = mb_strtolower(trim($nom));
+        foreach ($candidats as $c) {
+            if (mb_strtolower(trim((string) $c->getNom())) === $cible) {
+                return $c->getId();
+            }
+        }
 
-        return $type instanceof Chargement ? $type->getId() : null;
+        return reset($candidats)->getId();
     }
 }
