@@ -106,7 +106,8 @@
                                     {% elseif attr.format is defined and attr.format == 'Date' and value is not null and value.timestamp is defined %}
                                         {{ value|date('d/m/Y') }}
                                     {% elseif attr.format is defined and attr.format == 'Pourcentage' %}
-                                        {{ value|number_format(2, ',', ' ') }} %
+                                        {# Affichage unifié via le VO Pourcentage (valeur déjà en pour-cent). #}
+                                        {{ value|pourcentage }}
                                     {% elseif attr.format is defined and attr.format == 'Nombre' and value is not null %}
                                         {# Nombres : les compteurs (Nb. Clients, Nb. Pistes…) s'affichent en ENTIER,
                                            sans décimales parasites. Le format « Nombre » servant aussi à des taux
