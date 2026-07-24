@@ -1060,7 +1060,11 @@ class AssistantIaWorkspaceTest extends WebTestCase
         $this->assertFalse($data['assistant']['refus']);
         $this->assertStringContainsString('Ce que l\'assistant peut faire', $data['assistant']['contenu']);
         $this->assertStringContainsString('Combien de clients avons-nous ?', $data['assistant']['contenu']);
-        $this->assertStringContainsString('n\'écrit jamais en base', $data['assistant']['contenu']);
+        // La fiche dit ce que l'assistant fait VRAIMENT : il enregistre lui-même,
+        // mais seulement après un plan chiffré que l'utilisateur valide.
+        $this->assertStringContainsString('PARCOURS COMPLET', $data['assistant']['contenu']);
+        $this->assertStringContainsString('une seule validation', $data['assistant']['contenu']);
+        $this->assertStringContainsString('n\'écrit jamais de sa propre initiative', $data['assistant']['contenu']);
 
         $meta = $this->em()->getRepository(AssistantMessage::class)
             ->findOneBy(['role' => AssistantMessage::ROLE_ASSISTANT], ['id' => 'DESC'])

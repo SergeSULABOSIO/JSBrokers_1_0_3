@@ -5,6 +5,7 @@ namespace App\Service\Workspace;
 use App\Ai\Mutation\MutationAllowlist;
 use App\Ai\Mutation\MutationOperation;
 use App\Ai\Mutation\MutationPlan;
+use App\Ai\Mutation\MutationReferences;
 use App\Ai\Scope\AiScope;
 use App\Entity\Entreprise;
 use App\Entity\Utilisateur;
@@ -88,8 +89,9 @@ class WorkspaceMutationService
      *     cible: ?string, manquants: array<string,string[]>, impacts: string[], bloque: bool
      * }
      */
-    public function analyserOperation(MutationOperation $op, AiScope $scope): array
+    public function analyserOperation(MutationOperation $op, AiScope $scope, ?MutationReferences $refs = null): array
     {
+        $refs ??= MutationReferences::dryRun();
         $labels = $this->accessResolver->libellesEntites();
         $libelle = $labels[$op->entityShortName] ?? $op->entityShortName;
         $base = [
@@ -133,10 +135,17 @@ class WorkspaceMutationService
         // Création : champs OBLIGATOIRES (non-nullables sans défaut) manquants —
         // détectés AVANT le form (que clearMissing=false ne validerait pas), afin
         // que Ket les demande plutôt que de provoquer une erreur SQL à l'exécution.
-        $manquants = [];
-        if ($op->isCreate()) {
+        // Renvois vers d'autres opérations du plan (« @etiquette ») : résolus une
+        // fois, ici, avant toute validation. Au dry-run l'id n'existe pas encore :
+        // le champ est tenu pour FOURNI (donc pas réclamé à l'utilisateur) mais
+        // n'est pas soumis au formulaire. Une étiquette inconnue est un manquant.
+        $resolution = $this->resoudreReferences($op, $refs);
+        $manquants = $resolution['manquants'];
+
+        if ($manquants === [] && $op->isCreate()) {
             // Portefeuille (auto si unique, sinon à demander) + champs obligatoires.
-            $manquants = $this->resoudrePortefeuille($copie, $op, $scope) + $this->champsRequisManquants($copie, $op);
+            $manquants = $this->resoudrePortefeuille($copie, $op, $scope)
+                + $this->champsRequisManquants($copie, $op, [], $resolution);
             if ($manquants === [] && method_exists($copie, 'getPortefeuille') && $copie->getPortefeuille() !== null) {
                 $base['portefeuille'] = $this->libelleInstance($copie->getPortefeuille());
             }
@@ -146,10 +155,15 @@ class WorkspaceMutationService
         // écrire (une édition « conteneur », dont seules des collections changent,
         // n'a pas de champ propre à valider et ne re-persiste pas la tête).
         if ($manquants === [] && $this->estEcritureReelle($op)) {
-            $form = $this->construireEtSoumettre($copie, $op);
+            $form = $this->construireEtSoumettre($copie, $op, null, $resolution);
             if (!$form->isValid()) {
                 $manquants = $this->erreurs($form);
             }
+        }
+
+        // La création est « promise » aux opérations suivantes du plan.
+        if ($op->isCreate()) {
+            $refs->declarer($op->ref);
         }
 
         // Collections imbriquées (récursif) : parité formulaire avec l'UI. Le
@@ -157,7 +171,7 @@ class WorkspaceMutationService
         // facturablesArbre() (utilisée à l'identique par le budget et l'exécution).
         $impacts = [];
         $bloque = false;
-        $this->analyserCollections($copie, $op, $scope, $op->entityShortName, '', 0, $manquants, $impacts, $bloque);
+        $this->analyserCollections($copie, $op, $scope, $op->entityShortName, '', 0, $manquants, $impacts, $bloque, $refs);
 
         $base['impacts'] = array_merge($base['impacts'], $impacts);
 
@@ -192,7 +206,9 @@ class WorkspaceMutationService
         array &$manquants,
         array &$impacts,
         bool &$bloque,
+        ?MutationReferences $refs = null,
     ): void {
+        $refs ??= MutationReferences::dryRun();
         if ($parentOp->collections === [] || $profondeur >= FormTreeInspector::PROFONDEUR_MAX) {
             return;
         }
@@ -238,6 +254,14 @@ class WorkspaceMutationService
                 }
 
                 // create / edit.
+                $resolutionEnfant = $this->resoudreReferences($enfant, $refs);
+                foreach ($resolutionEnfant['manquants'] as $champ => $msgs) {
+                    $manquants[$cheminEnfant . '.' . $champ] = $msgs;
+                }
+                if ($resolutionEnfant['manquants'] !== []) {
+                    continue;
+                }
+
                 if ($enfant->isCreate()) {
                     if (!$ce->allowAdd) {
                         $manquants[$cheminEnfant] = ['L\'ajout n\'est pas autorisé pour cette collection.'];
@@ -248,7 +272,7 @@ class WorkspaceMutationService
                     // et l'y ajouter polluerait l'UnitOfWork (flush ultérieur en échec).
                     // La relation parente est ignorée pour la validation (mappedBy).
                     $copieEnfant = $this->nouvelleEntite($enfant, $scope);
-                    $reqManquants = $this->champsRequisManquants($copieEnfant, $enfant, [$ce->mappedBy]);
+                    $reqManquants = $this->champsRequisManquants($copieEnfant, $enfant, [$ce->mappedBy], $resolutionEnfant);
                     foreach ($reqManquants as $champ => $msgs) {
                         $manquants[$cheminEnfant . '.' . $champ] = $msgs;
                     }
@@ -262,16 +286,19 @@ class WorkspaceMutationService
                 }
 
                 if ($this->estEcritureReelle($enfant)) {
-                    $form = $this->construireEtSoumettre($copieEnfant, $enfant, $ce->childFormType);
+                    $form = $this->construireEtSoumettre($copieEnfant, $enfant, $ce->childFormType, $resolutionEnfant);
                     if (!$form->isValid()) {
                         foreach ($this->erreurs($form) as $champ => $msgs) {
                             $manquants[$cheminEnfant . '.' . $champ] = $msgs;
                         }
                     }
                 }
+                if ($enfant->isCreate()) {
+                    $refs->declarer($enfant->ref);
+                }
 
                 // Récursion : les collections de l'enfant.
-                $this->analyserCollections($copieEnfant, $enfant, $scope, $ce->childShortName, $cheminEnfant . '.', $profondeur + 1, $manquants, $impacts, $bloque);
+                $this->analyserCollections($copieEnfant, $enfant, $scope, $ce->childShortName, $cheminEnfant . '.', $profondeur + 1, $manquants, $impacts, $bloque, $refs);
             }
         }
     }
@@ -282,8 +309,9 @@ class WorkspaceMutationService
      *
      * @return array{op: string, entite: string, libelle: string, cible: ?string, id: ?int}
      */
-    public function executer(MutationOperation $op, AiScope $scope, ?Utilisateur $acteur): array
+    public function executer(MutationOperation $op, AiScope $scope, ?Utilisateur $acteur, ?MutationReferences $refs = null): array
     {
+        $refs ??= MutationReferences::live();
         $labels = $this->accessResolver->libellesEntites();
         $libelle = $labels[$op->entityShortName] ?? $op->entityShortName;
 
@@ -308,20 +336,30 @@ class WorkspaceMutationService
             return ['op' => $op->op, 'entite' => $op->entityShortName, 'libelle' => $libelle, 'cible' => $cibleLabel, 'id' => null];
         }
 
+        // Renvois vers les créations DÉJÀ exécutées de ce plan : résolus en id réels
+        // (source unique avec le dry-run) avant toute validation.
+        $resolution = $this->resoudreReferences($op, $refs);
+        if ($resolution['manquants'] !== []) {
+            throw MutationException::invalide(sprintf('Renvoi non résolu pour « %s ».', $libelle), $resolution['manquants']);
+        }
+
         // Create / edit.
         if ($op->isCreate()) {
             $entity = $this->nouvelleEntite($op, $scope);
             // Portefeuille (auto/à demander) + champs obligatoires => 422 propre
             // si incomplet (jamais d'erreur SQL, jamais d'enregistrement « perdu »).
-            $manquants = $this->resoudrePortefeuille($entity, $op, $scope) + $this->champsRequisManquants($entity, $op);
+            $manquants = $this->resoudrePortefeuille($entity, $op, $scope)
+                + $this->champsRequisManquants($entity, $op, [], $resolution);
             if ($manquants !== []) {
                 throw MutationException::invalide(sprintf('Informations obligatoires manquantes pour « %s ».', $libelle), $manquants);
             }
-            $form = $this->construireEtSoumettre($entity, $op);
+            $form = $this->construireEtSoumettre($entity, $op, null, $resolution);
             if (!$form->isValid()) {
                 throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelle), $this->erreurs($form));
             }
             $this->commitWrite($entity, $scope->entreprise, $acteur);
+            // L'id existe : les opérations suivantes du plan peuvent y renvoyer.
+            $refs->declarer($op->ref, method_exists($entity, 'getId') ? $entity->getId() : null);
         } else {
             $entity = $this->trouverCible($op, $scope) ?? throw MutationException::introuvable(
                 sprintf('%s #%d introuvable dans votre entreprise.', $libelle, (int) $op->targetId),
@@ -329,7 +367,7 @@ class WorkspaceMutationService
             // Édition « conteneur » (seules des collections changent) : la tête n'est
             // ni re-validée ni re-facturée si elle ne porte aucun champ propre.
             if ($this->estEcritureReelle($op)) {
-                $form = $this->construireEtSoumettre($entity, $op);
+                $form = $this->construireEtSoumettre($entity, $op, null, $resolution);
                 if (!$form->isValid()) {
                     throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelle), $this->erreurs($form));
                 }
@@ -340,7 +378,7 @@ class WorkspaceMutationService
         // Collections imbriquées (récursif) : chaque nœud écrit est métré et persisté
         // exactement comme via son propre formulaire dans l'UI.
         $enfants = [];
-        $this->executerCollections($entity, $op, $scope, $acteur, $op->entityShortName, 0, $enfants);
+        $this->executerCollections($entity, $op, $scope, $acteur, $op->entityShortName, 0, $enfants, $refs);
 
         return [
             'op'      => $op->op,
@@ -369,7 +407,9 @@ class WorkspaceMutationService
         string $parentShortName,
         int $profondeur,
         array &$enfants,
+        ?MutationReferences $refs = null,
     ): void {
+        $refs ??= MutationReferences::live();
         if ($parentOp->collections === [] || $profondeur >= FormTreeInspector::PROFONDEUR_MAX) {
             return;
         }
@@ -405,13 +445,18 @@ class WorkspaceMutationService
                     continue;
                 }
 
+                $resolutionEnfant = $this->resoudreReferences($enfantOp, $refs);
+                if ($resolutionEnfant['manquants'] !== []) {
+                    throw MutationException::invalide(sprintf('Renvoi non résolu pour « %s ».', $libelleEnfant), $resolutionEnfant['manquants']);
+                }
+
                 if ($enfantOp->isCreate()) {
                     if (!$ce->allowAdd) {
                         throw MutationException::horsPerimetre(sprintf('Ajout interdit dans « %s ».', $nomCollection));
                     }
                     $entiteEnfant = $this->nouvelleEntite($enfantOp, $scope);
                     $this->lierAuParent($entiteEnfant, $parent, $ce);
-                    $manquants = $this->champsRequisManquants($entiteEnfant, $enfantOp, [$ce->mappedBy]);
+                    $manquants = $this->champsRequisManquants($entiteEnfant, $enfantOp, [$ce->mappedBy], $resolutionEnfant);
                     if ($manquants !== []) {
                         throw MutationException::invalide(sprintf('Informations obligatoires manquantes pour « %s ».', $libelleEnfant), $manquants);
                     }
@@ -423,15 +468,18 @@ class WorkspaceMutationService
                 if ($this->estEcritureReelle($enfantOp)) {
                     // Le FormType enfant ne porte pas la relation parente (posée en amont
                     // via lierAuParent) ; clearMissing=false la préserve à la soumission.
-                    $form = $this->construireEtSoumettre($entiteEnfant, $enfantOp, $ce->childFormType);
+                    $form = $this->construireEtSoumettre($entiteEnfant, $enfantOp, $ce->childFormType, $resolutionEnfant);
                     if (!$form->isValid()) {
                         throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelleEnfant), $this->erreurs($form));
                     }
                     $this->commitWrite($entiteEnfant, $scope->entreprise, $acteur);
                 }
+                if ($enfantOp->isCreate()) {
+                    $refs->declarer($enfantOp->ref, method_exists($entiteEnfant, 'getId') ? $entiteEnfant->getId() : null);
+                }
 
                 $petitsEnfants = [];
-                $this->executerCollections($entiteEnfant, $enfantOp, $scope, $acteur, $ce->childShortName, $profondeur + 1, $petitsEnfants);
+                $this->executerCollections($entiteEnfant, $enfantOp, $scope, $acteur, $ce->childShortName, $profondeur + 1, $petitsEnfants, $refs);
 
                 $enfants[] = [
                     'op'      => $enfantOp->op,
@@ -488,17 +536,31 @@ class WorkspaceMutationService
      */
     public function facturablesArbre(MutationOperation $op, AiScope $scope): array
     {
+        return array_column($this->facturablesDetailles($op, $scope), 'fqcn');
+    }
+
+    /**
+     * Même collecte, mais chaque nœud facturé porte son ENTITÉ et son ÉTAPE de
+     * parcours — de quoi ventiler le budget par étape (« ce que coûte ce que vous
+     * avez accepté ») sans jamais recalculer le chiffrage ailleurs. Un nœud sans
+     * étape hérite de celle de son parent.
+     *
+     * @return array<int, array{fqcn: string, entite: string, etape: ?string}>
+     */
+    public function facturablesDetailles(MutationOperation $op, AiScope $scope): array
+    {
         $out = [];
-        $this->collecterFacturables($op, $op->entityShortName, 0, $out);
+        $this->collecterFacturables($op, $op->entityShortName, 0, $op->etape, $out);
 
         return $out;
     }
 
-    /** @param string[] $out */
-    private function collecterFacturables(MutationOperation $op, string $shortName, int $profondeur, array &$out): void
+    /** @param array<int, array{fqcn: string, entite: string, etape: ?string}> $out */
+    private function collecterFacturables(MutationOperation $op, string $shortName, int $profondeur, ?string $etapeHeritee, array &$out): void
     {
+        $etape = $op->etape ?? $etapeHeritee;
         if ($this->estEcritureReelle($op)) {
-            $out[] = 'App\\Entity\\' . $shortName;
+            $out[] = ['fqcn' => 'App\\Entity\\' . $shortName, 'entite' => $shortName, 'etape' => $etape];
         }
         if ($op->collections === [] || $profondeur >= FormTreeInspector::PROFONDEUR_MAX) {
             return;
@@ -509,9 +571,30 @@ class WorkspaceMutationService
                 continue;
             }
             foreach ($enfants as $enfant) {
-                $this->collecterFacturables($enfant, $ce->childShortName, $profondeur + 1, $out);
+                $this->collecterFacturables($enfant, $ce->childShortName, $profondeur + 1, $etape, $out);
             }
         }
+    }
+
+    /**
+     * Collections que le formulaire d'une entité permet d'ALIMENTER dès sa
+     * création (allow_add) : ce que Ket peut proposer de renseigner dans le MÊME
+     * plan plutôt que dans une seconde validation. Libellés lisibles de l'entité
+     * enfant (source unique : la carte d'accès).
+     *
+     * @return array<string, string> nom de collection => libellé de l'entité enfant
+     */
+    public function collectionsProposables(string $shortName): array
+    {
+        $labels = $this->accessResolver->libellesEntites();
+        $proposables = [];
+        foreach ($this->formTreeInspector->collectionsEditables($shortName) as $nom => $ce) {
+            if ($ce->allowAdd) {
+                $proposables[$nom] = $labels[$ce->childShortName] ?? $nom;
+            }
+        }
+
+        return $proposables;
     }
 
     /** Pose la relation inverse (ManyToOne) de l'enfant vers le parent + l'ajoute à la collection. */
@@ -579,14 +662,18 @@ class WorkspaceMutationService
      *
      * @return array<string, string[]>
      */
-    private function champsRequisManquants(object $entity, MutationOperation $op, array $ignorer = []): array
+    private function champsRequisManquants(object $entity, MutationOperation $op, array $ignorer = [], ?array $resolution = null): array
     {
         try {
             $meta = $this->em->getClassMetadata($op->fqcn());
         } catch (\Throwable) {
             return [];
         }
-        $fields = $this->nettoyerChamps($op->fields);
+        $resolution ??= $this->resoudreReferences($op, MutationReferences::dryRun());
+        $fields = $resolution['champs'];
+        // Un champ satisfait par un renvoi (« @etiquette ») vers une création du
+        // même plan est FOURNI — même si son id n'existe pas encore.
+        $ignorer = array_merge($ignorer, $resolution['parReference']);
         $manquants = [];
 
         // Champs scalaires obligatoires (prédicat partagé avec l'inventaire).
@@ -823,10 +910,11 @@ class WorkspaceMutationService
      * ManyToOne pour que les champs autocomplete valident les id soumis — même
      * logique que ControllerUtilsTrait::handleFormSubmission.
      */
-    private function construireEtSoumettre(object $entity, MutationOperation $op, ?string $formTypeOverride = null): FormInterface
+    private function construireEtSoumettre(object $entity, MutationOperation $op, ?string $formTypeOverride = null, ?array $resolution = null): FormInterface
     {
         $fqcn = $op->fqcn();
-        $fields = $this->nettoyerChamps($op->fields);
+        $resolution ??= $this->resoudreReferences($op, MutationReferences::dryRun());
+        $fields = $resolution['champs'];
 
         // Pré-hydratation des parents ManyToOne (création surtout) + normalisation
         // des champs booléens. API objet ORM 3.
@@ -887,17 +975,84 @@ class WorkspaceMutationService
         return in_array($v, ['1', 'true', 'vrai', 'oui', 'yes', 'y', 'o', 'x'], true);
     }
 
-    /** Ne conserve que des paires champ(string) => valeur scalaire/null. */
+    /**
+     * Ne conserve que des paires champ(string) => valeur scalaire/null, ou LISTE
+     * de scalaires (relation multiple : `multiple` du formulaire / ManyToMany,
+     * ex. les partenaires d'une piste — l'UI y soumet un tableau d'identifiants).
+     */
     private function nettoyerChamps(array $fields): array
     {
         $propres = [];
         foreach ($fields as $champ => $valeur) {
-            if (is_string($champ) && (is_scalar($valeur) || $valeur === null)) {
+            if (!is_string($champ)) {
+                continue;
+            }
+            if (is_scalar($valeur) || $valeur === null) {
                 $propres[$champ] = $valeur;
+            } elseif (is_array($valeur) && array_is_list($valeur)) {
+                $propres[$champ] = array_values(array_filter($valeur, static fn ($v) => is_scalar($v)));
             }
         }
 
         return $propres;
+    }
+
+    /**
+     * Résout les RENVOIS d'un nœud vers d'autres opérations du même plan : une
+     * valeur « @etiquette » désigne l'enregistrement créé par l'opération qui porte
+     * cette étiquette. C'est ce qui rend validable EN UNE FOIS un plan couvrant
+     * plusieurs entités dépendantes (créer le client PUIS sa piste).
+     *
+     * Renvoie :
+     *  - `champs`       : champs prêts à soumettre (renvois remplacés par l'id réel ;
+     *                     retirés tant que l'id n'existe pas — dry-run) ;
+     *  - `parReference` : champs satisfaits par un renvoi (à ne pas réclamer) ;
+     *  - `manquants`    : renvois vers une étiquette INCONNUE (fail-closed : jamais
+     *                     de rattachement silencieux au mauvais enregistrement).
+     *
+     * @return array{champs: array<string, mixed>, parReference: string[], manquants: array<string, string[]>}
+     */
+    private function resoudreReferences(MutationOperation $op, MutationReferences $refs): array
+    {
+        $champs = [];
+        $parReference = [];
+        $manquants = [];
+
+        foreach ($this->nettoyerChamps($op->fields) as $champ => $valeur) {
+            $liste = is_array($valeur);
+            $valeurs = $liste ? $valeur : [$valeur];
+            $resolues = [];
+            $porteReference = false;
+
+            foreach ($valeurs as $item) {
+                if (!MutationReferences::estReference($item)) {
+                    $resolues[] = $item;
+                    continue;
+                }
+                $porteReference = true;
+                $cible = $refs->resoudre((string) $item);
+                if ($cible === null) {
+                    $manquants[$champ] = [sprintf(
+                        'Renvoi « %s » inconnu : aucune opération précédente de ce plan ne porte cette étiquette.',
+                        (string) $item,
+                    )];
+                    continue 2;
+                }
+                if ($cible !== MutationReferences::PROMISE) {
+                    $resolues[] = $cible; // id réel (exécution).
+                }
+            }
+
+            if ($porteReference) {
+                $parReference[] = $champ;
+            }
+            if ($resolues === [] && $porteReference) {
+                continue; // renvoi encore « promis » : rien à soumettre au formulaire.
+            }
+            $champs[$champ] = $liste ? $resolues : ($resolues[0] ?? null);
+        }
+
+        return ['champs' => $champs, 'parReference' => $parReference, 'manquants' => $manquants];
     }
 
     /** @return array<string, string[]> Erreurs de formulaire par champ. */

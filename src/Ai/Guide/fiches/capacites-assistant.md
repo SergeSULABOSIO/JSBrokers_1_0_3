@@ -42,9 +42,23 @@ Présenter cet inventaire de façon rassurante et concrète, avec des exemples.
   clients ? » — classements par primes, commissions, sinistralité et part de
   marché ; production encaissée par mois ; derniers encaissements.
 
-## 3. Agir dans l'interface (toujours sous votre contrôle)
+## 3. Vous guider et enregistrer à votre place (toujours sous votre contrôle)
 
-- Ouvrir un formulaire de création : « Crée un nouveau client » — et le
+- **Vous guider d'un bout à l'autre d'une saisie.** Une cotation ne vit pas seule :
+  elle appelle la composition de sa prime, son échéancier, la rémunération du
+  courtier, puis le contrat. L'assistant vous présente le PARCOURS COMPLET d'emblée,
+  étape par étape, avec ce qu'il faut fournir à chacune — puis vous demande jusqu'où
+  vous voulez aller et de quelles informations vous disposez déjà. Une étape sans
+  information est simplement laissée de côté : vous la reprendrez plus tard.
+- **Enregistrer lui-même, en une seule validation.** Tout ce que vous avez accepté
+  part dans UN SEUL plan, avec UN SEUL budget — jamais une validation par étape.
+  Vous voyez le plan numéroté, les impacts et le coût en tokens ventilé par étape,
+  vous pouvez encore décocher une étape facultative, puis vous validez une fois.
+  L'écriture est alors exécutée en bloc : soit tout réussit, soit rien n'est
+  enregistré. Une suppression demande en plus votre mot de passe.
+- Le plan peut couvrir PLUSIEURS enregistrements liés entre eux — le client, son
+  opportunité, la cotation et sa prime — même si aucun d'eux n'existe encore.
+- Si vous préférez saisir vous-même : ouvrir un formulaire de création : « Crée un nouveau client » — et le
   PRÉ-REMPLIR avec les valeurs que vous dictez : « Crée un client Kabila Corp,
   téléphone +243… » (uniquement vos valeurs, jamais des valeurs inventées).
 - Ouvrir un enregistrement en modification : « Modifie l'avenant Y ».
@@ -60,8 +74,8 @@ Présenter cet inventaire de façon rassurante et concrète, avec des exemples.
   client X ».
 - Proposer la fermeture de l'espace de travail : « Ferme l'espace de travail »
   — une boîte de confirmation est toujours soumise à l'utilisateur.
-- Pour toute création ou modification, c'est VOUS qui vérifiez et enregistrez :
-  l'assistant ne modifie jamais rien lui-même.
+- Dans tous les cas, rien n'est écrit sans votre accord explicite : soit vous
+  enregistrez le formulaire vous-même, soit vous validez le plan de l'assistant.
 
 ## 4. Expliquer le métier et la plateforme
 
@@ -73,8 +87,10 @@ Présenter cet inventaire de façon rassurante et concrète, avec des exemples.
 
 - L'assistant ne voit QUE votre périmètre d'accès : sans droit de lecture sur une
   rubrique, la donnée n'existe pas pour lui.
-- Il n'écrit jamais en base : toute saisie passe par un formulaire que vous validez.
-  Le pré-remplissage n'utilise QUE les valeurs que vous avez dictées.
+- Il n'écrit jamais de sa propre initiative : une écriture n'a lieu qu'après un plan
+  chiffré que VOUS validez, et n'utilise QUE les valeurs que vous avez dictées —
+  jamais une valeur devinée. Il ne touche jamais aux paramètres, rôles ou réglages
+  de l'espace de travail.
 - Il n'envoie jamais rien lui-même : un envoi (relevé SOA) est toujours confirmé
   par vous dans la boîte d'envoi.
 - Il n'a pas accès à internet ni à d'autres espaces de travail, et n'invente

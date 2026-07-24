@@ -20,6 +20,7 @@ use App\Repository\AssistantConversationRepository;
 use App\Repository\AssistantParametresRepository;
 use App\Repository\EntrepriseRepository;
 use App\Ai\Mutation\MutationPlan;
+use App\Ai\Mutation\MutationReferences;
 use App\Ai\Scope\AiScope;
 use App\Service\Workspace\MutationException;
 use App\Service\Workspace\WorkspaceAccessResolver;
@@ -384,6 +385,9 @@ class AssistantIaController extends AbstractController
             if (($action['type'] ?? null) === 'ket-mutation.review' && isset($action['plan'])) {
                 return [
                     'plan'             => $action['plan'],
+                    // `budget` porte aussi la ventilation par étape (budget.parEtape) :
+                    // c'est elle qui alimente les cases à cocher de l'ÉTENDUE, live
+                    // comme après un rechargement de page.
                     'budget'           => $action['budget'] ?? null,
                     'requiresPassword' => (bool) ($action['requiresPassword'] ?? false),
                     // Impacts de cascade conservés pour reconstruire la barre de
@@ -455,6 +459,25 @@ class AssistantIaController extends AbstractController
         if ($plan->estVide()) {
             return $this->json(['message' => 'Plan vide.'], Response::HTTP_BAD_REQUEST);
         }
+
+        $payload = json_decode($request->getContent(), true) ?: [];
+
+        // 1 bis) ÉTENDUE choisie par l'utilisateur : il a pu décocher des étapes
+        // facultatives avant d'exécuter. Le client n'envoie que des CLÉS d'étapes ;
+        // le filtrage s'applique ICI, au plan stocké côté serveur, et le coût est
+        // ensuite recalculé sur le plan réellement retenu (on ne facture jamais
+        // une étape abandonnée).
+        $etapesRetenues = array_values(array_filter(
+            (array) ($payload['etapes'] ?? []),
+            static fn ($cle) => is_string($cle) && $cle !== '',
+        ));
+        if ($etapesRetenues !== []) {
+            $plan = $plan->filtrerEtapes($etapesRetenues);
+            if ($plan->estVide()) {
+                return $this->json(['message' => 'Aucune étape retenue.'], Response::HTTP_BAD_REQUEST);
+            }
+        }
+
         $scope = new AiScope($entreprise, $invite);
 
         // 2) SOLVABILITÉ (pré-vol strict) : seules les écritures sont facturées —
@@ -480,7 +503,6 @@ class AssistantIaController extends AbstractController
 
         // 3) Autorisation renforcée pour les suppressions : mot de passe (jamais journalisé).
         if ($plan->contientSuppression()) {
-            $payload = json_decode($request->getContent(), true) ?: [];
             $password = (string) ($payload['password'] ?? '');
             if ($password === '' || !$this->passwordHasher->isPasswordValid($this->currentUser(), $password)) {
                 return $this->json([
@@ -494,9 +516,14 @@ class AssistantIaController extends AbstractController
         $journal = [];
         $acteur = $this->currentUser();
         try {
-            $this->em->wrapInTransaction(function () use ($plan, $scope, $acteur, &$journal): void {
+            // Registre de références PARTAGÉ par tout le plan : une opération peut
+            // renvoyer (« @etiquette ») à un enregistrement créé par une opération
+            // précédente — c'est ce qui permet d'enchaîner plusieurs entités
+            // dépendantes sous UNE seule validation.
+            $refs = MutationReferences::live();
+            $this->em->wrapInTransaction(function () use ($plan, $scope, $acteur, $refs, &$journal): void {
                 foreach ($plan->operationsOrdonnees() as $op) {
-                    $step = $this->mutationService->executer($op, $scope, $acteur);
+                    $step = $this->mutationService->executer($op, $scope, $acteur, $refs);
                     $this->aplatirEtapeJournal($step, 0, $journal);
                 }
             });

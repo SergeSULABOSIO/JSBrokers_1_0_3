@@ -286,8 +286,18 @@ export default class extends Controller {
         // modèle), en texte simple sur une ligne : coût · solde · reste.
         const budgetLine = document.createElement('p');
         budgetLine.className = 'aic-mutation-budget';
-        budgetLine.textContent = `Budget : ${formatNombre(cout)} tokens · solde ${formatNombre(solde)} · reste ${formatNombre(reste)}`;
+        const majBudget = (coutRetenu) => {
+            budgetLine.textContent = `Budget : ${formatNombre(coutRetenu)} tokens · solde ${formatNombre(solde)} · reste ${formatNombre(Math.max(0, solde - coutRetenu))}`;
+        };
+        majBudget(cout);
         bar.appendChild(budgetLine);
+
+        // ÉTENDUE : l'utilisateur décoche les étapes qu'il ne veut pas enregistrer
+        // maintenant. Le budget se réajuste ; les clés retenues partent avec
+        // l'exécution et c'est le SERVEUR qui filtre le plan (jamais le client).
+        const etapes = this._renderMutationSteps(action, majBudget, cout);
+        if (etapes) bar.appendChild(etapes.el);
+        const clesRetenues = () => (etapes ? etapes.retenues() : null);
 
         if (!suffisant) {
             const notice = document.createElement('p');
@@ -306,7 +316,7 @@ export default class extends Controller {
                 if (action.requiresPassword === true) {
                     // Suppression : confirmation renforcée par mot de passe (modale).
                     bar.remove();
-                    this.openMutationConfirm(action);
+                    this.openMutationConfirm({ ...action, etapesRetenues: clesRetenues() });
                     return;
                 }
                 // Écriture pure : exécution IMMÉDIATE, sans boîte de dialogue.
@@ -316,7 +326,7 @@ export default class extends Controller {
                 exec.disabled = true;
                 cancel.disabled = true;
                 if (label) label.textContent = 'Exécution…';
-                const status = await this.executeMutationPlan(action.idMessage, null, false);
+                const status = await this.executeMutationPlan(action.idMessage, null, false, clesRetenues());
                 if (status === 'success') {
                     // Décision mémorisée : la barre laisse place à un feedback permanent.
                     this._replaceBar(bar, this._planStatusNote('done', 'Plan exécuté — les données ont été enregistrées.'));
@@ -343,6 +353,59 @@ export default class extends Controller {
             this.messagesTarget.appendChild(bar);
         }
         this.scrollToBottom();
+    }
+
+    /**
+     * Sélecteur d'ÉTENDUE : une case à cocher par étape du parcours, alimentée par
+     * la ventilation du budget renvoyée par le serveur (budget.parEtape). L'étape
+     * socle est cochée et verrouillée — sans elle, le reste n'aurait plus d'objet.
+     * Retourne { el, retenues() } ou null si le plan n'a pas d'étape facultative.
+     */
+    _renderMutationSteps(action, majBudget, coutTotal) {
+        const etapes = (action.budget && Array.isArray(action.budget.parEtape)) ? action.budget.parEtape : [];
+        if (etapes.length < 2 || !etapes.some((e) => e.obligatoire === false)) return null;
+
+        const fieldset = document.createElement('fieldset');
+        fieldset.className = 'aic-mut-steps';
+
+        const legend = document.createElement('legend');
+        legend.className = 'aic-mut-steps-legend';
+        legend.textContent = 'Étendue — décochez ce que vous préférez ne pas enregistrer maintenant';
+        fieldset.appendChild(legend);
+
+        const cases = [];
+        etapes.forEach((etape) => {
+            const label = document.createElement('label');
+            label.className = 'aic-mut-step';
+
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.checked = true;
+            input.value = etape.cle || '';
+            input.disabled = etape.obligatoire !== false;
+
+            const titre = document.createElement('span');
+            titre.className = 'aic-mut-step-label';
+            titre.textContent = etape.libelle || etape.cle || '';
+
+            const meta = document.createElement('span');
+            meta.className = 'aic-mut-step-meta';
+            const nb = etape.enregistrements || 0;
+            meta.textContent = `${nb} enr. · ${formatNombre(etape.cout || 0)} tokens${etape.obligatoire !== false ? ' · requise' : ''}`;
+
+            label.append(input, titre, meta);
+            fieldset.appendChild(label);
+            cases.push({ input, etape });
+        });
+
+        const retenues = () => cases.filter((c) => c.input.checked).map((c) => c.input.value);
+        cases.forEach(({ input }) => input.addEventListener('change', () => {
+            // Aucune étape facultative cochée : le coût retombe sur les seules requises.
+            const total = cases.reduce((somme, c) => (c.input.checked ? somme + (c.etape.cout || 0) : somme), 0);
+            majBudget(total || coutTotal);
+        }));
+
+        return { el: fieldset, retenues };
     }
 
     /**
@@ -438,7 +501,8 @@ export default class extends Controller {
                 confirmClass: requirePassword ? 'btn btn-danger' : 'btn btn-primary',
                 onConfirm: {
                     type: 'ket:mutation.execute',
-                    payload: { idMessage: action.idMessage },
+                    // L'étendue choisie avant l'ouverture de la modale suit la confirmation.
+                    payload: { idMessage: action.idMessage, etapes: action.etapesRetenues || null },
                 },
             },
         }));
@@ -453,7 +517,7 @@ export default class extends Controller {
         if (!detail || detail.type !== 'ket:mutation.execute') return;
         const payload = detail.payload || {};
         // Déclenché par la modale de confirmation (suppression + mot de passe).
-        this.executeMutationPlan(payload.idMessage, payload.password, true);
+        this.executeMutationPlan(payload.idMessage, payload.password, true, payload.etapes || null);
     }
 
     /**
@@ -462,7 +526,7 @@ export default class extends Controller {
      * (suppression) : les erreurs y sont affichées ; false pour une écriture
      * pure exécutée directement (erreurs affichées en bulle du chat).
      */
-    async executeMutationPlan(idMessage, password, viaModal = true) {
+    async executeMutationPlan(idMessage, password, viaModal = true, etapes = null) {
         const id = parseInt(idMessage, 10);
         if (!Number.isInteger(id) || id <= 0) return 'error';
         const url = `/admin/assistant-ia/api/mutation/${this.idEntrepriseValue}/${this.idConversationValue}/${id}/execute`;
@@ -473,7 +537,10 @@ export default class extends Controller {
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password: password || '' }),
+                // `etapes` = clés des étapes RETENUES. Le serveur filtre le plan qu'il
+                // a stocké et re-chiffre : rien de la sélection n'est pris pour argent
+                // comptant côté client.
+                body: JSON.stringify({ password: password || '', etapes: Array.isArray(etapes) ? etapes : [] }),
             });
             const data = await response.json().catch(() => ({}));
 

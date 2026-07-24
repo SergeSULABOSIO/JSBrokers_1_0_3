@@ -20,6 +20,15 @@ use App\Entity\Invite;
  * enfant pouvant lui-même porter des `collections` (parité formulaire récursive
  * avec l'UI). Le nom court d'entité d'un enfant est DÉRIVÉ côté serveur du
  * FormType parent (entry_type / targetEntity), jamais dicté par le LLM.
+ *
+ * `ref` = étiquette posée sur une CRÉATION pour que d'autres opérations du MÊME
+ * plan y renvoient (valeur de champ « @etiquette ») alors que son id n'existe pas
+ * encore — c'est ce qui rend un plan MULTI-ENTITÉS validable en une seule fois
+ * (cf. MutationReferences).
+ *
+ * `etape` = libellé de l'ÉTAPE de parcours à laquelle le nœud appartient. C'est
+ * l'unité que l'utilisateur coche/décoche pour fixer l'ÉTENDUE du plan avant de
+ * le valider (le filtrage reste serveur : MutationPlan::filtrerEtapes()).
  */
 final class MutationOperation
 {
@@ -30,7 +39,7 @@ final class MutationOperation
     public const OPS = [self::OP_CREATE, self::OP_EDIT, self::OP_DELETE];
 
     /**
-     * @param array<string, scalar|null>        $fields
+     * @param array<string, scalar|array|null>   $fields
      * @param array<string, MutationOperation[]> $collections nom de collection => ops enfant
      */
     public function __construct(
@@ -39,6 +48,8 @@ final class MutationOperation
         public readonly ?int $targetId = null,
         public readonly array $fields = [],
         public readonly array $collections = [],
+        public readonly ?string $ref = null,
+        public readonly ?string $etape = null,
     ) {
     }
 
@@ -84,12 +95,27 @@ final class MutationOperation
         // toléré. Lire les trois évite de perdre les valeurs dictées par le modèle.
         $fields = [];
         foreach ((array) ($data['champs'] ?? $data['fields'] ?? $data['valeurs'] ?? []) as $champ => $valeur) {
-            if (is_string($champ) && (is_scalar($valeur) || $valeur === null)) {
+            if (!is_string($champ)) {
+                continue;
+            }
+            if (is_scalar($valeur) || $valeur === null) {
                 $fields[$champ] = $valeur;
+                continue;
+            }
+            // Relation MULTIPLE (ManyToMany/`multiple` du formulaire, ex. les
+            // partenaires d'une piste) : liste d'identifiants. Seuls des scalaires
+            // sont conservés (fail-closed sur toute structure imbriquée).
+            if (is_array($valeur) && array_is_list($valeur)) {
+                $liste = array_values(array_filter($valeur, static fn ($v) => is_scalar($v)));
+                if ($liste !== []) {
+                    $fields[$champ] = $liste;
+                }
             }
         }
 
         $id = isset($data['targetId']) ? (int) $data['targetId'] : (isset($data['id']) ? (int) $data['id'] : null);
+        $ref = trim((string) ($data['ref'] ?? ''));
+        $etape = trim((string) ($data['etape'] ?? ''));
 
         return new self(
             op: (string) ($data['op'] ?? ''),
@@ -97,6 +123,8 @@ final class MutationOperation
             targetId: ($id !== null && $id > 0) ? $id : null,
             fields: $fields,
             collections: self::collectionsFromArray($data['collections'] ?? []),
+            ref: $ref !== '' ? $ref : null,
+            etape: $etape !== '' ? $etape : null,
         );
     }
 
@@ -172,6 +200,12 @@ final class MutationOperation
             'targetId' => $this->targetId,
             'fields'   => $this->fields,
         ];
+        if ($this->ref !== null) {
+            $data['ref'] = $this->ref;
+        }
+        if ($this->etape !== null) {
+            $data['etape'] = $this->etape;
+        }
         if ($this->collections !== []) {
             $data['collections'] = [];
             foreach ($this->collections as $nom => $enfants) {
@@ -192,6 +226,31 @@ final class MutationOperation
      */
     public function withEntityShortName(string $shortName): self
     {
-        return new self($this->op, $shortName, $this->targetId, $this->fields, $this->collections);
+        return new self($this->op, $shortName, $this->targetId, $this->fields, $this->collections, $this->ref, $this->etape);
+    }
+
+    /** Copie de l'opération avec d'autres sous-collections (filtrage d'étapes). */
+    public function withCollections(array $collections): self
+    {
+        return new self($this->op, $this->entityShortName, $this->targetId, $this->fields, $collections, $this->ref, $this->etape);
+    }
+
+    /**
+     * Étiquettes de référence utilisées par les champs de CE nœud (valeurs « @x »).
+     *
+     * @return string[]
+     */
+    public function referencesUtilisees(): array
+    {
+        $refs = [];
+        foreach ($this->fields as $valeur) {
+            foreach (is_array($valeur) ? $valeur : [$valeur] as $item) {
+                if (MutationReferences::estReference($item)) {
+                    $refs[] = MutationReferences::etiquette((string) $item);
+                }
+            }
+        }
+
+        return array_values(array_unique($refs));
     }
 }
