@@ -615,8 +615,21 @@ export default class extends Controller {
             if (response.ok && data.success) {
                 if (viaModal) document.dispatchEvent(new CustomEvent('ui:confirmation.close', { bubbles: true }));
                 await this.renderMutationJournal(data.journal || []);
-                // Rafraîchit les listes éventuellement affichées (données modifiées).
-                document.dispatchEvent(new CustomEvent('app:workspace.data-changed', { bubbles: true }));
+                // Ket a modifié des données : demande au Cerveau de rafraîchir la
+                // liste de la rubrique affichée SI son entité figure parmi celles
+                // touchées (refresh ciblé). Le journal porte le short name par ligne.
+                const entitesAffectees = Array.from(new Set(
+                    (data.journal || []).map(l => l && l.entite).filter(Boolean)
+                ));
+                document.dispatchEvent(new CustomEvent('cerveau:event', {
+                    bubbles: true,
+                    detail: {
+                        type:      'ket:workspace.data-changed',
+                        source:    'assistant-chat',
+                        payload:   { entitesAffectees },
+                        timestamp: Date.now(),
+                    },
+                }));
                 return 'success';
             }
 
