@@ -243,8 +243,11 @@ class WorkspaceMutationService
                         $manquants[$cheminEnfant] = ['L\'ajout n\'est pas autorisé pour cette collection.'];
                         continue;
                     }
+                    // DRY-RUN : on NE lie PAS l'enfant au parent — un clone Doctrine
+                    // partage la collection de l'entité managée (clone superficiel),
+                    // et l'y ajouter polluerait l'UnitOfWork (flush ultérieur en échec).
+                    // La relation parente est ignorée pour la validation (mappedBy).
                     $copieEnfant = $this->nouvelleEntite($enfant, $scope);
-                    $this->lierAuParent($copieEnfant, $parent, $ce);
                     $reqManquants = $this->champsRequisManquants($copieEnfant, $enfant, [$ce->mappedBy]);
                     foreach ($reqManquants as $champ => $msgs) {
                         $manquants[$cheminEnfant . '.' . $champ] = $msgs;
