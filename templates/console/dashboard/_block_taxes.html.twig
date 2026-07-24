@@ -10,7 +10,7 @@
                 <tr>
                     <td><span class="cs-badge cs-badge--cobalt">{{ ligne.taxe.code }}</span> {{ ligne.taxe.libelle }}</td>
                     <td>{{ ligne.taxe.autoriteNom }} ({{ ligne.taxe.autoriteAbreviation }})</td>
-                    <td style="text-align:right;">{{ ligne.taxe.taux|number_format(2, '.', ' ') }} %</td>
+                    <td style="text-align:right;">{{ ligne.taxe.taux|pourcentage }}</td>
                     <td style="text-align:right;">{{ ligne.montant|number_format(2, '.', ' ') }} $</td>
                 </tr>
             {% endfor %}

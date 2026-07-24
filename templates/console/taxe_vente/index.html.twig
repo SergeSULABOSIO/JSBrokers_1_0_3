@@ -132,7 +132,7 @@
                         <td><strong>{{ t.code }}</strong></td>
                         <td>{{ t.libelle }}</td>
                         <td>{{ t.autoriteNom }} <span class="cs-badge cs-badge--cobalt">{{ t.autoriteAbreviation }}</span></td>
-                        <td style="text-align:right;">{{ t.taux|number_format(2, '.', ' ') }} %</td>
+                        <td style="text-align:right;">{{ t.taux|pourcentage }}</td>
                         <td style="text-align:right;">{% if t.actif %}{{ (prix_ht(revenuTotal) * t.taux / 100)|number_format(2, '.', ' ') }} ${% else %}—{% endif %}</td>
                         <td>
                             {% if t.actif %}
