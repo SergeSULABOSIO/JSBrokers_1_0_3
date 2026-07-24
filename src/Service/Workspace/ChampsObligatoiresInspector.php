@@ -36,6 +36,10 @@ class ChampsObligatoiresInspector
      */
     private const RELATIONS_METIER_REQUISES = [
         'RevenuPourCourtier' => ['typeRevenu'],
+        // Un chargement de prime SANS type ne peut pas servir de base au calcul de
+        // commission (getCotationMontantChargementPrime matche le TYPE, pas le nom)
+        // → prime affichée mais commission à 0. On l'exige donc à la création.
+        'ChargementPourPrime' => ['type'],
     ];
 
     public function __construct(

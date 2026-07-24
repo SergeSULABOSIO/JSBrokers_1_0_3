@@ -264,6 +264,11 @@ class CollectionMutationTest extends WebTestCase
         // unique et renvoie un plan validable au budget NON nul (une écriture par
         // composante). Prouve la voie fiable pour un modèle faible en JSON imbriqué.
         [$ent, $inv, $owner] = $this->seedWorkspace();
+        // Types de chargement de l'entreprise (le type est désormais requis à la
+        // création d'un chargement, et déduit du nom de la composante).
+        foreach (['Prime nette', 'Frais accessoires', 'TVA', 'Frais ARCA'] as $t) {
+            $this->seedChargementType($ent, $inv, $t);
+        }
         $cot = $this->seedCotation($ent, $inv, 'Offre Flotte RC Auto - SFA');
         $this->em->flush();
         $cotId = $cot->getId();
@@ -287,6 +292,35 @@ class CollectionMutationTest extends WebTestCase
         $chargements = $result->uiAction['plan'][0]['collections']['chargements'] ?? [];
         $this->assertCount(4, $chargements, 'Les 4 composantes sont des sous-opérations sur « chargements ».');
         $this->assertSame('create', $chargements[0]['op']);
+    }
+
+    public function testTypeChargementDeduitDuNomDeLaComposante(): void
+    {
+        // La commission ne se calcule que si le chargement porte le bon TYPE (le
+        // calcul matche le type-chargement, pas le nom). L'outil doit donc déduire
+        // et poser le type depuis le nom de la composante, même sans type explicite.
+        [$ent, $inv, $owner] = $this->seedWorkspace();
+        $typePrimeNette = $this->seedChargementType($ent, $inv, 'Prime nette');
+        $typeFrais = $this->seedChargementType($ent, $inv, 'Frais accessoires');
+        $cot = $this->seedCotation($ent, $inv, 'Offre typée');
+        $this->em->flush();
+        [$cotId, $idPrime, $idFrais] = [$cot->getId(), $typePrimeNette->getId(), $typeFrais->getId()];
+        $this->client->loginUser($owner);
+
+        $tool = static::getContainer()->get(ModifierCompositionPrimeTool::class);
+        $result = $tool->execute([
+            'cotationId'  => $cotId,
+            'composantes' => [
+                ['nom' => 'Prime nette', 'montant' => 9000],
+                ['nom' => 'Frais accessoires', 'montant' => 500],
+            ],
+        ], new AiScope($ent, $inv));
+
+        $chargements = $result->uiAction['plan'][0]['collections']['chargements'] ?? [];
+        $this->assertCount(2, $chargements);
+        // Le type est posé dans les champs de chaque création (déduit du nom).
+        $this->assertSame($idPrime, $chargements[0]['fields']['type'] ?? null, '« Prime nette » lie le type Chargement « Prime nette ».');
+        $this->assertSame($idFrais, $chargements[1]['fields']['type'] ?? null, '« Frais accessoires » lie son type.');
     }
 
     public function testCompositionIdentiqueNeRepresentePasDePlan(): void
