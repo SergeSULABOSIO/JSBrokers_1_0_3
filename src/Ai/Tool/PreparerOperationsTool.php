@@ -88,26 +88,39 @@ final class PreparerOperationsTool implements AiToolInterface
                                     . '{"portefeuille": 42}). Jamais l\'id ni les champs d\'audit.',
                                 'additionalProperties' => ['type' => ['string', 'number', 'boolean']],
                             ],
+                            // Structure en ARRAY (et non map dynamique) : le nom de la
+                            // collection est une VALEUR, pas une clé — indispensable pour
+                            // les modèles dont le dialecte de schéma ignore/élague
+                            // additionalProperties (ex. Gemini). Marche aussi pour Anthropic.
                             'collections' => [
-                                'type' => 'object',
+                                'type' => 'array',
                                 'description' => 'Sous-opérations sur les collections ÉDITABLES du parent, telles '
-                                    . 'qu\'exposées par son formulaire (parité avec l\'écran), RÉCURSIF. Clé = nom '
-                                    . 'de la collection (ex. "chargements" d\'une Cotation) ; valeur = liste d\'éléments '
-                                    . 'à créer/modifier/supprimer. Chaque élément de "chargements" porte "nom", '
-                                    . '"montantFlatExceptionel" et "type" (= id d\'un Chargement, à résoudre par son '
-                                    . 'nom au préalable). N\'indique le nom court de l\'entité enfant nulle part : il '
-                                    . 'est déduit du formulaire parent.',
-                                'additionalProperties' => [
-                                    'type' => 'array',
-                                    'items' => [
-                                        'type' => 'object',
-                                        'properties' => [
-                                            'op'     => ['type' => 'string', 'enum' => MutationOperation::OPS],
-                                            'id'     => ['type' => 'integer', 'minimum' => 1, 'description' => 'Id de l\'élément (edit/delete).'],
-                                            'champs' => ['type' => 'object', 'additionalProperties' => ['type' => ['string', 'number', 'boolean']]],
+                                    . 'qu\'exposées par son formulaire (parité avec l\'écran). Une entrée par collection. '
+                                    . 'Ex. pour éditer la composition de la prime d\'une Cotation : '
+                                    . '[{"collection":"chargements","elements":[{"op":"create","champs":{"nom":"Prime nette",'
+                                    . '"montantFlatExceptionel":9000,"type":<id Chargement>}}, …]}]. Chaque chargement porte '
+                                    . '"nom", "montantFlatExceptionel" (le montant) et "type" (= id d\'un Chargement, à '
+                                    . 'résoudre par son nom au préalable). NE mets JAMAIS ces composantes dans "champs" de '
+                                    . 'la Cotation : elles y seraient ignorées.',
+                                'items' => [
+                                    'type' => 'object',
+                                    'properties' => [
+                                        'collection' => ['type' => 'string', 'description' => 'Nom de la collection (ex. "chargements").'],
+                                        'elements' => [
+                                            'type' => 'array',
+                                            'description' => 'Éléments à créer/modifier/supprimer dans la collection.',
+                                            'items' => [
+                                                'type' => 'object',
+                                                'properties' => [
+                                                    'op'     => ['type' => 'string', 'enum' => MutationOperation::OPS],
+                                                    'id'     => ['type' => 'integer', 'description' => 'Id de l\'élément (edit/delete).'],
+                                                    'champs' => ['type' => 'object', 'description' => 'Champs de l\'élément (scalaires ; relations par id).'],
+                                                ],
+                                                'required' => ['op'],
+                                            ],
                                         ],
-                                        'required' => ['op'],
                                     ],
+                                    'required' => ['collection', 'elements'],
                                 ],
                             ],
                         ],
