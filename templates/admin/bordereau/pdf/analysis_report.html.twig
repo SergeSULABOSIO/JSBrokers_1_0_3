@@ -252,7 +252,7 @@
                 <td>{{ result.line_data.commission_ht_assureur is not null ? result.line_data.commission_ht_assureur|number_format(2, ',', ' ') : '—' }}</td>
                 <td>
                     {% if result.line_data.commission_ht_assureur is not null and result.line_data.commission_ht_assureur != 0 and result.line_data.commission_ht_payable_now is defined %}
-                        {{ ((result.line_data.commission_ht_payable_now / result.line_data.commission_ht_assureur) * 100)|number_format(1, ',', ' ') }} %
+                        {{ (result.line_data.commission_ht_payable_now / result.line_data.commission_ht_assureur)|pourcentage('fraction', 1) }}
                     {% else %}
                         —
                     {% endif %}
@@ -320,7 +320,7 @@
                 <td>{{ result.line_data.commission_ht_assureur is not null ? result.line_data.commission_ht_assureur|number_format(2, ',', ' ') : '—' }}</td>
                 <td>
                     {% if result.line_data.commission_ht_assureur is not null and result.line_data.commission_ht_assureur != 0 and result.line_data.commission_ht_payable_now is defined %}
-                        {{ ((result.line_data.commission_ht_payable_now / result.line_data.commission_ht_assureur) * 100)|number_format(1, ',', ' ') }} %
+                        {{ (result.line_data.commission_ht_payable_now / result.line_data.commission_ht_assureur)|pourcentage('fraction', 1) }}
                     {% else %}
                         —
                     {% endif %}
@@ -388,7 +388,7 @@
                 <td>{{ result.line_data.commission_ht_assureur is not null ? result.line_data.commission_ht_assureur|number_format(2, ',', ' ') : '—' }}</td>
                 <td>
                     {% if result.line_data.commission_ht_assureur is not null and result.line_data.commission_ht_assureur != 0 and result.line_data.commission_ht_payable_now is defined %}
-                        {{ ((result.line_data.commission_ht_payable_now / result.line_data.commission_ht_assureur) * 100)|number_format(1, ',', ' ') }} %
+                        {{ (result.line_data.commission_ht_payable_now / result.line_data.commission_ht_assureur)|pourcentage('fraction', 1) }}
                     {% else %}
                         —
                     {% endif %}
