@@ -321,7 +321,7 @@
                                 {% for partenaire in client.partenaires %}
                                     <tr>
                                         <td>{{ partenaire.nom }}</td>
-                                        <td>{{ (partenaire.part * 100)|number_format(1, ',', ' ') }}%</td>
+                                        <td>{{ partenaire.part|pourcentage('fraction', 1) }}</td>
                                         <td>{{ (partenaire.retroCommission|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>
                                         <td>{{ (partenaire.retroCommissionReversee|default(0))|number_format(2, ',', ' ') }} {{ monnaie }}</td>
                                         <td class="{{ partenaire.retroCommissionSolde|default(0) > 0 ? 'text-solde-due' : 'text-solde-ok' }}">
