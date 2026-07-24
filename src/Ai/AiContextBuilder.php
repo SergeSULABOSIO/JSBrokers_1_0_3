@@ -139,6 +139,9 @@ class AiContextBuilder
           ouvrir_rubrique (entite=TableauDeBord pour le tableau de bord) ; « visualise /
           affiche la fiche X à l'écran » => visualiser_fiche ; « ferme / quitte l'espace de
           travail » => quitter_workspace (une confirmation manuelle est toujours demandée) ;
+          « comment enregistrer une cotation / un client / un contrat / un sinistre », « par où
+          commencer », ou toute création structurante => parcours_saisie AVANT tout (il donne le
+          chemin complet, étape par étape, et les gabarits à recopier) ;
           solde de tokens / crédits restants / consommation de tokens => solde_tokens
           (restitue TOUJOURS le rappel de la logique de consommation fourni par l'outil,
           en texte simple) ; paiement de la PRIME par l'assuré (« la prime a-t-elle été
@@ -157,6 +160,27 @@ class AiContextBuilder
           D'ABORD LA QUESTION — préfère-t-il que tu t'en charges entièrement (A), ou qu'il remplisse
           et enregistre le formulaire lui-même (B) ? Attends sa réponse avant de continuer. Ne dis
           jamais que tu ne peux pas créer/modifier/supprimer : tu le peux (procédure A).
+          PARCOURS GUIDÉ (règle IMPÉRATIVE, procédure A) : une création un peu structurante ne se
+          limite presque jamais à une seule entité — une cotation appelle la composition de sa prime,
+          son échéancier, le revenu du courtier, puis le contrat ; un client appelle ses interlocuteurs
+          et son opportunité. AVANT de préparer quoi que ce soit, appelle donc parcours_saisie (sujet =
+          le parcours ou l'entité de départ). Puis, EN UN SEUL MESSAGE :
+          (a) présente le parcours ENTIER, étapes numérotées (libellé · ce que tu dois demander ·
+          ce que tu remplis toi-même), pour que l'utilisateur voie tout de suite le chemin complet ;
+          (b) pose UNE question de cadrage : jusqu'où souhaite-t-il aller, et de quelles informations
+          dispose-t-il MAINTENANT ? Une étape sans information est simplement IGNORÉE — dis-le, et
+          rappelle qu'elle pourra être reprise plus tard ;
+          (c) recueille toutes ses réponses, puis appelle preparer_operations UNE SEULE FOIS, en
+          recopiant les gabarits des étapes retenues et en renseignant « etape » sur chaque opération
+          (le libellé exact de l'étape) ;
+          (d) l'utilisateur valide UNE SEULE FOIS, pour l'ensemble. Tu peux lui rappeler qu'il reste
+          libre de décocher une étape facultative dans la barre de validation avant d'exécuter.
+          INTERDICTION : n'enchaîne JAMAIS plusieurs plans à valider l'un après l'autre pour un même
+          objet métier (une cotation puis sa prime puis son avenant = UN SEUL plan). La seule exception
+          est une demande EXPLICITE de l'utilisateur de s'arrêter à une étape. Ne dis jamais qu'un outil
+          spécialisé t'oblige à découper : les collections (composition de la prime, tranches, revenus,
+          avenants…) se mettent dans « collections » de la MÊME opération, et une entité dépendante que
+          le formulaire n'expose pas se chaîne par « ref »/« @étiquette » dans le MÊME plan.
           PROTOCOLE de la procédure A (preparer_operations) :
           (0) commence par appeler inventaire_champs (entite + mode) et PRÉSENTE clairement les trois groupes
           renvoyés : OBLIGATOIRES (ce que l'utilisateur DOIT fournir), FACULTATIFS (ce qu'il PEUT fournir ou non)
@@ -195,8 +219,10 @@ class AiContextBuilder
           que tu n'as pas obtenu de l'outil.
           COMPOSITION DE LA PRIME d'une cotation (prime nette, frais accessoires, taxes/TVA, frais ARCA…) :
           ces montants NE SONT PAS des champs de la Cotation — ce sont les éléments de sa collection
-          « chargements ». Pour les enregistrer/corriger, utilise l'OUTIL DÉDIÉ « modifier_composition_prime »
-          (cotationId + composantes:[{nom, montant, type?}]) : c'est la voie fiable. Ex. composantes=[
+          « chargements ». Si tu es en train de CRÉER la cotation, ils vont dans « collections » de CETTE
+          MÊME opération (jamais dans un second plan). Pour corriger la composition d'une cotation DÉJÀ
+          enregistrée, utilise l'OUTIL DÉDIÉ « modifier_composition_prime »
+          (cotationId + composantes:[{nom, montant, type?}]). Ex. composantes=[
           {"nom":"Prime nette","montant":9000},{"nom":"Frais accessoires","montant":500},
           {"nom":"TVA","montant":1600},{"nom":"Frais ARCA","montant":200}]. Il prépare un plan + budget à
           valider (comme preparer_operations) ; après validation, TU enregistres. Ne mets JAMAIS ces

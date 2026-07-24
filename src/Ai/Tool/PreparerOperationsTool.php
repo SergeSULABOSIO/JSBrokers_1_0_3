@@ -5,6 +5,7 @@ namespace App\Ai\Tool;
 use App\Ai\Mutation\MutationAllowlist;
 use App\Ai\Mutation\MutationOperation;
 use App\Ai\Mutation\MutationPlan;
+use App\Ai\Mutation\MutationReferences;
 use App\Ai\Scope\AiScope;
 use App\Service\Workspace\WorkspaceMutationService;
 use App\Token\TokenAccountService;
@@ -81,12 +82,30 @@ final class PreparerOperationsTool implements AiToolInterface
                                 'minimum' => 1,
                                 'description' => 'Identifiant de la cible (obligatoire pour edit et delete).',
                             ],
+                            'ref' => [
+                                'type' => 'string',
+                                'description' => 'Étiquette libre posée sur une CRÉATION pour qu\'une opération '
+                                    . 'SUIVANTE du même plan y renvoie alors que son identifiant n\'existe pas '
+                                    . 'encore : dans l\'opération suivante, donne au champ de relation la valeur '
+                                    . '"@etiquette". Ex. créer un client (ref:"client") puis sa piste '
+                                    . '(champs:{"client":"@client"}) — le tout validé EN UNE SEULE FOIS.',
+                            ],
+                            'etape' => [
+                                'type' => 'string',
+                                'description' => 'Libellé de l\'ÉTAPE de parcours à laquelle cette opération '
+                                    . 'appartient (reprends EXACTEMENT le libellé donné par parcours_saisie, ex. '
+                                    . '"La composition de la prime"). C\'est ce qui permet à l\'utilisateur de '
+                                    . 'décocher une étape avant d\'exécuter, et au budget d\'être ventilé par étape.',
+                            ],
                             'champs' => [
                                 'type' => 'object',
-                                'description' => 'Champ scalaire => valeur, STRICTEMENT telles que dictées par '
+                                'description' => 'Champ => valeur, STRICTEMENT telles que dictées par '
                                     . 'l\'utilisateur (create/edit). Les relations se donnent par id (ex. '
-                                    . '{"portefeuille": 42}). Jamais l\'id ni les champs d\'audit.',
-                                'additionalProperties' => ['type' => ['string', 'number', 'boolean']],
+                                    . '{"portefeuille": 42}) ; une relation MULTIPLE se donne par liste d\'id '
+                                    . '(ex. {"partenaires": [7, 12]}) ; une relation vers une création du même '
+                                    . 'plan se donne par son étiquette (ex. {"client": "@client"}). Jamais l\'id '
+                                    . 'ni les champs d\'audit.',
+                                'additionalProperties' => ['type' => ['string', 'number', 'boolean', 'array']],
                             ],
                             // Structure en ARRAY (et non map dynamique) : le nom de la
                             // collection est une VALEUR, pas une clé — indispensable pour
@@ -115,6 +134,7 @@ final class PreparerOperationsTool implements AiToolInterface
                                                     'op'     => ['type' => 'string', 'enum' => MutationOperation::OPS],
                                                     'id'     => ['type' => 'integer', 'description' => 'Id de l\'élément (edit/delete).'],
                                                     'champs' => ['type' => 'object', 'description' => 'Champs de l\'élément (scalaires ; relations par id).'],
+                                                    'etape'  => ['type' => 'string', 'description' => 'Libellé de l\'étape de parcours de cet élément (décochable par l\'utilisateur).'],
                                                 ],
                                                 'required' => ['op'],
                                             ],
@@ -158,10 +178,15 @@ final class PreparerOperationsTool implements AiToolInterface
         $manquants = [];
         $blocages = [];
         $facturables = [];
+        $avertissements = [];
+        // Registre PARTAGÉ par toutes les opérations du plan : c'est lui qui rend
+        // validable en une seule fois un plan couvrant plusieurs entités dépendantes
+        // (« @etiquette » vers une création précédente).
+        $refs = MutationReferences::dryRun();
         $n = 0;
         foreach ($plan->operations as $op) {
             $n++;
-            $analyse = $this->mutationService->analyserOperation($op, $scope);
+            $analyse = $this->mutationService->analyserOperation($op, $scope, $refs);
 
             // Fail-closed : toute opération hors périmètre fait échouer la préparation entière.
             if ($analyse['statut'] === 'hors_perimetre') {
@@ -171,11 +196,11 @@ final class PreparerOperationsTool implements AiToolInterface
                 return AiToolResult::introuvable(sprintf('%s %s', $analyse['libelle'], $op->targetId ? '#' . $op->targetId : ''));
             }
 
-            // Budget : FQCN de chaque nœud écrit RÉELLEMENT (tête + enfants de
-            // collection, TOUTES imbrications). Source UNIQUE du chiffrage,
-            // partagée à l'identique avec le pré-vol de l'endpoint d'exécution.
-            foreach ($this->mutationService->facturablesArbre($op, $scope) as $fqcn) {
-                $facturables[] = $fqcn;
+            // Budget : chaque nœud écrit RÉELLEMENT (tête + enfants de collection,
+            // TOUTES imbrications), étiqueté par son étape. Source UNIQUE du
+            // chiffrage, partagée à l'identique avec le pré-vol de l'exécution.
+            foreach ($this->mutationService->facturablesDetailles($op, $scope) as $facturable) {
+                $facturables[] = $facturable;
             }
 
             $lignes[] = [
@@ -184,11 +209,17 @@ final class PreparerOperationsTool implements AiToolInterface
                 'entite'       => $op->entityShortName,
                 'libelle'      => $analyse['libelle'],
                 'cible'        => $analyse['cible'],
+                'etape'        => $op->etape,
+                'ref'          => $op->ref,
                 'champs'       => array_keys($op->fields),
                 'collections'  => $this->resumerCollections($op),
                 'impacts'      => $analyse['impacts'],
                 'portefeuille' => $analyse['portefeuille'] ?? null,
             ];
+
+            foreach ($this->collectionsNonCouvertes($op) as $suggestion) {
+                $avertissements[] = $suggestion;
+            }
 
             if ($analyse['statut'] === 'invalide') {
                 foreach ($analyse['manquants'] as $champ => $msgs) {
@@ -223,8 +254,9 @@ final class PreparerOperationsTool implements AiToolInterface
 
         // Budget en tokens : chaque nœud écrit réellement (tête ET enfants de
         // collection) est facturé ; les suppressions sont gratuites. $facturables
-        // a été agrégé sur tout l'arbre pendant l'analyse.
-        $cout = $this->tokenAccountService->estimateWriteCost($facturables);
+        // a été agrégé sur tout l'arbre pendant l'analyse, étape par étape — le
+        // budget couvre donc D'UN SEUL TENANT tout ce que l'utilisateur validera.
+        $cout = $this->tokenAccountService->estimateWriteCost(array_column($facturables, 'fqcn'));
         $solde = $this->tokenAccountService->availableFor($scope->entreprise);
         $suffisant = $solde >= $cout;
         $requiresPassword = $plan->contientSuppression();
@@ -234,24 +266,38 @@ final class PreparerOperationsTool implements AiToolInterface
             'soldeDisponible' => $solde,
             'resteApres'      => max(0, $solde - $cout),
             'suffisant'       => $suffisant,
+            'enregistrements' => count($facturables),
+            'parEtape'        => $this->budgetParEtape($facturables, $plan),
         ];
+        $etapes = $plan->etapes();
 
         return AiToolResult::ok(
             [
                 'pret'             => true,
                 'plan'             => $lignes,
+                'etapes'           => $etapes,
                 'budget'           => $budget,
                 'requiresPassword' => $requiresPassword,
+                'avertissements'   => $avertissements,
                 'note'             => $suffisant
-                    ? ('Présente le plan (tableau des opérations + liste des impacts + tableau du budget) et invite '
-                        . 'l\'utilisateur à confirmer'
-                        . ($requiresPassword ? ' (une suppression exige son mot de passe).' : '.'))
+                    ? ('Présente le plan EN UNE FOIS : tableau des opérations (avec la colonne Étape), liste des '
+                        . 'impacts, et tableau du budget ventilé par étape (« parEtape ») avec son total. Précise '
+                        . 'que l\'utilisateur peut encore DÉCOCHER une étape facultative avant d\'exécuter — le '
+                        . 'budget se réajuste — et qu\'une seule validation suffit pour l\'ensemble'
+                        . ($requiresPassword ? ' (une suppression exige son mot de passe).' : '.')
+                        . ($avertissements !== []
+                            ? ' Signale AUSSI, en une phrase et UNE SEULE FOIS, les éléments listés dans '
+                                . '« avertissements » : demande à l\'utilisateur s\'il dispose de ces informations '
+                                . 'MAINTENANT, pour tout regrouper dans CE plan. S\'il ne les a pas, laisse le plan tel quel.'
+                            : ''))
                     : ('Solde de tokens INSUFFISANT pour cette mission : présente le plan et le budget, puis propose '
                         . 'd\'acheter des tokens ou d\'abandonner. N\'exécute pas.'),
             ],
             uiAction: [
                 'type'             => 'ket-mutation.review',
                 'plan'             => $plan->toArray(),
+                // `budget.parEtape` porte les étapes décochables (libellé, clé,
+                // caractère obligatoire, coût) : source unique du sélecteur d'étendue.
                 'budget'           => $budget,
                 'requiresPassword' => $requiresPassword,
                 // Impacts agrégés (cascades de suppression) : alimentent la liste
@@ -271,6 +317,77 @@ final class PreparerOperationsTool implements AiToolInterface
      *
      * @return array<string, array<int, array>>
      */
+    /**
+     * Ventilation du budget PAR ÉTAPE : ce que coûte chacune des étapes que
+     * l'utilisateur a acceptées. Aucun barème n'est recalculé ici — c'est le même
+     * estimateWriteCost, appliqué à des sous-ensembles du MÊME jeu de facturables.
+     *
+     * @param array<int, array{fqcn: string, entite: string, etape: ?string}> $facturables
+     *
+     * @return array<int, array{cle: string, libelle: string, obligatoire: bool, enregistrements: int, cout: int}>
+     */
+    private function budgetParEtape(array $facturables, MutationPlan $plan): array
+    {
+        $obligatoires = [];
+        foreach ($plan->etapes() as $etape) {
+            $obligatoires[$etape['cle']] = $etape['obligatoire'];
+        }
+
+        $groupes = [];
+        foreach ($facturables as $facturable) {
+            $libelle = $facturable['etape'] ?? 'Sans étape';
+            $cle = MutationPlan::cleEtape($libelle);
+            $groupes[$cle] ??= ['cle' => $cle, 'libelle' => $libelle, 'fqcns' => []];
+            $groupes[$cle]['fqcns'][] = $facturable['fqcn'];
+        }
+
+        $detail = [];
+        foreach ($groupes as $cle => $groupe) {
+            $detail[] = [
+                'cle'             => $cle,
+                'libelle'         => $groupe['libelle'],
+                'obligatoire'     => $obligatoires[$cle] ?? true,
+                'enregistrements' => count($groupe['fqcns']),
+                'cout'            => $this->tokenAccountService->estimateWriteCost($groupe['fqcns']),
+            ];
+        }
+
+        return $detail;
+    }
+
+    /**
+     * Collections éditables du formulaire d'une CRÉATION qui ne sont pas couvertes
+     * par le plan — c'est-à-dire tout ce que l'utilisateur pourrait renseigner
+     * MAINTENANT, dans ce même plan, plutôt que dans une seconde validation.
+     * Purement informatif : ne bloque jamais, ne modifie pas le plan.
+     *
+     * @return string[]
+     */
+    private function collectionsNonCouvertes(MutationOperation $op): array
+    {
+        if (!$op->isCreate()) {
+            return [];
+        }
+
+        $manquantes = [];
+        foreach ($this->mutationService->collectionsProposables($op->entityShortName) as $nom => $libelle) {
+            if (!isset($op->collections[$nom])) {
+                $manquantes[] = $libelle;
+            }
+        }
+        if ($manquantes === []) {
+            return [];
+        }
+
+        return [sprintf(
+            'L’opération « %s » ne couvre pas : %s. Demande à l’utilisateur, DANS LE MÊME MESSAGE que le plan, '
+            . 's’il dispose de ces informations maintenant — pour tout regrouper ici plutôt que d’avoir à '
+            . 'valider un second plan plus tard.',
+            $op->entityShortName,
+            implode(', ', $manquantes),
+        )];
+    }
+
     private function resumerCollections(MutationOperation $op): array
     {
         $resume = [];

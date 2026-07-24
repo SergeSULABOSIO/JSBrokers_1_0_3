@@ -91,6 +91,129 @@ final class MutationPlan
         return array_map(static fn ($d) => $d[2], $decore);
     }
 
+    /**
+     * ÉTENDUE du plan : restreint le plan aux seules étapes RETENUES par
+     * l'utilisateur (cases cochées). Le filtrage est fait ICI, côté serveur, sur
+     * le plan STOCKÉ — le client ne transmet que des clés d'étapes, jamais des
+     * opérations. Règles (fail-closed) :
+     *  - l'étape SOCLE (celle de la première opération du plan) est toujours
+     *    conservée : sans elle le reste n'a plus d'objet ;
+     *  - toute autre opération — de tête comme de collection — dont l'étape n'est
+     *    pas retenue est élaguée, ainsi que toute sa descendance ;
+     *  - un nœud sans étape hérite de celle de son parent (il suit son sort) ;
+     *  - CASCADE de références : une opération qui renvoie (« @etiquette ») à une
+     *    création élaguée est elle-même élaguée — jamais d'orpheline ;
+     *  - $cles vide (aucune sélection transmise) = plan INTÉGRAL, comportement
+     *    historique strictement inchangé.
+     *
+     * @param string[] $cles Clés d'étapes retenues (cf. etapes()).
+     */
+    public function filtrerEtapes(array $cles): self
+    {
+        if ($cles === []) {
+            return $this;
+        }
+        $retenues = array_flip(array_map(self::cleEtape(...), $cles));
+        $socle = $this->operations[0]->etape ?? null;
+        if ($socle !== null) {
+            $retenues[self::cleEtape($socle)] = true;
+        }
+
+        $ops = [];
+        $abandonnees = []; // étiquettes de créations élaguées => leurs dépendantes tombent aussi.
+        foreach ($this->operations as $op) {
+            $etape = $op->etape;
+            $garde = $etape === null || isset($retenues[self::cleEtape($etape)]);
+            if ($garde) {
+                foreach ($op->referencesUtilisees() as $utilisee) {
+                    if (isset($abandonnees[$utilisee])) {
+                        $garde = false;
+                        break;
+                    }
+                }
+            }
+            if (!$garde) {
+                if ($op->ref !== null) {
+                    $abandonnees[MutationReferences::etiquette(MutationReferences::PREFIXE . $op->ref)] = true;
+                }
+                continue;
+            }
+            $ops[] = self::filtrerNoeud($op, $retenues, $etape);
+        }
+
+        return new self($ops);
+    }
+
+    /**
+     * @param array<string, mixed> $retenues clé d'étape => présence
+     */
+    private static function filtrerNoeud(MutationOperation $op, array $retenues, ?string $etapeHeritee): MutationOperation
+    {
+        $collections = [];
+        foreach ($op->collections as $nom => $enfants) {
+            $gardes = [];
+            foreach ($enfants as $enfant) {
+                $etape = $enfant->etape ?? $etapeHeritee;
+                if ($etape !== null && !isset($retenues[self::cleEtape($etape)])) {
+                    continue; // étape décochée : l'enfant et sa descendance sont abandonnés.
+                }
+                $gardes[] = self::filtrerNoeud($enfant, $retenues, $etape);
+            }
+            if ($gardes !== []) {
+                $collections[$nom] = $gardes;
+            }
+        }
+
+        return $op->withCollections($collections);
+    }
+
+    /**
+     * INVENTAIRE des étapes du plan, dans l'ordre où elles apparaissent : ce que
+     * l'utilisateur voit et coche. L'étape SOCLE (celle de la première opération)
+     * est « obligatoire » — les autres se décochent librement. `noeuds` = nombre
+     * d'enregistrements concernés (informatif).
+     *
+     * @return array<int, array{cle: string, libelle: string, obligatoire: bool, noeuds: int}>
+     */
+    public function etapes(): array
+    {
+        $etapes = [];
+        foreach ($this->operations as $op) {
+            self::collecterEtapes($op, $op->etape, $etapes);
+        }
+        $socle = $this->operations[0]->etape ?? null;
+        if ($socle !== null && isset($etapes[self::cleEtape($socle)])) {
+            $etapes[self::cleEtape($socle)]['obligatoire'] = true;
+        }
+
+        return array_values($etapes);
+    }
+
+    /** @param array<string, array{cle: string, libelle: string, obligatoire: bool, noeuds: int}> $etapes */
+    private static function collecterEtapes(MutationOperation $op, ?string $etapeHeritee, array &$etapes): void
+    {
+        $libelle = $op->etape ?? $etapeHeritee;
+        if ($libelle !== null) {
+            $cle = self::cleEtape($libelle);
+            $etapes[$cle] ??= ['cle' => $cle, 'libelle' => $libelle, 'obligatoire' => false, 'noeuds' => 0];
+            $etapes[$cle]['noeuds']++;
+        }
+        foreach ($op->collections as $enfants) {
+            foreach ($enfants as $enfant) {
+                self::collecterEtapes($enfant, $libelle, $etapes);
+            }
+        }
+    }
+
+    /** Clé stable d'une étape (le libellé reste libre côté modèle). */
+    public static function cleEtape(string $libelle): string
+    {
+        $cle = mb_strtolower(trim($libelle));
+        $cle = preg_replace('/[^\p{L}\p{N}]+/u', '-', $cle) ?? $cle;
+
+        return trim($cle, '-');
+    }
+
     /** @return array<int, array> */
     public function toArray(): array
     {

@@ -41,10 +41,13 @@ final class ModifierCompositionPrimeTool implements AiToolInterface
 
     public function description(): string
     {
-        return "Enregistre ou modifie la COMPOSITION (ventilation) de la prime d'une cotation : prime "
-            . 'nette, frais accessoires, taxes/TVA, frais ARCA, etc. À appeler dès que l\'utilisateur '
-            . 'donne ou corrige les montants de la prime d\'une cotation (« la prime nette est 9000, la '
-            . 'TVA 1600… », « fixe la composition de la prime »). Fournis cotationId et composantes '
+        return "Corrige la COMPOSITION (ventilation) de la prime d'une cotation DÉJÀ ENREGISTRÉE : prime "
+            . 'nette, frais accessoires, taxes/TVA, frais ARCA, etc. À appeler quand l\'utilisateur '
+            . 'donne ou corrige les montants de la prime d\'une cotation EXISTANTE (« la prime nette est 9000, la '
+            . 'TVA 1600… », « fixe la composition de la prime »). N\'APPELLE PAS cet outil si tu es en train de '
+            . 'CRÉER la cotation : dans ce cas les composantes vont dans « collections » de la même opération '
+            . 'preparer_operations — sinon tu imposerais à l\'utilisateur une seconde validation. '
+            . 'Fournis cotationId et composantes '
             . '(chaque composante = nom + montant ; le type de chargement est déduit automatiquement du '
             . 'nom, ex. « Prime nette » → type « Prime nette », essentiel pour que la commission se '
             . 'calcule). L\'outil '
