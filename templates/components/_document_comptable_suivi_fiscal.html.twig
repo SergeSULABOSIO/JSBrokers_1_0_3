@@ -23,7 +23,7 @@
                     <div style="display:flex; align-items:center; gap:.4rem; margin-bottom:.2rem;">
                         <twig:UX:Icon name="{{ resolve_icon_name('taxe') }}" style="width:16px;height:16px;color:#0047AB;" />
                         <strong style="color:#212529;">{{ taxe.code }}</strong>
-                        <span class="text-muted" style="font-size:.8rem;">IARD {{ taxe.tauxIARD|number_format(2, ',', ' ') }} % · VIE {{ taxe.tauxVIE|number_format(2, ',', ' ') }} %</span>
+                        <span class="text-muted" style="font-size:.8rem;">IARD {{ taxe.tauxIARD|pourcentage }} · VIE {{ taxe.tauxVIE|pourcentage }}</span>
                     </div>
                     {% if taxe.description %}
                         <div style="color:#495057; font-size:.83rem; margin-bottom:.2rem;">{{ taxe.description }}</div>
