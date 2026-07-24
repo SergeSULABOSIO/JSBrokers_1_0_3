@@ -6,6 +6,7 @@ namespace App\Services;
 use App\Entity\Entreprise;
 use App\Services\Search\AvenantEcheanceScope;
 use App\Services\Search\CotationSouscriptionScope;
+use App\Services\Search\PisteTransformationScope;
 use App\Services\Search\PortefeuilleScope;
 use App\Services\Search\TranchePaiementScope;
 use App\Services\Tranche\TranchePaiementService;
@@ -359,6 +360,35 @@ class JSBDynamicSearchService
                     ->getDQL();
 
                 if ($statut === CotationSouscriptionScope::STATUT_SOUSCRITES) {
+                    $qb->andWhere($qb->expr()->in("{$rootAlias}.id", $sousRequete));
+                } else {
+                    $qb->andWhere($qb->expr()->notIn("{$rootAlias}.id", $sousRequete));
+                }
+                continue;
+            }
+
+            // CAS 0 ter : Statut de transformation (Piste uniquement). Une piste est
+            // « transformée » dès qu'une de ses cotations est souscrite (porte un avenant),
+            // « en cours » sinon — même définition que l'indicateur calculé statutTransformation,
+            // pendant un cran plus haut du statut de souscription d'une cotation. Exprimable en
+            // SQL : on filtre par EXISTS / NOT EXISTS sur une sous-requête des pistes ayant au
+            // moins un avenant rattaché via l'une de leurs cotations. Compose automatiquement
+            // avec les autres critères, le périmètre portefeuille, la pagination et le comptage.
+            if ($field === PisteTransformationScope::CRITERION_KEY) {
+                $statut = is_array($value) ? ($value['value'] ?? null) : $value;
+                if (!PisteTransformationScope::estValide(is_string($statut) ? $statut : null)) {
+                    continue; // valeur vide/inconnue (« Toutes ») : filtre ignoré
+                }
+
+                $avAlias = 'transformation_av' . $suffix;
+                $cotAlias = 'transformation_cot' . $suffix;
+                $sousRequete = $this->em->createQueryBuilder()
+                    ->select("IDENTITY({$cotAlias}.piste)")
+                    ->from(\App\Entity\Avenant::class, $avAlias)
+                    ->join("{$avAlias}.cotation", $cotAlias)
+                    ->getDQL();
+
+                if ($statut === PisteTransformationScope::STATUT_TRANSFORMEES) {
                     $qb->andWhere($qb->expr()->in("{$rootAlias}.id", $sousRequete));
                 } else {
                     $qb->andWhere($qb->expr()->notIn("{$rootAlias}.id", $sousRequete));

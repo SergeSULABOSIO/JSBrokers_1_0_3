@@ -8,6 +8,7 @@ use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
 use App\Services\Search\AvenantEcheanceScope;
 use App\Services\Search\CotationSouscriptionScope;
+use App\Services\Search\PisteTransformationScope;
 use App\Services\Search\PortefeuilleCritereFactory;
 use App\Services\Search\PortefeuilleScope;
 use App\Services\Search\TranchePaiementScope;
@@ -59,11 +60,12 @@ final class RechercherEntitesTool implements AiToolInterface
             . 'aux enregistrements LIÉS à une fiche précise, même à plusieurs niveaux de relation '
             . '(ex. les tâches d’une piste, les tâches ou avenants d’un CLIENT via ses pistes) — '
             . 'SEUL moyen fiable de connaître les éléments liés : une fiche ne les contient jamais. '
-            . 'Les paramètres echeance (Avenant), statutPaiement (Tranche) et validation (Cotation) '
-            . 'appliquent EXACTEMENT les mêmes règles que les filtres rapides de ces rubriques, tri '
-            . 'par urgence inclus : à utiliser dès que la question porte sur une fenêtre d’échéance '
-            . '(« quels avenants échoient dans les 30 jours ? »), un statut de paiement ou un statut '
-            . 'de souscription (« quelles propositions en attente ? »), afin que la réponse '
+            . 'Les paramètres echeance (Avenant), statutPaiement (Tranche), validation (Cotation) '
+            . 'et transformation (Piste) appliquent EXACTEMENT les mêmes règles que les filtres '
+            . 'rapides de ces rubriques, tri par urgence inclus : à utiliser dès que la question '
+            . 'porte sur une fenêtre d’échéance (« quels avenants échoient dans les 30 jours ? »), '
+            . 'un statut de paiement, un statut de souscription (« quelles propositions en attente ? ») '
+            . 'ou un statut de transformation (« quelles pistes en cours ? »), afin que la réponse '
             . 'coïncide avec ce que l’utilisateur voit à l’écran. La liste porte par défaut sur le '
             . 'PORTEFEUILLE de l’utilisateur, comme la rubrique affichée (paramètre perimetre). '
             . 'Renvoie l’identifiant et le libellé de chaque enregistrement.';
@@ -109,6 +111,14 @@ final class RechercherEntitesTool implements AiToolInterface
                     'description' => 'COTATION uniquement : restreint à un statut de souscription — '
                         . 'souscrites (transformées en police, au moins un avenant), en_attente '
                         . '(non transformées). Mêmes règles que les filtres rapides de la rubrique.',
+                ],
+                'transformation' => [
+                    'type' => 'string',
+                    'enum' => array_keys(PisteTransformationScope::VALEURS),
+                    'description' => 'PISTE uniquement : restreint à un statut de transformation — '
+                        . 'transformees (au moins une cotation souscrite/transformée en police), '
+                        . 'en_cours (aucune cotation encore transformée). Mêmes règles que les '
+                        . 'filtres rapides de la rubrique.',
                 ],
                 'perimetre' => PortefeuilleScope::proprieteSchema(),
                 'lieA' => [
@@ -163,6 +173,8 @@ final class RechercherEntitesTool implements AiToolInterface
             $args['statutPaiement'] = $s;
         } elseif ($shortName === 'Cotation' && ($v = CotationSouscriptionScope::detecterDepuisTexte($normalized)) !== null) {
             $args['validation'] = $v;
+        } elseif ($shortName === 'Piste' && ($t = PisteTransformationScope::detecterDepuisTexte($normalized)) !== null) {
+            $args['transformation'] = $t;
         }
 
         // Le périmètre par défaut est celui de l'écran (portefeuille de l'invité) : seule une
@@ -235,7 +247,8 @@ final class RechercherEntitesTool implements AiToolInterface
         // paiement pour Tranche. Ignorés si l'entité ne s'y prête pas.
         $criteresRubrique = AvenantEcheanceScope::critereRecherche($shortName, $args['echeance'] ?? null)
             + TranchePaiementScope::critereRecherche($shortName, $args['statutPaiement'] ?? null)
-            + CotationSouscriptionScope::critereRecherche($shortName, $args['validation'] ?? null);
+            + CotationSouscriptionScope::critereRecherche($shortName, $args['validation'] ?? null)
+            + PisteTransformationScope::critereRecherche($shortName, $args['transformation'] ?? null);
         $filtreRubrique = null;
         if (isset($criteresRubrique[AvenantEcheanceScope::CRITERION_KEY])) {
             $filtreRubrique = AvenantEcheanceScope::libelle((string) $criteresRubrique[AvenantEcheanceScope::CRITERION_KEY]['value']);
@@ -243,6 +256,8 @@ final class RechercherEntitesTool implements AiToolInterface
             $filtreRubrique = TranchePaiementScope::libelle((string) $criteresRubrique[TranchePaiementScope::CRITERION_KEY]['value']);
         } elseif (isset($criteresRubrique[CotationSouscriptionScope::CRITERION_KEY])) {
             $filtreRubrique = CotationSouscriptionScope::libelle((string) $criteresRubrique[CotationSouscriptionScope::CRITERION_KEY]['value']);
+        } elseif (isset($criteresRubrique[PisteTransformationScope::CRITERION_KEY])) {
+            $filtreRubrique = PisteTransformationScope::libelle((string) $criteresRubrique[PisteTransformationScope::CRITERION_KEY]['value']);
         }
 
         // PÉRIMÈTRE : par défaut le portefeuille de l'invité, comme la rubrique à l'écran

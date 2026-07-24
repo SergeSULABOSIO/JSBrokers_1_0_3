@@ -169,6 +169,23 @@ class SearchCanvasProvider
             ]);
         }
 
+        // Critère synthétique « Statut de transformation » (Piste) : une piste est
+        // « transformée » dès qu'une de ses cotations est souscrite (présence exprimable en SQL,
+        // EXISTS), absente du canevas d'entité car dérivée. Porté par la clé spéciale
+        // PisteTransformationScope::CRITERION_KEY, interceptée par le moteur. Le type 'Boolean'
+        // rend un <select> depuis la map de valeurs, badge inclus — les chips de la rubrique et
+        // ce badge manipulent la même clé et restent synchronisés.
+        if ($shortName === 'Piste') {
+            array_unshift($searchCriteria, [
+                'Nom' => \App\Services\Search\PisteTransformationScope::CRITERION_KEY,
+                'Display' => 'Statut',
+                'Type' => 'Boolean',
+                'Valeur' => \App\Services\Search\PisteTransformationScope::VALEURS,
+                'isDefault' => false,
+                'Icone' => $this->iconCanvasProvider->resolveIconName('piste') !== null ? 'piste' : 'action:check',
+            ]);
+        }
+
         return $searchCriteria;
     }
 

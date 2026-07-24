@@ -3,6 +3,7 @@
 namespace App\Services\Canvas\Provider\List;
 
 use App\Entity\Piste;
+use App\Services\Search\PisteTransformationScope;
 use App\Services\ServiceMonnaies;
 
 class PisteListCanvasProvider implements ListCanvasProviderInterface
@@ -53,6 +54,22 @@ class PisteListCanvasProvider implements ListCanvasProviderInterface
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                     "attribut_code" => "montantTTC",
                     "attribut_type" => "calcul", // Changé pour refléter que c'est un calcul
+                ],
+            ],
+            // Chips de filtre rapide rendus par _List_manager (hors dialogues) : chaque option
+            // pose/retire le critère synthétique « Statut de transformation » via le Cerveau. Le
+            // moteur filtre en SQL (EXISTS / NOT EXISTS sur les avenants des cotations de la
+            // piste). Même clé que le badge de la barre de recherche → les deux restent
+            // synchronisés. `icon` = alias IconCanvasProvider, résolu par resolve_icon_name().
+            "filtres_predefinis" => [
+                [
+                    "critere" => PisteTransformationScope::CRITERION_KEY,
+                    "libelle" => "Statut",
+                    "options" => [
+                        ["value" => PisteTransformationScope::STATUT_TRANSFORMEES, "label" => PisteTransformationScope::libelle(PisteTransformationScope::STATUT_TRANSFORMEES), "icon" => "action:completed"],
+                        ["value" => PisteTransformationScope::STATUT_EN_COURS, "label" => PisteTransformationScope::libelle(PisteTransformationScope::STATUT_EN_COURS), "icon" => "action:ongoing"],
+                        ["value" => "", "label" => "Toutes", "icon" => "action:filter"],
+                    ],
                 ],
             ],
         ];

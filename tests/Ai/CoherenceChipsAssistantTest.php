@@ -19,6 +19,7 @@ use App\Entity\Utilisateur;
 use App\Services\JSBDynamicSearchService;
 use App\Services\Search\AvenantEcheanceScope;
 use App\Services\Search\CotationSouscriptionScope;
+use App\Services\Search\PisteTransformationScope;
 use App\Services\Search\PortefeuilleCritereFactory;
 use App\Services\Search\PortefeuilleScope;
 use App\Services\Search\TranchePaiementScope;
@@ -161,6 +162,14 @@ class CoherenceChipsAssistantTest extends KernelTestCase
             $avenant->setInvite($invite);
             $em->persist($avenant);
         }
+
+        // Piste « en cours » (aucune cotation transformée) DANS le portefeuille de l'invité : la
+        // piste ci-dessus deviendra « transformée » (ses cotations à avenants), celle-ci reste
+        // « en cours ». De quoi éprouver les deux chips de transformation de la rubrique Pistes.
+        $pisteEnCours = (new Piste())->setNom('Piste En Cours')->setTypeAvenant(0)
+            ->setDescriptionDuRisque('Risque en cours')->setExercice(2026)
+            ->setClient($client)->setEntreprise($entreprise)->setInvite($invite);
+        $em->persist($pisteEnCours);
 
         // Deux tranches impayées : une échue, une à échoir (statut dérivé, filtre en mémoire).
         foreach ([['Tranche échue', 50, '-10 days'], ['Tranche à échoir', 0.5, '+10 days']] as [$nom, $pct, $delta]) {
@@ -372,6 +381,50 @@ class CoherenceChipsAssistantTest extends KernelTestCase
         $enAttente = $this->compter()->execute(['entite' => 'Cotation', 'validation' => CotationSouscriptionScope::STATUT_EN_ATTENTE], $scope);
         $this->assertSame(1, $souscrites->data['count'], 'La seule cotation à avenants du portefeuille.');
         $this->assertSame(1, $enAttente->data['count'], 'La seule cotation sans avenant du portefeuille (« Cotation Voisine » est hors périmètre).');
+    }
+
+    /**
+     * Idem pour la rubrique Pistes (opportunités) : le statut de transformation (« transformée »
+     * dès qu'une cotation est souscrite, « en cours » sinon) est filtré en SQL (EXISTS / NOT
+     * EXISTS sur les avenants des cotations de la piste). Les outils génériques de Ket doivent
+     * passer par le même critère synthétique et donc par le même moteur, scope portefeuille inclus.
+     */
+    public function testPistesChaqueChipCoincideAvecLAssistant(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+        $scope = new AiScope($entreprise, $invite);
+
+        foreach (array_keys(PisteTransformationScope::VALEURS) as $statut) {
+            $chip = $this->service()->search(
+                Piste::class,
+                $this->criteresRubrique('Piste', $invite, PisteTransformationScope::CRITERION_KEY, $statut),
+                $entreprise,
+            );
+            $idsChip = array_map(static fn (Piste $p) => $p->getId(), $chip['data']);
+
+            $compte = $this->compter()->execute(['entite' => 'Piste', 'transformation' => $statut], $scope);
+            $this->assertSame(AiToolResult::STATUS_OK, $compte->status, "Chip {$statut}");
+            $this->assertSame(
+                (int) $chip['totalItems'],
+                $compte->data['count'],
+                "Chip « {$statut} » : le comptage de Ket doit égaler celui de la rubrique."
+            );
+
+            $liste = $this->rechercher()->execute(['entite' => 'Piste', 'transformation' => $statut], $scope);
+            $this->assertSame(AiToolResult::STATUS_OK, $liste->status);
+            $this->assertSame(
+                $idsChip,
+                array_column($liste->data['items'], 'id'),
+                "Chip « {$statut} » : mêmes pistes, même ordre."
+            );
+        }
+
+        // Preuve que chaque chip isole bien sa moitié : une piste transformée (cotation à
+        // avenants) et une en cours (sans) coexistent dans le portefeuille de l'invité.
+        $transformees = $this->compter()->execute(['entite' => 'Piste', 'transformation' => PisteTransformationScope::STATUT_TRANSFORMEES], $scope);
+        $enCours = $this->compter()->execute(['entite' => 'Piste', 'transformation' => PisteTransformationScope::STATUT_EN_COURS], $scope);
+        $this->assertSame(1, $transformees->data['count'], 'La seule piste transformée du portefeuille.');
+        $this->assertSame(1, $enCours->data['count'], 'La seule piste en cours du portefeuille (« Piste Voisine » est hors périmètre).');
     }
 
     /**
