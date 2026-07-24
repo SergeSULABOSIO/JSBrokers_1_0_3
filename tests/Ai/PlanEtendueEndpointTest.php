@@ -198,6 +198,29 @@ class PlanEtendueEndpointTest extends WebTestCase
         $this->assertNull($this->em()->getRepository(Piste::class)->findOneBy(['nom' => 'Affaire 2026']));
     }
 
+    /**
+     * Le JOURNAL de ce qui a été réellement écrit est CONSERVÉ sur le message :
+     * c'est lui qui sera réinjecté au moteur au tour suivant, pour qu'il ne puisse
+     * plus affirmer qu'un enregistrement existe alors qu'il n'a pas été créé.
+     * Ici l'étape « opportunité » est décochée : elle ne doit PAS figurer.
+     */
+    public function testLeJournalDeCeQuiAEteEcritEstConserve(): void
+    {
+        [$ent, $inv] = $this->seed();
+        $message = $this->seedMessageAvecPlan($ent, $inv);
+
+        $this->executer($ent, $message, ['etapes' => ['le-client']]);
+
+        $this->em()->refresh($message);
+        $journal = $message->getMeta()['mutationPlanJournal'] ?? null;
+
+        $this->assertIsArray($journal);
+        $this->assertCount(1, $journal, 'Seul ce qui a VRAIMENT été écrit figure au journal.');
+        $this->assertSame('Client', $journal[0]['entite']);
+        $this->assertSame('ACME Étendue', $journal[0]['cible']);
+        $this->assertNotContains('Piste', array_column($journal, 'entite'), 'L’étape décochée n’a laissé aucune trace.');
+    }
+
     /** Anti-rejeu : le plan exécuté (quelle que soit l'étendue) ne se rejoue pas. */
     public function testPlanExecuteNeSeRejouePas(): void
     {

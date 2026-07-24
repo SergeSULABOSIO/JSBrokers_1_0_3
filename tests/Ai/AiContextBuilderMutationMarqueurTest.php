@@ -116,4 +116,54 @@ class AiContextBuilderMutationMarqueurTest extends KernelTestCase
         $messages = $this->build($ent, $inv, $conv);
         $this->assertStringNotContainsString('[SYSTÈME —', $messages[0]['content']);
     }
+
+    public function testPlanEnAttenteEstAnnoteDansLHistorique(): void
+    {
+        [$ent, $inv] = $this->seed();
+        $conv = $this->conversationAvecPlan($ent, $inv, ['mutationPlan' => ['plan' => []]]);
+
+        $messages = $this->build($ent, $inv, $conv);
+        $this->assertStringContainsString('ATTEND ENCORE la décision', $messages[0]['content']);
+        $this->assertStringContainsString('remplacerPlanEnAttente', $messages[0]['content']);
+    }
+
+    /**
+     * Le garde-fou contre l'affirmation de complaisance : après exécution, le
+     * moteur ne reçoit PAS un simple « succès » (dont il pourrait déduire que tout
+     * ce qui avait été évoqué est enregistré) mais la liste EXACTE de ce qui a été
+     * écrit. Le cas vécu : une cotation créée sans son revenu de courtage, et Ket
+     * qui affirmait que le revenu avait été « généré automatiquement ».
+     */
+    public function testJournalDExecutionEstInjecteLigneParLigne(): void
+    {
+        [$ent, $inv] = $this->seed();
+        $conv = $this->conversationAvecPlan($ent, $inv, [
+            'mutationPlan'         => ['plan' => []],
+            'mutationPlanExecuted' => true,
+            'mutationPlanJournal'  => [
+                ['op' => 'create', 'entite' => 'Cotation', 'libelle' => 'Propositions', 'cible' => 'Offre SUNU', 'statut' => 'ok', 'niveau' => 0],
+                ['op' => 'create', 'entite' => 'ChargementPourPrime', 'libelle' => 'Composantes', 'cible' => 'Prime nette', 'statut' => 'ok', 'niveau' => 1],
+            ],
+        ]);
+
+        $contenu = $this->build($ent, $inv, $conv)[0]['content'];
+
+        $this->assertStringContainsString('Propositions : créé (« Offre SUNU »)', $contenu);
+        $this->assertStringContainsString('Composantes : créé (« Prime nette »)', $contenu);
+        $this->assertStringContainsString('rien d\'autre n\'a été enregistré', $contenu);
+        // L'échappatoire du modèle — « le moteur l'a calculé automatiquement » —
+        // est explicitement fermée.
+        $this->assertStringContainsString('automatique', $contenu);
+    }
+
+    /** Journal absent (plan exécuté avant cette garantie) : ne rien présumer. */
+    public function testSansJournalLeMoteurEstInviteAVerifier(): void
+    {
+        [$ent, $inv] = $this->seed();
+        $conv = $this->conversationAvecPlan($ent, $inv, ['mutationPlan' => ['plan' => []], 'mutationPlanExecuted' => true]);
+
+        $contenu = $this->build($ent, $inv, $conv)[0]['content'];
+        $this->assertStringContainsString('journal indisponible', $contenu);
+        $this->assertStringContainsString('rechercher_entites', $contenu);
+    }
 }

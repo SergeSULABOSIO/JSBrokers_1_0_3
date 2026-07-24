@@ -395,6 +395,10 @@ class AssistantIaController extends AbstractController
                     // c'est elle qui alimente les cases à cocher de l'ÉTENDUE, live
                     // comme après un rechargement de page.
                     'budget'           => $action['budget'] ?? null,
+                    // Ce que le plan fait / ne fait pas, tel que l'utilisateur doit le
+                    // VOIR avant de valider (indépendant de la prose du modèle).
+                    'apercu'           => $action['apercu'] ?? [],
+                    'omissions'        => $action['omissions'] ?? [],
                     'requiresPassword' => (bool) ($action['requiresPassword'] ?? false),
                     // Impacts de cascade conservés pour reconstruire la barre de
                     // décision après un rechargement de page (F5).
@@ -574,8 +578,12 @@ class AssistantIaController extends AbstractController
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
-        // Marque le plan comme exécuté (anti-rejeu) après succès.
+        // Marque le plan comme exécuté (anti-rejeu) après succès, et CONSERVE le
+        // journal : c'est la seule liste vraie de ce qui a été écrit. Elle est
+        // réinjectée au moteur au tour suivant, pour qu'il ne puisse plus affirmer
+        // qu'un enregistrement a été créé alors qu'il n'y figure pas.
         $meta['mutationPlanExecuted'] = true;
+        $meta['mutationPlanJournal'] = $journal;
         $message->setMeta($meta);
         $this->em->flush();
 

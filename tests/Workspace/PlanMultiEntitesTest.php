@@ -9,7 +9,6 @@ use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
 use App\Ai\Tool\PreparerOperationsTool;
 use App\Entity\Chargement;
-use App\Entity\ChargementPourPrime;
 use App\Entity\Client;
 use App\Entity\Cotation;
 use App\Entity\Entreprise;
@@ -375,8 +374,62 @@ class PlanMultiEntitesTest extends WebTestCase
         ]], new AiScope($ent, $inv));
 
         $this->assertTrue($result->data['pret']);
-        $this->assertNotSame([], $result->data['avertissements'], 'Les collections non couvertes sont signalées.');
-        $this->assertStringContainsString('Cotation', $result->data['avertissements'][0]);
+        $this->assertNotSame([], $result->data['avertissements'], 'Les collections non couvertes sont signalées au modèle.');
+        $this->assertStringContainsString('Propositions', $result->data['avertissements'][0]);
+
+        // Et surtout : l'utilisateur les VOIT. L'aperçu de la barre de décision
+        // nomme ce que le plan écrira, et ce qu'il n'écrira PAS — sans dépendre de
+        // la prose du modèle.
+        $omissions = $result->uiAction['omissions'];
+        $this->assertNotSame([], $omissions);
+        $this->assertContains(
+            'Revenus',
+            $omissions[0]['elements'],
+            'Le revenu du courtier, non couvert par ce plan, est explicitement signalé à l’utilisateur.',
+        );
+
+        $apercu = $result->uiAction['apercu'];
+        $this->assertCount(1, $apercu);
+        $this->assertSame('create', $apercu[0]['op']);
+        $this->assertSame('Offre nue', $apercu[0]['cible'], 'L’aperçu nomme la cible telle qu’elle sera créée.');
+        $this->assertSame([], $apercu[0]['details'], 'Aucune collection couverte : rien d’autre ne sera écrit.');
+    }
+
+    /**
+     * L'aperçu décrit fidèlement un plan à collections : c'est LUI que
+     * l'utilisateur valide, pas le texte rédigé par Ket (les deux peuvent
+     * diverger — une étape annoncée en prose mais absente des opérations passerait
+     * sinon inaperçue jusqu'à ce qu'on constate qu'elle n'a pas été enregistrée).
+     */
+    public function testApercuDecritFidelementCeQueLePlanVaEcrire(): void
+    {
+        [$ent, $inv, $owner] = $this->seedWorkspace();
+        $type = $this->seedChargementType($ent, $inv, 'Prime nette');
+        $this->em->flush();
+        $typeId = $type->getId();
+        $this->client->loginUser($owner);
+
+        $result = $this->preparer->execute(['operations' => [[
+            'op' => 'create', 'entite' => 'Cotation', 'etape' => 'La proposition',
+            'champs' => ['nom' => 'Offre SUNU', 'duree' => 12],
+            'collections' => [[
+                'collection' => 'chargements',
+                'elements' => [
+                    ['op' => 'create', 'champs' => ['nom' => 'Prime nette', 'montantFlatExceptionel' => 8000, 'type' => $typeId]],
+                    ['op' => 'create', 'champs' => ['nom' => 'TVA', 'montantFlatExceptionel' => 500, 'type' => $typeId]],
+                ],
+            ]],
+        ]]], new AiScope($ent, $inv));
+
+        $apercu = $result->uiAction['apercu'][0];
+        $this->assertSame('Offre SUNU', $apercu['cible']);
+        $this->assertCount(1, $apercu['details'], 'Une seule collection est couverte.');
+        $this->assertSame(2, $apercu['details'][0]['creations']);
+        $this->assertSame(0, $apercu['details'][0]['suppressions']);
+
+        // Le revenu du courtier n'est PAS dans le plan : il doit figurer parmi les
+        // omissions montrées à l'utilisateur, jamais être présumé « automatique ».
+        $this->assertContains('Revenus', $result->uiAction['omissions'][0]['elements']);
     }
 
     /** Un plan sans étape reste chiffré et exécutable exactement comme avant. */
