@@ -1480,6 +1480,18 @@ trait ControllerUtilsTrait
             ];
         }
 
+        // Pistes (opportunités) : au premier chargement, on met en avant le travail commercial
+        // restant → les pistes « En cours » (aucune cotation encore transformée en police).
+        // Même logique que Cotation, un cran plus haut. Retirable (badge/dialogue) → « Toutes »,
+        // et se COMBINE avec le périmètre portefeuille ci-dessous.
+        if ($shortName === 'Piste') {
+            $criteria[\App\Services\Search\PisteTransformationScope::CRITERION_KEY] = [
+                'operator' => '=',
+                'value' => \App\Services\Search\PisteTransformationScope::STATUT_EN_COURS,
+                'label' => \App\Services\Search\PisteTransformationScope::libelle(\App\Services\Search\PisteTransformationScope::STATUT_EN_COURS),
+            ];
+        }
+
         // Périmètre portefeuille : critère produit par la fabrique partagée avec les outils
         // de l'assistant IA (source unique — cf. PortefeuilleCritereFactory), pour que la
         // rubrique et Ket ne puissent plus diverger.
