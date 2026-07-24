@@ -292,6 +292,21 @@ export default class extends Controller {
                 this.broadcast('app:loading.start');
                 this._requestListRefresh(this.getActiveTabId());
                 break;
+            case 'ket:workspace.data-changed': {
+                // Ket a écrit/édité/supprimé en base. On rafraîchit la liste
+                // affichée UNIQUEMENT si son entité figure parmi celles touchées —
+                // comparaison directe de short names (aucune conversion de casse).
+                // No-op sûr si aucune rubrique n'est ouverte : _requestListRefresh
+                // n'a pas d'URL à construire et sort proprement.
+                const entitesAffectees = Array.isArray(payload.entitesAffectees) ? payload.entitesAffectees : [];
+                const activeState = this._getActiveTabState();
+                const entiteActive = activeState && activeState.entiteNom;
+                if (entiteActive && entitesAffectees.includes(entiteActive)) {
+                    this._publishSelectionStatus('Actualisation de la liste...');
+                    this._requestListRefresh(this.getActiveTabId());
+                }
+                break;
+            }
             case 'app:api.delete-request':
                 this._publishSelectionStatus('Suppression en cours...');
                 this._handleApiDeleteRequest(payload);

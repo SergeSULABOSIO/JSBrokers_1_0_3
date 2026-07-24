@@ -377,6 +377,31 @@ class KetMutationTest extends TestCase
 
         $this->assertSame('delete', $step['op']);
         $this->assertSame('Client à supprimer', $step['cible']);
+        // Contrat consommé par le refresh ciblé de la liste (front) : chaque ligne
+        // de journal porte `entite` = short name de l'entité touchée.
+        $this->assertSame('Client', $step['entite']);
+    }
+
+    /**
+     * Refresh ciblé de la liste après écriture Ket : l'étape de journal d'une
+     * édition porte `entite` = short name exact (« Client »), la clé que le front
+     * compare à l'entité de la rubrique affichée (`entiteNom`) pour décider s'il
+     * rafraîchit. Édition « conteneur » sans champ scalaire → aucun formulaire.
+     */
+    public function testExecuterEditionJournaliseLeShortName(): void
+    {
+        $cible = (new Client())->setNom('Client à éditer');
+
+        $service = $this->makeMutationService(
+            $this->resolver(true),
+            $this->searchRetournant($cible),
+        );
+
+        $step = $service->executer(new MutationOperation('edit', 'Client', 5), $this->makeScope(), null);
+
+        $this->assertSame('edit', $step['op']);
+        $this->assertSame('Client', $step['entite']);
+        $this->assertSame('Client à éditer', $step['cible']);
     }
 
     // ───────────────────────── Budget : estimation ────────────────────────────
