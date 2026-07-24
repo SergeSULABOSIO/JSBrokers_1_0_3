@@ -21,6 +21,7 @@ use App\Repository\AssistantParametresRepository;
 use App\Repository\EntrepriseRepository;
 use App\Ai\Mutation\MutationPlan;
 use App\Ai\Mutation\MutationReferences;
+use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Scope\AiScope;
 use App\Service\Workspace\MutationException;
 use App\Service\Workspace\WorkspaceAccessResolver;
@@ -332,7 +333,12 @@ class AssistantIaController extends AbstractController
         // Un plan de mutation préparé par Ket (uiAction ket-mutation.review) est
         // STOCKÉ côté serveur (meta du message) : l'endpoint d'exécution le
         // rechargera et le re-validera intégralement — jamais de confiance au client.
-        $mutationPlan = $this->extraireMutationPlan($reply->actions ?? []);
+        // Un seul plan par réponse : si le moteur a appelé deux fois l'outil de
+        // préparation dans le MÊME tour (le verrou de conversation ne voit que les
+        // tours précédents), seule la première barre de décision est conservée —
+        // la seconde serait orpheline (aucun plan stocké derrière elle).
+        $actions = PlanEnAttente::limiterAUnSeulPlan($reply->actions ?? []);
+        $mutationPlan = $this->extraireMutationPlan($actions);
 
         $messageAssistant = (new AssistantMessage())
             ->setRole(AssistantMessage::ROLE_ASSISTANT)
@@ -342,7 +348,7 @@ class AssistantIaController extends AbstractController
                 'tool'         => $reply->toolUsed,
                 'refus'        => $reply->refused ?: null,
                 'erreur'       => $erreurMoteur ?: null,
-                'actions'      => $reply->actions ?: null,
+                'actions'      => $actions ?: null,
                 'mutationPlan' => $mutationPlan,
             ]));
         $conversation->addMessage($messageAssistant);
@@ -366,7 +372,7 @@ class AssistantIaController extends AbstractController
                 'refus'     => $reply->refused,
                 // Les actions renvoyées portent l'id du message : une action
                 // ket-mutation.review sait ainsi vers quel endpoint d'exécution pointer.
-                'actions'   => $this->actionsAvecMessage($reply->actions ?? [], (int) $messageAssistant->getId()),
+                'actions'   => $this->actionsAvecMessage($actions, (int) $messageAssistant->getId()),
                 'createdAt' => $messageAssistant->getCreatedAt()?->format(\DateTimeImmutable::ATOM),
             ],
             'conversationTitre' => $conversation->getTitre(),
@@ -382,7 +388,7 @@ class AssistantIaController extends AbstractController
     private function extraireMutationPlan(array $actions): ?array
     {
         foreach ($actions as $action) {
-            if (($action['type'] ?? null) === 'ket-mutation.review' && isset($action['plan'])) {
+            if (($action['type'] ?? null) === PlanEnAttente::ACTION_REVUE && isset($action['plan'])) {
                 return [
                     'plan'             => $action['plan'],
                     // `budget` porte aussi la ventilation par étape (budget.parEtape) :
@@ -409,7 +415,7 @@ class AssistantIaController extends AbstractController
     private function actionsAvecMessage(array $actions, int $idMessage): array
     {
         return array_map(static function (array $action) use ($idMessage) {
-            if (($action['type'] ?? null) === 'ket-mutation.review') {
+            if (($action['type'] ?? null) === PlanEnAttente::ACTION_REVUE) {
                 $action['idMessage'] = $idMessage;
             }
 
@@ -451,8 +457,11 @@ class AssistantIaController extends AbstractController
         if ($message === null || !is_array($stored) || !isset($stored['plan'])) {
             return $this->json(['message' => 'Plan introuvable ou expiré.'], Response::HTTP_NOT_FOUND);
         }
-        if (($meta['mutationPlanExecuted'] ?? false) === true) {
+        if (PlanEnAttente::estExecute($meta)) {
             return $this->json(['message' => 'Ce plan a déjà été exécuté.'], Response::HTTP_CONFLICT);
+        }
+        if (PlanEnAttente::estAnnule($meta)) {
+            return $this->json(['message' => 'Ce plan a été annulé.'], Response::HTTP_CONFLICT);
         }
 
         $plan = MutationPlan::fromArray((array) $stored['plan']);
@@ -478,7 +487,7 @@ class AssistantIaController extends AbstractController
             }
         }
 
-        $scope = new AiScope($entreprise, $invite);
+        $scope = new AiScope($entreprise, $invite, $conversation);
 
         // 2) SOLVABILITÉ (pré-vol strict) : seules les écritures sont facturées —
         // tête ET enfants de collection (source unique du chiffrage, identique au
@@ -618,10 +627,10 @@ class AssistantIaController extends AbstractController
             }
         }
         $meta = $message?->getMeta() ?? [];
-        if ($message === null || !isset($meta['mutationPlan'])) {
+        if ($message === null || !PlanEnAttente::porteUnPlan($meta)) {
             return $this->json(['message' => 'Plan introuvable.'], Response::HTTP_NOT_FOUND);
         }
-        if (($meta['mutationPlanExecuted'] ?? false) === true) {
+        if (PlanEnAttente::estExecute($meta)) {
             return $this->json(['message' => 'Ce plan a déjà été exécuté.'], Response::HTTP_CONFLICT);
         }
 

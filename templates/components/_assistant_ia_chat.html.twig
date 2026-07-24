@@ -332,7 +332,9 @@
             {% set estAssistant = message.role == 'assistant' %}
             {% set estRefus = estAssistant and (message.meta.refus ?? false) %}
             {# Décision d'un plan de mutation, MÉMORISÉE dans le fil : en attente
-               (barre reconstruite après F5), exécuté ou annulé (feedback permanent). #}
+               (barre reconstruite après F5), exécuté ou annulé (feedback permanent).
+               Règle canonique côté PHP : App\Ai\Mutation\PlanEnAttente (verrou
+               anti-empilement) — garder ces trois tests alignés dessus. #}
             {% set hasPlan = estAssistant and (message.meta.mutationPlan ?? null) is not null %}
             {% set planExecute = hasPlan and (message.meta.mutationPlanExecuted ?? false) %}
             {% set planAnnule = hasPlan and (message.meta.mutationPlanCancelled ?? false) %}

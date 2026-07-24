@@ -6,6 +6,7 @@ use App\Ai\Mutation\MutationAllowlist;
 use App\Ai\Mutation\MutationOperation;
 use App\Ai\Mutation\MutationPlan;
 use App\Ai\Mutation\MutationReferences;
+use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Scope\AiScope;
 use App\Service\Workspace\WorkspaceMutationService;
 use App\Token\TokenAccountService;
@@ -30,6 +31,7 @@ final class PreparerOperationsTool implements AiToolInterface
     public function __construct(
         private readonly WorkspaceMutationService $mutationService,
         private readonly TokenAccountService $tokenAccountService,
+        private readonly PlanEnAttente $planEnAttente,
     ) {
     }
 
@@ -147,6 +149,14 @@ final class PreparerOperationsTool implements AiToolInterface
                         'required' => ['op', 'entite'],
                     ],
                 ],
+                'remplacerPlanEnAttente' => [
+                    'type' => 'boolean',
+                    'description' => 'Ne mets true QUE si un plan attend déjà une décision ET que l\'utilisateur '
+                        . 'demande explicitement de le CHANGER (« non, plutôt… », « corrige le montant »). Le plan '
+                        . 'en attente est alors ANNULÉ et remplacé par celui-ci — il n\'y a jamais deux plans à '
+                        . 'valider. Sinon laisse false : tant qu\'un plan attend, la préparation est REFUSÉE et tu '
+                        . 'dois renvoyer l\'utilisateur vers la barre « Valider et exécuter / Annuler » déjà affichée.',
+                ],
             ],
             'required' => ['operations'],
         ];
@@ -167,6 +177,16 @@ final class PreparerOperationsTool implements AiToolInterface
         $operations = $args['operations'] ?? null;
         if (!is_array($operations) || $operations === []) {
             return AiToolResult::introuvable('opérations');
+        }
+
+        // VERROU (état de la conversation) : un plan attend déjà la décision de
+        // l'utilisateur. En préparer un second lui imposerait d'empiler les
+        // validations — exactement ce qu'on veut lui épargner. Deux issues, et
+        // deux seulement : il tranche sur la barre déjà affichée, ou il demande
+        // à CHANGER de plan (remplacerPlanEnAttente), auquel cas l'ancien est
+        // annulé ici même. Il n'y a donc jamais deux plans en attente.
+        if ($refus = $this->verrouPlanEnAttente($args, $scope)) {
+            return $refus;
         }
 
         $plan = MutationPlan::fromArray($operations);
@@ -294,7 +314,7 @@ final class PreparerOperationsTool implements AiToolInterface
                         . 'd\'acheter des tokens ou d\'abandonner. N\'exécute pas.'),
             ],
             uiAction: [
-                'type'             => 'ket-mutation.review',
+                'type'             => PlanEnAttente::ACTION_REVUE,
                 'plan'             => $plan->toArray(),
                 // `budget.parEtape` porte les étapes décochables (libellé, clé,
                 // caractère obligatoire, coût) : source unique du sélecteur d'étendue.
@@ -317,6 +337,44 @@ final class PreparerOperationsTool implements AiToolInterface
      *
      * @return array<string, array<int, array>>
      */
+    /**
+     * Le verrou anti-empilement. Renvoie le refus structuré si un plan attend une
+     * décision et que l'utilisateur n'a pas demandé à le remplacer ; null si la
+     * voie est libre (aucun plan en attente, ou remplacement demandé — l'ancien
+     * plan est alors annulé, comme s'il avait cliqué « Annuler »).
+     */
+    private function verrouPlanEnAttente(array $args, AiScope $scope): ?AiToolResult
+    {
+        $message = $this->planEnAttente->messageEnAttente($scope->conversation);
+        if ($message === null) {
+            return null;
+        }
+
+        $resume = $this->planEnAttente->resume(($message->getMeta() ?? [])['mutationPlan'] ?? []);
+
+        if (($args['remplacerPlanEnAttente'] ?? false) === true) {
+            $this->planEnAttente->annulerLePlanEnAttente($scope->conversation);
+
+            return null;
+        }
+
+        return AiToolResult::ok([
+            'pret'            => false,
+            'planEnAttente'   => true,
+            'resumePlanEnAttente' => $resume,
+            'note'            => sprintf(
+                'REFUSÉ : un plan que tu as déjà présenté (%s) attend la décision de l’utilisateur — sa barre '
+                . '« Valider et exécuter / Annuler » est encore affichée dans le fil. Ne prépare PAS un second '
+                . 'plan : ce serait lui imposer deux validations. Explique-lui en une phrase qu’un plan est en '
+                . 'attente et invite-le soit à le VALIDER, soit à l’ANNULER. S’il te dit qu’il veut CHANGER ce '
+                . 'plan (autre montant, autre étendue, autre étape), rappelle-moi avec '
+                . 'remplacerPlanEnAttente=true : j’annulerai l’ancien et présenterai le nouveau. '
+                . 'N’affiche AUCUN tableau de plan tant que celui-ci n’est pas tranché.',
+                $resume,
+            ),
+        ]);
+    }
+
     /**
      * Ventilation du budget PAR ÉTAPE : ce que coûte chacune des étapes que
      * l'utilisateur a acceptées. Aucun barème n'est recalculé ici — c'est le même

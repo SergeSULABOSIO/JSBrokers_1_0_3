@@ -3,6 +3,7 @@
 namespace App\Ai;
 
 use App\Ai\Guide\GuideRepository;
+use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Scope\AiScope;
 use App\Entity\AssistantConversation;
 use App\Entity\AssistantMessage;
@@ -69,7 +70,9 @@ class AiContextBuilder
                 'objetsAttaches' => $this->objetsAttaches($conversation, $entreprise, $invite),
             ],
             messages: $messages,
-            scope: new AiScope($entreprise, $invite),
+            // La conversation suit jusqu'aux outils : le verrou anti-empilement de
+            // plans a besoin de l'état du fil, pas seulement des droits.
+            scope: new AiScope($entreprise, $invite, $conversation),
         );
     }
 
@@ -204,6 +207,12 @@ class AiContextBuilder
           l'écriture est alors exécutée AUTOMATIQUEMENT et immédiatement, sans aucun formulaire à
           soumettre ; toute suppression demandera en plus le MOT DE PASSE ;
           (5) si le solde est INSUFFISANT, ne lance rien : propose d'acheter des tokens ou d'abandonner.
+          UN SEUL PLAN EN ATTENTE (verrou) : tant qu'un plan que tu as présenté n'a pas été tranché par
+          l'utilisateur (marqueur « [SYSTÈME — ce plan … ATTEND ENCORE la décision … ] »), l'outil REFUSE
+          d'en préparer un autre — il te renverra « planEnAttente ». Ne présente alors aucun tableau :
+          dis en une phrase qu'un plan attend sa décision et invite-le à VALIDER ou ANNULER sur la barre
+          déjà affichée. S'il demande de CHANGER ce plan, rappelle preparer_operations avec
+          remplacerPlanEnAttente=true : l'ancien sera annulé et remplacé — jamais deux plans à valider.
           APRÈS VALIDATION (règle impérative) : une fois qu'un plan a été exécuté (l'historique porte le
           marqueur « [SYSTÈME — ce plan … a été VALIDÉ et EXÉCUTÉ … ] »), il est DÉFINITIF. Si l'utilisateur
           demande alors « c'est fait ? / enregistré ? » ou te remercie, réponds simplement OUI d'après ce
@@ -340,14 +349,21 @@ class AiContextBuilder
      */
     private function marqueurEtatMutation(array $meta): string
     {
-        if (($meta['mutationPlanExecuted'] ?? false) === true) {
+        if (PlanEnAttente::estExecute($meta)) {
             return "\n\n[SYSTÈME — ce plan d'écriture a été VALIDÉ et EXÉCUTÉ avec succès : les données "
                 . "sont DÉJÀ enregistrées en base. Ne le re-prépare pas. Si l'utilisateur demande si c'est "
                 . 'fait/enregistré, réponds OUI d\'après ceci, sans relancer d\'outil d\'écriture.]';
         }
-        if (($meta['mutationPlanCancelled'] ?? false) === true) {
+        if (PlanEnAttente::estAnnule($meta)) {
             return "\n\n[SYSTÈME — ce plan d'écriture a été ANNULÉ par l'utilisateur : il n'a PAS été "
                 . 'exécuté, rien n\'a été enregistré.]';
+        }
+        if (PlanEnAttente::estEnAttente($meta)) {
+            return "\n\n[SYSTÈME — ce plan d'écriture ATTEND ENCORE la décision de l'utilisateur : la barre "
+                . '« Valider et exécuter / Annuler » est toujours affichée sous ce message. Tant qu\'il n\'a '
+                . 'pas tranché, tu ne peux PAS préparer un autre plan (l\'outil te le refusera) : renvoie-le '
+                . 'vers cette barre. S\'il veut MODIFIER ce plan, rappelle preparer_operations avec '
+                . 'remplacerPlanEnAttente=true — le plan en attente sera alors annulé et remplacé.]';
         }
 
         return '';

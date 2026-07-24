@@ -52,6 +52,9 @@ Présenter cet inventaire de façon rassurante et concrète, avec des exemples.
   information est simplement laissée de côté : vous la reprendrez plus tard.
 - **Enregistrer lui-même, en une seule validation.** Tout ce que vous avez accepté
   part dans UN SEUL plan, avec UN SEUL budget — jamais une validation par étape.
+  Tant qu'un plan attend votre décision, l'assistant ne peut pas en préparer un
+  autre : jamais deux barres de validation en concurrence. Si vous voulez changer
+  le plan, dites-le — il annule le précédent et vous en présente un nouveau.
   Vous voyez le plan numéroté, les impacts et le coût en tokens ventilé par étape,
   vous pouvez encore décocher une étape facultative, puis vous validez une fois.
   L'écriture est alors exécutée en bloc : soit tout réussit, soit rien n'est
