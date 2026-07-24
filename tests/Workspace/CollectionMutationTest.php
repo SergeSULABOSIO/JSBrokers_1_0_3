@@ -10,7 +10,9 @@ use App\Entity\Cotation;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Utilisateur;
+use App\Ai\Tool\LireFicheTool;
 use App\Ai\Tool\ModifierCompositionPrimeTool;
+use App\Entity\RevenuPourCourtier;
 use App\Service\Workspace\WorkspaceMutationService;
 use App\Token\TokenAccountService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -52,6 +54,7 @@ class CollectionMutationTest extends WebTestCase
         $conn = $this->em->getConnection();
         $conn->executeStatement('UPDATE utilisateur SET connected_to_id = NULL WHERE email = :e', ['e' => self::OWNER]);
         $conn->executeStatement('DELETE cpp FROM chargement_pour_prime cpp JOIN entreprise e ON cpp.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
+        $conn->executeStatement('DELETE rpc FROM revenu_pour_courtier rpc JOIN entreprise e ON rpc.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE co FROM cotation co JOIN entreprise e ON co.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE ch FROM chargement ch JOIN entreprise e ON ch.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE i FROM invite i JOIN entreprise e ON i.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
@@ -335,6 +338,29 @@ class CollectionMutationTest extends WebTestCase
         $chargements = $result->uiAction['plan'][0]['collections']['chargements'] ?? [];
         $this->assertCount(1, $chargements);
         $this->assertSame('edit', $chargements[0]['op'], 'Composante existante => édition (pas de doublon).');
+    }
+
+    public function testLireFicheCotationAvecRevenuNeCrashePas(): void
+    {
+        // Régression : un membre de collection SANS __toString (RevenuPourCourtier)
+        // faisait planter lire_fiche (« could not be converted to string ») → tout
+        // l'appel du moteur échouait. Le libellé doit être calculé sans cast (string).
+        [$ent, $inv, $owner] = $this->seedWorkspace();
+        $cot = $this->seedCotation($ent, $inv, 'Offre avec revenu');
+        $revenu = (new RevenuPourCourtier())->setNom('Commission de courtage');
+        $revenu->setEntreprise($ent)->setInvite($inv);
+        $cot->addRevenu($revenu);
+        $this->em->persist($revenu);
+        $this->em->flush();
+        $cotId = $cot->getId();
+        $this->client->loginUser($owner);
+
+        $lireFiche = static::getContainer()->get(LireFicheTool::class);
+        $result = $lireFiche->execute(['entite' => 'Cotation', 'id' => $cotId], new AiScope($ent, $inv));
+
+        $membres = $result->data['collectionsEditables']['revenus']['membres'] ?? [];
+        $this->assertCount(1, $membres, 'Le revenu est exposé comme membre éditable.');
+        $this->assertSame('Commission de courtage', $membres[0]['libelle'], 'Libellé sûr via getNom (pas de cast string).');
     }
 
     public function testCollectionInconnueRefusee(): void
