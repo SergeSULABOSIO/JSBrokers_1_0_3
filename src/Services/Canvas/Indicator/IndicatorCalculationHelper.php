@@ -656,7 +656,11 @@ class IndicatorCalculationHelper implements ResetInterface
         $montant = 0;
         foreach ($cotation->getRevenus() as $revenu) {
             if ($onlySharable) {
-                if ($revenu->getTypeRevenu()->isShared() == $onlySharable) {
+                // Garde null : un revenu SANS type (typeRevenu non renseigné) ne peut
+                // pas être « partageable » — on l'ignore plutôt que de crasher la vue
+                // (même prudence qu'aux lignes getRevenuMontantHtAddressedTo/getRevenuMontantHtShared).
+                $typeRevenu = $revenu->getTypeRevenu();
+                if ($typeRevenu && $typeRevenu->isShared() == $onlySharable) {
                     $montant += $this->getRevenuMontantHtAddressedTo($addressedTo, $revenu);
                 }
             } else {
