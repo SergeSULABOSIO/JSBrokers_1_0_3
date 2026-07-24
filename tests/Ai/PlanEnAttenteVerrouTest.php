@@ -254,4 +254,65 @@ class PlanEnAttenteVerrouTest extends WebTestCase
             $this->planEnAttente->messageEnAttente($conversation)?->getId(),
         );
     }
+
+    // ─────────────── Garde-fou anti-plan FANTÔME (prose sans action) ───────────────
+
+    /**
+     * Reproduit l'incident : le modèle décrit un plan / un budget / un « bouton de
+     * validation » dans sa PROSE sans avoir appelé l'outil. La prose doit être
+     * reconnue comme simulant une décision — c'est ce qui, combiné à l'absence de
+     * plan réel, déclenche l'avertissement autoritaire.
+     */
+    public function testProseSimuleUneDecisionReconnaitLesSurfacesFabriquees(): void
+    {
+        $cas = [
+            'Le bouton de validation est désormais actif dans votre interface.',
+            'Vous pourrez cliquer sur Valider et exécuter pour lancer l’opération.',
+            'Une boîte de confirmation va apparaître.',
+            "| Total estimé | 25 |\n| Solde disponible | 29 328 |\n| Reste après exécution | 29 303 |",
+        ];
+        foreach ($cas as $texte) {
+            $this->assertTrue(
+                PlanEnAttente::proseSimuleUneDecision($texte),
+                sprintf('Devrait être détecté comme simulant une décision : « %s »', mb_substr($texte, 0, 40)),
+            );
+        }
+    }
+
+    /** Les réponses légitimes (question, récap d'après-exécution) ne déclenchent pas le garde-fou. */
+    public function testProseNormaleNeSimulePasDeDecision(): void
+    {
+        $cas = [
+            'Pour ajouter un revenu, de quel type de commission s’agit-il ?',
+            'Oui, l’exécution a bien été réalisée : le revenu #189 a été supprimé.',
+            'Voici la liste des cotations actuellement disponibles dans votre portefeuille.',
+        ];
+        foreach ($cas as $texte) {
+            $this->assertFalse(
+                PlanEnAttente::proseSimuleUneDecision($texte),
+                sprintf('Ne devrait PAS être détecté : « %s »', mb_substr($texte, 0, 40)),
+            );
+        }
+    }
+
+    /** L'état « un plan attend-il ? » reflète le fil (source unique), sans EM. */
+    public function testAUnPlanEnAttenteRefleteLeFil(): void
+    {
+        $this->assertFalse(PlanEnAttente::aUnPlanEnAttente(null), 'Aucune conversation : rien en attente.');
+
+        $vide = (new AssistantConversation())->setTitre('Vide');
+        $this->assertFalse(PlanEnAttente::aUnPlanEnAttente($vide));
+
+        $execute = (new AssistantConversation())->setTitre('Exécuté');
+        $execute->addMessage((new AssistantMessage())
+            ->setRole(AssistantMessage::ROLE_ASSISTANT)->setContenu('Fait.')
+            ->setMeta(['mutationPlan' => ['plan' => []], 'mutationPlanExecuted' => true]));
+        $this->assertFalse(PlanEnAttente::aUnPlanEnAttente($execute), 'Un plan exécuté n’est plus en attente.');
+
+        $enAttente = (new AssistantConversation())->setTitre('En attente');
+        $enAttente->addMessage((new AssistantMessage())
+            ->setRole(AssistantMessage::ROLE_ASSISTANT)->setContenu('Voici le plan.')
+            ->setMeta(['mutationPlan' => ['plan' => []]]));
+        $this->assertTrue(PlanEnAttente::aUnPlanEnAttente($enAttente), 'Un plan présenté non tranché est en attente.');
+    }
 }

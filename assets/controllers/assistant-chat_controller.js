@@ -19,6 +19,9 @@ export default class extends Controller {
     /** Seuil d'affichage du compteur de caractères restants (proche de maxlength). */
     static COUNT_THRESHOLD = 400;
 
+    /** Message autoritaire affiché quand le modèle décrit un plan sans l'avoir préparé (aucun bouton ne viendra). */
+    static MUTATION_ABSENT_MESSAGE = "Aucun plan n'est réellement en attente de validation : l'opération n'a pas été préparée, donc aucun bouton « Valider et exécuter » n'apparaîtra. Redemandez l'action (par ex. « supprime le revenu de cette cotation ») pour que le plan et son bouton s'affichent.";
+
     /** Bornes du rythme de déploiement mot à mot (ms par mot). */
     static TYPE_DELAY_MAX = 45;
     static TYPE_DELAY_MIN = 12;
@@ -237,6 +240,9 @@ export default class extends Controller {
                     break;
                 case 'ket-mutation.review':
                     this.renderMutationReview(action);
+                    break;
+                case 'ket-mutation.absent':
+                    this.renderMutationAbsent();
                     break;
             }
         }
@@ -505,6 +511,17 @@ export default class extends Controller {
             this.messagesTarget.appendChild(replacement);
         }
         this.scrollToBottom();
+    }
+
+    /**
+     * Avertissement AUTORITAIRE (émis par le serveur) : le message décrit un plan
+     * ou un « bouton de validation », mais AUCUN plan n'a réellement été préparé
+     * (le modèle a présenté un plan sans appeler l'outil). On dit la vérité à
+     * l'utilisateur — pas de bouton fantôme, pas d'attente d'une décision qui ne
+     * viendra pas. Rendu identique au chargement (Twig) et en direct.
+     */
+    renderMutationAbsent() {
+        this.appendNotice('warning', this.constructor.MUTATION_ABSENT_MESSAGE);
     }
 
     /** Note de statut PERMANENTE d'un plan (validé / annulé) — même rendu que le serveur. */

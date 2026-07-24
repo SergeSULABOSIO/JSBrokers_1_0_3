@@ -22,6 +22,15 @@ final class PlanEnAttente
     /** Directive UI qui fait apparaître la barre de décision d'un plan. */
     public const ACTION_REVUE = 'ket-mutation.review';
 
+    /**
+     * Directive UI AUTORITAIRE : le message décrit un plan / un bouton de
+     * validation, mais AUCUN plan n'a réellement été préparé (le modèle a
+     * halluciné la surface de décision sans appeler l'outil). On le dit
+     * clairement à l'utilisateur — jamais de bouton fantôme, jamais d'attente
+     * d'une décision qui ne viendra pas.
+     */
+    public const ACTION_ABSENT = 'ket-mutation.absent';
+
     public function __construct(
         private readonly EntityManagerInterface $em,
     ) {
@@ -100,6 +109,66 @@ final class PlanEnAttente
         }
 
         return $enAttente;
+    }
+
+    /**
+     * La conversation porte-t-elle déjà un plan en attente de décision ? Variante
+     * STATIQUE (sans EM), n'a besoin que de l'état du fil : utilisée par le
+     * garde-fou anti-plan fantôme.
+     */
+    public static function aUnPlanEnAttente(?AssistantConversation $conversation): bool
+    {
+        if ($conversation === null) {
+            return false;
+        }
+
+        foreach ($conversation->getMessages() as $message) {
+            if ($message->getRole() === AssistantMessage::ROLE_ASSISTANT
+                && self::estEnAttente($message->getMeta() ?? [])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * La prose PRÉSENTE-t-elle une décision à prendre — un tableau de budget, un
+     * « bouton de validation », une « boîte de confirmation » — comme si un plan
+     * était prêt à valider ? Combinée à l'ABSENCE de tout plan réellement émis ce
+     * tour-ci ET en attente dans le fil, elle révèle un plan FANTÔME : le modèle
+     * a décrit un plan (voire affirmé que le bouton est « actif ») sans appeler
+     * preparer_operations — aucune barre de décision ne s'affichera jamais.
+     *
+     * Volontairement CONSERVATEUR (marqueurs à haute précision) : c'est le double
+     * verrou « aucun plan émis + aucun plan en attente » qui garantit qu'on ne se
+     * déclenche que sur une vraie divergence, pas sur un plan légitime (celui-là
+     * porte une action réelle) ni sur un récapitulatif d'après-exécution.
+     */
+    public static function proseSimuleUneDecision(string $contenu): bool
+    {
+        $texte = mb_strtolower($contenu);
+
+        // Revendication explicite de la surface de décision (ce que le modèle
+        // fabrique : « le bouton de validation est actif », « la boîte de
+        // confirmation va apparaître », « cliquez sur Valider »…).
+        foreach ([
+            'bouton de validation',
+            'boîte de confirmation',
+            'boite de confirmation',
+            'valider et exécuter',
+            'valider et executer',
+            'cliquez sur valider',
+            'cliquer sur valider',
+        ] as $marqueur) {
+            if (str_contains($texte, $marqueur)) {
+                return true;
+            }
+        }
+
+        // Tableau de BUDGET rendu en prose : « Total estimé » avec le solde.
+        return str_contains($texte, 'total estimé')
+            && (str_contains($texte, 'solde disponible') || str_contains($texte, 'reste après'));
     }
 
     /**

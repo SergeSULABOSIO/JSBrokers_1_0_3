@@ -213,11 +213,23 @@ final class LireFicheTool implements AiToolInterface
             if (!is_numeric($fiche[$champ] ?? null)) {
                 continue;
             }
+            $fraction = (float) $fiche[$champ];
+            $pourcent = rtrim(rtrim(number_format($fraction * 100, 3, '.', ''), '0'), '.');
+            // Message VERROUILLÉ contre les deux erreurs opposées : lire la fraction
+            // comme un pourcentage (1 → « 1 % »), et « corriger » une valeur déjà
+            // juste (réécrire 1 → stocke 0.01). Le nombre brut EST une fraction ;
+            // il vaut déjà (brut × 100) %.
             $unites[$champ] = sprintf(
-                'valeur stockée %s = %s %% — pour l\'écrire, fournis %s (le pourcentage), jamais %s.',
+                'le nombre stocké %s est une FRACTION : il vaut %s %% (= %s × 100). Ce n\'est PAS %s %%. '
+                . 'Pour l\'AFFICHER, dis « %s %% ». Cette valeur est DÉJÀ correcte : ne la « corrige » '
+                . 'pas. Ne la modifie QUE si l\'utilisateur donne un NOUVEAU pourcentage — et fournis alors '
+                . 'ce pourcentage (ex. %s), jamais la fraction %s.',
                 $fiche[$champ],
-                rtrim(rtrim(number_format((float) $fiche[$champ] * 100, 3, '.', ''), '0'), '.'),
-                rtrim(rtrim(number_format((float) $fiche[$champ] * 100, 3, '.', ''), '0'), '.'),
+                $pourcent,
+                $fiche[$champ],
+                $fiche[$champ],
+                $pourcent,
+                $pourcent,
                 $fiche[$champ],
             );
         }

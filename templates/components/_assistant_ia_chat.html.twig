@@ -405,6 +405,12 @@
                     <span>Plan annulé — aucune donnée n’a été modifiée.</span>
                 </p>
             {% endif %}
+            {# Plan FANTÔME : le message décrit un plan/bouton que le modèle n'a pas
+               réellement préparé (aucune action émise). Avertissement autoritaire
+               réaffiché après un rechargement, en miroir du live (executeActions). #}
+            {% if estAssistant and (message.meta.mutationAbsent ?? false) %}
+                <p class="aic-notice aic-notice--warning" role="status">Aucun plan n'est réellement en attente de validation : l'opération n'a pas été préparée, donc aucun bouton « Valider et exécuter » n'apparaîtra. Redemandez l'action pour que le plan et son bouton s'affichent.</p>
+            {% endif %}
         {% endfor %}
     </div>
 
