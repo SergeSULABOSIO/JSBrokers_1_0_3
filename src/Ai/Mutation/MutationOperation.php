@@ -101,34 +101,66 @@ final class MutationOperation
     }
 
     /**
-     * Décode récursivement la structure `collections` : nom de collection => liste
-     * d'ops enfant. Ignore silencieusement les entrées malformées (fail-closed :
-     * ce qui n'est pas une op valide n'est pas exécuté).
+     * Décode récursivement la structure `collections` en map « nom de collection
+     * => ops enfant ». Accepte DEUX formes (fail-closed : ce qui n'est pas une op
+     * valide est ignoré) :
+     *  - ARRAY (dialecte modèle, Gemini-safe) : [{collection|nom, elements|operations:[…]}] ;
+     *  - MAP (aller-retour interne toArray) : {nom: [ops]}.
      *
      * @return array<string, MutationOperation[]>
      */
     private static function collectionsFromArray(mixed $raw): array
     {
-        if (!is_array($raw)) {
+        if (!is_array($raw) || $raw === []) {
             return [];
         }
         $collections = [];
-        foreach ($raw as $nom => $enfants) {
-            if (!is_string($nom) || !is_array($enfants)) {
-                continue;
-            }
-            $ops = [];
-            foreach ($enfants as $enfant) {
-                if (is_array($enfant)) {
-                    $ops[] = self::fromArray($enfant);
+
+        // Forme ARRAY : chaque entrée nomme sa collection et liste ses éléments.
+        if (array_is_list($raw)) {
+            foreach ($raw as $entree) {
+                if (!is_array($entree)) {
+                    continue;
+                }
+                $nom = (string) ($entree['collection'] ?? $entree['nom'] ?? '');
+                $elements = $entree['elements'] ?? $entree['operations'] ?? $entree['ops'] ?? [];
+                if ($nom === '' || !is_array($elements)) {
+                    continue;
+                }
+                $ops = self::opsEnfant($elements);
+                if ($ops !== []) {
+                    $collections[$nom] = array_merge($collections[$nom] ?? [], $ops);
                 }
             }
+
+            return $collections;
+        }
+
+        // Forme MAP : { nom: [ops] }.
+        foreach ($raw as $nom => $elements) {
+            if (!is_string($nom) || !is_array($elements)) {
+                continue;
+            }
+            $ops = self::opsEnfant($elements);
             if ($ops !== []) {
                 $collections[$nom] = $ops;
             }
         }
 
         return $collections;
+    }
+
+    /** @return MutationOperation[] */
+    private static function opsEnfant(array $elements): array
+    {
+        $ops = [];
+        foreach ($elements as $element) {
+            if (is_array($element)) {
+                $ops[] = self::fromArray($element);
+            }
+        }
+
+        return $ops;
     }
 
     /** Sérialisation pour stockage (meta du message) et re-validation d'exécution. */
