@@ -76,17 +76,12 @@ class ServiceTaxes
         $gross = 0;
         if ($taxeAssureur == true) {
             foreach ($this->getTaxesPayableParAssureur($entreprise) as $taxeAss) {
-                $gross += match ($tauxIARD) {
-                    true => $montantNet * ($taxeAss->getTauxIARD() / 100),
-                    false => $montantNet * ($taxeAss->getTauxVIE() / 100),
-                };
+                // Conversion pourcentage→montant centralisée dans le VO (fini le ÷100).
+                $gross += $taxeAss->tauxPourcentage($tauxIARD)->appliquerA((float) $montantNet);
             }
         } else {
             foreach ($this->getTaxesPayableParCourtier($entreprise) as $taxeCou) {
-                $gross += match ($tauxIARD) {
-                    true => $montantNet * ($taxeCou->getTauxIARD() / 100),
-                    false => $montantNet * ($taxeCou->getTauxVIE() / 100),
-                };
+                $gross += $taxeCou->tauxPourcentage($tauxIARD)->appliquerA((float) $montantNet);
             }
         }
 

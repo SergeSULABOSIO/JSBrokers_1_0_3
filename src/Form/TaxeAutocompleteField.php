@@ -26,9 +26,9 @@ class TaxeAutocompleteField extends AbstractType
             'as_html' => true,
             'choice_label' => function(Taxe $taxe) {
                 // Extraction des taux
-                // Taux en POURCENTAGE ENTIER (stocké tel quel) → pas de ×100 (sinon 1600%).
-                $iard = $taxe->getTauxIARD() !== null ? ((float)$taxe->getTauxIARD()) . '%' : '-';
-                $vie = $taxe->getTauxVIE() !== null ? ((float)$taxe->getTauxVIE()) . '%' : '-';
+                // Affichage via le VO Pourcentage (convention portée par l'entité Taxe).
+                $iard = $taxe->getTauxIARD() !== null ? $taxe->tauxPourcentage(true)->format(2) : '-';
+                $vie = $taxe->getTauxVIE() !== null ? $taxe->tauxPourcentage(false)->format(2) : '-';
                 
                 $affichage = $taxe->getCode() ?? 'Taxe';
                 // On tronque la description si elle est trop longue pour ne pas casser l'interface
