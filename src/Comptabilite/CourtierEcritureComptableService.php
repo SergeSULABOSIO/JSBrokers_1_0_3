@@ -162,7 +162,9 @@ class CourtierEcritureComptableService
                 // COURTIER est redevable, due sur la part HT encaissée — alimente le
                 // « Dû » du suivi fiscal (CourtierSuiviFiscalService). Non facturée
                 // dans la note, elle n'entre en comptabilité qu'au reversement (641).
-                'taxeCourtierDue' => round($this->serviceTaxes->getMontantTaxe($htPart, $this->isIARD($note), false), 2),
+                // Entreprise explicite : ce service tourne aussi hors requête HTTP
+                // (suivi fiscal), où l'utilisateur connecté n'est pas disponible.
+                'taxeCourtierDue' => round($this->serviceTaxes->getMontantTaxe($htPart, $this->isIARD($note), false, $note->getEntreprise()), 2),
             ];
         }
 
