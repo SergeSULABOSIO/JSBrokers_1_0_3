@@ -70,7 +70,13 @@ l'obligation de s'appuyer sur ce journal, pas sur un raisonnement.
 - **Composition de la prime** : chaque composante porte un nom, un montant et un
   TYPE de chargement. Sans le type, la commission ne peut pas se calculer.
 - **Revenu du courtier** : le type de revenu est obligatoire — c'est lui qui porte
-  le taux et la base de calcul.
+  le taux et la base de calcul. L'assistant dispose, pour chaque type, de son taux,
+  de son mode de calcul, de son chargement de base et de son redevable en clair :
+  il peut donc choisir « selon le taux relatif au risque » sans vous le redemander.
+- **Taux en pourcentage** : un taux se saisit en pourcentage (15 pour 15 %) mais se
+  stocke en fraction (0,15). L'assistant fournit la valeur telle que vous la dites ;
+  il ne recopie jamais la fraction qu'il lit dans une fiche — cela diviserait le
+  taux par cent.
 - **Portefeuille** : un client sans portefeuille n'apparaît pas dans la vue « Mon
   portefeuille ». L'assistant l'y range automatiquement si vous n'en gérez qu'un,
   sinon il vous demande lequel.

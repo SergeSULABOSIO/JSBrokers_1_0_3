@@ -730,6 +730,7 @@ class WorkspaceMutationService
         }
 
         $labels = $this->champsInspector->libellesFormulaire($shortName, $fqcn);
+        $pourcentages = $this->champsInspector->champsPourcentage($shortName, $fqcn);
         $entity = $cible ?? new $fqcn();
         $obligatoires = [];
         $facultatifs = [];
@@ -762,7 +763,7 @@ class WorkspaceMutationService
             if (!in_array((string) $meta->getTypeOfField($field), self::TYPES_SCALAIRES, true)) {
                 continue;
             }
-            $item = $this->itemChamp($field, $labels, $meta, $cible, $mode);
+            $item = $this->itemChamp($field, $labels, $meta, $cible, $mode, $pourcentages);
             if ($mode === 'creation' && $this->champsInspector->scalaireRequis($meta, $entity, $field)) {
                 $obligatoires[] = $item;
             } else {
@@ -776,7 +777,7 @@ class WorkspaceMutationService
                 || in_array($field, ChampsObligatoiresInspector::CHAMPS_SYSTEME, true) || in_array($field, $autoChamps, true)) {
                 continue;
             }
-            $item = $this->itemChamp($field, $labels, $meta, $cible, $mode);
+            $item = $this->itemChamp($field, $labels, $meta, $cible, $mode, $pourcentages);
             $requis = $mode === 'creation'
                 && ($this->champsInspector->relationRequise($field, $mapping) || ($field === 'portefeuille' && $portefeuilleObligatoire));
             if ($requis) {
@@ -789,12 +790,24 @@ class WorkspaceMutationService
         return ['entite' => $shortName, 'libelle' => $libelle, 'mode' => $mode, 'obligatoires' => $obligatoires, 'facultatifs' => $facultatifs, 'auto' => $auto];
     }
 
-    /** Construit une entrée d'inventaire (avec valeur actuelle en édition). */
-    private function itemChamp(string $field, array $labels, ClassMetadata $meta, ?object $cible, string $mode): array
+    /**
+     * Construit une entrée d'inventaire (avec valeur actuelle en édition).
+     *
+     * @param string[] $pourcentages champs saisis en % mais stockés en fraction
+     */
+    private function itemChamp(string $field, array $labels, ClassMetadata $meta, ?object $cible, string $mode, array $pourcentages = []): array
     {
         $item = ['champ' => $field, 'libelle' => $labels[$field] ?? $this->champsInspector->humaniser($field)];
         if ($mode === 'edition') {
             $item['valeurActuelle'] = $this->valeurLisible($cible, $meta, $field);
+        }
+        // Piège d'unité : l'écran (et donc l'écriture) attend un POURCENTAGE, la
+        // base stocke une FRACTION. Sans cette mention, recopier la valeur lue
+        // divise le taux par 100 en silence.
+        if (in_array($field, $pourcentages, true)) {
+            $item['unite'] = 'pourcentage';
+            $item['aide'] = 'À FOURNIR en pourcentage (ex. 15 pour 15 %). Attention : la valeur '
+                . 'LUE dans une fiche est une fraction (0.15) — ne la recopie jamais telle quelle.';
         }
 
         return $item;

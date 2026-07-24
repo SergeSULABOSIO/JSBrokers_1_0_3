@@ -5,6 +5,7 @@ namespace App\Ai\Tool;
 use App\Ai\AiText;
 use App\Ai\FicheNormaliseur;
 use App\Ai\Scope\AiScope;
+use App\Service\Workspace\ChampsObligatoiresInspector;
 use App\Service\Workspace\FormTreeInspector;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
@@ -35,6 +36,7 @@ final class LireFicheTool implements AiToolInterface
         private readonly FicheNormaliseur $ficheNormaliseur,
         private readonly FormTreeInspector $formTreeInspector,
         private readonly TokenAccountService $tokenAccountService,
+        private readonly ChampsObligatoiresInspector $champsInspector,
     ) {
     }
 
@@ -45,11 +47,13 @@ final class LireFicheTool implements AiToolInterface
 
     public function description(): string
     {
-        return "Lit la fiche complète (tous les attributs enregistrés) d'un enregistrement précis : "
-            . 'adresse, contacts, statut, dates, références… Cible par id (fourni par '
-            . 'rechercher_entites) ou par nom. À appeler quand l’utilisateur demande le détail ou '
-            . 'un attribut d’une fiche précise. Pour un chiffre CALCULÉ (prime, commission…), '
-            . 'utiliser indicateur_calcule.';
+        return "Lit la fiche complète d'un enregistrement précis : ses attributs enregistrés ET ses "
+            . 'attributs dérivés lisibles (libellés des champs codés — « Redevable : Assureur » plutôt '
+            . 'que « 1 » —, mode de calcul, taux en clair…), plus le bloc « unites » quand un champ se '
+            . 'saisit en pourcentage mais se stocke en fraction. Cible par id (fourni par '
+            . 'rechercher_entites) ou par nom. À appeler quand l’utilisateur demande le détail ou un '
+            . 'attribut d’une fiche précise, OU avant d’écrire pour comprendre un champ codé. Pour un '
+            . 'total CALCULÉ (prime, commission agrégée…), utiliser indicateur_calcule.';
     }
 
     public function schema(): array
@@ -162,8 +166,21 @@ final class LireFicheTool implements AiToolInterface
             'libelle' => $labels[$shortName],
             'id'      => $entity->getId(),
             'nom'     => $this->libelleur->libelle($entity, $displayField),
-            'fiche'   => $this->ficheNormaliseur->fiche($entity),
+            // Lecture CIBLÉE d'un seul enregistrement : on y joint les attributs
+            // CALCULÉS de l'entité. C'est le seul endroit où Ket peut comprendre
+            // un champ codé (« redevable: 1 » => « Redevable : Assureur ») ou un
+            // taux (« 0.15 » => « 15 % »). Sans cela, elle lit sans comprendre —
+            // et une entité incomprise est une étape qu'elle finit par ignorer.
+            'fiche'   => $this->ficheNormaliseur->ficheEnrichie($entity),
         ];
+
+        // Unités trompeuses : un taux stocké en FRACTION (0.15) s'écrit en
+        // POURCENTAGE (15). Le dire explicitement au moment de la LECTURE, c'est
+        // empêcher la recopie à l'identique — qui diviserait le taux par 100.
+        $unites = $this->unitesPourcentage($shortName, $data['fiche']);
+        if ($unites !== []) {
+            $data['unites'] = $unites;
+        }
 
         // Membres des collections ÉDITABLES (mêmes que la surface d'écriture de Ket) :
         // exposés avec leur id pour cibler edit/delete. Facturés en LECTURE.
@@ -173,6 +190,39 @@ final class LireFicheTool implements AiToolInterface
         }
 
         return AiToolResult::ok($data);
+    }
+
+    /**
+     * Pour les champs de la fiche saisis en POURCENTAGE mais stockés en FRACTION,
+     * restitue la valeur telle qu'elle devrait être ÉCRITE. Le modèle voit ainsi
+     * les deux formes côte à côte au lieu d'avoir à deviner l'unité.
+     *
+     * @param array<string, mixed> $fiche
+     *
+     * @return array<string, string>
+     */
+    private function unitesPourcentage(string $shortName, array $fiche): array
+    {
+        $fqcn = 'App\\Entity\\' . $shortName;
+        if (!class_exists($fqcn)) {
+            return [];
+        }
+
+        $unites = [];
+        foreach ($this->champsInspector->champsPourcentage($shortName, $fqcn) as $champ) {
+            if (!is_numeric($fiche[$champ] ?? null)) {
+                continue;
+            }
+            $unites[$champ] = sprintf(
+                'valeur stockée %s = %s %% — pour l\'écrire, fournis %s (le pourcentage), jamais %s.',
+                $fiche[$champ],
+                rtrim(rtrim(number_format((float) $fiche[$champ] * 100, 3, '.', ''), '0'), '.'),
+                rtrim(rtrim(number_format((float) $fiche[$champ] * 100, 3, '.', ''), '0'), '.'),
+                $fiche[$champ],
+            );
+        }
+
+        return $unites;
     }
 
     /**

@@ -207,6 +207,12 @@ class AiContextBuilder
           l'écriture est alors exécutée AUTOMATIQUEMENT et immédiatement, sans aucun formulaire à
           soumettre ; toute suppression demandera en plus le MOT DE PASSE ;
           (5) si le solde est INSUFFISANT, ne lance rien : propose d'acheter des tokens ou d'abandonner.
+          UNITÉS (règle IMPÉRATIVE — un taux mal recopié fausse la commission d'un facteur 100) : certains
+          champs se SAISISSENT en pourcentage (ex. « 15 » pour 15 %) mais se STOCKENT en fraction (0,15).
+          La valeur que tu LIS dans une fiche est donc la fraction, pas ce que tu dois écrire. Quand un
+          outil signale « unite: pourcentage » (inventaire_champs) ou un bloc « unites » (lire_fiche),
+          fournis le POURCENTAGE dicté par l'utilisateur (15), jamais la fraction lue (0,15). Ne recopie
+          jamais aveuglément une valeur lue dans un champ d'écriture sans vérifier son unité.
           NE DIS QUE CE QUE LE PLAN FAIT (règle IMPÉRATIVE, la plus importante de toutes) : ta prose doit
           décrire EXACTEMENT les opérations renvoyées par l'outil — ni plus, ni moins. L'interface affiche
           à l'utilisateur, sous ta réponse, la liste RÉELLE de ce que le plan écrira et la liste de ce

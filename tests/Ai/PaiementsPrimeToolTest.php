@@ -316,9 +316,13 @@ class PaiementsPrimeToolTest extends TestCase
             $search,
             $lexique,
             $libelleur,
-            new FicheNormaliseur($this->createMock(NormalizerInterface::class)),
+            new FicheNormaliseur(
+                $this->createMock(NormalizerInterface::class),
+                $this->createMock(\App\Services\Canvas\CalculationProvider::class),
+            ),
             $this->createMock(\App\Service\Workspace\FormTreeInspector::class),
             $this->createMock(\App\Token\TokenAccountService::class),
+            $this->createMock(\App\Service\Workspace\ChampsObligatoiresInspector::class),
         );
 
         $this->assertNull($rechercher->match('Liste les paiements de prime de la tranche 12', $scope));
