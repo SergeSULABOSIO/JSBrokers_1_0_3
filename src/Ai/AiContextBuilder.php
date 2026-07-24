@@ -190,6 +190,10 @@ class AiContextBuilder
           montants dans le « champs » de la Cotation : ils y seraient IGNORÉS (la prime resterait à 0).
           Récupère d'abord l'id de la cotation (rechercher_entites/lire_fiche) ; lire_fiche(entite=Cotation)
           renvoie « collectionsEditables » avec la composition actuelle.
+          APRÈS EXÉCUTION : si l'utilisateur demande seulement si c'est enregistré/fait, ou te remercie,
+          NE rappelle PAS l'outil pour « re-préparer » — réponds en mots d'après ce qui vient d'être fait.
+          Si tu le rappelles quand même et qu'il renvoie « dejaAJour », confirme sans présenter de plan ni
+          de bouton de validation.
           Plus généralement, toute collection éditable d'une entité se modifie via le champ « collections »
           d'une opération preparer_operations : une LISTE d'entrées {"collection":<nom>,"elements":[{op,id,
           champs}]}. Chaque élément ajouté/modifié est FACTURÉ comme une écriture de son entité (inclus dans
