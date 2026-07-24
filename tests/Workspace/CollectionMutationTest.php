@@ -10,6 +10,7 @@ use App\Entity\Cotation;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Utilisateur;
+use App\Ai\Tool\ModifierCompositionPrimeTool;
 use App\Service\Workspace\WorkspaceMutationService;
 use App\Token\TokenAccountService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -251,6 +252,38 @@ class CollectionMutationTest extends WebTestCase
             $avant - $apres,
             'Les tokens réellement consommés == le budget annoncé (tête + toutes imbrications).',
         );
+    }
+
+    public function testOutilDedieCompositionPrimePrepareUnPlanFacture(): void
+    {
+        // L'outil typé modifier_composition_prime traduit {nom, montant} en une
+        // édition de Cotation + créations sur « chargements », délègue au moteur
+        // unique et renvoie un plan validable au budget NON nul (une écriture par
+        // composante). Prouve la voie fiable pour un modèle faible en JSON imbriqué.
+        [$ent, $inv, $owner] = $this->seedWorkspace();
+        $cot = $this->seedCotation($ent, $inv, 'Offre Flotte RC Auto - SFA');
+        $this->em->flush();
+        $cotId = $cot->getId();
+        $this->client->loginUser($owner);
+
+        $tool = static::getContainer()->get(ModifierCompositionPrimeTool::class);
+        $result = $tool->execute([
+            'cotationId'  => $cotId,
+            'composantes' => [
+                ['nom' => 'Prime nette', 'montant' => 9000],
+                ['nom' => 'Frais accessoires', 'montant' => 500],
+                ['nom' => 'TVA', 'montant' => 1600],
+                ['nom' => 'Frais ARCA', 'montant' => 200],
+            ],
+        ], new AiScope($ent, $inv));
+
+        $this->assertTrue($result->data['pret'] ?? false, 'Le plan doit être prêt.');
+        $this->assertGreaterThan(0, $result->data['budget']['coutEstime'], 'Le budget doit inclure les 4 composantes créées (jamais 0).');
+        $this->assertSame('ket-mutation.review', $result->uiAction['type']);
+
+        $chargements = $result->uiAction['plan'][0]['collections']['chargements'] ?? [];
+        $this->assertCount(4, $chargements, 'Les 4 composantes sont des sous-opérations sur « chargements ».');
+        $this->assertSame('create', $chargements[0]['op']);
     }
 
     public function testCollectionInconnueRefusee(): void

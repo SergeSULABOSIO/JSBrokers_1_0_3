@@ -180,23 +180,20 @@ class AiContextBuilder
           renseigne le champ « portefeuille » (id). Indique TOUJOURS dans le plan le portefeuille de
           destination (champ « portefeuille » renvoyé par l'outil) et n'affirme jamais un rattachement
           que tu n'as pas obtenu de l'outil.
-          COLLECTIONS IMBRIQUÉES (édition du formulaire COMME l'utilisateur à l'écran) : la COMPOSITION
-          DE LA PRIME d'une Cotation (prime nette, frais accessoires, taxes/TVA, frais ARCA…) N'EST PAS
-          faite de champs de la Cotation : ce sont les éléments de sa collection « chargements ». Pour la
-          modifier, l'opération sur la Cotation (op=edit, id de la cotation) porte un champ « collections »
-          qui est une LISTE d'entrées {"collection":"chargements","elements":[…]} ; chaque élément a op
-          (create/edit/delete), id (pour edit/delete) et champs. Ex. pour poser 9000 de prime nette et 200
-          de frais ARCA : collections=[{"collection":"chargements","elements":[
-          {"op":"create","champs":{"nom":"Prime nette","montantFlatExceptionel":9000,"type":<idChargement>}},
-          {"op":"create","champs":{"nom":"Frais ARCA","montantFlatExceptionel":200,"type":<idChargement>}}]}].
-          IMPÉRATIF : ne mets JAMAIS « primeNette », « tva », « montantFlatExceptionel »… dans le « champs »
-          de la Cotation elle-même — ils y seraient silencieusement IGNORÉS (aucun effet, la prime resterait
-          à 0). Passe TOUJOURS par collections=chargements. Le « type » de chaque ligne = l'id d'un
-          Chargement : commence par LIRE la composition actuelle avec lire_fiche (entite=Cotation) — il
-          renvoie « collectionsEditables » avec l'id de chaque chargement existant — et RÉSOUS les « type »
-          par leur nom via rechercher_entites (entite=Chargement) ; ne DEVINE jamais un id. Chaque élément
-          ajouté/modifié est FACTURÉ comme une écriture de son entité (inclus dans le budget) ; chaque
-          lecture de ces éléments est facturée comme une lecture.
+          COMPOSITION DE LA PRIME d'une cotation (prime nette, frais accessoires, taxes/TVA, frais ARCA…) :
+          ces montants NE SONT PAS des champs de la Cotation — ce sont les éléments de sa collection
+          « chargements ». Pour les enregistrer/corriger, utilise l'OUTIL DÉDIÉ « modifier_composition_prime »
+          (cotationId + composantes:[{nom, montant, type?}]) : c'est la voie fiable. Ex. composantes=[
+          {"nom":"Prime nette","montant":9000},{"nom":"Frais accessoires","montant":500},
+          {"nom":"TVA","montant":1600},{"nom":"Frais ARCA","montant":200}]. Il prépare un plan + budget à
+          valider (comme preparer_operations) ; après validation, TU enregistres. Ne mets JAMAIS ces
+          montants dans le « champs » de la Cotation : ils y seraient IGNORÉS (la prime resterait à 0).
+          Récupère d'abord l'id de la cotation (rechercher_entites/lire_fiche) ; lire_fiche(entite=Cotation)
+          renvoie « collectionsEditables » avec la composition actuelle.
+          Plus généralement, toute collection éditable d'une entité se modifie via le champ « collections »
+          d'une opération preparer_operations : une LISTE d'entrées {"collection":<nom>,"elements":[{op,id,
+          champs}]}. Chaque élément ajouté/modifié est FACTURÉ comme une écriture de son entité (inclus dans
+          le budget) ; chaque lecture de ces éléments est facturée comme une lecture.
           Tu ne touches JAMAIS aux paramètres, rôles ou réglages de l'espace de travail (hors périmètre).
         - Enchaîne plusieurs appels d'outils si nécessaire pour répondre complètement, sans demander
           la permission (ex. lister des clients puis lire un indicateur pour chacun).
