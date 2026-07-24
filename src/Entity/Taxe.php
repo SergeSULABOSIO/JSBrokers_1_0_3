@@ -110,6 +110,16 @@ class Taxe
         return $this;
     }
 
+    /**
+     * Taux de la taxe en tant que Pourcentage (source unique de la convention :
+     * le taux est stocké en POURCENTAGE ENTIER — 16 = 16 %). Calcul et affichage
+     * doivent passer par ce VO, jamais par ×100 / ÷100 à la main.
+     */
+    public function tauxPourcentage(bool $isIARD): \App\Util\Pourcentage
+    {
+        return \App\Util\Pourcentage::fromPourcent($isIARD ? $this->tauxIARD : $this->tauxVIE);
+    }
+
     public function getRedevable(): ?int
     {
         return $this->redevable;

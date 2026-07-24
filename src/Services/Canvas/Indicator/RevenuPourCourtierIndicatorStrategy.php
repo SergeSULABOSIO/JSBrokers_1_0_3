@@ -5,6 +5,7 @@ namespace App\Services\Canvas\Indicator;
 use App\Entity\RevenuPourCourtier;
 use App\Entity\Note;
 use App\Entity\Taxe;
+use App\Util\Pourcentage;
 use App\Repository\TaxeRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -55,20 +56,19 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
             'retroCommissionReversee' => round($this->getRevenuRetroCommissionReversee($entity), 2),
             'retroCommissionSolde' => round($this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1, []) - $this->getRevenuRetroCommissionReversee($entity), 2),
             'taxeCourtierMontant' => round($this->calculationHelper->getRevenuMontantTaxeCourtier($entity), 2),
-            // Le taux de taxe est stocké en POURCENTAGE ENTIER (2 = 2%, 16 = 16%) —
-            // getMontantTaxe le divise d'ailleurs par 100. On l'affiche donc TEL QUEL,
-            // sans ×100 (qui donnait 200% / 1600%). Ne pas confondre avec les taux
-            // stockés en fraction (part partenaire, % du risque) qui, eux, ×100.
-            'taxeCourtierTaux' => round($this->getTaxeTaux($entity, Taxe::REDEVABLE_COURTIER), 2),
+            // Taux via le VO Pourcentage (source unique de la convention) : pourcent()
+            // rend le nombre à afficher (16.0), quelle que soit la convention de stockage.
+            'taxeCourtierTaux' => round($this->getTaxeTaux($entity, Taxe::REDEVABLE_COURTIER)->pourcent(), 2),
             'taxeAssureurMontant' => round($this->calculationHelper->getRevenuMontantTaxeAssureur($entity), 2),
-            'taxeAssureurTaux' => round($this->getTaxeTaux($entity, Taxe::REDEVABLE_ASSUREUR), 2),
+            'taxeAssureurTaux' => round($this->getTaxeTaux($entity, Taxe::REDEVABLE_ASSUREUR)->pourcent(), 2),
             'estPartageable' => ($entity->getTypeRevenu() && $entity->getTypeRevenu()->isShared()) ? 'Oui' : 'Non',
             'taxeCourtierPayee' => round($this->getRevenuTaxePayee($entity, Taxe::REDEVABLE_COURTIER), 2),
             'taxeCourtierSolde' => round($this->calculationHelper->getRevenuMontantTaxeCourtier($entity) - $this->getRevenuTaxePayee($entity, Taxe::REDEVABLE_COURTIER), 2),
             'taxeAssureurPayee' => round($this->getRevenuTaxePayee($entity, Taxe::REDEVABLE_ASSUREUR), 2),
             'taxeAssureurSolde' => round($this->calculationHelper->getRevenuMontantTaxeAssureur($entity) - $this->getRevenuTaxePayee($entity, Taxe::REDEVABLE_ASSUREUR), 2),
             'montantCalculeHT' => $montantHT,
-            'partPartenaire' => round($this->getRevenuPartPartenaire($entity) * 100, 2), // CORRECTION: On multiplie par 100 pour l'affichage
+            // Part partenaire = FRACTION (0.35) → pourcent() pour l'affichage (via le VO).
+            'partPartenaire' => round(Pourcentage::fromFraction($this->getRevenuPartPartenaire($entity))->pourcent(), 2),
             'retroCommission' => $this->calculationHelper->getRevenuMontantRetrocommissionsPayableParCourtier($entity, null, -1, []),
             'reserve' => $this->getReserveCourtier($entity),
         ];
@@ -107,21 +107,23 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
         $typeRevenu = $revenu->getTypeRevenu();
         if (!$typeRevenu) return "Type de revenu non défini";
 
+        // Ces taux (exceptionnel, type de revenu, risque) sont stockés en FRACTION →
+        // affichage via le VO Pourcentage (jamais de ×100 à la main).
         if ($revenu->getTauxExceptionel() !== null && $revenu->getTauxExceptionel() != 0) {
-            return "Taux exceptionnel de " . ($revenu->getTauxExceptionel() * 100) . "%";
+            return "Taux exceptionnel de " . Pourcentage::fromFraction($revenu->getTauxExceptionel())->format(2);
         }
         if ($revenu->getMontantFlatExceptionel()) {
             return "Montant fixe exceptionnel de " . $revenu->getMontantFlatExceptionel();
         }
         if ($typeRevenu->getPourcentage() !== null && $typeRevenu->getPourcentage() != 0) {
-            return "Taux par défaut de " . ($typeRevenu->getPourcentage() * 100) . "%";
+            return "Taux par défaut de " . Pourcentage::fromFraction($typeRevenu->getPourcentage())->format(2);
         }
         if ($typeRevenu->getMontantflat()) {
             return "Montant fixe par défaut de " . $typeRevenu->getMontantflat();
         }
         if ($typeRevenu->isAppliquerPourcentageDuRisque() && $revenu->getCotation()?->getPiste()?->getRisque()) {
             $tauxRisque = $revenu->getCotation()->getPiste()->getRisque()->getPourcentageCommissionSpecifiqueHT();
-            return "Taux du risque de " . ($tauxRisque * 100) . "%";
+            return "Taux du risque de " . Pourcentage::fromFraction($tauxRisque)->format(2);
         }
         return "Logique de calcul non spécifiée";
     }
@@ -188,16 +190,15 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
         return $montantPaye;
     }
 
-    private function getTaxeTaux(RevenuPourCourtier $revenu, int $redevable): float
+    private function getTaxeTaux(RevenuPourCourtier $revenu, int $redevable): Pourcentage
     {
         $isIARD = $this->calculationHelper->isIARD($revenu->getCotation()); // ex: true
         $entreprise = $revenu->getTypeRevenu()?->getEntreprise();
         // Fallback si le type de revenu n'a pas d'entreprise (ex: création dynamique)
         if (!$entreprise) $entreprise = $revenu->getCotation()?->getPiste()?->getInvite()?->getEntreprise();
         $taxe = $this->taxeRepository->findOneBy(['redevable' => $redevable, 'entreprise' => $entreprise]);
-        if (!$taxe) return 0.0;
-        $rate = $isIARD ? $taxe->getTauxIARD() : $taxe->getTauxVIE();
-        return (float)($rate ?? 0.0);
+
+        return $taxe ? $taxe->tauxPourcentage($isIARD) : Pourcentage::zero();
     }
 
     private function getRevenuTaxePayee(RevenuPourCourtier $revenu, int $targetRedevable): float
