@@ -340,6 +340,26 @@ class AssistantIaController extends AbstractController
         $actions = PlanEnAttente::limiterAUnSeulPlan($reply->actions ?? []);
         $mutationPlan = $this->extraireMutationPlan($actions);
 
+        // GARDE-FOU anti-plan FANTÔME. Le modèle peut décrire un plan, un budget,
+        // voire affirmer qu'un « bouton de validation » est actif — le tout dans sa
+        // seule PROSE, sans avoir appelé preparer_operations. Aucune action n'est
+        // alors émise : aucun bouton ne s'affiche, et l'utilisateur attend une
+        // décision qui ne viendra jamais (au pire le modèle invente ensuite un « bug
+        // d'interface »). Quand la prose simule une décision alors qu'AUCUN plan n'a
+        // été préparé ce tour-ci NI n'est en attente dans le fil, on émet un signal
+        // AUTORITAIRE (serveur) qui dit la vérité — indépendamment de la prose.
+        $planFantome = $mutationPlan === null
+            && !$reply->refused
+            && !PlanEnAttente::aUnPlanEnAttente($conversation)
+            && PlanEnAttente::proseSimuleUneDecision((string) $reply->content);
+        if ($planFantome) {
+            $actions[] = ['type' => PlanEnAttente::ACTION_ABSENT];
+            $this->logger->warning('Assistant IA : plan fantôme détecté (prose sans action de mutation).', [
+                'conversation' => $conversation->getId(),
+                'engine'       => $this->aiEngine->name(),
+            ]);
+        }
+
         $messageAssistant = (new AssistantMessage())
             ->setRole(AssistantMessage::ROLE_ASSISTANT)
             ->setContenu($reply->content)
@@ -350,6 +370,9 @@ class AssistantIaController extends AbstractController
                 'erreur'       => $erreurMoteur ?: null,
                 'actions'      => $actions ?: null,
                 'mutationPlan' => $mutationPlan,
+                // Trace du garde-fou : réaffiche l'avertissement autoritaire après
+                // un rechargement de page (F5), comme les statuts de plan.
+                'mutationAbsent' => $planFantome ?: null,
             ]));
         $conversation->addMessage($messageAssistant);
 

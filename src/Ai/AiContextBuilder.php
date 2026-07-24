@@ -206,6 +206,20 @@ class AiContextBuilder
           (4) l'utilisateur valide en cliquant « Valider et exécuter » (bouton fourni par l'interface) :
           l'écriture est alors exécutée AUTOMATIQUEMENT et immédiatement, sans aucun formulaire à
           soumettre ; toute suppression demandera en plus le MOT DE PASSE ;
+          JAMAIS DE PLAN NI DE BOUTON FANTÔME (règle IMPÉRATIVE, garde-fou anti-hallucination) : le tableau
+          du plan, le budget et le bouton « Valider et exécuter » ne sont RÉELS que si preparer_operations
+          (ou modifier_composition_prime) a répondu « pret: true » DANS CE MÊME TOUR. Donc :
+          • N'affiche JAMAIS un tableau de plan ni un budget en prose sans avoir d'abord appelé l'outil ;
+            si tu n'as appelé que rechercher_entites / lire_fiche, tu n'as PAS de plan — ne fais pas
+            semblant. Le budget (coût, solde) provient de l'outil, jamais de ta mémoire : ne l'invente pas
+            (une suppression coûte 0 token).
+          • Tu ne VOIS pas l'interface. N'affirme JAMAIS qu'un « bouton de validation est actif », qu'une
+            « boîte de confirmation va apparaître », ni qu'un « bug technique » empêche le bouton. Ces
+            éléments sont dessinés par l'interface À PARTIR de l'action de l'outil — s'il n'y a pas eu
+            d'appel « pret: true », il n'y a, à juste titre, aucun bouton.
+          • Si l'utilisateur dit « je ne vois pas le bouton / la boîte de confirmation », n'invente pas de
+            panne : c'est le signe que tu n'as pas réellement préparé le plan. APPELLE preparer_operations
+            maintenant (avec toutes les infos) — le bouton apparaîtra tout seul.
           (5) si le solde est INSUFFISANT, ne lance rien : propose d'acheter des tokens ou d'abandonner.
           UNITÉS (règle IMPÉRATIVE — un taux mal recopié fausse la commission d'un facteur 100) : certains
           champs se SAISISSENT en pourcentage (ex. « 15 » pour 15 %) mais se STOCKENT en fraction (0,15).
@@ -213,6 +227,13 @@ class AiContextBuilder
           outil signale « unite: pourcentage » (inventaire_champs) ou un bloc « unites » (lire_fiche),
           fournis le POURCENTAGE dicté par l'utilisateur (15), jamais la fraction lue (0,15). Ne recopie
           jamais aveuglément une valeur lue dans un champ d'écriture sans vérifier son unité.
+          • La fraction stockée EST déjà correcte : 1 (ou 1,0) vaut 100 %, 0,15 vaut 15 %. Pour RAPPORTER
+            une telle valeur à l'utilisateur, multiplie TOUJOURS par 100 et dis « 100 % » — n'annonce
+            JAMAIS qu'un 1 stocké vaut « 1 % » ou « 0,01 » (c'est faux : ce serait diviser deux fois).
+          • NE PROPOSE JAMAIS de « corriger » un pourcentage qui est déjà juste. Une tranche unique à 1,0
+            = 100 % est correcte ; la « corriger » à 100 est inutile (le formulaire re-diviserait par 100)
+            et écrire 1 la CORROMPRAIT en 0,01 = 1 %. Ne modifie un champ pourcentage QUE si l'utilisateur
+            fournit un NOUVEAU taux, et fournis alors ce taux en pourcentage (ex. 50 pour 50 %).
           NE DIS QUE CE QUE LE PLAN FAIT (règle IMPÉRATIVE, la plus importante de toutes) : ta prose doit
           décrire EXACTEMENT les opérations renvoyées par l'outil — ni plus, ni moins. L'interface affiche
           à l'utilisateur, sous ta réponse, la liste RÉELLE de ce que le plan écrira et la liste de ce

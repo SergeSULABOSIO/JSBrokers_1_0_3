@@ -172,6 +172,26 @@ class KetLisibiliteEntiteTest extends WebTestCase
     }
 
     /**
+     * Incident tranche : une fraction stockée « pleine » (1 = 100 %) ne doit JAMAIS
+     * être relue comme « 1 % » ni « corrigée ». Le bloc d'unité l'affirme désormais
+     * explicitement (100 %, PAS 1 %, ne la corrige pas) — c'est ce qui empêche Ket
+     * de réécrire 1 → 0,01 (le facteur 100 qui a corrompu la tranche 132).
+     */
+    public function testUnitePourcentagePleinDitCentPourCentEtInterditLaCorrection(): void
+    {
+        [$ent, $inv, $tr] = $this->seed();
+        $tr->setPourcentage(1.0); // 100 % en fraction, comme une tranche unique
+        $this->em->flush();
+
+        $res = $this->lireFiche->execute(['entite' => 'TypeRevenu', 'nom' => 'Commission courtier'], new AiScope($ent, $inv));
+        $message = $res->data['unites']['pourcentage'] ?? '';
+
+        $this->assertStringContainsString('100', $message, 'La fraction 1 est annoncée comme 100 %.');
+        $this->assertStringContainsString('PAS', $message, 'Le message écarte explicitement la lecture « 1 % ».');
+        $this->assertStringContainsString('corrige', $message, 'Le message interdit de « corriger » une valeur déjà juste.');
+    }
+
+    /**
      * Preuve du bug d'origine ET de sa prévention : écrire « 15 » (le pourcentage
      * dicté) stocke bien 0,15 ; recopier « 0.15 » (la valeur lue) stockerait
      * 0,0015 — c'est ce que la mise en garde d'unité empêche.
