@@ -207,6 +207,19 @@ class AiContextBuilder
           l'écriture est alors exécutée AUTOMATIQUEMENT et immédiatement, sans aucun formulaire à
           soumettre ; toute suppression demandera en plus le MOT DE PASSE ;
           (5) si le solde est INSUFFISANT, ne lance rien : propose d'acheter des tokens ou d'abandonner.
+          NE DIS QUE CE QUE LE PLAN FAIT (règle IMPÉRATIVE, la plus importante de toutes) : ta prose doit
+          décrire EXACTEMENT les opérations renvoyées par l'outil — ni plus, ni moins. L'interface affiche
+          à l'utilisateur, sous ta réponse, la liste RÉELLE de ce que le plan écrira et la liste de ce
+          qu'il ne couvre PAS : le moindre écart entre ton texte et cette liste se voit.
+          • N'annonce jamais une étape absente du plan ; n'invoque jamais un calcul « automatique » du
+            moteur pour combler un élément que le plan n'écrit pas (le revenu du courtier, une tranche,
+            un avenant… ne sont créés QUE s'ils figurent dans les opérations).
+          • Si l'utilisateur a demandé quelque chose que tu n'as pas pu mettre dans le plan (information
+            manquante, champ que tu n'as pas su résoudre), DIS-LE dans le même message, en clair, et
+            propose comment l'obtenir. Une omission tue davantage la confiance qu'une question.
+          • Après exécution, n'affirme QUE ce que le journal renvoyé énumère. Si l'utilisateur conteste,
+            VÉRIFIE avec rechercher_entites / lire_fiche avant de répondre — ne défends jamais une
+            affirmation par un raisonnement sur « l'architecture de la plateforme ».
           UN SEUL PLAN EN ATTENTE (verrou) : tant qu'un plan que tu as présenté n'a pas été tranché par
           l'utilisateur (marqueur « [SYSTÈME — ce plan … ATTEND ENCORE la décision … ] »), l'outil REFUSE
           d'en préparer un autre — il te renverra « planEnAttente ». Ne présente alors aucun tableau :
@@ -350,9 +363,15 @@ class AiContextBuilder
     private function marqueurEtatMutation(array $meta): string
     {
         if (PlanEnAttente::estExecute($meta)) {
-            return "\n\n[SYSTÈME — ce plan d'écriture a été VALIDÉ et EXÉCUTÉ avec succès : les données "
-                . "sont DÉJÀ enregistrées en base. Ne le re-prépare pas. Si l'utilisateur demande si c'est "
-                . 'fait/enregistré, réponds OUI d\'après ceci, sans relancer d\'outil d\'écriture.]';
+            return "\n\n[SYSTÈME — ce plan d'écriture a été VALIDÉ et EXÉCUTÉ. Voici la liste EXHAUSTIVE et "
+                . "EXACTE de ce qui a été écrit en base :\n"
+                . $this->journalLisible($meta['mutationPlanJournal'] ?? [])
+                . "\nRÈGLE ABSOLUE : rien d'autre n'a été enregistré. N'affirme JAMAIS qu'un enregistrement "
+                . 'existe s\'il ne figure pas dans cette liste, et n\'invoque JAMAIS un calcul « automatique » '
+                . 'du moteur pour combler un élément absent : ce qui n\'a pas été écrit n\'existe pas. Si '
+                . 'l\'utilisateur avait demandé quelque chose qui n\'y figure pas, RECONNAIS-le et propose de '
+                . 'le préparer maintenant. Ne re-prépare pas ce plan-ci ; si on te demande simplement si c\'est '
+                . 'fait, réponds d\'après cette liste, sans relancer d\'outil d\'écriture.]';
         }
         if (PlanEnAttente::estAnnule($meta)) {
             return "\n\n[SYSTÈME — ce plan d'écriture a été ANNULÉ par l'utilisateur : il n'a PAS été "
@@ -367,6 +386,38 @@ class AiContextBuilder
         }
 
         return '';
+    }
+
+    /**
+     * Rend lisible, pour le moteur, le JOURNAL d'exécution d'un plan : une ligne
+     * par enregistrement RÉELLEMENT écrit (indentée selon sa place dans l'arbre).
+     * C'est le garde-fou contre l'affirmation de complaisance — le modèle ne peut
+     * plus déduire d'un simple « succès » que tout ce qui avait été évoqué a été
+     * enregistré.
+     *
+     * @param array<int, array> $journal
+     */
+    private function journalLisible(array $journal): string
+    {
+        $verbes = ['create' => 'créé', 'edit' => 'modifié', 'delete' => 'supprimé'];
+        $lignes = [];
+        foreach ($journal as $etape) {
+            if (!is_array($etape) || ($etape['statut'] ?? 'ok') !== 'ok') {
+                continue;
+            }
+            $lignes[] = sprintf(
+                '%s- %s : %s%s',
+                str_repeat('  ', max(0, (int) ($etape['niveau'] ?? 0))),
+                $etape['libelle'] ?? $etape['entite'] ?? '?',
+                $verbes[$etape['op'] ?? ''] ?? 'traité',
+                ($etape['cible'] ?? null) !== null ? sprintf(' (« %s »)', $etape['cible']) : '',
+            );
+        }
+
+        return $lignes === []
+            ? '- (journal indisponible : ne présume RIEN de ce qui a été enregistré — vérifie avec '
+                . 'rechercher_entites avant toute affirmation)'
+            : implode("\n", $lignes);
     }
 
     /**

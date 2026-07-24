@@ -199,6 +199,8 @@ final class PreparerOperationsTool implements AiToolInterface
         $blocages = [];
         $facturables = [];
         $avertissements = [];
+        $apercu = [];
+        $omissions = [];
         // Registre PARTAGÉ par toutes les opérations du plan : c'est lui qui rend
         // validable en une seule fois un plan couvrant plusieurs entités dépendantes
         // (« @etiquette » vers une création précédente).
@@ -237,8 +239,22 @@ final class PreparerOperationsTool implements AiToolInterface
                 'portefeuille' => $analyse['portefeuille'] ?? null,
             ];
 
-            foreach ($this->collectionsNonCouvertes($op) as $suggestion) {
-                $avertissements[] = $suggestion;
+            // Aperçu AUTORITAIRE destiné à l'utilisateur : ce que le plan fera
+            // RÉELLEMENT, dérivé des opérations elles-mêmes. Il ne dépend pas de la
+            // prose du modèle — c'est ce qui empêche qu'on valide un plan différent
+            // de celui qu'on a lu.
+            $apercu[] = $this->apercuOperation($op, $analyse);
+
+            $nonCouvertes = $this->collectionsNonCouvertes($op);
+            if ($nonCouvertes !== []) {
+                $omissions[] = ['libelle' => $analyse['libelle'], 'elements' => array_values($nonCouvertes)];
+                $avertissements[] = sprintf(
+                    'L’opération « %s » ne couvre pas : %s. Demande à l’utilisateur, DANS LE MÊME MESSAGE que le '
+                    . 'plan, s’il dispose de ces informations maintenant — pour tout regrouper ici plutôt que '
+                    . 'd’avoir à valider un second plan plus tard.',
+                    $analyse['libelle'],
+                    implode(', ', $nonCouvertes),
+                );
             }
 
             if ($analyse['statut'] === 'invalide') {
@@ -299,6 +315,13 @@ final class PreparerOperationsTool implements AiToolInterface
                 'budget'           => $budget,
                 'requiresPassword' => $requiresPassword,
                 'avertissements'   => $avertissements,
+                // Rappel au modèle : l'utilisateur voit le plan RÉEL sous ta réponse.
+                'controleCoherence' => 'L’interface affiche à l’utilisateur, sous ta réponse, la liste EXACTE de '
+                    . 'ce que ce plan va écrire, et la liste de ce qu’il ne couvre pas. Ta prose doit y correspondre '
+                    . 'EXACTEMENT : n’annonce aucune étape qui ne figure pas dans « plan » ci-dessus, et ne dis '
+                    . 'jamais qu’un élément sera enregistré « automatiquement » — seul ce qui est dans le plan '
+                    . 'sera écrit. Si une information demandée par l’utilisateur n’a pas pu entrer dans le plan, '
+                    . 'DIS-LE explicitement au lieu de la passer sous silence.',
                 'note'             => $suffisant
                     ? ('Présente le plan EN UNE FOIS : tableau des opérations (avec la colonne Étape), liste des '
                         . 'impacts, et tableau du budget ventilé par étape (« parEtape ») avec son total. Précise '
@@ -319,6 +342,11 @@ final class PreparerOperationsTool implements AiToolInterface
                 // `budget.parEtape` porte les étapes décochables (libellé, clé,
                 // caractère obligatoire, coût) : source unique du sélecteur d'étendue.
                 'budget'           => $budget,
+                // Ce que le plan fera VRAIMENT, et ce qu'il ne fera PAS : affiché à
+                // l'utilisateur au-dessus des boutons, indépendamment de la prose du
+                // modèle (qui peut annoncer une étape que les opérations ne portent pas).
+                'apercu'           => $apercu,
+                'omissions'        => $omissions,
                 'requiresPassword' => $requiresPassword,
                 // Impacts agrégés (cascades de suppression) : alimentent la liste
                 // d'éléments de la confirmation renforcée côté front.
@@ -417,9 +445,11 @@ final class PreparerOperationsTool implements AiToolInterface
      * Collections éditables du formulaire d'une CRÉATION qui ne sont pas couvertes
      * par le plan — c'est-à-dire tout ce que l'utilisateur pourrait renseigner
      * MAINTENANT, dans ce même plan, plutôt que dans une seconde validation.
-     * Purement informatif : ne bloque jamais, ne modifie pas le plan.
+     * Purement informatif : ne bloque jamais, ne modifie pas le plan. Restitué
+     * TEL QUEL à l'utilisateur (« ce plan ne couvre pas… »), pour qu'une étape
+     * qu'il croyait incluse ne puisse pas passer inaperçue.
      *
-     * @return string[]
+     * @return string[] libellés des entités enfant non couvertes
      */
     private function collectionsNonCouvertes(MutationOperation $op): array
     {
@@ -433,17 +463,57 @@ final class PreparerOperationsTool implements AiToolInterface
                 $manquantes[] = $libelle;
             }
         }
-        if ($manquantes === []) {
-            return [];
+
+        return $manquantes;
+    }
+
+    /**
+     * Ligne d'aperçu d'une opération pour la BARRE DE DÉCISION : l'action, la
+     * cible, et le décompte de ce qui sera écrit dans chaque collection.
+     *
+     * C'est la seule description du plan que l'utilisateur puisse tenir pour vraie :
+     * elle est dérivée des opérations qui seront RÉELLEMENT exécutées, pas du texte
+     * rédigé par le modèle. Les deux peuvent diverger — une étape annoncée en prose
+     * mais absente des opérations serait sinon validée sans que personne le voie.
+     */
+    private function apercuOperation(MutationOperation $op, array $analyse): array
+    {
+        $libellesEnfants = $this->mutationService->collectionsProposables($op->entityShortName);
+
+        $details = [];
+        foreach ($op->collections as $nom => $enfants) {
+            $compte = ['create' => 0, 'edit' => 0, 'delete' => 0];
+            foreach ($enfants as $enfant) {
+                $compte[$enfant->op] = ($compte[$enfant->op] ?? 0) + 1;
+            }
+            $details[] = [
+                'libelle'       => $libellesEnfants[$nom] ?? $nom,
+                'creations'     => $compte['create'],
+                'modifications' => $compte['edit'],
+                'suppressions'  => $compte['delete'],
+            ];
         }
 
-        return [sprintf(
-            'L’opération « %s » ne couvre pas : %s. Demande à l’utilisateur, DANS LE MÊME MESSAGE que le plan, '
-            . 's’il dispose de ces informations maintenant — pour tout regrouper ici plutôt que d’avoir à '
-            . 'valider un second plan plus tard.',
-            $op->entityShortName,
-            implode(', ', $manquantes),
-        )];
+        return [
+            'op'      => $op->op,
+            'libelle' => $analyse['libelle'],
+            'cible'   => $analyse['cible'] ?? $this->cibleProposee($op),
+            'etape'   => $op->etape,
+            'details' => $details,
+        ];
+    }
+
+    /** Libellé pressenti d'une création (aucune cible en base : on prend son nom dicté). */
+    private function cibleProposee(MutationOperation $op): ?string
+    {
+        foreach (['nom', 'libelle', 'titre', 'reference', 'referencePolice'] as $champ) {
+            $valeur = $op->fields[$champ] ?? null;
+            if (is_string($valeur) && trim($valeur) !== '') {
+                return trim($valeur);
+            }
+        }
+
+        return null;
     }
 
     private function resumerCollections(MutationOperation $op): array

@@ -274,7 +274,6 @@ export default class extends Controller {
         const budget = action.budget || {};
         const cout = budget.coutEstime || 0;
         const solde = budget.soldeDisponible || 0;
-        const reste = budget.resteApres ?? Math.max(0, solde - cout);
         const suffisant = budget.suffisant !== false;
 
         const bar = document.createElement('div');
@@ -289,8 +288,12 @@ export default class extends Controller {
         const majBudget = (coutRetenu) => {
             budgetLine.textContent = `Budget : ${formatNombre(coutRetenu)} tokens · solde ${formatNombre(solde)} · reste ${formatNombre(Math.max(0, solde - coutRetenu))}`;
         };
-        majBudget(cout);
-        bar.appendChild(budgetLine);
+        // Ce que le plan fera VRAIMENT, et ce qu'il ne couvre pas — rendu à partir
+        // des données du serveur, jamais de la prose du modèle. C'est ce que
+        // l'utilisateur valide ; si le texte de Ket annonce autre chose, l'écart
+        // saute aux yeux AVANT l'exécution.
+        const apercu = this._renderMutationApercu(action);
+        if (apercu) bar.appendChild(apercu);
 
         // ÉTENDUE : l'utilisateur décoche les étapes qu'il ne veut pas enregistrer
         // maintenant. Le budget se réajuste ; les clés retenues partent avec
@@ -298,6 +301,9 @@ export default class extends Controller {
         const etapes = this._renderMutationSteps(action, majBudget, cout);
         if (etapes) bar.appendChild(etapes.el);
         const clesRetenues = () => (etapes ? etapes.retenues() : null);
+
+        majBudget(cout);
+        bar.appendChild(budgetLine);
 
         if (!suffisant) {
             const notice = document.createElement('p');
@@ -353,6 +359,68 @@ export default class extends Controller {
             this.messagesTarget.appendChild(bar);
         }
         this.scrollToBottom();
+    }
+
+    /**
+     * APERÇU AUTORITAIRE du plan : ce qui sera réellement écrit, et ce que le plan
+     * ne couvre pas. Construit à partir des données du serveur (dérivées des
+     * opérations elles-mêmes), jamais du texte rédigé par le modèle — les deux
+     * peuvent diverger, et c'est précisément l'écart qu'il faut rendre visible
+     * AVANT la validation. Retourne null si le serveur n'a pas fourni d'aperçu
+     * (plans antérieurs restaurés après un F5).
+     */
+    _renderMutationApercu(action) {
+        const apercu = Array.isArray(action.apercu) ? action.apercu : [];
+        const omissions = Array.isArray(action.omissions) ? action.omissions : [];
+        if (apercu.length === 0) return null;
+
+        const verbe = { create: 'Création', edit: 'Modification', delete: 'Suppression' };
+        const bloc = document.createElement('div');
+        bloc.className = 'aic-mut-apercu';
+
+        const titre = document.createElement('p');
+        titre.className = 'aic-mut-apercu-titre';
+        titre.textContent = 'Ce plan va enregistrer :';
+        bloc.appendChild(titre);
+
+        const liste = document.createElement('ul');
+        liste.className = 'aic-mut-apercu-liste';
+        apercu.forEach((op) => {
+            const item = document.createElement('li');
+            const cible = op.cible ? ` « ${op.cible} »` : '';
+            item.textContent = `${verbe[op.op] || 'Opération'} — ${op.libelle || ''}${cible}`;
+
+            const details = Array.isArray(op.details) ? op.details : [];
+            if (details.length > 0) {
+                const sous = document.createElement('ul');
+                details.forEach((detail) => {
+                    const parts = [];
+                    if (detail.creations) parts.push(`${detail.creations} à créer`);
+                    if (detail.modifications) parts.push(`${detail.modifications} à modifier`);
+                    if (detail.suppressions) parts.push(`${detail.suppressions} à supprimer`);
+                    if (parts.length === 0) return;
+                    const ligne = document.createElement('li');
+                    ligne.textContent = `${detail.libelle} : ${parts.join(', ')}`;
+                    sous.appendChild(ligne);
+                });
+                if (sous.children.length > 0) item.appendChild(sous);
+            }
+            liste.appendChild(item);
+        });
+        bloc.appendChild(liste);
+
+        // Ce que le plan ne fera PAS : la garantie qu'une étape attendue mais
+        // absente des opérations ne passe pas inaperçue.
+        omissions.forEach((omission) => {
+            const elements = Array.isArray(omission.elements) ? omission.elements : [];
+            if (elements.length === 0) return;
+            const note = document.createElement('p');
+            note.className = 'aic-mut-apercu-omission';
+            note.textContent = `Rien ne sera enregistré pour : ${elements.join(', ')}. Dites-le à l’assistant si vous vouliez les inclure.`;
+            bloc.appendChild(note);
+        });
+
+        return bloc;
     }
 
     /**

@@ -39,6 +39,22 @@ Vous gardez la main dans tous les cas :
 - **« Non, plutôt ceci »** : dites-le simplement. L'assistant annule le plan en
   attente et vous en présente un nouveau — jamais deux en concurrence.
 
+## Ce que vous lisez est ce qui sera écrit
+
+Sous chaque plan, l'interface affiche — à partir des données du serveur, et non
+du texte rédigé par l'assistant — deux listes :
+
+- **« Ce plan va enregistrer »** : chaque enregistrement qui sera créé, modifié ou
+  supprimé, avec le décompte par rubrique.
+- **« Rien ne sera enregistré pour… »** : ce que le plan ne couvre pas. Si vous
+  aviez demandé le revenu de courtage et qu'il apparaît dans cette seconde liste,
+  c'est qu'il n'est PAS dans le plan — dites-le avant de valider.
+
+Après exécution, le journal énumère ligne par ligne ce qui a réellement été écrit.
+C'est la seule source de vérité : rien n'est jamais « généré automatiquement » en
+plus du plan. Si l'assistant affirme le contraire, faites-lui vérifier — il a
+l'obligation de s'appuyer sur ce journal, pas sur un raisonnement.
+
 ## Deux façons de rattacher les étapes
 
 - **Les collections du formulaire** : ce que l'écran permet déjà d'ajouter dans la

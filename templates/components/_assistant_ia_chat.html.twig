@@ -167,6 +167,21 @@
         /* Budget en texte simple sur une ligne (coût · solde · reste). */
         .jsb-ai-chat .aic-mutation-budget { flex:1 1 100%; margin:0 0 .1rem; font-size:.8rem; color:#495057; font-weight:600; }
 
+        /* Aperçu AUTORITAIRE : ce que le plan écrira réellement (données serveur),
+           et ce qu'il ne couvre pas — pour qu'un écart avec la prose de Ket se voie
+           AVANT la validation. */
+        .jsb-ai-chat .aic-mut-apercu { flex:1 1 100%; margin:0 0 .35rem; }
+        .jsb-ai-chat .aic-mut-apercu-titre {
+            margin:0 0 .25rem; font-size:.78rem; font-weight:600; color:#6c757d;
+        }
+        .jsb-ai-chat .aic-mut-apercu-liste { margin:0; padding-left:1.1rem; font-size:.83rem; color:#212529; }
+        .jsb-ai-chat .aic-mut-apercu-liste li { margin:.1rem 0; }
+        .jsb-ai-chat .aic-mut-apercu-liste ul { margin:.1rem 0 .2rem; padding-left:1rem; color:#495057; font-size:.79rem; }
+        .jsb-ai-chat .aic-mut-apercu-omission {
+            margin:.35rem 0 0; padding:.4rem .55rem; border-radius:6px;
+            background:#fff3cd; color:#664d03; font-size:.78rem;
+        }
+
         /* Étendue du plan : une case à cocher par étape du parcours (l'étape socle
            reste cochée et désactivée). Décocher réajuste le budget affiché. */
         .jsb-ai-chat .aic-mut-steps {
@@ -343,6 +358,8 @@
                 {%- if planEnAttente %} data-mutation-review="{{ {
                     idMessage: message.id,
                     budget: message.meta.mutationPlan.budget,
+                    apercu: message.meta.mutationPlan.apercu ?? [],
+                    omissions: message.meta.mutationPlan.omissions ?? [],
                     requiresPassword: message.meta.mutationPlan.requiresPassword ?? false,
                     impacts: message.meta.mutationPlan.impacts ?? []
                 }|json_encode|e('html_attr') }}"{% endif %}>
