@@ -293,15 +293,15 @@ export default class extends Controller {
                 this._requestListRefresh(this.getActiveTabId());
                 break;
             case 'ket:workspace.data-changed': {
-                // Ket a écrit/édité/supprimé en base. On rafraîchit la liste
-                // affichée UNIQUEMENT si son entité figure parmi celles touchées —
-                // comparaison directe de short names (aucune conversion de casse).
-                // No-op sûr si aucune rubrique n'est ouverte : _requestListRefresh
-                // n'a pas d'URL à construire et sort proprement.
-                const entitesAffectees = Array.isArray(payload.entitesAffectees) ? payload.entitesAffectees : [];
+                // Ket a écrit/édité/supprimé en base. On rafraîchit SYSTÉMATIQUEMENT
+                // la liste de la rubrique affichée : une édition d'entité liée ou
+                // enfant (ex. un revenu de courtage) peut modifier des colonnes
+                // calculées de la liste parente (Cotation) sans porter son short
+                // name dans le journal — un ciblage strict raterait ce cas. Le
+                // re-fetch de la page courante est peu coûteux. Garde « rubrique
+                // ouverte » (serverRootName) : rien à faire si seul le chat est visible.
                 const activeState = this._getActiveTabState();
-                const entiteActive = activeState && activeState.entiteNom;
-                if (entiteActive && entitesAffectees.includes(entiteActive)) {
+                if (activeState && activeState.serverRootName) {
                     this._publishSelectionStatus('Actualisation de la liste...');
                     this._requestListRefresh(this.getActiveTabId());
                 }
