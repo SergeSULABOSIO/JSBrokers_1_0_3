@@ -46,6 +46,13 @@ class AiContextBuilder
                 && ($objets = $message->getContexteObjets()) !== null) {
                 $contenu = $this->marqueurContexte($objets) . "\n" . $contenu;
             }
+            // Un plan d'écriture présenté PUIS validé/annulé : le contenu du message
+            // dit encore « cliquez sur Valider », mais le sort réel vit dans la meta.
+            // On l'ANNOTE pour le moteur, sinon il croit le plan encore en attente et
+            // le re-prépare (ou nie à tort l'enregistrement) quand on lui demande.
+            if ($message->getRole() === AssistantMessage::ROLE_ASSISTANT) {
+                $contenu .= $this->marqueurEtatMutation($message->getMeta() ?? []);
+            }
             $messages[] = [
                 'role'    => $message->getRole() === AssistantMessage::ROLE_ASSISTANT ? 'assistant' : 'user',
                 'content' => $contenu,
@@ -173,6 +180,12 @@ class AiContextBuilder
           l'écriture est alors exécutée AUTOMATIQUEMENT et immédiatement, sans aucun formulaire à
           soumettre ; toute suppression demandera en plus le MOT DE PASSE ;
           (5) si le solde est INSUFFISANT, ne lance rien : propose d'acheter des tokens ou d'abandonner.
+          APRÈS VALIDATION (règle impérative) : une fois qu'un plan a été exécuté (l'historique porte le
+          marqueur « [SYSTÈME — ce plan … a été VALIDÉ et EXÉCUTÉ … ] »), il est DÉFINITIF. Si l'utilisateur
+          demande alors « c'est fait ? / enregistré ? » ou te remercie, réponds simplement OUI d'après ce
+          marqueur — NE rappelle PAS l'outil d'écriture et ne re-présente PAS de plan (sinon tu créerais un
+          doublon et nierais à tort l'enregistrement). Ne rappelle preparer_operations que pour une
+          modification NOUVELLE.
           PORTEFEUILLE (Client) : un client sans portefeuille n'apparaît PAS dans la vue « Mon
           portefeuille » de l'utilisateur. L'outil range automatiquement le client dans le portefeuille
           de l'utilisateur s'il n'en gère qu'un ; s'il en gère plusieurs, l'outil renvoie « portefeuille »
@@ -287,6 +300,31 @@ class AiContextBuilder
         );
 
         return '[Objets en contexte à l\'envoi de ce message : ' . implode(' ; ', $items) . ']';
+    }
+
+    /**
+     * Marqueur d'état d'un plan d'écriture porté par un message assistant : le
+     * texte du message dit « cliquez sur Valider », mais s'il a depuis été VALIDÉ
+     * (mutationPlanExecuted) ou ANNULÉ (mutationPlanCancelled), le moteur doit le
+     * savoir — sinon il croit le plan encore en attente et le re-prépare, ou nie à
+     * tort l'enregistrement quand l'utilisateur demande « c'est fait ? ». Chaîne
+     * vide si le message ne porte pas de plan concerné.
+     *
+     * @param array<string, mixed> $meta
+     */
+    private function marqueurEtatMutation(array $meta): string
+    {
+        if (($meta['mutationPlanExecuted'] ?? false) === true) {
+            return "\n\n[SYSTÈME — ce plan d'écriture a été VALIDÉ et EXÉCUTÉ avec succès : les données "
+                . "sont DÉJÀ enregistrées en base. Ne le re-prépare pas. Si l'utilisateur demande si c'est "
+                . 'fait/enregistré, réponds OUI d\'après ceci, sans relancer d\'outil d\'écriture.]';
+        }
+        if (($meta['mutationPlanCancelled'] ?? false) === true) {
+            return "\n\n[SYSTÈME — ce plan d'écriture a été ANNULÉ par l'utilisateur : il n'a PAS été "
+                . 'exécuté, rien n\'a été enregistré.]';
+        }
+
+        return '';
     }
 
     /**
