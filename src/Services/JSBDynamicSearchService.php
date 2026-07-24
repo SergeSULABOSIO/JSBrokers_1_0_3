@@ -5,6 +5,7 @@ namespace App\Services;
 
 use App\Entity\Entreprise;
 use App\Services\Search\AvenantEcheanceScope;
+use App\Services\Search\CotationSouscriptionScope;
 use App\Services\Search\PortefeuilleScope;
 use App\Services\Search\TranchePaiementScope;
 use App\Services\Tranche\TranchePaiementService;
@@ -334,6 +335,33 @@ class JSBDynamicSearchService
                 if (!empty($orParts)) {
                     $qb->andWhere($qb->expr()->orX(...$orParts))
                        ->setParameter('scopeInvite' . $suffix, $inviteId);
+                }
+                continue;
+            }
+
+            // CAS 0 bis : Statut de souscription (Cotation uniquement). Une cotation est
+            // « souscrite » dès qu'elle porte au moins un avenant (= transformée en police),
+            // « en attente » sinon — même définition que l'indicateur calculé statutSouscription.
+            // La présence d'un avenant est exprimable en SQL (Avenant.cotation est une vraie
+            // relation) : on filtre par EXISTS / NOT EXISTS sur une sous-requête d'avenants,
+            // sans service en mémoire ni tri spécial. Ce CAS compose automatiquement avec les
+            // autres critères, le périmètre portefeuille, la pagination et le comptage.
+            if ($field === CotationSouscriptionScope::CRITERION_KEY) {
+                $statut = is_array($value) ? ($value['value'] ?? null) : $value;
+                if (!CotationSouscriptionScope::estValide(is_string($statut) ? $statut : null)) {
+                    continue; // valeur vide/inconnue (« Toutes ») : filtre ignoré
+                }
+
+                $avAlias = 'souscription_av' . $suffix;
+                $sousRequete = $this->em->createQueryBuilder()
+                    ->select("IDENTITY({$avAlias}.cotation)")
+                    ->from(\App\Entity\Avenant::class, $avAlias)
+                    ->getDQL();
+
+                if ($statut === CotationSouscriptionScope::STATUT_SOUSCRITES) {
+                    $qb->andWhere($qb->expr()->in("{$rootAlias}.id", $sousRequete));
+                } else {
+                    $qb->andWhere($qb->expr()->notIn("{$rootAlias}.id", $sousRequete));
                 }
                 continue;
             }

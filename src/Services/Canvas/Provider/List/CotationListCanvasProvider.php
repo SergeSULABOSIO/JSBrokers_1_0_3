@@ -4,6 +4,7 @@ namespace App\Services\Canvas\Provider\List;
 
 use App\Entity\Cotation;
 use App\Services\Canvas\Provider\List\ListCanvasProviderInterface;
+use App\Services\Search\CotationSouscriptionScope;
 use App\Services\ServiceMonnaies;
 
 class CotationListCanvasProvider implements ListCanvasProviderInterface
@@ -53,6 +54,22 @@ class CotationListCanvasProvider implements ListCanvasProviderInterface
                     "attribut_unité" => $this->serviceMonnaies->getCodeMonnaieAffichage(),
                     "attribut_code" => "reserve",
                     "attribut_type" => "nombre",
+                ],
+            ],
+            // Chips de filtre rapide rendus par _List_manager (hors dialogues) : chaque option
+            // pose/retire le critère synthétique « Statut de souscription » via le Cerveau. Le
+            // moteur filtre en SQL (EXISTS / NOT EXISTS sur les avenants). Même clé que le badge
+            // de la barre de recherche → les deux restent synchronisés. `icon` = alias
+            // IconCanvasProvider, résolu par resolve_icon_name().
+            "filtres_predefinis" => [
+                [
+                    "critere" => CotationSouscriptionScope::CRITERION_KEY,
+                    "libelle" => "Statut",
+                    "options" => [
+                        ["value" => CotationSouscriptionScope::STATUT_SOUSCRITES, "label" => CotationSouscriptionScope::libelle(CotationSouscriptionScope::STATUT_SOUSCRITES), "icon" => "action:completed"],
+                        ["value" => CotationSouscriptionScope::STATUT_EN_ATTENTE, "label" => CotationSouscriptionScope::libelle(CotationSouscriptionScope::STATUT_EN_ATTENTE), "icon" => "action:ongoing"],
+                        ["value" => "", "label" => "Toutes", "icon" => "action:filter"],
+                    ],
                 ],
             ],
         ];

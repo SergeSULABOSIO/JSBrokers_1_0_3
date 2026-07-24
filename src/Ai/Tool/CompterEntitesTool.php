@@ -7,6 +7,7 @@ use App\Ai\Scope\AiScope;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
 use App\Services\Search\AvenantEcheanceScope;
+use App\Services\Search\CotationSouscriptionScope;
 use App\Services\Search\PortefeuilleCritereFactory;
 use App\Services\Search\PortefeuilleScope;
 use App\Services\Search\TranchePaiementScope;
@@ -40,12 +41,13 @@ final class CompterEntitesTool implements AiToolInterface
     {
         return "Compte le nombre d'enregistrements d'une catégorie de données de l'entreprise "
             . '(clients, avenants, pistes, notes, sinistres…). À appeler quand l’utilisateur '
-            . 'demande « combien de … » ou « le nombre de … ». Les paramètres echeance (Avenant) '
-            . 'et statutPaiement (Tranche) appliquent EXACTEMENT les mêmes règles que les filtres '
-            . 'rapides de ces rubriques : à utiliser dès que la question porte sur une fenêtre '
-            . 'd’échéance (« combien d’avenants échoient dans les 30 jours ? ») ou un statut de '
-            . 'paiement (« combien de tranches impayées ? »), afin que la réponse coïncide avec '
-            . 'ce que l’utilisateur voit à l’écran. Le comptage porte par défaut sur le '
+            . 'demande « combien de … » ou « le nombre de … ». Les paramètres echeance (Avenant), '
+            . 'statutPaiement (Tranche) et validation (Cotation) appliquent EXACTEMENT les mêmes '
+            . 'règles que les filtres rapides de ces rubriques : à utiliser dès que la question '
+            . 'porte sur une fenêtre d’échéance (« combien d’avenants échoient dans les 30 jours ? »), '
+            . 'un statut de paiement (« combien de tranches impayées ? ») ou un statut de '
+            . 'souscription (« combien de propositions en attente ? »), afin que la réponse '
+            . 'coïncide avec ce que l’utilisateur voit à l’écran. Le comptage porte par défaut sur le '
             . 'PORTEFEUILLE de l’utilisateur, comme la rubrique affichée (paramètre perimetre).';
     }
 
@@ -72,6 +74,13 @@ final class CompterEntitesTool implements AiToolInterface
                     'description' => 'TRANCHE uniquement : restreint à un statut de paiement — '
                         . 'impayees, echues, a_echoir, partiellement, payees, retro_a_payer, '
                         . 'commission_exigible. Mêmes règles que les filtres rapides de la rubrique.',
+                ],
+                'validation' => [
+                    'type' => 'string',
+                    'enum' => array_keys(CotationSouscriptionScope::VALEURS),
+                    'description' => 'COTATION uniquement : restreint à un statut de souscription — '
+                        . 'souscrites (transformées en police, au moins un avenant), en_attente '
+                        . '(non transformées). Mêmes règles que les filtres rapides de la rubrique.',
                 ],
                 'perimetre' => PortefeuilleScope::proprieteSchema(),
             ],
@@ -104,6 +113,8 @@ final class CompterEntitesTool implements AiToolInterface
             $args['echeance'] = $f;
         } elseif ($shortName === 'Tranche' && ($s = TranchePaiementScope::detecterDepuisTexte($normalized)) !== null) {
             $args['statutPaiement'] = $s;
+        } elseif ($shortName === 'Cotation' && ($v = CotationSouscriptionScope::detecterDepuisTexte($normalized)) !== null) {
+            $args['validation'] = $v;
         }
 
         // Le périmètre par défaut est celui de l'écran (portefeuille de l'invité) : seule une
@@ -138,7 +149,8 @@ final class CompterEntitesTool implements AiToolInterface
         // même moteur et même résultat) : fenêtre d'échéance pour Avenant, statut de
         // paiement pour Tranche. Ignorés si l'entité ne s'y prête pas.
         $criteres = AvenantEcheanceScope::critereRecherche($shortName, $args['echeance'] ?? null)
-            + TranchePaiementScope::critereRecherche($shortName, $args['statutPaiement'] ?? null);
+            + TranchePaiementScope::critereRecherche($shortName, $args['statutPaiement'] ?? null)
+            + CotationSouscriptionScope::critereRecherche($shortName, $args['validation'] ?? null);
 
         // PÉRIMÈTRE : par défaut le portefeuille de l'invité, comme la rubrique à l'écran.
         // Le critère provient de la fabrique partagée avec le contrôleur de liste, donc il
@@ -160,6 +172,9 @@ final class CompterEntitesTool implements AiToolInterface
             ),
             isset($criteres[TranchePaiementScope::CRITERION_KEY]) => TranchePaiementScope::libelle(
                 (string) $criteres[TranchePaiementScope::CRITERION_KEY]['value']
+            ),
+            isset($criteres[CotationSouscriptionScope::CRITERION_KEY]) => CotationSouscriptionScope::libelle(
+                (string) $criteres[CotationSouscriptionScope::CRITERION_KEY]['value']
             ),
             default => null,
         };
