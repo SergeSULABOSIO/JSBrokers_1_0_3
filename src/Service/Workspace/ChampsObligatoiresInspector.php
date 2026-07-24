@@ -25,6 +25,19 @@ class ChampsObligatoiresInspector
     /** Champs jamais exigés à l'utilisateur (système + scoping auto). */
     public const CHAMPS_SYSTEME = ['id', 'createdAt', 'updatedAt'];
 
+    /**
+     * Relations MÉTIER requises à la création même si leur colonne est NULLABLE en
+     * base : la nullabilité tolère les données héritées, mais une création sans elles
+     * produit une fiche incohérente (ex. un RevenuPourCourtier sans typeRevenu casse
+     * le calcul de commission — cf. IndicatorCalculationHelper). Exigées à l'identique
+     * côté formulaire HTTP et côté assistant (Ket), via relationRequise(). Clé = nom
+     * court d'entité, valeur = champs de relation. Fail-open : entité absente = aucune
+     * exigence métier supplémentaire (comportement Doctrine inchangé).
+     */
+    private const RELATIONS_METIER_REQUISES = [
+        'RevenuPourCourtier' => ['typeRevenu'],
+    ];
+
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly FormFactoryInterface $formFactory,
@@ -96,7 +109,7 @@ class ChampsObligatoiresInspector
         return !$this->aUnDefaut($meta, $field) && !$this->valeurNonNulle($entity, $meta, $field);
     }
 
-    /** Une relation ManyToOne est-elle OBLIGATOIRE (colonne non-null, hors entreprise/invite auto) ? */
+    /** Une relation ManyToOne est-elle OBLIGATOIRE (colonne non-null OU requise métier, hors entreprise/invite auto) ? */
     public function relationRequise(string $field, object $mapping): bool
     {
         if (!$mapping->isManyToOne() || !$mapping->isOwningSide() || in_array($field, ['entreprise', 'invite'], true)) {
@@ -108,7 +121,18 @@ class ChampsObligatoiresInspector
             }
         }
 
-        return false;
+        // Exigence MÉTIER (colonne nullable mais indispensable à la cohérence).
+        $source = $this->shortName((string) ($mapping->sourceEntity ?? ''));
+
+        return in_array($field, self::RELATIONS_METIER_REQUISES[$source] ?? [], true);
+    }
+
+    /** Nom court d'une classe (dernier segment du FQCN). */
+    private function shortName(string $fqcn): string
+    {
+        $pos = strrpos($fqcn, '\\');
+
+        return $pos === false ? $fqcn : substr($fqcn, $pos + 1);
     }
 
     /** Libellé LISIBLE d'un champ (lu depuis le FormType), repli sur l'humanisation. */
