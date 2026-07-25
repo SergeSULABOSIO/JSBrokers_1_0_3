@@ -146,12 +146,11 @@
                     <h2 class="company-title">{{ menu.colonne_2.titre }}</h2>
                 </a>
                 <p class="company-description">{{ menu.colonne_2.description }}</p>
-                {# La version affichée est celle des conditions et termes d'utilisation (source : App\Legal\Cgu),
-                   et non plus la version applicative. Le lien ouvre les CGU. #}
-                <a class="company-version" href="{{ path('app_terms') }}" target="_blank" rel="noopener"
-                   title="Lire les conditions et termes d'utilisation">
-                    Version {{ constant('App\\Legal\\Cgu::VERSION') }} — dernière mise à jour le {{ constant('App\\Legal\\Cgu::DATE')|date('d/m/Y') }}
-                </a>
+                {# Version APPLICATIVE, auto-incrémentée à chaque commit (source : App\Services\VersionService).
+                   La version des CGU (App\Legal\Cgu) reste dédiée à la page des conditions. #}
+                <span class="company-version" title="Version de l'application JS Brokers">
+                    Version {{ app_version() }} — dernière mise à jour le {{ app_version_date()|date('d/m/Y') }}
+                </span>
             </div>
             {# Carte d'identité de l'entreprise courante #}
             {% if entreprise is defined and entreprise %}
