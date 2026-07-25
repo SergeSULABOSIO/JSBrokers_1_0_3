@@ -198,6 +198,16 @@ class TypeRevenu
         return $this->pourcentage;
     }
 
+    /**
+     * Fraction (0..1) dérivée du taux stocké en POINTS (5 = 5 %) : source UNIQUE
+     * pour tout calcul (chargement × fraction). Ne jamais multiplier une assiette
+     * par getPourcentage() directement.
+     */
+    public function getFraction(): float
+    {
+        return ($this->pourcentage ?? 0.0) / 100.0;
+    }
+
     public function setPourcentage(?float $pourcentage): static
     {
         $this->pourcentage = $pourcentage;

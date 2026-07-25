@@ -201,6 +201,16 @@ class Risque
         return $this->pourcentageCommissionSpecifiqueHT;
     }
 
+    /**
+     * Fraction (0..1) dérivée du taux stocké en POINTS (16 = 16 %) : source UNIQUE
+     * pour tout calcul monétaire (assiette × fraction). Ne jamais multiplier une
+     * assiette par getPourcentageCommissionSpecifiqueHT() directement.
+     */
+    public function getFraction(): float
+    {
+        return ($this->pourcentageCommissionSpecifiqueHT ?? 0.0) / 100.0;
+    }
+
     public function setPourcentageCommissionSpecifiqueHT(?float $pourcentageCommissionSpecifiqueHT): static
     {
         $this->pourcentageCommissionSpecifiqueHT = $pourcentageCommissionSpecifiqueHT;

@@ -1669,7 +1669,7 @@ class Constante
                         $totalPartenaire['retroComBalance'] += $this->Cotation_getMontant_retrocommissions_payable_par_courtier_solde($avenant->getCotation(), $partenaire, -1, false);
                     }
                 }
-                $totalPartenaire['partnerRate'] = $partenaire->getPart() * 100;
+                $totalPartenaire['partnerRate'] = $partenaire->getPart();
                 $data[] = $this->loadDataToReportSet(1, PartnerReportSet::TYPE_ELEMENT, $partenaire->getNom(), $totalPartenaire);
                 $ligne += 1;
 
@@ -3522,7 +3522,7 @@ class Constante
         /** @var Partenaire $partenaire */
         $partenaire = $this->Note_getPartenaireFacture($note);
         if ($partenaire != null) {
-            $txt = "Rétrocom. " . $partenaire->getNom() . " " . ($partenaire->getPart() != 0 ? "(" . ($partenaire->getPart() * 100) . "%)" : "");
+            $txt = "Rétrocom. " . $partenaire->getNom() . " " . ($partenaire->getPart() != 0 ? "(" . $partenaire->getPart() . "%)" : "");
             return $txt;
         } else {
             return null;
@@ -4827,12 +4827,12 @@ class Constante
                 /** @var Risque $couverture */
                 $couverture = $this->Cotation_getRisque($cotation);
                 if ($couverture != null) {
-                    $montant += $montantChargementPrime * $couverture->getPourcentageCommissionSpecifiqueHT();
+                    $montant += $montantChargementPrime * $couverture->getFraction();
                 }
             } else {
                 //On cherche à appliquer d'abord le taux du revenu sur la cotation
                 if ($revenu->getTauxExceptionel() != 0) {
-                    $montant += $montantChargementPrime * $revenu->getTauxExceptionel();
+                    $montant += $montantChargementPrime * $revenu->getFraction();
                 } else if ($revenu->getMontantFlatExceptionel() != 0) {
                     $montant += $revenu->getMontantFlatExceptionel();
                 } else {
@@ -4840,7 +4840,7 @@ class Constante
                     //On doit appliquer la formule par défaut pour ce type de revenu
                     if ($typeRevenu->getPourcentage() != 0) {
                         // dd("On applique le pourcentage spécifique à " . $revenuPourCourtier->getNom(),);
-                        $montant += $montantChargementPrime * $typeRevenu->getPourcentage();
+                        $montant += $montantChargementPrime * $typeRevenu->getFraction();
                     } else if ($typeRevenu->getMontantflat() != 0) {
                         // dd("On applique le montant flat qui est de " . $revenuPourCourtier->getMontantFlatExceptionel());
                         $montant += $montantChargementPrime * $typeRevenu->getMontantflat();
@@ -4880,7 +4880,7 @@ class Constante
         if (count($cotation->getPiste()->getConditionsPartageExceptionnelles()) != 0) {
             /** @var ConditionPartage $conditionPartagePiste */
             $conditionPartagePiste = $cotation->getPiste()->getConditionsPartageExceptionnelles()[0];
-            return ($conditionPartagePiste->getTaux() * 100) . "%";
+            return $conditionPartagePiste->getTaux() . "%";
         } else {
             return null;
         }
@@ -5004,7 +5004,7 @@ class Constante
     private function calculerRetroCommission(?Risque $risque, ?ConditionPartage $conditionPartage, $assiette): float
     {
         $montant = 0;
-        $taux = $conditionPartage->getTaux();
+        $taux = $conditionPartage->getFraction();
         $produitsCible = $conditionPartage->getProduits();
 
         switch ($conditionPartage->getCritereRisque()) {
@@ -5144,12 +5144,12 @@ class Constante
             switch ($conditionPartage->getFormule()) {
                 case ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL:
                     if ($conditionPartage->getSeuil()) {
-                        $texte = ($conditionPartage->getTaux() * 100) . "% de l'assiette " . $unite . " si celle-ci est au moins égale à " . $conditionPartage->getSeuil() . " " . $this->serviceMonnaies->getCodeMonnaieAffichage();
+                        $texte = $conditionPartage->getTaux() . "% de l'assiette " . $unite . " si celle-ci est au moins égale à " . $conditionPartage->getSeuil() . " " . $this->serviceMonnaies->getCodeMonnaieAffichage();
                     }
                     break;
                 case ConditionPartage::FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL:
                     if ($conditionPartage->getSeuil()) {
-                        $texte = ($conditionPartage->getTaux() * 100) . "% de l'assiette " . $unite . " si celle-ci est inférieur au seuil à " . $conditionPartage->getSeuil() . " " . $this->serviceMonnaies->getCodeMonnaieAffichage();
+                        $texte = $conditionPartage->getTaux() . "% de l'assiette " . $unite . " si celle-ci est inférieur au seuil à " . $conditionPartage->getSeuil() . " " . $this->serviceMonnaies->getCodeMonnaieAffichage();
                     }
                     break;
                 case ConditionPartage::FORMULE_NE_SAPPLIQUE_PAS_SEUIL:
@@ -6412,7 +6412,7 @@ class Constante
                                         $retrocom = $this->Revenu_appliquerConditionsSpeciales($conditionsPartagePartenaire[0], $revenu, $addressedTo);
                                     } else if ($partenaire->getPart() != 0) {
                                         $assiette = $this->Revenu_getMontant_pure($revenu, $addressedTo, true);
-                                        $retrocom = $assiette * $partenaire->getPart();
+                                        $retrocom = $assiette * $partenaire->getFraction();
                                     }
                                 }
                             }

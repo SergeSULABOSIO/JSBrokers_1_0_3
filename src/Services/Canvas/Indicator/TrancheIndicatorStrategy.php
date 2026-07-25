@@ -241,7 +241,7 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
     private function getTranchePartPartenaire(Tranche $tranche): float
     {
         $partenaire = $this->calculationHelper->getCotationPartenaire($tranche->getCotation());
-        return $partenaire ? ($partenaire->getPart() * 100) : 0.0;
+        return $partenaire ? ($partenaire->getPart() ?? 0.0) : 0.0;
     }
 
     private function getTrancheRetroCommission(Tranche $tranche): float

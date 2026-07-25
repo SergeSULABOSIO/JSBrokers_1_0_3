@@ -28,7 +28,7 @@ class PartenaireIndicatorStrategy implements IndicatorCalculationStrategyInterfa
             'nombreClientsAssocies' => $entity->getClients()->count(),
             'nombrePolicesGenerees' => $this->countPartenairePolices($entity),
             'nombreConditionsPartage' => $entity->getConditionPartages()->count(),
-            'partPourcentage' => round(($entity->getPart() ?? 0) * 100, 2),
+            'partPourcentage' => round(($entity->getPart() ?? 0), 2),
             'conditionsPartageResume' => $this->getPartenaireConditionsPartageResume($entity),
 
             // Mapping des stats globales vers les attributs de l'entité
@@ -84,8 +84,8 @@ class PartenaireIndicatorStrategy implements IndicatorCalculationStrategyInterfa
     {
         $conditions = $partenaire->getConditionPartages();
         if ($conditions->isEmpty()) {
-            // CORRECTION: Le taux 'part' est un facteur (ex: 0.35), il faut le multiplier par 100.
-            return "Aucune condition spécifique définie. Le taux par défaut de " . round(($partenaire->getPart() ?? 0) * 100, 2) . "% s'applique à l'ensemble du portefeuille.";
+            // Le taux 'part' est stocké en POINTS (ex: 35 = 35 %) : affichage direct.
+            return "Aucune condition spécifique définie. Le taux par défaut de " . round(($partenaire->getPart() ?? 0), 2) . "% s'applique à l'ensemble du portefeuille.";
         }
 
         $resume = "Ce partenaire dispose de " . $conditions->count() . " condition(s) spécifique(s) qui modulent le calcul de sa rétro-commission.";
@@ -107,8 +107,8 @@ class PartenaireIndicatorStrategy implements IndicatorCalculationStrategyInterfa
 
     private function getConditionPartageDescriptionRegle(ConditionPartage $condition): string
     {
-        // CORRECTION: Le taux de la condition est un facteur (ex: 0.15), il faut le multiplier par 100.
-        $taux = round(($condition->getTaux() ?? 0) * 100, 2);
+        // Le taux de la condition est stocké en POINTS (ex: 15 = 15 %) : affichage direct.
+        $taux = round(($condition->getTaux() ?? 0), 2);
         
         $formule = match ($condition->getFormule()) {
             ConditionPartage::FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL => "Assiette >= Seuil",

@@ -248,6 +248,16 @@ class Partenaire
         return $this->part;
     }
 
+    /**
+     * Fraction (0..1) dérivée de la part stockée en POINTS (30 = 30 %) : source
+     * UNIQUE pour tout calcul (assiette partageable × fraction). Ne jamais
+     * multiplier une assiette par getPart() directement.
+     */
+    public function getFraction(): float
+    {
+        return ($this->part ?? 0.0) / 100.0;
+    }
+
     public function setPart(float $part): static
     {
         $this->part = $part;

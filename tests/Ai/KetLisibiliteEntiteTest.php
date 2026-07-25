@@ -85,7 +85,7 @@ class KetLisibiliteEntiteTest extends WebTestCase
         $ch->setEntreprise($ent)->setInvite($inv);
         $this->em->persist($ch);
         $tr = (new TypeRevenu())->setNom('Commission courtier')->setShared(true)->setMultipayments(true)
-            ->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR)->setPourcentage(0.15)
+            ->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR)->setPourcentage(15.0) // 15 % en POINTS
             ->setModeCalcul(TypeRevenu::MODE_CALCUL_POURCENTAGE_CHARGEMENT)->setTypeChargement($ch);
         $tr->setEntreprise($ent)->setInvite($inv);
         $this->em->persist($tr);
@@ -137,10 +137,14 @@ class KetLisibiliteEntiteTest extends WebTestCase
         $this->assertSame('Prime nette', $valeur['attributs']['typeChargement']['nom'] ?? null);
     }
 
-    // ─────────────────────────── Unités ───────────────────────────
+    // ────────────────── Unités (convention UNIQUE : pourcentage) ──────────────────
 
-    /** L'inventaire signale qu'un taux se saisit en %, avec la mise en garde anti-recopie. */
-    public function testInventaireSignaleLesChampsPourcentage(): void
+    /**
+     * Convention unifiée : les taux ne sont PLUS stockés en fraction. L'inventaire
+     * ne doit donc plus marquer tauxExceptionel comme « piège de fraction »
+     * (unite=pourcentage + mise en garde) : le champ se saisit tel quel.
+     */
+    public function testInventaireNeMarquePlusDePiegeDeFraction(): void
     {
         [$ent, $inv] = $this->seed();
 
@@ -152,51 +156,28 @@ class KetLisibiliteEntiteTest extends WebTestCase
             }
         }
 
-        $this->assertNotNull($taux);
-        $this->assertSame('pourcentage', $taux['unite'] ?? null);
-        $this->assertStringContainsString('15', $taux['aide'] ?? '', 'La mise en garde donne l’exemple 15 pour 15 %.');
+        $this->assertNotNull($taux, 'Le champ existe toujours dans l’inventaire.');
+        $this->assertNull($taux['unite'] ?? null, 'Plus aucun champ n’est marqué comme fraction (convention pourcentage unique).');
     }
 
-    /** lire_fiche donne, pour un champ %, la valeur à ÉCRIRE à côté de la valeur stockée. */
-    public function testLireFicheAnnonceLesUnitesPourcentage(): void
+    /** lire_fiche n'expose plus de bloc « unites » : aucun champ n'est en fraction. */
+    public function testLireFicheNExposePlusDIndiceDeFraction(): void
     {
         [$ent, $inv] = $this->seed();
 
         $res = $this->lireFiche->execute(['entite' => 'TypeRevenu', 'nom' => 'Commission courtier'], new AiScope($ent, $inv));
 
-        $this->assertArrayHasKey('unites', $res->data);
-        $this->assertArrayHasKey('pourcentage', $res->data['unites']);
-        $message = $res->data['unites']['pourcentage'];
-        $this->assertStringContainsString('0.15', $message, 'La valeur stockée est rappelée…');
-        $this->assertStringContainsString('15', $message, '…et la valeur à écrire donnée.');
+        $this->assertArrayNotHasKey('unites', $res->data, 'Convention unique : plus de piège de fraction à signaler.');
+        // Le taux reste lisible en clair, en pourcentage.
+        $this->assertSame(15.0, $res->data['fiche']['pourcentageDisplay'] ?? null);
     }
 
     /**
-     * Incident tranche : une fraction stockée « pleine » (1 = 100 %) ne doit JAMAIS
-     * être relue comme « 1 % » ni « corrigée ». Le bloc d'unité l'affirme désormais
-     * explicitement (100 %, PAS 1 %, ne la corrige pas) — c'est ce qui empêche Ket
-     * de réécrire 1 → 0,01 (le facteur 100 qui a corrompu la tranche 132).
+     * Convention unique : écrire « 15 » stocke 15 (points, = 15 %), et la fraction
+     * dérivée getFraction() vaut 0,15 pour les calculs. Plus aucune division /100
+     * silencieuse à l'écriture.
      */
-    public function testUnitePourcentagePleinDitCentPourCentEtInterditLaCorrection(): void
-    {
-        [$ent, $inv, $tr] = $this->seed();
-        $tr->setPourcentage(1.0); // 100 % en fraction, comme une tranche unique
-        $this->em->flush();
-
-        $res = $this->lireFiche->execute(['entite' => 'TypeRevenu', 'nom' => 'Commission courtier'], new AiScope($ent, $inv));
-        $message = $res->data['unites']['pourcentage'] ?? '';
-
-        $this->assertStringContainsString('100', $message, 'La fraction 1 est annoncée comme 100 %.');
-        $this->assertStringContainsString('PAS', $message, 'Le message écarte explicitement la lecture « 1 % ».');
-        $this->assertStringContainsString('corrige', $message, 'Le message interdit de « corriger » une valeur déjà juste.');
-    }
-
-    /**
-     * Preuve du bug d'origine ET de sa prévention : écrire « 15 » (le pourcentage
-     * dicté) stocke bien 0,15 ; recopier « 0.15 » (la valeur lue) stockerait
-     * 0,0015 — c'est ce que la mise en garde d'unité empêche.
-     */
-    public function testEcrireLePourcentageStockeLaBonneFraction(): void
+    public function testEcrireLeTauxStockeLesPoints(): void
     {
         [$ent, $inv, $tr] = $this->seed();
         $cot = (new Cotation())->setNom('Offre unités')->setDuree(12);
@@ -217,6 +198,7 @@ class KetLisibiliteEntiteTest extends WebTestCase
         $this->em->clear();
         $rev = $this->em->getRepository(RevenuPourCourtier::class)->findOneBy(['nom' => 'Com 15']);
         $this->assertNotNull($rev);
-        $this->assertEqualsWithDelta(0.15, $rev->getTauxExceptionel(), 0.0001, 'Écrire 15 stocke 0,15 (15 %), pas 0,0015.');
+        $this->assertEqualsWithDelta(15.0, $rev->getTauxExceptionel(), 0.0001, 'Écrire 15 stocke 15 (points).');
+        $this->assertEqualsWithDelta(0.15, $rev->getFraction(), 0.0001, 'getFraction() dérive 0,15 pour les calculs.');
     }
 }
