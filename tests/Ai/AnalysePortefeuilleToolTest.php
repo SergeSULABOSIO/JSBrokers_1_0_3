@@ -9,6 +9,7 @@ use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\DashboardDataProvider;
+use App\Services\Finance\VentilationFinanciereService;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -34,7 +35,7 @@ class AnalysePortefeuilleToolTest extends TestCase
         'sinistresIndemnises' => 200.0, 'ratioSP' => 20.0, 'partMarche' => 45.5,
     ];
 
-    private function makeTool(array $canRead, ?DashboardDataProvider $dashboard = null): AnalysePortefeuilleTool
+    private function makeTool(array $canRead, ?DashboardDataProvider $dashboard = null, ?VentilationFinanciereService $ventilation = null): AnalysePortefeuilleTool
     {
         $resolver = $this->createMock(WorkspaceAccessResolver::class);
         $resolver->method('libellesEntites')->willReturn(self::LIBELLES);
@@ -45,6 +46,7 @@ class AnalysePortefeuilleToolTest extends TestCase
         return new AnalysePortefeuilleTool(
             $resolver,
             $dashboard ?? $this->createMock(DashboardDataProvider::class),
+            $ventilation ?? $this->createMock(VentilationFinanciereService::class),
         );
     }
 
@@ -179,6 +181,82 @@ class AnalysePortefeuilleToolTest extends TestCase
         $this->assertSame(AiToolResult::STATUS_HORS_PERIMETRE, $result->status);
     }
 
+    public function testChiffreAffairesParDimensionDelegueAuService(): void
+    {
+        $ventilation = $this->createMock(VentilationFinanciereService::class);
+        $ventilation->expects($this->once())
+            ->method('chiffreAffaires')
+            ->with($this->anything(), 'assureur', 2026)
+            ->willReturn([
+                'mesure' => 'chiffre_affaires', 'dimension' => 'assureur', 'annee' => 2026,
+                'lignes' => [['libelle' => 'Assureur Alpha', 'caHt' => 100.0, 'caTtc' => 115.0]],
+                'totalHt' => 100.0, 'totalTtc' => 115.0,
+            ]);
+
+        $tool = $this->makeTool(['Paiement' => true, 'Avenant' => true], null, $ventilation);
+        $result = $tool->execute(['analyse' => 'chiffre_affaires', 'dimension' => 'assureur', 'annee' => 2026], $this->makeScope());
+
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        $this->assertSame('assureur', $result->data['dimension']);
+        $this->assertSame('Assureur Alpha', $result->data['lignes'][0]['libelle']);
+        $this->assertSame(100.0, $result->data['totalHt']);
+    }
+
+    public function testChiffreAffairesParDimensionExigeAvenantEtPaiement(): void
+    {
+        $result = $this->makeTool(['Paiement' => true, 'Avenant' => false])
+            ->execute(['analyse' => 'chiffre_affaires', 'dimension' => 'assureur'], $this->makeScope());
+
+        $this->assertSame(AiToolResult::STATUS_HORS_PERIMETRE, $result->status);
+    }
+
+    public function testSinistresParDimensionDelegueEtFailClosed(): void
+    {
+        $ventilation = $this->createMock(VentilationFinanciereService::class);
+        $ventilation->method('sinistres')->willReturn([
+            'mesure' => 'sinistres', 'dimension' => 'risque', 'annee' => 2026,
+            'lignes' => [['libelle' => 'Incendie', 'payable' => 500.0, 'paye' => 200.0, 'solde' => 300.0]],
+            'totalPayable' => 500.0, 'totalPaye' => 200.0, 'totalSolde' => 300.0,
+        ]);
+
+        $result = $this->makeTool(['NotificationSinistre' => true, 'Paiement' => true], null, $ventilation)
+            ->execute(['analyse' => 'sinistres', 'dimension' => 'risque'], $this->makeScope());
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        $this->assertSame(300.0, $result->data['lignes'][0]['solde']);
+
+        // Fail-closed : sans accès aux sinistres, refus.
+        $refus = $this->makeTool(['NotificationSinistre' => false, 'Paiement' => true], null, $ventilation)
+            ->execute(['analyse' => 'sinistres', 'dimension' => 'risque'], $this->makeScope());
+        $this->assertSame(AiToolResult::STATUS_HORS_PERIMETRE, $refus->status);
+    }
+
+    public function testDimensionInvalideIntrouvable(): void
+    {
+        $result = $this->makeTool(['Paiement' => true, 'Avenant' => true])
+            ->execute(['analyse' => 'chiffre_affaires', 'dimension' => 'martien'], $this->makeScope());
+
+        $this->assertSame(AiToolResult::STATUS_INTROUVABLE, $result->status);
+    }
+
+    public function testVentilationTronqueePourConcision(): void
+    {
+        $lignes = array_map(
+            static fn (int $i) => ['libelle' => 'C' . $i, 'caHt' => 1.0, 'caTtc' => 1.0],
+            range(1, 20),
+        );
+        $ventilation = $this->createMock(VentilationFinanciereService::class);
+        $ventilation->method('chiffreAffaires')->willReturn([
+            'mesure' => 'chiffre_affaires', 'dimension' => 'client', 'annee' => 2026,
+            'lignes' => $lignes, 'totalHt' => 20.0, 'totalTtc' => 20.0,
+        ]);
+
+        $result = $this->makeTool(['Paiement' => true, 'Avenant' => true], null, $ventilation)
+            ->execute(['analyse' => 'chiffre_affaires', 'dimension' => 'client'], $this->makeScope());
+
+        $this->assertCount(12, $result->data['lignes']);
+        $this->assertSame(8, $result->data['lignesTronquees']);
+    }
+
     public function testAnalyseInconnueIntrouvable(): void
     {
         $tool = $this->makeTool([]);
@@ -208,6 +286,28 @@ class AnalysePortefeuilleToolTest extends TestCase
         $this->assertSame(
             ['analyse' => 'chiffre_affaires_mensuel'],
             $tool->match('CA par mois', $scope),
+        );
+        // CA ventilé par un axe (hors mois) => chiffre_affaires + dimension.
+        $this->assertSame(
+            ['analyse' => 'chiffre_affaires', 'dimension' => 'assureur'],
+            $tool->match('chiffre d\'affaires par assureur', $scope),
+        );
+        $this->assertSame(
+            ['analyse' => 'chiffre_affaires', 'dimension' => 'client', 'annee' => 2026],
+            $tool->match('CA par client en 2026', $scope),
+        );
+        $this->assertSame(
+            ['analyse' => 'chiffre_affaires', 'dimension' => 'portefeuille'],
+            $tool->match('Ventile le chiffre d\'affaires par portefeuille', $scope),
+        );
+        // Sinistres ventilés (payable/payé/solde).
+        $this->assertSame(
+            ['analyse' => 'sinistres', 'dimension' => 'risque'],
+            $tool->match('indemnisations sinistres par risque', $scope),
+        );
+        $this->assertSame(
+            ['analyse' => 'sinistres', 'dimension' => 'mois'],
+            $tool->match('compensations sinistres par mois', $scope),
         );
         $this->assertSame(['analyse' => 'encaissements'], $tool->match('Quels sont les derniers encaissements ?', $scope));
 

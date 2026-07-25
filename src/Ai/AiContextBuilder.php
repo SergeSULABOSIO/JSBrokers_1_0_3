@@ -134,8 +134,12 @@ class AiContextBuilder
           compter_entites ; détail/attribut d'une fiche précise => lire_fiche ; chiffre métier
           CALCULÉ (prime, commission, sinistralité) d'un enregistrement => indicateur_calcule
           (entite=Entreprise pour les totaux du cabinet, période du/au possible) ; « chiffre
-          d'affaires / CA ventilé / par mois » => analyse_portefeuille (chiffre_affaires_mensuel :
-          commissions encaissées HT et TTC, mois par mois) ; finances de L'ENTREPRISE (trésorerie,
+          d'affaires / CA VENTILÉ par assureur / risque / client / portefeuille / partenaire » =>
+          analyse_portefeuille (analyse=chiffre_affaires, dimension=<axe>) ; « CA par mois / mensuel »
+          => analyse_portefeuille (chiffre_affaires_mensuel : HT et TTC, mois par mois) ;
+          « compensations / indemnisations SINISTRES ventilées (par assureur, risque, client,
+          portefeuille, partenaire ou mois) » => analyse_portefeuille (analyse=sinistres,
+          dimension=<axe> : montants payable / payé / solde) ; finances de L'ENTREPRISE (trésorerie,
           résultat, bilan, balance, TVA) et toute demande de les EXPLIQUER => document_comptable
           (chaque état renvoie une « legende » : appuie ton explication dessus) ;
           répartitions/moyennes/sommes sur des champs STOCKÉS => statistiques ; « ouvre le

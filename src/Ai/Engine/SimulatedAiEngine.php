@@ -272,6 +272,46 @@ final class SimulatedAiEngine implements AiEngineInterface
             );
         }
 
+        if (($data['analyse'] ?? '') === 'chiffre_affaires') {
+            $lignes = array_map(
+                static fn (array $l) => sprintf('- %s : HT %s · TTC %s', $l['libelle'], $fmt($l['caHt']), $fmt($l['caTtc'])),
+                $data['lignes'],
+            );
+
+            return sprintf(
+                "Chiffre d'affaires %d par %s — commissions encaissées (total HT %s · TTC %s) :\n%s%s%s",
+                $data['annee'],
+                $data['dimension'],
+                $fmt($data['totalHt']),
+                $fmt($data['totalTtc']),
+                $lignes === [] ? '(aucun encaissement de commission)' : implode("\n", $lignes),
+                isset($data['lignesTronquees']) ? sprintf("\n… (+%d autres)", $data['lignesTronquees']) : '',
+                !empty($data['chevauchement']) ? "\n(Axe partenaire : les montants peuvent se recouper — le total n'est pas le CA global.)" : '',
+            );
+        }
+
+        if (($data['analyse'] ?? '') === 'sinistres') {
+            $lignes = array_map(
+                static fn (array $l) => sprintf(
+                    '- %s : payable %s · payé %s · solde %s',
+                    $l['libelle'], $fmt($l['payable']), $fmt($l['paye']), $fmt($l['solde']),
+                ),
+                $data['lignes'],
+            );
+
+            return sprintf(
+                "Compensations sinistres %d par %s (payable %s · payé %s · solde %s) :\n%s%s%s",
+                $data['annee'],
+                $data['dimension'],
+                $fmt($data['totalPayable']),
+                $fmt($data['totalPaye']),
+                $fmt($data['totalSolde']),
+                $lignes === [] ? '(aucun sinistre sur la période)' : implode("\n", $lignes),
+                isset($data['lignesTronquees']) ? sprintf("\n… (+%d autres)", $data['lignesTronquees']) : '',
+                !empty($data['chevauchement']) ? "\n(Axe partenaire : les montants peuvent se recouper.)" : '',
+            );
+        }
+
         if (($data['analyse'] ?? '') === 'encaissements') {
             $lignes = array_map(
                 static fn (array $l) => sprintf(

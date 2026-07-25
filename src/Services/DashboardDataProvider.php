@@ -1057,9 +1057,9 @@ class DashboardDataProvider
         ];
     }
 
-    public function getProductionGroupData(Entreprise $entreprise): array
+    public function getProductionGroupData(Entreprise $entreprise, ?int $annee = null): array
     {
-        $tableData = $this->getProductionTableData($entreprise);
+        $tableData = $this->getProductionTableData($entreprise, $annee);
 
         $fields = ['primeTtc', 'commissionPure', 'retrocommission', 'taxeCourtier',
                    'taxeAssureur', 'commissionTtc', 'encaissements', 'solde'];
@@ -1084,7 +1084,7 @@ class DashboardDataProvider
         return [
             'byAssureur'        => array_values($byAssureur),
             'byAssureurMonthly' => $byAssureurMonthly,
-            'byPartenaire'      => $this->getProductionParPartenaire($entreprise),
+            'byPartenaire'      => $this->getProductionParPartenaire($entreprise, $tableData['year']),
             'byRisque'          => $risqueData['byRisque'],
             'byRisqueMonthly'   => $risqueData['byRisqueMonthly'],
             'taxeCourtierNom'   => $tableData['taxeCourtierNom'],
@@ -1096,7 +1096,7 @@ class DashboardDataProvider
 
     private function getProductionParRisque(Entreprise $entreprise, array $tableData): array
     {
-        $year  = (int) date('Y');
+        $year  = (int) ($tableData['year'] ?? date('Y'));
         $debut = new \DateTimeImmutable($year . '-01-01 00:00:00');
         $fin   = new \DateTimeImmutable($year . '-12-31 23:59:59');
         $tauxAssureur = $tableData['taxeAssureurTaux'];
@@ -1335,9 +1335,35 @@ class DashboardDataProvider
         return ['byRisque' => array_values($byRisque), 'byRisqueMonthly' => $byRisqueMonthly];
     }
 
-    private function getProductionParPartenaire(Entreprise $entreprise): array
+    private function getProductionParPartenaire(Entreprise $entreprise, ?int $annee = null): array
     {
-        $year  = (int) date('Y');
+        return $this->getProductionParAxePiste($entreprise, 'partenaire', $annee);
+    }
+
+    /** Production encaissée par CLIENT/assuré (année demandée). Voir getProductionParAxePiste. */
+    public function getProductionParClient(Entreprise $entreprise, ?int $annee = null): array
+    {
+        return $this->getProductionParAxePiste($entreprise, 'client', $annee);
+    }
+
+    /** Production encaissée par PORTEFEUILLE (année demandée). Voir getProductionParAxePiste. */
+    public function getProductionParPortefeuille(Entreprise $entreprise, ?int $annee = null): array
+    {
+        return $this->getProductionParAxePiste($entreprise, 'portefeuille', $annee);
+    }
+
+    /**
+     * Ventilation de la production ENCAISSÉE (commissions) par un axe porté par la
+     * piste : « partenaire » (M:N — un encaissement compte pour CHAQUE partenaire),
+     * « client » ou « portefeuille » (1:1 — un seul porteur par note). Même socle
+     * de données que getProductionTableData (notes de commission TO_CLIENT/TO_ASSUREUR
+     * réellement payées), agrégé sur l'année demandée (défaut : année courante).
+     *
+     * @return array<int, array{nom: string, encaissements: float, primeTtc: float, commissionTtc: float}>
+     */
+    private function getProductionParAxePiste(Entreprise $entreprise, string $axe, ?int $annee = null): array
+    {
+        $year  = $annee ?? (int) date('Y');
         $debut = new \DateTimeImmutable($year . '-01-01 00:00:00');
         $fin   = new \DateTimeImmutable($year . '-12-31 23:59:59');
 
@@ -1370,20 +1396,23 @@ class DashboardDataProvider
         }
 
         $ids = array_keys($notesById);
+        // Batch-load piste + porteurs de l'axe (partenaires M:N, client, portefeuille du client).
         $this->em->createQuery(
-            'SELECT n, arts, rpc, cot, piste, pars
+            'SELECT n, arts, rpc, cot, piste, pars, cli, pf
              FROM App\Entity\Note n
              LEFT JOIN n.articles arts
              LEFT JOIN arts.revenuFacture rpc
              LEFT JOIN rpc.cotation cot
              LEFT JOIN cot.piste piste
              LEFT JOIN piste.partenaires pars
+             LEFT JOIN piste.client cli
+             LEFT JOIN cli.portefeuille pf
              WHERE n.id IN (:ids)'
         )
         ->setParameter('ids', $ids)
         ->getResult();
 
-        $byPartenaire   = [];
+        $byTarget       = [];
         $processedNotes = [];
         foreach ($notesById as $noteId => $note) {
             if (isset($processedNotes[$noteId])) continue;
@@ -1392,29 +1421,43 @@ class DashboardDataProvider
             $encaissements = $noteEncaiss[$noteId] ?? 0.0;
             $montantTotal  = (float) ($note->montantTotal ?? 0);
 
-            $partFound = [];
+            // Porteurs de l'axe pour cette note (dédupliqués).
+            $found = [];
             foreach ($note->getArticles() as $art) {
                 $piste = $art->getRevenuFacture()?->getCotation()?->getPiste();
                 if (!$piste) continue;
-                foreach ($piste->getPartenaires() as $par) {
-                    $partFound[$par->getId()] = $par;
+                if ($axe === 'partenaire') {
+                    foreach ($piste->getPartenaires() as $par) {
+                        $found[$par->getId()] = $par->getNom();
+                    }
+                } elseif ($axe === 'client') {
+                    $cli = $piste->getClient();
+                    if ($cli) $found[$cli->getId()] = (string) $cli->getNom();
+                } elseif ($axe === 'portefeuille') {
+                    $pf = $piste->getClient()?->getPortefeuille();
+                    if ($pf) $found[$pf->getId()] = (string) $pf->getNom();
                 }
             }
 
-            $targets = empty($partFound) ? ['__none__' => null] : $partFound;
-            foreach ($targets as $parId => $par) {
-                $nom = $par ? $par->getNom() : 'Sans partenaire';
-                if (!isset($byPartenaire[$parId])) {
-                    $byPartenaire[$parId] = ['nom' => $nom, 'encaissements' => 0.0,
-                                             'primeTtc' => 0.0, 'commissionTtc' => 0.0];
+            $libelleVide = match ($axe) {
+                'partenaire'   => 'Sans partenaire',
+                'client'       => 'Sans client',
+                'portefeuille' => 'Sans portefeuille',
+                default        => '—',
+            };
+            $targets = empty($found) ? ['__none__' => $libelleVide] : $found;
+            foreach ($targets as $tid => $nom) {
+                if (!isset($byTarget[$tid])) {
+                    $byTarget[$tid] = ['nom' => $nom, 'encaissements' => 0.0,
+                                       'primeTtc' => 0.0, 'commissionTtc' => 0.0];
                 }
-                $byPartenaire[$parId]['encaissements'] += $encaissements;
-                $byPartenaire[$parId]['commissionTtc'] += $montantTotal;
+                $byTarget[$tid]['encaissements'] += $encaissements;
+                $byTarget[$tid]['commissionTtc'] += $montantTotal;
             }
         }
 
-        uasort($byPartenaire, fn($a, $b) => $b['encaissements'] <=> $a['encaissements']);
-        return array_values($byPartenaire);
+        uasort($byTarget, fn($a, $b) => $b['encaissements'] <=> $a['encaissements']);
+        return array_values($byTarget);
     }
 
     public function getProductionMensuelle(Entreprise $entreprise): array

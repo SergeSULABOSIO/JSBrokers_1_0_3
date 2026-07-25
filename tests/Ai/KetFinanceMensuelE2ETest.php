@@ -8,12 +8,17 @@ use App\Ai\Tool\AnalysePortefeuilleTool;
 use App\Entity\AssistantConversation;
 use App\Entity\AssistantMessage;
 use App\Entity\Assureur;
+use App\Entity\Client;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Note;
+use App\Entity\NotificationSinistre;
+use App\Entity\OffreIndemnisationSinistre;
 use App\Entity\Paiement;
+use App\Entity\Risque;
 use App\Entity\Taxe;
 use App\Entity\Utilisateur;
+use App\Services\Finance\VentilationFinanciereService;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -79,9 +84,10 @@ class KetFinanceMensuelE2ETest extends WebTestCase
              JOIN entreprise e ON c.entreprise_id = e.id WHERE e.nom IN (:noms)",
             ['noms' => $noms], ['noms' => $strList],
         );
-        // Ordre des clés étrangères : paiement -> note -> (taxe, assureur) -> reste.
+        // Ordre des clés étrangères : paiement -> offre -> notif -> note -> risque/client -> taxe/assureur.
         foreach ([
-            'assistant_conversation', 'paiement', 'note', 'taxe', 'assureur',
+            'assistant_conversation', 'paiement', 'offre_indemnisation_sinistre',
+            'notification_sinistre', 'note', 'risque', 'client', 'taxe', 'assureur',
         ] as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom IN (:noms)",
@@ -171,6 +177,44 @@ class KetFinanceMensuelE2ETest extends WebTestCase
         $paiement->setEntreprise($entreprise);
         $em->persist($paiement);
 
+        // ── Volet SINISTRE : risque « Incendie », indemnisation payable 500, payé 200 (solde 300) ──
+        $assure = new Client();
+        $assure->setNom('Assuré CAF');
+        $assure->setExonere(false);
+        $assure->setEntreprise($entreprise);
+        $em->persist($assure);
+
+        $risque = new Risque();
+        $risque->setCode('INC');
+        $risque->setBranche(Risque::BRANCHE_IARD_OU_NON_VIE);
+        $risque->setNomComplet('Incendie');
+        $risque->setImposable(true);
+        $risque->setEntreprise($entreprise);
+        $em->persist($risque);
+
+        $sinistre = new NotificationSinistre();
+        $sinistre->setAssureur($assureur);
+        $sinistre->setAssure($assure);
+        $sinistre->setRisque($risque);
+        $sinistre->setOccuredAt(new \DateTimeImmutable(sprintf('%d-04-10 09:00:00', self::ANNEE)));
+        $sinistre->setEntreprise($entreprise);
+        $em->persist($sinistre);
+
+        $offre = new OffreIndemnisationSinistre();
+        $offre->setMontantPayable(500.0);
+        $offre->setBeneficiaire('Assuré CAF');
+        $offre->setNotificationSinistre($sinistre);
+        $offre->setEntreprise($entreprise);
+        $em->persist($offre);
+
+        $indemnite = new Paiement();
+        $indemnite->setMontant(200.0);
+        $indemnite->setReference('IND-CAF-1');
+        $indemnite->setPaidAt(new \DateTimeImmutable(sprintf('%d-05-20 10:00:00', self::ANNEE)));
+        $indemnite->setOffreIndemnisationSinistre($offre);
+        $indemnite->setEntreprise($entreprise);
+        $em->persist($indemnite);
+
         $em->flush();
 
         // Taxe assureur 15 % (sert au calcul HT = TTC / 1,15). La colonne
@@ -224,6 +268,64 @@ class KetFinanceMensuelE2ETest extends WebTestCase
         $this->assertSame(0.0, $result->data['commissionEncaisseeTtc'][1]);
         $this->assertSame(115.0, $result->data['totalTtc']);
         $this->assertSame(100.0, $result->data['totalHt']);
+    }
+
+    /** L'OUTIL, sur la vraie base : CA ventilé par assureur (HT 100 / TTC 115). */
+    public function testVentilationCaParAssureur(): void
+    {
+        ['entreprise' => $e] = $this->seed();
+        $service = static::getContainer()->get(VentilationFinanciereService::class);
+
+        $data = $service->chiffreAffaires($e, 'assureur', self::ANNEE);
+
+        $this->assertSame('assureur', $data['dimension']);
+        $this->assertNotEmpty($data['lignes']);
+        $this->assertSame('Assureur CAF', $data['lignes'][0]['libelle']);
+        $this->assertSame(115.0, $data['lignes'][0]['caTtc']);
+        $this->assertSame(100.0, $data['lignes'][0]['caHt']);
+    }
+
+    /** L'OUTIL, sur la vraie base : sinistres par risque (payable 500 / payé 200 / solde 300). */
+    public function testVentilationSinistresParRisque(): void
+    {
+        ['entreprise' => $e] = $this->seed();
+        $service = static::getContainer()->get(VentilationFinanciereService::class);
+
+        $data = $service->sinistres($e, 'risque', self::ANNEE);
+
+        $this->assertSame('sinistres', $data['mesure']);
+        $this->assertNotEmpty($data['lignes']);
+        $ligne = $data['lignes'][0];
+        $this->assertSame('Incendie', $ligne['libelle']);
+        $this->assertSame(500.0, $ligne['payable']);
+        $this->assertSame(200.0, $ligne['paye']);
+        $this->assertSame(300.0, $ligne['solde']);
+        $this->assertSame(300.0, $data['totalSolde']);
+    }
+
+    /** DE BOUT EN BOUT via le chat : « CA par assureur » routé et rendu. */
+    public function testChatCaParAssureur(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $owner);
+
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+        $this->client->request(
+            'POST',
+            sprintf('/admin/assistant-ia/api/messages/%d/%d', $e->getId(), $conversation->getId()),
+            [], [], ['CONTENT_TYPE' => 'application/json'],
+            json_encode(['contenu' => 'Chiffre d\'affaires par assureur en ' . self::ANNEE]),
+        );
+        $this->assertResponseIsSuccessful();
+        $data = $this->jsonResponse();
+
+        $this->assertFalse($data['assistant']['refus']);
+        $this->assertStringContainsString('Assureur CAF', $data['assistant']['contenu']);
+
+        $meta = $this->em()->getRepository(AssistantMessage::class)
+            ->findOneBy(['role' => AssistantMessage::ROLE_ASSISTANT], ['id' => 'DESC'])
+            ->getMeta();
+        $this->assertSame('analyse_portefeuille', $meta['tool']);
     }
 
     /**
