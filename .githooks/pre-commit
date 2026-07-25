@@ -1,0 +1,14 @@
+#!/bin/sh
+#
+# Estampille la version applicative de JS Brokers dans le fichier `VERSION`.
+#
+# La version = nombre total de commits (+1 pour le commit en cours de création,
+# absent de `git rev-list` tant qu'il n'est pas écrit) + date du jour. C'est la
+# source de vérité lue par App\Services\VersionService (aucun appel git au runtime).
+#
+# Installation (une fois par clone du dépôt) :
+#     git config core.hooksPath .githooks
+#
+count=$(git rev-list --count HEAD 2>/dev/null || echo 0)
+printf '%s\n%s\n' "$((count + 1))" "$(date +%Y-%m-%d)" > VERSION
+git add VERSION
