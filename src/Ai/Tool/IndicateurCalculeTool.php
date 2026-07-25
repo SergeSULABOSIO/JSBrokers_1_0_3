@@ -106,11 +106,16 @@ final class IndicateurCalculeTool implements AiToolInterface
                 ],
                 'du' => [
                     'type' => 'string',
-                    'description' => 'Début de période AAAA-MM-JJ (optionnel).',
+                    'description' => 'Début de période AAAA-MM-JJ (optionnel ; fournir AUSSI « au » pour que la période s\'applique).',
                 ],
                 'au' => [
                     'type' => 'string',
-                    'description' => 'Fin de période AAAA-MM-JJ (optionnel).',
+                    'description' => 'Fin de période AAAA-MM-JJ (optionnel ; fournir AUSSI « du » pour que la période s\'applique).',
+                ],
+                'reper' => [
+                    'type' => 'string',
+                    'enum' => ['dateEffet', 'dateEcheance'],
+                    'description' => "Borne de la période : date d'effet (dateEffet, défaut) ou d'échéance (dateEcheance) de l'avenant.",
                 ],
             ],
             'required' => ['code'],
@@ -248,28 +253,73 @@ final class IndicateurCalculeTool implements AiToolInterface
             'valeur'     => (float) $stats[$code],
             // Peut être null si l'entreprise n'a pas de monnaie d'affichage configurée.
             'unite'      => (string) ($indicateur['unite'] ?? ''),
+            // Sémantique métier de l'indicateur (définition + nature) — transmise au
+            // modèle pour qu'il ne CONFONDE PAS généré / encaissé / reste-à-encaisser.
+            'description' => (string) ($indicateur['description'] ?? ''),
+            'base'        => $this->baseIndicateur($code),
         ];
-        foreach (['entre' => 'du', 'et' => 'au'] as $option => $cle) {
-            if (isset($options[$option])) {
-                $data[$cle] = $options[$option];
+        // Période effectivement appliquée (reper posé ⇒ le moteur a filtré) : réécho en AAAA-MM-JJ lisible.
+        if (isset($options['reper'])) {
+            foreach (['entre' => 'du', 'et' => 'au'] as $option => $cle) {
+                if (isset($options[$option])) {
+                    $iso = \DateTimeImmutable::createFromFormat('!d/m/Y', $options[$option]);
+                    $data[$cle] = $iso instanceof \DateTimeImmutable ? $iso->format('Y-m-d') : $options[$option];
+                }
             }
         }
 
         return AiToolResult::ok($data);
     }
 
-    /** Période du/au => options entre/et du moteur d'indicateurs (dates validées). */
+    /**
+     * Période du/au => options entre/et du moteur d'indicateurs.
+     *
+     * ⚠️ Le moteur (IndicatorCalculationHelper::getIndicateursGlobaux) n'applique
+     * le filtre de dates QUE si les DEUX bornes sont au format d/m/Y ET que
+     * l'option « reper » est posée (dateEffet = startingAt, dateEcheance =
+     * endingAt de l'avenant). On convertit donc AAAA-MM-JJ -> d/m/Y et on pose
+     * reper, sans quoi la période serait silencieusement ignorée (agrégat toutes
+     * périodes confondues).
+     */
     private function optionsPeriode(array $args): array
     {
-        $options = [];
+        $bornes = [];
         foreach (['du' => 'entre', 'au' => 'et'] as $arg => $option) {
             $valeur = trim((string) ($args[$arg] ?? ''));
             if ($valeur !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $valeur)) {
-                $options[$option] = $valeur;
+                $date = \DateTimeImmutable::createFromFormat('!Y-m-d', $valeur);
+                if ($date instanceof \DateTimeImmutable) {
+                    $bornes[$option] = $date->format('d/m/Y');
+                }
             }
         }
 
-        return $options;
+        // Le filtre n'est actif QUE bornes complètes : on ne pose reper que si les deux sont là.
+        if (isset($bornes['entre'], $bornes['et'])) {
+            $reper = (string) ($args['reper'] ?? 'dateEffet');
+            $bornes['reper'] = in_array($reper, ['dateEffet', 'dateEcheance'], true) ? $reper : 'dateEffet';
+        }
+
+        return $bornes;
+    }
+
+    /**
+     * Nature comptable de l'indicateur, déduite de son code — signale au modèle
+     * s'il lit un montant GÉNÉRÉ/facturé, ENCAISSÉ/réglé, un SOLDE restant, ou un TAUX.
+     */
+    private function baseIndicateur(string $code): string
+    {
+        if (str_starts_with($code, 'taux_')) {
+            return 'taux';
+        }
+        if (str_ends_with($code, '_solde')) {
+            return 'solde';
+        }
+        if (str_ends_with($code, '_encaissee') || str_ends_with($code, '_payee') || str_ends_with($code, '_paye')) {
+            return 'encaissee';
+        }
+
+        return 'generee';
     }
 
     /** Dictionnaire des indicateurs calculés (mêmes définitions que la colonne de visualisation). */

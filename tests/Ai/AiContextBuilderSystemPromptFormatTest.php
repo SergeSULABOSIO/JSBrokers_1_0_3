@@ -44,4 +44,31 @@ class AiContextBuilderSystemPromptFormatTest extends KernelTestCase
         $this->assertStringContainsString('[Info](#info)', $prompt);
         $this->assertStringContainsString('[Aucun impayé](#neutral)', $prompt);
     }
+
+    public function testPromptPorteLeGlossaireFinancierEtLaConcision(): void
+    {
+        static::bootKernel();
+        $builder = static::getContainer()->get(AiContextBuilder::class);
+
+        $request = new AiRequest(
+            systemContext: [
+                'assistantNom'   => 'Ket',
+                'entrepriseNom'  => 'PHPUnit Glossaire SARL',
+                'perimetre'      => [],
+                'date'           => '2026-07-25',
+                'objetsAttaches' => [],
+            ],
+            messages: [],
+            scope: new AiScope(new Entreprise(), new Invite()),
+        );
+
+        $prompt = $builder->toSystemPrompt($request);
+
+        // Glossaire : CA = commissions encaissées, distinct de généré / production / prime.
+        $this->assertStringContainsString('GLOSSAIRE FINANCIER', $prompt);
+        $this->assertStringContainsString('commissions réellement ENCAISSÉES', $prompt);
+        $this->assertStringContainsString('chiffre_affaires_mensuel', $prompt);
+        // Concision.
+        $this->assertStringContainsString('CONCISION', $prompt);
+    }
 }
