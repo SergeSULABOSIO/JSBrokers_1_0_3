@@ -139,7 +139,7 @@
         {# COLONNE 2 : Rubriques & Descriptions #}
         <div class="menu-col-2">
             {# Ligne 1: Marque JS Brokers — version compacte pour laisser de la place aux rubriques #}
-            {# Au survol du nom et de la version : infobulle sombre du DERNIER commit
+            {# Au survol de la version UNIQUEMENT : infobulle sombre du DERNIER commit
                (réf — date + explication), même pattern que les infobulles Pistes/chat IA
                (contrôleur `commit-tip`). Présente seulement si git est lisible (repli : rien). #}
             {% set _lc = app_last_commit() %}
@@ -149,9 +149,9 @@
                     data-commit-tip-date-value="{{ _lc.date|date('d/m/Y') }}"
                     data-commit-tip-subject-value="{{ _lc.subject }}"{% endif %}>
                 {# La marque renvoie toujours vers la page d'accueil publique (/). #}
-                <a href="{{ path('app_index') }}" class="company-brand" aria-label="JS Brokers — retour à l'accueil"{% if not _lc %} title="Retour à l'accueil JS Brokers"{% endif %}>
+                <a href="{{ path('app_index') }}" class="company-brand" aria-label="JS Brokers — retour à l'accueil" title="Retour à l'accueil JS Brokers">
                     <img src="{{ asset(menu.colonne_2.logo) }}" alt="Logo" class="company-logo">
-                    <h2 class="company-title"{% if _lc %} data-commit-tip{% endif %}>{{ menu.colonne_2.titre }}</h2>
+                    <h2 class="company-title">{{ menu.colonne_2.titre }}</h2>
                 </a>
                 <p class="company-description">{{ menu.colonne_2.description }}</p>
                 {# Version APPLICATIVE, auto-incrémentée à chaque commit (source : App\Services\VersionService).

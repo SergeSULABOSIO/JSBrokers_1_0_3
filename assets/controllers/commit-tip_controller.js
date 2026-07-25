@@ -77,7 +77,8 @@ export default class extends Controller {
     _create() {
         if (this._tip) return this._tip;
         const tip = document.createElement('div');
-        tip.className = 'jsb-ctx-tip';
+        // `jsb-ctx-tip` = style partagé ; `commit-tip` = crochet local (titre en blanc).
+        tip.className = 'jsb-ctx-tip commit-tip';
         tip.setAttribute('role', 'tooltip');
         document.body.appendChild(tip);
         this._tip = tip;

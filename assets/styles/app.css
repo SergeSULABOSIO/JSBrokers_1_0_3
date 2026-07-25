@@ -3894,6 +3894,8 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 #db-piste-tip .tip-section:first-child, .jsb-ctx-tip .tip-section:first-child { border-top: none; padding-top: 3px; }
 #db-piste-tip .tip-risque, .jsb-ctx-tip .tip-risque { color: #fbbf24; }
 #db-piste-tip .tip-libelle, .jsb-ctx-tip .tip-libelle { color: #9ca3af; font-style: italic; font-size: .68rem; padding-top: 1px; padding-bottom: 3px; }
+/* Infobulle « dernier commit » (survol de la version) : titre en blanc, pas en bleu. */
+.jsb-ctx-tip.commit-tip .tip-section { color: #fff; }
 
 /* ── Blocs details collapsibles (top listes) ── */
 .db-block-details > summary { list-style:none; cursor:pointer; border-radius:.375rem .375rem 0 0; transition: background .15s ease; }
