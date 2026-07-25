@@ -27,8 +27,14 @@ class VersionService
     /** Commits nécessaires pour incrémenter le numéro majeur (1.x → 2.x). */
     private const COMMITS_PER_MAJOR = 1000;
 
+    /** Séparateur d'unité (0x1F) entre champs de `git log` : jamais présent dans un message. */
+    private const SEP = "\x1f";
+
     /** Cache des valeurs résolues (fichier lu une seule fois par requête). */
     private ?array $cache = null;
+
+    /** Cache du dernier commit (false = déjà cherché et indisponible). */
+    private array|false|null $lastCommit = null;
 
     public function __construct(
         #[Autowire('%kernel.project_dir%')]
@@ -61,6 +67,75 @@ class VersionService
     public function getDate(): \DateTimeImmutable
     {
         return $this->values()['date'];
+    }
+
+    /**
+     * Dernier commit effectué, pour communiquer sur la mise à jour au survol de
+     * la version : réf courte, date, et sujet (explication concise de ce qui a
+     * été fait). Lu via git (mémoïsé) ; null si git est indisponible (prod sans
+     * binaire) → l'appelant masque simplement l'infobulle.
+     *
+     * @return array{ref:string, date:\DateTimeImmutable, subject:string}|null
+     */
+    public function getLastCommit(): ?array
+    {
+        if ($this->lastCommit !== null) {
+            return $this->lastCommit ?: null;
+        }
+
+        $raw = $this->gitLastCommitRaw();
+        $this->lastCommit = ($raw !== null ? self::parseCommit($raw) : null) ?? false;
+
+        return $this->lastCommit ?: null;
+    }
+
+    /**
+     * Analyse la sortie de `git log -1` (champs `ref SEP date-ISO SEP sujet`).
+     * Fonction pure : testable sans dépôt git.
+     *
+     * @return array{ref:string, date:\DateTimeImmutable, subject:string}|null
+     */
+    public static function parseCommit(string $raw): ?array
+    {
+        $parts = explode(self::SEP, trim($raw));
+        if (count($parts) < 3) {
+            return null;
+        }
+
+        [$ref, $iso, $subject] = $parts;
+        $ref = trim($ref);
+        $subject = trim($subject);
+        if ($ref === '') {
+            return null;
+        }
+
+        try {
+            $date = new \DateTimeImmutable(trim($iso));
+        } catch (\Exception) {
+            return null;
+        }
+
+        return ['ref' => $ref, 'date' => $date, 'subject' => $subject];
+    }
+
+    /** Sortie brute de `git log -1` (ref, date ISO, sujet) ou null si git indisponible. */
+    private function gitLastCommitRaw(): ?string
+    {
+        try {
+            $format = '%h' . self::SEP . '%cI' . self::SEP . '%s';
+            $process = new Process(['git', 'log', '-1', '--format=' . $format], $this->projectDir);
+            $process->setTimeout(3);
+            $process->run();
+
+            if ($process->isSuccessful()) {
+                $out = trim($process->getOutput());
+                return $out !== '' ? $out : null;
+            }
+        } catch (\Throwable) {
+            // git indisponible : l'infobulle est simplement masquée.
+        }
+
+        return null;
     }
 
     /**
