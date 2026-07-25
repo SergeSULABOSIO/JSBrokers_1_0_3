@@ -147,7 +147,8 @@
                  {% if _lc %}data-controller="commit-tip"
                     data-commit-tip-ref-value="{{ _lc.ref }}"
                     data-commit-tip-date-value="{{ _lc.date|date('d/m/Y') }}"
-                    data-commit-tip-subject-value="{{ _lc.subject }}"{% endif %}>
+                    data-commit-tip-subject-value="{{ _lc.subject }}"
+                    data-commit-tip-paragraphs-value="{{ _lc.paragraphs|json_encode|e('html_attr') }}"{% endif %}>
                 {# La marque renvoie toujours vers la page d'accueil publique (/). #}
                 <a href="{{ path('app_index') }}" class="company-brand" aria-label="JS Brokers — retour à l'accueil" title="Retour à l'accueil JS Brokers">
                     <img src="{{ asset(menu.colonne_2.logo) }}" alt="Logo" class="company-logo">

@@ -79,6 +79,48 @@ class VersionServiceTest extends TestCase
         $this->assertSame('Ket : garde-fou — robustesse', $commit['subject']);
     }
 
+    public function testParseCommitCaptureLesParagraphesDuCorps(): void
+    {
+        $sep = "\x1f";
+        $corps = "Première explication de ce qui a été fait.\n\nDeuxième paragraphe sur le problème résolu.\n\nCo-Authored-By: Claude <x@y.z>";
+        $raw = "abc1234{$sep}2026-01-02T08:00:00+00:00{$sep}Sujet du commit{$sep}{$corps}";
+
+        $commit = VersionService::parseCommit($raw);
+
+        $this->assertSame('Sujet du commit', $commit['subject']);
+        $this->assertSame(
+            ['Première explication de ce qui a été fait.', 'Deuxième paragraphe sur le problème résolu.'],
+            $commit['paragraphs'],
+            'Deux paragraphes, trailer Co-Authored-By exclu',
+        );
+    }
+
+    public function testSummarizeBodyRetireTrailersEtBorneADeuxParagraphes(): void
+    {
+        $body = "Para un.\n\nPara deux.\n\nPara trois (ignoré).\n\nSigned-off-by: Qui <a@b.c>";
+
+        $this->assertSame(['Para un.', 'Para deux.'], VersionService::summarizeBody($body));
+    }
+
+    public function testSummarizeBodyReunitLesLignesEtTronque(): void
+    {
+        // Les retours de ligne internes deviennent des espaces ; longueur bornée.
+        $long = str_repeat('mot ', 200); // ~800 caractères
+        $body = "ligne une\nligne deux\n\n{$long}";
+
+        $paras = VersionService::summarizeBody($body, 2, 50);
+
+        $this->assertSame('ligne une ligne deux', $paras[0]);
+        $this->assertStringEndsWith('…', $paras[1]);
+        $this->assertLessThanOrEqual(50, mb_strlen($paras[1]));
+    }
+
+    public function testSummarizeBodyVideDonneListeVide(): void
+    {
+        $this->assertSame([], VersionService::summarizeBody(''));
+        $this->assertSame([], VersionService::summarizeBody("Co-Authored-By: X <a@b.c>"));
+    }
+
     public function testParseCommitRejetteUneSortieMalformee(): void
     {
         $this->assertNull(VersionService::parseCommit(''));
