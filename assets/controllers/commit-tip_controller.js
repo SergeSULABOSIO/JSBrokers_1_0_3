@@ -20,6 +20,7 @@ export default class extends Controller {
         ref: String,
         date: String,
         subject: String,
+        paragraphs: Array,
     };
 
     connect() {
@@ -85,28 +86,34 @@ export default class extends Controller {
         return tip;
     }
 
-    /** Titre = « réf — date » (tip-section) ; corps = sujet du commit (tip-libelle). */
+    /**
+     * Titre = « réf — date » (tip-section) ; sujet en tête (commit-tip-lead) ;
+     * puis 1 à 2 paragraphes d'explication (commit-tip-para). Construction DOM
+     * par textContent : échappement garanti.
+     */
     _build(tip) {
         tip.textContent = '';
         const table = document.createElement('table');
 
-        const titre = document.createElement('tr');
-        const tdTitre = document.createElement('td');
-        tdTitre.setAttribute('colspan', '2');
-        tdTitre.className = 'tip-section';
-        tdTitre.textContent = `${this.refValue} — ${this.dateValue}`;
-        titre.appendChild(tdTitre);
-        table.appendChild(titre);
+        const addRow = (text, className) => {
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.setAttribute('colspan', '2');
+            td.className = className;
+            td.textContent = text;
+            tr.appendChild(td);
+            table.appendChild(tr);
+        };
+
+        addRow(`${this.refValue} — ${this.dateValue}`, 'tip-section');
 
         if (this.subjectValue) {
-            const corps = document.createElement('tr');
-            const tdCorps = document.createElement('td');
-            tdCorps.setAttribute('colspan', '2');
-            tdCorps.className = 'tip-libelle';
-            tdCorps.textContent = this.subjectValue;
-            corps.appendChild(tdCorps);
-            table.appendChild(corps);
+            addRow(this.subjectValue, 'commit-tip-lead');
         }
+
+        (this.paragraphsValue || []).forEach((para) => {
+            if (para) addRow(para, 'commit-tip-para');
+        });
 
         tip.appendChild(table);
     }

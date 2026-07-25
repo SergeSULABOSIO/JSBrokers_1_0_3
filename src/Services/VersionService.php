@@ -71,11 +71,12 @@ class VersionService
 
     /**
      * Dernier commit effectué, pour communiquer sur la mise à jour au survol de
-     * la version : réf courte, date, et sujet (explication concise de ce qui a
-     * été fait). Lu via git (mémoïsé) ; null si git est indisponible (prod sans
-     * binaire) → l'appelant masque simplement l'infobulle.
+     * la version : réf courte, date, sujet (titre de ce qui a été fait) et
+     * paragraphes du corps (explication détaillée, trailers retirés). Lu via git
+     * (mémoïsé) ; null si git est indisponible (prod sans binaire) → l'appelant
+     * masque simplement l'infobulle.
      *
-     * @return array{ref:string, date:\DateTimeImmutable, subject:string}|null
+     * @return array{ref:string, date:\DateTimeImmutable, subject:string, paragraphs:list<string>}|null
      */
     public function getLastCommit(): ?array
     {
@@ -90,39 +91,80 @@ class VersionService
     }
 
     /**
-     * Analyse la sortie de `git log -1` (champs `ref SEP date-ISO SEP sujet`).
+     * Analyse la sortie de `git log -1` (champs `ref SEP date-ISO SEP sujet SEP corps`).
      * Fonction pure : testable sans dépôt git.
      *
-     * @return array{ref:string, date:\DateTimeImmutable, subject:string}|null
+     * @return array{ref:string, date:\DateTimeImmutable, subject:string, paragraphs:list<string>}|null
      */
     public static function parseCommit(string $raw): ?array
     {
-        $parts = explode(self::SEP, trim($raw));
+        $parts = explode(self::SEP, trim($raw), 4);
         if (count($parts) < 3) {
             return null;
         }
 
-        [$ref, $iso, $subject] = $parts;
-        $ref = trim($ref);
-        $subject = trim($subject);
+        $ref = trim($parts[0]);
+        $subject = trim($parts[2]);
+        $body = $parts[3] ?? '';
         if ($ref === '') {
             return null;
         }
 
         try {
-            $date = new \DateTimeImmutable(trim($iso));
+            $date = new \DateTimeImmutable(trim($parts[1]));
         } catch (\Exception) {
             return null;
         }
 
-        return ['ref' => $ref, 'date' => $date, 'subject' => $subject];
+        return [
+            'ref' => $ref,
+            'date' => $date,
+            'subject' => $subject,
+            'paragraphs' => self::summarizeBody($body),
+        ];
+    }
+
+    /**
+     * Transforme le corps brut d'un commit en 1 à 2 paragraphes lisibles :
+     * retire les trailers (`Co-Authored-By:`, `Signed-off-by:`…), découpe sur les
+     * lignes vides, réunit les retours de ligne internes en espaces (prose fluide)
+     * et borne la longueur. Fonction pure : testable sans dépôt git.
+     *
+     * @return list<string>
+     */
+    public static function summarizeBody(string $body, int $maxParagraphs = 2, int $maxLen = 320): array
+    {
+        $lignes = preg_split('/\R/', str_replace("\r\n", "\n", $body)) ?: [];
+
+        // Retire les lignes de trailer (métadonnées de fin de message, hors sujet).
+        $lignes = array_filter($lignes, static fn (string $l): bool
+            => !preg_match('/^\s*(co-authored-by|signed-off-by|acked-by|reviewed-by|tested-by|cc)\s*:/i', $l));
+
+        $bruts = preg_split('/\n\s*\n/', trim(implode("\n", $lignes))) ?: [];
+
+        $paragraphs = [];
+        foreach ($bruts as $p) {
+            $p = trim(preg_replace('/\s*\n\s*/', ' ', $p) ?? '');
+            if ($p === '') {
+                continue;
+            }
+            if (mb_strlen($p) > $maxLen) {
+                $p = rtrim(mb_substr($p, 0, $maxLen - 1)) . '…';
+            }
+            $paragraphs[] = $p;
+            if (count($paragraphs) >= $maxParagraphs) {
+                break;
+            }
+        }
+
+        return $paragraphs;
     }
 
     /** Sortie brute de `git log -1` (ref, date ISO, sujet) ou null si git indisponible. */
     private function gitLastCommitRaw(): ?string
     {
         try {
-            $format = '%h' . self::SEP . '%cI' . self::SEP . '%s';
+            $format = '%h' . self::SEP . '%cI' . self::SEP . '%s' . self::SEP . '%b';
             $process = new Process(['git', 'log', '-1', '--format=' . $format], $this->projectDir);
             $process->setTimeout(3);
             $process->run();
