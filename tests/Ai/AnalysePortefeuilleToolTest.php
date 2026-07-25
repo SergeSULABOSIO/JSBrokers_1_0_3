@@ -148,6 +148,37 @@ class AnalysePortefeuilleToolTest extends TestCase
         $this->assertSame(1.0, $result->data['mois'][1]);
     }
 
+    public function testChiffreAffairesMensuelHtEtTtc(): void
+    {
+        $monthTotals = [3 => ['encaissements' => 115.0], 7 => ['encaissements' => 230.0]];
+        $dashboard = $this->createMock(DashboardDataProvider::class);
+        $dashboard->expects($this->once())
+            ->method('getProductionTableData')
+            ->with($this->anything(), 2025)
+            ->willReturn(['monthTotals' => $monthTotals, 'taxeAssureurTaux' => 15.0]);
+
+        $tool = $this->makeTool(['Paiement' => true, 'Avenant' => true], $dashboard);
+        $result = $tool->execute(['analyse' => 'chiffre_affaires_mensuel', 'annee' => 2025], $this->makeScope());
+
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
+        $this->assertSame(2025, $result->data['annee']);
+        // Cash TTC perçu = encaissements bruts ; CA HT = TTC / (1 + 15 %).
+        $this->assertSame(115.0, $result->data['commissionEncaisseeTtc'][3]);
+        $this->assertSame(100.0, $result->data['commissionEncaisseeHt'][3]);
+        $this->assertSame(0.0, $result->data['commissionEncaisseeTtc'][1]);
+        $this->assertSame(345.0, $result->data['totalTtc']);
+        $this->assertSame(300.0, $result->data['totalHt']);
+        $this->assertArrayHasKey('definition', $result->data);
+    }
+
+    public function testChiffreAffairesMensuelExigeAvenantEtPaiement(): void
+    {
+        $tool = $this->makeTool(['Paiement' => true, 'Avenant' => false]);
+        $result = $tool->execute(['analyse' => 'chiffre_affaires_mensuel'], $this->makeScope());
+
+        $this->assertSame(AiToolResult::STATUS_HORS_PERIMETRE, $result->status);
+    }
+
     public function testAnalyseInconnueIntrouvable(): void
     {
         $tool = $this->makeTool([]);
@@ -169,6 +200,14 @@ class AnalysePortefeuilleToolTest extends TestCase
         $this->assertSame(
             ['analyse' => 'production_mensuelle', 'annee' => 2026],
             $tool->match('Production mensuelle 2026', $scope),
+        );
+        $this->assertSame(
+            ['analyse' => 'chiffre_affaires_mensuel', 'annee' => 2026],
+            $tool->match('Affiche le chiffre d\'affaires ventilé par mois en 2026', $scope),
+        );
+        $this->assertSame(
+            ['analyse' => 'chiffre_affaires_mensuel'],
+            $tool->match('CA par mois', $scope),
         );
         $this->assertSame(['analyse' => 'encaissements'], $tool->match('Quels sont les derniers encaissements ?', $scope));
 

@@ -28,12 +28,13 @@ final class AnalysePortefeuilleTool implements AiToolInterface
 {
     /** analyse => [méthode du provider (tops), entités dont la lecture est exigée]. */
     private const ANALYSES = [
-        'top_assureurs'        => ['getTopAssureursAvecIndicateurs',      ['Avenant', 'Assureur']],
-        'top_clients'          => ['getTopAssuresAvecIndicateurs',        ['Avenant', 'Client']],
-        'top_risques'          => ['getTopRisquesAvecIndicateurs',        ['Avenant', 'Risque']],
-        'top_intermediaires'   => ['getTopIntermediairesAvecIndicateurs', ['Avenant', 'Partenaire']],
-        'production_mensuelle' => [null, ['Paiement']],
-        'encaissements'        => [null, ['Paiement']],
+        'top_assureurs'             => ['getTopAssureursAvecIndicateurs',      ['Avenant', 'Assureur']],
+        'top_clients'               => ['getTopAssuresAvecIndicateurs',        ['Avenant', 'Client']],
+        'top_risques'               => ['getTopRisquesAvecIndicateurs',        ['Avenant', 'Risque']],
+        'top_intermediaires'        => ['getTopIntermediairesAvecIndicateurs', ['Avenant', 'Partenaire']],
+        'production_mensuelle'      => [null, ['Paiement']],
+        'chiffre_affaires_mensuel'  => [null, ['Paiement', 'Avenant']],
+        'encaissements'             => [null, ['Paiement']],
     ];
 
     private const LIMITE_DEFAUT = 5;
@@ -56,10 +57,12 @@ final class AnalysePortefeuilleTool implements AiToolInterface
     {
         return 'Analyses agrégées du portefeuille du cabinet : classements « top » des assureurs, '
             . 'clients, risques ou intermédiaires (nombre de polices, primes, commissions, '
-            . 'sinistralité, part de marché — polices actives), production encaissée par mois, '
-            . 'derniers encaissements. À appeler pour « quel est notre meilleur assureur ? », '
-            . '« top 5 clients », « production mensuelle 2026 ». Pour un indicateur unitaire, '
-            . 'préférer indicateur_calcule ; pour compter/lister, compter_entites / rechercher_entites.';
+            . 'sinistralité, part de marché — polices actives), CHIFFRE D\'AFFAIRES par mois '
+            . '(commissions encaissées, HT et TTC), production encaissée par mois, derniers '
+            . 'encaissements. À appeler pour « quel est notre meilleur assureur ? », « top 5 '
+            . 'clients », « chiffre d\'affaires / CA ventilé par mois », « production mensuelle '
+            . '2026 ». Pour un indicateur unitaire, préférer indicateur_calcule ; pour '
+            . 'compter/lister, compter_entites / rechercher_entites.';
     }
 
     public function schema(): array
@@ -70,8 +73,9 @@ final class AnalysePortefeuilleTool implements AiToolInterface
                 'analyse' => [
                     'type' => 'string',
                     'enum' => array_keys(self::ANALYSES),
-                    'description' => 'Analyse demandée : classement du portefeuille, production '
-                        . 'encaissée par mois, ou derniers encaissements.',
+                    'description' => 'Analyse demandée : classement du portefeuille, chiffre '
+                        . "d'affaires par mois (commissions encaissées), production encaissée par "
+                        . 'mois, ou derniers encaissements.',
                 ],
                 'limite' => [
                     'type' => 'integer',
@@ -81,7 +85,7 @@ final class AnalysePortefeuilleTool implements AiToolInterface
                 ],
                 'annee' => [
                     'type' => 'integer',
-                    'description' => 'Année de la production mensuelle (défaut : année courante).',
+                    'description' => "Année du chiffre d'affaires / de la production mensuelle (défaut : année courante).",
                 ],
             ],
             'required' => ['analyse'],
@@ -108,6 +112,18 @@ final class AnalysePortefeuilleTool implements AiToolInterface
 
                 return $args;
             }
+        }
+
+        // CA / chiffre d'affaires ventilé => commissions encaissées par mois.
+        // Apostrophe conservée par la normalisation : « d.?affaires » couvre d'/d /d.
+        if (preg_match('/(chiffre d.?affaires|\bca\b).*(mensuel|par mois|ventile|mois par mois)/', $normalized)
+            || preg_match('/(mensuel|par mois|ventile).*(chiffre d.?affaires|\bca\b)/', $normalized)) {
+            $args = ['analyse' => 'chiffre_affaires_mensuel'];
+            if (preg_match('/\b(20\d{2})\b/', $normalized, $m)) {
+                $args['annee'] = (int) $m[1];
+            }
+
+            return $args;
         }
 
         if (preg_match('/\bproduction\s+(mensuelle|par mois)\b/', $normalized)) {
@@ -145,9 +161,10 @@ final class AnalysePortefeuilleTool implements AiToolInterface
         }
 
         return match ($analyse) {
-            'production_mensuelle' => $this->productionMensuelle($scope, $args),
-            'encaissements'        => $this->encaissements($scope),
-            default                => $this->top($analyse, $methode, $scope, $args),
+            'production_mensuelle'     => $this->productionMensuelle($scope, $args),
+            'chiffre_affaires_mensuel' => $this->chiffreAffairesMensuel($scope, $args),
+            'encaissements'            => $this->encaissements($scope),
+            default                    => $this->top($analyse, $methode, $scope, $args),
         };
     }
 
@@ -207,6 +224,41 @@ final class AnalysePortefeuilleTool implements AiToolInterface
             'annee'   => $annee,
             'mois'    => array_map(static fn (float $m) => round($m, 2), $mensuel),
             'total'   => round(array_sum($mensuel), 2),
+        ]);
+    }
+
+    /**
+     * CHIFFRE D'AFFAIRES du courtier ventilé par mois = commissions réellement
+     * ENCAISSÉES (≠ production brute, ≠ commissions générées). On réutilise le
+     * moteur de la table de production (notes de commission TO_CLIENT/TO_ASSUREUR),
+     * dont « encaissements » est le cash perçu ; le HT (CA comptable) s'en déduit
+     * par le taux de taxe assureur (HT = TTC / (1 + taux/100)).
+     */
+    private function chiffreAffairesMensuel(AiScope $scope, array $args): AiToolResult
+    {
+        $annee = (int) ($args['annee'] ?? 0) ?: (int) date('Y');
+        $table = $this->dashboard->getProductionTableData($scope->entreprise, $annee);
+        $tauxAssureur = (float) ($table['taxeAssureurTaux'] ?? 0.0);
+
+        $ht  = array_fill(1, 12, 0.0);
+        $ttc = array_fill(1, 12, 0.0);
+        foreach ($table['monthTotals'] as $mois => $totaux) {
+            $encaisse = (float) ($totaux['encaissements'] ?? 0.0);
+            $ttc[$mois] = round($encaisse, 2);
+            $ht[$mois]  = round($tauxAssureur > 0.0 ? $encaisse / (1.0 + $tauxAssureur / 100.0) : $encaisse, 2);
+        }
+
+        return AiToolResult::ok([
+            'analyse'    => 'chiffre_affaires_mensuel',
+            'annee'      => $annee,
+            'definition' => "Chiffre d'affaires du courtier = commissions réellement ENCAISSÉES. "
+                . 'commissionEncaisseeHt = base hors taxes (CA comptable) ; commissionEncaisseeTtc '
+                . '= cash perçu, taxes comprises. Ne pas confondre avec la production encaissée '
+                . '(flux de caisse brut) ni avec les commissions générées (facturées, non encore encaissées).',
+            'commissionEncaisseeHt'  => $ht,
+            'commissionEncaisseeTtc' => $ttc,
+            'totalHt'                => round(array_sum($ht), 2),
+            'totalTtc'               => round(array_sum($ttc), 2),
         ]);
     }
 

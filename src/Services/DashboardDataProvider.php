@@ -809,9 +809,9 @@ class DashboardDataProvider
         return (int) ($result ?? 0);
     }
 
-    public function getProductionTableData(Entreprise $entreprise): array
+    public function getProductionTableData(Entreprise $entreprise, ?int $annee = null): array
     {
-        $year  = (int) date('Y');
+        $year  = $annee ?? (int) date('Y');
         $debut = new \DateTimeImmutable($year . '-01-01 00:00:00');
         $fin   = new \DateTimeImmutable($year . '-12-31 23:59:59');
 

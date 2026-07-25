@@ -40,6 +40,30 @@ final class DocumentComptableTool implements AiToolInterface
         'suivi_fiscal'       => 'Suivi fiscal (TVA et taxes)',
     ];
 
+    /**
+     * Définition métier de chaque état (SYSCOHADA) — transmise au modèle pour
+     * qu'il EXPLIQUE correctement le document sans inventer. Rappel clé : en
+     * comptabilité d'ENCAISSEMENT du cabinet, le « chiffre d'affaires » du
+     * compte de résultat = commissions de courtage HT réellement ENCAISSÉES.
+     */
+    private const LEGENDES = [
+        'tresorerie'         => "Tableau de flux de trésorerie (TFT) : mouvements de liquidités de l'exercice "
+            . '(encaissements − décaissements) et variation de la trésorerie. Mesure le cash réel, pas le résultat.',
+        'resultat'           => "Compte de résultat : produits − charges = résultat net de l'exercice. Le poste "
+            . "« chiffre d'affaires » correspond aux commissions de courtage HT réellement encaissées (comptabilité "
+            . "d'encaissement) ; il ne comprend ni les primes (encaissées par l'assureur) ni les commissions non encore encaissées.",
+        'bilan'              => 'Bilan : photographie du patrimoine à la clôture — actif (emplois) et passif '
+            . '(ressources), qui s\'équilibrent. Décrit une situation, pas un flux.',
+        'formation_resultat' => 'Formation du résultat (TFR) : soldes intermédiaires de gestion, du chiffre '
+            . "d'affaires jusqu'au résultat net, montrant comment le résultat se construit étape par étape.",
+        'balance'            => 'Balance générale : pour chaque compte, cumuls et soldes débiteurs/créditeurs. '
+            . 'Contrôle de cohérence (total débit = total crédit) et base des états de synthèse.',
+        'journal'            => "Journal : totaux des écritures comptables de l'exercice (total débit, total "
+            . 'crédit, nombre d\'écritures). Trace chronologique exhaustive des mouvements.',
+        'suivi_fiscal'       => 'Suivi fiscal : TVA collectée − TVA déductible = TVA nette due/à reverser, et '
+            . 'taxes courtier dues/payées, par mois et en cumul annuel.',
+    ];
+
     public function __construct(
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly CourtierEcritureComptableService $comptabilite,
@@ -145,6 +169,7 @@ final class DocumentComptableTool implements AiToolInterface
         return AiToolResult::ok([
             'document'  => $document,
             'titre'     => self::DOCUMENTS[$document],
+            'legende'   => self::LEGENDES[$document] ?? '',
             'exercice'  => $exercice,
             'exercices' => $exercices,
             'monnaie'   => 'USD',

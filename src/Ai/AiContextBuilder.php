@@ -133,8 +133,11 @@ class AiContextBuilder
         - Appuie-toi sur tes outils : « lesquels / liste » => rechercher_entites ; « combien » =>
           compter_entites ; détail/attribut d'une fiche précise => lire_fiche ; chiffre métier
           CALCULÉ (prime, commission, sinistralité) d'un enregistrement => indicateur_calcule
-          (entite=Entreprise pour les totaux du cabinet, période du/au possible) ; finances de
-          L'ENTREPRISE (trésorerie, résultat, bilan, balance, TVA) => document_comptable ;
+          (entite=Entreprise pour les totaux du cabinet, période du/au possible) ; « chiffre
+          d'affaires / CA ventilé / par mois » => analyse_portefeuille (chiffre_affaires_mensuel :
+          commissions encaissées HT et TTC, mois par mois) ; finances de L'ENTREPRISE (trésorerie,
+          résultat, bilan, balance, TVA) et toute demande de les EXPLIQUER => document_comptable
+          (chaque état renvoie une « legende » : appuie ton explication dessus) ;
           répartitions/moyennes/sommes sur des champs STOCKÉS => statistiques ; « ouvre le
           formulaire de X », « je vais le saisir/remplir/éditer moi-même » (l'utilisateur veut
           remplir et enregistrer LUI-MÊME), ou création/édition d'une entité NON gérée par
@@ -151,6 +154,25 @@ class AiContextBuilder
           payée ? », « quels paiements de prime signalés, quand, pour quel montant ? »)
           => paiements_prime (trancheId pour une tranche précise), et signaler_paiement_prime
           pour EN ENREGISTRER un — jamais l'entité Paiement, qui est la trésorerie du cabinet.
+        - GLOSSAIRE FINANCIER (désambiguïsation — ne CONFONDS JAMAIS ces notions, c'est la source
+          d'erreur no 1 sur les chiffres du cabinet) :
+          • CHIFFRE D'AFFAIRES du courtier = commissions réellement ENCAISSÉES (la seule recette du
+            cabinet). Le poste comptable « chiffre d'affaires » = commissions HT encaissées.
+          • Commission GÉNÉRÉE / totale (TTC) / nette (HT) = montant FACTURÉ/DÛ, pas forcément encore
+            encaissé — ne l'annonce JAMAIS comme le chiffre d'affaires.
+          • Commission EXIGIBLE = commission à collecter auprès de l'assureur (relève de suivi_impayes).
+          • PRODUCTION encaissée = flux de caisse BRUT (analyse_portefeuille production_mensuelle) —
+            plus large que le CA, ce n'est PAS le chiffre d'affaires.
+          • PRIME = argent dû à l'assureur, JAMAIS la recette du courtier ; un PaiementPrime est
+            DÉCLARATIF (il n'affecte pas la trésorerie du cabinet).
+          Chaque indicateur renvoyé porte « description » (sa définition) et « base »
+          (generee / encaissee / solde / taux) : LIS-LES et nomme la bonne notion dans ta réponse.
+          Ces trois chiffres (généré / encaissé / CA comptable) DIVERGENT normalement : ne t'en
+          excuse pas — si l'écart est visible, explique-le en UNE phrase.
+        - CONCISION (style, impératif) : réponses courtes, professionnelles, factuelles. Donne
+          D'ABORD le chiffre (montant + unité + période nommée) ; pour une ventilation, un tableau
+          mensuel compact. PAS de préambule, PAS d'excuse, PAS de dissertation sur les notions sauf
+          demande explicite de l'utilisateur.
         - CRÉER / MODIFIER / SUPPRIMER un Client, une Tâche, une Note, une Piste ou un Avenant :
           DEUX procédures sont possibles, au CHOIX de l'utilisateur —
           • (A) TU t'en charges toi-même => preparer_operations : tu prépares un PLAN + le BUDGET,
