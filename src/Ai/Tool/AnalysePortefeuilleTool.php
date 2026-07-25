@@ -5,6 +5,7 @@ namespace App\Ai\Tool;
 use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
 use App\Services\DashboardDataProvider;
+use App\Services\Finance\VentilationFinanciereService;
 use App\Service\Workspace\WorkspaceAccessResolver;
 
 /**
@@ -34,6 +35,8 @@ final class AnalysePortefeuilleTool implements AiToolInterface
         'top_intermediaires'        => ['getTopIntermediairesAvecIndicateurs', ['Avenant', 'Partenaire']],
         'production_mensuelle'      => [null, ['Paiement']],
         'chiffre_affaires_mensuel'  => [null, ['Paiement', 'Avenant']],
+        'chiffre_affaires'          => [null, ['Paiement', 'Avenant']],
+        'sinistres'                 => [null, ['NotificationSinistre', 'Paiement']],
         'encaissements'             => [null, ['Paiement']],
     ];
 
@@ -41,10 +44,23 @@ final class AnalysePortefeuilleTool implements AiToolInterface
     /** Aligné sur DashboardDataProvider::sliceAvecRestes(top: 9). */
     private const LIMITE_MAX = 9;
     private const MAX_ENCAISSEMENTS = 10;
+    /** Plafond de lignes restituées pour une ventilation (concision + tokens). */
+    private const MAX_LIGNES_VENTIL = 12;
+
+    /** Mots-clés => axe de ventilation (aligné sur VentilationFinanciereService::DIMENSIONS). */
+    private const AXES = [
+        'assureur'     => '/\bassureurs?\b/',
+        'risque'       => '/\brisques?\b/',
+        'client'       => '/\b(clients?|assures?)\b/',
+        'portefeuille' => '/\bportefeuilles?\b/',
+        'partenaire'   => '/\b(partenaires?|intermediaires?|apporteurs?)\b/',
+        'mois'         => '/\b(mois|mensuel(le)?)\b/',
+    ];
 
     public function __construct(
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly DashboardDataProvider $dashboard,
+        private readonly VentilationFinanciereService $ventilation,
     ) {
     }
 
@@ -56,13 +72,13 @@ final class AnalysePortefeuilleTool implements AiToolInterface
     public function description(): string
     {
         return 'Analyses agrégées du portefeuille du cabinet : classements « top » des assureurs, '
-            . 'clients, risques ou intermédiaires (nombre de polices, primes, commissions, '
-            . 'sinistralité, part de marché — polices actives), CHIFFRE D\'AFFAIRES par mois '
-            . '(commissions encaissées, HT et TTC), production encaissée par mois, derniers '
-            . 'encaissements. À appeler pour « quel est notre meilleur assureur ? », « top 5 '
-            . 'clients », « chiffre d\'affaires / CA ventilé par mois », « production mensuelle '
-            . '2026 ». Pour un indicateur unitaire, préférer indicateur_calcule ; pour '
-            . 'compter/lister, compter_entites / rechercher_entites.';
+            . 'clients, risques ou intermédiaires ; CHIFFRE D\'AFFAIRES (commissions encaissées, '
+            . 'HT et TTC) VENTILÉ par assureur, risque, client/assuré, portefeuille, partenaire '
+            . 'OU par mois ; COMPENSATIONS SINISTRES (indemnisations payable/payé/solde) ventilées '
+            . 'selon les mêmes axes ; production encaissée par mois ; derniers encaissements. '
+            . 'À appeler pour « chiffre d\'affaires par assureur », « CA par client 2026 », '
+            . '« indemnisations sinistres par risque », « top 5 clients », « production mensuelle ». '
+            . 'Pour un indicateur unitaire, préférer indicateur_calcule.';
     }
 
     public function schema(): array
@@ -87,6 +103,12 @@ final class AnalysePortefeuilleTool implements AiToolInterface
                     'type' => 'integer',
                     'description' => "Année du chiffre d'affaires / de la production mensuelle (défaut : année courante).",
                 ],
+                'dimension' => [
+                    'type' => 'string',
+                    'enum' => VentilationFinanciereService::DIMENSIONS,
+                    'description' => "Axe de ventilation pour analyse=chiffre_affaires ou analyse=sinistres : "
+                        . 'assureur, risque, client, portefeuille, partenaire ou mois.',
+                ],
             ],
             'required' => ['analyse'],
         ];
@@ -108,6 +130,30 @@ final class AnalysePortefeuilleTool implements AiToolInterface
                 $args = ['analyse' => $analyse];
                 if (preg_match('/\btop\s*(\d{1,2})\b/', $normalized, $m)) {
                     $args['limite'] = (int) $m[1];
+                }
+
+                return $args;
+            }
+        }
+
+        // Compensations sinistres ventilées (indemnisations payable/payé/solde).
+        if (preg_match('/\b(sinistres?|indemnisations?|compensations?)\b/', $normalized)) {
+            $args = ['analyse' => 'sinistres', 'dimension' => $this->matchAxe($normalized) ?? 'assureur'];
+            if (preg_match('/\b(20\d{2})\b/', $normalized, $m)) {
+                $args['annee'] = (int) $m[1];
+            }
+
+            return $args;
+        }
+
+        // CA / chiffre d'affaires ventilé par un AXE (assureur/risque/client/portefeuille/partenaire).
+        // L'axe « mois » reste servi par chiffre_affaires_mensuel (bloc suivant).
+        if (preg_match('/(chiffre d.?affaires|\bca\b)/', $normalized)) {
+            $axe = $this->matchAxe($normalized);
+            if ($axe !== null && $axe !== 'mois') {
+                $args = ['analyse' => 'chiffre_affaires', 'dimension' => $axe];
+                if (preg_match('/\b(20\d{2})\b/', $normalized, $m)) {
+                    $args['annee'] = (int) $m[1];
                 }
 
                 return $args;
@@ -163,6 +209,8 @@ final class AnalysePortefeuilleTool implements AiToolInterface
         return match ($analyse) {
             'production_mensuelle'     => $this->productionMensuelle($scope, $args),
             'chiffre_affaires_mensuel' => $this->chiffreAffairesMensuel($scope, $args),
+            'chiffre_affaires'         => $this->ventiler('chiffre_affaires', $scope, $args),
+            'sinistres'                => $this->ventiler('sinistres', $scope, $args),
             'encaissements'            => $this->encaissements($scope),
             default                    => $this->top($analyse, $methode, $scope, $args),
         };
@@ -260,6 +308,51 @@ final class AnalysePortefeuilleTool implements AiToolInterface
             'totalHt'                => round(array_sum($ht), 2),
             'totalTtc'               => round(array_sum($ttc), 2),
         ]);
+    }
+
+    /**
+     * Ventilation du CA ou des sinistres selon l'axe demandé (dimension), déléguée
+     * au service unique. Restitution plafonnée (top MAX_LIGNES_VENTIL) pour la
+     * concision — les lignes arrivent déjà triées (CA/payable décroissant, ou mois).
+     */
+    private function ventiler(string $mesure, AiScope $scope, array $args): AiToolResult
+    {
+        $dimension = (string) ($args['dimension'] ?? 'assureur');
+        if (!\in_array($dimension, VentilationFinanciereService::DIMENSIONS, true)) {
+            return AiToolResult::introuvable(sprintf(
+                'dimension « %s » inconnue — axes possibles : %s',
+                $dimension,
+                implode(', ', VentilationFinanciereService::DIMENSIONS),
+            ));
+        }
+        $annee = (int) ($args['annee'] ?? 0) ?: (int) date('Y');
+
+        $data = $mesure === 'sinistres'
+            ? $this->ventilation->sinistres($scope->entreprise, $dimension, $annee)
+            : $this->ventilation->chiffreAffaires($scope->entreprise, $dimension, $annee);
+
+        // Le moteur (simulé + rendu) dispatche sur « analyse » ; on l'aligne sur la mesure.
+        $data['analyse'] = $mesure;
+
+        $total = \count($data['lignes']);
+        if ($total > self::MAX_LIGNES_VENTIL) {
+            $data['lignes'] = \array_slice($data['lignes'], 0, self::MAX_LIGNES_VENTIL);
+            $data['lignesTronquees'] = $total - self::MAX_LIGNES_VENTIL;
+        }
+
+        return AiToolResult::ok($data);
+    }
+
+    /** Premier axe de ventilation cité dans la question (assureur, risque, mois…), ou null. */
+    private function matchAxe(string $normalized): ?string
+    {
+        foreach (self::AXES as $axe => $pattern) {
+            if (preg_match($pattern, $normalized)) {
+                return $axe;
+            }
+        }
+
+        return null;
     }
 
     private function encaissements(AiScope $scope): AiToolResult
