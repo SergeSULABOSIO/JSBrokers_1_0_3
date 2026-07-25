@@ -253,6 +253,25 @@ final class SimulatedAiEngine implements AiEngineInterface
             );
         }
 
+        if (($data['analyse'] ?? '') === 'chiffre_affaires_mensuel') {
+            $lignes = [];
+            foreach (($data['commissionEncaisseeTtc'] ?? []) as $mois => $ttc) {
+                $ht = $data['commissionEncaisseeHt'][$mois] ?? 0.0;
+                if ((float) $ttc === 0.0 && (float) $ht === 0.0) {
+                    continue; // concision : on n'affiche que les mois mouvementés.
+                }
+                $lignes[] = sprintf('- Mois %02d : HT %s · TTC %s', $mois, $fmt($ht), $fmt($ttc));
+            }
+
+            return sprintf(
+                "Chiffre d'affaires %d — commissions encaissées (total HT %s · TTC %s) :\n%s",
+                $data['annee'],
+                $fmt($data['totalHt'] ?? 0.0),
+                $fmt($data['totalTtc'] ?? 0.0),
+                $lignes === [] ? '(aucun encaissement de commission sur la période)' : implode("\n", $lignes),
+            );
+        }
+
         if (($data['analyse'] ?? '') === 'encaissements') {
             $lignes = array_map(
                 static fn (array $l) => sprintf(
