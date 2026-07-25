@@ -55,6 +55,37 @@ class VersionServiceTest extends TestCase
         rmdir($dir);
     }
 
+    public function testParseCommitDecoupeLesTroisChamps(): void
+    {
+        $sep = "\x1f";
+        $raw = "b8d40a8a{$sep}2026-07-25T15:18:40+01:00{$sep}Version applicative dynamique";
+
+        $commit = VersionService::parseCommit($raw);
+
+        $this->assertNotNull($commit);
+        $this->assertSame('b8d40a8a', $commit['ref']);
+        $this->assertSame('2026-07-25', $commit['date']->format('Y-m-d'));
+        $this->assertSame('Version applicative dynamique', $commit['subject']);
+    }
+
+    public function testParseCommitSujetAvecSeparateurDeChampNaturel(): void
+    {
+        // Le sujet peut contenir un tiret « — » : seul le séparateur 0x1F découpe.
+        $sep = "\x1f";
+        $raw = "abc1234{$sep}2026-01-02T08:00:00+00:00{$sep}Ket : garde-fou — robustesse";
+
+        $commit = VersionService::parseCommit($raw);
+
+        $this->assertSame('Ket : garde-fou — robustesse', $commit['subject']);
+    }
+
+    public function testParseCommitRejetteUneSortieMalformee(): void
+    {
+        $this->assertNull(VersionService::parseCommit(''));
+        $this->assertNull(VersionService::parseCommit('pas-de-separateur'));
+        $this->assertNull(VersionService::parseCommit("\x1f2026-01-02T08:00:00+00:00\x1fsujet"), 'ref vide → null');
+    }
+
     private function projetTemporaire(string $contenuVersion): string
     {
         $dir = sys_get_temp_dir() . '/jsb_version_' . uniqid('', true);

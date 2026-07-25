@@ -21,6 +21,7 @@ class VersionExtension extends AbstractExtension
         return [
             new TwigFunction('app_version', [$this->versionService, 'getVersion']),
             new TwigFunction('app_version_date', [$this->versionService, 'getDate']),
+            new TwigFunction('app_last_commit', [$this->versionService, 'getLastCommit']),
         ];
     }
 }
