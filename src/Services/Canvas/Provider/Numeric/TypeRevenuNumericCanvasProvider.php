@@ -31,7 +31,7 @@ class TypeRevenuNumericCanvasProvider implements NumericCanvasProviderInterface
             ],
             "pourcentage" => [
                 "description" => "Pourcentage",
-                "value" => ($object->getPourcentage() ?? 0) * 100,
+                "value" => ($object->getPourcentage() ?? 0),
                 "unit" => "%",
             ],
         ];

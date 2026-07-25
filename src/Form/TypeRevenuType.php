@@ -78,6 +78,8 @@ class TypeRevenuType extends AbstractType
                 'label' => "Pourcentage",
                 'required' => false,
                 'help' => "On applique un %",
+                // Stockage en POINTS (5 = 5 %), pas en fraction. Calculs via TypeRevenu::getFraction().
+                'type' => 'integer',
                 'scale' => 3,
                 'attr' => [
                     'placeholder' => "Pourcentage",

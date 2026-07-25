@@ -107,23 +107,23 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
         $typeRevenu = $revenu->getTypeRevenu();
         if (!$typeRevenu) return "Type de revenu non défini";
 
-        // Ces taux (exceptionnel, type de revenu, risque) sont stockés en FRACTION →
-        // affichage via le VO Pourcentage (jamais de ×100 à la main).
+        // Ces taux (exceptionnel, type de revenu, risque) sont stockés en POINTS →
+        // affichage via le VO Pourcentage::fromPourcent (jamais de ×100 à la main).
         if ($revenu->getTauxExceptionel() !== null && $revenu->getTauxExceptionel() != 0) {
-            return "Taux exceptionnel de " . Pourcentage::fromFraction($revenu->getTauxExceptionel())->format(2);
+            return "Taux exceptionnel de " . Pourcentage::fromPourcent($revenu->getTauxExceptionel())->format(2);
         }
         if ($revenu->getMontantFlatExceptionel()) {
             return "Montant fixe exceptionnel de " . $revenu->getMontantFlatExceptionel();
         }
         if ($typeRevenu->getPourcentage() !== null && $typeRevenu->getPourcentage() != 0) {
-            return "Taux par défaut de " . Pourcentage::fromFraction($typeRevenu->getPourcentage())->format(2);
+            return "Taux par défaut de " . Pourcentage::fromPourcent($typeRevenu->getPourcentage())->format(2);
         }
         if ($typeRevenu->getMontantflat()) {
             return "Montant fixe par défaut de " . $typeRevenu->getMontantflat();
         }
         if ($typeRevenu->isAppliquerPourcentageDuRisque() && $revenu->getCotation()?->getPiste()?->getRisque()) {
             $tauxRisque = $revenu->getCotation()->getPiste()->getRisque()->getPourcentageCommissionSpecifiqueHT();
-            return "Taux du risque de " . Pourcentage::fromFraction($tauxRisque)->format(2);
+            return "Taux du risque de " . Pourcentage::fromPourcent($tauxRisque)->format(2);
         }
         return "Logique de calcul non spécifiée";
     }
@@ -161,14 +161,14 @@ class RevenuPourCourtierIndicatorStrategy implements IndicatorCalculationStrateg
             foreach ($piste->getConditionsPartageExceptionnelles() as $condition) {
                 // Règle d'applicabilité centralisée sur l'entité (cf. ConditionPartage::sappliqueAuRisque).
                 if ($condition->sappliqueAuRisque($risqueActuel)) {
-                    // La première condition applicable trouvée détermine le taux.
-                    return $condition->getTaux() ?? 0.0;
+                    // La première condition applicable trouvée détermine le taux (facteur = fraction).
+                    return $condition->getFraction();
                 }
             }
         }
 
-        // S'il n'y a pas de condition exceptionnelle applicable, on utilise le taux par défaut du partenaire.
-        return $partenaire->getPart() ?? 0.0;
+        // S'il n'y a pas de condition exceptionnelle applicable, on utilise le taux par défaut du partenaire (facteur = fraction).
+        return $partenaire->getFraction();
     }
 
     private function getRevenuRetroCommissionReversee(RevenuPourCourtier $revenu): float

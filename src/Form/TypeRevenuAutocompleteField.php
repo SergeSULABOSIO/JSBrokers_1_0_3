@@ -52,7 +52,7 @@ class TypeRevenuAutocompleteField extends AbstractType
 
         // Logique de calcul
         if ($typeRevenu->getModeCalcul() === TypeRevenu::MODE_CALCUL_POURCENTAGE_CHARGEMENT && $typeRevenu->getPourcentage() !== null && $typeRevenu->getPourcentage() != 0) {
-            $details[] = number_format($typeRevenu->getPourcentage() * 100, 2) . '%';
+            $details[] = number_format($typeRevenu->getPourcentage(), 2) . '%';
         } elseif ($typeRevenu->getModeCalcul() === TypeRevenu::MODE_CALCUL_MONTANT_FLAT && $typeRevenu->getMontantflat() !== null && $typeRevenu->getMontantflat() != 0) {
             $details[] = 'Fixe de ' . $typeRevenu->getMontantflat();
         } elseif ($typeRevenu->isAppliquerPourcentageDuRisque()) {

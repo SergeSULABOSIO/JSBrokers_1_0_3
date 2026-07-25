@@ -20,7 +20,7 @@ class PartenaireAutocompleteCanvasProvider
 
         $nomPartenaire = $partenaire->getNom() ?? 'Partenaire sans nom';
         $email = $partenaire->getEmail() ?? 'N/A';
-        $part = ($partenaire->getPart() ?? 0) * 100;
+        $part = ($partenaire->getPart() ?? 0);
 
         $commissionPure = $partenaire->montantPur ?? 0.0;
         $retroDue = $partenaire->retroCommission ?? 0.0;

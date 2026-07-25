@@ -61,6 +61,8 @@ class ConditionPartageType extends AbstractType
                 'label' => "Taux applicable",
                 'help' => "Ce pourcentage ne s'appliquera que sur les commissions hors taxes (l'assiette partageable).",
                 'required' => false,
+                // Stockage en POINTS (30 = 30 %), pas en fraction. Calculs via ConditionPartage::getFraction().
+                'type' => 'integer',
                 'scale' => 3,
                 'attr' => [
                     'placeholder' => "Taux",

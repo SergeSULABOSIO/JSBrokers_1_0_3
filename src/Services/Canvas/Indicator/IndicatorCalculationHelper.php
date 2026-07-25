@@ -695,19 +695,19 @@ class IndicatorCalculationHelper implements ResetInterface
 
                 // PRIORITÉ 1 : Exceptions sur l'instance de revenu (Overrule)
                 if ($revenu->getTauxExceptionel() && $revenu->getTauxExceptionel() != 0) {
-                    $montant = $montantChargementPrime * $revenu->getTauxExceptionel();
+                    $montant = $montantChargementPrime * $revenu->getFraction();
                 } elseif ($revenu->getMontantFlatExceptionel() && $revenu->getMontantFlatExceptionel() != 0) {
                     $montant = $revenu->getMontantFlatExceptionel();
                 } 
                 // PRIORITÉ 2 : Valeurs par défaut du Type de Revenu
                 elseif ($typeRevenu->getPourcentage() && $typeRevenu->getPourcentage() != 0) {
-                    $montant = $montantChargementPrime * $typeRevenu->getPourcentage();
+                    $montant = $montantChargementPrime * $typeRevenu->getFraction();
                 } elseif ($typeRevenu->getMontantflat() && $typeRevenu->getMontantflat() != 0) {
                     $montant = $typeRevenu->getMontantflat();
                 }
                 // PRIORITÉ 3 : Logique dynamique par Risque
                 elseif ($typeRevenu->isAppliquerPourcentageDuRisque() && ($risque = $this->getCotationRisque($cotation))) {
-                    $montant = $montantChargementPrime * $risque->getPourcentageCommissionSpecifiqueHT();
+                    $montant = $montantChargementPrime * $risque->getFraction();
                 }
             }
         }
@@ -1020,7 +1020,7 @@ class IndicatorCalculationHelper implements ResetInterface
     public function calculerRetroCommission(?Risque $risque, ?ConditionPartage $conditionPartage, $assiette): float
     {
         if (!$conditionPartage || !$risque) return 0.0;
-        $taux = $conditionPartage->getTaux();
+        $taux = $conditionPartage->getFraction();
         $produitsCible = $conditionPartage->getProduits();
 
         switch ($conditionPartage->getCritereRisque()) {

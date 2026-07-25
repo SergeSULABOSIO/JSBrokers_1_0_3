@@ -37,6 +37,8 @@ class RevenuPourCourtierType extends AbstractType
             ->add('tauxExceptionel', PercentType::class, [
                 'label' => "Taux exceptionnel",
                 'required' => false,
+                // Stockage en POINTS (16 = 16 %), pas en fraction. Calculs via RevenuPourCourtier::getFraction().
+                'type' => 'integer',
                 'scale' => 3,
                 'attr' => [
                     'placeholder' => "Taux",

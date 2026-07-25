@@ -221,19 +221,15 @@ class AiContextBuilder
             panne : c'est le signe que tu n'as pas réellement préparé le plan. APPELLE preparer_operations
             maintenant (avec toutes les infos) — le bouton apparaîtra tout seul.
           (5) si le solde est INSUFFISANT, ne lance rien : propose d'acheter des tokens ou d'abandonner.
-          UNITÉS (règle IMPÉRATIVE — un taux mal recopié fausse la commission d'un facteur 100) : certains
-          champs se SAISISSENT en pourcentage (ex. « 15 » pour 15 %) mais se STOCKENT en fraction (0,15).
-          La valeur que tu LIS dans une fiche est donc la fraction, pas ce que tu dois écrire. Quand un
-          outil signale « unite: pourcentage » (inventaire_champs) ou un bloc « unites » (lire_fiche),
-          fournis le POURCENTAGE dicté par l'utilisateur (15), jamais la fraction lue (0,15). Ne recopie
-          jamais aveuglément une valeur lue dans un champ d'écriture sans vérifier son unité.
-          • La fraction stockée EST déjà correcte : 1 (ou 1,0) vaut 100 %, 0,15 vaut 15 %. Pour RAPPORTER
-            une telle valeur à l'utilisateur, multiplie TOUJOURS par 100 et dis « 100 % » — n'annonce
-            JAMAIS qu'un 1 stocké vaut « 1 % » ou « 0,01 » (c'est faux : ce serait diviser deux fois).
-          • NE PROPOSE JAMAIS de « corriger » un pourcentage qui est déjà juste. Une tranche unique à 1,0
-            = 100 % est correcte ; la « corriger » à 100 est inutile (le formulaire re-diviserait par 100)
-            et écrire 1 la CORROMPRAIT en 0,01 = 1 %. Ne modifie un champ pourcentage QUE si l'utilisateur
-            fournit un NOUVEAU taux, et fournis alors ce taux en pourcentage (ex. 50 pour 50 %).
+          UNITÉS (taux et pourcentages) : JS Brokers parle une SEULE langue pour les taux — le
+          POURCENTAGE, en entrée comme en sortie. Tous les champs de taux (part d'un partenaire, taux
+          d'une condition de partage, taux de commission d'un risque, taux exceptionnel d'un revenu,
+          pourcentage d'un type de revenu, pourcentage d'une tranche, taux de taxe…) se SAISISSENT et se
+          STOCKENT en points (16 = 16 %, 100 = 100 %, 33,33 = 33,33 %) — plus aucune fraction. Donc :
+          fournis le pourcentage dicté par l'utilisateur (16 pour 16 %) ; la valeur LUE dans une fiche EST
+          déjà ce pourcentage, rapporte-la telle quelle (« 16 % »), sans jamais la diviser ni la
+          multiplier par 100. Ne « corrige » pas un taux déjà correct ; ne le modifie que si l'utilisateur
+          donne un NOUVEAU pourcentage.
           NE DIS QUE CE QUE LE PLAN FAIT (règle IMPÉRATIVE, la plus importante de toutes) : ta prose doit
           décrire EXACTEMENT les opérations renvoyées par l'outil — ni plus, ni moins. L'interface affiche
           à l'utilisateur, sous ta réponse, la liste RÉELLE de ce que le plan écrira et la liste de ce

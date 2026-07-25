@@ -161,6 +161,16 @@ class RevenuPourCourtier
         return $this->tauxExceptionel;
     }
 
+    /**
+     * Fraction (0..1) dérivée du taux exceptionnel stocké en POINTS (16 = 16 %) :
+     * source UNIQUE pour tout calcul (chargement × fraction). Ne jamais multiplier
+     * une assiette par getTauxExceptionel() directement.
+     */
+    public function getFraction(): float
+    {
+        return ($this->tauxExceptionel ?? 0.0) / 100.0;
+    }
+
     public function setTauxExceptionel(?float $tauxExceptionel): static
     {
         $this->tauxExceptionel = $tauxExceptionel;

@@ -146,6 +146,16 @@ class ConditionPartage
         return $this->taux;
     }
 
+    /**
+     * Fraction (0..1) dérivée du taux stocké en POINTS (30 = 30 %) : source UNIQUE
+     * pour tout calcul (assiette × fraction). Ne jamais multiplier une assiette par
+     * getTaux() directement.
+     */
+    public function getFraction(): float
+    {
+        return ($this->taux ?? 0.0) / 100.0;
+    }
+
     public function setTaux(?float $taux): static
     {
         $this->taux = $taux;

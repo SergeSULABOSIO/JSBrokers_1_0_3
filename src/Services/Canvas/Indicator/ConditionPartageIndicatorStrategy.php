@@ -37,7 +37,7 @@ class ConditionPartageIndicatorStrategy implements IndicatorCalculationStrategyI
 
     private function getConditionPartageDescriptionRegle(ConditionPartage $condition): string
     {
-        $taux = ($condition->getTaux() ?? 0) * 100;
+        $taux = ($condition->getTaux() ?? 0);
         $formule = $this->ConditionPartage_getFormuleString($condition);
         $critere = $this->ConditionPartage_getCritereRisqueString($condition);
         $nbRisques = $condition->getProduits()->count();

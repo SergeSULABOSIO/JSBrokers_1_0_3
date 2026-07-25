@@ -73,6 +73,8 @@ class PartenaireType extends AbstractType
                 'label' => "Part du partenaire",
                 'help' => "Ce pourcentage ne s'appliquera que sur les commissions hors taxes (l'assiette partageable).",
                 'required' => true,
+                // Stockage en POINTS (30 = 30 %), pas en fraction. Calculs via Partenaire::getFraction().
+                'type' => 'integer',
                 'scale' => 3,
                 'attr' => [
                     'placeholder' => "Part",

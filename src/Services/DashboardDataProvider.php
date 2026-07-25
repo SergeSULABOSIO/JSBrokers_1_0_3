@@ -976,7 +976,7 @@ class DashboardDataProvider
                 $cot = $art->getRevenuFacture()?->getCotation();
                 if ($cot) {
                     $partenaire = $this->calculationHelper->getCotationPartenaire($cot);
-                    $tauxPart = $partenaire ? (float) ($partenaire->getPart() ?? 0) : 0.0;
+                    $tauxPart = $partenaire ? $partenaire->getFraction() : 0.0;
                     break;
                 }
             }
@@ -1299,7 +1299,7 @@ class DashboardDataProvider
                         $cot = $art->getRevenuFacture()?->getCotation();
                         if ($cot) {
                             $partenaire = $this->calculationHelper->getCotationPartenaire($cot);
-                            $tauxPart   = $partenaire ? (float) ($partenaire->getPart() ?? 0) : 0.0;
+                            $tauxPart   = $partenaire ? $partenaire->getFraction() : 0.0;
                             break;
                         }
                     }

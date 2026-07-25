@@ -42,6 +42,9 @@ class RisqueType extends AbstractType
             ->add('pourcentageCommissionSpecifiqueHT', PercentType::class, [
                 'label' => "Taux de commission",
                 'required' => false,
+                // Stockage en POINTS (16 = 16 %), pas en fraction : convention unique
+                // de l'app. Calculs via Risque::getFraction().
+                'type' => 'integer',
                 'scale' => 2,
                 // 'help' => "Taux spécifique.",
                 'attr' => [
