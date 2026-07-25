@@ -1427,8 +1427,9 @@ class IndicatorCalculationHelper implements ResetInterface
     public function getTrancheTauxFactor(Tranche $tranche): float
     {
         if ($tranche->getPourcentage() !== null && $tranche->getPourcentage() > 0) {
-            $valeur = $tranche->getPourcentage();
-            return ($valeur > 1) ? $valeur / 100 : $valeur;
+            // Le pourcentage est stocké en POINTS (100 = 100 %) : la part est
+            // toujours la fraction dérivée. Source unique = Tranche::getFraction().
+            return $tranche->getFraction();
         }
         if ($tranche->getMontantFlat() !== null && $tranche->getMontantFlat() > 0) {
             $cotation = $tranche->getCotation();

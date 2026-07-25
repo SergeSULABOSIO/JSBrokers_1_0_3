@@ -468,7 +468,7 @@ class Constante
                                                 $tabPostesFacturables[] = [
                                                     "poste" => $revenu->getNom(),
                                                     "addressedTo" => Note::TO_ASSUREUR,
-                                                    "pourcentage" => $tranche->getPourcentage(),
+                                                    "pourcentage" => $tranche->getFraction(),
                                                     "montantPayable" => $montant,
                                                     "montantPaye" => $montantPaye,
                                                     "montantFacturé" => $montantInvoiced,
@@ -515,7 +515,7 @@ class Constante
                                                 $tabPostesFacturables[] = [
                                                     "poste" => $revenu->getNom(),
                                                     "addressedTo" => Note::TO_CLIENT,
-                                                    "pourcentage" => $tranche->getPourcentage(),
+                                                    "pourcentage" => $tranche->getFraction(),
                                                     "montantPayable" => $montant,
                                                     "montantPaye" => $montantPaye,
                                                     "montantFacturé" => $montantInvoiced,
@@ -561,7 +561,7 @@ class Constante
                                             $tabPostesFacturables[] = [
                                                 "poste" => "Rétrocommission",
                                                 "addressedTo" => Note::TO_PARTENAIRE,
-                                                "pourcentage" => $tranche->getPourcentage(),
+                                                "pourcentage" => $tranche->getFraction(),
                                                 "montantPayable" => $montant,
                                                 "montantPaye" => $montantPaye,
                                                 "montantFacturé" => $montantInvoiced,
@@ -613,7 +613,7 @@ class Constante
                                     $tabPostesFacturables[] = [
                                         "poste" => $autorite->getTaxe()->getCode(),
                                         "addressedTo" => Note::TO_AUTORITE_FISCALE,
-                                        "pourcentage" => $tranche->getPourcentage(),
+                                        "pourcentage" => $tranche->getFraction(),
                                         "montantPayable" => $montant,
                                         "montantPaye" => $montantPaye,
                                         "montantFacturé" => $montantInvoiced,
@@ -693,7 +693,7 @@ class Constante
         $montant = 0;
         if ($tranche != null) {
             if ($tranche->getCotation()) {
-                $montant = $this->Cotation_getMontant_taxe_payable_par_courtier($tranche->getCotation(), $onlySharable) * $tranche->getPourcentage();
+                $montant = $this->Cotation_getMontant_taxe_payable_par_courtier($tranche->getCotation(), $onlySharable) * $tranche->getFraction();
             }
         }
         return $montant;
@@ -2702,7 +2702,7 @@ class Constante
         $totPourcTranches = 0;
         /**@var Tranche $tranche */
         foreach ($cotation->getTranches() as $tranche) {
-            $totPourcTranches += $tranche->getPourcentage();
+            $totPourcTranches += $tranche->getFraction();
         }
         $txt = "";
         if ($totPourcTranches != 1) {
@@ -3971,7 +3971,7 @@ class Constante
     public function Revenu_getMontant_ttc_tranche(?RevenuPourCourtier $revenu, ?Tranche $tranche): float
     {
         if ($tranche != null && $revenu != null) {
-            return $this->Revenu_getMontant_ttc($revenu) * $tranche->getPourcentage();
+            return $this->Revenu_getMontant_ttc($revenu) * $tranche->getFraction();
         } else {
             return 0;
         }
@@ -4392,7 +4392,7 @@ class Constante
         $montant = 0;
         if ($tranche != null) {
             if ($tranche->getCotation()) {
-                $montant = $this->Cotation_getMontant_taxe_payable_par_assureur($tranche->getCotation(), $onlySharable) * $tranche->getPourcentage();
+                $montant = $this->Cotation_getMontant_taxe_payable_par_assureur($tranche->getCotation(), $onlySharable) * $tranche->getFraction();
             }
         }
         return $montant;
@@ -4481,7 +4481,7 @@ class Constante
         $montant = 0;
         if ($tranche != null) {
             if ($tranche->getCotation()) {
-                $montant = $this->Cotation_getMontant_commission_pure($tranche->getCotation(), $addressedTo, $onlySharable) * $tranche->getPourcentage();
+                $montant = $this->Cotation_getMontant_commission_pure($tranche->getCotation(), $addressedTo, $onlySharable) * $tranche->getFraction();
             }
         }
         return $montant;
@@ -4492,7 +4492,7 @@ class Constante
         $montant = 0;
         if ($tranche != null) {
             if ($tranche->getCotation()) {
-                $montant = $this->Cotation_getMontant_commission_ttc($tranche->getCotation(), $addressedTo, $onlySharable) * $tranche->getPourcentage();
+                $montant = $this->Cotation_getMontant_commission_ttc($tranche->getCotation(), $addressedTo, $onlySharable) * $tranche->getFraction();
             }
         }
         return $montant;
@@ -4503,7 +4503,7 @@ class Constante
         $montant = 0;
         if ($tranche != null) {
             if ($tranche->getCotation()) {
-                $montant = $this->Cotation_getMontant_commission_ht($tranche->getCotation(), $addressedTo, $onlySharable) * $tranche->getPourcentage();
+                $montant = $this->Cotation_getMontant_commission_ht($tranche->getCotation(), $addressedTo, $onlySharable) * $tranche->getFraction();
             }
         }
         // dd($montant);
@@ -4869,7 +4869,7 @@ class Constante
         $montant = 0;
         if ($tranche != null) {
             if ($tranche->getCotation() != null) {
-                $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($tranche->getCotation(), $partenaireCible, $addressedTo, $onlySharable) * $tranche->getPourcentage();
+                $montant = $this->Cotation_getMontant_retrocommissions_payable_par_courtier($tranche->getCotation(), $partenaireCible, $addressedTo, $onlySharable) * $tranche->getFraction();
             }
         }
         return $montant;
@@ -5938,7 +5938,7 @@ class Constante
         $montant = 0;
         if ($tranche != null) {
             if ($tranche->getCotation()) {
-                $montant = $this->Cotation_getMontant_prime_payable_par_client($tranche->getCotation()) * $tranche->getPourcentage();
+                $montant = $this->Cotation_getMontant_prime_payable_par_client($tranche->getCotation()) * $tranche->getFraction();
             }
         }
         return $montant;
@@ -6177,7 +6177,7 @@ class Constante
     {
         /** @var Tranche $tranche */
         $tranche = $article->getTranche();
-        return $tranche->getNom() . " (" . $tranche->getPourcentage() * 100 . "%)";
+        return $tranche->getNom() . " (" . $tranche->getPourcentage() . "%)";
     }
 
     public function ARTICLE_getCodeRisque(Article $article)
@@ -6229,7 +6229,7 @@ class Constante
             $primeTTC = $this->Cotation_getMontant_prime_payable_par_client($cotation);
         }
         // dd($primeTTC);
-        return $primeTTC * $article->getTranche()->getPourcentage();
+        return $primeTTC * $article->getTranche()->getFraction();
     }
 
     public function ARTICLE_getPrimeHT(Article $article)
@@ -6247,7 +6247,7 @@ class Constante
                 }
             }
         }
-        return $primeHT * $article->getTranche()->getPourcentage();
+        return $primeHT * $article->getTranche()->getFraction();
     }
 
     public function ARTICLE_getFronting(Article $article)
@@ -6265,7 +6265,7 @@ class Constante
                 }
             }
         }
-        return $primeHT * $article->getTranche()->getPourcentage();
+        return $primeHT * $article->getTranche()->getFraction();
     }
 
     public function ARTICLE_getComHT(Article $article)
