@@ -182,7 +182,7 @@ class PaiementsPrimeToolIntegrationTest extends KernelTestCase
 
         $tranche = (new Tranche())
             ->setNom('Tranche PP ' . $suffixe)
-            ->setPourcentage(1.0)
+            ->setPourcentage(100.0) // 100 % en POINTS (convention pourcentage, pas fraction)
             ->setPayableAt(new \DateTimeImmutable('-60 days'))
             ->setEcheanceAt(new \DateTimeImmutable('-10 days'));
         $tranche->setCotation($cotation);

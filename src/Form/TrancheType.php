@@ -60,6 +60,11 @@ class TrancheType extends AbstractType
             ->add('pourcentage', PercentType::class, [
                 'label' => "Pourcentage",
                 'required' => false,
+                // Stockage en POINTS (100 = 100 %, 33,33 = 33,33 %), PAS en fraction :
+                // le mode 'integer' n'applique aucune division par 100. Aligne le
+                // stockage sur l'écran, l'import bordereau et l'éditeur de facture ;
+                // les calculs dérivent la fraction via Tranche::getFraction().
+                'type' => 'integer',
                 'scale' => 2,
                 'html5' => true,
                 'attr' => [

@@ -275,6 +275,18 @@ class Tranche
         return $this;
     }
 
+    /**
+     * Fraction (0..1) dérivée du pourcentage stocké : SOURCE UNIQUE pour tout
+     * calcul monétaire (prime × fraction, commission × fraction…). Le champ
+     * `pourcentage` est stocké en POINTS (100 = 100 %, 33,33 = 33,33 %) — comme
+     * l'affiche l'écran et l'import bordereau ; les calculs, eux, ont besoin de la
+     * fraction. Ne jamais multiplier un montant par getPourcentage() directement.
+     */
+    public function getFraction(): float
+    {
+        return ($this->pourcentage ?? 0.0) / 100.0;
+    }
+
     public function getPayableAt(): ?\DateTimeImmutable
     {
         return $this->payableAt;
