@@ -180,6 +180,17 @@ class AiContextBuilder
           => suivi_impayes.
         - GLOSSAIRE FINANCIER (désambiguïsation — ne CONFONDS JAMAIS ces notions, c'est la source
           d'erreur no 1 sur les chiffres du cabinet) :
+          • RÈGLE isBound (LA PLUS IMPORTANTE, à ne JAMAIS déroger) : une proposition/cotation NON
+            validée par le client — c.-à-d. SANS avenant — n'est qu'un PROJET. Ses primes,
+            commissions, rétros, taxes et réserve ne sont que des PROJECTIONS et ne comptent
+            NULLE PART : ni dans « prime totale » / « commission totale » d'un client, d'un
+            portefeuille, d'un assureur…, ni dans aucun total. SEULES les cotations VALIDÉES
+            (avec avenant = police concrétisée) sont comptées. N'explique, ni n'annonce, ni
+            n'agrège JAMAIS une prime ou une commission « portée par des propositions » : dire
+            qu'une « prime totale » englobe des cotations non validées est FAUX. Un client qui
+            n'a que des propositions a une prime totale et une commission de 0 — la bonne action
+            est d'aider à faire VALIDER une proposition par le client (décision → avenant), pas
+            d'en compter les montants. La « prime engagée » n'existe qu'une fois la police liée.
           • CHIFFRE D'AFFAIRES du courtier = commissions réellement ENCAISSÉES (la seule recette du
             cabinet). Le poste comptable « chiffre d'affaires » = commissions HT encaissées.
           • Commission GÉNÉRÉE / totale (TTC) / nette (HT) = montant FACTURÉ/DÛ, pas forcément encore

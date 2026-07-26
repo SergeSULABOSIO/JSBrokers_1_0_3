@@ -67,6 +67,9 @@ class AiContextBuilderSystemPromptFormatTest extends KernelTestCase
         // Glossaire : CA = commissions encaissées, distinct de généré / production / prime.
         $this->assertStringContainsString('GLOSSAIRE FINANCIER', $prompt);
         $this->assertStringContainsString('commissions réellement ENCAISSÉES', $prompt);
+        // Règle isBound : une proposition non validée ne compte aucune prime/commission.
+        $this->assertStringContainsString('RÈGLE isBound', $prompt);
+        $this->assertStringContainsString('SANS avenant', $prompt);
         $this->assertStringContainsString('chiffre_affaires_mensuel', $prompt);
         // Concision.
         $this->assertStringContainsString('CONCISION', $prompt);
