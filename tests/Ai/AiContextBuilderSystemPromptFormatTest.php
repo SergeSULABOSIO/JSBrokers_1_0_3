@@ -71,4 +71,40 @@ class AiContextBuilderSystemPromptFormatTest extends KernelTestCase
         // Concision.
         $this->assertStringContainsString('CONCISION', $prompt);
     }
+
+    public function testPromptPorteLaBoussoleEtSonEtat(): void
+    {
+        static::bootKernel();
+        $builder = static::getContainer()->get(AiContextBuilder::class);
+
+        $request = new AiRequest(
+            systemContext: [
+                'assistantNom'   => 'Ket',
+                'entrepriseNom'  => 'PHPUnit Boussole SARL',
+                'perimetre'      => [],
+                'date'           => '2026-07-26',
+                'objetsAttaches' => [],
+                'boussole'       => [
+                    'items' => [
+                        ['axe' => 'saturation', 'libelle' => '4 client(s) sous 100 % de couverture', 'actionnable' => true, 'urgence' => 50],
+                        ['axe' => 'fiscal', 'libelle' => 'TVA à jour', 'actionnable' => false, 'urgence' => 0],
+                    ],
+                    'prioritaire' => ['axe' => 'saturation', 'libelle' => '4 client(s) sous 100 % de couverture', 'urgence' => 50],
+                ],
+            ],
+            messages: [],
+            scope: new AiScope(new Entreprise(), new Invite()),
+        );
+
+        $prompt = $builder->toSystemPrompt($request);
+
+        // Mission permanente + cadence + état dynamique injecté.
+        $this->assertStringContainsString('TA BOUSSOLE', $prompt);
+        $this->assertStringContainsString('RAPPEL À CHAQUE INTERACTION', $prompt);
+        $this->assertStringContainsString('ÉTAT DE LA BOUSSOLE', $prompt);
+        $this->assertStringContainsString('PRIORITÉ ACTUELLE', $prompt);
+        $this->assertStringContainsString('4 client(s) sous 100 % de couverture', $prompt);
+        // Routage vers le nouvel outil.
+        $this->assertStringContainsString('saturation_portefeuille', $prompt);
+    }
 }
