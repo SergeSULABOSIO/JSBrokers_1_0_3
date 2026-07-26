@@ -2,11 +2,10 @@
 
 namespace App\Service\Soa;
 
-use App\Entity\Avenant;
 use App\Entity\Client;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
-use App\Repository\RisqueRepository;
+use App\Service\Saturation\SaturationService;
 use App\Services\CanvasBuilder;
 use App\Services\ServiceMonnaies;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -26,7 +25,7 @@ class SoaContextBuilder
     public function __construct(
         private CanvasBuilder $canvasBuilder,
         private ServiceMonnaies $serviceMonnaies,
-        private RisqueRepository $risqueRepository,
+        private SaturationService $saturationService,
         private UrlGeneratorInterface $urlGenerator,
     ) {
     }
@@ -152,86 +151,10 @@ class SoaContextBuilder
                 'pistesEnCours'    => $pistesEnCours,
                 'cotationsEnCours' => $cotationsEnCours,
                 'taches'           => $taches,
-                'crossSelling'     => $this->buildCrossSellingOpportunites($client, $entreprise),
+                'crossSelling'     => $this->saturationService->opportunites($client, $entreprise),
             ];
         }
 
         return $context;
-    }
-
-    /**
-     * Détermine les opportunités de cross-selling avec le client :
-     * - 'nouveaux'   : risques du catalogue de l'entreprise jamais abordés avec le client (aucune piste) ;
-     * - 'aRelancer'  : risques abordés par le passé mais sans suite (pistes fermées, polices perdues ou résiliées).
-     * Les risques avec une piste ouverte ou une police valide sont exclus (déjà couverts ou en négociation).
-     */
-    private function buildCrossSellingOpportunites(Client $client, ?Entreprise $entreprise): array
-    {
-        if ($entreprise === null) {
-            return ['nouveaux' => [], 'aRelancer' => []];
-        }
-
-        // Catalogue strictement issu de la BD, restreint à l'entreprise courante.
-        $catalogue = $this->risqueRepository->findCatalogueForEntreprise($entreprise);
-        if ($catalogue === []) {
-            return ['nouveaux' => [], 'aRelancer' => []];
-        }
-
-        // Ensemble des IDs du catalogue : garde-fou d'isolation par entreprise.
-        $catalogueIds = [];
-        foreach ($catalogue as $risqueCatalogue) {
-            $catalogueIds[$risqueCatalogue->getId()] = true;
-        }
-
-        // Statut par risque : 'actif' (couvert ou en négociation) > 'policePerdue' > 'pisteFermee'
-        $statuts = [];
-        $dernierePisteFermee = []; // risqueId => Piste fermée la plus récente (pour "Editer la piste")
-        foreach ($client->getPistes() as $piste) {
-            $risque = $piste->getRisque();
-            // On ne calcule un statut que pour les risques réellement persistés sous l'entreprise courante.
-            if ($risque === null || !isset($catalogueIds[$risque->getId()])) {
-                continue;
-            }
-            $risqueId = $risque->getId();
-
-            $aUnAvenant      = false;
-            $aPoliceValide   = false;
-            foreach ($piste->getCotations() as $cotation) {
-                foreach ($cotation->getAvenants() as $avenant) {
-                    $aUnAvenant = true;
-                    if (!in_array($avenant->getRenewalStatus(), [Avenant::RENEWAL_STATUS_LOST, Avenant::RENEWAL_STATUS_CANCELLED], true)) {
-                        $aPoliceValide = true;
-                        break 2;
-                    }
-                }
-            }
-
-            if (!$piste->isClosed() || $aPoliceValide) {
-                $statuts[$risqueId] = 'actif';
-            } elseif (($statuts[$risqueId] ?? null) !== 'actif') {
-                $statuts[$risqueId] = $aUnAvenant ? 'policePerdue' : 'pisteFermee';
-                $existante = $dernierePisteFermee[$risqueId] ?? null;
-                if ($existante === null || $piste->getId() > $existante->getId()) {
-                    $dernierePisteFermee[$risqueId] = $piste;
-                }
-            }
-        }
-
-        $nouveaux  = [];
-        $aRelancer = [];
-        foreach ($catalogue as $risque) {
-            $statut = $statuts[$risque->getId()] ?? null;
-            if ($statut === null) {
-                $nouveaux[] = $risque;
-            } elseif ($statut !== 'actif') {
-                $aRelancer[] = [
-                    'risque' => $risque,
-                    'motif'  => $statut === 'policePerdue' ? 'Police perdue ou résiliée' : 'Piste(s) fermée(s) sans souscription',
-                    'piste'  => $dernierePisteFermee[$risque->getId()] ?? null,
-                ];
-            }
-        }
-
-        return ['nouveaux' => $nouveaux, 'aRelancer' => $aRelancer];
     }
 }

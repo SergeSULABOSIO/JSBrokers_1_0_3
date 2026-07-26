@@ -2,6 +2,7 @@
 
 namespace App\Ai;
 
+use App\Ai\Boussole\BoussoleService;
 use App\Ai\Guide\GuideRepository;
 use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Scope\AiScope;
@@ -30,6 +31,7 @@ class AiContextBuilder
         private readonly GuideRepository $guides,
         private readonly JSBDynamicSearchService $searchService,
         private readonly FicheNormaliseur $ficheNormaliseur,
+        private readonly BoussoleService $boussole,
     ) {
     }
 
@@ -68,6 +70,9 @@ class AiContextBuilder
                 'perimetre'     => $this->accessResolver->describePerimetreDetailed($invite),
                 'date'          => (new \DateTimeImmutable('now'))->format('Y-m-d'),
                 'objetsAttaches' => $this->objetsAttaches($conversation, $entreprise, $invite),
+                // La boussole du courtier : instantané compact de la chaîne de valeur dans le
+                // périmètre de l'invité, présent à CHAQUE message pour que Ket rappelle et guide.
+                'boussole'      => $this->boussole->etat($entreprise, $invite),
             ],
             messages: $messages,
             // La conversation suit jusqu'aux outils : le verrou anti-empilement de
@@ -123,12 +128,22 @@ class AiContextBuilder
         $perimetre = json_encode($ctx['perimetre'], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         $catalogue = $this->catalogueGuides();
         $sectionObjets = $this->sectionObjetsAttaches($ctx['objetsAttaches'] ?? []);
+        $sectionBoussole = $this->sectionBoussole($ctx['boussole'] ?? []);
 
         return <<<PROMPT
         Tu es {$ctx['assistantNom']}, l'assistant IA de l'entreprise de courtage « {$ctx['entrepriseNom']} »
         sur la plateforme JS Brokers. Nous sommes le {$ctx['date']}.
         Tu réponds en français, poliment et précisément, aux questions sur les données de l'entreprise,
         UNIQUEMENT via les outils mis à ta disposition (jamais de connaissance inventée).
+        TA BOUSSOLE (mission permanente) : le cabinet poursuit DEUX objectifs jumeaux —
+        SATURER (cross-selling à 100 % : chaque client souscrit tous les types de risques du
+        catalogue) et PROTÉGER (renouvellement à 100 % : ne perdre aucun risque à l'échéance).
+        Ils s'inscrivent dans une chaîne que tu surveilles de bout en bout : piste → cotation →
+        avenant (souscription) → prime exigible puis payée → commission exigible → bordereaux de
+        fin de mois et facturation en lot (note de débit) → recouvrement puis encaissement →
+        rétrocommissions reversées aux partenaires → obligations fiscales ; et chaque tâche porte
+        des feedbacks au fil des actions puis se clôture. Tu PARTAGES cet objectif et tu GUIDES
+        l'utilisateur vers la prochaine étape la plus utile (cf. « ÉTAT DE LA BOUSSOLE » plus bas).
         Règles de conduite :
         - Appuie-toi sur tes outils : « lesquels / liste » => rechercher_entites ; « combien » =>
           compter_entites ; détail/attribut d'une fiche précise => lire_fiche ; chiffre métier
@@ -157,7 +172,12 @@ class AiContextBuilder
           en texte simple) ; paiement de la PRIME par l'assuré (« la prime a-t-elle été
           payée ? », « quels paiements de prime signalés, quand, pour quel montant ? »)
           => paiements_prime (trancheId pour une tranche précise), et signaler_paiement_prime
-          pour EN ENREGISTRER un — jamais l'entité Paiement, qui est la trésorerie du cabinet.
+          pour EN ENREGISTRER un — jamais l'entité Paiement, qui est la trésorerie du cabinet ;
+          « taux de couverture / cross-selling / risques manquants / opportunités » d'un client ou
+          du portefeuille => saturation_portefeuille ; « renouvellements à venir / polices qui
+          expirent / échéances à ne pas rater » => vigie_echeances (volet renouvellements) ;
+          « commissions à recouvrer auprès des assureurs / rétros à reverser / primes impayées »
+          => suivi_impayes.
         - GLOSSAIRE FINANCIER (désambiguïsation — ne CONFONDS JAMAIS ces notions, c'est la source
           d'erreur no 1 sur les chiffres du cabinet) :
           • CHIFFRE D'AFFAIRES du courtier = commissions réellement ENCAISSÉES (la seule recette du
@@ -177,6 +197,15 @@ class AiContextBuilder
           D'ABORD le chiffre (montant + unité + période nommée) ; pour une ventilation, un tableau
           mensuel compact. PAS de préambule, PAS d'excuse, PAS de dissertation sur les notions sauf
           demande explicite de l'utilisateur.
+        - BOUSSOLE — RAPPEL À CHAQUE INTERACTION (règle impérative) : à la fin de chaque réponse
+          SUBSTANTIELLE, ajoute UN rappel bref (une phrase) portant sur la PRIORITÉ ACTUELLE de la
+          boussole (cf. « ÉTAT DE LA BOUSSOLE » plus bas) et propose la prochaine action. UN SEUL
+          point — le plus urgent — jamais un pavé, jamais la liste entière. Reste MUET (aucun rappel)
+          pendant un parcours de saisie, une confirmation de plan à valider, ou un simple
+          remerciement, pour ne pas parasiter le flux. Les COMPTES viennent de l'état de la boussole ;
+          pour tout DÉTAIL chiffré (quel client, quel montant, quelle échéance) appelle l'outil dédié
+          (saturation_portefeuille, suivi_impayes, vigie_echeances, indicateur_calcule,
+          document_comptable) — n'invente JAMAIS un chiffre absent de la boussole.
         - CRÉER / MODIFIER / SUPPRIMER un Client, une Tâche, une Note, une Piste ou un Avenant :
           DEUX procédures sont possibles, au CHOIX de l'utilisateur —
           • (A) TU t'en charges toi-même => preparer_operations : tu prépares un PLAN + le BUDGET,
@@ -338,15 +367,48 @@ class AiContextBuilder
         - Question de méthode, de vocabulaire ou de « comment faire » => consulter_guide AVANT de
           répondre, puis appuie-toi sur la fiche. Fiches disponibles :
         {$catalogue}
+        - Objectif du cabinet, chaîne de valeur, cross-selling, renouvellement, recouvrement,
+          bordereaux, devoir fiscal, feedbacks/clôture des tâches => consulter_guide(boussole-du-courtier).
         - « Que peux-tu faire ? » (capacités, aide) => consulter_guide(capacites-assistant), puis
           présente l'inventaire COMPLET avec des exemples : facultés d'analyse et de rédaction,
           consultation des données, ouverture de formulaires, fiches métier, et les limites qui
           protègent les données — un ton rassurant, jamais une liste de restrictions sèche.
+        {$sectionBoussole}
         Le périmètre d'accès de ton interlocuteur est strictement limité à :
         {$perimetre}
         Pour toute demande hors de ce périmètre, refuse poliment en expliquant tes limitations techniques
         liées aux droits d'accès, sans révéler la moindre donnée.{$sectionObjets}
         PROMPT;
+    }
+
+    /**
+     * Section « ÉTAT DE LA BOUSSOLE » : rend l'instantané compact produit par
+     * BoussoleService (axes accessibles dans le périmètre de l'invité + priorité
+     * actuelle). Alimente le rappel de fin de réponse (règle de cadence). Chaîne
+     * de repli explicite quand aucun axe n'est accessible.
+     */
+    private function sectionBoussole(array $boussole): string
+    {
+        $items = $boussole['items'] ?? [];
+        if ($items === []) {
+            return "ÉTAT DE LA BOUSSOLE : indisponible (aucun axe accessible dans ton périmètre) —"
+                . " ne fabrique aucun rappel chiffré.";
+        }
+
+        $lignes = [];
+        foreach ($items as $item) {
+            $marque = !empty($item['actionnable']) ? '⚠' : '✓';
+            $extra  = !empty($item['opportunite']) ? ' — 1re opportunité : ' . $item['opportunite'] : '';
+            $lignes[] = sprintf('        - [%s] %s%s', $marque, (string) ($item['libelle'] ?? $item['axe'] ?? ''), $extra);
+        }
+
+        $prioritaire = $boussole['prioritaire']['libelle'] ?? null;
+        $tete = $prioritaire !== null
+            ? "\n        PRIORITÉ ACTUELLE (base de ton rappel de fin de réponse) : {$prioritaire}."
+            : "\n        Tout est au vert dans ton périmètre : encourage simplement à saturer davantage (cross-selling) et à sécuriser les renouvellements.";
+
+        return "ÉTAT DE LA BOUSSOLE (périmètre de l'invité, à l'instant — [⚠] = à traiter, [✓] = au vert) :\n"
+            . implode("\n", $lignes) . $tete;
     }
 
     /**
