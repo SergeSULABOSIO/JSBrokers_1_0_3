@@ -250,8 +250,12 @@ class PortefeuilleFilterTest extends WebTestCase
         $avenant->setEndingAt(new \DateTimeImmutable('+30 days'));
         $avenant->setDescription('Avenant de test');
         $avenant->setReferencePolice($refPolice);
-        $avenant->setCotation($cotation);
         $avenant->setEntreprise($e);
+        // addAvenant() (et pas seulement setCotation()) synchronise la collection inverse
+        // Cotation::getAvenants() EN MÉMOIRE : sans ça — et sans em->clear() ici — la cotation
+        // paraît « non validée » (aucun avenant), la tranche est vue comme un simple projet et
+        // son statut retombe à « N/A », invisible sous les filtres de paiement.
+        $cotation->addAvenant($avenant);
         $em->persist($avenant);
 
         // Prime réelle (ChargementPourPrime) pour que la tranche ait un statut de

@@ -258,6 +258,15 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
      */
     private function getTrancheStatutPaiement(Tranche $tranche): string
     {
+        // Tant que la proposition n'est pas VALIDÉE par le client (aucun avenant lié), la
+        // tranche n'est qu'un PROJET : elle ne compte pas encore et ne fait l'objet d'AUCUN
+        // suivi de recouvrement — même si sa date d'effet est atteinte ou dépassée. Le suivi
+        // ne commence qu'à la concrétisation du contrat (avenant). Source unique : ce statut
+        // 'N/A' exclut la tranche des filtres impayées/échues et de la vigie d'urgence.
+        if (!$this->calculationHelper->isCotationBound($tranche->getCotation())) {
+            return 'N/A';
+        }
+
         $prime = round($this->getTranchePrime($tranche), 2);
         $commission = round($this->getTrancheMontantTTC($tranche), 2);
 
@@ -355,6 +364,11 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
      */
     private function getTrancheRetroExigible(Tranche $tranche): float
     {
+        // Proposition non validée (aucun avenant) : projet, aucune dette rétro à surveiller.
+        if (!$this->calculationHelper->isCotationBound($tranche->getCotation())) {
+            return 0.0;
+        }
+
         $soldeRetro = round(
             $this->getTrancheRetroCommission($tranche)
             - $this->calculationHelper->getTrancheMontantRetrocommissionsPayableParCourtierPayee($tranche),
@@ -395,6 +409,11 @@ class TrancheIndicatorStrategy implements IndicatorCalculationStrategyInterface
      */
     private function getTrancheCommissionExigible(Tranche $tranche): float
     {
+        // Proposition non validée (aucun avenant) : projet, aucune commission à recouvrer.
+        if (!$this->calculationHelper->isCotationBound($tranche->getCotation())) {
+            return 0.0;
+        }
+
         $soldeCommission = round(
             $this->getTrancheMontantTTC($tranche)
             - $this->calculationHelper->getTrancheMontantCommissionEncaissee($tranche),

@@ -104,10 +104,13 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
     }
 
     /**
-     * Une cotation avec une prime client réelle (ChargementPourPrime), condition
-     * pour que les tranches aient un statut calculable (sinon « N/A »).
+     * Une cotation VALIDÉE (proposition acceptée par le client → avenant) avec une prime
+     * client réelle (ChargementPourPrime). Double condition pour que les tranches soient
+     * réellement SUIVIES avec un statut calculable (sinon « N/A ») : sans avenant, la
+     * cotation reste un simple projet et ses tranches ne font l'objet d'aucun suivi de
+     * recouvrement, même échéance dépassée (règle métier — cf. TrancheIndicatorStrategy).
      */
-    private function makeCotationAvecPrime(Entreprise $entreprise, Invite $invite, string $nom, float $prime): Cotation
+    private function makeCotationAvecPrime(Entreprise $entreprise, Invite $invite, string $nom, float $prime, bool $valide = true): Cotation
     {
         $em = $this->em();
 
@@ -131,6 +134,24 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
             ->setCotation($cotation);
         $chargement->setEntreprise($entreprise);
         $em->persist($chargement);
+
+        // Proposition VALIDÉE : un avenant matérialise le contrat, ce qui déclenche le suivi
+        // des tranches. ($valide = false → proposition restée à l'état de projet, tranches non
+        // suivies.) (Les tests « bordereau » ajoutent en plus leur propre avenant référencé
+        // dans l'analyse ; un avenant supplémentaire ici reste sans effet sur leur
+        // réconciliation, qui cible un avenant_id précis.)
+        if ($valide) {
+            $avenant = (new Avenant())
+                ->setReferencePolice('POL-' . $nom)
+                ->setNumero('0')
+                ->setDescription('Avenant de validation (test)')
+                ->setStartingAt(new \DateTimeImmutable('-60 days'))
+                ->setEndingAt(new \DateTimeImmutable('+305 days'));
+            $avenant->setCotation($cotation);
+            $avenant->setEntreprise($entreprise);
+            $avenant->setInvite($invite);
+            $em->persist($avenant);
+        }
 
         return $cotation;
     }
@@ -243,6 +264,46 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
             $entreprise,
         );
         $this->assertSame(0, $payees['totalItems'], 'Aucun encaissement : rien n\'est payé.');
+    }
+
+    public function testTrancheDePropositionNonValideeNestPasSuivie(): void
+    {
+        // Règle métier : une tranche liée à une proposition NON validée (aucun avenant) reste
+        // un simple PROJET — elle ne compte pas et ne fait l'objet d'AUCUN suivi, même échéance
+        // dépassée. Le suivi ne démarre qu'à la validation (avenant), quand le client choisit
+        // la proposition qui concrétise la police.
+        ['entreprise' => $entreprise, 'echue' => $echue, 'aEchoir' => $aEchoir] = $this->seed();
+        $em = $this->em();
+        $invite = $em->getRepository(Invite::class)->findOneBy(['entreprise' => $entreprise]);
+
+        // Proposition NON validée (pas d'avenant) + une tranche largement échue.
+        $projet = $this->makeCotationAvecPrime($entreprise, $invite, 'Projet non validé', 1000.0, false);
+        $trancheProjet = $this->makeTranche($projet, $entreprise, 'Tranche projet échue', 100, new \DateTimeImmutable('-30 days'));
+        $em->flush();
+        $projetId = $trancheProjet->getId();
+        $em->clear();
+
+        $entreprise = $em->getRepository(Entreprise::class)->find($entreprise->getId());
+
+        // La tranche du projet n'apparaît sous AUCUN filtre de suivi.
+        foreach (['impayees', 'echues', 'commission_exigible', 'retro_a_payer', 'payees'] as $statut) {
+            $resultat = $this->service()->search(Tranche::class, [TranchePaiementScope::CRITERION_KEY => $statut], $entreprise);
+            $ids = array_map(static fn (Tranche $t) => $t->getId(), $resultat['data']);
+            $this->assertNotContains($projetId, $ids, "La tranche d'un projet ne doit pas être « {$statut} ».");
+        }
+
+        // Les impayées restent EXACTEMENT les 2 tranches de la cotation validée.
+        $impayees = $this->service()->search(Tranche::class, [TranchePaiementScope::CRITERION_KEY => 'impayees'], $entreprise);
+        $this->assertEqualsCanonicalizing(
+            [$echue->getId(), $aEchoir->getId()],
+            array_map(static fn (Tranche $t) => $t->getId(), $impayees['data']),
+        );
+
+        // Et son statut calculé est bien « N/A » (aucun badge de suivi), commission non exigible.
+        $trancheFraiche = $em->getRepository(Tranche::class)->find($projetId);
+        static::getContainer()->get(\App\Services\CanvasBuilder::class)->loadAllCalculatedValues($trancheFraiche);
+        $this->assertSame('N/A', $trancheFraiche->statutPaiement);
+        $this->assertSame(0.0, $trancheFraiche->commissionExigible ?? 0.0);
     }
 
     public function testSansCritereCheminStandardInchange(): void
