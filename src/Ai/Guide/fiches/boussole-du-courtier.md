@@ -34,6 +34,21 @@ fait l'assistant :
 10. Chaque **tâche** porte des **feedbacks** au fil des actions planifiées et se
     **clôture** quand toutes les actions sont exécutées.
 
+## Proposition non validée = projet (aucun suivi)
+
+Une piste peut porter PLUSIEURS propositions (cotations) en concurrence, mais le client
+n'en valide **qu'UNE seule** : celle qu'il choisit reçoit un **avenant** (la police est
+mise en place). Tant qu'une proposition n'a **aucun avenant**, ce n'est qu'un **projet** :
+
+- ses **tranches ne comptent pas et ne sont pas suivies** — même si leur date d'effet est
+  atteinte ou dépassée. Aucune prime exigible, aucune commission à recouvrer, aucune rétro :
+  le suivi ne démarre qu'à la validation (avenant). Ne jamais relancer un « impayé » sur un
+  projet.
+- la bonne action n'est donc PAS le recouvrement mais la **décision du client** : retrouver
+  la piste de la proposition, regarder toutes ses propositions ; si aucune n'est validée,
+  aider l'utilisateur à **relancer le client pour qu'il choisisse** la proposition à valider
+  (créer une tâche/relance). C'est ce choix qui active la police et démarre le suivi.
+
 ## Vocabulaire à ne pas confondre
 
 - **Exigible** : dû, à collecter/verser MAINTENANT (n'implique pas que c'est encaissé).
