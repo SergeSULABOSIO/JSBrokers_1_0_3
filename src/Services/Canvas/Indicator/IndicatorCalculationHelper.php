@@ -462,7 +462,12 @@ class IndicatorCalculationHelper implements ResetInterface
         $sinistresAcalculer = $sinistresQb->getQuery()->getResult();
 
         foreach ($cotationsAcalculer as $cotation) {
-            if ($isBound && !$this->isCotationBound($cotation)) continue; 
+            // RÈGLE MÉTIER : une cotation NON validée (proposition sans avenant) n'est qu'un
+            // projet — ses primes, commissions, rétros, taxes et réserve ne sont que des
+            // PROJECTIONS et ne doivent JAMAIS être agrégées (ni dans les listes du workspace,
+            // ni chez Ket). Seules les cotations BOUND (police concrétisée) comptent. Le suivi
+            // et le chiffre ne naissent qu'à la validation du client (avenant).
+            if (!$this->isCotationBound($cotation)) continue;
 
             $prime_nette += $this->getCotationMontantPrimeNette($cotation);
             $prime_cotation = $this->getCotationMontantPrimePayableParClient($cotation);

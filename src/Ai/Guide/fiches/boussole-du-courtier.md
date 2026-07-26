@@ -40,6 +40,12 @@ Une piste peut porter PLUSIEURS propositions (cotations) en concurrence, mais le
 n'en valide **qu'UNE seule** : celle qu'il choisit reçoit un **avenant** (la police est
 mise en place). Tant qu'une proposition n'a **aucun avenant**, ce n'est qu'un **projet** :
 
+- ses montants (prime, commission, rétro, réserve) ne sont que des **projections** et ne
+  comptent **nulle part** : ni dans les indicateurs agrégés d'un client / portefeuille /
+  assureur / partenaire (listes du workspace), ni chez Ket (`indicateur_calcule`,
+  `analyse_portefeuille`, chiffre d'affaires). Un client qui n'a que des propositions a une
+  prime totale et une commission de **0** — ne jamais annoncer les chiffres d'un projet
+  comme « engagés ».
 - ses **tranches ne comptent pas et ne sont pas suivies** — même si leur date d'effet est
   atteinte ou dépassée. Aucune prime exigible, aucune commission à recouvrer, aucune rétro :
   le suivi ne démarre qu'à la validation (avenant). Ne jamais relancer un « impayé » sur un
