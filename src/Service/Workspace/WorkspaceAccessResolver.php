@@ -120,6 +120,30 @@ class WorkspaceAccessResolver
         'AssistantParametres',
     ];
 
+    /**
+     * SOUS-entités structurelles gouvernées par le droit d'un PARENT présent dans
+     * MAP : leur écriture/suppression s'évalue au niveau du parent (fail-closed),
+     * SANS les inscrire dans MAP — elles restent donc hors menu, hors lexique de
+     * lecture et hors périmètre décrit. Ex. PaiementPrime (signalement de paiement
+     * de prime) suit le droit « Tranche », comme le formulaire de l'espace.
+     *
+     * @var array<string, string> nom court de la sous-entité => nom court du parent
+     */
+    private const GOUVERNANCE_PARENT = [
+        'PaiementPrime' => 'Tranche',
+    ];
+
+    /**
+     * Libellés lisibles des sous-entités gouvernées (hors MAP) — pour que l'assistant
+     * et l'aperçu de plan nomment proprement une écriture sur ces entités, sans les
+     * exposer comme rubriques de lecture. Fusionnés dans libellesEntites().
+     *
+     * @var array<string, string>
+     */
+    private const SOUS_ENTITES_LIBELLES = [
+        'PaiementPrime' => 'Paiements de prime',
+    ];
+
     public function __construct(
         private readonly InviteRepository $inviteRepository,
     ) {
@@ -221,6 +245,14 @@ class WorkspaceAccessResolver
             return $this->canManageInvites($invite);
         }
 
+        // Sous-entité gouvernée par un PARENT explicite (ex. PaiementPrime → Tranche) :
+        // le droit s'évalue au niveau du parent (fail-closed), sans inscrire la
+        // sous-entité dans MAP. Sans cela, le repli permissif ci-dessous laisserait
+        // n'importe quel invité l'écrire.
+        if (isset(self::GOUVERNANCE_PARENT[$entityShortName])) {
+            return $this->can($invite, self::GOUVERNANCE_PARENT[$entityShortName], $level);
+        }
+
         // Sous-entité structurelle hors carte : gouvernée par son parent (déjà contrôlé).
         if (!isset(self::MAP[$entityShortName])) {
             return true;
@@ -284,6 +316,10 @@ class WorkspaceAccessResolver
     {
         $labels = [];
         foreach (self::MAP as $entityShortName => [, , , $label]) {
+            $labels[$entityShortName] = $label;
+        }
+        // Sous-entités gouvernées (hors MAP) : libellé pour l'écriture uniquement.
+        foreach (self::SOUS_ENTITES_LIBELLES as $entityShortName => $label) {
             $labels[$entityShortName] = $label;
         }
 

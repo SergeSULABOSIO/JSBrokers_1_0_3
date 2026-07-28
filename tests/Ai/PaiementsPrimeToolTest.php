@@ -336,10 +336,9 @@ class PaiementsPrimeToolTest extends TestCase
     /** Les deux outils dédiés se répartissent la question sans se marcher dessus. */
     public function testLectureEtActionNeSeRecouvrentPas(): void
     {
-        $signaler = new SignalerPaiementPrimeTool(
-            $this->createMock(WorkspaceAccessResolver::class),
-            $this->createMock(JSBDynamicSearchService::class),
-        );
+        // match() n'utilise aucune dépendance injectée (juste AiText/PaiementPrimeIntent) :
+        // on évite d'avoir à câbler le délégué PreparerOperationsTool (classe finale).
+        $signaler = (new \ReflectionClass(SignalerPaiementPrimeTool::class))->newInstanceWithoutConstructor();
         $lecture = $this->makeTool(true);
         $scope = $this->makeScope();
 

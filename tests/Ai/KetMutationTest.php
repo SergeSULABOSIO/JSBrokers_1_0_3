@@ -37,13 +37,14 @@ class KetMutationTest extends TestCase
 
     public function testAllowlistNAutoriseQueLesDonneesMetier(): void
     {
-        // Parité lecture/écriture : les 31 entités interrogeables sont mutables,
-        // paramétrage et référentiels compris.
+        // Parité lecture/écriture : les entités interrogeables sont mutables,
+        // paramétrage et référentiels compris ; plus la sous-entité PaiementPrime
+        // (signalement, gouvernée par le droit Tranche, cf. GOUVERNANCE_PARENT).
         $membres = [
             // Production
             'Client', 'Cotation', 'Avenant', 'Piste', 'Portefeuille', 'Assureur', 'Risque', 'Partenaire', 'Groupe', 'Contact',
             // Finances
-            'Note', 'DepenseCourtier', 'ChargeCourtier', 'Paiement', 'Bordereau', 'Tranche', 'RevenuPourCourtier',
+            'Note', 'DepenseCourtier', 'ChargeCourtier', 'Paiement', 'Bordereau', 'Tranche', 'PaiementPrime', 'RevenuPourCourtier',
             'Chargement', 'TypeRevenu', 'Taxe', 'Monnaie', 'CompteBancaire', 'Fournisseur',
             // Marketing
             'Tache', 'Feedback',
@@ -52,7 +53,7 @@ class KetMutationTest extends TestCase
             // Administration
             'Document', 'Classeur',
         ];
-        $this->assertCount(31, $membres);
+        $this->assertCount(32, $membres);
         foreach ($membres as $membre) {
             $this->assertTrue(MutationAllowlist::autorise($membre), $membre . ' doit être mutable');
         }
