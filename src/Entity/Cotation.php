@@ -144,6 +144,15 @@ class Cotation
     #[Groups(['list:read'])]
     public ?float $taxeAssureurMontant = null;
 
+    // Taux (en POURCENTAGE, ex. 16) des taxes SUR LA COMMISSION, exposés à côté de
+    // leur montant pour lever toute ambiguïté (le montant seul laissait deviner un
+    // taux — et deviner faux). Rien à voir avec les taxes sur la prime.
+    #[Groups(['list:read'])]
+    public ?float $tauxTaxeAssureurPercent = null;
+
+    #[Groups(['list:read'])]
+    public ?float $tauxTaxeCourtierPercent = null;
+
     #[Groups(['list:read'])]
     public ?float $montant_du = null;
 

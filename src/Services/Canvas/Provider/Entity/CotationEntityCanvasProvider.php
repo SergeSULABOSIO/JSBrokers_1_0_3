@@ -91,8 +91,10 @@ class CotationEntityCanvasProvider implements EntityCanvasProviderInterface
             ["group" => "Revenu Brut", "code" => "montantTTC", "intitule" => "Commission TTC", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Commission totale TTC."],
             ["group" => "Revenu Brut", "code" => "detailCalcul", "intitule" => "Détail du Calcul", "type" => "Calcul", "format" => "Texte", "description" => "Explication du calcul."],
 
-            ["group" => "Taxes sur Commission", "code" => "taxeCourtierMontant", "intitule" => "Taxe Courtier (ARCA)", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Total taxe courtier."],
-            ["group" => "Taxes sur Commission", "code" => "taxeAssureurMontant", "intitule" => "Taxe Assureur (TVA)", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Total taxe assureur."],
+            ["group" => "Taxes sur Commission", "code" => "taxeAssureurMontant", "intitule" => "Taxe Assureur (TVA)", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant de la TVA due par l'assureur SUR LA COMMISSION (assiette = commission HT). Rien à voir avec les taxes sur la prime."],
+            ["group" => "Taxes sur Commission", "code" => "tauxTaxeAssureurPercent", "intitule" => "Taux Taxe Assureur (TVA)", "type" => "Calcul", "format" => "Pourcentage", "description" => "Taux de la TVA appliqué sur la commission HT (ex. 16 %)."],
+            ["group" => "Taxes sur Commission", "code" => "taxeCourtierMontant", "intitule" => "Taxe Courtier (ARCA)", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant de la taxe due par le courtier SUR LA COMMISSION (assiette = commission HT)."],
+            ["group" => "Taxes sur Commission", "code" => "tauxTaxeCourtierPercent", "intitule" => "Taux Taxe Courtier (ARCA)", "type" => "Calcul", "format" => "Pourcentage", "description" => "Taux de la taxe courtier appliqué sur la commission HT (ex. 2 %)."],
 
             ["group" => "Facturation & Paiements", "code" => "montant_du", "intitule" => "Commission TTC", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant total TTC à facturer."],
             ["group" => "Facturation & Paiements", "code" => "montant_paye", "intitule" => "Commission Encaissée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant effectivement encaissé."],

@@ -48,6 +48,8 @@ class CotationIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'detailCalcul' => "Somme des revenus",
             'taxeCourtierMontant' => round($this->calculationHelper->getCotationMontantTaxeCourtier($entity, false), 2),
             'taxeAssureurMontant' => round($this->calculationHelper->getCotationMontantTaxeAssureur($entity, false), 2),
+            'tauxTaxeAssureurPercent' => $this->calculationHelper->getCotationTauxTaxeAssureurPercent($entity),
+            'tauxTaxeCourtierPercent' => $this->calculationHelper->getCotationTauxTaxeCourtierPercent($entity),
             'montant_du' => round($this->calculationHelper->getCotationMontantCommissionTtc($entity, -1, false), 2),
             'montant_paye' => round($this->calculationHelper->getCotationMontantCommissionEncaissee($entity), 2),
             'solde_restant_du' => round($this->calculationHelper->getCotationMontantCommissionTtc($entity, -1, false) - $this->calculationHelper->getCotationMontantCommissionEncaissee($entity), 2),
