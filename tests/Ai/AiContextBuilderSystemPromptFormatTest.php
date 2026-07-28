@@ -75,6 +75,35 @@ class AiContextBuilderSystemPromptFormatTest extends KernelTestCase
         $this->assertStringContainsString('CONCISION', $prompt);
     }
 
+    public function testPromptSepareLesDeuxMondesDeTaxesEtInterditDinventerUnTaux(): void
+    {
+        static::bootKernel();
+        $builder = static::getContainer()->get(AiContextBuilder::class);
+
+        $request = new AiRequest(
+            systemContext: [
+                'assistantNom'   => 'Ket',
+                'entrepriseNom'  => 'PHPUnit Taxes SARL',
+                'perimetre'      => [],
+                'date'           => '2026-07-28',
+                'objetsAttaches' => [],
+            ],
+            messages: [],
+            scope: new AiScope(new Entreprise(), new Invite()),
+        );
+
+        $prompt = $builder->toSystemPrompt($request);
+
+        // Deux mondes de taxes distincts : prime vs commission.
+        $this->assertStringContainsString('SUR LA PRIME', $prompt);
+        $this->assertStringContainsString('SUR LA COMMISSION', $prompt);
+        $this->assertStringContainsString('taxeAssureurMontant', $prompt);
+        $this->assertStringContainsString('taxeCourtierMontant', $prompt);
+        // Interdiction d'inventer un taux + où lire le vrai taux.
+        $this->assertStringContainsString("N'INVENTE JAMAIS un taux de taxe", $prompt);
+        $this->assertStringContainsString('lire_fiche(entite=Taxe)', $prompt);
+    }
+
     public function testPromptPorteLaBoussoleEtSonEtat(): void
     {
         static::bootKernel();
