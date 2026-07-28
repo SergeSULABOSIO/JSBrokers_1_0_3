@@ -118,6 +118,25 @@
         .jsb-ai-chat .aic-md-badge--info    { background:#e8f0fb; color:#0047AB; }
         .jsb-ai-chat .aic-md-badge--neutral { background:#e9ecef; color:#495057; }
 
+        /* Graphiques (blocs ```chart montés par assistant-chart-render.js) : une
+           <figure> avec le <canvas> puis une légende explicative en dessous.
+           Comme les tableaux, le graphique ne doit jamais déborder la bulle. */
+        .jsb-ai-chat .aic-chart { margin:.4rem 0 .5rem; }
+        .jsb-ai-chat .aic-chart:last-child { margin-bottom:0; }
+        .jsb-ai-chat .aic-chart-figure { margin:0; }
+        .jsb-ai-chat .aic-chart-canvas {
+            position:relative; height:230px; max-width:100%;
+            background:#ffffff; border:1px solid #dee2e6; border-radius:8px;
+            padding:.5rem;
+        }
+        /* Légende sous le graphique : concise, atténuée, liseré cobalt discret
+           pour signaler « clé de lecture » sans concurrencer le graphique. */
+        .jsb-ai-chat .aic-chart-legende {
+            margin:.35rem 0 0; padding:.1rem 0 .1rem .55rem;
+            border-left:2px solid #0047AB;
+            font-size:.76rem; line-height:1.4; color:#6c757d;
+        }
+
         /* Feedback local sur chaque bulle : SURVOL (liseré cobalt + élévation
            légère) et CLIC (enfoncement bref) — l'utilisateur « sent » chaque
            message sous la souris. Transition douce, couleurs de la charte. */

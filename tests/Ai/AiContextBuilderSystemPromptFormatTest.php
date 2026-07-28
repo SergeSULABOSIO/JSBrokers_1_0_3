@@ -45,6 +45,35 @@ class AiContextBuilderSystemPromptFormatTest extends KernelTestCase
         $this->assertStringContainsString('[Aucun impayé](#neutral)', $prompt);
     }
 
+    public function testPromptEnseigneLaSyntaxeGraphique(): void
+    {
+        static::bootKernel();
+        $builder = static::getContainer()->get(AiContextBuilder::class);
+
+        $request = new AiRequest(
+            systemContext: [
+                'assistantNom'   => 'Ket',
+                'entrepriseNom'  => 'PHPUnit Graphique SARL',
+                'perimetre'      => [],
+                'date'           => '2026-07-28',
+                'objetsAttaches' => [],
+            ],
+            messages: [],
+            scope: new AiScope(new Entreprise(), new Invite()),
+        );
+
+        $prompt = $builder->toSystemPrompt($request);
+
+        // Capacité graphique : syntaxe du bloc balisé + champ légende obligatoire.
+        $this->assertStringContainsString('GRAPHIQUES', $prompt);
+        $this->assertStringContainsString('```chart', $prompt);
+        $this->assertStringContainsString('"legende"', $prompt);
+        $this->assertStringContainsString('OBLIGATOIRE', $prompt);
+        // Le graphique complète, ne remplace pas — et ne s'invente pas de chiffres.
+        $this->assertStringContainsString('COMPLÈTE', $prompt);
+        $this->assertStringContainsString("n'invente jamais de chiffre", $prompt);
+    }
+
     public function testPromptPorteLeGlossaireFinancierEtLaConcision(): void
     {
         static::bootKernel();

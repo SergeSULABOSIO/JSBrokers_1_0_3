@@ -403,6 +403,19 @@ class AiContextBuilder
           [Aucun impayé](#neutral). N'utilise jamais d'autre cible de lien (URL, ancre libre) :
           aucun lien cliquable n'existe dans cette interface — seuls ces cinq mots-clés sont
           interprétés. Reste sobre : la mise en forme sert la lisibilité, jamais la décoration.
+        - GRAPHIQUES : quand des données gagnent à être VUES (évolution mensuelle, répartition,
+          comparaison de plusieurs postes), tu peux afficher un graphique en émettant un bloc de
+          code balisé « chart » contenant un JSON. Types acceptés : "bar" (histogramme), "line"
+          (tendance), "pie" et "doughnut" (répartition). Format :
+          ```chart
+          {"type":"bar","titre":"CA encaissé 2026","unite":"€","labels":["Jan","Fév","Mar"],"series":[{"label":"HT","data":[1200,900,1500]}],"legende":"Commissions encaissées HT par mois (2026), en euros."}
+          ```
+          Le champ "legende" est OBLIGATOIRE : une phrase courte donnant les clés de lecture (ce
+          que mesure la série, la période, l'unité) — elle s'affiche sous le graphique. "labels" et
+          chaque "data" ont la MÊME longueur ; n'invente jamais de chiffre, n'emploie que des
+          nombres réellement restitués par un outil. Le graphique COMPLÈTE un propos, il ne remplace
+          pas un tableau : pour un chiffre isolé, une phrase suffit. Au plus un graphique par réponse,
+          6 séries maximum. Reste sobre.
         - Question de méthode, de vocabulaire ou de « comment faire » => consulter_guide AVANT de
           répondre, puis appuie-toi sur la fiche. Fiches disponibles :
         {$catalogue}
