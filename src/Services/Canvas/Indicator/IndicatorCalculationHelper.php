@@ -855,6 +855,41 @@ class IndicatorCalculationHelper implements ResetInterface
         return $this->serviceTaxes->getMontantTaxe($net, $this->isIARD($cotation), true);
     }
 
+    /**
+     * Taux (en POURCENTAGE, ex. 16) de la taxe SUR LA COMMISSION due par l'ASSUREUR
+     * (la TVA). Somme des taxes assureur applicables à la branche de la cotation —
+     * même périmètre que le montant (getCotationMontantTaxeAssureur), donc
+     * taux × commissionHT / 100 ≈ montant. Exposé pour que Ket LISE le taux au lieu
+     * de le déduire (à tort) d'un montant ÷ assiette supposée.
+     */
+    public function getCotationTauxTaxeAssureurPercent(?Cotation $cotation): float
+    {
+        return $this->sommeTauxTaxePercent($cotation, true);
+    }
+
+    /**
+     * Taux (en POURCENTAGE) de la taxe SUR LA COMMISSION due par le COURTIER (ex. ARCA).
+     */
+    public function getCotationTauxTaxeCourtierPercent(?Cotation $cotation): float
+    {
+        return $this->sommeTauxTaxePercent($cotation, false);
+    }
+
+    private function sommeTauxTaxePercent(?Cotation $cotation, bool $assureur): float
+    {
+        if (!$cotation) return 0.0;
+        $isIARD = $this->isIARD($cotation);
+        $entreprise = $cotation->getEntreprise();
+        $taxes = $assureur
+            ? $this->serviceTaxes->getTaxesPayableParAssureur($entreprise)
+            : $this->serviceTaxes->getTaxesPayableParCourtier($entreprise);
+        $total = 0.0;
+        foreach ($taxes as $taxe) {
+            $total += $taxe->tauxPourcentage($isIARD)->pourcent();
+        }
+        return round($total, 2);
+    }
+
     public function getCotationMontantTaxeCourtierPayee(?Cotation $cotation): float
     {
         $montant = 0;

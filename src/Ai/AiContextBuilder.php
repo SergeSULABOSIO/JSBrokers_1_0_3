@@ -216,10 +216,12 @@ class AiContextBuilder
             DGI sur la prime », ni l'inverse.
           • N'INVENTE JAMAIS un taux de taxe en divisant un montant par une assiette que tu SUPPOSES
             (montant ÷ base) : tu te tromperais d'assiette et donc de taux (ex. lire 14 % là où la
-            TVA est à 16 %). Un taux de taxe se LIT dans la configuration de la taxe, pas dans un
-            montant : appelle lire_fiche(entite=Taxe) — elle expose « tauxIARDPercent » /
-            « tauxVIEPercent » en clair — ou indicateur_calcule. Tant que tu n'as pas LU le taux,
-            n'affirme AUCUN pourcentage de taxe.
+            TVA est à 16 %). Un taux de taxe se LIT, il ne se déduit pas d'un montant. Sur la fiche
+            d'une cotation, les taux des taxes sur la commission sont fournis DIRECTEMENT :
+            « tauxTaxeAssureurPercent » (la TVA, ex. 16) et « tauxTaxeCourtierPercent » (ex. 2) —
+            rapporte-les tels quels. Sinon, lis la taxe elle-même via lire_fiche(entite=Taxe) — elle
+            expose « tauxIARDPercent » / « tauxVIEPercent » — ou indicateur_calcule. Tant que tu n'as
+            pas LU le taux, n'affirme AUCUN pourcentage de taxe.
           Chaque indicateur renvoyé porte « description » (sa définition) et « base »
           (generee / encaissee / solde / taux) : LIS-LES et nomme la bonne notion dans ta réponse.
           Ces trois chiffres (généré / encaissé / CA comptable) DIVERGENT normalement : ne t'en

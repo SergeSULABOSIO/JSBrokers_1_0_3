@@ -2,6 +2,7 @@
 
 namespace App\Tests\Services;
 
+use App\Entity\AutoriteFiscale;
 use App\Entity\Entreprise;
 use App\Entity\Taxe;
 use App\Entity\Utilisateur;
@@ -43,6 +44,7 @@ class ServiceTaxesScopingTest extends KernelTestCase
         $conn = $this->em->getConnection();
         $emails = [strtolower(self::NOM_A) . '@test.local', strtolower(self::NOM_B) . '@test.local'];
         foreach ([self::NOM_A, self::NOM_B] as $nom) {
+            $conn->executeStatement('DELETE a FROM autorite_fiscale a JOIN entreprise e ON a.entreprise_id = e.id WHERE e.nom = :n', ['n' => $nom]);
             $conn->executeStatement('DELETE t FROM taxe t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :n', ['n' => $nom]);
             $conn->executeStatement('DELETE i FROM invite i JOIN entreprise e ON i.entreprise_id = e.id WHERE e.nom = :n', ['n' => $nom]);
         }
@@ -89,5 +91,22 @@ class ServiceTaxesScopingTest extends KernelTestCase
         // Hors contexte (pas d'entreprise explicite, pas d'utilisateur connecté) :
         // jamais toutes les entreprises → aucune taxe (fail-safe).
         $this->assertSame(0.0, (float) $this->service->getMontantTaxe(1000.0, true, true, null));
+    }
+
+    public function testMontantTaxeAutoriteAppliqueLaFractionPasLePourcentEntier(): void
+    {
+        $entA = $this->seedEntrepriseAvecTva(self::NOM_A);
+        $this->em->flush();
+
+        // Rattache une autorité fiscale (DGI) à la TVA seedée.
+        $tva = $this->em->getRepository(Taxe::class)->findOneBy(['entreprise' => $entA, 'code' => 'TVA']);
+        $autorite = (new AutoriteFiscale())->setNom('Direction Générale des Impôts')->setAbreviation('DGI')->setTaxe($tva);
+        $autorite->setEntreprise($entA);
+        $this->em->persist($autorite);
+        $this->em->flush();
+
+        // 1000 × 16 % = 160 (la FRACTION 0,16), PAS 1000 × 16 = 16000 (l'ancien bug ÷100 manquant).
+        $montant = $this->service->getMontantTaxeAutorite(1000.0, true, $autorite, $entA);
+        $this->assertEqualsWithDelta(160.0, $montant, 0.01, 'getMontantTaxeAutorite doit appliquer la fraction, pas le pourcentage entier.');
     }
 }

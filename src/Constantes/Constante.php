@@ -6276,10 +6276,12 @@ class Constante
         if ($note->getAddressedTo() == Note::TO_AUTORITE_FISCALE) {
             /** @var Taxe $taxeFacturee */
             $taxeFacturee = $this->Note_getTaxeFacturee($article->getNote());
-            $res = match ($article->getTranche()->getCotation()->getPiste()->getRisque()->getBranche()) {
-                Risque::BRANCHE_IARD_OU_NON_VIE => ($article->getMontant() / $taxeFacturee->getTauxIARD()),
-                Risque::BRANCHE_VIE => ($article->getMontant() / $taxeFacturee->getTauxVIE()),
-            };
+            // On remonte du montant de taxe facturé vers son assiette (la commission HT) :
+            // assiette = taxe / fraction. Le taux est en pourcentage entier → passer par
+            // le VO (÷ 0,16), pas ÷ 16 (qui donnait une assiette 100× trop petite).
+            $isIARD = $article->getTranche()->getCotation()->getPiste()->getRisque()->getBranche() == Risque::BRANCHE_IARD_OU_NON_VIE;
+            $fraction = $taxeFacturee->tauxPourcentage($isIARD)->fraction();
+            $res = $fraction != 0.0 ? ($article->getMontant() / $fraction) : 0.0;
         }
         if ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT) {
             $comTTC = $this->ARTICLE_getComTTC($article);
@@ -6295,17 +6297,23 @@ class Constante
         return round($res, 2);
     }
 
+    /**
+     * Taux combiné des taxes sur la commission, en FRACTION (0,16 pour 16 %) — et
+     * NON en pourcentage entier. Les taux sont stockés en pourcentage entier ; la
+     * conversion passe par le VO Pourcentage. Ses consommateurs l'utilisent en
+     * fraction : « comHT × tauxTaxe » (montant de taxe) et « comTTC / (1 + tauxTaxe) »
+     * (retrait de la taxe). Avant, cette méthode renvoyait 16 au lieu de 0,16, d'où
+     * une taxe ×100 trop grande et un comTTC/(16+1) au lieu de /1,16.
+     */
     public function getTauxTaxe(?Cotation $cotation, bool $forAssureur)
     {
-        $tauxTaxe = 0;
-        if ($forAssureur == true) {
-            foreach ($this->serviceTaxes->getTaxesPayableParAssureur() as $taxeAssureur) {
-                $tauxTaxe += $this->isIARD($cotation) ? $taxeAssureur->getTauxIARD() : $taxeAssureur->getTauxVIE();
-            }
-        } else {
-            foreach ($this->serviceTaxes->getTaxesPayableParCourtier() as $taxeCourtier) {
-                $tauxTaxe += $this->isIARD($cotation) ? $taxeCourtier->getTauxIARD() : $taxeCourtier->getTauxVIE();
-            }
+        $isIARD = $this->isIARD($cotation);
+        $tauxTaxe = 0.0;
+        $taxes = $forAssureur
+            ? $this->serviceTaxes->getTaxesPayableParAssureur()
+            : $this->serviceTaxes->getTaxesPayableParCourtier();
+        foreach ($taxes as $taxe) {
+            $tauxTaxe += $taxe->tauxPourcentage($isIARD)->fraction();
         }
         return $tauxTaxe;
     }

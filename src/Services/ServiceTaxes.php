@@ -94,10 +94,10 @@ class ServiceTaxes
         $montantTaxe = 0;
         foreach ($this->getTaxes($entreprise) as $taxe) {
             if ($autoriteFiscale->getTaxe() == $taxe) {
-                $montantTaxe += match ($tauxIARD) {
-                    true => $montantNet * $taxe->getTauxIARD(),
-                    false => $montantNet * $taxe->getTauxVIE(),
-                };
+                // Le taux est stocké en POURCENTAGE ENTIER (16 = 16 %) : la conversion
+                // passe par le VO Pourcentage (base × fraction), plus jamais × taux brut
+                // (le montant sortait sinon ×100 trop grand : 16 au lieu de 0,16).
+                $montantTaxe += $taxe->tauxPourcentage((bool) $tauxIARD)->appliquerA((float) $montantNet);
             }
         }
         return $montantTaxe;
