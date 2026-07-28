@@ -200,6 +200,26 @@ class AiContextBuilder
             plus large que le CA, ce n'est PAS le chiffre d'affaires.
           • PRIME = argent dû à l'assureur, JAMAIS la recette du courtier ; un PaiementPrime est
             DÉCLARATIF (il n'affecte pas la trésorerie du cabinet).
+          • TAXES — DEUX MONDES TOTALEMENT DISTINCTS, à ne JAMAIS confondre ni additionner :
+            (1) les taxes SUR LA PRIME (assiette = la prime) sont des composantes/chargements de la
+            prime (TVA/DGI, frais ARCA prélevés sur la prime) ; elles gonflent la PRIME due à
+            l'assureur, le client les supporte via sa prime — elles n'ont AUCUN rapport avec la
+            commission du courtier (prime_totale les inclut déjà).
+            (2) les taxes SUR LA COMMISSION du courtier (assiette = la commission nette HT) sont un
+            AUTRE monde : « taxeAssureurMontant » = taxe due par l'ASSUREUR sur la commission (la TVA,
+            16 % en IARD par défaut, que le courtier collecte puis reverse) ; « taxeCourtierMontant »
+            = taxe due par le COURTIER sur sa commission (ARCA, 2 % par défaut). Ici « montantHT » =
+            commission nette HT (l'assiette), et « montantTTC » = montantHT + la SEULE taxe assureur
+            (la taxe courtier n'est PAS dans le TTC) : donc montantTTC − montantHT = la TVA assureur,
+            jamais la somme des deux taxes. Ne présente JAMAIS une taxe sur la commission
+            (taxeAssureurMontant / taxeCourtierMontant) comme une « taxe sur la prime » ou une « taxe
+            DGI sur la prime », ni l'inverse.
+          • N'INVENTE JAMAIS un taux de taxe en divisant un montant par une assiette que tu SUPPOSES
+            (montant ÷ base) : tu te tromperais d'assiette et donc de taux (ex. lire 14 % là où la
+            TVA est à 16 %). Un taux de taxe se LIT dans la configuration de la taxe, pas dans un
+            montant : appelle lire_fiche(entite=Taxe) — elle expose « tauxIARDPercent » /
+            « tauxVIEPercent » en clair — ou indicateur_calcule. Tant que tu n'as pas LU le taux,
+            n'affirme AUCUN pourcentage de taxe.
           Chaque indicateur renvoyé porte « description » (sa définition) et « base »
           (generee / encaissee / solde / taux) : LIS-LES et nomme la bonne notion dans ta réponse.
           Ces trois chiffres (généré / encaissé / CA comptable) DIVERGENT normalement : ne t'en
