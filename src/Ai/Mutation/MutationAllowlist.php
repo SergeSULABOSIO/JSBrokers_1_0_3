@@ -30,7 +30,7 @@ final class MutationAllowlist
      * et (b) dont aucun setter ManyToOne ne maintient de collection inverse en
      * cascade-persist — sinon la validation FormType du dry-run
      * (WorkspaceMutationService::analyserOperation) pourrait rattacher l'entité de
-     * test à un parent géré et la persister au flush suivant. Les 31 entités
+     * test à un parent géré et la persister au flush suivant. Les 32 entités
      * ci-dessous ont été vérifiées conformes ; de plus le chemin de dry-run
      * (PreparerOperationsTool) ne flush jamais — double garde.
      */
@@ -53,6 +53,11 @@ final class MutationAllowlist
         'Paiement',
         'Bordereau',
         'Tranche',
+        // Signalement déclaratif du paiement de la prime (l'assureur encaisse, jamais
+        // la trésorerie du courtier). SOUS-entité de Tranche : absente de la carte
+        // d'accès (WorkspaceAccessResolver::MAP), son écriture est gouvernée par le
+        // droit « Tranche » via GOUVERNANCE_PARENT — donc jamais top-level en lecture.
+        'PaiementPrime',
         'RevenuPourCourtier', // « Revenus »
         'Chargement',      // « Types Chargements »
         'TypeRevenu',

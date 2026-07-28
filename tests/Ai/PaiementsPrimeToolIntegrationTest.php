@@ -20,6 +20,7 @@ use App\Entity\Utilisateur;
 use App\Services\Search\PortefeuilleScope;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 
 /**
  * Outil « paiements_prime » sur la VRAIE base : ce que les tests unitaires ne peuvent pas
@@ -68,6 +69,11 @@ class PaiementsPrimeToolIntegrationTest extends KernelTestCase
                 ['noms' => \Doctrine\DBAL\ArrayParameterType::STRING]
             );
         }
+        // Dénoue la FK utilisateur.connected_to_id ↔ entreprise avant suppression.
+        $conn->executeStatement(
+            'UPDATE utilisateur SET connected_to_id = NULL WHERE email = :email',
+            ['email' => self::OWNER_EMAIL]
+        );
         $conn->executeStatement(
             'DELETE FROM entreprise WHERE nom IN (:noms)',
             ['noms' => $noms],
@@ -114,6 +120,7 @@ class PaiementsPrimeToolIntegrationTest extends KernelTestCase
         $em->persist($ownerUser);
 
         $entreprise = $this->makeEntreprise(self::ENTREPRISE_NOM, $ownerUser);
+        $ownerUser->setConnectedTo($entreprise); // pour la construction du FormType (autocomplete) de l'action.
         $gestionnaire = (new Invite())->setNom('Propriétaire PP');
         $gestionnaire->setUtilisateur($ownerUser)->setEntreprise($entreprise)->setProprietaire(true);
         $em->persist($gestionnaire);
@@ -303,6 +310,13 @@ class PaiementsPrimeToolIntegrationTest extends KernelTestCase
         }
 
         // L'ACTION reste à l'outil d'action : la lecture ne lui vole pas la question.
+        // signaler_paiement_prime prépare désormais un plan (délégation à
+        // preparer_operations) → il construit le PaiementPrimeType, dont l'autocomplete
+        // exige un utilisateur connecté : on le pose comme le fait le chat authentifié.
+        $ownerUser = $this->em()->getRepository(Utilisateur::class)->findOneBy(['email' => self::OWNER_EMAIL]);
+        static::getContainer()->get('security.token_storage')->setToken(
+            new UsernamePasswordToken($ownerUser, 'main', $ownerUser->getRoles()),
+        );
         $action = $engine->reply(new AiRequest(
             systemContext: [
                 'assistantNom'   => 'Ket',

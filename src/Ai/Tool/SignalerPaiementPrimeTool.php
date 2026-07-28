@@ -7,25 +7,37 @@ use App\Ai\Scope\AiScope;
 use App\Entity\Invite;
 use App\Entity\Tranche;
 use App\Service\Workspace\WorkspaceAccessResolver;
+use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use App\Services\JSBDynamicSearchService;
 
 /**
- * Outil d'ACTION UI : ouvre le formulaire « Signaler un paiement de prime » d'une
- * tranche — le PaiementPrime déclaratif (l'ASSUREUR a encaissé la prime, jamais la
- * trésorerie du courtier), à ne PAS confondre avec l'entité Paiement (trésorerie).
- * Le dialogue s'ouvre PRÉREMPLI par le circuit standard de l'action de liste
- * (ui:tranche.signaler-paiement-prime) : montant = solde de prime restant, date du
- * jour, description auto — l'utilisateur relit et enregistre lui-même.
+ * Outil d'ÉCRITURE : signale le paiement d'une prime sur une tranche — le
+ * PaiementPrime déclaratif (l'ASSUREUR a encaissé la prime, jamais la trésorerie du
+ * courtier), à ne PAS confondre avec l'entité Paiement (trésorerie).
  *
- * FAIL-CLOSED : préparer ce signalement = mutation à venir sur la tranche —
- * niveau Écriture exigé, et la tranche est résolue STRICTEMENT dans l'entreprise
- * du scope (le endpoint de contexte re-valide de toute façon côté serveur).
+ * Il n'introduit AUCUNE logique d'écriture : il TRADUIT ses arguments en une
+ * opération générique (create PaiementPrime, parent = la tranche) et DÉLÈGUE à
+ * preparer_operations (donc au même WorkspaceMutationService : validation, budget,
+ * plan à valider, exécution transactionnelle, journal). DRY strict — même pattern
+ * que ModifierCompositionPrimeTool.
+ *
+ * Les défauts métier (montant = solde de prime restant, date du jour, référence
+ * auto) sont posés ICI, à l'identique du PaiementPrimeType : contrairement au form
+ * HTTP, le dry-run réclame les champs NON-NULL (montant, paidAt, reference) AVANT de
+ * construire le formulaire — les pré-remplir permet donc « trancheId seul suffit » ET
+ * fait apparaître des valeurs concrètes dans l'aperçu du plan.
+ *
+ * FAIL-CLOSED : signaler = écriture sur une sous-entité de la tranche — niveau
+ * Écriture sur « Tranche » exigé (le moteur le re-contrôle via GOUVERNANCE_PARENT),
+ * et la tranche est résolue STRICTEMENT dans l'entreprise du scope.
  */
 final class SignalerPaiementPrimeTool implements AiToolInterface
 {
     public function __construct(
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly JSBDynamicSearchService $searchService,
+        private readonly PreparerOperationsTool $preparer,
+        private readonly IndicatorCalculationHelper $calculationHelper,
     ) {
     }
 
@@ -36,16 +48,18 @@ final class SignalerPaiementPrimeTool implements AiToolInterface
 
     public function description(): string
     {
-        return "Ouvre le formulaire « Signaler un paiement de prime » d'une TRANCHE : trace "
-            . "déclarative du règlement de la prime par l'assuré, encaissé par l'ASSUREUR "
-            . "(sans impact sur la trésorerie du cabinet) — rend la commission exigible. "
+        return "Signale le paiement d'une prime sur une TRANCHE : trace déclarative du "
+            . "règlement de la prime par l'assuré, encaissé par l'ASSUREUR (sans impact sur "
+            . 'la trésorerie du cabinet) — rend la commission de courtage exigible. '
             . 'À appeler quand l\'utilisateur veut signaler/enregistrer/tracer le paiement '
             . 'd\'une prime sur une tranche (trancheId requis — obtiens-le via '
             . 'rechercher_entites si besoin). NE PAS utiliser ouvrir_dialogue avec l\'entité '
             . 'Paiement pour cela : Paiement = encaissement de trésorerie du courtier, ce '
-            . 'qui est un tout autre circuit. Le formulaire s\'ouvre prérempli (solde de '
-            . 'prime restant, date du jour) : l\'utilisateur vérifie et enregistre lui-même. '
-            . 'Cet outil CRÉE : pour seulement CONSULTER les signalements déjà enregistrés '
+            . 'qui est un tout autre circuit. Fournis trancheId (et, si l\'utilisateur les '
+            . 'donne, montant et paidAt) ; sinon les défauts s\'appliquent (montant = solde '
+            . 'de prime restant, date du jour, référence auto). L\'outil prépare un PLAN + '
+            . 'BUDGET à valider (comme preparer_operations) ; après validation, c\'est TOI '
+            . 'qui enregistres. Pour seulement CONSULTER les signalements déjà enregistrés '
             . '(dates, montants, références), utiliser paiements_prime.';
     }
 
@@ -58,6 +72,29 @@ final class SignalerPaiementPrimeTool implements AiToolInterface
                     'type' => 'integer',
                     'minimum' => 1,
                     'description' => 'Identifiant de la tranche dont la prime a été payée.',
+                ],
+                'montant' => [
+                    'type' => 'number',
+                    'description' => 'Montant réglé, dans la devise de la tranche. Omets-le pour '
+                        . 'utiliser le solde de prime restant (paiements partiels possibles).',
+                ],
+                'paidAt' => [
+                    'type' => 'string',
+                    'description' => 'Date du règlement par l\'assuré (AAAA-MM-JJ). Omets-la pour la date du jour.',
+                ],
+                'reference' => [
+                    'type' => 'string',
+                    'description' => 'Référence du règlement. Omets-la pour une référence auto-générée.',
+                ],
+                'description' => [
+                    'type' => 'string',
+                    'description' => 'Précision facultative sur la source de l\'information.',
+                ],
+                'remplacerPlanEnAttente' => [
+                    'type' => 'boolean',
+                    'description' => 'Ne mets true QUE si un plan attend déjà une décision ET que '
+                        . 'l\'utilisateur demande de le CHANGER : le plan en attente est annulé et '
+                        . 'remplacé. Sinon, tant qu\'un plan attend, la préparation est refusée.',
                 ],
             ],
             'required' => ['trancheId'],
@@ -116,18 +153,63 @@ final class SignalerPaiementPrimeTool implements AiToolInterface
             return AiToolResult::introuvable(sprintf('%s #%d', $libelleTranche, $trancheId));
         }
 
-        return AiToolResult::ok(
-            [
-                'trancheId' => $trancheId,
-                'tranche'   => $tranche->getNom(),
-                'note'      => "Le formulaire « Signaler un paiement de prime » s'ouvre dans l'espace de travail, "
-                    . 'prérempli avec le solde de prime restant et la date du jour (déclaratif : encaissé par '
-                    . "l'assureur, sans impact sur la trésorerie) — l'utilisateur vérifie et enregistre lui-même.",
-            ],
-            uiAction: [
-                'type'      => 'signaler-paiement-prime',
-                'trancheId' => $trancheId,
-            ],
-        );
+        // Traduction en opération générique + délégation au moteur unique. Le parent
+        // « tranche » est posé par id (le moteur appelle setTranche). Les champs
+        // NON-NULL (montant, paidAt, reference) sont pré-remplis à l'identique du
+        // PaiementPrimeType, car le dry-run les EXIGE avant de construire le
+        // formulaire ; l'utilisateur peut tous les surcharger.
+        $champs = [
+            'tranche'   => $trancheId,
+            'montant'   => $this->resoudreMontant($args, $tranche),
+            'paidAt'    => $this->resoudrePaidAt($args),
+            'reference' => $this->resoudreReference($args),
+        ];
+        if (($args['description'] ?? null) !== null && $args['description'] !== '') {
+            $champs['description'] = (string) $args['description']; // sinon auto par le FormType.
+        }
+
+        return $this->preparer->execute([
+            'operations' => [[
+                'op'     => 'create',
+                'entite' => 'PaiementPrime',
+                'champs' => $champs,
+            ]],
+            'remplacerPlanEnAttente' => ($args['remplacerPlanEnAttente'] ?? false) === true,
+        ], $scope);
+    }
+
+    /** Montant fourni, sinon solde de prime restant à signaler (formule du PaiementPrimeType). */
+    private function resoudreMontant(array $args, Tranche $tranche): float
+    {
+        if (($args['montant'] ?? null) !== null && $args['montant'] !== '') {
+            return (float) $args['montant'];
+        }
+
+        $prime = $this->calculationHelper->getCotationMontantPrimePayableParClient($tranche->getCotation())
+            * $this->calculationHelper->getTrancheTauxFactor($tranche);
+        $solde = round($prime - $this->calculationHelper->getTranchePrimePayee($tranche), 2);
+
+        return $solde > 0 ? $solde : 0.0;
+    }
+
+    /** Date fournie (AAAA-MM-JJ…), sinon maintenant — format attendu par DateTimeType single_text. */
+    private function resoudrePaidAt(array $args): string
+    {
+        $brut = trim((string) ($args['paidAt'] ?? ''));
+        try {
+            $date = $brut !== '' ? new \DateTimeImmutable($brut) : new \DateTimeImmutable('now');
+        } catch (\Throwable) {
+            $date = new \DateTimeImmutable('now');
+        }
+
+        return $date->format('Y-m-d\TH:i:s');
+    }
+
+    /** Référence fournie, sinon générée (même schéma que le PaiementPrimeType). */
+    private function resoudreReference(array $args): string
+    {
+        $ref = trim((string) ($args['reference'] ?? ''));
+
+        return $ref !== '' ? $ref : 'PRIME-' . (new \DateTimeImmutable('now'))->format('dmY-His');
     }
 }
