@@ -469,12 +469,17 @@
                le navigateur ne supporte pas l'API Web Speech. SVG micro inline
                (auto-porté) — pas d'ux_icon serveur pour éviter tout appel au
                circuit d'icônes (cf. correctif 500 du commit 456208af). #}
+            {# Infobulle sombre (pattern JS Brokers .jsb-ctx-tip.commit-tip) au lieu
+               du title natif : titre blanc + explication grise. Copie posée en
+               data-* et rendue par le contrôleur. #}
             <button type="button" class="aic-mic"
                     data-assistant-chat-target="mic"
                     data-action="click->assistant-chat#toggleDictation"
                     aria-pressed="false"
                     aria-label="Dicter le message vocalement"
-                    title="Parler à {{ assistantNom }}">
+                    data-mic-tip-title="Dicter votre message"
+                    data-mic-tip-body="Parlez au lieu d'écrire : votre voix est transcrite en texte dans la zone de saisie.
+Relisez, corrigez si besoin, puis envoyez. La langue suit l'affichage (français ou anglais).">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
                      fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                      stroke-linejoin="round" aria-hidden="true">

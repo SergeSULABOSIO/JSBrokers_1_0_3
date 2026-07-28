@@ -90,6 +90,18 @@ export default class extends Controller {
         // du navigateur, transcrite dans la zone de saisie puis envoyée par le
         // circuit send() habituel (aucun token supplémentaire, aucun backend).
         this.setupDictation();
+
+        // Infobulle sombre du bouton micro (pattern JS Brokers .jsb-ctx-tip) :
+        // ANCRÉE au-dessus du bouton (le composer est au coin inférieur droit de
+        // l'écran) plutôt que suiveuse de curseur — réutilise l'infobulle du chat.
+        if (this.hasMicTarget) {
+            this._onMicTipOver = this._micTipShow.bind(this);
+            this._onMicTipOut = () => this._ctxTipHide();
+            this.micTarget.addEventListener('mouseenter', this._onMicTipOver);
+            this.micTarget.addEventListener('mouseleave', this._onMicTipOut);
+            this.micTarget.addEventListener('focus', this._onMicTipOver);
+            this.micTarget.addEventListener('blur', this._onMicTipOut);
+        }
     }
 
     /**
@@ -194,6 +206,12 @@ export default class extends Controller {
         if (this.recognition) {
             try { this.recognition.stop(); } catch (error) { /* déjà arrêtée */ }
             this.recognition = null;
+        }
+        if (this.hasMicTarget && this._onMicTipOver) {
+            this.micTarget.removeEventListener('mouseenter', this._onMicTipOver);
+            this.micTarget.removeEventListener('mouseleave', this._onMicTipOut);
+            this.micTarget.removeEventListener('focus', this._onMicTipOver);
+            this.micTarget.removeEventListener('blur', this._onMicTipOut);
         }
     }
 
@@ -1154,7 +1172,50 @@ export default class extends Controller {
      * par le partial serveur), rendue en tableau sombre — construction DOM via
      * textContent (échappement garanti). Sans fiche : objet supprimé/hors périmètre.
      */
+    /**
+     * Infobulle ANCRÉE du bouton micro : titre blanc (commit-tip-lead) + texte
+     * explicatif gris (commit-tip-para), copie lue sur les data-* du bouton.
+     * Position figée au-dessus du micro et alignée à droite (le composer est au
+     * coin inférieur droit) — épinglée pour que le suivi du curseur l'ignore.
+     */
+    _micTipShow() {
+        if (!this.hasMicTarget) return;
+        const tip = this._ctxTipCreate();
+        tip.className = 'jsb-ctx-tip commit-tip';
+        tip.textContent = '';
+
+        const table = document.createElement('table');
+        const addRow = (text, className) => {
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.setAttribute('colspan', '2');
+            td.className = className;
+            td.textContent = text;
+            tr.appendChild(td);
+            table.appendChild(tr);
+        };
+        addRow(this.micTarget.dataset.micTipTitle || 'Dicter votre message', 'commit-tip-lead');
+        (this.micTarget.dataset.micTipBody || '').split('\n').forEach((para) => {
+            if (para.trim() !== '') addRow(para.trim(), 'commit-tip-para');
+        });
+        tip.appendChild(table);
+
+        // Affiché puis positionné (mesures valides une fois display:block).
+        tip.style.display = 'block';
+        const rect = this.micTarget.getBoundingClientRect();
+        let left = rect.right - tip.offsetWidth;           // aligné au bord droit du micro
+        if (left < 8) left = 8;
+        let top = rect.top - tip.offsetHeight - 8;          // au-dessus du bouton
+        if (top < 8) top = rect.bottom + 8;                 // repli en dessous si pas de place
+        tip.style.left = `${left}px`;
+        tip.style.top = `${top}px`;
+
+        this._ctxTipActive = true;
+        this._ctxTipPinned = true; // figée : _ctxTipMove ne la déplacera pas
+    }
+
     _ctxTipBuild(tip, chip) {
+        tip.className = 'jsb-ctx-tip'; // repli du style partagé (annule un éventuel commit-tip du micro)
         tip.textContent = '';
         const table = document.createElement('table');
 
@@ -1196,6 +1257,7 @@ export default class extends Controller {
      * serveur ou la bulle optimiste) — construction DOM via textContent.
      */
     _ctxTipBuildMessage(tip, bouton) {
+        tip.className = 'jsb-ctx-tip'; // repli du style partagé (annule un éventuel commit-tip du micro)
         tip.textContent = '';
         const table = document.createElement('table');
 
