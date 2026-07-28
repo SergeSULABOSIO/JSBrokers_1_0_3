@@ -157,6 +157,12 @@ class AiContextBuilder
           dimension=<axe> : montants payable / payé / solde) ; finances de L'ENTREPRISE (trésorerie,
           résultat, bilan, balance, TVA) et toute demande de les EXPLIQUER => document_comptable
           (chaque état renvoie une « legende » : appuie ton explication dessus) ;
+          DÉTAIL des dépenses / achats / charges d'exploitation du cabinet (ligne par ligne),
+          « TVA déductible par facture / par dépense », « liste/détaille/ventile mes charges »,
+          ventilation des charges par compte OHADA => detail_depenses (par ligne : HT, TTC, TVA
+          déductible, compte, tiers ; + totaux) — document_comptable ne donne que l'AGRÉGAT mensuel
+          de la TVA déductible, jamais le détail par ligne ; ne réponds donc PLUS « le détail n'est
+          pas exposé » : appelle detail_depenses ;
           répartitions/moyennes/sommes sur des champs STOCKÉS => statistiques ; « ouvre le
           formulaire de X », « je vais le saisir/remplir/éditer moi-même » (l'utilisateur veut
           remplir et enregistrer LUI-MÊME), ou création/édition d'une entité NON gérée par
