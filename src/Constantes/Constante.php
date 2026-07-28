@@ -3352,11 +3352,11 @@ class Constante
             foreach ($note->getArticles() as $article) {
                 if ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT) {
                     // $montant += $this->Tranche_getMontant_commission_ht($article->getTranche());
-                    $montant += $this->ARTICLE_getComHT($article, $addressedTo, $onlySharable);
+                    $montant += $this->ARTICLE_getComHT($article);
                 } else if ($note->getAddressedTo() == Note::TO_AUTORITE_FISCALE) {
-                    $montant += $this->ARTICLE_getComHT($article, $addressedTo, $onlySharable);
+                    $montant += $this->ARTICLE_getComHT($article);
                 } else if ($note->getAddressedTo() == Note::TO_PARTENAIRE) {
-                    $montant += $this->ARTICLE_getComHT($article, $addressedTo, $onlySharable);
+                    $montant += $this->ARTICLE_getComHT($article);
                 }
             }
         }
@@ -3371,12 +3371,12 @@ class Constante
             foreach ($note->getArticles() as $article) {
                 if ($note->getAddressedTo() == Note::TO_ASSUREUR || $note->getAddressedTo() == Note::TO_CLIENT) {
                     // $montant += $this->Tranche_getMontant_taxe_payable_par_assureur($article->getTranche());
-                    $montant += $this->ARTICLE_getTaxeAssureur($article, $addressedTo, $onlySharable);
+                    $montant += $this->ARTICLE_getTaxeAssureur($article);
                 } else if ($note->getAddressedTo() == Note::TO_AUTORITE_FISCALE) {
                     // $montant += $this->Tranche_getMontant_taxe_payable_par_assureur($article->getTranche());
                     $montant += $this->ARTICLE_getMontantTaxeFacturee($article, $onlySharable);
                 } else if ($note->getAddressedTo() == Note::TO_PARTENAIRE) {
-                    $montant += $this->ARTICLE_getTaxeCourtier($article, $addressedTo, $onlySharable);
+                    $montant += $this->ARTICLE_getTaxeCourtier($article);
                 }
             }
         }
@@ -3550,7 +3550,7 @@ class Constante
         if ($note->getAddressedTo() == note::TO_PARTENAIRE) {
             /** @var Article $article */
             foreach ($note->getArticles() as $article) {
-                $assiette += $this->ARTICLE_getAssiette($article, -1, true);
+                $assiette += $this->ARTICLE_getAssiette($article);
             }
         }
         return round($assiette, 2);
@@ -6318,26 +6318,26 @@ class Constante
         return $tauxTaxe;
     }
 
-    public function ARTICLE_getTauxComHT(Article $article, $addressedTo, bool $onlySharable)
+    public function ARTICLE_getTauxComHT(Article $article)
     {
-        return round(($this->ARTICLE_getComHT($article, $addressedTo, $onlySharable) / $this->ARTICLE_getPrimeHT($article)) * 100, 2) . "%";
+        return round(($this->ARTICLE_getComHT($article) / $this->ARTICLE_getPrimeHT($article)) * 100, 2) . "%";
     }
 
-    public function ARTICLE_getTaxeAssureur(Article $article, $addressedTo, bool $onlySharable)
+    public function ARTICLE_getTaxeAssureur(Article $article)
     {
-        $taxe = $this->ARTICLE_getComHT($article, $addressedTo, $onlySharable) * $this->getTauxTaxe($article->getTranche()->getCotation(), true);
+        $taxe = $this->ARTICLE_getComHT($article) * $this->getTauxTaxe($article->getTranche()->getCotation(), true);
         return round($taxe, 2);
     }
 
     public function ARTICLE_getAssiette(Article $article)
     {
-        $taxe = $this->ARTICLE_getComHT($article, -1, true) - $this->ARTICLE_getTaxeCourtier($article, -1, true);
+        $taxe = $this->ARTICLE_getComHT($article) - $this->ARTICLE_getTaxeCourtier($article);
         return round($taxe, 2);
     }
 
-    public function ARTICLE_getTaxeCourtier(Article $article, $addressedTo, bool $onlySharable)
+    public function ARTICLE_getTaxeCourtier(Article $article)
     {
-        $taxe = $this->ARTICLE_getComHT($article, $addressedTo, $onlySharable) * $this->getTauxTaxe($article->getTranche()->getCotation(), false);
+        $taxe = $this->ARTICLE_getComHT($article) * $this->getTauxTaxe($article->getTranche()->getCotation(), false);
         return round($taxe, 2);
     }
 
