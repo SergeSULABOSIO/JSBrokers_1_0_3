@@ -3,11 +3,18 @@
 namespace App\Tests\Ai;
 
 use App\Ai\AiContextBuilder;
+use App\Ai\FicheNormaliseur;
 use App\Entity\AssistantConversation;
 use App\Entity\AssistantConversationContexte;
+use App\Entity\Avenant;
+use App\Entity\ChargementPourPrime;
 use App\Entity\Client;
+use App\Entity\Cotation;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
+use App\Entity\Piste;
+use App\Entity\RevenuPourCourtier;
+use App\Entity\TypeRevenu;
 use App\Entity\Utilisateur;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -64,6 +71,14 @@ class AiContextBuilderObjetsAttachesTest extends KernelTestCase
                  JOIN assistant_conversation c ON t.conversation_id = c.id
                  JOIN entreprise e ON c.entreprise_id = e.id
                  WHERE e.nom IN (:noms)",
+                ['noms' => $noms],
+                ['noms' => \Doctrine\DBAL\ArrayParameterType::STRING]
+            );
+        }
+        // Chaîne cotation supprimée AVANT le client (FK piste→client, cotation→piste, avenant→cotation).
+        foreach (['avenant', 'revenu_pour_courtier', 'type_revenu', 'chargement_pour_prime', 'cotation', 'piste'] as $table) {
+            $conn->executeStatement(
+                "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom IN (:noms)",
                 ['noms' => $noms],
                 ['noms' => \Doctrine\DBAL\ArrayParameterType::STRING]
             );
@@ -175,6 +190,53 @@ class AiContextBuilderObjetsAttachesTest extends KernelTestCase
         return $conversation;
     }
 
+    /**
+     * Cotation complète (piste + prime + commission) attachable, VALIDÉE ou non
+     * selon $valide (avenant présent = souscrite). Graphe suffisant pour que
+     * CotationIndicatorStrategy calcule sans erreur (statut, montants, taux).
+     */
+    private function makeCotation(Entreprise $e, Invite $invite, Client $client, string $nom, bool $valide): Cotation
+    {
+        $em = $this->em();
+
+        $piste = (new Piste())->setNom('Piste ' . $nom)->setTypeAvenant(0)
+            ->setDescriptionDuRisque('Risque test contexte')->setExercice(2026)
+            ->setClient($client)->setEntreprise($e)->setInvite($invite);
+        $em->persist($piste);
+
+        $cotation = (new Cotation())->setNom($nom)->setDuree(365);
+        $cotation->setPiste($piste);
+        $cotation->setEntreprise($e);
+        $em->persist($cotation);
+
+        $chargement = (new ChargementPourPrime())->setNom('Prime ' . $nom)->setMontantFlatExceptionel(1000.0);
+        $chargement->setEntreprise($e);
+        $cotation->addChargement($chargement);
+        $em->persist($chargement);
+
+        $typeRevenu = (new TypeRevenu())->setNom('Commission ' . $nom)->setMontantflat(200.0)
+            ->setShared(false)->setMultipayments(true)->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR);
+        $typeRevenu->setEntreprise($e);
+        $em->persist($typeRevenu);
+        $revenu = (new RevenuPourCourtier())->setNom('Revenu ' . $nom)->setTypeRevenu($typeRevenu)->setCotation($cotation);
+        $revenu->setEntreprise($e);
+        $em->persist($revenu);
+
+        if ($valide) {
+            $avenant = (new Avenant())->setReferencePolice('POL-' . $nom)->setNumero('0')
+                ->setDescription('Avenant validé')
+                ->setStartingAt(new \DateTimeImmutable('-30 days'))->setEndingAt(new \DateTimeImmutable('+335 days'));
+            $avenant->setEntreprise($e);
+            $avenant->setInvite($invite);
+            $cotation->addAvenant($avenant);
+            $em->persist($avenant);
+        }
+
+        $em->flush();
+
+        return $cotation;
+    }
+
     public function testFichePresenteDansContexteEtPrompt(): void
     {
         ['entreprise' => $e, 'owner' => $owner] = $this->seed();
@@ -275,5 +337,88 @@ class AiContextBuilderObjetsAttachesTest extends KernelTestCase
         $prompt = $this->builder()->toSystemPrompt($request);
         $this->assertStringNotContainsString('ATTACHÉ', $prompt, 'Sans objet, le prompt reste strictement identique.');
         $this->assertStringContainsString('périmètre', $prompt);
+    }
+
+    /**
+     * Le cœur du correctif : une cotation SOUSCRITE (avec avenant) attachée doit
+     * exposer son statut « Souscrite » et sa référence de police DANS la fiche du
+     * contexte — sans quoi Ket la croit « non validée » et parle de montants
+     * « potentiels » (RÈGLE isBound appliquée à l'envers).
+     */
+    public function testCotationSouscriteExposeStatutEtReference(): void
+    {
+        ['entreprise' => $e, 'owner' => $owner] = $this->seed();
+        $client = $this->makeClient($e, 'Builder Client Souscrit');
+        $cotation = $this->makeCotation($e, $owner, $client, 'Souscrite', true);
+        $conversation = $this->makeConversationAvecContexte($e, $owner, 'Cotation', $cotation->getId(), 'Cotation Souscrite');
+
+        $request = $this->builder()->build($e, $owner, $conversation);
+        $fiche = $request->systemContext['objetsAttaches'][0]['fiche'];
+
+        $this->assertSame('Souscrite', $fiche['statutSouscription'], 'La fiche attachée doit porter le statut calculé.');
+        $this->assertStringContainsString('POL-', (string) $fiche['referencePolice'], 'La police liée doit être visible.');
+
+        $prompt = $this->builder()->toSystemPrompt($request);
+        $this->assertStringContainsString('Souscrite', $prompt, 'Le statut souscrit entre dans le prompt.');
+    }
+
+    /**
+     * À l'inverse, une cotation SANS avenant reste « En attente » — Ket ne doit
+     * pas la présenter comme une police concrète.
+     */
+    public function testCotationSansAvenantResteEnAttente(): void
+    {
+        ['entreprise' => $e, 'owner' => $owner] = $this->seed();
+        $client = $this->makeClient($e, 'Builder Client Projet');
+        $cotation = $this->makeCotation($e, $owner, $client, 'EnAttente', false);
+        $conversation = $this->makeConversationAvecContexte($e, $owner, 'Cotation', $cotation->getId(), 'Cotation Projet');
+
+        $fiche = $this->builder()->build($e, $owner, $conversation)->systemContext['objetsAttaches'][0]['fiche'];
+
+        $this->assertSame('En attente', $fiche['statutSouscription']);
+    }
+
+    /**
+     * Les indicateurs calculés embarqués sont PLAFONNÉS (MAX_INDICATEURS_CONTEXTE) :
+     * une cotation en expose ~35, donc la fiche porte le marqueur d'approfondissement
+     * et les champs monétaires tardifs (ex. « reserve ») restent HORS fiche — preuve
+     * qu'on n'a PAS déversé toute la stratégie dans le prompt.
+     */
+    public function testIndicateursCalculesPlafonnesAvecMarqueur(): void
+    {
+        ['entreprise' => $e, 'owner' => $owner] = $this->seed();
+        $client = $this->makeClient($e, 'Builder Client Plafond');
+        $cotation = $this->makeCotation($e, $owner, $client, 'Plafond', true);
+        $conversation = $this->makeConversationAvecContexte($e, $owner, 'Cotation', $cotation->getId(), 'Cotation Plafond');
+
+        $request = $this->builder()->build($e, $owner, $conversation);
+        $fiche = $request->systemContext['objetsAttaches'][0]['fiche'];
+
+        $this->assertArrayHasKey('analyseApprofondie', $fiche, 'Au-delà du plafond, un marqueur d\'approfondissement est posé.');
+        $this->assertArrayNotHasKey('reserve', $fiche, 'Les indicateurs tardifs ne sont pas embarqués (plafond respecté).');
+
+        // Le prompt enseigne la fiabilité des indicateurs ET le protocole d'approfondissement.
+        $prompt = $this->builder()->toSystemPrompt($request);
+        $this->assertStringContainsString('RÉELLES', $prompt);
+        $this->assertStringContainsString('analyseApprofondie', $prompt);
+        $this->assertStringContainsString('lire_fiche', $prompt);
+    }
+
+    /**
+     * Parité inter-chemins : le statut vu sur un objet ATTACHÉ est le même que
+     * celui rendu par la fiche enrichie (chemin lire_fiche) pour la même cotation.
+     */
+    public function testPariteStatutAvecFicheEnrichie(): void
+    {
+        ['entreprise' => $e, 'owner' => $owner] = $this->seed();
+        $client = $this->makeClient($e, 'Builder Client Parite');
+        $cotation = $this->makeCotation($e, $owner, $client, 'Parite', true);
+        $conversation = $this->makeConversationAvecContexte($e, $owner, 'Cotation', $cotation->getId(), 'Cotation Parite');
+
+        $attache = $this->builder()->build($e, $owner, $conversation)
+            ->systemContext['objetsAttaches'][0]['fiche']['statutSouscription'];
+        $enrichie = static::getContainer()->get(FicheNormaliseur::class)->ficheEnrichie($cotation)['statutSouscription'];
+
+        $this->assertSame($enrichie, $attache, 'Même vocabulaire de statut sur les deux chemins.');
     }
 }

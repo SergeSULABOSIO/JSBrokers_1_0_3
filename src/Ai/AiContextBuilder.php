@@ -115,7 +115,7 @@ class AiContextBuilder
                 'libelle' => $labels[$type],
                 'id'      => $contexte->getEntityId(),
                 'nom'     => (string) $contexte->getLabel(),
-                'fiche'   => $this->ficheNormaliseur->fiche($entity),
+                'fiche'   => $this->ficheNormaliseur->ficheContexte($entity),
             ];
         }
 
@@ -444,13 +444,22 @@ class AiContextBuilder
             . "\nsi un objet a été ajouté, remplacé ou retiré depuis les messages précédents, ajuste-toi"
             . "\nimmédiatement à la liste ci-dessous — ne reste jamais sur un objet qui n'y figure plus."
             . "\nLes fiches sont déjà vérifiées et dans le périmètre de l'utilisateur : appuie-toi dessus"
-            . "\nsans re-lire la fiche via un outil. ATTENTION : chaque fiche ne contient QUE les attributs"
-            . "\nSTOCKÉS de l'enregistrement — JAMAIS ses enregistrements liés (tâches, documents, avenants,"
-            . "\ncotations…) ni ses indicateurs calculés. Ne conclus donc JAMAIS à l'absence d'éléments liés"
-            . "\nà partir d'une fiche : cherche-les avec rechercher_entites et son paramètre lieA, qui suit"
-            . "\nles relations à plusieurs niveaux (ex. tâches de la piste 42 : entite=Tache,"
+            . "\nsans re-lire la fiche via un outil. Chaque fiche porte les attributs STOCKÉS de"
+            . "\nl'enregistrement ET jusqu'à quelques indicateurs CALCULÉS FIABLES (statut, montants clés,"
+            . "\ntaux en clair…) : traite-les comme l'ÉTAT RÉEL de l'objet. En particulier, une Cotation"
+            . "\nmarquée statutSouscription « Souscrite » EST liée à un avenant (police établie) : ses primes"
+            . "\net commissions sont RÉELLES, jamais des « projections » — ne la qualifie donc JAMAIS de"
+            . "\n« proposition non validée », de « projet » ni de montants « potentiels » (la RÈGLE isBound"
+            . "\nest satisfaite dès qu'un avenant existe). En revanche, la fiche ne liste PAS les"
+            . "\nenregistrements liés en nombre (tâches, documents, tranches, avenants…) : ne conclus JAMAIS"
+            . "\nà leur absence à partir d'une fiche — cherche-les avec rechercher_entites et son paramètre"
+            . "\nlieA, qui suit les relations à plusieurs niveaux (ex. tâches de la piste 42 : entite=Tache,"
             . "\nlieA={entite: \"Piste\", id: 42} ; tâches du client 82 via ses pistes : entite=Tache,"
-            . "\nlieA={entite: \"Client\", id: 82}) ; un chiffre calculé se lit via indicateur_calcule :\n"
+            . "\nlieA={entite: \"Client\", id: 82}) ; un chiffre calculé plus précis se lit via"
+            . "\nindicateur_calcule. Enfin, si une fiche porte le champ « analyseApprofondie », d'AUTRES"
+            . "\nindicateurs existent pour cet objet : ne les invente pas — propose à l'utilisateur"
+            . "\nd'approfondir puis, sur son accord, appelle lire_fiche pour cet objet (SEULE exception"
+            . "\nautorisée à la règle « ne pas re-lire un objet attaché ») :\n"
             . json_encode($objets, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     }
 
