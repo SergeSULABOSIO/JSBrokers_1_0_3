@@ -297,6 +297,26 @@
             font-size:.9rem; color:#000000; line-height:1.45;
         }
         .jsb-ai-chat .aic-input:focus { outline:none; box-shadow:none; }
+        /* ── Bouton micro (dictée vocale) : bouton fantôme, état « écoute » pulsé ── */
+        .jsb-ai-chat .aic-mic {
+            flex:0 0 auto; width:44px; height:44px; border-radius:10px; border:none; cursor:pointer;
+            background:transparent; color:#6c757d; display:flex; align-items:center; justify-content:center;
+            transition: background-color .15s ease, color .15s ease;
+        }
+        .jsb-ai-chat .aic-mic:hover { background:#e8f0fb; color:#0047AB; }
+        .jsb-ai-chat .aic-mic:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+        .jsb-ai-chat .aic-mic[hidden] { display:none; }
+        .jsb-ai-chat .aic-mic--recording,
+        .jsb-ai-chat .aic-mic--recording:hover {
+            background:#f8d7da; color:#842029; animation: aic-mic-pulse 1.4s ease-in-out infinite;
+        }
+        @keyframes aic-mic-pulse {
+            0%, 100% { box-shadow:0 0 0 0 rgba(132,32,41,.45); }
+            50%      { box-shadow:0 0 0 .35rem rgba(132,32,41,0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .jsb-ai-chat .aic-mic--recording { animation:none; }
+        }
         .jsb-ai-chat .aic-send {
             flex:0 0 auto; width:44px; height:44px; border-radius:10px; border:none; cursor:pointer;
             background:#0047AB; color:#ffffff; display:flex; align-items:center; justify-content:center;
@@ -445,6 +465,24 @@
                       aria-describedby="aic-hint-{{ conversation.id }} aic-count-{{ conversation.id }}"
                       data-assistant-chat-target="input"
                       data-action="keydown->assistant-chat#keydown input->assistant-chat#onInput"></textarea>
+            {# Dictée vocale : parler plutôt qu'écrire. Masqué par le contrôleur si
+               le navigateur ne supporte pas l'API Web Speech. SVG micro inline
+               (auto-porté) — pas d'ux_icon serveur pour éviter tout appel au
+               circuit d'icônes (cf. correctif 500 du commit 456208af). #}
+            <button type="button" class="aic-mic"
+                    data-assistant-chat-target="mic"
+                    data-action="click->assistant-chat#toggleDictation"
+                    aria-pressed="false"
+                    aria-label="Dicter le message vocalement"
+                    title="Parler à {{ assistantNom }}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" x2="12" y1="19" y2="22"/>
+                </svg>
+            </button>
             <button type="button" class="aic-send" disabled
                     data-assistant-chat-target="send"
                     data-action="click->assistant-chat#send"

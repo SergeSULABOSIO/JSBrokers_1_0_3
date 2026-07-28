@@ -2,6 +2,7 @@ import { Controller } from '@hotwired/stimulus';
 import { renderAssistantMarkdown } from './assistant-markdown-render.js';
 import { formatInstant } from '../datetime-format.js';
 import { formatNombre } from '../number-format.js';
+import { documentLocale } from '../locale.js';
 
 /**
  * @class AssistantChatController
@@ -14,7 +15,7 @@ import { formatNombre } from '../number-format.js';
  * sanitisé via assistant-markdown-render.js (jamais de HTML brut du LLM).
  */
 export default class extends Controller {
-    static targets = ['messages', 'input', 'send', 'typing', 'typingLabel', 'count', 'contextBar'];
+    static targets = ['messages', 'input', 'send', 'typing', 'typingLabel', 'count', 'contextBar', 'mic'];
 
     /** Seuil d'affichage du compteur de caractères restants (proche de maxlength). */
     static COUNT_THRESHOLD = 400;
@@ -84,6 +85,92 @@ export default class extends Controller {
         // notifie le bus cerveau:event ; on capte notre type dédié.
         this._onMutationExecute = this.executeFromEvent.bind(this);
         document.addEventListener('cerveau:event', this._onMutationExecute);
+
+        // Dictée vocale (parler plutôt qu'écrire) : reconnaissance vocale native
+        // du navigateur, transcrite dans la zone de saisie puis envoyée par le
+        // circuit send() habituel (aucun token supplémentaire, aucun backend).
+        this.setupDictation();
+    }
+
+    /**
+     * Prépare la reconnaissance vocale native (API Web Speech, Chrome/Edge). La
+     * langue suit l'interface (source unique : documentLocale()). Si le
+     * navigateur ne la supporte pas, le bouton micro est masqué (amélioration
+     * progressive : l'UI reste identique à l'existant).
+     */
+    setupDictation() {
+        this.listening = false;
+        this._dictationBase = '';
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            if (this.hasMicTarget) this.micTarget.hidden = true;
+            return;
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = documentLocale() === 'en' ? 'en-US' : 'fr-FR';
+        recognition.interimResults = true;
+        recognition.continuous = true;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => {
+            this.listening = true;
+            if (this.hasMicTarget) {
+                this.micTarget.classList.add('aic-mic--recording');
+                this.micTarget.setAttribute('aria-pressed', 'true');
+            }
+        };
+        recognition.onresult = (event) => {
+            let transcript = '';
+            for (let i = 0; i < event.results.length; i++) {
+                transcript += event.results[i][0].transcript;
+            }
+            transcript = transcript.trim();
+            const base = this._dictationBase;
+            const max = Number(this.inputTarget.getAttribute('maxlength')) || 4000;
+            const separateur = base !== '' && transcript !== '' ? ' ' : '';
+            this.inputTarget.value = (base + separateur + transcript).slice(0, max);
+            this.onInput(); // réutilise autoGrow + état du bouton + compteur
+        };
+        recognition.onerror = (event) => {
+            if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                this.appendNotice('warning', "Micro indisponible : autorisez l'accès au microphone pour dicter votre message.");
+            }
+            this.stopDictationUi();
+        };
+        recognition.onend = () => this.stopDictationUi();
+
+        this.recognition = recognition;
+    }
+
+    /** Réinitialise l'état visuel du micro (fin d'écoute ou erreur). */
+    stopDictationUi() {
+        this.listening = false;
+        if (this.hasMicTarget) {
+            this.micTarget.classList.remove('aic-mic--recording');
+            this.micTarget.setAttribute('aria-pressed', 'false');
+        }
+        if (this.hasInputTarget) this.inputTarget.focus();
+    }
+
+    /**
+     * Bascule l'écoute : démarre la dictée (en mémorisant le texte déjà saisi
+     * comme socle) ou l'arrête. Le transcript remplit la zone de saisie ;
+     * l'utilisateur relit puis envoie — le circuit send() reste inchangé.
+     */
+    toggleDictation() {
+        if (!this.recognition) return;
+        if (this.listening) {
+            this.recognition.stop();
+            return;
+        }
+        this._dictationBase = this.inputTarget.value.trim();
+        try {
+            this.recognition.start();
+        } catch (error) {
+            // start() lève si une reconnaissance est déjà en cours : on ignore.
+            console.warn('AssistantChat - dictée déjà active :', error);
+        }
     }
 
     disconnect() {
@@ -102,6 +189,11 @@ export default class extends Controller {
         if (this._ctxTip) {
             this._ctxTip.remove();
             this._ctxTip = null;
+        }
+        // Coupe une éventuelle dictée en cours quand le panneau col-4 est re-rendu.
+        if (this.recognition) {
+            try { this.recognition.stop(); } catch (error) { /* déjà arrêtée */ }
+            this.recognition = null;
         }
     }
 
