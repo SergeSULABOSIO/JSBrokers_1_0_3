@@ -352,6 +352,10 @@ class AssistantIaWorkspaceTest extends WebTestCase
         $this->assertStringContainsString('data-assistant-chat-target="mic"', $content, 'Le bouton micro doit être un target Stimulus.');
         $this->assertStringContainsString('assistant-chat#toggleDictation', $content, 'Le bouton micro doit déclencher la dictée.');
         $this->assertStringContainsString('aic-mic', $content, 'Le bouton micro doit porter sa classe (styles + état d\'écoute).');
+        // Infobulle sombre JS Brokers (pas le title natif) : copie posée en data-*.
+        $this->assertStringContainsString('data-mic-tip-title="Dicter votre message"', $content, 'Le bouton micro doit porter le titre de l\'infobulle.');
+        $this->assertStringContainsString('data-mic-tip-body="', $content, 'Le bouton micro doit porter le texte explicatif de l\'infobulle.');
+        $this->assertStringNotContainsString('title="Parler à', $content, 'Plus de title natif : l\'infobulle sombre le remplace.');
     }
 
     /**
