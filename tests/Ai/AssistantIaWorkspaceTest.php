@@ -334,6 +334,27 @@ class AssistantIaWorkspaceTest extends WebTestCase
     }
 
     /**
+     * Dictée vocale : le composer du chat rend le bouton micro correctement
+     * câblé (target + action Stimulus). La transcription elle-même est 100 %
+     * navigateur (API Web Speech) et se vérifie manuellement ; ce test garde le
+     * rendu et le câblage côté serveur (anti-régression).
+     */
+    public function testChatRendLeBoutonDicteeVocale(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $owner);
+
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+        $this->client->request('GET', sprintf('/admin/assistant-ia/chat/%d/%d', $e->getId(), $conversation->getId()));
+        $this->assertResponseIsSuccessful();
+        $content = (string) $this->client->getResponse()->getContent();
+
+        $this->assertStringContainsString('data-assistant-chat-target="mic"', $content, 'Le bouton micro doit être un target Stimulus.');
+        $this->assertStringContainsString('assistant-chat#toggleDictation', $content, 'Le bouton micro doit déclencher la dictée.');
+        $this->assertStringContainsString('aic-mic', $content, 'Le bouton micro doit porter sa classe (styles + état d\'écoute).');
+    }
+
+    /**
      * PREMIUM : sans solde de tokens payant, le composant affiche le panneau de
      * mise en valeur (CTA réservé au propriétaire) et l'envoi de message est
      * bloqué en 402 « premium » sans rien persister.
