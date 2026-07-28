@@ -19,6 +19,12 @@ use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
  */
 final class SimulatedAiEngine implements AiEngineInterface
 {
+    /** Libellés courts des mois (index 1..12), pour les labels de graphiques. */
+    private const MOIS_COURTS = [
+        1 => 'Jan', 2 => 'Fév', 3 => 'Mar', 4 => 'Avr', 5 => 'Mai', 6 => 'Juin',
+        7 => 'Juil', 8 => 'Août', 9 => 'Sep', 10 => 'Oct', 11 => 'Nov', 12 => 'Déc',
+    ];
+
     /** @var iterable<AiToolInterface> */
     private iterable $tools;
 
@@ -241,34 +247,66 @@ final class SimulatedAiEngine implements AiEngineInterface
 
         if (($data['analyse'] ?? '') === 'production_mensuelle') {
             $lignes = [];
+            $labels = [];
+            $valeurs = [];
             foreach ($data['mois'] as $mois => $montant) {
                 $lignes[] = sprintf('- Mois %02d : %s', $mois, $fmt($montant));
+                $labels[] = self::MOIS_COURTS[$mois] ?? sprintf('%02d', $mois);
+                $valeurs[] = round((float) $montant, 2);
             }
 
+            $chart = $this->blocChart([
+                'type'    => 'bar',
+                'titre'   => sprintf('Production encaissée %d', $data['annee']),
+                'labels'  => $labels,
+                'series'  => [['label' => 'Production', 'data' => $valeurs]],
+                'legende' => sprintf('Production (primes) encaissée par mois en %d. Total : %s.', $data['annee'], $fmt($data['total'])),
+            ]);
+
             return sprintf(
-                "Production encaissée %d (total %s) :\n%s",
+                "Production encaissée %d (total %s) :\n%s\n\n%s",
                 $data['annee'],
                 $fmt($data['total']),
                 implode("\n", $lignes),
+                $chart,
             );
         }
 
         if (($data['analyse'] ?? '') === 'chiffre_affaires_mensuel') {
             $lignes = [];
-            foreach (($data['commissionEncaisseeTtc'] ?? []) as $mois => $ttc) {
-                $ht = $data['commissionEncaisseeHt'][$mois] ?? 0.0;
-                if ((float) $ttc === 0.0 && (float) $ht === 0.0) {
-                    continue; // concision : on n'affiche que les mois mouvementés.
+            $labels = [];
+            $htSerie = [];
+            $ttcSerie = [];
+            for ($mois = 1; $mois <= 12; $mois++) {
+                $ht = (float) ($data['commissionEncaisseeHt'][$mois] ?? 0.0);
+                $ttc = (float) ($data['commissionEncaisseeTtc'][$mois] ?? 0.0);
+                $labels[] = self::MOIS_COURTS[$mois];
+                $htSerie[] = round($ht, 2);
+                $ttcSerie[] = round($ttc, 2);
+                if ($ttc === 0.0 && $ht === 0.0) {
+                    continue; // concision (texte) : on n'affiche que les mois mouvementés.
                 }
                 $lignes[] = sprintf('- Mois %02d : HT %s · TTC %s', $mois, $fmt($ht), $fmt($ttc));
             }
 
+            $chart = $this->blocChart([
+                'type'    => 'bar',
+                'titre'   => sprintf("Chiffre d'affaires %d", $data['annee']),
+                'labels'  => $labels,
+                'series'  => [
+                    ['label' => 'HT', 'data' => $htSerie],
+                    ['label' => 'TTC', 'data' => $ttcSerie],
+                ],
+                'legende' => sprintf('Commissions encaissées par mois en %d (HT et TTC). Total HT : %s · TTC : %s.', $data['annee'], $fmt($data['totalHt'] ?? 0.0), $fmt($data['totalTtc'] ?? 0.0)),
+            ]);
+
             return sprintf(
-                "Chiffre d'affaires %d — commissions encaissées (total HT %s · TTC %s) :\n%s",
+                "Chiffre d'affaires %d — commissions encaissées (total HT %s · TTC %s) :\n%s\n\n%s",
                 $data['annee'],
                 $fmt($data['totalHt'] ?? 0.0),
                 $fmt($data['totalTtc'] ?? 0.0),
                 $lignes === [] ? '(aucun encaissement de commission sur la période)' : implode("\n", $lignes),
+                $chart,
             );
         }
 
@@ -278,8 +316,22 @@ final class SimulatedAiEngine implements AiEngineInterface
                 $data['lignes'],
             );
 
+            $chart = '';
+            if ($data['lignes'] !== []) {
+                $chart = "\n\n" . $this->blocChart([
+                    'type'    => 'bar',
+                    'titre'   => sprintf("Chiffre d'affaires %d par %s", $data['annee'], $data['dimension']),
+                    'labels'  => array_map(static fn (array $l) => (string) $l['libelle'], $data['lignes']),
+                    'series'  => [
+                        ['label' => 'HT', 'data' => array_map(static fn (array $l) => round((float) $l['caHt'], 2), $data['lignes'])],
+                        ['label' => 'TTC', 'data' => array_map(static fn (array $l) => round((float) $l['caTtc'], 2), $data['lignes'])],
+                    ],
+                    'legende' => sprintf('Commissions encaissées %d ventilées par %s (HT et TTC).', $data['annee'], $data['dimension']),
+                ]);
+            }
+
             return sprintf(
-                "Chiffre d'affaires %d par %s — commissions encaissées (total HT %s · TTC %s) :\n%s%s%s",
+                "Chiffre d'affaires %d par %s — commissions encaissées (total HT %s · TTC %s) :\n%s%s%s%s",
                 $data['annee'],
                 $data['dimension'],
                 $fmt($data['totalHt']),
@@ -287,6 +339,7 @@ final class SimulatedAiEngine implements AiEngineInterface
                 $lignes === [] ? '(aucun encaissement de commission)' : implode("\n", $lignes),
                 isset($data['lignesTronquees']) ? sprintf("\n… (+%d autres)", $data['lignesTronquees']) : '',
                 !empty($data['chevauchement']) ? "\n(Axe partenaire : les montants peuvent se recouper — le total n'est pas le CA global.)" : '',
+                $chart,
             );
         }
 
@@ -350,6 +403,16 @@ final class SimulatedAiEngine implements AiEngineInterface
         }
 
         return $texte;
+    }
+
+    /**
+     * Encapsule une spécification de graphique dans un bloc Markdown ```chart,
+     * décodé et monté côté front (assistant-chart-render.js). Le moteur simulé
+     * n'émet QUE cette chaîne : aucune logique de graphe dupliquée ici.
+     */
+    private function blocChart(array $spec): string
+    {
+        return "```chart\n" . json_encode($spec, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n```";
     }
 
     /** Liste des candidats sur une cible ambiguë (partagé lire_fiche / indicateur_calcule). */

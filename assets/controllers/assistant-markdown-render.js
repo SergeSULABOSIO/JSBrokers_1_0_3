@@ -10,6 +10,11 @@ import DOMPurify from 'dompurify';
  */
 const BADGE_VARIANTES = new Set(['success', 'danger', 'warning', 'info', 'neutral']);
 
+/** Échappe le texte destiné au contenu d'une balise (jamais interprété comme HTML). */
+function echapperHtml(texte) {
+    return String(texte ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 const marked = new Marked({
     gfm: true,
     breaks: true,
@@ -24,10 +29,22 @@ const marked = new Marked({
         heading({ tokens }) {
             return `<p class="aic-md-heading">${this.parser.parseInline(tokens)}</p>`;
         },
+        code({ text, lang }) {
+            // Bloc ```chart / ```graphique : on ne rend PAS le JSON, on dépose un
+            // hôte sûr dont le TEXTE porte la spec ; assistant-chart-render.js y
+            // montera un <canvas> Chart.js. Le JSON n'est jamais du HTML.
+            const langue = (lang || '').trim().toLowerCase();
+            if (langue === 'chart' || langue === 'graphique') {
+                return `<div class="aic-chart"><code class="aic-chart-spec">${echapperHtml(text)}</code></div>`;
+            }
+            return `<code>${echapperHtml(text)}</code>`;
+        },
     },
 });
 
-const ALLOWED_TAGS = ['p', 'strong', 'em', 'ul', 'ol', 'li', 'br', 'span', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'code'];
+// `div` : hôte du graphique (voir renderer `code`). Aucun data-*/svg/canvas
+// requis — le montage se fait en JS après sanitisation, hors allowlist.
+const ALLOWED_TAGS = ['p', 'strong', 'em', 'ul', 'ol', 'li', 'br', 'span', 'div', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'code'];
 const ALLOWED_ATTR = ['class'];
 
 /** Rend un texte Markdown assistant en HTML sûr (sanitisé, allowlist stricte). */

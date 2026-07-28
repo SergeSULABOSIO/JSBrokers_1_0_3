@@ -1,5 +1,7 @@
 import { Controller } from '@hotwired/stimulus';
 import { renderAssistantMarkdown } from './assistant-markdown-render.js';
+import { monterGraphiquesAssistant } from './assistant-chart-render.js';
+import { masquerBlocsChart } from './assistant-chart-spec.js';
 import { formatInstant } from '../datetime-format.js';
 import { formatNombre } from '../number-format.js';
 import { documentLocale } from '../locale.js';
@@ -1367,12 +1369,24 @@ export default class extends Controller {
                 break;
             }
             accumule += mot;
-            content.innerHTML = renderAssistantMarkdown(accumule);
+            // Les blocs ```chart sont masqués pendant la frappe (pas de JSON
+            // déroulé mot à mot) ; le graphique n'apparaît qu'au rendu final.
+            content.innerHTML = renderAssistantMarkdown(masquerBlocsChart(accumule));
             this.scrollToBottom();
             await new Promise((resolve) => setTimeout(resolve, delai));
         }
-        content.innerHTML = renderAssistantMarkdown(texte); // garantit le texte intégral quoi qu'il arrive
+        this.rendreAssistant(content, texte); // garantit le texte intégral + graphiques
         bubble.removeAttribute('aria-hidden');
+    }
+
+    /**
+     * Point d'entrée unique du rendu d'une bulle assistant : Markdown restreint
+     * sanitisé PUIS montage des éventuels graphiques ```chart. Toute écriture de
+     * réponse assistant passe par ici (DRY).
+     */
+    rendreAssistant(el, source) {
+        el.innerHTML = renderAssistantMarkdown(source);
+        monterGraphiquesAssistant(el);
     }
 
     /**
@@ -1384,7 +1398,7 @@ export default class extends Controller {
     renderHistoricalMarkdown() {
         if (!this.hasMessagesTarget) return;
         this.messagesTarget.querySelectorAll('.aic-msg--assistant .aic-msg-text[data-md-source]').forEach((el) => {
-            el.innerHTML = renderAssistantMarkdown(el.dataset.mdSource);
+            this.rendreAssistant(el, el.dataset.mdSource);
         });
     }
 
