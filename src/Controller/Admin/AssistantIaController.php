@@ -6,11 +6,14 @@ use App\Ai\AiContextBuilder;
 use App\Ai\AiEngineFailure;
 use App\Ai\AiReply;
 use App\Ai\Engine\AiEngineInterface;
+use App\Ai\Fichier\FichierAttachePolicy;
+use App\Ai\Fichier\FichierTexteExtracteur;
 use App\Ai\Tool\EntiteLibelle;
 use App\Ai\Tool\PrefillWhitelist;
 use Psr\Log\LoggerInterface;
 use App\Entity\AssistantConversation;
 use App\Entity\AssistantConversationContexte;
+use App\Entity\AssistantConversationFichier;
 use App\Entity\AssistantMessage;
 use App\Entity\AssistantParametres;
 use App\Entity\Entreprise;
@@ -36,10 +39,13 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Vich\UploaderBundle\Handler\DownloadHandler;
 
 /**
  * @file Assistant IA de l'espace de travail du courtier.
@@ -86,6 +92,8 @@ class AssistantIaController extends AbstractController
         private EntiteLibelle $libelleur,
         private WorkspaceMutationService $mutationService,
         private UserPasswordHasherInterface $passwordHasher,
+        private ValidatorInterface $validator,
+        private FichierTexteExtracteur $fichierExtracteur,
     ) {
     }
 
@@ -300,7 +308,9 @@ class AssistantIaController extends AbstractController
             // tels qu'ils étaient à l'envoi (agrafe sur la bulle + annotation de
             // l'historique moteur) — la liste courante de la conversation, elle,
             // continuera d'évoluer sans réécrire ce cliché.
-            ->setContexteObjets($this->instantaneContexte($conversation));
+            ->setContexteObjets($this->instantaneContexte($conversation))
+            // Même logique pour les pièces jointes attachées à l'envoi.
+            ->setFichiersJoints($this->instantaneFichiers($conversation));
 
         // MÉTRAGE (écriture) avant moteur et persistance : si le solde est
         // épuisé, rien n'est traité ni enregistré.
@@ -387,6 +397,7 @@ class AssistantIaController extends AbstractController
                 'id'             => $messageUser->getId(),
                 'contenu'        => $messageUser->getContenu(),
                 'contexteObjets' => $messageUser->getContexteObjets(),
+                'fichiersJoints' => $messageUser->getFichiersJoints(),
                 'createdAt'      => $messageUser->getCreatedAt()?->format(\DateTimeImmutable::ATOM),
             ],
             'assistant' => [
@@ -694,6 +705,28 @@ class AssistantIaController extends AbstractController
     }
 
     /**
+     * Instantané des pièces jointes de la conversation à l'envoi : id + nom +
+     * type + taille (cliché des puces fichiers telles que l'utilisateur les
+     * voit). Vide → null (setFichiersJoints normalise) : pas d'agrafe fichiers.
+     *
+     * @return array<int, array{id: int, nom: string, type: string, taille: int}>
+     */
+    private function instantaneFichiers(AssistantConversation $conversation): array
+    {
+        $fichiers = [];
+        foreach ($conversation->getFichiers() as $fichier) {
+            $fichiers[] = [
+                'id'     => (int) $fichier->getId(),
+                'nom'    => (string) $fichier->getNomOriginal(),
+                'type'   => (string) ($fichier->getMimeType() ?: 'inconnu'),
+                'taille' => $fichier->getTaille(),
+            ];
+        }
+
+        return $fichiers;
+    }
+
+    /**
      * Attache un lot d'objets du workspace au contexte de la conversation
      * (sélection des listes → « Ajouter au chat avec l'assistant IA »).
      * FAIL-CLOSED par objet : whitelist de la carte de permissions + canRead
@@ -870,6 +903,232 @@ class AssistantIaController extends AbstractController
         }
 
         return $fiches;
+    }
+
+    /**
+     * Attache un lot de FICHIERS (multipart) au contexte de la conversation.
+     * Miroir de attachContextes, côté pièces jointes : validation de TOUT le lot
+     * AVANT le moindre débit (politique unique FichierAttachePolicy : taille ≤
+     * 10 Mo, formats autorisés, plafond par conversation), MÉTRAGE (100 % du poids
+     * message par fichier) → 402 si solde épuisé, puis stockage Vich (dossier
+     * privé) + extraction de texte best-effort. Un fichier invalide est ignoré
+     * (compteur `ignores` + message dans `erreurs`), jamais de 403 global.
+     */
+    #[Route('/api/fichiers/{idEntreprise}/{idConversation}', name: 'api.fichier.attach', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS], methods: ['POST'])]
+    public function attachFichiers(int $idEntreprise, int $idConversation, Request $request): JsonResponse
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        if ($blocage = $this->blocagePremium($entreprise)) {
+            return $blocage;
+        }
+        $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+
+        /** @var UploadedFile[] $fichiers */
+        $fichiers = $request->files->all()['fichiers'] ?? [];
+        if (!\is_array($fichiers)) {
+            $fichiers = [$fichiers];
+        }
+        $fichiers = array_values(array_filter($fichiers, static fn ($f) => $f instanceof UploadedFile));
+        if ($fichiers === []) {
+            return $this->json(['message' => 'Aucun fichier fourni.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        // 1) Validation de TOUT le lot avant le moindre débit ou stockage.
+        $contrainte = FichierAttachePolicy::contrainte();
+        $ignores = 0;
+        $erreurs = [];
+        $aStocker = [];
+        $dejaAttaches = $conversation->nbFichiers();
+        foreach ($fichiers as $fichier) {
+            if ($dejaAttaches + \count($aStocker) >= FichierAttachePolicy::MAX_FILES) {
+                $ignores++;
+                $erreurs[] = sprintf('Limite de %d fichiers par conversation atteinte.', FichierAttachePolicy::MAX_FILES);
+                continue;
+            }
+            $violations = $this->validator->validate($fichier, $contrainte);
+            if (\count($violations) > 0) {
+                $ignores++;
+                $erreurs[] = (string) $violations[0]->getMessage();
+                continue;
+            }
+            $aStocker[] = $fichier;
+        }
+
+        // 2) MÉTRAGE avant stockage (patron attachContextes) : solde épuisé → 402.
+        try {
+            $this->tokenAccountService->meterFichierIa($entreprise, $this->currentUser(), \count($aStocker));
+        } catch (InsufficientTokensException $e) {
+            return $this->json([
+                'message'       => 'Quota de tokens épuisé. Rechargez votre solde ou attendez le renouvellement de votre allocation gratuite.',
+                'blocked'       => true,
+                'required'      => $e->required,
+                'available'     => $e->available,
+                'nextRenewalAt' => $e->nextRenewalAt?->format(\DateTimeImmutable::ATOM),
+            ], Response::HTTP_PAYMENT_REQUIRED);
+        }
+
+        // 3) Stockage : l'extraction de texte LIT le fichier temporaire AVANT le
+        // flush (Vich déplace ensuite le binaire vers le dossier privé).
+        foreach ($aStocker as $fichier) {
+            $entite = (new AssistantConversationFichier())
+                ->setNomOriginal(mb_substr($fichier->getClientOriginalName(), 0, 255))
+                ->setFichier($fichier)
+                ->setMimeType(mb_substr((string) ($fichier->getMimeType() ?: $fichier->getClientMimeType()), 0, 120))
+                ->setTaille((int) $fichier->getSize())
+                ->setTexteExtrait($this->fichierExtracteur->extraire($fichier));
+            $conversation->addFichier($entite);
+        }
+        if ($aStocker !== []) {
+            $this->em->flush();
+        }
+
+        return $this->reponseFichiers($conversation, $ignores, $erreurs);
+    }
+
+    /** Retire UN fichier du contexte de la conversation (par id de rattachement). */
+    #[Route('/api/fichiers/{idEntreprise}/{idConversation}/{idFichier}', name: 'api.fichier.detach', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS, 'idFichier' => Requirement::DIGITS], methods: ['DELETE'])]
+    public function detachFichier(int $idEntreprise, int $idConversation, int $idFichier): JsonResponse
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+
+        $fichier = $this->trouverFichier($conversation, $idFichier);
+        if ($fichier === null) {
+            return $this->json(['message' => 'Fichier introuvable.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $conversation->removeFichier($fichier); // orphanRemoval → suppression + Vich retire le binaire
+        $this->em->flush();
+
+        return $this->reponseFichiers($conversation);
+    }
+
+    /** Vide les pièces jointes de la conversation (tous les fichiers d'un coup). */
+    #[Route('/api/fichiers/{idEntreprise}/{idConversation}', name: 'api.fichier.clear', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS], methods: ['DELETE'])]
+    public function clearFichiers(int $idEntreprise, int $idConversation): JsonResponse
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+
+        foreach ($conversation->getFichiers()->toArray() as $fichier) {
+            $conversation->removeFichier($fichier);
+        }
+        $this->em->flush();
+
+        return $this->reponseFichiers($conversation);
+    }
+
+    /**
+     * Télécharge une pièce jointe — FAIL-CLOSED : le fichier doit appartenir à
+     * une conversation de l'entreprise ET de l'invité courants (le DownloadHandler
+     * Vich ne s'occupe que du streaming, jamais du contrôle d'accès).
+     */
+    #[Route('/api/fichiers/{idEntreprise}/{idConversation}/{idFichier}/download', name: 'api.fichier.download', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS, 'idFichier' => Requirement::DIGITS], methods: ['GET'])]
+    public function downloadFichier(int $idEntreprise, int $idConversation, int $idFichier, DownloadHandler $downloadHandler): Response
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            throw $this->createAccessDeniedException('Accès refusé.');
+        }
+        $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+
+        $fichier = $this->trouverFichier($conversation, $idFichier);
+        if ($fichier === null) {
+            throw $this->createNotFoundException('Fichier introuvable.');
+        }
+
+        return $downloadHandler->downloadObject($fichier, 'fichier', null, $fichier->getNomOriginal());
+    }
+
+    /**
+     * Télécharge un DOCUMENT enregistré en base (entité Document) — FAIL-CLOSED :
+     * module IA autorisé + droit de LECTURE sur Document + le document doit
+     * exister DANS l'entreprise de l'invité (scoping searchService) et porter un
+     * fichier physique. Permet à Ket de proposer le téléchargement d'un document
+     * de la base (pas seulement des pièces jointes de la conversation).
+     */
+    #[Route('/api/documents/{idEntreprise}/{idDocument}/download', name: 'api.document.download', requirements: ['idEntreprise' => Requirement::DIGITS, 'idDocument' => Requirement::DIGITS], methods: ['GET'])]
+    public function downloadDocument(int $idEntreprise, int $idDocument, DownloadHandler $downloadHandler): Response
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite) || !$this->accessResolver->canRead($invite, 'Document')) {
+            throw $this->createAccessDeniedException('Accès refusé.');
+        }
+
+        $result = $this->searchService->search('App\\Entity\\Document', ['id' => $idDocument], $entreprise, null, 1, 1);
+        $document = $result['data'][0] ?? null;
+        if (($result['status']['code'] ?? 500) !== 200 || $document === null || $document->getNomFichierStocke() === null) {
+            throw $this->createNotFoundException('Document introuvable ou sans fichier.');
+        }
+
+        // Le libellé (« nom ») du Document n'a pas d'extension → le fichier téléchargé
+        // serait inouvrable. On restitue l'extension RÉELLE (depuis le nom de stockage
+        // Vich, qui préserve l'extension d'origine via SmartUniqueNamer).
+        $nomTelechargement = $this->nomAvecExtension((string) $document->getNom(), (string) $document->getNomFichierStocke());
+
+        return $downloadHandler->downloadObject($document, 'fichier', null, $nomTelechargement);
+    }
+
+    /** Ajoute au libellé l'extension du nom de stockage si elle manque (fichier ouvrable). */
+    private function nomAvecExtension(string $nom, string $nomStocke): string
+    {
+        $ext = strtolower(pathinfo($nomStocke, PATHINFO_EXTENSION));
+        $nom = trim($nom) !== '' ? trim($nom) : 'document';
+        if ($ext !== '' && !str_ends_with(strtolower($nom), '.' . $ext)) {
+            $nom .= '.' . $ext;
+        }
+
+        return $nom;
+    }
+
+    /** Cherche un fichier DANS la collection de la conversation (jamais par id global). */
+    private function trouverFichier(AssistantConversation $conversation, int $idFichier): ?AssistantConversationFichier
+    {
+        foreach ($conversation->getFichiers() as $candidat) {
+            if ($candidat->getId() === $idFichier) {
+                return $candidat;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Réponse commune des endpoints fichiers : liste sérialisée + fragment HTML
+     * des puces re-rendu côté serveur (chemin de rendu unique, partagé avec le
+     * rendu initial du chat).
+     *
+     * @param string[] $erreurs
+     */
+    private function reponseFichiers(AssistantConversation $conversation, int $ignores = 0, array $erreurs = []): JsonResponse
+    {
+        return $this->json([
+            'fichiers' => array_values(array_map(
+                static fn (AssistantConversationFichier $f) => [
+                    'id'     => $f->getId(),
+                    'nom'    => $f->getNomOriginal(),
+                    'type'   => $f->getMimeType(),
+                    'taille' => $f->getTaille(),
+                    'aExtrait' => $f->getTexteExtrait() !== null,
+                ],
+                $conversation->getFichiers()->toArray(),
+            )),
+            'html'    => $this->renderView('components/_assistant_ia_chat_fichiers.html.twig', [
+                'conversation' => $conversation,
+                'idEntreprise' => $conversation->getEntreprise()?->getId(),
+            ]),
+            'ignores' => $ignores,
+            'erreurs' => array_values(array_unique($erreurs)),
+        ]);
     }
 
     /**

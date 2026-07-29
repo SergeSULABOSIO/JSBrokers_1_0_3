@@ -3,6 +3,7 @@
 namespace App\Token;
 
 use App\Entity\AssistantConversationContexte;
+use App\Entity\AssistantConversationFichier;
 use App\Entity\AssistantMessage;
 use App\Entity\Entreprise;
 use App\Entity\TokenConsumption;
@@ -302,6 +303,49 @@ class TokenAccountService
     {
         return (int) ceil(
             TokenPricing::CONTEXTE_IA_RATIO * $this->parametres->weightFor(AssistantMessage::class),
+        );
+    }
+
+    /**
+     * Métrage de l'attache de $nbFichiers au contexte d'une conversation IA.
+     * Coût unitaire = 100 % du poids d'un message assistant (un fichier extrait
+     * et injecté pèse davantage qu'un objet). Bloquant, débité en une fois AVANT
+     * persistance ; une ligne de journal par fichier attaché.
+     *
+     * @throws InsufficientTokensException si le solde du propriétaire est insuffisant.
+     */
+    public function meterFichierIa(Entreprise $entreprise, ?Utilisateur $acteur, int $nbFichiers): void
+    {
+        if ($nbFichiers <= 0) {
+            return;
+        }
+
+        $owner = $entreprise->getUtilisateur();
+        if (!$owner instanceof Utilisateur) {
+            return; // Pas de propriétaire identifiable : on ne facture pas.
+        }
+
+        $unit = $this->coutFichierIa();
+        $this->guardAndConsume($owner, $nbFichiers * $unit);
+
+        for ($i = 0; $i < $nbFichiers; $i++) {
+            $this->log(
+                $entreprise,
+                $owner,
+                $acteur,
+                $this->shortName(AssistantConversationFichier::class),
+                TokenConsumption::SENS_ENTREE,
+                1,
+                $unit,
+            );
+        }
+    }
+
+    /** Coût unitaire d'un fichier attaché au contexte IA (100 % du poids message). */
+    public function coutFichierIa(): int
+    {
+        return (int) ceil(
+            TokenPricing::FICHIER_IA_RATIO * $this->parametres->weightFor(AssistantMessage::class),
         );
     }
 

@@ -16,11 +16,15 @@ final class AiRequest
     /**
      * @param array{assistantNom: string, entrepriseNom: string, perimetre: array, date: string, objetsAttaches: array} $systemContext
      * @param list<array{role: string, content: string}> $messages Historique, du plus ancien au plus récent.
+     * @param list<array{mimeType: string, donneesBase64: string, nom: string}> $piecesNatives Fichiers attachés
+     *        à transmettre NATIVEMENT au moteur multimodal (PDF scannés, images) : le modèle les lit par vision,
+     *        sans dépendre d'une extraction texte. Ignoré par le moteur simulé.
      */
     public function __construct(
         public readonly array $systemContext,
         public readonly array $messages,
         public readonly AiScope $scope,
+        public readonly array $piecesNatives = [],
     ) {
     }
 

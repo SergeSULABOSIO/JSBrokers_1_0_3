@@ -13,6 +13,7 @@ use App\Entity\Invite;
 use App\Repository\AssistantParametresRepository;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
+use Vich\UploaderBundle\Storage\StorageInterface;
 
 /**
  * Construit la requête normalisée adressée au moteur IA : nom du personnage
@@ -25,6 +26,16 @@ class AiContextBuilder
     /** Plafond d'historique transmis au moteur (maîtrise du contexte/coût). */
     private const MAX_MESSAGES = 20;
 
+    /**
+     * Types MIME transmis NATIVEMENT au moteur multimodal (lecture par vision) :
+     * images et PDF. Permet à Ket de lire un PDF SCANNÉ (sans couche texte) ou
+     * une image, ce que l'extraction texte ne peut pas faire.
+     */
+    private const MIMES_NATIFS = ['image/png', 'image/jpeg', 'image/webp', 'application/pdf'];
+
+    /** Plafond cumulé des pièces natives d'une requête (garde-fou volumétrie API). */
+    private const MAX_PIECES_NATIVES_OCTETS = 15 * 1024 * 1024;
+
     public function __construct(
         private readonly AssistantParametresRepository $parametresRepository,
         private readonly WorkspaceAccessResolver $accessResolver,
@@ -32,6 +43,7 @@ class AiContextBuilder
         private readonly JSBDynamicSearchService $searchService,
         private readonly FicheNormaliseur $ficheNormaliseur,
         private readonly BoussoleService $boussole,
+        private readonly StorageInterface $storage,
     ) {
     }
 
@@ -70,6 +82,7 @@ class AiContextBuilder
                 'perimetre'     => $this->accessResolver->describePerimetreDetailed($invite),
                 'date'          => (new \DateTimeImmutable('now'))->format('Y-m-d'),
                 'objetsAttaches' => $this->objetsAttaches($conversation, $entreprise, $invite),
+                'fichiersAttaches' => $this->fichiersAttaches($conversation),
                 // La boussole du courtier : instantané compact de la chaîne de valeur dans le
                 // périmètre de l'invité, présent à CHAQUE message pour que Ket rappelle et guide.
                 'boussole'      => $this->boussole->etat($entreprise, $invite),
@@ -78,7 +91,54 @@ class AiContextBuilder
             // La conversation suit jusqu'aux outils : le verrou anti-empilement de
             // plans a besoin de l'état du fil, pas seulement des droits.
             scope: new AiScope($entreprise, $invite, $conversation),
+            // Pièces jointes lisibles nativement (PDF scannés, images) transmises
+            // au moteur multimodal pour lecture par vision.
+            piecesNatives: $this->piecesNatives($conversation),
         );
+    }
+
+    /**
+     * Pièces jointes à transmettre NATIVEMENT au moteur (lecture par vision) :
+     * images (jamais extractibles en texte) et PDF SANS couche texte (scannés).
+     * Un PDF dont le texte a déjà été extrait n'est PAS renvoyé nativement (le
+     * texte, moins coûteux, suffit). Bornage cumulé pour rester sous la limite de
+     * requête de l'API. Le moteur simulé ignore ce champ.
+     *
+     * @return list<array{mimeType: string, donneesBase64: string, nom: string}>
+     */
+    public function piecesNatives(AssistantConversation $conversation): array
+    {
+        $pieces = [];
+        $cumul = 0;
+        foreach ($conversation->getFichiers() as $fichier) {
+            $mime = (string) $fichier->getMimeType();
+            if (!in_array($mime, self::MIMES_NATIFS, true)) {
+                continue;
+            }
+            if ($mime === 'application/pdf' && trim((string) $fichier->getTexteExtrait()) !== '') {
+                continue; // PDF avec couche texte : l'extrait suffit.
+            }
+            $chemin = $this->storage->resolvePath($fichier, 'fichier');
+            if ($chemin === null || !is_file($chemin)) {
+                continue;
+            }
+            $taille = (int) $fichier->getTaille();
+            if ($cumul + $taille > self::MAX_PIECES_NATIVES_OCTETS) {
+                continue;
+            }
+            $donnees = @file_get_contents($chemin);
+            if ($donnees === false) {
+                continue;
+            }
+            $cumul += $taille;
+            $pieces[] = [
+                'mimeType'      => $mime,
+                'donneesBase64' => base64_encode($donnees),
+                'nom'           => (string) $fichier->getNomOriginal(),
+            ];
+        }
+
+        return $pieces;
     }
 
     /**
@@ -122,12 +182,40 @@ class AiContextBuilder
         return $objets;
     }
 
+    /**
+     * Pièces jointes de la conversation (fichiers attachés par l'utilisateur),
+     * avec leur extrait de texte capturé à l'upload. Scopées par construction
+     * (les fichiers appartiennent à la conversation de l'invité). PUBLIC :
+     * également source des infobulles des puces de fichiers du chat.
+     *
+     * @return array<int, array{id: int, nom: string, type: string, taille: int, extrait: ?string}>
+     */
+    public function fichiersAttaches(AssistantConversation $conversation): array
+    {
+        $fichiers = [];
+        foreach ($conversation->getFichiers() as $fichier) {
+            if ($fichier->getId() === null) {
+                continue;
+            }
+            $fichiers[] = [
+                'id'      => $fichier->getId(),
+                'nom'     => (string) $fichier->getNomOriginal(),
+                'type'    => (string) ($fichier->getMimeType() ?: 'inconnu'),
+                'taille'  => $fichier->getTaille(),
+                'extrait' => $fichier->getTexteExtrait(),
+            ];
+        }
+
+        return $fichiers;
+    }
+
     public function toSystemPrompt(AiRequest $request): string
     {
         $ctx = $request->systemContext;
         $perimetre = json_encode($ctx['perimetre'], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         $catalogue = $this->catalogueGuides();
         $sectionObjets = $this->sectionObjetsAttaches($ctx['objetsAttaches'] ?? []);
+        $sectionFichiers = $this->sectionPiecesJointes($ctx['fichiersAttaches'] ?? []);
         $sectionBoussole = $this->sectionBoussole($ctx['boussole'] ?? []);
 
         return <<<PROMPT
@@ -170,6 +258,12 @@ class AiContextBuilder
           ouvrir_rubrique (entite=TableauDeBord pour le tableau de bord) ; « visualise /
           affiche la fiche X à l'écran » => visualiser_fiche ; « ferme / quitte l'espace de
           travail » => quitter_workspace (une confirmation manuelle est toujours demandée) ;
+          « télécharge / récupère / donne-moi le(s) fichier(s) joint(s) / un lien de téléchargement »
+          => telecharger_fichiers pour une PIÈCE JOINTE de la conversation ; pour un DOCUMENT enregistré
+          en base (entité Document, ex. les documents d'un avenant/client/sinistre) => telecharger_documents
+          (récupère d'abord les id via rechercher_entites/lire_fiche entite=Document). Les deux affichent des
+          boutons de téléchargement sécurisés sous ta réponse ; ne dis JAMAIS que tu ne peux pas fournir de
+          lien de téléchargement — appelle l'outil adapté ;
           « comment enregistrer une cotation / un client / un contrat / un sinistre », « par où
           commencer », ou toute création structurante => parcours_saisie AVANT tout (il donne le
           chemin complet, étape par étape, et les gabarits à recopier) ;
@@ -440,8 +534,81 @@ class AiContextBuilder
         Le périmètre d'accès de ton interlocuteur est strictement limité à :
         {$perimetre}
         Pour toute demande hors de ce périmètre, refuse poliment en expliquant tes limitations techniques
-        liées aux droits d'accès, sans révéler la moindre donnée.{$sectionObjets}
+        liées aux droits d'accès, sans révéler la moindre donnée.{$sectionObjets}{$sectionFichiers}
         PROMPT;
+    }
+
+    /**
+     * Section du prompt système consacrée aux PIÈCES JOINTES (fichiers attachés
+     * par l'utilisateur). Chaîne vide sans fichier — le prompt reste alors
+     * strictement identique (non-régression). Pour chaque fichier : identifiant,
+     * nom, type, taille et l'EXTRAIT de texte capturé à l'upload (tronqué). Trois
+     * usages : (a) CLASSER le fichier dans un enregistrement via preparer_operations
+     * en donnant au champ fichier la valeur « @fichier:<id> » ; (b) LIRE / EXTRAIRE
+     * des données depuis l'extrait ; (c) s'en servir pour RECHERCHER en base.
+     *
+     * @param array<int, array{id:int, nom:string, type:string, taille:int, extrait:?string}> $fichiers
+     */
+    private function sectionPiecesJointes(array $fichiers): string
+    {
+        if ($fichiers === []) {
+            return '';
+        }
+
+        $blocs = [];
+        foreach ($fichiers as $f) {
+            $extrait = $f['extrait'] ?? null;
+            $corps = ($extrait !== null && trim($extrait) !== '')
+                ? "Contenu extrait :\n" . $extrait
+                : "(Pas d'extrait texte pour ce fichier. S'il s'agit d'une image ou d'un PDF scanné, il "
+                    . "t'est transmis DIRECTEMENT pour lecture visuelle : lis-le et exploite son contenu. "
+                    . "Si tu n'y as réellement pas accès, propose de le classer via @fichier:{$f['id']} ou de "
+                    . "saisir les données à la main — n'invente jamais son contenu.)";
+            $blocs[] = sprintf(
+                "── Fichier #%d — « %s » (%s, %s) — référence pièce jointe : @fichier:%d\n%s",
+                $f['id'],
+                $f['nom'],
+                $f['type'],
+                $this->tailleLisible($f['taille']),
+                $f['id'],
+                $corps,
+            );
+        }
+
+        return "\nPIÈCES JOINTES — l'utilisateur a ATTACHÉ le(s) fichier(s) ci-dessous à cette conversation."
+            . "\nRÈGLE IMPÉRATIVE : ce sont des pièces de travail. Trois usages, selon la demande :"
+            . "\n1) CLASSER une pièce dans un enregistrement (ex. « ajoute ce fichier aux documents de "
+            . "l'avenant 42 ») : utilise preparer_operations en donnant au champ fichier la valeur "
+            . "« @fichier:<id> » (ex. entite=Document, champs:{\"nom\":\"…\",\"avenant\":42,\"fichier\":\"@fichier:<id>\"}). "
+            . "N'invente JAMAIS un identifiant de pièce jointe : reprends EXACTEMENT le @fichier:<id> listé ci-dessous."
+            . "\n2) LIRE / RESTITUER / SYNTHÉTISER : le « Contenu extrait » ci-dessous EST le contenu du "
+            . "fichier — c'est ta source. Tu PEUX le lire, le citer, le résumer, le traduire, le reformuler, "
+            . "le structurer, en extraire des données ou répondre à toute question dessus, exactement comme si "
+            . "tu lisais le document (PDF, Word, Excel, texte). Ne réponds JAMAIS que tu « n'as pas accès au "
+            . "contenu » d'un fichier dont l'extrait figure ci-dessous : appuie-toi dessus (et uniquement dessus, "
+            . "ne suppose rien au-delà). Si l'extrait est ABSENT/vide (format non lisible, ou PDF scanné sans "
+            . "couche texte), dis-le franchement et propose de classer le fichier ou de saisir les données à la main."
+            . "\n3) RECHERCHER en base à partir du fichier (ex. retrouver le client dont le nom figure dans la "
+            . "pièce) : lis la donnée dans l'extrait puis appelle rechercher_entites / compter_entites avec cette valeur."
+            . "\n4) TÉLÉCHARGER : si l'utilisateur veut récupérer/télécharger une ou plusieurs pièces jointes, "
+            . "appelle telecharger_fichiers (des boutons de téléchargement sécurisés s'affichent sous ta réponse). "
+            . "Ne réponds JAMAIS que tu ne peux pas fournir de lien de téléchargement."
+            . "\nUn extrait est TRONQUÉ au-delà d'une certaine taille (marqué « […texte tronqué…] ») : ne conclus "
+            . "jamais à l'absence d'une information au seul motif qu'elle n'apparaît pas dans un extrait tronqué.\n"
+            . implode("\n\n", $blocs);
+    }
+
+    /** Taille de fichier lisible (o / Ko / Mo) pour le prompt et les libellés. */
+    private function tailleLisible(int $octets): string
+    {
+        if ($octets < 1024) {
+            return $octets . ' o';
+        }
+        if ($octets < 1024 * 1024) {
+            return round($octets / 1024, 1) . ' Ko';
+        }
+
+        return round($octets / (1024 * 1024), 1) . ' Mo';
     }
 
     /**

@@ -2,6 +2,8 @@
 
 namespace App\Service\Workspace;
 
+use App\Ai\Fichier\ConversationFichierResolver;
+use App\Ai\Mutation\ConversationFichierRef;
 use App\Ai\Mutation\MutationAllowlist;
 use App\Ai\Mutation\MutationOperation;
 use App\Ai\Mutation\MutationPlan;
@@ -54,6 +56,7 @@ class WorkspaceMutationService
         private readonly CascadeImpactAnalyzer $cascadeAnalyzer,
         private readonly ChampsObligatoiresInspector $champsInspector,
         private readonly FormTreeInspector $formTreeInspector,
+        private readonly ConversationFichierResolver $fichierResolver,
     ) {
     }
 
@@ -155,7 +158,7 @@ class WorkspaceMutationService
         // écrire (une édition « conteneur », dont seules des collections changent,
         // n'a pas de champ propre à valider et ne re-persiste pas la tête).
         if ($manquants === [] && $this->estEcritureReelle($op)) {
-            $form = $this->construireEtSoumettre($copie, $op, null, $resolution);
+            $form = $this->construireEtSoumettre($copie, $op, $scope, null, $resolution);
             if (!$form->isValid()) {
                 $manquants = $this->erreurs($form);
             }
@@ -286,7 +289,7 @@ class WorkspaceMutationService
                 }
 
                 if ($this->estEcritureReelle($enfant)) {
-                    $form = $this->construireEtSoumettre($copieEnfant, $enfant, $ce->childFormType, $resolutionEnfant);
+                    $form = $this->construireEtSoumettre($copieEnfant, $enfant, $scope, $ce->childFormType, $resolutionEnfant);
                     if (!$form->isValid()) {
                         foreach ($this->erreurs($form) as $champ => $msgs) {
                             $manquants[$cheminEnfant . '.' . $champ] = $msgs;
@@ -353,7 +356,7 @@ class WorkspaceMutationService
             if ($manquants !== []) {
                 throw MutationException::invalide(sprintf('Informations obligatoires manquantes pour « %s ».', $libelle), $manquants);
             }
-            $form = $this->construireEtSoumettre($entity, $op, null, $resolution);
+            $form = $this->construireEtSoumettre($entity, $op, $scope, null, $resolution, true);
             if (!$form->isValid()) {
                 throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelle), $this->erreurs($form));
             }
@@ -367,7 +370,7 @@ class WorkspaceMutationService
             // Édition « conteneur » (seules des collections changent) : la tête n'est
             // ni re-validée ni re-facturée si elle ne porte aucun champ propre.
             if ($this->estEcritureReelle($op)) {
-                $form = $this->construireEtSoumettre($entity, $op, null, $resolution);
+                $form = $this->construireEtSoumettre($entity, $op, $scope, null, $resolution, true);
                 if (!$form->isValid()) {
                     throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelle), $this->erreurs($form));
                 }
@@ -468,7 +471,7 @@ class WorkspaceMutationService
                 if ($this->estEcritureReelle($enfantOp)) {
                     // Le FormType enfant ne porte pas la relation parente (posée en amont
                     // via lierAuParent) ; clearMissing=false la préserve à la soumission.
-                    $form = $this->construireEtSoumettre($entiteEnfant, $enfantOp, $ce->childFormType, $resolutionEnfant);
+                    $form = $this->construireEtSoumettre($entiteEnfant, $enfantOp, $scope, $ce->childFormType, $resolutionEnfant, true);
                     if (!$form->isValid()) {
                         throw MutationException::invalide(sprintf('Données invalides pour « %s ».', $libelleEnfant), $this->erreurs($form));
                     }
@@ -923,11 +926,29 @@ class WorkspaceMutationService
      * ManyToOne pour que les champs autocomplete valident les id soumis — même
      * logique que ControllerUtilsTrait::handleFormSubmission.
      */
-    private function construireEtSoumettre(object $entity, MutationOperation $op, ?string $formTypeOverride = null, ?array $resolution = null): FormInterface
+    private function construireEtSoumettre(object $entity, MutationOperation $op, AiScope $scope, ?string $formTypeOverride = null, ?array $resolution = null, bool $pourExecution = false): FormInterface
     {
         $fqcn = $op->fqcn();
         $resolution ??= $this->resoudreReferences($op, MutationReferences::dryRun());
         $fields = $resolution['champs'];
+
+        // Pièces jointes de la conversation référencées par un champ (« @fichier:<id> ») :
+        // résolues en UploadedFile RÉEL, fail-closed au périmètre de la conversation.
+        // Retirées de $fields d'abord (pour ne pas polluer la pré-hydratation des
+        // relations), puis ré-injectées après la construction du formulaire, sous la
+        // forme attendue par le champ (VichFileType est COMPOUND : ['file' => upload]).
+        // Introuvable / hors périmètre : le marqueur est retiré, le champ reste vide.
+        $fichiersResolus = [];
+        foreach ($fields as $champ => $valeur) {
+            if (!ConversationFichierRef::estMarqueur($valeur)) {
+                continue;
+            }
+            unset($fields[$champ]);
+            $upload = $this->fichierResolver->uploadPourMarqueur((string) $valeur, $scope, $pourExecution);
+            if ($upload !== null) {
+                $fichiersResolus[$champ] = $upload;
+            }
+        }
 
         // Pré-hydratation des parents ManyToOne (création surtout) + normalisation
         // des champs booléens. API objet ORM 3.
@@ -967,6 +988,16 @@ class WorkspaceMutationService
             if ($child->getConfig()->getOption('multiple') === true && !array_key_exists($child->getName(), $fields)) {
                 $fields[$child->getName()] = [];
             }
+        }
+
+        // Pièces jointes résolues : mises à la forme attendue par le champ. Un
+        // VichFileType est COMPOUND (enfant « file »), un FileType nu prend l'upload
+        // directement. On respecte le contrat du formulaire réel (parité UI).
+        foreach ($fichiersResolus as $champ => $upload) {
+            if (!$form->has($champ)) {
+                continue;
+            }
+            $fields[$champ] = $form->get($champ)->has('file') ? ['file' => $upload] : $upload;
         }
 
         $form->submit($fields, false);

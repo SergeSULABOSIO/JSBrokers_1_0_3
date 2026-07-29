@@ -17,7 +17,7 @@ import { documentLocale } from '../locale.js';
  * sanitisé via assistant-markdown-render.js (jamais de HTML brut du LLM).
  */
 export default class extends Controller {
-    static targets = ['messages', 'input', 'send', 'typing', 'typingLabel', 'count', 'contextBar', 'mic'];
+    static targets = ['messages', 'input', 'send', 'typing', 'typingLabel', 'count', 'contextBar', 'mic', 'fichierBar', 'fichierInput'];
 
     /** Seuil d'affichage du compteur de caractères restants (proche de maxlength). */
     static COUNT_THRESHOLD = 400;
@@ -41,6 +41,8 @@ export default class extends Controller {
         dialogContextUrl: String,
         visualContextUrl: String,
         contexteUrl: String,
+        fichierUrl: String,
+        fichierLimits: Object,
         idEntreprise: Number,
         idInvite: Number,
         idConversation: Number,
@@ -74,6 +76,12 @@ export default class extends Controller {
         if (this.hasContextBarTarget) {
             this.contextBarTarget.addEventListener('mouseover', this._onCtxTipOver);
             this.contextBarTarget.addEventListener('mouseout', this._onCtxTipOut);
+        }
+        // Puces fichiers : même infobulle sombre, déléguée à la barre de fichiers
+        // (survit aux re-rendus innerHTML des endpoints d'attache/retrait).
+        if (this.hasFichierBarTarget) {
+            this.fichierBarTarget.addEventListener('mouseover', this._onCtxTipOver);
+            this.fichierBarTarget.addEventListener('mouseout', this._onCtxTipOut);
         }
         // Agrafes des bulles utilisateur (instantané de contexte du message) :
         // même infobulle sombre, déléguée au fil de messages (survit aux ajouts).
@@ -266,7 +274,7 @@ export default class extends Controller {
 
         this.sending = true;
         this.sendTarget.disabled = true;
-        const userBubble = this.appendMessage('user', contenu, false, this.contexteInstantane());
+        const userBubble = this.appendMessage('user', contenu, false, this.contexteInstantane(), this.fichiersInstantane());
         this.inputTarget.value = '';
         this.onInput();
         this.setTypingLabel('réfléchit…');
@@ -349,6 +357,9 @@ export default class extends Controller {
                     break;
                 case 'signaler-paiement-prime':
                     this.openSignalerPaiementPrimeAction(action);
+                    break;
+                case 'files-download':
+                    this.renderFilesDownload(action);
                     break;
                 case 'ket-mutation.review':
                     this.renderMutationReview(action);
@@ -1032,7 +1043,7 @@ export default class extends Controller {
      * depuis le fragment HTML serveur (chemin de rendu unique), gestion du 402
      * (premium / solde) identique à send().
      */
-    async contexteOperation(doFetch, buildSuccess) {
+    async contexteOperation(doFetch, buildSuccess, render = (html) => this.renderContextes(html)) {
         this.emitContexteOperation({ phase: 'start' });
         let message = "L'opération sur le contexte a échoué. Veuillez réessayer.";
         let level = 'error';
@@ -1049,7 +1060,7 @@ export default class extends Controller {
                 message = data.message || message;
                 this.appendNotice('error', message);
             } else {
-                this.renderContextes(data.html || '');
+                render(data.html || '');
                 ({ message, level } = buildSuccess(data));
             }
         } catch (error) {
@@ -1095,14 +1106,247 @@ export default class extends Controller {
         })).filter((o) => o.type && Number.isInteger(o.id));
     }
 
+    /**
+     * Instantané (id + nom) des pièces jointes courantes, lu depuis les puces —
+     * pour poser l'agrafe fichiers sur la bulle optimiste (même cliché que celui
+     * persisté côté serveur, cf. instantaneFichiers du contrôleur).
+     */
+    fichiersInstantane() {
+        if (!this.hasFichierBarTarget) return [];
+        return [...this.fichierBarTarget.querySelectorAll('.aic-fichier-chip')].map((chip) => ({
+            id: parseInt(chip.dataset.fichierId, 10),
+            nom: chip.dataset.ficNom || chip.querySelector('.aic-chip-label')?.textContent?.trim() || '',
+        })).filter((f) => Number.isInteger(f.id));
+    }
+
+    // ── Pièces jointes (fichiers attachés à la conversation) ────────────────
+
+    /** Ouvre le sélecteur de fichiers natif (bouton trombone). */
+    ouvrirSelecteurFichier() {
+        if (this.hasFichierInputTarget) {
+            this.fichierInputTarget.click();
+        }
+    }
+
+    /** Sélection de fichiers → validation JS puis upload (change du champ caché). */
+    onFichiersChoisis(event) {
+        const input = event.currentTarget;
+        const fichiers = [...(input.files || [])];
+        input.value = ''; // ré-autorise la re-sélection d'un même fichier
+        if (fichiers.length > 0) {
+            this.uploadFichiers(fichiers);
+        }
+    }
+
+    /** Limites d'attache (miroir serveur FichierAttachePolicy), avec repli sûr. */
+    get fichierLimits() {
+        const l = this.hasFichierLimitsValue ? this.fichierLimitsValue : {};
+        return {
+            maxFiles: l.maxFiles || 5,
+            maxSize: l.maxSize || 10 * 1024 * 1024,
+            extensions: Array.isArray(l.extensions) ? l.extensions : [],
+        };
+    }
+
+    /** Nombre de fichiers déjà attachés (lu depuis les puces rendues serveur). */
+    nbFichiersAttaches() {
+        if (!this.hasFichierBarTarget) return 0;
+        return this.fichierBarTarget.querySelectorAll('.aic-fichier-chip:not(.is-loading)').length;
+    }
+
+    /**
+     * Valide (taille, format, nombre cumulé) puis téléverse les fichiers choisis.
+     * Feedback visuel : une puce « chargement » (spinner) par fichier pendant
+     * l'upload, remplacée par le rendu serveur au succès. Gère le 402 (solde)
+     * comme l'attache d'objets. La barrière JS DOUBLE la contrainte serveur.
+     */
+    async uploadFichiers(fichiers) {
+        if (!this.hasFichierUrlValue) return;
+        const limits = this.fichierLimits;
+        const valides = [];
+        const erreurs = [];
+        let restants = limits.maxFiles - this.nbFichiersAttaches();
+
+        for (const f of fichiers) {
+            const ext = (f.name.split('.').pop() || '').toLowerCase();
+            if (restants <= 0) {
+                erreurs.push(`Limite de ${limits.maxFiles} fichiers par conversation atteinte.`);
+                break;
+            }
+            if (limits.extensions.length > 0 && !limits.extensions.includes(ext)) {
+                erreurs.push(`« ${f.name} » : format non autorisé (accepté : ${limits.extensions.join(', ')}).`);
+                continue;
+            }
+            if (f.size > limits.maxSize) {
+                erreurs.push(`« ${f.name} » dépasse la taille maximale (${Math.round(limits.maxSize / (1024 * 1024))} Mo).`);
+                continue;
+            }
+            valides.push(f);
+            restants -= 1;
+        }
+
+        erreurs.forEach((m) => this.appendNotice('warning', m));
+        if (valides.length === 0) return;
+
+        const chipsChargement = this.ajouterChipsChargement(valides);
+        this.emitContexteOperation({ phase: 'start' });
+        let message = "L'ajout du fichier a échoué. Veuillez réessayer.";
+        let level = 'error';
+
+        try {
+            const formData = new FormData();
+            valides.forEach((f) => formData.append('fichiers[]', f, f.name));
+            const response = await fetch(this.fichierUrlValue, { method: 'POST', body: formData });
+            const data = await response.json().catch(() => ({}));
+
+            if (response.status === 402) {
+                chipsChargement.remove();
+                message = data.premium ? (data.message || 'Fonctionnalité premium.') : this.tokensMessage(data);
+                this.appendNotice('warning', message);
+                level = 'warning';
+            } else if (!response.ok) {
+                chipsChargement.remove();
+                message = data.message || message;
+                this.appendNotice('error', message);
+            } else {
+                this.renderFichiers(data.html || '');
+                (data.erreurs || []).forEach((m) => this.appendNotice('warning', m));
+                const nb = (data.fichiers || []).length;
+                message = valides.length === 1
+                    ? `« ${valides[0].name} » joint à la conversation.`
+                    : `${nb} fichier${nb > 1 ? 's' : ''} joint${nb > 1 ? 's' : ''} à la conversation.`;
+                level = 'success';
+            }
+        } catch (error) {
+            console.error('AssistantChat - upload fichier échoué :', error);
+            chipsChargement.remove();
+            this.appendNotice('error', message);
+        } finally {
+            this.emitContexteOperation({ phase: 'end', message, level, objets: this.contexteObjets() });
+        }
+    }
+
+    /**
+     * Insère une liste de puces « en cours de chargement » (spinner) dans la
+     * barre de fichiers pour un retour visuel immédiat pendant l'upload.
+     * Renvoie l'élément conteneur, à retirer en cas d'échec.
+     */
+    ajouterChipsChargement(fichiers) {
+        const conteneur = document.createElement('ul');
+        conteneur.className = 'aic-context-chips';
+        conteneur.setAttribute('aria-label', 'Fichiers en cours de chargement');
+        for (const f of fichiers) {
+            const li = document.createElement('li');
+            li.className = 'aic-chip aic-fichier-chip is-loading';
+            li.setAttribute('aria-busy', 'true');
+            const spin = document.createElement('span');
+            spin.className = 'aic-chip-spinner';
+            spin.setAttribute('aria-hidden', 'true');
+            const label = document.createElement('span');
+            label.className = 'aic-chip-label';
+            label.textContent = f.name; // textContent : échappement systématique
+            li.append(spin, label);
+            conteneur.append(li);
+        }
+        if (this.hasFichierBarTarget) {
+            this.fichierBarTarget.append(conteneur);
+        }
+        return conteneur;
+    }
+
+    /** Remplace les puces fichiers par le fragment rendu côté serveur. */
+    renderFichiers(html) {
+        if (this.hasFichierBarTarget) {
+            this.fichierBarTarget.innerHTML = html;
+        }
+        // Une puce survolée peut disparaître du DOM sans mouseout : masquage explicite.
+        this._ctxTipHide();
+    }
+
+    /** Retire UN fichier de la conversation (bouton × d'une puce fichier). */
+    async removeFichier(event) {
+        const idFichier = parseInt(event.currentTarget.dataset.fichierId, 10);
+        if (!Number.isInteger(idFichier) || !this.hasFichierUrlValue) return;
+        const nom = event.currentTarget.closest('.aic-fichier-chip')?.querySelector('.aic-chip-label')?.textContent?.trim();
+
+        await this.contexteOperation(
+            () => fetch(`${this.fichierUrlValue}/${idFichier}`, { method: 'DELETE' }),
+            () => ({
+                message: nom ? `« ${nom} » retiré de la conversation.` : 'Fichier retiré de la conversation.',
+                level: 'success',
+            }),
+            (html) => this.renderFichiers(html),
+        );
+    }
+
+    /** Vide les pièces jointes (bouton « Tout retirer » de la barre fichiers). */
+    async clearFichiers() {
+        if (!this.hasFichierUrlValue) return;
+
+        await this.contexteOperation(
+            () => fetch(this.fichierUrlValue, { method: 'DELETE' }),
+            () => ({ message: 'Pièces jointes retirées de la conversation.', level: 'success' }),
+            (html) => this.renderFichiers(html),
+        );
+    }
+
+    /**
+     * Rend, sous la réponse de l'assistant, un panneau de boutons de
+     * TÉLÉCHARGEMENT des pièces jointes (directive uiAction 'files-download').
+     * Chaque bouton est un lien vers la route de téléchargement FAIL-CLOSED :
+     * l'accès est re-vérifié côté serveur au clic. Les libellés viennent du
+     * serveur (échappés via textContent) — jamais de HTML brut du modèle.
+     */
+    renderFilesDownload(action) {
+        const fichiers = Array.isArray(action?.fichiers) ? action.fichiers : [];
+        if (fichiers.length === 0 || !this.hasMessagesTarget) return;
+
+        const panel = document.createElement('div');
+        panel.className = 'aic-files-dl';
+        panel.setAttribute('role', 'group');
+        panel.setAttribute('aria-label', 'Téléchargement des pièces jointes');
+
+        const titre = document.createElement('p');
+        titre.className = 'aic-files-dl-title';
+        titre.textContent = fichiers.length === 1 ? 'Télécharger la pièce jointe' : 'Télécharger les pièces jointes';
+        panel.appendChild(titre);
+
+        for (const f of fichiers) {
+            if (!f || typeof f.url !== 'string') continue;
+            const lien = document.createElement('a');
+            lien.className = 'aic-file-dl-btn';
+            lien.href = f.url;
+            lien.setAttribute('download', '');
+            lien.setAttribute('rel', 'noopener');
+            lien.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>';
+            const label = document.createElement('span');
+            label.className = 'aic-file-dl-label';
+            label.textContent = f.taille ? `${f.nom} (${this.formatTaille(f.taille)})` : String(f.nom || 'fichier');
+            lien.appendChild(label);
+            panel.appendChild(lien);
+        }
+
+        this.messagesTarget.appendChild(panel);
+        this.scrollToBottom();
+    }
+
+    /** Taille de fichier lisible (o / Ko / Mo). */
+    formatTaille(octets) {
+        if (octets < 1024) return `${octets} o`;
+        if (octets < 1024 * 1024) return `${(octets / 1024).toFixed(1)} Ko`;
+        return `${(octets / (1024 * 1024)).toFixed(1)} Mo`;
+    }
+
     // ── Infobulle sombre des puces (pattern data-piste-tip du tableau de bord) ──
 
     _ctxTipOver(event) {
         if (this._ctxTipPinned) return; // infobulle épinglée par clic : ne pas écraser
-        const cible = event.target.closest ? event.target.closest('[data-ctx-tip], [data-msg-contextes]') : null;
+        const cible = event.target.closest ? event.target.closest('[data-ctx-tip], [data-fic-tip], [data-msg-contextes]') : null;
         if (!cible || event.target.closest('.aic-chip-remove')) return;
         const tip = this._ctxTipCreate();
-        if (cible.dataset.msgContextes !== undefined) {
+        if (cible.dataset.ficTip !== undefined) {
+            this._ctxTipBuildFichier(tip, cible);
+        } else if (cible.dataset.msgContextes !== undefined) {
             this._ctxTipBuildMessage(tip, cible);
         } else {
             this._ctxTipBuild(tip, cible);
@@ -1113,7 +1357,7 @@ export default class extends Controller {
 
     _ctxTipOut(event) {
         if (this._ctxTipPinned) return;
-        const cible = event.target.closest ? event.target.closest('[data-ctx-tip], [data-msg-contextes]') : null;
+        const cible = event.target.closest ? event.target.closest('[data-ctx-tip], [data-fic-tip], [data-msg-contextes]') : null;
         if (cible && !cible.contains(event.relatedTarget)) {
             this._ctxTipHide();
         }
@@ -1295,6 +1539,43 @@ export default class extends Controller {
         tip.appendChild(table);
     }
 
+    /**
+     * Contenu de l'infobulle d'une puce FICHIER : caractéristiques du fichier
+     * survolé (posées en data-fic-* par le partial serveur), rendues en tableau
+     * sombre — construction DOM via textContent (échappement garanti).
+     */
+    _ctxTipBuildFichier(tip, chip) {
+        tip.className = 'jsb-ctx-tip'; // repli du style partagé (annule un éventuel commit-tip du micro)
+        tip.textContent = '';
+        const table = document.createElement('table');
+
+        const addRow = (cells) => {
+            const tr = document.createElement('tr');
+            cells.forEach(({ text, colspan, className }) => {
+                const td = document.createElement('td');
+                td.textContent = text;
+                if (colspan) td.setAttribute('colspan', String(colspan));
+                if (className) td.className = className;
+                tr.appendChild(td);
+            });
+            table.appendChild(tr);
+        };
+
+        addRow([{ text: 'Pièce jointe', colspan: 2, className: 'tip-section' }]);
+        addRow([{ text: 'Nom' }, { text: chip.dataset.ficNom || '—' }]);
+        addRow([{ text: 'Type' }, { text: chip.dataset.ficType || 'inconnu' }]);
+        addRow([{ text: 'Taille' }, { text: chip.dataset.ficTaille || '—' }]);
+        addRow([
+            { text: 'Contenu lisible' },
+            { text: chip.dataset.ficLisible === '1' ? 'Oui (l’assistant peut le lire)' : 'Non (format non extrait)' },
+        ]);
+        if (chip.dataset.ficDate) {
+            addRow([{ text: 'Ajouté le' }, { text: chip.dataset.ficDate }]);
+        }
+
+        tip.appendChild(table);
+    }
+
     /** Valeur de fiche lisible : booléens en clair, structures résumées, textes bornés. */
     _ctxTipFormat(valeur) {
         if (valeur === null || valeur === undefined || valeur === '') return '—';
@@ -1406,7 +1687,7 @@ export default class extends Controller {
      * Ajoute une bulle de message au fil (structure identique à celle rendue
      * côté serveur dans _assistant_ia_chat.html.twig).
      */
-    appendMessage(role, texte, refus = false, contexteObjets = null) {
+    appendMessage(role, texte, refus = false, contexteObjets = null, fichiersJoints = null) {
         const bubble = document.createElement('div');
         bubble.className = `aic-msg aic-msg--${role}${refus ? ' aic-msg--refus' : ''}`;
 
@@ -1442,6 +1723,20 @@ export default class extends Controller {
             compteur.textContent = String(contexteObjets.length);
             attache.appendChild(compteur);
             body.appendChild(attache);
+        }
+
+        // Agrafe des PIÈCES JOINTES à l'envoi (bulle utilisateur) : miroir du rendu
+        // serveur (aic-msg-attach--file), infobulle native listant les noms.
+        if (role === 'user' && Array.isArray(fichiersJoints) && fichiersJoints.length > 0) {
+            const attacheF = document.createElement('span');
+            attacheF.className = 'aic-msg-attach aic-msg-attach--file';
+            attacheF.title = fichiersJoints.map((f) => f.nom).filter(Boolean).join(', ');
+            attacheF.setAttribute('aria-label', `${fichiersJoints.length} fichier${fichiersJoints.length > 1 ? 's' : ''} joint${fichiersJoints.length > 1 ? 's' : ''} à l'envoi de ce message`);
+            attacheF.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v5h5"/></svg>';
+            const compteurF = document.createElement('span');
+            compteurF.textContent = String(fichiersJoints.length);
+            attacheF.appendChild(compteurF);
+            body.appendChild(attacheF);
         }
 
         const time = document.createElement('span');
