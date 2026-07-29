@@ -359,6 +359,30 @@ class AssistantIaWorkspaceTest extends WebTestCase
     }
 
     /**
+     * Plein écran : le chat rend le bouton d'agrandissement dans son entête, câblé
+     * sur le contrôleur du workspace (qui gère l'affichage des colonnes 3 et 4). La
+     * bascule réelle (masquer col-3 / étendre col-4) et sa persistance sont 100 %
+     * navigateur (localStorage) et se vérifient manuellement ; ce test garde le rendu
+     * et le câblage côté serveur (anti-régression).
+     */
+    public function testChatRendLeBoutonPleinEcran(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $owner);
+
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+        $this->client->request('GET', sprintf('/admin/assistant-ia/chat/%d/%d', $e->getId(), $conversation->getId()));
+        $this->assertResponseIsSuccessful();
+        $content = (string) $this->client->getResponse()->getContent();
+
+        $this->assertStringContainsString('class="aic-iconbtn aic-fullscreen"', $content, 'Le bouton plein écran doit porter le socle commun + sa classe.');
+        $this->assertStringContainsString('workspace-manager#toggleChatFullscreen', $content, 'Le bouton doit déclencher la bascule plein écran du contrôleur workspace.');
+        // Icônes inline (agrandir / réduire) : pas d'ux_icon serveur, comme le micro.
+        $this->assertStringContainsString('aic-ic-expand', $content, 'L\'icône « agrandir » doit être rendue.');
+        $this->assertStringContainsString('aic-ic-collapse', $content, 'L\'icône « réduire » doit être rendue.');
+    }
+
+    /**
      * PREMIUM : sans solde de tokens payant, le composant affiche le panneau de
      * mise en valeur (CTA réservé au propriétaire) et l'envoi de message est
      * bloqué en 402 « premium » sans rien persister.

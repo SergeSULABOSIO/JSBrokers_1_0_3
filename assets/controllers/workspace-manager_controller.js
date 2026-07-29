@@ -842,6 +842,19 @@ export default class extends Controller {
 
         // NOUVEAU : Fait défiler l'onglet actif pour qu'il soit centré et visible, améliorant l'UX avec de nombreux onglets.
         clickedTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+
+        // Plein écran du chat : mode réservé aux conversations IA. On l'applique
+        // seulement si la préférence est active ET que l'onglet activé est un chat
+        // (clé « ia-conv-… »). C'est ce point unique qui restaure le plein écran au
+        // rechargement (le chat restauré repasse par ici via openHtmlTabInVisualization)
+        // et qui empêche tout état bloqué sur un onglet non-chat (colonne 3 masquée
+        // sans bouton pour la rétablir).
+        const estOngletChat = (clickedTab.dataset.entityId || '').startsWith('ia-conv-');
+        const pleinEcran = this._readFullscreenPref() && estOngletChat;
+        this.element.classList.toggle('chat-fullscreen', pleinEcran);
+        if (estOngletChat) {
+            this._syncFullscreenButtons(pleinEcran);
+        }
     }
 
 
@@ -880,11 +893,55 @@ export default class extends Controller {
         if (contentToClose) contentToClose.remove();
 
         if (this.tabContainerTarget.children.length === 0) {
-            this.element.classList.remove('visualization-visible');
+            // La colonne 4 se vide : on retire aussi le plein écran (la colonne 3
+            // réapparaît). La PRÉFÉRENCE est conservée — rouvrir le chat le réaffiche
+            // en plein écran.
+            this.element.classList.remove('visualization-visible', 'chat-fullscreen');
             this.visualizationColumnTarget.style.display = 'none';
         } else {
             const lastTab = this.tabContainerTarget.querySelector('.tab-item:last-child');
             if (lastTab) this.activateTab({ currentTarget: lastTab });
+        }
+    }
+
+    /**
+     * Bascule le mode plein écran du chat IA : la colonne de visualisation s'étend
+     * sur la zone des colonnes 3 + 4 (la colonne 3 est masquée, contenu préservé).
+     * La préférence est persistée par entreprise et restaurée au rechargement.
+     * Déclenché depuis l'entête du chat : l'onglet actif est donc bien un chat.
+     */
+    toggleChatFullscreen() {
+        const actif = !this._readFullscreenPref();
+        this._writeFullscreenPref(actif);
+        this.element.classList.toggle('chat-fullscreen', actif);
+        this._syncFullscreenButtons(actif);
+    }
+
+    /**
+     * Synchronise l'état visuel des boutons plein écran (aria-pressed + libellés)
+     * avec le mode courant. Cible tous les boutons de la colonne de visualisation
+     * pour couvrir le cas rare de plusieurs conversations ouvertes.
+     * @param {boolean} actif
+     */
+    _syncFullscreenButtons(actif) {
+        this.visualizationColumnTarget.querySelectorAll('.aic-fullscreen').forEach((btn) => {
+            btn.setAttribute('aria-pressed', actif ? 'true' : 'false');
+            btn.setAttribute('aria-label', actif ? 'Réduire le chat' : 'Afficher le chat en plein écran');
+            btn.setAttribute('title', actif ? 'Réduire' : 'Plein écran');
+        });
+    }
+
+    /** Préférence de plein écran du chat (persistée par entreprise, restaurée au rechargement). */
+    _readFullscreenPref() {
+        return localStorage.getItem(`chatFullscreen_${this.idEntrepriseValue}`) === '1';
+    }
+
+    _writeFullscreenPref(actif) {
+        const cle = `chatFullscreen_${this.idEntrepriseValue}`;
+        if (actif) {
+            localStorage.setItem(cle, '1');
+        } else {
+            localStorage.removeItem(cle);
         }
     }
 
