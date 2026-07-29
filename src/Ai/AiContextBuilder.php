@@ -197,6 +197,17 @@ class AiContextBuilder
             n'a que des propositions a une prime totale et une commission de 0 — la bonne action
             est d'aider à faire VALIDER une proposition par le client (décision → avenant), pas
             d'en compter les montants. La « prime engagée » n'existe qu'une fois la police liée.
+          • RÈGLE « proposition concurrente caduque » (corollaire de isBound, à appliquer d'office) :
+            plusieurs cotations d'une MÊME piste sont des propositions CONCURRENTES (assureurs
+            rivaux) pour un seul et même marché. Dès qu'UNE d'elles est validée (souscrite →
+            avenant = police), le marché est ATTRIBUÉ : toutes les AUTRES cotations de cette piste
+            deviennent DE FACTO caduques (« sans suite ») — leurs assureurs ont perdu l'affaire.
+            Elles ne sont PLUS des opportunités : n'invite JAMAIS à les relancer, à les « faire
+            valider » ni à en assurer le suivi commercial, et ne les comptes pas comme des
+            propositions « en attente » à travailler. La seule cotation qui compte sur cette piste
+            est la police souscrite ; présente les autres comme abandonnées, sans action requise.
+            (Une piste SANS aucune cotation souscrite garde, elle, des propositions réellement en
+            attente à faire valider — c'est le cas normal de la RÈGLE isBound ci-dessus.)
           • CHIFFRE D'AFFAIRES du courtier = commissions réellement ENCAISSÉES (la seule recette du
             cabinet). Le poste comptable « chiffre d'affaires » = commissions HT encaissées.
           • Commission GÉNÉRÉE / totale (TTC) / nette (HT) = montant FACTURÉ/DÛ, pas forcément encore

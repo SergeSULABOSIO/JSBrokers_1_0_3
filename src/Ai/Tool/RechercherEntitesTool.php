@@ -302,6 +302,11 @@ final class RechercherEntitesTool implements AiToolInterface
                 if ($bound) {
                     $item['referencePolice'] = $this->indicatorHelper->getCotationReferencePolice($entity);
                     $item['periodeCouverture'] = $this->indicatorHelper->getCotationPeriodeCouverture($entity);
+                } elseif ($this->indicatorHelper->isCotationConcurrenteCaduque($entity)) {
+                    // Une AUTRE proposition de la même piste est déjà souscrite : le marché est
+                    // attribué, celle-ci a perdu l'affaire. On le dit explicitement pour que le
+                    // modèle ne la présente pas comme une opportunité « en attente » à relancer.
+                    $item['suivi'] = 'Sans suite — une autre proposition de cette piste est souscrite (marché déjà attribué)';
                 }
             }
             $items[] = $item;

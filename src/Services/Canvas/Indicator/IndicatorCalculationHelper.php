@@ -158,6 +158,31 @@ class IndicatorCalculationHelper implements ResetInterface
         return $cotation && !$cotation->getAvenants()->isEmpty();
     }
 
+    /**
+     * Une cotation « concurrente caduque » (sans suite) : elle n'est PAS souscrite, mais une
+     * AUTRE cotation de la MÊME piste l'est déjà. Plusieurs cotations d'une piste sont des
+     * propositions concurrentes (assureurs rivaux) pour un seul marché ; dès qu'une est validée
+     * (avenant = police), le marché est attribué et les autres ont perdu l'affaire. Corollaire de
+     * isCotationBound : sert à ne plus présenter ces propositions comme des opportunités à relancer.
+     */
+    public function isCotationConcurrenteCaduque(?Cotation $cotation): bool
+    {
+        if ($cotation === null || $this->isCotationBound($cotation)) {
+            return false;
+        }
+        $piste = $cotation->getPiste();
+        if ($piste === null) {
+            return false;
+        }
+        foreach ($piste->getCotations() as $soeur) {
+            if ($soeur !== $cotation && $this->isCotationBound($soeur)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function getCotationReferencePolice(Cotation $cotation): string
     {
         if ($cotation->getAvenants()->isEmpty()) return 'Nulle';
