@@ -82,7 +82,9 @@ final class CompterEntitesTool implements AiToolInterface
                     'enum' => array_keys(CotationSouscriptionScope::VALEURS),
                     'description' => 'COTATION uniquement : restreint à un statut de souscription — '
                         . 'souscrites (transformées en police, au moins un avenant), en_attente '
-                        . '(non transformées). Mêmes règles que les filtres rapides de la rubrique.',
+                        . '(non transformées, encore en course), caduques (non transformées mais '
+                        . 'une autre proposition de la même piste est souscrite = marché perdu, '
+                        . 'sans suite). Mêmes règles que les filtres rapides de la rubrique.',
                 ],
                 'transformation' => [
                     'type' => 'string',

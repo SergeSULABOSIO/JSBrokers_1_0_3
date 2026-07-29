@@ -263,6 +263,86 @@ class JSBDynamicSearchServiceCotationSouscriptionTest extends KernelTestCase
         $this->assertSame(5, $resultat['totalItems'], 'Critère retiré, recherche standard scopée entreprise.');
     }
 
+    /**
+     * Une piste « bound » (cotation A souscrite) porte une proposition concurrente B non
+     * souscrite : B est CADUQUE (le marché est attribué à A). Une piste distincte porte une
+     * cotation C non souscrite et seule : C est simplement EN ATTENTE. Les trois statuts
+     * partitionnent l'ensemble — le chip « En attente » ne doit PLUS contenir la caduque B.
+     */
+    public function testCaduquesEtEnAttenteSontDisjoints(): void
+    {
+        $em = $this->em();
+
+        $ownerUser = new Utilisateur();
+        $ownerUser->setEmail(self::OWNER_EMAIL)->setNom('PHPUnit CotSouscr')->setVerified(true)->setPassword('irrelevant');
+        $em->persist($ownerUser);
+
+        $entreprise = $this->makeEntreprise(self::ENTREPRISE_NOM, $ownerUser);
+        $invite = $this->makeInvite($entreprise, $ownerUser, 'Gestionnaire A');
+
+        // Piste bound : A souscrite (avenant), B concurrente non souscrite → B est caduque.
+        $client1 = (new Client())->setNom('Client Piste Bound')->setExonere(false);
+        $client1->setEntreprise($entreprise);
+        $em->persist($client1);
+        $pisteBound = (new Piste())->setNom('Piste Bound')->setTypeAvenant(0)->setDescriptionDuRisque('Risque')
+            ->setExercice(2026)->setClient($client1)->setEntreprise($entreprise)->setInvite($invite);
+        $em->persist($pisteBound);
+
+        $cotationA = (new Cotation())->setNom('A Souscrite')->setDuree(365);
+        $cotationA->setEntreprise($entreprise);
+        $pisteBound->addCotation($cotationA);
+        $em->persist($cotationA);
+        $avenant = (new Avenant())->setReferencePolice('POL-A')->setNumero('0')->setDescription('Avenant A')
+            ->setStartingAt(new \DateTimeImmutable('-30 days'))->setEndingAt(new \DateTimeImmutable('+335 days'));
+        $avenant->setEntreprise($entreprise)->setInvite($invite);
+        $cotationA->addAvenant($avenant);
+        $em->persist($avenant);
+
+        $cotationB = (new Cotation())->setNom('B Caduque')->setDuree(365);
+        $cotationB->setEntreprise($entreprise);
+        $pisteBound->addCotation($cotationB);
+        $em->persist($cotationB);
+
+        // Piste non bound : C non souscrite et seule → C est en attente (encore en course).
+        $client2 = (new Client())->setNom('Client Piste En Cours')->setExonere(false);
+        $client2->setEntreprise($entreprise);
+        $em->persist($client2);
+        $pisteEnCours = (new Piste())->setNom('Piste En Cours')->setTypeAvenant(0)->setDescriptionDuRisque('Risque')
+            ->setExercice(2026)->setClient($client2)->setEntreprise($entreprise)->setInvite($invite);
+        $em->persist($pisteEnCours);
+        $cotationC = (new Cotation())->setNom('C En Attente')->setDuree(365);
+        $cotationC->setEntreprise($entreprise);
+        $pisteEnCours->addCotation($cotationC);
+        $em->persist($cotationC);
+
+        $em->flush();
+        $ids = [
+            'A' => $cotationA->getId(),
+            'B' => $cotationB->getId(),
+            'C' => $cotationC->getId(),
+        ];
+        $entrepriseId = $entreprise->getId();
+        $em->clear();
+
+        $entrepriseA = $this->em()->getRepository(Entreprise::class)->find($entrepriseId);
+
+        // Souscrites : uniquement A.
+        $souscrites = $this->service()->search(Cotation::class, [CotationSouscriptionScope::CRITERION_KEY => CotationSouscriptionScope::STATUT_SOUSCRITES], $entrepriseA);
+        $this->assertSame([$ids['A']], $this->ids($souscrites));
+
+        // Caduques : uniquement B (jamais C : sa piste n'est pas bound).
+        $caduques = $this->service()->search(Cotation::class, [CotationSouscriptionScope::CRITERION_KEY => CotationSouscriptionScope::STATUT_CADUQUES], $entrepriseA);
+        $this->assertSame([$ids['B']], $this->ids($caduques));
+
+        // En attente : uniquement C (B exclue car caduque).
+        $enAttente = $this->service()->search(Cotation::class, [CotationSouscriptionScope::CRITERION_KEY => CotationSouscriptionScope::STATUT_EN_ATTENTE], $entrepriseA);
+        $this->assertSame([$ids['C']], $this->ids($enAttente));
+
+        // Les trois groupes partitionnent bien les 3 cotations.
+        $toutes = $this->service()->search(Cotation::class, [CotationSouscriptionScope::CRITERION_KEY => ['operator' => '=', 'value' => '']], $entrepriseA);
+        $this->assertSame(3, $toutes['totalItems']);
+    }
+
     public function testChipParDefautEstEnAttente(): void
     {
         $s = $this->seed();
@@ -300,6 +380,8 @@ class JSBDynamicSearchServiceCotationSouscriptionTest extends KernelTestCase
         $this->assertSame(CotationSouscriptionScope::STATUT_SOUSCRITES, CotationSouscriptionScope::detecterDepuisTexte('quelles propositions souscrites ?'));
         $this->assertSame(CotationSouscriptionScope::STATUT_EN_ATTENTE, CotationSouscriptionScope::detecterDepuisTexte('combien de propositions en attente'));
         $this->assertSame(CotationSouscriptionScope::STATUT_EN_ATTENTE, CotationSouscriptionScope::detecterDepuisTexte('les cotations non souscrites'));
+        $this->assertSame(CotationSouscriptionScope::STATUT_CADUQUES, CotationSouscriptionScope::detecterDepuisTexte('les propositions caduques'));
+        $this->assertSame(CotationSouscriptionScope::STATUT_CADUQUES, CotationSouscriptionScope::detecterDepuisTexte('quelles cotations sans suite ?'));
         $this->assertNull(CotationSouscriptionScope::detecterDepuisTexte('liste des propositions'));
     }
 }

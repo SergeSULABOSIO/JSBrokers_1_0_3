@@ -25,6 +25,7 @@ final class CotationSouscriptionScope
 
     public const STATUT_SOUSCRITES = 'souscrites';
     public const STATUT_EN_ATTENTE = 'en_attente';
+    public const STATUT_CADUQUES = 'caduques';
 
     /**
      * Libellés SINGULIERS du statut de souscription d'UNE cotation, repris EXACTEMENT de
@@ -38,11 +39,16 @@ final class CotationSouscriptionScope
     /**
      * @var array<string, string> Valeur du critère => libellé affiché (badge, select du
      *      dialogue avancé, chips). Le vocabulaire reprend EXACTEMENT l'indicateur calculé
-     *      Cotation.statutSouscription (« Souscrite » / « En attente »).
+     *      Cotation.statutSouscription (« Souscrite » / « En attente »). « Caduques » désigne
+     *      les propositions concurrentes qui ont perdu le marché : NON souscrites, mais une
+     *      autre cotation de LA MÊME piste l'est déjà (piste « bound »). Elles ne demandent
+     *      plus d'effort commercial ; « En attente » ne les inclut donc plus (partition :
+     *      Souscrites ⊎ En attente ⊎ Caduques = toutes les cotations).
      */
     public const VALEURS = [
         self::STATUT_SOUSCRITES => 'Souscrites',
         self::STATUT_EN_ATTENTE => 'En attente',
+        self::STATUT_CADUQUES => 'Caduques',
     ];
 
     public static function estValide(?string $statut): bool
@@ -98,9 +104,15 @@ final class CotationSouscriptionScope
      */
     public static function detecterDepuisTexte(string $texteNormalise): ?string
     {
-        // Ordre volontaire : les formulations NÉGATIVES d'abord (« non souscrite », « non
-        // transformee » contiennent le mot « souscrite »/« transformee » qui piégerait la
-        // règle positive).
+        // Ordre volontaire : la caducité EN PREMIER. « caduque », « sans suite », « perdu(e) »
+        // ou « marche attribue » désignent une proposition concurrente hors course — à ne PAS
+        // confondre avec « en attente » (qui contient « sans » et piégerait la règle négative
+        // ci-dessous).
+        if (preg_match('/\b(?:caduque?s?|sans suite|perdue?s?|marche attribue|deja attribue)\b/', $texteNormalise)) {
+            return self::STATUT_CADUQUES;
+        }
+        // Ensuite les formulations NÉGATIVES (« non souscrite », « non transformee » contiennent
+        // le mot « souscrite »/« transformee » qui piégerait la règle positive).
         if (preg_match('/\b(?:non|pas|jamais|sans)\b.{0,15}\b(?:souscri\w*|transform\w*|police|validee?s?)\b/', $texteNormalise)
             || preg_match('/\b(?:en attente|a relancer|non validee?s?|non souscrites?|non transformees?)\b/', $texteNormalise)) {
             return self::STATUT_EN_ATTENTE;
