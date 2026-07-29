@@ -44,6 +44,15 @@ class AssistantMessage
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $contexteObjets = null;
 
+    /**
+     * Instantané IMMUABLE des fichiers attachés à l'envoi (messages utilisateur
+     * uniquement) : [{id, nom, type, taille}]. Même logique que contexteObjets —
+     * le message « transporte » les pièces jointes telles qu'elles étaient à
+     * l'envoi (agrafe dédiée sur la bulle). Null = aucun fichier attaché.
+     */
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $fichiersJoints = null;
+
     #[ORM\Column(type: 'datetime_immutable')]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -105,6 +114,18 @@ class AssistantMessage
     public function setContexteObjets(?array $contexteObjets): self
     {
         $this->contexteObjets = $contexteObjets !== [] ? $contexteObjets : null;
+        return $this;
+    }
+
+    /** @return array<int, array{id: int, nom: string, type: string, taille: int}>|null */
+    public function getFichiersJoints(): ?array
+    {
+        return $this->fichiersJoints;
+    }
+
+    public function setFichiersJoints(?array $fichiersJoints): self
+    {
+        $this->fichiersJoints = $fichiersJoints !== [] ? $fichiersJoints : null;
         return $this;
     }
 

@@ -43,6 +43,11 @@ class AssistantConversation
     #[ORM\OrderBy(['id' => 'ASC'])]
     private Collection $contextes;
 
+    /** @var Collection<int, AssistantConversationFichier> */
+    #[ORM\OneToMany(targetEntity: AssistantConversationFichier::class, mappedBy: 'conversation', cascade: ['persist'], orphanRemoval: true)]
+    #[ORM\OrderBy(['id' => 'ASC'])]
+    private Collection $fichiers;
+
     #[ORM\Column(type: 'datetime_immutable')]
     private ?\DateTimeImmutable $createdAt = null;
 
@@ -53,6 +58,7 @@ class AssistantConversation
     {
         $this->messages = new ArrayCollection();
         $this->contextes = new ArrayCollection();
+        $this->fichiers = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -148,6 +154,35 @@ class AssistantConversation
             }
         }
         return false;
+    }
+
+    /** @return Collection<int, AssistantConversationFichier> */
+    public function getFichiers(): Collection
+    {
+        return $this->fichiers;
+    }
+
+    public function addFichier(AssistantConversationFichier $fichier): self
+    {
+        if (!$this->fichiers->contains($fichier)) {
+            $this->fichiers->add($fichier);
+            $fichier->setConversation($this);
+        }
+        return $this;
+    }
+
+    public function removeFichier(AssistantConversationFichier $fichier): self
+    {
+        if ($this->fichiers->removeElement($fichier) && $fichier->getConversation() === $this) {
+            $fichier->setConversation(null);
+        }
+        return $this;
+    }
+
+    /** Nombre de fichiers actuellement attachés à cette conversation. */
+    public function nbFichiers(): int
+    {
+        return $this->fichiers->count();
     }
 
     public function getCreatedAt(): ?\DateTimeImmutable

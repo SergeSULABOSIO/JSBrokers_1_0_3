@@ -1,0 +1,65 @@
+{#
+    Pièces jointes de la conversation IA — chemin de rendu UNIQUE des puces
+    fichiers : inclus au rendu initial du chat ET re-rendu par les endpoints API
+    fichiers (clé `html` de la réponse ; le contrôleur Stimulus assistant-chat
+    remplace le innerHTML de la barre de fichiers). SVG inline (auto-portés) pour
+    ne pas dépendre du circuit d'icônes dans un partial injecté.
+#}
+{% if conversation.fichiers|length > 0 %}
+    <div class="aic-context-head">
+        <span class="aic-context-count" role="status">
+            {{ conversation.fichiers|length }} fichier{{ conversation.fichiers|length > 1 ? 's' : '' }} joint{{ conversation.fichiers|length > 1 ? 's' : '' }}
+        </span>
+        <button type="button" class="aic-context-clear"
+                data-action="click->assistant-chat#clearFichiers"
+                title="Retirer tous les fichiers de la conversation">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+            <span>Tout retirer</span>
+        </button>
+    </div>
+    <ul class="aic-context-chips" aria-label="Fichiers attachés à la conversation">
+        {% for f in conversation.fichiers %}
+            {% set ko = f.taille / 1024 %}
+            {% set tailleLisible = f.taille < 1024 ? (f.taille ~ ' o') : (ko < 1024 ? (ko|round(1) ~ ' Ko') : ((ko / 1024)|round(1) ~ ' Mo')) %}
+            {# Infobulle sombre (même mécanique que les puces objets) : caractéristiques
+               du fichier, posées en data-* et rendues par le contrôleur Stimulus. #}
+            <li class="aic-chip aic-fichier-chip"
+                data-fichier-id="{{ f.id }}"
+                data-fic-tip
+                data-fic-nom="{{ f.nomOriginal }}"
+                data-fic-type="{{ f.mimeType|default('inconnu') }}"
+                data-fic-taille="{{ tailleLisible }}"
+                data-fic-lisible="{{ f.texteExtrait is not null ? '1' : '0' }}"
+                data-fic-date="{{ f.createdAt ? f.createdAt|date('d/m/Y H:i') : '' }}">
+                <span class="aic-chip-icon" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
+                        <path d="M14 2v5h5"/>
+                    </svg>
+                </span>
+                {% if idEntreprise is defined and idEntreprise is not null %}
+                    <a class="aic-chip-label aic-chip-download"
+                       href="{{ path('admin.assistantia.api.fichier.download', {idEntreprise: idEntreprise, idConversation: conversation.id, idFichier: f.id}) }}"
+                       target="_blank" rel="noopener"
+                       aria-label="Télécharger {{ f.nomOriginal }}">{{ f.nomOriginal }}</a>
+                {% else %}
+                    <span class="aic-chip-label">{{ f.nomOriginal }}</span>
+                {% endif %}
+                <span class="aic-chip-size" aria-hidden="true">{{ tailleLisible }}</span>
+                <button type="button" class="aic-chip-remove"
+                        data-fichier-id="{{ f.id }}"
+                        data-action="click->assistant-chat#removeFichier"
+                        aria-label="Retirer {{ f.nomOriginal }} de la conversation">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M18 6 6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </li>
+        {% endfor %}
+    </ul>
+{% endif %}

@@ -18,3 +18,15 @@ vich_uploader:
       inject_on_load: false
       delete_on_update: true
       delete_on_remove: true
+
+    # Fichiers attachés au chat de l'assistant IA (Ket). Stockés HORS public/
+    # (uploads utilisateur arbitraires) : jamais servis directement par URL,
+    # seulement via la route de téléchargement fail-closed du contrôleur IA.
+    assistant_fichiers:
+      uri_prefix: /_private/assistant
+      upload_destination: "%kernel.project_dir%/var/uploads/assistant"
+      namer: Vich\UploaderBundle\Naming\SmartUniqueNamer
+
+      inject_on_load: false
+      delete_on_update: true
+      delete_on_remove: true

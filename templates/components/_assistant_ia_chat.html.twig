@@ -15,6 +15,8 @@
      data-assistant-chat-dialog-context-url-value="{{ path('admin.assistantia.api.dialog_context', {idEntreprise: idEntreprise}) }}"
      data-assistant-chat-visual-context-url-value="{{ path('admin.assistantia.api.visual_context', {idEntreprise: idEntreprise}) }}"
      data-assistant-chat-contexte-url-value="{{ path('admin.assistantia.api.contexte.attach', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
+     data-assistant-chat-fichier-url-value="{{ path('admin.assistantia.api.fichier.attach', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
+     data-assistant-chat-fichier-limits-value="{{ fichierLimits|default(attached_file_limits())|json_encode|e('html_attr') }}"
      data-assistant-chat-id-entreprise-value="{{ idEntreprise }}"
      data-assistant-chat-id-invite-value="{{ idInvite }}"
      data-assistant-chat-id-conversation-value="{{ conversation.id }}"
@@ -310,6 +312,62 @@
         }
         .jsb-ai-chat .aic-chip-remove:hover { background:#0047AB; color:#ffffff; }
         .jsb-ai-chat .aic-chip-remove:focus-visible { outline:2px solid #0047AB; outline-offset:1px; }
+
+        /* ── Pièces jointes (puces fichiers) ── */
+        /* Fond neutre distinct des puces objets (cobalt subtil) pour différencier
+           d'un coup d'œil les deux natures de contexte. */
+        .jsb-ai-chat .aic-fichiers:empty { display:none; }
+        .jsb-ai-chat .aic-fichier-chip { background:#eef1f4; }
+        .jsb-ai-chat .aic-chip-download { color:#0047AB; text-decoration:none; }
+        .jsb-ai-chat .aic-chip-download:hover { text-decoration:underline; }
+        .jsb-ai-chat .aic-chip-size { flex:0 0 auto; color:#6c757d; font-size:.7rem; }
+        /* Puce en cours de chargement : spinner + libellé atténué, non interactive. */
+        .jsb-ai-chat .aic-fichier-chip.is-loading { color:#6c757d; }
+        .jsb-ai-chat .aic-fichier-chip.is-loading .aic-chip-remove { visibility:hidden; }
+        .jsb-ai-chat .aic-chip-spinner {
+            width:13px; height:13px; flex:0 0 auto; border-radius:50%;
+            border:2px solid #ced4da; border-top-color:#0047AB;
+            animation: aic-spin .7s linear infinite;
+        }
+        .jsb-ai-chat .aic-fichier-chip.is-error { background:#f8d7da; color:#842029; }
+        @keyframes aic-spin { to { transform:rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) {
+            .jsb-ai-chat .aic-chip-spinner { animation:none; }
+        }
+
+        /* Bouton « joindre un fichier » (trombone) : jumeau du bouton micro. */
+        .jsb-ai-chat .aic-attach {
+            flex:0 0 auto; width:44px; height:44px; border-radius:10px; border:none; cursor:pointer;
+            background:transparent; color:#6c757d; display:flex; align-items:center; justify-content:center;
+            transition: background-color .15s ease, color .15s ease;
+        }
+        .jsb-ai-chat .aic-attach:hover { background:#e8f0fb; color:#0047AB; }
+        .jsb-ai-chat .aic-attach:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+
+        /* Agrafe fichiers d'une bulle utilisateur : liseré vert discret (distinct
+           de l'agrafe objets) pour signaler « des pièces étaient jointes ». */
+        .jsb-ai-chat .aic-msg-attach--file { cursor:default; }
+        .jsb-ai-chat .aic-msg-attach--file:hover { border-color:#0f5132; color:#0f5132; }
+
+        /* Panneau de téléchargement des pièces jointes proposé par Ket (uiAction
+           files-download) : boutons-liens vers la route sécurisée. */
+        .jsb-ai-chat .aic-files-dl {
+            align-self:flex-start; max-width:96%; margin:.1rem 0 .55rem;
+            padding:.7rem .85rem; background:#ffffff; border:1px solid #dee2e6;
+            border-left:3px solid #0047AB; border-radius:10px;
+            display:flex; flex-direction:column; gap:.4rem;
+        }
+        .jsb-ai-chat .aic-files-dl-title { margin:0; font-size:.8rem; font-weight:600; color:#6c757d; }
+        .jsb-ai-chat .aic-file-dl-btn {
+            display:inline-flex; align-items:center; gap:.45rem; align-self:flex-start; max-width:100%;
+            padding:.4rem .75rem; border:1px solid #ced4da; border-radius:8px;
+            background:#f8f9fa; color:#0047AB; text-decoration:none; font-size:.83rem; font-weight:600;
+            transition:background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+        }
+        .jsb-ai-chat .aic-file-dl-btn:hover { background:#e8f0fb; border-color:#0047AB; }
+        .jsb-ai-chat .aic-file-dl-btn:focus-visible { outline:none; box-shadow:0 0 0 3px rgba(0,71,171,.35); }
+        .jsb-ai-chat .aic-file-dl-btn svg { flex:0 0 auto; }
+        .jsb-ai-chat .aic-file-dl-label { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .jsb-ai-chat .aic-inputbox {
             display:flex; align-items:flex-end; gap:.5rem;
             border:1px solid #ced4da; border-radius:12px; background:#ffffff;
@@ -458,6 +516,18 @@
                             <span>{{ message.contexteObjets|length }}</span>
                         </button>
                     {% endif %}
+                    {# Agrafe des pièces jointes à l'envoi de CE message (instantané immuable). #}
+                    {% if not estAssistant and message.fichiersJoints %}
+                        <span class="aic-msg-attach aic-msg-attach--file"
+                              title="{{ message.fichiersJoints|map(f => f.nom)|join(', ') }}"
+                              aria-label="{{ message.fichiersJoints|length }} fichier{{ message.fichiersJoints|length > 1 ? 's' : '' }} joint{{ message.fichiersJoints|length > 1 ? 's' : '' }} à l'envoi de ce message">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v5h5"/>
+                            </svg>
+                            <span>{{ message.fichiersJoints|length }}</span>
+                        </span>
+                    {% endif %}
                     {# Heure seule pour les messages du jour, date + heure au-delà. #}
                     {% set memeJour = message.createdAt|date('Y-m-d') == 'now'|date('Y-m-d') %}
                     <span class="aic-msg-time">{{ message.createdAt|date(memeJour ? 'H:i' : 'd/m/Y H:i') }}</span>
@@ -504,6 +574,18 @@
                 fichesContextes: fichesContextes|default({}),
             } only %}
         </div>
+        {# Pièces jointes : même mécanique (re-rendu serveur, remplacement innerHTML). #}
+        <div class="aic-context aic-fichiers" data-assistant-chat-target="fichierBar">
+            {% include 'components/_assistant_ia_chat_fichiers.html.twig' with {
+                conversation: conversation,
+                idEntreprise: idEntreprise,
+            } only %}
+        </div>
+        {# Champ fichier caché piloté par le bouton trombone (multi-sélection). #}
+        <input type="file" multiple hidden
+               data-assistant-chat-target="fichierInput"
+               data-action="change->assistant-chat#onFichiersChoisis"
+               aria-hidden="true" tabindex="-1">
         <div class="aic-inputbox">
             <span class="aic-input-ic" aria-hidden="true">
                 <twig:UX:Icon name="{{ resolve_icon_name('feedback') }}" style="width:20px;height:20px;" />
@@ -522,6 +604,18 @@
             {# Infobulle sombre (pattern JS Brokers .jsb-ctx-tip.commit-tip) au lieu
                du title natif : titre blanc + explication grise. Copie posée en
                data-* et rendue par le contrôleur. #}
+            {# Joindre un fichier : déclenche le champ fichier caché. SVG trombone
+               inline (auto-porté) — pas d'ux_icon serveur dans ce partial injecté. #}
+            <button type="button" class="aic-attach"
+                    data-action="click->assistant-chat#ouvrirSelecteurFichier"
+                    aria-label="Joindre un ou plusieurs fichiers"
+                    title="Joindre un fichier">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                     stroke-linejoin="round" aria-hidden="true">
+                    <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                </svg>
+            </button>
             <button type="button" class="aic-mic"
                     data-assistant-chat-target="mic"
                     data-action="click->assistant-chat#toggleDictation"

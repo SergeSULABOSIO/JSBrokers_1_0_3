@@ -63,6 +63,25 @@ final class GeminiAiEngine implements AiEngineInterface
             $request->messages,
         );
 
+        // Pièces jointes lisibles nativement (PDF scannés, images) : jointes au
+        // DERNIER tour utilisateur en inlineData, pour que Gemini les lise par
+        // vision avec la question courante (elles restent en contexte des rounds
+        // de function calling suivants).
+        if ($request->piecesNatives !== []) {
+            for ($i = count($contents) - 1; $i >= 0; $i--) {
+                if (($contents[$i]['role'] ?? null) !== 'user') {
+                    continue;
+                }
+                foreach ($request->piecesNatives as $piece) {
+                    $contents[$i]['parts'][] = ['inlineData' => [
+                        'mimeType' => $piece['mimeType'],
+                        'data'     => $piece['donneesBase64'],
+                    ]];
+                }
+                break;
+            }
+        }
+
         $refused = false;
         $toolUsed = null;
         $actions = [];

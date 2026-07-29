@@ -48,12 +48,18 @@ final class MutationReferences
         return new self(false);
     }
 
-    /** Une valeur de champ est-elle un renvoi vers une autre opération ? */
+    /**
+     * Une valeur de champ est-elle un renvoi vers une autre opération ?
+     * Le marqueur « @fichier:<id> » partage le préfixe « @ » mais N'EST PAS un
+     * renvoi (c'est une pièce jointe à injecter) : il est explicitement exclu,
+     * sinon il serait pris pour une étiquette introuvable (faux « manquant »).
+     */
     public static function estReference(mixed $valeur): bool
     {
         return is_string($valeur)
             && strlen($valeur) > 1
-            && str_starts_with($valeur, self::PREFIXE);
+            && str_starts_with($valeur, self::PREFIXE)
+            && !ConversationFichierRef::estMarqueur($valeur);
     }
 
     /** Étiquette normalisée d'une valeur de référence (« @client » => « client »). */

@@ -105,8 +105,12 @@ final class PreparerOperationsTool implements AiToolInterface
                                     . 'l\'utilisateur (create/edit). Les relations se donnent par id (ex. '
                                     . '{"portefeuille": 42}) ; une relation MULTIPLE se donne par liste d\'id '
                                     . '(ex. {"partenaires": [7, 12]}) ; une relation vers une création du même '
-                                    . 'plan se donne par son étiquette (ex. {"client": "@client"}). Jamais l\'id '
-                                    . 'ni les champs d\'audit.',
+                                    . 'plan se donne par son étiquette (ex. {"client": "@client"}). Pour DÉPOSER '
+                                    . 'une PIÈCE JOINTE de la conversation dans un champ fichier (ex. le champ '
+                                    . '"fichier" d\'un Document), donne au champ la valeur "@fichier:<id>" où <id> '
+                                    . 'est l\'identifiant du fichier attaché indiqué dans la section PIÈCES JOINTES '
+                                    . '(ex. créer un Document d\'un avenant : {"nom":"Police signée","avenant":42,'
+                                    . '"fichier":"@fichier:7"}). Jamais l\'id ni les champs d\'audit.',
                                 'additionalProperties' => ['type' => ['string', 'number', 'boolean', 'array']],
                             ],
                             // Structure en ARRAY (et non map dynamique) : le nom de la

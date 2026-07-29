@@ -63,6 +63,14 @@ final class TokenPricing
      */
     public const CONTEXTE_IA_RATIO = 0.8;
 
+    /**
+     * Assistant IA : coût d'un FICHIER attaché au contexte d'une conversation,
+     * exprimé en RATIO du poids d'un message (décision produit : 100 % — un
+     * fichier extrait et injecté pèse davantage qu'un simple objet). Facturé une
+     * seule fois, à l'attache ; suit le poids message paramétré en console.
+     */
+    public const FICHIER_IA_RATIO = 1.0;
+
     /** Poids en tokens d'une entité envoyée vers le frontend (LECTURE / sortie). */
     public const READ_WEIGHT = 2;
 

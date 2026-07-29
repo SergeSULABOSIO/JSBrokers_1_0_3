@@ -271,6 +271,7 @@ class KetMutationTest extends TestCase
             $cascade ?? $this->createMock(CascadeImpactAnalyzer::class),
             new ChampsObligatoiresInspector($emResolved, $formsResolved),
             new FormTreeInspector($formsResolved, $emResolved),
+            new \App\Ai\Fichier\ConversationFichierResolver($this->createMock(\Vich\UploaderBundle\Storage\StorageInterface::class)),
         );
     }
 
