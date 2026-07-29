@@ -385,27 +385,55 @@ class JSBDynamicSearchService
 
             // CAS 0 bis : Statut de souscription (Cotation uniquement). Une cotation est
             // « souscrite » dès qu'elle porte au moins un avenant (= transformée en police),
-            // « en attente » sinon — même définition que l'indicateur calculé statutSouscription.
-            // La présence d'un avenant est exprimable en SQL (Avenant.cotation est une vraie
-            // relation) : on filtre par EXISTS / NOT EXISTS sur une sous-requête d'avenants,
-            // sans service en mémoire ni tri spécial. Ce CAS compose automatiquement avec les
-            // autres critères, le périmètre portefeuille, la pagination et le comptage.
+            // « en attente » ou « caduque » sinon — même définition que l'indicateur calculé
+            // statutSouscription / isCotationConcurrenteCaduque. La présence d'un avenant est
+            // exprimable en SQL (Avenant.cotation est une vraie relation) : on filtre par
+            // EXISTS / NOT EXISTS sur des sous-requêtes d'avenants, sans service en mémoire ni
+            // tri spécial. Ce CAS compose automatiquement avec les autres critères, le périmètre
+            // portefeuille, la pagination et le comptage.
+            //
+            // Partition des cotations (mutuellement exclusive et exhaustive) :
+            //  - souscrites : la cotation porte au moins un avenant.
+            //  - en attente : la cotation N'est PAS souscrite ET sa piste non plus (aucune sœur
+            //    souscrite) — proposition encore en course, effort commercial à fournir.
+            //  - caduques   : la cotation N'est PAS souscrite MAIS sa piste l'est (une sœur porte
+            //    un avenant = marché attribué à un concurrent) — sans suite, hors course.
             if ($field === CotationSouscriptionScope::CRITERION_KEY) {
                 $statut = is_array($value) ? ($value['value'] ?? null) : $value;
                 if (!CotationSouscriptionScope::estValide(is_string($statut) ? $statut : null)) {
                     continue; // valeur vide/inconnue (« Toutes ») : filtre ignoré
                 }
 
+                // Sous-requête A : les cotations DIRECTEMENT souscrites (au moins un avenant).
                 $avAlias = 'souscription_av' . $suffix;
-                $sousRequete = $this->em->createQueryBuilder()
+                $cotationsSouscrites = $this->em->createQueryBuilder()
                     ->select("IDENTITY({$avAlias}.cotation)")
                     ->from(\App\Entity\Avenant::class, $avAlias)
                     ->getDQL();
 
                 if ($statut === CotationSouscriptionScope::STATUT_SOUSCRITES) {
-                    $qb->andWhere($qb->expr()->in("{$rootAlias}.id", $sousRequete));
-                } else {
-                    $qb->andWhere($qb->expr()->notIn("{$rootAlias}.id", $sousRequete));
+                    $qb->andWhere($qb->expr()->in("{$rootAlias}.id", $cotationsSouscrites));
+                    continue;
+                }
+
+                // « en attente » et « caduques » : la cotation elle-même n'est jamais souscrite.
+                $qb->andWhere($qb->expr()->notIn("{$rootAlias}.id", $cotationsSouscrites));
+
+                // On distingue par l'état de la PISTE : est-elle « bound » (au moins une de ses
+                // cotations souscrite) ? Sous-requête B, alias distincts pour éviter toute
+                // collision avec la sous-requête A ci-dessus.
+                $avpAlias = 'souscription_avp' . $suffix;
+                $cotpAlias = 'souscription_cotp' . $suffix;
+                $pistesBound = $this->em->createQueryBuilder()
+                    ->select("IDENTITY({$cotpAlias}.piste)")
+                    ->from(\App\Entity\Avenant::class, $avpAlias)
+                    ->join("{$avpAlias}.cotation", $cotpAlias)
+                    ->getDQL();
+
+                if ($statut === CotationSouscriptionScope::STATUT_CADUQUES) {
+                    $qb->andWhere($qb->expr()->in("IDENTITY({$rootAlias}.piste)", $pistesBound));
+                } else { // STATUT_EN_ATTENTE
+                    $qb->andWhere($qb->expr()->notIn("IDENTITY({$rootAlias}.piste)", $pistesBound));
                 }
                 continue;
             }

@@ -143,13 +143,13 @@ class CoherenceChipsAssistantTest extends KernelTestCase
         $chargement->setEntreprise($entreprise);
         $em->persist($chargement);
 
-        // Cotation « en attente » (AUCUN avenant) DANS le portefeuille de l'invité : la
-        // cotation ci-dessus deviendra « souscrite » (ses 4 avenants), celle-ci reste « en
-        // attente ». De quoi éprouver les deux chips de souscription de la rubrique Propositions.
-        $cotationEnAttente = (new Cotation())->setNom('Cotation En Attente')->setDuree(365);
-        $cotationEnAttente->setPiste($piste);
-        $cotationEnAttente->setEntreprise($entreprise);
-        $em->persist($cotationEnAttente);
+        // Cotation concurrente CADUQUE (AUCUN avenant) sur la MÊME piste que la souscrite : la
+        // cotation ci-dessus deviendra « souscrite » (ses 4 avenants), donc sa piste est « bound »
+        // et cette proposition rivale a perdu le marché (« caduque », plus « en attente »).
+        $cotationCaduque = (new Cotation())->setNom('Cotation Caduque')->setDuree(365);
+        $cotationCaduque->setPiste($piste);
+        $cotationCaduque->setEntreprise($entreprise);
+        $em->persist($cotationCaduque);
 
         // Un avenant par fenêtre d'échéance (échu / sous 30 j / 31-60 j / au-delà de 60 j).
         foreach ([['ECHU', '-10 days'], ['J10', '+10 days'], ['J45', '+45 days'], ['J90', '+90 days']] as [$ref, $delta]) {
@@ -170,6 +170,14 @@ class CoherenceChipsAssistantTest extends KernelTestCase
             ->setDescriptionDuRisque('Risque en cours')->setExercice(2026)
             ->setClient($client)->setEntreprise($entreprise)->setInvite($invite);
         $em->persist($pisteEnCours);
+
+        // Cotation VRAIMENT « en attente » : non souscrite, sur une piste NON bound (aucune
+        // sœur souscrite) → encore en course. Distincte de la caduque ci-dessus. Ne change pas
+        // le statut de pisteEnCours (toujours sans avenant = « en cours »).
+        $cotationEnAttente = (new Cotation())->setNom('Cotation En Attente')->setDuree(365);
+        $cotationEnAttente->setPiste($pisteEnCours);
+        $cotationEnAttente->setEntreprise($entreprise);
+        $em->persist($cotationEnAttente);
 
         // Deux tranches impayées : une échue, une à échoir (statut dérivé, filtre en mémoire).
         foreach ([['Tranche échue', 50, '-10 days'], ['Tranche à échoir', 0.5, '+10 days']] as [$nom, $pct, $delta]) {
@@ -375,12 +383,16 @@ class CoherenceChipsAssistantTest extends KernelTestCase
             );
         }
 
-        // Preuve que chaque chip isole bien sa moitié : une cotation souscrite (avec avenants)
-        // et une en attente (sans) coexistent dans le portefeuille de l'invité.
+        // Preuve que chaque chip isole bien sa part : dans le portefeuille de l'invité
+        // coexistent une cotation souscrite (avec avenants, sur « Piste Cohérence »), une
+        // caduque (rivale non souscrite sur cette MÊME piste bound) et une en attente (non
+        // souscrite sur « Piste En Cours », piste non bound). Les trois groupes sont disjoints.
         $souscrites = $this->compter()->execute(['entite' => 'Cotation', 'validation' => CotationSouscriptionScope::STATUT_SOUSCRITES], $scope);
         $enAttente = $this->compter()->execute(['entite' => 'Cotation', 'validation' => CotationSouscriptionScope::STATUT_EN_ATTENTE], $scope);
+        $caduques = $this->compter()->execute(['entite' => 'Cotation', 'validation' => CotationSouscriptionScope::STATUT_CADUQUES], $scope);
         $this->assertSame(1, $souscrites->data['count'], 'La seule cotation à avenants du portefeuille.');
-        $this->assertSame(1, $enAttente->data['count'], 'La seule cotation sans avenant du portefeuille (« Cotation Voisine » est hors périmètre).');
+        $this->assertSame(1, $enAttente->data['count'], 'La seule cotation sans avenant sur une piste non bound (« Cotation Voisine » est hors périmètre).');
+        $this->assertSame(1, $caduques->data['count'], 'La seule proposition concurrente perdante (même piste que la souscrite).');
     }
 
     /**
