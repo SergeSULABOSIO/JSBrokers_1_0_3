@@ -27,6 +27,15 @@ final class CotationSouscriptionScope
     public const STATUT_EN_ATTENTE = 'en_attente';
 
     /**
+     * Libellés SINGULIERS du statut de souscription d'UNE cotation, repris EXACTEMENT de
+     * l'indicateur calculé Cotation.statutSouscription. Source unique partagée par la stratégie
+     * d'indicateur (écrans + fiche Ket) et par les items de rechercher_entites : une cotation
+     * bound doit s'afficher « Souscrite » PARTOUT, jamais confondue avec une proposition.
+     */
+    public const STATUT_LABEL_SOUSCRITE = 'Souscrite';
+    public const STATUT_LABEL_EN_ATTENTE = 'En attente';
+
+    /**
      * @var array<string, string> Valeur du critère => libellé affiché (badge, select du
      *      dialogue avancé, chips). Le vocabulaire reprend EXACTEMENT l'indicateur calculé
      *      Cotation.statutSouscription (« Souscrite » / « En attente »).
@@ -39,6 +48,17 @@ final class CotationSouscriptionScope
     public static function estValide(?string $statut): bool
     {
         return $statut !== null && isset(self::VALEURS[$statut]);
+    }
+
+    /**
+     * Libellé singulier du statut d'UNE cotation d'après sa qualité de bound (au moins un
+     * avenant). Même vocabulaire que l'indicateur calculé Cotation.statutSouscription. Source
+     * unique : la stratégie d'indicateur et rechercher_entites l'utilisent tous les deux, pour
+     * qu'une cotation souscrite ne soit JAMAIS prise pour une proposition en attente.
+     */
+    public static function statutLibelle(bool $bound): string
+    {
+        return $bound ? self::STATUT_LABEL_SOUSCRITE : self::STATUT_LABEL_EN_ATTENTE;
     }
 
     public static function libelle(string $statut): string

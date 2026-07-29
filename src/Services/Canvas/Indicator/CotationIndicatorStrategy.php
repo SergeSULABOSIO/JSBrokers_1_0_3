@@ -3,6 +3,7 @@
 namespace App\Services\Canvas\Indicator;
 
 use App\Entity\Cotation;
+use App\Services\Search\CotationSouscriptionScope;
 use App\Services\ServiceDates;
 use DateTimeImmutable;
 
@@ -26,7 +27,7 @@ class CotationIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'clientDescription' => $this->calculationHelper->getClientDescriptionFromCotation($entity),
             'risqueDescription' => $this->calculationHelper->getRisqueDescriptionFromCotation($entity),
             'contextePiste' => $this->calculationHelper->getCotationContextePiste($entity),
-            'statutSouscription' => $this->calculationHelper->isCotationBound($entity) ? 'Souscrite' : 'En attente',
+            'statutSouscription' => CotationSouscriptionScope::statutLibelle($this->calculationHelper->isCotationBound($entity)),
             'referencePolice' => $this->calculationHelper->getCotationReferencePolice($entity),
             'periodeCouverture' => $this->calculationHelper->getCotationPeriodeCouverture($entity),
             'indemnisationDue' => round($this->calculationHelper->getCotationIndemnisationDue($entity), 2),

@@ -4,7 +4,9 @@ namespace App\Ai\Tool;
 
 use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
+use App\Entity\Cotation;
 use App\Service\Workspace\WorkspaceAccessResolver;
+use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use App\Services\JSBDynamicSearchService;
 use App\Services\Search\AvenantEcheanceScope;
 use App\Services\Search\CotationSouscriptionScope;
@@ -43,6 +45,7 @@ final class RechercherEntitesTool implements AiToolInterface
         private readonly EntiteLibelle $libelleur,
         private readonly EntityManagerInterface $em,
         private readonly PortefeuilleCritereFactory $portefeuilleCritere,
+        private readonly IndicatorCalculationHelper $indicatorHelper,
     ) {
     }
 
@@ -68,7 +71,10 @@ final class RechercherEntitesTool implements AiToolInterface
             . 'ou un statut de transformation (« quelles pistes en cours ? »), afin que la réponse '
             . 'coïncide avec ce que l’utilisateur voit à l’écran. La liste porte par défaut sur le '
             . 'PORTEFEUILLE de l’utilisateur, comme la rubrique affichée (paramètre perimetre). '
-            . 'Renvoie l’identifiant et le libellé de chaque enregistrement.';
+            . 'Renvoie l’identifiant et le libellé de chaque enregistrement ; pour une COTATION, '
+            . 'chaque item porte aussi son statut (« Souscrite » = déjà liée à un avenant, donc '
+            . 'police concrétisée, PAS une simple proposition ; « En attente » = proposition non '
+            . 'validée) : appuie-toi dessus, ne suppose jamais qu’une cotation listée est en attente.';
     }
 
     public function schema(): array
@@ -228,10 +234,14 @@ final class RechercherEntitesTool implements AiToolInterface
                 $lienIgnore = true;
             } elseif (!$this->accessResolver->canRead($scope->invite, $lienType)) {
                 return AiToolResult::horsPerimetre($labels[$lienType]);
-            } elseif (($chemin = $this->cheminVers($fqcn, $lienFqcn)) === null) {
+            } elseif (($chemins = $this->cheminsVers($fqcn, $lienFqcn)) === []) {
                 $lienIgnore = true;
             } else {
-                $lienCriteria[$chemin] = ['operator' => '=', 'value' => $lienId];
+                // Plusieurs chemins peuvent relier les deux entités (ex. Avenant → Client via sa
+                // cotation OU via sa piste de renouvellement) : on les passe TOUS au moteur, qui
+                // matche dès qu'un seul pointe sur la fiche (OR) — sinon le plus court, parfois une
+                // relation secondaire nulle, masquait les enregistrements réellement liés.
+                $lienCriteria[JSBDynamicSearchService::LIEN_MULTI_CHEMINS] = ['paths' => $chemins, 'id' => $lienId];
                 $lien = ['entite' => $lienType, 'id' => $lienId];
             }
         }
@@ -275,10 +285,26 @@ final class RechercherEntitesTool implements AiToolInterface
 
         $items = [];
         foreach ($result['data'] as $entity) {
-            $items[] = [
+            $item = [
                 'id'      => $entity->getId(),
                 'libelle' => $this->libelleur->libelle($entity, $displayField),
             ];
+            // Une COTATION porte son statut de souscription (bound = au moins un avenant), sinon
+            // le modèle, ne voyant qu'un libellé, prend une cotation déjà transformée en police
+            // pour une simple proposition en attente. Même source de vérité que le chip de la
+            // rubrique et l'indicateur calculé (CotationSouscriptionScope / isCotationBound). Une
+            // cotation SOUSCRITE porte en plus sa référence de police et sa période de couverture
+            // (indicateurs calculés) : la preuve CONCRÈTE que la couverture existe, pour que le
+            // modèle n'ait pas à conclure « aucun contrat actif » faute d'être allé plus loin.
+            if ($entity instanceof Cotation) {
+                $bound = $this->indicatorHelper->isCotationBound($entity);
+                $item['statut'] = CotationSouscriptionScope::statutLibelle($bound);
+                if ($bound) {
+                    $item['referencePolice'] = $this->indicatorHelper->getCotationReferencePolice($entity);
+                    $item['periodeCouverture'] = $this->indicatorHelper->getCotationPeriodeCouverture($entity);
+                }
+            }
+            $items[] = $item;
         }
 
         return AiToolResult::ok(array_filter([
@@ -298,23 +324,30 @@ final class RechercherEntitesTool implements AiToolInterface
     }
 
     /**
-     * PLUS COURT chemin de relations *-vers-un reliant $fqcn à $cibleFqcn
-     * (BFS sur les métadonnées Doctrine, profondeur max MAX_PROFONDEUR_LIEN) :
-     * « piste » (direct), « piste.client » (petit-fils → grand-père),
-     * « cotation.piste »… Générique pour TOUT couple d'entités du workspace —
-     * chaque enfant pointant vers son parent en *-vers-un, le chemin remonte
-     * naturellement la généalogie père → fils → petit-fils, quel que soit
-     * l'objet attaché au contexte. Seuls les segments *-vers-un sont traversés
-     * (un segment collection dupliquerait les lignes paginées). Null si aucun
-     * chemin dans la profondeur permise.
+     * TOUS les chemins de relations *-vers-un reliant $fqcn à $cibleFqcn dans la
+     * profondeur permise (MAX_PROFONDEUR_LIEN), chemins SIMPLES (sans repasser par
+     * une classe déjà traversée) : « piste » (direct), « piste.client », « cotation.piste.client »…
+     * Générique pour TOUT couple d'entités du workspace — chaque enfant pointant vers son
+     * parent en *-vers-un, les chemins remontent la généalogie père → fils → petit-fils.
+     *
+     * On renvoie TOUS les chemins, pas seulement le plus court : celui-ci peut emprunter une
+     * relation secondaire souvent NULLE (ex. Avenant.pisteDeRenouvellement → Client, len 2)
+     * tandis que le vrai lien passe plus profond (Avenant.cotation.piste.client, len 3). L'appelant
+     * les combine en OR pour ne manquer aucun enregistrement réellement lié. Seuls les segments
+     * *-vers-un sont traversés (un segment collection dupliquerait les lignes paginées).
+     *
+     * @return string[] Chemins pointillés distincts ([] si aucun dans la profondeur permise).
      */
-    private function cheminVers(string $fqcn, string $cibleFqcn): ?string
+    private function cheminsVers(string $fqcn, string $cibleFqcn): array
     {
-        $queue = [[$fqcn, []]];
-        $visites = [$fqcn => true];
+        $chemins = [];
+        // DFS sur les chemins simples : chaque état porte sa propre liste de classes visitées
+        // (pas de visite globale) pour explorer les chemins alternatifs, tout en évitant les
+        // cycles à l'intérieur d'un même chemin.
+        $pile = [[$fqcn, [], [$fqcn => true]]];
 
-        while ($queue !== []) {
-            [$classe, $chemin] = array_shift($queue);
+        while ($pile !== []) {
+            [$classe, $chemin, $visites] = array_pop($pile);
             if (\count($chemin) >= self::MAX_PROFONDEUR_LIEN) {
                 continue;
             }
@@ -324,16 +357,17 @@ final class RechercherEntitesTool implements AiToolInterface
                     continue;
                 }
                 $target = $metadata->getAssociationTargetClass($name);
+                $nouveauChemin = [...$chemin, $name];
                 if ($target === $cibleFqcn) {
-                    return implode('.', [...$chemin, $name]);
+                    $chemins[] = implode('.', $nouveauChemin);
+                    continue; // cible atteinte : inutile de la dépasser
                 }
                 if (!isset($visites[$target])) {
-                    $visites[$target] = true;
-                    $queue[] = [$target, [...$chemin, $name]];
+                    $pile[] = [$target, $nouveauChemin, $visites + [$target => true]];
                 }
             }
         }
 
-        return null;
+        return array_values(array_unique($chemins));
     }
 }

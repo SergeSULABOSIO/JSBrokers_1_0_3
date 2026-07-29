@@ -309,7 +309,7 @@ class PaiementsPrimeToolTest extends TestCase
         $libelleur = new EntiteLibelle($em);
         $scope = $this->makeScope();
 
-        $rechercher = new RechercherEntitesTool($resolver, $search, $lexique, $libelleur, $em, $this->fabriquePortefeuille());
+        $rechercher = new RechercherEntitesTool($resolver, $search, $lexique, $libelleur, $em, $this->fabriquePortefeuille(), $this->createMock(\App\Services\Canvas\Indicator\IndicatorCalculationHelper::class));
         $compter = new CompterEntitesTool($resolver, $search, $lexique, $this->fabriquePortefeuille());
         $lireFiche = new LireFicheTool(
             $resolver,

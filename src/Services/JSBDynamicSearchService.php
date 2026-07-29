@@ -18,6 +18,15 @@ use Doctrine\ORM\EntityManagerInterface;
 
 class JSBDynamicSearchService
 {
+    /**
+     * Critère synthétique « lien multi-chemins » : restreint aux enregistrements reliés à une
+     * fiche par AU MOINS un chemin de relations to-one (OR). Posé par rechercher_entites (lieA)
+     * quand plusieurs chemins mènent à l'entité de rattachement — le plus court n'étant pas
+     * toujours le bon (ex. Avenant → Client via pisteDeRenouvellement.client, souvent nul, OU via
+     * cotation.piste.client, le vrai lien). Valeur : ['paths' => string[], 'id' => int].
+     */
+    public const LIEN_MULTI_CHEMINS = '__lien_multi_chemins__';
+
     private EntityManagerInterface $em;
     private LoggerInterface $logger;
 
@@ -336,6 +345,40 @@ class JSBDynamicSearchService
                 if (!empty($orParts)) {
                     $qb->andWhere($qb->expr()->orX(...$orParts))
                        ->setParameter('scopeInvite' . $suffix, $inviteId);
+                }
+                continue;
+            }
+
+            // CAS 0 quater : Lien MULTI-CHEMINS (rechercher_entites, paramètre lieA). Une même
+            // entité peut atteindre l'entité de rattachement par PLUSIEURS chemins de relations
+            // to-one — et le plus court n'est pas forcément le bon : un Avenant rejoint un Client
+            // par pisteDeRenouvellement.client (relation de renouvellement, NULLE pour une police
+            // ordinaire) ET par cotation.piste.client (le vrai lien). On matche donc dès qu'AU
+            // MOINS un chemin pointe sur l'id demandé (OR), exactement comme le périmètre
+            // portefeuille. Chaque chemin est joint en leftJoin (associations to-one : aucun
+            // doublon de ligne), les alias étant dédupliqués/partagés par joinPath.
+            if ($field === self::LIEN_MULTI_CHEMINS) {
+                $paths = is_array($value) ? ($value['paths'] ?? []) : [];
+                $lienId = is_array($value) ? ($value['id'] ?? null) : null;
+                if ($lienId === null || $lienId === '' || !is_array($paths) || $paths === []) {
+                    continue; // rien à appliquer (aucun chemin ou id manquant)
+                }
+
+                $orParts = [];
+                foreach ($paths as $path) {
+                    $finalAlias = $this->joinPath($qb, $rootAlias, $metadata, (string) $path, $joinedEntities, $suffix);
+                    if ($finalAlias === null) {
+                        $this->logger->warning('[JSBDynamicSearch] Chemin de lien invalide ignoré.', [
+                            'entity' => $entityClass, 'path' => $path,
+                        ]);
+                        continue;
+                    }
+                    $orParts[] = $qb->expr()->eq("{$finalAlias}.id", ':lienMulti' . $suffix);
+                }
+
+                if (!empty($orParts)) {
+                    $qb->andWhere($qb->expr()->orX(...$orParts))
+                       ->setParameter('lienMulti' . $suffix, $lienId);
                 }
                 continue;
             }
