@@ -5,10 +5,12 @@ namespace App\Services\Canvas\Provider\Entity;
 use App\Entity\Assureur;
 use App\Entity\Avenant;
 use App\Entity\ChargementPourPrime;
+use App\Entity\Client;
 use App\Entity\Cotation;
 use App\Entity\Document;
 use App\Entity\Piste;
 use App\Entity\Portefeuille;
+use App\Entity\Risque;
 use App\Entity\RevenuPourCourtier;
 use App\Entity\Tache;
 use App\Entity\Tranche;
@@ -46,6 +48,11 @@ class CotationEntityCanvasProvider implements EntityCanvasProviderInterface
                 ["code" => "createdAt", "intitule" => "Créée le", "type" => "Date"],
                 ["code" => "assureur", "intitule" => "Assureur", "type" => "Relation", "targetEntity" => Assureur::class, "displayField" => "nom"],
                 ["code" => "piste", "intitule" => "Piste", "type" => "Relation", "targetEntity" => Piste::class, "displayField" => "nom"],
+                // Relations dérivées de la piste, exposées comme critères de recherche avancée
+                // (chemins de relation traversés par le moteur, cf. JSBDynamicSearchService
+                // SOUS-CAS 2.1). Même motif que « piste.client.portefeuille » ci-dessous.
+                ["code" => "piste.risque", "intitule" => "Risque", "type" => "Relation", "targetEntity" => Risque::class, "displayField" => "nomComplet"],
+                ["code" => "piste.client", "intitule" => "Client", "type" => "Relation", "targetEntity" => Client::class, "displayField" => "nom"],
                 ["code" => "piste.client.portefeuille", "intitule" => "Portefeuille", "type" => "Relation", "targetEntity" => Portefeuille::class, "displayField" => "nom"],
                 ["code" => "taches", "intitule" => "Tâches", "type" => "Collection", "targetEntity" => Tache::class, "displayField" => "description"],
                 ["code" => "chargements", "intitule" => "Chargements", "type" => "Collection", "targetEntity" => ChargementPourPrime::class, "displayField" => "nom"],
