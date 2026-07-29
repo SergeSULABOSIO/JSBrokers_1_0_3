@@ -101,7 +101,10 @@ class RechercherEntitesCotationStatutTest extends KernelTestCase
         // Mayfair : bound (avenant déjà en place). SUNU et SFA CONGO : propositions en attente.
         foreach (['Mayfair' => true, 'SUNU' => false, 'SFA CONGO' => false] as $nom => $bound) {
             $cotation = (new Cotation())->setNom('Proposition RC Auto - ' . $nom)->setDuree(365);
-            $cotation->setPiste($piste)->setEntreprise($entreprise);
+            $cotation->setEntreprise($entreprise);
+            // addCotation synchronise les DEUX côtés : sans em->clear(), la piste gardée en
+            // mémoire doit connaître ses cotations sœurs (détection « concurrente caduque »).
+            $piste->addCotation($cotation);
             $em->persist($cotation);
 
             if ($bound) {
@@ -152,10 +155,16 @@ class RechercherEntitesCotationStatutTest extends KernelTestCase
         // La cotation souscrite porte la PREUVE concrète de la police : référence + période.
         $this->assertSame('POL-Mayfair', $itemParLibelle[$nomBound]['referencePolice'] ?? null);
         $this->assertArrayHasKey('periodeCouverture', $itemParLibelle[$nomBound]);
-        // Une cotation en attente n'a ni police ni période (rien à inventer).
+        // Une cotation en attente n'a ni police ni période (rien à inventer). Comme une AUTRE
+        // proposition de la MÊME piste (Mayfair) est souscrite, les concurrentes sont « sans
+        // suite » : marché attribué, plus d'opportunité à relancer.
         foreach (['Proposition RC Auto - SUNU', 'Proposition RC Auto - SFA CONGO'] as $nomEnAttente) {
             $this->assertArrayNotHasKey('referencePolice', $itemParLibelle[$nomEnAttente]);
+            $this->assertArrayHasKey('suivi', $itemParLibelle[$nomEnAttente], 'Une proposition concurrente perdante doit être marquée sans suite.');
+            $this->assertStringContainsString('Sans suite', $itemParLibelle[$nomEnAttente]['suivi']);
         }
+        // La cotation souscrite (le gagnant) n'est évidemment PAS « sans suite ».
+        $this->assertArrayNotHasKey('suivi', $itemParLibelle[$nomBound]);
 
         // La cotation Mayfair est BOUND (avenant) → « Souscrite », jamais « En attente ».
         $this->assertSame(
