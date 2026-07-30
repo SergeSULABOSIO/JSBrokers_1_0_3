@@ -9,7 +9,14 @@
   est portée par le contrôleur Stimulus `assistant-chat` (instancié
   automatiquement dans le HTML injecté).
 #}
+{#
+  Thème du chat : 'light' / 'dark' si l'utilisateur a tranché (colonne
+  Utilisateur::$themeAssistant), 'auto' sinon. Le CSS ne réagit qu'à "dark" ;
+  'auto' est résolu par le contrôleur Stimulus (préférence système du poste) dès
+  connect(), avant le premier rendu visuel.
+#}
 <div class="jsb-ai-chat"
+     data-aic-theme="{{ themeAssistant|default('auto') }}"
      data-controller="assistant-chat"
      data-assistant-chat-send-url-value="{{ path('admin.assistantia.api.message.send', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
      data-assistant-chat-dialog-context-url-value="{{ path('admin.assistantia.api.dialog_context', {idEntreprise: idEntreprise}) }}"
@@ -17,34 +24,134 @@
      data-assistant-chat-contexte-url-value="{{ path('admin.assistantia.api.contexte.attach', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
      data-assistant-chat-fichier-url-value="{{ path('admin.assistantia.api.fichier.attach', {idEntreprise: idEntreprise, idConversation: conversation.id}) }}"
      data-assistant-chat-fichier-limits-value="{{ fichierLimits|default(attached_file_limits())|json_encode|e('html_attr') }}"
+     data-assistant-chat-theme-url-value="{{ path('admin.assistantia.api.theme') }}"
      data-assistant-chat-id-entreprise-value="{{ idEntreprise }}"
      data-assistant-chat-id-invite-value="{{ idInvite }}"
      data-assistant-chat-id-conversation-value="{{ conversation.id }}"
      data-assistant-chat-assistant-nom-value="{{ assistantNom }}"
      data-action="assistant:contexte.attach-request->assistant-chat#attachFromEvent">
     <style>
-        .jsb-ai-chat { display:flex; flex-direction:column; height:100%; min-height:0; background:#f8f9fa; }
+        /* ══ Jetons de couleur du chat ══════════════════════════════════════════
+           Le chat est le seul écran de l'application à proposer un mode sombre
+           (confort visuel : c'est l'interface la plus longuement regardée). Il
+           est donc entièrement AUTO-PORTÉ : toutes ses couleurs passent par ces
+           jetons, et le mode sombre ne redéfinit QUE ces jetons — aucun des ~90
+           sélecteurs ci-dessous n'est dupliqué.
+
+           Les jetons sont nommés par RÔLE, jamais par valeur : deux couleurs
+           identiques en clair peuvent divercher en sombre. Exemple : le fond du
+           panneau et le survol d'une ligne de tableau valent tous deux #f8f9fa
+           en clair, mais en sombre l'élévation s'inverse (le fond s'assombrit,
+           le survol s'éclaircit) — d'où --aic-bg vs --aic-row-hover. */
+        .jsb-ai-chat {
+            /* Surfaces, du plus bas au plus élevé */
+            --aic-bg:#f8f9fa;              /* fond du panneau, encadrés encastrés */
+            --aic-surface:#ffffff;         /* entête, composer, bulle assistant, cartes */
+            --aic-surface-raised:#e9ecef;  /* survol neutre, badge neutre, plan annulé */
+            --aic-btn-neutral-bg:#f8f9fa;  /* bouton neutre POSÉ sur une carte blanche */
+            --aic-code-bg:#f1f3f5;
+            --aic-chip-file-bg:#eef1f4;
+            --aic-input-bg:#ffffff;
+            --aic-row-hover:#f8f9fa;       /* survol de ligne : s'ÉCLAIRCIT en sombre */
+            /* Textes */
+            --aic-text:#212529;
+            --aic-text-strong:#343a40;
+            --aic-text-2:#495057;
+            --aic-muted:#6c757d;
+            --aic-input-text:#000000;
+            /* Bordures : `strong` porte les contours de composants (WCAG 1.4.11),
+               `border` et `subtle` sont décoratifs. */
+            --aic-border:#dee2e6;
+            --aic-border-strong:#ced4da;
+            --aic-border-subtle:#e9ecef;
+            /* Marque. `solid` reste le cobalt de la charte dans les DEUX modes
+               (aplat des boutons pleins, blanc dessus = 8.44:1) ; `accent` est la
+               version lisible en texte/icône/liseré, qui s'éclaircit en sombre. */
+            --aic-accent:#0047AB;
+            --aic-accent-solid:#0047AB;
+            --aic-on-accent:#ffffff;
+            --aic-accent-hover:#003380;
+            --aic-accent-subtle:#e8f0fb;
+            --aic-on-subtle:#0047AB;
+            --aic-ring:rgba(0,71,171,.35);
+            --aic-shadow-hover:rgba(0,71,171,.12);
+            --aic-shadow-chip:rgba(0,71,171,.25);
+            /* États sémantiques (retours utilisateur uniquement) */
+            --aic-success-bg:#d1e7dd; --aic-success-fg:#0f5132;
+            --aic-danger-bg:#f8d7da;  --aic-danger-fg:#842029;
+            --aic-warning-bg:#fff3cd; --aic-warning-fg:#664d03;
+            --aic-warning-line:#ffc107;
+            --aic-mic-pulse:rgba(132,32,41,.45);
+            --aic-mic-fade:rgba(132,32,41,0);
+
+            display:flex; flex-direction:column; height:100%; min-height:0; background:var(--aic-bg);
+        }
+
+        /* ══ Mode sombre ════════════════════════════════════════════════════════
+           SEUL endroit où les couleurs sombres sont définies. Pas de
+           @media (prefers-color-scheme) ici : le contrôleur Stimulus résout le
+           thème (choix explicite de l'utilisateur > préférence système) et écrit
+           toujours data-aic-theme sur cette racine → une seule source de vérité,
+           et les puces re-rendues par le serveur héritent par simple cascade.
+           Contrastes WCAG AA vérifiés par calcul (texte courant 13.48:1, texte
+           atténué 7.71:1, accent 6.62:1, contours de composants 3.41:1). */
+        .jsb-ai-chat[data-aic-theme="dark"] {
+            --aic-bg:#16181b;
+            --aic-surface:#1e2227;
+            --aic-surface-raised:#2a2f36;
+            --aic-btn-neutral-bg:#2a2f36;  /* s'ÉCLAIRCIT au-dessus de la carte, comme en clair */
+            --aic-code-bg:#262b31;
+            --aic-chip-file-bg:#262b31;
+            --aic-input-bg:#16181b;
+            --aic-row-hover:#2a2f36;       /* élévation inversée : plus clair que la bulle */
+            --aic-text:#e9ecef;
+            --aic-text-strong:#f1f3f5;
+            --aic-text-2:#ced4da;
+            --aic-muted:#adb5bd;
+            --aic-input-text:#f8f9fa;
+            --aic-border:#343a40;
+            --aic-border-strong:#6c757d;
+            --aic-border-subtle:#2a2f36;
+            --aic-accent:#6ea8fe;          /* le cobalt ne ferait que 1.90:1 ici */
+            --aic-accent-hover:#0a58ca;    /* un aplat s'ÉCLAIRCIT au survol en sombre */
+            --aic-accent-subtle:#16305a;
+            --aic-on-subtle:#6ea8fe;
+            --aic-ring:rgba(110,168,254,.45);
+            --aic-shadow-hover:rgba(0,0,0,.45);
+            --aic-shadow-chip:rgba(110,168,254,.35);
+            --aic-success-bg:#16281f; --aic-success-fg:#79dfb0;
+            --aic-danger-bg:#341a1d;  --aic-danger-fg:#ea868f;
+            --aic-warning-bg:#33290a; --aic-warning-fg:#ffda6a;
+            --aic-mic-pulse:rgba(234,134,143,.45);
+            --aic-mic-fade:rgba(234,134,143,0);
+        }
+        /* Exception structurelle : un aplat cobalt sur fond sombre ne se détache
+           plus de la surface (1.90:1). On lui donne un contour perceptible pour
+           que le bouton reste identifiable comme bouton (WCAG 1.4.11). Le
+           box-sizing global préserve les 44×44 px de la cible (WCAG 2.5.5). */
+        .jsb-ai-chat[data-aic-theme="dark"] .aic-send,
+        .jsb-ai-chat[data-aic-theme="dark"] .aic-mut-btn--primary { border:1px solid var(--aic-accent); }
 
         /* ── Entête ── */
         .jsb-ai-chat .aic-header {
             display:flex; align-items:center; gap:.65rem; flex:0 0 auto;
-            padding:.75rem 1rem; background:#ffffff; border-bottom:1px solid #dee2e6;
+            padding:.75rem 1rem; background:var(--aic-surface); border-bottom:1px solid var(--aic-border);
         }
         .jsb-ai-chat .aic-avatar {
             width:40px; height:40px; border-radius:50%; flex:0 0 auto;
-            background:#0047AB; color:#ffffff; font-weight:700; font-size:1.05rem;
+            background:var(--aic-accent-solid); color:var(--aic-on-accent); font-weight:700; font-size:1.05rem;
             display:flex; align-items:center; justify-content:center;
         }
         .jsb-ai-chat .aic-header-txt { min-width:0; }
-        .jsb-ai-chat .aic-header-nom { color:#212529; font-weight:700; font-size:1rem; margin:0; }
-        .jsb-ai-chat .aic-header-sub { color:#6c757d; font-size:.78rem; margin:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        /* Boutons d'action de l'entête (plein écran, fermeture) : socle commun. */
+        .jsb-ai-chat .aic-header-nom { color:var(--aic-text); font-weight:700; font-size:1rem; margin:0; }
+        .jsb-ai-chat .aic-header-sub { color:var(--aic-muted); font-size:.78rem; margin:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        /* Boutons d'action de l'entête (thème, plein écran, fermeture) : socle commun. */
         .jsb-ai-chat .aic-iconbtn {
-            background:none; border:none; color:#6c757d; cursor:pointer; flex:0 0 auto;
+            background:none; border:none; color:var(--aic-muted); cursor:pointer; flex:0 0 auto;
             width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center;
         }
-        .jsb-ai-chat .aic-iconbtn:hover { background:#e9ecef; color:#212529; }
-        .jsb-ai-chat .aic-iconbtn:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+        .jsb-ai-chat .aic-iconbtn:hover { background:var(--aic-surface-raised); color:var(--aic-text); }
+        .jsb-ai-chat .aic-iconbtn:focus-visible { outline:2px solid var(--aic-accent); outline-offset:2px; }
         /* Le premier bouton d'action pousse le groupe à droite de l'entête. */
         .jsb-ai-chat .aic-header .aic-iconbtn:first-of-type { margin-left:auto; }
         /* Bascule agrandir / réduire selon l'état pressé (piloté par le contrôleur
@@ -52,6 +159,12 @@
         .jsb-ai-chat .aic-fullscreen .aic-ic-collapse { display:none; }
         .jsb-ai-chat .aic-fullscreen[aria-pressed="true"] .aic-ic-expand { display:none; }
         .jsb-ai-chat .aic-fullscreen[aria-pressed="true"] .aic-ic-collapse { display:block; }
+        /* Bascule de thème : même mécanique que le plein écran — l'icône suit
+           aria-pressed. Au repos (clair) on propose la lune ; pressé (sombre) on
+           propose le soleil, c'est-à-dire toujours l'action à venir. */
+        .jsb-ai-chat .aic-theme .aic-ic-sun { display:none; }
+        .jsb-ai-chat .aic-theme[aria-pressed="true"] .aic-ic-moon { display:none; }
+        .jsb-ai-chat .aic-theme[aria-pressed="true"] .aic-ic-sun { display:block; }
 
         /* ── Fil de messages ── */
         .jsb-ai-chat .aic-messages { flex:1 1 auto; min-height:0; overflow-y:auto; padding:1rem; display:flex; flex-direction:column; gap:.75rem; }
@@ -60,23 +173,23 @@
         .jsb-ai-chat .aic-msg--user { align-self:flex-end; flex-direction:row-reverse; }
         .jsb-ai-chat .aic-msg-avatar {
             width:28px; height:28px; border-radius:50%; flex:0 0 auto; margin-top:2px;
-            background:#0047AB; color:#ffffff; font-weight:700; font-size:.8rem;
+            background:var(--aic-accent-solid); color:var(--aic-on-accent); font-weight:700; font-size:.8rem;
             display:flex; align-items:center; justify-content:center;
         }
         .jsb-ai-chat .aic-msg-body { min-width:0; display:flex; flex-direction:column; gap:.15rem; }
         .jsb-ai-chat .aic-msg-text {
             margin:0; padding:.6rem .8rem; border-radius:12px;
-            color:#212529; font-size:.9rem; line-height:1.5; white-space:pre-wrap; word-break:break-word;
+            color:var(--aic-text); font-size:.9rem; line-height:1.5; white-space:pre-wrap; word-break:break-word;
         }
         .jsb-ai-chat .aic-msg--assistant .aic-msg-text {
-            background:#ffffff; border:1px solid #dee2e6; border-top-left-radius:4px;
+            background:var(--aic-surface); border:1px solid var(--aic-border); border-top-left-radius:4px;
             /* Contenu HTML structuré (Markdown rendu) : les éléments de bloc
                gèrent déjà leurs propres marges, pre-wrap ne sert plus qu'à
                préserver les sauts de ligne du texte brut utilisateur. */
             white-space:normal;
         }
-        .jsb-ai-chat .aic-msg--user .aic-msg-text { background:#e8f0fb; border-top-right-radius:4px; }
-        .jsb-ai-chat .aic-msg--refus .aic-msg-text { border-left:3px solid #ffc107; }
+        .jsb-ai-chat .aic-msg--user .aic-msg-text { background:var(--aic-accent-subtle); border-top-right-radius:4px; }
+        .jsb-ai-chat .aic-msg--refus .aic-msg-text { border-left:3px solid var(--aic-warning-line); }
 
         /* Rendu Markdown restreint des réponses assistant (voir
            assistant-markdown-render.js) : sobre, densité compacte adaptée à
@@ -88,12 +201,12 @@
         .jsb-ai-chat .aic-msg-text ul:last-child,
         .jsb-ai-chat .aic-msg-text ol:last-child { margin-bottom:0; }
         .jsb-ai-chat .aic-msg-text li { margin-bottom:.15rem; }
-        .jsb-ai-chat .aic-msg-text strong { color:#212529; font-weight:700; }
+        .jsb-ai-chat .aic-msg-text strong { color:var(--aic-text); font-weight:700; }
         .jsb-ai-chat .aic-msg-text code {
-            background:#f1f3f5; color:#212529; border-radius:4px;
+            background:var(--aic-code-bg); color:var(--aic-text); border-radius:4px;
             padding:.05rem .3rem; font-size:.85em;
         }
-        .jsb-ai-chat .aic-md-heading { margin:.2rem 0 .35rem; font-size:.92rem; font-weight:700; color:#343a40; }
+        .jsb-ai-chat .aic-md-heading { margin:.2rem 0 .35rem; font-size:.92rem; font-weight:700; color:var(--aic-text-strong); }
         /* Un tableau large ne doit JAMAIS élargir ni écraser la bulle : il devient
            lui-même la boîte défilante. `width:max-content` donne aux colonnes leur
            largeur naturelle, `max-width:100%` les borne à la bulle (donc à la colonne
@@ -106,27 +219,27 @@
         /* nowrap l'emporte sur le word-break hérité de .aic-msg-text : une
            référence de police ou un montant ne se casse plus en plusieurs lignes. */
         .jsb-ai-chat .aic-msg-text th,
-        .jsb-ai-chat .aic-msg-text td { border-bottom:1px solid #dee2e6; padding:.3rem .5rem; text-align:left; white-space:nowrap; }
-        .jsb-ai-chat .aic-msg-text th { color:#6c757d; font-weight:600; text-transform:uppercase; letter-spacing:.3px; font-size:.72rem; }
-        .jsb-ai-chat .aic-msg-text td { color:#495057; }
+        .jsb-ai-chat .aic-msg-text td { border-bottom:1px solid var(--aic-border); padding:.3rem .5rem; text-align:left; white-space:nowrap; }
+        .jsb-ai-chat .aic-msg-text th { color:var(--aic-muted); font-weight:600; text-transform:uppercase; letter-spacing:.3px; font-size:.72rem; }
+        .jsb-ai-chat .aic-msg-text td { color:var(--aic-text-2); }
         /* Feedback local sur chaque LIGNE de données, dans la même langue que
            les bulles et les listes du produit : SURVOL (fond #f8f9fa, idiome
            .table-enhanced / .jsb-picker-table d'app.css, texte plus contrasté)
            et CLIC (fond cobalt subtil, idiome .db-fb-item:active). L'entête
            n'est pas concerné : seules les données sont survolables. */
         .jsb-ai-chat .aic-msg-text tbody td { transition:background-color .12s ease, color .12s ease; }
-        .jsb-ai-chat .aic-msg-text tbody tr:hover td { background:#f8f9fa; color:#212529; }
-        .jsb-ai-chat .aic-msg-text tbody tr:active td { background:#e8f0fb; }
+        .jsb-ai-chat .aic-msg-text tbody tr:hover td { background:var(--aic-row-hover); color:var(--aic-text); }
+        .jsb-ai-chat .aic-msg-text tbody tr:active td { background:var(--aic-accent-subtle); }
         /* Pastilles : mêmes couleurs sémantiques que .jsb-state-badge (app.css). */
         .jsb-ai-chat .aic-md-badge {
             display:inline-block; padding:.1rem .5rem; border-radius:999px;
             font-size:.75rem; font-weight:600; line-height:1.3; white-space:nowrap;
         }
-        .jsb-ai-chat .aic-md-badge--success { background:#d1e7dd; color:#0f5132; }
-        .jsb-ai-chat .aic-md-badge--danger  { background:#f8d7da; color:#842029; }
-        .jsb-ai-chat .aic-md-badge--warning { background:#fff3cd; color:#664d03; }
-        .jsb-ai-chat .aic-md-badge--info    { background:#e8f0fb; color:#0047AB; }
-        .jsb-ai-chat .aic-md-badge--neutral { background:#e9ecef; color:#495057; }
+        .jsb-ai-chat .aic-md-badge--success { background:var(--aic-success-bg); color:var(--aic-success-fg); }
+        .jsb-ai-chat .aic-md-badge--danger  { background:var(--aic-danger-bg); color:var(--aic-danger-fg); }
+        .jsb-ai-chat .aic-md-badge--warning { background:var(--aic-warning-bg); color:var(--aic-warning-fg); }
+        .jsb-ai-chat .aic-md-badge--info    { background:var(--aic-accent-subtle); color:var(--aic-on-subtle); }
+        .jsb-ai-chat .aic-md-badge--neutral { background:var(--aic-surface-raised); color:var(--aic-text-2); }
 
         /* Graphiques (blocs ```chart montés par assistant-chart-render.js) : une
            <figure> avec le <canvas> puis une légende explicative en dessous.
@@ -136,15 +249,15 @@
         .jsb-ai-chat .aic-chart-figure { margin:0; }
         .jsb-ai-chat .aic-chart-canvas {
             position:relative; height:230px; max-width:100%;
-            background:#ffffff; border:1px solid #dee2e6; border-radius:8px;
+            background:var(--aic-surface); border:1px solid var(--aic-border); border-radius:8px;
             padding:.5rem;
         }
         /* Légende sous le graphique : concise, atténuée, liseré cobalt discret
            pour signaler « clé de lecture » sans concurrencer le graphique. */
         .jsb-ai-chat .aic-chart-legende {
             margin:.35rem 0 0; padding:.1rem 0 .1rem .55rem;
-            border-left:2px solid #0047AB;
-            font-size:.76rem; line-height:1.4; color:#6c757d;
+            border-left:2px solid var(--aic-accent);
+            font-size:.76rem; line-height:1.4; color:var(--aic-muted);
         }
 
         /* Feedback local sur chaque bulle : SURVOL (liseré cobalt + élévation
@@ -155,82 +268,82 @@
             cursor: default;
         }
         .jsb-ai-chat .aic-msg:hover .aic-msg-text {
-            border-color:#0047AB;
-            box-shadow:0 3px 10px rgba(0,71,171,.12);
+            border-color:var(--aic-accent);
+            box-shadow:0 3px 10px var(--aic-shadow-hover);
         }
         /* Bulle utilisateur sans bordure de base : on en révèle une au survol
            (transparente au repos pour éviter tout saut de mise en page). */
         .jsb-ai-chat .aic-msg--user .aic-msg-text { border:1px solid transparent; }
         /* Le liseré d'avertissement d'un refus reste jaune, même au survol. */
-        .jsb-ai-chat .aic-msg--refus:hover .aic-msg-text { border-left-color:#ffc107; }
+        .jsb-ai-chat .aic-msg--refus:hover .aic-msg-text { border-left-color:var(--aic-warning-line); }
         .jsb-ai-chat .aic-msg:active .aic-msg-text { transform:scale(.985); }
-        .jsb-ai-chat .aic-msg-time { color:#6c757d; font-size:.7rem; }
+        .jsb-ai-chat .aic-msg-time { color:var(--aic-muted); font-size:.7rem; }
         .jsb-ai-chat .aic-msg--user .aic-msg-time { text-align:right; }
 
         /* Agrafe des messages utilisateur : instantané des objets du contexte à
            l'envoi (pastille discrète, alignée à droite sous la bulle). */
         .jsb-ai-chat .aic-msg-attach {
             align-self:flex-end; display:inline-flex; align-items:center; gap:3px;
-            border:1px solid #dee2e6; background:#ffffff; color:#6c757d;
+            border:1px solid var(--aic-border); background:var(--aic-surface); color:var(--aic-muted);
             font-size:.68rem; line-height:1.2; padding:1px 7px; border-radius:999px;
             cursor:pointer; font-family:inherit;
             transition:border-color .15s ease, color .15s ease;
         }
-        .jsb-ai-chat .aic-msg-attach:hover { border-color:#0047AB; color:#0047AB; }
-        .jsb-ai-chat .aic-msg-attach:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+        .jsb-ai-chat .aic-msg-attach:hover { border-color:var(--aic-accent); color:var(--aic-accent); }
+        .jsb-ai-chat .aic-msg-attach:focus-visible { outline:2px solid var(--aic-accent); outline-offset:2px; }
 
         /* Bulles système (402 tokens / erreur réseau). */
         .jsb-ai-chat .aic-notice { margin:0; padding:.6rem .8rem; border-radius:8px; font-size:.85rem; align-self:center; max-width:92%; }
-        .jsb-ai-chat .aic-notice--warning { background:#fff3cd; color:#664d03; }
-        .jsb-ai-chat .aic-notice--error { background:#f8d7da; color:#842029; }
+        .jsb-ai-chat .aic-notice--warning { background:var(--aic-warning-bg); color:var(--aic-warning-fg); }
+        .jsb-ai-chat .aic-notice--error { background:var(--aic-danger-bg); color:var(--aic-danger-fg); }
 
         /* Panneau de décision sous un plan de mutation préparé par Ket. */
         .jsb-ai-chat .aic-mutation-actions {
             display:flex; flex-wrap:wrap; align-items:center; gap:.5rem .6rem;
             align-self:flex-start; max-width:96%; margin:.4rem 0 .55rem;
-            padding:.75rem .85rem; background:#ffffff; border:1px solid #dee2e6;
-            border-left:3px solid #0047AB; border-radius:10px;
+            padding:.75rem .85rem; background:var(--aic-surface); border:1px solid var(--aic-border);
+            border-left:3px solid var(--aic-accent); border-radius:10px;
         }
         .jsb-ai-chat .aic-mutation-actions .aic-notice { flex:1 1 100%; align-self:stretch; margin:.1rem 0 0; }
 
         /* Budget en texte simple sur une ligne (coût · solde · reste). */
-        .jsb-ai-chat .aic-mutation-budget { flex:1 1 100%; margin:0 0 .1rem; font-size:.8rem; color:#495057; font-weight:600; }
+        .jsb-ai-chat .aic-mutation-budget { flex:1 1 100%; margin:0 0 .1rem; font-size:.8rem; color:var(--aic-text-2); font-weight:600; }
 
         /* Aperçu AUTORITAIRE : ce que le plan écrira réellement (données serveur),
            et ce qu'il ne couvre pas — pour qu'un écart avec la prose de Ket se voie
            AVANT la validation. */
         .jsb-ai-chat .aic-mut-apercu { flex:1 1 100%; margin:0 0 .35rem; }
         .jsb-ai-chat .aic-mut-apercu-titre {
-            margin:0 0 .25rem; font-size:.78rem; font-weight:600; color:#6c757d;
+            margin:0 0 .25rem; font-size:.78rem; font-weight:600; color:var(--aic-muted);
         }
-        .jsb-ai-chat .aic-mut-apercu-liste { margin:0; padding-left:1.1rem; font-size:.83rem; color:#212529; }
+        .jsb-ai-chat .aic-mut-apercu-liste { margin:0; padding-left:1.1rem; font-size:.83rem; color:var(--aic-text); }
         .jsb-ai-chat .aic-mut-apercu-liste li { margin:.1rem 0; }
-        .jsb-ai-chat .aic-mut-apercu-liste ul { margin:.1rem 0 .2rem; padding-left:1rem; color:#495057; font-size:.79rem; }
+        .jsb-ai-chat .aic-mut-apercu-liste ul { margin:.1rem 0 .2rem; padding-left:1rem; color:var(--aic-text-2); font-size:.79rem; }
         .jsb-ai-chat .aic-mut-apercu-omission {
             margin:.35rem 0 0; padding:.4rem .55rem; border-radius:6px;
-            background:#fff3cd; color:#664d03; font-size:.78rem;
+            background:var(--aic-warning-bg); color:var(--aic-warning-fg); font-size:.78rem;
         }
 
         /* Étendue du plan : une case à cocher par étape du parcours (l'étape socle
            reste cochée et désactivée). Décocher réajuste le budget affiché. */
         .jsb-ai-chat .aic-mut-steps {
             flex:1 1 100%; margin:.15rem 0 .35rem; padding:.5rem .6rem;
-            border:1px solid #e9ecef; border-radius:8px; background:#f8f9fa;
+            border:1px solid var(--aic-border-subtle); border-radius:8px; background:var(--aic-bg);
         }
         .jsb-ai-chat .aic-mut-steps-legend {
             float:none; width:auto; padding:0 .2rem; margin:0 0 .3rem;
-            font-size:.75rem; font-weight:600; color:#6c757d; text-transform:none;
+            font-size:.75rem; font-weight:600; color:var(--aic-muted); text-transform:none;
         }
         .jsb-ai-chat .aic-mut-step {
             display:flex; align-items:baseline; gap:.45rem;
-            padding:.22rem .2rem; font-size:.82rem; color:#212529; cursor:pointer;
+            padding:.22rem .2rem; font-size:.82rem; color:var(--aic-text); cursor:pointer;
         }
-        .jsb-ai-chat .aic-mut-step input { flex:0 0 auto; accent-color:#0047AB; cursor:pointer; }
+        .jsb-ai-chat .aic-mut-step input { flex:0 0 auto; accent-color:var(--aic-accent-solid); cursor:pointer; }
         .jsb-ai-chat .aic-mut-step input:disabled { cursor:default; }
-        .jsb-ai-chat .aic-mut-step input:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+        .jsb-ai-chat .aic-mut-step input:focus-visible { outline:2px solid var(--aic-accent); outline-offset:2px; }
         .jsb-ai-chat .aic-mut-step-label { flex:1 1 auto; }
-        .jsb-ai-chat .aic-mut-step-meta { flex:0 0 auto; font-size:.74rem; color:#6c757d; }
-        .jsb-ai-chat .aic-mut-step:has(input:disabled) { cursor:default; color:#495057; }
+        .jsb-ai-chat .aic-mut-step-meta { flex:0 0 auto; font-size:.74rem; color:var(--aic-muted); }
+        .jsb-ai-chat .aic-mut-step:has(input:disabled) { cursor:default; color:var(--aic-text-2); }
 
         /* Boutons d'action (charte cobalt + états accessibles). */
         .jsb-ai-chat .aic-mut-btn {
@@ -240,11 +353,11 @@
             text-decoration:none; transition:background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
         }
         .jsb-ai-chat .aic-mut-btn svg { width:15px; height:15px; flex:0 0 auto; }
-        .jsb-ai-chat .aic-mut-btn--primary { background:#0047AB; color:#ffffff; }
-        .jsb-ai-chat .aic-mut-btn--primary:hover { background:#003380; color:#ffffff; }
-        .jsb-ai-chat .aic-mut-btn--ghost { background:transparent; color:#495057; border-color:#ced4da; }
-        .jsb-ai-chat .aic-mut-btn--ghost:hover { background:#e9ecef; color:#212529; }
-        .jsb-ai-chat .aic-mut-btn:focus-visible { outline:none; box-shadow:0 0 0 3px rgba(0,71,171,0.35); }
+        .jsb-ai-chat .aic-mut-btn--primary { background:var(--aic-accent-solid); color:var(--aic-on-accent); }
+        .jsb-ai-chat .aic-mut-btn--primary:hover { background:var(--aic-accent-hover); color:var(--aic-on-accent); }
+        .jsb-ai-chat .aic-mut-btn--ghost { background:transparent; color:var(--aic-text-2); border-color:var(--aic-border-strong); }
+        .jsb-ai-chat .aic-mut-btn--ghost:hover { background:var(--aic-surface-raised); color:var(--aic-text); }
+        .jsb-ai-chat .aic-mut-btn:focus-visible { outline:none; box-shadow:0 0 0 3px var(--aic-ring); }
         .jsb-ai-chat .aic-mut-btn:disabled { opacity:.65; pointer-events:none; }
 
         /* Décision MÉMORISÉE d'un plan (feedback permanent dans le fil). */
@@ -254,14 +367,14 @@
             font-size:.8rem; font-weight:600; border-radius:8px;
         }
         .jsb-ai-chat .aic-plan-status svg { width:14px; height:14px; flex:0 0 auto; }
-        .jsb-ai-chat .aic-plan-status--done { color:#0f5132; background:#d1e7dd; }
-        .jsb-ai-chat .aic-plan-status--cancelled { color:#495057; background:#e9ecef; }
+        .jsb-ai-chat .aic-plan-status--done { color:var(--aic-success-fg); background:var(--aic-success-bg); }
+        .jsb-ai-chat .aic-plan-status--cancelled { color:var(--aic-text-2); background:var(--aic-surface-raised); }
 
         /* Indicateur « réfléchit… ». */
-        .jsb-ai-chat .aic-typing { flex:0 0 auto; display:flex; align-items:center; gap:.45rem; padding:.25rem 1rem .5rem; color:#6c757d; font-size:.82rem; }
+        .jsb-ai-chat .aic-typing { flex:0 0 auto; display:flex; align-items:center; gap:.45rem; padding:.25rem 1rem .5rem; color:var(--aic-muted); font-size:.82rem; }
         .jsb-ai-chat .aic-typing[hidden] { display:none; }
         .jsb-ai-chat .aic-typing .dot {
-            width:6px; height:6px; border-radius:50%; background:#6c757d;
+            width:6px; height:6px; border-radius:50%; background:var(--aic-muted);
             animation: aic-blink 1.2s infinite ease-in-out;
         }
         .jsb-ai-chat .aic-typing .dot:nth-child(2) { animation-delay:.2s; }
@@ -271,7 +384,7 @@
         /* ── Zone de saisie (groupe champ + envoi, focus-within visible) ── */
         .jsb-ai-chat .aic-composer {
             flex:0 0 auto; display:flex; flex-direction:column; gap:.35rem;
-            padding:.75rem 1rem .6rem; background:#ffffff; border-top:1px solid #dee2e6;
+            padding:.75rem 1rem .6rem; background:var(--aic-surface); border-top:1px solid var(--aic-border);
         }
 
         /* ── Objets attachés au contexte (puces au-dessus de la saisie) ── */
@@ -280,56 +393,56 @@
         .jsb-ai-chat .aic-context-head {
             display:flex; align-items:center; justify-content:space-between; gap:.75rem;
         }
-        .jsb-ai-chat .aic-context-count { color:#6c757d; font-size:.74rem; }
+        .jsb-ai-chat .aic-context-count { color:var(--aic-muted); font-size:.74rem; }
         .jsb-ai-chat .aic-context-clear {
             display:inline-flex; align-items:center; gap:.25rem;
             background:none; border:none; cursor:pointer;
-            color:#6c757d; font-size:.74rem; padding:.15rem .4rem; border-radius:6px;
+            color:var(--aic-muted); font-size:.74rem; padding:.15rem .4rem; border-radius:6px;
             transition: color .15s ease, background-color .15s ease;
         }
-        .jsb-ai-chat .aic-context-clear:hover { color:#842029; background:#f8d7da; }
-        .jsb-ai-chat .aic-context-clear:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+        .jsb-ai-chat .aic-context-clear:hover { color:var(--aic-danger-fg); background:var(--aic-danger-bg); }
+        .jsb-ai-chat .aic-context-clear:focus-visible { outline:2px solid var(--aic-accent); outline-offset:2px; }
         .jsb-ai-chat .aic-context-chips {
             display:flex; flex-wrap:wrap; gap:.35rem;
             list-style:none; margin:0; padding:0;
         }
         .jsb-ai-chat .aic-chip {
             display:inline-flex; align-items:center; gap:.3rem; max-width:100%;
-            background:#e8f0fb; border:1px solid transparent; border-radius:999px;
-            padding:.2rem .3rem .2rem .6rem; font-size:.78rem; color:#212529;
+            background:var(--aic-accent-subtle); border:1px solid transparent; border-radius:999px;
+            padding:.2rem .3rem .2rem .6rem; font-size:.78rem; color:var(--aic-text);
             transition: border-color .15s ease, box-shadow .15s ease;
         }
-        .jsb-ai-chat .aic-chip:hover { border-color:#0047AB; box-shadow:0 2px 6px rgba(0,71,171,.25); }
-        .jsb-ai-chat .aic-chip-icon { display:flex; flex:0 0 auto; color:#0047AB; }
+        .jsb-ai-chat .aic-chip:hover { border-color:var(--aic-accent); box-shadow:0 2px 6px var(--aic-shadow-chip); }
+        .jsb-ai-chat .aic-chip-icon { display:flex; flex:0 0 auto; color:var(--aic-on-subtle); }
         .jsb-ai-chat .aic-chip-label {
             min-width:0; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
         }
         .jsb-ai-chat .aic-chip-remove {
             display:flex; align-items:center; justify-content:center; flex:0 0 auto;
             width:22px; height:22px; border-radius:50%; border:none; cursor:pointer;
-            background:none; color:#6c757d;
+            background:none; color:var(--aic-muted);
             transition: background-color .15s ease, color .15s ease;
         }
-        .jsb-ai-chat .aic-chip-remove:hover { background:#0047AB; color:#ffffff; }
-        .jsb-ai-chat .aic-chip-remove:focus-visible { outline:2px solid #0047AB; outline-offset:1px; }
+        .jsb-ai-chat .aic-chip-remove:hover { background:var(--aic-accent-solid); color:var(--aic-on-accent); }
+        .jsb-ai-chat .aic-chip-remove:focus-visible { outline:2px solid var(--aic-accent); outline-offset:1px; }
 
         /* ── Pièces jointes (puces fichiers) ── */
         /* Fond neutre distinct des puces objets (cobalt subtil) pour différencier
            d'un coup d'œil les deux natures de contexte. */
         .jsb-ai-chat .aic-fichiers:empty { display:none; }
-        .jsb-ai-chat .aic-fichier-chip { background:#eef1f4; }
-        .jsb-ai-chat .aic-chip-download { color:#0047AB; text-decoration:none; }
+        .jsb-ai-chat .aic-fichier-chip { background:var(--aic-chip-file-bg); }
+        .jsb-ai-chat .aic-chip-download { color:var(--aic-accent); text-decoration:none; }
         .jsb-ai-chat .aic-chip-download:hover { text-decoration:underline; }
-        .jsb-ai-chat .aic-chip-size { flex:0 0 auto; color:#6c757d; font-size:.7rem; }
+        .jsb-ai-chat .aic-chip-size { flex:0 0 auto; color:var(--aic-muted); font-size:.7rem; }
         /* Puce en cours de chargement : spinner + libellé atténué, non interactive. */
-        .jsb-ai-chat .aic-fichier-chip.is-loading { color:#6c757d; }
+        .jsb-ai-chat .aic-fichier-chip.is-loading { color:var(--aic-muted); }
         .jsb-ai-chat .aic-fichier-chip.is-loading .aic-chip-remove { visibility:hidden; }
         .jsb-ai-chat .aic-chip-spinner {
             width:13px; height:13px; flex:0 0 auto; border-radius:50%;
-            border:2px solid #ced4da; border-top-color:#0047AB;
+            border:2px solid var(--aic-border-strong); border-top-color:var(--aic-accent);
             animation: aic-spin .7s linear infinite;
         }
-        .jsb-ai-chat .aic-fichier-chip.is-error { background:#f8d7da; color:#842029; }
+        .jsb-ai-chat .aic-fichier-chip.is-error { background:var(--aic-danger-bg); color:var(--aic-danger-fg); }
         @keyframes aic-spin { to { transform:rotate(360deg); } }
         @media (prefers-reduced-motion: reduce) {
             .jsb-ai-chat .aic-chip-spinner { animation:none; }
@@ -338,85 +451,89 @@
         /* Bouton « joindre un fichier » (trombone) : jumeau du bouton micro. */
         .jsb-ai-chat .aic-attach {
             flex:0 0 auto; width:44px; height:44px; border-radius:10px; border:none; cursor:pointer;
-            background:transparent; color:#6c757d; display:flex; align-items:center; justify-content:center;
+            background:transparent; color:var(--aic-muted); display:flex; align-items:center; justify-content:center;
             transition: background-color .15s ease, color .15s ease;
         }
-        .jsb-ai-chat .aic-attach:hover { background:#e8f0fb; color:#0047AB; }
-        .jsb-ai-chat .aic-attach:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+        .jsb-ai-chat .aic-attach:hover { background:var(--aic-accent-subtle); color:var(--aic-on-subtle); }
+        .jsb-ai-chat .aic-attach:focus-visible { outline:2px solid var(--aic-accent); outline-offset:2px; }
 
         /* Agrafe fichiers d'une bulle utilisateur : liseré vert discret (distinct
            de l'agrafe objets) pour signaler « des pièces étaient jointes ». */
         .jsb-ai-chat .aic-msg-attach--file { cursor:default; }
-        .jsb-ai-chat .aic-msg-attach--file:hover { border-color:#0f5132; color:#0f5132; }
+        .jsb-ai-chat .aic-msg-attach--file:hover { border-color:var(--aic-success-fg); color:var(--aic-success-fg); }
 
         /* Panneau de téléchargement des pièces jointes proposé par Ket (uiAction
            files-download) : boutons-liens vers la route sécurisée. */
         .jsb-ai-chat .aic-files-dl {
             align-self:flex-start; max-width:96%; margin:.1rem 0 .55rem;
-            padding:.7rem .85rem; background:#ffffff; border:1px solid #dee2e6;
-            border-left:3px solid #0047AB; border-radius:10px;
+            padding:.7rem .85rem; background:var(--aic-surface); border:1px solid var(--aic-border);
+            border-left:3px solid var(--aic-accent); border-radius:10px;
             display:flex; flex-direction:column; gap:.4rem;
         }
-        .jsb-ai-chat .aic-files-dl-title { margin:0; font-size:.8rem; font-weight:600; color:#6c757d; }
+        .jsb-ai-chat .aic-files-dl-title { margin:0; font-size:.8rem; font-weight:600; color:var(--aic-muted); }
         .jsb-ai-chat .aic-file-dl-btn {
             display:inline-flex; align-items:center; gap:.45rem; align-self:flex-start; max-width:100%;
-            padding:.4rem .75rem; border:1px solid #ced4da; border-radius:8px;
-            background:#f8f9fa; color:#0047AB; text-decoration:none; font-size:.83rem; font-weight:600;
+            padding:.4rem .75rem; border:1px solid var(--aic-border-strong); border-radius:8px;
+            background:var(--aic-btn-neutral-bg); color:var(--aic-accent); text-decoration:none; font-size:.83rem; font-weight:600;
             transition:background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
         }
-        .jsb-ai-chat .aic-file-dl-btn:hover { background:#e8f0fb; border-color:#0047AB; }
-        .jsb-ai-chat .aic-file-dl-btn:focus-visible { outline:none; box-shadow:0 0 0 3px rgba(0,71,171,.35); }
+        .jsb-ai-chat .aic-file-dl-btn:hover { background:var(--aic-accent-subtle); border-color:var(--aic-accent); }
+        .jsb-ai-chat .aic-file-dl-btn:focus-visible { outline:none; box-shadow:0 0 0 3px var(--aic-ring); }
         .jsb-ai-chat .aic-file-dl-btn svg { flex:0 0 auto; }
         .jsb-ai-chat .aic-file-dl-label { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .jsb-ai-chat .aic-inputbox {
             display:flex; align-items:flex-end; gap:.5rem;
-            border:1px solid #ced4da; border-radius:12px; background:#ffffff;
+            border:1px solid var(--aic-border-strong); border-radius:12px; background:var(--aic-input-bg);
             padding:.3rem .35rem .3rem .7rem;
             transition: border-color .15s ease, box-shadow .15s ease;
         }
-        .jsb-ai-chat .aic-inputbox:focus-within { border-color:#0047AB; box-shadow:0 0 0 .25rem rgba(0,71,171,.35); }
-        .jsb-ai-chat .aic-input-ic { flex:0 0 auto; align-self:center; display:flex; color:#6c757d; }
+        .jsb-ai-chat .aic-inputbox:focus-within { border-color:var(--aic-accent); box-shadow:0 0 0 .25rem var(--aic-ring); }
+        .jsb-ai-chat .aic-input-ic { flex:0 0 auto; align-self:center; display:flex; color:var(--aic-muted); }
         .jsb-ai-chat .aic-input {
             flex:1 1 auto; resize:none; min-height:40px; max-height:160px;
             border:none; background:transparent; padding:.5rem .25rem;
-            font-size:.9rem; color:#000000; line-height:1.45;
+            font-size:.9rem; color:var(--aic-input-text); line-height:1.45;
         }
         .jsb-ai-chat .aic-input:focus { outline:none; box-shadow:none; }
+        /* Le placeholder par défaut du navigateur dérive de `color` : sur fond
+           sombre il deviendrait presque aussi clair que la saisie. On le fixe
+           sur le gris atténué de la charte (6.87:1 sur la boîte sombre). */
+        .jsb-ai-chat .aic-input::placeholder { color:var(--aic-muted); opacity:1; }
         /* ── Bouton micro (dictée vocale) : bouton fantôme, état « écoute » pulsé ── */
         .jsb-ai-chat .aic-mic {
             flex:0 0 auto; width:44px; height:44px; border-radius:10px; border:none; cursor:pointer;
-            background:transparent; color:#6c757d; display:flex; align-items:center; justify-content:center;
+            background:transparent; color:var(--aic-muted); display:flex; align-items:center; justify-content:center;
             transition: background-color .15s ease, color .15s ease;
         }
-        .jsb-ai-chat .aic-mic:hover { background:#e8f0fb; color:#0047AB; }
-        .jsb-ai-chat .aic-mic:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+        .jsb-ai-chat .aic-mic:hover { background:var(--aic-accent-subtle); color:var(--aic-on-subtle); }
+        .jsb-ai-chat .aic-mic:focus-visible { outline:2px solid var(--aic-accent); outline-offset:2px; }
         .jsb-ai-chat .aic-mic[hidden] { display:none; }
         .jsb-ai-chat .aic-mic--recording,
         .jsb-ai-chat .aic-mic--recording:hover {
-            background:#f8d7da; color:#842029; animation: aic-mic-pulse 1.4s ease-in-out infinite;
+            background:var(--aic-danger-bg); color:var(--aic-danger-fg); animation: aic-mic-pulse 1.4s ease-in-out infinite;
         }
         @keyframes aic-mic-pulse {
-            0%, 100% { box-shadow:0 0 0 0 rgba(132,32,41,.45); }
-            50%      { box-shadow:0 0 0 .35rem rgba(132,32,41,0); }
+            0%, 100% { box-shadow:0 0 0 0 var(--aic-mic-pulse); }
+            50%      { box-shadow:0 0 0 .35rem var(--aic-mic-fade); }
         }
         @media (prefers-reduced-motion: reduce) {
             .jsb-ai-chat .aic-mic--recording { animation:none; }
         }
         .jsb-ai-chat .aic-send {
             flex:0 0 auto; width:44px; height:44px; border-radius:10px; border:none; cursor:pointer;
-            background:#0047AB; color:#ffffff; display:flex; align-items:center; justify-content:center;
+            background:var(--aic-accent-solid); color:var(--aic-on-accent); display:flex; align-items:center; justify-content:center;
             transition: background-color .15s ease, opacity .15s ease;
         }
-        .jsb-ai-chat .aic-send:hover { background:#003380; }
-        .jsb-ai-chat .aic-send:focus-visible { outline:2px solid #0047AB; outline-offset:2px; }
+        .jsb-ai-chat .aic-send:hover { background:var(--aic-accent-hover); }
+        .jsb-ai-chat .aic-send:focus-visible { outline:2px solid var(--aic-accent); outline-offset:2px; }
         .jsb-ai-chat .aic-send:disabled { opacity:.65; pointer-events:none; }
         /* Pied du composer : indice de raccourcis + compteur près de la limite. */
         .jsb-ai-chat .aic-composer-foot {
             display:flex; justify-content:space-between; gap:.75rem;
-            font-size:.72rem; color:#6c757d; padding:0 .25rem;
+            font-size:.72rem; color:var(--aic-muted); padding:0 .25rem;
         }
         .jsb-ai-chat .aic-count[hidden] { display:none; }
-        .jsb-ai-chat .aic-count--limite { color:#664d03; font-weight:600; }
+        .jsb-ai-chat .aic-count--limite { color:var(--aic-warning-fg); font-weight:600; }
         .jsb-ai-chat .visually-hidden {
             position:absolute; width:1px; height:1px; padding:0; margin:-1px;
             overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
@@ -430,6 +547,34 @@
             <p class="aic-header-nom">{{ assistantNom }}</p>
             <p class="aic-header-sub">Assistant IA · {{ entreprise.nom }}</p>
         </div>
+        {# Confort visuel : bascule clair / sombre du chat (et du chat SEUL). Placé
+           en premier pour porter l'auto-marge `.aic-iconbtn:first-of-type` qui
+           pousse tout le groupe à droite. SVG inline (lune/soleil) auto-porté —
+           pas d'ux_icon serveur dans ce partial injecté, comme le micro et le
+           plein écran (cf. correctif 500 du commit 456208af).
+           A11y : `aria-label` STABLE + `aria-pressed` qui bascule — faire varier
+           les deux s'annoncerait de façon contradictoire (« Activer le mode
+           clair, bouton bascule, activé »), et `title` doit rester identique à
+           l'`aria-label` (WCAG 2.5.3, l'étiquette dans le nom accessible). #}
+        <button type="button" class="aic-iconbtn aic-theme"
+                data-action="click->assistant-chat#toggleTheme"
+                aria-pressed="false"
+                aria-label="Mode sombre"
+                title="Mode sombre">
+            <svg class="aic-ic-moon" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+            </svg>
+            <svg class="aic-ic-sun" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="4"/>
+                <path d="M12 2v2"/><path d="M12 20v2"/><path d="M4.93 4.93l1.41 1.41"/>
+                <path d="M17.66 17.66l1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/>
+                <path d="M6.34 17.66l-1.41 1.41"/><path d="M19.07 4.93l-1.41 1.41"/>
+            </svg>
+        </button>
         {# Plein écran : élargit le chat sur les colonnes 3+4 (voir
            workspace-manager#toggleChatFullscreen). SVG inline (agrandir/réduire)
            auto-porté — pas d'ux_icon serveur, pour éviter le circuit d'icônes

@@ -21,6 +21,50 @@ export const CHART_TYPES = ['bar', 'line', 'doughnut', 'pie'];
  */
 export const PALETTE_CHART = ['#0047AB', '#0d6efd', '#198754', '#e69500', '#6c757d', '#003380', '#0a58ca'];
 
+/**
+ * Palette catégorielle du MODE SOMBRE. Mêmes familles de teintes, pas
+ * re-calculés pour la surface sombre du canvas (#1e2227) : le cobalt #0047AB
+ * n'y ferait que 1.90:1 et serait illisible. Ordre validé (séparation des
+ * paires adjacentes pour les daltonismes protan/deutan/tritan, plancher de
+ * vision normale, contraste >= 3:1 sur le fond sombre) — ne pas réordonner
+ * sans revalider : l'ORDRE est le mécanisme de lisibilité, pas une esthétique.
+ */
+export const PALETTE_CHART_SOMBRE = ['#2f7fe0', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9'];
+
+/**
+ * Habillage du graphique (tout ce qui n'est pas une série) : titre, légende,
+ * graduations, grille, bordure entre secteurs d'un camembert.
+ */
+export const CHROME_CHART = {
+    titre: '#212529',
+    legende: '#495057',
+    graduations: '#6c757d',
+    grille: '#e9ecef',
+    secteur: '#ffffff',
+};
+
+/** Même habillage, pas sombres. `secteur` = fond du canvas sombre (séparation nette). */
+export const CHROME_CHART_SOMBRE = {
+    titre: '#f1f3f5',
+    legende: '#ced4da',
+    graduations: '#adb5bd',
+    grille: '#343a40',
+    secteur: '#1e2227',
+};
+
+/**
+ * Seam UNIQUE thème → habillage graphique : c'est le seul endroit qui décide
+ * quelles couleurs un graphique porte. Utilisée par le renderer (montage et
+ * re-thème), et testable sans DOM.
+ * @param {'light'|'dark'} theme
+ * @returns {{palette: string[], chrome: object}}
+ */
+export function habillageGraphique(theme) {
+    return theme === 'dark'
+        ? { palette: PALETTE_CHART_SOMBRE, chrome: CHROME_CHART_SOMBRE }
+        : { palette: PALETTE_CHART, chrome: CHROME_CHART };
+}
+
 const MAX_SERIES = 6;   // au-delà, illisible dans une bulle de chat
 const MAX_POINTS = 24;  // ex. 24 mois
 const MAX_LEGENDE = 240;
@@ -102,8 +146,11 @@ function transparence(hex, alpha) {
  * Construit une configuration Chart.js v3 à partir d'une spec (brute ou déjà
  * normalisée — `normaliserSpec` est idempotent). Retourne `null` si invalide.
  * Ne touche pas au DOM : c'est un simple objet, testable tel quel.
+ *
+ * `palette` et `chrome` par défaut = mode clair : un appel à un seul argument
+ * produit exactement la configuration d'origine (rétrocompatibilité).
  */
-export function construireConfigChart(spec, palette = PALETTE_CHART) {
+export function construireConfigChart(spec, palette = PALETTE_CHART, chrome = CHROME_CHART) {
     const s = normaliserSpec(spec);
     if (!s) {
         return null;
@@ -116,7 +163,7 @@ export function construireConfigChart(spec, palette = PALETTE_CHART) {
             label: s.series[0].label,
             data: s.series[0].data,
             backgroundColor: s.labels.map((_, i) => palette[i % palette.length]),
-            borderColor: '#ffffff',
+            borderColor: chrome.secteur,
             borderWidth: 1,
         }]
         : s.series.map((serie, i) => {
@@ -151,17 +198,17 @@ export function construireConfigChart(spec, palette = PALETTE_CHART) {
                 legend: {
                     display: legendeSeries,
                     position: circulaire ? 'right' : 'top',
-                    labels: { boxWidth: 12, font: { size: 11 }, color: '#495057' },
+                    labels: { boxWidth: 12, font: { size: 11 }, color: chrome.legende },
                 },
                 title: s.titre
-                    ? { display: true, text: s.titre, color: '#212529', font: { size: 13, weight: '600' } }
+                    ? { display: true, text: s.titre, color: chrome.titre, font: { size: 13, weight: '600' } }
                     : { display: false },
             },
             scales: circulaire
                 ? {}
                 : {
-                    y: { beginAtZero: true, ticks: { font: { size: 10 }, color: '#6c757d' }, grid: { color: '#e9ecef' } },
-                    x: { ticks: { font: { size: 10 }, color: '#6c757d' }, grid: { display: false } },
+                    y: { beginAtZero: true, ticks: { font: { size: 10 }, color: chrome.graduations }, grid: { color: chrome.grille } },
+                    x: { ticks: { font: { size: 10 }, color: chrome.graduations }, grid: { display: false } },
                 },
         },
     };

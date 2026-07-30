@@ -204,7 +204,37 @@ class AssistantIaController extends AbstractController
             'idEntreprise'    => $idEntreprise,
             'idInvite'        => $invite->getId(),
             'fichesContextes' => $this->fichesContextes($conversation),
+            // Thème du chat : 'light' / 'dark' si l'utilisateur a tranché,
+            // 'auto' sinon → le contrôleur Stimulus résout via
+            // `prefers-color-scheme` avant le premier rendu visuel.
+            'themeAssistant'  => $this->currentUser()->getThemeAssistant() ?? 'auto',
         ]);
+    }
+
+    /**
+     * Bascule du thème du chat (confort visuel). Préférence d'AFFICHAGE portée
+     * par l'utilisateur — donc valable sur tous ses appareils, comme `locale`,
+     * et sans dépendance à une entreprise ou à une conversation.
+     *
+     * AUCUN métrage de tokens : ce n'est pas une écriture métier, pas plus que
+     * le choix de la langue. La bascule doit rester gratuite et instantanée.
+     */
+    #[Route('/api/theme', name: 'api.theme', methods: ['POST'])]
+    public function setTheme(Request $request): JsonResponse
+    {
+        $payload = json_decode($request->getContent(), true) ?: [];
+        $theme = $payload['theme'] ?? null;
+
+        if (!in_array($theme, Utilisateur::THEMES, true)) {
+            return $this->json([
+                'message' => 'Thème inconnu : attendu « light » ou « dark ».',
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        $this->currentUser()->setThemeAssistant($theme);
+        $this->em->flush();
+
+        return $this->json(['success' => true, 'theme' => $theme]);
     }
 
     /** Crée une conversation vide pour l'invité courant. */
