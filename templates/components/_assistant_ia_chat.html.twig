@@ -961,6 +961,13 @@ Relisez, corrigez si besoin, puis envoyez. La langue suit l'affichage (français
             <span>Répondre</span>
         </button>
         <hr role="separator" class="aic-msg-menu-sep">
+        {# Copie EN IMAGE dans le presse-papiers : se colle directement (Ctrl+V)
+           dans un document Word ou un corps d'e-mail, sans passer par un fichier. #}
+        <button type="button" class="aic-msg-menu-item" role="menuitem" tabindex="-1"
+                data-menu-key="copier-image" data-action="click->assistant-chat#copierMessage">
+            {{ ux_icon(resolve_icon_name('action:copy'), {height: '15px', width: '15px'}) }}
+            <span>Copier (image)</span>
+        </button>
         <button type="button" class="aic-msg-menu-item" role="menuitem" tabindex="-1"
                 data-menu-key="export-pdf" data-action="click->assistant-chat#exporterMessage">
             {{ ux_icon(resolve_icon_name('action:pdf'), {height: '15px', width: '15px'}) }}

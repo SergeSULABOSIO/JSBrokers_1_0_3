@@ -13,6 +13,7 @@ import {
     FORMAT_IMAGE,
     FORMATS_SERVEUR,
     CLE_REPONDRE,
+    CLE_COPIE,
     CLE_EMAIL,
     CLE_EXPORT,
     urlExportMessage,
@@ -51,8 +52,15 @@ test('FORMATS_SERVEUR correspond à MessageExporter::FORMATS et exclut l\'image'
 });
 
 test('les clés de menu sont uniques', () => {
-    const cles = [CLE_REPONDRE, CLE_EMAIL, ...Object.values(CLE_EXPORT)];
+    const cles = [CLE_REPONDRE, CLE_COPIE, CLE_EMAIL, ...Object.values(CLE_EXPORT)];
     assert.equal(new Set(cles).size, cles.length);
+});
+
+test('la copie presse-papiers a sa propre clé, distincte de l\'export image', () => {
+    // Deux destinations différentes pour la même capture : le presse-papiers
+    // (collage direct) et le téléchargement d'un fichier.
+    assert.equal(CLE_COPIE, 'copier-image');
+    assert.notEqual(CLE_COPIE, CLE_EXPORT[FORMAT_IMAGE]);
 });
 
 test('chaque format dispose d\'une clé de menu, image incluse', () => {

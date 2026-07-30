@@ -59,6 +59,46 @@ export async function capturerBulle(bulle, { theme = 'light', echelle = 2 } = {}
 }
 
 /**
+ * Copie la bulle dans le PRESSE-PAPIERS, en image : elle se colle ensuite
+ * directement (Ctrl+V) dans un document Word, un corps d'e-mail ou tout support
+ * acceptant une image — sans passer par un fichier.
+ *
+ * Le blob est confié à ClipboardItem sous forme de PROMESSE : la capture dure
+ * plusieurs centaines de millisecondes, et attendre sa résolution avant de
+ * construire l'item ferait perdre le geste utilisateur exigé par l'API.
+ *
+ * Volontairement image SEULE, sans variante `text/plain` : Word choisit lui-même
+ * le format le plus riche du presse-papiers et collerait le texte brut à la
+ * place de l'image, à l'inverse de ce qui est demandé ici.
+ *
+ * @param {HTMLElement} bulle
+ * @param {{theme?: 'light'|'dark', echelle?: number}} options
+ * @throws {Error} `code = 'non-supporte'` si le navigateur ne sait pas écrire
+ *         une image (Firefox), ou hors contexte sécurisé (http non local).
+ */
+export async function copierBulleDansPressePapier(bulle, options = {}) {
+    if (!bulle) return;
+
+    if (!navigator.clipboard?.write || typeof window.ClipboardItem !== 'function') {
+        const erreur = new Error('Presse-papiers image non supporté par ce navigateur.');
+        erreur.code = 'non-supporte';
+        throw erreur;
+    }
+
+    const image = new window.ClipboardItem({
+        'image/png': capturerBulle(bulle, options).then((blob) => {
+            if (!blob) {
+                throw new Error('capture vide');
+            }
+
+            return blob;
+        }),
+    });
+
+    await navigator.clipboard.write([image]);
+}
+
+/**
  * Fond effectif du chat : jeton `--aic-bg` s'il est résoluble, sinon repli sur
  * les deux valeurs déclarées dans le partial (clair #f8f9fa, sombre #16181b).
  */

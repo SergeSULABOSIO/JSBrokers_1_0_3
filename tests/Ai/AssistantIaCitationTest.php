@@ -405,6 +405,7 @@ class AssistantIaCitationTest extends WebTestCase
             'aic-msg-menu',
             'role="menu"',
             'data-menu-key="repondre"',
+            'data-menu-key="copier-image"',
             'data-menu-key="export-pdf"',
             'data-menu-key="export-word"',
             'data-menu-key="export-markdown"',
