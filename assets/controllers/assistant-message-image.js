@@ -20,6 +20,37 @@
 const MARGE = 12;
 
 /**
+ * Bornes de dimensions acceptées par le serveur — miroir de
+ * App\Ai\Export\ImageJointeValidator::MAX_LARGEUR / MAX_HAUTEUR. Une réponse très
+ * longue rasterisée à l'échelle 2 pourrait les dépasser et se faire refuser à
+ * l'envoi : on préfère perdre en finesse que perdre l'envoi.
+ */
+export const MAX_LARGEUR = 4000;
+export const MAX_HAUTEUR = 12000;
+
+/**
+ * Échelle effective : la plus fine possible SANS dépasser les bornes serveur.
+ * Fonction pure, testable — c'est elle qui garantit qu'une longue réponse produit
+ * une image acceptée plutôt qu'un refus.
+ *
+ * @param {{largeur: number, hauteur: number}} taille taille CSS de la bulle
+ * @param {number} souhaitee échelle idéale (netteté)
+ * @returns {number}
+ */
+export function echelleAdaptee({ largeur, hauteur }, souhaitee = 2) {
+    const utile = (valeur) => (Number.isFinite(valeur) && valeur > 0 ? valeur : 1);
+    const plafond = Math.min(
+        MAX_LARGEUR / (utile(largeur) + 2 * MARGE),
+        MAX_HAUTEUR / (utile(hauteur) + 2 * MARGE)
+    );
+
+    // Jamais au-dessus du souhait (inutile), jamais sous 1 (illisible) : sous
+    // cette taille l'image dépasse de toute façon, autant la produire lisible et
+    // laisser le serveur trancher.
+    return Math.max(1, Math.min(souhaitee, plafond));
+}
+
+/**
  * Rasterise une bulle en PNG.
  *
  * @param {HTMLElement} bulle élément `.aic-msg`
@@ -30,13 +61,14 @@ export async function capturerBulle(bulle, { theme = 'light', echelle = 2 } = {}
     if (!bulle) return null;
 
     const { default: html2canvas } = await import('html2canvas');
+    const boite = bulle.getBoundingClientRect();
 
     const canvas = await html2canvas(bulle, {
         // Sans fond explicite, le PNG est transparent : illisible sur fond clair
         // après une capture en thème sombre (et inversement). On reprend le fond
         // réel du panneau, résolu depuis les jetons --aic-*.
         backgroundColor: fondDuChat(bulle, theme),
-        scale: echelle,
+        scale: echelleAdaptee({ largeur: boite.width, hauteur: boite.height }, echelle),
         useCORS: true,
         logging: false,
         // Le bouton ⋮ est un affordance d'interface, pas du contenu : il n'a
@@ -46,7 +78,7 @@ export async function capturerBulle(bulle, { theme = 'light', echelle = 2 } = {}
             // La bulle est capturée hors de son fil : on lui rend une largeur
             // stable et une marge, sinon html2canvas rogne au plus juste.
             elementClone.style.margin = `${MARGE}px`;
-            elementClone.style.width = `${bulle.getBoundingClientRect().width}px`;
+            elementClone.style.width = `${boite.width}px`;
             // Le clone sort de la cascade s'il est déplacé : on lui réaffirme le
             // thème pour que les jetons --aic-* résolvent comme à l'écran.
             documentClone.querySelectorAll('.jsb-ai-chat').forEach((chat) => {

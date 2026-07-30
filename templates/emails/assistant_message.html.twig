@@ -10,6 +10,13 @@
 {% extends 'emails/_layout.html.twig' %}
 {% import 'emails/_macros.html.twig' as m %}
 
+{# Corps élargi : une réponse de Ket transporte souvent un tableau de 5-6
+   colonnes (client, risque, assureur, échéance…), à l'étroit dans les 600 px
+   standard — les dates s'y coupaient en deux. 760 px reste sous la largeur du
+   volet de lecture des clients de bureau, et le mobile n'est pas affecté (le
+   conteneur est fluide, seul son maximum change). #}
+{% set largeurCorps = 760 %}
+
 {% block content %}
     {{ m.heading('assistant-ia', 'Message de ' ~ assistantNom) }}
 

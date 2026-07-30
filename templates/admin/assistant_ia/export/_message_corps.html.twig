@@ -62,12 +62,18 @@
         </{{ bloc.ordonnee ? 'ol' : 'ul' }}>
 
     {% elseif bloc.type == 'tableau' %}
-        <table cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin:0 0 12px;font-size:12px;color:#343a40;">
+        {# Au-delà de 4 colonnes, la place par colonne devient le facteur limitant
+           (une date se coupait en deux). On resserre alors la typographie et les
+           gouttières plutôt que de laisser le contenu se déformer. Vaut pour
+           l'e-mail comme pour le PDF : même fragment. #}
+        {% set compact = bloc.entetes|length >= 5 %}
+        {% set cellule_pad = compact ? '4px 6px' : '6px 8px' %}
+        <table cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin:0 0 12px;font-size:{{ compact ? '11px' : '12px' }};line-height:1.35;color:#343a40;">
             {% if bloc.entetes is not empty %}
                 <thead>
                     <tr>
                         {% for cellule in bloc.entetes %}
-                            <th style="text-align:left;padding:6px 8px;background:#f1f3f5;border:1px solid #dee2e6;font-weight:700;color:#0d2440;">{{ md.inline(cellule, badgeStyles) }}</th>
+                            <th style="text-align:left;padding:{{ cellule_pad }};background:#f1f3f5;border:1px solid #dee2e6;font-weight:700;color:#0d2440;word-break:break-word;">{{ md.inline(cellule, badgeStyles) }}</th>
                         {% endfor %}
                     </tr>
                 </thead>
@@ -76,7 +82,12 @@
                 {% for ligne in bloc.lignes %}
                     <tr>
                         {% for cellule in ligne %}
-                            <td style="padding:6px 8px;border:1px solid #dee2e6;vertical-align:top;">{{ md.inline(cellule, badgeStyles) }}</td>
+                            {# word-break:break-word — la cellule cède AVANT le tableau.
+                               Sur un écran de téléphone, six colonnes dépassent sinon la
+                               largeur de l'écran et c'est tout l'e-mail qui défile
+                               horizontalement. La coupure n'intervient que si le mot ne
+                               tient pas : sur un écran large, rien ne change. #}
+                            <td style="padding:{{ cellule_pad }};border:1px solid #dee2e6;vertical-align:top;word-break:break-word;">{{ md.inline(cellule, badgeStyles) }}</td>
                         {% endfor %}
                     </tr>
                 {% endfor %}
@@ -100,7 +111,7 @@
                 <tr>
                     <th style="text-align:left;padding:6px 8px;background:#f1f3f5;border:1px solid #dee2e6;font-weight:700;color:#0d2440;">&nbsp;</th>
                     {% for serie in bloc.series %}
-                        <th style="text-align:right;padding:6px 8px;background:#f1f3f5;border:1px solid #dee2e6;font-weight:700;color:#0d2440;">
+                        <th style="text-align:right;padding:6px 8px;background:#f1f3f5;border:1px solid #dee2e6;font-weight:700;color:#0d2440;word-break:break-word;">
                             {{ serie.label }}{% if bloc.unite is not empty %} ({{ bloc.unite }}){% endif %}
                         </th>
                     {% endfor %}
@@ -109,7 +120,7 @@
             <tbody>
                 {% for index, label in bloc.labels %}
                     <tr>
-                        <th scope="row" style="text-align:left;padding:6px 8px;border:1px solid #dee2e6;font-weight:600;">{{ label }}</th>
+                        <th scope="row" style="text-align:left;padding:6px 8px;border:1px solid #dee2e6;font-weight:600;word-break:break-word;">{{ label }}</th>
                         {% for serie in bloc.series %}
                             <td style="text-align:right;padding:6px 8px;border:1px solid #dee2e6;">{{ serie.data[index]|number_format(2, ',', ' ') }}</td>
                         {% endfor %}

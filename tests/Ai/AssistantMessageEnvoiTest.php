@@ -415,12 +415,22 @@ class AssistantMessageEnvoiTest extends WebTestCase
             'data-picker-format',
             // Sélection MULTIPLE : cases à cocher, jamais des boutons radio.
             'type="checkbox"',
+            // L'image doit figurer dans les formats ET être le défaut, comme
+            // lorsque Ket envoie lui-même : c'est le seul rendu fidèle.
+            'id="aimsg-format-image"',
+            'data-assistant-message-picker-id-message-value',
         ] as $crochet) {
             self::assertStringContainsString($crochet, $html, sprintf('Crochet « %s » absent du picker.', $crochet));
         }
         // L'ORIGINE est ce qui permet de retrouver « le contact sinistres de SONAS ».
         self::assertStringContainsString('SONAS', $html);
         self::assertStringContainsString('Sinistres', $html);
+
+        // Seule l'option « image » est pré-cochée parmi les formats.
+        self::assertSame(
+            1,
+            preg_match_all('/name="aimsg-format"[^>]*value="image"[^>]*checked|checked[^>]*name="aimsg-format"[^>]*value="image"/', $html)
+        );
         // data-search agrège les facettes, en minuscules.
         self::assertStringContainsString('data-search="alice sinistre', strtolower($html));
     }
