@@ -513,6 +513,9 @@ export default class extends Controller {
                 case 'open-soa-envoi':
                     this.openSoaEnvoiAction(action);
                     break;
+                case 'assistant:message.envoyer-direct':
+                    await this.envoyerMessageDirect(action);
+                    break;
                 case 'signaler-paiement-prime':
                     this.openSignalerPaiementPrimeAction(action);
                     break;
@@ -2171,6 +2174,79 @@ export default class extends Controller {
     }
 
     // ── Envoyer par e-mail ────────────────────────────────────────────────────
+
+    /**
+     * Envoi demandé par Ket lui-même (« envoie ce message à x@y.z ») : raccourci
+     * du picker, quand l'utilisateur donne l'adresse dans la conversation.
+     *
+     * Le format par défaut est l'IMAGE, pour que le destinataire reçoive le
+     * message tel qu'il s'affiche — graphiques compris. Cette capture ne peut
+     * être faite QUE par le navigateur : c'est pourquoi l'outil serveur délègue
+     * ici plutôt que d'envoyer lui-même. Le POST retombe ensuite sur la route
+     * d'envoi standard, qui re-valide tout (adresses, plafond, traçabilité).
+     *
+     * Si la capture échoue, on bascule sur le PDF plutôt que d'abandonner :
+     * la mise en forme est préservée, seule la fidélité du graphique se perd.
+     */
+    async envoyerMessageDirect(action) {
+        const idMessage = Number(action?.idMessage);
+        const destinataires = Array.isArray(action?.destinataires) ? action.destinataires : [];
+        if (!Number.isInteger(idMessage) || idMessage <= 0 || destinataires.length === 0) return;
+
+        let format = action.format || 'image';
+        let image = null;
+
+        if (format === 'image') {
+            const bulle = this.hasMessagesTarget
+                ? this.messagesTarget.querySelector(`.aic-msg[data-message-id="${idMessage}"]`)
+                : null;
+            try {
+                if (!bulle) throw new Error('bulle introuvable');
+                const { capturerBulle } = await import('./assistant-message-image.js');
+                const blob = await capturerBulle(bulle, { theme: this._theme });
+                if (!blob) throw new Error('capture vide');
+                image = await this.blobEnBase64(blob);
+            } catch (error) {
+                console.error('AssistantChat - capture pour envoi échouée :', error);
+                format = 'pdf';
+            }
+        }
+
+        try {
+            const response = await fetch(`${this.sendUrlValue.replace(/\/+$/, '')}/${idMessage}/envoyer`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                body: JSON.stringify({
+                    emails: destinataires,
+                    format,
+                    image,
+                    message: action.message || '',
+                }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || data.success === false) {
+                throw new Error(data.message || `Erreur serveur ${response.status}`);
+            }
+            this.appendNotice('status', data.message || 'Message envoyé.');
+        } catch (error) {
+            console.error('AssistantChat - envoi direct échoué :', error);
+            this.appendNotice('error', error.message || "L'envoi a échoué. Réessayez ou passez par « Envoyer par e-mail ».");
+        }
+    }
+
+    /** Blob → base64 nu (sans préfixe data:), forme attendue par le serveur. */
+    blobEnBase64(blob) {
+        return new Promise((resolve, reject) => {
+            const lecteur = new FileReader();
+            lecteur.onerror = () => reject(lecteur.error);
+            lecteur.onload = () => {
+                const resultat = String(lecteur.result || '');
+                const virgule = resultat.indexOf(',');
+                resolve(virgule === -1 ? resultat : resultat.slice(virgule + 1));
+            };
+            lecteur.readAsDataURL(blob);
+        });
+    }
 
     async envoyerMessageParEmail() {
         const actif = this.messageActif();

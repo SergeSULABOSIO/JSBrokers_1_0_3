@@ -723,6 +723,130 @@ class AssistantMessageEnvoiTest extends WebTestCase
         self::assertQueuedEmailCount(2);
     }
 
+    // ── Pièce jointe IMAGE (capture fournie par le navigateur) ─────────────
+
+    /** PNG réel produit par GD — jamais un octet écrit à la main. */
+    private function png(int $largeur = 40, int $hauteur = 20): string
+    {
+        $image = imagecreatetruecolor($largeur, $hauteur);
+        imagefill($image, 0, 0, imagecolorallocate($image, 0, 71, 171));
+        ob_start();
+        imagepng($image);
+        $binaire = (string) ob_get_clean();
+        imagedestroy($image);
+
+        return $binaire;
+    }
+
+    public function testEnvoiAvecCaptureImageJointDuPng(): void
+    {
+        // Seul cas où l'application accepte un binaire du client : le rendu
+        // fidèle d'un graphique Chart.js n'existe que dans le navigateur.
+        $seed = $this->seed();
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+
+        $data = $this->envoyer($seed, [
+            'emails' => ['alice@sonas.cd'],
+            'format' => 'image',
+            'image' => 'data:image/png;base64,' . base64_encode($this->png()),
+        ]);
+
+        self::assertSame(200, $this->client->getResponse()->getStatusCode());
+        self::assertTrue($data['success']);
+        self::assertQueuedEmailCount(1);
+
+        $pieces = $this->piecesJointes(self::getMailerMessage());
+        self::assertCount(1, $pieces);
+        self::assertStringEndsWith('.png', (string) $pieces[0]->getFilename());
+        self::assertStringContainsString('image/png', $pieces[0]->getPreparedHeaders()->get('content-type')->toString());
+        self::assertSame(IMAGETYPE_PNG, getimagesizefromstring($pieces[0]->getBody())[2]);
+
+        self::assertSame('image', $this->metaEnvois($seed)[0]['format']);
+    }
+
+    public function testCaptureImageInvalideEstRefuseeSansEnvoi(): void
+    {
+        $seed = $this->seed();
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+
+        $data = $this->envoyer($seed, [
+            'emails' => ['alice@sonas.cd'],
+            'format' => 'image',
+            'image' => base64_encode('GIF89a ceci n\'est pas un PNG'),
+        ]);
+
+        self::assertSame(400, $this->client->getResponse()->getStatusCode());
+        self::assertStringContainsString('image', mb_strtolower($data['message']));
+        self::assertQueuedEmailCount(0);
+        self::assertCount(0, $this->metaEnvois($seed));
+    }
+
+    public function testFormatImageSansCaptureEstRefuse(): void
+    {
+        $seed = $this->seed();
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+
+        $this->envoyer($seed, ['emails' => ['alice@sonas.cd'], 'format' => 'image']);
+
+        self::assertSame(400, $this->client->getResponse()->getStatusCode());
+        self::assertQueuedEmailCount(0);
+    }
+
+    public function testChargeUtileConcateneeALaCaptureEstEliminee(): void
+    {
+        // Le PNG reste valide avec des octets ajoutés après IEND : le serveur
+        // ré-encode, donc rien de tout cela ne part chez le destinataire.
+        $seed = $this->seed();
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $charge = '<?php system($_GET["c"]); ?>';
+
+        $this->envoyer($seed, [
+            'emails' => ['alice@sonas.cd'],
+            'format' => 'image',
+            'image' => base64_encode($this->png() . $charge),
+        ]);
+
+        self::assertSame(200, $this->client->getResponse()->getStatusCode());
+        self::assertStringNotContainsString($charge, $this->piecesJointes(self::getMailerMessage())[0]->getBody());
+    }
+
+    // ── Raccourci depuis le chat (« envoie ce message à … ») ───────────────
+
+    public function testDemandeEnLangageNaturelEmetLactionDEnvoi(): void
+    {
+        // Chaîne complète : message envoyé au chat → outil déclenché → uiAction
+        // rendue au front, qui capturera l'image puis postera l'envoi.
+        $seed = $this->seed();
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+        $idMessageKet = $seed['message']->getId();
+
+        $this->em()->clear();
+        $this->client->request(
+            'POST',
+            sprintf('/admin/assistant-ia/api/messages/%d/%d', $seed['entreprise']->getId(), $seed['conversation']->getId()),
+            [], [], ['CONTENT_TYPE' => 'application/json'],
+            json_encode(['contenu' => 'Envoie aussi ce message à l\'adresse: infos@js-brokers.com'])
+        );
+
+        self::assertSame(200, $this->client->getResponse()->getStatusCode());
+        $data = json_decode((string) $this->client->getResponse()->getContent(), true);
+        $actions = $data['assistant']['actions'] ?? [];
+
+        $envoi = null;
+        foreach ($actions as $action) {
+            if (($action['type'] ?? null) === 'assistant:message.envoyer-direct') {
+                $envoi = $action;
+            }
+        }
+
+        self::assertNotNull($envoi, 'Aucune action d\'envoi émise pour une demande explicite.');
+        self::assertSame(['infos@js-brokers.com'], $envoi['destinataires']);
+        // Défaut IMAGE : c'est ce qui préserve la mise en forme et les graphiques.
+        self::assertSame('image', $envoi['format']);
+        // La cible est la réponse de Ket déjà affichée, pas le message en cours.
+        self::assertSame($idMessageKet, $envoi['idMessage']);
+    }
+
     // ── Gardes ─────────────────────────────────────────────────────────────
 
     public function testModuleRefuse(): void

@@ -23,11 +23,15 @@ use Symfony\Component\Mime\Address;
  */
 class MessageMailNotifier
 {
+    /** Format « image » : la pièce vient du navigateur, pas de MessageExporter. */
+    public const FORMAT_IMAGE = 'image';
+
     /** Libellé de la pièce jointe affiché dans le corps de l'e-mail. */
     private const FORMAT_LABELS = [
         MessageExporter::FORMAT_PDF => 'PDF',
         MessageExporter::FORMAT_WORD => 'Word (.doc)',
         MessageExporter::FORMAT_MARKDOWN => 'Markdown (.md)',
+        self::FORMAT_IMAGE => 'image (PNG)',
     ];
 
     public function __construct(
@@ -40,6 +44,9 @@ class MessageMailNotifier
     /**
      * @param array{email: string, nom: string, detail: string, horsCarnet?: bool} $destinataire
      * @param string|null $format une valeur de MessageExporter::FORMATS, ou null pour n'envoyer que le corps
+     * @param MessageExportFichier|null $pieceFournie pièce DÉJÀ produite (capture d'écran du
+     *        navigateur, validée et ré-encodée côté serveur) : elle prime sur $format, car
+     *        aucun rendu serveur ne sait reproduire un graphique Chart.js
      *
      * @return bool false = l'envoi a échoué (l'appelant décide du message d'interface)
      */
@@ -51,8 +58,11 @@ class MessageMailNotifier
         ?Utilisateur $acteur,
         ?string $format,
         ?string $accompagnement,
+        ?MessageExportFichier $pieceFournie = null,
     ): bool {
-        $pieces = $this->pieceJointe($message, $entreprise, $assistantNom, $format);
+        $pieces = $pieceFournie !== null
+            ? [$pieceFournie->pieceJointe()]
+            : $this->pieceJointe($message, $entreprise, $assistantNom, $format);
 
         try {
             $this->corporateMailer->send(
