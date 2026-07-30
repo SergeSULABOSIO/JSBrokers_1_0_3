@@ -1,5 +1,6 @@
 import { Controller } from '@hotwired/stimulus';
 import { } from './base_controller.js';
+import { ouvrirPickerAutonome } from './picker-open.js';
 
 /**
  * @file Ce fichier contient le contrôleur Stimulus 'cerveau'.
@@ -2006,37 +2007,16 @@ export default class extends Controller {
      * @private
      */
     async _openStandalonePicker(url, { controllerName, errorLabel }) {
-        if (!url) {
-            console.error(`[Cerveau] _openStandalonePicker(${controllerName}) : URL manquante.`);
-            this._showNotification(`Impossible d'ouvrir ${errorLabel} : URL manquante.`, 'error');
-            return;
-        }
-        // Garde anti double-ouverture (double clic / menu contextuel + toolbar).
-        if (document.querySelector(`[data-controller~="${controllerName}"]`)) return;
-        try {
-            this.broadcast('app:loading.start');
-            const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-            if (!response.ok) throw new Error(`Erreur serveur ${response.status}`);
-            const html = await response.text();
-
-            const holder = document.createElement('div');
-            holder.innerHTML = html.trim();
-            const picker = holder.firstElementChild;
-            if (!picker) throw new Error('Contenu du picker vide.');
-
-            // Hôte = la modale ouverte la plus HAUTE (dernière .modal.show réellement
-            // visible), sinon <body>. On filtre sur la visibilité : un `.show` résiduel
-            // sur une modale masquée détournerait le picker vers un conteneur invisible.
-            const host = Array.from(document.querySelectorAll('.modal.show'))
-                .filter(m => getComputedStyle(m).display !== 'none')
-                .pop() || document.body;
-            host.appendChild(picker); // → connect() du contrôleur Stimulus dédié
-        } catch (error) {
-            console.error(`[Cerveau] _openStandalonePicker(${controllerName}) failed:`, error);
-            this._showNotification(error.message || `Impossible d'ouvrir ${errorLabel}.`, 'error');
-        } finally {
-            this.broadcast('app:loading.stop');
-        }
+        // Mécanique commune extraite dans `picker-open.js` : le chat de
+        // l'assistant (colonne 4, hors Cerveau) ouvre ses pickers par le MÊME
+        // chemin. Ici, seuls les effets de bord restent propres au Cerveau —
+        // comportement inchangé à l'identique.
+        await ouvrirPickerAutonome(url, {
+            controllerName,
+            errorLabel,
+            onErreur: (message) => this._showNotification(message, 'error'),
+            onChargement: (actif) => this.broadcast(actif ? 'app:loading.start' : 'app:loading.stop'),
+        });
     }
 
     /**

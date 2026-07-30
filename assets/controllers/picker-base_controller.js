@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { normaliserRecherche, ligneCorrespond } from './texte-recherche.js';
 
 /**
  * Socle COMMUN des pickers autonomes (overlay .jsb-picker-* inséré dans le DOM par le
@@ -82,13 +83,18 @@ export default class extends Controller {
         if (bar) bar.classList.toggle('is-active', !!active);
     }
 
-    /** Filtre les lignes sur data-search + met à jour le compteur « affiché(s) ». */
+    /**
+     * Filtre les lignes sur data-search + met à jour le compteur « affiché(s) ».
+     *
+     * Recherche INSENSIBLE AUX ACCENTS et par mots (tous les termes, dans
+     * n'importe quel ordre) : sur un carnet francophone, exiger « Échéance »
+     * plutôt que « echeance » rend le filtrage inutilisable.
+     */
     _filter(query) {
         const raw = (query || '').trim();
-        const q = raw.toLowerCase();
         let visible = 0;
         this.element.querySelectorAll('[data-picker-row]').forEach((row) => {
-            const match = q === '' || (row.dataset.search || '').includes(q);
+            const match = ligneCorrespond(row.dataset.search || '', raw) && this._rowMatchesFilters(row);
             row.style.display = match ? '' : 'none';
             if (match) {
                 visible++;
@@ -108,16 +114,35 @@ export default class extends Controller {
     }
 
     /**
+     * Point d'extension : critère NON textuel s'ajoutant à la recherche (puces
+     * de catégorie du picker de destinataires, par exemple). Vrai par défaut,
+     * donc les pickers existants gardent exactement leur comportement.
+     */
+    _rowMatchesFilters(row) { // eslint-disable-line no-unused-vars
+        return true;
+    }
+
+    /** Relance le filtrage avec la saisie courante (après un changement de critère). */
+    _refilter() {
+        this._filter(this.element.querySelector('[data-picker-search]')?.value || '');
+    }
+
+    /**
      * Réécrit le contenu de `el` à partir du texte original, en enveloppant chaque
      * occurrence de `query` dans un <mark> (via des nœuds DOM : aucun risque d'injection).
+     *
+     * La recherche des positions se fait sur le texte NORMALISÉ (minuscules, sans
+     * accents) et le découpage sur le texte D'ORIGINE : c'est possible parce que
+     * normaliserRecherche() préserve la longueur — sinon « eche » surlignerait à
+     * côté dans « Échéance ».
      */
     _highlightInto(el, original, query) {
         const q = (query || '').trim();
         if (!q) { el.textContent = original; return; }
 
         el.textContent = '';
-        const lower = original.toLowerCase();
-        const qlower = q.toLowerCase();
+        const lower = normaliserRecherche(original);
+        const qlower = normaliserRecherche(q);
         let i = 0;
         let idx;
         while ((idx = lower.indexOf(qlower, i)) !== -1) {

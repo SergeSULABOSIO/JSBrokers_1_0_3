@@ -15,6 +15,22 @@
   'auto' est résolu par le contrôleur Stimulus (préférence système du poste) dès
   connect(), avant le premier rendu visuel.
 #}
+{#
+  Macros des éléments montés à la fois par le SERVEUR (boucle de l'historique) et
+  par le NAVIGATEUR (bulles ajoutées en direct, qui clonent les <template> du bas
+  de ce fichier). Les définir ici les rend SOURCE UNIQUE : le contrôleur Stimulus
+  ne construit aucun markup ni aucune icône, il clone et remplit du textContent.
+  C'est ce qui évite le troisième doublon Twig ⇄ JS.
+#}
+{% macro citationBulle(qui, extrait, quoteId) %}
+    <button type="button" class="aic-msg-quote" data-quote-id="{{ quoteId }}"
+            data-action="click->assistant-chat#allerAuMessage"
+            aria-label="Aller au message cité">
+        <span class="aic-msg-quote-qui">{{ qui }}</span>
+        <span class="aic-msg-quote-extrait">{{ extrait }}</span>
+    </button>
+{% endmacro %}
+{% import _self as aic %}
 <div class="jsb-ai-chat"
      data-aic-theme="{{ themeAssistant|default('auto') }}"
      data-controller="assistant-chat"
@@ -292,10 +308,108 @@
         .jsb-ai-chat .aic-msg-attach:hover { border-color:var(--aic-accent); color:var(--aic-accent); }
         .jsb-ai-chat .aic-msg-attach:focus-visible { outline:2px solid var(--aic-accent); outline-offset:2px; }
 
+        /* ══ Actions d'une bulle (kebab + menu) ═════════════════════════════════
+           Le bouton et le menu vivent DANS .jsb-ai-chat : ils héritent des jetons
+           --aic-* par cascade, donc le mode sombre est gratuit — aucune couleur
+           n'est dupliquée ici, contrairement au .context-menu applicatif dont les
+           teintes sombres sont codées en dur.
+           Le menu est posé en `fixed` : il échappe ainsi à l'overflow-y:auto du
+           fil (aucun ancêtre ne porte de transform, les coordonnées viewport de
+           getBoundingClientRect restent donc valides). */
+        .jsb-ai-chat .aic-msg-body { position:relative; }
+        .jsb-ai-chat .aic-msg-menu-btn {
+            position:absolute; top:-4px; right:-4px; z-index:1;
+            display:flex; align-items:center; justify-content:center;
+            width:26px; height:26px; padding:0; border-radius:8px;
+            background:var(--aic-surface); border:1px solid var(--aic-border);
+            color:var(--aic-muted); cursor:pointer;
+            /* opacity (et NON display:none) : le bouton reste atteignable au Tab,
+               et :focus-visible le révèle — WCAG 2.4.7. */
+            opacity:0;
+            transition:opacity .12s ease, color .12s ease, border-color .12s ease;
+        }
+        .jsb-ai-chat .aic-msg--user .aic-msg-menu-btn { right:auto; left:-4px; }
+        .jsb-ai-chat .aic-msg:hover .aic-msg-menu-btn,
+        .jsb-ai-chat .aic-msg:focus-within .aic-msg-menu-btn,
+        .jsb-ai-chat .aic-msg-menu-btn:focus-visible,
+        .jsb-ai-chat .aic-msg-menu-btn[aria-expanded="true"] { opacity:1; }
+        .jsb-ai-chat .aic-msg-menu-btn:hover { color:var(--aic-accent); border-color:var(--aic-accent); }
+        .jsb-ai-chat .aic-msg-menu-btn:focus-visible { outline:2px solid var(--aic-accent); outline-offset:2px; }
+        /* Tactile : pas de survol possible, le bouton reste donc visible. */
+        @media (hover:none) { .jsb-ai-chat .aic-msg-menu-btn { opacity:1; } }
+        @media (prefers-reduced-motion:reduce) { .jsb-ai-chat .aic-msg-menu-btn { transition:none; } }
+
+        /* z-index juste au-dessus de l'infobulle .jsb-ctx-tip (9999, app.css). */
+        .jsb-ai-chat .aic-msg-menu {
+            position:fixed; z-index:10000; min-width:200px; padding:.25rem;
+            background:var(--aic-surface); border:1px solid var(--aic-border-strong);
+            border-radius:10px; box-shadow:0 8px 24px var(--aic-shadow-hover);
+        }
+        .jsb-ai-chat .aic-msg-menu[hidden] { display:none; }
+        .jsb-ai-chat .aic-msg-menu-item {
+            display:flex; align-items:center; gap:.55rem; width:100%;
+            padding:.45rem .6rem; border:none; border-radius:6px; background:none;
+            color:var(--aic-text); font-family:inherit; font-size:.85rem; text-align:left;
+            cursor:pointer;
+        }
+        .jsb-ai-chat .aic-msg-menu-item[hidden] { display:none; }
+        .jsb-ai-chat .aic-msg-menu-item:hover,
+        .jsb-ai-chat .aic-msg-menu-item:focus-visible {
+            background:var(--aic-accent-subtle); color:var(--aic-on-subtle); outline:none;
+        }
+        .jsb-ai-chat .aic-msg-menu-item svg { flex:0 0 auto; color:var(--aic-muted); }
+        .jsb-ai-chat .aic-msg-menu-item:hover svg,
+        .jsb-ai-chat .aic-msg-menu-item:focus-visible svg { color:var(--aic-on-subtle); }
+        .jsb-ai-chat .aic-msg-menu-sep {
+            margin:.25rem .3rem; border:none; border-top:1px solid var(--aic-border);
+        }
+
+        /* ══ Citation (« Répondre ») ════════════════════════════════════════════ */
+        /* Dans la bulle : rappel du message cité, cliquable pour y revenir. */
+        .jsb-ai-chat .aic-msg-quote {
+            display:block; width:100%; margin:0 0 .15rem; padding:.3rem .5rem;
+            text-align:left; font-family:inherit; cursor:pointer;
+            background:var(--aic-bg); border:none; border-left:3px solid var(--aic-accent);
+            border-radius:6px;
+        }
+        .jsb-ai-chat .aic-msg-quote:hover { background:var(--aic-accent-subtle); }
+        .jsb-ai-chat .aic-msg-quote:focus-visible { outline:2px solid var(--aic-accent); outline-offset:2px; }
+        .jsb-ai-chat .aic-msg-quote-qui {
+            display:block; font-size:.7rem; font-weight:600; color:var(--aic-accent);
+        }
+        /* Troncature en CSS, jamais en JS : une seule règle, aucune constante
+           de longueur dupliquée entre le serveur et le navigateur. */
+        .jsb-ai-chat .aic-msg-quote-extrait {
+            display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+            overflow:hidden; font-size:.76rem; color:var(--aic-muted); line-height:1.35;
+        }
+        /* Surlignage bref du message rejoint depuis une citation. */
+        .jsb-ai-chat .aic-msg--cible .aic-msg-text {
+            outline:2px solid var(--aic-accent); outline-offset:2px;
+        }
+
+        /* Bandeau de citation du composer : brouillon purement client, jamais
+           persisté — il disparaît à l'envoi ou à l'annulation. */
+        .jsb-ai-chat .aic-citation {
+            display:flex; align-items:center; gap:.4rem; min-width:0;
+            margin:0 0 .4rem; padding:.3rem .35rem .3rem .55rem;
+            background:var(--aic-bg); border-left:3px solid var(--aic-accent); border-radius:6px;
+        }
+        .jsb-ai-chat .aic-citation[hidden] { display:none; }
+        .jsb-ai-chat .aic-citation svg { flex:0 0 auto; color:var(--aic-accent); }
+        .jsb-ai-chat .aic-citation-qui { flex:0 0 auto; font-size:.72rem; font-weight:600; color:var(--aic-accent); }
+        .jsb-ai-chat .aic-citation-extrait {
+            flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+            font-size:.76rem; color:var(--aic-muted);
+        }
+
         /* Bulles système (402 tokens / erreur réseau). */
         .jsb-ai-chat .aic-notice { margin:0; padding:.6rem .8rem; border-radius:8px; font-size:.85rem; align-self:center; max-width:92%; }
         .jsb-ai-chat .aic-notice--warning { background:var(--aic-warning-bg); color:var(--aic-warning-fg); }
         .jsb-ai-chat .aic-notice--error { background:var(--aic-danger-bg); color:var(--aic-danger-fg); }
+        /* Confirmation d'une action réussie (envoi d'un message par e-mail) :
+           mêmes jetons que le plan exécuté, donc mode sombre couvert d'office. */
+        .jsb-ai-chat .aic-notice--status { background:var(--aic-success-bg); color:var(--aic-success-fg); }
 
         /* Panneau de décision sous un plan de mutation préparé par Ket. */
         .jsb-ai-chat .aic-mutation-actions {
@@ -627,7 +741,13 @@
             {% set planExecute = hasPlan and (message.meta.mutationPlanExecuted ?? false) %}
             {% set planAnnule = hasPlan and (message.meta.mutationPlanCancelled ?? false) %}
             {% set planEnAttente = hasPlan and not planExecute and not planAnnule %}
+            {# data-message-id : identité de la bulle, sans laquelle aucune action
+               (répondre, exporter, envoyer) n'est possible. Volontairement un
+               data-* et NON un id= : deux conversations peuvent être ouvertes en
+               même temps, un id DOM entrerait en collision. #}
             <div class="aic-msg aic-msg--{{ estAssistant ? 'assistant' : 'user' }}{{ estRefus ? ' aic-msg--refus' }}"
+                data-message-id="{{ message.id }}"
+                data-message-role="{{ message.role }}"
                 {%- if planEnAttente %} data-mutation-review="{{ {
                     idMessage: message.id,
                     budget: message.meta.mutationPlan.budget,
@@ -640,6 +760,15 @@
                     <span class="aic-msg-avatar" aria-hidden="true">{{ assistantNom|first|upper }}</span>
                 {% endif %}
                 <div class="aic-msg-body">
+                    {# Message CITÉ (« Répondre ») : rappel cliquable, en tête de
+                       bulle. Même macro que le <template> cloné en direct. #}
+                    {% if message.repondA %}
+                        {{ aic.citationBulle(
+                            message.repondA.role == 'assistant' ? assistantNom : 'Vous',
+                            message.repondA.extraitCitation,
+                            message.repondA.id
+                        ) }}
+                    {% endif %}
                     {% if estAssistant %}
                         <p class="aic-msg-text" data-md-source="{{ message.contenu|e('html_attr') }}">{{ message.contenu }}</p>
                     {% else %}
@@ -726,6 +855,21 @@
                 idEntreprise: idEntreprise,
             } only %}
         </div>
+        {# Brouillon de CITATION (« Répondre » du menu de bulle). Contrairement aux
+           deux barres ci-dessus, ce bandeau n'est jamais re-rendu par le serveur :
+           c'est un état purement client, effacé à l'envoi réussi ou à l'annulation.
+           Il survit donc volontairement à un 402 ou à une panne réseau, comme le
+           texte restauré dans la zone de saisie. #}
+        <div class="aic-citation" hidden data-assistant-chat-target="citationBar">
+            {{ ux_icon(resolve_icon_name('action:reply'), {height: '13px', width: '13px'}) }}
+            <span class="aic-citation-qui" data-assistant-chat-target="citationQui"></span>
+            <span class="aic-citation-extrait" data-assistant-chat-target="citationExtrait"></span>
+            <button type="button" class="aic-chip-remove"
+                    data-action="click->assistant-chat#annulerCitation"
+                    aria-label="Ne plus répondre à ce message">
+                {{ ux_icon(resolve_icon_name('action:cancel'), {height: '13px', width: '13px'}) }}
+            </button>
+        </div>
         {# Champ fichier caché piloté par le bouton trombone (multi-sélection). #}
         <input type="file" multiple hidden
                data-assistant-chat-target="fichierInput"
@@ -786,9 +930,80 @@ Relisez, corrigez si besoin, puis envoyez. La langue suit l'affichage (français
             </button>
         </div>
         <div class="aic-composer-foot">
-            <span class="aic-hint" id="aic-hint-{{ conversation.id }}">Entrée : envoyer · Maj + Entrée : retour à la ligne</span>
+            <span class="aic-hint" id="aic-hint-{{ conversation.id }}">Entrée : envoyer · Maj + Entrée : retour à la ligne · Clic droit sur un message : ses actions</span>
             <span class="aic-count" id="aic-count-{{ conversation.id }}" hidden
                   aria-live="polite" data-assistant-chat-target="count"></span>
         </div>
     </div>
+
+    {# ══ Actions d'une bulle ════════════════════════════════════════════════
+       Menu UNIQUE, ancré par le contrôleur à la bulle active — ouvert par le
+       bouton ⋮ ou par un CLIC DROIT n'importe où sur la bulle (même menu, même
+       clavier : un curseur est traité comme une ancre de 0×0).
+
+       Placé HORS de .aic-messages, qui est une zone aria-live : ouvrir un menu
+       n'est pas un changement de conversation à annoncer. Placé DANS
+       .jsb-ai-chat : la cascade lui donne les jetons --aic-*, donc le mode
+       sombre ne demande pas une ligne de plus.
+
+       Les libellés et les icônes vivent ICI, jamais dans le JS : ils sont ainsi
+       assertables en PHPUnit et une entrée s'ajoute sans toucher au contrôleur
+       (data-menu-key + data-action ; data-menu-roles pour restreindre à un rôle).
+    #}
+    <div class="aic-msg-menu" role="menu" hidden
+         id="aic-msg-menu-{{ conversation.id }}"
+         aria-label="Actions du message"
+         data-assistant-chat-target="menuBulle"
+         data-action="click->assistant-chat#fermerMenuBulle keydown->assistant-chat#naviguerMenu">
+        <button type="button" class="aic-msg-menu-item" role="menuitem" tabindex="-1"
+                data-menu-key="repondre" data-action="click->assistant-chat#repondreAuMessage">
+            {{ ux_icon(resolve_icon_name('action:reply'), {height: '15px', width: '15px'}) }}
+            <span>Répondre</span>
+        </button>
+        <hr role="separator" class="aic-msg-menu-sep">
+        <button type="button" class="aic-msg-menu-item" role="menuitem" tabindex="-1"
+                data-menu-key="export-pdf" data-action="click->assistant-chat#exporterMessage">
+            {{ ux_icon(resolve_icon_name('action:pdf'), {height: '15px', width: '15px'}) }}
+            <span>Exporter en PDF</span>
+        </button>
+        <button type="button" class="aic-msg-menu-item" role="menuitem" tabindex="-1"
+                data-menu-key="export-word" data-action="click->assistant-chat#exporterMessage">
+            {{ ux_icon(resolve_icon_name('action:word'), {height: '15px', width: '15px'}) }}
+            <span>Exporter en Word (.doc)</span>
+        </button>
+        <button type="button" class="aic-msg-menu-item" role="menuitem" tabindex="-1"
+                data-menu-key="export-markdown" data-action="click->assistant-chat#exporterMessage">
+            {{ ux_icon(resolve_icon_name('action:markdown'), {height: '15px', width: '15px'}) }}
+            <span>Exporter en Markdown</span>
+        </button>
+        {# Capture PNG de la bulle réelle : seul format qui préserve un graphique
+           Chart.js. Produite par le navigateur, sans aller-retour serveur. #}
+        <button type="button" class="aic-msg-menu-item" role="menuitem" tabindex="-1"
+                data-menu-key="export-image" data-action="click->assistant-chat#exporterImage">
+            {{ ux_icon(resolve_icon_name('action:image'), {height: '15px', width: '15px'}) }}
+            <span>Exporter en image</span>
+        </button>
+        <hr role="separator" class="aic-msg-menu-sep">
+        <button type="button" class="aic-msg-menu-item" role="menuitem" tabindex="-1"
+                data-menu-key="envoyer-email" data-action="click->assistant-chat#envoyerMessageParEmail">
+            {{ ux_icon(resolve_icon_name('action:send-email'), {height: '15px', width: '15px'}) }}
+            <span>Envoyer par e-mail</span>
+        </button>
+    </div>
+
+    {# Gabarits clonés par le contrôleur pour les bulles ajoutées en direct. Les
+       déclarer en Twig fait du serveur la SOURCE UNIQUE du markup et des icônes
+       (resolve_icon_name), et évite au JS de fabriquer du HTML. Un <template>
+       n'est pas rendu : il ne pollue ni le fil ni la zone aria-live. #}
+    <template data-assistant-chat-target="tplKebab">
+        <button type="button" class="aic-msg-menu-btn"
+                aria-label="Actions du message" aria-haspopup="menu" aria-expanded="false"
+                aria-controls="aic-msg-menu-{{ conversation.id }}"
+                data-action="click->assistant-chat#ouvrirMenuBulle keydown->assistant-chat#toucheKebab">
+            {{ ux_icon(resolve_icon_name('action:options'), {height: '14px', width: '14px'}) }}
+        </button>
+    </template>
+    <template data-assistant-chat-target="tplCitation">
+        {{ aic.citationBulle('', '', '') }}
+    </template>
 </div>

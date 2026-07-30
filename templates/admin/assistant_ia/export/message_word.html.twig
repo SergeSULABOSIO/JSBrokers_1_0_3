@@ -1,0 +1,46 @@
+{# Enveloppe HTML-Word (.doc) : les namespaces Office et le bloc <xml> font
+   ouvrir ce fichier par Word, LibreOffice Writer et Google Docs en conservant
+   gras, listes et tableaux — et surtout ÉDITABLE, ce qui est le besoin réel
+   derrière « exporter en Word ».
+
+   Zéro dépendance, et le corps est EXACTEMENT le fragment du PDF et de
+   l'e-mail. Si un vrai .docx devient nécessaire (avertissement d'Office sur un
+   fichier téléchargé), il se substitue derrière MessageExporter::exporter()
+   sans qu'aucun appelant ne change. #}
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+    <meta charset="UTF-8">
+    <meta name="ProgId" content="Word.Document">
+    <meta name="Generator" content="JS Brokers">
+    <title>{{ assistantNom }} — message du {{ message.createdAt|date('d/m/Y H:i') }}</title>
+    <!--[if gte mso 9]><xml>
+        <w:WordDocument>
+            <w:View>Print</w:View>
+            <w:Zoom>100</w:Zoom>
+            <w:DoNotOptimizeForBrowser/>
+        </w:WordDocument>
+    </xml><![endif]-->
+    <style>
+        @page { size: A4 portrait; margin: 2cm; }
+        body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #343a40; }
+    </style>
+</head>
+<body>
+    <div style="border-bottom:2px solid #0047AB;padding-bottom:8px;margin-bottom:14px;">
+        <span style="font-size:14pt;font-weight:700;color:#0047AB;">JS Brokers</span>
+        <span style="font-size:9pt;color:#6c757d;"> — {{ entreprise.nom }}</span>
+        <div style="font-size:9pt;color:#6c757d;">
+            {{ estAssistant ? 'Réponse de ' ~ assistantNom : 'Question de l’utilisateur' }},
+            le {{ message.createdAt|date('d/m/Y à H:i') }}
+        </div>
+    </div>
+
+    {{ corpsHtml|raw }}{# fragment issu d'un template autoescapé, cf. MessageExporter::corpsHtml() #}
+
+    <div style="border-top:1px solid #dee2e6;margin-top:18px;padding-top:6px;font-size:8pt;color:#adb5bd;">
+        Document généré depuis l'assistant IA de JS Brokers — {{ entreprise.nom }}. Usage interne.
+    </div>
+</body>
+</html>

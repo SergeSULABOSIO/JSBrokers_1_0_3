@@ -6,6 +6,9 @@ use App\Ai\AiContextBuilder;
 use App\Ai\AiEngineFailure;
 use App\Ai\AiReply;
 use App\Ai\Engine\AiEngineInterface;
+use App\Ai\Export\MessageDestinataires;
+use App\Ai\Export\MessageExporter;
+use App\Ai\Export\MessageMailNotifier;
 use App\Ai\Fichier\FichierAttachePolicy;
 use App\Ai\Fichier\FichierTexteExtracteur;
 use App\Ai\Tool\EntiteLibelle;
@@ -20,6 +23,7 @@ use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Utilisateur;
 use App\Repository\AssistantConversationRepository;
+use App\Repository\AssistantMessageRepository;
 use App\Repository\AssistantParametresRepository;
 use App\Repository\EntrepriseRepository;
 use App\Ai\Mutation\MutationPlan;
@@ -36,6 +40,7 @@ use App\Token\TokenAccountService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -44,6 +49,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Vich\UploaderBundle\Handler\DownloadHandler;
 
@@ -75,9 +81,19 @@ class AssistantIaController extends AbstractController
     /** Nombre maximal d'objets attachés au contexte d'une même conversation. */
     private const MAX_CONTEXTES = 20;
 
+    /**
+     * Plafond d'envois par e-mail d'un MÊME message. Un e-mail sortant porte la
+     * marque JS Brokers vers un tiers, et l'adresse peut être saisie librement :
+     * ce plafond borne l'abus d'un message donné. Il se lit en O(1) dans
+     * meta['envois'], sans table ni requête supplémentaire. (Un quota GLOBAL par
+     * entreprise demanderait symfony/rate-limiter, absent du projet.)
+     */
+    private const MAX_ENVOIS_PAR_MESSAGE = 10;
+
     public function __construct(
         private EntrepriseRepository $entrepriseRepository,
         private AssistantConversationRepository $conversationRepository,
+        private AssistantMessageRepository $messageRepository,
         private AssistantParametresRepository $parametresRepository,
         private WorkspaceAccessResolver $accessResolver,
         private TokenAccountService $tokenAccountService,
@@ -331,9 +347,31 @@ class AssistantIaController extends AbstractController
             ], Response::HTTP_BAD_REQUEST);
         }
 
+        // Citation (« Répondre » du menu de bulle) : le message cité doit
+        // appartenir à CETTE conversation, elle-même déjà restreinte à cet invité
+        // et à cette entreprise. Vérifié AVANT le métrage : une requête invalide
+        // ne doit rien consommer.
+        //
+        // 400 — et non 404 — dans tous les cas (id inexistant, autre conversation,
+        // autre invité) : réponses indiscernables, donc aucun oracle permettant
+        // d'énumérer les ids de messages. Le 404 reste réservé à « conversation
+        // introuvable » (requireConversation).
+        $repondA = null;
+        $replyToId = $payload['replyToId'] ?? null;
+        if ($replyToId !== null) {
+            $repondA = $this->messageRepository->findDansConversation((int) $replyToId, $conversation);
+            if ($repondA === null) {
+                return $this->json(
+                    ['message' => 'Le message cité est introuvable dans cette conversation.'],
+                    Response::HTTP_BAD_REQUEST
+                );
+            }
+        }
+
         $messageUser = (new AssistantMessage())
             ->setRole(AssistantMessage::ROLE_USER)
             ->setContenu($contenu)
+            ->setRepondA($repondA)
             // Instantané IMMUABLE : le message « transporte » les objets du contexte
             // tels qu'ils étaient à l'envoi (agrafe sur la bulle + annotation de
             // l'historique moteur) — la liste courante de la conversation, elle,
@@ -428,6 +466,13 @@ class AssistantIaController extends AbstractController
                 'contenu'        => $messageUser->getContenu(),
                 'contexteObjets' => $messageUser->getContexteObjets(),
                 'fichiersJoints' => $messageUser->getFichiersJoints(),
+                // Contrat testable de la persistance de la citation (le front
+                // affiche déjà sa bulle optimiste sans attendre cette valeur).
+                'citation'       => $repondA === null ? null : [
+                    'id'      => $repondA->getId(),
+                    'role'    => $repondA->getRole(),
+                    'extrait' => $repondA->extraitCitation(),
+                ],
                 'createdAt'      => $messageUser->getCreatedAt()?->format(\DateTimeImmutable::ATOM),
             ],
             'assistant' => [
@@ -513,13 +558,7 @@ class AssistantIaController extends AbstractController
         $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
 
         // Le plan est relu depuis la meta du message (jamais depuis le client).
-        $message = null;
-        foreach ($conversation->getMessages() as $m) {
-            if ($m->getId() === $idMessage) {
-                $message = $m;
-                break;
-            }
-        }
+        $message = $this->trouverMessage($conversation, $idMessage);
         $meta = $message?->getMeta() ?? [];
         $stored = $meta['mutationPlan'] ?? null;
         if ($message === null || !is_array($stored) || !isset($stored['plan'])) {
@@ -691,13 +730,7 @@ class AssistantIaController extends AbstractController
         }
         $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
 
-        $message = null;
-        foreach ($conversation->getMessages() as $m) {
-            if ($m->getId() === $idMessage) {
-                $message = $m;
-                break;
-            }
-        }
+        $message = $this->trouverMessage($conversation, $idMessage);
         $meta = $message?->getMeta() ?? [];
         if ($message === null || !PlanEnAttente::porteUnPlan($meta)) {
             return $this->json(['message' => 'Plan introuvable.'], Response::HTTP_NOT_FOUND);
@@ -1108,6 +1141,205 @@ class AssistantIaController extends AbstractController
         return $downloadHandler->downloadObject($document, 'fichier', null, $nomTelechargement);
     }
 
+    /**
+     * Exporte UN message du fil en document téléchargeable (PDF, Word, Markdown).
+     *
+     * FAIL-CLOSED par construction : le message est cherché DANS la conversation,
+     * elle-même déjà restreinte à cet invité et à cette entreprise par
+     * requireConversation(). Un idMessage d'un autre invité est donc un 404.
+     *
+     * `format` est contraint par la ROUTE : toute autre valeur est rejetée par le
+     * routeur avant d'entrer ici (404), donc MessageExporter::FORMATS reste la
+     * seule liste à maintenir.
+     *
+     * NON MÉTRÉ, délibérément : le message a déjà été facturé à l'envoi
+     * (meterWrite), l'export ne lit aucune entité supplémentaire et n'appelle pas
+     * le moteur. Facturer la relecture de son propre message serait une double
+     * facturation. Même parti pris que SoaController::envoyer() et que la bascule
+     * de thème. L'accès reste gardé (module + premium) ; c'est la consommation
+     * qui ne l'est pas.
+     */
+    #[Route('/api/messages/{idEntreprise}/{idConversation}/{idMessage}/export/{format}', name: 'api.message.export', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS, 'idMessage' => Requirement::DIGITS, 'format' => 'pdf|word|markdown'], methods: ['GET'])]
+    public function exportMessage(
+        int $idEntreprise,
+        int $idConversation,
+        int $idMessage,
+        string $format,
+        MessageExporter $exporter,
+    ): Response {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            throw $this->createAccessDeniedException('Accès refusé.');
+        }
+        if ($blocage = $this->blocagePremium($entreprise)) {
+            return $blocage;
+        }
+        $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+
+        $message = $this->trouverMessage($conversation, $idMessage);
+        if ($message === null) {
+            throw $this->createNotFoundException('Message introuvable.');
+        }
+
+        $fichier = $exporter->exporter($message, $format, $entreprise, $this->parametresRepository->nomPour($entreprise));
+
+        return new Response($fichier->contenu, Response::HTTP_OK, [
+            'Content-Type' => $fichier->mime,
+            'Content-Disposition' => HeaderUtils::makeDisposition(
+                HeaderUtils::DISPOSITION_ATTACHMENT,
+                $fichier->nomFichier
+            ),
+        ]);
+    }
+
+    /**
+     * Picker de destinataires d'un message (fragment HTML, comme les autres
+     * pickers de l'application).
+     */
+    #[Route('/api/messages/{idEntreprise}/{idConversation}/{idMessage}/destinataires', name: 'api.message.destinataires', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS, 'idMessage' => Requirement::DIGITS], methods: ['GET'])]
+    public function destinatairesMessage(
+        int $idEntreprise,
+        int $idConversation,
+        int $idMessage,
+        MessageDestinataires $destinataires,
+    ): Response {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            throw $this->createAccessDeniedException('Accès refusé.');
+        }
+        if ($blocage = $this->blocagePremium($entreprise)) {
+            return $blocage;
+        }
+        $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+        $message = $this->trouverMessage($conversation, $idMessage);
+        if ($message === null) {
+            throw $this->createNotFoundException('Message introuvable.');
+        }
+
+        $carnet = $destinataires->collecter($entreprise, $invite, $this->currentUser());
+
+        return $this->render('components/assistant_ia/_message_destinataire_picker.html.twig', [
+            'message' => $message,
+            'assistantNom' => $this->parametresRepository->nomPour($entreprise),
+            'destinataires' => $carnet['destinataires'],
+            'tronque' => $carnet['tronque'],
+            'categorieLabels' => MessageDestinataires::CATEGORIE_LABELS,
+            'urlEnvoi' => $this->generateUrl('admin.assistantia.api.message.envoyer', [
+                'idEntreprise' => $idEntreprise,
+                'idConversation' => $idConversation,
+                'idMessage' => $idMessage,
+            ]),
+        ]);
+    }
+
+    /**
+     * Envoie UN message du fil par e-mail, à une adresse du carnet ou saisie à la
+     * main.
+     *
+     * Une adresse HORS CARNET est acceptée — c'est un besoin réel — mais jamais
+     * sans contrôle, parce que l'e-mail part sous la marque JS Brokers vers un
+     * tiers : format validé, plafond par message, marquage `horsCarnet` dans la
+     * trace et journalisation nominative. Le `replyTo` porte l'adresse du
+     * courtier, de sorte que la réponse lui revienne directement.
+     *
+     * NON MÉTRÉ (même parti pris que l'export et que SoaController::envoyer).
+     */
+    #[Route('/api/messages/{idEntreprise}/{idConversation}/{idMessage}/envoyer', name: 'api.message.envoyer', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS, 'idMessage' => Requirement::DIGITS], methods: ['POST'])]
+    public function envoyerMessage(
+        int $idEntreprise,
+        int $idConversation,
+        int $idMessage,
+        Request $request,
+        MessageDestinataires $destinataires,
+        MessageMailNotifier $notifier,
+    ): JsonResponse {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        if ($blocage = $this->blocagePremium($entreprise)) {
+            return $blocage;
+        }
+        $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+        $message = $this->trouverMessage($conversation, $idMessage);
+        if ($message === null) {
+            return $this->json(['message' => 'Message introuvable.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $meta = $message->getMeta() ?? [];
+        $envois = is_array($meta['envois'] ?? null) ? $meta['envois'] : [];
+        if (\count($envois) >= self::MAX_ENVOIS_PAR_MESSAGE) {
+            return $this->json([
+                'message' => sprintf(
+                    'Ce message a déjà été envoyé %d fois. Créez-en un nouvel export si vous devez le diffuser davantage.',
+                    self::MAX_ENVOIS_PAR_MESSAGE
+                ),
+            ], Response::HTTP_TOO_MANY_REQUESTS);
+        }
+
+        $payload = json_decode($request->getContent(), true) ?: [];
+        $email = trim((string) ($payload['email'] ?? ''));
+        $acteur = $this->currentUser();
+
+        $destinataire = $destinataires->trouver($entreprise, $invite, $acteur, $email);
+        if ($destinataire === null) {
+            $erreurs = $this->validator->validate($email, [
+                new Assert\NotBlank(message: 'Saisissez une adresse e-mail.'),
+                new Assert\Email(mode: Assert\Email::VALIDATION_MODE_STRICT, message: 'Adresse e-mail invalide.'),
+            ]);
+            if (\count($erreurs) > 0) {
+                return $this->json(['message' => (string) $erreurs->get(0)->getMessage()], Response::HTTP_BAD_REQUEST);
+            }
+            $destinataire = ['email' => $email, 'nom' => $email, 'detail' => 'Adresse saisie', 'horsCarnet' => true];
+            // Un envoi hors carnet doit rester retrouvable : il engage la marque.
+            $this->logger->notice('Assistant IA : envoi d\'un message à une adresse hors carnet.', [
+                'entreprise' => $entreprise->getId(),
+                'invite' => $invite?->getId(),
+                'message' => $message->getId(),
+                'email' => $email,
+            ]);
+        }
+
+        $format = $payload['format'] ?? null;
+        $format = in_array($format, MessageExporter::FORMATS, true) ? $format : null;
+
+        $envoye = $notifier->envoyer(
+            $message,
+            $entreprise,
+            $this->parametresRepository->nomPour($entreprise),
+            $destinataire,
+            $acteur,
+            $format,
+            (string) ($payload['message'] ?? ''),
+        );
+        if (!$envoye) {
+            return $this->json([
+                'success' => false,
+                'message' => "L'e-mail n'a pas pu être envoyé. Réessayez dans un instant.",
+            ], Response::HTTP_OK);
+        }
+
+        // Trace attachée AU MESSAGE : elle voyage avec la conversation (purge
+        // automatique en cascade), sans table ni migration supplémentaire.
+        $envois[] = [
+            'email' => $destinataire['email'],
+            'nom' => $destinataire['nom'],
+            'detail' => $destinataire['detail'],
+            'format' => $format,
+            'at' => (new \DateTimeImmutable('now'))->format(\DateTimeImmutable::ATOM),
+            'invite' => $invite?->getId(),
+            'horsCarnet' => ($destinataire['horsCarnet'] ?? false) === true,
+        ];
+        $meta['envois'] = $envois;
+        $message->setMeta($meta);
+        $this->em->flush();
+
+        return $this->json([
+            'success' => true,
+            'message' => sprintf('Message envoyé à %s.', $destinataire['email']),
+        ]);
+    }
+
     /** Ajoute au libellé l'extension du nom de stockage si elle manque (fichier ouvrable). */
     private function nomAvecExtension(string $nom, string $nomStocke): string
     {
@@ -1341,6 +1573,30 @@ class AssistantIaController extends AbstractController
 
         return $this->conversationRepository->findOneDeLInvite($idConversation, $invite, $entreprise)
             ?? throw $this->createNotFoundException('Conversation introuvable.');
+    }
+
+    /**
+     * Message appartenant à CETTE conversation, sinon null.
+     *
+     * Le parcours de la collection (et non un AssistantMessageRepository::find())
+     * EST la garantie d'appartenance : $conversation sort déjà de
+     * findOneDeLInvite(), donc un id d'un autre invité ou d'une autre entreprise
+     * ne peut pas être atteint. AssistantConversation::$messages porte
+     * #[ORM\OrderBy(['id' => 'ASC'])] — parcours déterministe.
+     *
+     * Retourne null plutôt que de lever : les appelants divergent sur la réponse
+     * d'échec (JSON 404 pour les mutations, createNotFoundException pour les
+     * routes de navigation).
+     */
+    private function trouverMessage(AssistantConversation $conversation, int $idMessage): ?AssistantMessage
+    {
+        foreach ($conversation->getMessages() as $message) {
+            if ($message->getId() === $idMessage) {
+                return $message;
+            }
+        }
+
+        return null;
     }
 
     private function currentUser(): Utilisateur

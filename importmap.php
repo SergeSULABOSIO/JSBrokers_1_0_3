@@ -62,4 +62,7 @@ return [
     'dompurify' => [
         'version' => '3.4.12',
     ],
+    'html2canvas' => [
+        'version' => '1.4.1',
+    ],
 ];

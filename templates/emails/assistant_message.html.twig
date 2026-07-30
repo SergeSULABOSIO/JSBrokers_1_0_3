@@ -1,0 +1,37 @@
+{#
+   Envoi par e-mail d'UN message du chat de l'assistant IA.
+
+   Le corps du message (`corpsHtml`) vient de MessageExporter::corpsHtml() : c'est
+   EXACTEMENT le fragment qui alimente le PDF et le Word. Il porte des styles
+   inline, seul format fiable d'un client mail à l'autre — d'où la possibilité de
+   l'injecter tel quel dans m.paragraph(), dont le |raw est légitime ici parce que
+   le fragment sort d'un template autoescapé.
+#}
+{% extends 'emails/_layout.html.twig' %}
+{% import 'emails/_macros.html.twig' as m %}
+
+{% block content %}
+    {{ m.heading('assistant-ia', 'Message de ' ~ assistantNom) }}
+
+    {{ m.paragraph(
+        'Bonjour' ~ (nomDestinataire ? ' ' ~ nomDestinataire|e : '') ~ ',<br>'
+        ~ '<strong>' ~ expediteurNom|e ~ '</strong> (' ~ entrepriseNom|e ~ ') vous transmet un extrait '
+        ~ 'de son assistant ' ~ assistantNom|e ~ ', daté du ' ~ dateMessage|e ~ '.'
+    ) }}
+
+    {% if accompagnement %}
+        {{ m.note('<strong>Message de ' ~ expediteurNom|e ~ ' :</strong><br>' ~ accompagnement|e|nl2br) }}
+    {% endif %}
+
+    {# Le contenu du message lui-même, dans sa mise en forme documentaire. #}
+    {{ m.paragraph(corpsHtml) }}
+
+    {% if pieceJointeNom %}
+        {{ m.note('Ce message est également joint à cet e-mail au format <strong>' ~ pieceJointeNom|e ~ '</strong>.') }}
+    {% endif %}
+
+    {{ m.note(
+        'Extrait de l’assistant IA de <strong>' ~ entrepriseNom|e ~ '</strong>, transmis via JS Brokers. '
+        ~ 'Répondez directement à cet e-mail pour joindre ' ~ expediteurNom|e ~ '.'
+    ) }}
+{% endblock %}

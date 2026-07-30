@@ -10,6 +10,14 @@ import {
     resoudreTheme,
     themeOppose,
 } from './assistant-theme.js';
+import { positionnerMenu, indexApresTouche } from './menu-flottant.js';
+import {
+    FORMAT_IMAGE,
+    CLE_EXPORT,
+    urlExportMessage,
+    urlDestinatairesMessage,
+    nomFichierImage,
+} from './assistant-message-menu.js';
 import { formatInstant } from '../datetime-format.js';
 import { formatNombre } from '../number-format.js';
 import { documentLocale } from '../locale.js';
@@ -25,7 +33,12 @@ import { documentLocale } from '../locale.js';
  * sanitisé via assistant-markdown-render.js (jamais de HTML brut du LLM).
  */
 export default class extends Controller {
-    static targets = ['messages', 'input', 'send', 'typing', 'typingLabel', 'count', 'contextBar', 'mic', 'fichierBar', 'fichierInput'];
+    static targets = [
+        'messages', 'input', 'send', 'typing', 'typingLabel', 'count', 'contextBar', 'mic',
+        'fichierBar', 'fichierInput',
+        // Actions de bulle : menu unique ancré, gabarits clonés, bandeau de citation.
+        'menuBulle', 'tplKebab', 'tplCitation', 'citationBar', 'citationQui', 'citationExtrait',
+    ];
 
     /** Seuil d'affichage du compteur de caractères restants (proche de maxlength). */
     static COUNT_THRESHOLD = 400;
@@ -68,6 +81,10 @@ export default class extends Controller {
 
         this.sending = false;
         this.renderHistoricalMarkdown();
+        // Équipe l'historique du bouton ⋮ (les bulles ajoutées en direct le
+        // reçoivent dans appendMessage) et arme le clic droit sur le fil.
+        this.equiperBulles();
+        this.setupMenuBulle();
         // Reconstruit la barre de décision des plans EN ATTENTE après un rechargement
         // (F5) : le live la crée via executeActions, l'historique la restaure ici.
         this.restoreMutationReviews();
@@ -245,6 +262,7 @@ export default class extends Controller {
         if (this._mqSombre && this._onOsTheme) {
             this._mqSombre.removeEventListener('change', this._onOsTheme);
         }
+        this.teardownMenuBulle();
     }
 
     // ═══ Thème du chat (confort visuel) ═══════════════════════════════════════
@@ -376,11 +394,17 @@ export default class extends Controller {
         }
     }
 
-    /** Entrée = envoyer, Maj+Entrée = retour à la ligne. */
+    /** Entrée = envoyer, Maj+Entrée = retour à la ligne, Échap = annuler la citation. */
     keydown(event) {
         if (event.key === 'Enter' && !event.shiftKey) {
             event.preventDefault();
             this.send();
+            return;
+        }
+        // Seule sortie clavier immédiate du mode « réponse à un message ».
+        if (event.key === 'Escape' && this._citation) {
+            event.preventDefault();
+            this.annulerCitation();
         }
     }
 
@@ -397,7 +421,10 @@ export default class extends Controller {
 
         this.sending = true;
         this.sendTarget.disabled = true;
-        const userBubble = this.appendMessage('user', contenu, false, this.contexteInstantane(), this.fichiersInstantane());
+        const citation = this._citation;
+        const userBubble = this.appendMessage(
+            'user', contenu, false, this.contexteInstantane(), this.fichiersInstantane(), { citation }
+        );
         this.inputTarget.value = '';
         this.onInput();
         this.setTypingLabel('réfléchit…');
@@ -408,7 +435,7 @@ export default class extends Controller {
             const response = await fetch(this.sendUrlValue, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ contenu }),
+                body: JSON.stringify({ contenu, replyToId: citation ? citation.id : null }),
             });
 
             if (response.status === 402) {
@@ -424,10 +451,18 @@ export default class extends Controller {
                 this.appendNotice('error', "L'envoi a échoué. Vérifiez votre connexion puis réessayez.");
             } else {
                 const data = await response.json();
+                // La bulle optimiste reçoit enfin son identité : ses actions
+                // (répondre, exporter, envoyer) n'existaient pas avant, puisque
+                // le message n'était pas encore persisté.
+                this.identifierBulle(userBubble, data.user?.id);
+                // Envoi accepté : le brouillon de citation a joué son rôle. En
+                // 402 ou en erreur, il est au contraire CONSERVÉ, comme le texte
+                // restauré dans la zone de saisie.
+                this.annulerCitation();
                 // La réponse se déploie mot après mot (façon ChatGPT/Claude) ;
                 // l'indicateur bascule de « réfléchit… » à « écrit… ».
                 this.setTypingLabel('écrit…');
-                await this.typeMessage(data.assistant.contenu, data.assistant.refus === true);
+                await this.typeMessage(data.assistant.contenu, data.assistant.refus === true, data.assistant.id);
                 await this.executeActions(data.assistant.actions);
             }
         } catch (error) {
@@ -845,10 +880,18 @@ export default class extends Controller {
      */
     executeFromEvent(event) {
         const detail = event.detail;
-        if (!detail || detail.type !== 'ket:mutation.execute') return;
+        if (!detail) return;
         const payload = detail.payload || {};
-        // Déclenché par la modale de confirmation (suppression + mot de passe).
-        this.executeMutationPlan(payload.idMessage, payload.password, true, payload.etapes || null);
+        if (detail.type === 'ket:mutation.execute') {
+            // Déclenché par la modale de confirmation (suppression + mot de passe).
+            this.executeMutationPlan(payload.idMessage, payload.password, true, payload.etapes || null);
+            return;
+        }
+        // Retour du picker de destinataires : confirmation dans le fil, à
+        // l'endroit même où l'utilisateur a lancé l'envoi.
+        if (detail.type === 'assistant:message.envoye') {
+            this.appendNotice('status', payload.message || 'Message envoyé.');
+        }
     }
 
     /**
@@ -1773,8 +1816,8 @@ export default class extends Controller {
      * Markdown partiel (ex. « **gras » non fermé) reste affiché tel quel
      * jusqu'à ce que sa fermeture arrive dans un mot suivant — pas de crash.
      */
-    async typeMessage(texte, refus = false) {
-        const bubble = this.appendMessage('assistant', '', refus);
+    async typeMessage(texte, refus = false, idMessage = null) {
+        const bubble = this.appendMessage('assistant', '', refus, null, null, { idMessage });
         const content = bubble.querySelector('.aic-msg-text');
         // Le fil est une zone aria-live : on masque la bulle pendant le
         // déploiement pour éviter une annonce du lecteur d'écran à chaque mot,
@@ -1799,6 +1842,8 @@ export default class extends Controller {
         }
         this.rendreAssistant(content, texte); // garantit le texte intégral + graphiques
         bubble.removeAttribute('aria-hidden');
+
+        return bubble;
     }
 
     /**
@@ -1826,13 +1871,306 @@ export default class extends Controller {
         });
     }
 
+    // ═══ Actions d'une bulle (répondre, exporter, envoyer) ════════════════════
+    // Un seul menu, deux ouvertures équivalentes : le bouton ⋮ et le CLIC DROIT.
+    // La géométrie est partagée parce que `positionnerMenu` raisonne sur un
+    // rectangle d'ancre — un curseur n'est qu'un rectangle de 0×0.
+    //
+    // Aucun markup n'est fabriqué ici : le bouton et la citation sont clonés
+    // depuis les <template> rendus par Twig, ce qui garde les libellés et les
+    // icônes (resolve_icon_name) côté serveur.
+
+    /** Arme le clic droit sur le fil et les fermetures transitoires. */
+    setupMenuBulle() {
+        this._menuOuvertSur = null;
+        this._bulleActive = null;
+        this._onClicDroit = this.ouvrirMenuAuCurseur.bind(this);
+        this._onFermerMenu = () => this.fermerMenuBulle();
+        this._onPointerHorsMenu = (event) => {
+            if (!this._menuOuvertSur) return;
+            if (this.hasMenuBulleTarget && this.menuBulleTarget.contains(event.target)) return;
+            if (this._menuOuvertSur.contains(event.target)) return;
+            this.fermerMenuBulle();
+        };
+        if (this.hasMessagesTarget) {
+            this.messagesTarget.addEventListener('contextmenu', this._onClicDroit);
+        }
+    }
+
+    teardownMenuBulle() {
+        if (this.hasMessagesTarget && this._onClicDroit) {
+            this.messagesTarget.removeEventListener('contextmenu', this._onClicDroit);
+        }
+        this._retirerEcouteursMenu();
+        clearTimeout(this._timerCible);
+    }
+
+    /** Équipe du bouton ⋮ toutes les bulles de l'historique (idempotent). */
+    equiperBulles() {
+        if (!this.hasMessagesTarget) return;
+        this.messagesTarget.querySelectorAll('.aic-msg[data-message-id]').forEach((bulle) => this.equiperBulle(bulle));
+    }
+
+    /**
+     * Pose le bouton ⋮ sur une bulle. Rien à faire sans identité : une bulle
+     * d'accueil, d'erreur ou encore optimiste n'a rien à exporter ni à citer.
+     * Le bouton est un FRÈRE de .aic-msg-text — jamais dedans : `rendreAssistant`
+     * réécrit cet innerHTML à chaque mot, et DOMPurify n'y laisserait passer que
+     * l'attribut `class`.
+     */
+    equiperBulle(bulle) {
+        if (!bulle?.dataset.messageId || bulle.querySelector('.aic-msg-menu-btn')) return;
+        if (!this.hasTplKebabTarget) return;
+        const corps = bulle.querySelector('.aic-msg-body');
+        if (!corps) return;
+        corps.appendChild(this.tplKebabTarget.content.firstElementChild.cloneNode(true));
+    }
+
+    /** Ouverture par le bouton ⋮ : l'ancre est le bouton lui-même. */
+    ouvrirMenuBulle(event) {
+        const bouton = event.currentTarget;
+        this._ouvrirMenu(bouton.closest('.aic-msg'), bouton.getBoundingClientRect(), bouton);
+    }
+
+    /**
+     * Ouverture par CLIC DROIT sur une bulle. Hors bulle, on ne préempte pas :
+     * le menu natif du navigateur reste disponible (copier, inspecter…).
+     * Bonus : la touche « Menu » du clavier émet le même événement, donc le menu
+     * est atteignable sans passer par le bouton.
+     */
+    ouvrirMenuAuCurseur(event) {
+        const bulle = event.target.closest?.('.aic-msg[data-message-id]');
+        if (!bulle || !this.hasMenuBulleTarget) return;
+        event.preventDefault();
+        const curseur = {
+            left: event.clientX, right: event.clientX,
+            top: event.clientY, bottom: event.clientY,
+        };
+        this._ouvrirMenu(bulle, curseur, bulle.querySelector('.aic-msg-menu-btn'));
+    }
+
+    /** Chemin d'ouverture UNIQUE des deux gestes. */
+    _ouvrirMenu(bulle, ancre, boutonAncre) {
+        if (!bulle || !this.hasMenuBulleTarget) return;
+        // Second geste sur la même bulle = bascule.
+        if (this._menuOuvertSur && this._bulleActive === bulle) {
+            this.fermerMenuBulle();
+            return;
+        }
+        this.fermerMenuBulle();
+        this._ctxTipHide(); // ne pas superposer deux surfaces flottantes
+
+        this._bulleActive = bulle;
+        this._menuOuvertSur = boutonAncre ?? bulle;
+        this._filtrerItemsMenu(bulle);
+
+        const menu = this.menuBulleTarget;
+        menu.hidden = false;
+        menu.style.visibility = 'hidden'; // mesurable sans être visible
+        const { left, top } = positionnerMenu({
+            ancre,
+            menu: { largeur: menu.offsetWidth, hauteur: menu.offsetHeight },
+            viewport: { largeur: window.innerWidth, hauteur: window.innerHeight },
+        });
+        menu.style.left = `${left}px`;
+        menu.style.top = `${top}px`;
+        menu.style.visibility = 'visible';
+
+        boutonAncre?.setAttribute('aria-expanded', 'true');
+
+        document.addEventListener('pointerdown', this._onPointerHorsMenu, true);
+        window.addEventListener('resize', this._onFermerMenu);
+        if (this.hasMessagesTarget) {
+            // Le fil défile (y compris via scrollToBottom) : l'ancre bouge, on ferme.
+            this.messagesTarget.addEventListener('scroll', this._onFermerMenu, { passive: true });
+        }
+    }
+
+    fermerMenuBulle() {
+        if (this.hasMenuBulleTarget) {
+            this.menuBulleTarget.hidden = true;
+        }
+        this._menuOuvertSur?.setAttribute?.('aria-expanded', 'false');
+        this._menuOuvertSur = null;
+        this._retirerEcouteursMenu();
+    }
+
+    _retirerEcouteursMenu() {
+        if (!this._onPointerHorsMenu) return;
+        document.removeEventListener('pointerdown', this._onPointerHorsMenu, true);
+        window.removeEventListener('resize', this._onFermerMenu);
+        if (this.hasMessagesTarget) {
+            this.messagesTarget.removeEventListener('scroll', this._onFermerMenu);
+        }
+    }
+
+    /** Un item porteur de data-menu-roles ne s'affiche que pour ces rôles. */
+    _filtrerItemsMenu(bulle) {
+        const role = bulle.dataset.messageRole || '';
+        this.menuBulleTarget.querySelectorAll('[role="menuitem"]').forEach((item) => {
+            const roles = item.dataset.menuRoles;
+            item.hidden = roles !== undefined && !roles.split(' ').includes(role);
+        });
+    }
+
+    /** Items navigables : ceux que le filtrage laisse visibles. */
+    _itemsMenu() {
+        if (!this.hasMenuBulleTarget) return [];
+        return Array.from(this.menuBulleTarget.querySelectorAll('[role="menuitem"]:not([hidden])'));
+    }
+
+    /** Flèches / Home / End dans le menu ; Échap ferme et rend le focus. */
+    naviguerMenu(event) {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            const bouton = this._menuOuvertSur;
+            this.fermerMenuBulle();
+            bouton?.focus?.();
+            return;
+        }
+        const items = this._itemsMenu();
+        const suivant = indexApresTouche(event.key, items.indexOf(document.activeElement), items.length);
+        if (suivant === null) return;
+        event.preventDefault();
+        items[suivant].focus();
+    }
+
+    /** Sur le bouton ⋮ : ↓ ouvre et entre dans le menu, Échap referme. */
+    toucheKebab(event) {
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            this.ouvrirMenuBulle(event);
+            this._itemsMenu()[0]?.focus();
+            return;
+        }
+        if (event.key === 'Escape' && this._menuOuvertSur) {
+            event.preventDefault();
+            this.fermerMenuBulle();
+        }
+    }
+
+    /** Contrat UNIQUE offert aux actions du menu. */
+    messageActif() {
+        const bulle = this._bulleActive;
+        if (!bulle?.dataset.messageId) return null;
+
+        return { id: Number(bulle.dataset.messageId), role: bulle.dataset.messageRole || '', bulle };
+    }
+
+    // ── Répondre ──────────────────────────────────────────────────────────────
+
+    /** Prépare la citation dans le composer (brouillon purement client). */
+    repondreAuMessage() {
+        const actif = this.messageActif();
+        if (!actif || !this.hasCitationBarTarget) return;
+
+        const qui = actif.role === 'assistant' ? (this.assistantNomValue || 'Assistant') : 'Vous';
+        const extrait = (actif.bulle.querySelector('.aic-msg-text')?.textContent || '').trim();
+
+        this._citation = { id: actif.id, qui, extrait };
+        this.citationQuiTarget.textContent = qui;
+        this.citationExtraitTarget.textContent = extrait;
+        this.citationBarTarget.hidden = false;
+        this.inputTarget?.focus();
+    }
+
+    annulerCitation() {
+        this._citation = null;
+        if (this.hasCitationBarTarget) {
+            this.citationBarTarget.hidden = true;
+            this.citationQuiTarget.textContent = '';
+            this.citationExtraitTarget.textContent = '';
+        }
+    }
+
+    /** Clic sur une citation : rejoindre le message cité et le signaler. */
+    allerAuMessage(event) {
+        const id = event.currentTarget.dataset.quoteId;
+        const cible = this.hasMessagesTarget
+            ? this.messagesTarget.querySelector(`.aic-msg[data-message-id="${id}"]`)
+            : null;
+        if (!cible) return; // défensif : le fil est complet en pratique
+        cible.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        cible.classList.add('aic-msg--cible');
+        clearTimeout(this._timerCible);
+        this._timerCible = setTimeout(() => cible.classList.remove('aic-msg--cible'), 1600);
+    }
+
+    /** Citation d'une bulle, clonée depuis le gabarit Twig (markup non dupliqué). */
+    _monterCitation(corps, citation) {
+        if (!citation || !this.hasTplCitationTarget) return;
+        const noeud = this.tplCitationTarget.content.firstElementChild.cloneNode(true);
+        noeud.dataset.quoteId = String(citation.id);
+        noeud.querySelector('.aic-msg-quote-qui').textContent = citation.qui;
+        noeud.querySelector('.aic-msg-quote-extrait').textContent = citation.extrait;
+        corps.appendChild(noeud);
+    }
+
+    // ── Exporter ──────────────────────────────────────────────────────────────
+
+    /**
+     * Téléchargement d'un format servi par le serveur. Navigation directe plutôt
+     * que fetch + blob : progression native du navigateur, rien à révoquer.
+     */
+    exporterMessage(event) {
+        const actif = this.messageActif();
+        if (!actif) return;
+        const format = Object.keys(CLE_EXPORT).find((f) => CLE_EXPORT[f] === event.currentTarget.dataset.menuKey);
+        if (!format || format === FORMAT_IMAGE) return;
+        window.location.assign(urlExportMessage(this.sendUrlValue, actif.id, format));
+    }
+
+    /**
+     * Capture PNG de la bulle RÉELLE. C'est le seul export fidèle quand la
+     * réponse porte un graphique : Chart.js peint dans un <canvas>, qu'aucun
+     * rendu serveur ne peut reproduire. Le fichier ne transite jamais par le
+     * serveur — donc aucune route, aucun binaire client accepté en retour.
+     */
+    async exporterImage() {
+        const actif = this.messageActif();
+        if (!actif) return;
+        try {
+            const { capturerBulle } = await import('./assistant-message-image.js');
+            const blob = await capturerBulle(actif.bulle, { theme: this._theme });
+            if (!blob) throw new Error('capture vide');
+            const url = URL.createObjectURL(blob);
+            const lien = document.createElement('a');
+            lien.href = url;
+            lien.download = nomFichierImage(actif.id, new Date());
+            document.body.appendChild(lien);
+            lien.click();
+            lien.remove();
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('AssistantChat - capture image échouée :', error);
+            this.appendNotice('error', "L'image n'a pas pu être générée. Réessayez ou exportez en PDF.");
+        }
+    }
+
+    // ── Envoyer par e-mail ────────────────────────────────────────────────────
+
+    async envoyerMessageParEmail() {
+        const actif = this.messageActif();
+        if (!actif) return;
+        const { ouvrirPickerAutonome } = await import('./picker-open.js');
+        await ouvrirPickerAutonome(urlDestinatairesMessage(this.sendUrlValue, actif.id), {
+            controllerName: 'assistant-message-picker',
+            errorLabel: "Le choix du destinataire n'a pas pu être ouvert.",
+            onErreur: (message) => this.appendNotice('error', message),
+        });
+    }
+
     /**
      * Ajoute une bulle de message au fil (structure identique à celle rendue
      * côté serveur dans _assistant_ia_chat.html.twig).
      */
-    appendMessage(role, texte, refus = false, contexteObjets = null, fichiersJoints = null) {
+    appendMessage(role, texte, refus = false, contexteObjets = null, fichiersJoints = null, options = {}) {
         const bubble = document.createElement('div');
         bubble.className = `aic-msg aic-msg--${role}${refus ? ' aic-msg--refus' : ''}`;
+        bubble.dataset.messageRole = role;
+        if (options.idMessage) {
+            bubble.dataset.messageId = String(options.idMessage);
+        }
 
         if (role === 'assistant') {
             const avatar = document.createElement('span');
@@ -1844,6 +2182,9 @@ export default class extends Controller {
 
         const body = document.createElement('div');
         body.className = 'aic-msg-body';
+
+        // Citation en tête de bulle (miroir du rendu serveur), clonée du gabarit.
+        this._monterCitation(body, options.citation);
 
         const content = document.createElement('p');
         content.className = 'aic-msg-text';
@@ -1888,9 +2229,22 @@ export default class extends Controller {
         body.appendChild(time);
 
         bubble.appendChild(body);
+        // Le bouton ⋮ est posé AVANT l'insertion : la zone aria-live n'annonce
+        // ainsi qu'une seule fois la bulle complète.
+        this.equiperBulle(bubble);
         this.messagesTarget.appendChild(bubble);
         this.scrollToBottom();
         return bubble;
+    }
+
+    /**
+     * Attache après coup son identité à une bulle optimiste (l'id n'existe qu'au
+     * retour du serveur) et l'équipe de ses actions.
+     */
+    identifierBulle(bubble, idMessage) {
+        if (!bubble || !idMessage) return;
+        bubble.dataset.messageId = String(idMessage);
+        this.equiperBulle(bubble);
     }
 
     /** Bulle système (avertissement 402 / erreur réseau). */

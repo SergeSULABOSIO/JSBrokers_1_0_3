@@ -75,19 +75,23 @@ class IconCanvasProvider
         'action:exit'         => 'hugeicons:logout-04',
         'action:filter'       => 'mdi:filter',
         'action:hide'         => 'hugeicons:view-off-slash',
+        'action:image'        => 'tabler:photo-down',   // export d'une bulle de chat en PNG
         'action:incorporation'=> 'material-symbols:add-ad-outline-rounded',
         'action:information'  => 'hugeicons:ai-idea',
         'action:invite'       => 'mingcute:invite-fill',
+        'action:markdown'     => 'tabler:markdown',     // export en Markdown (texte simple)
         'action:ongoing'      => 'mdi:progress-download',
         'action:open'         => 'fad:open',
         'action:options'      => 'simple-line-icons:options-vertical',
         'action:password'     => 'hugeicons:square-lock-password',
+        'action:pdf'          => 'tabler:file-type-pdf',
         'action:premium'      => 'ic:twotone-workspace-premium',
         'action:print'        => 'carbon:printer',
         'action:prorogation'  => 'iconoir:truck-length',
         'action:refresh'      => 'hugeicons:refresh-01',
         'action:reload'       => 'ci:arrows-reload-01',
         'action:renew'        => 'carbon:renew',
+        'action:reply'        => 'lucide:reply',        // répondre à un message du chat Ket
         'action:resiliation'  => 'gravity-ui:hand-stop',
         'action:reset'        => 'bx:reset',
         'action:resend-invitation' => 'mdi:email-sync-outline',
@@ -99,6 +103,7 @@ class IconCanvasProvider
         'action:transfer'     => 'mdi:swap-horizontal', // transfert vers un autre rattachement
         'action:upload'       => 'hugeicons:upload-01',
         'action:view'         => 'hugeicons:view',
+        'action:word'         => 'tabler:file-type-docx', // export « Word » (.doc HTML-Word)
     ];
 
     /**

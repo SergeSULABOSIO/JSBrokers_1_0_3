@@ -1,0 +1,126 @@
+{# ═══════════════════════════════════════════════════════════════════════════
+   Corps d'un message de l'assistant, rendu depuis l'arbre de blocs de
+   App\Ai\Export\MessageMarkdownParser.
+
+   SOURCE UNIQUE des trois transports : PDF (DomPDF), Word (.doc HTML-Word) et
+   e-mail. Toute mise en forme ajoutée ici profite aux trois d'un coup.
+
+   Deux règles à ne pas enfreindre :
+
+   1. STYLES INLINE, jamais de classes. Les clients mail ne suivent pas les
+      feuilles de style (cf. emails/_layout.html.twig, « HTML bulletproof »).
+      C'est ce qui rend ce fragment partageable ; une classe CSS le casserait
+      pour l'e-mail sans que rien ne le signale.
+   2. AUCUN |raw. Le parseur ne renvoie que du texte brut : c'est ici, sous
+      l'autoescape de Twig, que le HTML naît. Un |raw rouvrirait l'injection
+      pour n'importe quel contenu de message.
+
+   Charte : cobalt #0047AB, titres #0d2440, corps #343a40, bordures #dee2e6.
+   Les pastilles portent LE TEXTE (jamais la couleur seule) — WCAG 1.4.1.
+   ═══════════════════════════════════════════════════════════════════════════ #}
+
+{% set badgeStyles = {
+    success: 'background:#d1e7dd;color:#0a3622;',
+    danger:  'background:#f8d7da;color:#58151c;',
+    warning: 'background:#fff3cd;color:#664d03;',
+    info:    'background:#e8f0fb;color:#0047AB;',
+    neutral: 'background:#e9ecef;color:#343a40;',
+} %}
+
+{% macro inline(jetons, badgeStyles) %}
+    {%- for jeton in jetons -%}
+        {%- if jeton.type == 'gras' -%}
+            <strong style="font-weight:700;">{{ jeton.texte }}</strong>
+        {%- elseif jeton.type == 'italique' -%}
+            <em style="font-style:italic;">{{ jeton.texte }}</em>
+        {%- elseif jeton.type == 'code' -%}
+            <code style="font-family:Consolas,'Courier New',monospace;font-size:.92em;background:#f1f3f5;padding:1px 4px;border-radius:3px;">{{ jeton.texte }}</code>
+        {%- elseif jeton.type == 'badge' -%}
+            <span style="display:inline-block;{{ badgeStyles[jeton.variante] ?? badgeStyles.neutral }}font-size:.85em;font-weight:600;padding:1px 7px;border-radius:9px;">{{ jeton.texte }}</span>
+        {%- elseif jeton.type == 'saut' -%}
+            <br>
+        {%- else -%}
+            {{ jeton.texte }}
+        {%- endif -%}
+    {%- endfor -%}
+{% endmacro %}
+
+{% import _self as md %}
+
+{% for bloc in blocs %}
+    {% if bloc.type == 'titre' %}
+        <p style="margin:18px 0 8px;font-size:15px;font-weight:700;color:#0d2440;">{{ md.inline(bloc.inline, badgeStyles) }}</p>
+
+    {% elseif bloc.type == 'paragraphe' %}
+        <p style="margin:0 0 10px;font-size:13px;line-height:1.55;color:#343a40;">{{ md.inline(bloc.inline, badgeStyles) }}</p>
+
+    {% elseif bloc.type == 'liste' %}
+        <{{ bloc.ordonnee ? 'ol' : 'ul' }} style="margin:0 0 10px;padding-left:20px;font-size:13px;line-height:1.55;color:#343a40;">
+            {% for item in bloc.items %}
+                <li style="margin:0 0 3px;">{{ md.inline(item, badgeStyles) }}</li>
+            {% endfor %}
+        </{{ bloc.ordonnee ? 'ol' : 'ul' }}>
+
+    {% elseif bloc.type == 'tableau' %}
+        <table cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin:0 0 12px;font-size:12px;color:#343a40;">
+            {% if bloc.entetes is not empty %}
+                <thead>
+                    <tr>
+                        {% for cellule in bloc.entetes %}
+                            <th style="text-align:left;padding:6px 8px;background:#f1f3f5;border:1px solid #dee2e6;font-weight:700;color:#0d2440;">{{ md.inline(cellule, badgeStyles) }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+            {% endif %}
+            <tbody>
+                {% for ligne in bloc.lignes %}
+                    <tr>
+                        {% for cellule in ligne %}
+                            <td style="padding:6px 8px;border:1px solid #dee2e6;vertical-align:top;">{{ md.inline(cellule, badgeStyles) }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+    {% elseif bloc.type == 'code' %}
+        <pre style="margin:0 0 12px;padding:10px 12px;background:#f1f3f5;border:1px solid #dee2e6;border-radius:4px;font-family:Consolas,'Courier New',monospace;font-size:11.5px;line-height:1.45;color:#343a40;white-space:pre-wrap;">{{ bloc.texte }}</pre>
+
+    {% elseif bloc.type == 'chart' %}
+        {# Un canvas Chart.js ne se peint pas dans un document : on transcrit la
+           spec en TABLEAU, ce qui est SANS PERTE (labels × séries sont dans le
+           JSON) et supérieur à une image — sélectionnable, imprimable, lisible
+           par un lecteur d'écran. La fidélité visuelle est l'affaire de
+           l'export image, qui capture la bulle réelle. #}
+        <table cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin:0 0 6px;font-size:12px;color:#343a40;">
+            {% if bloc.titre is not empty %}
+                <caption style="caption-side:top;text-align:left;padding:0 0 6px;font-size:13px;font-weight:700;color:#0d2440;">Graphique — {{ bloc.titre }}</caption>
+            {% endif %}
+            <thead>
+                <tr>
+                    <th style="text-align:left;padding:6px 8px;background:#f1f3f5;border:1px solid #dee2e6;font-weight:700;color:#0d2440;">&nbsp;</th>
+                    {% for serie in bloc.series %}
+                        <th style="text-align:right;padding:6px 8px;background:#f1f3f5;border:1px solid #dee2e6;font-weight:700;color:#0d2440;">
+                            {{ serie.label }}{% if bloc.unite is not empty %} ({{ bloc.unite }}){% endif %}
+                        </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for index, label in bloc.labels %}
+                    <tr>
+                        <th scope="row" style="text-align:left;padding:6px 8px;border:1px solid #dee2e6;font-weight:600;">{{ label }}</th>
+                        {% for serie in bloc.series %}
+                            <td style="text-align:right;padding:6px 8px;border:1px solid #dee2e6;">{{ serie.data[index]|number_format(2, ',', ' ') }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% if bloc.legende is not empty %}
+            <p style="margin:0 0 14px;font-size:11.5px;font-style:italic;color:#6c757d;">{{ bloc.legende }}</p>
+        {% endif %}
+    {% endif %}
+{% else %}
+    <p style="margin:0;font-size:13px;color:#6c757d;font-style:italic;">Ce message ne contient aucun texte.</p>
+{% endfor %}

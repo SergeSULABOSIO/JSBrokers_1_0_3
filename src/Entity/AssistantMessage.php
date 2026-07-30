@@ -53,8 +53,29 @@ class AssistantMessage
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $fichiersJoints = null;
 
+    /**
+     * Message CITÉ par celui-ci (« Répondre » du menu de bulle, façon WhatsApp),
+     * toujours dans la MÊME conversation — garanti par le contrôleur, qui
+     * résout l'id via AssistantMessageRepository::findDansConversation().
+     *
+     * Relation et NON instantané JSON, contrairement à contexteObjets /
+     * fichiersJoints : ces deux-là figent une liste COURANTE qui évolue, alors
+     * que le contenu d'un message n'est jamais édité — il n'y a donc rien à
+     * figer, et l'id resterait de toute façon nécessaire pour faire défiler le
+     * fil jusqu'à la bulle citée.
+     *
+     * Pas d'inversedBy : personne n'a besoin de savoir « qui m'a cité ».
+     * NULL = message ordinaire.
+     */
+    #[ORM\ManyToOne(targetEntity: self::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?AssistantMessage $repondA = null;
+
     #[ORM\Column(type: 'datetime_immutable')]
     private ?\DateTimeImmutable $createdAt = null;
+
+    /** Longueur de l'extrait cité (bulle, composer, prompt) — SOURCE UNIQUE. */
+    public const EXTRAIT_CITATION_MAX = 240;
 
     public function getId(): ?int
     {
@@ -127,6 +148,32 @@ class AssistantMessage
     {
         $this->fichiersJoints = $fichiersJoints !== [] ? $fichiersJoints : null;
         return $this;
+    }
+
+    public function getRepondA(): ?AssistantMessage
+    {
+        return $this->repondA;
+    }
+
+    public function setRepondA(?AssistantMessage $repondA): self
+    {
+        $this->repondA = $repondA;
+        return $this;
+    }
+
+    /**
+     * Extrait normalisé du message, SOURCE UNIQUE de toute citation : bulle
+     * (Twig), bandeau du composer, marqueur injecté au prompt et réponse JSON.
+     * Les sauts de ligne sont aplatis — un marqueur de prompt multiligne
+     * casserait la lisibilité du tour de parole.
+     */
+    public function extraitCitation(): string
+    {
+        $plat = trim((string) preg_replace('/\s+/u', ' ', (string) $this->contenu));
+
+        return mb_strlen($plat) > self::EXTRAIT_CITATION_MAX
+            ? mb_substr($plat, 0, self::EXTRAIT_CITATION_MAX) . '…'
+            : $plat;
     }
 
     public function getCreatedAt(): ?\DateTimeImmutable

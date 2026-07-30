@@ -1,0 +1,51 @@
+{# Cadre A4 du PDF d'un message de l'assistant. Le corps vient du fragment
+   partagé (même HTML que le Word et l'e-mail) : ne rien mettre en forme ici
+   qui appartienne au message lui-même. #}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ assistantNom }} — message du {{ message.createdAt|date('d/m/Y H:i') }}</title>
+    <style>
+        @page { margin: 18mm 16mm 20mm; }
+        body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 13px; color: #343a40; margin: 0; }
+        .entete { border-bottom: 2px solid #0047AB; padding-bottom: 10px; margin-bottom: 16px; }
+        .entete td { vertical-align: middle; }
+        .marque { font-size: 16px; font-weight: 700; color: #0047AB; }
+        .sous-marque { font-size: 11px; color: #6c757d; }
+        .meta { font-size: 11px; color: #6c757d; text-align: right; }
+        .auteur { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 10px; }
+        .pied { position: fixed; bottom: -12mm; left: 0; right: 0; border-top: 1px solid #dee2e6;
+                padding-top: 5px; font-size: 9.5px; color: #adb5bd; }
+    </style>
+</head>
+<body>
+    <table class="entete" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+            {% if logo %}
+                <td width="42"><img src="{{ logo }}" width="34" height="34" alt=""></td>
+            {% endif %}
+            <td>
+                <div class="marque">JS Brokers</div>
+                <div class="sous-marque">{{ entreprise.nom }}</div>
+            </td>
+            <td class="meta">
+                Message extrait de l'assistant {{ assistantNom }}<br>
+                {{ message.createdAt|date('d/m/Y à H:i') }}
+            </td>
+        </tr>
+    </table>
+
+    <p style="margin:0 0 14px;">
+        <span class="auteur" style="{{ estAssistant ? 'background:#e8f0fb;color:#0047AB;' : 'background:#e9ecef;color:#343a40;' }}">
+            {{ estAssistant ? assistantNom : 'Question de l’utilisateur' }}
+        </span>
+    </p>
+
+    {{ corpsHtml|raw }}{# fragment issu d'un template autoescapé, cf. MessageExporter::corpsHtml() #}
+
+    <div class="pied">
+        Document généré depuis l'assistant IA de JS Brokers — {{ entreprise.nom }}. Usage interne.
+    </div>
+</body>
+</html>
