@@ -50,9 +50,10 @@
             <div class="jsb-picker-intro-text">
                 <p class="jsb-picker-intro-title">Message de {{ assistantNom }} du {{ message.createdAt|date('d/m/Y à H:i') }}</p>
                 <p id="jsb-aimsg-picker-desc" class="jsb-picker-intro-desc">
-                    Le destinataire recevra le contenu du message mis en forme, et la pièce jointe
-                    choisie ci-dessous. Vous pouvez sélectionner une adresse du carnet ou en saisir
-                    une autre.
+                    Chaque destinataire recevra le contenu du message mis en forme, et la pièce
+                    jointe choisie ci-dessous. Cochez autant d'adresses du carnet que nécessaire,
+                    et&nbsp;/ ou saisissez-en d'autres. Un e-mail distinct part vers chacun&nbsp;:
+                    les destinataires ne se voient pas entre eux.
                 </p>
             </div>
         </div>
@@ -138,7 +139,13 @@
             {% endif %}
 
             <fieldset class="border-0 p-0 m-0">
-                <legend class="fs-6 fw-semibold mb-2" style="color:#0d2440;">Destinataire</legend>
+                <legend class="fs-6 fw-semibold mb-1" style="color:#0d2440;">
+                    Destinataires
+                    <span class="fw-normal text-muted small">(aucun, un ou plusieurs)</span>
+                </legend>
+                <p class="text-muted small mb-2" role="status" aria-live="polite" data-picker-selection>
+                    Aucun destinataire sélectionné.
+                </p>
 
                 {# ── 3. Lignes groupées par catégorie, origine affichée ── #}
                 {% set categorieCourante = null %}
@@ -163,11 +170,15 @@
                            data-picker-row
                            data-categorie="{{ d.categorie }}"
                            data-search="{{ [d.nom, d.email, d.detail, d.origine, categorieLabels[d.categorie] ?? d.categorie]|join(' ')|lower }}">
+                        {# Case à cocher, et non bouton radio : un même message part
+                           souvent à plusieurs correspondants (le contact du client ET
+                           l'assureur). Aucune case n'est pré-cochée — l'utilisateur
+                           choisit, y compris de ne rien sélectionner et de saisir une
+                           adresse à la main. #}
                         <input class="form-check-input"
-                               type="radio"
+                               type="checkbox"
                                name="aimsg-destinataire"
-                               value="{{ d.email|e('html_attr') }}"
-                               {{ loop.first ? 'checked' : '' }}>
+                               value="{{ d.email|e('html_attr') }}">
                         <span class="jsb-picker-option-corps">
                             <span class="fw-semibold d-block jsb-picker-client-nom">{{ d.nom }}</span>
                             <span class="text-muted small d-block jsb-picker-client-mail">{{ d.email }}</span>
@@ -189,34 +200,29 @@
                     </p>
                 {% endif %}
 
-                {# ── Adresse hors carnet ── #}
+                {# ── Adresses hors carnet ──
+                   Toujours actif, et cumulable avec les cases cochées : on peut
+                   n'en sélectionner aucune et ne saisir qu'une adresse, ou les
+                   deux à la fois. #}
                 <div class="mt-3 pt-2" style="border-top:1px solid #dee2e6;">
-                    <label class="jsb-picker-option">
-                        <input class="form-check-input"
-                               type="radio"
-                               name="aimsg-destinataire"
-                               value=""
-                               data-picker-libre-radio
-                               {{ destinataires is empty ? 'checked' : '' }}>
-                        <span class="jsb-picker-option-corps">
-                            <span class="fw-semibold d-block">Autre adresse</span>
-                            <span class="text-muted small d-block">
-                                Pour un destinataire absent du carnet. L'envoi est tracé comme tel.
-                            </span>
-                        </span>
+                    <label for="aimsg-libre" class="form-label fw-semibold mb-0" style="color:#0d2440;">
+                        Autres adresses <span class="fw-normal text-muted small">(facultatif)</span>
                     </label>
-                    {# Champ à icône incrustée (pattern .jsb-support .jsb-field-control).
-                       HORS du <label> : un clic dedans ne doit pas rebasculer la radio. #}
-                    <div class="jsb-picker-field mt-1">
+                    <span class="text-muted small d-block mb-1" id="aimsg-libre-aide">
+                        Destinataires absents du carnet, séparés par une virgule. Ces envois sont tracés comme tels.
+                    </span>
+                    {# Champ à icône incrustée (pattern .jsb-support .jsb-field-control). #}
+                    <div class="jsb-picker-field">
                         <span class="jsb-picker-field-icon" aria-hidden="true">
                             {{ ux_icon(resolve_icon_name('action:send-email'), {width: '16px', height: '16px'}) }}
                         </span>
-                        <input type="email"
+                        <input type="text"
+                               id="aimsg-libre"
                                class="form-control"
-                               placeholder="prenom.nom@exemple.com"
-                               aria-label="Adresse e-mail du destinataire hors carnet"
-                               data-picker-email-libre
-                               {{ destinataires is not empty ? 'disabled' : '' }}>
+                               placeholder="prenom.nom@exemple.com, autre@exemple.com"
+                               autocomplete="off"
+                               aria-describedby="aimsg-libre-aide"
+                               data-picker-email-libre>
                     </div>
                 </div>
             </fieldset>

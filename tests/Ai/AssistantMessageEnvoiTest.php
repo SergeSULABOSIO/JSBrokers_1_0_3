@@ -334,7 +334,7 @@ class AssistantMessageEnvoiTest extends WebTestCase
         $seed = $this->seed();
         $this->client->loginUser($this->user(self::GUEST_EMAIL));
 
-        $this->envoyer($seed, ['email' => 'alice@sonas.cd', 'format' => null]);
+        $this->envoyer($seed, ['emails' => ['alice@sonas.cd'], 'format' => null]);
 
         self::assertSame(200, $this->client->getResponse()->getStatusCode());
         self::assertQueuedEmailCount(1);
@@ -411,8 +411,10 @@ class AssistantMessageEnvoiTest extends WebTestCase
             'data-picker-count-shown',
             'data-picker-empty',
             'data-picker-email-libre',
-            'data-picker-libre-radio',
+            'data-picker-selection',
             'data-picker-format',
+            // Sélection MULTIPLE : cases à cocher, jamais des boutons radio.
+            'type="checkbox"',
         ] as $crochet) {
             self::assertStringContainsString($crochet, $html, sprintf('Crochet « %s » absent du picker.', $crochet));
         }
@@ -431,9 +433,10 @@ class AssistantMessageEnvoiTest extends WebTestCase
         $html = $this->ouvrirPicker($seed);
 
         // « Vous » et le collaborateur restent : l'état vide concerne le carnet
-        // externe, jamais l'impossibilité d'envoyer.
+        // externe, jamais l'impossibilité d'envoyer — la saisie libre reste offerte.
         self::assertStringContainsString(self::GUEST_EMAIL, $html);
-        self::assertStringContainsString('Autre adresse', $html);
+        self::assertStringContainsString('Autres adresses', $html);
+        self::assertStringContainsString('data-picker-email-libre', $html);
     }
 
     public function testCollecterExposeCategoriesEtOrigine(): void
@@ -471,7 +474,7 @@ class AssistantMessageEnvoiTest extends WebTestCase
         $seed = $this->seed();
         $this->client->loginUser($this->user(self::GUEST_EMAIL));
 
-        $data = $this->envoyer($seed, ['email' => 'alice@sonas.cd', 'format' => 'pdf', 'message' => 'Bonjour Alice,']);
+        $data = $this->envoyer($seed, ['emails' => ['alice@sonas.cd'], 'format' => 'pdf', 'message' => 'Bonjour Alice,']);
 
         self::assertSame(200, $this->client->getResponse()->getStatusCode());
         self::assertTrue($data['success']);
@@ -501,7 +504,7 @@ class AssistantMessageEnvoiTest extends WebTestCase
         $seed = $this->seed();
         $this->client->loginUser($this->user(self::GUEST_EMAIL));
 
-        $this->envoyer($seed, ['email' => 'alice@sonas.cd', 'format' => null]);
+        $this->envoyer($seed, ['emails' => ['alice@sonas.cd'], 'format' => null]);
 
         self::assertQueuedEmailCount(1);
         self::assertCount(0, $this->piecesJointes(self::getMailerMessage()));
@@ -512,10 +515,10 @@ class AssistantMessageEnvoiTest extends WebTestCase
         $seed = $this->seed();
         $this->client->loginUser($this->user(self::GUEST_EMAIL));
 
-        $this->envoyer($seed, ['email' => 'alice@sonas.cd', 'format' => 'pdf']);
+        $this->envoyer($seed, ['emails' => ['alice@sonas.cd'], 'format' => 'pdf']);
         self::assertCount(1, $this->metaEnvois($seed));
 
-        $this->envoyer($seed, ['email' => 'contact@rawsure.cd', 'format' => null]);
+        $this->envoyer($seed, ['emails' => ['contact@rawsure.cd'], 'format' => null]);
         $envois = $this->metaEnvois($seed);
 
         self::assertCount(2, $envois);
@@ -533,7 +536,7 @@ class AssistantMessageEnvoiTest extends WebTestCase
         $seed = $this->seed();
         $this->client->loginUser($this->user(self::GUEST_EMAIL));
 
-        $data = $this->envoyer($seed, ['email' => 'nouveau.client@exemple.com', 'format' => null]);
+        $data = $this->envoyer($seed, ['emails' => ['nouveau.client@exemple.com'], 'format' => null]);
 
         self::assertSame(200, $this->client->getResponse()->getStatusCode());
         self::assertTrue($data['success']);
@@ -557,14 +560,17 @@ class AssistantMessageEnvoiTest extends WebTestCase
         self::assertCount(0, $this->metaEnvois($seed));
     }
 
+    /**
+     * Formats réellement invalides. Les valeurs VIDES relèvent d'un autre cas —
+     * « aucun destinataire » — couvert par testAucunDestinataireEstRefuse : les
+     * confondre masquerait le message d'erreur propre à chaque situation.
+     */
     public static function adressesInvalides(): array
     {
         return [
             'pas un e-mail' => ['pas-un-email'],
             'domaine manquant' => ['a@'],
-            'chaîne vide' => [''],
-            'espaces seuls' => ['   '],
-            'absent du payload' => [null],
+            'espaces internes' => ['a b@exemple.com'],
         ];
     }
 
@@ -576,15 +582,145 @@ class AssistantMessageEnvoiTest extends WebTestCase
         $this->client->loginUser($this->user(self::GUEST_EMAIL));
 
         for ($i = 1; $i <= 10; ++$i) {
-            $this->envoyer($seed, ['email' => sprintf('destinataire%d@exemple.com', $i), 'format' => null]);
+            $this->envoyer($seed, ['emails' => [sprintf('destinataire%d@exemple.com', $i)], 'format' => null]);
             self::assertSame(200, $this->client->getResponse()->getStatusCode(), "Envoi #{$i}");
         }
 
-        $data = $this->envoyer($seed, ['email' => 'onzieme@exemple.com', 'format' => null]);
+        $data = $this->envoyer($seed, ['emails' => ['onzieme@exemple.com'], 'format' => null]);
 
         self::assertSame(429, $this->client->getResponse()->getStatusCode());
         self::assertStringContainsString('déjà été envoyé', $data['message']);
         self::assertCount(10, $this->metaEnvois($seed));
+    }
+
+    // ── Sélection multiple ─────────────────────────────────────────────────
+
+    public function testEnvoiAPlusieursDestinatairesProduitUnEmailParPersonne(): void
+    {
+        // Jamais de « À » collectif : les correspondants d'un courtier ne doivent
+        // pas découvrir mutuellement leurs adresses.
+        $seed = $this->seed();
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+
+        $data = $this->envoyer($seed, [
+            'emails' => ['alice@sonas.cd', 'contact@rawsure.cd', 'externe@exemple.com'],
+            'format' => null,
+        ]);
+
+        self::assertSame(200, $this->client->getResponse()->getStatusCode());
+        self::assertTrue($data['success']);
+        self::assertQueuedEmailCount(3);
+        self::assertStringContainsString('3 destinataires', $data['message']);
+
+        $destinataires = [];
+        foreach ([0, 1, 2] as $index) {
+            $email = self::getMailerMessage($index);
+            self::assertCount(1, $email->getTo(), 'Chaque e-mail ne porte qu\'UN destinataire.');
+            $destinataires[] = $email->getTo()[0]->getAddress();
+        }
+        sort($destinataires);
+        self::assertSame(['alice@sonas.cd', 'contact@rawsure.cd', 'externe@exemple.com'], $destinataires);
+    }
+
+    public function testChaqueDestinataireLaisseSaPropreTrace(): void
+    {
+        $seed = $this->seed();
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+
+        $this->envoyer($seed, ['emails' => ['alice@sonas.cd', 'externe@exemple.com'], 'format' => 'pdf']);
+        $envois = $this->metaEnvois($seed);
+
+        self::assertCount(2, $envois);
+        self::assertSame(['alice@sonas.cd', 'externe@exemple.com'], array_column($envois, 'email'));
+        self::assertFalse($envois[0]['horsCarnet']);
+        self::assertTrue($envois[1]['horsCarnet']);
+        self::assertSame(['pdf', 'pdf'], array_column($envois, 'format'));
+    }
+
+    public function testAucunDestinataireEstRefuse(): void
+    {
+        // L'interface autorise à ne rien cocher ; l'envoi, lui, exige une cible.
+        $seed = $this->seed();
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+
+        foreach ([['emails' => []], ['emails' => ['', '   ']], []] as $payload) {
+            $data = $this->envoyer($seed, $payload + ['format' => null]);
+            self::assertSame(400, $this->client->getResponse()->getStatusCode());
+            self::assertStringContainsString('au moins un destinataire', $data['message']);
+        }
+        self::assertQueuedEmailCount(0);
+        self::assertCount(0, $this->metaEnvois($seed));
+    }
+
+    public function testAdressesDupliqueesNeProduisentQuUnEnvoi(): void
+    {
+        $seed = $this->seed();
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+
+        $this->envoyer($seed, ['emails' => ['alice@sonas.cd', 'ALICE@SONAS.CD', ' alice@sonas.cd '], 'format' => null]);
+
+        self::assertSame(200, $this->client->getResponse()->getStatusCode());
+        self::assertQueuedEmailCount(1);
+        self::assertCount(1, $this->metaEnvois($seed));
+    }
+
+    public function testUneSeuleAdresseInvalideAnnuleTOUTLEnvoi(): void
+    {
+        // Validation intégrale AVANT le premier départ : une faute de frappe sur
+        // la dernière adresse ne doit pas laisser partir les précédentes.
+        $seed = $this->seed();
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+
+        $data = $this->envoyer($seed, [
+            'emails' => ['alice@sonas.cd', 'contact@rawsure.cd', 'pas-un-email'],
+            'format' => null,
+        ]);
+
+        self::assertSame(400, $this->client->getResponse()->getStatusCode());
+        self::assertStringContainsString('pas-un-email', $data['message']);
+        self::assertQueuedEmailCount(0);
+        self::assertCount(0, $this->metaEnvois($seed));
+    }
+
+    public function testLePlafondCompteLeCumulDesDestinataires(): void
+    {
+        $seed = $this->seed();
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+
+        $huit = array_map(static fn (int $i): string => sprintf('d%d@exemple.com', $i), range(1, 8));
+        $this->envoyer($seed, ['emails' => $huit, 'format' => null]);
+        self::assertSame(200, $this->client->getResponse()->getStatusCode());
+        self::assertCount(8, $this->metaEnvois($seed));
+
+        // 8 déjà envoyés + 3 demandés > 10 : refus AVANT tout départ.
+        $this->envoyer($seed, ['emails' => ['a@exemple.com', 'b@exemple.com', 'c@exemple.com'], 'format' => null]);
+
+        self::assertSame(429, $this->client->getResponse()->getStatusCode());
+        self::assertCount(8, $this->metaEnvois($seed));
+    }
+
+    public function testLaFormeSinguliereResteAcceptee(): void
+    {
+        // `email` (singulier) : un appelant plus ancien ou un envoi unitaire n'a
+        // pas à connaître la forme tableau.
+        $seed = $this->seed();
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+
+        $this->envoyer($seed, ['email' => 'alice@sonas.cd', 'format' => null]);
+
+        self::assertSame(200, $this->client->getResponse()->getStatusCode());
+        self::assertQueuedEmailCount(1);
+    }
+
+    public function testFormesSinguliereEtPluriellePeuventSeCumuler(): void
+    {
+        $seed = $this->seed();
+        $this->client->loginUser($this->user(self::GUEST_EMAIL));
+
+        $this->envoyer($seed, ['emails' => ['alice@sonas.cd'], 'email' => 'contact@rawsure.cd', 'format' => null]);
+
+        self::assertSame(200, $this->client->getResponse()->getStatusCode());
+        self::assertQueuedEmailCount(2);
     }
 
     // ── Gardes ─────────────────────────────────────────────────────────────
@@ -597,7 +733,7 @@ class AssistantMessageEnvoiTest extends WebTestCase
         $this->ouvrirPicker($seed);
         self::assertSame(403, $this->client->getResponse()->getStatusCode());
 
-        $this->envoyer($seed, ['email' => 'alice@sonas.cd']);
+        $this->envoyer($seed, ['emails' => ['alice@sonas.cd']]);
         self::assertSame(403, $this->client->getResponse()->getStatusCode());
     }
 
@@ -606,7 +742,7 @@ class AssistantMessageEnvoiTest extends WebTestCase
         $seed = $this->seed(comptePayant: false);
         $this->client->loginUser($this->user(self::GUEST_EMAIL));
 
-        $this->envoyer($seed, ['email' => 'alice@sonas.cd']);
+        $this->envoyer($seed, ['emails' => ['alice@sonas.cd']]);
 
         self::assertSame(402, $this->client->getResponse()->getStatusCode());
         self::assertQueuedEmailCount(0);
@@ -622,7 +758,7 @@ class AssistantMessageEnvoiTest extends WebTestCase
             'POST',
             sprintf('/admin/assistant-ia/api/messages/%d/%d/999999999/envoyer', $seed['entreprise']->getId(), $seed['conversation']->getId()),
             [], [], ['CONTENT_TYPE' => 'application/json'],
-            json_encode(['email' => 'alice@sonas.cd'])
+            json_encode(['emails' => ['alice@sonas.cd']])
         );
 
         self::assertSame(404, $this->client->getResponse()->getStatusCode());
@@ -636,7 +772,7 @@ class AssistantMessageEnvoiTest extends WebTestCase
         $repo = static::getContainer()->get(TokenConsumptionRepository::class);
         $avant = \count($repo->findBy(['proprietaire' => $this->user(self::OWNER_EMAIL)]));
 
-        $this->envoyer($seed, ['email' => 'alice@sonas.cd', 'format' => 'pdf']);
+        $this->envoyer($seed, ['emails' => ['alice@sonas.cd'], 'format' => 'pdf']);
 
         self::assertSame($avant, \count($repo->findBy(['proprietaire' => $this->user(self::OWNER_EMAIL)])));
     }

@@ -27,14 +27,17 @@ export default class extends PickerBaseController {
     connect() {
         super.connect();
         this._categorie = '';
-        this._onChangement = (event) => this._surChangement(event);
+        this._onChangement = () => this._majSelection();
         this._onClavier = (event) => this._surClavier(event);
         this.element.addEventListener('change', this._onChangement);
+        this.element.addEventListener('input', this._onChangement);
         this.element.addEventListener('keydown', this._onClavier);
+        this._majSelection();
     }
 
     disconnect() {
         this.element.removeEventListener('change', this._onChangement);
+        this.element.removeEventListener('input', this._onChangement);
         this.element.removeEventListener('keydown', this._onClavier);
         super.disconnect();
     }
@@ -74,9 +77,45 @@ export default class extends PickerBaseController {
         return this._categorie === '' || row.dataset.categorie === this._categorie;
     }
 
-    // ── Clavier et saisie libre ───────────────────────────────────────────────
+    // ── Sélection multiple ────────────────────────────────────────────────────
 
-    /** ↑/↓ parcourt les lignes VISIBLES, Entrée valide la sélection courante. */
+    /** Adresses cochées dans le carnet, dans l'ordre d'affichage. */
+    _cochees() {
+        return Array.from(this.element.querySelectorAll('input[name="aimsg-destinataire"]:checked'))
+            .map((c) => c.value.trim())
+            .filter((v) => v !== '');
+    }
+
+    /** Adresses saisies à la main : séparateurs virgule, point-virgule ou espace. */
+    _saisies() {
+        const brut = this.element.querySelector('[data-picker-email-libre]')?.value || '';
+        return brut.split(/[,;\s]+/).map((v) => v.trim()).filter((v) => v !== '');
+    }
+
+    /** Destinataires retenus : carnet + saisie, dédoublonnés (le serveur revalide). */
+    _destinataires() {
+        const vues = new Set();
+        return [...this._cochees(), ...this._saisies()].filter((email) => {
+            const cle = email.toLowerCase();
+            if (vues.has(cle)) return false;
+            vues.add(cle);
+            return true;
+        });
+    }
+
+    /** Compte rendu permanent de la sélection (Nielsen 1 : l'état est visible). */
+    _majSelection() {
+        const zone = this.element.querySelector('[data-picker-selection]');
+        if (!zone) return;
+        const nombre = this._destinataires().length;
+        zone.textContent = nombre === 0
+            ? 'Aucun destinataire sélectionné.'
+            : `${nombre} destinataire${nombre > 1 ? 's' : ''} sélectionné${nombre > 1 ? 's' : ''}.`;
+    }
+
+    // ── Clavier ───────────────────────────────────────────────────────────────
+
+    /** ↑/↓ parcourt les lignes VISIBLES, Entrée envoie. */
     _surClavier(event) {
         if (event.key === 'Enter' && event.target.matches('[data-picker-search], [data-picker-email-libre]')) {
             event.preventDefault();
@@ -86,28 +125,18 @@ export default class extends PickerBaseController {
         if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
         if (!event.target.matches('[data-picker-search], input[name="aimsg-destinataire"]')) return;
 
-        const radios = this._radiosVisibles();
-        const suivant = indexApresTouche(event.key, radios.indexOf(document.activeElement), radios.length);
+        const cases = this._casesVisibles();
+        const suivant = indexApresTouche(event.key, cases.indexOf(document.activeElement), cases.length);
         if (suivant === null) return;
         event.preventDefault();
-        radios[suivant].focus();
-        radios[suivant].checked = true;
-        radios[suivant].dispatchEvent(new Event('change', { bubbles: true }));
+        // On déplace le FOCUS sans cocher : avec des cases à cocher, parcourir
+        // n'est plus choisir — l'Espace coche, comme partout ailleurs.
+        cases[suivant].focus();
     }
 
-    _radiosVisibles() {
+    _casesVisibles() {
         return Array.from(this.element.querySelectorAll('input[name="aimsg-destinataire"]'))
-            .filter((radio) => radio.closest('[data-picker-row], .form-check')?.style.display !== 'none');
-    }
-
-    /** Le champ d'adresse libre ne s'active qu'avec sa propre option. */
-    _surChangement(event) {
-        if (event.target.name !== 'aimsg-destinataire') return;
-        const libre = this.element.querySelector('[data-picker-email-libre]');
-        if (!libre) return;
-        const modeLibre = this.element.querySelector('[data-picker-libre-radio]')?.checked === true;
-        libre.disabled = !modeLibre;
-        if (modeLibre) libre.focus();
+            .filter((c) => c.closest('[data-picker-row]')?.style.display !== 'none');
     }
 
     // ── Envoi ─────────────────────────────────────────────────────────────────
@@ -115,17 +144,9 @@ export default class extends PickerBaseController {
     async _send(button) {
         if (!this.sendUrlValue || this.sendRunning) return;
 
-        const choisi = this.element.querySelector('input[name="aimsg-destinataire"]:checked');
-        if (!choisi) {
-            this._showError("Choisissez d'abord un destinataire.");
-            return;
-        }
-        const modeLibre = choisi.hasAttribute('data-picker-libre-radio');
-        const email = modeLibre
-            ? (this.element.querySelector('[data-picker-email-libre]')?.value || '').trim()
-            : choisi.value;
-        if (email === '') {
-            this._showError('Saisissez une adresse e-mail.');
+        const emails = this._destinataires();
+        if (emails.length === 0) {
+            this._showError('Cochez au moins un destinataire, ou saisissez une adresse.');
             return;
         }
 
@@ -143,7 +164,7 @@ export default class extends PickerBaseController {
                     'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest',
                 },
-                body: JSON.stringify({ email, format: format || null, message }),
+                body: JSON.stringify({ emails, format: format || null, message }),
             });
             const data = await response.json().catch(() => ({}));
             if (!response.ok || data.success === false) {

@@ -182,17 +182,38 @@ class MessageDestinataires
      */
     public function trouver(Entreprise $entreprise, ?Invite $invite, ?Utilisateur $acteur, string $email): ?array
     {
-        $recherche = mb_strtolower(trim($email));
-        if ($recherche === '') {
-            return null;
+        return $this->trouverPlusieurs($entreprise, $invite, $acteur, [$email])[mb_strtolower(trim($email))] ?? null;
+    }
+
+    /**
+     * Même règle que trouver(), mais pour un LOT d'adresses : le carnet n'est
+     * collecté qu'une fois, au lieu d'une fois par destinataire.
+     *
+     * @param array<int, string> $emails
+     * @return array<string, array{email: string, nom: string, detail: string, categorie: string, origine: string}|null>
+     *         indexé par adresse en minuscules ; null = hors carnet
+     */
+    public function trouverPlusieurs(Entreprise $entreprise, ?Invite $invite, ?Utilisateur $acteur, array $emails): array
+    {
+        $recherches = [];
+        foreach ($emails as $email) {
+            $cle = mb_strtolower(trim($email));
+            if ($cle !== '') {
+                $recherches[$cle] = null;
+            }
         }
+        if ($recherches === []) {
+            return [];
+        }
+
         foreach ($this->collecter($entreprise, $invite, $acteur)['destinataires'] as $destinataire) {
-            if (mb_strtolower($destinataire['email']) === $recherche) {
-                return $destinataire;
+            $cle = mb_strtolower($destinataire['email']);
+            if (array_key_exists($cle, $recherches)) {
+                $recherches[$cle] = $destinataire;
             }
         }
 
-        return null;
+        return $recherches;
     }
 
     /**

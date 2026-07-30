@@ -1233,8 +1233,17 @@ class AssistantIaController extends AbstractController
     }
 
     /**
-     * Envoie UN message du fil par e-mail, à une adresse du carnet ou saisie à la
-     * main.
+     * Envoie UN message du fil par e-mail à UN OU PLUSIEURS destinataires, pris
+     * dans le carnet et/ou saisis à la main.
+     *
+     * UN E-MAIL PAR DESTINATAIRE, jamais un « À » collectif : les correspondants
+     * d'un courtier (contact d'un client, assureur, co-courtier) ne doivent pas
+     * découvrir mutuellement leurs adresses. Chaque envoi porte donc sa propre
+     * salutation et sa propre ligne de trace.
+     *
+     * Toutes les adresses sont résolues et validées AVANT le premier envoi : une
+     * faute de frappe sur la troisième adresse ne doit pas laisser partir les
+     * deux premières.
      *
      * Une adresse HORS CARNET est acceptée — c'est un besoin réel — mais jamais
      * sans contrôle, parce que l'e-mail part sous la marque JS Brokers vers un
@@ -1266,53 +1275,72 @@ class AssistantIaController extends AbstractController
             return $this->json(['message' => 'Message introuvable.'], Response::HTTP_NOT_FOUND);
         }
 
+        $payload = json_decode($request->getContent(), true) ?: [];
+        $acteur = $this->currentUser();
+        $demandees = $this->adressesDemandees($payload);
+        if ($demandees === []) {
+            return $this->json([
+                'message' => 'Sélectionnez au moins un destinataire, ou saisissez une adresse.',
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
         $meta = $message->getMeta() ?? [];
         $envois = is_array($meta['envois'] ?? null) ? $meta['envois'] : [];
-        if (\count($envois) >= self::MAX_ENVOIS_PAR_MESSAGE) {
+        // Le plafond porte sur le CUMUL : cinq destinataires consomment cinq
+        // envois. Vérifié avant tout départ, pour ne pas en laisser partir une
+        // partie puis refuser le reste.
+        if (\count($envois) + \count($demandees) > self::MAX_ENVOIS_PAR_MESSAGE) {
             return $this->json([
                 'message' => sprintf(
-                    'Ce message a déjà été envoyé %d fois. Créez-en un nouvel export si vous devez le diffuser davantage.',
+                    'Ce message a déjà été envoyé %d fois (plafond : %d). Réexportez-le si vous devez le diffuser davantage.',
+                    \count($envois),
                     self::MAX_ENVOIS_PAR_MESSAGE
                 ),
             ], Response::HTTP_TOO_MANY_REQUESTS);
         }
 
-        $payload = json_decode($request->getContent(), true) ?: [];
-        $email = trim((string) ($payload['email'] ?? ''));
-        $acteur = $this->currentUser();
-
-        $destinataire = $destinataires->trouver($entreprise, $invite, $acteur, $email);
-        if ($destinataire === null) {
-            $erreurs = $this->validator->validate($email, [
-                new Assert\NotBlank(message: 'Saisissez une adresse e-mail.'),
-                new Assert\Email(mode: Assert\Email::VALIDATION_MODE_STRICT, message: 'Adresse e-mail invalide.'),
-            ]);
-            if (\count($erreurs) > 0) {
-                return $this->json(['message' => (string) $erreurs->get(0)->getMessage()], Response::HTTP_BAD_REQUEST);
+        // Résolution + validation de TOUTES les adresses avant le premier envoi.
+        $connus = $destinataires->trouverPlusieurs($entreprise, $invite, $acteur, $demandees);
+        $cibles = [];
+        foreach ($demandees as $email) {
+            $destinataire = $connus[mb_strtolower($email)] ?? null;
+            if ($destinataire === null) {
+                $erreurs = $this->validator->validate($email, [
+                    new Assert\Email(mode: Assert\Email::VALIDATION_MODE_STRICT, message: 'Adresse e-mail invalide.'),
+                ]);
+                if (\count($erreurs) > 0) {
+                    return $this->json([
+                        'message' => sprintf('Adresse e-mail invalide : %s', $email),
+                    ], Response::HTTP_BAD_REQUEST);
+                }
+                $destinataire = ['email' => $email, 'nom' => $email, 'detail' => 'Adresse saisie', 'horsCarnet' => true];
+                // Un envoi hors carnet doit rester retrouvable : il engage la marque.
+                $this->logger->notice('Assistant IA : envoi d\'un message à une adresse hors carnet.', [
+                    'entreprise' => $entreprise->getId(),
+                    'invite' => $invite?->getId(),
+                    'message' => $message->getId(),
+                    'email' => $email,
+                ]);
             }
-            $destinataire = ['email' => $email, 'nom' => $email, 'detail' => 'Adresse saisie', 'horsCarnet' => true];
-            // Un envoi hors carnet doit rester retrouvable : il engage la marque.
-            $this->logger->notice('Assistant IA : envoi d\'un message à une adresse hors carnet.', [
-                'entreprise' => $entreprise->getId(),
-                'invite' => $invite?->getId(),
-                'message' => $message->getId(),
-                'email' => $email,
-            ]);
+            $cibles[] = $destinataire;
         }
 
         $format = $payload['format'] ?? null;
         $format = in_array($format, MessageExporter::FORMATS, true) ? $format : null;
+        $assistantNom = $this->parametresRepository->nomPour($entreprise);
+        $accompagnement = (string) ($payload['message'] ?? '');
 
-        $envoye = $notifier->envoyer(
-            $message,
-            $entreprise,
-            $this->parametresRepository->nomPour($entreprise),
-            $destinataire,
-            $acteur,
-            $format,
-            (string) ($payload['message'] ?? ''),
-        );
-        if (!$envoye) {
+        $reussis = [];
+        $echecs = [];
+        foreach ($cibles as $cible) {
+            if ($notifier->envoyer($message, $entreprise, $assistantNom, $cible, $acteur, $format, $accompagnement)) {
+                $reussis[] = $cible;
+            } else {
+                $echecs[] = $cible['email'];
+            }
+        }
+
+        if ($reussis === []) {
             return $this->json([
                 'success' => false,
                 'message' => "L'e-mail n'a pas pu être envoyé. Réessayez dans un instant.",
@@ -1321,23 +1349,86 @@ class AssistantIaController extends AbstractController
 
         // Trace attachée AU MESSAGE : elle voyage avec la conversation (purge
         // automatique en cascade), sans table ni migration supplémentaire.
-        $envois[] = [
-            'email' => $destinataire['email'],
-            'nom' => $destinataire['nom'],
-            'detail' => $destinataire['detail'],
-            'format' => $format,
-            'at' => (new \DateTimeImmutable('now'))->format(\DateTimeImmutable::ATOM),
-            'invite' => $invite?->getId(),
-            'horsCarnet' => ($destinataire['horsCarnet'] ?? false) === true,
-        ];
+        // Une ligne PAR destinataire réellement servi.
+        $horodatage = (new \DateTimeImmutable('now'))->format(\DateTimeImmutable::ATOM);
+        foreach ($reussis as $cible) {
+            $envois[] = [
+                'email' => $cible['email'],
+                'nom' => $cible['nom'],
+                'detail' => $cible['detail'],
+                'format' => $format,
+                'at' => $horodatage,
+                'invite' => $invite?->getId(),
+                'horsCarnet' => ($cible['horsCarnet'] ?? false) === true,
+            ];
+        }
         $meta['envois'] = $envois;
         $message->setMeta($meta);
         $this->em->flush();
 
         return $this->json([
             'success' => true,
-            'message' => sprintf('Message envoyé à %s.', $destinataire['email']),
+            'message' => $this->messageEnvoi($reussis, $echecs),
         ]);
+    }
+
+    /**
+     * Adresses réellement demandées : sélection du carnet + adresse(s) saisies,
+     * nettoyées et dédoublonnées (insensible à la casse). L'ordre de première
+     * apparition est conservé — c'est celui du carnet à l'écran.
+     *
+     * @param array<string, mixed> $payload
+     * @return array<int, string>
+     */
+    private function adressesDemandees(array $payload): array
+    {
+        $brutes = $payload['emails'] ?? [];
+        if (!is_array($brutes)) {
+            $brutes = [];
+        }
+        // `email` (singulier) reste accepté : un appel plus ancien, ou un envoi à
+        // un seul destinataire, n'a pas à connaître la forme tableau.
+        if (isset($payload['email'])) {
+            $brutes[] = $payload['email'];
+        }
+
+        $adresses = [];
+        $vues = [];
+        foreach ($brutes as $brute) {
+            if (!is_scalar($brute)) {
+                continue;
+            }
+            $email = trim((string) $brute);
+            $cle = mb_strtolower($email);
+            if ($email === '' || isset($vues[$cle])) {
+                continue;
+            }
+            $vues[$cle] = true;
+            $adresses[] = $email;
+        }
+
+        return $adresses;
+    }
+
+    /**
+     * Compte rendu d'un envoi multiple : ce qui est parti, et ce qui a échoué —
+     * un échec partiel ne doit pas se cacher derrière un « message envoyé ».
+     *
+     * @param array<int, array{email: string}> $reussis
+     * @param array<int, string> $echecs
+     */
+    private function messageEnvoi(array $reussis, array $echecs): string
+    {
+        $compte = \count($reussis);
+        $texte = $compte === 1
+            ? sprintf('Message envoyé à %s.', $reussis[0]['email'])
+            : sprintf('Message envoyé à %d destinataires.', $compte);
+
+        if ($echecs !== []) {
+            $texte .= sprintf(' Échec pour : %s.', implode(', ', $echecs));
+        }
+
+        return $texte;
     }
 
     /** Ajoute au libellé l'extension du nom de stockage si elle manque (fichier ouvrable). */
