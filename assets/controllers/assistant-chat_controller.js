@@ -1,7 +1,15 @@
 import { Controller } from '@hotwired/stimulus';
 import { renderAssistantMarkdown } from './assistant-markdown-render.js';
-import { monterGraphiquesAssistant } from './assistant-chart-render.js';
+import { monterGraphiquesAssistant, rethemeGraphiquesAssistant } from './assistant-chart-render.js';
 import { masquerBlocsChart } from './assistant-chart-spec.js';
+import {
+    THEME_CLAIR,
+    THEME_SOMBRE,
+    EVENEMENT_THEME,
+    normaliserTheme,
+    resoudreTheme,
+    themeOppose,
+} from './assistant-theme.js';
 import { formatInstant } from '../datetime-format.js';
 import { formatNombre } from '../number-format.js';
 import { documentLocale } from '../locale.js';
@@ -43,6 +51,7 @@ export default class extends Controller {
         contexteUrl: String,
         fichierUrl: String,
         fichierLimits: Object,
+        themeUrl: String,
         idEntreprise: Number,
         idInvite: Number,
         idConversation: Number,
@@ -50,6 +59,13 @@ export default class extends Controller {
     };
 
     connect() {
+        // EN PREMIER, avant tout rendu : renderHistoricalMarkdown() monte les
+        // graphiques de l'historique, et Chart.js fige ses couleurs à la
+        // construction. Résoudre le thème après, ce serait peindre l'historique
+        // en clair. Stimulus connecte via MutationObserver (microtâche), donc
+        // cette écriture précède le premier paint : pas de flash clair.
+        this.setupTheme();
+
         this.sending = false;
         this.renderHistoricalMarkdown();
         // Reconstruit la barre de décision des plans EN ATTENTE après un rechargement
@@ -223,6 +239,113 @@ export default class extends Controller {
             this.micTarget.removeEventListener('focus', this._onMicTipOver);
             this.micTarget.removeEventListener('blur', this._onMicTipOut);
         }
+        if (this._onThemeChanged) {
+            document.removeEventListener(EVENEMENT_THEME, this._onThemeChanged);
+        }
+        if (this._mqSombre && this._onOsTheme) {
+            this._mqSombre.removeEventListener('change', this._onOsTheme);
+        }
+    }
+
+    // ═══ Thème du chat (confort visuel) ═══════════════════════════════════════
+    // Le chat est la seule interface de l'application à proposer un mode sombre.
+    // La règle de résolution vit dans le module PUR `assistant-theme.js` (testé
+    // sous node --test) ; ce contrôleur n'est qu'une coquille : il lit les
+    // entrées (attribut serveur, préférence système), applique, diffuse, persiste.
+
+    /**
+     * Résout et applique le thème, puis met en place les deux écoutes :
+     *  - la bascule diffusée par N'IMPORTE quelle instance de chat ouverte ;
+     *  - le changement de thème du système, UNIQUEMENT tant que l'utilisateur
+     *    n'a pas tranché (sinon son choix explicite serait écrasé).
+     */
+    setupTheme() {
+        // L'attribut vaut 'light' / 'dark' si l'utilisateur a tranché, 'auto'
+        // sinon — normaliserTheme() ramène 'auto' (et tout inconnu) à null.
+        const stocke = normaliserTheme(this.element.dataset.aicTheme);
+        // Un choix explicite (rendu par le serveur, ou fait dans cette session)
+        // gèle le suivi du système : on ne lui reprend pas la main.
+        this._choixExplicite = stocke !== null;
+        this._theme = resoudreTheme({ stocke, prefereSombre: this._osPrefereSombre() });
+        this._appliquerTheme(this._theme, { rethemer: false });
+
+        this._onThemeChanged = (e) => {
+            const theme = normaliserTheme(e && e.detail ? e.detail.theme : null);
+            if (theme !== null) {
+                this._appliquerTheme(theme);
+            }
+        };
+        document.addEventListener(EVENEMENT_THEME, this._onThemeChanged);
+
+        this._mqSombre = typeof window.matchMedia === 'function'
+            ? window.matchMedia('(prefers-color-scheme: dark)')
+            : null;
+        if (this._mqSombre) {
+            this._onOsTheme = () => {
+                if (!this._choixExplicite) {
+                    this._appliquerTheme(this._osPrefereSombre() ? THEME_SOMBRE : THEME_CLAIR);
+                }
+            };
+            this._mqSombre.addEventListener('change', this._onOsTheme);
+        }
+    }
+
+    /**
+     * Bascule. N'applique RIEN elle-même : elle diffuse, et l'écouteur applique
+     * — y compris dans cette instance. Un seul chemin de code, donc plusieurs
+     * conversations ouvertes restent cohérentes sans traitement particulier.
+     */
+    toggleTheme() {
+        const suivant = themeOppose(this._theme);
+        this._choixExplicite = true;
+        document.dispatchEvent(new CustomEvent(EVENEMENT_THEME, { detail: { theme: suivant } }));
+        this._persisterTheme(suivant);
+    }
+
+    /**
+     * Pose l'état sur la RACINE et nulle part ailleurs : c'est ce qui fait que
+     * les puces de contexte et de fichiers re-rendues par le serveur (remplacement
+     * d'innerHTML) restent thémées par simple cascade, sans code dédié.
+     * @param {'light'|'dark'} theme
+     * @param {{rethemer?: boolean}} options
+     */
+    _appliquerTheme(theme, { rethemer = true } = {}) {
+        this._theme = theme;
+        this.element.setAttribute('data-aic-theme', theme);
+        this.element.querySelectorAll('.aic-theme').forEach((btn) => {
+            btn.setAttribute('aria-pressed', theme === THEME_SOMBRE ? 'true' : 'false');
+        });
+        // Chart.js ne lit pas les variables CSS : ses couleurs sont figées dans la
+        // configuration, il faut donc repeindre les graphiques déjà montés.
+        if (rethemer && this.hasMessagesTarget) {
+            rethemeGraphiquesAssistant(this.messagesTarget, theme);
+        }
+    }
+
+    /** Préférence système du poste (false si le navigateur ne la connaît pas). */
+    _osPrefereSombre() {
+        return typeof window.matchMedia === 'function'
+            && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+
+    /**
+     * Mémorise le choix côté serveur (il suit l'utilisateur sur tous ses
+     * appareils). Optimiste : l'interface a déjà basculé. Un échec réseau ne
+     * mérite pas d'alerte pour un réglage d'affichage — le thème reste appliqué
+     * pour la session et sera simplement re-résolu au prochain chargement.
+     * @param {'light'|'dark'} theme
+     */
+    _persisterTheme(theme) {
+        if (!this.hasThemeUrlValue) {
+            return;
+        }
+        fetch(this.themeUrlValue, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ theme }),
+        }).catch((error) => {
+            console.warn('AssistantChat - préférence de thème non enregistrée :', error);
+        });
     }
 
     /**
@@ -1406,11 +1529,29 @@ export default class extends Controller {
     _ctxTipCreate() {
         if (this._ctxTip) return this._ctxTip;
         const tip = document.createElement('div');
-        tip.className = 'jsb-ctx-tip';
+        tip.className = this._ctxTipClasse();
         tip.setAttribute('role', 'tooltip');
         document.body.appendChild(tip);
         this._ctxTip = tip;
         return tip;
+    }
+
+    /**
+     * Classes de l'infobulle partagée (.jsb-ctx-tip, stylée dans app.css et
+     * mutualisée avec le bloc Pistes du tableau de bord — donc déjà sombre, on
+     * n'y touche pas). Elle est attachée au <body>, HORS du sous-arbre du chat :
+     * la cascade du thème ne l'atteint pas, d'où ce marqueur explicite. Utile
+     * uniquement pour son contour : son ombre portée noire disparaît sur un chat
+     * sombre, et l'infobulle perdrait ses limites.
+     *
+     * Source unique des classes : les 5 endroits qui (ré)affectent className
+     * passent par ici.
+     * @param {string} variante Variante de style (ex. 'commit-tip').
+     */
+    _ctxTipClasse(variante = '') {
+        const base = variante ? `jsb-ctx-tip ${variante}` : 'jsb-ctx-tip';
+
+        return this._theme === THEME_SOMBRE ? `${base} is-sur-sombre` : base;
     }
 
     /**
@@ -1427,7 +1568,7 @@ export default class extends Controller {
     _micTipShow() {
         if (!this.hasMicTarget) return;
         const tip = this._ctxTipCreate();
-        tip.className = 'jsb-ctx-tip commit-tip';
+        tip.className = this._ctxTipClasse('commit-tip');
         tip.textContent = '';
 
         const table = document.createElement('table');
@@ -1461,7 +1602,7 @@ export default class extends Controller {
     }
 
     _ctxTipBuild(tip, chip) {
-        tip.className = 'jsb-ctx-tip'; // repli du style partagé (annule un éventuel commit-tip du micro)
+        tip.className = this._ctxTipClasse(); // repli du style partagé (annule un éventuel commit-tip du micro)
         tip.textContent = '';
         const table = document.createElement('table');
 
@@ -1503,7 +1644,7 @@ export default class extends Controller {
      * serveur ou la bulle optimiste) — construction DOM via textContent.
      */
     _ctxTipBuildMessage(tip, bouton) {
-        tip.className = 'jsb-ctx-tip'; // repli du style partagé (annule un éventuel commit-tip du micro)
+        tip.className = this._ctxTipClasse(); // repli du style partagé (annule un éventuel commit-tip du micro)
         tip.textContent = '';
         const table = document.createElement('table');
 
@@ -1545,7 +1686,7 @@ export default class extends Controller {
      * sombre — construction DOM via textContent (échappement garanti).
      */
     _ctxTipBuildFichier(tip, chip) {
-        tip.className = 'jsb-ctx-tip'; // repli du style partagé (annule un éventuel commit-tip du micro)
+        tip.className = this._ctxTipClasse(); // repli du style partagé (annule un éventuel commit-tip du micro)
         tip.textContent = '';
         const table = document.createElement('table');
 
@@ -1667,7 +1808,9 @@ export default class extends Controller {
      */
     rendreAssistant(el, source) {
         el.innerHTML = renderAssistantMarkdown(source);
-        monterGraphiquesAssistant(el);
+        // Le thème est résolu en tête de connect() : un graphique naît donc
+        // toujours déjà habillé, jamais repeint après coup.
+        monterGraphiquesAssistant(el, this._theme);
     }
 
     /**

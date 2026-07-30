@@ -8,6 +8,10 @@ import assert from 'node:assert/strict';
 
 import {
     CHART_TYPES,
+    PALETTE_CHART,
+    PALETTE_CHART_SOMBRE,
+    CHROME_CHART_SOMBRE,
+    habillageGraphique,
     normaliserSpec,
     construireConfigChart,
     masquerBlocsChart,
@@ -99,6 +103,70 @@ test('construireConfigChart colore les secteurs pour un camembert', () => {
 
 test('construireConfigChart renvoie null sur une spec invalide', () => {
     assert.equal(construireConfigChart({ labels: [], series: [] }), null);
+});
+
+test('construireConfigChart appelé à UN seul argument garde l\'habillage clair (rétrocompatibilité)', () => {
+    // Le mode sombre a ajouté deux paramètres optionnels : un appel historique
+    // doit produire EXACTEMENT la configuration d'avant.
+    const config = construireConfigChart({
+        type: 'bar',
+        titre: 'CA 2026',
+        labels: ['Jan'],
+        series: [{ label: 'HT', data: [10] }, { label: 'TTC', data: [12] }],
+    });
+    assert.ok(config);
+    assert.equal(config.data.datasets[0].borderColor, PALETTE_CHART[0]);
+    assert.equal(config.options.plugins.title.color, '#212529');
+    assert.equal(config.options.plugins.legend.labels.color, '#495057');
+    assert.equal(config.options.scales.y.ticks.color, '#6c757d');
+    assert.equal(config.options.scales.y.grid.color, '#e9ecef');
+    assert.equal(config.options.scales.x.ticks.color, '#6c757d');
+});
+
+test('construireConfigChart applique l\'habillage sombre quand on le lui passe', () => {
+    const { palette, chrome } = habillageGraphique('dark');
+    const config = construireConfigChart({
+        type: 'line',
+        titre: 'Encaissements',
+        labels: ['Jan', 'Fév'],
+        series: [{ label: 'Commissions', data: [10, 20] }, { label: 'Rétro', data: [3, 4] }],
+    }, palette, chrome);
+    assert.ok(config);
+    assert.equal(config.data.datasets[0].borderColor, PALETTE_CHART_SOMBRE[0]);
+    assert.equal(config.data.datasets[1].borderColor, PALETTE_CHART_SOMBRE[1]);
+    assert.equal(config.options.plugins.title.color, CHROME_CHART_SOMBRE.titre);
+    assert.equal(config.options.plugins.legend.labels.color, CHROME_CHART_SOMBRE.legende);
+    assert.equal(config.options.scales.y.ticks.color, CHROME_CHART_SOMBRE.graduations);
+    assert.equal(config.options.scales.y.grid.color, CHROME_CHART_SOMBRE.grille);
+});
+
+test('la bordure entre secteurs d\'un camembert suit le fond du canvas selon le thème', () => {
+    const spec = { type: 'doughnut', labels: ['A', 'B'], series: [{ label: 'R', data: [1, 2] }] };
+    assert.equal(construireConfigChart(spec).data.datasets[0].borderColor, '#ffffff');
+
+    const { palette, chrome } = habillageGraphique('dark');
+    assert.equal(
+        construireConfigChart(spec, palette, chrome).data.datasets[0].borderColor,
+        CHROME_CHART_SOMBRE.secteur,
+    );
+});
+
+test('habillageGraphique est la seam unique thème → couleurs, et retombe sur le clair', () => {
+    assert.deepEqual(habillageGraphique('dark').palette, PALETTE_CHART_SOMBRE);
+    assert.deepEqual(habillageGraphique('light').palette, PALETTE_CHART);
+    // Tout ce qui n'est pas 'dark' reste clair (aucune devinette).
+    assert.deepEqual(habillageGraphique(undefined).palette, PALETTE_CHART);
+    assert.deepEqual(habillageGraphique('auto').palette, PALETTE_CHART);
+});
+
+test('la palette sombre est exploitable : hexadécimaux valides, tous distincts, même cardinalité', () => {
+    // L'ORDRE de cette palette porte la lisibilité (séparation des paires
+    // adjacentes, daltonismes) : un doublon ou un format cassé la ruinerait.
+    assert.equal(PALETTE_CHART_SOMBRE.length, PALETTE_CHART.length);
+    for (const couleur of PALETTE_CHART_SOMBRE) {
+        assert.match(couleur, /^#[0-9a-f]{6}$/i, `couleur invalide : ${couleur}`);
+    }
+    assert.equal(new Set(PALETTE_CHART_SOMBRE).size, PALETTE_CHART_SOMBRE.length);
 });
 
 test('masquerBlocsChart masque les blocs chart (terminés ou non) sans toucher au reste', () => {

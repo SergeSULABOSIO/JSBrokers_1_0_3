@@ -3894,6 +3894,13 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
 #db-piste-tip .tip-section:first-child, .jsb-ctx-tip .tip-section:first-child { border-top: none; padding-top: 3px; }
 #db-piste-tip .tip-risque, .jsb-ctx-tip .tip-risque { color: #fbbf24; }
 #db-piste-tip .tip-libelle, .jsb-ctx-tip .tip-libelle { color: #9ca3af; font-style: italic; font-size: .68rem; padding-top: 1px; padding-bottom: 3px; }
+/* Infobulle posée AU-DESSUS d'une surface déjà sombre (chat de l'assistant en
+   mode sombre) : son ombre portée noire n'y délimite plus rien. On lui rend un
+   contour perceptible, sans toucher au style partagé avec le tableau de bord.
+   Marqueur posé par le contrôleur `assistant-chat` (l'infobulle est attachée au
+   <body>, hors du sous-arbre du chat : la cascade du thème ne l'atteint pas). */
+.jsb-ctx-tip.is-sur-sombre { border: 1px solid #495057; }
+
 /* Infobulle « dernier commit » (survol de la version) : titre blanc + corps explicite
    sur un ou deux paragraphes lisibles (plus large que l'infobulle partagée). */
 .jsb-ctx-tip.commit-tip { max-width: 380px; }

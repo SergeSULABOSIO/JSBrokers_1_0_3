@@ -383,6 +383,114 @@ class AssistantIaWorkspaceTest extends WebTestCase
     }
 
     /**
+     * MODE SOMBRE (confort visuel / fatigue oculaire) : le chat rend sa bascule
+     * de thème, et son CSS est entièrement tokenisé avec un unique bloc sombre.
+     * La bascule elle-même est 100 % navigateur ; ce test garde le rendu et les
+     * invariants du CSS côté serveur (anti-régression).
+     */
+    public function testChatRendLaBasculeDeThemeEtSonCssTokenise(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $owner);
+
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+        $this->client->request('GET', sprintf('/admin/assistant-ia/chat/%d/%d', $e->getId(), $conversation->getId()));
+        $this->assertResponseIsSuccessful();
+        $content = (string) $this->client->getResponse()->getContent();
+
+        // Bouton : socle commun + classe propre, câblé sur le contrôleur du chat.
+        $this->assertStringContainsString('class="aic-iconbtn aic-theme"', $content, 'La bascule doit porter le socle commun + sa classe.');
+        $this->assertStringContainsString('assistant-chat#toggleTheme', $content, 'La bascule doit déclencher toggleTheme.');
+        // Icônes inline (lune / soleil) : pas d'ux_icon serveur, comme le micro.
+        $this->assertStringContainsString('aic-ic-moon', $content, 'L\'icône « lune » doit être rendue.');
+        $this->assertStringContainsString('aic-ic-sun', $content, 'L\'icône « soleil » doit être rendue.');
+        // A11y : libellé STABLE + état pressé (pas de libellé qui varie).
+        $this->assertStringContainsString('aria-label="Mode sombre"', $content, 'Le libellé de la bascule doit être stable.');
+
+        // L'ordre porte l'auto-marge `.aic-iconbtn:first-of-type` qui pousse le
+        // groupe de boutons à droite : la bascule doit précéder le plein écran.
+        $this->assertLessThan(
+            strpos($content, 'aic-fullscreen'),
+            strpos($content, 'aic-theme'),
+            'La bascule de thème doit précéder le bouton plein écran dans l\'entête.'
+        );
+
+        // Défaut : aucun choix explicite → le front suit la préférence système.
+        $this->assertStringContainsString('data-aic-theme="auto"', $content, 'Sans choix enregistré, le chat doit être rendu en « auto ».');
+        $this->assertStringContainsString('data-assistant-chat-theme-url-value=', $content, 'L\'URL de persistance du thème doit être passée au contrôleur.');
+
+        // CSS : jetons déclarés + UN bloc sombre, et surtout aucune règle
+        // @media (prefers-color-scheme) — la résolution est faite par le
+        // contrôleur, qui est la source de vérité unique de l'état.
+        $this->assertStringContainsString('--aic-surface:', $content, 'Le CSS du chat doit être tokenisé.');
+        $this->assertStringContainsString('--aic-row-hover:', $content, 'Le survol de ligne doit avoir son propre jeton (élévation inversée en sombre).');
+        $this->assertStringContainsString('.jsb-ai-chat[data-aic-theme="dark"]', $content, 'Le bloc de surcharge sombre doit être présent.');
+        $this->assertStringNotContainsString('prefers-color-scheme: dark', $content, 'Le thème ne doit PAS être résolu en CSS (double source de vérité).');
+    }
+
+    /**
+     * Persistance du thème : préférence d'AFFICHAGE portée par l'utilisateur
+     * (donc valable sur tous ses appareils), écrite par un endpoint dédié qui
+     * refuse toute valeur hors « light » / « dark ». Le rendu suivant du chat
+     * sert le choix, sans repasser par « auto ».
+     */
+    public function testEndpointDeThemeEnregistreLeChoixEtRefuseLeReste(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $owner);
+
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+
+        // Valeur inconnue : refusée, rien n'est écrit.
+        $this->client->request('POST', '/admin/assistant-ia/api/theme', [], [], ['CONTENT_TYPE' => 'application/json'], json_encode(['theme' => 'bleu']));
+        $this->assertResponseStatusCodeSame(400);
+        $this->em()->clear();
+        $this->assertNull($this->user(self::OWNER_EMAIL)->getThemeAssistant(), 'Une valeur invalide ne doit rien enregistrer.');
+
+        // Choix valide : enregistré sur l'utilisateur.
+        $this->client->request('POST', '/admin/assistant-ia/api/theme', [], [], ['CONTENT_TYPE' => 'application/json'], json_encode(['theme' => 'dark']));
+        $this->assertResponseIsSuccessful();
+        $this->em()->clear();
+        $this->assertSame(Utilisateur::THEME_SOMBRE, $this->user(self::OWNER_EMAIL)->getThemeAssistant());
+
+        // Le chat sert désormais le choix explicite (plus « auto »).
+        $this->client->request('GET', sprintf('/admin/assistant-ia/chat/%d/%d', $e->getId(), $conversation->getId()));
+        $this->assertResponseIsSuccessful();
+        $content = (string) $this->client->getResponse()->getContent();
+        $this->assertStringContainsString('data-aic-theme="dark"', $content);
+        $this->assertStringNotContainsString('data-aic-theme="auto"', $content);
+
+        // Retour au clair : un choix explicite « light » doit primer sur un
+        // éventuel système en sombre — il est donc stocké, pas effacé.
+        $this->client->request('POST', '/admin/assistant-ia/api/theme', [], [], ['CONTENT_TYPE' => 'application/json'], json_encode(['theme' => 'light']));
+        $this->assertResponseIsSuccessful();
+        $this->em()->clear();
+        $this->assertSame(Utilisateur::THEME_CLAIR, $this->user(self::OWNER_EMAIL)->getThemeAssistant());
+    }
+
+    /**
+     * La bascule de thème est un réglage d'affichage : elle ne doit RIEN coûter
+     * (pas plus que le choix de la langue). Garde-fou contre un métrage ajouté
+     * par inadvertance au fil des refontes du trait CRUD.
+     */
+    public function testLeChangementDeThemeNeConsommeAucunToken(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $this->makeConversation($e, $owner);
+
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+        $repo = static::getContainer()->get(TokenConsumptionRepository::class);
+        $avant = count($repo->findBy(['proprietaire' => $this->user(self::OWNER_EMAIL)]));
+
+        $this->client->request('POST', '/admin/assistant-ia/api/theme', [], [], ['CONTENT_TYPE' => 'application/json'], json_encode(['theme' => 'dark']));
+        $this->assertResponseIsSuccessful();
+
+        $this->em()->clear();
+        $apres = count($repo->findBy(['proprietaire' => $this->user(self::OWNER_EMAIL)]));
+        $this->assertSame($avant, $apres, 'Changer de thème ne doit journaliser aucune consommation de tokens.');
+    }
+
+    /**
      * PREMIUM : sans solde de tokens payant, le composant affiche le panneau de
      * mise en valeur (CTA réservé au propriétaire) et l'envoi de message est
      * bloqué en 402 « premium » sans rien persister.

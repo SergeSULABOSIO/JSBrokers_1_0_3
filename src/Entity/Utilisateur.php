@@ -19,6 +19,13 @@ use Symfony\Component\Security\Core\User\UserInterface;
 #[UniqueEntity(fields: ['email'], message: 'Cette adresse mail est déjà utilisée. Veuillez nous en fournir une autre.')]
 class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
 {
+    /** Thèmes explicites du chat de l'assistant (cf. $themeAssistant). */
+    public const THEME_CLAIR = 'light';
+    public const THEME_SOMBRE = 'dark';
+
+    /** Valeurs acceptées par la bascule de thème (NULL = suivre le système). */
+    public const THEMES = [self::THEME_CLAIR, self::THEME_SOMBRE];
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -64,6 +71,16 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 255, options:['default' => "fr"])]
     #[Groups(['list:read'])]
     private string $locale = "fr";
+
+    /**
+     * Thème du chat de l'assistant IA (confort visuel / fatigue oculaire).
+     * NULL = aucun choix explicite → le front suit la préférence système du
+     * poste (`prefers-color-scheme`). Un clic sur la bascule fige 'light' ou
+     * 'dark', qui prime alors définitivement. Préférence d'AFFICHAGE : elle
+     * suit l'utilisateur sur tous ses appareils, comme `locale`.
+     */
+    #[ORM\Column(length: 10, nullable: true)]
+    private ?string $themeAssistant = null;
 
     #[ORM\ManyToOne(inversedBy: 'connectedUsers')]
     #[Groups(['list:read'])]
@@ -280,6 +297,19 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     public function setLocale(string $locale): static
     {
         $this->locale = $locale;
+
+        return $this;
+    }
+
+    /** NULL = aucun choix explicite → le front suit la préférence système. */
+    public function getThemeAssistant(): ?string
+    {
+        return $this->themeAssistant;
+    }
+
+    public function setThemeAssistant(?string $themeAssistant): static
+    {
+        $this->themeAssistant = in_array($themeAssistant, self::THEMES, true) ? $themeAssistant : null;
 
         return $this;
     }
