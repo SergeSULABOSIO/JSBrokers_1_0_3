@@ -26,6 +26,7 @@ export const FORMATS_SERVEUR = [FORMAT_PDF, FORMAT_WORD, FORMAT_MARKDOWN];
 
 /** Clés `data-menu-key` reconnues par le contrôleur (le libellé vit en Twig). */
 export const CLE_REPONDRE = 'repondre';
+export const CLE_COPIE = 'copier-image';
 export const CLE_EMAIL = 'envoyer-email';
 export const CLE_EXPORT = {
     [FORMAT_PDF]: 'export-pdf',

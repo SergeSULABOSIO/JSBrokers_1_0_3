@@ -2147,6 +2147,29 @@ export default class extends Controller {
         }
     }
 
+    /**
+     * Copie la bulle dans le presse-papiers, EN IMAGE : elle se colle ensuite
+     * telle quelle (Ctrl+V) dans un document Word ou un corps d'e-mail —
+     * graphiques compris, ce qu'aucune copie de texte ne permet.
+     */
+    async copierMessage() {
+        const actif = this.messageActif();
+        if (!actif) return;
+        try {
+            const { copierBulleDansPressePapier } = await import('./assistant-message-image.js');
+            await copierBulleDansPressePapier(actif.bulle, { theme: this._theme });
+            this.appendNotice('status', 'Message copié comme image. Collez-le avec Ctrl+V dans Word, un e-mail…');
+        } catch (error) {
+            console.error('AssistantChat - copie image échouée :', error);
+            this.appendNotice(
+                'error',
+                error?.code === 'non-supporte'
+                    ? "Ce navigateur ne sait pas copier une image. Utilisez « Exporter en image », puis insérez le fichier."
+                    : "La copie a échoué. Utilisez « Exporter en image », puis insérez le fichier."
+            );
+        }
+    }
+
     // ── Envoyer par e-mail ────────────────────────────────────────────────────
 
     async envoyerMessageParEmail() {

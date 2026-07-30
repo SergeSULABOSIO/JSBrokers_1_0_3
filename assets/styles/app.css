@@ -4385,6 +4385,50 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     border-color: #0047AB;
     box-shadow: 0 0 0 .2rem rgba(0, 71, 171, 0.15) !important;
 }
+/* Ligne d'option d'un picker (choix d'un destinataire) — layout AUTO-PORTÉ.
+   On n'utilise volontairement PAS `.form-check` : sa puce flottante (float +
+   marge négative de Bootstrap) déborde de sa rangée et rogne le libellé dès que
+   le texte est long — exactement le défaut déjà neutralisé côté dialogues
+   (`.form-column .dlg-field-card-body .form-check-input`). Un `<label>` en flex
+   contenant l'input rend la ligne entière cliquable et immunise la mise en page
+   contre toute règle `.form-check` ambiante du contexte d'insertion (le picker
+   est inséré dans la modale visible la plus haute, dont on ne maîtrise pas le CSS). */
+.jsb-picker-option {
+    display: flex;
+    align-items: flex-start;
+    gap: .55rem;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px; /* cible tactile confortable (WCAG 2.5.8) */
+    margin: 0 0 .15rem;
+    padding: .35rem .4rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color .15s ease;
+}
+.jsb-picker-option:hover {
+    background: #f8f9fa;
+}
+.jsb-picker-option:has(input:checked) {
+    background: rgba(0, 71, 171, 0.06);
+}
+.jsb-picker-option:focus-within {
+    outline: 2px solid #0047AB;
+    outline-offset: 1px;
+}
+.jsb-picker-option > input {
+    flex: 0 0 auto;
+    margin: .35rem 0 0; /* alignée optiquement sur la première ligne du libellé */
+    cursor: pointer;
+}
+/* min-width:0 autorise le retour à la ligne dans un conteneur flex ;
+   overflow-wrap:anywhere empêche une adresse longue de pousser la largeur du
+   bloc — les deux ensemble suppriment tout défilement horizontal de la liste. */
+.jsb-picker-option-corps {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
 /* Compteur d'un chip de filtre rapide (nombre d'éléments de la catégorie).
    Deux fonds distincts pour rester lisible sur la piste grise comme sur le chip
    actif cobalt — contraste vérifié dans les deux états. */
