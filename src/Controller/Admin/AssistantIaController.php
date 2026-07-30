@@ -6,6 +6,7 @@ use App\Ai\AiContextBuilder;
 use App\Ai\AiEngineFailure;
 use App\Ai\AiReply;
 use App\Ai\Engine\AiEngineInterface;
+use App\Ai\Export\ImageJointeValidator;
 use App\Ai\Export\MessageDestinataires;
 use App\Ai\Export\MessageExporter;
 use App\Ai\Export\MessageMailNotifier;
@@ -1261,6 +1262,7 @@ class AssistantIaController extends AbstractController
         Request $request,
         MessageDestinataires $destinataires,
         MessageMailNotifier $notifier,
+        ImageJointeValidator $imageValidator,
     ): JsonResponse {
         [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
         if (!$this->moduleAutorise($invite)) {
@@ -1325,15 +1327,30 @@ class AssistantIaController extends AbstractController
             $cibles[] = $destinataire;
         }
 
+        // Format « image » : la pièce est une CAPTURE produite par le navigateur —
+        // seule façon d'obtenir un rendu fidèle (les graphiques Chart.js vivent
+        // dans un <canvas>). C'est le seul endroit où l'application accepte un
+        // binaire fabriqué par le client, et il n'est jamais réexpédié tel quel :
+        // ImageJointeValidator le reconstruit à partir de ses seuls pixels.
         $format = $payload['format'] ?? null;
-        $format = in_array($format, MessageExporter::FORMATS, true) ? $format : null;
+        $pieceFournie = null;
+        if ($format === MessageMailNotifier::FORMAT_IMAGE) {
+            try {
+                $pieceFournie = $imageValidator->valider((string) ($payload['image'] ?? ''), (int) $message->getId());
+            } catch (\InvalidArgumentException $e) {
+                return $this->json(['message' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
+            }
+        } else {
+            $format = in_array($format, MessageExporter::FORMATS, true) ? $format : null;
+        }
+
         $assistantNom = $this->parametresRepository->nomPour($entreprise);
         $accompagnement = (string) ($payload['message'] ?? '');
 
         $reussis = [];
         $echecs = [];
         foreach ($cibles as $cible) {
-            if ($notifier->envoyer($message, $entreprise, $assistantNom, $cible, $acteur, $format, $accompagnement)) {
+            if ($notifier->envoyer($message, $entreprise, $assistantNom, $cible, $acteur, $format, $accompagnement, $pieceFournie)) {
                 $reussis[] = $cible;
             } else {
                 $echecs[] = $cible['email'];
