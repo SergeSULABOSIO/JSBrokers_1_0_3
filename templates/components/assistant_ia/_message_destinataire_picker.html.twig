@@ -59,40 +59,73 @@
 
         <p class="jsb-picker-empty text-danger" data-picker-error role="alert" hidden></p>
 
-        <div class="jsb-picker-listwrap" style="padding: .25rem 1.25rem 1rem;">
-            {# ── 1. Recherche plein texte ── #}
-            <div class="mb-2">
-                <label for="aimsg-recherche" class="form-label fw-semibold" style="color:#0d2440;">
-                    Rechercher un destinataire
-                </label>
-                <input type="search"
-                       id="aimsg-recherche"
-                       class="form-control"
-                       placeholder="Nom, e-mail, fonction, client… (ex. « sinistre sonas »)"
-                       autocomplete="off"
-                       aria-describedby="aimsg-recherche-aide"
-                       data-picker-search>
-                <span id="aimsg-recherche-aide" class="text-muted small">
-                    Accents facultatifs. Plusieurs mots&nbsp;: tous doivent correspondre.
-                    <span data-picker-count-shown>{{ destinataires|length }}</span> / {{ destinataires|length }} affichés.
-                </span>
-            </div>
+        {# ── 1. Recherche plein texte ──
+           Bloc `.jsb-picker-search` standard des pickers (icône incrustée à
+           gauche, champ encastré) : il reste fixe pendant que la liste défile.
+           Le libellé et l'aide vivent HORS du bloc — le repère `top:50%` de
+           l'icône vise le centre du bloc, qu'un texte interne décalerait. #}
+        <div style="padding: .75rem 1.25rem 0;">
+            <label for="aimsg-recherche" class="form-label fw-semibold mb-0" style="color:#0d2440;">
+                Rechercher un destinataire
+            </label>
+        </div>
+        <div class="jsb-picker-search">
+            <span class="jsb-picker-search-icon" aria-hidden="true">
+                {{ ux_icon(resolve_icon_name('action:search'), {width: '16px', height: '16px'}) }}
+            </span>
+            <input type="search"
+                   id="aimsg-recherche"
+                   class="form-control"
+                   placeholder="Nom, e-mail, fonction, client… (ex. « sinistre sonas »)"
+                   autocomplete="off"
+                   aria-describedby="aimsg-recherche-aide"
+                   data-picker-search>
+        </div>
+        <p id="aimsg-recherche-aide" class="text-muted small mb-0" style="padding: 0 1.25rem .5rem;">
+            Accents facultatifs. Plusieurs mots&nbsp;: tous doivent correspondre.
+            <span data-picker-count-shown>{{ destinataires|length }}</span> / {{ destinataires|length }} affichés.
+        </p>
 
-            {# ── 2. Puces de catégorie ── #}
+        <div class="jsb-picker-listwrap" style="padding: .25rem 1.25rem 1rem;">
+            {# ── 2. Chips de catégorie ──
+               Même composant que les filtres rapides des listes (Propositions,
+               Tranches, Avenants) : piste grise en pilule + chip actif cobalt,
+               classes .jsb-preset-filters / .jsb-preset-chip d'app.css. Les
+               icônes passent par resolve_icon_name() — toutes vendorisées
+               (IconAliasVendorisationTest). #}
+            {% set categorieIcones = {
+                'moi': 'utilisateur',
+                'contact': 'contact',
+                'collaborateur': 'groupe',
+                'partenaire': 'partenaire',
+                'assureur': 'assureur',
+                'fournisseur': 'fournisseur',
+            } %}
             {% if destinataires is not empty %}
-                <div class="d-flex flex-wrap gap-1 mb-3" role="group" aria-label="Filtrer par catégorie">
-                    <button type="button" class="btn btn-sm btn-primary" data-picker-categorie="" aria-pressed="true">
-                        Tous <span class="badge text-bg-light ms-1">{{ destinataires|length }}</span>
-                    </button>
-                    {% for cle, label in categorieLabels %}
-                        {% set nb = destinataires|filter(d => d.categorie == cle)|length %}
-                        {% if nb > 0 %}
-                            <button type="button" class="btn btn-sm btn-outline-secondary"
-                                    data-picker-categorie="{{ cle }}" aria-pressed="false">
-                                {{ label }} <span class="badge text-bg-light ms-1">{{ nb }}</span>
-                            </button>
-                        {% endif %}
-                    {% endfor %}
+                <div class="mb-3">
+                    <div class="jsb-preset-filters" role="group" aria-label="Filtrer par catégorie">
+                        <button type="button" class="jsb-preset-chip is-active"
+                                data-picker-categorie="" aria-pressed="true">
+                            <span class="jsb-preset-chip__icon" aria-hidden="true">
+                                {{ ux_icon(resolve_icon_name('action:filter'), {width: '15px', height: '15px'}) }}
+                            </span>
+                            <span>Tous</span>
+                            <span class="jsb-preset-chip__count">{{ destinataires|length }}</span>
+                        </button>
+                        {% for cle, label in categorieLabels %}
+                            {% set nb = destinataires|filter(d => d.categorie == cle)|length %}
+                            {% if nb > 0 %}
+                                <button type="button" class="jsb-preset-chip"
+                                        data-picker-categorie="{{ cle }}" aria-pressed="false">
+                                    <span class="jsb-preset-chip__icon" aria-hidden="true">
+                                        {{ ux_icon(resolve_icon_name(categorieIcones[cle]|default('contact')), {width: '15px', height: '15px'}) }}
+                                    </span>
+                                    <span>{{ label }}</span>
+                                    <span class="jsb-preset-chip__count">{{ nb }}</span>
+                                </button>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
                 </div>
             {% endif %}
 
@@ -171,12 +204,18 @@
                             Pour un destinataire absent du carnet. L'envoi est tracé comme tel.
                         </span>
                     </label>
-                    <input type="email"
-                           class="form-control mt-1"
-                           placeholder="prenom.nom@exemple.com"
-                           aria-label="Adresse e-mail du destinataire hors carnet"
-                           data-picker-email-libre
-                           {{ destinataires is not empty ? 'disabled' : '' }}>
+                    {# Champ à icône incrustée (pattern .jsb-support .jsb-field-control). #}
+                    <div class="jsb-picker-field mt-1">
+                        <span class="jsb-picker-field-icon" aria-hidden="true">
+                            {{ ux_icon(resolve_icon_name('action:send-email'), {width: '16px', height: '16px'}) }}
+                        </span>
+                        <input type="email"
+                               class="form-control"
+                               placeholder="prenom.nom@exemple.com"
+                               aria-label="Adresse e-mail du destinataire hors carnet"
+                               data-picker-email-libre
+                               {{ destinataires is not empty ? 'disabled' : '' }}>
+                    </div>
                 </div>
             </fieldset>
 
@@ -200,9 +239,16 @@
                 <label for="aimsg-message" class="form-label fw-semibold" style="color:#0d2440;">
                     Message d'accompagnement <span class="text-muted fw-normal">(facultatif)</span>
                 </label>
-                <textarea id="aimsg-message" class="form-control" rows="3" maxlength="1000"
-                          placeholder="Un mot personnel qui apparaîtra en tête de l'e-mail…"
-                          data-picker-message></textarea>
+                {# --top : sur un champ multi-lignes, l'icône s'aligne sur la
+                   première ligne plutôt que de flotter au milieu du bloc. #}
+                <div class="jsb-picker-field jsb-picker-field--top">
+                    <span class="jsb-picker-field-icon" aria-hidden="true">
+                        {{ ux_icon(resolve_icon_name('action:description'), {width: '16px', height: '16px'}) }}
+                    </span>
+                    <textarea id="aimsg-message" class="form-control" rows="3" maxlength="1000"
+                              placeholder="Un mot personnel qui apparaîtra en tête de l'e-mail…"
+                              data-picker-message></textarea>
+                </div>
             </div>
         </div>
 
