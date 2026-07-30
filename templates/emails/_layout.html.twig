@@ -16,6 +16,13 @@
    restent inchangés ; ceux qui le passent (ex. confirmation de tokens) suivent
    la langue de l'utilisateur. #}
 {% set lang = locale|default('fr') %}
+{# Largeur du corps, en pixels. 600 est le standard prudent des e-mails et reste
+   le DÉFAUT : tous les e-mails existants sont inchangés. Un e-mail qui transporte
+   des données tabulaires (extrait de l'assistant, états) peut demander plus large
+   en passant `largeurCorps` — au-delà de ~700 px, seule la marge latérale se
+   réduit chez les clients de bureau, la lecture reste confortable et le mobile
+   n'est pas concerné (le tableau extérieur est en largeur fluide). #}
+{% set largeurCorps = largeurCorps|default(600) %}
 <!DOCTYPE html>
 <html lang="{{ lang }}">
 <head>
@@ -29,8 +36,8 @@
         <tr>
             <td align="center" style="padding: 24px 12px;">
 
-                <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0"
-                       style="width: 600px; max-width: 600px; background-color: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 8px 30px rgba(0, 71, 171, 0.10);">
+                <table role="presentation" width="{{ largeurCorps }}" cellpadding="0" cellspacing="0" border="0"
+                       style="width: 100%; max-width: {{ largeurCorps }}px; background-color: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 8px 30px rgba(0, 71, 171, 0.10);">
 
                     {# ───────── En-tête de marque ───────── #}
                     <tr>

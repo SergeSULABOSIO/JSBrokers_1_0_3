@@ -121,6 +121,23 @@ class ImageJointeValidatorTest extends TestCase
         $this->validator->valider(base64_encode(str_repeat('x', ImageJointeValidator::MAX_OCTETS + 1)), 1);
     }
 
+    public function testLesBornesSontLesMemesCoteNavigateur(): void
+    {
+        // Le navigateur adapte l'échelle de capture pour ne PAS dépasser ces
+        // bornes (echelleAdaptee, assistant-message-image.js). Si elles divergent,
+        // une longue réponse se ferait refuser à l'envoi sans raison visible.
+        $module = (string) file_get_contents(__DIR__ . '/../../assets/controllers/assistant-message-image.js');
+
+        self::assertMatchesRegularExpression(
+            '/export const MAX_LARGEUR = ' . ImageJointeValidator::MAX_LARGEUR . '\b/',
+            $module
+        );
+        self::assertMatchesRegularExpression(
+            '/export const MAX_HAUTEUR = ' . ImageJointeValidator::MAX_HAUTEUR . '\b/',
+            $module
+        );
+    }
+
     public function testDimensionsExcessivesSontRefusees(): void
     {
         // Bombe de décompression : peu d'octets, énormément de pixels.

@@ -22,6 +22,7 @@ export default class extends PickerBaseController {
 
     static values = {
         sendUrl: String,
+        idMessage: Number,
     };
 
     connect() {
@@ -139,6 +140,41 @@ export default class extends PickerBaseController {
             .filter((c) => c.closest('[data-picker-row]')?.style.display !== 'none');
     }
 
+    // ── Capture de la bulle (pièce jointe image) ──────────────────────────────
+
+    /**
+     * Capture la bulle du message en PNG base64. Le picker vit au <body>, hors du
+     * chat : la bulle est retrouvée par son id dans le document, et le thème lu
+     * sur la racine du chat (le contrôleur du chat y écrit le thème RÉSOLU, donc
+     * jamais « auto »).
+     *
+     * @returns {Promise<string>} base64 nu, sans préfixe data:
+     */
+    async _capturerBulle() {
+        const bulle = document.querySelector(`.jsb-ai-chat .aic-msg[data-message-id="${this.idMessageValue}"]`);
+        if (!bulle) {
+            throw new Error('Bulle du message introuvable.');
+        }
+        const theme = document.querySelector('.jsb-ai-chat')?.dataset.aicTheme || 'light';
+
+        const { capturerBulle } = await import('./assistant-message-image.js');
+        const blob = await capturerBulle(bulle, { theme });
+        if (!blob) {
+            throw new Error('Capture vide.');
+        }
+
+        return await new Promise((resolve, reject) => {
+            const lecteur = new FileReader();
+            lecteur.onerror = () => reject(lecteur.error);
+            lecteur.onload = () => {
+                const resultat = String(lecteur.result || '');
+                const virgule = resultat.indexOf(',');
+                resolve(virgule === -1 ? resultat : resultat.slice(virgule + 1));
+            };
+            lecteur.readAsDataURL(blob);
+        });
+    }
+
     // ── Envoi ─────────────────────────────────────────────────────────────────
 
     async _send(button) {
@@ -150,13 +186,30 @@ export default class extends PickerBaseController {
             return;
         }
 
-        const format = this.element.querySelector('[data-picker-format]:checked')?.value || '';
+        let format = this.element.querySelector('[data-picker-format]:checked')?.value || '';
         const message = this.element.querySelector('[data-picker-message]')?.value || '';
 
         this.sendRunning = true;
         button.disabled = true;
         this._progress(true);
         this._showError(null);
+
+        // Pièce jointe image : seul le navigateur sait rasteriser la bulle (les
+        // graphiques Chart.js vivent dans un <canvas>). Repli sur le PDF si la
+        // capture échoue — la mise en forme est préservée, seule la fidélité du
+        // graphique se perd, et l'envoi n'est pas perdu.
+        let image = null;
+        let repliPdf = false;
+        if (format === 'image') {
+            try {
+                image = await this._capturerBulle();
+            } catch (error) {
+                console.error('AssistantMessagePicker - capture échouée :', error);
+                format = 'pdf';
+                repliPdf = true;
+            }
+        }
+
         try {
             const response = await fetch(this.sendUrlValue, {
                 method: 'POST',
@@ -164,7 +217,7 @@ export default class extends PickerBaseController {
                     'Content-Type': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest',
                 },
-                body: JSON.stringify({ emails, format: format || null, message }),
+                body: JSON.stringify({ emails, format: format || null, image, message }),
             });
             const data = await response.json().catch(() => ({}));
             if (!response.ok || data.success === false) {
@@ -172,8 +225,11 @@ export default class extends PickerBaseController {
             }
 
             // Le chat écoute déjà `cerveau:event` : aucune plomberie nouvelle.
+            const confirmation = data.message || 'Message envoyé.';
             this._notifyCerveau('assistant:message.envoye', {
-                message: data.message || 'Message envoyé.',
+                message: repliPdf
+                    ? `${confirmation} L'image n'a pas pu être produite : le PDF a été joint à la place.`
+                    : confirmation,
             });
             this.close();
         } catch (error) {

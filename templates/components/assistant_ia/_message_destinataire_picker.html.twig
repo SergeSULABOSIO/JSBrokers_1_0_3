@@ -21,6 +21,9 @@
 <div class="jsb-picker-overlay"
      data-controller="assistant-message-picker"
      data-assistant-message-picker-send-url-value="{{ urlEnvoi }}"
+     {# Le picker est inséré au <body>, hors du chat : l'id lui permet de
+        retrouver la bulle à capturer pour la pièce jointe image. #}
+     data-assistant-message-picker-id-message-value="{{ message.id }}"
      data-picker-overlay>
     <div class="jsb-picker-modal"
          role="dialog"
@@ -227,20 +230,28 @@
                 </div>
             </fieldset>
 
-            {# ── Pièce jointe ── #}
+            {# ── Pièce jointe ──
+               « Image » est le défaut, comme lorsque Ket envoie lui-même : c'est
+               le seul format qui restitue la mise en forme ET les graphiques,
+               ceux-ci vivant dans un <canvas> qu'aucun rendu serveur ne
+               reproduit. La capture est faite par le navigateur ; si elle échoue,
+               l'envoi bascule sur le PDF plutôt que d'être perdu. #}
             <fieldset class="border-0 p-0 m-0 mt-3">
-                <legend class="fs-6 fw-semibold mb-2" style="color:#0d2440;">Pièce jointe</legend>
+                <legend class="fs-6 fw-semibold mb-1" style="color:#0d2440;">Pièce jointe</legend>
                 <div class="d-flex flex-wrap gap-3">
-                    {% for valeur, label in {'pdf': 'PDF', 'word': 'Word (.doc)', 'markdown': 'Markdown (.md)', '': 'Aucune'} %}
+                    {% for valeur, label in {'image': 'Image (rendu fidèle)', 'pdf': 'PDF', 'word': 'Word (.doc)', 'markdown': 'Markdown (.md)', '': 'Aucune'} %}
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="aimsg-format"
                                    id="aimsg-format-{{ valeur ?: 'aucune' }}" value="{{ valeur }}"
-                                   {{ valeur == 'pdf' ? 'checked' : '' }}
+                                   {{ valeur == 'image' ? 'checked' : '' }}
                                    data-picker-format>
                             <label class="form-check-label" for="aimsg-format-{{ valeur ?: 'aucune' }}">{{ label }}</label>
                         </div>
                     {% endfor %}
                 </div>
+                <p class="text-muted small mb-0 mt-1">
+                    L'image conserve exactement l'affichage du message, graphiques compris.
+                </p>
             </fieldset>
 
             <div class="mt-3">
