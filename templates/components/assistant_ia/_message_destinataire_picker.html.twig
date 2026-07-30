@@ -1,0 +1,225 @@
+{#
+    Choix du destinataire pour l'envoi par e-mail d'UN message du chat Ket.
+    Miroir des pickers jsb-picker-* (cf. soa/_envoi_picker.html.twig), piloté par
+    le contrôleur Stimulus « assistant-message-picker ».
+
+    Ce carnet agrège les contacts des clients, les collaborateurs, les
+    co-courtiers, les assureurs et les fournisseurs : il peut compter plusieurs
+    centaines de lignes. La RECHERCHE est donc la fonction principale de cet
+    écran, pas un ornement — d'où quatre couches complémentaires :
+      1. recherche plein texte multi-facettes (data-search précalculé serveur,
+         insensible aux accents et par mots, via picker-base) ;
+      2. puces de catégorie avec compteurs ;
+      3. regroupement visuel et affichage de l'ORIGINE (« — SONAS ») : on lit
+         pourquoi telle adresse est proposée ;
+      4. navigation ↑/↓ dans les lignes visibles.
+
+    Le picker s'insère dans le <body> et utilise les classes applicatives : c'est
+    un modal DE L'APPLICATION, pas un fragment du chat — il ne suit donc pas le
+    mode sombre du chat, comme tous les autres pickers.
+#}
+<div class="jsb-picker-overlay"
+     data-controller="assistant-message-picker"
+     data-assistant-message-picker-send-url-value="{{ urlEnvoi }}"
+     data-picker-overlay>
+    <div class="jsb-picker-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="jsb-aimsg-picker-title"
+         aria-describedby="jsb-aimsg-picker-desc"
+         tabindex="-1">
+
+        <div class="modal-header jsb-picker-header">
+            <div class="d-flex align-items-center">
+                <span class="me-2 d-inline-flex" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:send-email') }}" style="width:22px;height:22px;color:#0047AB;" />
+                </span>
+                <h5 id="jsb-aimsg-picker-title" class="modal-title mb-0">Envoyer ce message par e-mail</h5>
+            </div>
+            <button type="button" class="btn-close" data-picker-close aria-label="Fermer la fenêtre d'envoi"></button>
+        </div>
+
+        <div class="jsb-picker-progress" data-picker-progress role="progressbar" aria-hidden="true">
+            <div class="jsb-picker-progress-bar"></div>
+        </div>
+
+        <div class="jsb-picker-intro">
+            <span class="jsb-picker-intro-icon" aria-hidden="true">
+                <twig:UX:Icon name="{{ resolve_icon_name('assistant-ia') }}" style="width:26px;height:26px;" />
+            </span>
+            <div class="jsb-picker-intro-text">
+                <p class="jsb-picker-intro-title">Message de {{ assistantNom }} du {{ message.createdAt|date('d/m/Y à H:i') }}</p>
+                <p id="jsb-aimsg-picker-desc" class="jsb-picker-intro-desc">
+                    Le destinataire recevra le contenu du message mis en forme, et la pièce jointe
+                    choisie ci-dessous. Vous pouvez sélectionner une adresse du carnet ou en saisir
+                    une autre.
+                </p>
+            </div>
+        </div>
+
+        <p class="jsb-picker-empty text-danger" data-picker-error role="alert" hidden></p>
+
+        <div class="jsb-picker-listwrap" style="padding: .25rem 1.25rem 1rem;">
+            {# ── 1. Recherche plein texte ── #}
+            <div class="mb-2">
+                <label for="aimsg-recherche" class="form-label fw-semibold" style="color:#0d2440;">
+                    Rechercher un destinataire
+                </label>
+                <input type="search"
+                       id="aimsg-recherche"
+                       class="form-control"
+                       placeholder="Nom, e-mail, fonction, client… (ex. « sinistre sonas »)"
+                       autocomplete="off"
+                       aria-describedby="aimsg-recherche-aide"
+                       data-picker-search>
+                <span id="aimsg-recherche-aide" class="text-muted small">
+                    Accents facultatifs. Plusieurs mots&nbsp;: tous doivent correspondre.
+                    <span data-picker-count-shown>{{ destinataires|length }}</span> / {{ destinataires|length }} affichés.
+                </span>
+            </div>
+
+            {# ── 2. Puces de catégorie ── #}
+            {% if destinataires is not empty %}
+                <div class="d-flex flex-wrap gap-1 mb-3" role="group" aria-label="Filtrer par catégorie">
+                    <button type="button" class="btn btn-sm btn-primary" data-picker-categorie="" aria-pressed="true">
+                        Tous <span class="badge text-bg-light ms-1">{{ destinataires|length }}</span>
+                    </button>
+                    {% for cle, label in categorieLabels %}
+                        {% set nb = destinataires|filter(d => d.categorie == cle)|length %}
+                        {% if nb > 0 %}
+                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                    data-picker-categorie="{{ cle }}" aria-pressed="false">
+                                {{ label }} <span class="badge text-bg-light ms-1">{{ nb }}</span>
+                            </button>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if destinataires is empty %}
+                <p class="jsb-picker-empty" role="status">
+                    Aucune adresse e-mail exploitable dans cet espace de travail. Renseignez un e-mail
+                    sur un contact, un partenaire, un assureur ou un fournisseur — ou saisissez
+                    directement une adresse ci-dessous.
+                </p>
+            {% endif %}
+
+            <fieldset class="border-0 p-0 m-0">
+                <legend class="fs-6 fw-semibold mb-2" style="color:#0d2440;">Destinataire</legend>
+
+                {# ── 3. Lignes groupées par catégorie, origine affichée ── #}
+                {% set categorieCourante = null %}
+                {% for d in destinataires %}
+                    {% if d.categorie != categorieCourante %}
+                        {% set categorieCourante = d.categorie %}
+                        <p class="text-muted text-uppercase fw-semibold mt-2 mb-1"
+                           style="font-size:.7rem; letter-spacing:.04em;"
+                           data-picker-row
+                           data-picker-groupe="{{ d.categorie }}"
+                           data-categorie="{{ d.categorie }}"
+                           data-search="{{ (categorieLabels[d.categorie] ?? d.categorie)|lower }}"
+                           aria-hidden="true">{{ categorieLabels[d.categorie] ?? d.categorie }}</p>
+                    {% endif %}
+                    {# data-search : toutes les facettes concaténées côté serveur —
+                       c'est ce qui rend « sinistre sonas » ou « @aib.cd » efficaces. #}
+                    <div class="form-check mb-2"
+                         data-picker-row
+                         data-categorie="{{ d.categorie }}"
+                         data-search="{{ [d.nom, d.email, d.detail, d.origine, categorieLabels[d.categorie] ?? d.categorie]|join(' ')|lower }}">
+                        <input class="form-check-input"
+                               type="radio"
+                               name="aimsg-destinataire"
+                               id="aimsg-dest-{{ loop.index }}"
+                               value="{{ d.email|e('html_attr') }}"
+                               {{ loop.first ? 'checked' : '' }}>
+                        <label class="form-check-label" for="aimsg-dest-{{ loop.index }}"
+                               style="min-height:44px; display:flex; flex-direction:column; justify-content:center;">
+                            <span class="fw-semibold jsb-picker-client-nom">{{ d.nom }}</span>
+                            <span class="text-muted small jsb-picker-client-mail">{{ d.email }}</span>
+                            <span class="text-muted small" data-picker-hl>
+                                {{ d.detail }}{% if d.origine %} — {{ d.origine }}{% endif %}
+                            </span>
+                        </label>
+                    </div>
+                {% endfor %}
+
+                <p class="jsb-picker-empty" data-picker-empty role="status" hidden>
+                    Aucune adresse ne correspond à cette recherche.
+                </p>
+
+                {% if tronque > 0 %}
+                    {# Jamais de troncature silencieuse : une liste coupée sans le
+                       dire se lit comme une liste complète. #}
+                    <p class="text-muted small" role="status">
+                        {{ tronque }} adresse{{ tronque > 1 ? 's' : '' }} supplémentaire{{ tronque > 1 ? 's ne sont pas listées' : ' n’est pas listée' }}.
+                        Affinez la recherche ou saisissez l'adresse directement.
+                    </p>
+                {% endif %}
+
+                {# ── Adresse hors carnet ── #}
+                <div class="form-check mt-3 pt-2" style="border-top:1px solid #dee2e6;">
+                    <input class="form-check-input"
+                           type="radio"
+                           name="aimsg-destinataire"
+                           id="aimsg-dest-libre"
+                           value=""
+                           data-picker-libre-radio
+                           {{ destinataires is empty ? 'checked' : '' }}>
+                    <label class="form-check-label w-100" for="aimsg-dest-libre">
+                        <span class="fw-semibold">Autre adresse</span>
+                        <span class="text-muted small d-block mb-1">
+                            Pour un destinataire absent du carnet. L'envoi est tracé comme tel.
+                        </span>
+                    </label>
+                    <input type="email"
+                           class="form-control mt-1"
+                           placeholder="prenom.nom@exemple.com"
+                           aria-label="Adresse e-mail du destinataire hors carnet"
+                           data-picker-email-libre
+                           {{ destinataires is not empty ? 'disabled' : '' }}>
+                </div>
+            </fieldset>
+
+            {# ── Pièce jointe ── #}
+            <fieldset class="border-0 p-0 m-0 mt-3">
+                <legend class="fs-6 fw-semibold mb-2" style="color:#0d2440;">Pièce jointe</legend>
+                <div class="d-flex flex-wrap gap-3">
+                    {% for valeur, label in {'pdf': 'PDF', 'word': 'Word (.doc)', 'markdown': 'Markdown (.md)', '': 'Aucune'} %}
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="aimsg-format"
+                                   id="aimsg-format-{{ valeur ?: 'aucune' }}" value="{{ valeur }}"
+                                   {{ valeur == 'pdf' ? 'checked' : '' }}
+                                   data-picker-format>
+                            <label class="form-check-label" for="aimsg-format-{{ valeur ?: 'aucune' }}">{{ label }}</label>
+                        </div>
+                    {% endfor %}
+                </div>
+            </fieldset>
+
+            <div class="mt-3">
+                <label for="aimsg-message" class="form-label fw-semibold" style="color:#0d2440;">
+                    Message d'accompagnement <span class="text-muted fw-normal">(facultatif)</span>
+                </label>
+                <textarea id="aimsg-message" class="form-control" rows="3" maxlength="1000"
+                          placeholder="Un mot personnel qui apparaîtra en tête de l'e-mail…"
+                          data-picker-message></textarea>
+            </div>
+        </div>
+
+        <footer class="jsb-picker-foot">
+            <span class="jsb-picker-hint text-muted small">
+                L'e-mail part au nom de JS Brokers, avec votre adresse en réponse.
+            </span>
+            <span class="d-inline-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-picker-close>
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:close') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                    Annuler
+                </button>
+                <button type="button" class="btn btn-primary jsb-picker-btn" data-picker-send>
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:send-email') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                    Envoyer
+                </button>
+            </span>
+        </footer>
+    </div>
+</div>

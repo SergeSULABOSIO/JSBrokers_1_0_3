@@ -61,6 +61,13 @@ class AiContextBuilder
                 && ($objets = $message->getContexteObjets()) !== null) {
                 $contenu = $this->marqueurContexte($objets) . "\n" . $contenu;
             }
+            // « Répondre » à une bulle précise : sans ce marqueur, le modèle
+            // traiterait la demande comme portant sur le DERNIER sujet du fil.
+            // Préfixé APRÈS le marqueur de contexte, donc placé AVANT lui dans le
+            // texte final — ordre déterministe, et testable.
+            if (($cite = $message->getRepondA()) !== null) {
+                $contenu = $this->marqueurReponse($cite) . "\n" . $contenu;
+            }
             // Un plan d'écriture présenté PUIS validé/annulé : le contenu du message
             // dit encore « cliquez sur Valider », mais le sort réel vit dans la meta.
             // On l'ANNOTE pour le moteur, sinon il croit le plan encore en attente et
@@ -698,6 +705,36 @@ class AiContextBuilder
         );
 
         return '[Objets en contexte à l\'envoi de ce message : ' . implode(' ; ', $items) . ']';
+    }
+
+    /**
+     * Marqueur préfixé à un message qui RÉPOND explicitement à un message
+     * antérieur (« Répondre » du menu de bulle).
+     *
+     * Il embarque l'extrait EXACT du message cité, et pas seulement un renvoi :
+     * la cible peut être sortie de la fenêtre d'historique (MAX_MESSAGES), auquel
+     * cas un simple pointeur serait vide de sens. L'extrait est borné par
+     * AssistantMessage::EXTRAIT_CITATION_MAX — citer 4000 caractères doublerait
+     * le coût du tour alors que la cible est le plus souvent déjà dans le fil.
+     *
+     * Le rôle est explicité : le modèle doit savoir s'il commente SON propre
+     * propos (correction, approfondissement) ou celui de l'utilisateur.
+     */
+    private function marqueurReponse(AssistantMessage $cite): string
+    {
+        $qui = $cite->getRole() === AssistantMessage::ROLE_ASSISTANT
+            ? 'TA propre réponse'
+            : 'un message ANTÉRIEUR de l\'utilisateur';
+
+        return sprintf(
+            '[CE MESSAGE RÉPOND À %s du %s. Extrait EXACT du message cité : « %s ». '
+            . 'RÈGLE : traite la demande ci-dessous comme portant sur CE passage précis, '
+            . 'et non sur le dernier sujet abordé dans le fil. Si le passage cité est '
+            . 'ambigu, demande une précision plutôt que de changer de sujet.]',
+            $qui,
+            $cite->getCreatedAt()?->format('d/m/Y H:i') ?? '?',
+            $cite->extraitCitation()
+        );
     }
 
     /**

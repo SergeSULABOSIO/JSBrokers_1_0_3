@@ -11,6 +11,14 @@
     <php>
         <ini name="display_errors" value="1" />
         <ini name="error_reporting" value="-1" />
+        <!-- La suite tourne dans UN seul processus : la mémoire s'accumule d'un
+             test à l'autre (kernels bootés, clients HTTP, classeurs Excel et PDF
+             générés en mémoire). Les 512 Mo du php.ini CLI ne suffisent plus pour
+             `php bin/phpunit` en une passe — l'exécution s'interrompait sur un
+             « Allowed memory size exhausted » dans zipstream (export XLSX), sans
+             rapport avec le test concerné. 1 Go laisse une marge confortable tout
+             en gardant un garde-fou contre une fuite réelle. -->
+        <ini name="memory_limit" value="1024M" />
         <server name="APP_ENV" value="test" force="true" />
         <server name="SHELL_VERBOSITY" value="-1" />
         <server name="SYMFONY_PHPUNIT_REMOVE" value="" />
