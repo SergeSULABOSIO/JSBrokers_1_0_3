@@ -4353,6 +4353,59 @@ details.db-hero[open] > summary .db-hero-chevron { transform: rotate(180deg); }
     border-color: #0047AB;
     box-shadow: 0 0 0 .2rem rgba(0, 71, 171, 0.15) !important;
 }
+/* Champ de saisie à icône incrustée DANS un picker — même pattern que
+   `.jsb-support .jsb-field-control` (lui-même calqué sur le thème console
+   `.cs-field`) : l'icône est posée à l'intérieur du champ, à gauche, et l'input
+   reçoit un retrait équivalent. Complète `.jsb-picker-search`, qui ne couvre que
+   le champ de recherche d'un picker. */
+.jsb-picker-field {
+    position: relative;
+}
+.jsb-picker-field-icon {
+    position: absolute;
+    left: .7rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    line-height: 0;
+    color: #0047AB;
+    pointer-events: none;
+}
+/* Variante des champs multi-lignes : l'icône s'aligne sur la PREMIÈRE ligne,
+   un centrage vertical la ferait flotter au milieu du bloc. */
+.jsb-picker-field--top .jsb-picker-field-icon {
+    top: .72rem;
+    transform: none;
+}
+.jsb-picker-field .form-control {
+    padding-left: 2.4rem;
+}
+.jsb-picker-field .form-control:focus {
+    border-color: #0047AB;
+    box-shadow: 0 0 0 .2rem rgba(0, 71, 171, 0.15) !important;
+}
+/* Compteur d'un chip de filtre rapide (nombre d'éléments de la catégorie).
+   Deux fonds distincts pour rester lisible sur la piste grise comme sur le chip
+   actif cobalt — contraste vérifié dans les deux états. */
+.jsb-preset-chip__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    font-size: .72rem;
+    font-weight: 600;
+    line-height: 1;
+    background: rgba(108, 117, 125, 0.16);
+    color: #495057;
+}
+.jsb-preset-chip.is-active .jsb-preset-chip__count {
+    background: rgba(0, 0, 0, 0.22);
+    color: #ffffff;
+}
 /* Zone de liste : occupe tout l'espace restant et défile — c'est ce qui garantit une
    hauteur de boîte constante quels que soient le nombre d'éléments. */
 .jsb-picker-listwrap {

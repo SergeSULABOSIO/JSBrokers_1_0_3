@@ -55,11 +55,12 @@ export default class extends PickerBaseController {
 
     _choisirCategorie(puce) {
         this._categorie = puce.dataset.pickerCategorie || '';
+        // `is-active` : classe d'état du composant chip partagé avec les filtres
+        // rapides des listes (.jsb-preset-chip, app.css) — même rendu partout.
         this.element.querySelectorAll('[data-picker-categorie]').forEach((autre) => {
             const actif = autre === puce;
             autre.setAttribute('aria-pressed', actif ? 'true' : 'false');
-            autre.classList.toggle('btn-primary', actif);
-            autre.classList.toggle('btn-outline-secondary', !actif);
+            autre.classList.toggle('is-active', actif);
         });
         this._refilter();
     }
