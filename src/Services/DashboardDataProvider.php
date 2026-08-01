@@ -11,6 +11,7 @@ use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use App\Services\Canvas\Indicator\AvenantIndicatorStrategy;
 use App\Services\Canvas\Provider\Entity\AvenantEntityCanvasProvider;
 use App\Services\CanvasBuilder;
+use App\Services\Search\AvenantSuccessionScope;
 use Doctrine\ORM\EntityManagerInterface;
 
 class DashboardDataProvider
@@ -137,8 +138,19 @@ class DashboardDataProvider
         ->getResult();
     }
 
+    /**
+     * PIPELINE DE RENOUVELLEMENT : les polices qui expirent dans la fenêtre ET qui
+     * réclament encore une action. L'exclusion des polices dont le sort est SCELLÉ
+     * (reprises par un avenant successeur, ou résiliées) vient de la MÊME règle que
+     * les chips d'échéance de la rubrique et que la boussole de l'assistante —
+     * AvenantSuccessionScope. Une exclusion propre à cette requête, fondée sur le
+     * renewalStatus stocké du successeur et sur un seul sens du double lien, aurait
+     * fait vivre un troisième dialecte de la même idée.
+     */
     public function getAllRenouvellements(Entreprise $entreprise, int $maxDays = 365): array
     {
+        $successionScellee = AvenantSuccessionScope::dqlSuccessionScellee($this->em, 'a', '_vigie');
+
         $avenants = $this->em->createQuery(
             'SELECT a, c, ass, p, cl, r, pdr, pf, pfg FROM App\Entity\Avenant a
              JOIN a.cotation c
@@ -152,18 +164,16 @@ class DashboardDataProvider
              WHERE a.entreprise = :e
                AND a.endingAt BETWEEN :debut AND :fin
                AND (p.renewalCondition IN (0, 1) OR p IS NULL OR p.renewalCondition IS NULL)
-               AND (pdr IS NULL OR NOT EXISTS (
-                   SELECT 1 FROM App\Entity\Avenant a2
-                   JOIN a2.cotation c2
-                   JOIN c2.piste p2
-                   WHERE p2 = pdr
-                   AND a2.renewalStatus NOT IN (0, 6)
-               ))
+               AND NOT EXISTS (' . $successionScellee . ')
              ORDER BY a.endingAt ASC'
         )
         ->setParameter('e', $entreprise)
         ->setParameter('debut', new \DateTimeImmutable('now'))
         ->setParameter('fin',   new \DateTimeImmutable('+' . $maxDays . ' days'))
+        ->setParameter(
+            AvenantSuccessionScope::parametreMouvementsScellants('_vigie'),
+            AvenantSuccessionScope::MOUVEMENTS_SCELLANTS
+        )
         ->getResult();
 
         foreach ($avenants as $avenant) {

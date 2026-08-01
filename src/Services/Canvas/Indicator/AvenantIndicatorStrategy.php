@@ -7,6 +7,7 @@ use App\Entity\Entreprise;
 use App\Repository\CotationRepository;
 use App\Services\AvenantRenouvellementResolver;
 use App\Services\Search\AvenantEcheanceScope;
+use App\Services\Search\AvenantSuccessionScope;
 use App\Services\ServiceDates;
 use DateTimeImmutable;
 
@@ -38,6 +39,8 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
         // que l'existence d'un mouvement, jamais son aboutissement.
         $renouvellement = $this->renouvellementResolver->resoudre($entity);
         if (!$cotation) {
+            $urgenceSeule = $this->getUrgenceEcheance($entity, $renouvellement);
+
             return [
                 'statutRenouvellement' => $renouvellement['statut'],
                 'suiteDeLaPolice' => $renouvellement['phrase'],
@@ -45,8 +48,8 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
                 'pisteDeriveeLibelle' => $entity->getPisteDeRenouvellement() !== null ? 'Piste dérivée' : null,
                 'dureeCouverture' => $this->calculateDureeCouvertureAvenant($entity),
                 'joursRestants' => $this->calculateJoursRestantsAvenant($entity),
-            'urgenceEcheance' => $this->getUrgenceEcheance($entity)['libelle'],
-            'urgenceEcheanceNiveau' => $this->getUrgenceEcheance($entity)['niveau'],
+                'urgenceEcheance' => $urgenceSeule['libelle'],
+                'urgenceEcheanceNiveau' => $urgenceSeule['niveau'],
                 'ageAvenant' => $this->calculateAgeAvenant($entity),
                 'typeAffaire' => $this->getAvenantTypeAffaire($entity),
                 'periodeCouverture' => $this->getAvenantPeriodeCouverture($entity),
@@ -66,7 +69,7 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
         // soldes soustraient les valeurs NON arrondies avant d'arrondir le résultat,
         // ce qui n'est pas équivalent à soustraire les valeurs déjà arrondies.
         $pisteDerivee = $entity->getPisteDeRenouvellement();
-        $urgence      = $this->getUrgenceEcheance($entity);
+        $urgence      = $this->getUrgenceEcheance($entity, $renouvellement);
         $piste        = $cotation->getPiste();
         $tauxSP       = $this->calculationHelper->getCotationTauxSP($cotation);
 
@@ -169,16 +172,48 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
      * seuils : AvenantEcheanceScope (mêmes bornes que le filtre SQL des chips). Un avenant sans
      * échéance renvoie des valeurs nulles → aucun badge rendu.
      *
+     * POLICE AU SORT SCELLÉ : le badge d'urgence n'a plus de sens et devient NEUTRE. Afficher
+     * « Expiré depuis 183 j » en rouge sur une police que la même application vient de déclarer
+     * toujours couverte — et qu'elle retire des chips d'échéance — serait se contredire à
+     * l'écran. Même règle que le filtre SQL du pipeline (AvenantSuccessionScope).
+     *
+     * @param array<string, mixed> $renouvellement sortie d'AvenantRenouvellementResolver::resoudre()
+     *
      * @return array{libelle: ?string, niveau: ?string}
      */
-    private function getUrgenceEcheance(Avenant $avenant): array
+    private function getUrgenceEcheance(Avenant $avenant, array $renouvellement): array
     {
+        if ($avenant->getEndingAt() !== null && AvenantSuccessionScope::estScelle((int) $renouvellement['code'])) {
+            return $this->badgeSortScelle($renouvellement);
+        }
+
         $classe = AvenantEcheanceScope::classifier($avenant->getEndingAt(), new DateTimeImmutable('today'));
 
         return [
             'libelle' => $classe['libelle'] ?? null,
             'niveau' => $classe['niveau'] ?? null,
         ];
+    }
+
+    /**
+     * Badge d'une police dont le sort est scellé : vert « en règle » quand la couverture se
+     * poursuit sous un successeur (l'affaire est faite), gris neutre quand la police a pris fin
+     * par décision. Le numéro du successeur est nommé : c'est ce qui permet de le rejoindre.
+     *
+     * @param array<string, mixed> $renouvellement
+     *
+     * @return array{libelle: ?string, niveau: ?string}
+     */
+    private function badgeSortScelle(array $renouvellement): array
+    {
+        $successeur = $renouvellement['avenantsIssus'][0]['id'] ?? null;
+        $suffixe    = $successeur !== null ? sprintf(' · avenant #%d', $successeur) : '';
+
+        return match ((int) $renouvellement['code']) {
+            Avenant::RENEWAL_STATUS_RENEWED  => ['libelle' => 'Reprise' . $suffixe, 'niveau' => 'reglee'],
+            Avenant::RENEWAL_STATUS_EXTENDED => ['libelle' => 'Prorogée' . $suffixe, 'niveau' => 'reglee'],
+            default                          => ['libelle' => 'Résiliée' . $suffixe, 'niveau' => 'faible'],
+        };
     }
 
     private function calculateAgeAvenant(Avenant $avenant): string
