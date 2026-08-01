@@ -8,6 +8,7 @@ use App\Entity\Piste;
 use App\Form\PisteType;
 use App\Repository\AvenantRepository;
 use App\Repository\PisteRepository;
+use App\Services\Search\AvenantSuccessionScope;
 
 /**
  * QU'EST DEVENUE CETTE POLICE ? — source unique de la SUITE d'un avenant.
@@ -121,6 +122,18 @@ final class AvenantRenouvellementResolver
     public function code(Avenant $base): int
     {
         return $this->resoudre($base)['code'];
+    }
+
+    /**
+     * Le sort de la police est-il SCELLÉ (reprise par un successeur, ou décision
+     * de fin) ? Face PHP de la règle du pipeline d'échéance — sa face SQL est
+     * AvenantSuccessionScope::dqlSuccessionScellee(), et un test confronte les
+     * deux. Une police scellée ne réclame plus rien : elle sort des chips
+     * d'échéance et son badge de ligne devient neutre.
+     */
+    public function estScellee(Avenant $base): bool
+    {
+        return AvenantSuccessionScope::estScelle($this->code($base));
     }
 
     // ------------------------------------------------------------------ calcul
