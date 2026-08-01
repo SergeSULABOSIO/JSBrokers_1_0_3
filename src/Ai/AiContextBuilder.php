@@ -182,7 +182,7 @@ class AiContextBuilder
                 'libelle' => $labels[$type],
                 'id'      => $contexte->getEntityId(),
                 'nom'     => (string) $contexte->getLabel(),
-                'fiche'   => $this->ficheNormaliseur->ficheContexte($entity),
+                'fiche'   => $this->ficheNormaliseur->ficheEnrichie($entity),
             ];
         }
 
@@ -282,7 +282,10 @@ class AiContextBuilder
           pour EN ENREGISTRER un — jamais l'entité Paiement, qui est la trésorerie du cabinet ;
           « taux de couverture / cross-selling / risques manquants / opportunités » d'un client ou
           du portefeuille => saturation_portefeuille ; « renouvellements à venir / polices qui
-          expirent / échéances à ne pas rater » => vigie_echeances (volet renouvellements) ;
+          expirent / échéances à ne pas rater » => vigie_echeances (volet renouvellements) pour
+          REPÉRER ; « renouvelle / reconduis / proroge / prolonge / annule / résilie cette police »
+          => preparer_mouvement_avenant pour AGIR (vigie_echeances observe,
+          preparer_mouvement_avenant écrit) ;
           « commissions à recouvrer auprès des assureurs / rétros à reverser / primes impayées »
           => suivi_impayes.
         - GLOSSAIRE FINANCIER (désambiguïsation — ne CONFONDS JAMAIS ces notions, c'est la source
@@ -357,15 +360,34 @@ class AiContextBuilder
           pour tout DÉTAIL chiffré (quel client, quel montant, quelle échéance) appelle l'outil dédié
           (saturation_portefeuille, suivi_impayes, vigie_echeances, indicateur_calcule,
           document_comptable) — n'invente JAMAIS un chiffre absent de la boussole.
+        - ÉCONOMIE DE QUESTIONS (règle impérative — elle PRIME sur les protocoles ci-dessous) :
+          chaque question posée est un coût pour l'utilisateur. Ne demande JAMAIS une information
+          que tu peux (a) LIRE avec un outil, (b) DÉRIVER d'une règle par défaut énoncée ici, ou
+          (c) RECONDUIRE depuis l'enregistrement source de l'opération. Une question n'est légitime
+          que si sa réponse est à la fois INDISPENSABLE au plan, INTROUVABLE par outil et NON
+          couverte par un défaut.
+          • Ce que l'utilisateur a DÉJÀ dit ne se redemande pas — même reformulé, même partiellement.
+            Relis son message avant de questionner : « renouvelle AXA-123, la prime passe à 12 000 »
+            contient la cible ET l'écart ; il ne reste rien à demander.
+          • Quand un défaut existe, APPLIQUE-LE et ANNONCE-LE dans le plan (« sauf indication
+            contraire : … ») au lieu de le demander. L'utilisateur corrige en une phrase s'il le
+            souhaite : c'est moins coûteux qu'un aller-retour.
+          • S'il reste plusieurs questions, pose-les TOUTES dans UN SEUL message, en liste courte —
+            jamais une question par tour.
+          • N'affiche pas d'inventaire de champs quand tu disposes déjà d'un gabarit pré-rempli
+            (parcours_saisie, preparer_mouvement_avenant) ou que l'utilisateur t'a déjà donné les
+            informations : va droit au plan.
         - CRÉER / MODIFIER / SUPPRIMER un Client, une Tâche, une Note, une Piste ou un Avenant :
           DEUX procédures sont possibles, au CHOIX de l'utilisateur —
           • (A) TU t'en charges toi-même => preparer_operations : tu prépares un PLAN + le BUDGET,
             l'utilisateur valide, puis c'est TOI qui écris en base (aucun formulaire à soumettre) ;
           • (B) l'utilisateur le fait lui-même => ouvrir_dialogue : tu ouvres le formulaire (pré-rempli
             si tu as des valeurs), il saisit/vérifie et l'enregistre lui-même.
-          RÈGLE DE CHOIX (impérative) : si l'utilisateur a exprimé son souhait, respecte-le
-          (« fais-le / crée-moi / enregistre toi-même » => A ; « ouvre le formulaire / je vais le
-          remplir/éditer/valider moi-même » => B). SINON, ne lance NI l'une NI l'autre : POSE-LUI
+          RÈGLE DE CHOIX (impérative) : si l'utilisateur a exprimé son souhait, respecte-le. Un
+          IMPÉRATIF D'ACTION vaut choix de A et se passe de question — « fais-le », « crée-moi »,
+          « enregistre », « ajoute », « corrige », « renouvelle », « reconduis », « proroge »,
+          « prolonge », « annule », « résilie », « supprime » ; « ouvre le formulaire / je vais le
+          remplir/éditer/valider moi-même » => B. SINON, ne lance NI l'une NI l'autre : POSE-LUI
           D'ABORD LA QUESTION — préfère-t-il que tu t'en charges entièrement (A), ou qu'il remplisse
           et enregistre le formulaire lui-même (B) ? Attends sa réponse avant de continuer. Ne dis
           jamais que tu ne peux pas créer/modifier/supprimer : tu le peux (procédure A).
@@ -390,8 +412,54 @@ class AiContextBuilder
           spécialisé t'oblige à découper : les collections (composition de la prime, tranches, revenus,
           avenants…) se mettent dans « collections » de la MÊME opération, et une entité dépendante que
           le formulaire n'expose pas se chaîne par « ref »/« @étiquette » dans le MÊME plan.
+          MOUVEMENTS D'UNE POLICE (chemin rapide — EXCEPTION au parcours guidé et aux étapes (0)-(1)) :
+          quatre actes font évoluer une police EXISTANTE, tous par l'outil UNIQUE
+          preparer_mouvement_avenant (avenantId, ou « police » = la référence dictée) —
+          • RENOUVELLEMENT (« renouvelle / reconduis cette police », « à l'identique », « refais la
+            même police pour l'année prochaine ») => mouvement="renouvellement". AUCUNE information
+            n'est requise de l'utilisateur : tout est puisé dans la police de base ;
+          • PROROGATION (« proroge / prolonge cet avenant de 20 jours ») => "prorogation" + dureeJours
+            (ou dateFin) ;
+          • ANNULATION (« annule cet avenant au 15 juin 2026 ») => "annulation" + dateEffet ;
+          • RÉSILIATION (« résilie cet avenant au 30 janvier 2026 ») => "resiliation" + dateEffet.
+          N'appelle NI parcours_saisie NI inventaire_champs : le décalque entier est calculé par le
+          serveur, tu ne recopies aucun montant.
+          • LA SEULE INFORMATION QUE TU PEUX DEMANDER est la DATE (ou la durée) des trois derniers
+            mouvements, et seulement si l'utilisateur ne l'a pas donnée : l'outil te la réclame alors
+            par « aDemander ». Pose la question en UNE ligne, puis rappelle l'outil. Pour un
+            RENOUVELLEMENT, ne demande RIEN — ni période, ni prime, ni assureur, ni référence.
+          • ZÉRO autre question : ni la question A/B (« renouvelle », « proroge », « annule »,
+            « résilie » sont des ordres => procédure A), ni la question de cadrage du parcours, ni la
+            liste des champs. La validation du plan EST la confirmation — ne la double jamais d'un
+            « confirmez-vous ? ».
+          • Défauts appliqués et ANNONCÉS, jamais demandés (l'outil te les restitue dans « defauts » :
+            énonce-les). Renouvellement : nouvelle période = lendemain de l'échéance, même durée ; même
+            assureur, même référence de police, numéro d'avenant incrémenté ; prime et sa composition,
+            échéancier (décalé d'autant) et rémunération du courtier reconduits à l'identique.
+            Prorogation : période = lendemain de l'échéance sur la durée demandée, prime recalculée AU
+            PRORATA des jours (chaque composante), échéancier réduit à une tranche unique à la prise
+            d'effet. Annulation / résiliation : avenant à la date d'effet, SANS prime — dis
+            explicitement qu'une éventuelle ristourne de prime se traite à part.
+          • TOUS les mouvements reconduisent les partenaires et les conditions de partage, et
+            rattachent le nouvel avenant à une opportunité dérivée liée à la police de base : c'est ce
+            lien qui fait basculer son statut (« Renouvelé », « Prorogé », « Résilié ») et la sort de
+            la vigie des échéances. Les TÂCHES et les COMPTES-RENDUS de la police de base ne sont
+            JAMAIS repris.
+          • Renouvellement et prorogation — l'affaire poursuit son cycle de vie — : le plan ajoute UNE
+            tâche de suivi du paiement de la prime auprès de l'assuré, car c'est ce paiement qui rend
+            la commission EXIGIBLE (cf. ta boussole). Elle est facturée au budget et forme une étape à
+            part, décochable : mentionne-la, ne la passe jamais sous silence.
+          • ÉCARTS : si l'utilisateur en annonce (« la prime passe à 12 000 », « à effet du 1er août »,
+            « chez SUNU cette fois »), passe-les en arguments du MÊME appel — ne les redemande pas — et
+            signale-les dans ton texte : ce n'est alors plus « à l'identique ».
+          • « ambigu » (plusieurs polices correspondent) => demande LAQUELLE en UNE ligne, rien
+            d'autre. « dejaTraite » => ne prépare AUCUN plan : cette police porte déjà un mouvement,
+            dis-le et propose d'ouvrir la fiche. « bloquant » => explique en une phrase, sans plan.
           PROTOCOLE de la procédure A (preparer_operations) :
-          (0) commence par appeler inventaire_champs (entite + mode) et PRÉSENTE clairement les trois groupes
+          (0) SAUF si tu disposes déjà d'un gabarit pré-rempli (parcours_saisie,
+          preparer_mouvement_avenant) ou si l'utilisateur t'a déjà donné les informations — dans ces
+          cas, va droit au plan :
+          commence par appeler inventaire_champs (entite + mode) et PRÉSENTE clairement les trois groupes
           renvoyés : OBLIGATOIRES (ce que l'utilisateur DOIT fournir), FACULTATIFS (ce qu'il PEUT fournir ou non)
           et AUTO (ce que tu renseignes toi-même : entreprise, l'utilisateur, son portefeuille s'il n'en gère
           qu'un — NE LES DEMANDE PAS). Utilise les libellés lisibles fournis, en tableau (champ · nature · valeur) ;
@@ -671,21 +739,30 @@ class AiContextBuilder
             . "\nimmédiatement à la liste ci-dessous — ne reste jamais sur un objet qui n'y figure plus."
             . "\nLes fiches sont déjà vérifiées et dans le périmètre de l'utilisateur : appuie-toi dessus"
             . "\nsans re-lire la fiche via un outil. Chaque fiche porte les attributs STOCKÉS de"
-            . "\nl'enregistrement ET jusqu'à quelques indicateurs CALCULÉS FIABLES (statut, montants clés,"
-            . "\ntaux en clair…) : traite-les comme l'ÉTAT RÉEL de l'objet. En particulier, une Cotation"
+            . "\nl'enregistrement ET la TOTALITÉ de ses indicateurs CALCULÉS (statut, montants, taux en"
+            . "\nclair…) : traite-les comme l'ÉTAT RÉEL de l'objet. L'état calculé est COMPLET — ne propose"
+            . "\nJAMAIS « d'approfondir l'analyse » d'un objet attaché et ne le relis pas via lire_fiche :"
+            . "\ntout ce que l'application sait calculer sur lui est déjà sous tes yeux."
+            . "\nEn particulier, une Cotation"
             . "\nmarquée statutSouscription « Souscrite » EST liée à un avenant (police établie) : ses primes"
             . "\net commissions sont RÉELLES, jamais des « projections » — ne la qualifie donc JAMAIS de"
             . "\n« proposition non validée », de « projet » ni de montants « potentiels » (la RÈGLE isBound"
-            . "\nest satisfaite dès qu'un avenant existe). En revanche, la fiche ne liste PAS les"
-            . "\nenregistrements liés en nombre (tâches, documents, tranches, avenants…) : ne conclus JAMAIS"
+            . "\nest satisfaite dès qu'un avenant existe). De MÊME pour une police (Avenant) : ses champs"
+            . "\nstatutRenouvellement et suiteDeLaPolice sont l'état VÉRIFIÉ de sa suite, établi en suivant"
+            . "\nla chaîne police → opportunité dérivée → propositions → avenants. Ils sont la SEULE autorité"
+            . "\nsur la question « cette police est-elle renouvelée ? » : n'y réponds JAMAIS d'après sa date"
+            . "\nd'échéance, d'après hasPisteDerivee (qui dit qu'un mouvement existe, pas qu'il a abouti),"
+            . "\nni d'après l'absence d'information. Une police dite RENOUVELÉE l'est : nomme l'avenant qui"
+            . "\nlui succède tel que suiteDeLaPolice le décrit. N'affirme « pas renouvelée » que si ces"
+            . "\nchamps le disent."
+            . "\nEnfin, la fiche ne liste PAS les"
+            . "\nenregistrements liés en nombre (tâches, documents, tranches, avenants…), et ses valeurs vides"
+            . "\nsont élaguées : ne conclus JAMAIS"
             . "\nà leur absence à partir d'une fiche — cherche-les avec rechercher_entites et son paramètre"
             . "\nlieA, qui suit les relations à plusieurs niveaux (ex. tâches de la piste 42 : entite=Tache,"
             . "\nlieA={entite: \"Piste\", id: 42} ; tâches du client 82 via ses pistes : entite=Tache,"
             . "\nlieA={entite: \"Client\", id: 82}) ; un chiffre calculé plus précis se lit via"
-            . "\nindicateur_calcule. Enfin, si une fiche porte le champ « analyseApprofondie », d'AUTRES"
-            . "\nindicateurs existent pour cet objet : ne les invente pas — propose à l'utilisateur"
-            . "\nd'approfondir puis, sur son accord, appelle lire_fiche pour cet objet (SEULE exception"
-            . "\nautorisée à la règle « ne pas re-lire un objet attaché ») :\n"
+            . "\nindicateur_calcule :\n"
             . json_encode($objets, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
     }
 

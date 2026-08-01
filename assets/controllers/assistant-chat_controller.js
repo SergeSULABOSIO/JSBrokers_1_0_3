@@ -43,6 +43,14 @@ export default class extends Controller {
     /** Seuil d'affichage du compteur de caractères restants (proche de maxlength). */
     static COUNT_THRESHOLD = 400;
 
+    /**
+     * Lignes de fiche affichées dans l'infobulle d'une puce de contexte. Borne
+     * d'AFFICHAGE seulement : la fiche transmise à l'assistante n'est jamais
+     * tronquée. L'infobulle flotte au <body>, ne défile pas et suit le curseur —
+     * au-delà d'une vingtaine de lignes elle déborderait du viewport.
+     */
+    static CTX_TIP_MAX_LIGNES = 20;
+
     /** Message autoritaire affiché quand le modèle décrit un plan sans l'avoir préparé (aucun bouton ne viendra). */
     static MUTATION_ABSENT_MESSAGE = "Aucun plan n'est réellement en attente de validation : l'opération n'a pas été préparée, donc aucun bouton « Valider et exécuter » n'apparaîtra. Redemandez l'action (par ex. « supprime le revenu de cette cotation ») pour que le plan et son bouton s'affichent.";
 
@@ -1674,8 +1682,23 @@ export default class extends Controller {
 
         if (fiche && typeof fiche === 'object') {
             addRow([{ text: 'Fiche capturée par l\'assistant', colspan: 2, className: 'tip-section' }]);
-            for (const [cle, valeur] of Object.entries(fiche)) {
+            // La fiche transmise à l'assistante porte TOUS les indicateurs calculés
+            // de l'objet (plusieurs dizaines). Cette infobulle flotte au <body> en
+            // pointer-events: none et suit le curseur : elle ne peut pas défiler, et
+            // tout afficher la ferait déborder du viewport — donc rogner en silence.
+            // On borne donc L'AFFICHAGE, jamais la donnée, et on annonce le reste :
+            // l'utilisateur sait ainsi ce que l'assistante a réellement reçu.
+            const lignes = Object.entries(fiche);
+            for (const [cle, valeur] of lignes.slice(0, this.constructor.CTX_TIP_MAX_LIGNES)) {
                 addRow([{ text: cle }, { text: this._ctxTipFormat(valeur) }]);
+            }
+            const restants = lignes.length - this.constructor.CTX_TIP_MAX_LIGNES;
+            if (restants > 0) {
+                addRow([{
+                    text: `… et ${restants} autre${restants > 1 ? 's' : ''} indicateur${restants > 1 ? 's' : ''} : la fiche COMPLÈTE est transmise à l'assistant.`,
+                    colspan: 2,
+                    className: 'tip-libelle',
+                }]);
             }
         } else {
             addRow([{ text: 'Détails indisponibles (objet supprimé ou hors de votre périmètre).', colspan: 2, className: 'tip-libelle' }]);

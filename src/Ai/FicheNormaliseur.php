@@ -20,21 +20,20 @@ use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
  * sur chargement » et « 15 % » sont sans équivoque. Une entité que Ket ne
  * comprend pas est une étape qu'elle risque d'abandonner en silence.
  *
+ * TOUS les indicateurs, JAMAIS de troncature. Les fiches des objets attachés au
+ * chat étaient auparavant plafonnées à 15 indicateurs, le reste étant remplacé
+ * par un marqueur « analyseApprofondie » invitant Ket à proposer d'approfondir.
+ * Une fiche partielle par construction est une invitation permanente à combler
+ * les trous : c'est ainsi qu'un avenant dont la suite n'était pas décrite s'est
+ * vu déclaré « pas encore renouvelé » alors qu'un avenant lui succédait (bug
+ * KIN AVIA). Le prompt système peut désormais affirmer que l'état calculé de
+ * l'objet est COMPLET — ce qui retire à Ket toute excuse de deviner.
+ *
  * Réservé aux lectures CIBLÉES (une fiche, les valeurs d'un référentiel) : les
  * stratégies interrogent la base, on ne les déclenche pas sur des listes.
  */
 final class FicheNormaliseur
 {
-    /**
-     * Plafond d'indicateurs CALCULÉS embarqués dans la fiche d'un objet ATTACHÉ
-     * au contexte du chat (ficheContexte). Assez pour que Ket réponde sûrement
-     * (statut, montants clés, taux) sans déverser les ~35 champs d'une stratégie
-     * lourde dans le prompt système à chaque message. Au-delà, la fiche pose un
-     * marqueur « analyseApprofondie » et Ket lit le détail à la demande via
-     * l'outil lire_fiche (ficheEnrichie, sans plafond).
-     */
-    public const MAX_INDICATEURS_CONTEXTE = 15;
-
     public function __construct(
         private readonly NormalizerInterface $normalizer,
         private readonly CalculationProvider $calculationProvider,
@@ -47,49 +46,18 @@ final class FicheNormaliseur
     }
 
     /**
-     * Fiche des objets ATTACHÉS au chat : attributs stockés + jusqu'à
-     * MAX_INDICATEURS_CONTEXTE attributs CALCULÉS (statut de souscription,
-     * montants dérivés, taux en clair…). Contrairement à la fiche brute, elle
-     * porte donc l'ÉTAT réel de l'objet — sans quoi Ket, ne voyant aucun avenat
-     * sur une Cotation, la croit « non validée » et parle de montants
-     * « potentiels » alors que la police existe (RÈGLE isBound).
-     *
-     * Best-effort : une stratégie en échec ne prive jamais Ket de la fiche
-     * stockée. Si les indicateurs dépassent le plafond, on garde les premiers
-     * (les stratégies listent le plus contextuel d'abord) et on signale le reste
-     * via « analyseApprofondie » — Ket doit alors proposer d'approfondir puis, sur
-     * accord, appeler lire_fiche. Partagé avec les infobulles des puces de
-     * contexte (AiContextBuilder::objetsAttaches).
-     */
-    public function ficheContexte(object $entity): array
-    {
-        $fiche = $this->fiche($entity);
-
-        try {
-            $calcules = $this->nettoyer($this->calculationProvider->getIndicateursSpecifics($entity));
-        } catch (\Throwable) {
-            return $fiche;
-        }
-
-        if (count($calcules) > self::MAX_INDICATEURS_CONTEXTE) {
-            $restants = count($calcules) - self::MAX_INDICATEURS_CONTEXTE;
-            $calcules = array_slice($calcules, 0, self::MAX_INDICATEURS_CONTEXTE, true);
-            $calcules['analyseApprofondie'] = sprintf(
-                '%d autres indicateurs calculés sont disponibles pour cet objet (montants détaillés, '
-                . 'taxes, rétrocommissions, sinistralité…). Ne les invente pas : propose à l\'utilisateur '
-                . 'd\'approfondir, et, s\'il accepte, lis la fiche complète via lire_fiche.',
-                $restants,
-            );
-        }
-
-        // Les attributs stockés priment : un calcul ne masque jamais une valeur réelle.
-        return $fiche + $calcules;
-    }
-
-    /**
      * Fiche + attributs calculés de l'entité (libellés des champs codés, montants
-     * dérivés, pourcentages en clair). Best-effort : une stratégie en échec ne
-     * doit jamais priver le modèle de la fiche elle-même.
+     * dérivés, pourcentages en clair). Contrairement à la fiche brute, elle porte
+     * l'ÉTAT réel de l'objet — sans quoi Ket, ne voyant aucun avenant sur une
+     * Cotation, la croit « non validée » et parle de montants « potentiels » alors
+     * que la police existe (RÈGLE isBound).
+     *
+     * Sert AUSSI de fiche des objets ATTACHÉS au chat, et donc des infobulles des
+     * puces de contexte (AiContextBuilder::objetsAttaches) : l'utilisateur voit
+     * exactement ce que l'assistante capture.
+     *
+     * Best-effort : une stratégie en échec ne doit jamais priver le modèle de la
+     * fiche elle-même.
      */
     public function ficheEnrichie(object $entity): array
     {

@@ -4,8 +4,10 @@ namespace App\Ai\Tool;
 
 use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
+use App\Entity\Avenant;
 use App\Entity\Cotation;
 use App\Service\Workspace\WorkspaceAccessResolver;
+use App\Services\AvenantRenouvellementResolver;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use App\Services\JSBDynamicSearchService;
 use App\Services\Search\AvenantEcheanceScope;
@@ -46,6 +48,7 @@ final class RechercherEntitesTool implements AiToolInterface
         private readonly EntityManagerInterface $em,
         private readonly PortefeuilleCritereFactory $portefeuilleCritere,
         private readonly IndicatorCalculationHelper $indicatorHelper,
+        private readonly AvenantRenouvellementResolver $renouvellementResolver,
     ) {
     }
 
@@ -309,6 +312,17 @@ final class RechercherEntitesTool implements AiToolInterface
                     // attribué, celle-ci a perdu l'affaire. On le dit explicitement pour que le
                     // modèle ne la présente pas comme une opportunité « en attente » à relancer.
                     $item['suivi'] = 'Sans suite — une autre proposition de cette piste est souscrite (marché déjà attribué)';
+                }
+            }
+            // Une POLICE (Avenant) porte le même genre de preuve, pour la même raison : sans elle,
+            // le modèle répond « pas encore renouvelée » sur une police dont la piste dérivée a
+            // pourtant DÉJÀ donné naissance à un avenant. Source unique partagée avec les
+            // indicateurs calculés et le badge des listes (AvenantRenouvellementResolver).
+            if ($entity instanceof Avenant) {
+                $suite = $this->renouvellementResolver->resoudre($entity);
+                $item['statutRenouvellement'] = $suite['statut'];
+                if ($suite['avenantsIssus'] !== [] || $suite['pisteDeriveeId'] !== null) {
+                    $item['suiteDeLaPolice'] = $suite['phrase'];
                 }
             }
             $items[] = $item;

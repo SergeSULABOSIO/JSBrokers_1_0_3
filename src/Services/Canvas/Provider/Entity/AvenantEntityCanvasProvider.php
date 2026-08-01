@@ -58,6 +58,8 @@ class AvenantEntityCanvasProvider implements EntityCanvasProviderInterface
     {
         $monnaie = $this->serviceMonnaies->getCodeMonnaieAffichage();
         return [
+            ["group" => "Statut & Suivi", "code" => "statutRenouvellement", "intitule" => "Statut de renouvellement", "type" => "Calcul", "format" => "Texte", "description" => "Ce que la police est DEVENUE : renouvelée, renouvellement en cours, prorogée, résiliée, non renouvelée. Établi en suivant la chaîne police → opportunité dérivée → propositions → avenants, et non la seule date d'échéance."],
+            ["group" => "Statut & Suivi", "code" => "suiteDeLaPolice", "intitule" => "Suite de la police", "type" => "Calcul", "format" => "Texte", "description" => "Le fait détaillé : l'avenant qui succède à cette police (numéro, référence, période) et l'opportunité dérivée qui l'a produit — ou l'absence de suite, affirmée après vérification de la chaîne."],
             ["group" => "Statut & Suivi", "code" => "typeAffaire", "intitule" => "Type d'Affaire", "type" => "Calcul", "format" => "Texte", "description" => "Indique s'il s'agit d'une nouvelle affaire ou d'une affaire existante dans le portefeuille."],
             ["group" => "Statut & Suivi", "code" => "periodeCouverture", "intitule" => "Période", "type" => "Calcul", "format" => "Texte", "description" => "Période de couverture (Date d'effet - Date d'échéance)."],
             ["group" => "Statut & Suivi", "code" => "dureeCouverture", "intitule" => "Durée de couverture", "type" => "Calcul", "format" => "Texte", "description" => "Durée totale de la couverture de l'avenant en jours."],

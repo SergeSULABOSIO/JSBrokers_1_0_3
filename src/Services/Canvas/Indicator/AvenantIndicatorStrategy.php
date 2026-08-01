@@ -5,6 +5,7 @@ namespace App\Services\Canvas\Indicator;
 use App\Entity\Avenant;
 use App\Entity\Entreprise;
 use App\Repository\CotationRepository;
+use App\Services\AvenantRenouvellementResolver;
 use App\Services\Search\AvenantEcheanceScope;
 use App\Services\ServiceDates;
 use DateTimeImmutable;
@@ -17,7 +18,8 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
     public function __construct(
         private ServiceDates $serviceDates,
         private IndicatorCalculationHelper $calculationHelper,
-        private CotationRepository $cotationRepository
+        private CotationRepository $cotationRepository,
+        private AvenantRenouvellementResolver $renouvellementResolver
     ) {
     }
 
@@ -30,8 +32,15 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
     {
         /** @var Avenant $entity */
         $cotation = $entity->getCotation();
+        // QU'EST DEVENUE CETTE POLICE ? En TÊTE de fiche, avant tout chiffre : c'est
+        // la question la plus posée sur un avenant, et la seule dont une réponse
+        // fausse fait perdre un renouvellement. hasPisteDerivee ci-dessous ne dit
+        // que l'existence d'un mouvement, jamais son aboutissement.
+        $renouvellement = $this->renouvellementResolver->resoudre($entity);
         if (!$cotation) {
             return [
+                'statutRenouvellement' => $renouvellement['statut'],
+                'suiteDeLaPolice' => $renouvellement['phrase'],
                 'hasPisteDerivee' => $entity->getPisteDeRenouvellement() !== null,
                 'pisteDeriveeLibelle' => $entity->getPisteDeRenouvellement() !== null ? 'Piste dérivée' : null,
                 'dureeCouverture' => $this->calculateDureeCouvertureAvenant($entity),
@@ -48,59 +57,89 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
             ];
         }
 
+        // PERF : chaque getCotation*() ci-dessous parcourt le graphe revenus/tranches/
+        // chargements de la cotation et déclenche ses propres requêtes. L'implémentation
+        // précédente rappelait plusieurs de ces méthodes avec des arguments IDENTIQUES
+        // (jusqu'à 4 fois pour getCotationPartenaire, 3 fois pour la commission TTC et
+        // la rétrocommission), soit ~18 parcours redondants PAR LIGNE de liste.
+        // On les évalue donc une seule fois ici. Attention en modifiant ce bloc : les
+        // soldes soustraient les valeurs NON arrondies avant d'arrondir le résultat,
+        // ce qui n'est pas équivalent à soustraire les valeurs déjà arrondies.
+        $pisteDerivee = $entity->getPisteDeRenouvellement();
+        $urgence      = $this->getUrgenceEcheance($entity);
+        $piste        = $cotation->getPiste();
+        $tauxSP       = $this->calculationHelper->getCotationTauxSP($cotation);
+
+        $primeTotale = $this->calculationHelper->getCotationMontantPrimePayableParClient($cotation);
+        $primePayee  = $this->calculationHelper->getCotationMontantPrimePayableParClientPayee($cotation);
+
+        $commissionHt        = $this->calculationHelper->getCotationMontantCommissionHt($cotation, -1, false);
+        $commissionTtc       = $this->calculationHelper->getCotationMontantCommissionTtc($cotation, -1, false);
+        $commissionEncaissee = $this->calculationHelper->getCotationMontantCommissionEncaissee($cotation);
+        $commissionPure      = $this->calculationHelper->getCotationMontantCommissionPure($cotation, -1, false);
+
+        $taxeCourtier      = $this->calculationHelper->getCotationMontantTaxeCourtier($cotation, false);
+        $taxeCourtierPayee = $this->calculationHelper->getCotationMontantTaxeCourtierPayee($cotation);
+        $taxeAssureur      = $this->calculationHelper->getCotationMontantTaxeAssureur($cotation, false);
+        $taxeAssureurPayee = $this->calculationHelper->getCotationMontantTaxeAssureurPayee($cotation);
+
+        // Le partenaire conditionne les trois indicateurs de rétrocommission ET la réserve :
+        // on ne paie le parcours du graphe des rétrocommissions que s'il existe.
+        $partenaire   = $this->calculationHelper->getCotationPartenaire($cotation);
+        $retro        = $partenaire ? $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1, []) : 0.0;
+        $retroReverse = $partenaire ? $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtierPayee($cotation, null) : 0.0;
+
         return [
             // Indicateurs de base de l'avenant
-            'hasPisteDerivee' => $entity->getPisteDeRenouvellement() !== null,
-            'pisteDeriveeLibelle' => $entity->getPisteDeRenouvellement() !== null ? 'Piste dérivée' : null,
+            'statutRenouvellement' => $renouvellement['statut'],
+            'suiteDeLaPolice' => $renouvellement['phrase'],
+            'hasPisteDerivee' => $pisteDerivee !== null,
+            'pisteDeriveeLibelle' => $pisteDerivee !== null ? 'Piste dérivée' : null,
             'dureeCouverture' => $this->calculateDureeCouvertureAvenant($entity),
             'joursRestants' => $this->calculateJoursRestantsAvenant($entity),
-            'urgenceEcheance' => $this->getUrgenceEcheance($entity)['libelle'],
-            'urgenceEcheanceNiveau' => $this->getUrgenceEcheance($entity)['niveau'],
+            'urgenceEcheance' => $urgence['libelle'],
+            'urgenceEcheanceNiveau' => $urgence['niveau'],
             'ageAvenant' => $this->calculateAgeAvenant($entity),
             'typeAffaire' => $this->getAvenantTypeAffaire($entity),
             'periodeCouverture' => $this->getAvenantPeriodeCouverture($entity),
             'clientDescription' => $this->calculationHelper->getClientDescriptionFromCotation($cotation),
             'risqueDescription' => $this->calculationHelper->getRisqueDescriptionFromCotation($cotation),
-            'risqueCode' => $cotation->getPiste()?->getRisque()?->getCode() ?? 'N/A',
-            'titrePrincipal' => ($entity->getReferencePolice() ?? 'N/A') . ' • ' . ($cotation->getPiste()?->getClient()?->getNom() ?? 'N/A'),
+            'risqueCode' => $piste?->getRisque()?->getCode() ?? 'N/A',
+            'titrePrincipal' => ($entity->getReferencePolice() ?? 'N/A') . ' • ' . ($piste?->getClient()?->getNom() ?? 'N/A'),
 
             // Indicateurs hérités de la Cotation parente
             'contextePiste' => $this->calculationHelper->getCotationContextePiste($cotation),
             'indemnisationDue' => round($this->calculationHelper->getCotationIndemnisationDue($cotation), 2),
             'indemnisationVersee' => round($this->calculationHelper->getCotationIndemnisationVersee($cotation), 2),
             'indemnisationSolde' => round($this->calculationHelper->getCotationIndemnisationSolde($cotation), 2),
-            'tauxSP' => $this->calculationHelper->getCotationTauxSP($cotation),
+            'tauxSP' => $tauxSP,
             'tauxSPInterpretation' => $this->calculationHelper->getCotationTauxSPInterpretation($cotation),
             'dateDernierReglement' => $this->calculationHelper->getCotationDateDernierReglement($cotation),
             'vitesseReglement' => $this->calculationHelper->getCotationVitesseReglement($cotation),
             'nombreTranches' => $this->calculationHelper->calculateNombreTranches($cotation),
             'montantMoyenTranche' => $this->calculationHelper->calculateMontantMoyenTranche($cotation),
-            'primeTotale' => round($this->calculationHelper->getCotationMontantPrimePayableParClient($cotation), 2),
-            'primePayee' => round($this->calculationHelper->getCotationMontantPrimePayableParClientPayee($cotation), 2),
-            'primeSoldeDue' => round($this->calculationHelper->getCotationMontantPrimePayableParClient($cotation) - $this->calculationHelper->getCotationMontantPrimePayableParClientPayee($cotation), 2),
-            'tauxCommission' => $this->calculationHelper->getCotationTauxSP($cotation), // Ancienne implémentation pour éviter régression
-            'montantHT' => round($this->calculationHelper->getCotationMontantCommissionHt($cotation, -1, false), 2),
-            'montantTTC' => round($this->calculationHelper->getCotationMontantCommissionTtc($cotation, -1, false), 2),
+            'primeTotale' => round($primeTotale, 2),
+            'primePayee' => round($primePayee, 2),
+            'primeSoldeDue' => round($primeTotale - $primePayee, 2),
+            'tauxCommission' => $tauxSP, // Ancienne implémentation pour éviter régression
+            'montantHT' => round($commissionHt, 2),
+            'montantTTC' => round($commissionTtc, 2),
             'detailCalcul' => "Basé sur la cotation associée",
-            'taxeCourtierMontant' => round($this->calculationHelper->getCotationMontantTaxeCourtier($cotation, false), 2),
-            'taxeAssureurMontant' => round($this->calculationHelper->getCotationMontantTaxeAssureur($cotation, false), 2),
-            'montant_du' => round($this->calculationHelper->getCotationMontantCommissionTtc($cotation, -1, false), 2),
-            'montant_paye' => round($this->calculationHelper->getCotationMontantCommissionEncaissee($cotation), 2),
-            'solde_restant_du' => round($this->calculationHelper->getCotationMontantCommissionTtc($cotation, -1, false) - $this->calculationHelper->getCotationMontantCommissionEncaissee($cotation), 2),
-            'taxeCourtierPayee' => round($this->calculationHelper->getCotationMontantTaxeCourtierPayee($cotation), 2),
-            'taxeCourtierSolde' => round($this->calculationHelper->getCotationMontantTaxeCourtier($cotation, false) - $this->calculationHelper->getCotationMontantTaxeCourtierPayee($cotation), 2),
-            'taxeAssureurPayee' => round($this->calculationHelper->getCotationMontantTaxeAssureurPayee($cotation), 2),
-            'taxeAssureurSolde' => round($this->calculationHelper->getCotationMontantTaxeAssureur($cotation, false) - $this->calculationHelper->getCotationMontantTaxeAssureurPayee($cotation), 2),
-            'montantPur' => round($this->calculationHelper->getCotationMontantCommissionPure($cotation, -1, false), 2),
+            'taxeCourtierMontant' => round($taxeCourtier, 2),
+            'taxeAssureurMontant' => round($taxeAssureur, 2),
+            'montant_du' => round($commissionTtc, 2),
+            'montant_paye' => round($commissionEncaissee, 2),
+            'solde_restant_du' => round($commissionTtc - $commissionEncaissee, 2),
+            'taxeCourtierPayee' => round($taxeCourtierPayee, 2),
+            'taxeCourtierSolde' => round($taxeCourtier - $taxeCourtierPayee, 2),
+            'taxeAssureurPayee' => round($taxeAssureurPayee, 2),
+            'taxeAssureurSolde' => round($taxeAssureur - $taxeAssureurPayee, 2),
+            'montantPur' => round($commissionPure, 2),
             // CORRECTION : On utilise la méthode du helper pour obtenir le partenaire et on vérifie son existence.
-            'retroCommission' => $this->calculationHelper->getCotationPartenaire($cotation) ? round($this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1, []), 2) : 0.0,
-            'retroCommissionReversee' => $this->calculationHelper->getCotationPartenaire($cotation) ? round($this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtierPayee($cotation, null), 2) : 0.0,
-            'retroCommissionSolde' => $this->calculationHelper->getCotationPartenaire($cotation) ? round(
-                $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1, []) -
-                $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtierPayee($cotation, null),
-                2
-            ) : 0.0,
-            'reserve' => round($this->calculationHelper->getCotationMontantCommissionPure($cotation, -1, false) - ($this->calculationHelper->getCotationPartenaire($cotation) ? $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1, []) : 0.0), 2),
+            'retroCommission' => $partenaire ? round($retro, 2) : 0.0,
+            'retroCommissionReversee' => $partenaire ? round($retroReverse, 2) : 0.0,
+            'retroCommissionSolde' => $partenaire ? round($retro - $retroReverse, 2) : 0.0,
+            'reserve' => round($commissionPure - $retro, 2),
         ];
     }
 

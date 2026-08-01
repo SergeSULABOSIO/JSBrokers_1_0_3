@@ -17,10 +17,11 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
- * FicheNormaliseur::ficheContexte() = fiche stockée + jusqu'à
- * MAX_INDICATEURS_CONTEXTE indicateurs calculés, avec marqueur d'approfondissement
- * au-delà. Chemin des objets attachés au chat : sans les indicateurs calculés, Ket
- * ne voit pas qu'une cotation est souscrite (RÈGLE isBound) et la croit « projet ».
+ * FicheNormaliseur::ficheEnrichie() = fiche stockée + la TOTALITÉ des indicateurs
+ * calculés, sans troncature. Chemin des objets attachés au chat : sans les
+ * indicateurs calculés, Ket ne voit pas qu'une cotation est souscrite (RÈGLE
+ * isBound) et la croit « projet ». Et sans leur COMPLÉTUDE, elle comble les trous
+ * d'une fiche partielle par des négations plausibles (bug KIN AVIA).
  */
 class FicheNormaliseurTest extends KernelTestCase
 {
@@ -119,35 +120,40 @@ class FicheNormaliseurTest extends KernelTestCase
         return ['cotation' => $cotation];
     }
 
-    public function testFicheContexteEstUnSupersetDeLaFicheStockee(): void
+    public function testFicheEnrichieEstUnSupersetDeLaFicheStockee(): void
     {
         ['cotation' => $cotation] = $this->seedCotation(true);
         $normaliseur = $this->normaliseur();
 
         $fiche = $normaliseur->fiche($cotation);
-        $contexte = $normaliseur->ficheContexte($cotation);
+        $contexte = $normaliseur->ficheEnrichie($cotation);
 
         foreach ($fiche as $cle => $valeur) {
-            $this->assertArrayHasKey($cle, $contexte, "La fiche contexte conserve l'attribut stocké « $cle ».");
+            $this->assertArrayHasKey($cle, $contexte, "La fiche enrichie conserve l'attribut stocké « $cle ».");
             $this->assertSame($valeur, $contexte[$cle], "Un indicateur calculé ne masque jamais l'attribut stocké « $cle ».");
         }
     }
 
-    public function testCotationSouscriteEtPlafond(): void
+    /**
+     * AUCUNE troncature : la fiche porte les indicateurs TARDIFS de la stratégie
+     * (« reserve » est le dernier de la liste) et ne pose plus de marqueur
+     * d'approfondissement. Une fiche complète est ce qui retire à Ket l'excuse de
+     * deviner ce qu'elle ne voit pas.
+     */
+    public function testCotationSouscriteEtFicheComplete(): void
     {
         ['cotation' => $cotation] = $this->seedCotation(true);
-        $contexte = $this->normaliseur()->ficheContexte($cotation);
+        $contexte = $this->normaliseur()->ficheEnrichie($cotation);
 
         $this->assertSame('Souscrite', $contexte['statutSouscription']);
-        // Une cotation expose ~35 indicateurs → plafond dépassé → marqueur présent.
-        $this->assertArrayHasKey('analyseApprofondie', $contexte);
-        $this->assertArrayNotHasKey('reserve', $contexte, 'Le plafond écarte les indicateurs tardifs.');
+        $this->assertArrayNotHasKey('analyseApprofondie', $contexte, 'Plus de marqueur d’approfondissement : la fiche est complète.');
+        $this->assertArrayHasKey('reserve', $contexte, 'Les indicateurs tardifs de la stratégie sont embarqués.');
     }
 
     public function testCotationSansAvenantEnAttente(): void
     {
         ['cotation' => $cotation] = $this->seedCotation(false);
-        $contexte = $this->normaliseur()->ficheContexte($cotation);
+        $contexte = $this->normaliseur()->ficheEnrichie($cotation);
 
         $this->assertSame('En attente', $contexte['statutSouscription']);
     }
