@@ -756,14 +756,47 @@ textarea:hover,
 
 .jsb-search-bar { width: 100%; }
 
+/* Ligne UNIQUE : saisie + critère + filtres actifs + actions. Le gabarit reprend
+   celui des barres sœurs — hauteur --jsb-control-h et rayon 8px de .jsb-control-pill
+   (Cohérence, Bastien & Scapin) — mais la bordure reste VISIBLE au repos : un champ
+   de saisie doit se reconnaître comme éditable (Signifiance / affordance).
+   `nowrap` + hauteur fixe = aucune déformation possible, quel que soit le nombre de
+   filtres actifs (au-delà d'un filtre, ils se replient dans le volet). */
 .jsb-search-bar__row {
     display: flex;
     align-items: center;
+    flex-wrap: nowrap;
+    /* Espacement UNIQUE par `gap` (et non des marges par élément) : il disparaît de
+       lui-même quand un élément se replie (zone de filtres vide), ce qui rend la
+       répartition de la largeur prévisible dans un panneau étroit. */
+    gap: 0.375rem;
+    min-height: var(--jsb-control-h);
     background: #ffffff;
     border: 1.5px solid #dee2e6;
-    border-radius: 0.5rem;
-    padding: 0.25rem 0.625rem;
+    border-radius: 8px;
+    padding: 0 0.5rem;
+    /* Garde-fou de non-déformation : même dans un panneau pathologiquement étroit,
+       aucun contenu ne peut déborder de la pilule. `clip` (et non `hidden`) évite de
+       créer un conteneur de défilement ; la marge de 3px préserve les anneaux de focus
+       des boutons de bord (WCAG 2.4.7). */
+    overflow: clip;
+    overflow-clip-margin: 3px;
+    /* Conteneur de requête pour la dégradation progressive ci-dessous. Posé sur la
+       LIGNE et non sur .jsb-search-bar : `container-type` implique `contain: layout`,
+       qui ferait de l'élément le bloc conteneur des descendants `position: fixed` — le
+       volet des filtres (frère de la ligne) doit rester ancré au viewport. */
+    container-type: inline-size;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Panneau très étroit : plutôt que d'écraser le champ ou de rogner les actions, on
+   abandonne d'abord le superflu — le libellé « Avancée » (l'icône et son aria-label
+   subsistent, l'action reste identifiable) puis la largeur du sélecteur de critère.
+   Adaptabilité (Bastien & Scapin) : l'essentiel — saisir, voir ses filtres, réinitialiser
+   — survit à toutes les largeurs. */
+@container (max-width: 400px) {
+    .jsb-search-bar__btn-label { display: none; }
+    .jsb-search-bar__criterion { max-width: 6rem; min-width: 3.5rem; }
 }
 .jsb-search-bar__row:focus-within {
     border-color: #0047AB;
@@ -777,19 +810,22 @@ textarea:hover,
     width: 18px;
     height: 18px;
     flex-shrink: 0;
-    margin-right: 0.5rem;
     transition: color 0.2s ease;
 }
 .jsb-search-bar__row:focus-within .jsb-search-bar__icon { color: #0047AB; }
 
+/* Seul élément élastique de la ligne : il absorbe l'espace libre ET, en cas de manque,
+   il cède EN PREMIER (base 0 = il ne pèse pas dans la répartition du déficit) jusqu'à
+   son plancher de 5rem. C'est ce qui garantit qu'un badge de filtre s'affiche à sa
+   largeur naturelle tant que la place existe. */
 .jsb-search-bar__input {
-    flex: 1;
+    flex: 1 1 0;
     border: none;
     background: transparent;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     color: #212529;
-    padding: 0.375rem 0;
-    min-width: 0;
+    padding: 0.25rem 0;
+    min-width: 4.5rem;
 }
 .jsb-search-bar__input:focus { outline: none; box-shadow: none; }
 .jsb-search-bar__input::placeholder { color: #adb5bd; font-style: italic; }
@@ -798,17 +834,21 @@ textarea:hover,
     width: 1px;
     height: 1.25rem;
     background: #dee2e6;
-    margin: 0 0.5rem;
     flex-shrink: 0;
 }
 
 .jsb-search-bar__criterion {
+    /* Premier à céder sous la pression (facteur 4) : le critère visé est déjà rappelé
+       par le placeholder du champ (« Rechercher dans "Réf. Police"… »), alors qu'un
+       libellé de filtre tronqué, lui, n'est plus lisible. */
+    flex: 0 4 auto;
+    min-width: 4rem;
     border: none;
     background: transparent;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     color: #495057;
-    padding: 0.25rem 0.375rem;
-    max-width: 180px;
+    padding: 0.15rem 0.25rem;
+    max-width: 150px;
     cursor: pointer;
 }
 .jsb-search-bar__criterion:focus { outline: none; }
@@ -817,7 +857,6 @@ textarea:hover,
     display: flex;
     align-items: center;
     gap: 0.25rem;
-    margin-left: 0.25rem;
     flex-shrink: 0;
 }
 
@@ -827,14 +866,16 @@ textarea:hover,
     gap: 0.3rem;
     border: 1px solid transparent;
     background: transparent;
-    padding: 0.3rem 0.625rem;
+    padding: 0.25rem 0.5rem;
     border-radius: 0.375rem;
     cursor: pointer;
     font-size: 0.8rem;
     font-weight: 500;
     color: #6c757d;
     transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-    min-height: 32px;
+    /* Tient dans la hauteur unique de la ligne (--jsb-control-h) tout en gardant une
+       cible confortable (WCAG 2.5.8 : ≥ 24px). */
+    min-height: 27px;
 }
 .jsb-search-bar__btn svg { width: 15px; height: 15px; }
 
@@ -855,34 +896,63 @@ textarea:hover,
 }
 
 .jsb-search-bar__btn-label { font-size: 0.8rem; }
+.jsb-search-bar__btn:focus-visible {
+    outline: 2px solid #0047AB;
+    outline-offset: 1px;
+}
 
+/* Zone des filtres actifs, DANS la ligne : largeur naturelle (jamais élastique) et
+   nowrap — elle contient au plus UN élément (badge ou pastille compteur). */
 .jsb-search-bar__filters {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
+    /* Largeur naturelle, mais compressible : sous la pression, c'est l'ellipsis du
+       badge qui absorbe (le champ de saisie garde son plancher de 5rem). */
+    flex: 0 1 auto;
+    min-width: 0;
     gap: 0.375rem;
-    padding-top: 0.375rem;
-    padding-left: 0.125rem;
 }
+/* Aucun filtre → le div interne reste vide → la zone disparaît (pas de séparateur
+   ni de trou fantôme dans la ligne). */
 .jsb-search-bar__filters:has(div:empty) { display: none; }
+.jsb-search-bar__filters > div {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
 
 .jsb-filter-badge {
     display: inline-flex;
     align-items: center;
-    gap: 0.375rem;
+    gap: 0.25rem;
     background-color: #e8f0fb;
     color: #0047AB;
     border: 1px solid rgba(0, 71, 171, 0.25);
     border-radius: 2rem;
-    padding: 0.2rem 0.5rem 0.2rem 0.75rem;
-    font-size: 0.8rem;
+    padding: 0.1rem 0.35rem 0.1rem 0.6rem;
+    font-size: 0.78rem;
     font-weight: 500;
     line-height: 1.4;
+    max-width: 15rem;
+    /* Indispensable pour que l'ellipsis puisse jouer : sans min-width:0, la largeur
+       min-content du libellé empêcherait le badge de se comprimer et pousserait les
+       boutons d'action hors de la pilule. */
+    min-width: 0;
+}
+/* Un libellé long (« Mon portefeuille : Portefeuille de Serge ») est tronqué plutôt
+   que d'étirer la ligne ; le texte complet reste accessible en infobulle (title). */
+.jsb-filter-badge__text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 .jsb-filter-badge__remove {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0; /* jamais rogné : c'est la seule sortie du filtre (Contrôle explicite) */
     width: 18px;
     height: 18px;
     border: none;
@@ -900,6 +970,165 @@ textarea:hover,
     opacity: 1;
     background-color: rgba(0, 71, 171, 0.18);
 }
+.jsb-filter-badge__remove:focus-visible {
+    outline: 2px solid #0047AB;
+    outline-offset: 1px;
+    opacity: 1;
+}
+
+/* Pastille compteur : à partir de deux filtres actifs, le détail se replie ici.
+   Nielsen #1 (le nombre de critères reste visible) + #8 (minimalisme : le détail est
+   à un clic). Charte : teinte cobalt au repos, cobalt plein à l'ouverture/survol. */
+.jsb-filters-chip {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0; /* compacte par nature : jamais rognée (le compteur doit rester lisible) */
+    gap: 0.35rem;
+    min-height: 25px;
+    padding: 0 0.4rem 0 0.6rem;
+    border: 1px solid rgba(0, 71, 171, 0.25);
+    border-radius: 2rem;
+    background-color: #e8f0fb;
+    color: #0047AB;
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-family: inherit;
+    line-height: 1.4;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+/* Chevron dessiné en bordures CSS plutôt qu'en icône : la pastille est rendue en JS
+   (innerHTML), donc hors du circuit d'icônes serveur — aucune icône à y injecter. */
+.jsb-filters-chip::after {
+    content: "";
+    border: 4px solid transparent;
+    border-top-color: currentColor;
+    margin-left: 0.1rem;
+    transform: translateY(2px);
+    transition: transform 0.15s ease;
+}
+.jsb-filters-chip:hover,
+.jsb-filters-chip[aria-expanded="true"] {
+    background-color: #0047AB;
+    border-color: #0047AB;
+    color: #ffffff;
+}
+.jsb-filters-chip[aria-expanded="true"]::after {
+    transform: translateY(-2px) rotate(180deg);
+}
+.jsb-filters-chip:focus-visible {
+    outline: 2px solid #0047AB;
+    outline-offset: 2px;
+}
+.jsb-filters-chip__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 0.2rem;
+    border-radius: 999px;
+    background-color: rgba(0, 71, 171, 0.18);
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1;
+}
+.jsb-filters-chip:hover .jsb-filters-chip__count,
+.jsb-filters-chip[aria-expanded="true"] .jsb-filters-chip__count {
+    background-color: rgba(255, 255, 255, 0.28);
+}
+
+/* Volet des critères actifs : même surface flottante que les menus de la barre
+   d'outils (blanc, bordure #dee2e6, rayon 8px, ombre portée, z-index 1050 = au-dessus
+   des listes, sous les modales Bootstrap). Position `fixed` posée par le contrôleur :
+   le volet échappe ainsi au découpage du bandeau collant. */
+.jsb-search-bar__popover {
+    position: fixed;
+    z-index: 1050;
+    min-width: 260px;
+    max-width: 360px;
+    padding: 0.25rem 0;
+    background-color: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.jsb-search-bar__popover[hidden] { display: none; }
+
+.jsb-search-bar__popover-title {
+    margin: 0;
+    padding: 0.35rem 0.75rem 0.3rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #6c757d;
+}
+
+.jsb-search-bar__popover-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-height: 15rem;
+    overflow-y: auto;
+}
+.jsb-search-bar__popover-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 32px;
+    padding: 0.2rem 0.5rem 0.2rem 0.75rem;
+    font-size: 0.83rem;
+    color: #212529;
+}
+.jsb-search-bar__popover-item:hover { background-color: rgba(0, 71, 171, 0.06); }
+.jsb-search-bar__popover-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    word-break: break-word;
+}
+/* Cible de retrait confortable dans le volet (WCAG 2.5.8) : 24px, contre 18px sur le
+   badge compact de la ligne. */
+.jsb-search-bar__popover-item .jsb-filter-badge__remove {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    color: #6c757d;
+}
+.jsb-search-bar__popover-item .jsb-filter-badge__remove:hover {
+    color: #0047AB;
+    background-color: rgba(0, 71, 171, 0.12);
+}
+
+.jsb-search-bar__popover-footer {
+    margin-top: 0.25rem;
+    border-top: 1px solid #e9ecef;
+    padding-top: 0.25rem;
+}
+.jsb-search-bar__popover-clear {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    min-height: 34px;
+    padding: 0.25rem 0.75rem;
+    border: none;
+    background: transparent;
+    color: #0047AB;
+    font-family: inherit;
+    font-size: 0.83rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+}
+.jsb-search-bar__popover-clear:hover { background-color: rgba(0, 71, 171, 0.08); }
+.jsb-search-bar__popover-clear:focus-visible {
+    outline: 2px solid #0047AB;
+    outline-offset: -2px;
+}
+.jsb-search-bar__popover-clear svg { width: 15px; height: 15px; }
 
 .jsb-search-dialog__header {
     background-color: #0047AB;

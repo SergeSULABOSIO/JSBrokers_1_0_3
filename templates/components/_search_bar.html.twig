@@ -6,7 +6,13 @@
     data-search-bar-criteria-value="{{ searchCanvas|json_encode|e('html_attr') }}"
     data-search-bar-autocomplete-url-value="{{ autocomplete_url|default('') }}"
 >
-    {# ── Ligne principale (pill) ── #}
+    {#
+        Ligne UNIQUE (pilule) : saisie, critère, filtres actifs et actions vivent sur
+        la même rangée que les barres sœurs (outils, contrôles, chips, totaux) et
+        partagent leur gabarit (--jsb-control-h, rayon 8px) — Cohérence (Bastien &
+        Scapin) et stabilité de mise en page : la hauteur ne dépend PLUS du nombre
+        de filtres actifs (au-delà d'un filtre, ils se replient dans le volet).
+    #}
     <div class="jsb-search-bar__row">
         <span class="jsb-search-bar__icon" aria-hidden="true">
             <twig:ux:icon name="{{ resolve_icon_name('lucide:search') }}" />
@@ -46,9 +52,25 @@
             data-action="change->search-bar#updateSimpleSearchPlaceholder"
         ></select>
 
+        {# ── Filtres actifs, DANS la ligne (masqué si vide via CSS :has) ──
+           Un seul filtre : badge en clair. Plusieurs : pastille « Filtres N »
+           qui ouvre le volet ci-dessous (rendu par le contrôleur). #}
+        <div
+            class="jsb-search-bar__filters"
+            data-search-bar-target="summaryContainer"
+            role="status"
+            aria-live="polite"
+            aria-label="Filtres actifs"
+        >
+            <div data-search-bar-target="summary"></div>
+        </div>
+
         <div class="jsb-search-bar__actions">
             <button
                 class="jsb-search-bar__btn jsb-search-bar__btn--advanced"
+                {# Dans un panneau étroit, le libellé « Avancée » se replie (voir la
+                   @container de app.css) : l'infobulle prend le relais du texte visible. #}
+                title="Recherche avancée"
                 aria-label="Ouvrir la recherche avancée"
                 data-action="click->search-bar#openAdvancedSearch"
             >
@@ -57,6 +79,7 @@
             </button>
             <button
                 class="jsb-search-bar__btn jsb-search-bar__btn--reset"
+                title="Réinitialiser la recherche"
                 aria-label="Réinitialiser la recherche"
                 data-action="click->search-bar#resetAllFilters"
             >
@@ -65,14 +88,31 @@
         </div>
     </div>
 
-    {# ── Filtres actifs (masqué si vide via CSS :has) ── #}
+    {#
+        Volet des critères actifs : surface flottante ancrée à la pastille compteur
+        (position calculée par `positionnerMenu()`, partagée avec le menu de bulle du
+        chat). `hidden` natif = hors flux ET hors parcours clavier tant qu'il est
+        fermé (WCAG 2.4.3) ; fermeture par Échap, clic extérieur ou redimensionnement.
+    #}
     <div
-        class="jsb-search-bar__filters"
-        data-search-bar-target="summaryContainer"
-        role="status"
-        aria-live="polite"
-        aria-label="Filtres actifs"
+        class="jsb-search-bar__popover"
+        data-search-bar-target="popover"
+        data-action="keydown->search-bar#naviguerPopover"
+        role="group"
+        aria-label="Critères de recherche actifs"
+        hidden
     >
-        <div data-search-bar-target="summary"></div>
+        <p class="jsb-search-bar__popover-title">Critères actifs</p>
+        <ul class="jsb-search-bar__popover-list" data-search-bar-target="popoverList"></ul>
+        <div class="jsb-search-bar__popover-footer">
+            <button
+                type="button"
+                class="jsb-search-bar__popover-clear"
+                data-action="click->search-bar#resetAllFilters"
+            >
+                <twig:ux:icon name="{{ resolve_icon_name('lucide:x') }}" aria-hidden="true" />
+                <span>Tout effacer</span>
+            </button>
+        </div>
     </div>
 </div>
