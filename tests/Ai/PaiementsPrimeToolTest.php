@@ -309,7 +309,22 @@ class PaiementsPrimeToolTest extends TestCase
         $libelleur = new EntiteLibelle($em);
         $scope = $this->makeScope();
 
-        $rechercher = new RechercherEntitesTool($resolver, $search, $lexique, $libelleur, $em, $this->fabriquePortefeuille(), $this->createMock(\App\Services\Canvas\Indicator\IndicatorCalculationHelper::class));
+        $rechercher = new RechercherEntitesTool(
+            $resolver,
+            $search,
+            $lexique,
+            $libelleur,
+            $em,
+            $this->fabriquePortefeuille(),
+            $this->createMock(\App\Services\Canvas\Indicator\IndicatorCalculationHelper::class),
+            // Classe finale (source unique volontairement non doublable) : instance
+            // réelle sur des dépôts doublés — ce test ne vérifie que le routage des
+            // intentions, jamais la résolution du renouvellement.
+            new \App\Services\AvenantRenouvellementResolver(
+                $this->createMock(\App\Repository\PisteRepository::class),
+                $this->createMock(\App\Repository\AvenantRepository::class),
+            ),
+        );
         $compter = new CompterEntitesTool($resolver, $search, $lexique, $this->fabriquePortefeuille());
         $lireFiche = new LireFicheTool(
             $resolver,

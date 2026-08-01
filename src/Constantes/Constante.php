@@ -69,6 +69,7 @@ use App\Repository\RevenuPourCourtierRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use App\Controller\Admin\RevenuCourtierController;
 use App\Repository\NotificationSinistreRepository;
+use App\Services\AvenantRenouvellementResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
 use Symfony\Component\Notifier\Notification\Notification;
 
@@ -91,6 +92,7 @@ class Constante
         private InviteRepository $inviteRepository,
         private ServiceDates $serviceDates,
         private ModelePieceSinistreRepository $modelePieceSinistreRepository,
+        private AvenantRenouvellementResolver $renouvellementResolver,
     ) {}
 
     public const STATUS_DUE = "AmountDue";
@@ -748,29 +750,13 @@ class Constante
             $renewalStatus['code'] = Avenant::RENEWAL_STATUS_RUNNING;
         } else {
             $renewalStatus['text'] = "Expiré il y a " . (-1 * $renewalStatus['remaining days']) . " jrs";
-            if ($avenantEncours->getCotation()->getPiste()->getRenewalCondition() == Piste::RENEWAL_CONDITION_ONCE_OFF_AND_EXTENDABLE) {
-                $renewalStatus['code'] = Avenant::RENEWAL_STATUS_ONCE_OFF;
-            } else {
-                /**
-                 * Cherche des pistes (bound ou non), qui sont liés à cet avénant "AvenantEncours"
-                 */
-                $foundPiste = false;
-                /** @var Piste $pisteExistante */
-                foreach ($this->Entreprise_getPistes() as $pisteExistante) {
-                    if ($pisteExistante->getAvenantDeBase() == $avenantEncours) {
-                        $renewalStatus['code'] = match ($pisteExistante->getTypeAvenant()) {
-                            Piste::AVENANT_RENOUVELLEMENT => $this->Piste_isBound($pisteExistante) == true ? Avenant::RENEWAL_STATUS_RENEWED : Avenant::RENEWAL_STATUS_RENEWING,
-                            Piste::AVENANT_ANNULATION => Avenant::RENEWAL_STATUS_CANCELLED,
-                            Piste::AVENANT_RESILIATION => Avenant::RENEWAL_STATUS_CANCELLED,
-                            Piste::AVENANT_PROROGATION => Avenant::RENEWAL_STATUS_EXTENDED,
-                        };
-                        $foundPiste = true;
-                    }
-                }
-                if ($foundPiste == false) {
-                    $renewalStatus['code'] = Avenant::RENEWAL_STATUS_LOST;
-                }
-            }
+            // Ce qu'est DEVENUE la police vient d'une source unique, partagée avec les
+            // indicateurs calculés, les fiches de l'assistante et ses résultats de
+            // recherche : le badge de la liste et la réponse de Ket ne peuvent plus
+            // diverger. Auparavant ce bloc balayait TOUTES les pistes de l'entreprise
+            // pour retrouver le lien, et son match sans bras par défaut levait
+            // \UnhandledMatchError sur une piste dérivée typée « Souscription ».
+            $renewalStatus['code'] = $this->renouvellementResolver->code($avenantEncours);
         }
         $statusDescription = match ($renewalStatus['code']) {
             Avenant::RENEWAL_STATUS_CANCELLED => "Résilié",

@@ -22,8 +22,19 @@ class Avenant
     public const RENEWAL_STATUS_ONCE_OFF    = 1;
 
     // NOUVEAU : Attributs calculés spécifiques à l'avenant
+    // QU'EST DEVENUE CETTE POLICE ? Statut de la SUITE (« Renouvelée »,
+    // « Renouvellement en cours », « Non renouvelée »…) et fait rédigé qui NOMME
+    // l'avenant successeur — ou affirme son absence comme une VÉRIFICATION.
+    // Source unique : AvenantRenouvellementResolver. Sans ces deux attributs,
+    // l'assistante ne voyait que « une piste dérivée existe » (hasPisteDerivee) et
+    // en déduisait à tort « pas encore renouvelée » (bug KIN AVIA).
+    #[Groups(['list:read'])]
+    public ?string $statutRenouvellement = null;
+    #[Groups(['list:read'])]
+    public ?string $suiteDeLaPolice = null;
     // Présence d'une piste dérivée (renouvellement/prorogation/ajustement lié à cet
     // avenant de base) : sert de condition aux attribute_actions « piste dérivée ».
+    // NE DIT RIEN de ce que cette piste a produit : voir $suiteDeLaPolice.
     #[Groups(['list:read'])]
     public ?bool $hasPisteDerivee = null;
     // Libellé de la ligne secondaire de la liste : « Piste dérivée » UNIQUEMENT si

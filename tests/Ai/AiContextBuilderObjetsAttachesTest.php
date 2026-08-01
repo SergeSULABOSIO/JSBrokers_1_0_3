@@ -379,29 +379,30 @@ class AiContextBuilderObjetsAttachesTest extends KernelTestCase
     }
 
     /**
-     * Les indicateurs calculés embarqués sont PLAFONNÉS (MAX_INDICATEURS_CONTEXTE) :
-     * une cotation en expose ~35, donc la fiche porte le marqueur d'approfondissement
-     * et les champs monétaires tardifs (ex. « reserve ») restent HORS fiche — preuve
-     * qu'on n'a PAS déversé toute la stratégie dans le prompt.
+     * Les indicateurs calculés embarqués sont COMPLETS : aucune troncature, donc les
+     * champs monétaires TARDIFS de la stratégie (ex. « reserve ») figurent dans la
+     * fiche et aucun marqueur d'approfondissement n'est posé. Une fiche partielle par
+     * construction invitait le modèle à combler les trous — c'est ainsi qu'un avenant
+     * dont la suite n'était pas décrite s'est vu déclaré « pas encore renouvelé ».
      */
-    public function testIndicateursCalculesPlafonnesAvecMarqueur(): void
+    public function testIndicateursCalculesComplets(): void
     {
         ['entreprise' => $e, 'owner' => $owner] = $this->seed();
-        $client = $this->makeClient($e, 'Builder Client Plafond');
-        $cotation = $this->makeCotation($e, $owner, $client, 'Plafond', true);
-        $conversation = $this->makeConversationAvecContexte($e, $owner, 'Cotation', $cotation->getId(), 'Cotation Plafond');
+        $client = $this->makeClient($e, 'Builder Client Complet');
+        $cotation = $this->makeCotation($e, $owner, $client, 'Complet', true);
+        $conversation = $this->makeConversationAvecContexte($e, $owner, 'Cotation', $cotation->getId(), 'Cotation Complète');
 
         $request = $this->builder()->build($e, $owner, $conversation);
         $fiche = $request->systemContext['objetsAttaches'][0]['fiche'];
 
-        $this->assertArrayHasKey('analyseApprofondie', $fiche, 'Au-delà du plafond, un marqueur d\'approfondissement est posé.');
-        $this->assertArrayNotHasKey('reserve', $fiche, 'Les indicateurs tardifs ne sont pas embarqués (plafond respecté).');
+        $this->assertArrayNotHasKey('analyseApprofondie', $fiche, 'Plus de marqueur d\'approfondissement : la fiche est complète.');
+        $this->assertArrayHasKey('reserve', $fiche, 'Les indicateurs tardifs de la stratégie sont embarqués.');
 
-        // Le prompt enseigne la fiabilité des indicateurs ET le protocole d'approfondissement.
+        // Le prompt enseigne la fiabilité des indicateurs ET leur COMPLÉTUDE.
         $prompt = $this->builder()->toSystemPrompt($request);
         $this->assertStringContainsString('RÉELLES', $prompt);
-        $this->assertStringContainsString('analyseApprofondie', $prompt);
-        $this->assertStringContainsString('lire_fiche', $prompt);
+        $this->assertStringContainsString('TOTALITÉ de ses indicateurs CALCULÉS', $prompt);
+        $this->assertStringNotContainsString('analyseApprofondie', $prompt);
     }
 
     /**

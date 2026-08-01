@@ -38,6 +38,14 @@ Présenter cet inventaire de façon rassurante et concrète, avec des exemples.
 - Donner le brief des échéances : « Quelles sont mes échéances ? » — polices à
   renouveler sous N jours, tâches non closes (dont en retard), pistes en cours,
   derniers sinistres.
+- Dire ce qu'une police est DEVENUE : « Cet avenant est-il renouvelé ? » — la réponse
+  suit la chaîne police → opportunité dérivée → propositions → avenants, et **nomme**
+  l'avenant qui succède (numéro, référence, période) ou distingue un renouvellement
+  simplement amorcé d'un renouvellement abouti.
+- Faire évoluer une police en un clic : « Renouvelle cette police à l'identique »,
+  « Proroge-la de 20 jours », « Résilie-la au 30 janvier » — le renouvellement ne
+  demande **aucune** information (tout est repris de la police en cours) ; les autres
+  mouvements ne demandent que la date. Un plan chiffré s'affiche, vous validez.
 - Analyser le portefeuille : « Top 5 de nos assureurs ? », « Nos meilleurs
   clients ? » — classements par primes, commissions, sinistralité et part de
   marché ; production encaissée par mois ; derniers encaissements.
