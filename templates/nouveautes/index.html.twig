@@ -62,18 +62,19 @@
         color: #343a40; line-height: 1.65;
     }
 
-    /* Journal : file verticale ponctuée d'une pastille cobalt par livraison
-       (même vocabulaire visuel que la timeline CRM). */
+    /* Journal : file verticale jalonnée, à chaque livraison, du NUMÉRO DE VERSION
+       qu'elle a produit — le même que celui affiché dans le menu, ce qui permet de
+       rattacher une amélioration à la version que l'on utilise. */
     .chg-list { list-style: none; margin: 0; padding: 0; }
     .chg-item {
-        position: relative; padding: 0 0 1.6rem 1.6rem;
+        position: relative; padding: 0 0 1.6rem 3.8rem;
         border-left: 2px solid #e8f0fb;
     }
     .chg-item:last-child { border-left-color: transparent; padding-bottom: 0; }
-    .chg-item::before {
-        content: ""; position: absolute; left: -.45rem; top: .3rem;
-        width: .8rem; height: .8rem; border-radius: 50%;
-        background-color: #0047AB; border: 2px solid #fff;
+    .chg-version {
+        position: absolute; left: .5rem; top: .05rem;
+        font-weight: 700; font-size: .82rem; color: #0047AB;
+        white-space: nowrap;
     }
 
     .chg-item-meta {
@@ -114,7 +115,9 @@
 
     @media (max-width: 575.98px) {
         .chg-card { padding: 1.25rem; }
-        .chg-item { padding-left: 1.2rem; }
+        /* Le numéro reste dans la gouttière : on ne la rétrécit pas sous sa largeur. */
+        .chg-item { padding-left: 3.4rem; }
+        .chg-version { left: .35rem; }
     }
 
     /* Impression : on ne garde que le journal. */
@@ -183,6 +186,7 @@
                 <ol class="chg-list">
                     {% for c in commits %}
                         <li class="chg-item">
+                            <span class="chg-version">{{ c.version }}</span>
                             <div class="chg-item-meta">
                                 <time class="chg-date" datetime="{{ c.date|date('c') }}">
                                     {{ c.date|format_datetime('full', 'short', locale: lang) }}

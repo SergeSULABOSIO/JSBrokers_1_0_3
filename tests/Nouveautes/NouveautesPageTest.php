@@ -47,6 +47,11 @@ class NouveautesPageTest extends WebTestCase
         $this->assertGreaterThan(0, $entrees->count(), 'Le dépôt est lisible : le journal ne peut pas être vide.');
 
         $premiere = $entrees->first();
+        $this->assertMatchesRegularExpression(
+            '/^\d+\.\d+$/',
+            trim($premiere->filter('.chg-version')->text()),
+            'Le numéro de version jalonne chaque livraison, à la place de la pastille.',
+        );
         $this->assertSame(1, $premiere->filter('time.chg-date')->count(), 'Date complète présente.');
         $this->assertNotSame('', trim($premiere->filter('time.chg-date')->text()));
         $this->assertMatchesRegularExpression(
