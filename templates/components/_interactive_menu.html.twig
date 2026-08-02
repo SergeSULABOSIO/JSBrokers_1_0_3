@@ -156,10 +156,14 @@
                 </a>
                 <p class="company-description">{{ menu.colonne_2.description }}</p>
                 {# Version APPLICATIVE, auto-incrémentée à chaque commit (source : App\Services\VersionService).
-                   La version des CGU (App\Legal\Cgu) reste dédiée à la page des conditions. #}
-                <span class="company-version"{% if _lc %} data-commit-tip aria-label="Dernière mise à jour : {{ _lc.ref }} du {{ _lc.date|date('d/m/Y') }}"{% else %} title="Version de l'application JS Brokers"{% endif %}>
+                   La version des CGU (App\Legal\Cgu) reste dédiée à la page des conditions.
+                   Au clic : le journal des nouveautés (30 derniers jours) ; au survol :
+                   l'infobulle du dernier commit, conservée. #}
+                <a href="{{ path('app_changelog') }}" class="company-version"
+                   title="Voir les nouveautés de la plateforme"
+                   {% if _lc %}data-commit-tip aria-label="Nouveautés de la plateforme — dernière mise à jour : {{ _lc.ref }} du {{ _lc.date|date('d/m/Y') }}"{% else %}aria-label="Nouveautés de la plateforme"{% endif %}>
                     Version {{ app_version() }} — dernière mise à jour le {{ app_version_date()|date('d/m/Y') }}
-                </span>
+                </a>
             </div>
             {# Carte d'identité de l'entreprise courante #}
             {% if entreprise is defined and entreprise %}

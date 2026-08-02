@@ -1,0 +1,231 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ pageName }} — JS Brokers{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    /* ============================================================
+       Nouveautés de la plateforme — journal des mises à jour.
+       Même pattern de page publique autoportante que les CGU.
+       Charte : cobalt #0047AB + neutres Bootstrap. Aucune couleur hors charte.
+       ============================================================ */
+    /* L'espace de travail impose globalement `body, html { overflow: hidden }`
+       (interactive-menu.css) ; on rétablit le défilement sur cette page autonome. */
+    html, body { height: auto !important; overflow: auto !important; }
+    html { scroll-padding-top: var(--chg-topbar-h, 64px); }
+
+    /* Barre de progression globale (même pattern que top-progress_controller). */
+    .ent-progress-bar {
+        position: fixed; top: 0; left: 0; width: 100%; height: 6px;
+        background-color: #0047AB; display: none; z-index: 1100;
+        animation: ent-progress-animation 1.5s infinite linear;
+    }
+    @keyframes ent-progress-animation {
+        0%   { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    .chg-page {
+        --chg-topbar-h: 64px;
+        min-height: 100vh; display: flex; flex-direction: column;
+        background-color: #f3f3f3; padding-top: var(--chg-topbar-h);
+    }
+
+    /* Barre applicative — fixée en haut, comme le portail public. */
+    .chg-topbar {
+        position: fixed; top: 0; left: 0; right: 0; width: 100%; z-index: 1030;
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 1rem; padding: .75rem 1.5rem;
+        background-color: #ffffff; border-bottom: 1px solid #dee2e6;
+    }
+    .chg-brand { display: flex; align-items: center; gap: .6rem; text-decoration: none; }
+    .chg-brand img { width: 36px; height: 36px; border-radius: 8px; }
+    .chg-brand span { font-weight: 700; color: #0047AB; font-size: 1.1rem; }
+    .chg-topbar-actions { display: flex; align-items: center; gap: .5rem; }
+
+    /* Contenu : colonne de lecture confortable, poussant le pied de page en bas. */
+    .chg-content { max-width: 860px; margin: 0 auto; padding: 1.5rem; width: 100%; flex: 1 0 auto; }
+    .chg-back-row { display: flex; align-items: center; gap: .4rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .chg-back { display: inline-flex; align-items: center; gap: .35rem; font-size: .9rem; color: #6c757d; text-decoration: none; }
+    .chg-back:hover { color: #0047AB; }
+
+    .chg-head { margin-bottom: 1.5rem; }
+    .chg-head h1 { display: flex; align-items: center; gap: .55rem; font-size: 1.6rem; font-weight: 700; color: #212529; margin: 0 0 .35rem; }
+    .chg-head-icon { flex: 0 0 auto; color: #0047AB; }
+    .chg-meta { color: #6c757d; font-size: .9rem; margin: 0; }
+
+    /* Carte document */
+    .chg-card {
+        background-color: #ffffff; border: 1px solid #dee2e6; border-radius: 12px;
+        padding: 1.75rem 2rem; box-shadow: 0 4px 16px rgba(0, 71, 171, .06);
+        color: #343a40; line-height: 1.65;
+    }
+
+    /* Journal : file verticale ponctuée d'une pastille cobalt par livraison
+       (même vocabulaire visuel que la timeline CRM). */
+    .chg-list { list-style: none; margin: 0; padding: 0; }
+    .chg-item {
+        position: relative; padding: 0 0 1.6rem 1.6rem;
+        border-left: 2px solid #e8f0fb;
+    }
+    .chg-item:last-child { border-left-color: transparent; padding-bottom: 0; }
+    .chg-item::before {
+        content: ""; position: absolute; left: -.45rem; top: .3rem;
+        width: .8rem; height: .8rem; border-radius: 50%;
+        background-color: #0047AB; border: 2px solid #fff;
+    }
+
+    .chg-item-meta {
+        display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem;
+        font-size: .8rem; color: #6c757d; margin-bottom: .2rem;
+    }
+    .chg-date { text-transform: none; }
+    .chg-ref {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: .75rem; color: #0047AB;
+        background-color: #eef2fb; border: 1px solid #e1e8f5; border-radius: 4px;
+        padding: .05rem .35rem;
+    }
+    .chg-title { font-size: 1rem; font-weight: 700; color: #212529; margin: 0 0 .3rem; }
+    .chg-desc { margin: 0; color: #495057; font-size: .93rem; line-height: 1.6; }
+    .chg-desc--absente { color: #6c757d; font-style: italic; }
+
+    /* État dégradé : l'historique détaillé n'est pas lisible sur cet environnement. */
+    .chg-empty { color: #495057; }
+    .chg-empty h2 { font-size: 1.05rem; font-weight: 700; color: #0047AB; margin: 0 0 .6rem; }
+
+    /* ---------- Pied de page public réutilisé (même style que la vitrine) ---------- */
+    .public-footer { background-color: #fff; border-top: 1px solid #dee2e6; margin-top: 1rem; }
+    .public-footer__inner { max-width: 1140px; margin: 0 auto; padding: 2.5rem 1.5rem 1.5rem;
+        display: flex; flex-wrap: wrap; align-items: flex-start; gap: 1.5rem; }
+    .public-footer__brand { display: flex; align-items: center; gap: .75rem; flex: 1 1 280px; text-decoration: none; }
+    .public-footer__brand:hover { opacity: .85; }
+    .public-footer__brand img { border-radius: 8px; }
+    .public-footer__name { font-weight: 700; color: #0047AB; margin: 0; font-size: 1.05rem; }
+    .public-footer__tagline { color: #6c757d; margin: 0; font-size: .9rem; max-width: 360px; }
+    .public-footer__links { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; }
+    .public-footer__links a { display: inline-flex; align-items: center; min-height: 44px;
+        color: #495057; text-decoration: none; font-size: .92rem; font-weight: 600; }
+    .public-footer__links a:hover { color: #0047AB; }
+    .public-footer__links a:focus-visible { outline: 2px solid #0047AB; outline-offset: 2px; border-radius: 4px; }
+    .public-footer__credit { max-width: 1140px; margin: 0 auto; padding: 1rem 1.5rem;
+        border-top: 1px solid #dee2e6; text-align: center; color: #6c757d; font-size: .85rem; }
+
+    @media (max-width: 575.98px) {
+        .chg-card { padding: 1.25rem; }
+        .chg-item { padding-left: 1.2rem; }
+    }
+
+    /* Impression : on ne garde que le journal. */
+    @media print {
+        .chg-topbar, .chg-back-row, .chg-no-print, .public-footer { display: none !important; }
+        .chg-page { background: #fff; padding-top: 0; }
+        .chg-card { border: none; box-shadow: none; padding: 0; }
+        .chg-item { break-inside: avoid; }
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+{% set isEn = (lang == 'en') %}
+{% set backHref = app.user is not null ? path('admin.entreprise.index') : path('app_login') %}
+
+<main class="chg-page" data-controller="top-progress">
+
+    <div class="ent-progress-bar" data-top-progress-target="bar"
+         role="progressbar" aria-label="{{ isEn ? 'Loading' : 'Chargement en cours' }}" aria-hidden="true"></div>
+
+    <header class="chg-topbar">
+        <a href="{{ path('app_index') }}" class="chg-brand"
+           aria-label="JS Brokers — retour à l'accueil" title="Retour à l'accueil JS Brokers">
+            <img src="{{ asset('images/entreprises/logofav.png') }}" alt="">
+            <span>JS Brokers</span>
+        </a>
+        <div class="chg-topbar-actions chg-no-print">
+            {{ include('components/_lang_switch.html.twig', {current: (isEn ? 'en' : 'fr'), route: 'app_changelog', uid: 'lang-chg'}) }}
+            <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center"
+                    onclick="window.print()">
+                {{ ux_icon(resolve_icon_name('mdi:printer-outline'), {height: '18px', width: '18px'}) }}
+                <span class="ms-1">{{ isEn ? 'Print' : 'Imprimer' }}</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="chg-content">
+
+        <div class="chg-back-row">
+            <a href="{{ backHref }}" class="chg-back" data-action="click->top-progress#show">
+                {{ ux_icon(resolve_icon_name('hugeicons:arrow-left-01'), {height: '18px', width: '18px'}) }}
+                {{ app.user is not null
+                    ? (isEn ? 'Back to my workspace' : 'Retour à mon espace')
+                    : (isEn ? 'Back to sign in' : 'Retour à la connexion') }}
+            </a>
+        </div>
+
+        <div class="chg-head">
+            <h1>
+                <span class="chg-head-icon">{{ ux_icon(resolve_icon_name('mdi:rocket-launch-outline'), {height: '26px', width: '26px'}) }}</span>
+                {{ pageName }}
+            </h1>
+            <p class="chg-meta">
+                {% if isEn %}
+                    Version {{ app_version() }} — {{ commits|length }} update{{ commits|length > 1 ? 's' }} over the last {{ jours }} days.
+                {% else %}
+                    Version {{ app_version() }} — {{ commits|length }} mise{{ commits|length > 1 ? 's' }} à jour sur les {{ jours }} derniers jours.
+                {% endif %}
+            </p>
+        </div>
+
+        <article class="chg-card">
+            {% if commits is not empty %}
+                {# Antéchronologique : la dernière amélioration livrée en premier. #}
+                <ol class="chg-list">
+                    {% for c in commits %}
+                        <li class="chg-item">
+                            <div class="chg-item-meta">
+                                <time class="chg-date" datetime="{{ c.date|date('c') }}">
+                                    {{ c.date|format_datetime('full', 'short', locale: lang) }}
+                                </time>
+                                <code class="chg-ref">{{ c.ref }}</code>
+                            </div>
+                            <h2 class="chg-title">{{ c.subject }}</h2>
+                            {% if c.paragraphs is not empty %}
+                                <p class="chg-desc">{{ c.paragraphs|first }}</p>
+                            {% else %}
+                                <p class="chg-desc chg-desc--absente">
+                                    {{ isEn ? 'No further details provided for this update.' : 'Aucun détail complémentaire n’accompagne cette mise à jour.' }}
+                                </p>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ol>
+            {% else %}
+                {# Repli : l'historique détaillé se lit dans le dépôt, absent de certains
+                   environnements. On affiche au moins la dernière mise à jour connue. #}
+                {% set _lc = app_last_commit() %}
+                <div class="chg-empty">
+                    <h2>{{ isEn ? 'Detailed history unavailable' : 'Historique détaillé indisponible' }}</h2>
+                    <p>
+                        {% if isEn %}
+                            The update log cannot be read on this environment. The application
+                            is running version <strong>{{ app_version() }}</strong>, last updated on
+                            {{ app_version_date()|format_datetime('long', 'none', locale: lang) }}.
+                        {% else %}
+                            Le journal des mises à jour n’est pas lisible sur cet environnement.
+                            L’application fonctionne en version <strong>{{ app_version() }}</strong>,
+                            dernière mise à jour le {{ app_version_date()|format_datetime('long', 'none', locale: lang) }}.
+                        {% endif %}
+                    </p>
+                    {% if _lc %}
+                        <p class="mb-0"><strong>{{ _lc.subject }}</strong>{% if _lc.paragraphs is not empty %} — {{ _lc.paragraphs|first }}{% endif %}</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </article>
+
+    </div>
+
+    {% include 'components/_public_footer.html.twig' with { lang: lang } %}
+</main>
+{% endblock %}

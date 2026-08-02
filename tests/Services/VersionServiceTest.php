@@ -121,11 +121,68 @@ class VersionServiceTest extends TestCase
         $this->assertSame([], VersionService::summarizeBody("Co-Authored-By: X <a@b.c>"));
     }
 
+    public function testParseCommitBornageDuCorpsParametrable(): void
+    {
+        // La page des nouveautés ne veut QUE le premier paragraphe (le « pourquoi »),
+        // là où l'infobulle du menu en résume deux, plus court.
+        $sep = "\x1f";
+        $corps = "Le besoin et le bénéfice, en clair.\n\nDétail technique hors sujet pour l'utilisateur.";
+        $raw = "abc1234{$sep}2026-01-02T08:00:00+00:00{$sep}Sujet{$sep}{$corps}";
+
+        $commit = VersionService::parseCommit($raw, maxParagraphs: 1, maxLen: 600);
+
+        $this->assertSame(['Le besoin et le bénéfice, en clair.'], $commit['paragraphs']);
+    }
+
     public function testParseCommitRejetteUneSortieMalformee(): void
     {
         $this->assertNull(VersionService::parseCommit(''));
         $this->assertNull(VersionService::parseCommit('pas-de-separateur'));
         $this->assertNull(VersionService::parseCommit("\x1f2026-01-02T08:00:00+00:00\x1fsujet"), 'ref vide → null');
+    }
+
+    /**
+     * Lecture de l'historique sur le dépôt réel : c'est la matière de la page des
+     * nouveautés. Ignoré si git est indisponible (le service, lui, retombe sur []).
+     */
+    public function testGetRecentCommitsLitLHistoriqueDuDepot(): void
+    {
+        $projet = \dirname(__DIR__, 2);
+        if (!is_dir($projet . '/.git')) {
+            $this->markTestSkipped('Dépôt git absent : lecture de l’historique non vérifiable.');
+        }
+
+        $commits = (new VersionService($projet))->getRecentCommits(30);
+
+        if ($commits === []) {
+            $this->markTestSkipped('Binaire git indisponible : le service retombe sur une liste vide.');
+        }
+
+        $premier = $commits[0];
+        $this->assertArrayHasKey('ref', $premier);
+        $this->assertArrayHasKey('subject', $premier);
+        $this->assertInstanceOf(\DateTimeImmutable::class, $premier['date']);
+        $this->assertNotSame('', $premier['ref']);
+        $this->assertNotSame('', $premier['subject']);
+
+        $limite = new \DateTimeImmutable('-31 days');
+        $precedente = null;
+        foreach ($commits as $commit) {
+            $this->assertGreaterThan($limite, $commit['date'], 'La fenêtre demandée est respectée.');
+            $this->assertLessThanOrEqual(1, count($commit['paragraphs']), 'Un seul paragraphe de description.');
+            if ($precedente !== null) {
+                $this->assertLessThanOrEqual($precedente, $commit['date'], 'Ordre antéchronologique.');
+            }
+            $precedente = $commit['date'];
+        }
+    }
+
+    public function testGetRecentCommitsSansDepotDonneListeVide(): void
+    {
+        // Hors dépôt (production sans binaire git ou sans .git) : repli silencieux.
+        $dir = $this->projetTemporaire("3882\n2026-07-25\n");
+
+        $this->assertSame([], (new VersionService($dir))->getRecentCommits(30));
     }
 
     private function projetTemporaire(string $contenuVersion): string
