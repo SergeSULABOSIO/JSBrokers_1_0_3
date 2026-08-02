@@ -67,12 +67,20 @@
        rattacher une amélioration à la version que l'on utilise. */
     .chg-list { list-style: none; margin: 0; padding: 0; }
     .chg-item {
-        position: relative; padding: 0 0 1.6rem 3.8rem;
+        position: relative; padding: 0 0 1.6rem 4.1rem;
         border-left: 2px solid #e8f0fb;
     }
     .chg-item:last-child { border-left-color: transparent; padding-bottom: 0; }
+    /* La pastille est centrée SUR la ligne, le numéro juste derrière : on lit d'un
+       coup l'enfilade des livraisons et la version que chacune a produite. Les deux
+       sont alignés sur le même axe (centre de pastille = milieu du numéro). */
+    .chg-item::before {
+        content: ""; position: absolute; left: -.45rem; top: .26rem;
+        width: .8rem; height: .8rem; border-radius: 50%;
+        background-color: #0047AB; border: 2px solid #fff;
+    }
     .chg-version {
-        position: absolute; left: .5rem; top: .05rem;
+        position: absolute; left: .75rem; top: .05rem;
         font-weight: 700; font-size: .82rem; color: #0047AB;
         white-space: nowrap;
     }
@@ -115,9 +123,10 @@
 
     @media (max-width: 575.98px) {
         .chg-card { padding: 1.25rem; }
-        /* Le numéro reste dans la gouttière : on ne la rétrécit pas sous sa largeur. */
-        .chg-item { padding-left: 3.4rem; }
-        .chg-version { left: .35rem; }
+        /* Pastille + numéro restent dans la gouttière : on ne la rétrécit pas sous
+           la largeur qu'ils occupent ensemble. */
+        .chg-item { padding-left: 3.7rem; }
+        .chg-version { left: .6rem; }
     }
 
     /* Impression : on ne garde que le journal. */
