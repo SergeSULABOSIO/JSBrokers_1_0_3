@@ -161,9 +161,24 @@ class VersionServiceTest extends TestCase
         $premier = $commits[0];
         $this->assertArrayHasKey('ref', $premier);
         $this->assertArrayHasKey('subject', $premier);
+        $this->assertSame(
+            (new VersionService($projet))->getVersion(),
+            $premier['version'],
+            'La livraison la plus récente porte la version courante.',
+        );
         $this->assertInstanceOf(\DateTimeImmutable::class, $premier['date']);
         $this->assertNotSame('', $premier['ref']);
         $this->assertNotSame('', $premier['subject']);
+
+        // Le numéro décroît d'un cran par entrée : c'est le décompte des commits.
+        if (isset($commits[1])) {
+            $this->assertNotSame($commits[0]['version'], $commits[1]['version']);
+            $this->assertSame(
+                VersionService::format($this->compteurDe($commits[0]['version']) - 1),
+                $commits[1]['version'],
+                'La livraison précédente porte la version juste inférieure.',
+            );
+        }
 
         $limite = new \DateTimeImmutable('-31 days');
         $precedente = null;
@@ -183,6 +198,14 @@ class VersionServiceTest extends TestCase
         $dir = $this->projetTemporaire("3882\n2026-07-25\n");
 
         $this->assertSame([], (new VersionService($dir))->getRecentCommits(30));
+    }
+
+    /** Inverse de format() : « 1.40 » → nombre de commits correspondant. */
+    private function compteurDe(string $version): int
+    {
+        [$majeur, $mineur] = array_map('intval', explode('.', $version, 2));
+
+        return 3881 + ($majeur - 1) * 1000 + $mineur;
     }
 
     private function projetTemporaire(string $contenuVersion): string

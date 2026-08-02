@@ -103,10 +103,16 @@ class VersionService
      * dans la technique (noms de classes, ratios de contraste, comptes de tests)
      * — hors sujet pour un courtier.
      *
+     * Chaque entrée porte LA VERSION qu'elle a produite : le numéro n'étant qu'un
+     * décompte de commits, le plus récent vaut la version courante et chaque
+     * entrée plus ancienne en retire un. C'est la même règle que getVersion(),
+     * appliquée au même endroit — l'utilisateur peut ainsi rattacher une
+     * amélioration au numéro affiché dans son menu.
+     *
      * Liste vide si git est indisponible (production sans binaire) : l'appelant
      * affiche alors l'état dégradé, comme getLastCommit() masque son infobulle.
      *
-     * @return list<array{ref:string, date:\DateTimeImmutable, subject:string, paragraphs:list<string>}>
+     * @return list<array{version:string, ref:string, date:\DateTimeImmutable, subject:string, paragraphs:list<string>}>
      */
     public function getRecentCommits(int $jours = 30, int $max = 400): array
     {
@@ -124,6 +130,13 @@ class VersionService
             if ($commit !== null) {
                 $commits[] = $commit;
             }
+        }
+
+        // `git log` remonte l'historique depuis HEAD : la première entrée est donc
+        // le commit courant, celui que le fichier VERSION vient d'estampiller.
+        $compteur = $this->values()['count'];
+        foreach ($commits as $rang => $commit) {
+            $commits[$rang]['version'] = self::format($compteur - $rang);
         }
 
         return $commits;
