@@ -44,5 +44,15 @@
         {{ include('components/_lang_switch.html.twig', {current: lang, route: switchRoute, params: switchParams, uid: 'lang-foot'}) }}
     </div>
 
-    <p class="public-footer__credit">{{ "base_base_de_page" | trans }}</p>
+    {# La version applicative est cliquable : elle mène au journal des nouveautés.
+       Utilitaires Bootstrap plutôt qu'une classe dédiée — `.public-footer__*` est
+       redéfini dans chaque page hôte (vitrine, CGU, console, tokens…), une nouvelle
+       classe devrait donc être recopiée partout pour être stylée. #}
+    <p class="public-footer__credit">
+        {{ "base_base_de_page" | trans }}
+        <a href="{{ path('app_changelog') }}" class="link-secondary text-decoration-underline ms-1"
+           data-action="click->top-progress#show">
+            {{ lang == 'en' ? "Version #{app_version()} — what's new" : "Version #{app_version()} — nouveautés" }}
+        </a>
+    </p>
 </footer>

@@ -83,6 +83,23 @@
         color: rgba(255, 255, 255, 0.85); /* texte secondaire sur fond sombre */
     }
 
+    /* Version applicative → journal des nouveautés. Sur le panneau cobalt, on reste
+       en blanc atténué (contraste AA conservé) et on ne souligne qu'au survol. */
+    .auth__brand-version {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px; /* cible tactile confortable (WCAG 2.5.5) */
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.75);
+        text-decoration: none;
+    }
+
+    .auth__brand-version:hover,
+    .auth__brand-version:focus-visible {
+        color: #ffffff;
+        text-decoration: underline;
+    }
+
     .auth__brand-points {
         list-style: none;
         padding: 0;
@@ -245,6 +262,7 @@
         }
         .auth__brand-home { flex-direction: row; align-items: center; gap: 0.75rem; }
         .auth__brand-tagline,
+        .auth__brand-version,
         .auth__brand-points { display: none; } /* on allège l'en-tête sur mobile */
         .auth__form { padding: 2rem; }
     }

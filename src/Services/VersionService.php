@@ -30,6 +30,9 @@ class VersionService
     /** Séparateur d'unité (0x1F) entre champs de `git log` : jamais présent dans un message. */
     private const SEP = "\x1f";
 
+    /** Séparateur d'enregistrement (0x1E) entre commits : même raisonnement que SEP. */
+    private const REC = "\x1e";
+
     /** Cache des valeurs résolues (fichier lu une seule fois par requête). */
     private ?array $cache = null;
 
@@ -91,12 +94,53 @@ class VersionService
     }
 
     /**
-     * Analyse la sortie de `git log -1` (champs `ref SEP date-ISO SEP sujet SEP corps`).
+     * Mises à jour de la plateforme sur une fenêtre glissante, du plus récent au
+     * plus ancien : de quoi alimenter la page « Nouveautés » qui explique à
+     * l'utilisateur ce qui a changé et pourquoi.
+     *
+     * On ne retient qu'UN paragraphe de corps : dans ce dépôt le premier expose
+     * systématiquement le besoin et le bénéfice, alors que les suivants basculent
+     * dans la technique (noms de classes, ratios de contraste, comptes de tests)
+     * — hors sujet pour un courtier.
+     *
+     * Liste vide si git est indisponible (production sans binaire) : l'appelant
+     * affiche alors l'état dégradé, comme getLastCommit() masque son infobulle.
+     *
+     * @return list<array{ref:string, date:\DateTimeImmutable, subject:string, paragraphs:list<string>}>
+     */
+    public function getRecentCommits(int $jours = 30, int $max = 400): array
+    {
+        $raw = $this->gitLogRaw($jours, $max);
+        if ($raw === null) {
+            return [];
+        }
+
+        $commits = [];
+        foreach (explode(self::REC, $raw) as $enregistrement) {
+            if (trim($enregistrement) === '') {
+                continue;
+            }
+            $commit = self::parseCommit($enregistrement, maxParagraphs: 1, maxLen: 600);
+            if ($commit !== null) {
+                $commits[] = $commit;
+            }
+        }
+
+        return $commits;
+    }
+
+    /**
+     * Analyse la sortie de `git log` pour UN commit (champs `ref SEP date-ISO SEP sujet SEP corps`).
      * Fonction pure : testable sans dépôt git.
+     *
+     * Le bornage du corps est paramétrable car les deux usages n'ont pas le même
+     * besoin : l'infobulle du menu résume en 2 courts paragraphes, tandis que la
+     * page des nouveautés veut le premier paragraphe entier (l'explication de
+     * l'amélioration telle qu'elle a été rédigée).
      *
      * @return array{ref:string, date:\DateTimeImmutable, subject:string, paragraphs:list<string>}|null
      */
-    public static function parseCommit(string $raw): ?array
+    public static function parseCommit(string $raw, int $maxParagraphs = 2, int $maxLen = 320): ?array
     {
         $parts = explode(self::SEP, trim($raw), 4);
         if (count($parts) < 3) {
@@ -120,7 +164,7 @@ class VersionService
             'ref' => $ref,
             'date' => $date,
             'subject' => $subject,
-            'paragraphs' => self::summarizeBody($body),
+            'paragraphs' => self::summarizeBody($body, $maxParagraphs, $maxLen),
         ];
     }
 
@@ -160,12 +204,39 @@ class VersionService
         return $paragraphs;
     }
 
+    /**
+     * Variables d'environnement minimales à transmettre au processus git.
+     *
+     * GOTCHA — sous SAPI web, Dotenv peuple $_ENV avec les SEULES variables de
+     * l'application ; Symfony\Process en fait alors l'environnement du processus
+     * fils, qui se retrouve sans PATH : git n'est plus localisable (« 'git' n'est
+     * pas reconnu… ») alors que la même commande passe en CLI. getenv() lit, lui,
+     * le véritable environnement du processus courant : on y repêche de quoi
+     * retrouver le binaire. Sous Windows, PATHEXT/ComSpec/SystemRoot sont
+     * indispensables en plus de PATH.
+     *
+     * @return array<string, string>
+     */
+    private static function environnementGit(): array
+    {
+        $env = [];
+
+        foreach (['PATH', 'Path', 'PATHEXT', 'SystemRoot', 'ComSpec', 'HOME', 'USERPROFILE'] as $nom) {
+            $valeur = getenv($nom);
+            if (is_string($valeur) && $valeur !== '') {
+                $env[$nom] = $valeur;
+            }
+        }
+
+        return $env;
+    }
+
     /** Sortie brute de `git log -1` (ref, date ISO, sujet) ou null si git indisponible. */
     private function gitLastCommitRaw(): ?string
     {
         try {
             $format = '%h' . self::SEP . '%cI' . self::SEP . '%s' . self::SEP . '%b';
-            $process = new Process(['git', 'log', '-1', '--format=' . $format], $this->projectDir);
+            $process = new Process(['git', 'log', '-1', '--format=' . $format], $this->projectDir, self::environnementGit());
             $process->setTimeout(3);
             $process->run();
 
@@ -175,6 +246,36 @@ class VersionService
             }
         } catch (\Throwable) {
             // git indisponible : l'infobulle est simplement masquée.
+        }
+
+        return null;
+    }
+
+    /**
+     * Sortie brute de `git log` sur les $jours derniers jours (enregistrements
+     * séparés par REC, champs par SEP), ou null si git est indisponible.
+     * Le timeout est plus généreux que pour un commit seul : on lit ici quelques
+     * centaines d'entrées avec leur corps.
+     */
+    private function gitLogRaw(int $jours, int $max): ?string
+    {
+        try {
+            $format = self::REC . '%h' . self::SEP . '%cI' . self::SEP . '%s' . self::SEP . '%b';
+            $process = new Process([
+                'git', 'log',
+                '--since=' . $jours . ' days ago',
+                '--max-count=' . $max,
+                '--format=' . $format,
+            ], $this->projectDir, self::environnementGit());
+            $process->setTimeout(5);
+            $process->run();
+
+            if ($process->isSuccessful()) {
+                $out = trim($process->getOutput());
+                return $out !== '' ? $out : null;
+            }
+        } catch (\Throwable) {
+            // git indisponible : la page des nouveautés affiche l'état dégradé.
         }
 
         return null;
@@ -230,7 +331,7 @@ class VersionService
     private function gitCommitCount(): ?int
     {
         try {
-            $process = new Process(['git', 'rev-list', '--count', 'HEAD'], $this->projectDir);
+            $process = new Process(['git', 'rev-list', '--count', 'HEAD'], $this->projectDir, self::environnementGit());
             $process->setTimeout(3);
             $process->run();
 

@@ -10,6 +10,11 @@
         Votre plateforme de gestion de courtage en assurance,
         centralisée et sécurisée.
     </p>
+    {# Version applicative cliquable : le journal des nouveautés est public, donc
+       consultable avant même de se connecter. #}
+    <a href="{{ path('app_changelog') }}" class="auth__brand-version">
+        Version {{ app_version() }} — voir les nouveautés
+    </a>
     <ul class="auth__brand-points">
         <li>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
