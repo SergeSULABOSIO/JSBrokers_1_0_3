@@ -38,31 +38,80 @@ class AvenantFormCanvasProvider implements FormCanvasProviderInterface
             // condition évaluée côté front contre l'attribut calculé hasPisteDerivee
             // (AvenantIndicatorStrategy). Ajouter/Éditer ouvrent le même endpoint de
             // contexte ; le backend adapte le mode (create/edit) à l'état réel de l'avenant.
+            // Actions spécifiques de la rubrique. Le CLÉ « groupe » replie une FAMILLE
+            // d'actions en une seule entrée (bouton déroulant en barre d'outils,
+            // sous-menu au clic droit) : sans elle, les sept actions ci-dessous
+            // saturaient la barre. Cf. assets/controllers/actions-groupees.js — la
+            // règle de regroupement est partagée par les deux surfaces.
             "attribute_actions" => [
+                // MOUVEMENTS DE LA POLICE — parité stricte avec l'assistant : mêmes
+                // quatre actes, même moteur (MouvementAvenantBuilder), mêmes défauts.
+                // Condition `hasPisteDerivee == false` : une police déjà mouvementée ne
+                // l'est pas deux fois (miroir exact du garde « dejaTraite » de l'outil).
+                [
+                    "label"        => "Renouveler à l'identique",
+                    "icon"         => "action:renew",
+                    "groupe"       => "Mouvements de la police",
+                    "groupe_icone" => "action:renew",
+                    "event"        => "ui:avenant.mouvement-request",
+                    "url"          => "/admin/avenant/api/mouvement-picker/renouvellement/%id%",
+                    "condition"    => ["field" => "hasPisteDerivee", "value" => false],
+                ],
+                [
+                    "label"     => "Proroger la police",
+                    "icon"      => "action:prorogation",
+                    "groupe"    => "Mouvements de la police",
+                    "event"     => "ui:avenant.mouvement-request",
+                    "url"       => "/admin/avenant/api/mouvement-picker/prorogation/%id%",
+                    "condition" => ["field" => "hasPisteDerivee", "value" => false],
+                ],
+                [
+                    "label"     => "Annuler la police",
+                    "icon"      => "action:annulation",
+                    "groupe"    => "Mouvements de la police",
+                    "event"     => "ui:avenant.mouvement-request",
+                    "url"       => "/admin/avenant/api/mouvement-picker/annulation/%id%",
+                    "condition" => ["field" => "hasPisteDerivee", "value" => false],
+                ],
+                [
+                    "label"     => "Résilier la police",
+                    "icon"      => "action:resiliation",
+                    "groupe"    => "Mouvements de la police",
+                    "event"     => "ui:avenant.mouvement-request",
+                    "url"       => "/admin/avenant/api/mouvement-picker/resiliation/%id%",
+                    "condition" => ["field" => "hasPisteDerivee", "value" => false],
+                ],
+                // Gestion manuelle de l'opportunité dérivée : même famille métier que
+                // les mouvements (elle en est le support), donc même repli.
                 [
                     "label"     => "Ajouter une piste dérivée",
                     "icon"      => "piste",
+                    "groupe"    => "Mouvements de la police",
                     "event"     => "ui:avenant.piste-derivee-form-request",
                     "url"       => "/admin/avenant/api/get-piste-derivee-context/%id%",
                     "condition" => ["field" => "hasPisteDerivee", "value" => false],
                 ],
                 [
-                    "label"     => "Éditer la piste dérivée",
-                    "icon"      => "action:edit",
-                    "event"     => "ui:avenant.piste-derivee-form-request",
-                    "url"       => "/admin/avenant/api/get-piste-derivee-context/%id%",
-                    "condition" => ["field" => "hasPisteDerivee", "value" => true],
+                    "label"        => "Éditer la piste dérivée",
+                    "icon"         => "action:edit",
+                    "groupe"       => "Mouvements de la police",
+                    "groupe_icone" => "piste",
+                    "event"        => "ui:avenant.piste-derivee-form-request",
+                    "url"          => "/admin/avenant/api/get-piste-derivee-context/%id%",
+                    "condition"    => ["field" => "hasPisteDerivee", "value" => true],
                 ],
                 [
                     "label"     => "Supprimer la piste dérivée",
                     "icon"      => "action:delete",
+                    "groupe"    => "Mouvements de la police",
                     // Pas de %id% : l'id de l'avenant est transmis en `ids` par le flux
                     // générique app:api.delete-request après confirmation.
                     "event"     => "ui:avenant.delete-piste-derivee",
                     "url"       => "/admin/avenant/api/delete-piste-derivee",
                     "condition" => ["field" => "hasPisteDerivee", "value" => true],
                 ],
-                // Picker de documents générique (pipe complet de la police).
+                // Picker de documents générique (pipe complet de la police) : hors
+                // famille, il reste accessible en un seul clic.
                 [
                     "label" => "Voir les documents",
                     "icon"  => "classeur",
@@ -83,6 +132,7 @@ class AvenantFormCanvasProvider implements FormCanvasProviderInterface
                 "description"     => "action:description",
                 "startingAt"      => "action:calendar",
                 "endingAt"        => "action:calendar",
+                "renewalStatus"   => "avenant",
                 "documents"       => "document",
             ],
         ];
@@ -103,6 +153,7 @@ class AvenantFormCanvasProvider implements FormCanvasProviderInterface
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["numero"]], ["champs" => ["referencePolice"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["startingAt"]], ["champs" => ["endingAt"]]]],
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["renewalStatus"]]]],
         ];
 
         $collections = [

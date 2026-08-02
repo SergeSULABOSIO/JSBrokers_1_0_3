@@ -1,4 +1,12 @@
 import { Controller } from '@hotwired/stimulus';
+import { grouperActions, urlAction } from './actions-groupees.js';
+
+/**
+ * Nombre maximal d'entrées d'actions spécifiques affichées EN LIGNE dans la barre.
+ * Au-delà, le surplus est replié dans un menu « Autres actions » : la barre garde
+ * une largeur prévisible quel que soit le nombre d'actions déclarées par la rubrique.
+ */
+const TOOLBAR_MAX_ACTIONS_EN_LIGNE = 4;
 
 /**
  * @class ToolbarController - REFACTORED (V3)
@@ -261,6 +269,7 @@ export default class extends Controller {
     updateSpecificActionButtons(actions) {
         // On vide le conteneur
         this.specificActionsContainerTarget.innerHTML = '';
+        this._fermerMenuOuvert();
 
         // On affiche ou masque le séparateur en fonction de la présence d'actions
         this.toggleButton(this.specificActionsSeparatorTarget, actions.length > 0);
@@ -270,48 +279,155 @@ export default class extends Controller {
         }
 
         const selectedId = this.selectos[0].id;
-        let separatorInserted = false;
 
-        actions.forEach(action => {
-            // Séparateur interne UNIQUEMENT entre un bloc d'actions inconditionnelles et
-            // les actions conditionnelles. Sans action inconditionnelle en amont
-            // (conteneur encore vide), le séparateur fixe suffit — évite le doublon.
-            if (action.condition && !separatorInserted && this.specificActionsContainerTarget.children.length > 0) {
-                const sep = document.createElement('div');
-                sep.className = 'toolbar-separator';
-                sep.setAttribute('role', 'separator');
-                sep.setAttribute('aria-orientation', 'vertical');
-                this.specificActionsContainerTarget.appendChild(sep);
-                separatorInserted = true;
-            }
-
-            const finalUrl = action.url.includes('%id%')
-                ? action.url.replace('%id%', selectedId)
-                : action.url;
-
-            const button = document.createElement('button');
-            button.className = 'btn btn-default';
-            button.setAttribute('type', 'button');
-            button.setAttribute('title', action.label);
-            button.setAttribute('aria-label', action.label);
-            button.setAttribute('data-controller', 'ripple');
-
-            if (this.iconCache.has(action.icon)) {
-                this.handleIconLoaded({ detail: { html: this.iconCache.get(action.icon), requesterId: `toolbar-specific-action-${action.icon.replace(/:/g, '--')}-${selectedId}`, iconName: action.icon } }, button);
-            } else {
-                button.id = `toolbar-specific-action-${action.icon.replace(/:/g, '--')}-${selectedId}`;
-                const iconSize = 31;
-                this.notifyCerveau('ui:icon.request', { iconName: action.icon, iconSize: iconSize, requesterId: button.id });
-            }
-
-            button.addEventListener('click', () => {
-                this.notifyCerveau(action.event, {
-                    url: finalUrl,
-                    selection: this.selectos
-                });
-            });
-            this.specificActionsContainerTarget.appendChild(button);
+        // REGROUPEMENT PAR FAMILLE : une famille d'actions (les mouvements d'une
+        // police, par exemple) devient UN bouton qui déploie ses membres. Au-delà de
+        // MAX_ACTIONS_EN_LIGNE entrées, le surplus rejoint « Autres actions » — la
+        // barre reste lisible quel que soit le nombre d'actions déclarées.
+        grouperActions(actions, { maxInline: TOOLBAR_MAX_ACTIONS_EN_LIGNE }).forEach((entree) => {
+            this.specificActionsContainerTarget.appendChild(
+                entree.type === 'groupe'
+                    ? this._creerBoutonGroupe(entree, selectedId)
+                    : this._creerBoutonAction(entree.action, selectedId),
+            );
         });
+    }
+
+    /**
+     * Bouton d'une action simple (comportement historique : icône seule + infobulle).
+     * @private
+     */
+    _creerBoutonAction(action, selectedId) {
+        const button = document.createElement('button');
+        button.className = 'btn btn-default';
+        button.setAttribute('type', 'button');
+        button.setAttribute('title', action.label);
+        button.setAttribute('aria-label', action.label);
+        button.setAttribute('data-controller', 'ripple');
+
+        this._poserIcone(button, action.icon, `toolbar-specific-action-${action.icon.replace(/:/g, '--')}-${selectedId}`);
+
+        button.addEventListener('click', () => {
+            this.notifyCerveau(action.event, { url: urlAction(action, selectedId), selection: this.selectos });
+        });
+
+        return button;
+    }
+
+    /**
+     * Bouton d'une FAMILLE : icône + chevron, ouvrant un menu déroulant qui liste
+     * les actions membres (icône + libellé, cette fois explicite — un menu a la
+     * place d'écrire, contrairement à la barre).
+     * @private
+     */
+    _creerBoutonGroupe(groupe, selectedId) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'toolbar-groupe';
+
+        const button = document.createElement('button');
+        button.className = 'btn btn-default toolbar-groupe-bouton';
+        button.setAttribute('type', 'button');
+        button.setAttribute('title', groupe.label);
+        button.setAttribute('aria-label', groupe.label);
+        button.setAttribute('aria-haspopup', 'menu');
+        button.setAttribute('aria-expanded', 'false');
+        // Le chevron « ce bouton déploie un menu » est un ::after CSS, PAS un élément :
+        // le circuit d'icônes remplace l'innerHTML du bouton à l'arrivée de l'icône
+        // (handleIconLoaded) et effacerait un enfant posé ici.
+        this._poserIcone(button, groupe.icon, `toolbar-groupe-${groupe.icon.replace(/:/g, '--')}-${selectedId}`);
+
+        const menu = document.createElement('ul');
+        menu.className = 'toolbar-groupe-menu';
+        menu.setAttribute('role', 'menu');
+        menu.setAttribute('aria-label', groupe.label);
+        menu.hidden = true;
+
+        groupe.actions.forEach((action) => {
+            const item = document.createElement('li');
+            item.setAttribute('role', 'menuitem');
+            item.setAttribute('tabindex', '-1');
+
+            const icone = document.createElement('span');
+            icone.className = 'toolbar-groupe-menu-icone';
+            icone.setAttribute('aria-hidden', 'true');
+            this._poserIcone(icone, action.icon, `toolbar-groupe-item-${action.icon.replace(/:/g, '--')}-${selectedId}-${crypto.randomUUID()}`, 18);
+            item.appendChild(icone);
+
+            const libelle = document.createElement('span');
+            libelle.textContent = action.label;
+            item.appendChild(libelle);
+
+            item.addEventListener('click', (event) => {
+                event.stopPropagation();
+                this._fermerMenuOuvert();
+                this.notifyCerveau(action.event, { url: urlAction(action, selectedId), selection: this.selectos });
+            });
+            menu.appendChild(item);
+        });
+
+        button.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const ouvert = !menu.hidden;
+            this._fermerMenuOuvert();
+            if (!ouvert) this._ouvrirMenu(button, menu);
+        });
+
+        wrapper.append(button, menu);
+
+        return wrapper;
+    }
+
+    /** Ouvre le menu d'une famille et arme la fermeture (clic extérieur / Échap). @private */
+    _ouvrirMenu(button, menu) {
+        menu.hidden = false;
+        button.setAttribute('aria-expanded', 'true');
+        this.menuOuvert = { button, menu };
+
+        this.boundFermerMenu = (event) => {
+            if (!menu.contains(event.target)) this._fermerMenuOuvert();
+        };
+        this.boundEchapMenu = (event) => {
+            if (event.key === 'Escape') {
+                this._fermerMenuOuvert();
+                button.focus(); // restitution du focus au déclencheur (WCAG 2.4.3)
+            }
+        };
+        document.addEventListener('click', this.boundFermerMenu);
+        document.addEventListener('keydown', this.boundEchapMenu);
+
+        menu.querySelector('[role="menuitem"]')?.focus();
+    }
+
+    /** Referme le menu de famille ouvert, s'il y en a un. @private */
+    _fermerMenuOuvert() {
+        if (this.boundFermerMenu) {
+            document.removeEventListener('click', this.boundFermerMenu);
+            this.boundFermerMenu = null;
+        }
+        if (this.boundEchapMenu) {
+            document.removeEventListener('keydown', this.boundEchapMenu);
+            this.boundEchapMenu = null;
+        }
+        if (!this.menuOuvert) return;
+        this.menuOuvert.menu.hidden = true;
+        this.menuOuvert.button.setAttribute('aria-expanded', 'false');
+        this.menuOuvert = null;
+    }
+
+    /**
+     * Pose une icône dans un conteneur : depuis le cache si possible, sinon en la
+     * demandant au cerveau (circuit d'icônes existant, inchangé).
+     * @private
+     */
+    _poserIcone(conteneur, iconName, requesterId, iconSize = 31) {
+        if (!iconName) return;
+        if (this.iconCache.has(iconName)) {
+            this.handleIconLoaded({ detail: { html: this.iconCache.get(iconName), requesterId, iconName } }, conteneur);
+
+            return;
+        }
+        conteneur.id = requesterId;
+        this.notifyCerveau('ui:icon.request', { iconName, iconSize, requesterId });
     }
 
     /**

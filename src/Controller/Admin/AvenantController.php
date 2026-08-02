@@ -3,11 +3,20 @@
 namespace App\Controller\Admin;
 
 use DateTimeImmutable;
+use App\Ai\Mouvement\MouvementAvenant;
+use App\Ai\Mouvement\MouvementAvenantBuilder;
+use App\Ai\Mutation\MutationPlan;
+use App\Ai\Mutation\MutationReferences;
+use App\Ai\Scope\AiScope;
 use App\Entity\Avenant;
+use App\Entity\Cotation;
 use App\Entity\Invite;
 use App\Entity\Piste;
 use App\Form\AvenantType;
 use App\Constantes\Constante;
+use App\Service\Workspace\MutationException;
+use App\Service\Workspace\WorkspaceMutationService;
+use App\Token\InsufficientTokensException;
 use App\Repository\InviteRepository;
 use App\Repository\AvenantRepository;
 use App\Repository\EntrepriseRepository;
@@ -44,6 +53,8 @@ class AvenantController extends AbstractController
         private Constante $constante,
         private JSBDynamicSearchService $searchService,
         private SerializerInterface $serializer,
+        private MouvementAvenantBuilder $mouvementBuilder,
+        private WorkspaceMutationService $mutationService,
         CanvasBuilder $canvasBuilder // Inject CanvasBuilder without property promotion
     ) {
         // Assign the injected CanvasBuilder to the property declared in the trait
@@ -160,6 +171,209 @@ class AvenantController extends AbstractController
         $piste->setAvenantDeBase(null);
 
         return $this->handleDeleteApi($piste);
+    }
+
+    // ─────────────────── Mouvements de police (renouvellement, prorogation, …) ───────────────────
+
+    /** Durée proposée par défaut dans la boîte de prorogation (jours). */
+    private const PROROGATION_JOURS_DEFAUT = 30;
+
+    /**
+     * Boîte de MOUVEMENT d'une police (renouvellement, prorogation, annulation,
+     * résiliation) ouverte depuis la liste des avenants — barre d'outils ou clic
+     * droit. Rend le fragment HTML du picker autonome, que le cerveau insère.
+     *
+     * PARITÉ AVEC L'ASSISTANT : l'écran et Ket appellent le MÊME
+     * MouvementAvenantBuilder puis le MÊME WorkspaceMutationService. Ce qui change
+     * n'est que la façon de recueillir la seule information variable (durée ou date
+     * d'effet) : un formulaire ici, une phrase là-bas.
+     */
+    #[Route('/api/mouvement-picker/{mouvement}/{id}', name: 'api.mouvement_picker', requirements: ['id' => Requirement::DIGITS, 'mouvement' => '[a-z]+'], methods: ['GET'])]
+    public function mouvementPicker(string $mouvement, Avenant $avenant): Response
+    {
+        $contexte = $this->contexteMouvement($mouvement, $avenant, Invite::ACCESS_ECRITURE);
+        if ($contexte instanceof JsonResponse) {
+            return $contexte;
+        }
+        [$type, $scope] = $contexte;
+
+        // Valeurs proposées dans les champs. L'aperçu est calculé AVEC elles : sans
+        // cela, la boîte s'ouvrait sur « renseignez l'information demandée » alors
+        // que le champ était déjà rempli, puis se corrigeait toute seule.
+        $defauts = match (true) {
+            $type === MouvementAvenant::Prorogation => ['dureeJours' => self::PROROGATION_JOURS_DEFAUT],
+            $type->exigeDate()                      => ['dateEffet' => (new DateTimeImmutable())->format('Y-m-d')],
+            default                                 => [],
+        };
+
+        return $this->render('components/avenant/_mouvement_picker.html.twig', [
+            'mouvement'   => $type->value,
+            'libelle'     => $type->libelle(),
+            'exigeDate'   => $type->exigeDate(),
+            'avenant'     => $avenant,
+            'dureeDefaut' => self::PROROGATION_JOURS_DEFAUT,
+            'dateDefaut'  => $defauts['dateEffet'] ?? null,
+            'apercu'      => $this->apercuMouvement($type, $avenant, $defauts, $scope),
+        ]);
+    }
+
+    /**
+     * APERÇU d'un mouvement : ce que le plan écrira, aux paramètres saisis. Rafraîchi
+     * à chaque changement de durée ou de date dans le picker, pour que l'utilisateur
+     * VOIE la période dérivée et la prime au prorata avant de valider (Nielsen 1).
+     * N'écrit rien.
+     */
+    #[Route('/api/mouvement-apercu/{mouvement}/{id}', name: 'api.mouvement_apercu', requirements: ['id' => Requirement::DIGITS, 'mouvement' => '[a-z]+'], methods: ['GET'])]
+    public function mouvementApercu(string $mouvement, Avenant $avenant, Request $request): JsonResponse
+    {
+        $contexte = $this->contexteMouvement($mouvement, $avenant, Invite::ACCESS_ECRITURE);
+        if ($contexte instanceof JsonResponse) {
+            return $contexte;
+        }
+        [$type, $scope] = $contexte;
+        $apercu = $this->apercuMouvement($type, $avenant, $request->query->all(), $scope);
+
+        // Le fragment est rendu par le SERVEUR (même partiel qu'à l'ouverture) : le
+        // JS ne fabrique aucun libellé, il substitue le bloc. Un seul markup à maintenir.
+        return $this->json([
+            'pret' => $apercu['pret'] ?? false,
+            'html' => $this->renderView('components/avenant/_mouvement_apercu.html.twig', ['apercu' => $apercu]),
+        ]);
+    }
+
+    /**
+     * EXÉCUTE le mouvement : même plan que celui de l'assistant, joué dans UNE
+     * transaction (une étape en échec annule tout — jamais de police à moitié
+     * renouvelée). Le métrage des tokens est celui du moteur (commitWrite).
+     */
+    #[Route('/api/mouvement/{mouvement}/{id}', name: 'api.mouvement_executer', requirements: ['id' => Requirement::DIGITS, 'mouvement' => '[a-z]+'], methods: ['POST'])]
+    public function mouvementExecuter(string $mouvement, Avenant $avenant, Request $request): JsonResponse
+    {
+        $contexte = $this->contexteMouvement($mouvement, $avenant, Invite::ACCESS_ECRITURE);
+        if ($contexte instanceof JsonResponse) {
+            return $contexte;
+        }
+        [$type, $scope] = $contexte;
+
+        $args = json_decode($request->getContent() ?: '{}', true);
+        $decalque = $this->mouvementBuilder->construire($type, $avenant, is_array($args) ? $args : [], $scope);
+
+        if (isset($decalque['bloquant'])) {
+            return $this->json(['success' => false, 'message' => $decalque['bloquant']], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+        if (isset($decalque['aDemander'])) {
+            return $this->json([
+                'success' => false,
+                'message' => $decalque['aDemander'][0]['question'] ?? 'Information manquante.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $acteur = $this->getUser();
+        try {
+            $this->em->wrapInTransaction(function () use ($decalque, $scope, $acteur): void {
+                // Registre PARTAGÉ : la cotation renvoie à la piste créée juste avant
+                // (« @mouvement »), l'avenant à la cotation — d'où l'ordre imposé.
+                $refs = MutationReferences::live();
+                foreach (MutationPlan::fromArray($decalque['operations'])->operationsOrdonnees() as $op) {
+                    $this->mutationService->executer($op, $scope, $acteur, $refs);
+                }
+            });
+        } catch (InsufficientTokensException) {
+            return $this->json([
+                'success' => false,
+                'message' => 'Solde de tokens épuisé : aucune modification n’a été conservée.',
+                'buyUrl'  => $this->generateUrl('admin.token.buy'),
+            ], Response::HTTP_PAYMENT_REQUIRED);
+        } catch (MutationException $e) {
+            return $this->json(['success' => false, 'message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        return $this->json([
+            'success' => true,
+            'message' => sprintf('%s de la police « %s » enregistré%s.',
+                $type->libelle(),
+                (string) $avenant->getReferencePolice(),
+                $type === MouvementAvenant::Resiliation || $type === MouvementAvenant::Annulation ? 'e' : '',
+            ),
+        ]);
+    }
+
+    /**
+     * Gardes communes aux trois endpoints de mouvement : mouvement connu, droits
+     * d'écriture (fail-closed), avenant de l'espace de travail courant, police pas
+     * déjà mouvementée — l'idempotence exacte de l'outil de l'assistant.
+     *
+     * @return array{0: MouvementAvenant, 1: AiScope}|JsonResponse
+     */
+    private function contexteMouvement(string $mouvement, Avenant $avenant, int $niveau): array|JsonResponse
+    {
+        $type = MouvementAvenant::depuis($mouvement);
+        if ($type === null) {
+            return $this->json(['message' => 'Mouvement inconnu.'], Response::HTTP_NOT_FOUND);
+        }
+        // Un mouvement crée une piste, une cotation et un avenant : le droit d'écriture
+        // est exigé sur les trois, comme le ferait chaque formulaire pris séparément.
+        foreach ([Piste::class, Cotation::class, Avenant::class] as $classe) {
+            if (!$this->mayAccessEntity($classe, $niveau)) {
+                return $this->accessDeniedJson();
+            }
+        }
+        if ($avenant->getEntreprise()?->getId() !== $this->getEntreprise()->getId()) {
+            return $this->json(['message' => 'Avenant introuvable dans cet espace de travail.'], Response::HTTP_NOT_FOUND);
+        }
+        if ($avenant->getPisteDeRenouvellement() !== null) {
+            return $this->json([
+                'message' => 'Cette police porte déjà une opportunité dérivée : un mouvement y a déjà été enregistré.',
+            ], Response::HTTP_CONFLICT);
+        }
+
+        return [$type, new AiScope($this->getEntreprise(), $this->getInvite())];
+    }
+
+    /**
+     * Aperçu lisible du décalque : période, défauts appliqués, écarts, ce qui est
+     * reconduit — exactement ce que l'assistant énonce dans sa réponse.
+     *
+     * @param array<string, mixed> $args
+     *
+     * @return array<string, mixed>
+     */
+    private function apercuMouvement(MouvementAvenant $type, Avenant $avenant, array $args, AiScope $scope): array
+    {
+        $decalque = $this->mouvementBuilder->construire($type, $avenant, $args, $scope);
+
+        if (isset($decalque['bloquant'])) {
+            return ['pret' => false, 'bloquant' => $decalque['bloquant'], 'source' => []];
+        }
+        if (isset($decalque['aDemander'])) {
+            // Le picker n'a pas encore de date : on annonce la question plutôt qu'un
+            // aperçu vide, et le bouton de validation reste inactif. L'identité de la
+            // police, elle, est déjà connue et accompagne la réponse.
+            return [
+                'pret'     => false,
+                'question' => $decalque['aDemander'][0]['question'] ?? null,
+                'source'   => $decalque['source'] ?? [],
+            ];
+        }
+
+        $nouvelAvenant = [];
+        foreach ($decalque['operations'] as $op) {
+            if ($op['entite'] === 'Avenant' && $op['op'] === 'create') {
+                $nouvelAvenant = $op['champs'];
+            }
+        }
+
+        return [
+            'pret'           => true,
+            'debut'          => substr((string) ($nouvelAvenant['startingAt'] ?? ''), 0, 10),
+            'fin'            => substr((string) ($nouvelAvenant['endingAt'] ?? ''), 0, 10),
+            'numero'         => $nouvelAvenant['numero'] ?? null,
+            'defauts'        => $decalque['defauts'],
+            'ecarts'         => $decalque['ecarts'],
+            'reconduit'      => $decalque['reconduit'],
+            'avertissements' => $decalque['avertissements'],
+            'source'         => $decalque['source'],
+        ];
     }
 
     #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]

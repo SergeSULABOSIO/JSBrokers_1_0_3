@@ -47,6 +47,19 @@ class WorkspaceMutationService
         'boolean', 'date', 'date_immutable', 'datetime', 'datetime_immutable',
     ];
 
+    /**
+     * Libellés des SOUS-ENTITÉS structurelles, absentes de la carte d'accès (elles
+     * n'y ont pas leur place : on ne les interroge jamais en tête, leur droit suit
+     * celui du parent). Sans eux, l'aperçu affiché à l'utilisateur AVANT validation
+     * exposait le nom technique de la collection — « conditionsPartageExceptionnelles »
+     * là où il faut lire « Conditions de partage ».
+     */
+    private const LIBELLES_SOUS_ENTITES = [
+        'ChargementPourPrime' => 'Composition de la prime',
+        'ConditionPartage'    => 'Conditions de partage',
+        'PaiementPrime'       => 'Paiements de prime signalés',
+    ];
+
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly FormFactoryInterface $formFactory,
@@ -593,7 +606,9 @@ class WorkspaceMutationService
         $proposables = [];
         foreach ($this->formTreeInspector->collectionsEditables($shortName) as $nom => $ce) {
             if ($ce->allowAdd) {
-                $proposables[$nom] = $labels[$ce->childShortName] ?? $nom;
+                $proposables[$nom] = $labels[$ce->childShortName]
+                    ?? self::LIBELLES_SOUS_ENTITES[$ce->childShortName]
+                    ?? $nom;
             }
         }
 
@@ -950,12 +965,20 @@ class WorkspaceMutationService
             }
         }
 
-        // Pré-hydratation des parents ManyToOne (création surtout) + normalisation
-        // des champs booléens. API objet ORM 3.
+        // Pré-hydratation des relations TO-ONE côté PROPRIÉTAIRE (création surtout)
+        // + normalisation des champs booléens. API objet ORM 3.
+        //
+        // ManyToOne ET OneToOne propriétaire : la promesse du moteur est « une
+        // relation se donne par son id », et elle vaut pour les deux. Un OneToOne
+        // propriétaire porte sa colonne de jointure exactement comme un ManyToOne
+        // (ex. Piste::avenantDeBase, le lien qui rattache une piste dérivée à la
+        // police qu'elle fait évoluer) ; le restreindre au ManyToOne rendait ces
+        // champs inatteignables, sans qu'aucune règle ne le justifie. Le côté
+        // INVERSE reste exclu : lui affecter une valeur ne persisterait rien.
         try {
             $meta = $this->em->getClassMetadata($fqcn);
             foreach ($meta->getAssociationMappings() as $field => $mapping) {
-                if (!$mapping->isManyToOne()) {
+                if (!$mapping->isToOneOwningSide()) {
                     continue;
                 }
                 if (!empty($fields[$field])) {

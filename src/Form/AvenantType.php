@@ -9,6 +9,7 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
@@ -16,6 +17,20 @@ use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 
 class AvenantType extends AbstractType
 {
+    /**
+     * Libellés du statut de renouvellement (valeur → texte). Source unique du
+     * champ ; alignée sur AvenantIndicatorStrategy::getAvenantStatutRenouvellementString().
+     */
+    public const RENEWAL_STATUS_LABELS = [
+        Avenant::RENEWAL_STATUS_RUNNING  => "En cours",
+        Avenant::RENEWAL_STATUS_RENEWING => "En renouvellement",
+        Avenant::RENEWAL_STATUS_RENEWED  => "Renouvelé",
+        Avenant::RENEWAL_STATUS_EXTENDED => "Prorogé",
+        Avenant::RENEWAL_STATUS_CANCELLED => "Annulé / résilié",
+        Avenant::RENEWAL_STATUS_ONCE_OFF => "Unique (sans renouvellement)",
+        Avenant::RENEWAL_STATUS_LOST     => "Perdu",
+    ];
+
     public function __construct(
         private FormListenerFactory $ecouteurFormulaire,
         private TranslatorInterface $translatorInterface
@@ -52,6 +67,18 @@ class AvenantType extends AbstractType
             ->add('endingAt', DateTimeType::class, [
                 'label' => "Echéance",
                 'widget' => 'single_text',
+            ])
+            // Statut de renouvellement de la police. Colonne stockée que deux KPI du
+            // tableau de bord interrogent (DashboardDataProvider::getPoliciesActives /
+            // getAvenantsActifsHydrates) : sans champ de formulaire, une police annulée
+            // ou résiliée restait comptée « active » à jamais, et aucun chemin — écran
+            // comme assistant — ne pouvait la corriger.
+            ->add('renewalStatus', ChoiceType::class, [
+                'label' => "Statut de la police",
+                'help' => "Laissez « En cours » tant que la police court. Un mouvement (renouvellement, prorogation, résiliation) met ce statut à jour.",
+                'required' => false,
+                'placeholder' => false,
+                'choices' => array_flip(self::RENEWAL_STATUS_LABELS),
             ])
             ->add('documents', CollectionType::class, [
                 'label' => "Documents",

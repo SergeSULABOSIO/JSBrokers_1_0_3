@@ -1639,12 +1639,28 @@ class IndicatorCalculationHelper implements ResetInterface
         )->setParameter('ids', $ids)->getResult();
     }
 
+    /**
+     * Précharge en un nombre FIXE de requêtes tout le graphe que les indicateurs de la
+     * liste Avenant parcourent ensuite. Sans cela, chaque ligne déclenchait ses propres
+     * chargements paresseux : mesuré à 289 requêtes pour 20 avenants (revenus ×53,
+     * chargements ×53, puis 20 chacun pour tranches, articles et paiements de prime).
+     *
+     * RÈGLE À NE PAS ENFREINDRE : une seule collection to-many par requête. Joindre
+     * deux to-many dans la même requête (p. ex. revenus ET chargements) produit un
+     * produit cartésien dont le coût croît en O(n×m) et annule le gain.
+     *
+     * Reste volontairement hors périmètre : notification_sinistre, chargé par
+     * `reference_police` (recherche par valeur, pas une association) et donc non
+     * groupable ici.
+     */
     public function preloadAvenantRelations(array $avenants): void
     {
-        $cotationIds = array_values(array_filter(
+        $cotationIds = array_values(array_unique(array_filter(
             array_map(fn($a) => $a->getCotation()?->getId(), $avenants)
-        ));
+        )));
         if (empty($cotationIds)) return;
+
+        // 1. Graphe to-one + partenaires (une seule collection : partenaires).
         $this->em->createQuery(
             'SELECT c, p, cl, r, par
              FROM App\Entity\Cotation c
@@ -1654,5 +1670,56 @@ class IndicatorCalculationHelper implements ResetInterface
              LEFT JOIN p.partenaires par
              WHERE c.id IN (:ids)'
         )->setParameter('ids', $cotationIds)->getResult();
+
+        // 2. Revenus (+ leur type, to-one : sert au calcul des rétrocommissions).
+        $this->em->createQuery(
+            'SELECT c, rev, trev
+             FROM App\Entity\Cotation c
+             LEFT JOIN c.revenus rev
+             LEFT JOIN rev.typeRevenu trev
+             WHERE c.id IN (:ids)'
+        )->setParameter('ids', $cotationIds)->getResult();
+
+        // 3. Chargements de prime (+ leur type, to-one).
+        $this->em->createQuery(
+            'SELECT c, ch, cht
+             FROM App\Entity\Cotation c
+             LEFT JOIN c.chargements ch
+             LEFT JOIN ch.type cht
+             WHERE c.id IN (:ids)'
+        )->setParameter('ids', $cotationIds)->getResult();
+
+        // 4. Tranches.
+        $cotations = $this->em->createQuery(
+            'SELECT c, tr
+             FROM App\Entity\Cotation c
+             LEFT JOIN c.tranches tr
+             WHERE c.id IN (:ids)'
+        )->setParameter('ids', $cotationIds)->getResult();
+
+        // 5-6. Collections portées par la Tranche. Les identifiants sont relus depuis les
+        // tranches déjà hydratées en 4 : aucune requête supplémentaire pour les obtenir.
+        $trancheIds = [];
+        foreach ($cotations as $cotation) {
+            foreach ($cotation->getTranches() as $tranche) {
+                if ($tranche->getId() !== null) {
+                    $trancheIds[] = $tranche->getId();
+                }
+            }
+        }
+        $trancheIds = array_values(array_unique($trancheIds));
+        if (empty($trancheIds)) return;
+
+        $this->em->createQuery(
+            'SELECT t, a FROM App\Entity\Tranche t
+             LEFT JOIN t.articles a
+             WHERE t.id IN (:ids)'
+        )->setParameter('ids', $trancheIds)->getResult();
+
+        $this->em->createQuery(
+            'SELECT t, pp FROM App\Entity\Tranche t
+             LEFT JOIN t.paiementsPrime pp
+             WHERE t.id IN (:ids)'
+        )->setParameter('ids', $trancheIds)->getResult();
     }
 }

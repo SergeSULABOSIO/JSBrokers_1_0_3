@@ -21,10 +21,11 @@ class PisteType extends AbstractType
 {
     /**
      * Libellés des types d'avenant (valeur → texte). Source unique, utilisée à la fois
-     * pour les choix du champ et pour la synchronisation dynamique du préfixe du nom
-     * côté client (contrôleur Stimulus « piste-name-sync »).
+     * pour les choix du champ, pour la synchronisation dynamique du préfixe du nom
+     * côté client (contrôleur Stimulus « piste-name-sync ») et pour les mouvements de
+     * police de l'assistant IA (App\Ai\Mouvement\MouvementAvenant::libelle()).
      */
-    private const TYPE_AVENANT_LABELS = [
+    public const TYPE_AVENANT_LABELS = [
         Piste::AVENANT_SOUSCRIPTION   => "Souscription",
         Piste::AVENANT_INCORPORATION  => "Incorporation",
         Piste::AVENANT_PROROGATION    => "Prorogation",

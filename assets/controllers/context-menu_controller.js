@@ -1,4 +1,5 @@
 import { Controller } from '@hotwired/stimulus';
+import { grouperActions } from './actions-groupees.js';
 
 /**
  * @class ContextMenuController
@@ -227,58 +228,134 @@ export default class extends Controller {
         if (actions.length === 0) return;
 
         const selectedId = this.entities[0].id;
-        let separatorInserted = false;
 
-        actions.forEach(action => {
-            // Séparateur interne UNIQUEMENT entre un bloc d'actions inconditionnelles et
-            // les actions conditionnelles. Sans action inconditionnelle en amont
-            // (conteneur encore vide), le séparateur fixe suffit — évite le doublon.
-            if (action.condition && !separatorInserted && this.specificActionsContainerTarget.children.length > 0) {
-                const sep = document.createElement('li');
-                sep.setAttribute('role', 'separator');
-                sep.className = 'separator';
-                this.specificActionsContainerTarget.appendChild(sep);
-                separatorInserted = true;
-            }
-
-            const finalUrl = action.url.includes('%id%') ? action.url.replace('%id%', selectedId) : action.url;
-
-            const li = document.createElement('li');
-            li.setAttribute('role', 'menuitem');
-            li.setAttribute('tabindex', '-1');
-            li.setAttribute('data-action', 'click->context-menu#notify');
-            li.setAttribute('data-context-menu-event-name-param', action.event);
-            li.dataset.url = finalUrl;
-            li.dataset.selection = JSON.stringify(this.entities);
-
-            const iconSpan = document.createElement('span');
-            iconSpan.className = 'context-menu-icon';
-            iconSpan.setAttribute('aria-hidden', 'true');
-            iconSpan.id = `context-menu-icon-${action.icon.replace(':', '--')}-${crypto.randomUUID()}`;
-            li.appendChild(iconSpan);
-
-            const labelSpan = document.createElement('span');
-            labelSpan.className = 'flex-grow-1';
-            labelSpan.textContent = action.label;
-            li.appendChild(labelSpan);
-
-            const shortcutSpan = document.createElement('span');
-            shortcutSpan.className = 'context-menu-shortcut';
-            li.appendChild(shortcutSpan);
-
-            this.specificActionsContainerTarget.appendChild(li);
-
-            // On charge l'icône
-            if (this.iconCache.has(action.icon)) {
-                this.handleIconLoaded({ detail: { html: this.iconCache.get(action.icon), requesterId: iconSpan.id, iconName: action.icon } });
-            } else {
-                this.notifyCerveau('ui:icon.request', {
-                    iconName: action.icon,
-                    iconSize: 18,
-                    requesterId: iconSpan.id
-                });
-            }
+        // REGROUPEMENT PAR FAMILLE (même règle que la barre d'outils, cf.
+        // actions-groupees.js) : une famille devient UN item qui ouvre un sous-menu.
+        // Pas de plafond ici : un menu vertical peut défiler, contrairement à la barre.
+        grouperActions(actions).forEach((entree) => {
+            this.specificActionsContainerTarget.appendChild(
+                entree.type === 'groupe'
+                    ? this._creerItemGroupe(entree, selectedId)
+                    : this._creerItemAction(entree.action, selectedId),
+            );
         });
+    }
+
+    /**
+     * Item d'une action simple : icône + libellé, notifié au cerveau par la
+     * délégation Stimulus historique (data-action / data-url / data-selection).
+     * @private
+     */
+    _creerItemAction(action, selectedId) {
+        const li = document.createElement('li');
+        li.setAttribute('role', 'menuitem');
+        li.setAttribute('tabindex', '-1');
+        li.setAttribute('data-action', 'click->context-menu#notify');
+        li.setAttribute('data-context-menu-event-name-param', action.event);
+        li.dataset.url = action.url && action.url.includes('%id%') ? action.url.replace('%id%', selectedId) : action.url;
+        li.dataset.selection = JSON.stringify(this.entities);
+
+        li.appendChild(this._creerIcone(action.icon));
+
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'flex-grow-1';
+        labelSpan.textContent = action.label;
+        li.appendChild(labelSpan);
+
+        const shortcutSpan = document.createElement('span');
+        shortcutSpan.className = 'context-menu-shortcut';
+        li.appendChild(shortcutSpan);
+
+        return li;
+    }
+
+    /**
+     * Item d'une FAMILLE : un sous-menu qui s'ouvre au survol et au clic, replié à
+     * la sortie. Conforme au pattern WAI-ARIA Menu (aria-haspopup + aria-expanded,
+     * sous-liste role="menu"). Le sous-menu se rabat à GAUCHE quand il déborderait
+     * du viewport — le menu contextuel s'ouvre là où l'utilisateur a cliqué, souvent
+     * près du bord droit.
+     * @private
+     */
+    _creerItemGroupe(groupe, selectedId) {
+        const li = document.createElement('li');
+        li.setAttribute('role', 'menuitem');
+        li.setAttribute('tabindex', '-1');
+        li.setAttribute('aria-haspopup', 'menu');
+        li.setAttribute('aria-expanded', 'false');
+        li.className = 'context-menu-groupe';
+
+        li.appendChild(this._creerIcone(groupe.icon));
+
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'flex-grow-1';
+        labelSpan.textContent = groupe.label;
+        li.appendChild(labelSpan);
+
+        // Chevron « ouvre un sous-menu » : ::after CSS, pour survivre au remplacement
+        // d'innerHTML que fait le circuit d'icônes sur ses conteneurs.
+        const chevron = document.createElement('span');
+        chevron.className = 'context-menu-shortcut context-menu-groupe-chevron';
+        chevron.setAttribute('aria-hidden', 'true');
+        li.appendChild(chevron);
+
+        const sousMenu = document.createElement('ul');
+        sousMenu.className = 'context-submenu';
+        sousMenu.setAttribute('role', 'menu');
+        sousMenu.setAttribute('aria-label', groupe.label);
+
+        groupe.actions.forEach((action) => {
+            sousMenu.appendChild(this._creerItemAction(action, selectedId));
+        });
+        li.appendChild(sousMenu);
+
+        const ouvrir = () => {
+            li.classList.add('is-open');
+            li.setAttribute('aria-expanded', 'true');
+            // Rabat vers la gauche si le sous-menu sortirait de l'écran.
+            const rect = sousMenu.getBoundingClientRect();
+            li.classList.toggle('submenu-left', rect.right > window.innerWidth - 8);
+        };
+        const fermer = () => {
+            li.classList.remove('is-open', 'submenu-left');
+            li.setAttribute('aria-expanded', 'false');
+        };
+
+        li.addEventListener('mouseenter', ouvrir);
+        li.addEventListener('mouseleave', fermer);
+        // Clic sur l'item de famille : bascule (et n'exécute rien — une famille
+        // n'est pas une action). Le clic sur un MEMBRE remonte au handler du menu.
+        li.addEventListener('click', (event) => {
+            if (event.target.closest('.context-submenu')) return;
+            event.stopPropagation();
+            li.classList.contains('is-open') ? fermer() : ouvrir();
+        });
+
+        return li;
+    }
+
+    /**
+     * Conteneur d'icône alimenté par le circuit d'icônes du cerveau (cache d'abord).
+     * @private
+     */
+    _creerIcone(iconName) {
+        const span = document.createElement('span');
+        span.className = 'context-menu-icon';
+        span.setAttribute('aria-hidden', 'true');
+        if (!iconName) return span;
+
+        span.id = `context-menu-icon-${iconName.replace(':', '--')}-${crypto.randomUUID()}`;
+        if (this.iconCache.has(iconName)) {
+            // Différé d'une microtâche : l'élément n'est pas encore dans le document,
+            // et handleIconLoaded le retrouve par getElementById.
+            queueMicrotask(() => this.handleIconLoaded({
+                detail: { html: this.iconCache.get(iconName), requesterId: span.id, iconName },
+            }));
+        } else {
+            this.notifyCerveau('ui:icon.request', { iconName, iconSize: 18, requesterId: span.id });
+        }
+
+        return span;
     }
 
     /**
