@@ -608,6 +608,106 @@ textarea:hover,
     flex-shrink: 0;
 }
 
+/* ============================================================================
+   FAMILLES D'ACTIONS — bouton déroulant de la barre d'outils
+   ----------------------------------------------------------------------------
+   Une famille d'actions tient sur UN bouton (icône + chevron) qui déploie ses
+   membres, libellés cette fois : la barre garde une largeur prévisible quel que
+   soit le nombre d'actions déclarées. Même règle de regroupement que le menu
+   contextuel (actions-groupees.js), présentation différente.
+   ============================================================================ */
+.toolbar-groupe {
+    position: relative;
+    display: inline-flex;
+}
+
+/* Chevron « ce bouton déploie un menu » : pseudo-élément, donc insensible au
+   remplacement d'innerHTML opéré par le circuit d'icônes sur le bouton. */
+.toolbar-groupe-bouton {
+    padding-right: 1.05rem !important;
+}
+.toolbar-groupe-bouton::after {
+    content: "";
+    position: absolute;
+    right: 0.35rem;
+    top: 50%;
+    width: 0;
+    height: 0;
+    border-left: 3.5px solid transparent;
+    border-right: 3.5px solid transparent;
+    border-top: 4px solid #6c757d;
+    transform: translateY(-1px);
+    pointer-events: none;
+}
+.toolbar-groupe-bouton:hover::after,
+.toolbar-groupe-bouton[aria-expanded="true"]::after {
+    border-top-color: #0047AB;
+}
+.toolbar-groupe-bouton[aria-expanded="true"] {
+    background-color: rgba(0, 71, 171, 0.12);
+}
+
+.toolbar-groupe-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 1050;          /* au-dessus de la liste, sous les modales Bootstrap */
+    min-width: 232px;
+    margin: 0;
+    padding: 4px 0;
+    list-style: none;
+    background-color: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14), 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* Rabat à droite quand le bouton est en fin de barre (débordement horizontal). */
+.toolbar-groupe:last-child .toolbar-groupe-menu {
+    left: auto;
+    right: 0;
+}
+
+.toolbar-groupe-menu [role="menuitem"] {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 40px;       /* cible confortable (Opquast / WCAG 2.5.8) */
+    padding: 0.4rem 0.9rem;
+    margin: 1px 4px;
+    border-radius: 4px;
+    color: #212529;
+    font-size: 0.88rem;
+    white-space: nowrap;
+    cursor: pointer;
+    outline: none;
+    transition: background-color 0.12s ease-in-out, color 0.12s ease-in-out;
+}
+.toolbar-groupe-menu [role="menuitem"]:hover,
+.toolbar-groupe-menu [role="menuitem"]:focus {
+    background-color: rgba(0, 71, 171, 0.08);
+    color: #0047AB;
+}
+.toolbar-groupe-menu [role="menuitem"]:focus-visible {
+    outline: 2px solid #0047AB;
+    outline-offset: -2px;
+}
+
+/* Les icônes du menu reprennent la taille du texte, pas celle de la barre :
+   .toolbar-icon (22px) est posée par le circuit d'icônes sur tous les SVG. */
+.toolbar-groupe-menu-icone {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: #495057;
+}
+.toolbar-groupe-menu-icone .toolbar-icon {
+    width: 18px;
+    height: 18px;
+}
+.toolbar-groupe-menu [role="menuitem"]:hover .toolbar-groupe-menu-icone {
+    color: #0047AB;
+}
+
 /* --- Icônes SVG dans les boutons toolbar --- */
 .toolbar-icon {
     width: 22px;
@@ -712,6 +812,61 @@ textarea:hover,
     margin: 4px 0;
     padding: 0;
     cursor: default;
+}
+
+/* ============================================================================
+   FAMILLES D'ACTIONS — sous-menu du menu contextuel
+   ----------------------------------------------------------------------------
+   Une famille d'actions (les mouvements d'une police, par exemple) tient sur UN
+   item qui déploie ses membres : le menu garde une hauteur lisible quel que soit
+   le nombre d'actions déclarées par la rubrique. Pattern WAI-ARIA Menu — l'item
+   porte aria-haspopup/aria-expanded, la sous-liste role="menu".
+   ============================================================================ */
+.context-menu .context-menu-groupe {
+    position: relative;
+}
+
+/* Chevron « ouvre un sous-menu » : pseudo-élément, donc insensible au
+   remplacement d'innerHTML opéré par le circuit d'icônes. */
+.context-menu .context-menu-groupe-chevron::after {
+    content: "›";
+    font-size: 1.1rem;
+    line-height: 1;
+    opacity: 0.7;
+}
+
+.context-menu .context-submenu {
+    display: none;
+    position: absolute;
+    top: -5px;
+    left: 100%;
+    margin-left: 2px;
+    min-width: 220px;
+    background-color: #1e2227;
+    border: 1px solid #3d4349;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2);
+    padding: 4px 0;
+    z-index: 1;
+}
+
+.context-menu .context-menu-groupe.is-open > .context-submenu {
+    display: block;
+}
+
+/* Rabat à gauche : le menu contextuel s'ouvre au pointeur, souvent près du bord. */
+.context-menu .context-menu-groupe.submenu-left > .context-submenu {
+    left: auto;
+    right: 100%;
+    margin-left: 0;
+    margin-right: 2px;
+}
+
+/* L'item de famille garde le fond cobalt tant que son sous-menu est déployé :
+   sans cela, le survol d'un membre « éteint » le parent et le chemin se perd. */
+.context-menu .context-menu-groupe.is-open {
+    background-color: #0047AB;
+    color: #ffffff;
 }
 
 /* --- Wrapper pour les actions spécifiques injectées (li > ul) --- */

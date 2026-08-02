@@ -1,0 +1,65 @@
+{#
+    APERÇU d'un mouvement de police : ce que la validation écrira réellement.
+
+    Rendu à l'ouverture du picker ET re-rendu par le serveur à chaque changement de
+    durée ou de date (le contrôleur Stimulus remplace ce fragment). Le markup ne vit
+    donc qu'ICI : le JS ne fabrique aucun libellé, il ne fait que substituer le bloc.
+
+    `apercu` provient de AvenantController::apercuMouvement(), lui-même alimenté par
+    MouvementAvenantBuilder — la même source que la réponse de l'assistant.
+#}
+{% if apercu.bloquant is defined %}
+    <p class="jsb-picker-empty text-danger" role="alert">{{ apercu.bloquant }}</p>
+{% elseif not (apercu.pret ?? false) %}
+    <p class="jsb-picker-empty" role="status">
+        {{ apercu.question ?? "Renseignez l'information demandée pour voir l'aperçu." }}
+    </p>
+{% else %}
+    <dl class="row mb-2" style="font-size:.86rem;">
+        <dt class="col-5 fw-semibold text-muted">Nouvelle période</dt>
+        <dd class="col-7 mb-1">{{ apercu.debut|date('d/m/Y') }} → {{ apercu.fin|date('d/m/Y') }}</dd>
+
+        <dt class="col-5 fw-semibold text-muted">Numéro d'avenant</dt>
+        <dd class="col-7 mb-1">{{ apercu.numero ?? '—' }}</dd>
+
+        <dt class="col-5 fw-semibold text-muted">Éléments repris</dt>
+        <dd class="col-7 mb-1">
+            {% set repris = [] %}
+            {% if apercu.reconduit.chargements > 0 %}{% set repris = repris|merge(['%d composante(s) de prime'|format(apercu.reconduit.chargements)]) %}{% endif %}
+            {% if apercu.reconduit.tranches > 0 %}{% set repris = repris|merge(['%d tranche(s)'|format(apercu.reconduit.tranches)]) %}{% endif %}
+            {% if apercu.reconduit.revenus > 0 %}{% set repris = repris|merge(['%d revenu(s)'|format(apercu.reconduit.revenus)]) %}{% endif %}
+            {% if apercu.reconduit.partenaires > 0 %}{% set repris = repris|merge(['%d partenaire(s)'|format(apercu.reconduit.partenaires)]) %}{% endif %}
+            {% if apercu.reconduit.conditions > 0 %}{% set repris = repris|merge(['%d condition(s) de partage'|format(apercu.reconduit.conditions)]) %}{% endif %}
+            {% if apercu.reconduit.tacheDeSuivi > 0 %}{% set repris = repris|merge(['1 tâche de suivi du paiement']) %}{% endif %}
+            {{ repris is empty ? 'Aucun (acte seul)' : repris|join(' · ') }}
+        </dd>
+    </dl>
+
+    <ul class="list-unstyled mb-0" style="font-size:.82rem;">
+        {% for defaut in apercu.defauts %}
+            <li class="d-flex gap-2 mb-1">
+                <span aria-hidden="true" style="color:#0047AB;">•</span>
+                <span class="text-muted">{{ defaut }}</span>
+            </li>
+        {% endfor %}
+    </ul>
+
+    {% if apercu.ecarts is not empty %}
+        <p class="mt-2 mb-0 fw-semibold" style="font-size:.82rem; color:#0d2440;">Écarts par rapport à la police de base</p>
+        <ul class="list-unstyled mb-0" style="font-size:.82rem;">
+            {% for ecart in apercu.ecarts %}
+                <li class="text-muted">— {{ ecart }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    {% if apercu.avertissements is not empty %}
+        <div class="alert alert-warning mt-2 mb-0 py-2 px-3" role="alert" style="font-size:.82rem;">
+            <ul class="list-unstyled mb-0">
+                {% for avertissement in apercu.avertissements %}
+                    <li>{{ avertissement }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+{% endif %}

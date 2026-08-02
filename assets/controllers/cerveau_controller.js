@@ -502,6 +502,12 @@ export default class extends Controller {
             case 'ui:avenant.delete-piste-derivee':
                 this.handleAvenantDeletePisteDerivee(payload);
                 break;
+            case 'ui:avenant.mouvement-request': // renouveler / proroger / annuler / résilier une police
+                this.handleAvenantMouvementRequest(payload);
+                break;
+            case 'avenant:mouvement.enregistre': // succès d'un mouvement via le picker
+                this._handleAvenantMouvementEnregistre(payload);
+                break;
             case 'ui:client.portefeuille-picker-request':
                 this.handleClientPortefeuillePickerRequest(payload);
                 break;
@@ -1507,6 +1513,38 @@ export default class extends Controller {
             controllerName: 'soa-envoi-picker',
             errorLabel: "l'envoi du relevé de compte",
         });
+    }
+
+    /**
+     * Ouvre la boîte de MOUVEMENT d'une police : renouvellement, prorogation,
+     * annulation ou résiliation (rubrique Avenants — barre d'outils ou clic droit).
+     * Le mouvement est porté par l'URL de l'action ; le contrôleur Stimulus
+     * « mouvement-picker » s'auto-connecte à l'insertion (cf. _openStandalonePicker).
+     *
+     * PARITÉ ASSISTANT : le picker n'invente rien — période dérivée, prime au prorata
+     * et liste de ce qui est reconduit viennent du serveur, du même builder que Ket.
+     * @param {object} payload
+     * @param {string} payload.url - '/admin/avenant/api/mouvement-picker/{mouvement}/{id}'
+     */
+    async handleAvenantMouvementRequest(payload) {
+        await this._openStandalonePicker(payload.url, {
+            controllerName: 'mouvement-picker',
+            errorLabel: 'le mouvement de la police',
+        });
+    }
+
+    /**
+     * Mouvement enregistré : notification + rafraîchissement de la liste active.
+     * Le refresh est ce qui fait disparaître les actions de mouvement de la police
+     * traitée (hasPisteDerivee bascule) et met à jour son statut affiché.
+     * @private
+     */
+    _handleAvenantMouvementEnregistre(payload) {
+        this._showNotification(payload.message || 'Mouvement enregistré.', 'success');
+        const etat = this._getActiveTabState();
+        this._publishSelectionStatus('Actualisation de la liste...');
+        this.broadcast('app:loading.start', { originatorId: etat.elementId, workspaceTabId: this.currentWorkspaceTabId });
+        this._requestListRefresh(this.getActiveTabId());
     }
 
     /**
