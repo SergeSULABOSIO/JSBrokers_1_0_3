@@ -18,6 +18,11 @@
     {% endif %}
 {% endfor %}
 {% set groupeDefaut = countEchus > 0 ? 'echus' : 'j30' %}
+{# Collection SÉPARÉE : les non renouvelables ne sont pas dans `renouvellements` (le pipeline
+   les écarte) et ne doivent pas gonfler les seaux d'urgence. Leur onglet n'est JAMAIS le
+   défaut : c'est une archive de décisions, pas un travail à faire. #}
+{% set nonRenouvelables = nonRenouvelables|default([]) %}
+{% set countNonRenouv = nonRenouvelables|length %}
 
 <div class="px-3 pt-2 pb-2 bg-white">
         <div class="d-flex align-items-center gap-2">
@@ -26,6 +31,9 @@
                 <button class="db-task-toggle{{ groupeDefaut == 'j30' ? ' active' : '' }}"   data-mode="j30"     onclick="dbRenewToggle(this)" aria-pressed="{{ groupeDefaut == 'j30' ? 'true' : 'false' }}">≤ 30 jrs ({{ countJ30 }})</button>
                 <button class="db-task-toggle"        data-mode="j60"     onclick="dbRenewToggle(this)" aria-pressed="false">31-60 jrs ({{ countJ60 }})</button>
                 <button class="db-task-toggle"        data-mode="j61plus" onclick="dbRenewToggle(this)" aria-pressed="false">61+ jrs ({{ countJ61plus }})</button>
+                {# Onglet des DÉCISIONS. Rendu même à zéro, pour que le groupe existe visiblement
+                   et que personne ne cherche où sont passées les polices écartées. #}
+                <button class="db-task-toggle"        data-mode="nonrenouv" onclick="dbRenewToggle(this)" aria-pressed="false">Non renouv. ({{ countNonRenouv }})</button>
             </div>
             <div class="ms-auto input-group input-group-sm flex-shrink-0" role="search" style="max-width:130px;">
                 <span class="input-group-text border-0 bg-light px-2">
@@ -44,6 +52,7 @@
          data-renewals-url="/admin/entreprise_dashbord/renewals-fragment/{{ entreprise.id }}">
         {% include 'components/dashboard/_renewals_list.html.twig' with {
             'renouvellements': renouvellements,
+            'nonRenouvelables': nonRenouvelables,
             'entreprise': entreprise,
             'deviseCode': deviseCode
         } %}
@@ -68,8 +77,10 @@
                 <twig:UX:Icon name="mdi:calendar-remove" style="width:16px;height:16px;" />
             </span>
             {# Ouvre le MÊME picker que la rubrique Avenants : motif obligatoire, aperçu de
-               ce qui reste à recouvrer, gardes serveur identiques (cf. dbRenewCtxNoRenewal). #}
-            <span class="flex-grow-1">Signaler&nbsp;: à ne pas renouveler</span>
+               ce qui reste à recouvrer, gardes serveur identiques (cf. dbRenewCtxNoRenewal).
+               Libellé posé à l'ouverture selon l'état réel de la ligne — « Rétablir » sur une
+               police déjà signalée, comme le fait déjà l'entrée « piste » au-dessus. #}
+            <span class="flex-grow-1" id="dbRenewCtxNoRenewalLabel">Signaler&nbsp;: à ne pas renouveler</span>
         </li>
     </ul>
 </nav>

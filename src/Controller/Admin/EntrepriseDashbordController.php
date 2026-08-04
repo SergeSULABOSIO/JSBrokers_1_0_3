@@ -243,6 +243,10 @@ class EntrepriseDashbordController extends AbstractController
         return $this->render('components/dashboard/_renewals.html.twig', [
             'entreprise'      => $entreprise,
             'renouvellements' => $provider->getAllRenouvellements($entreprise),
+            // Collection SÉPARÉE, et non fusionnée : les non renouvelables ne réclament aucune
+            // action et ne doivent pas gonfler les seaux d'urgence. Elles forment leur propre
+            // onglet, comme leur propre chip dans la rubrique.
+            'nonRenouvelables' => $provider->getAvenantsNonRenouvelables($entreprise),
             'deviseCode'      => $serviceMonnaies->getCodeMonnaieAffichage() ?? '€',
         ]);
     }
@@ -255,6 +259,7 @@ class EntrepriseDashbordController extends AbstractController
         return $this->render('components/dashboard/_renewals_list.html.twig', [
             'entreprise'      => $entreprise,
             'renouvellements' => $provider->getAllRenouvellements($entreprise),
+            'nonRenouvelables' => $provider->getAvenantsNonRenouvelables($entreprise),
             'deviseCode'      => $serviceMonnaies->getCodeMonnaieAffichage() ?? '€',
         ]);
     }

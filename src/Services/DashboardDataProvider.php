@@ -194,6 +194,53 @@ class DashboardDataProvider
         return $avenants;
     }
 
+    /**
+     * LES POLICES QUE LE COURTIER A SIGNALÉES NON RENOUVELABLES — le pendant exact de
+     * getAllRenouvellements(), qui les écarte.
+     *
+     * AUCUNE BORNE DE DATE, volontairement : ce groupe rassemble un ÉTAT, pas une fenêtre. Une
+     * décision peut être posée des mois avant l'échéance, et c'est justement celle-là qu'il
+     * faut pouvoir revoir — pour l'auditer, ou la lever si elle est devenue fausse.
+     *
+     * Le tableau de bord et le chip « Non renouvelables » de la rubrique lisent la MÊME
+     * condition (Avenant::$nonRenouvelable) : ils ne peuvent donc pas se contredire. Même
+     * jointure que ci-dessus, LEFT sur l'assureur incluse — Cotation::assureur est nullable, et
+     * un INNER JOIN rendrait ces polices invisibles ici alors que la rubrique les affiche.
+     *
+     * @return Avenant[]
+     */
+    public function getAvenantsNonRenouvelables(Entreprise $entreprise, ?Invite $portefeuilleDe = null): array
+    {
+        $perimetre = $portefeuilleDe !== null ? ' AND pfg.id = :pfInvite' : '';
+
+        $query = $this->em->createQuery(
+            'SELECT a, c, ass, p, cl, r, pdr, pf, pfg FROM App\Entity\Avenant a
+             JOIN a.cotation c
+             LEFT JOIN c.assureur ass
+             LEFT JOIN c.piste p
+             LEFT JOIN p.client cl
+             LEFT JOIN cl.portefeuille pf
+             LEFT JOIN pf.gestionnaire pfg
+             LEFT JOIN p.risque r
+             LEFT JOIN a.pisteDeRenouvellement pdr
+             WHERE a.entreprise = :e
+               AND a.nonRenouvelable = true' . $perimetre . '
+             ORDER BY a.endingAt ASC'
+        )->setParameter('e', $entreprise);
+
+        if ($portefeuilleDe !== null) {
+            $query->setParameter('pfInvite', $portefeuilleDe->getId());
+        }
+
+        $avenants = $query->getResult();
+
+        foreach ($avenants as $avenant) {
+            $this->canvasBuilder->loadAllCalculatedValues($avenant);
+        }
+
+        return $avenants;
+    }
+
     public function getProductionParMois(Entreprise $entreprise, \DateTimeImmutable $debut, \DateTimeImmutable $fin): array
     {
         $paiements = $this->em->createQuery(

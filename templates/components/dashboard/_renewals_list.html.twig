@@ -21,10 +21,20 @@
 {% endfor %}
 
 {# Seau ouvert par défaut : les ÉCHUES d'abord quand il y en a — même logique que le
-   chip par défaut dynamique de la rubrique (ControllerUtilsTrait::getInitialSearchCriteria). #}
+   chip par défaut dynamique de la rubrique (ControllerUtilsTrait::getInitialSearchCriteria).
+   Le groupe des décisions n'est JAMAIS le défaut : c'est une archive, pas un travail à faire. #}
 {% set groupeDefaut = countEchus > 0 ? 'echus' : 'j30' %}
 
-{% if renouvellements|length > 0 %}
+{# Les non renouvelables arrivent dans une collection SÉPARÉE (le pipeline les écarte de
+   `renouvellements`), mais on les FUSIONNE pour la boucle de rendu : une ligne du tableau de
+   bord porte une centaine de lignes de markup, dont son menu contextuel — la dupliquer aurait
+   garanti qu'un des deux exemplaires prenne du retard sur l'autre. Le groupe se décide
+   ci-dessous sur `avenant.nonRenouvelable`, pas sur la provenance. #}
+{% set nonRenouvelables = nonRenouvelables|default([]) %}
+{% set countNonRenouv = nonRenouvelables|length %}
+{% set _toutes = renouvellements|merge(nonRenouvelables) %}
+
+{% if _toutes|length > 0 %}
     {% if countEchus == 0 %}
     <p class="db-renew-item text-muted small px-2 py-4 text-center" data-group="echus"{% if groupeDefaut != 'echus' %} style="display:none;"{% endif %}>
         <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
@@ -49,10 +59,21 @@
         Aucun renouvellement au-delà de 60 jours.
     </p>
     {% endif %}
+    {% if countNonRenouv == 0 %}
+    <p class="db-renew-item text-muted small px-2 py-4 text-center" data-group="nonrenouv" style="display:none;">
+        <twig:UX:Icon name="mdi:calendar-remove" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucune police signalée « à ne pas renouveler ».
+    </p>
+    {% endif %}
 
-    {% for avenant in renouvellements %}
+    {% for avenant in _toutes %}
         {% set _diff = ((avenant.endingAt|date('Y-m-d')|date('U') - _now) / 86400)|round %}
-        {% if _diff < 0 %}
+        {# La DÉCISION prime sur la date : une police signalée non renouvelable n'est pas en
+           retard, et son onglet ne dépend pas de son échéance. Gris neutre, jamais de rouge. #}
+        {% if avenant.nonRenouvelable %}
+            {% set group = 'nonrenouv' %}
+            {% set urgencyColor = '#6c757d' %}
+        {% elseif _diff < 0 %}
             {% set group = 'echus' %}
             {# --danger-dark : plus grave que le rouge « critique » des 30 jours. #}
             {% set urgencyColor = '#842029' %}
@@ -80,6 +101,9 @@
                  data-avenant-id="{{ avenant.id }}"
                  data-entreprise-id="{{ entreprise.id }}"
                  data-piste-id="{{ avenant.pisteDeRenouvellement ? avenant.pisteDeRenouvellement.id : '' }}"
+                 {# Lu par dbRenewCtxOpen : le menu contextuel propose « Signaler » ou
+                    « Rétablir » selon l'état réel, jamais l'action impossible. #}
+                 data-non-renouvelable="{{ avenant.nonRenouvelable ? '1' : '0' }}"
                  oncontextmenu="dbRenewCtxOpen(event,this)"
                  {% if group != groupeDefaut %}style="display:none;"{% endif %}>
             <summary class="d-flex align-items-center gap-2 py-2 px-1">
@@ -118,14 +142,26 @@
                 </span>
                 <span class="badge rounded-pill db-renew-badge"
                       style="background:{{ urgencyColor }};color:#fff;flex-shrink:0;">
-                    {# Jamais de nombre NÉGATIF : pour une échue on nomme le retard. #}
-                    {% if _diff < 0 %}Expiré depuis {{ -_diff }} j{% else %}{{ _diff }}j{% endif %}
+                    {# Jamais de nombre NÉGATIF : pour une échue on nomme le retard. Pour une
+                       police signalée, on nomme la DÉCISION — annoncer un retard sur une
+                       échéance qu'on a choisi de ne pas honorer serait un contresens. #}
+                    {% if avenant.nonRenouvelable %}Non renouv.{% elseif _diff < 0 %}Expiré depuis {{ -_diff }} j{% else %}{{ _diff }}j{% endif %}
                 </span>
                 <twig:UX:Icon name="mdi:chevron-down" class="db-ass-chevron"
                               style="width:14px;height:14px;color:#6c757d;" />
             </summary>
 
             <div class="px-2 py-2 bg-light rounded-bottom" style="font-size:.73rem;">
+                {# LA DÉCISION EN TÊTE DU DÉTAIL, avec son motif : c'est la note écrite pour
+                   celui qui rouvre le dossier, et elle doit être la première chose qu'il lit.
+                   Source unique avec la liste et la fiche : l'indicateur nonRenouvelableDetail. #}
+                {% if avenant.nonRenouvelableDetail %}
+                <div class="mb-2 px-2 py-1 rounded" role="note"
+                     style="background:#fff8e6;border-left:3px solid #e69500;color:#7a4f00;">
+                    <twig:UX:Icon name="mdi:calendar-remove" style="width:11px;height:11px;" class="me-1" />
+                    {{ avenant.nonRenouvelableDetail }}
+                </div>
+                {% endif %}
                 <div class="mb-2">
                     {% if avenant.cotation.piste %}
                         <span style="color:#212529;">

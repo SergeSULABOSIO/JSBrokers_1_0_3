@@ -189,16 +189,28 @@ class JSBDynamicSearchService
                         $countQb->andWhere('e_count.endingAt < :echMax_count')->setParameter('echMax_count', $bornes['max']);
                     }
 
-                    // PIPELINE DE RENOUVELLEMENT : une police dont le sort est SCELLÉ n'a plus
-                    // rien à réclamer et sort des QUATRE fenêtres. Reprise par un avenant
-                    // successeur, la couverture continue sous lui — l'assuré EST couvert, la
-                    // finalité est atteinte ; résiliée, la décision est prise ; SIGNALÉE NON
-                    // RENOUVELABLE, le courtier a tranché. Restent celles qui appellent une
-                    // action : renouvellement amorcé sans avenant, ou aucune suite. Règle et
-                    // prédicat : AvenantSuccessionScope (sa face PHP sert le badge de ligne et
-                    // les indicateurs). Appliqué aux DEUX requêtes : un comptage qui ne filtre
+                    // DEUX RÔLES OPPOSÉS POUR UN MÊME CRITÈRE.
+                    //
+                    // Les QUATRE fenêtres de dates APPLIQUENT la règle du pipeline : une police
+                    // dont le sort est SCELLÉ n'a plus rien à réclamer et en sort. Reprise par
+                    // un avenant successeur, la couverture continue sous lui — l'assuré EST
+                    // couvert, la finalité est atteinte ; résiliée, la décision est prise ;
+                    // signalée non renouvelable, le courtier a tranché. Restent celles qui
+                    // appellent une action : renouvellement amorcé sans avenant, ou aucune suite.
+                    //
+                    // Le groupe « Non renouvelables » l'INVERSE : il rassemble précisément ce
+                    // que les autres écartent. Lui appliquer l'exclusion le rendrait VIDE par
+                    // construction — et cette page vide n'aurait dit à personne qu'il ne
+                    // s'agissait pas d'une absence de données.
+                    //
+                    // Dans les deux cas, appliqué aux DEUX requêtes : un comptage qui ne filtre
                     // pas comme la liste fait mentir la pagination.
+                    $etatNonRenouvelable = AvenantEcheanceScope::estEtatNonRenouvelable($statutEcheance);
                     foreach ([[$qb, 'e', ''], [$countQb, 'e_count', '_count']] as [$builder, $alias, $suffixe]) {
+                        if ($etatNonRenouvelable) {
+                            $builder->andWhere(sprintf('%s.nonRenouvelable = true', $alias));
+                            continue;
+                        }
                         $builder
                             ->andWhere(AvenantSuccessionScope::predicatSortNonScelle($this->em, $alias, $suffixe))
                             ->setParameter(
@@ -207,7 +219,9 @@ class JSBDynamicSearchService
                             );
                     }
 
-                    // Tri par urgence : échéance la plus proche (ou le retard le plus ancien) en tête.
+                    // Tri par urgence : échéance la plus proche (ou le retard le plus ancien) en
+                    // tête. Vaut aussi pour les non renouvelables : à défaut d'urgence, l'ordre
+                    // chronologique reste le plus lisible.
                     $qb->orderBy('e.endingAt', 'ASC');
                     $qb->setFirstResult(($page - 1) * $limit)->setMaxResults($limit);
                     $results = $qb->getQuery()->getResult();
