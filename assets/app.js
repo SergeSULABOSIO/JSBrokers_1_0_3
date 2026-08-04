@@ -266,17 +266,28 @@ export function saveCookie(nom, valeur) {
 
 // ── Renouvellements à venir (toggles + recherche + menu contextuel) ──────────
 (function () {
-    var _activeRenewMode = 'j30';
+    // null = pas encore de choix de l'utilisateur : le seau ouvert est celui que le
+    // SERVEUR a rendu actif (« Échues » quand il y en a). Une valeur codée en dur ici
+    // écrasait ce défaut au premier rafraîchissement du fragment et masquait les
+    // polices échues que le serveur venait d'afficher.
+    var _activeRenewMode = null;
     var _el  = null;
     var _aid = null;
     var _eid = null;
     var _pid = null;
 
+    function dbRenewActiveMode() {
+        if (_activeRenewMode !== null) return _activeRenewMode;
+        var actif = document.querySelector('#dbRenewToggleBar .db-task-toggle.active');
+        return actif ? actif.dataset.mode : 'j30';
+    }
+
     function dbRenewApplyFilter() {
         var searchInput = document.querySelector('[aria-label="Filtrer les renouvellements"]');
         var q = searchInput ? searchInput.value.toLowerCase() : '';
+        var mode = dbRenewActiveMode();
         document.querySelectorAll('.db-renew-item').forEach(function (el) {
-            var matchMode   = el.dataset.group === _activeRenewMode;
+            var matchMode   = el.dataset.group === mode;
             var matchSearch = !q || (el.dataset.searchText || '').indexOf(q) >= 0;
             el.style.display = (matchMode && matchSearch) ? '' : 'none';
         });

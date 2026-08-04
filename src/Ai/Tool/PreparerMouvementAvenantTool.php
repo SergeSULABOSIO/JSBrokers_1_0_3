@@ -8,6 +8,7 @@ use App\Ai\Scope\AiScope;
 use App\Entity\Avenant;
 use App\Services\AvenantRenouvellementResolver;
 use App\Services\JSBDynamicSearchService;
+use App\Services\Search\AvenantSuccessionScope;
 
 /**
  * Outil DÉDIÉ aux quatre MOUVEMENTS d'une police existante : renouvellement,
@@ -136,6 +137,16 @@ final class PreparerMouvementAvenantTool implements AiToolInterface
                     'description' => 'Ne mets true QUE si un plan attend déjà une décision ET que l\'utilisateur '
                         . 'demande de le CHANGER : le plan en attente sera annulé et remplacé.',
                 ],
+                'abandonnerMouvementExistant' => [
+                    'type' => 'boolean',
+                    'description' => 'ABANDON d\'un mouvement amorcé. Ne mets true QUE si l\'outil t\'a déjà '
+                        . 'répondu « mouvementAmorce » ET que l\'utilisateur a explicitement demandé de repartir '
+                        . 'de zéro (« abandonne ce renouvellement », « supprime cette opportunité », « recommence »). '
+                        . 'Prépare alors un plan de SUPPRESSION de l\'opportunité dérivée — la police de base est '
+                        . 'conservée, ses quatre mouvements redeviennent disponibles. Le plan est soumis à '
+                        . 'validation et au mot de passe, comme toute suppression. Ne le mets JAMAIS de ta propre '
+                        . 'initiative : c\'est une destruction de données.',
+                ],
             ],
             'required' => ['mouvement'],
         ];
@@ -149,21 +160,36 @@ final class PreparerMouvementAvenantTool implements AiToolInterface
 
     public function execute(array $args, AiScope $scope): AiToolResult
     {
+        // AUCUNE SORTIE SANS CONSIGNE DE CONDUITE. Un « INTROUVABLE » nu ne dit au modèle
+        // que ce qui manque, jamais ce qu'il doit faire : livré seul, il laissait la porte
+        // ouverte à l'improvisation (excuses, promesse de rappeler l'outil, voire plan
+        // inventé). Chaque refus de cet outil porte donc sa note, comme les autres.
         $mouvement = MouvementAvenant::depuis((string) ($args['mouvement'] ?? ''));
         if ($mouvement === null) {
-            return AiToolResult::introuvable(sprintf(
-                'mouvement de police (valeurs acceptées : %s)',
-                implode(', ', MouvementAvenant::valeurs()),
-            ));
+            return AiToolResult::ok([
+                'pret'     => false,
+                'bloquant' => sprintf(
+                    'Mouvement inconnu. Valeurs acceptées : %s.',
+                    implode(', ', MouvementAvenant::valeurs()),
+                ),
+                'note'     => 'Rappelle cet outil AVEC l’une des valeurs acceptées, dans ce même tour. '
+                    . 'Ne présente aucun plan et n’annonce aucun bouton.',
+            ]);
         }
 
         // Police résolue STRICTEMENT dans l'entreprise du scope (fail-closed).
         $candidats = $this->candidats($args, $scope);
         if ($candidats === []) {
-            return AiToolResult::introuvable(sprintf(
-                'police %s',
-                isset($args['police']) ? '« ' . trim((string) $args['police']) . ' »' : '#' . (int) ($args['avenantId'] ?? 0),
-            ));
+            return AiToolResult::ok([
+                'pret'     => false,
+                'bloquant' => sprintf(
+                    'Aucune police %s dans cet espace de travail.',
+                    isset($args['police']) ? '« ' . trim((string) $args['police']) . ' »' : '#' . (int) ($args['avenantId'] ?? 0),
+                ),
+                'note'     => 'Dis-le en UNE phrase et demande la référence exacte (ou retrouve-la avec '
+                    . 'rechercher_entites entite=Avenant). Ne présente AUCUN plan, n’annonce AUCUN bouton '
+                    . 'et n’invoque aucune panne technique.',
+            ]);
         }
         if (count($candidats) > 1) {
             return AiToolResult::ok([
@@ -180,25 +206,9 @@ final class PreparerMouvementAvenantTool implements AiToolInterface
         // Idempotence : une police ne porte qu'un mouvement à la fois. Sans cette
         // garde, redemander « renouvelle-la » créerait un second jeu d'écritures.
         if ($base->getPisteDeRenouvellement() !== null) {
-            // On ne dit pas seulement QU'un mouvement existe, on dit ce que la police
-            // est DEVENUE : « déjà renouvelée par l'avenant #120 » plutôt que « porte
-            // une opportunité dérivée ». Sans ce fait, l'assistante décrivait le
-            // mouvement comme simplement « initié » et laissait croire la police
-            // encore à renouveler.
-            $suite = $this->renouvellementResolver->resoudre($base);
-
-            return AiToolResult::ok([
-                'pret'         => false,
-                'dejaTraite'   => true,
-                'police'       => $base->getReferencePolice(),
-                'mouvementExistant' => $base->getPisteDeRenouvellement()->getNom(),
-                'statutRenouvellement' => $suite['statut'],
-                'suiteDeLaPolice' => $suite['phrase'],
-                'note'         => 'Cette police porte DÉJÀ un mouvement enregistré. Ne prépare AUCUN plan et '
-                    . 'n’affiche aucun bouton. Dis à l’utilisateur ce que la police est DEVENUE, en reprenant '
-                    . '« suiteDeLaPolice » : si un avenant lui succède, NOMME-le (numéro et période) ; si le '
-                    . 'mouvement est amorcé sans avenant, dis-le tel quel. Propose d’ouvrir la fiche pour modifier.',
-            ]);
+            return ($args['abandonnerMouvementExistant'] ?? false) === true
+                ? $this->planDAbandon($base, $args, $scope)
+                : $this->mouvementDejaEnCours($base);
         }
 
         $decalque = $this->builder->construire($mouvement, $base, $args, $scope);
@@ -230,7 +240,15 @@ final class PreparerMouvementAvenantTool implements AiToolInterface
             'remplacerPlanEnAttente' => ($args['remplacerPlanEnAttente'] ?? false) === true,
         ], $scope);
 
-        if ($resultat->status !== AiToolResult::STATUS_OK) {
+        // LE REFUS DU MOTEUR PASSE AVANT TOUT, ET SEUL. Ses refus (informations
+        // manquantes, blocages, verrou « un seul plan en attente ») sont des STATUS_OK
+        // porteurs de « pret: false » : ne tester que le statut les laissait filer, et le
+        // bloc ci-dessous leur agrafait une « consigne : Présente le plan et le budget »
+        // en CONTRADICTION FRONTALE avec leur propre note « n'affiche AUCUN tableau de
+        // plan », défauts et écarts à l'appui. Le modèle, recevant les deux ordres et la
+        // matière d'un plan, rédigeait un plan en prose — sans bouton, puisque aucune
+        // uiAction ne l'accompagnait. C'est le « plan fantôme » vu par l'utilisateur.
+        if ($resultat->status !== AiToolResult::STATUS_OK || ($resultat->data['pret'] ?? false) !== true) {
             return $resultat;
         }
 
@@ -257,6 +275,160 @@ final class PreparerMouvementAvenantTool implements AiToolInterface
         ];
 
         return AiToolResult::ok($data, $resultat->uiAction);
+    }
+
+    /**
+     * ABANDONNER UN MOUVEMENT AMORCÉ : la seule façon de rouvrir une police bloquée.
+     *
+     * On ne supprime rien ici : on PRÉPARE un plan de suppression de l'opportunité
+     * dérivée, soumis au même circuit que toute écriture — revue, validation
+     * explicite, et mot de passe puisque le plan contient une suppression. La police
+     * de base est CONSERVÉE : le moteur coupe le lien `Piste::avenantDeBase` avant de
+     * supprimer (cf. LiensProteges), faute de quoi la cascade Doctrine emporterait la
+     * police elle-même.
+     *
+     * REFUS quand le sort est SCELLÉ : un avenant successeur a été émis, la couverture
+     * repose sur lui. Supprimer l'opportunité détruirait une police vivante — jamais
+     * par ce chemin.
+     */
+    private function planDAbandon(Avenant $base, array $args, AiScope $scope): AiToolResult
+    {
+        $derivee = $base->getPisteDeRenouvellement();
+        $suite = $this->renouvellementResolver->resoudre($base);
+
+        if (AvenantSuccessionScope::estScelle($suite['code'])) {
+            return AiToolResult::ok([
+                'pret'     => false,
+                'bloquant' => sprintf(
+                    'Le sort de cette police est SCELLÉ (%s) : son opportunité dérivée porte une suite réelle. '
+                    . 'L’abandonner détruirait une police vivante — cet outil ne le fera pas.',
+                    $suite['statut'],
+                ),
+                'note'     => 'Explique-le en une phrase. Ne prépare AUCUN plan. Si l’utilisateur veut vraiment '
+                    . 'défaire cette suite, il doit passer par la fiche, où chaque suppression est confirmée '
+                    . 'séparément.',
+            ]);
+        }
+
+        $resultat = $this->preparer->execute([
+            'operations' => [[
+                'op'     => 'delete',
+                'entite' => 'Piste',
+                'id'     => $derivee->getId(),
+            ]],
+            'remplacerPlanEnAttente' => ($args['remplacerPlanEnAttente'] ?? false) === true,
+        ], $scope);
+
+        if ($resultat->status !== AiToolResult::STATUS_OK || ($resultat->data['pret'] ?? false) !== true) {
+            return $resultat;
+        }
+
+        return AiToolResult::ok($resultat->data + [
+            'abandon'      => true,
+            'police'       => $base->getReferencePolice(),
+            'pisteDeriveeId' => $derivee->getId(),
+            'consigne'     => 'C’est un plan de SUPPRESSION. AVANT toute autre chose, préviens l’utilisateur en '
+                . 'clair : nomme l’opportunité dérivée qui disparaîtra, ÉNONCE les « impacts » du plan (ce que la '
+                . 'cascade emporte : propositions, échéanciers, paiements déclarés…), et dis que c’est '
+                . 'IRRÉVERSIBLE et que son mot de passe lui sera demandé. Précise aussi ce qui est CONSERVÉ : la '
+                . 'police « ' . $base->getReferencePolice() . ' » elle-même, qui retrouvera ses quatre mouvements '
+                . 'une fois le plan exécuté. N’enjolive pas et ne minimise pas la portée.',
+        ], $resultat->uiAction);
+    }
+
+    /**
+     * LA POLICE PORTE DÉJÀ UN MOUVEMENT — MAIS CE N'EST PAS LA MÊME CHOSE SELON QU'IL EST
+     * ABOUTI OU EN PLAN.
+     *
+     * Cette garde d'idempotence est nécessaire (sans elle, redemander « renouvelle-la »
+     * créerait un second jeu d'écritures), mais elle était une IMPASSE SANS SORTIE : elle
+     * refusait à vie, sans jamais dire ce qu'il restait à faire. Une police dont le
+     * renouvellement était AMORCÉ — opportunité dérivée créée, mais aucun avenant émis —
+     * ne pouvait plus être renouvelée par l'assistant, et la rubrique lui retirait ses
+     * quatre boutons de mouvement (condition « hasPisteDerivee: false »). L'utilisateur
+     * redemandait donc le renouvellement, encore et encore, et aucun bouton n'apparaissait
+     * jamais : ni celui du mouvement, ni celui d'un plan. Trois polices étaient dans cet
+     * état en production.
+     *
+     * Or il RESTE une écriture à faire, et c'est une écriture ORDINAIRE que le moteur
+     * générique sait produire : faire valider la proposition de renouvellement (créer
+     * l'avenant successeur), ou monter cette proposition si elle manque. On la NOMME donc,
+     * avec les identifiants nécessaires, pour que l'assistant enchaîne sur un vrai plan —
+     * donc un vrai bouton.
+     *
+     * Le cas SCELLÉ (avenant successeur émis, annulation, résiliation) reste un refus sec :
+     * là, il n'y a réellement plus rien à écrire.
+     */
+    private function mouvementDejaEnCours(Avenant $base): AiToolResult
+    {
+        $derivee = $base->getPisteDeRenouvellement();
+        // On ne dit pas seulement QU'un mouvement existe, on dit ce que la police est
+        // DEVENUE : « déjà renouvelée par l'avenant #120 » plutôt que « porte une
+        // opportunité dérivée ».
+        $suite = $this->renouvellementResolver->resoudre($base);
+
+        $commun = [
+            'pret'                 => false,
+            'dejaTraite'           => true,
+            'police'               => $base->getReferencePolice(),
+            'mouvementExistant'    => $derivee->getNom(),
+            'pisteDeriveeId'       => $derivee->getId(),
+            'statutRenouvellement' => $suite['statut'],
+            'suiteDeLaPolice'      => $suite['phrase'],
+        ];
+
+        if (AvenantSuccessionScope::estScelle($suite['code'])) {
+            return AiToolResult::ok($commun + [
+                'note' => 'Le sort de cette police est SCELLÉ : il n’y a plus rien à écrire. Ne prépare AUCUN '
+                    . 'plan et n’annonce aucun bouton. Dis à l’utilisateur ce que la police est DEVENUE, en '
+                    . 'reprenant « suiteDeLaPolice » : si un avenant lui succède, NOMME-le (numéro et période). '
+                    . 'Propose d’ouvrir la fiche s’il veut la modifier.',
+            ]);
+        }
+
+        // Mouvement AMORCÉ : les propositions de la piste dérivée encore sans avenant sont
+        // exactement ce qu'il reste à faire valider.
+        $propositions = [];
+        foreach ($derivee->getCotations() as $cotation) {
+            if ($cotation->getAvenants()->count() === 0) {
+                $propositions[] = [
+                    'cotationId' => $cotation->getId(),
+                    'nom'        => $cotation->getNom(),
+                    'assureur'   => $cotation->getAssureur()?->getNom(),
+                ];
+            }
+        }
+
+        $etape = $propositions === []
+            ? sprintf(
+                'L’opportunité de renouvellement #%d n’a AUCUNE proposition : il faut d’abord en monter une '
+                . '(créer une Cotation rattachée à cette opportunité), puis la faire valider.',
+                $derivee->getId(),
+            )
+            : sprintf(
+                'La proposition de renouvellement existe déjà (%s) : pour que la police soit reconduite, il '
+                . 'faut la FAIRE VALIDER, c’est-à-dire créer l’avenant sur cette cotation.',
+                implode(', ', array_map(
+                    static fn (array $p): string => sprintf('#%d « %s »', $p['cotationId'], $p['nom']),
+                    $propositions,
+                )),
+            );
+
+        return AiToolResult::ok($commun + [
+            'mouvementAmorce'       => true,
+            'propositionsEnAttente' => $propositions,
+            'prochaineEtape'        => $etape,
+            'note' => 'Ce mouvement est AMORCÉ MAIS PAS ABOUTI : la police n’est PAS reconduite, et cet outil '
+                . 'ne peut pas en préparer un second (ce serait un doublon). Ne dis donc PAS que c’est fait, et '
+                . 'n’annonce SURTOUT pas un bouton ici. Mais ne t’arrête pas là : énonce « prochaineEtape » en '
+                . 'une phrase, puis PROPOSE de la réaliser. S’il accepte — ou s’il a déjà dit « renouvelle-la », '
+                . 'ce qui vaut acceptation — appelle preparer_operations DANS LE MÊME TOUR pour cette écriture '
+                . '(créer l’Avenant sur la cotation indiquée, en reprenant la période qui suit l’échéance de la '
+                . 'police de base ; ou créer la Cotation sur l’opportunité #' . $derivee->getId() . ' si aucune '
+                . 'proposition n’existe). C’est CE plan-là qui portera le bouton « Valider et exécuter ». '
+                . 'Alternative à mentionner s’il préfère repartir de zéro : supprimer l’opportunité dérivée '
+                . 'depuis la fiche de la police, ce qui rouvre les quatre mouvements.',
+        ]);
     }
 
     /**

@@ -110,11 +110,43 @@ final class AvenantEcheanceScope
 
         return match ($statut) {
             self::STATUT_ECHUS => ['min' => null, 'max' => $jour],
-            self::STATUT_30J => ['min' => $jour, 'max' => $jour->modify('+31 days')],
+            // Exprimé via bornesHorizon() : l'identité entre le chip « Sous 30 jours » et
+            // la fenêtre à horizon 30 de la vigie est ainsi PROUVÉE PAR LE CODE.
+            self::STATUT_30J => self::bornesHorizon(30, $ref, false),
             self::STATUT_31_60J => ['min' => $jour->modify('+31 days'), 'max' => $jour->modify('+61 days')],
             self::STATUT_60_PLUS => ['min' => $jour->modify('+61 days'), 'max' => null],
             default => ['min' => null, 'max' => null],
         };
+    }
+
+    /**
+     * Bornes d'une fenêtre « (échues +) à échoir sous N jours », même convention
+     * [min, max[ à minuit que bornes() — l'arithmétique n'existe qu'ICI. Pour
+     * $jours = 30 et $inclureEchues = false, la fenêtre est EXACTEMENT celle de
+     * STATUT_30J : c'est ce qui rend la vigie de l'assistant et le chip « Sous
+     * 30 jours » réconciliables ligne à ligne.
+     *
+     * RAISON D'ÊTRE. La vigie accepte un horizon LIBRE (1..180 jours) que les quatre
+     * statuts figés ne savent pas exprimer. Sans cette méthode, elle refabriquait ses
+     * propres bornes — un dialecte de plus, ouvert à minuit près : c'est ainsi qu'un
+     * « endingAt BETWEEN now AND now + N jours » a pu rendre les polices ÉCHUES
+     * structurellement invisibles à l'assistant, qui annonçait « plus aucune police
+     * échue » quand la rubrique en affichait cinq.
+     *
+     * @return array{min: ?\DateTimeImmutable, max: ?\DateTimeImmutable}
+     */
+    public static function bornesHorizon(int $jours, \DateTimeImmutable $ref, bool $inclureEchues = true): array
+    {
+        $jour = $ref->setTime(0, 0, 0);
+
+        return [
+            // Borne basse OUVERTE : une police expirée il y a dix ans réclame toujours
+            // une action, exactement comme dans le chip « Échus ».
+            'min' => $inclureEchues ? null : $jour,
+            // +1 jour parce que la borne haute est EXCLUSIVE : « sous 30 jours » doit
+            // contenir le trentième jour entier.
+            'max' => $jour->modify('+' . ($jours + 1) . ' days'),
+        ];
     }
 
     /**

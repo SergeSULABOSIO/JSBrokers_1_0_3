@@ -1,0 +1,96 @@
+{# ══════════════════════════════════════════════════════════════════════════════
+   PROGRAMME DU JOUR — bulle d'ouverture d'une conversation vide.
+
+   Rendu SERVEUR à partir de PlanDuJourService : aucun token consommé, aucune
+   invention possible, et les chiffres sont exactement ceux des rubriques.
+
+   Ce n'est PAS un message du fil : ni data-message-id (donc ni menu ⋮, ni
+   citation, ni export), ni data-md-source (le pipeline markdown du connect()
+   ne doit pas le revisiter). Il disparaît dès le premier message envoyé.
+
+   Attendu : `plan` = {date, sections[], priorite, toutAuVert}, non nul et
+   toutAuVert = false (l'appelant retombe sinon sur l'accueil ordinaire).
+═══════════════════════════════════════════════════════════════════════════════ #}
+{% set statuts = {
+    'en_retard':  { variante: 'danger',  libelle: 'En retard' },
+    'aujourdhui': { variante: 'warning', libelle: "Aujourd'hui" },
+    'a_venir':    { variante: 'info',    libelle: 'À venir' }
+} %}
+
+<div class="aic-msg aic-msg--assistant">
+    <span class="aic-msg-avatar" aria-hidden="true">{{ assistantNom|first|upper }}</span>
+    <div class="aic-msg-body">
+        <div class="aic-msg-text aic-plan">
+            <p class="aic-plan-intro">
+                Bonjour ! Je suis {{ assistantNom }}. Voici votre programme du
+                {{ plan.date|date('d/m/Y') }} — {{ plan.sections|length }} point{{ plan.sections|length > 1 ? 's' }}
+                à traiter dans votre périmètre.
+            </p>
+
+            {% if plan.priorite %}
+                <p class="aic-plan-priorite">
+                    À commencer par : {{ plan.priorite.titre|lower }}
+                    ({{ plan.priorite.compte }}{% if plan.priorite.montant is defined %},
+                    {{ plan.priorite.montant|format_montant }} {{ display_currency_code() }}{% endif %}).
+                </p>
+            {% endif %}
+
+            {% for section in plan.sections %}
+                <section class="aic-plan-section">
+                    <div class="aic-plan-head">
+                        <h3 class="aic-plan-titre">{{ section.titre }}</h3>
+                        <span class="aic-plan-compte">
+                            {{ section.compte }}{% if section.montant is defined %}
+                                · {{ section.montant|format_montant }} {{ display_currency_code() }}
+                            {% endif %}
+                        </span>
+                        <span class="aic-plan-perimetre">{{ section.perimetre }}</span>
+                        {% if section.enRetard > 0 %}
+                            <span class="aic-md-badge aic-md-badge--danger">{{ section.enRetard }} en retard</span>
+                        {% endif %}
+                    </div>
+
+                    <ul class="aic-plan-liste">
+                        {% for ligne in section.lignes %}
+                            {% set statut = statuts[ligne.statutTemporel|default('')]|default(null) %}
+                            <li>
+                                {# Bouton et non lien : la ligne ouvre une fiche dans la
+                                   colonne de visualisation, elle ne navigue nulle part. #}
+                                <button type="button" class="aic-plan-ligne"
+                                        data-action="click->assistant-chat#ouvrirFichePlan"
+                                        data-plan-entite="{{ ligne.entite }}"
+                                        data-plan-id="{{ ligne.id }}">
+                                    <span class="aic-plan-libelle">
+                                        {{ ligne.libelle }}
+                                        {% if ligne.contexte %}
+                                            <span class="aic-plan-contexte">{{ ligne.contexte }}</span>
+                                        {% endif %}
+                                    </span>
+                                    {% if ligne.montant is defined and ligne.montant > 0 %}
+                                        <span class="aic-plan-montant">{{ ligne.montant|format_montant }}</span>
+                                    {% endif %}
+                                    {% if statut %}
+                                        <span class="aic-md-badge aic-md-badge--{{ statut.variante }}">
+                                            {%- if ligne.joursAnciennete is defined and ligne.joursAnciennete -%}
+                                                {{ ligne.joursAnciennete }} j
+                                            {%- else -%}
+                                                {{ statut.libelle }}
+                                            {%- endif -%}
+                                        </span>
+                                    {% endif %}
+                                </button>
+                            </li>
+                        {% endfor %}
+                    </ul>
+
+                    {% if section.tronque %}
+                        <p class="aic-plan-reste">
+                            … et {{ section.echeant - section.lignes|length }} autre{{ (section.echeant - section.lignes|length) > 1 ? 's' }}.
+                            Demandez-moi le détail.
+                        </p>
+                    {% endif %}
+                </section>
+            {% endfor %}
+        </div>
+    </div>
+</div>

@@ -619,8 +619,19 @@ export default class extends Controller {
             exec.addEventListener('click', async () => {
                 if (action.requiresPassword === true) {
                     // Suppression : confirmation renforcée par mot de passe (modale).
-                    bar.remove();
-                    this.openMutationConfirm({ ...action, etapesRetenues: clesRetenues() });
+                    // La barre est NEUTRALISÉE, pas retirée : la retirer ici la faisait
+                    // disparaître pour de bon dès que l'utilisateur fermait la modale
+                    // (Échap / Annuler) — le plan restait en attente côté serveur, sans
+                    // plus aucune commande dans le fil. Renoncer à une suppression ne
+                    // doit jamais coûter le plan.
+                    exec.disabled = true;
+                    cancel.disabled = true;
+                    const rearmer = () => {
+                        exec.disabled = false;
+                        cancel.disabled = false;
+                    };
+                    document.addEventListener('ui:confirmation.close', rearmer, { once: true });
+                    this.openMutationConfirm({ ...action, etapesRetenues: clesRetenues(), bar });
                     return;
                 }
                 // Écriture pure : exécution IMMÉDIATE, sans boîte de dialogue.
@@ -686,6 +697,10 @@ export default class extends Controller {
         apercu.forEach((op) => {
             const item = document.createElement('li');
             const cible = op.cible ? ` « ${op.cible} »` : '';
+            // UNE SUPPRESSION NE DOIT PAS SE LIRE COMME UNE CRÉATION. Elle portait le
+            // même gris que les autres lignes : la seule différence était le mot
+            // « Suppression » au fil du texte, et l'utilisateur validait sans l'avoir vu.
+            if (op.op === 'delete') item.className = 'aic-mut-apercu-suppression';
             item.textContent = `${verbe[op.op] || 'Opération'} — ${op.libelle || ''}${cible}`;
 
             const details = Array.isArray(op.details) ? op.details : [];
@@ -718,7 +733,69 @@ export default class extends Controller {
             bloc.appendChild(note);
         });
 
+        const alerte = this._renderSuppressionAlerte(action, apercu);
+        if (alerte) bloc.appendChild(alerte);
+
         return bloc;
+    }
+
+    /**
+     * AVERTISSEMENT DE SUPPRESSION, AVANT TOUT CLIC.
+     *
+     * L'utilisateur n'était prévenu qu'APRÈS avoir cliqué « Valider et exécuter » :
+     * la portée réelle (ce qui disparaît en cascade), le caractère irréversible et
+     * l'exigence du mot de passe n'apparaissaient que dans la modale. Il validait donc
+     * sans savoir — et un plan supprimant une opportunité de renouvellement efface
+     * aussi ses propositions, leurs échéanciers et leurs paiements.
+     *
+     * Cet encart énonce les trois faits AVANT la décision, à partir des données du
+     * SERVEUR (op.op === 'delete' et action.impacts), jamais de la prose du modèle.
+     * La modale reste en second rideau : on informe deux fois plutôt qu'une.
+     */
+    _renderSuppressionAlerte(action, apercu) {
+        const suppressions = apercu.filter((op) => op.op === 'delete');
+        const impacts = Array.isArray(action.impacts) ? action.impacts.filter(Boolean) : [];
+        if (suppressions.length === 0 && action.requiresPassword !== true) return null;
+
+        const encart = document.createElement('div');
+        encart.className = 'aic-mut-suppression-alerte';
+        encart.setAttribute('role', 'alert');
+
+        const titre = document.createElement('p');
+        titre.className = 'aic-mut-suppression-titre';
+        const cibles = suppressions
+            .map((op) => (op.cible ? `${op.libelle || ''} « ${op.cible} »` : op.libelle || ''))
+            .filter(Boolean);
+        titre.textContent = cibles.length > 0
+            ? `Attention — ce plan SUPPRIME définitivement : ${cibles.join(', ')}.`
+            : 'Attention — ce plan comporte une suppression définitive.';
+        encart.appendChild(titre);
+
+        // La portée RÉELLE : ce que la cascade emporte avec la cible.
+        if (impacts.length > 0) {
+            const intro = document.createElement('p');
+            intro.className = 'aic-mut-suppression-portee';
+            intro.textContent = 'Seront effacés avec :';
+            encart.appendChild(intro);
+
+            const liste = document.createElement('ul');
+            liste.className = 'aic-mut-suppression-liste';
+            impacts.forEach((impact) => {
+                const li = document.createElement('li');
+                li.textContent = String(impact);
+                liste.appendChild(li);
+            });
+            encart.appendChild(liste);
+        }
+
+        const pied = document.createElement('p');
+        pied.className = 'aic-mut-suppression-pied';
+        pied.textContent = action.requiresPassword === true
+            ? 'Cette action est IRRÉVERSIBLE. Votre mot de passe vous sera demandé pour confirmer.'
+            : 'Cette action est IRRÉVERSIBLE.';
+        encart.appendChild(pied);
+
+        return encart;
     }
 
     /**
@@ -862,6 +939,9 @@ export default class extends Controller {
     openMutationConfirm(action) {
         const requirePassword = action.requiresPassword === true;
         const impacts = Array.isArray(action.impacts) ? action.impacts : [];
+        // Barre à remplacer par le feedback permanent SI la confirmation aboutit
+        // (l'exécution part de la modale, qui ne connaît pas le fil).
+        this._barreEnAttente = action.bar || null;
         const body = requirePassword
             ? 'Cette mission comporte une SUPPRESSION définitive. Vérifiez le plan ci-dessus, puis confirmez avec votre mot de passe.'
             : 'Vérifiez le plan ci-dessus, puis confirmez pour que j’exécute les opérations.';
@@ -895,7 +975,13 @@ export default class extends Controller {
         const payload = detail.payload || {};
         if (detail.type === 'ket:mutation.execute') {
             // Déclenché par la modale de confirmation (suppression + mot de passe).
-            this.executeMutationPlan(payload.idMessage, payload.password, true, payload.etapes || null);
+            const bar = this._barreEnAttente;
+            this._barreEnAttente = null;
+            this.executeMutationPlan(payload.idMessage, payload.password, true, payload.etapes || null)
+                .then((status) => {
+                    if (status !== 'success' || !bar) return;
+                    this._replaceBar(bar, this._planStatusNote('done', 'Plan exécuté — les données ont été enregistrées.'));
+                });
             return;
         }
         // Retour du picker de destinataires : confirmation dans le fil, à
@@ -1082,6 +1168,20 @@ export default class extends Controller {
      * droits, fail-closed) puis rejoue le circuit standard des listes
      * (app:liste-element:openned).
      */
+    /**
+     * Ligne du PROGRAMME DU JOUR (bulle d'ouverture rendue par le serveur) :
+     * ouvre la fiche concernée dans la colonne de visualisation. Même chemin que
+     * l'outil visualiser_fiche — l'endpoint re-valide les droits, fail-closed.
+     */
+    ouvrirFichePlan(event) {
+        const ligne = event.currentTarget;
+
+        this.openVisualizationAction({
+            entite: ligne.dataset.planEntite,
+            id: ligne.dataset.planId,
+        });
+    }
+
     async openVisualizationAction(action) {
         if (!this.hasVisualContextUrlValue) return;
         try {

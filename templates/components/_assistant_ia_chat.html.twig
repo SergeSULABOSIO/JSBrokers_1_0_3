@@ -257,6 +257,66 @@
         .jsb-ai-chat .aic-md-badge--info    { background:var(--aic-accent-subtle); color:var(--aic-on-subtle); }
         .jsb-ai-chat .aic-md-badge--neutral { background:var(--aic-surface-raised); color:var(--aic-text-2); }
 
+        /* ══ Programme du jour ══════════════════════════════════════════════════
+           Bulle d'ouverture d'une conversation vide, rendue par le SERVEUR (aucun
+           token, aucune invention) — cf. _plan_du_jour.html.twig. Volontairement
+           dépourvue de data-md-source et de data-message-id : ce n'est pas un
+           message du fil, elle n'a ni menu ⋮, ni citation, ni export, et le
+           pipeline markdown ne doit pas la revisiter au connect().
+           Aucune couleur en dur : uniquement des jetons --aic-*, sans quoi la
+           bascule de thème laisserait la bulle en arrière. */
+        .jsb-ai-chat .aic-plan { margin-top:.25rem; }
+        .jsb-ai-chat .aic-plan-intro { margin:0 0 .6rem; color:var(--aic-text-2); }
+        .jsb-ai-chat .aic-plan-priorite {
+            margin:0 0 .7rem; padding:.4rem .6rem;
+            border-left:3px solid var(--aic-accent); border-radius:0 6px 6px 0;
+            background:var(--aic-accent-subtle); color:var(--aic-on-subtle);
+            font-size:.82rem; font-weight:600;
+        }
+        .jsb-ai-chat .aic-plan-section { margin:0 0 .55rem; }
+        .jsb-ai-chat .aic-plan-section:last-of-type { margin-bottom:0; }
+        /* Entête de section : le titre porte le sens, le compte porte le volume,
+           le périmètre lève l'ambiguïté « mon portefeuille ou tout le cabinet ? ». */
+        .jsb-ai-chat .aic-plan-head {
+            display:flex; align-items:baseline; gap:.4rem; flex-wrap:wrap;
+            margin:0 0 .3rem;
+        }
+        .jsb-ai-chat .aic-plan-titre {
+            margin:0; font-size:.78rem; font-weight:700; letter-spacing:.3px;
+            text-transform:uppercase; color:var(--aic-text-strong);
+        }
+        .jsb-ai-chat .aic-plan-compte { font-size:.78rem; font-weight:600; color:var(--aic-accent); }
+        .jsb-ai-chat .aic-plan-perimetre { font-size:.72rem; color:var(--aic-muted); }
+        .jsb-ai-chat .aic-plan-liste { margin:0; padding:0; list-style:none; }
+        /* Une ligne = une action. Bouton et non lien : elle ouvre une fiche dans
+           l'espace de travail, elle ne navigue pas. Survol/clic reprennent l'idiome
+           des lignes de tableau ci-dessus, pour une seule grammaire d'interaction. */
+        .jsb-ai-chat .aic-plan-ligne {
+            display:flex; align-items:baseline; gap:.45rem; width:100%;
+            padding:.3rem .4rem; border:0; border-radius:6px;
+            background:transparent; color:var(--aic-text-2); text-align:left;
+            font:inherit; font-size:.82rem; cursor:pointer;
+            transition:background-color .12s ease, color .12s ease;
+        }
+        .jsb-ai-chat .aic-plan-ligne:hover { background:var(--aic-row-hover); color:var(--aic-text); }
+        .jsb-ai-chat .aic-plan-ligne:active { background:var(--aic-accent-subtle); }
+        .jsb-ai-chat .aic-plan-ligne:focus-visible { outline:2px solid var(--aic-accent); outline-offset:1px; }
+        .jsb-ai-chat .aic-plan-libelle { flex:1 1 auto; min-width:0; }
+        /* Le contexte (client, assureur) reste secondaire : il situe sans capter
+           l'attention, et s'efface plutôt que de pousser la pastille hors cadre. */
+        .jsb-ai-chat .aic-plan-contexte {
+            display:block; font-size:.74rem; color:var(--aic-muted);
+            overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+        }
+        .jsb-ai-chat .aic-plan-montant {
+            flex:0 0 auto; font-variant-numeric:tabular-nums;
+            font-weight:600; color:var(--aic-text);
+        }
+        .jsb-ai-chat .aic-plan-reste {
+            margin:.15rem 0 0; padding-left:.4rem;
+            font-size:.75rem; font-style:italic; color:var(--aic-muted);
+        }
+
         /* Graphiques (blocs ```chart montés par assistant-chart-render.js) : une
            <figure> avec le <canvas> puis une légende explicative en dessous.
            Comme les tableaux, le graphique ne doit jamais déborder la bulle. */
@@ -437,6 +497,23 @@
             margin:.35rem 0 0; padding:.4rem .55rem; border-radius:6px;
             background:var(--aic-warning-bg); color:var(--aic-warning-fg); font-size:.78rem;
         }
+
+        /* SUPPRESSION : rendue visible AVANT toute décision. L'utilisateur n'était
+           averti qu'après avoir cliqué « Valider et exécuter » — portée réelle,
+           irréversibilité et mot de passe n'apparaissaient que dans la modale. */
+        .jsb-ai-chat .aic-mut-apercu-suppression {
+            color:var(--aic-danger-fg); font-weight:600;
+        }
+        .jsb-ai-chat .aic-mut-suppression-alerte {
+            margin:.45rem 0 0; padding:.5rem .6rem; border-radius:6px;
+            background:var(--aic-danger-bg); color:var(--aic-danger-fg);
+            border-left:3px solid currentColor; font-size:.78rem;
+        }
+        .jsb-ai-chat .aic-mut-suppression-titre { margin:0; font-weight:600; }
+        .jsb-ai-chat .aic-mut-suppression-portee { margin:.3rem 0 .1rem; }
+        .jsb-ai-chat .aic-mut-suppression-liste { margin:0; padding-left:1.1rem; }
+        .jsb-ai-chat .aic-mut-suppression-liste li { margin:.05rem 0; }
+        .jsb-ai-chat .aic-mut-suppression-pied { margin:.3rem 0 0; font-weight:600; }
 
         /* Étendue du plan : une case à cocher par étape du parcours (l'étape socle
            reste cochée et désactivée). Décocher réajuste le budget affiché. */
@@ -723,12 +800,24 @@
          aria-label="Conversation avec {{ assistantNom }}"
          data-assistant-chat-target="messages">
         {% if conversation.messages is empty %}
-            <div class="aic-msg aic-msg--assistant">
-                <span class="aic-msg-avatar" aria-hidden="true">{{ assistantNom|first|upper }}</span>
-                <div class="aic-msg-body">
-                    <p class="aic-msg-text">Bonjour ! Je suis {{ assistantNom }}, l'assistant IA de {{ entreprise.nom }}. Posez-moi une question sur les données de votre espace de travail — par exemple « Combien de clients avons-nous ? » ou « Quel est mon périmètre d'accès ? ».</p>
+            {# Conversation vide : Ket ouvre sur le PROGRAMME DU JOUR quand il a
+               quelque chose à dire, et sur l'accueil ordinaire sinon (invité sans
+               périmètre, rien à traiter, ou calcul indisponible — le contrôleur
+               passe alors planDuJour à null). #}
+            {% if planDuJour is defined and planDuJour %}
+                {# `only` : le partial ne reçoit QUE ce dont il a besoin (pas la
+                   conversation ni les fichiers) — d'où le passage explicite du
+                   nom du personnage, qui signe l'avatar de la bulle. #}
+                {% include 'components/assistant_ia/_plan_du_jour.html.twig'
+                    with { plan: planDuJour, assistantNom: assistantNom } only %}
+            {% else %}
+                <div class="aic-msg aic-msg--assistant">
+                    <span class="aic-msg-avatar" aria-hidden="true">{{ assistantNom|first|upper }}</span>
+                    <div class="aic-msg-body">
+                        <p class="aic-msg-text">Bonjour ! Je suis {{ assistantNom }}, l'assistant IA de {{ entreprise.nom }}. Posez-moi une question sur les données de votre espace de travail — par exemple « Combien de clients avons-nous ? » ou « Quel est mon périmètre d'accès ? ».</p>
+                    </div>
                 </div>
-            </div>
+            {% endif %}
         {% endif %}
         {% for message in conversation.messages %}
             {% set estAssistant = message.role == 'assistant' %}

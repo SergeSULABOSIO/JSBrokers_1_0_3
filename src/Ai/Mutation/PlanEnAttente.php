@@ -160,6 +160,13 @@ final class PlanEnAttente
             'valider et executer',
             'cliquez sur valider',
             'cliquer sur valider',
+            // Revendications sans le mot « bouton », vues en production : la prose
+            // affirme que le plan EST prêt, ce qui suffit à faire chercher une barre
+            // de décision qui n'existe pas.
+            'prêt à être exécuté',
+            'pret a etre execute',
+            'prêt à être validé',
+            'pret a etre valide',
         ] as $marqueur) {
             if (str_contains($texte, $marqueur)) {
                 return true;
@@ -167,8 +174,25 @@ final class PlanEnAttente
         }
 
         // Tableau de BUDGET rendu en prose : « Total estimé » avec le solde.
-        return str_contains($texte, 'total estimé')
-            && (str_contains($texte, 'solde disponible') || str_contains($texte, 'reste après'));
+        if (str_contains($texte, 'total estimé')
+            && (str_contains($texte, 'solde disponible') || str_contains($texte, 'reste après'))) {
+            return true;
+        }
+
+        // ANNONCE D'UN APPEL D'OUTIL À VENIR. Une phrase ne déclenche rien, et il n'y aura
+        // pas de tour suivant : « je lance immédiatement preparer_mouvement_avenant » est
+        // une promesse que rien ne tiendra. L'utilisateur attend, puis relance — c'est
+        // exactement ce qui s'est produit en production.
+        //
+        // On exige la CONJONCTION d'un verbe d'intention à la 1re personne et du nom d'un
+        // outil d'écriture : nommer un outil pour expliquer un manque (« il me faudrait
+        // preparer_operations, mais la référence manque ») est un comportement LÉGITIME
+        // qu'il ne faut pas signaler.
+        return (bool) preg_match(
+            '/\b(?:je (?:lance|vais|prepare|prépare|appelle|relance|execute|exécute)|j\'appelle|j\'execute|j\'exécute|je m\'en occupe)\b[^.!?]{0,120}'
+            . '(?:preparer_mouvement_avenant|preparer_operations|parcours_saisie|modifier_composition_prime)/u',
+            $texte,
+        );
     }
 
     /**

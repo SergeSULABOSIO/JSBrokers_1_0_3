@@ -33,6 +33,9 @@ class AssistantIaWorkspaceTest extends WebTestCase
     private const ENTREPRISE_NOM = 'PHPUnit IA SARL';
     private const ENTREPRISE_B_NOM = 'PHPUnit IA Autre SARL';
     private const DENIED_MARKER = 'jsb-access-denied';
+    /** Marqueur de MARKUP de la bulle « programme du jour » (les classes CSS aic-plan-*
+     *  figurent aussi dans la feuille de style inline du chat et ne prouvent rien). */
+    private const PLAN_MARKER = 'Voici votre programme du';
 
     private KernelBrowser $client;
 
@@ -92,8 +95,10 @@ class AssistantIaWorkspaceTest extends WebTestCase
             ['noms' => $noms],
             ['noms' => \Doctrine\DBAL\ArrayParameterType::STRING]
         );
+        // « tache » avant « client » : le programme du jour crée des tâches, et une
+        // tâche peut pointer un client via sa piste.
         // « client » avant « portefeuille » : le client porte la clé étrangère.
-        foreach (['assistant_conversation', 'assistant_parametres', 'client', 'portefeuille'] as $table) {
+        foreach (['assistant_conversation', 'assistant_parametres', 'tache', 'client', 'portefeuille'] as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom IN (:noms)",
                 ['noms' => $noms],
@@ -1450,5 +1455,116 @@ class AssistantIaWorkspaceTest extends WebTestCase
 
         $this->postMessage($e->getId(), $conversation->getId(), 'Je ne devrais pas pouvoir écrire ici.');
         $this->assertResponseStatusCodeSame(403);
+    }
+
+    // ── Programme du jour (bulle d'ouverture) ─────────────────────────────────
+
+    /** Tâche ouverte de l'entreprise, échéant à $jours du jour (négatif = en retard). */
+    private function makeTache(Entreprise $entreprise, string $description, int $jours, ?Invite $executor = null): void
+    {
+        $tache = new \App\Entity\Tache();
+        $tache->setDescription($description);
+        $tache->setToBeEndedAt(new \DateTimeImmutable(sprintf('%+d days', $jours)));
+        $tache->setClosed(false);
+        $tache->setEntreprise($entreprise);
+        $tache->setExecutor($executor);
+        $this->em()->persist($tache);
+        $this->em()->flush();
+    }
+
+    private function ouvrirChat(Entreprise $entreprise, AssistantConversation $conversation, string $email): string
+    {
+        $this->client->loginUser($this->user($email));
+        $this->client->request('GET', sprintf('/admin/assistant-ia/chat/%d/%d', $entreprise->getId(), $conversation->getId()));
+        $this->assertResponseIsSuccessful();
+
+        return (string) $this->client->getResponse()->getContent();
+    }
+
+    /**
+     * Rien à traiter : le plan est « tout au vert », le contrôleur passe null et
+     * l'accueil ordinaire reprend sa place. Non-régression du repli — un invité
+     * sans périmètre ne doit jamais tomber sur une bulle vide.
+     */
+    public function testConversationVideSansRienAFaireGardeLAccueilOrdinaire(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $conversation = $this->makeConversation($e, $owner);
+
+        $content = $this->ouvrirChat($e, $conversation, self::OWNER_EMAIL);
+
+        $this->assertStringContainsString("Posez-moi une question sur les données", $content);
+        // Marqueur de MARKUP : les classes aic-plan-* apparaissent aussi dans la
+        // feuille de style inline du chat, elles ne prouvent donc rien.
+        $this->assertStringNotContainsString(self::PLAN_MARKER, $content);
+    }
+
+    /**
+     * Une tâche en retard, non assignée (donc « à moi » au sens de la règle
+     * executor IS NULL OR = moi) : Ket ouvre sur le programme du jour, avec la
+     * section, la ligne et la pastille de retard.
+     */
+    public function testConversationVideOuvreSurLeProgrammeDuJour(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $this->makeTache($e, 'Relancer AXA sur la police 2026-014', -3);
+        $conversation = $this->makeConversation($e, $owner);
+
+        $content = $this->ouvrirChat($e, $conversation, self::OWNER_EMAIL);
+
+        $this->assertStringContainsString(self::PLAN_MARKER, $content, 'La bulle de programme doit être rendue.');
+        $this->assertStringContainsString('Mes tâches', $content);
+        $this->assertStringContainsString('Relancer AXA sur la police 2026-014', $content);
+        // Pastille de retard, empruntée aux variantes markdown existantes.
+        $this->assertStringContainsString('aic-md-badge--danger', $content);
+        // La ligne ouvre la fiche, elle ne navigue pas.
+        $this->assertStringContainsString('assistant-chat#ouvrirFichePlan', $content);
+        $this->assertStringContainsString('data-plan-entite="Tache"', $content);
+        // L'accueil ordinaire a bien cédé la place.
+        $this->assertStringNotContainsString("Posez-moi une question sur les données", $content);
+    }
+
+    /**
+     * FAIL-CLOSED : sans le droit de lecture sur les Tâches, la section disparaît.
+     * L'invité de ce test n'a que le module IA et la Lecture Client — aucune tâche
+     * ne doit lui être annoncée, même si l'entreprise en compte.
+     */
+    public function testProgrammeDuJourNAnnoncePasLesTachesHorsPerimetre(): void
+    {
+        ['guest' => $guest, 'entreprise' => $e] = $this->seed();
+        $this->makeTache($e, 'Tâche invisible pour cet invité', -1);
+        $conversation = $this->makeConversation($e, $guest);
+
+        $content = $this->ouvrirChat($e, $conversation, self::GUEST_EMAIL);
+
+        $this->assertStringNotContainsString('Tâche invisible pour cet invité', $content);
+        $this->assertStringNotContainsString('Mes tâches', $content);
+    }
+
+    /**
+     * Le programme n'ouvre que ce qui n'a pas encore commencé : dès qu'un message
+     * existe, la bulle disparaît et le fil reprend ses droits.
+     */
+    public function testConversationEntameeNAffichePlusLeProgramme(): void
+    {
+        ['owner' => $owner, 'entreprise' => $e] = $this->seed();
+        $this->makeTache($e, 'Relancer AXA sur la police 2026-014', -3);
+        $conversation = $this->makeConversation($e, $owner, 'Déjà entamée');
+
+        // addMessage() et pas seulement setConversation() : la conversation vient
+        // d'être créée dans CET EntityManager, sa collection est donc déjà
+        // initialisée et vide — sans le côté inverse, le contrôleur la relirait vide
+        // et croirait la conversation neuve.
+        $message = (new AssistantMessage())
+            ->setRole(AssistantMessage::ROLE_USER)
+            ->setContenu('Bonjour');
+        $conversation->addMessage($message);
+        $this->em()->persist($message);
+        $this->em()->flush();
+
+        $content = $this->ouvrirChat($e, $conversation, self::OWNER_EMAIL);
+
+        $this->assertStringNotContainsString(self::PLAN_MARKER, $content);
+        $this->assertStringNotContainsString("Posez-moi une question sur les données", $content);
     }
 }

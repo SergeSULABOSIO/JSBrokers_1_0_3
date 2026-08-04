@@ -6,6 +6,7 @@ use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
 use App\Ai\Tool\CompterEntitesTool;
 use App\Ai\Tool\RechercherEntitesTool;
+use App\Ai\Tool\VigieEcheancesTool;
 use App\Entity\Avenant;
 use App\Entity\ChargementPourPrime;
 use App\Entity\Client;
@@ -75,6 +76,17 @@ class CoherenceChipsAssistantTest extends KernelTestCase
     private function cleanUp(): void
     {
         $conn = $this->em()->getConnection();
+
+        // GOTCHA — le double lien Piste::avenantDeBase ⇄ Avenant::pisteDeRenouvellement est
+        // un cycle de clés étrangères : il faut le DISSOCIER avant tout DELETE, sinon la
+        // suppression des avenants se heurte à piste.avenant_de_base_id.
+        foreach ([
+            'UPDATE piste p JOIN entreprise e ON p.entreprise_id = e.id SET p.avenant_de_base_id = NULL WHERE e.nom = :nom',
+            'UPDATE avenant a JOIN entreprise e ON a.entreprise_id = e.id SET a.piste_de_renouvellement_id = NULL WHERE e.nom = :nom',
+        ] as $dissociation) {
+            $conn->executeStatement($dissociation, ['nom' => self::ENTREPRISE_NOM]);
+        }
+
         foreach (['avenant', 'tranche', 'chargement_pour_prime', 'cotation', 'piste', 'client', 'portefeuille', 'invite'] as $table) {
             $conn->executeStatement(
                 "DELETE t FROM {$table} t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :nom",
@@ -602,5 +614,131 @@ class CoherenceChipsAssistantTest extends KernelTestCase
                 "Question : {$question}"
             );
         }
+    }
+
+    /**
+     * LE GARDE-FOU DE L'INCIDENT « plus aucune police échue ».
+     *
+     * La vigie de Ket passe par DashboardDataProvider (DQL écrit à la main), les chips par
+     * JSBDynamicSearchService : deux chemins, un seul ensemble attendu. Ils avaient
+     * divergé sur quatre points à la fois — borne basse à « now » (les échues ne pouvaient
+     * pas entrer), borne haute inclusive et horodatée, filtre renewalCondition surnuméraire,
+     * INNER JOIN sur un assureur nullable. Résultat : la rubrique affichait cinq polices
+     * échues et l'assistant annonçait qu'il n'en restait aucune.
+     *
+     * Ce test confronte les deux chemins sur le MÊME jeu de données, en incluant tous les
+     * SORTS de police (scellé / amorcé / sans suite / résilié), et sans écrire aucun total
+     * à la main : c'est l'égalité des deux chemins qui est vérifiée, pas un nombre.
+     */
+    public function testVigieDeKetCoincideAvecLesChipsEchusEtSous30j(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+        $this->ajouterCasDeSuccession($entreprise, $invite);
+        $scope = new AiScope($entreprise, $invite);
+
+        // Ce que l'utilisateur VOIT : les deux chips que la vigie couvre, à horizon 30.
+        $idsChips = [];
+        foreach ([AvenantEcheanceScope::STATUT_ECHUS, AvenantEcheanceScope::STATUT_30J] as $statut) {
+            $chip = $this->service()->search(
+                Avenant::class,
+                $this->criteresRubrique('Avenant', $invite, AvenantEcheanceScope::CRITERION_KEY, $statut),
+                $entreprise,
+            );
+            foreach ($chip['data'] as $avenant) {
+                $idsChips[] = $avenant->getId();
+            }
+        }
+
+        $volet = static::getContainer()->get(VigieEcheancesTool::class)
+            ->execute(['volet' => 'renouvellements', 'horizonJours' => 30], $scope)
+            ->data['volets']['renouvellements'];
+
+        $idsVigie = array_merge(
+            array_column($volet['echues']['lignes'], 'id'),
+            array_column($volet['aVenir']['lignes'], 'id'),
+        );
+
+        // Le jeu de données doit être PARLANT : un test vert sur deux ensembles vides
+        // ne prouverait rien.
+        $this->assertGreaterThan(2, count($idsChips), 'Le jeu de données doit contenir plusieurs polices.');
+        $this->assertSame(
+            $idsChips,
+            $idsVigie,
+            'La vigie de Ket et les chips « Échus » + « Sous 30 jours » doivent désigner '
+            . 'les MÊMES polices, dans le même ordre d\'urgence.'
+        );
+        $this->assertSame(
+            count($idsChips),
+            $volet['echues']['total'] + $volet['aVenir']['total'],
+            'Les totaux de la vigie doivent égaler ceux des chips.'
+        );
+        $this->assertGreaterThan(0, $volet['echues']['total'], 'Les polices ÉCHUES doivent être VUES par la vigie.');
+    }
+
+    /**
+     * Les quatre SORTS possibles d'une police échue, ajoutés au portefeuille de l'invité :
+     * scellée par un avenant successeur (sort acquis → sort du pipeline), amorcée sans
+     * successeur (RENEWING → y reste, l'action est due), sans aucune suite (piège NULL du
+     * NOT EXISTS), résiliée (décision de fin → sort du pipeline). C'est l'état réel des
+     * polices de l'incident : leurs pistes de renouvellement existaient SANS avenant issu.
+     */
+    private function ajouterCasDeSuccession(Entreprise $entreprise, Invite $invite): void
+    {
+        $em = $this->em();
+        $portefeuille = $em->getRepository(Portefeuille::class)
+            ->findOneBy(['gestionnaire' => $invite, 'nom' => 'Portefeuille Cohérence']);
+        $echu = new \DateTimeImmutable('-30 days');
+
+        foreach ([
+            ['SCELLEE', Piste::AVENANT_RENOUVELLEMENT, true],
+            ['AMORCEE', Piste::AVENANT_RENOUVELLEMENT, false],
+            ['RESILIEE', Piste::AVENANT_RESILIATION, false],
+        ] as [$ref, $typeAvenant, $avecAvenantIssu]) {
+            $client = (new Client())->setNom('Client ' . $ref)->setExonere(false);
+            $client->setEntreprise($entreprise);
+            $portefeuille->addClient($client);
+            $em->persist($client);
+
+            $piste = (new Piste())->setNom('Piste ' . $ref)->setTypeAvenant(Piste::AVENANT_SOUSCRIPTION)
+                ->setDescriptionDuRisque('Risque')->setExercice(2026)->setClient($client);
+            $piste->setEntreprise($entreprise)->setInvite($invite);
+            $em->persist($piste);
+
+            $cotation = (new Cotation())->setNom('Cotation ' . $ref)->setDuree(365);
+            $cotation->setPiste($piste);
+            $cotation->setEntreprise($entreprise);
+            $em->persist($cotation);
+
+            $base = (new Avenant())->setCotation($cotation)->setReferencePolice('POL-' . $ref)->setNumero('0')
+                ->setDescription('Avenant ' . $ref)
+                ->setStartingAt($echu->modify('-365 days'))->setEndingAt($echu);
+            $base->setEntreprise($entreprise)->setInvite($invite);
+            $em->persist($base);
+
+            // Opportunité dérivée : les DEUX sens du double lien, comme en production.
+            $derivee = (new Piste())->setNom('Mouvement ' . $ref)->setTypeAvenant($typeAvenant)
+                ->setDescriptionDuRisque('Risque')->setExercice(2026)->setClient($client);
+            $derivee->setEntreprise($entreprise)->setInvite($invite);
+            $derivee->setAvenantDeBase($base);
+            $em->persist($derivee);
+            $base->setPisteDeRenouvellement($derivee);
+
+            if ($avecAvenantIssu) {
+                $cotationSuite = (new Cotation())->setNom('Cotation suite ' . $ref)->setDuree(365);
+                $cotationSuite->setPiste($derivee);
+                $cotationSuite->setEntreprise($entreprise);
+                $em->persist($cotationSuite);
+
+                $successeur = (new Avenant())->setCotation($cotationSuite)
+                    ->setReferencePolice('POL-' . $ref)->setNumero('1')->setDescription('Successeur ' . $ref)
+                    ->setStartingAt(new \DateTimeImmutable('today'))
+                    ->setEndingAt(new \DateTimeImmutable('+1 year'));
+                $successeur->setEntreprise($entreprise)->setInvite($invite);
+                $em->persist($successeur);
+            }
+        }
+
+        $em->flush();
+        $em->clear();
     }
 }

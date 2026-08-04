@@ -9,6 +9,8 @@ use App\Ai\Mutation\MutationReferences;
 use App\Ai\Scope\AiScope;
 use App\Ai\Tool\AiToolResult;
 use App\Ai\Tool\PreparerMouvementAvenantTool;
+use App\Entity\AssistantConversation;
+use App\Entity\AssistantMessage;
 use App\Entity\Assureur;
 use App\Entity\Avenant;
 use App\Entity\Chargement;
@@ -100,6 +102,8 @@ class MouvementAvenantTest extends WebTestCase
             'DELETE pa FROM partenaire pa JOIN entreprise e ON pa.entreprise_id = e.id WHERE e.nom = :n',
             'DELETE ri FROM risque ri JOIN entreprise e ON ri.entreprise_id = e.id WHERE e.nom = :n',
             'DELETE c FROM client c JOIN entreprise e ON c.entreprise_id = e.id WHERE e.nom = :n',
+            // Après les clients (qui portent la clé étrangère), avant les invités (gestionnaires).
+            'DELETE pf FROM portefeuille pf JOIN entreprise e ON pf.entreprise_id = e.id WHERE e.nom = :n',
             'DELETE ass FROM assureur ass JOIN entreprise e ON ass.entreprise_id = e.id WHERE e.nom = :n',
             'DELETE i FROM invite i JOIN entreprise e ON i.entreprise_id = e.id WHERE e.nom = :n',
         ] as $sql) {
@@ -569,6 +573,128 @@ class MouvementAvenantTest extends WebTestCase
         $this->assertNull($resultat->uiAction, 'Pas de plan, donc pas de bouton de validation.');
     }
 
+    /**
+     * L'IMPASSE SANS SORTIE, corrigée. Une police dont le renouvellement est AMORCÉ
+     * (opportunité dérivée créée, aucun avenant émis) ne pouvait plus rien : l'outil
+     * refusait à vie, et la rubrique lui retirait ses quatre boutons de mouvement. Résultat
+     * en production : l'utilisateur redemandait le renouvellement encore et encore, et
+     * AUCUN bouton n'apparaissait jamais.
+     *
+     * Le refus doit désormais NOMMER l'écriture qui reste — faire valider la proposition —
+     * pour que l'assistant enchaîne sur un vrai plan, donc un vrai bouton.
+     */
+    public function testMouvementAmorceNommeLEcritureQuiResteEtLaPropositionAValider(): void
+    {
+        $s = $this->seed();
+
+        // Renouvellement amorcé : opportunité dérivée + proposition, mais AUCUN avenant.
+        $derivee = (new Piste())
+            ->setNom('Renouvellement — amorcé')->setClient($s['piste']->getClient())->setRisque($s['piste']->getRisque())
+            ->setTypeAvenant(Piste::AVENANT_RENOUVELLEMENT)->setDescriptionDuRisque('x')->setExercice(2027);
+        $derivee->setEntreprise($s['ent'])->setInvite($s['inv']);
+        $this->em->persist($derivee);
+
+        $proposition = (new Cotation())->setNom('Offre de renouvellement - SFA')->setDuree(365);
+        $proposition->setPiste($derivee);
+        $proposition->setEntreprise($s['ent']);
+        $derivee->addCotation($proposition);
+        $this->em->persist($proposition);
+
+        $s['base']->setPisteDeRenouvellement($derivee);
+        $this->em->flush();
+
+        $resultat = $this->outil->execute(
+            ['mouvement' => 'renouvellement', 'avenantId' => $s['base']->getId()],
+            $this->scope($s),
+        );
+
+        $this->assertTrue($resultat->data['mouvementAmorce'] ?? false, 'Amorcé, donc pas scellé.');
+        $this->assertFalse($resultat->data['pret'] ?? true);
+        $this->assertNull($resultat->uiAction, 'Aucun bouton pour le mouvement lui-même.');
+
+        // La proposition à faire valider est DÉSIGNÉE, avec son identifiant.
+        $this->assertSame(
+            [$proposition->getId()],
+            array_column($resultat->data['propositionsEnAttente'], 'cotationId'),
+        );
+        $this->assertStringContainsString('FAIRE VALIDER', $resultat->data['prochaineEtape']);
+
+        // Et la consigne envoie l'assistant préparer CETTE écriture, dans le même tour.
+        $this->assertStringContainsString('preparer_operations', $resultat->data['note']);
+        $this->assertStringContainsString('MÊME TOUR', $resultat->data['note']);
+    }
+
+    /**
+     * Variante sans proposition : l'étape qui reste n'est pas la même, et doit le dire —
+     * c'est l'état réel de deux des polices bloquées en production.
+     */
+    public function testMouvementAmorceSansPropositionDemandeDEnMonterUne(): void
+    {
+        $s = $this->seed();
+
+        $derivee = (new Piste())
+            ->setNom('Renouvellement — sans proposition')->setClient($s['piste']->getClient())
+            ->setRisque($s['piste']->getRisque())->setTypeAvenant(Piste::AVENANT_RENOUVELLEMENT)
+            ->setDescriptionDuRisque('x')->setExercice(2027);
+        $derivee->setEntreprise($s['ent'])->setInvite($s['inv']);
+        $this->em->persist($derivee);
+        $s['base']->setPisteDeRenouvellement($derivee);
+        $this->em->flush();
+
+        $resultat = $this->outil->execute(
+            ['mouvement' => 'renouvellement', 'avenantId' => $s['base']->getId()],
+            $this->scope($s),
+        );
+
+        $this->assertTrue($resultat->data['mouvementAmorce'] ?? false);
+        $this->assertSame([], $resultat->data['propositionsEnAttente']);
+        $this->assertStringContainsString('AUCUNE proposition', $resultat->data['prochaineEtape']);
+    }
+
+    /**
+     * À l'inverse, une police dont le sort est SCELLÉ (avenant successeur émis) n'a plus
+     * rien à écrire : pas de « prochaine étape », et surtout pas d'invitation à préparer
+     * une écriture qui créerait un doublon.
+     */
+    public function testPoliceScelleeNAucuneEtapeRestante(): void
+    {
+        $s = $this->seed();
+
+        $derivee = (new Piste())
+            ->setNom('Renouvellement — abouti')->setClient($s['piste']->getClient())->setRisque($s['piste']->getRisque())
+            ->setTypeAvenant(Piste::AVENANT_RENOUVELLEMENT)->setDescriptionDuRisque('x')->setExercice(2027);
+        $derivee->setEntreprise($s['ent'])->setInvite($s['inv']);
+        $derivee->setAvenantDeBase($s['base']);
+        $this->em->persist($derivee);
+
+        $cotationSuite = (new Cotation())->setNom('Offre validée')->setDuree(365);
+        $cotationSuite->setPiste($derivee);
+        $cotationSuite->setEntreprise($s['ent']);
+        $derivee->addCotation($cotationSuite);
+        $this->em->persist($cotationSuite);
+
+        $successeur = (new Avenant())->setReferencePolice('POL-MVT-1')->setNumero('2')
+            ->setDescription('Successeur')
+            ->setStartingAt(new DateTimeImmutable('2027-01-01'))->setEndingAt(new DateTimeImmutable('2027-12-31'));
+        $successeur->setEntreprise($s['ent'])->setInvite($s['inv']);
+        $cotationSuite->addAvenant($successeur);
+        $this->em->persist($successeur);
+
+        $s['base']->setPisteDeRenouvellement($derivee);
+        $this->em->flush();
+
+        $resultat = $this->outil->execute(
+            ['mouvement' => 'renouvellement', 'avenantId' => $s['base']->getId()],
+            $this->scope($s),
+        );
+
+        $this->assertTrue($resultat->data['dejaTraite'] ?? false);
+        $this->assertArrayNotHasKey('mouvementAmorce', $resultat->data, 'Scellé, pas amorcé.');
+        $this->assertArrayNotHasKey('prochaineEtape', $resultat->data, 'Il n’y a plus rien à écrire.');
+        $this->assertStringContainsString('SCELLÉ', $resultat->data['note']);
+        $this->assertStringNotContainsString('preparer_operations', $resultat->data['note']);
+    }
+
     /** Référence ambiguë : la liste est proposée, aucun plan n'est préparé. */
     public function testReferenceAmbigueProposeLaListe(): void
     {
@@ -591,8 +717,13 @@ class MouvementAvenantTest extends WebTestCase
         $this->assertTrue($exact->data['pret'] ?? false, 'Une référence exacte n’est pas ambiguë.');
     }
 
-    /** Fail-closed : une police d'une autre entreprise est introuvable. */
-    public function testPoliceHorsEntrepriseEstIntrouvable(): void
+    /**
+     * Fail-closed : une police d'une autre entreprise est introuvable — et le refus PORTE
+     * SA CONSIGNE. Un « INTROUVABLE » nu ne disait au modèle que ce qui manquait, jamais ce
+     * qu'il devait faire : c'est dans ces vides qu'il improvisait (excuses, promesse de
+     * rappeler l'outil, plan inventé).
+     */
+    public function testPoliceHorsEntrepriseEstRefuseeAvecConsigne(): void
     {
         $s = $this->seed();
         $autre = (new Entreprise())
@@ -607,10 +738,201 @@ class MouvementAvenantTest extends WebTestCase
             ['mouvement' => 'renouvellement', 'avenantId' => $s['base']->getId()],
             new AiScope($autre, $inviteAutre),
         );
-        $this->assertSame(AiToolResult::STATUS_INTROUVABLE, $resultat->status);
+        $this->assertFalse($resultat->data['pret'] ?? true, 'Aucun plan hors du périmètre.');
+        $this->assertNull($resultat->uiAction, 'Donc aucun bouton.');
+        $this->assertArrayHasKey('bloquant', $resultat->data);
+        $this->assertArrayHasKey('note', $resultat->data, 'Tout refus doit dire au modèle quoi faire.');
+        $this->assertStringContainsString('AUCUN plan', $resultat->data['note']);
+        $this->assertStringNotContainsString(
+            'Présente le plan',
+            implode(' ', array_map(strval(...), array_filter($resultat->data, is_scalar(...)))),
+            'Aucune consigne ne doit contredire le refus.'
+        );
 
         $this->em->getConnection()->executeStatement('DELETE i FROM invite i JOIN entreprise e ON i.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT . '-bis']);
         $this->em->getConnection()->executeStatement('DELETE FROM entreprise WHERE nom = :n', ['n' => self::ENT . '-bis']);
+    }
+
+    /**
+     * LE BUG DU « PLAN FANTÔME », À LA SOURCE. Quand un plan attend déjà la décision de
+     * l'utilisateur, le moteur REFUSE d'en préparer un second — mais son refus est un
+     * STATUS_OK porteur de « pret: false ». L'outil de mouvement ne testait que le statut :
+     * le refus passait, et l'outil lui agrafait une « consigne : Présente le plan et le
+     * budget » avec défauts, source et éléments reconduits à l'appui.
+     *
+     * Le modèle recevait donc DEUX ORDRES CONTRAIRES et la matière d'un plan, sans aucune
+     * uiAction : il rédigeait un plan en prose annonçant un bouton qui n'existerait jamais.
+     * Le refus doit ressortir INTACT.
+     */
+    public function testLeRefusDuMoteurRessortIntactSansConsigneDePresentation(): void
+    {
+        $s = $this->seed();
+        $scope = $this->scope($s);
+
+        // Premier mouvement : un plan réel, qui reste en attente de décision.
+        $premier = $this->outil->execute(
+            ['mouvement' => 'renouvellement', 'avenantId' => $s['base']->getId()],
+            $scope,
+        );
+        $this->assertTrue($premier->data['pret'] ?? false, 'Le premier plan doit être prêt.');
+        $this->assertNotNull($premier->uiAction, 'Et porter sa barre de décision.');
+
+        // Le fil porte désormais ce plan non tranché — c'est cet ÉTAT qui arme le verrou,
+        // et il n'atteint les outils que par la conversation portée dans le scope.
+        $scopeAvecFil = new AiScope($s['ent'], $s['inv'], $this->filAvecPlanEnAttente($s, $premier));
+
+        $second = $this->outil->execute(
+            ['mouvement' => 'prorogation', 'avenantId' => $s['base']->getId(), 'dureeJours' => 30],
+            $scopeAvecFil,
+        );
+
+        $this->assertFalse($second->data['pret'] ?? true, 'Aucun second plan tant que le premier attend.');
+        $this->assertNull($second->uiAction, 'Et surtout aucun second bouton.');
+        $this->assertTrue($second->data['planEnAttente'] ?? false, 'Le refus du verrou doit être reconnaissable.');
+        $this->assertArrayNotHasKey(
+            'consigne',
+            $second->data,
+            'Le refus ne doit PAS être habillé d’une consigne « Présente le plan et le budget ».'
+        );
+        foreach (['defauts', 'source', 'reconduit', 'ecarts'] as $matiereDePlan) {
+            $this->assertArrayNotHasKey(
+                $matiereDePlan,
+                $second->data,
+                sprintf('« %s » donnerait au modèle de quoi rédiger un plan en prose.', $matiereDePlan)
+            );
+        }
+    }
+
+    /**
+     * L'ABANDON REND LA POLICE À SES MOUVEMENTS — SANS LA DÉTRUIRE.
+     *
+     * `Piste::avenantDeBase` est un OneToOne en cascade:['remove'] : supprimer
+     * l'opportunité dérivée emporterait la POLICE qu'elle fait évoluer, ses
+     * propositions, ses échéanciers et ses paiements. Le contrôleur HTTP dissociait à
+     * la main ; le chemin générique des plans de l'assistant, lui, ne le faisait pas.
+     * Ce test est le garde-fou : après exécution, la police doit être VIVANTE.
+     */
+    public function testAbandonSupprimeLOpportuniteMaisPreserveLaPolice(): void
+    {
+        $s = $this->seed();
+        $scope = $this->scope($s);
+        $baseId = $s['base']->getId();
+
+        $derivee = (new Piste())
+            ->setNom('Renouvellement — à abandonner')->setClient($s['piste']->getClient())
+            ->setRisque($s['piste']->getRisque())->setTypeAvenant(Piste::AVENANT_RENOUVELLEMENT)
+            ->setDescriptionDuRisque('x')->setExercice(2027);
+        $derivee->setEntreprise($s['ent'])->setInvite($s['inv']);
+        // Les DEUX sens du lien, comme en production.
+        $derivee->setAvenantDeBase($s['base']);
+        $this->em->persist($derivee);
+
+        $proposition = (new Cotation())->setNom('Offre à abandonner')->setDuree(365);
+        $proposition->setPiste($derivee);
+        $proposition->setEntreprise($s['ent']);
+        $derivee->addCotation($proposition);
+        $this->em->persist($proposition);
+
+        $s['base']->setPisteDeRenouvellement($derivee);
+        $this->em->flush();
+        $deriveeId = $derivee->getId();
+
+        $resultat = $this->outil->execute([
+            'mouvement' => 'renouvellement',
+            'avenantId' => $baseId,
+            'abandonnerMouvementExistant' => true,
+        ], $scope);
+
+        $this->assertTrue($resultat->data['pret'] ?? false, 'L’abandon doit produire un vrai plan.');
+        $this->assertTrue($resultat->data['abandon'] ?? false);
+        $this->assertNotNull($resultat->uiAction, 'Donc un vrai bouton de validation.');
+
+        // AVERTISSEMENT : le plan exige le mot de passe, et la consigne impose de
+        // prévenir AVANT d'agir.
+        $this->assertTrue($resultat->data['requiresPassword'] ?? false, 'Une suppression exige le mot de passe.');
+        $this->assertStringContainsString('IRRÉVERSIBLE', $resultat->data['consigne']);
+        $this->assertStringContainsString('impacts', $resultat->data['consigne']);
+
+        $plan = MutationPlan::fromArray($resultat->uiAction['plan']);
+        $refs = MutationReferences::live();
+        foreach ($plan->operationsOrdonnees() as $op) {
+            $this->mutation->executer($op, $scope, $s['user'], $refs);
+        }
+        $this->em->flush();
+        $this->em->clear();
+
+        // L'opportunité a disparu…
+        $this->assertNull(
+            $this->em->getRepository(Piste::class)->find($deriveeId),
+            'L’opportunité dérivée doit être supprimée.'
+        );
+
+        // … et LA POLICE EST VIVANTE, rendue à ses quatre mouvements.
+        $police = $this->em->getRepository(Avenant::class)->find($baseId);
+        $this->assertNotNull($police, 'La police de base ne doit JAMAIS être emportée par la cascade.');
+        $this->assertNull($police->getPisteDeRenouvellement(), 'Elle est de nouveau libre de tout mouvement.');
+        $this->assertNotNull($police->getCotation(), 'Sa proposition d’origine est intacte.');
+    }
+
+    /**
+     * À l'inverse, on n'abandonne PAS un mouvement dont le sort est scellé : un avenant
+     * successeur porte la couverture, et le supprimer détruirait une police vivante.
+     */
+    public function testAbandonRefuseSurUnMouvementScelle(): void
+    {
+        $s = $this->seed();
+
+        $derivee = (new Piste())
+            ->setNom('Renouvellement — abouti')->setClient($s['piste']->getClient())
+            ->setRisque($s['piste']->getRisque())->setTypeAvenant(Piste::AVENANT_RENOUVELLEMENT)
+            ->setDescriptionDuRisque('x')->setExercice(2027);
+        $derivee->setEntreprise($s['ent'])->setInvite($s['inv']);
+        $derivee->setAvenantDeBase($s['base']);
+        $this->em->persist($derivee);
+
+        $cotationSuite = (new Cotation())->setNom('Offre validée')->setDuree(365);
+        $cotationSuite->setPiste($derivee);
+        $cotationSuite->setEntreprise($s['ent']);
+        $derivee->addCotation($cotationSuite);
+        $this->em->persist($cotationSuite);
+
+        $successeur = (new Avenant())->setReferencePolice('POL-MVT-1')->setNumero('2')
+            ->setDescription('Successeur')
+            ->setStartingAt(new DateTimeImmutable('2027-01-01'))->setEndingAt(new DateTimeImmutable('2027-12-31'));
+        $successeur->setEntreprise($s['ent'])->setInvite($s['inv']);
+        $cotationSuite->addAvenant($successeur);
+        $this->em->persist($successeur);
+
+        $s['base']->setPisteDeRenouvellement($derivee);
+        $this->em->flush();
+
+        $resultat = $this->outil->execute([
+            'mouvement' => 'renouvellement',
+            'avenantId' => $s['base']->getId(),
+            'abandonnerMouvementExistant' => true,
+        ], $this->scope($s));
+
+        $this->assertFalse($resultat->data['pret'] ?? true);
+        $this->assertNull($resultat->uiAction, 'Aucun bouton : rien ne doit pouvoir être détruit ici.');
+        $this->assertStringContainsString('SCELLÉ', $resultat->data['bloquant']);
+    }
+
+    /**
+     * Un fil portant un plan NON TRANCHÉ, tel que AssistantIaController l'enregistre après
+     * avoir présenté un plan : c'est cet état que PlanEnAttente lit pour armer le verrou.
+     */
+    private function filAvecPlanEnAttente(array $s, AiToolResult $resultat): AssistantConversation
+    {
+        $conversation = (new AssistantConversation())->setTitre('Verrou mouvement');
+        $conversation->setEntreprise($s['ent'])->setInvite($s['inv']);
+        $conversation->addMessage((new AssistantMessage())
+            ->setRole(AssistantMessage::ROLE_ASSISTANT)
+            ->setContenu('Plan présenté.')
+            ->setMeta(['mutationPlan' => ['plan' => $resultat->uiAction['plan'] ?? []]]));
+        $this->em->persist($conversation);
+        $this->em->flush();
+
+        return $conversation;
     }
 
     // ───────────────────────── 4. L'exécution referme la boucle ─────────────────────────
@@ -667,6 +989,66 @@ class MouvementAvenantTest extends WebTestCase
 
         $apres = array_map(static fn (Avenant $a) => $a->getId(), $dashboard->getAllRenouvellements($s['ent'], 400));
         $this->assertNotContains($baseId, $apres, 'La police renouvelée ne doit plus être réclamée par la vigie.');
+    }
+
+    /**
+     * LE REVERS EXACT DU TEST PRÉCÉDENT, et l'état réel des polices de l'incident : le
+     * mouvement a été AMORCÉ — l'opportunité dérivée existe, les deux sens du lien sont
+     * posés — mais AUCUN avenant successeur n'en est issu. Le sort n'est donc PAS scellé :
+     * la police reste ÉCHUE et la vigie doit continuer à la réclamer, puisque l'action
+     * due (faire valider la proposition de renouvellement) ne l'est pas encore.
+     *
+     * C'est ce que l'assistant a confondu avec « renouvelée », en annonçant qu'il ne
+     * restait aucune police échue.
+     */
+    public function testRenouvellementAmorceSansSuccesseurLaisseLaPoliceDansLaVigie(): void
+    {
+        $s = $this->seed();
+        $baseId = $s['base']->getId();
+
+        // La police est ÉCHUE : c'est la situation de l'incident.
+        $s['base']->setEndingAt(new DateTimeImmutable('-30 days'));
+
+        // Opportunité dérivée SANS cotation ni avenant : un renouvellement amorcé.
+        $derivee = (new Piste())
+            ->setNom('Renouvellement amorcé POL-MVT-1')
+            ->setTypeAvenant(Piste::AVENANT_RENOUVELLEMENT)
+            ->setDescriptionDuRisque('Risque reconduit')
+            ->setExercice(2027)
+            ->setClient($s['piste']->getClient());
+        $derivee->setEntreprise($s['ent'])->setInvite($s['inv']);
+        $derivee->setAvenantDeBase($s['base']);
+        $this->em->persist($derivee);
+        $s['base']->setPisteDeRenouvellement($derivee);
+
+        // La vigie de l'assistant répond DANS le portefeuille de l'invité : sans
+        // portefeuille, elle rend une liste vide — exactement comme la rubrique à l'écran.
+        $portefeuille = (new \App\Entity\Portefeuille())->setNom('Portefeuille Mouvement');
+        $portefeuille->setGestionnaire($s['inv']);
+        $portefeuille->setEntreprise($s['ent']);
+        $portefeuille->addClient($s['piste']->getClient());
+        $this->em->persist($portefeuille);
+
+        $this->em->flush();
+        $this->em->clear();
+
+        $dashboard = static::getContainer()->get(DashboardDataProvider::class);
+        $vigie = $dashboard->getAllRenouvellements($s['ent'], 30);
+        $ids = array_map(static fn (Avenant $a) => $a->getId(), $vigie);
+
+        $this->assertContains(
+            $baseId,
+            $ids,
+            'Un renouvellement AMORCÉ ne scelle rien : la police échue reste réclamée par la vigie.'
+        );
+
+        // Et la vigie la présente bien comme ÉCHUE, avec son retard nommé.
+        $volet = static::getContainer()->get(\App\Ai\Tool\VigieEcheancesTool::class)
+            ->execute(['volet' => 'renouvellements', 'horizonJours' => 30], $this->scope($s))
+            ->data['volets']['renouvellements'];
+
+        $this->assertSame([$baseId], array_column($volet['echues']['lignes'], 'id'));
+        $this->assertSame(30, $volet['echues']['lignes'][0]['joursRetard']);
     }
 
     // ───────────────────────── 5. Parité avec l'interface (workspace) ─────────────────────────

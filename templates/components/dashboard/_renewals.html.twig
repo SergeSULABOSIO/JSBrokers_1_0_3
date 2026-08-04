@@ -1,10 +1,15 @@
-{% set _now = date() %}
+{# Mêmes seuils, même arithmétique en jours pleins que _renewals_list.html.twig :
+   les compteurs des onglets et le rangement des lignes DOIVENT s'accorder. #}
+{% set _now = 'today'|date('U') %}
+{% set countEchus = 0 %}
 {% set countJ30 = 0 %}
 {% set countJ60 = 0 %}
 {% set countJ61plus = 0 %}
 {% for avenant in renouvellements %}
-    {% set _diff = (avenant.endingAt|date('U') - _now|date('U')) / 86400 %}
-    {% if _diff <= 30 %}
+    {% set _diff = ((avenant.endingAt|date('Y-m-d')|date('U') - _now) / 86400)|round %}
+    {% if _diff < 0 %}
+        {% set countEchus = countEchus + 1 %}
+    {% elseif _diff <= 30 %}
         {% set countJ30 = countJ30 + 1 %}
     {% elseif _diff <= 60 %}
         {% set countJ60 = countJ60 + 1 %}
@@ -12,11 +17,13 @@
         {% set countJ61plus = countJ61plus + 1 %}
     {% endif %}
 {% endfor %}
+{% set groupeDefaut = countEchus > 0 ? 'echus' : 'j30' %}
 
 <div class="px-3 pt-2 pb-2 bg-white">
         <div class="d-flex align-items-center gap-2">
             <div class="db-prod-tabs" id="dbRenewToggleBar">
-                <button class="db-task-toggle active" data-mode="j30"     onclick="dbRenewToggle(this)" aria-pressed="true">≤ 30 jrs ({{ countJ30 }})</button>
+                <button class="db-task-toggle{{ groupeDefaut == 'echus' ? ' active' : '' }}" data-mode="echus"   onclick="dbRenewToggle(this)" aria-pressed="{{ groupeDefaut == 'echus' ? 'true' : 'false' }}">Échues ({{ countEchus }})</button>
+                <button class="db-task-toggle{{ groupeDefaut == 'j30' ? ' active' : '' }}"   data-mode="j30"     onclick="dbRenewToggle(this)" aria-pressed="{{ groupeDefaut == 'j30' ? 'true' : 'false' }}">≤ 30 jrs ({{ countJ30 }})</button>
                 <button class="db-task-toggle"        data-mode="j60"     onclick="dbRenewToggle(this)" aria-pressed="false">31-60 jrs ({{ countJ60 }})</button>
                 <button class="db-task-toggle"        data-mode="j61plus" onclick="dbRenewToggle(this)" aria-pressed="false">61+ jrs ({{ countJ61plus }})</button>
             </div>
