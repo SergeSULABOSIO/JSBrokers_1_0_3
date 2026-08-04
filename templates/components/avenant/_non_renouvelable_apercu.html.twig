@@ -1,0 +1,98 @@
+{#
+    APERÇU de la décision « cette police n'est pas à renouveler » : ce que la validation
+    écrira, et surtout CE QUI RESTE À RECOUVRER malgré elle.
+
+    Rendu à l'ouverture du picker ET re-rendu par le serveur à chaque frappe dans le motif
+    (le contrôleur Stimulus remplace ce fragment). Le markup ne vit donc qu'ICI : le JS ne
+    fabrique aucun libellé, il ne fait que substituer le bloc — même promesse que
+    _mouvement_apercu.html.twig.
+
+    `apercu` provient de AvenantController::apercuNonRenouvelable().
+#}
+{% if apercu.mode == 'lever' %}
+    <dl class="row mb-2" style="font-size:.86rem;">
+        <dt class="col-5 fw-semibold text-muted">Décision retirée</dt>
+        <dd class="col-7 mb-1">
+            {% if apercu.decideeLe %}du {{ apercu.decideeLe }}{% endif %}
+            {%- if apercu.decideePar %}, par {{ apercu.decideePar }}{% endif %}
+        </dd>
+
+        {% if apercu.motifActuel %}
+            <dt class="col-5 fw-semibold text-muted">Motif consigné</dt>
+            <dd class="col-7 mb-1">«&nbsp;{{ apercu.motifActuel }}&nbsp;»</dd>
+        {% endif %}
+    </dl>
+
+    <ul class="list-unstyled mb-0" style="font-size:.82rem;">
+        <li class="d-flex gap-2 mb-1">
+            <span aria-hidden="true" style="color:#0047AB;">•</span>
+            <span class="text-muted">La police réapparaîtra dans le suivi des échéances, à sa place habituelle.</span>
+        </li>
+        {# On le dit explicitement : la crainte naturelle en retirant un marquage est de
+           perdre la note qui l'accompagnait. #}
+        <li class="d-flex gap-2 mb-1">
+            <span aria-hidden="true" style="color:#0047AB;">•</span>
+            <span class="text-muted">Le motif et son auteur sont <strong>conservés</strong> dans l'historique de la police.</span>
+        </li>
+    </ul>
+{% elseif not apercu.pret %}
+    <p class="jsb-picker-empty" role="status">
+        Indiquez le motif pour voir ce qui sera enregistré.
+    </p>
+{% else %}
+    <dl class="row mb-2" style="font-size:.86rem;">
+        <dt class="col-5 fw-semibold text-muted">Motif consigné</dt>
+        <dd class="col-7 mb-1">«&nbsp;{{ apercu.motif }}&nbsp;»</dd>
+
+        {% if apercu.mode == 'motif' and apercu.decideeLe %}
+            <dt class="col-5 fw-semibold text-muted">Décision d'origine</dt>
+            <dd class="col-7 mb-1">
+                du {{ apercu.decideeLe }}{% if apercu.decideePar %}, par {{ apercu.decideePar }}{% endif %}
+                <span class="text-muted">(inchangée)</span>
+            </dd>
+        {% endif %}
+    </dl>
+
+    <ul class="list-unstyled mb-0" style="font-size:.82rem;">
+        {% if apercu.mode == 'marquer' %}
+            <li class="d-flex gap-2 mb-1">
+                <span aria-hidden="true" style="color:#0047AB;">•</span>
+                <span class="text-muted">La police quitte le suivi des échéances&nbsp;: elle ne sera plus réclamée comme un renouvellement en attente.</span>
+            </li>
+            {# CE QUI DISTINGUE CE MARQUAGE D'UNE RÉSILIATION. Sans cette ligne, un
+               utilisateur peut croire qu'il vient d'interrompre la couverture. #}
+            {% if apercu.couvertureEnCours %}
+                <li class="d-flex gap-2 mb-1">
+                    <span aria-hidden="true" style="color:#198754;">•</span>
+                    <span class="text-muted">
+                        <strong>La couverture n'est pas interrompue</strong>&nbsp;: elle court jusqu'au
+                        {{ apercu.finCouverture }} et la police reste une police active.
+                    </span>
+                </li>
+            {% endif %}
+            <li class="d-flex gap-2 mb-1">
+                <span aria-hidden="true" style="color:#0047AB;">•</span>
+                <span class="text-muted">Décision réversible à tout moment&nbsp;: «&nbsp;Rétablir le renouvellement&nbsp;».</span>
+            </li>
+        {% else %}
+            <li class="d-flex gap-2 mb-1">
+                <span aria-hidden="true" style="color:#0047AB;">•</span>
+                <span class="text-muted">Seul le motif est réécrit&nbsp;: la date de la décision et son auteur restent ceux de l'origine.</span>
+            </li>
+        {% endif %}
+    </ul>
+{% endif %}
+
+{# CE QUI RESTE DÛ. Affiché dans les TROIS modes, y compris à la levée : retirer une police
+   du pipeline de renouvellement ne la retire d'aucun suivi d'encaissement, et laisser
+   croire l'inverse ferait perdre de l'argent déjà gagné. #}
+{% if apercu.avertissements is not empty %}
+    <div class="alert alert-warning mt-2 mb-0 py-2 px-3" role="alert" style="font-size:.82rem;">
+        <p class="fw-semibold mb-1">Ce suivi reste actif sur cette police</p>
+        <ul class="list-unstyled mb-0">
+            {% for avertissement in apercu.avertissements %}
+                <li>{{ avertissement }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}

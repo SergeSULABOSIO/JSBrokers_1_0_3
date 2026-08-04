@@ -371,42 +371,27 @@ export function saveCookie(nom, valeur) {
         }, 600);
     }
 
+    /**
+     * « Signaler : à ne pas renouveler » depuis le clic droit du widget Renouvellements.
+     *
+     * Ouvre le MÊME picker que la rubrique Avenants (barre d'outils, clic droit, fiche) :
+     * le motif y est obligatoire, l'aperçu annonce ce qui reste à recouvrer, et le serveur
+     * applique les mêmes gardes (droit de modification, périmètre de l'espace de travail).
+     *
+     * L'ancien chemin — une simple confirmation qui POSTait vers /admin/piste/api/set-not-renewable —
+     * écrivait « assurance temporaire non renouvelable » sur la PISTE (une nature de contrat,
+     * pas une décision), ne conservait aucun motif, n'était protégée par aucun contrôle de
+     * droits ni de périmètre, et ne faisait en réalité sortir la police d'AUCUNE vue.
+     */
     function dbRenewCtxNoRenewal() {
         var menu = document.getElementById('dbRenewCtxMenu');
         if (menu) menu.style.display = 'none';
         if (!_aid) return;
 
-        var tipEl    = _el ? _el.querySelector('[data-renew-tip]') : null;
-        var client   = tipEl ? esc(tipEl.textContent.trim())               : '—';
-        var risque   = tipEl ? esc(tipEl.dataset.renewRisque   || '—')     : '—';
-        var assureur = tipEl ? esc(tipEl.dataset.renewAssureur || '—')     : '—';
-        var periode  = tipEl ? esc(tipEl.dataset.renewPeriode  || '—')     : '—';
-
-        function esc(s) {
-            return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-        }
-
-        var row = '<div class="d-flex gap-2 mb-1"><span class="text-muted" style="min-width:4.5rem;">';
-        var bodyHtml =
-            '<p class="mb-2">La piste liée à cet avenant sera marquée comme <strong>Temporaire non renouvellable</strong>. Elle disparaîtra du tableau des renouvellements à venir.</p>' +
-            '<div class="p-2 rounded small" style="background:#f8f9fa;border:1px solid #dee2e6;">' +
-                row + 'Client</span><strong>' + client + '</strong></div>' +
-                row + 'Risque</span><span>' + risque + '</span></div>' +
-                row + 'Assureur</span><span>' + assureur + '</span></div>' +
-                '<div class="d-flex gap-2"><span class="text-muted" style="min-width:4.5rem;">Période</span><span>' + periode + '</span></div>' +
-            '</div>';
-
-        document.dispatchEvent(new CustomEvent('ui:confirmation.request', {
+        document.dispatchEvent(new CustomEvent('cerveau:event', {
             detail: {
-                title: 'Ne pas renouveler',
-                body: bodyHtml,
-                headerClass: 'bg-cobalt text-white',
-                confirmClass: 'btn btn-cobalt',
-                showIrreversible: false,
-                onConfirm: {
-                    type: 'renew:set-not-renewable',
-                    payload: { avenantId: _aid }
-                }
+                type: 'ui:avenant.non-renouvelable-request',
+                payload: { url: '/admin/avenant/api/non-renouvelable-picker/' + _aid }
             }
         }));
     }

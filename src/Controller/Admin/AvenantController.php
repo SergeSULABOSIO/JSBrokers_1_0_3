@@ -22,6 +22,7 @@ use App\Repository\AvenantRepository;
 use App\Repository\EntrepriseRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use App\Services\JSBDynamicSearchService;
+use App\Services\Avenant\MarquageNonRenouvelableService;
 use App\Services\CanvasBuilder;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mailer\MailerInterface;
@@ -56,6 +57,7 @@ class AvenantController extends AbstractController
         private SerializerInterface $serializer,
         private MouvementAvenantBuilder $mouvementBuilder,
         private WorkspaceMutationService $mutationService,
+        private MarquageNonRenouvelableService $marquageNonRenouvelable,
         CanvasBuilder $canvasBuilder // Inject CanvasBuilder without property promotion
     ) {
         // Assign the injected CanvasBuilder to the property declared in the trait
@@ -373,6 +375,174 @@ class AvenantController extends AbstractController
             'reconduit'      => $decalque['reconduit'],
             'avertissements' => $decalque['avertissements'],
             'source'         => $decalque['source'],
+        ];
+    }
+
+    // ─────────────────── Décision : « cette police n'est pas à renouveler » ───────────────────
+
+    /** Les trois gestes du marquage. Le motif n'est exigé que pour les deux premiers. */
+    private const MODES_NON_RENOUVELABLE = ['marquer', 'motif', 'lever'];
+
+    /**
+     * Boîte « signaler / corriger / rétablir », ouverte depuis la barre d'outils, le clic
+     * droit ou la fiche d'un avenant — et depuis le clic droit du widget Renouvellements.
+     *
+     * AUCUNE CONDITION DE DATE, ici ni ailleurs : l'information arrive quand elle arrive
+     * (le client annonce en mars ce qui se produira en décembre), et c'est en pleine
+     * couverture que la note a le plus de valeur pour celui qui rouvrira le dossier.
+     */
+    #[Route('/api/non-renouvelable-picker/{id}', name: 'api.non_renouvelable_picker', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function nonRenouvelablePicker(Avenant $avenant, Request $request): Response
+    {
+        $contexte = $this->contexteNonRenouvelable($avenant, $request);
+        if ($contexte instanceof JsonResponse) {
+            return $contexte;
+        }
+        $mode = $contexte;
+
+        return $this->render('components/avenant/_non_renouvelable_picker.html.twig', [
+            'mode'    => $mode,
+            'avenant' => $avenant,
+            'apercu'  => $this->apercuNonRenouvelable($avenant, $mode, $avenant->getNonRenouvelableMotif()),
+        ]);
+    }
+
+    /**
+     * APERÇU : ce que la validation écrira, et surtout CE QUI RESTE À RECOUVRER malgré la
+     * décision. Rafraîchi à la saisie du motif. N'écrit rien.
+     */
+    #[Route('/api/non-renouvelable-apercu/{id}', name: 'api.non_renouvelable_apercu', requirements: ['id' => Requirement::DIGITS], methods: ['GET'])]
+    public function nonRenouvelableApercu(Avenant $avenant, Request $request): JsonResponse
+    {
+        $contexte = $this->contexteNonRenouvelable($avenant, $request);
+        if ($contexte instanceof JsonResponse) {
+            return $contexte;
+        }
+        $apercu = $this->apercuNonRenouvelable($avenant, $contexte, (string) $request->query->get('motif', ''));
+
+        // Fragment rendu par le SERVEUR, comme pour les mouvements : le JS ne fabrique aucun
+        // libellé, il substitue le bloc. Écran et assistante annoncent donc le même texte.
+        return $this->json([
+            'pret' => $apercu['pret'],
+            'html' => $this->renderView('components/avenant/_non_renouvelable_apercu.html.twig', ['apercu' => $apercu]),
+        ]);
+    }
+
+    /**
+     * ENREGISTRE la décision. Trois gestes, un seul endpoint : marquer, corriger le motif,
+     * lever. Toutes les règles (motif obligatoire, horodatage, conservation de la trace)
+     * vivent dans MarquageNonRenouvelableService, partagé avec l'outil de l'assistante.
+     */
+    #[Route('/api/non-renouvelable/{id}', name: 'api.non_renouvelable_executer', requirements: ['id' => Requirement::DIGITS], methods: ['POST'])]
+    public function nonRenouvelableExecuter(Avenant $avenant, Request $request): JsonResponse
+    {
+        $contexte = $this->contexteNonRenouvelable($avenant, $request);
+        if ($contexte instanceof JsonResponse) {
+            return $contexte;
+        }
+        $mode = $contexte;
+
+        $args  = json_decode($request->getContent() ?: '{}', true);
+        $motif = is_array($args) ? (string) ($args['motif'] ?? '') : '';
+
+        try {
+            match ($mode) {
+                'marquer' => $this->marquageNonRenouvelable->marquer($avenant, $motif, $this->getInvite()),
+                'motif'   => $this->marquageNonRenouvelable->modifierMotif($avenant, $motif),
+                'lever'   => $this->marquageNonRenouvelable->lever($avenant),
+            };
+        } catch (\InvalidArgumentException $e) {
+            return $this->json(['success' => false, 'message' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $this->em->flush();
+
+        $reference = (string) $avenant->getReferencePolice();
+
+        return $this->json([
+            'success' => true,
+            'message' => match ($mode) {
+                'marquer' => sprintf('La police « %s » est signalée comme non renouvelable.', $reference),
+                'motif'   => sprintf('Le motif de non-renouvellement de la police « %s » a été mis à jour.', $reference),
+                'lever'   => sprintf('La police « %s » est de nouveau suivie pour renouvellement.', $reference),
+            },
+        ]);
+    }
+
+    /**
+     * Gardes communes aux trois endpoints du marquage : mode connu, droit de MODIFICATION
+     * sur l'avenant (fail-closed), avenant de l'espace de travail courant, et cohérence du
+     * geste avec l'état réel de la police.
+     *
+     * Volontairement PLUS ÉTROIT que contexteMouvement() : aucun objet n'est créé ici, donc
+     * le droit d'écriture sur Piste et Cotation n'a pas lieu d'être exigé. Et pas de garde
+     * sur endingAt : marquer une police en cours est le cas nominal.
+     *
+     * @return string|JsonResponse le mode validé
+     */
+    private function contexteNonRenouvelable(Avenant $avenant, Request $request): string|JsonResponse
+    {
+        if (!$this->mayAccessEntity(Avenant::class, Invite::ACCESS_MODIFICATION)) {
+            return $this->accessDeniedJson();
+        }
+        if ($avenant->getEntreprise()?->getId() !== $this->getEntreprise()->getId()) {
+            return $this->json(['message' => 'Avenant introuvable dans cet espace de travail.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $mode = (string) $request->query->get('mode', 'marquer');
+        if (!in_array($mode, self::MODES_NON_RENOUVELABLE, true)) {
+            return $this->json(['message' => 'Geste inconnu.'], Response::HTTP_NOT_FOUND);
+        }
+
+        // L'état de la police décide du geste possible : corriger ou lever suppose un
+        // marquage, marquer suppose son absence. Sans ce contrôle, deux utilisateurs
+        // agissant en même temps pourraient se contredire en silence.
+        $marquee = $avenant->isNonRenouvelable();
+        if ($mode === 'marquer' && $marquee) {
+            return $this->json(['message' => 'Cette police est déjà signalée comme non renouvelable.'], Response::HTTP_CONFLICT);
+        }
+        if ($mode !== 'marquer' && !$marquee) {
+            return $this->json(['message' => "Cette police n'est pas signalée comme non renouvelable."], Response::HTTP_CONFLICT);
+        }
+
+        return $mode;
+    }
+
+    /**
+     * Aperçu lisible du geste : identité de la police, ce que la validation changera, et
+     * CE QUI RESTE DÛ.
+     *
+     * Les avertissements de recouvrement sont le cœur de cet aperçu : sortir une police du
+     * pipeline de renouvellement ne la sort d'AUCUN suivi d'encaissement, et laisser croire
+     * l'inverse ferait perdre de l'argent déjà gagné.
+     *
+     * @return array<string, mixed>
+     */
+    private function apercuNonRenouvelable(Avenant $avenant, string $mode, ?string $motif): array
+    {
+        $piste = $avenant->getCotation()?->getPiste();
+        $fin   = $avenant->getEndingAt();
+
+        return [
+            'pret'   => $mode === 'lever' || trim((string) $motif) !== '',
+            'mode'   => $mode,
+            'motif'  => trim((string) $motif),
+            'source' => [
+                'client'   => $piste?->getClient()?->getNom(),
+                'risque'   => $piste?->getRisque()?->getNomComplet(),
+                'assureur' => $avenant->getCotation()?->getAssureur()?->getNom(),
+                'periode'  => $avenant->getStartingAt() !== null && $fin !== null
+                    ? $avenant->getStartingAt()->format('d/m/Y') . ' → ' . $fin->format('d/m/Y')
+                    : null,
+            ],
+            // La couverture court-elle encore ? C'est ce qui distingue ce marquage d'une
+            // résiliation, et l'utilisateur doit le lire noir sur blanc avant de valider.
+            'couvertureEnCours' => $fin !== null && $fin >= new DateTimeImmutable('today'),
+            'finCouverture'     => $fin?->format('d/m/Y'),
+            'decideeLe'         => $avenant->getNonRenouvelableLe()?->format('d/m/Y'),
+            'decideePar'        => $avenant->getNonRenouvelablePar()?->getNom(),
+            'motifActuel'       => $avenant->getNonRenouvelableMotif(),
+            'avertissements'    => $this->marquageNonRenouvelable->avertissements($avenant),
         ];
     }
 

@@ -41,7 +41,7 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
         if (!$cotation) {
             $urgenceSeule = $this->getUrgenceEcheance($entity, $renouvellement);
 
-            return [
+            return $this->nonRenouvelableIndicateurs($entity) + [
                 'statutRenouvellement' => $renouvellement['statut'],
                 'suiteDeLaPolice' => $renouvellement['phrase'],
                 'hasPisteDerivee' => $entity->getPisteDeRenouvellement() !== null,
@@ -92,7 +92,7 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
         $retro        = $partenaire ? $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1, []) : 0.0;
         $retroReverse = $partenaire ? $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtierPayee($cotation, null) : 0.0;
 
-        return [
+        return $this->nonRenouvelableIndicateurs($entity) + [
             // Indicateurs de base de l'avenant
             'statutRenouvellement' => $renouvellement['statut'],
             'suiteDeLaPolice' => $renouvellement['phrase'],
@@ -168,6 +168,65 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
     }
 
     /**
+     * DÉCISION DE NON-RENOUVELLEMENT, rendue lisible partout où la police s'affiche.
+     *
+     * SOURCE UNIQUE des libellés : liste, bandeau du dialogue, colonne d'attributs calculés,
+     * fiches et listes de l'assistante lisent tous CES valeurs. Aucun gabarit ne réécrit la
+     * phrase — sinon deux surfaces finiraient par ne plus dire la même chose.
+     *
+     * SEUL LE BOOLÉEN GOUVERNE. Après une levée, la trace (motif, auteur, date) subsiste dans
+     * les colonnes : elle alimente alors nonRenouvelableHistorique, jamais le badge. Une police
+     * dont le marquage a été retiré est redevenue une police ordinaire.
+     *
+     * @return array{nonRenouvelableBadge: ?string, nonRenouvelableNiveau: ?string, nonRenouvelableDetail: ?string, nonRenouvelableHistorique: ?string}
+     */
+    private function nonRenouvelableIndicateurs(Avenant $avenant): array
+    {
+        $vide = [
+            'nonRenouvelableBadge' => null,
+            'nonRenouvelableNiveau' => null,
+            'nonRenouvelableDetail' => null,
+            'nonRenouvelableHistorique' => null,
+        ];
+
+        $motif  = trim((string) $avenant->getNonRenouvelableMotif());
+        $auteur = $avenant->getNonRenouvelablePar()?->getNom();
+        $le     = $avenant->getNonRenouvelableLe();
+
+        if (!$avenant->isNonRenouvelable()) {
+            $leve = $avenant->getNonRenouvelableLeveLe();
+            if ($leve === null) {
+                return $vide;
+            }
+
+            // Marquage posé puis RETIRÉ : plus de badge, mais l'historique reste consultable
+            // pour qui rouvre le dossier et se demande pourquoi la police avait disparu du
+            // pipeline pendant plusieurs mois.
+            //
+            // L'union de tableaux garde la valeur de GAUCHE sur une clé commune : la ligne
+            // calculée doit donc précéder $vide, jamais l'inverse.
+            return ['nonRenouvelableHistorique' => sprintf(
+                'Marquage « non renouvelable » levé le %s%s%s.',
+                $leve->format('d/m/Y'),
+                $le !== null ? ' — décision du ' . $le->format('d/m/Y') : '',
+                $motif !== '' ? sprintf(' : « %s »', $motif) : '',
+            )] + $vide;
+        }
+
+        return [
+            'nonRenouvelableBadge' => 'Non renouvelable',
+            'nonRenouvelableNiveau' => 'faible',
+            'nonRenouvelableDetail' => sprintf(
+                'Non renouvelable — décidé%s%s%s',
+                $le !== null ? ' le ' . $le->format('d/m/Y') : '',
+                $auteur !== null && $auteur !== '' ? ' par ' . $auteur : '',
+                $motif !== '' ? sprintf(' : %s', $motif) : '.',
+            ),
+            'nonRenouvelableHistorique' => null,
+        ];
+    }
+
+    /**
      * Urgence d'échéance pour le badge de la liste (libellé + niveau CSS). Source unique des
      * seuils : AvenantEcheanceScope (mêmes bornes que le filtre SQL des chips). Un avenant sans
      * échéance renvoie des valeurs nulles → aucun badge rendu.
@@ -183,6 +242,14 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
      */
     private function getUrgenceEcheance(Avenant $avenant, array $renouvellement): array
     {
+        // Une police signalée non renouvelable n'est pas EN RETARD : c'est une décision, pas
+        // un oubli. Elle perd donc l'alarme rouge « Expiré depuis N j ». Le badge dédié
+        // « Non renouvelable » (nonRenouvelableBadge) prend le relais à côté, pour qu'elle
+        // reste repérable en un coup d'œil — elle a quitté tous les chips sauf « Toutes ».
+        if ($avenant->isNonRenouvelable()) {
+            return ['libelle' => null, 'niveau' => null];
+        }
+
         if ($avenant->getEndingAt() !== null && AvenantSuccessionScope::estScelle((int) $renouvellement['code'])) {
             return $this->badgeSortScelle($renouvellement);
         }

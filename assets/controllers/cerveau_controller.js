@@ -312,9 +312,6 @@ export default class extends Controller {
                 this._publishSelectionStatus('Suppression en cours...');
                 this._handleApiDeleteRequest(payload);
                 break;
-            case 'renew:set-not-renewable':
-                this._handleSetNotRenewable(payload);
-                break;
             case 'dialog:confirmation.request':
                 this._publishSelectionStatus('Attente de confirmation...');
                 this._requestDeleteConfirmation(payload);
@@ -507,6 +504,12 @@ export default class extends Controller {
                 break;
             case 'avenant:mouvement.enregistre': // succès d'un mouvement via le picker
                 this._handleAvenantMouvementEnregistre(payload);
+                break;
+            case 'ui:avenant.non-renouvelable-request': // signaler / corriger le motif / rétablir
+                this.handleAvenantNonRenouvelableRequest(payload);
+                break;
+            case 'avenant:non-renouvelable.enregistre': // succès du marquage via le picker
+                this._handleAvenantNonRenouvelableEnregistre(payload);
                 break;
             case 'ui:client.portefeuille-picker-request':
                 this.handleClientPortefeuillePickerRequest(payload);
@@ -1004,28 +1007,6 @@ export default class extends Controller {
             });
     }
 
-    _handleSetNotRenewable(payload) {
-        const { avenantId } = payload;
-        if (!avenantId) {
-            this.broadcast('ui:confirmation.error', { error: 'ID avenant manquant.' });
-            return;
-        }
-        const fd = new FormData();
-        fd.append('avenantId', avenantId);
-        fetch('/admin/piste/api/set-not-renewable', { method: 'POST', body: fd })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    this.broadcast('ui:confirmation.close');
-                    document.dispatchEvent(new CustomEvent('app:dashboard.sidebar.reload'));
-                } else {
-                    this.broadcast('ui:confirmation.error', { error: data.message || 'Erreur lors de la mise à jour.' });
-                }
-            })
-            .catch(() => {
-                this.broadcast('ui:confirmation.error', { error: 'Erreur de communication avec le serveur.' });
-            });
-    }
 
     /**
      * Met à jour l'état de la sélection en ajoutant ou retirant un élément.
@@ -1545,6 +1526,43 @@ export default class extends Controller {
         this._publishSelectionStatus('Actualisation de la liste...');
         this.broadcast('app:loading.start', { originatorId: etat.elementId, workspaceTabId: this.currentWorkspaceTabId });
         this._requestListRefresh(this.getActiveTabId());
+    }
+
+    /**
+     * « Cette police n'est pas à renouveler » : signaler, corriger le motif, rétablir.
+     * Le mode voyage dans l'URL (?mode=motif|lever), le picker n'a rien à deviner.
+     *
+     * AUCUNE CONDITION DE DATE : l'action est offerte sur une police qui couvre encore
+     * comme sur une police échue — l'information arrive quand elle arrive.
+     *
+     * PARITÉ ASSISTANT : le picker n'invente rien, pas même les montants restant à
+     * recouvrer ; l'aperçu vient du serveur, du même service que l'outil de Ket.
+     * @param {object} payload
+     * @param {string} payload.url - '/admin/avenant/api/non-renouvelable-picker/{id}[?mode=…]'
+     */
+    async handleAvenantNonRenouvelableRequest(payload) {
+        await this._openStandalonePicker(payload.url, {
+            controllerName: 'non-renouvelable-picker',
+            errorLabel: 'le suivi de renouvellement de la police',
+        });
+    }
+
+    /**
+     * Décision enregistrée : notification + rafraîchissement de la liste active.
+     * Le refresh est ce qui fait basculer les trois actions (signaler ⇄ corriger/rétablir),
+     * apparaître ou disparaître le badge, et surtout sortir ou rentrer la ligne dans le
+     * chip d'échéance courant.
+     * @private
+     */
+    _handleAvenantNonRenouvelableEnregistre(payload) {
+        this._showNotification(payload.message || 'Décision enregistrée.', 'success');
+        const etat = this._getActiveTabState();
+        this._publishSelectionStatus('Actualisation de la liste...');
+        this.broadcast('app:loading.start', { originatorId: etat.elementId, workspaceTabId: this.currentWorkspaceTabId });
+        this._requestListRefresh(this.getActiveTabId());
+        // Le widget Renouvellements du tableau de bord affiche les mêmes polices : quand la
+        // décision vient de son clic droit, c'est LUI qu'il faut rafraîchir, pas une liste.
+        this.broadcast('app:dashboard.sidebar.reload', {});
     }
 
     /**

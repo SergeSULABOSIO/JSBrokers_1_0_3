@@ -192,16 +192,15 @@ class JSBDynamicSearchService
                     // PIPELINE DE RENOUVELLEMENT : une police dont le sort est SCELLÉ n'a plus
                     // rien à réclamer et sort des QUATRE fenêtres. Reprise par un avenant
                     // successeur, la couverture continue sous lui — l'assuré EST couvert, la
-                    // finalité est atteinte ; résiliée, la décision est prise. Restent celles
-                    // qui appellent une action : renouvellement amorcé sans avenant, ou aucune
-                    // suite. Règle et DQL : AvenantSuccessionScope (sa face PHP sert le badge
-                    // de ligne et les indicateurs). Appliqué aux DEUX requêtes : un comptage
-                    // qui ne filtre pas comme la liste fait mentir la pagination.
+                    // finalité est atteinte ; résiliée, la décision est prise ; SIGNALÉE NON
+                    // RENOUVELABLE, le courtier a tranché. Restent celles qui appellent une
+                    // action : renouvellement amorcé sans avenant, ou aucune suite. Règle et
+                    // prédicat : AvenantSuccessionScope (sa face PHP sert le badge de ligne et
+                    // les indicateurs). Appliqué aux DEUX requêtes : un comptage qui ne filtre
+                    // pas comme la liste fait mentir la pagination.
                     foreach ([[$qb, 'e', ''], [$countQb, 'e_count', '_count']] as [$builder, $alias, $suffixe]) {
                         $builder
-                            ->andWhere($builder->expr()->not($builder->expr()->exists(
-                                AvenantSuccessionScope::dqlSuccessionScellee($this->em, $alias, $suffixe)
-                            )))
+                            ->andWhere(AvenantSuccessionScope::predicatSortNonScelle($this->em, $alias, $suffixe))
                             ->setParameter(
                                 AvenantSuccessionScope::parametreMouvementsScellants($suffixe),
                                 AvenantSuccessionScope::MOUVEMENTS_SCELLANTS

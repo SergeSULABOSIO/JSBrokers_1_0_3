@@ -2524,6 +2524,68 @@ thead.sticky-header {
     color: #495057;
 }
 
+/*
+===================================================================
+ BANDEAU D'ALERTE DES FORMULAIRES DE DIALOGUE (.form-alerte)
+ Bloc opt-in rendu TOUT EN HAUT du volet de saisie quand le canvas
+ pose form_alerte (cf. _form_content.html.twig) : un fait décisif
+ qui doit être vu avant toute saisie — par exemple une police
+ signalée « à ne pas renouveler ».
+ Placé au-dessus de .form-intro, et non dans la colonne d'attributs
+ calculés, où ses dizaines de lignes le noieraient.
+ Ergonomie (Bastien & Scapin — Guidage / Incitation ; Nielsen 1).
+===================================================================
+*/
+.form-column .form-alerte {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding: 0.7rem 0.9rem;
+    border-radius: 10px;
+    border-left: 4px solid;
+}
+.form-column .form-alerte-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    margin-top: 0.1rem;
+}
+.form-column .form-alerte-icon svg { width: 22px; height: 22px; }
+.form-column .form-alerte-title {
+    margin: 0 0 0.15rem;
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+.form-column .form-alerte-desc {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    max-width: 78ch;
+}
+/* Niveaux. Contraste du texte sur fond teinté vérifié pour AA (WCAG 1.4.3). */
+.form-column .form-alerte--warning {
+    background-color: #fff8e6;
+    border-left-color: #e69500;
+    color: #7a4f00;
+}
+.form-column .form-alerte--warning .form-alerte-icon { color: #e69500; }
+.form-column .form-alerte--danger {
+    background-color: #fdf2f3;
+    border-left-color: #dc3545;
+    color: #842029;
+}
+.form-column .form-alerte--danger .form-alerte-icon { color: #dc3545; }
+.form-column .form-alerte--info {
+    background-color: #e8f0fb;
+    border-left-color: #0047AB;
+    color: #05306b;
+}
+.form-column .form-alerte--info .form-alerte-icon { color: #0047AB; }
+
 /* STYLES POUR LE DÉFILEMENT DE FORMULAIRES (utilisé par le dialogue de recherche avancée) */
 .form-scrollable-content {
     max-height: 45vh; /* Hauteur augmentée pour plus de confort */

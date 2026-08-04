@@ -158,16 +158,42 @@ class AvenantSuccessionScopeTest extends KernelTestCase
         $anticipee = $this->police('POL-ANTICIPEE', new \DateTimeImmutable('+10 days'));
         $this->deriver($anticipee, Piste::AVENANT_RENOUVELLEMENT, avecAvenantIssu: true);
 
+        // LE QUATRIÈME SORT — décision SANS mouvement ni successeur : le courtier a signalé
+        // que la police n'aurait pas de suite. Aucune piste dérivée n'existe ici, ce qui en
+        // fait aussi un second cas de PIÈGE NULL, du côté opposé.
+        $marquee = $this->police('POL-MARQUEE', $echu);
+        $marquee->setNonRenouvelable(true);
+        $marquee->setNonRenouvelableMotif('Le client a vendu le véhicule.');
+        $marquee->setNonRenouvelablePar($this->invite);
+
+        // MARQUÉE EN PLEINE COUVERTURE : échoit dans 10 jours, mais on sait déjà qu'elle ne
+        // sera pas reconduite. Le marquage n'attend pas l'échéance.
+        $marqueeEnCours = $this->police('POL-MARQUEE-EN-COURS', new \DateTimeImmutable('+10 days'));
+        $marqueeEnCours->setNonRenouvelable(true);
+        $marqueeEnCours->setNonRenouvelableMotif('Le client cesse son activité en fin d’année.');
+        $marqueeEnCours->setNonRenouvelablePar($this->invite);
+
+        // MARQUAGE LEVÉ : la décision a été révisée, la police doit être redevenue une police
+        // ORDINAIRE — donc réclamée comme n'importe quelle échue. La trace, elle, subsiste.
+        $levee = $this->police('POL-LEVEE', $echu);
+        $levee->setNonRenouvelable(true);
+        $levee->setNonRenouvelableMotif('Le client annonçait son départ.');
+        $levee->setNonRenouvelablePar($this->invite);
+        $levee->setNonRenouvelable(false);
+
         $em->flush();
 
         return [
-            'renouvelee' => $renouvelee->getId(),
-            'amorcee'    => $amorcee->getId(),
-            'sansSuite'  => $sansSuite->getId(),
-            'resiliee'   => $resiliee->getId(),
-            'prorogee'   => $prorogee->getId(),
-            'lienMoitie' => $lienMoitie->getId(),
-            'anticipee'  => $anticipee->getId(),
+            'renouvelee'     => $renouvelee->getId(),
+            'amorcee'        => $amorcee->getId(),
+            'sansSuite'      => $sansSuite->getId(),
+            'resiliee'       => $resiliee->getId(),
+            'prorogee'       => $prorogee->getId(),
+            'lienMoitie'     => $lienMoitie->getId(),
+            'anticipee'      => $anticipee->getId(),
+            'marquee'        => $marquee->getId(),
+            'marqueeEnCours' => $marqueeEnCours->getId(),
+            'levee'          => $levee->getId(),
         ];
     }
 
@@ -268,11 +294,62 @@ class AvenantSuccessionScopeTest extends KernelTestCase
 
         $echus = $this->fenetre(AvenantEcheanceScope::STATUT_ECHUS);
 
-        $this->assertEqualsCanonicalizing([$s['amorcee'], $s['sansSuite']], $echus);
+        $this->assertEqualsCanonicalizing([$s['amorcee'], $s['sansSuite'], $s['levee']], $echus);
         $this->assertNotContains($s['renouvelee'], $echus, 'Reprise par un successeur : la couverture continue.');
         $this->assertNotContains($s['prorogee'], $echus, 'Prorogée : la couverture continue.');
         $this->assertNotContains($s['resiliee'], $echus, 'Résiliée : la décision est prise, rien à réclamer.');
         $this->assertNotContains($s['lienMoitie'], $echus, 'Lien à moitié posé : les DEUX sens sont lus.');
+        $this->assertNotContains($s['marquee'], $echus, 'Signalée non renouvelable : le courtier a tranché.');
+    }
+
+    /**
+     * LE QUATRIÈME SORT. Une police signalée non renouvelable quitte le pipeline sans
+     * qu'aucune piste dérivée n'existe : la décision se lit sur la police elle-même.
+     *
+     * Et elle le quitte DÈS LE MARQUAGE, pas à l'échéance — c'est tout l'intérêt de pouvoir
+     * le signaler en pleine couverture, dès que l'information arrive.
+     */
+    public function testUnePoliceSignaleeNonRenouvelableSortDuPipelineQuelleQueSoitSonEcheance(): void
+    {
+        $s = $this->seed();
+
+        $this->assertNotContains($s['marquee'], $this->fenetre(AvenantEcheanceScope::STATUT_ECHUS));
+        $this->assertNotContains(
+            $s['marqueeEnCours'],
+            $this->fenetre(AvenantEcheanceScope::STATUT_30J),
+            'Marquée alors qu’elle couvre encore : elle sort aussi, sans attendre son terme.'
+        );
+    }
+
+    /**
+     * LE RETRAIT REND INTÉGRALEMENT LA POLICE AU PIPELINE — pendant exact du test
+     * ci-dessus. Aucun code de restauration n'existe : le prédicat SQL ne lit que le
+     * booléen. Ce test est ce qui prouve qu'il ne reste rien de coincé.
+     *
+     * Et la TRACE survit : effacer le motif à la levée supprimerait précisément ce que ce
+     * dispositif existe pour garder.
+     */
+    public function testLeRetraitDuMarquageRendLaPoliceAuPipelineEtConserveLaTrace(): void
+    {
+        $s = $this->seed();
+        $em = $this->em();
+
+        $this->assertContains(
+            $s['levee'],
+            $this->fenetre(AvenantEcheanceScope::STATUT_ECHUS),
+            'Marquage levé : la police est redevenue une échue ordinaire, à réclamer.'
+        );
+
+        $levee = $em->getRepository(Avenant::class)->find($s['levee']);
+        $this->assertFalse($levee->isNonRenouvelable());
+        $this->assertNotNull($levee->getNonRenouvelableLeveLe(), 'La levée est datée.');
+        $this->assertSame('Le client annonçait son départ.', $levee->getNonRenouvelableMotif());
+        $this->assertNotNull($levee->getNonRenouvelablePar(), 'L’auteur de la décision révisée reste connu.');
+        $this->assertFalse($this->resolver()->estScellee($levee));
+
+        // Re-marquer après une levée est un marquage NEUF : la date de levée est effacée.
+        $levee->setNonRenouvelable(true);
+        $this->assertNull($levee->getNonRenouvelableLeveLe());
     }
 
     /**
@@ -357,5 +434,55 @@ class AvenantSuccessionScopeTest extends KernelTestCase
         $amorcee = $strategie->calculate($em->getRepository(Avenant::class)->find($s['amorcee']));
         $this->assertStringStartsWith('Expiré depuis', (string) $amorcee['urgenceEcheance']);
         $this->assertSame('critique', $amorcee['urgenceEcheanceNiveau']);
+    }
+
+    /**
+     * LE BADGE EST LE SEUL ENDROIT OÙ UNE POLICE MARQUÉE RESTE REPÉRABLE, puisque le
+     * pipeline l'a écartée de tous les chips sauf « Toutes ». Il porte donc la décision,
+     * et l'alarme rouge « Expiré depuis N j » s'efface : ce n'est pas un retard.
+     */
+    public function testUnePoliceMarqueePorteSonBadgeDedieEtPerdLAlarmeDeRetard(): void
+    {
+        $s = $this->seed();
+        $em = $this->em();
+        /** @var AvenantIndicatorStrategy $strategie */
+        $strategie = static::getContainer()->get(AvenantIndicatorStrategy::class);
+
+        $marquee = $strategie->calculate($em->getRepository(Avenant::class)->find($s['marquee']));
+        $this->assertSame('Non renouvelable', $marquee['nonRenouvelableBadge']);
+        $this->assertSame('faible', $marquee['nonRenouvelableNiveau']);
+        $this->assertStringContainsString('vendu le véhicule', (string) $marquee['nonRenouvelableDetail']);
+        $this->assertNull($marquee['urgenceEcheance'], 'Une décision n’est pas un retard : pas d’alarme rouge.');
+
+        // Marquage levé : plus de badge, mais l'historique reste lisible dans la fiche.
+        $levee = $strategie->calculate($em->getRepository(Avenant::class)->find($s['levee']));
+        $this->assertNull($levee['nonRenouvelableBadge']);
+        $this->assertNull($levee['nonRenouvelableDetail']);
+        $this->assertStringContainsString('levé', (string) $levee['nonRenouvelableHistorique']);
+        $this->assertStringStartsWith('Expiré depuis', (string) $levee['urgenceEcheance']);
+    }
+
+    /**
+     * LE CODE SUIT LA COUVERTURE, PAS LA DÉCISION. Une police marquée qui couvre encore
+     * garde RUNNING : poser LOST ferait mentir le badge des listes et le tableau de bord,
+     * qui dérivent tous de ce code. C'est le marquage qui scelle le sort, pas le code —
+     * d'où estScellePour(), qui prend l'avenant.
+     */
+    public function testLeStatutDUnePoliceMarqueeDependDeSonEcheanceEtNonDeLaDecision(): void
+    {
+        $s = $this->seed();
+        $em = $this->em();
+
+        $enCours = $em->getRepository(Avenant::class)->find($s['marqueeEnCours']);
+        $this->assertSame(Avenant::RENEWAL_STATUS_RUNNING, $this->resolver()->code($enCours));
+        $this->assertStringContainsString('Couverture EN COURS', $this->resolver()->phrase($enCours));
+        $this->assertStringContainsString('NE SERA PAS renouvelée', $this->resolver()->phrase($enCours));
+        $this->assertTrue($this->resolver()->estScellee($enCours), 'Marquée : scellée malgré le code RUNNING.');
+
+        $echue = $em->getRepository(Avenant::class)->find($s['marquee']);
+        $this->assertSame(Avenant::RENEWAL_STATUS_LOST, $this->resolver()->code($echue));
+        $this->assertStringContainsString('vendu le véhicule', $this->resolver()->phrase($echue));
+        // La phrase doit dire ce qui reste vrai : le dossier n'est pas clos.
+        $this->assertStringContainsString('recouvrement', $this->resolver()->phrase($echue));
     }
 }
