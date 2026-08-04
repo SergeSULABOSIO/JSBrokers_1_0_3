@@ -17,6 +17,7 @@ use App\Entity\Piste;
 use App\Entity\Portefeuille;
 use App\Entity\Tranche;
 use App\Entity\Utilisateur;
+use App\Services\DashboardDataProvider;
 use App\Services\JSBDynamicSearchService;
 use App\Services\Search\AvenantEcheanceScope;
 use App\Services\Search\CotationSouscriptionScope;
@@ -174,6 +175,21 @@ class CoherenceChipsAssistantTest extends KernelTestCase
             $avenant->setInvite($invite);
             $em->persist($avenant);
         }
+
+        // Police SIGNALÉE non renouvelable, dans le portefeuille de l'invité. Sans elle, le
+        // cinquième chip serait comparé à 0 = 0 : vrai, mais sans rien prouver. Elle sort des
+        // QUATRE fenêtres de dates et forme à elle seule le groupe des décisions.
+        $avenantMarque = new Avenant();
+        $avenantMarque->setCotation($cotation)->setReferencePolice('POL-NON-RENOUV')->setNumero('0')
+            ->setDescription('Avenant non renouvelable')
+            ->setStartingAt(new \DateTimeImmutable('-380 days'))
+            ->setEndingAt(new \DateTimeImmutable('-15 days'));
+        $avenantMarque->setEntreprise($entreprise);
+        $avenantMarque->setInvite($invite);
+        $avenantMarque->setNonRenouvelable(true);
+        $avenantMarque->setNonRenouvelableMotif('Le client a vendu le véhicule.');
+        $avenantMarque->setNonRenouvelablePar($invite);
+        $em->persist($avenantMarque);
 
         // Piste « en cours » (aucune cotation transformée) DANS le portefeuille de l'invité : la
         // piste ci-dessus deviendra « transformée » (ses cotations à avenants), celle-ci reste
@@ -460,8 +476,11 @@ class CoherenceChipsAssistantTest extends KernelTestCase
         ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
         $scope = new AiScope($entreprise, $invite);
 
+        // 5 : les 4 avenants des fenêtres d'échéance PLUS la police signalée non renouvelable.
+        // Sans chip, aucune interception n'a lieu : le décompte est celui de la rubrique en
+        // mode « Toutes », où une police écartée du pipeline reste bien visible.
         $compte = $this->compter()->execute(['entite' => 'Avenant'], $scope);
-        $this->assertSame(4, $compte->data['count'], 'Les 4 avenants du portefeuille, pas les 5 de l\'entreprise.');
+        $this->assertSame(5, $compte->data['count'], 'Les 5 avenants du portefeuille, pas les 6 de l\'entreprise.');
         $this->assertSame('Portefeuille Cohérence', $compte->data['perimetre'], 'Le périmètre appliqué est annoncé.');
         $this->assertArrayNotHasKey('filtre', $compte->data, 'Aucun filtre annoncé quand aucun n\'est demandé.');
 
@@ -470,7 +489,7 @@ class CoherenceChipsAssistantTest extends KernelTestCase
 
         // Une valeur inconnue est ignorée (pas d'erreur, pas de filtre appliqué).
         $compteInvalide = $this->compter()->execute(['entite' => 'Avenant', 'echeance' => 'valeur-inconnue'], $scope);
-        $this->assertSame(4, $compteInvalide->data['count']);
+        $this->assertSame(5, $compteInvalide->data['count']);
 
         // Le filtre d'une rubrique ne fuit jamais vers une autre entité.
         $compteCroise = $this->compter()->execute(['entite' => 'Client', 'echeance' => AvenantEcheanceScope::STATUT_ECHUS], $scope);
@@ -673,6 +692,72 @@ class CoherenceChipsAssistantTest extends KernelTestCase
             'Les totaux de la vigie doivent égaler ceux des chips.'
         );
         $this->assertGreaterThan(0, $volet['echues']['total'], 'Les polices ÉCHUES doivent être VUES par la vigie.');
+
+        // Les polices SIGNALÉES non renouvelables ne sont NI dans les chips d'échéance, NI
+        // comptées dans le travail à faire — mais la vigie les ANNONCE tout de même, avec leur
+        // motif. Les taire ferait dire à Ket « il ne reste plus rien » là où l'utilisateur voit
+        // un chip et un onglet pleins.
+        $this->assertArrayHasKey('nonRenouvelables', $volet, 'La vigie doit annoncer le groupe des décisions.');
+        $this->assertGreaterThan(0, $volet['nonRenouvelables']['total']);
+        $this->assertStringContainsString(
+            'vendu le véhicule',
+            (string) ($volet['nonRenouvelables']['lignes'][0]['motif'] ?? ''),
+            'Le motif accompagne la ligne : c’est lui qui explique la décision.'
+        );
+        foreach (array_column($volet['nonRenouvelables']['lignes'], 'id') as $idMarque) {
+            $this->assertNotContains($idMarque, $idsVigie, 'Une police signalée n’est pas du travail à faire.');
+        }
+    }
+
+    /**
+     * TRIPLE COHÉRENCE DU CINQUIÈME GROUPE : le chip de la rubrique, l'outil de Ket et
+     * l'onglet du tableau de bord doivent désigner les MÊMES polices.
+     *
+     * Les trois lisent la même condition (Avenant::$nonRenouvelable) mais par trois chemins
+     * distincts — interception SQL du moteur de recherche, outil générique, requête DQL dédiée
+     * du tableau de bord. Rien n'empêcherait l'un des trois de dériver : c'est ce test qui
+     * l'interdit, et il ne compare que les chemins entre eux, sans écrire aucun total.
+     */
+    public function testLeGroupeNonRenouvelablesEstAligneChipKetEtTableauDeBord(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+        $scope = new AiScope($entreprise, $invite);
+
+        // 1. Ce que la rubrique affiche sous le chip « Non renouvelables ».
+        $chip = $this->service()->search(
+            Avenant::class,
+            $this->criteresRubrique('Avenant', $invite, AvenantEcheanceScope::CRITERION_KEY, AvenantEcheanceScope::STATUT_NON_RENOUVELABLES),
+            $entreprise,
+        );
+        $idsChip = array_map(static fn (Avenant $a) => $a->getId(), $chip['data']);
+        $this->assertNotEmpty($idsChip, 'Le jeu de données doit contenir au moins une police signalée.');
+
+        // 2. Ce que Ket répond à « liste les polices non renouvelables ».
+        $liste = $this->rechercher()->execute(
+            ['entite' => 'Avenant', 'echeance' => AvenantEcheanceScope::STATUT_NON_RENOUVELABLES],
+            $scope,
+        );
+        $this->assertSame($idsChip, array_column($liste->data['items'], 'id'), 'Ket doit voir le même groupe.');
+
+        $compte = $this->compter()->execute(
+            ['entite' => 'Avenant', 'echeance' => AvenantEcheanceScope::STATUT_NON_RENOUVELABLES],
+            $scope,
+        );
+        $this->assertSame(count($idsChip), $compte->data['count']);
+
+        // 3. Ce que l'onglet « Non renouv. » du tableau de bord affiche, au même périmètre.
+        $dashboard = array_map(
+            static fn (Avenant $a) => $a->getId(),
+            static::getContainer()->get(DashboardDataProvider::class)
+                ->getAvenantsNonRenouvelables($entreprise, $invite),
+        );
+        $this->assertSame($idsChip, $dashboard, 'Le tableau de bord doit désigner le même groupe que le chip.');
+
+        // Et la police y est bien parce qu'elle est MARQUÉE, pas parce qu'elle est échue :
+        // le groupe ne borne aucune date.
+        $this->assertTrue(
+            $this->em()->getRepository(Avenant::class)->find($idsChip[0])->isNonRenouvelable(),
+        );
     }
 
     /**

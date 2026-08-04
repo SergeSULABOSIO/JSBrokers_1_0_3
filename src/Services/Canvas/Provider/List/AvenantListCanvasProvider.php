@@ -90,6 +90,12 @@ class AvenantListCanvasProvider implements ListCanvasProviderInterface
                         ["value" => AvenantEcheanceScope::STATUT_30J, "label" => AvenantEcheanceScope::libelle(AvenantEcheanceScope::STATUT_30J), "icon" => "action:calendar"],
                         ["value" => AvenantEcheanceScope::STATUT_31_60J, "label" => AvenantEcheanceScope::libelle(AvenantEcheanceScope::STATUT_31_60J), "icon" => "action:renew"],
                         ["value" => AvenantEcheanceScope::STATUT_60_PLUS, "label" => AvenantEcheanceScope::libelle(AvenantEcheanceScope::STATUT_60_PLUS), "icon" => "avenant"],
+                        // Le groupe des DÉCISIONS, et non une fenêtre de dates : il rassemble ce
+                        // que les quatre autres écartent. Sans lui, une police signalée non
+                        // renouvelable n'était plus retrouvable que par « Toutes », noyée — alors
+                        // que le marquage peut être posé des mois avant l'échéance et que leur
+                        // nombre ne fait que croître.
+                        ["value" => AvenantEcheanceScope::STATUT_NON_RENOUVELABLES, "label" => AvenantEcheanceScope::libelle(AvenantEcheanceScope::STATUT_NON_RENOUVELABLES), "icon" => "action:no-renew"],
                         ["value" => "", "label" => "Toutes", "icon" => "action:filter"],
                     ],
                 ],

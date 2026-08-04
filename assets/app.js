@@ -275,6 +275,10 @@ export function saveCookie(nom, valeur) {
     var _aid = null;
     var _eid = null;
     var _pid = null;
+    // État réel de la ligne visée : décide si le menu contextuel propose « Signaler » ou
+    // « Rétablir ». Sans lui, l'onglet « Non renouv. » offrirait de marquer une police
+    // déjà marquée, et le serveur répondrait 409 sur une action qu'on venait de proposer.
+    var _nonRenouv = false;
 
     function dbRenewActiveMode() {
         if (_activeRenewMode !== null) return _activeRenewMode;
@@ -314,6 +318,7 @@ export function saveCookie(nom, valeur) {
         _aid = el.dataset.avenantId;
         _eid = el.dataset.entrepriseId;
         _pid = el.dataset.pisteId;
+        _nonRenouv = el.dataset.nonRenouvelable === '1';
 
         var menu = document.getElementById('dbRenewCtxMenu');
         if (!menu) return;
@@ -327,6 +332,13 @@ export function saveCookie(nom, valeur) {
         var pisteLabel = document.getElementById('dbRenewCtxPisteLabel');
         if (pisteLabel) {
             pisteLabel.textContent = _pid ? 'Modifier la piste de renouvellement' : 'Créer une piste de renouvellement';
+        }
+
+        var nrLabel = document.getElementById('dbRenewCtxNoRenewalLabel');
+        if (nrLabel) {
+            nrLabel.textContent = _nonRenouv
+                ? 'Rétablir le renouvellement'
+                : 'Signaler : à ne pas renouveler';
         }
 
         setTimeout(function () {
@@ -388,10 +400,15 @@ export function saveCookie(nom, valeur) {
         if (menu) menu.style.display = 'none';
         if (!_aid) return;
 
+        // Le mode suit l'état réel de la ligne : marquer une police qui ne l'est pas,
+        // rétablir celle qui l'est. Le serveur revérifie et répond 409 en cas de course.
+        var url = '/admin/avenant/api/non-renouvelable-picker/' + _aid
+            + (_nonRenouv ? '?mode=lever' : '');
+
         document.dispatchEvent(new CustomEvent('cerveau:event', {
             detail: {
                 type: 'ui:avenant.non-renouvelable-request',
-                payload: { url: '/admin/avenant/api/non-renouvelable-picker/' + _aid }
+                payload: { url: url }
             }
         }));
     }

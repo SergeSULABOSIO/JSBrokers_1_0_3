@@ -298,6 +298,11 @@ class AiContextBuilder
           demande-le en une ligne — c'est une note écrite pour le collègue qui rouvrira le
           dossier plus tard. « finalement il renouvelle / remets-la dans les échéances » =>
           le même outil avec mode="lever" ;
+          « montre / liste / combien de polices non renouvelables (ou « à ne pas renouveler ») »
+          => rechercher_entites ou compter_entites avec echeance: non_renouvelables — c'est le
+          CINQUIÈME groupe d'échéance, celui des décisions, aligné avec le chip du même nom dans
+          la rubrique Avenants et l'onglet du tableau de bord. Ces polices ne sont PAS un retard
+          et n'entrent dans AUCUNE des quatre fenêtres de dates ;
           « commissions à recouvrer auprès des assureurs / rétros à reverser / primes impayées »
           => suivi_impayes.
         - GLOSSAIRE FINANCIER (désambiguïsation — ne CONFONDS JAMAIS ces notions, c'est la source

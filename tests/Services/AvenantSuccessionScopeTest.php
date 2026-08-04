@@ -353,6 +353,64 @@ class AvenantSuccessionScopeTest extends KernelTestCase
     }
 
     /**
+     * LE CINQUIÈME CHIP RASSEMBLE CE QUE LES QUATRE AUTRES ÉCARTENT.
+     *
+     * C'est le seul du lot qui INVERSE la règle du pipeline. Lui appliquer l'exclusion l'aurait
+     * rendu vide par construction — et une page vide n'aurait dit à personne qu'il ne
+     * s'agissait pas d'une absence de données. Ce test est la contrepartie exacte de
+     * testUnePoliceSignaleeNonRenouvelableSortDuPipeline...
+     */
+    public function testLeChipNonRenouvelablesRassembleExactementLesPolicesMarquees(): void
+    {
+        $s = $this->seed();
+
+        $marquees = $this->fenetre(AvenantEcheanceScope::STATUT_NON_RENOUVELABLES);
+
+        // Les deux marquées, quelle que soit leur échéance : l'une est échue, l'autre couvre
+        // encore pour 10 jours. Ce groupe ne borne AUCUNE date.
+        $this->assertEqualsCanonicalizing([$s['marquee'], $s['marqueeEnCours']], $marquees);
+
+        // Ni les échues ordinaires, ni les scellées par un successeur, ni celle dont le
+        // marquage a été LEVÉ : le groupe suit le booléen, pas l'historique.
+        $this->assertNotContains($s['amorcee'], $marquees);
+        $this->assertNotContains($s['sansSuite'], $marquees);
+        $this->assertNotContains($s['renouvelee'], $marquees);
+        $this->assertNotContains($s['levee'], $marquees, 'Marquage levé : la police a quitté ce groupe.');
+    }
+
+    /**
+     * LES CINQ CHIPS FORMENT UNE PARTITION SANS RECOUVREMENT NI TROU sur les polices dont on
+     * a une échéance : chaque avenant apparaît dans EXACTEMENT un chip. Sans cette propriété,
+     * un total lu dans un chip ne voudrait plus rien dire, et une police pourrait disparaître
+     * de toutes les vues à la fois.
+     */
+    public function testChaqueAvenantApparaitDansExactementUnChip(): void
+    {
+        $s = $this->seed();
+
+        $comptes = [];
+        foreach ([
+            AvenantEcheanceScope::STATUT_ECHUS,
+            AvenantEcheanceScope::STATUT_30J,
+            AvenantEcheanceScope::STATUT_31_60J,
+            AvenantEcheanceScope::STATUT_60_PLUS,
+            AvenantEcheanceScope::STATUT_NON_RENOUVELABLES,
+        ] as $statut) {
+            foreach ($this->fenetre($statut) as $id) {
+                $comptes[$id] = ($comptes[$id] ?? 0) + 1;
+            }
+        }
+
+        foreach ($comptes as $id => $nb) {
+            $this->assertSame(1, $nb, sprintf('L’avenant #%d figure dans %d chips au lieu d’un seul.', $id, $nb));
+        }
+
+        // Et les marquées y sont bien, alors qu'elles ne sont dans AUCUNE fenêtre de dates.
+        $this->assertArrayHasKey($s['marquee'], $comptes);
+        $this->assertArrayHasKey($s['marqueeEnCours'], $comptes);
+    }
+
+    /**
      * PIÈGE NULL. Une police sans aucune piste dérivée doit rester visible. Un
      * « IDENTITY(e.pisteDeRenouvellement) NOT IN (…) » vaut NULL — donc faux — et
      * aurait vidé la rubrique en silence.

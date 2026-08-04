@@ -219,6 +219,7 @@ final class VigieEcheancesTool implements AiToolInterface
             return $this->partitionnerRenouvellements(
                 $this->dashboard->getAllRenouvellements($entreprise, $horizon, $portefeuilleDe),
                 $max,
+                $this->dashboard->getAvenantsNonRenouvelables($entreprise, $portefeuilleDe),
             );
         }
 
@@ -246,9 +247,16 @@ final class VigieEcheancesTool implements AiToolInterface
      * c'est ce nombre que l'assistant doit citer, et il doit coïncider avec le chip
      * correspondant de la rubrique.
      *
-     * @param array<int, object> $items avenants triés par endingAt croissant
+     * TROISIÈME POPULATION, informative : les polices SIGNALÉES non renouvelables. Elles ne
+     * réclament aucune action — c'est pourquoi le pipeline les écarte, et pourquoi elles ne
+     * sont PAS comptées dans `total`. Mais les taire ferait dire à l'assistante « il ne reste
+     * plus rien » là où le courtier voit un onglet et un chip pleins. On les annonce donc,
+     * avec leur motif, et en disant explicitement qu'elles sont hors du travail à faire.
+     *
+     * @param array<int, object> $items            avenants triés par endingAt croissant
+     * @param array<int, object> $nonRenouvelables polices écartées par décision
      */
-    private function partitionnerRenouvellements(array $items, int $max): array
+    private function partitionnerRenouvellements(array $items, int $max, array $nonRenouvelables = []): array
     {
         $aujourdhui = new \DateTimeImmutable('today');
         $echues = [];
@@ -273,7 +281,7 @@ final class VigieEcheancesTool implements AiToolInterface
             'total' => count($liste),
         ];
 
-        return [
+        $payload = [
             'echues'  => $population($echues),
             'aVenir'  => $population($aVenir),
             'total'   => count($items),
@@ -282,6 +290,27 @@ final class VigieEcheancesTool implements AiToolInterface
                 . 'AMORCÉ — piste dérivée sans avenant successeur — laisse la police ÉCHUE : '
                 . 'ne conclus jamais qu\'elle est renouvelée.',
         ];
+
+        // Hors du travail à faire, donc hors de `total` — mais dites, pour ne pas contredire
+        // l'écran, qui leur consacre un chip et un onglet.
+        if ($nonRenouvelables !== []) {
+            $payload['nonRenouvelables'] = [
+                'lignes' => array_map(
+                    fn (object $e) => $this->projeter('renouvellements', $e)
+                        + ['motif' => $e->nonRenouvelableDetail ?? null],
+                    array_slice($nonRenouvelables, 0, $max),
+                ),
+                'total'  => count($nonRenouvelables),
+                'rappel' => 'Polices SIGNALÉES non renouvelables : une décision a été prise, elles ne '
+                    . 'sont donc PAS comptées dans « total » et ne réclament aucune action de '
+                    . 'renouvellement. Ne les présente pas comme du retard. Elles restent visibles '
+                    . 'dans le chip « Non renouvelables » de la rubrique et l\'onglet du même nom au '
+                    . 'tableau de bord ; ce qui reste dû dessus reste à recouvrer, et la décision peut '
+                    . 'être levée (preparer_marquage_non_renouvelable, mode="lever").',
+            ];
+        }
+
+        return $payload;
     }
 
     /** Projection compacte d'une ligne (scalaires utiles uniquement, dates Y-m-d). */

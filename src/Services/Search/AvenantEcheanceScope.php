@@ -25,20 +25,53 @@ final class AvenantEcheanceScope
     public const STATUT_60_PLUS = 'au_dela_60j';
 
     /**
+     * LE CINQUIÈME CHIP N'EST PAS UNE FENÊTRE DE DATES, C'EST UN ÉTAT.
+     *
+     * Les quatre premiers découpent `endingAt` ; celui-ci regroupe les polices que le courtier
+     * a SIGNALÉES non renouvelables, quelle que soit leur échéance. Il est le pendant exact des
+     * quatre autres : ce qu'ils écartent (AvenantSuccessionScope), lui seul le rassemble.
+     *
+     * Sans lui, une police marquée n'était plus visible que par « Toutes » — noyée parmi
+     * toutes les autres. Le marquage pouvant être posé des mois avant l'échéance, leur nombre
+     * ne fait que croître : il faut pouvoir les revoir, les auditer et lever une décision
+     * périmée.
+     *
+     * CONSÉQUENCE À TENIR PARTOUT : ce statut INVERSE la règle du pipeline au lieu de
+     * l'appliquer. Lui faire subir le NOT EXISTS d'exclusion le rendrait VIDE par
+     * construction — c'est exactement l'inverse de sa raison d'être. Voir
+     * estEtatNonRenouvelable(), que l'interception SQL interroge AVANT de calculer des bornes.
+     */
+    public const STATUT_NON_RENOUVELABLES = 'non_renouvelables';
+
+    /**
      * @var array<string, string> Valeur du critère => libellé affiché (badge, select du
      *      dialogue avancé, chips). L'ordre est celui de présentation, du plus urgent au moins
-     *      urgent (les avenants déjà échus sont la priorité absolue de traitement).
+     *      urgent (les avenants déjà échus sont la priorité absolue de traitement). Le groupe
+     *      « Non renouvelables » vient en DERNIER : il ne réclame aucune action, il archive une
+     *      décision.
      */
     public const VALEURS = [
         self::STATUT_ECHUS => 'Échus',
         self::STATUT_30J => 'Sous 30 jours',
         self::STATUT_31_60J => '31 à 60 jours',
         self::STATUT_60_PLUS => 'Au-delà de 60 jours',
+        self::STATUT_NON_RENOUVELABLES => 'Non renouvelables',
     ];
 
     public static function estValide(?string $statut): bool
     {
         return $statut !== null && isset(self::VALEURS[$statut]);
+    }
+
+    /**
+     * Ce statut désigne-t-il un ÉTAT (décision de non-renouvellement) plutôt qu'une fenêtre
+     * de dates ? Interrogé par l'interception SQL et par le tableau de bord, pour qu'aucun
+     * d'eux n'applique à ce groupe des bornes qui n'ont pas de sens ni l'exclusion du
+     * pipeline, qui le viderait.
+     */
+    public static function estEtatNonRenouvelable(?string $statut): bool
+    {
+        return $statut === self::STATUT_NON_RENOUVELABLES;
     }
 
     public static function libelle(string $statut): string
@@ -77,6 +110,12 @@ final class AvenantEcheanceScope
      */
     public static function detecterDepuisTexte(string $texteNormalise): ?string
     {
+        // AVANT « échues » : « les polices échues NON RENOUVELABLES » doit tomber sur le
+        // groupe des décisions, pas sur la fenêtre des échues — sinon la formulation la plus
+        // précise serait mangée par la plus large.
+        if (preg_match('/\bnon[- ]renouvelables?\b|\ba ne pas renouveler\b|\bpas a renouveler\b/', $texteNormalise)) {
+            return self::STATUT_NON_RENOUVELABLES;
+        }
         // Ordre volontaire : les formulations les plus spécifiques d'abord (« au-delà de
         // 60 » et « 31 à 60 » contiennent des nombres qui piégeraient la règle des 30 jours).
         if (preg_match('/\b(echus?|echue?s?|expires?|expirees?|perimes?|depasses?)\b/', $texteNormalise)) {
@@ -101,6 +140,10 @@ final class AvenantEcheanceScope
      * Bornes de la fenêtre `endingAt` pour un statut donné, calculées à minuit à partir de la
      * date de référence (évite l'off-by-one : l'échéance est ramenée au jour). Convention
      * [min, max[ (max exclusif). `null` = borne ouverte.
+     *
+     * STATUT_NON_RENOUVELABLES rend deux bornes OUVERTES : ce groupe ne borne pas les dates,
+     * il regroupe un état. Le filtre correspondant est posé par l'interception SQL, qui
+     * interroge estEtatNonRenouvelable() avant d'appeler cette méthode.
      *
      * @return array{min: ?\DateTimeImmutable, max: ?\DateTimeImmutable}
      */
