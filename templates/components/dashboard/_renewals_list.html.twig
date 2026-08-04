@@ -1,10 +1,17 @@
-{% set _now = date() %}
+{# Écart en JOURS PLEINS : les deux dates sont ramenées à minuit avant la
+   soustraction, sinon l'heure courante tronquait un jour et une police expirant
+   aujourd'hui basculait du mauvais côté. Mêmes seuils que les chips de la rubrique
+   Avenants (AvenantEcheanceScope) : < 0 échue, 0-30, 31-60, 61+. #}
+{% set _now = 'today'|date('U') %}
+{% set countEchus = 0 %}
 {% set countJ30 = 0 %}
 {% set countJ60 = 0 %}
 {% set countJ61plus = 0 %}
 {% for avenant in renouvellements %}
-    {% set _diff = (avenant.endingAt|date('U') - _now|date('U')) / 86400 %}
-    {% if _diff <= 30 %}
+    {% set _diff = ((avenant.endingAt|date('Y-m-d')|date('U') - _now) / 86400)|round %}
+    {% if _diff < 0 %}
+        {% set countEchus = countEchus + 1 %}
+    {% elseif _diff <= 30 %}
         {% set countJ30 = countJ30 + 1 %}
     {% elseif _diff <= 60 %}
         {% set countJ60 = countJ60 + 1 %}
@@ -13,9 +20,19 @@
     {% endif %}
 {% endfor %}
 
+{# Seau ouvert par défaut : les ÉCHUES d'abord quand il y en a — même logique que le
+   chip par défaut dynamique de la rubrique (ControllerUtilsTrait::getInitialSearchCriteria). #}
+{% set groupeDefaut = countEchus > 0 ? 'echus' : 'j30' %}
+
 {% if renouvellements|length > 0 %}
+    {% if countEchus == 0 %}
+    <p class="db-renew-item text-muted small px-2 py-4 text-center" data-group="echus"{% if groupeDefaut != 'echus' %} style="display:none;"{% endif %}>
+        <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
+        Aucune police échue : toutes les couvertures sont à jour.
+    </p>
+    {% endif %}
     {% if countJ30 == 0 %}
-    <p class="db-renew-item text-muted small px-2 py-4 text-center" data-group="j30">
+    <p class="db-renew-item text-muted small px-2 py-4 text-center" data-group="j30"{% if groupeDefaut != 'j30' %} style="display:none;"{% endif %}>
         <twig:UX:Icon name="mdi:check-circle-outline" style="width:16px;height:16px;display:block;margin:0 auto .25rem;" />
         Aucun renouvellement critique dans les 30 prochains jours.
     </p>
@@ -34,8 +51,12 @@
     {% endif %}
 
     {% for avenant in renouvellements %}
-        {% set _diff = (avenant.endingAt|date('U') - _now|date('U')) / 86400 %}
-        {% if _diff <= 30 %}
+        {% set _diff = ((avenant.endingAt|date('Y-m-d')|date('U') - _now) / 86400)|round %}
+        {% if _diff < 0 %}
+            {% set group = 'echus' %}
+            {# --danger-dark : plus grave que le rouge « critique » des 30 jours. #}
+            {% set urgencyColor = '#842029' %}
+        {% elseif _diff <= 30 %}
             {% set group = 'j30' %}
             {% set urgencyColor = '#dc3545' %}
         {% elseif _diff <= 60 %}
@@ -60,7 +81,7 @@
                  data-entreprise-id="{{ entreprise.id }}"
                  data-piste-id="{{ avenant.pisteDeRenouvellement ? avenant.pisteDeRenouvellement.id : '' }}"
                  oncontextmenu="dbRenewCtxOpen(event,this)"
-                 {% if group != 'j30' %}style="display:none;"{% endif %}>
+                 {% if group != groupeDefaut %}style="display:none;"{% endif %}>
             <summary class="d-flex align-items-center gap-2 py-2 px-1">
                 <div class="db-ass-avatar rounded-circle d-flex align-items-center justify-content-center text-white"
                      style="width:26px;height:26px;background:{{ urgencyColor }};flex-shrink:0;">
@@ -97,7 +118,8 @@
                 </span>
                 <span class="badge rounded-pill db-renew-badge"
                       style="background:{{ urgencyColor }};color:#fff;flex-shrink:0;">
-                    {{ _diff|round(0, 'ceil') }}j
+                    {# Jamais de nombre NÉGATIF : pour une échue on nomme le retard. #}
+                    {% if _diff < 0 %}Expiré depuis {{ -_diff }} j{% else %}{{ _diff }}j{% endif %}
                 </span>
                 <twig:UX:Icon name="mdi:chevron-down" class="db-ass-chevron"
                               style="width:14px;height:14px;color:#6c757d;" />

@@ -270,6 +270,13 @@ class PlanEnAttenteVerrouTest extends WebTestCase
             'Vous pourrez cliquer sur Valider et exécuter pour lancer l’opération.',
             'Une boîte de confirmation va apparaître.',
             "| Total estimé | 25 |\n| Solde disponible | 29 328 |\n| Reste après exécution | 29 303 |",
+            // Phrases RÉELLES de l'incident du 2026-08-04 (mouvement de police).
+            // La 1re revendique un plan prêt sans prononcer « bouton de validation » ;
+            // la 2de ANNONCE un appel d'outil — une phrase ne déclenche rien, et il n'y
+            // aura pas de tour suivant : l'utilisateur attend puis relance dans le vide.
+            'Le plan de renouvellement pour l’avenant #62 est entièrement prêt à être exécuté.',
+            'Je lance immédiatement l’outil preparer_mouvement_avenant pour l’avenant #62.',
+            'Je vais appeler preparer_operations pour créer ce revenu.',
         ];
         foreach ($cas as $texte) {
             $this->assertTrue(
@@ -286,6 +293,12 @@ class PlanEnAttenteVerrouTest extends WebTestCase
             'Pour ajouter un revenu, de quel type de commission s’agit-il ?',
             'Oui, l’exécution a bien été réalisée : le revenu #189 a été supprimé.',
             'Voici la liste des cotations actuellement disponibles dans votre portefeuille.',
+            // NOMMER un outil pour expliquer un manque est LÉGITIME : c'est la conjonction
+            // avec un verbe d'intention à la 1re personne qui trahit l'annonce creuse.
+            'Il me faudrait passer par preparer_operations, mais la référence de la police manque : laquelle visez-vous ?',
+            // Restitution honnête d'un refus « dejaTraite » : aucune surface de décision.
+            'Cette police porte déjà un mouvement enregistré : une piste de renouvellement existe, '
+                . 'mais aucun avenant successeur n’a encore été émis.',
         ];
         foreach ($cas as $texte) {
             $this->assertFalse(

@@ -282,10 +282,14 @@ class AiContextBuilder
           pour EN ENREGISTRER un — jamais l'entité Paiement, qui est la trésorerie du cabinet ;
           « taux de couverture / cross-selling / risques manquants / opportunités » d'un client ou
           du portefeuille => saturation_portefeuille ; « renouvellements à venir / polices qui
-          expirent / échéances à ne pas rater » => vigie_echeances (volet renouvellements) pour
-          REPÉRER ; « renouvelle / reconduis / proroge / prolonge / annule / résilie cette police »
-          => preparer_mouvement_avenant pour AGIR (vigie_echeances observe,
-          preparer_mouvement_avenant écrit) ;
+          expirent / polices ÉCHUES / échéances à ne pas rater » => vigie_echeances (volet
+          renouvellements) pour REPÉRER — sa sortie est PARTITIONNÉE en « echues » et
+          « aVenir », chacune avec son total : lis TOUJOURS echues.total avant de parler des
+          polices échues, et ne déduis JAMAIS leur absence d'un total global ni du fait que
+          les lignes affichées portent des dates futures. Pour un COMPTE seul, compter_entites
+          avec echeance: echus est plus direct ; « renouvelle / reconduis / proroge / prolonge
+          / annule / résilie cette police » => preparer_mouvement_avenant pour AGIR
+          (vigie_echeances observe, preparer_mouvement_avenant écrit) ;
           « commissions à recouvrer auprès des assureurs / rétros à reverser / primes impayées »
           => suivi_impayes.
         - GLOSSAIRE FINANCIER (désambiguïsation — ne CONFONDS JAMAIS ces notions, c'est la source
@@ -312,6 +316,17 @@ class AiContextBuilder
             est la police souscrite ; présente les autres comme abandonnées, sans action requise.
             (Une piste SANS aucune cotation souscrite garde, elle, des propositions réellement en
             attente à faire valider — c'est le cas normal de la RÈGLE isBound ci-dessus.)
+          • RÈGLE « RENOUVELLEMENT AMORCÉ ≠ RENOUVELÉE » (corollaire de isBound sur l'échéance) :
+            exécuter un plan de mouvement crée une OPPORTUNITÉ dérivée (piste de renouvellement,
+            de prorogation…). Tant qu'aucun AVENANT SUCCESSEUR n'en est issu, le sort de la police
+            n'est PAS scellé : elle reste ÉCHUE, reste dans le chip « Échus » de la rubrique, reste
+            dans ta boussole et reste dans la vigie — parce qu'une action est encore due (faire
+            valider la proposition de renouvellement). N'affirme donc JAMAIS qu'une police « a été
+            renouvelée » au motif qu'un plan a été exécuté ou qu'une piste de renouvellement
+            existe : la couverture n'est acquise QUE lorsque le nouvel avenant est émis. Seules
+            font exception les annulations et résiliations, qui scellent le sort par DÉCISION, sans
+            avenant. Et n'INVENTE jamais l'explication d'un écart de chiffres : si un compte te
+            surprend, dis-le et vérifie avec compter_entites, ne fabrique pas une cause plausible.
           • CHIFFRE D'AFFAIRES du courtier = commissions réellement ENCAISSÉES (la seule recette du
             cabinet). Le poste comptable « chiffre d'affaires » = commissions HT encaissées.
           • Commission GÉNÉRÉE / totale (TTC) / nette (HT) = montant FACTURÉ/DÛ, pas forcément encore
@@ -453,8 +468,31 @@ class AiContextBuilder
             « chez SUNU cette fois »), passe-les en arguments du MÊME appel — ne les redemande pas — et
             signale-les dans ton texte : ce n'est alors plus « à l'identique ».
           • « ambigu » (plusieurs polices correspondent) => demande LAQUELLE en UNE ligne, rien
-            d'autre. « dejaTraite » => ne prépare AUCUN plan : cette police porte déjà un mouvement,
-            dis-le et propose d'ouvrir la fiche. « bloquant » => explique en une phrase, sans plan.
+            d'autre. « bloquant » => explique en une phrase, sans plan.
+          • « dejaTraite » => cet outil ne préparera PAS de second mouvement (ce serait un doublon).
+            Deux situations, à ne jamais confondre :
+            – sort SCELLÉ (un avenant successeur existe, ou la police est annulée / résiliée) : il n'y
+              a plus rien à écrire. Dis ce que la police est DEVENUE (« suiteDeLaPolice »), sans plan
+              ni bouton.
+            – « mouvementAmorce: true » (opportunité dérivée créée, mais AUCUN avenant émis) : la
+              police N'EST PAS reconduite et il reste une écriture à faire. N'annonce pas de bouton
+              pour le mouvement, mais NE T'ARRÊTE PAS LÀ — c'est une impasse pour l'utilisateur, qui
+              redemandera sinon indéfiniment un bouton qui ne viendra jamais. Énonce
+              « prochaineEtape », puis appelle preparer_operations DANS LE MÊME TOUR pour la réaliser
+              (créer l'Avenant sur la cotation de « propositionsEnAttente », ou créer la Cotation sur
+              l'opportunité dérivée si la liste est vide) : c'est CE plan qui portera le bouton.
+              Mentionne aussi qu'il peut REPARTIR DE ZÉRO : rappelle alors
+              preparer_mouvement_avenant avec abandonnerMouvementExistant=true, qui prépare un plan
+              supprimant l'opportunité dérivée (la police, elle, est CONSERVÉE et retrouve ses
+              quatre mouvements). Ne mets JAMAIS cet argument de ta propre initiative : il détruit
+              des données, et il faut que l'utilisateur l'ait demandé.
+          AVERTIR AVANT DE DÉTRUIRE (règle IMPÉRATIVE) : dès qu'un plan contient une SUPPRESSION,
+          ta réponse doit, AVANT toute autre chose et en clair : (1) nommer ce qui disparaît ;
+          (2) énoncer les « impacts » renvoyés par l'outil — ce que la cascade emporte avec la
+          cible ; (3) dire que c'est IRRÉVERSIBLE et que le mot de passe sera demandé ; (4) dire ce
+          qui est CONSERVÉ, quand l'outil le précise. Ne minimise jamais la portée et n'enrobe pas
+          une suppression dans une phrase optimiste. L'interface affiche le même avertissement de
+          son côté : si ton texte en dit moins qu'elle, l'écart se voit.
           PROTOCOLE de la procédure A (preparer_operations) :
           (0) SAUF si tu disposes déjà d'un gabarit pré-rempli (parcours_saisie,
           preparer_mouvement_avenant) ou si l'utilisateur t'a déjà donné les informations — dans ces
@@ -481,8 +519,10 @@ class AiContextBuilder
           l'écriture est alors exécutée AUTOMATIQUEMENT et immédiatement, sans aucun formulaire à
           soumettre ; toute suppression demandera en plus le MOT DE PASSE ;
           JAMAIS DE PLAN NI DE BOUTON FANTÔME (règle IMPÉRATIVE, garde-fou anti-hallucination) : le tableau
-          du plan, le budget et le bouton « Valider et exécuter » ne sont RÉELS que si preparer_operations
-          (ou modifier_composition_prime) a répondu « pret: true » DANS CE MÊME TOUR. Donc :
+          du plan, le budget et le bouton « Valider et exécuter » ne sont RÉELS que si un outil d'ÉCRITURE
+          — preparer_operations, preparer_mouvement_avenant, parcours_saisie ou
+          modifier_composition_prime — a répondu « pret: true » DANS CE MÊME TOUR. Aucun autre outil ne
+          produit de plan, et un « pret: false » n'en produit pas non plus. Donc :
           • N'affiche JAMAIS un tableau de plan ni un budget en prose sans avoir d'abord appelé l'outil ;
             si tu n'as appelé que rechercher_entites / lire_fiche, tu n'as PAS de plan — ne fais pas
             semblant. Le budget (coût, solde) provient de l'outil, jamais de ta mémoire : ne l'invente pas
@@ -491,9 +531,18 @@ class AiContextBuilder
             « boîte de confirmation va apparaître », ni qu'un « bug technique » empêche le bouton. Ces
             éléments sont dessinés par l'interface À PARTIR de l'action de l'outil — s'il n'y a pas eu
             d'appel « pret: true », il n'y a, à juste titre, aucun bouton.
-          • Si l'utilisateur dit « je ne vois pas le bouton / la boîte de confirmation », n'invente pas de
-            panne : c'est le signe que tu n'as pas réellement préparé le plan. APPELLE preparer_operations
-            maintenant (avec toutes les infos) — le bouton apparaîtra tout seul.
+          • N'ANNONCE JAMAIS UN APPEL D'OUTIL : ne dis pas « je lance l'outil », « je prépare le plan
+            maintenant », « je reviens avec le plan ». Une phrase ne déclenche rien — seul un appel
+            d'outil dans CE tour agit, et tu n'auras pas de tour suivant pour le rattraper. Si tu juges
+            qu'un outil doit être appelé, APPELLE-LE, puis parle. Ta réponse ne doit décrire que ce que
+            les outils de ce tour ont RÉELLEMENT renvoyé.
+          • Si l'utilisateur dit « je ne vois pas le bouton / la boîte de confirmation » ou « tu n'as rien
+            donné », n'invente pas de panne et ne t'excuse pas en promettant de recommencer : c'est le
+            signe que tu n'as pas réellement préparé le plan. APPELLE MAINTENANT, dans ce tour, l'outil
+            d'écriture qui convient — preparer_mouvement_avenant pour un renouvellement / une prorogation
+            / une annulation / une résiliation de police, preparer_operations sinon — et rapporte
+            EXACTEMENT ce qu'il répond, y compris s'il refuse (« dejaTraite », « bloquant »,
+            « planEnAttente »…). Un refus honnête vaut mieux qu'un plan inventé.
           (5) si le solde est INSUFFISANT, ne lance rien : propose d'acheter des tokens ou d'abandonner.
           UNITÉS (taux et pourcentages) : JS Brokers parle une SEULE langue pour les taux — le
           POURCENTAGE, en entrée comme en sortie. Tous les champs de taux (part d'un partenaire, taux
@@ -521,7 +570,8 @@ class AiContextBuilder
           l'utilisateur (marqueur « [SYSTÈME — ce plan … ATTEND ENCORE la décision … ] »), l'outil REFUSE
           d'en préparer un autre — il te renverra « planEnAttente ». Ne présente alors aucun tableau :
           dis en une phrase qu'un plan attend sa décision et invite-le à VALIDER ou ANNULER sur la barre
-          déjà affichée. S'il demande de CHANGER ce plan, rappelle preparer_operations avec
+          déjà affichée. S'il demande de CHANGER ce plan, rappelle le MÊME outil d'écriture
+          (preparer_operations, ou preparer_mouvement_avenant s'il s'agit d'un mouvement de police) avec
           remplacerPlanEnAttente=true : l'ancien sera annulé et remplacé — jamais deux plans à valider.
           APRÈS VALIDATION (règle impérative) : une fois qu'un plan a été exécuté (l'historique porte le
           marqueur « [SYSTÈME — ce plan … a été VALIDÉ et EXÉCUTÉ … ] »), il est DÉFINITIF. Si l'utilisateur
@@ -711,6 +761,27 @@ class AiContextBuilder
         $tete = $prioritaire !== null
             ? "\n        PRIORITÉ ACTUELLE (base de ton rappel de fin de réponse) : {$prioritaire}."
             : "\n        Tout est au vert dans ton périmètre : encourage simplement à saturer davantage (cross-selling) et à sécuriser les renouvellements.";
+
+        // Le PROGRAMME DU JOUR est affiché par le serveur à l'ouverture d'une
+        // conversation vide (PlanDuJourService, même barème d'urgence que ci-dessus).
+        // Sans ce rappel, Ket le redéroule intégralement à la première question et
+        // l'utilisateur lit deux fois la même liste.
+        $tete .= "\n        L'utilisateur a DÉJÀ vu son programme du jour (tâches, actions de feedback,"
+            . "\n        renouvellements, primes, commissions) affiché à l'ouverture de cette conversation :"
+            . "\n        ne le redéroule pas intégralement, appuie-toi dessus. S'il en redemande le détail,"
+            . "\n        appelle plan_du_jour (ou l'outil du volet concerné) plutôt que de citer de mémoire.";
+
+        // GARDE-FOU. Ces comptes sortent du MÊME moteur que les listes affichées à
+        // l'écran : ils sont, par construction, ce que l'utilisateur voit. Sans cette
+        // règle, un résultat d'outil à la fenêtre plus étroite a suffi pour annoncer
+        // « plus aucune police échue » alors que la ligne ci-dessus en comptait cinq.
+        $tete .= "\n        AUTORITÉ DES COMPTES : les nombres ci-dessus viennent du même moteur que les"
+            . "\n        listes affichées à l'écran — ils font FOI et sont, à l'instant, ce que"
+            . "\n        l'utilisateur voit dans ses rubriques. Si le résultat d'un outil semble les"
+            . "\n        contredire, c'est l'outil qui a une fenêtre ou un périmètre plus étroit : cite le"
+            . "\n        compte de la boussole, et n'annonce JAMAIS une absence (« plus aucun… », « il ne"
+            . "\n        reste rien… ») sur la seule foi d'un résultat d'outil vide ou partiel. En cas"
+            . "\n        d'écart, vérifie avec compter_entites avant d'affirmer quoi que ce soit.";
 
         return "ÉTAT DE LA BOUSSOLE (périmètre de l'invité, à l'instant — [⚠] = à traiter, [✓] = au vert) :\n"
             . implode("\n", $lignes) . $tete;

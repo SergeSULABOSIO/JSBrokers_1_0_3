@@ -30,6 +30,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Entity\Traits\HandleChildAssociationTrait;
+use App\Service\Workspace\LiensProteges;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Routing\Requirement\Requirement;
 use Symfony\Contracts\Translation\TranslatorInterface;
@@ -160,15 +161,14 @@ class AvenantController extends AbstractController
             return $this->json(['message' => "Cet avenant n'a aucune piste dérivée."], Response::HTTP_NOT_FOUND);
         }
 
-        // Dissociation AVANT suppression : les deux relations Avenant↔Piste sont
-        // indépendantes et unidirectionnelles. Piste::avenantDeBase est en
+        // Dissociation AVANT suppression : Piste::avenantDeBase est en
         // cascade:['remove'] — laissée telle quelle, la suppression de la piste
-        // détruirait l'avenant de base. On coupe les deux liens pour ne supprimer
-        // QUE la piste dérivée (l'avenant de base est conservé). Les nulls sont
-        // persistés par le flush interne de handleDeleteApi (aucun flush ici si le
-        // gating de suppression échoue).
-        $avenant->setPisteDeRenouvellement(null);
-        $piste->setAvenantDeBase(null);
+        // détruirait l'avenant de base. La règle (et les DEUX sens du lien, qui sont
+        // indépendants) vit dans LiensProteges, partagée avec le moteur de mutation
+        // de l'assistant : elle était écrite ici seule, et tout autre chemin de
+        // suppression retombait dans le piège. Les nulls sont persistés par le flush
+        // interne de handleDeleteApi (aucun flush ici si le gating échoue).
+        LiensProteges::dissocier($piste);
 
         return $this->handleDeleteApi($piste);
     }

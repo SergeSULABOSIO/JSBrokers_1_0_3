@@ -347,6 +347,10 @@ class WorkspaceMutationService
                 throw MutationException::bloque(implode(' ', $impact->blocages));
             }
             $cibleLabel = $this->libelleInstance($cible);
+            // GARDE-FOU : couper les liens qu'une cascade ne doit jamais remonter
+            // (cf. LiensProteges). Supprimer une opportunité dérivée emporterait
+            // sinon la POLICE qu'elle fait évoluer — l'inverse exact de l'intention.
+            LiensProteges::dissocier($cible);
             $this->commitDelete($cible);
 
             return ['op' => $op->op, 'entite' => $op->entityShortName, 'libelle' => $libelle, 'cible' => $cibleLabel, 'id' => null];

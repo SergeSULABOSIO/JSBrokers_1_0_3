@@ -870,4 +870,55 @@ class PortefeuilleFilterTest extends WebTestCase
         $this->assertStringContainsString(self::PF_NOM, $html, 'Le nom du portefeuille doit être affiché sur la ligne.');
         $this->assertStringContainsString(self::GEST_NOM, $html, 'Le gestionnaire de compte doit être affiché sur la ligne.');
     }
+
+    /**
+     * LE WIDGET DOIT MONTRER LES POLICES ÉCHUES, dans leur propre seau et avec un retard
+     * NOMMÉ. Sa fenêtre partait de « maintenant » : une police expirée n'y entrait pas, et
+     * le seau « ≤ 30 jrs » aurait de toute façon affiché un badge NÉGATIF (« -30j »). Le
+     * seau « Échues » est ouvert par défaut dès qu'il y en a : c'est l'urgence du courtier.
+     */
+    public function testRenewalsBlockAffichePolicesEchuesDansLeurSeau(): void
+    {
+        ['entreprise' => $e] = $this->seed();
+
+        // Une police ÉCHUE sur la cotation du client rattaché (le seed n'en crée qu'à +30 j).
+        $em = $this->em();
+        $cotation = $em->getRepository(Avenant::class)
+            ->findOneBy(['entreprise' => $e, 'referencePolice' => self::CLI_IN . '-POL'])
+            ?->getCotation();
+        if ($cotation === null) {
+            $cotation = $em->getRepository(Cotation::class)->findOneBy(['entreprise' => $e]);
+        }
+        self::assertNotNull($cotation, 'Le seed doit fournir une cotation exploitable.');
+
+        $fin = new \DateTimeImmutable('-30 days');
+        $echue = new Avenant();
+        $echue->setStartingAt($fin->modify('-365 days'))->setEndingAt($fin)
+            ->setDescription('Avenant échu')->setReferencePolice('PHPUNIT-POL-ECHUE');
+        $echue->setEntreprise($e);
+        $cotation->addAvenant($echue);
+        $em->persist($echue);
+        $em->flush();
+
+        $this->client->loginUser($this->user(self::OWNER_EMAIL));
+        $this->client->request('GET', sprintf('/admin/entreprise_dashbord/block/renewals/%d', $e->getId()));
+        $this->assertResponseIsSuccessful();
+
+        $html = (string) $this->client->getResponse()->getContent();
+
+        $this->assertStringContainsString('Échues (1)', $html, 'Le seau « Échues » compte la police.');
+        $this->assertStringContainsString('Expiré depuis 30 j', $html, 'Le retard est nommé, pas laissé en négatif.');
+        // La ligne échue est rendue VISIBLE (les autres seaux, eux, sont masqués).
+        $this->assertMatchesRegularExpression(
+            '/data-group="echus"(?![^>]*display:none)/',
+            $html,
+            'La ligne de la police échue doit être rendue et visible.'
+        );
+        $this->assertStringNotContainsString('-30j', $html, 'Aucun badge négatif ne doit subsister.');
+        $this->assertMatchesRegularExpression(
+            '/data-mode="echus"[^>]*aria-pressed="true"/',
+            $html,
+            'Le seau « Échues » est ouvert par défaut dès qu\'une police est échue.'
+        );
+    }
 }

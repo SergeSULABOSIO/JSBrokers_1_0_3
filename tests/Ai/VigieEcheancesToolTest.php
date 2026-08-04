@@ -12,7 +12,9 @@ use App\Entity\Tache;
 use App\Entity\Tranche;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\DashboardDataProvider;
+use App\Services\Search\PortefeuilleCritereFactory;
 use App\Services\Tranche\TranchePaiementService;
+use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -58,6 +60,10 @@ class VigieEcheancesToolTest extends TestCase
             $resolver,
             $dashboard ?? $this->createMock(DashboardDataProvider::class),
             $tranchePaiement,
+            // Invité sans id : la fabrique rend un critère vide, donc aucune
+            // restriction de portefeuille — l'outil interroge le cabinet entier,
+            // comportement historique que ces tests décrivent.
+            new PortefeuilleCritereFactory($this->createMock(EntityManagerInterface::class)),
         );
     }
 
@@ -85,8 +91,80 @@ class VigieEcheancesToolTest extends TestCase
         $this->assertSame(30, $result->data['horizonJours']);
         $this->assertArrayNotHasKey('horsPerimetre', $result->data);
         $this->assertSame('Relancer le client Alpha', $result->data['volets']['taches']['lignes'][0]['description']);
-        $this->assertEqualsWithDelta(10, $result->data['volets']['renouvellements']['lignes'][0]['joursRestants'], 1);
+        $this->assertSame(10, $result->data['volets']['renouvellements']['aVenir']['lignes'][0]['joursRestants']);
         $this->assertNull($result->uiAction);
+    }
+
+    /**
+     * LE CONTRESENS À RENDRE IMPOSSIBLE. Avec un unique « total », deux lignes toutes
+     * à venir se lisaient « aucune police échue » — ce que l'assistant a affirmé alors
+     * que la rubrique en affichait cinq. Chaque population porte désormais son compte.
+     */
+    public function testRenouvellementsSeparentEchuesEtAVenirAvecLeursComptes(): void
+    {
+        $dashboard = $this->createMock(DashboardDataProvider::class);
+        $dashboard->method('getAllRenouvellements')->willReturn([
+            (new Avenant())->setEndingAt(new \DateTimeImmutable('-93 days')),
+            (new Avenant())->setEndingAt(new \DateTimeImmutable('-2 days')),
+            (new Avenant())->setEndingAt(new \DateTimeImmutable('+16 days')),
+        ]);
+
+        $tool = $this->makeTool(['Avenant' => true], $dashboard);
+        $volet = $tool->execute(['volet' => 'renouvellements'], $this->makeScope())
+            ->data['volets']['renouvellements'];
+
+        $this->assertSame(2, $volet['echues']['total']);
+        $this->assertSame(1, $volet['aVenir']['total']);
+        $this->assertSame(3, $volet['total']);
+        $this->assertFalse($volet['tronque']);
+
+        // Le retard est NOMMÉ, pas laissé au signe d'un nombre.
+        $this->assertSame(93, $volet['echues']['lignes'][0]['joursRetard']);
+        $this->assertSame(-93, $volet['echues']['lignes'][0]['joursRestants']);
+        $this->assertArrayNotHasKey('joursRetard', $volet['aVenir']['lignes'][0]);
+        $this->assertStringContainsString('ÉCHUES', $volet['rappel']);
+    }
+
+    /** Une police expirant AUJOURD'HUI n'est pas échue : elle est à venir (borne à minuit). */
+    public function testPoliceExpirantAujourdhuiEstAVenir(): void
+    {
+        $dashboard = $this->createMock(DashboardDataProvider::class);
+        $dashboard->method('getAllRenouvellements')->willReturn([
+            (new Avenant())->setEndingAt(new \DateTimeImmutable('today')),
+        ]);
+
+        $tool = $this->makeTool(['Avenant' => true], $dashboard);
+        $volet = $tool->execute(['volet' => 'renouvellements'], $this->makeScope())
+            ->data['volets']['renouvellements'];
+
+        $this->assertSame(0, $volet['echues']['total']);
+        $this->assertSame(1, $volet['aVenir']['total']);
+        $this->assertSame(0, $volet['aVenir']['lignes'][0]['joursRestants']);
+    }
+
+    /**
+     * Le plafond s'applique PAR POPULATION : neuf échéances lointaines ne doivent
+     * jamais évincer de l'échantillon la seule police échue, qui est l'urgence.
+     */
+    public function testPlafondRenouvellementsSAppliqueParPopulation(): void
+    {
+        $avenants = [(new Avenant())->setEndingAt(new \DateTimeImmutable('-5 days'))];
+        for ($i = 1; $i <= 9; ++$i) {
+            $avenants[] = (new Avenant())->setEndingAt(new \DateTimeImmutable('+' . $i . ' days'));
+        }
+
+        $dashboard = $this->createMock(DashboardDataProvider::class);
+        $dashboard->method('getAllRenouvellements')->willReturn($avenants);
+
+        $tool = $this->makeTool(['Avenant' => true], $dashboard);
+        $volet = $tool->execute(['volet' => 'renouvellements'], $this->makeScope())
+            ->data['volets']['renouvellements'];
+
+        $this->assertCount(1, $volet['echues']['lignes']);
+        $this->assertSame(1, $volet['echues']['total']);
+        $this->assertCount(8, $volet['aVenir']['lignes']);
+        $this->assertSame(9, $volet['aVenir']['total']);
+        $this->assertTrue($volet['tronque']);
     }
 
     public function testHorizonEstClampe(): void
@@ -218,9 +296,15 @@ class VigieEcheancesToolTest extends TestCase
         );
         $this->assertSame(['volet' => 'taches'], $tool->match('Quelles tâches en retard ?', $scope));
 
+        // Les polices ÉCHUES relèvent de ce volet depuis qu'il les couvre : sans cela,
+        // la question ne trouvait aucun outil et le modèle répondait de mémoire.
+        $this->assertSame(['volet' => 'renouvellements'], $tool->match('Quelles polices sont échues chez moi ?', $scope));
+        $this->assertSame(['volet' => 'renouvellements'], $tool->match('Mes polices expirées', $scope));
+
         // Domaine d'autres outils : liste => rechercher_entites, combien => compter_entites.
         $this->assertNull($tool->match('Liste les tâches', $scope));
         $this->assertNull($tool->match('Combien de renouvellements ?', $scope));
+        $this->assertNull($tool->match('Combien de polices échues ?', $scope));
         $this->assertNull($tool->match('Combien de clients avons-nous ?', $scope));
     }
 }

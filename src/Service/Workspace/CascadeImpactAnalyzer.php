@@ -45,49 +45,121 @@ class CascadeImpactAnalyzer
     }
 
     /**
-     * Enfants supprimés en cascade (une profondeur — informer, pas être exhaustif).
+     * PROFONDEUR MAXIMALE DE PARCOURS DES CASCADES.
+     *
+     * S'arrêter à une profondeur mentait par omission sur les cas qui comptent :
+     * supprimer une opportunité annonçait « 2 Cotation liée(s) » alors que
+     * disparaissaient aussi leurs avenants, leurs échéanciers et les paiements de
+     * prime déjà déclarés. On ne peut pas demander à quelqu'un de valider ce qu'on
+     * lui cache. Trois niveaux couvrent les chaînes réelles du domaine
+     * (Piste → Cotation → Tranche → PaiementPrime) sans parcours déraisonnable.
+     */
+    private const PROFONDEUR_MAX = 3;
+
+    /**
+     * Enfants supprimés en cascade, AGRÉGÉS PAR TYPE sur toute la chaîne.
+     *
+     * Le parcours suit aussi les associations to-one en cascade (ex.
+     * Piste::avenantDeBase) : ce sont elles qui réservent les mauvaises surprises,
+     * puisqu'elles remontent vers des entités que l'utilisateur croyait à l'abri.
      *
      * @return array<int, array{entite: string, libelle: string, count: int}>
      */
     private function enfantsEnCascade(object $entity, ClassMetadata $meta): array
     {
+        $comptes = [];
+        // Les relations en cascade forment un GRAPHE, pas un arbre : Cotation::piste
+        // renvoie vers sa Piste, Avenant::cotation vers sa Cotation. Sans mémoire des
+        // objets déjà vus, le parcours boucle indéfiniment.
+        $vus = new \SplObjectStorage();
+        $vus->attach($entity);
+
+        $this->parcourirCascades($entity, $meta, $comptes, $vus, 1);
+
         $impacts = [];
-        foreach ($meta->getAssociationMappings() as $field => $mapping) {
-            if (!$mapping->isCascadeRemove() && empty($mapping->orphanRemoval)) {
-                continue;
-            }
-
-            $count = $this->compterValeurAssociation($entity, $meta, $field);
-            if ($count <= 0) {
-                continue;
-            }
-
-            $short = $this->shortName((string) $mapping->targetEntity);
+        foreach ($comptes as $short => $count) {
             $impacts[] = ['entite' => $short, 'libelle' => $short, 'count' => $count];
         }
 
         return $impacts;
     }
 
-    /** Compte les éléments d'une association (collection : taille ; to-one : 0/1). */
-    private function compterValeurAssociation(object $entity, ClassMetadata $meta, string $field): int
+    /**
+     * @param array<string, int> $comptes accumulateur entité => nombre
+     */
+    private function parcourirCascades(
+        object $entity,
+        ClassMetadata $meta,
+        array &$comptes,
+        \SplObjectStorage $vus,
+        int $profondeur,
+    ): void {
+        if ($profondeur > self::PROFONDEUR_MAX) {
+            return;
+        }
+
+        // Liens que le moteur COUPE avant de supprimer : ils ne détruiront rien, et
+        // les annoncer promettrait la disparition d'une police qui survivra.
+        $proteges = LiensProteges::champs($entity);
+
+        foreach ($meta->getAssociationMappings() as $field => $mapping) {
+            if (!$mapping->isCascadeRemove() && empty($mapping->orphanRemoval)) {
+                continue;
+            }
+            if (array_key_exists($field, $proteges)) {
+                continue;
+            }
+
+            $short = $this->shortName((string) $mapping->targetEntity);
+            foreach ($this->valeursAssociation($entity, $meta, $field) as $enfant) {
+                if ($vus->contains($enfant)) {
+                    continue;
+                }
+                $vus->attach($enfant);
+                $comptes[$short] = ($comptes[$short] ?? 0) + 1;
+
+                try {
+                    $metaEnfant = $this->em->getClassMetadata($enfant::class);
+                } catch (\Throwable) {
+                    continue;
+                }
+                $this->parcourirCascades($enfant, $metaEnfant, $comptes, $vus, $profondeur + 1);
+            }
+        }
+    }
+
+    /**
+     * Éléments d'une association, sous forme d'objets (collection : ses membres ;
+     * to-one : l'objet ou rien). Fail-safe : une association illisible est ignorée.
+     *
+     * @return array<int, object>
+     */
+    private function valeursAssociation(object $entity, ClassMetadata $meta, string $field): array
     {
         try {
             $value = $meta->getFieldValue($entity, $field);
         } catch (\Throwable) {
-            return 0;
+            return [];
         }
         if ($value === null) {
-            return 0;
+            return [];
         }
-        if ($value instanceof \Countable || is_array($value)) {
-            return \count($value);
-        }
-        if ($value instanceof \Traversable) {
-            return iterator_count($value);
+        if (is_object($value) && !$value instanceof \Traversable) {
+            return [$value];
         }
 
-        return 1; // to-one non nul
+        $elements = [];
+        try {
+            foreach ($value as $element) {
+                if (is_object($element)) {
+                    $elements[] = $element;
+                }
+            }
+        } catch (\Throwable) {
+            return [];
+        }
+
+        return $elements;
     }
 
     /**

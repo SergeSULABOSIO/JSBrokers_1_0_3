@@ -2,15 +2,18 @@
 
 namespace App\Ai\Boussole;
 
-use App\Comptabilite\SuiviFiscalService;
+use App\Comptabilite\CourtierSuiviFiscalService;
 use App\Entity\Avenant;
 use App\Entity\Entreprise;
+use App\Entity\Feedback;
 use App\Entity\Invite;
 use App\Entity\Tache;
 use App\Service\Saturation\SaturationService;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Services\JSBDynamicSearchService;
+use App\Services\Note\NoteRecouvrementService;
 use App\Services\Search\AvenantEcheanceScope;
+use App\Services\Search\ChargeInviteCritereFactory;
 use App\Services\Search\PortefeuilleCritereFactory;
 use App\Services\Search\TranchePaiementScope;
 use App\Services\Tranche\TranchePaiementService;
@@ -32,25 +35,34 @@ use App\Services\Tranche\TranchePaiementService;
  */
 final class BoussoleService
 {
-    /** Barème d'urgence des axes (plus haut = plus prioritaire pour le rappel). */
-    private const URGENCE = [
-        'fiscal'            => 90,
-        'retros'           => 85,
-        'renouvellements'  => 80, // échus ; 60 si seulement imminents (cf. axeRenouvellements)
-        'commissions'      => 70,
-        'primes_impayees'  => 65,
-        'bordereaux'       => 55,
-        'saturation'       => 50,
-        'taches'           => 40,
+    /**
+     * Barème d'urgence des axes (plus haut = plus prioritaire pour le rappel).
+     * PUBLIC parce que PlanDuJourService s'en sert pour ordonner le programme du
+     * jour : un seul barème, donc jamais de contradiction entre la todo list
+     * affichée à l'ouverture et le rappel de fin de réponse.
+     */
+    public const URGENCE = [
+        'fiscal'             => 90,
+        'retros'             => 85,
+        'renouvellements'    => 80, // échus ; 60 si seulement imminents (cf. axeRenouvellements)
+        'feedbacks'          => 75, // prochaine action datée : l'engagement pris envers un client
+        'recouvrement_notes' => 72, // commission FACTURÉE non encaissée
+        'commissions'        => 70, // commission exigible, pas encore facturée
+        'primes_impayees'    => 65,
+        'bordereaux'         => 55,
+        'saturation'         => 50,
+        'taches'             => 40,
     ];
 
     public function __construct(
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly SaturationService $saturation,
         private readonly TranchePaiementService $tranchePaiement,
-        private readonly SuiviFiscalService $suiviFiscal,
+        private readonly CourtierSuiviFiscalService $suiviFiscal,
         private readonly JSBDynamicSearchService $searchService,
         private readonly PortefeuilleCritereFactory $portefeuilleCritere,
+        private readonly ChargeInviteCritereFactory $chargeCritere,
+        private readonly NoteRecouvrementService $noteRecouvrement,
     ) {
     }
 
@@ -68,9 +80,11 @@ final class BoussoleService
             $this->axe($invite, 'Tranche', fn (): array => $this->axePrimesImpayees($entreprise, $invite)),
             $this->axe($invite, 'Tranche', fn (): array => $this->axeCommissions($entreprise, $invite)),
             $this->axe($invite, 'Tranche', fn (): array => $this->axeRetros($entreprise, $invite)),
+            $this->axe($invite, 'Note', fn (): array => $this->axeRecouvrementNotes($entreprise)),
             $this->axe($invite, 'Bordereau', fn (): array => $this->axeBordereaux()),
-            $this->axe($invite, 'DocumentComptable', fn (): array => $this->axeFiscal()),
+            $this->axe($invite, 'DocumentComptable', fn (): array => $this->axeFiscal($entreprise)),
             $this->axe($invite, 'Tache', fn (): array => $this->axeTaches($entreprise, $invite)),
+            $this->axe($invite, 'Feedback', fn (): array => $this->axeFeedbacks($entreprise, $invite)),
         ]));
 
         $prioritaire = null;
@@ -202,42 +216,150 @@ final class BoussoleService
         ];
     }
 
-    private function axeFiscal(): array
+    private function axeFiscal(Entreprise $entreprise): array
     {
-        // Obligation FISCALE du cabinet (non scopée au portefeuille) : réservée aux
+        // Obligation FISCALE DU CABINET (non scopée au portefeuille) : réservée aux
         // invités habilités « Documents comptables » (gating canRead ci-dessus).
-        $annee = (int) date('Y');
-        $solde = (float) ($this->suiviFiscal->suivi($annee)['totaux']['solde'] ?? 0);
-        $du    = $solde > 0.005;
+        //
+        // CourtierSuiviFiscalService, et surtout PAS SuiviFiscalService : ce dernier
+        // calcule la TVA de la PLATEFORME JS Brokers (ventes de tokens, dépenses de
+        // l'éditeur) et ne prend aucune entreprise — il annoncerait à chaque courtier
+        // un solde qui ne le concerne pas, sur l'axe le plus urgent du barème.
+        //
+        // DEUX DETTES DISTINCTES, jamais additionnées à l'aveugle dans le libellé
+        // (cf. la règle « deux mondes » des taxes) : la taxe COLLECTÉE sur les primes
+        // pour le compte de l'assureur, et la taxe due par le COURTIER sur ses propres
+        // commissions. Le montant agrégé sert au tri, le libellé nomme la plus lourde.
+        $exercice = (int) date('Y');
+        $suivi    = $this->suiviFiscal->suivi($entreprise, $exercice);
+
+        $soldeAssureur = (float) ($suivi['assureur']['totaux']['solde'] ?? 0);
+        $soldeCourtier = (float) ($suivi['courtier']['totaux']['solde'] ?? 0);
+        $solde         = max(0.0, $soldeAssureur) + max(0.0, $soldeCourtier);
+        $du            = $solde > 0.005;
+
+        $dettes = [];
+        if ($soldeAssureur > 0.005) {
+            $dettes[] = 'taxe sur primes collectée';
+        }
+        if ($soldeCourtier > 0.005) {
+            $dettes[] = 'taxe sur commissions du courtier';
+        }
 
         return [
             'axe'         => 'fiscal',
             'libelle'     => $du
-                ? sprintf('TVA à reverser à l’administration (solde dû, exercice %d)', $annee)
-                : 'TVA à jour',
-            'compte'      => $du ? 1 : 0,
-            'montant'     => $solde,
+                ? sprintf('Taxes à reverser (%s) — exercice %d', implode(' et ', $dettes), $exercice)
+                : 'Taxes à jour',
+            'compte'      => $du ? count($dettes) : 0,
+            'montant'     => round($solde, 2),
             'urgence'     => $du ? self::URGENCE['fiscal'] : 0,
             'actionnable' => $du,
         ];
     }
 
+    /**
+     * Commissions FACTURÉES non encaissées. Stade suivant de l'axe « commissions »
+     * (exigible = pas encore facturée) : une note de débit a été émise à l'assureur
+     * et attend son règlement. Périmètre CABINET — une note agrège les commissions
+     * de plusieurs clients et n'est rattachable à aucun portefeuille.
+     */
+    private function axeRecouvrementNotes(Entreprise $entreprise): array
+    {
+        $r  = $this->noteRecouvrement->lister($entreprise, 1, 1);
+        $nb = (int) ($r['totalItems'] ?? 0);
+
+        return [
+            'axe'         => 'recouvrement_notes',
+            'libelle'     => $nb > 0
+                ? sprintf('%d note(s) de débit émise(s) non encaissée(s) à relancer (cabinet)', $nb)
+                : 'Aucune note de débit en attente d’encaissement',
+            'compte'      => $nb,
+            'montant'     => (float) ($r['totaux']['totalSolde'] ?? 0),
+            'urgence'     => $nb > 0 ? self::URGENCE['recouvrement_notes'] : 0,
+            'actionnable' => $nb > 0,
+        ];
+    }
+
+    /**
+     * Tâches ouvertes : celles qui M'INCOMBENT (assignées à moi ou à personne) et
+     * celles de MON PORTEFEUILLE, comptées comme un seul volume de travail. Le
+     * libellé isole le retard, seule information qui appelle une action immédiate.
+     * Règle de périmètre partagée avec PlanDuJourService (ChargeInviteCritereFactory).
+     */
     private function axeTaches(Entreprise $entreprise, Invite $invite): array
     {
-        $criteria = ['closed' => ['operator' => '=', 'value' => false]]
-            + $this->portefeuilleCritere->pour('Tache', $invite);
-        $result = $this->searchService->search(Tache::class, $criteria, $entreprise, null, 1, 1);
-        $nb     = ($result['status']['code'] ?? 500) === 200 ? (int) ($result['totalItems'] ?? 0) : 0;
+        $jour  = new \DateTimeImmutable('today');
+        $bases = [$this->chargeCritere->tachesAssignees($invite)];
+        if ($this->chargeCritere->aUnPortefeuille('Tache', $invite)) {
+            $bases[] = $this->chargeCritere->tachesPortefeuille($invite);
+        }
+
+        // Les deux jeux se recoupant, la somme majorerait le compte : on retient le
+        // plus large plutôt que d'annoncer un volume que la rubrique ne montrera pas.
+        $nb       = 0;
+        $enRetard = 0;
+        foreach ($bases as $criteres) {
+            $nb = max($nb, $this->compter(Tache::class, $criteres, $entreprise));
+            $enRetard = max($enRetard, $this->compter(
+                Tache::class,
+                ['toBeEndedAt' => ['to' => $jour->modify('-1 day')->format('Y-m-d')]] + $criteres,
+                $entreprise,
+            ));
+        }
 
         return [
             'axe'         => 'taches',
-            'libelle'     => $nb > 0
-                ? sprintf('%d tâche(s) ouverte(s) : suivre les feedbacks puis clôturer', $nb)
-                : 'Aucune tâche ouverte',
+            'libelle'     => match (true) {
+                $nb === 0     => 'Aucune tâche ouverte',
+                $enRetard > 0 => sprintf('%d tâche(s) ouverte(s), dont %d en retard : suivre les feedbacks puis clôturer', $nb, $enRetard),
+                default       => sprintf('%d tâche(s) ouverte(s) : suivre les feedbacks puis clôturer', $nb),
+            },
             'compte'      => $nb,
             'urgence'     => $nb > 0 ? self::URGENCE['taches'] : 0,
             'actionnable' => $nb > 0,
         ];
+    }
+
+    /**
+     * Prochaines actions de feedback dues ou en retard — l'engagement daté pris
+     * envers un client au fil d'une tâche. Seule donnée « prochain pas » du
+     * workspace, longtemps restée invisible faute d'être requêtée.
+     */
+    private function axeFeedbacks(Entreprise $entreprise, Invite $invite): array
+    {
+        $jour  = new \DateTimeImmutable('today');
+        $bases = [$this->chargeCritere->feedbacksAuteur($invite, $jour)];
+        if ($this->chargeCritere->aUnPortefeuille('Feedback', $invite)) {
+            $bases[] = $this->chargeCritere->feedbacksPortefeuille($invite, $jour);
+        }
+
+        $nb = 0;
+        foreach ($bases as $criteres) {
+            $nb = max($nb, $this->compter(Feedback::class, $criteres, $entreprise));
+        }
+
+        return [
+            'axe'         => 'feedbacks',
+            'libelle'     => $nb > 0
+                ? sprintf('%d action(s) promise(s) arrivée(s) à échéance (feedbacks)', $nb)
+                : 'Aucune action de feedback en attente',
+            'compte'      => $nb,
+            'urgence'     => $nb > 0 ? self::URGENCE['feedbacks'] : 0,
+            'actionnable' => $nb > 0,
+        ];
+    }
+
+    /**
+     * Comptage via le moteur de recherche (même SQL que la rubrique affichée).
+     *
+     * @param array<string, mixed> $criteres
+     */
+    private function compter(string $entityClass, array $criteres, Entreprise $entreprise): int
+    {
+        $result = $this->searchService->search($entityClass, $criteres, $entreprise, null, 1, 1);
+
+        return ($result['status']['code'] ?? 500) === 200 ? (int) ($result['totalItems'] ?? 0) : 0;
     }
 
     /** Compte des avenants d'une fenêtre d'échéance dans le périmètre de l'invité. */

@@ -5,6 +5,7 @@ namespace App\Ai\Tool;
 use App\Ai\AiText;
 use App\Ai\Scope\AiScope;
 use App\Services\DashboardDataProvider;
+use App\Services\Search\PortefeuilleCritereFactory;
 use App\Services\Search\TranchePaiementScope;
 use App\Services\Tranche\TranchePaiementService;
 use App\Service\Workspace\WorkspaceAccessResolver;
@@ -19,8 +20,18 @@ use App\Service\Workspace\WorkspaceAccessResolver;
  * périmètre ; un volet hors périmètre est OMIS avec mention (l'assistant reste
  * utile sur le reste), le refus global n'arrive que si tout est hors périmètre.
  *
+ * LE VOLET RENOUVELLEMENTS EST PARTITIONNÉ (echues / aVenir), et cette forme est
+ * un GARDE-FOU, pas une commodité d'affichage : avec un unique « total », un
+ * résultat de 2 lignes toutes à venir se lisait « il n'y a aucune police échue »,
+ * et l'assistant l'a affirmé alors que la rubrique en affichait cinq. Deux
+ * compteurs nommés rendent ce contresens impossible. Les bornes viennent de
+ * AvenantEcheanceScope (via DashboardDataProvider) : ce volet RÉCONCILIE avec les
+ * chips « Échus » + « Sous N jours » de la rubrique.
+ *
  * COÛT : getAllRenouvellements() hydrate les valeurs calculées des avenants —
- * l'horizon est borné dur (HORIZON_MAX) pour contenir ce coût.
+ * l'horizon est borné dur (HORIZON_MAX) pour contenir ce coût. La projection de la
+ * vigie n'en a pas besoin (getters simples), mais le tableau de bord partage la
+ * méthode : ne pas retirer l'hydratation sans dissocier les deux appelants.
  */
 final class VigieEcheancesTool implements AiToolInterface
 {
@@ -43,6 +54,7 @@ final class VigieEcheancesTool implements AiToolInterface
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly DashboardDataProvider $dashboard,
         private readonly TranchePaiementService $tranchePaiement,
+        private readonly PortefeuilleCritereFactory $portefeuilleCritere,
     ) {
     }
 
@@ -53,19 +65,19 @@ final class VigieEcheancesTool implements AiToolInterface
 
     public function description(): string
     {
-        return 'Brief des échéances et points de vigilance du cabinet : polices à renouveler '
-            . 'sous N jours (défaut 30), tâches non closes (dont en retard), pistes en cours '
-            . 'sans police, derniers sinistres notifiés, tranches échues impayées (primes et '
-            . 'commissions à relancer). À appeler quand l\'utilisateur demande ce qu\'il doit '
-            . 'surveiller/faire, ses renouvellements à venir ou un brief du jour. '
-            . 'ATTENTION — le volet renouvellements est le PIPELINE DE RENOUVELLEMENT : il ne '
-            . 'retient que les polices encore renouvelables et NON déjà reprises par une piste '
-            . 'de renouvellement active, et ignore les polices déjà expirées. Ses chiffres sont '
-            . 'donc volontairement plus restrictifs que la rubrique Avenants. Si la question '
-            . 'porte simplement sur les avenants qui arrivent à échéance (ou déjà échus) dans '
-            . 'une fenêtre de temps, utiliser rechercher_entites / compter_entites avec le '
-            . 'paramètre echeance : eux seuls reproduisent exactement les filtres rapides de la '
-            . 'rubrique. Pour le détail complet des impayés, préférer suivi_impayes.';
+        return 'Brief des échéances et points de vigilance du cabinet : polices déjà ÉCHUES et '
+            . 'polices à renouveler sous N jours (défaut 30), tâches non closes (dont en '
+            . 'retard), pistes en cours sans police, derniers sinistres notifiés, tranches '
+            . 'échues impayées (primes et commissions à relancer). À appeler quand '
+            . 'l\'utilisateur demande ce qu\'il doit surveiller/faire, ses renouvellements ou '
+            . 'un brief du jour. Le volet renouvellements est PARTITIONNÉ en « echues » et '
+            . '« aVenir », chacun avec son propre total : il reproduit EXACTEMENT les chips '
+            . '« Échus » + « Sous N jours » de la rubrique Avenants (mêmes bornes, même '
+            . 'exclusion des polices dont le sort est scellé), donc ses chiffres doivent '
+            . 'coïncider avec ceux de compter_entites (paramètre echeance) et avec la boussole. '
+            . 'Un « aVenir.total » non nul avec « echues.total » à zéro signifie qu\'il n\'y a '
+            . 'réellement aucune police échue — mais ne JAMAIS déduire l\'absence d\'échues '
+            . 'd\'un total global. Pour le détail complet des impayés, préférer suivi_impayes.';
     }
 
     public function schema(): array
@@ -108,7 +120,10 @@ final class VigieEcheancesTool implements AiToolInterface
             return $args;
         }
 
-        if (preg_match('/\brenouvellements?\b|\brenouveler\b/', $normalized)
+        // « échues / expirées / périmées » relèvent aussi de ce volet depuis qu'il les
+        // couvre : sans cela, « il reste combien de polices échues ? » ne trouvait aucun
+        // outil et le modèle répondait de mémoire.
+        if (preg_match('/\brenouvellements?\b|\brenouveler\b|\b(?:echues?|echus|expirees?|expires?|perimees?|perimes?)\b/', $normalized)
             && !preg_match('/\bcombien\b/', $normalized)) {
             $args = ['volet' => 'renouvellements'];
             if (preg_match('/\b(\d{1,3})\s*jours?\b/', $normalized, $m)) {
@@ -162,11 +177,20 @@ final class VigieEcheancesTool implements AiToolInterface
         ], static fn ($v) => $v !== null));
     }
 
-    /** @return array{lignes: array, total: int, tronque: bool, totaux?: array} */
     private function collecter(string $volet, AiScope $scope, int $horizon): array
     {
         $entreprise = $scope->entreprise;
         $max = self::MAX_LIGNES_PAR_VOLET;
+
+        // PÉRIMÈTRE : la vigie répond DANS le portefeuille de l'invité, comme la
+        // boussole et comme les rubriques affichées. Sans cela, un gestionnaire
+        // s'entendait annoncer les échéances de tout le cabinet — deux nombres
+        // pour la même question selon qu'il la posait à Ket ou qu'il regardait
+        // sa liste. `null` quand l'invité ne gère aucun portefeuille : le filtre
+        // est alors sans objet (il n'y a rien à restreindre).
+        $portefeuilleDe = $this->portefeuilleCritere->pour('Tranche', $scope->invite) !== []
+            ? $scope->invite
+            : null;
 
         // Volet impayés : tranches échues (prime ou commission encore dues), les plus
         // en retard d'abord — source unique TranchePaiementService (règle de la liste).
@@ -177,7 +201,8 @@ final class VigieEcheancesTool implements AiToolInterface
                 null,
                 null,
                 1,
-                $max
+                $max,
+                $portefeuilleDe
             );
 
             return [
@@ -188,11 +213,19 @@ final class VigieEcheancesTool implements AiToolInterface
             ];
         }
 
+        // Volet renouvellements : PARTITIONNÉ en échues / à venir. Un seul « total »
+        // laissait lire « 2 lignes à venir » comme « aucune police échue ».
+        if ($volet === 'renouvellements') {
+            return $this->partitionnerRenouvellements(
+                $this->dashboard->getAllRenouvellements($entreprise, $horizon, $portefeuilleDe),
+                $max,
+            );
+        }
+
         $items = match ($volet) {
-            'renouvellements' => $this->dashboard->getAllRenouvellements($entreprise, $horizon),
-            'taches'          => $this->dashboard->getTachesNonCloses($entreprise, $max + 1),
-            'pistes'          => $this->dashboard->getPistesEnCours($entreprise, $max + 1),
-            'sinistres'       => $this->dashboard->getDerniersSinistres($entreprise, $max + 1),
+            'taches'    => $this->dashboard->getTachesNonCloses($entreprise, $max + 1, $portefeuilleDe),
+            'pistes'    => $this->dashboard->getPistesEnCours($entreprise, $max + 1, $portefeuilleDe),
+            'sinistres' => $this->dashboard->getDerniersSinistres($entreprise, $max + 1, $portefeuilleDe),
         };
 
         $total = count($items);
@@ -202,6 +235,53 @@ final class VigieEcheancesTool implements AiToolInterface
         );
 
         return ['lignes' => $lignes, 'total' => $total, 'tronque' => $total > $max];
+    }
+
+    /**
+     * Sépare les polices ÉCHUES des polices à venir, chacune avec son propre compteur
+     * et son propre plafond de lignes — les échues, les plus urgentes, ne doivent
+     * jamais être évincées de l'échantillon par des échéances plus lointaines.
+     *
+     * `total` reste le compte RÉEL de chaque population, indépendamment du plafond :
+     * c'est ce nombre que l'assistant doit citer, et il doit coïncider avec le chip
+     * correspondant de la rubrique.
+     *
+     * @param array<int, object> $items avenants triés par endingAt croissant
+     */
+    private function partitionnerRenouvellements(array $items, int $max): array
+    {
+        $aujourdhui = new \DateTimeImmutable('today');
+        $echues = [];
+        $aVenir = [];
+
+        foreach ($items as $avenant) {
+            $fin = $avenant->getEndingAt();
+            $estEchue = $fin !== null
+                && \DateTimeImmutable::createFromInterface($fin)->setTime(0, 0) < $aujourdhui;
+            if ($estEchue) {
+                $echues[] = $avenant;
+            } else {
+                $aVenir[] = $avenant;
+            }
+        }
+
+        $population = fn (array $liste): array => [
+            'lignes' => array_map(
+                fn (object $e) => $this->projeter('renouvellements', $e),
+                array_slice($liste, 0, $max),
+            ),
+            'total' => count($liste),
+        ];
+
+        return [
+            'echues'  => $population($echues),
+            'aVenir'  => $population($aVenir),
+            'total'   => count($items),
+            'tronque' => count($echues) > $max || count($aVenir) > $max,
+            'rappel'  => 'Les polices ÉCHUES sont incluses (echues.total). Un renouvellement '
+                . 'AMORCÉ — piste dérivée sans avenant successeur — laisse la police ÉCHUE : '
+                . 'ne conclus jamais qu\'elle est renouvelée.',
+        ];
     }
 
     /** Projection compacte d'une ligne (scalaires utiles uniquement, dates Y-m-d). */
@@ -217,9 +297,15 @@ final class VigieEcheancesTool implements AiToolInterface
                 'assureur'      => $e->getCotation()?->getAssureur()?->getNom(),
                 'risque'        => $e->getCotation()?->getPiste()?->getRisque()?->getNomComplet(),
                 'echeance'      => $e->getEndingAt()?->format('Y-m-d'),
+                // Jour à jour (échéance ramenée à minuit) : négatif = police ÉCHUE. Le
+                // signe seul est trop discret pour être lu, d'où joursRetard explicite.
                 'joursRestants' => $e->getEndingAt() !== null
-                    ? (int) $aujourdhui->diff(\DateTimeImmutable::createFromInterface($e->getEndingAt()))->format('%r%a')
+                    ? (int) $aujourdhui->diff(\DateTimeImmutable::createFromInterface($e->getEndingAt())->setTime(0, 0))->format('%r%a')
                     : null,
+                'joursRetard'   => $e->getEndingAt() !== null
+                    && ($retard = -((int) $aujourdhui->diff(\DateTimeImmutable::createFromInterface($e->getEndingAt())->setTime(0, 0))->format('%r%a'))) > 0
+                        ? $retard
+                        : null,
             ], static fn ($v) => $v !== null && $v !== ''),
             'taches' => array_filter([
                 'id'          => $e->getId(),

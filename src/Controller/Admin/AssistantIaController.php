@@ -4,6 +4,7 @@ namespace App\Controller\Admin;
 
 use App\Ai\AiContextBuilder;
 use App\Ai\AiEngineFailure;
+use App\Ai\Boussole\PlanDuJourService;
 use App\Ai\AiReply;
 use App\Ai\Engine\AiEngineInterface;
 use App\Ai\Export\ImageJointeValidator;
@@ -111,6 +112,7 @@ class AssistantIaController extends AbstractController
         private UserPasswordHasherInterface $passwordHasher,
         private ValidatorInterface $validator,
         private FichierTexteExtracteur $fichierExtracteur,
+        private PlanDuJourService $planDuJour,
     ) {
     }
 
@@ -217,6 +219,14 @@ class AssistantIaController extends AbstractController
         return $this->render('components/_assistant_ia_chat.html.twig', [
             'conversation'    => $conversation,
             'assistantNom'    => $this->parametresRepository->nomPour($entreprise),
+            // PROGRAMME DU JOUR : calculé uniquement pour une conversation VIDE, où il
+            // remplace la bulle d'accueil. Rendu serveur = aucun token consommé et
+            // aucun risque d'invention : ce sont les chiffres des rubriques, tels quels.
+            // Le service est fail-safe, mais l'ouverture du chat ne doit dépendre de
+            // rien : un pépin ici retombe simplement sur l'accueil ordinaire.
+            'planDuJour'      => $conversation->getMessages()->isEmpty()
+                ? $this->planDuJourOuNull($entreprise, $invite)
+                : null,
             'entreprise'      => $entreprise,
             'idEntreprise'    => $idEntreprise,
             'idInvite'        => $invite->getId(),
@@ -226,6 +236,28 @@ class AssistantIaController extends AbstractController
             // `prefers-color-scheme` avant le premier rendu visuel.
             'themeAssistant'  => $this->currentUser()->getThemeAssistant() ?? 'auto',
         ]);
+    }
+
+    /**
+     * Programme du jour de l'invité, ou `null` si le calcul échoue ou n'a rien à
+     * dire. Le template retombe alors sur le message d'accueil ordinaire — mieux
+     * vaut un accueil neutre qu'un chat qui ne s'ouvre pas.
+     */
+    private function planDuJourOuNull(Entreprise $entreprise, Invite $invite): ?array
+    {
+        try {
+            $plan = $this->planDuJour->plan($entreprise, $invite);
+        } catch (\Throwable $e) {
+            $this->logger->warning('[AssistantIa] Programme du jour indisponible.', [
+                'entreprise' => $entreprise->getId(),
+                'invite' => $invite->getId(),
+                'exception' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+
+        return $plan['toutAuVert'] ? null : $plan;
     }
 
     /**

@@ -5,12 +5,14 @@ namespace App\Services;
 use App\Entity\Avenant;
 use App\Entity\Bordereau;
 use App\Entity\Entreprise;
+use App\Entity\Invite;
 use App\Entity\Taxe;
 use App\Repository\TaxeRepository;
 use App\Services\Canvas\Indicator\IndicatorCalculationHelper;
 use App\Services\Canvas\Indicator\AvenantIndicatorStrategy;
 use App\Services\Canvas\Provider\Entity\AvenantEntityCanvasProvider;
 use App\Services\CanvasBuilder;
+use App\Services\Search\AvenantEcheanceScope;
 use App\Services\Search\AvenantSuccessionScope;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -121,40 +123,41 @@ class DashboardDataProvider
         return (int) ($result ?? 0);
     }
 
-    public function getRenouvellements30j(Entreprise $entreprise): array
-    {
-        return $this->em->createQuery(
-            'SELECT a, c, ass FROM App\Entity\Avenant a
-             JOIN a.cotation c
-             JOIN c.assureur ass
-             WHERE a.entreprise = :e
-               AND a.endingAt BETWEEN :debut AND :fin
-             ORDER BY a.endingAt ASC'
-        )
-        ->setParameter('e', $entreprise)
-        ->setParameter('debut', new \DateTimeImmutable('now'))
-        ->setParameter('fin',   new \DateTimeImmutable('+30 days'))
-        ->setMaxResults(3)
-        ->getResult();
-    }
-
     /**
-     * PIPELINE DE RENOUVELLEMENT : les polices qui expirent dans la fenêtre ET qui
-     * réclament encore une action. L'exclusion des polices dont le sort est SCELLÉ
-     * (reprises par un avenant successeur, ou résiliées) vient de la MÊME règle que
-     * les chips d'échéance de la rubrique et que la boussole de l'assistante —
-     * AvenantSuccessionScope. Une exclusion propre à cette requête, fondée sur le
-     * renewalStatus stocké du successeur et sur un seul sens du double lien, aurait
-     * fait vivre un troisième dialecte de la même idée.
+     * PIPELINE D'ÉCHÉANCE COMPLET : les polices déjà ÉCHUES et celles qui expirent
+     * dans les $maxDays jours, qui réclament encore une action.
+     *
+     * DEUX RÈGLES EMPRUNTÉES, AUCUNE RÉINVENTÉE. Les bornes viennent de
+     * AvenantEcheanceScope::bornesHorizon() — la même arithmétique à minuit que les
+     * chips de la rubrique, la boussole et le programme du jour. L'exclusion des
+     * polices dont le sort est SCELLÉ (reprises par un avenant successeur, annulées,
+     * résiliées) vient de AvenantSuccessionScope. C'est tout : rien d'autre ne
+     * retranche de lignes ici, faute de quoi l'assistant et la rubrique cessent de
+     * s'accorder.
+     *
+     * LES ÉCHUES SONT DEDANS. Une fenêtre ouverte à gauche : une police expirée
+     * réclame une action PLUS que toute autre. Une borne basse à « now » l'excluait
+     * structurellement — c'est ce qui faisait annoncer à Ket « plus aucune police
+     * échue » quand la rubrique en affichait cinq. Le tri par endingAt croissant les
+     * place naturellement en tête.
      */
-    public function getAllRenouvellements(Entreprise $entreprise, int $maxDays = 365): array
+    public function getAllRenouvellements(Entreprise $entreprise, int $maxDays = 365, ?Invite $portefeuilleDe = null): array
     {
         $successionScellee = AvenantSuccessionScope::dqlSuccessionScellee($this->em, 'a', '_vigie');
+        $perimetre = $portefeuilleDe !== null ? ' AND pfg.id = :pfInvite' : '';
+        $bornes = AvenantEcheanceScope::bornesHorizon($maxDays, new \DateTimeImmutable('today'));
+        // Borne basse conditionnelle : ouverte pour les échues, mais la clause reste
+        // écrite si un appelant futur borne la fenêtre à gauche.
+        $borneBasse = $bornes['min'] !== null ? ' AND a.endingAt >= :debut' : '';
 
-        $avenants = $this->em->createQuery(
+        $query = $this->em->createQuery(
+            // LEFT JOIN sur l'assureur : Cotation::assureur est NULLABLE (une proposition
+            // peut être montée avant qu'un assureur soit retenu). Un INNER JOIN rendait
+            // ces polices invisibles à l'assistant alors que le chip les affichait —
+            // exactement le genre d'écart silencieux que ce chemin doit exclure.
             'SELECT a, c, ass, p, cl, r, pdr, pf, pfg FROM App\Entity\Avenant a
              JOIN a.cotation c
-             JOIN c.assureur ass
+             LEFT JOIN c.assureur ass
              LEFT JOIN c.piste p
              LEFT JOIN p.client cl
              LEFT JOIN cl.portefeuille pf
@@ -162,19 +165,26 @@ class DashboardDataProvider
              LEFT JOIN p.risque r
              LEFT JOIN a.pisteDeRenouvellement pdr
              WHERE a.entreprise = :e
-               AND a.endingAt BETWEEN :debut AND :fin
-               AND (p.renewalCondition IN (0, 1) OR p IS NULL OR p.renewalCondition IS NULL)
-               AND NOT EXISTS (' . $successionScellee . ')
+               AND a.endingAt < :fin' . $borneBasse . '
+               AND NOT EXISTS (' . $successionScellee . ')' . $perimetre . '
              ORDER BY a.endingAt ASC'
         )
         ->setParameter('e', $entreprise)
-        ->setParameter('debut', new \DateTimeImmutable('now'))
-        ->setParameter('fin',   new \DateTimeImmutable('+' . $maxDays . ' days'))
+        ->setParameter('fin', $bornes['max'])
         ->setParameter(
             AvenantSuccessionScope::parametreMouvementsScellants('_vigie'),
             AvenantSuccessionScope::MOUVEMENTS_SCELLANTS
-        )
-        ->getResult();
+        );
+
+        if ($bornes['min'] !== null) {
+            $query->setParameter('debut', $bornes['min']);
+        }
+
+        if ($portefeuilleDe !== null) {
+            $query->setParameter('pfInvite', $portefeuilleDe->getId());
+        }
+
+        $avenants = $query->getResult();
 
         foreach ($avenants as $avenant) {
             $this->canvasBuilder->loadAllCalculatedValues($avenant);
@@ -647,18 +657,43 @@ class DashboardDataProvider
         return $map;
     }
 
-    public function getTachesNonCloses(Entreprise $entreprise, int $limit = 100): array
+    /**
+     * Tâches non closes. $portefeuilleDe restreint au PÉRIMÈTRE PORTEFEUILLE de
+     * l'invité : une tâche rejoint le portefeuille par QUATRE chemins alternatifs
+     * (piste, cotation, sinistre, offre d'indemnisation), combinés en OU — mêmes
+     * chemins que PortefeuilleScope::PATHS['Tache'], la source unique du filtre
+     * posé sur la rubrique. Sans cette restriction, l'assistant annoncerait à un
+     * gestionnaire les tâches de tout le cabinet, que sa liste ne lui montre pas.
+     */
+    public function getTachesNonCloses(Entreprise $entreprise, int $limit = 100, ?Invite $portefeuilleDe = null): array
     {
-        $taches = $this->em->createQuery(
+        $perimetre = $portefeuilleDe !== null
+            ? ' AND (pg1.id = :pfInvite OR pg2.id = :pfInvite OR pg3.id = :pfInvite OR pg4.id = :pfInvite)'
+            : '';
+
+        $query = $this->em->createQuery(
             'SELECT t FROM App\Entity\Tache t
-             WHERE t.entreprise = :e AND t.closed = false
+             LEFT JOIN t.piste tp             LEFT JOIN tp.client tpc
+             LEFT JOIN tpc.portefeuille pf1   LEFT JOIN pf1.gestionnaire pg1
+             LEFT JOIN t.cotation tc          LEFT JOIN tc.piste tcp
+             LEFT JOIN tcp.client tcpc        LEFT JOIN tcpc.portefeuille pf2
+             LEFT JOIN pf2.gestionnaire pg2
+             LEFT JOIN t.notificationSinistre tn  LEFT JOIN tn.assure tna
+             LEFT JOIN tna.portefeuille pf3   LEFT JOIN pf3.gestionnaire pg3
+             LEFT JOIN t.offreIndemnisationSinistre to1
+             LEFT JOIN to1.notificationSinistre ton  LEFT JOIN ton.assure tona
+             LEFT JOIN tona.portefeuille pf4  LEFT JOIN pf4.gestionnaire pg4
+             WHERE t.entreprise = :e AND t.closed = false' . $perimetre . '
              ORDER BY t.id DESC'
         )
         ->setParameter('e', $entreprise)
-        ->setMaxResults($limit)
-        ->getResult();
+        ->setMaxResults($limit);
 
-        return $taches;
+        if ($portefeuilleDe !== null) {
+            $query->setParameter('pfInvite', $portefeuilleDe->getId());
+        }
+
+        return $query->getResult();
     }
 
     public function getDerniersFeedbacks(Entreprise $entreprise, int $limit = 20): array
@@ -674,11 +709,15 @@ class DashboardDataProvider
         ->getResult();
     }
 
-    public function getPistesEnCours(Entreprise $entreprise, int $limit = 60): array
+    public function getPistesEnCours(Entreprise $entreprise, int $limit = 60, ?Invite $portefeuilleDe = null): array
     {
-        return $this->em->createQuery(
+        $perimetre = $portefeuilleDe !== null ? ' AND pfg.id = :pfInvite' : '';
+
+        $query = $this->em->createQuery(
             'SELECT p, cl, r, inv FROM App\Entity\Piste p
              LEFT JOIN p.client cl
+             LEFT JOIN cl.portefeuille pf
+             LEFT JOIN pf.gestionnaire pfg
              LEFT JOIN p.risque r
              LEFT JOIN p.invite inv
              WHERE p.entreprise = :e
@@ -687,12 +726,17 @@ class DashboardDataProvider
                    SELECT a.id FROM App\Entity\Avenant a
                    JOIN a.cotation c
                    WHERE c.piste = p
-               )
+               )' . $perimetre . '
              ORDER BY p.createdAt DESC'
         )
         ->setParameter('e', $entreprise)
-        ->setMaxResults($limit)
-        ->getResult();
+        ->setMaxResults($limit);
+
+        if ($portefeuilleDe !== null) {
+            $query->setParameter('pfInvite', $portefeuilleDe->getId());
+        }
+
+        return $query->getResult();
     }
 
     public function getDerniersEncaissements(Entreprise $entreprise, int $limit = 20): array
@@ -746,21 +790,30 @@ class DashboardDataProvider
         return $depenses;
     }
 
-    public function getDerniersSinistres(Entreprise $entreprise, int $limit = 25): array
+    public function getDerniersSinistres(Entreprise $entreprise, int $limit = 25, ?Invite $portefeuilleDe = null): array
     {
-        $sinistres = $this->em->createQuery(
+        $perimetre = $portefeuilleDe !== null ? ' AND pfg.id = :pfInvite' : '';
+
+        $query = $this->em->createQuery(
             'SELECT s, inv, ass, cli, ris
              FROM App\Entity\NotificationSinistre s
              LEFT JOIN s.invite inv
              LEFT JOIN s.assureur ass
              LEFT JOIN s.assure cli
+             LEFT JOIN cli.portefeuille pf
+             LEFT JOIN pf.gestionnaire pfg
              LEFT JOIN s.risque ris
-             WHERE inv.entreprise = :e
+             WHERE inv.entreprise = :e' . $perimetre . '
              ORDER BY s.notifiedAt DESC'
         )
         ->setParameter('e', $entreprise)
-        ->setMaxResults($limit)
-        ->getResult();
+        ->setMaxResults($limit);
+
+        if ($portefeuilleDe !== null) {
+            $query->setParameter('pfInvite', $portefeuilleDe->getId());
+        }
+
+        $sinistres = $query->getResult();
 
         foreach ($sinistres as $s) {
             $this->canvasBuilder->loadAllCalculatedValues($s);
