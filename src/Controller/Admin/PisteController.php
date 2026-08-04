@@ -202,29 +202,14 @@ class PisteController extends AbstractController
         return $this->handleDeleteApi($piste);
     }
 
-    #[Route('/api/set-not-renewable', name: 'api.set_not_renewable', methods: ['POST'])]
-    public function setNotRenewableApi(Request $request): JsonResponse
-    {
-        $avenantId = (int) $request->request->get('avenantId', 0);
-        if (!$avenantId) {
-            return $this->json(['success' => false, 'message' => 'avenantId manquant'], 400);
-        }
-
-        $avenant = $this->em->find(Avenant::class, $avenantId);
-        if (!$avenant) {
-            return $this->json(['success' => false, 'message' => 'Avenant introuvable'], 404);
-        }
-
-        $piste = $avenant->getCotation()?->getPiste();
-        if (!$piste) {
-            return $this->json(['success' => false, 'message' => 'Piste introuvable'], 404);
-        }
-
-        $piste->setRenewalCondition(Piste::RENEWAL_CONDITION_ONCE_OFF_AND_EXTENDABLE);
-        $this->em->flush();
-
-        return $this->json(['success' => true]);
-    }
+    // SUPPRIMÉ — « /api/set-not-renewable ». Cette route écrivait
+    // Piste::RENEWAL_CONDITION_ONCE_OFF_AND_EXTENDABLE (« assurance temporaire non
+    // renouvelable ») pour signaler une DÉCISION commerciale : elle réécrivait donc la
+    // nature du contrat, ne conservait aucun motif, n'avait ni jeton CSRF, ni contrôle de
+    // droits, ni scoping entreprise — et ne faisait en réalité sortir la police d'AUCUNE
+    // vue, ce statut n'étant pas un sort scellé.
+    // Remplacée par admin.avenant.api.non_renouvelable_executer, qui porte la décision sur
+    // l'avenant lui-même, exige un motif, trace son auteur et reste réversible.
 
     #[Route('/api/dynamic-query/{idInvite}/{idEntreprise}', name: 'app_dynamic_query', requirements: ['idEntreprise' => Requirement::DIGITS, 'idInvite' => Requirement::DIGITS], methods: ['POST'])]
     public function query(Request $request): Response

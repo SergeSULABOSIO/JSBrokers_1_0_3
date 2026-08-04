@@ -125,15 +125,16 @@ final class AvenantRenouvellementResolver
     }
 
     /**
-     * Le sort de la police est-il SCELLÉ (reprise par un successeur, ou décision
-     * de fin) ? Face PHP de la règle du pipeline d'échéance — sa face SQL est
-     * AvenantSuccessionScope::dqlSuccessionScellee(), et un test confronte les
+     * Le sort de la police est-il SCELLÉ (reprise par un successeur, décision de
+     * fin, ou signalée non renouvelable par le courtier) ? Face PHP de la règle du
+     * pipeline d'échéance — sa face SQL est
+     * AvenantSuccessionScope::predicatSortNonScelle(), et un test confronte les
      * deux. Une police scellée ne réclame plus rien : elle sort des chips
      * d'échéance et son badge de ligne devient neutre.
      */
     public function estScellee(Avenant $base): bool
     {
-        return AvenantSuccessionScope::estScelle($this->code($base));
+        return AvenantSuccessionScope::estScellePour($base, $this->code($base));
     }
 
     // ------------------------------------------------------------------ calcul
@@ -141,6 +142,13 @@ final class AvenantRenouvellementResolver
     /** @return array<string, mixed> */
     private function calculer(Avenant $base): array
     {
+        // La DÉCISION du courtier prime sur toute déduction : si la police est signalée non
+        // renouvelable, inutile d'aller interroger la chaîne pour conclure « non renouvelée »
+        // — on connaît la réponse ET sa raison, écrite par un humain.
+        if ($base->isNonRenouvelable()) {
+            return $this->marqueeNonRenouvelable($base);
+        }
+
         $piste = $this->pisteDerivee($base);
 
         if ($piste === null) {
@@ -170,6 +178,69 @@ final class AvenantRenouvellementResolver
             'pisteDeriveeId' => $piste->getId(),
             'typeMouvement'  => $this->libelleMouvement($typeAvenant),
             'avenantsIssus'  => $avenantsIssus,
+        ];
+    }
+
+    /**
+     * Police SIGNALÉE non renouvelable par le courtier.
+     *
+     * LE CODE SUIT LA COUVERTURE, PAS LA DÉCISION. Le marquage peut être posé à tout moment
+     * de la vie de la police — souvent des mois avant son terme. Poser LOST sur une police
+     * qui couvre encore ferait mentir le badge des listes et le tableau de bord, qui dérivent
+     * tous de ce code (Constante::Avenant_getRenewalStatus). Ce n'est donc PAS le code qui
+     * scelle le sort ici, c'est le marquage lui-même : AvenantSuccessionScope::estScellePour()
+     * prend l'avenant, précisément pour ne pas avoir à mentir sur l'un des deux temps.
+     *
+     * Le statut est littéral, hors de self::STATUTS : « non renouvelable par décision » n'est
+     * pas un état de la chaîne, et l'écraser sur un libellé existant effacerait la nuance.
+     *
+     * @return array<string, mixed>
+     */
+    private function marqueeNonRenouvelable(Avenant $base): array
+    {
+        $fin     = $base->getEndingAt();
+        $expiree = $fin !== null && $fin < new \DateTimeImmutable('today');
+
+        $code   = $expiree ? Avenant::RENEWAL_STATUS_LOST : Avenant::RENEWAL_STATUS_RUNNING;
+        $statut = $expiree ? 'Non renouvelable (décidé)' : 'En cours — non renouvelable';
+
+        $motif   = trim((string) $base->getNonRenouvelableMotif());
+        $auteur  = $base->getNonRenouvelablePar()?->getNom();
+        $decidee = $base->getNonRenouvelableLe();
+
+        // Provenance de la décision : qui, quand. Sans elle, la note n'engage personne et
+        // celui qui rouvre le dossier ne sait pas à qui demander des précisions.
+        $signature = sprintf(
+            'décision enregistrée%s%s',
+            $decidee !== null ? ' le ' . $decidee->format('d/m/Y') : '',
+            $auteur !== null && $auteur !== '' ? ' par ' . $auteur : '',
+        );
+
+        $phrase = $expiree
+            ? sprintf(
+                'NON RENOUVELÉE PAR DÉCISION : la police a expiré%s et il a été signalé qu’elle ne serait '
+                . 'pas renouvelée — %s%s. Elle est volontairement retirée du pipeline d’échéance ; le '
+                . 'recouvrement de ce qui reste dû dessus reste actif.',
+                $fin !== null ? ' le ' . $fin->format('d/m/Y') : '',
+                $signature,
+                $motif !== '' ? sprintf(' — « %s »', $motif) : '',
+            )
+            : sprintf(
+                'Couverture EN COURS%s, mais cette police NE SERA PAS renouvelée : %s%s. Elle est '
+                . 'volontairement retirée du pipeline d’échéance ; la couverture court jusqu’à son terme '
+                . 'et le recouvrement de ce qui reste dû reste actif.',
+                $fin !== null ? ' jusqu’au ' . $fin->format('d/m/Y') : '',
+                $signature,
+                $motif !== '' ? sprintf(' — « %s »', $motif) : '',
+            );
+
+        return [
+            'code'           => $code,
+            'statut'         => $statut,
+            'phrase'         => $phrase,
+            'pisteDeriveeId' => null,
+            'typeMouvement'  => null,
+            'avenantsIssus'  => [],
         ];
     }
 

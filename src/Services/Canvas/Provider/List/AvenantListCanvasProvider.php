@@ -26,10 +26,17 @@ class AvenantListCanvasProvider implements ListCanvasProviderInterface
                     "attribut_code" => "titrePrincipal",
                     "icone" => "mdi:file-document-edit",
                 ],
-                // Badge d'urgence d'échéance rendu par _list_row à côté du texte principal,
-                // coloré par niveau (critique/élevée/modérée/faible). Texte vide = pas de badge.
+                // Badges rendus par _list_row à côté du texte principal, colorés par niveau
+                // (critique/élevée/modérée/faible). Texte vide = badge non rendu.
+                //
+                // Le second badge est le SEUL endroit où une police signalée non renouvelable
+                // reste repérable d'un coup d'œil : le pipeline d'échéance l'ayant écartée,
+                // elle ne se retrouve plus que par le chip « Toutes ». Les deux ne coexistent
+                // jamais — une police marquée n'est pas en retard, son badge d'urgence s'efface
+                // (AvenantIndicatorStrategy::getUrgenceEcheance).
                 "badges" => [
                     ["attribut_code" => "urgenceEcheance", "attribut_niveau" => "urgenceEcheanceNiveau"],
+                    ["attribut_code" => "nonRenouvelableBadge", "attribut_niveau" => "nonRenouvelableNiveau"],
                 ],
                 "textes_secondaires_separateurs" => " • ",
                 "textes_secondaires" => [
@@ -39,6 +46,10 @@ class AvenantListCanvasProvider implements ListCanvasProviderInterface
                     // Présence d'une piste dérivée : toujours renseigné (« Aucune piste
                     // dérivée » à défaut), sur le modèle du portefeuille des invités.
                     ["attribut_code" => "pisteDeriveeLibelle", "icone" => "piste"],
+                    // Le MOTIF, lisible sans ouvrir la fiche : c'est la note écrite pour celui
+                    // qui rouvrira le dossier. Null quand la police n'est pas marquée → l'item
+                    // n'est pas rendu.
+                    ["attribut_code" => "nonRenouvelableDetail", "icone" => "action:no-renew"],
                 ],
             ],
             "colonnes_numeriques" => [

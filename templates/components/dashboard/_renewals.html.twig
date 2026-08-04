@@ -65,9 +65,11 @@
             onclick="dbRenewCtxNoRenewal()"
             class="d-flex align-items-center gap-2 px-3 py-2" style="cursor:pointer;">
             <span class="context-menu-icon" aria-hidden="true">
-                <twig:UX:Icon name="mdi:cancel" style="width:16px;height:16px;" />
+                <twig:UX:Icon name="mdi:calendar-remove" style="width:16px;height:16px;" />
             </span>
-            <span class="flex-grow-1">À ne pas renouveler</span>
+            {# Ouvre le MÊME picker que la rubrique Avenants : motif obligatoire, aperçu de
+               ce qui reste à recouvrer, gardes serveur identiques (cf. dbRenewCtxNoRenewal). #}
+            <span class="flex-grow-1">Signaler&nbsp;: à ne pas renouveler</span>
         </li>
     </ul>
 </nav>

@@ -41,6 +41,21 @@ class Avenant
     // l'avenant en a une ; null sinon (l'item n'est alors pas rendu — économie d'espace).
     #[Groups(['list:read'])]
     public ?string $pisteDeriveeLibelle = null;
+    // Décision de non-renouvellement rendue LISIBLE, partout où la police s'affiche : badge de
+    // liste (+ son niveau) et fait rédigé nommant la date, l'auteur et le motif. Tous null
+    // quand la police n'est pas marquée — l'item n'est alors rendu nulle part. Source unique :
+    // AvenantIndicatorStrategy ; aucun libellé n'est réécrit dans un gabarit.
+    #[Groups(['list:read'])]
+    public ?string $nonRenouvelableBadge = null;
+    #[Groups(['list:read'])]
+    public ?string $nonRenouvelableNiveau = null;
+    #[Groups(['list:read'])]
+    public ?string $nonRenouvelableDetail = null;
+    // Rappel de la décision RÉVISÉE (marquage posé puis levé). Visible uniquement dans les
+    // attributs calculés et les fiches — jamais en badge ni en liste : la police est redevenue
+    // ordinaire, seul son historique reste consultable.
+    #[Groups(['list:read'])]
+    public ?string $nonRenouvelableHistorique = null;
     #[Groups(['list:read'])]
     public ?string $dureeCouverture = null;
     #[Groups(['list:read'])]
@@ -180,6 +195,39 @@ class Avenant
     #[Groups(['list:read'])]
     private ?Piste $pisteDeRenouvellement = null;
 
+    // DÉCISION DE NE PAS RENOUVELER — signalée par le courtier À TOUT MOMENT de la vie de la
+    // police (dès qu'il apprend l'information, pas seulement à l'échéance). Elle fait sortir la
+    // police du PIPELINE D'ÉCHÉANCE via AvenantSuccessionScope, et de RIEN D'AUTRE : la
+    // couverture court jusqu'à son terme, renewalStatus n'est pas touché, et tout ce qui reste
+    // dû (prime, commission, taxes, rétrocommissions) continue d'être réclamé par les suivis
+    // de recouvrement. Ce n'est ni une résiliation ni une annulation.
+    #[ORM\Column(type: 'boolean', options: ['default' => false])]
+    #[Groups(['list:read'])]
+    private bool $nonRenouvelable = false;
+
+    // Le POURQUOI, écrit pour celui qui rouvrira le dossier des mois plus tard. Note INTERNE :
+    // ne doit jamais sortir vers le client (cf. templates/admin/soa/*).
+    #[ORM\Column(type: 'text', nullable: true)]
+    #[Groups(['list:read'])]
+    private ?string $nonRenouvelableMotif = null;
+
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    #[Groups(['list:read'])]
+    private ?\DateTimeImmutable $nonRenouvelableLe = null;
+
+    // Pas de Groups : sérialiser la relation embarquerait tout le graphe Invite dans chaque
+    // ligne de liste. Le nom de l'auteur est publié par l'indicateur calculé nonRenouvelableDetail.
+    #[ORM\ManyToOne(targetEntity: Invite::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?Invite $nonRenouvelablePar = null;
+
+    // Date de LEVÉE du marquage. Non nulle = la police a été marquée puis rendue à nouveau
+    // renouvelable ; les trois champs ci-dessus CONSERVENT alors la décision révisée — les
+    // effacer supprimerait précisément ce que ce dispositif existe pour garder.
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    #[Groups(['list:read'])]
+    private ?\DateTimeImmutable $nonRenouvelableLeveLe = null;
+
     public function __construct()
     {
         $this->documents = new ArrayCollection();
@@ -317,6 +365,89 @@ class Avenant
     public function setRenewalStatus(?int $renewalStatus): static
     {
         $this->renewalStatus = $renewalStatus;
+
+        return $this;
+    }
+
+    // ------------------------------------------------- décision de non-renouvellement
+
+    public function isNonRenouvelable(): bool
+    {
+        return $this->nonRenouvelable;
+    }
+
+    /**
+     * SEUL LE BOOLÉEN GOUVERNE. Un motif non vide ne signifie pas « marquée » : après une
+     * levée, la trace subsiste alors que la police est redevenue renouvelable. Badges,
+     * bandeau, prédicat SQL, resolver et actions conditionnelles testent tous ce booléen,
+     * jamais la présence du texte.
+     *
+     * L'horodatage vit ici, et non dans les appelants, pour que le chemin écran et le chemin
+     * de l'assistante (qui écrit via AvenantType) se comportent identiquement.
+     */
+    public function setNonRenouvelable(?bool $nonRenouvelable): static
+    {
+        $nouveau = (bool) $nonRenouvelable;
+
+        if ($nouveau !== $this->nonRenouvelable) {
+            if ($nouveau) {
+                $this->nonRenouvelableLe     = new \DateTimeImmutable('now');
+                $this->nonRenouvelableLeveLe = null;
+            } else {
+                // Levée : on DATE la révision, on n'efface rien.
+                $this->nonRenouvelableLeveLe = new \DateTimeImmutable('now');
+            }
+        }
+
+        $this->nonRenouvelable = $nouveau;
+
+        return $this;
+    }
+
+    public function getNonRenouvelableMotif(): ?string
+    {
+        return $this->nonRenouvelableMotif;
+    }
+
+    public function setNonRenouvelableMotif(?string $motif): static
+    {
+        $this->nonRenouvelableMotif = $motif;
+
+        return $this;
+    }
+
+    public function getNonRenouvelableLe(): ?\DateTimeImmutable
+    {
+        return $this->nonRenouvelableLe;
+    }
+
+    public function setNonRenouvelableLe(?\DateTimeImmutable $le): static
+    {
+        $this->nonRenouvelableLe = $le;
+
+        return $this;
+    }
+
+    public function getNonRenouvelablePar(): ?Invite
+    {
+        return $this->nonRenouvelablePar;
+    }
+
+    public function setNonRenouvelablePar(?Invite $par): static
+    {
+        $this->nonRenouvelablePar = $par;
+
+        return $this;
+    }
+
+    public function getNonRenouvelableLeveLe(): ?\DateTimeImmutable
+    {
+        return $this->nonRenouvelableLeveLe;
+    }
+
+    public function setNonRenouvelableLeveLe(?\DateTimeImmutable $le): static
+    {
+        $this->nonRenouvelableLeveLe = $le;
 
         return $this;
     }

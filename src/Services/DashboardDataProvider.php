@@ -131,7 +131,8 @@ class DashboardDataProvider
      * AvenantEcheanceScope::bornesHorizon() — la même arithmétique à minuit que les
      * chips de la rubrique, la boussole et le programme du jour. L'exclusion des
      * polices dont le sort est SCELLÉ (reprises par un avenant successeur, annulées,
-     * résiliées) vient de AvenantSuccessionScope. C'est tout : rien d'autre ne
+     * résiliées, ou signalées non renouvelables par le courtier) vient de
+     * AvenantSuccessionScope::predicatSortNonScelle(). C'est tout : rien d'autre ne
      * retranche de lignes ici, faute de quoi l'assistant et la rubrique cessent de
      * s'accorder.
      *
@@ -143,7 +144,7 @@ class DashboardDataProvider
      */
     public function getAllRenouvellements(Entreprise $entreprise, int $maxDays = 365, ?Invite $portefeuilleDe = null): array
     {
-        $successionScellee = AvenantSuccessionScope::dqlSuccessionScellee($this->em, 'a', '_vigie');
+        $sortNonScelle = AvenantSuccessionScope::predicatSortNonScelle($this->em, 'a', '_vigie');
         $perimetre = $portefeuilleDe !== null ? ' AND pfg.id = :pfInvite' : '';
         $bornes = AvenantEcheanceScope::bornesHorizon($maxDays, new \DateTimeImmutable('today'));
         // Borne basse conditionnelle : ouverte pour les échues, mais la clause reste
@@ -166,7 +167,7 @@ class DashboardDataProvider
              LEFT JOIN a.pisteDeRenouvellement pdr
              WHERE a.entreprise = :e
                AND a.endingAt < :fin' . $borneBasse . '
-               AND NOT EXISTS (' . $successionScellee . ')' . $perimetre . '
+               AND (' . $sortNonScelle . ')' . $perimetre . '
              ORDER BY a.endingAt ASC'
         )
         ->setParameter('e', $entreprise)

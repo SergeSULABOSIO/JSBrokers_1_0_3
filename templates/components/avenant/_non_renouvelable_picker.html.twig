@@ -1,0 +1,140 @@
+{#
+    Boîte « cette police n'est pas à renouveler », ouverte depuis la barre d'outils, le clic
+    droit ou la fiche d'un avenant — et depuis le clic droit du widget Renouvellements.
+
+    UN SEUL picker pour les TROIS gestes (signaler / corriger le motif / rétablir), comme le
+    picker de mouvement en sert quatre : ils ne diffèrent que par ce qui est demandé et par
+    ce qui est annoncé. Tout le reste — l'identité de la police, ce qui reste à recouvrer —
+    est calculé par le serveur et affiché en APERÇU, jamais saisi.
+
+    Miroir visuel des pickers jsb-picker-* (/ergonomie-web : role=dialog, aria-modal,
+    fieldset/legend, cibles ≥44px, Échap, restitution du focus, zone d'erreur inline ;
+    /charte-couleurs : cobalt #0047AB). Piloté par le contrôleur Stimulus
+    « non-renouvelable-picker », auto-connecté à l'insertion par le cerveau.
+#}
+{% set titres = {
+    'marquer': "Ne pas renouveler la police",
+    'motif':   "Modifier le motif de non-renouvellement",
+    'lever':   "Rétablir le renouvellement de la police"
+} %}
+{% set icones = {'marquer': 'action:no-renew', 'motif': 'action:edit', 'lever': 'action:renew'} %}
+<div class="jsb-picker-overlay"
+     data-controller="non-renouvelable-picker"
+     data-non-renouvelable-picker-apercu-url-value="{{ path('admin.avenant.api.non_renouvelable_apercu', {id: avenant.id}) }}"
+     data-non-renouvelable-picker-executer-url-value="{{ path('admin.avenant.api.non_renouvelable_executer', {id: avenant.id}) }}"
+     data-non-renouvelable-picker-mode-value="{{ mode }}"
+     data-picker-overlay>
+    <div class="jsb-picker-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="jsb-nr-picker-title"
+         aria-describedby="jsb-nr-picker-desc"
+         tabindex="-1">
+
+        <div class="modal-header jsb-picker-header">
+            <div class="d-flex align-items-center">
+                <span class="me-2 d-inline-flex" aria-hidden="true">
+                    <twig:UX:Icon name="{{ resolve_icon_name(icones[mode]) }}" style="width:22px;height:22px;color:#0047AB;" />
+                </span>
+                <h5 id="jsb-nr-picker-title" class="modal-title mb-0">
+                    {{ titres[mode] }}&nbsp;«&nbsp;{{ avenant.referencePolice }}&nbsp;»
+                </h5>
+            </div>
+            <button type="button" class="btn-close" data-picker-close aria-label="Fermer la fenêtre"></button>
+        </div>
+
+        <div class="jsb-picker-progress" data-picker-progress role="progressbar" aria-hidden="true">
+            <div class="jsb-picker-progress-bar"></div>
+        </div>
+
+        <div class="jsb-picker-intro">
+            <span class="jsb-picker-intro-icon" aria-hidden="true">
+                <twig:UX:Icon name="{{ resolve_icon_name('avenant') }}" style="width:26px;height:26px;" />
+            </span>
+            <div class="jsb-picker-intro-text">
+                {# Identité de la police : client · risque · assureur. On n'affiche JAMAIS un
+                   intitulé négatif — un élément absent est simplement omis, la référence de
+                   police (en titre) suffit alors. #}
+                <p class="jsb-picker-intro-title">
+                    {% set identite = [apercu.source.client, apercu.source.risque, apercu.source.assureur]|filter(v => v is not empty) %}
+                    {{ identite is empty ? avenant.referencePolice : identite|join(' · ') }}
+                </p>
+                <p id="jsb-nr-picker-desc" class="jsb-picker-intro-desc">
+                    {% if mode == 'lever' %}
+                        La police redeviendra <strong>renouvelable</strong> et réintégrera le suivi des échéances.
+                        Le motif consigné reste conservé dans son historique.
+                    {% elseif mode == 'motif' %}
+                        Corrigez la note laissée à vos collègues. La <strong>date de la décision</strong>
+                        et son auteur ne changent pas.
+                    {% else %}
+                        Vous signalez que cette police <strong>n'aura pas de suite</strong>. Elle quittera le suivi
+                        des échéances, mais la couverture court jusqu'à son terme et tout ce qui reste dû
+                        continue d'être réclamé.
+                    {% endif %}
+                    {% if apercu.source.periode %}
+                        Période&nbsp;: <strong>{{ apercu.source.periode }}</strong>.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+
+        <p class="jsb-picker-empty text-danger" data-picker-error role="alert" hidden></p>
+
+        <div class="jsb-picker-listwrap" style="padding: .25rem 1.25rem 1rem;">
+            {% if mode != 'lever' %}
+                {# Champ au pattern maison : libellé en gras, aide AVANT le champ
+                   (aria-describedby), puis le champ — comme le picker de mouvement. #}
+                <fieldset class="border-0 p-0 m-0 mb-3">
+                    <legend class="fs-6 fw-semibold mb-1" style="color:#0d2440;">Motif</legend>
+                    <label for="nr-motif" class="form-label fw-semibold mb-0" style="color:#0d2440;">
+                        Pourquoi cette police ne sera-t-elle pas renouvelée&nbsp;?
+                        <span class="fw-normal text-muted small">(obligatoire)</span>
+                    </label>
+                    <span class="text-muted small d-block mb-1" id="nr-motif-aide">
+                        Écrit pour le collègue qui rouvrira ce dossier dans plusieurs mois.
+                        Note interne&nbsp;: elle n'est jamais transmise au client.
+                    </span>
+                    <textarea id="nr-motif" class="form-control" rows="3"
+                              placeholder="Ex.&nbsp;: le client revend sa flotte en fin d'année."
+                              maxlength="1000"
+                              data-non-renouvelable-picker-target="motif"
+                              aria-describedby="nr-motif-aide">{{ mode == 'motif' ? avenant.nonRenouvelableMotif : '' }}</textarea>
+                </fieldset>
+            {% endif %}
+
+            {# APERÇU — ce que la validation écrira, rafraîchi par le serveur à chaque frappe.
+               Source unique avec l'assistante. #}
+            <section aria-labelledby="nr-apercu-titre" aria-live="polite">
+                <h6 id="nr-apercu-titre" class="fw-semibold mb-2" style="color:#0d2440;">Ce qui sera enregistré</h6>
+                <div data-non-renouvelable-picker-target="apercu">
+                    {{ include('components/avenant/_non_renouvelable_apercu.html.twig', {apercu: apercu}) }}
+                </div>
+            </section>
+        </div>
+
+        <footer class="jsb-picker-foot">
+            <span class="jsb-picker-hint text-muted small">
+                {% if mode == 'lever' %}
+                    La police reprendra sa place dans le suivi des échéances.
+                {% else %}
+                    Décision réversible à tout moment.
+                {% endif %}
+            </span>
+            <span class="d-inline-flex gap-2">
+                {# Icônes CONTEXTUELLES : « annuler » et « enregistrer » disent ce que fait le
+                   bouton, pas une croix et une coche génériques. #}
+                <button type="button" class="btn btn-outline-secondary jsb-picker-btn" data-picker-close>
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:cancel') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                    Annuler
+                </button>
+                <button type="button" class="btn btn-primary jsb-picker-btn"
+                        data-picker-executer
+                        data-non-renouvelable-picker-target="executer"
+                        {{ apercu.pret ? '' : 'disabled' }}>
+                    <twig:UX:Icon name="{{ resolve_icon_name('action:save') }}" style="width:15px;height:15px;" aria-hidden="true" />
+                    {{ mode == 'lever' ? 'Rétablir' : 'Valider et enregistrer' }}
+                </button>
+            </span>
+        </footer>
+    </div>
+</div>

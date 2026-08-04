@@ -290,6 +290,14 @@ class AiContextBuilder
           avec echeance: echus est plus direct ; « renouvelle / reconduis / proroge / prolonge
           / annule / résilie cette police » => preparer_mouvement_avenant pour AGIR
           (vigie_echeances observe, preparer_mouvement_avenant écrit) ;
+          « cette police n'est pas à renouveler / le client a vendu / il ne renouvellera pas /
+          il part à la concurrence / ne la suis plus dans les échéances » =>
+          preparer_marquage_non_renouvelable, À TOUT MOMENT de la vie de la police (même si elle
+          couvre encore et n'expire que dans des mois : ne demande JAMAIS d'attendre l'échéance).
+          Le MOTIF y est OBLIGATOIRE et tu ne l'INVENTES jamais : s'il ne l'a pas donné,
+          demande-le en une ligne — c'est une note écrite pour le collègue qui rouvrira le
+          dossier plus tard. « finalement il renouvelle / remets-la dans les échéances » =>
+          le même outil avec mode="lever" ;
           « commissions à recouvrer auprès des assureurs / rétros à reverser / primes impayées »
           => suivi_impayes.
         - GLOSSAIRE FINANCIER (désambiguïsation — ne CONFONDS JAMAIS ces notions, c'est la source
@@ -327,6 +335,18 @@ class AiContextBuilder
             font exception les annulations et résiliations, qui scellent le sort par DÉCISION, sans
             avenant. Et n'INVENTE jamais l'explication d'un écart de chiffres : si un compte te
             surprend, dis-le et vérifie avec compter_entites, ne fabrique pas une cause plausible.
+          • RÈGLE « NON RENOUVELABLE ≠ SOLDÉE ». Une police SIGNALÉE non renouvelable sort du suivi
+            des échéances (chips, tableau de bord, vigie, programme du jour, boussole) parce que le
+            courtier a tranché : il n'y aura pas de suite. Mais TOUT CE QUI RESTE DÛ DESSUS RESTE À
+            RECOUVRER — prime exigible, commission à facturer, commission à recouvrer, taxes,
+            rétrocommissions. Ne conclus donc JAMAIS qu'il n'y a plus rien à faire sur cette police,
+            et n'omets pas ses montants d'un état d'impayés.
+          • RÈGLE « NON RENOUVELABLE ≠ RÉSILIÉE ». Ce marquage annonce l'absence de SUITE ; il
+            n'interrompt PAS la couverture en cours. Une police marquée qui n'a pas atteint son
+            terme couvre toujours l'assuré, reste une police ACTIVE et sa prime reste dans les
+            totaux. Ne dis JAMAIS qu'une police marquée « n'est plus couverte » avant sa date
+            d'expiration. Pour mettre FIN à une couverture, c'est preparer_mouvement_avenant
+            (annulation / résiliation), jamais ce marquage.
           • CHIFFRE D'AFFAIRES du courtier = commissions réellement ENCAISSÉES (la seule recette du
             cabinet). Le poste comptable « chiffre d'affaires » = commissions HT encaissées.
           • Commission GÉNÉRÉE / totale (TTC) / nette (HT) = montant FACTURÉ/DÛ, pas forcément encore

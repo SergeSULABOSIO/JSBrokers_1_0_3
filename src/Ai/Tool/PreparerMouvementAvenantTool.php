@@ -203,6 +203,27 @@ final class PreparerMouvementAvenantTool implements AiToolInterface
 
         $base = $candidats[0];
 
+        // DÉCISION EXPLICITE DE NE PAS RENOUVELER : un collègue a écrit noir sur blanc que
+        // cette police n'aurait pas de suite. La reconduire en silence effacerait sa
+        // décision — et, s'il s'agit d'une annulation ou d'une résiliation, l'acte serait
+        // fondé sur une lecture périmée du dossier. On refuse, en NOMMANT la décision et sa
+        // sortie : le marquage est réversible, mais c'est à l'utilisateur de le lever.
+        if ($base->isNonRenouvelable()) {
+            return AiToolResult::ok([
+                'pret'             => false,
+                'nonRenouvelable'  => true,
+                'police'           => $base->getReferencePolice(),
+                'motif'            => $base->getNonRenouvelableMotif(),
+                'decideeLe'        => $base->getNonRenouvelableLe()?->format('d/m/Y'),
+                'decideePar'       => $base->getNonRenouvelablePar()?->getNom(),
+                'note' => 'Cette police a été SIGNALÉE comme non renouvelable. Ne prépare AUCUN plan et n’annonce '
+                    . 'aucun bouton. Dis-le en une phrase en citant le motif, sa date et son auteur, puis DEMANDE '
+                    . 'à l’utilisateur s’il veut lever ce marquage — si oui, appelle '
+                    . 'preparer_marquage_non_renouvelable avec mode="lever", et seulement APRÈS, reviens à ce '
+                    . 'mouvement.',
+            ]);
+        }
+
         // Idempotence : une police ne porte qu'un mouvement à la fois. Sans cette
         // garde, redemander « renouvelle-la » créerait un second jeu d'écritures.
         if ($base->getPisteDeRenouvellement() !== null) {

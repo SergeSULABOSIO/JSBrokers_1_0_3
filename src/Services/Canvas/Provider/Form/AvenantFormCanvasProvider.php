@@ -110,6 +110,40 @@ class AvenantFormCanvasProvider implements FormCanvasProviderInterface
                     "url"       => "/admin/avenant/api/delete-piste-derivee",
                     "condition" => ["field" => "hasPisteDerivee", "value" => true],
                 ],
+                // SUIVI DU RENOUVELLEMENT — famille distincte des mouvements : ici rien n'est
+                // créé, on consigne une DÉCISION. Aucune condition de date : l'information
+                // arrive quand elle arrive (le client annonce en mars ce qui se produira en
+                // décembre), et c'est en pleine couverture que la note a le plus de valeur.
+                // Les trois entrées sont exclusives entre elles via le seul booléen.
+                [
+                    "label"        => "Signaler : à ne pas renouveler",
+                    "icon"         => "action:no-renew",
+                    "groupe"       => "Suivi du renouvellement",
+                    "groupe_icone" => "action:no-renew",
+                    "event"        => "ui:avenant.non-renouvelable-request",
+                    "url"          => "/admin/avenant/api/non-renouvelable-picker/%id%",
+                    "condition"    => ["field" => "nonRenouvelable", "value" => false],
+                ],
+                [
+                    // Le motif s'affine avec le temps : le corriger ne doit pas obliger à
+                    // démarquer puis remarquer, ce qui écraserait la date de la décision.
+                    "label"     => "Modifier le motif de non-renouvellement",
+                    "icon"      => "action:edit",
+                    "groupe"    => "Suivi du renouvellement",
+                    "event"     => "ui:avenant.non-renouvelable-request",
+                    "url"       => "/admin/avenant/api/non-renouvelable-picker/%id%?mode=motif",
+                    "condition" => ["field" => "nonRenouvelable", "value" => true],
+                ],
+                [
+                    // Une décision commerciale se révise : le retrait est un chemin de premier
+                    // rang, ouvert à tout collègue qui reçoit l'information — pas au seul auteur.
+                    "label"     => "Rétablir le renouvellement",
+                    "icon"      => "action:renew",
+                    "groupe"    => "Suivi du renouvellement",
+                    "event"     => "ui:avenant.non-renouvelable-request",
+                    "url"       => "/admin/avenant/api/non-renouvelable-picker/%id%?mode=lever",
+                    "condition" => ["field" => "nonRenouvelable", "value" => true],
+                ],
                 // Picker de documents générique (pipe complet de la police) : hors
                 // famille, il reste accessible en un seul clic.
                 [
@@ -118,6 +152,16 @@ class AvenantFormCanvasProvider implements FormCanvasProviderInterface
                     "event" => "ui:soa.docs-picker-request",
                     "url"   => "/admin/soa/api/documents/avenant/%id%",
                 ],
+            ],
+            // BANDEAU D'ALERTE en tête du volet de saisie. La colonne d'attributs calculés
+            // compte une cinquantaine de lignes : une décision de non-renouvellement y serait
+            // NOYÉE, alors qu'elle doit sauter aux yeux de quiconque ouvre la police. Rendu
+            // seulement si l'attribut nommé est non vide — donc invisible sur toute police
+            // ordinaire, et sur toute autre entité (clé opt-in, cf. _form_content.html.twig).
+            "form_alerte" => [
+                "niveau"     => "warning",
+                "titre"      => "Police signalée non renouvelable",
+                "texte_code" => "nonRenouvelableDetail",
             ],
             // Entête contextuel du volet de saisie (pastille + description).
             "form_intro" => [
@@ -133,6 +177,8 @@ class AvenantFormCanvasProvider implements FormCanvasProviderInterface
                 "startingAt"      => "action:calendar",
                 "endingAt"        => "action:calendar",
                 "renewalStatus"   => "avenant",
+                "nonRenouvelable" => "action:no-renew",
+                "nonRenouvelableMotif" => "action:description",
                 "documents"       => "document",
             ],
         ];
@@ -154,6 +200,9 @@ class AvenantFormCanvasProvider implements FormCanvasProviderInterface
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["description"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["startingAt"]], ["champs" => ["endingAt"]]]],
             ["couleur_fond" => "white", "colonnes" => [["champs" => ["renewalStatus"]]]],
+            // Décision de non-renouvellement : la case et son motif restent côte à côte, la
+            // seconde n'ayant aucun sens sans la première.
+            ["couleur_fond" => "white", "colonnes" => [["champs" => ["nonRenouvelable"]], ["champs" => ["nonRenouvelableMotif"]]]],
         ];
 
         $collections = [

@@ -10,6 +10,33 @@
 
         {# La colonne du formulaire prend l'espace restant #}
         <div class="col form-column{% if formCanvas.parametres.form_class is defined %} {{ formCanvas.parametres.form_class }}{% endif %}">
+            {# BANDEAU D'ALERTE opt-in, AU-DESSUS de tout le reste : un fait qui doit sauter aux
+               yeux de quiconque ouvre la fiche (ex. « police signalée non renouvelable »). La
+               colonne d'attributs calculés compte des dizaines de lignes — un fait décisif y
+               serait noyé, ce qui est exactement le contraire du but.
+
+               Le canvas fournit {niveau, titre, texte_code} ; le TEXTE vient d'un attribut
+               calculé de l'entité, jamais du gabarit : une seule source de vérité pour toutes
+               les surfaces. Attribut vide ou absent = aucun bandeau, donc invisible sur les
+               entités ordinaires et sur tous les dialogues qui ne posent pas la clé.
+
+               role="note" et non "alert" : ce n'est pas une erreur de saisie, et un alert serait
+               annoncé de façon intrusive à chaque ouverture (WCAG 4.1.3). #}
+            {% if formCanvas.parametres.form_alerte is defined %}
+                {% set alerte = formCanvas.parametres.form_alerte %}
+                {% set alerte_texte = attribute(entity, alerte.texte_code)|default(null) %}
+                {% if alerte_texte is not null and alerte_texte|trim != '' %}
+                    <div class="form-alerte form-alerte--{{ alerte.niveau|default('warning') }}" role="note">
+                        <span class="form-alerte-icon" aria-hidden="true">
+                            {{ ux_icon(resolve_icon_name(alerte.icone|default('action:alert')), {height: '22px', width: '22px'}) }}
+                        </span>
+                        <div class="form-alerte-text">
+                            <p class="form-alerte-title">{{ alerte.titre }}</p>
+                            <p class="form-alerte-desc">{{ alerte_texte }}</p>
+                        </div>
+                    </div>
+                {% endif %}
+            {% endif %}
             {# Entête contextuel opt-in (pastille de l'entité + description de l'édition
                et de son importance), au-dessus du cadre du formulaire. Rendu uniquement
                si le canvas pose form_intro : les autres dialogues sont inchangés. #}

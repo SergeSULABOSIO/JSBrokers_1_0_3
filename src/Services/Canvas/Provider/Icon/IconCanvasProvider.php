@@ -85,6 +85,7 @@ class IconCanvasProvider
         'action:options'      => 'simple-line-icons:options-vertical',
         'action:password'     => 'hugeicons:square-lock-password',
         'action:pdf'          => 'tabler:file-type-pdf',
+        'action:no-renew'     => 'mdi:calendar-remove',  // police signalée « à ne pas renouveler »
         'action:premium'      => 'ic:twotone-workspace-premium',
         'action:print'        => 'carbon:printer',
         'action:prorogation'  => 'iconoir:truck-length',

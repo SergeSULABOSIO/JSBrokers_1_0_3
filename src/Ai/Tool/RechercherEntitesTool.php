@@ -324,6 +324,14 @@ final class RechercherEntitesTool implements AiToolInterface
                 if ($suite['avenantsIssus'] !== [] || $suite['pisteDeriveeId'] !== null) {
                     $item['suiteDeLaPolice'] = $suite['phrase'];
                 }
+                // Décision explicite de ne pas renouveler : la phrase du resolver la porte
+                // déjà, mais elle n'accompagne l'item que s'il existe une piste dérivée — or
+                // ce marquage n'en crée aucune. Sans cette ligne, une police écartée du
+                // pipeline apparaîtrait dans une liste sans que RIEN n'explique pourquoi.
+                if ($entity->isNonRenouvelable()) {
+                    $item['suiteDeLaPolice'] = $suite['phrase'];
+                    $item['nonRenouvelable'] = true;
+                }
             }
             $items[] = $item;
         }

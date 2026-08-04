@@ -9,6 +9,7 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Contracts\Translation\TranslatorInterface;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
@@ -79,6 +80,30 @@ class AvenantType extends AbstractType
                 'required' => false,
                 'placeholder' => false,
                 'choices' => array_flip(self::RENEWAL_STATUS_LABELS),
+            ])
+            // DÉCISION DE NE PAS RENOUVELER. Ces deux champs existent AUSSI pour l'assistante :
+            // WorkspaceMutationService n'écrit que ce que le FormType expose (allow_extra_fields
+            // ignore le reste EN SILENCE), donc sans eux un plan validé s'exécuterait sans rien
+            // changer. L'auteur (nonRenouvelablePar) n'a pas besoin d'un champ : c'est une
+            // relation to-one propriétaire, pré-hydratée par le moteur depuis son id.
+            //
+            // false_values explicite : le moteur normalise les booléens du LLM en '1'/'0', or
+            // CheckboxType tient par défaut TOUTE valeur non nulle pour vraie — '0' aurait donc
+            // MARQUÉ la police au lieu de lever le marquage.
+            ->add('nonRenouvelable', CheckboxType::class, [
+                'label' => "Ne pas renouveler cette police",
+                'help' => "Signale que la police n'aura pas de suite. Elle sort du suivi des échéances, mais la couverture court jusqu'à son terme et tout ce qui reste dû continue d'être réclamé.",
+                'required' => false,
+                'false_values' => [null, '0', 'false', ''],
+            ])
+            ->add('nonRenouvelableMotif', TextareaType::class, [
+                'label' => "Motif de non-renouvellement",
+                'help' => "Écrit pour le collègue qui rouvrira ce dossier dans plusieurs mois. Note interne : jamais transmise au client.",
+                'required' => false,
+                'attr' => [
+                    'rows' => 3,
+                    'placeholder' => "Ex. : le client revend sa flotte en fin d'année.",
+                ],
             ])
             ->add('documents', CollectionType::class, [
                 'label' => "Documents",
