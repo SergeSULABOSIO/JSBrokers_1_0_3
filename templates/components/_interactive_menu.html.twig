@@ -139,9 +139,11 @@
         {# COLONNE 2 : Rubriques & Descriptions #}
         <div class="menu-col-2">
             {# Ligne 1: Marque JS Brokers — version compacte pour laisser de la place aux rubriques #}
-            {# Au survol de la version UNIQUEMENT : infobulle sombre du DERNIER commit
-               (réf — date + explication), même pattern que les infobulles Pistes/chat IA
-               (contrôleur `commit-tip`). Présente seulement si git est lisible (repli : rien). #}
+            {# Au survol du nom « JS Brokers » et de la version : infobulle sombre du
+               DERNIER commit (réf — date + explication), même pattern que les infobulles
+               Pistes/chat IA (contrôleur `commit-tip`). Présente seulement si git est
+               lisible (repli : rien). Ces deux liens n'ont AUCUN `title` : l'infobulle
+               native du navigateur se superposerait à la nôtre. #}
             {% set _lc = app_last_commit() %}
             <div class="menu-col-2-row-1"
                  {% if _lc %}data-controller="commit-tip"
@@ -149,8 +151,12 @@
                     data-commit-tip-date-value="{{ _lc.date|date('d/m/Y') }}"
                     data-commit-tip-subject-value="{{ _lc.subject }}"
                     data-commit-tip-paragraphs-value="{{ _lc.paragraphs|json_encode|e('html_attr') }}"{% endif %}>
-                {# La marque renvoie toujours vers la page d'accueil publique (/). #}
-                <a href="{{ path('app_index') }}" class="company-brand" aria-label="JS Brokers — retour à l'accueil" title="Retour à l'accueil JS Brokers">
+                {# La marque renvoie toujours vers la page d'accueil publique (/).
+                   AUCUN attribut `title` ici : le navigateur en ferait une infobulle
+                   native qui se superposerait à la nôtre (contrôleur `commit-tip`).
+                   L'intitulé accessible passe par `aria-label`. #}
+                <a href="{{ path('app_index') }}" class="company-brand" aria-label="JS Brokers — retour à l'accueil"
+                   {% if _lc %}data-commit-tip{% endif %}>
                     <img src="{{ asset(menu.colonne_2.logo) }}" alt="Logo" class="company-logo">
                     <h2 class="company-title">{{ menu.colonne_2.titre }}</h2>
                 </a>
@@ -158,9 +164,9 @@
                 {# Version APPLICATIVE, auto-incrémentée à chaque commit (source : App\Services\VersionService).
                    La version des CGU (App\Legal\Cgu) reste dédiée à la page des conditions.
                    Au clic : le journal des nouveautés (30 derniers jours) ; au survol :
-                   l'infobulle du dernier commit, conservée. #}
+                   l'infobulle du dernier commit, conservée — sans `title`, sinon
+                   l'infobulle native du navigateur se superpose à la nôtre. #}
                 <a href="{{ path('app_changelog') }}" class="company-version"
-                   title="Voir les nouveautés de la plateforme"
                    {% if _lc %}data-commit-tip aria-label="Nouveautés de la plateforme — dernière mise à jour : {{ _lc.ref }} du {{ _lc.date|date('d/m/Y') }}"{% else %}aria-label="Nouveautés de la plateforme"{% endif %}>
                     Version {{ app_version() }} — dernière mise à jour le {{ app_version_date()|date('d/m/Y') }}
                 </a>
