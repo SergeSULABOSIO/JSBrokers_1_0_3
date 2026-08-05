@@ -34,15 +34,44 @@ D'où un écart possible et NORMAL entre la prime payée et la part signalée : 
 plutôt que de le contredire.
 
 Dès que la prime est intégralement payée et que la commission n'est pas encore collectée,
-celle-ci devient **exigible** auprès de l'assureur (chip « Commission exigible » de la
-rubrique Tranches).
+celle-ci devient **exigible** auprès de l'assureur.
+
+## Trois dettes, trois débiteurs — jamais une seule
+
+Une tranche porte jusqu'à **trois dettes distinctes**, qui ne s'additionnent pas et ne se
+compensent jamais :
+
+| Dette | Qui doit | À qui | Solde lu dans |
+|---|---|---|---|
+| **Prime** | l'**assuré** | l'assureur | `soldePrime` |
+| **Commission** | l'**assureur** | le cabinet | `soldeCommission` |
+| **Rétrocommission** | le **cabinet** | le partenaire | `retroAPayer` |
+
+D'où la règle : **un `soldePrime` à 0 signifie « prime soldée », jamais « rien à faire »** —
+c'est même la situation normale d'une commission devenue exigible. Chaque ligne de
+`suivi_impayes` porte le champ `dette`, qui nomme ce qui reste dû : lis-le.
+
+## Filtrer : quatre axes complémentaires
+
+La rubrique Tranches et l'assistant partagent **quatre axes indépendants**, cumulés en ET
+(un groupe de chips par axe) : `prime`, `commission`, `retro` (`payee` / `impayee`) et
+`echeance` (`echue` / `a_echoir`). Il n'existe **aucun filtre « impayé » global** : le mot
+désignerait deux dettes à la fois.
+
+| Besoin | Axes |
+|---|---|
+| primes encore dues par les clients | `{prime: impayee}` |
+| commissions à collecter maintenant | `{prime: payee, commission: impayee}` |
+| rétros à verser maintenant | `{retro: impayee, commission: payee}` |
+| relances en retard | `{prime: impayee, echeance: echue}` |
+| tout est soldé | `{prime: payee, commission: payee}` |
 
 ## Recette d'assistant
 
 1. `paiements_prime` avec `trancheId` : le détail des signalements d'une tranche et son
    contexte (prime totale, part signalée, solde, commission exigible). Sans `trancheId` :
    la liste transversale, filtrable par client/cotation (`lieA`) et par période (`du`/`au`).
-2. `suivi_impayes` (statut `commission_exigible`) pour les commissions à collecter
-   maintenant, ou `impayees` pour les primes encore dues.
+2. `suivi_impayes` avec les `axes` du tableau ci-dessus. Sans axe de dette, la sortie porte
+   `repartition` : deux comptes nommés, qui se chevauchent et ne s'additionnent pas.
 3. `signaler_paiement_prime` pour ENREGISTRER un règlement : le formulaire s'ouvre
    prérempli, l'utilisateur relit et enregistre lui-même — l'assistant n'écrit jamais.

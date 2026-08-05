@@ -65,23 +65,40 @@ class TrancheListCanvasProvider implements ListCanvasProviderInterface
                 ],
                 ["titre_colonne" => "Pourcentage", "attribut_unité" => "%", "attribut_code" => "pourcentageAffiche", "attribut_type" => "nombre"],
             ],
-            // Chips de filtre rapide rendus par _List_manager (hors dialogues) : chaque option
-            // pose/retire le critère synthétique « Statut de paiement » via le Cerveau.
+            // Chips de filtre rapide rendus par _List_manager (hors dialogues) : UN GROUPE PAR
+            // AXE, chaque option posant/retirant sa propre clé de critère via le Cerveau. Les
+            // groupes sont COMPLÉMENTAIRES : ils se cumulent en ET (« Prime impayée » +
+            // « Échues » = les primes en retard). Un groupe unique mélangeait auparavant trois
+            // dettes de débiteurs différents sous le mot « Impayées » — ambiguïté à l'origine
+            // de l'incident du 2026-08-05, désormais inexprimable.
+            // Dérivés de TranchePaiementScope::AXES : aucun libellé n'est recopié ici.
             // `icon` (optionnel) = alias IconCanvasProvider, résolu par resolve_icon_name().
-            "filtres_predefinis" => [
-                [
-                    "critere" => TranchePaiementScope::CRITERION_KEY,
-                    "libelle" => "Statut de paiement",
-                    "options" => [
-                        ["value" => TranchePaiementScope::STATUT_IMPAYEES, "label" => TranchePaiementScope::libelle(TranchePaiementScope::STATUT_IMPAYEES), "icon" => "action:alert"],
-                        ["value" => TranchePaiementScope::STATUT_ECHUES, "label" => TranchePaiementScope::libelle(TranchePaiementScope::STATUT_ECHUES), "icon" => "action:calendar"],
-                        ["value" => TranchePaiementScope::STATUT_COMMISSION_EXIGIBLE, "label" => TranchePaiementScope::libelle(TranchePaiementScope::STATUT_COMMISSION_EXIGIBLE), "icon" => "paiement"],
-                        ["value" => TranchePaiementScope::STATUT_PAYEES, "label" => TranchePaiementScope::libelle(TranchePaiementScope::STATUT_PAYEES), "icon" => "action:completed"],
-                        ["value" => TranchePaiementScope::STATUT_RETRO_A_PAYER, "label" => "Rétro à payer", "icon" => "depense"],
-                        ["value" => "", "label" => "Toutes", "icon" => "action:filter"],
-                    ],
-                ],
-            ],
+            "filtres_predefinis" => $this->groupesDeChips(),
         ];
+    }
+
+    /**
+     * @return array<int, array{critere: string, libelle: string, options: array<int, array{value: string, label: string, icon: string}>}>
+     */
+    private function groupesDeChips(): array
+    {
+        $groupes = [];
+        foreach (TranchePaiementScope::AXES as $cle => $axe) {
+            $options = [];
+            foreach ($axe['valeurs'] as $valeur => $label) {
+                $options[] = ["value" => $valeur, "label" => $label, "icon" => $axe['icone']];
+            }
+            // L'option vide retire le critère de CE groupe seulement : les autres axes
+            // posés restent actifs (cf. list-manager_controller#applyPresetFilter).
+            $options[] = ["value" => "", "label" => "Toutes", "icon" => "action:filter"];
+
+            $groupes[] = [
+                "critere" => $cle,
+                "libelle" => $axe['libelle'],
+                "options" => $options,
+            ];
+        }
+
+        return $groupes;
     }
 }

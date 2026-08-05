@@ -120,20 +120,24 @@ class SearchCanvasProvider
             ]);
         }
 
-        // Critère synthétique « Statut de paiement » (Tranche) : le statut de règlement
-        // (prime + commission) est dérivé à la volée, donc absent du canevas d'entité.
-        // Porté par la clé spéciale TranchePaiementScope::CRITERION_KEY, il est intercepté
-        // par le moteur qui filtre/trie en mémoire (cf. TranchePaiementService). Le type
-        // 'Boolean' rend un <select> depuis la map de valeurs, badge inclus.
+        // Critères synthétiques « Paiement » (Tranche) : UN PAR AXE (prime, commission,
+        // rétro, échéance). Les soldes sont dérivés à la volée, donc absents du canevas
+        // d'entité ; ces clés spéciales sont interceptées par le moteur qui filtre/trie en
+        // mémoire (cf. TranchePaiementService). Le type 'Boolean' rend un <select> depuis la
+        // map de valeurs, badge inclus. Les axes se CUMULENT : chaque badge est indépendant,
+        // et le dialogue avancé peut donc croiser « prime impayée » et « échues ».
+        // array_unshift en ordre inverse pour que les axes apparaissent dans l'ordre de AXES.
         if ($shortName === 'Tranche') {
-            array_unshift($searchCriteria, [
-                'Nom' => \App\Services\Search\TranchePaiementScope::CRITERION_KEY,
-                'Display' => 'Statut de paiement',
-                'Type' => 'Boolean',
-                'Valeur' => \App\Services\Search\TranchePaiementScope::VALEURS,
-                'isDefault' => false,
-                'Icone' => $this->iconCanvasProvider->resolveIconName('paiement') !== null ? 'paiement' : 'action:check',
-            ]);
+            foreach (array_reverse(\App\Services\Search\TranchePaiementScope::AXES, true) as $cleAxe => $axe) {
+                array_unshift($searchCriteria, [
+                    'Nom' => $cleAxe,
+                    'Display' => $axe['libelle'],
+                    'Type' => 'Boolean',
+                    'Valeur' => $axe['valeurs'],
+                    'isDefault' => false,
+                    'Icone' => $this->iconCanvasProvider->resolveIconName($axe['icone']) !== null ? $axe['icone'] : 'action:check',
+                ]);
+            }
         }
 
         // Critère synthétique « Échéance » (Avenant) : l'échéance est une vraie colonne, mais

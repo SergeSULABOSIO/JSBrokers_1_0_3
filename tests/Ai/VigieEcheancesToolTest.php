@@ -200,40 +200,78 @@ class VigieEcheancesToolTest extends TestCase
         $this->assertSame(['Sinistres'], $result->data['horsPerimetre']);
     }
 
-    public function testVoletImpayesRestitueSoldesEtTotaux(): void
+    /**
+     * VOLET IMPAYÉS PARTITIONNÉ PAR DETTE. Comme pour les renouvellements (echues/aVenir),
+     * un total unique mélangeait ici deux débiteurs — l'assuré pour la prime, l'assureur
+     * pour la commission — au point de faire dire « 5 impayés » puis « une seule prime
+     * réellement due » du même jeu de lignes. Les deux sous-ensembles sont disjoints par
+     * construction : le second exige une prime PAYÉE.
+     */
+    public function testVoletImpayesEstPartitionneParDette(): void
     {
-        $tranche = (new Tranche())
+        $primeDue = (new Tranche())
             ->setNom('Tranche 1')
             ->setPayableAt(new \DateTimeImmutable('-40 days'))
             ->setEcheanceAt(new \DateTimeImmutable('-10 days'));
-        $tranche->clientNom = 'Client Alpha';
-        $tranche->statutPaiement = 'Non payée';
-        $tranche->urgenceRecouvrement = 'Critique · retard 10 j';
-        $tranche->primeSoldeDue = 800.0;
-        $tranche->solde_restant_du = 120.0;
+        $primeDue->clientNom = 'Client Alpha';
+        $primeDue->statutPaiement = 'Non payée';
+        $primeDue->urgenceRecouvrement = 'Critique · retard 10 j';
+        $primeDue->primeSoldeDue = 800.0;
+        $primeDue->solde_restant_du = 120.0;
 
+        $commissionSeule = (new Tranche())
+            ->setNom('Tranche 2')
+            ->setPayableAt(new \DateTimeImmutable('-40 days'))
+            ->setEcheanceAt(new \DateTimeImmutable('-3 days'));
+        $commissionSeule->clientNom = 'Client Bêta';
+        $commissionSeule->statutPaiement = 'Prime payée, commission due';
+        $commissionSeule->urgenceRecouvrement = 'Critique · retard 3 j';
+        $commissionSeule->primeSoldeDue = 0.0;
+        $commissionSeule->solde_restant_du = 90.0;
+
+        // Deux appels distincts (prime due, puis commission exigible) : le mock répond
+        // dans l'ordre où l'outil les émet.
         $tranchePaiement = $this->createMock(TranchePaiementService::class);
-        $tranchePaiement->method('lister')->willReturn([
-            'items' => [$tranche],
-            'totaux' => ['nb' => 1, 'totalPrime' => 1000.0, 'totalSoldePrime' => 800.0, 'totalSoldeCommission' => 120.0],
-            'totalItems' => 1,
-            'currentPage' => 1,
-            'totalPages' => 1,
-        ]);
+        $tranchePaiement->method('lister')->willReturnOnConsecutiveCalls(
+            [
+                'items' => [$primeDue],
+                'totaux' => ['nb' => 1, 'totalPrime' => 1000.0, 'totalSoldePrime' => 800.0, 'totalSoldeCommission' => 120.0],
+                'totalItems' => 1, 'currentPage' => 1, 'totalPages' => 1,
+            ],
+            [
+                'items' => [$commissionSeule],
+                'totaux' => ['nb' => 1, 'totalPrime' => 500.0, 'totalSoldePrime' => 0.0, 'totalSoldeCommission' => 90.0],
+                'totalItems' => 1, 'currentPage' => 1, 'totalPages' => 1,
+            ],
+        );
 
         $tool = $this->makeTool(['Tranche' => true], null, $tranchePaiement);
         $result = $tool->execute(['volet' => 'impayes'], $this->makeScope());
 
         $this->assertSame(AiToolResult::STATUS_OK, $result->status);
         $volet = $result->data['volets']['impayes'];
-        $ligne = $volet['lignes'][0];
+
+        $ligne = $volet['primes']['lignes'][0];
         $this->assertSame('Client Alpha', $ligne['client']);
         $this->assertSame(10, $ligne['joursRetard']);
         $this->assertSame(800.0, $ligne['soldePrime']);
         $this->assertSame(120.0, $ligne['soldeCommission']);
         $this->assertSame('Critique · retard 10 j', $ligne['urgence']);
-        $this->assertSame(800.0, $volet['totaux']['totalSoldePrime']);
-        $this->assertFalse($volet['tronque']);
+        $this->assertSame(800.0, $volet['primes']['totaux']['totalSoldePrime']);
+        $this->assertSame(1, $volet['primes']['total']);
+        $this->assertSame('l\'assuré', $volet['primes']['debiteur']);
+        $this->assertFalse($volet['primes']['tronque']);
+
+        $this->assertSame('Client Bêta', $volet['commissions']['lignes'][0]['client']);
+        $this->assertSame(0.0, $volet['commissions']['lignes'][0]['soldePrime']);
+        $this->assertSame(1, $volet['commissions']['total']);
+        $this->assertSame('l\'assureur', $volet['commissions']['debiteur']);
+
+        $this->assertSame(2, $volet['total']);
+        // Le rappel nomme la partition : sans lui, le total global se relit comme un
+        // compte de primes dues.
+        $this->assertStringContainsString('DISJOINTS', $volet['rappel']);
+        $this->assertStringContainsString('primes.total', $volet['rappel']);
     }
 
     public function testTousVoletsHorsPerimetreRefuse(): void

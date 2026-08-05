@@ -16,12 +16,29 @@ use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Outil « suivi_impayes » : fail-closed sur le droit de lecture Tranche, statut par
- * défaut « impayees », validation du rattachement lieA, projection compacte des
- * lignes (soldes prime/commission, retard, urgence) et totaux. Tests purs.
+ * Outil « suivi_impayes » : fail-closed sur le droit de lecture Tranche, filtrage par
+ * AXES (une dette par débiteur), validation du rattachement lieA, projection compacte
+ * des lignes (soldes prime/commission, dette nommée, retard, urgence) et répartition.
+ * Tests purs.
  */
 class SuiviImpayesToolTest extends TestCase
 {
+    /** @param array<string, float|int> $totauxSup */
+    private function resultatVide(array $totauxSup = [], int $page = 1): array
+    {
+        return [
+            'items' => [],
+            'totaux' => $totauxSup + [
+                'nb' => 0, 'totalPrime' => 0.0, 'totalSoldePrime' => 0.0,
+                'totalSoldeCommission' => 0.0, 'totalRetroExigible' => 0.0,
+                'nbPrimeImpayee' => 0, 'nbCommissionImpayee' => 0,
+            ],
+            'totalItems' => 0,
+            'currentPage' => $page,
+            'totalPages' => 1,
+        ];
+    }
+
     private function makeTool(bool $canReadTranche, ?TranchePaiementService $tranchePaiement = null): SuiviImpayesTool
     {
         $resolver = $this->createMock(WorkspaceAccessResolver::class);
@@ -32,13 +49,7 @@ class SuiviImpayesToolTest extends TestCase
 
         if ($tranchePaiement === null) {
             $tranchePaiement = $this->createMock(TranchePaiementService::class);
-            $tranchePaiement->method('lister')->willReturn([
-                'items' => [],
-                'totaux' => ['nb' => 0, 'totalPrime' => 0.0, 'totalSoldePrime' => 0.0, 'totalSoldeCommission' => 0.0],
-                'totalItems' => 0,
-                'currentPage' => 1,
-                'totalPages' => 1,
-            ]);
+            $tranchePaiement->method('lister')->willReturn($this->resultatVide());
         }
 
         // Fabrique réelle sur un EntityManager muet : l'invité de ces tests purs n'a pas
@@ -65,25 +76,62 @@ class SuiviImpayesToolTest extends TestCase
         $this->assertSame(AiToolResult::STATUS_HORS_PERIMETRE, $result->status);
     }
 
-    public function testStatutParDefautImpayees(): void
+    public function testSansAxeAucunFiltreDeDette(): void
     {
+        // Il n'existe plus de statut « impayées » par défaut : ce mot désignait deux dettes
+        // à la fois. Sans axe, l'outil ne filtre pas et livre la répartition.
         $tranchePaiement = $this->createMock(TranchePaiementService::class);
         $tranchePaiement->expects($this->once())
             ->method('lister')
-            ->with($this->anything(), TranchePaiementScope::STATUT_IMPAYEES, null, null, 1, $this->anything())
-            ->willReturn([
-                'items' => [],
-                'totaux' => ['nb' => 0, 'totalPrime' => 0.0, 'totalSoldePrime' => 0.0, 'totalSoldeCommission' => 0.0],
-                'totalItems' => 0,
-                'currentPage' => 1,
-                'totalPages' => 1,
-            ]);
+            ->with($this->anything(), [], null, null, 1, $this->anything())
+            ->willReturn($this->resultatVide());
 
         $result = $this->makeTool(true, $tranchePaiement)->execute([], $this->makeScope());
 
         $this->assertSame(AiToolResult::STATUS_OK, $result->status);
-        $this->assertSame('Impayées', $result->data['statut']);
+        $this->assertSame('Toutes les tranches suivies', $result->data['filtre']);
         $this->assertArrayNotHasKey('tronque', $result->data);
+    }
+
+    public function testAxesTransmisAuServiceEtLibellesDansLaSortie(): void
+    {
+        $attendus = [
+            TranchePaiementScope::AXE_PRIME => TranchePaiementScope::IMPAYEE,
+            TranchePaiementScope::AXE_ECHEANCE => TranchePaiementScope::ECHUE,
+        ];
+
+        $tranchePaiement = $this->createMock(TranchePaiementService::class);
+        $tranchePaiement->expects($this->once())
+            ->method('lister')
+            ->with($this->anything(), $attendus, null, null, 1, $this->anything())
+            ->willReturn($this->resultatVide());
+
+        $result = $this->makeTool(true, $tranchePaiement)->execute(
+            ['axes' => ['prime' => 'impayee', 'echeance' => 'echue']],
+            $this->makeScope(),
+        );
+
+        // Le filtre appliqué est NOMMÉ axe par axe : le modèle doit pouvoir dire
+        // exactement ce qu'il a demandé, sinon un compte redevient ambigu.
+        $this->assertSame('Prime impayée · Échues (en retard)', $result->data['filtre']);
+    }
+
+    public function testAxeInconnuIgnoreSansCasser(): void
+    {
+        // Une valeur d'axe hors énumération ne doit pas produire un filtre fantôme :
+        // elle est simplement écartée (le schéma la contraint déjà côté modèle).
+        $tranchePaiement = $this->createMock(TranchePaiementService::class);
+        $tranchePaiement->expects($this->once())
+            ->method('lister')
+            ->with($this->anything(), [], null, null, 1, $this->anything())
+            ->willReturn($this->resultatVide());
+
+        $result = $this->makeTool(true, $tranchePaiement)->execute(
+            ['axes' => ['prime' => 'inconnu', 'fantome' => 'impayee']],
+            $this->makeScope(),
+        );
+
+        $this->assertSame(AiToolResult::STATUS_OK, $result->status);
     }
 
     /**
@@ -91,33 +139,20 @@ class SuiviImpayesToolTest extends TestCase
      * d'écriture (id de tranche, échéance, solde) sans en être un : sans note, Ket a
      * présenté en prose un plan recopié du tour précédent, qu'aucun bouton ne pouvait
      * accompagner (incident du 2026-08-05, série de « le suivant »). La note dit que
-     * c'est une lecture et NOMME l'écriture qui la prolonge.
+     * c'est une lecture, NOMME l'écriture qui la prolonge, et depuis le même incident
+     * rappelle qu'un solde de prime nul n'est pas « rien à faire ».
      */
     public function testPorteUneNoteDeConduiteVersLEcriture(): void
     {
-        $tranchePaiement = $this->createMock(TranchePaiementService::class);
-        $tranchePaiement->method('lister')->willReturn([
-            'items' => [],
-            'totaux' => ['nb' => 0, 'totalPrime' => 0.0, 'totalSoldePrime' => 0.0, 'totalSoldeCommission' => 0.0],
-            'totalItems' => 0,
-            'currentPage' => 1,
-            'totalPages' => 1,
-        ]);
-
-        $note = $this->makeTool(true, $tranchePaiement)->execute([], $this->makeScope())->data['note'] ?? '';
+        $note = $this->makeTool(true)->execute([], $this->makeScope())->data['note'] ?? '';
 
         $this->assertStringContainsString('LECTURE SEULE', $note);
         $this->assertStringContainsString('aucun bouton de validation', $note);
         $this->assertStringContainsString('signaler_paiement_prime', $note);
         // Le piège des demandes en série est nommé dans la note elle-même.
         $this->assertStringContainsString('le suivant', $note);
-    }
-
-    public function testStatutInconnuIntrouvable(): void
-    {
-        $result = $this->makeTool(true)->execute(['statut' => 'inconnu'], $this->makeScope());
-
-        $this->assertSame(AiToolResult::STATUS_INTROUVABLE, $result->status);
+        // Et celui du solde de prime nul lu comme une absence de dette.
+        $this->assertStringContainsString('PRIME SOLDÉE', $note);
     }
 
     public function testLieAInvalideIntrouvable(): void
@@ -136,17 +171,18 @@ class SuiviImpayesToolTest extends TestCase
         $tranchePaiement = $this->createMock(TranchePaiementService::class);
         $tranchePaiement->expects($this->once())
             ->method('lister')
-            ->with($this->anything(), TranchePaiementScope::STATUT_ECHUES, 'Client', 12, 2, $this->anything())
-            ->willReturn([
-                'items' => [],
-                'totaux' => ['nb' => 0, 'totalPrime' => 0.0, 'totalSoldePrime' => 0.0, 'totalSoldeCommission' => 0.0],
-                'totalItems' => 0,
-                'currentPage' => 2,
-                'totalPages' => 2,
-            ]);
+            ->with(
+                $this->anything(),
+                [TranchePaiementScope::AXE_ECHEANCE => TranchePaiementScope::ECHUE],
+                'Client',
+                12,
+                2,
+                $this->anything(),
+            )
+            ->willReturn($this->resultatVide([], 2));
 
         $this->makeTool(true, $tranchePaiement)->execute(
-            ['statut' => 'echues', 'lieA' => ['entite' => 'Client', 'id' => 12], 'page' => 2],
+            ['axes' => ['echeance' => 'echue'], 'lieA' => ['entite' => 'Client', 'id' => 12], 'page' => 2],
             $this->makeScope(),
         );
     }
@@ -168,13 +204,19 @@ class SuiviImpayesToolTest extends TestCase
         $tranchePaiement = $this->createMock(TranchePaiementService::class);
         $tranchePaiement->method('lister')->willReturn([
             'items' => [$tranche],
-            'totaux' => ['nb' => 3, 'totalPrime' => 3000.0, 'totalSoldePrime' => 1200.0, 'totalSoldeCommission' => 90.0],
+            'totaux' => [
+                'nb' => 3, 'totalPrime' => 3000.0, 'totalSoldePrime' => 1200.0,
+                'totalSoldeCommission' => 90.0, 'nbPrimeImpayee' => 2, 'nbCommissionImpayee' => 1,
+            ],
             'totalItems' => 3,
             'currentPage' => 1,
             'totalPages' => 1,
         ]);
 
-        $result = $this->makeTool(true, $tranchePaiement)->execute([], $this->makeScope());
+        $result = $this->makeTool(true, $tranchePaiement)->execute(
+            ['axes' => ['prime' => 'impayee']],
+            $this->makeScope(),
+        );
 
         $this->assertSame(AiToolResult::STATUS_OK, $result->status);
         $ligne = $result->data['lignes'][0];
@@ -183,11 +225,92 @@ class SuiviImpayesToolTest extends TestCase
         $this->assertSame(15, $ligne['joursRetard']);
         $this->assertSame(400.0, $ligne['soldePrime']);
         $this->assertSame(0.0, $ligne['soldeCommission']);
+        $this->assertSame('prime', $ligne['dette']);
         $this->assertSame('Critique · retard 15 j', $ligne['urgence']);
         $this->assertSame(1200.0, $result->data['totaux']['totalSoldePrime']);
         $this->assertSame(3, $result->data['total']);
         $this->assertTrue($result->data['tronque']);
         $this->assertNull($result->uiAction);
+        // Un axe de dette est posé : la répartition serait redondante et trompeuse.
+        $this->assertArrayNotHasKey('repartition', $result->data);
+    }
+
+    /**
+     * LE CHAMP « dette » NOMME LE DÉBITEUR RESTANT. Sans lui, un soldePrime à 0 se lit
+     * « rien à faire » alors que l'assureur doit encore sa commission — c'est très
+     * exactement la lecture qui a fait dire « une seule est réellement impayée » d'un
+     * jeu de cinq lignes toutes exigibles (incident du 2026-08-05).
+     */
+    public function testChampDetteNommeLaDetteRestante(): void
+    {
+        $cas = [
+            'prime' => [400.0, 0.0, 0.0],
+            'commission' => [0.0, 150.0, 0.0],
+            'prime+commission' => [400.0, 150.0, 0.0],
+            'retro' => [0.0, 0.0, 75.0],
+            'soldee' => [0.0, 0.0, 0.0],
+        ];
+
+        foreach ($cas as $attendu => [$soldePrime, $soldeCommission, $soldeRetro]) {
+            $tranche = (new Tranche())->setNom('T')->setPayableAt(new \DateTimeImmutable('-1 day'));
+            $tranche->statutPaiement = 'Non payée';
+            $tranche->primeSoldeDue = $soldePrime;
+            $tranche->solde_restant_du = $soldeCommission;
+            $tranche->retroCommissionSolde = $soldeRetro;
+
+            $tranchePaiement = $this->createMock(TranchePaiementService::class);
+            $tranchePaiement->method('lister')->willReturn(
+                ['items' => [$tranche]] + $this->resultatVide() + [],
+            );
+
+            $result = $this->makeTool(true, $tranchePaiement)->execute(
+                ['axes' => ['prime' => 'impayee']],
+                $this->makeScope(),
+            );
+
+            $this->assertSame($attendu, $result->data['lignes'][0]['dette'], "Dette attendue : {$attendu}.");
+        }
+    }
+
+    /**
+     * RÉPARTITION. Même remède que la partition echues/aVenir de vigie_echeances : sans
+     * axe de dette, un total unique ne dit pas qui doit quoi. Deux comptes nommés, avec
+     * leur débiteur et l'avertissement qu'ils se chevauchent, rendent le contresens
+     * impossible.
+     */
+    public function testRepartitionEmiseSeulementSansAxeDeDette(): void
+    {
+        $totaux = [
+            'nb' => 5, 'totalPrime' => 5000.0, 'totalSoldePrime' => 1381.48,
+            'totalSoldeCommission' => 620.0, 'totalRetroExigible' => 0.0,
+            'nbPrimeImpayee' => 1, 'nbCommissionImpayee' => 4,
+        ];
+
+        $tranchePaiement = $this->createMock(TranchePaiementService::class);
+        $tranchePaiement->method('lister')->willReturn([
+            'items' => [], 'totaux' => $totaux, 'totalItems' => 5, 'currentPage' => 1, 'totalPages' => 1,
+        ]);
+        $tool = $this->makeTool(true, $tranchePaiement);
+
+        $sansAxe = $tool->execute([], $this->makeScope())->data['repartition'] ?? null;
+        $this->assertNotNull($sansAxe);
+        $this->assertSame(1, $sansAxe['primeImpayee']['nb']);
+        $this->assertSame(1381.48, $sansAxe['primeImpayee']['montant']);
+        $this->assertSame('l\'assuré', $sansAxe['primeImpayee']['debiteur']);
+        $this->assertSame(4, $sansAxe['commissionImpayee']['nb']);
+        $this->assertSame('l\'assureur', $sansAxe['commissionImpayee']['debiteur']);
+        $this->assertStringContainsString('ne s\'additionnent pas', $sansAxe['rappel']);
+
+        // L'axe échéance seul ne tranche aucune dette : la répartition reste utile.
+        $avecEcheance = $tool->execute(['axes' => ['echeance' => 'echue']], $this->makeScope());
+        $this->assertArrayHasKey('repartition', $avecEcheance->data);
+
+        // Dès qu'une dette est ciblée, la répartition disparaît (elle ferait doublon).
+        $avecPrime = $tool->execute(['axes' => ['prime' => 'impayee']], $this->makeScope());
+        $this->assertArrayNotHasKey('repartition', $avecPrime->data);
+
+        $avecCommission = $tool->execute(['axes' => ['commission' => 'impayee']], $this->makeScope());
+        $this->assertArrayNotHasKey('repartition', $avecCommission->data);
     }
 
     public function testMatchDeclencheursEtNonCollisions(): void
@@ -195,36 +318,38 @@ class SuiviImpayesToolTest extends TestCase
         $tool = $this->makeTool(true);
         $scope = $this->makeScope();
 
+        // « impayés » sans dette nommée : on retient celle du CLIENT (la plus courante en
+        // relance) et la sortie porte la répartition pour pouvoir nommer l'autre.
         $this->assertSame(
-            ['statut' => TranchePaiementScope::STATUT_IMPAYEES],
+            ['axes' => ['prime' => 'impayee']],
             $tool->match('Montre-moi les impayés', $scope),
         );
         $this->assertSame(
-            ['statut' => TranchePaiementScope::STATUT_ECHUES],
+            ['axes' => ['prime' => 'impayee', 'echeance' => 'echue']],
             $tool->match('Quelles primes en retard dois-je relancer ?', $scope),
         );
         $this->assertSame(
-            ['statut' => TranchePaiementScope::STATUT_IMPAYEES],
-            $tool->match('Quelles relances dois-je préparer ?', $scope),
+            ['axes' => ['prime' => 'impayee']],
+            $tool->match('Quelles primes sont dues ?', $scope),
         );
 
-        // Commissions devenues collectables (prime payée par l'assuré).
+        // Commissions devenues collectables = prime PAYÉE + commission impayée.
         $this->assertSame(
-            ['statut' => TranchePaiementScope::STATUT_COMMISSION_EXIGIBLE],
+            ['axes' => ['prime' => 'payee', 'commission' => 'impayee']],
             $tool->match('Quelles commissions sont exigibles ?', $scope),
         );
         $this->assertSame(
-            ['statut' => TranchePaiementScope::STATUT_COMMISSION_EXIGIBLE],
+            ['axes' => ['prime' => 'payee', 'commission' => 'impayee']],
             $tool->match('Quelles commissions puis-je collecter auprès de l\'assureur ?', $scope),
         );
 
-        // Flux inverse : rétrocommissions à verser aux partenaires.
+        // Flux inverse : rétrocommissions à verser aux partenaires, dette née.
         $this->assertSame(
-            ['statut' => TranchePaiementScope::STATUT_RETRO_A_PAYER],
+            ['axes' => ['commission' => 'payee', 'retro' => 'impayee']],
             $tool->match('Quelles rétrocommissions dois-je payer ?', $scope),
         );
         $this->assertSame(
-            ['statut' => TranchePaiementScope::STATUT_RETRO_A_PAYER],
+            ['axes' => ['commission' => 'payee', 'retro' => 'impayee']],
             $tool->match('Quels soldes dus aux partenaires ?', $scope),
         );
 
@@ -244,23 +369,32 @@ class SuiviImpayesToolTest extends TestCase
         $tranche->urgenceRecouvrement = 'Réglée';
         $tranche->primeSoldeDue = 0.0;
         $tranche->solde_restant_du = 0.0;
+        $tranche->retroCommission = 75.5;
+        $tranche->retroCommissionSolde = 75.5;
         $tranche->retroCommissionExigible = 75.5;
 
         $tranchePaiement = $this->createMock(TranchePaiementService::class);
         $tranchePaiement->method('lister')->willReturn([
             'items' => [$tranche],
-            'totaux' => ['nb' => 1, 'totalPrime' => 500.0, 'totalSoldePrime' => 0.0, 'totalSoldeCommission' => 0.0, 'totalRetroExigible' => 75.5],
+            'totaux' => [
+                'nb' => 1, 'totalPrime' => 500.0, 'totalSoldePrime' => 0.0,
+                'totalSoldeCommission' => 0.0, 'totalRetroExigible' => 75.5,
+                'nbPrimeImpayee' => 0, 'nbCommissionImpayee' => 0,
+            ],
             'totalItems' => 1,
             'currentPage' => 1,
             'totalPages' => 1,
         ]);
 
-        $result = $this->makeTool(true, $tranchePaiement)
-            ->execute(['statut' => 'retro_a_payer'], $this->makeScope());
+        $result = $this->makeTool(true, $tranchePaiement)->execute(
+            ['axes' => ['retro' => 'impayee', 'commission' => 'payee']],
+            $this->makeScope(),
+        );
 
         $this->assertSame(AiToolResult::STATUS_OK, $result->status);
-        $this->assertSame('Rétro partenaire à payer', $result->data['statut']);
+        $this->assertSame('Commission payée · Rétro à payer', $result->data['filtre']);
         $this->assertSame(75.5, $result->data['lignes'][0]['retroAPayer']);
+        $this->assertSame('retro', $result->data['lignes'][0]['dette']);
         $this->assertSame(75.5, $result->data['totaux']['totalRetroExigible']);
     }
 }

@@ -28,6 +28,12 @@ use App\Service\Workspace\WorkspaceAccessResolver;
  * AvenantEcheanceScope (via DashboardDataProvider) : ce volet RÉCONCILIE avec les
  * chips « Échus » + « Sous N jours » de la rubrique.
  *
+ * LE VOLET IMPAYÉS EST PARTITIONNÉ DE MÊME (primes / commissions), pour la même
+ * raison et à la suite du même genre d'incident : un total unique mélangeait la
+ * dette de l'ASSURÉ (prime) et celle de l'ASSUREUR (commission), si bien que « 5
+ * impayés » et « une seule prime réellement due » décrivaient le même jeu de lignes.
+ * Les deux ensembles sont disjoints par construction (le second exige prime PAYÉE).
+ *
  * COÛT : getAllRenouvellements() hydrate les valeurs calculées des avenants —
  * l'horizon est borné dur (HORIZON_MAX) pour contenir ce coût. La projection de la
  * vigie n'en a pas besoin (getters simples), mais le tableau de bord partage la
@@ -77,7 +83,10 @@ final class VigieEcheancesTool implements AiToolInterface
             . 'coïncider avec ceux de compter_entites (paramètre echeance) et avec la boussole. '
             . 'Un « aVenir.total » non nul avec « echues.total » à zéro signifie qu\'il n\'y a '
             . 'réellement aucune police échue — mais ne JAMAIS déduire l\'absence d\'échues '
-            . 'd\'un total global. Pour le détail complet des impayés, préférer suivi_impayes.';
+            . 'd\'un total global. Le volet impayes est lui aussi PARTITIONNÉ, par DETTE : '
+            . '« primes » (dues par l\'assuré) et « commissions » (dues par l\'assureur, prime '
+            . 'déjà soldée), ensembles disjoints — lis primes.total avant de parler de primes '
+            . 'impayées. Pour le détail complet des impayés, préférer suivi_impayes.';
     }
 
     public function schema(): array
@@ -192,12 +201,34 @@ final class VigieEcheancesTool implements AiToolInterface
             ? $scope->invite
             : null;
 
-        // Volet impayés : tranches échues (prime ou commission encore dues), les plus
-        // en retard d'abord — source unique TranchePaiementService (règle de la liste).
+        // Volet impayés : tranches ÉCHUES, PARTITIONNÉES par dette — même remède que le
+        // volet renouvellements ci-dessous. Un total unique mélangeant deux débiteurs
+        // (l'assuré pour la prime, l'assureur pour la commission) laissait lire « 5
+        // impayés » puis « une seule prime réellement due » sur le même jeu de lignes.
+        // Source unique TranchePaiementService (mêmes axes que les chips de la liste).
         if ($volet === 'impayes') {
-            $resultat = $this->tranchePaiement->lister(
+            $primes = $this->tranchePaiement->lister(
                 $entreprise,
-                TranchePaiementScope::STATUT_ECHUES,
+                [
+                    TranchePaiementScope::AXE_ECHEANCE => TranchePaiementScope::ECHUE,
+                    TranchePaiementScope::AXE_PRIME => TranchePaiementScope::IMPAYEE,
+                ],
+                null,
+                null,
+                1,
+                $max,
+                $portefeuilleDe
+            );
+
+            // Prime PAYÉE + commission impayée = commission exigible, à collecter
+            // auprès de l'assureur. Disjoint du volet précédent par construction.
+            $commissions = $this->tranchePaiement->lister(
+                $entreprise,
+                [
+                    TranchePaiementScope::AXE_ECHEANCE => TranchePaiementScope::ECHUE,
+                    TranchePaiementScope::AXE_PRIME => TranchePaiementScope::PAYEE,
+                    TranchePaiementScope::AXE_COMMISSION => TranchePaiementScope::IMPAYEE,
+                ],
                 null,
                 null,
                 1,
@@ -206,10 +237,25 @@ final class VigieEcheancesTool implements AiToolInterface
             );
 
             return [
-                'lignes'  => array_map(fn (object $e) => $this->projeter($volet, $e), $resultat['items']),
-                'totaux'  => $resultat['totaux'],
-                'total'   => $resultat['totalItems'],
-                'tronque' => $resultat['totalItems'] > count($resultat['items']),
+                'primes' => [
+                    'lignes' => array_map(fn (object $e) => $this->projeter($volet, $e), $primes['items']),
+                    'totaux' => $primes['totaux'],
+                    'total' => $primes['totalItems'],
+                    'tronque' => $primes['totalItems'] > count($primes['items']),
+                    'debiteur' => 'l\'assuré',
+                ],
+                'commissions' => [
+                    'lignes' => array_map(fn (object $e) => $this->projeter($volet, $e), $commissions['items']),
+                    'totaux' => $commissions['totaux'],
+                    'total' => $commissions['totalItems'],
+                    'tronque' => $commissions['totalItems'] > count($commissions['items']),
+                    'debiteur' => 'l\'assureur',
+                ],
+                'total' => $primes['totalItems'] + $commissions['totalItems'],
+                'rappel' => 'Sortie PARTITIONNÉE par dette : « primes » = dues par l\'assuré, '
+                    . '« commissions » = dues par l\'assureur (prime déjà soldée). Les deux ensembles '
+                    . 'sont DISJOINTS. Lis TOUJOURS primes.total avant de parler de primes impayées, '
+                    . 'et ne déduis JAMAIS leur absence du total global.',
             ];
         }
 

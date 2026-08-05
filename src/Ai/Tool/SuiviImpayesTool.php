@@ -18,8 +18,13 @@ use App\Service\Workspace\WorkspaceAccessResolver;
  * à faire pour le client X »).
  *
  * FAIL-CLOSED : sans droit de lecture sur Tranche, les données n'existent pas.
- * Source unique : TranchePaiementService (même règle métier que la liste Tranches —
- * « payée » = prime encaissée ET commission collectée).
+ * Source unique : TranchePaiementService (mêmes AXES que les chips de la liste Tranches).
+ *
+ * TROIS DETTES, JAMAIS UNE SEULE. Le filtre est une combinaison d'axes cumulés en ET, un
+ * par débiteur (assuré / assureur / partenaire) plus l'échéance. Chaque ligne porte
+ * `dette`, qui NOMME la dette restante, et la sortie porte `repartition` quand aucun axe
+ * de dette n'est posé : sans ces deux garde-fous, le modèle lit « 5 lignes » puis « 4
+ * soldes de prime à 0 » et croit se contredire (incident du 2026-08-05).
  */
 final class SuiviImpayesTool implements AiToolInterface
 {
@@ -42,14 +47,15 @@ final class SuiviImpayesTool implements AiToolInterface
 
     public function description(): string
     {
-        return 'Suivi des paiements par tranche : primes clients et commissions exigibles, '
-            . 'soldes restants, retards par rapport à la date d\'échéance, triés par urgence '
-            . '(les plus en retard d\'abord). Statut commission_exigible = commissions à '
-            . 'collecter MAINTENANT auprès de l\'assureur (la prime a été payée par l\'assuré '
-            . '— facturée ou signalée). Signale aussi les rétrocommissions partenaires à payer '
-            . '(exigibles dès que la commission partageable est encaissée). À appeler pour : '
-            . 'impayés, arriérés, relances à faire, primes ou commissions en retard/dues/exigibles, '
-            . 'qui doit payer, soldes dus, rétros à verser aux partenaires. Porte par défaut sur le '
+        return 'Suivi des paiements par tranche : soldes restants de PRIME (due par l\'assuré), '
+            . 'de COMMISSION (due par l\'assureur) et de RÉTROCOMMISSION (due par le courtier au '
+            . 'partenaire), retards par rapport à la date d\'échéance, triés par urgence (les plus '
+            . 'en retard d\'abord). Le filtre `axes` cible UNE dette à la fois ou les croise : '
+            . '{prime: impayee} = primes encore dues par les clients ; {prime: payee, commission: '
+            . 'impayee} = commissions à collecter MAINTENANT auprès de l\'assureur ; {retro: '
+            . 'impayee, commission: payee} = rétros à verser maintenant. À appeler pour : impayés, '
+            . 'arriérés, relances à faire, primes ou commissions en retard/dues/exigibles, qui doit '
+            . 'payer, soldes dus, rétros à verser aux partenaires. Porte par défaut sur le '
             . 'PORTEFEUILLE de l\'utilisateur, comme la rubrique Tranches affichée (paramètre '
             . 'perimetre). Restreignable à un client ou une cotation via lieA.';
     }
@@ -59,13 +65,7 @@ final class SuiviImpayesTool implements AiToolInterface
         return [
             'type' => 'object',
             'properties' => [
-                'statut' => [
-                    'type' => 'string',
-                    'enum' => array_keys(TranchePaiementScope::VALEURS),
-                    'description' => 'Filtre : impayees (tout solde exigible, défaut), echues (impayées '
-                        . 'en retard), a_echoir (impayées non échues), partiellement (règlement entamé), '
-                        . 'payees (prime et commission soldées).',
-                ],
+                'axes' => TranchePaiementScope::proprieteSchema(),
                 'lieA' => [
                     'type' => 'object',
                     'description' => 'Restreint aux tranches rattachées à cette fiche (client ou cotation).',
@@ -94,8 +94,16 @@ final class SuiviImpayesTool implements AiToolInterface
     {
         $normalized = AiText::normalize($question);
 
+        // « sont dues », « restent dues », « encore dues » : la formulation naturelle
+        // interpose un verbe entre la dette et son qualificatif. Sans ce petit segment
+        // optionnel, « quelles primes sont dues ? » — la question même de l'incident —
+        // ne déclenchait pas cet outil.
+        $verbeIntercale = '(sont |restent |demeurent |encore )?';
         $declencheurEncaissement = (bool) preg_match(
-            '/\b(impayes?|arrieres?|relances?|retards? de paiement|primes? (dues?|en retard|a collecter)|commissions? (dues?|en retard|a collecter)|soldes? dus?|qui doit payer)\b/',
+            '/\b(impayes?|arrieres?|relances?|retards? de paiement'
+            . '|primes? ' . $verbeIntercale . '(dues?|impayees?|en retard|a collecter)'
+            . '|commissions? ' . $verbeIntercale . '(dues?|impayees?|en retard|a collecter)'
+            . '|soldes? dus?|qui doit payer)\b/',
             $normalized
         );
         // Flux inverse : rétro évoquée AVEC une notion de paiement/dette (« liste les
@@ -110,15 +118,21 @@ final class SuiviImpayesTool implements AiToolInterface
             return null;
         }
 
-        $args = ['statut' => TranchePaiementScope::STATUT_IMPAYEES];
+        // La détection rend une COMBINAISON d'axes, source unique partagée avec les chips :
+        // « commission exigible » y devient {prime: payee, commission: impayee}, sa
+        // définition exacte, au lieu d'un statut composite opaque.
+        $axes = TranchePaiementScope::detecterAxesDepuisTexte($normalized);
         if ($declencheurRetro || preg_match('/\bpartenaires?\b/', $normalized)) {
-            // Ce que le courtier doit VERSER aux partenaires.
-            $args['statut'] = TranchePaiementScope::STATUT_RETRO_A_PAYER;
-        } elseif ($declencheurExigible) {
-            // Commissions devenues collectables (prime payée par l'assuré).
-            $args['statut'] = TranchePaiementScope::STATUT_COMMISSION_EXIGIBLE;
-        } elseif (preg_match('/\b(echues?|en retard)\b/', $normalized)) {
-            $args['statut'] = TranchePaiementScope::STATUT_ECHUES;
+            // Ce que le courtier doit VERSER aux partenaires, une fois la dette née.
+            $axes = [
+                TranchePaiementScope::AXE_RETRO => TranchePaiementScope::IMPAYEE,
+                TranchePaiementScope::AXE_COMMISSION => TranchePaiementScope::PAYEE,
+            ];
+        }
+
+        $args = [];
+        if (($courts = TranchePaiementScope::versNomsCourts($axes)) !== []) {
+            $args['axes'] = $courts;
         }
 
         // Le périmètre par défaut est celui de l'écran (portefeuille de l'invité) : seule une
@@ -139,10 +153,9 @@ final class SuiviImpayesTool implements AiToolInterface
             return AiToolResult::horsPerimetre($labels['Tranche'] ?? 'Suivi des paiements (Tranches)');
         }
 
-        $statut = (string) ($args['statut'] ?? TranchePaiementScope::STATUT_IMPAYEES);
-        if (!TranchePaiementScope::estValide($statut)) {
-            return AiToolResult::introuvable($statut);
-        }
+        // Aucun axe fourni = aucun filtre de dette : la sortie porte alors `repartition`,
+        // pour que la réponse puisse nommer chaque dette au lieu de les confondre.
+        $axes = TranchePaiementScope::normaliserAxes(is_array($args['axes'] ?? null) ? $args['axes'] : []);
 
         $lieAEntite = null;
         $lieAId = null;
@@ -165,7 +178,7 @@ final class SuiviImpayesTool implements AiToolInterface
         $page = max(1, (int) ($args['page'] ?? 1));
         $resultat = $this->tranchePaiement->lister(
             $scope->entreprise,
-            $statut,
+            $axes,
             $lieAEntite,
             $lieAId,
             $page,
@@ -175,10 +188,11 @@ final class SuiviImpayesTool implements AiToolInterface
 
         return AiToolResult::ok(array_filter([
             'date' => (new \DateTimeImmutable('now'))->format('Y-m-d'),
-            'statut' => TranchePaiementScope::libelle($statut),
+            'filtre' => $axes === [] ? 'Toutes les tranches suivies' : TranchePaiementScope::libelleCombinaison($axes),
             'perimetre' => PortefeuilleScope::libellePerimetre($perimetreEntreprise, $criterePortefeuille),
             'lignes' => array_map(fn (Tranche $t) => $this->projeter($t), $resultat['items']),
             'totaux' => $resultat['totaux'],
+            'repartition' => $this->repartition($axes, $resultat['totaux']),
             'total' => $resultat['totalItems'],
             'page' => $resultat['currentPage'],
             'tronque' => $resultat['totalItems'] > count($resultat['items']) ? true : null,
@@ -188,12 +202,51 @@ final class SuiviImpayesTool implements AiToolInterface
             // note, le modèle a présenté en prose un plan recopié du tour précédent
             // (incident du 2026-08-05, série de « le suivant ») : aucun bouton ne pouvait
             // s'afficher. On nomme donc ici l'écriture qui prolonge la lecture.
+            // Le second paragraphe traite l'autre moitié du même incident : nommer la
+            // dette au lieu de lire un solde de prime nul comme « rien à faire ».
             'note' => 'LECTURE SEULE : ces lignes ne constituent PAS un plan d\'écriture et ne font '
                 . 'apparaître aucun bouton de validation. Pour ENREGISTRER le règlement d\'une prime par '
                 . 'l\'assuré sur l\'une de ces tranches, appelle signaler_paiement_prime (trancheId pris '
                 . 'dans « id » ci-dessus) — un appel PAR tranche, y compris quand l\'utilisateur enchaîne '
-                . '« le suivant » : ne recopie jamais le tableau d\'un plan précédent.',
+                . '« le suivant » : ne recopie jamais le tableau d\'un plan précédent. '
+                . 'NOMME LA DETTE : chaque ligne porte « dette » (prime / commission / prime+commission / '
+                . 'retro). Un soldePrime à 0 signifie PRIME SOLDÉE, jamais « rien à faire » — la dette '
+                . 'restante est alors celle de l\'assureur. Ne présente comme « primes dues » que des '
+                . 'lignes obtenues avec axes.prime = impayee ; sinon rappelle l\'outil avec cet axe.',
         ], static fn ($v) => $v !== null));
+    }
+
+    /**
+     * Répartition des deux dettes principales sur l'ENSEMBLE filtré (pas la page), émise
+     * seulement quand aucun axe de dette n'a été posé — c'est-à-dire quand le total seul
+     * serait ambigu. Même remède que la partition echues/aVenir de vigie_echeances : un
+     * total global a suffi, une fois, à faire dire à l'assistant l'inverse de la ligne
+     * qu'il venait de lire.
+     *
+     * @param array<string, string> $axes
+     * @param array<string, float|int> $totaux
+     */
+    private function repartition(array $axes, array $totaux): ?array
+    {
+        if (isset($axes[TranchePaiementScope::AXE_PRIME]) || isset($axes[TranchePaiementScope::AXE_COMMISSION])) {
+            return null;
+        }
+
+        return [
+            'primeImpayee' => [
+                'nb' => (int) ($totaux['nbPrimeImpayee'] ?? 0),
+                'montant' => (float) ($totaux['totalSoldePrime'] ?? 0),
+                'debiteur' => 'l\'assuré',
+            ],
+            'commissionImpayee' => [
+                'nb' => (int) ($totaux['nbCommissionImpayee'] ?? 0),
+                'montant' => (float) ($totaux['totalSoldeCommission'] ?? 0),
+                'debiteur' => 'l\'assureur',
+            ],
+            'rappel' => 'Ces deux comptes se CHEVAUCHENT (une tranche peut devoir les deux) et ne '
+                . 's\'additionnent pas. Pour une liste de primes dues uniquement, rappelle l\'outil '
+                . 'avec axes.prime = impayee.',
+        ];
     }
 
     /**
@@ -213,6 +266,9 @@ final class SuiviImpayesTool implements AiToolInterface
             $joursRetard = $ecart < 0 ? -$ecart : 0;
         }
 
+        $soldePrime = max(0.0, (float) ($tranche->primeSoldeDue ?? 0));
+        $soldeCommission = max(0.0, (float) ($tranche->solde_restant_du ?? 0));
+
         return array_filter([
             'id' => $tranche->getId(),
             'tranche' => $tranche->getNom(),
@@ -224,13 +280,38 @@ final class SuiviImpayesTool implements AiToolInterface
             'echeance' => $echeance?->format('Y-m-d'),
             'joursRetard' => $joursRetard,
             'prime' => $tranche->primeTranche ?? null,
-            'soldePrime' => max(0.0, (float) ($tranche->primeSoldeDue ?? 0)),
-            'soldeCommission' => max(0.0, (float) ($tranche->solde_restant_du ?? 0)),
+            'soldePrime' => $soldePrime,
+            'soldeCommission' => $soldeCommission,
+            // NOMME la dette restante. Sans ce champ, un soldePrime à 0 se lit « rien à
+            // faire » alors que l'assureur doit encore sa commission — les deux dettes ont
+            // des débiteurs différents et ne se compensent jamais.
+            'dette' => $this->nommerDette($soldePrime, $soldeCommission, $tranche),
             // Signaux d'exigibilité (absents quand rien n'est exigible, pour rester compact) :
             // commission à collecter auprès de l'assureur (prime payée/signalée) et rétro
             // partenaire à verser (commission partageable encaissée).
             'commissionExigible' => ($tranche->commissionExigible ?? 0) > 0 ? (float) $tranche->commissionExigible : null,
             'retroAPayer' => ($tranche->retroCommissionExigible ?? 0) > 0 ? (float) $tranche->retroCommissionExigible : null,
         ], static fn ($v) => $v !== null && $v !== '' && $v !== 'N/A');
+    }
+
+    /**
+     * Nomme la ou les dettes restantes d'une tranche, du point de vue du DÉBITEUR.
+     * « soldee » n'est pas « rien à faire » : la rétro peut rester à verser, et c'est le
+     * seul flux où le courtier est lui-même débiteur.
+     */
+    private function nommerDette(float $soldePrime, float $soldeCommission, Tranche $tranche): string
+    {
+        $dettes = [];
+        if ($soldePrime > 0) {
+            $dettes[] = 'prime';
+        }
+        if ($soldeCommission > 0) {
+            $dettes[] = 'commission';
+        }
+        if ($dettes === [] && (float) ($tranche->retroCommissionSolde ?? 0) > 0) {
+            return 'retro';
+        }
+
+        return $dettes === [] ? 'soldee' : implode('+', $dettes);
     }
 }

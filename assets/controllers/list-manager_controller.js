@@ -216,17 +216,30 @@ export default class extends BaseController {
             label: criterionLabel,
         });
         // Retour visuel immédiat ; l'état de référence reviendra via app:context.changed.
-        this._syncPresetChips({ [criterionKey]: { value: criterionValue } });
+        // GOTCHA multi-groupes : on FUSIONNE dans les critères courants au lieu de les
+        // remplacer. Une liste peut porter plusieurs groupes de chips indépendants (les
+        // quatre axes de paiement des Tranches, cumulés en ET) ; ne transmettre que le
+        // critère cliqué remettrait visuellement tous les autres groupes sur « Toutes »
+        // jusqu'au retour du Cerveau, alors qu'ils restent bel et bien appliqués.
+        this._syncPresetChips({
+            ...this._presetCriteria,
+            [criterionKey]: { value: criterionValue },
+        });
     }
 
     /**
      * Synchronise l'état actif des chips sur les critères de recherche courants :
      * un chip est actif si la valeur du critère correspond ; l'option de valeur vide
-     * (« Toutes ») est active quand le critère est absent.
+     * (« Toutes ») est active quand le critère est absent. Chaque chip est résolu contre
+     * SA propre clé : les groupes ne se marchent pas dessus.
      * @param {object} criteria
      * @private
      */
     _syncPresetChips(criteria = {}) {
+        // Mémorisé pour que le retour visuel optimiste d'applyPresetFilter puisse fusionner
+        // au lieu d'écraser les autres groupes.
+        this._presetCriteria = criteria;
+
         const chips = this.element.querySelectorAll('.jsb-preset-chip');
         if (chips.length === 0) return;
 

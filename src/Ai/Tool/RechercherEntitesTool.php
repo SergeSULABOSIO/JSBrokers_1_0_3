@@ -107,13 +107,9 @@ final class RechercherEntitesTool implements AiToolInterface
                         . 'de_31_a_60j, au_dela_60j. Mêmes bornes que les filtres rapides de la '
                         . 'rubrique, résultats triés du plus urgent au moins urgent.',
                 ],
-                'statutPaiement' => [
-                    'type' => 'string',
-                    'enum' => array_keys(TranchePaiementScope::VALEURS),
-                    'description' => 'TRANCHE uniquement : restreint à un statut de paiement — '
-                        . 'impayees, echues, a_echoir, partiellement, payees, retro_a_payer, '
-                        . 'commission_exigible. Mêmes règles que les filtres rapides de la rubrique.',
-                ],
+                'axes' => TranchePaiementScope::proprieteSchema(
+                    'TRANCHE uniquement, mêmes règles que les groupes de chips de la rubrique.'
+                ),
                 'validation' => [
                     'type' => 'string',
                     'enum' => array_keys(CotationSouscriptionScope::VALEURS),
@@ -180,8 +176,8 @@ final class RechercherEntitesTool implements AiToolInterface
         $args = ['entite' => $shortName];
         if ($shortName === 'Avenant' && ($f = AvenantEcheanceScope::detecterDepuisTexte($normalized)) !== null) {
             $args['echeance'] = $f;
-        } elseif ($shortName === 'Tranche' && ($s = TranchePaiementScope::detecterDepuisTexte($normalized)) !== null) {
-            $args['statutPaiement'] = $s;
+        } elseif ($shortName === 'Tranche' && ($s = TranchePaiementScope::versNomsCourts(TranchePaiementScope::detecterAxesDepuisTexte($normalized))) !== []) {
+            $args['axes'] = $s;
         } elseif ($shortName === 'Cotation' && ($v = CotationSouscriptionScope::detecterDepuisTexte($normalized)) !== null) {
             $args['validation'] = $v;
         } elseif ($shortName === 'Piste' && ($t = PisteTransformationScope::detecterDepuisTexte($normalized)) !== null) {
@@ -260,15 +256,22 @@ final class RechercherEntitesTool implements AiToolInterface
         // Filtres rapides des rubriques (mêmes critères synthétiques que les chips, donc même
         // moteur, mêmes bornes et même tri) : fenêtre d'échéance pour Avenant, statut de
         // paiement pour Tranche. Ignorés si l'entité ne s'y prête pas.
+        // Scopé à Tranche : sans cette garde, des `axes` transmis par erreur sur une autre
+        // entité annonceraient un filtre que la recherche n'a pas appliqué.
+        $axesTranche = $shortName === 'Tranche'
+            ? TranchePaiementScope::normaliserAxes(is_array($args['axes'] ?? null) ? $args['axes'] : [])
+            : [];
         $criteresRubrique = AvenantEcheanceScope::critereRecherche($shortName, $args['echeance'] ?? null)
-            + TranchePaiementScope::critereRecherche($shortName, $args['statutPaiement'] ?? null)
+            + TranchePaiementScope::critereRecherche($shortName, $axesTranche)
             + CotationSouscriptionScope::critereRecherche($shortName, $args['validation'] ?? null)
             + PisteTransformationScope::critereRecherche($shortName, $args['transformation'] ?? null);
         $filtreRubrique = null;
         if (isset($criteresRubrique[AvenantEcheanceScope::CRITERION_KEY])) {
             $filtreRubrique = AvenantEcheanceScope::libelle((string) $criteresRubrique[AvenantEcheanceScope::CRITERION_KEY]['value']);
-        } elseif (isset($criteresRubrique[TranchePaiementScope::CRITERION_KEY])) {
-            $filtreRubrique = TranchePaiementScope::libelle((string) $criteresRubrique[TranchePaiementScope::CRITERION_KEY]['value']);
+        } elseif ($axesTranche !== []) {
+            // Combinaison lisible (« Prime impayée · Échues ») : le modèle doit pouvoir
+            // dire EXACTEMENT quel filtre il a appliqué, axe par axe.
+            $filtreRubrique = TranchePaiementScope::libelleCombinaison($axesTranche);
         } elseif (isset($criteresRubrique[CotationSouscriptionScope::CRITERION_KEY])) {
             $filtreRubrique = CotationSouscriptionScope::libelle((string) $criteresRubrique[CotationSouscriptionScope::CRITERION_KEY]['value']);
         } elseif (isset($criteresRubrique[PisteTransformationScope::CRITERION_KEY])) {

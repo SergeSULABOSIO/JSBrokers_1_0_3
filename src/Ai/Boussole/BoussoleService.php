@@ -150,12 +150,24 @@ final class BoussoleService
 
     private function axePrimesImpayees(Entreprise $entreprise, Invite $invite): array
     {
-        $r  = $this->tranchePaiement->lister($entreprise, TranchePaiementScope::STATUT_IMPAYEES, null, null, 1, 1, $invite);
+        // Axe PRIME SEULE : le compte et le montant portent alors sur la MÊME dette, celle
+        // de l'assuré. L'ancien filtre « impayées » comptait aussi les dettes de commission
+        // tout en affichant le seul solde de prime — un axe annonçait 5 lignes pour 1 seule
+        // prime réellement due (incident du 2026-08-05). Les commissions ont leur propre axe.
+        $r  = $this->tranchePaiement->lister(
+            $entreprise,
+            [TranchePaiementScope::AXE_PRIME => TranchePaiementScope::IMPAYEE],
+            null,
+            null,
+            1,
+            1,
+            $invite,
+        );
         $nb = (int) ($r['totalItems'] ?? 0);
 
         return [
             'axe'         => 'primes_impayees',
-            'libelle'     => $nb > 0 ? sprintf('%d prime(s) exigible(s) impayée(s)', $nb) : 'Aucune prime impayée',
+            'libelle'     => $nb > 0 ? sprintf('%d prime(s) encore due(s) par les clients', $nb) : 'Aucune prime impayée',
             'compte'      => $nb,
             'montant'     => (float) ($r['totaux']['totalSoldePrime'] ?? 0),
             'urgence'     => $nb > 0 ? self::URGENCE['primes_impayees'] : 0,
@@ -165,7 +177,20 @@ final class BoussoleService
 
     private function axeCommissions(Entreprise $entreprise, Invite $invite): array
     {
-        $r  = $this->tranchePaiement->lister($entreprise, TranchePaiementScope::STATUT_COMMISSION_EXIGIBLE, null, null, 1, 1, $invite);
+        // « Commission exigible » = sa définition même : prime PAYÉE par l'assuré (l'assureur
+        // détient donc les fonds) + commission encore due au courtier.
+        $r  = $this->tranchePaiement->lister(
+            $entreprise,
+            [
+                TranchePaiementScope::AXE_PRIME => TranchePaiementScope::PAYEE,
+                TranchePaiementScope::AXE_COMMISSION => TranchePaiementScope::IMPAYEE,
+            ],
+            null,
+            null,
+            1,
+            1,
+            $invite,
+        );
         $nb = (int) ($r['totalItems'] ?? 0);
 
         return [
@@ -182,7 +207,21 @@ final class BoussoleService
 
     private function axeRetros(Entreprise $entreprise, Invite $invite): array
     {
-        $r  = $this->tranchePaiement->lister($entreprise, TranchePaiementScope::STATUT_RETRO_A_PAYER, null, null, 1, 1, $invite);
+        // « Rétro à verser MAINTENANT » : la dette rétro existe (solde > 0) ET la commission
+        // partageable a été encaissée — sans quoi la dette envers le partenaire n'est pas
+        // encore née. C'est le seul flux où le courtier est lui-même débiteur.
+        $r  = $this->tranchePaiement->lister(
+            $entreprise,
+            [
+                TranchePaiementScope::AXE_RETRO => TranchePaiementScope::IMPAYEE,
+                TranchePaiementScope::AXE_COMMISSION => TranchePaiementScope::PAYEE,
+            ],
+            null,
+            null,
+            1,
+            1,
+            $invite,
+        );
         $nb = (int) ($r['totalItems'] ?? 0);
 
         return [

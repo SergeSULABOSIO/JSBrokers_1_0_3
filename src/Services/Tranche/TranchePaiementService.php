@@ -15,11 +15,15 @@ use Psr\Log\NullLogger;
 /**
  * Source de vérité du suivi des paiements par tranche (liste workspace ET assistant IA).
  *
- * Le statut de règlement (prime client ET commission) étant dérivé à la volée par
- * TrancheIndicatorStrategy — jamais stocké —, le filtrage par statut et le tri par urgence
+ * Les soldes (prime client, commission, rétrocommission) étant dérivés à la volée par
+ * TrancheIndicatorStrategy — jamais stockés —, le filtrage par AXES et le tri par urgence
  * se font en mémoire : préchargement batch, calcul des indicateurs, classification, tri,
  * puis pagination par découpage. Le volume de tranches d'une entreprise reste modeste ;
  * au-delà de MAX_TRANCHES_EN_MEMOIRE un avertissement est journalisé.
+ *
+ * Le filtre n'est plus un statut unique mais une COMBINAISON d'axes cumulés en ET
+ * (cf. TranchePaiementScope) : une dette par débiteur, plus l'échéance. Un tableau d'axes
+ * vide = toutes les tranches suivables.
  */
 class TranchePaiementService
 {
@@ -42,10 +46,11 @@ class TranchePaiementService
      * friction dans le pipeline des listes (trait + templates).
      *
      * @param Tranche[] $tranches
+     * @param array<string, string> $axes Combinaison d'axes (cf. TranchePaiementScope), cumulés en ET.
      */
-    public function filtrerTrierPaginer(array $tranches, string $statut, int $page = 1, int $limit = 20): array
+    public function filtrerTrierPaginer(array $tranches, array $axes, int $page = 1, int $limit = 20): array
     {
-        $filtrees = $this->preparerFiltrerTrier($tranches, $statut);
+        $filtrees = $this->preparerFiltrerTrier($tranches, $axes);
         $total = count($filtrees);
         $pageItems = array_slice($filtrees, ($page - 1) * $limit, $limit);
 
@@ -65,7 +70,7 @@ class TranchePaiementService
 
     /**
      * Chemin assistant IA : charge les tranches de l'entreprise (option : rattachées à un
-     * client ou une cotation), filtre par statut, trie par urgence, pagine, et ajoute les
+     * client ou une cotation), filtre par AXES, trie par urgence, pagine, et ajoute les
      * totaux calculés sur l'ENSEMBLE filtré (pas seulement la page).
      *
      * $invitePortefeuille restreint au PÉRIMÈTRE PORTEFEUILLE de cet invité, comme le badge
@@ -74,9 +79,10 @@ class TranchePaiementService
      * l'assistant coïncide avec la liste affichée. `null` = toute l'entreprise (chemin
      * historique, conservé pour la vigie des échéances qui raisonne au niveau du cabinet).
      *
+     * @param array<string, string> $axes Combinaison d'axes (cf. TranchePaiementScope), cumulés en ET.
      * @return array{items: Tranche[], totaux: array, totalItems: int, currentPage: int, totalPages: int}
      */
-    public function lister(Entreprise $entreprise, string $statut, ?string $lieAEntite = null, ?int $lieAId = null, int $page = 1, int $limit = 10, ?Invite $invitePortefeuille = null): array
+    public function lister(Entreprise $entreprise, array $axes, ?string $lieAEntite = null, ?int $lieAId = null, int $page = 1, int $limit = 10, ?Invite $invitePortefeuille = null): array
     {
         $qb = $this->em->getRepository(Tranche::class)->createQueryBuilder('t')
             ->andWhere('t.entreprise = :entreprise')
@@ -123,15 +129,31 @@ class TranchePaiementService
             }
         }
 
-        $filtrees = $this->preparerFiltrerTrier($qb->getQuery()->getResult(), $statut);
+        $filtrees = $this->preparerFiltrerTrier($qb->getQuery()->getResult(), $axes);
         $total = count($filtrees);
 
-        $totaux = ['nb' => $total, 'totalPrime' => 0.0, 'totalSoldePrime' => 0.0, 'totalSoldeCommission' => 0.0, 'totalRetroExigible' => 0.0];
+        // RÉPARTITION PAR DETTE. Comptée ICI, sur l'ensemble filtré : c'est le seul endroit
+        // qui le voit en entier, donc le seul où elle reste juste quand la page est tronquée.
+        // Sans elle, l'assistant lit « 5 lignes » puis « 4 soldes de prime à 0 » et croit se
+        // contredire, alors que ce sont deux dettes distinctes (incident du 2026-08-05).
+        $totaux = [
+            'nb' => $total,
+            'totalPrime' => 0.0,
+            'totalSoldePrime' => 0.0,
+            'totalSoldeCommission' => 0.0,
+            'totalRetroExigible' => 0.0,
+            'nbPrimeImpayee' => 0,
+            'nbCommissionImpayee' => 0,
+        ];
         foreach ($filtrees as $tranche) {
+            $soldePrime = (float) ($tranche->primeSoldeDue ?? 0);
+            $soldeCommission = (float) ($tranche->solde_restant_du ?? 0);
             $totaux['totalPrime'] += (float) ($tranche->primeTranche ?? 0);
-            $totaux['totalSoldePrime'] += max(0.0, (float) ($tranche->primeSoldeDue ?? 0));
-            $totaux['totalSoldeCommission'] += max(0.0, (float) ($tranche->solde_restant_du ?? 0));
+            $totaux['totalSoldePrime'] += max(0.0, $soldePrime);
+            $totaux['totalSoldeCommission'] += max(0.0, $soldeCommission);
             $totaux['totalRetroExigible'] += max(0.0, (float) ($tranche->retroCommissionExigible ?? 0));
+            $totaux['nbPrimeImpayee'] += $soldePrime > 0 ? 1 : 0;
+            $totaux['nbCommissionImpayee'] += $soldeCommission > 0 ? 1 : 0;
         }
         $totaux = array_map(fn ($v) => is_float($v) ? round($v, 2) : $v, $totaux);
 
@@ -145,32 +167,67 @@ class TranchePaiementService
     }
 
     /**
-     * Indique si une tranche (indicateurs déjà calculés) relève du statut demandé.
-     * Sémantique : « impayees » englobe tout solde exigible (prime et/ou commission),
-     * « echues »/« a_echoir » découpent les impayées selon l'échéance, « partiellement »
-     * cible les règlements entamés mais incomplets, « payees » = prime ET commission soldées.
+     * Indique si une tranche (indicateurs déjà calculés) satisfait TOUS les axes demandés.
+     * Les axes se cumulent en ET ; un tableau vide laisse tout passer.
+     *
+     * Chaque axe porte sur UNE dette et une seule — elles ne se compensent jamais, leurs
+     * débiteurs diffèrent (assuré / assureur / partenaire). Les combinaisons remplacent les
+     * anciens statuts composites : « commission exigible » = prime PAYÉE + commission
+     * IMPAYÉE, « rétro à payer maintenant » = rétro IMPAYÉE + commission PAYÉE.
+     *
+     * @param array<string, string> $axes clé de critère (ou nom court) => valeur
      */
-    public function correspondAuFiltre(Tranche $tranche, string $statut): bool
+    public function correspondAuFiltre(Tranche $tranche, array $axes): bool
     {
         $statutPaiement = (string) ($tranche->statutPaiement ?? 'N/A');
         if ($statutPaiement === 'N/A') {
-            return false; // ni prime ni commission : visible uniquement sous « Toutes »
+            return false; // projet (cotation non validée) ou ni prime ni commission
         }
 
-        $impayee = $statutPaiement !== 'Payée';
+        foreach (TranchePaiementScope::normaliserAxes($axes) as $cle => $valeur) {
+            if (!$this->respecteAxe($tranche, $cle, $valeur)) {
+                return false;
+            }
+        }
 
-        return match ($statut) {
-            TranchePaiementScope::STATUT_IMPAYEES => $impayee,
-            TranchePaiementScope::STATUT_ECHUES => $impayee && $this->estEchue($tranche),
-            TranchePaiementScope::STATUT_A_ECHOIR => $impayee && !$this->estEchue($tranche),
-            TranchePaiementScope::STATUT_PARTIELLEMENT => in_array($statutPaiement, ['Partiellement payée', 'Prime payée, commission due'], true),
-            TranchePaiementScope::STATUT_PAYEES => !$impayee,
-            // Flux inverse (décaissement) : rétro partenaire exigible, quel que soit
-            // le statut d'encaissement (une tranche soldée peut devoir sa rétro).
-            TranchePaiementScope::STATUT_RETRO_A_PAYER => (float) ($tranche->retroCommissionExigible ?? 0) > 0,
-            // Commission à collecter MAINTENANT auprès de l'assureur : la prime est
-            // payée (facturée ou signalée), la commission ne l'est pas encore.
-            TranchePaiementScope::STATUT_COMMISSION_EXIGIBLE => (float) ($tranche->commissionExigible ?? 0) > 0,
+        return true;
+    }
+
+    /**
+     * Prédicat d'un axe unique. Une dette INEXISTANTE (aucune rétro à verser) ou une
+     * information ABSENTE (tranche sans date d'échéance) sort des DEUX valeurs de son axe :
+     * la tranche n'est ni « payée » ni « impayée » de ce point de vue, exactement comme
+     * « N/A » la sort du suivi. C'est ce qui rend chaque axe réellement complémentaire.
+     */
+    private function respecteAxe(Tranche $tranche, string $cle, string $valeur): bool
+    {
+        $impayee = $valeur === TranchePaiementScope::IMPAYEE;
+
+        return match ($cle) {
+            // Dette de l'ASSURÉ envers l'assureur.
+            TranchePaiementScope::AXE_PRIME => $impayee
+                ? (float) ($tranche->primeSoldeDue ?? 0) > 0
+                : (float) ($tranche->primeSoldeDue ?? 0) <= 0,
+
+            // Dette de l'ASSUREUR envers le courtier.
+            TranchePaiementScope::AXE_COMMISSION => $impayee
+                ? (float) ($tranche->solde_restant_du ?? 0) > 0
+                : (float) ($tranche->solde_restant_du ?? 0) <= 0,
+
+            // Dette du COURTIER envers le partenaire (flux inverse). On filtre sur le SOLDE
+            // (la dette existe-t-elle ?), pas sur l'exigibilité (est-elle collectable ?) :
+            // « à payer maintenant » s'obtient en ajoutant l'axe « commission payée ».
+            TranchePaiementScope::AXE_RETRO => (float) ($tranche->retroCommission ?? 0) > 0
+                && ($impayee
+                    ? (float) ($tranche->retroCommissionSolde ?? 0) > 0
+                    : (float) ($tranche->retroCommissionSolde ?? 0) <= 0),
+
+            // Axe orthogonal aux trois dettes : n'importe laquelle peut être en retard.
+            TranchePaiementScope::AXE_ECHEANCE => $tranche->getEcheanceAt() instanceof \DateTimeInterface
+                && ($valeur === TranchePaiementScope::ECHUE
+                    ? $this->estEchue($tranche)
+                    : !$this->estEchue($tranche)),
+
             default => true,
         };
     }
@@ -220,16 +277,19 @@ class TranchePaiementService
 
     /**
      * @param Tranche[] $tranches
+     * @param array<string, string> $axes
      * @return Tranche[] Tranches filtrées et triées (ensemble complet, non paginé).
      */
-    private function preparerFiltrerTrier(array $tranches, string $statut): array
+    private function preparerFiltrerTrier(array $tranches, array $axes): array
     {
+        // Hydrater AVANT de filtrer, jamais l'inverse : les axes portent sur des indicateurs
+        // calculés, qui valent null tant que le canvas n'est pas passé.
         $this->chargerIndicateurs($tranches);
 
-        if (TranchePaiementScope::estValide($statut)) {
+        if (TranchePaiementScope::normaliserAxes($axes) !== []) {
             $tranches = array_values(array_filter(
                 $tranches,
-                fn (Tranche $t): bool => $this->correspondAuFiltre($t, $statut)
+                fn (Tranche $t): bool => $this->correspondAuFiltre($t, $axes)
             ));
         }
 
@@ -248,8 +308,11 @@ class TranchePaiementService
      */
     private function cleUrgence(Tranche $tranche): array
     {
+        // « Reste quelque chose à recouvrer » se lit sur les SOLDES, pas sur le libellé
+        // composite : le tri survit ainsi à toute évolution des libellés de statut.
         $statutPaiement = (string) ($tranche->statutPaiement ?? 'N/A');
-        $impayee = $statutPaiement !== 'N/A' && $statutPaiement !== 'Payée';
+        $impayee = $statutPaiement !== 'N/A'
+            && ((float) ($tranche->primeSoldeDue ?? 0) > 0 || (float) ($tranche->solde_restant_du ?? 0) > 0);
         $echeance = $tranche->getEcheanceAt();
 
         if ($impayee && $echeance instanceof \DateTimeInterface) {

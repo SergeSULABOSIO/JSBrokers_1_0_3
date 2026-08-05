@@ -252,7 +252,7 @@ class TrancheTotauxBarTest extends WebTestCase
             [],
             [],
             ['CONTENT_TYPE' => 'application/json'],
-            json_encode(['criteria' => ['__statut_paiement__' => 'payees'], 'parentContext' => null, 'page' => 1])
+            json_encode(['criteria' => ['__paiement_prime__' => 'payee', '__paiement_commission__' => 'payee'], 'parentContext' => null, 'page' => 1])
         );
         $this->assertResponseIsSuccessful();
         $payload = json_decode((string) $this->client->getResponse()->getContent(), true);
@@ -276,7 +276,7 @@ class TrancheTotauxBarTest extends WebTestCase
             [],
             [],
             ['CONTENT_TYPE' => 'application/json'],
-            json_encode(['criteria' => ['__statut_paiement__' => 'impayees'], 'parentContext' => null, 'page' => 1])
+            json_encode(['criteria' => ['__paiement_prime__' => 'impayee'], 'parentContext' => null, 'page' => 1])
         );
         $this->assertResponseIsSuccessful();
         $payload2 = json_decode((string) $this->client->getResponse()->getContent(), true);
@@ -409,7 +409,7 @@ class TrancheTotauxBarTest extends WebTestCase
             ['CONTENT_TYPE' => 'application/json'],
             json_encode([
                 'criteria' => [
-                    '__statut_paiement__' => 'payees',
+                    '__paiement_prime__' => 'payee', '__paiement_commission__' => 'payee',
                     '__mon_portefeuille__' => ['operator' => '=', 'value' => $sergeId, 'label' => 'Portefeuille de Serge'],
                 ],
                 'parentContext' => null,
@@ -436,7 +436,7 @@ class TrancheTotauxBarTest extends WebTestCase
             [],
             [],
             ['CONTENT_TYPE' => 'application/json'],
-            json_encode(['criteria' => ['__statut_paiement__' => 'payees'], 'parentContext' => null, 'page' => 1])
+            json_encode(['criteria' => ['__paiement_prime__' => 'payee', '__paiement_commission__' => 'payee'], 'parentContext' => null, 'page' => 1])
         );
         $payloadSansScope = json_decode((string) $this->client->getResponse()->getContent(), true);
         // Sans le badge portefeuille (retiré), Serge — qui A le droit de lecture

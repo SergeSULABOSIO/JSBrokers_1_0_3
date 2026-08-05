@@ -1455,17 +1455,18 @@ trait ControllerUtilsTrait
         $shortName = (new \ReflectionClass($entityClass))->getShortName();
         $criteria = [];
 
-        // Tranches : au premier chargement, la rubrique montre les impayées triées par
-        // urgence (retard décroissant puis échéances proches). Critère retirable comme
-        // les autres (badge de la barre ou dialogue avancé) → retour à « Toutes ».
+        // Tranches : au premier chargement, la rubrique montre ce que les CLIENTS doivent
+        // encore (prime impayée), trié par urgence (retard décroissant puis échéances
+        // proches). Un seul axe est posé : les dettes de commission et de rétro ont leur
+        // propre groupe de chips, à un clic. Critère retirable comme les autres (badge de la
+        // barre ou dialogue avancé) → retour à « Toutes ».
         // Se COMBINE avec le périmètre portefeuille ci-dessous (Tranche y est soumise
         // au même titre que Cotation/Avenant : les deux badges coexistent).
         if ($shortName === 'Tranche') {
-            $criteria[\App\Services\Search\TranchePaiementScope::CRITERION_KEY] = [
-                'operator' => '=',
-                'value' => \App\Services\Search\TranchePaiementScope::STATUT_IMPAYEES,
-                'label' => \App\Services\Search\TranchePaiementScope::libelle(\App\Services\Search\TranchePaiementScope::STATUT_IMPAYEES),
-            ];
+            $criteria += \App\Services\Search\TranchePaiementScope::critereRecherche(
+                'Tranche',
+                [\App\Services\Search\TranchePaiementScope::AXE_PRIME => \App\Services\Search\TranchePaiementScope::IMPAYEE],
+            );
         }
 
         // Cotations (propositions) : au premier chargement, on met en avant le travail

@@ -310,8 +310,14 @@ class AiContextBuilder
           CINQUIÈME groupe d'échéance, celui des décisions, aligné avec le chip du même nom dans
           la rubrique Avenants et l'onglet du tableau de bord. Ces polices ne sont PAS un retard
           et n'entrent dans AUCUNE des quatre fenêtres de dates ;
-          « commissions à recouvrer auprès des assureurs / rétros à reverser / primes impayées »
-          => suivi_impayes.
+          « primes impayées / encore dues / que les clients doivent » => suivi_impayes avec
+          axes {prime: impayee} ; « commissions à recouvrer auprès des assureurs / exigibles /
+          à collecter » => axes {prime: payee, commission: impayee} ; « rétros à reverser aux
+          partenaires » => axes {retro: impayee, commission: payee} ; « relances en retard »
+          => ajoute {echeance: echue}. Il n'existe AUCUN filtre « impayé » global : le mot
+          désignerait deux dettes de débiteurs différents à la fois. Si l'utilisateur reste
+          vague, appelle sans axe de dette et LIS le bloc « repartition » de la sortie, qui
+          donne les deux comptes nommés — puis dis lequel il veut traiter.
         - GLOSSAIRE FINANCIER (désambiguïsation — ne CONFONDS JAMAIS ces notions, c'est la source
           d'erreur no 1 sur les chiffres du cabinet) :
           • RÈGLE isBound (LA PLUS IMPORTANTE, à ne JAMAIS déroger) : une proposition/cotation NON
@@ -368,6 +374,26 @@ class AiContextBuilder
             plus large que le CA, ce n'est PAS le chiffre d'affaires.
           • PRIME = argent dû à l'assureur, JAMAIS la recette du courtier ; un PaiementPrime est
             DÉCLARATIF (il n'affecte pas la trésorerie du cabinet).
+          • RÈGLE « TROIS DETTES, TROIS DÉBITEURS » (à appliquer à CHAQUE ligne de tranche). Une
+            tranche porte jusqu'à trois dettes qui ne s'additionnent ni ne se compensent JAMAIS,
+            parce que ce ne sont pas les mêmes personnes qui doivent : la PRIME est due par
+            l'ASSURÉ (champ soldePrime), la COMMISSION est due par l'ASSUREUR (soldeCommission),
+            la RÉTROCOMMISSION est due par le COURTIER au partenaire (retroAPayer). Un
+            soldePrime à 0 signifie donc PRIME SOLDÉE — jamais « rien à faire », c'est même la
+            situation NORMALE d'une commission devenue exigible. Chaque ligne porte « dette »
+            (prime / commission / prime+commission / retro) : LIS-LE et nomme la bonne dette.
+            N'annonce comme « primes dues » que des lignes obtenues avec axes {prime: impayee},
+            et comme « commissions à recouvrer » que celles obtenues avec {prime: payee,
+            commission: impayee}. Les filtres sont QUATRE AXES cumulés en ET (prime, commission,
+            retro, echeance), identiques aux quatre groupes de chips de la rubrique Tranches :
+            il n'existe aucun filtre « impayé » global, et tu ne dois pas en inventer un en
+            fusionnant deux comptes.
+          • N'INVENTE JAMAIS UN SOLDE. Tout montant que tu inscris dans un tableau doit être
+            COPIÉ d'un champ d'une ligne renvoyée par un outil DANS CE TOUR (soldePrime,
+            soldeCommission, retroAPayer). Si un solde vaut 0, écris 0 — ne le remplace ni par
+            la prime totale, ni par le solde d'une autre dette, ni par un montant d'un tour
+            précédent. Un COMPTE (« 5 tranches ») n'autorise AUCUN montant par ligne : si tu
+            n'as pas lu les montants, donne le compte seul et appelle l'outil pour le détail.
           • TAXES — DEUX MONDES TOTALEMENT DISTINCTS, à ne JAMAIS confondre ni additionner :
             (1) les taxes SUR LA PRIME (assiette = la prime) sont des composantes/chargements de la
             prime (TVA/DGI, frais ARCA prélevés sur la prime) ; elles gonflent la PRIME due à
@@ -606,8 +632,12 @@ class AiContextBuilder
             manquante, champ que tu n'as pas su résoudre), DIS-LE dans le même message, en clair, et
             propose comment l'obtenir. Une omission tue davantage la confiance qu'une question.
           • Après exécution, n'affirme QUE ce que le journal renvoyé énumère. Si l'utilisateur conteste,
-            VÉRIFIE avec rechercher_entites / lire_fiche avant de répondre — ne défends jamais une
-            affirmation par un raisonnement sur « l'architecture de la plateforme ».
+            VÉRIFIE avant de répondre — ne défends jamais une affirmation par un raisonnement sur
+            « l'architecture de la plateforme ». Choisis l'outil qui porte la donnée contestée :
+            rechercher_entites / lire_fiche pour l'EXISTENCE d'un enregistrement, mais pour tout
+            CHIFFRE (solde, montant, compte) c'est suivi_impayes / paiements_prime /
+            indicateur_calcule / compter_entites — rechercher_entites ne renvoie AUCUNE colonne
+            financière, une « vérification » qui s'y appuie ne vérifie rien.
           UN SEUL PLAN EN ATTENTE (verrou) : tant qu'un plan que tu as présenté n'a pas été tranché par
           l'utilisateur (marqueur « [SYSTÈME — ce plan … ATTEND ENCORE la décision … ] »), l'outil REFUSE
           d'en préparer un autre — il te renverra « planEnAttente ». Ne présente alors aucun tableau :
@@ -824,7 +854,14 @@ class AiContextBuilder
             . "\n        contredire, c'est l'outil qui a une fenêtre ou un périmètre plus étroit : cite le"
             . "\n        compte de la boussole, et n'annonce JAMAIS une absence (« plus aucun… », « il ne"
             . "\n        reste rien… ») sur la seule foi d'un résultat d'outil vide ou partiel. En cas"
-            . "\n        d'écart, vérifie avec compter_entites avant d'affirmer quoi que ce soit.";
+            . "\n        d'écart, vérifie avec compter_entites avant d'affirmer quoi que ce soit."
+            // Garde-fou du garde-fou : cette règle a servi, une fois, à justifier un tableau
+            // de montants REFABRIQUÉS pour « tenir » le compte affiché ici. Un compte ne
+            // porte aucun montant : la boussole compte des lignes, elle ne les détaille pas.
+            . "\n        Ce sont des COMPTES, jamais des montants par ligne : ils ne t'autorisent AUCUN"
+            . "\n        chiffre détaillé. Si tu dresses un tableau, chaque montant doit être copié d'une"
+            . "\n        ligne d'outil lue dans CE tour — un compte qui ne colle pas à ta liste se dit et"
+            . "\n        s'explique (périmètre, dette visée), il ne se comble pas par des montants inventés.";
 
         return "ÉTAT DE LA BOUSSOLE (périmètre de l'invité, à l'instant — [⚠] = à traiter, [✓] = au vert) :\n"
             . implode("\n", $lignes) . $tete;
