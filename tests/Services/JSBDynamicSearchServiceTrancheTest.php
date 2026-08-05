@@ -644,16 +644,27 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
 
     /**
      * Un bordereau de production réconcilie SOUVENT plusieurs avenants (parfois des
-     * dizaines). Un unique paiement partiel sur sa note ne doit JAMAIS être compté en
-     * ENTIER sur chacun d'eux : le seuil « bordereau soldé » doit se mesurer contre
-     * l'agrégat RÉEL des commissions des avenants réconciliés (comme l'affiche déjà
-     * Bordereau), pas contre le champ auto-déclaré montantComHtPayableNow — qui peut
-     * sous-évaluer ce total si le bordereau a accumulé des réconciliations sans être
-     * remis à jour. Reproduit le cas signalé : un paiement réel unique (75 908) ne doit
-     * JAMAIS produire une « commission encaissée » agrégée supérieure à lui-même
-     * (constaté : 166 463 avant correctif, deux avenants comptés plein pot chacun).
+     * dizaines), et son encaissement est SOUVENT partiel. Ni tout, ni rien : les deux
+     * extrêmes ont été constatés en production et sont faux.
+     *
+     *  - Créditer le montant PLEIN à chaque avenant réconcilié : un paiement réel unique
+     *    de 75 908 $ produisait 166 463 $ de « commission encaissée ».
+     *  - N'admettre que le solde INTÉGRAL : un bordereau encaissé à 31 % (75 908 $ sur
+     *    245 363 $ dus, 52 avenants) ne créditait plus RIEN, et ces 75 908 $ bien réels
+     *    disparaissaient de la colonne « Reste commission », de la barre des totaux, du
+     *    chiffre d'affaires et des réponses de l'assistant — au point que le chip
+     *    « Commission payée » restait vide alors que l'argent était rentré.
+     *
+     * La règle est le PRORATA, la même que le chemin par articles applique déjà à une
+     * note (payé ÷ payable). Ce test fixe les deux bornes : chaque tranche reçoit sa part,
+     * et l'agrégat ne dépasse JAMAIS ce qui a été réellement encaissé.
+     *
+     * Le seuil se mesure en outre contre l'agrégat RÉEL des commissions des cotations
+     * réconciliées, jamais contre le champ auto-déclaré montantComHtPayableNow — qui peut
+     * sous-évaluer ce total si le bordereau a accumulé des réconciliations sans être remis
+     * à jour (c'est le cas monté ici : 500 déclaré pour 1000 réellement dus).
      */
-    public function testBordereauMultiAvenantsNeSurestimePasLaCommissionEncaisseeeSurMontantSousEvalue(): void
+    public function testEncaissementPartielDUnBordereauEstCrediteAuProrata(): void
     {
         $em = $this->em();
         $helper = static::getContainer()->get(IndicatorCalculationHelper::class);
@@ -731,8 +742,8 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
         $helper->reset();
 
         // 1) Paiement UNIQUE de 500 (= le champ sous-évalué, PAS l'agrégat réel de 1000) :
-        //    aucune des deux tranches ne doit être réputée encaissée — sinon 500 de vrai
-        //    argent produirait 1000 de commission encaissée inférée (le bug signalé).
+        //    le bordereau est encaissé à 50 %, chaque tranche est créditée de la MOITIÉ de
+        //    sa part — ni son montant plein (le premier bug), ni zéro (le second).
         $entreprise = $em->getRepository(Entreprise::class)->find($entrepriseId);
         $bordereau = $em->getRepository(Bordereau::class)->find($bordereauId);
         $invite = $em->getRepository(Invite::class)->findOneBy(['entreprise' => $entreprise]);
@@ -754,13 +765,28 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
 
         $trancheAFraiche = $em->getRepository(Tranche::class)->find($trancheAId);
         $trancheBFraiche = $em->getRepository(Tranche::class)->find($trancheBId);
+        // trancheA porte 50 % de sa cotation (commission due 250) → 50 % encaissés = 125.
         $this->assertEqualsWithDelta(
-            0.0,
+            125.0,
             $helper->getTrancheMontantCommissionEncaissee($trancheAFraiche),
             0.01,
-            'Agrégat réel (1000) non atteint par le paiement (500) : AUCUNE tranche ne doit être réputée encaissée.'
+            'Bordereau encaissé à 50 % : la tranche est créditée de la MOITIÉ de sa part, pas de rien.'
         );
-        $this->assertEqualsWithDelta(0.0, $helper->getTrancheMontantCommissionEncaissee($trancheBFraiche), 0.01);
+        // trancheB porte 100 % de la sienne (commission due 500) → 50 % encaissés = 250.
+        $this->assertEqualsWithDelta(250.0, $helper->getTrancheMontantCommissionEncaissee($trancheBFraiche), 0.01);
+
+        // LA BORNE HAUTE, celle du premier bug : l'agrégat de ce qui est réputé encaissé
+        // sur TOUTES les tranches des cotations réconciliées ne dépasse jamais l'argent
+        // réellement reçu (500). Sans elle, 500 de vrai argent en produisaient 1000.
+        $totalInfere = 0.0;
+        foreach ($em->getRepository(Tranche::class)->findBy(['entreprise' => $entreprise]) as $t) {
+            $totalInfere += $helper->getTrancheMontantCommissionEncaissee($t);
+        }
+        $this->assertLessThanOrEqual(
+            500.0 + 0.01,
+            $totalInfere,
+            'Un paiement de 500 ne peut JAMAIS produire plus de 500 de commission encaissée inférée.'
+        );
 
         // 2) Complément à 1000 (agrégat réel des deux avenants) : les deux tranches
         //    deviennent réputées encaissées, chacune à hauteur de SA propre part —

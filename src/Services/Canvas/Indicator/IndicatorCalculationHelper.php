@@ -805,14 +805,28 @@ class IndicatorCalculationHelper implements ResetInterface
             }
 
             // Miroir « sans articles » du circuit bordereau : la note liée au bordereau
-            // peut ne porter aucun article (repli sur les montants du bordereau). Si un
-            // bordereau de production couvrant la tranche (ligne réconciliée) est
-            // intégralement encaissé, la commission de la tranche est réputée encaissée
-            // — plafonnée à son dû TTC, sans double compter les notes à articles.
-            if ($this->isTrancheCouverteParBordereau($tranche, true)) {
+            // peut ne porter aucun article (repli sur les montants du bordereau). La
+            // commission de la tranche est alors réputée encaissée AU PRORATA de ce que
+            // le bordereau a réellement encaissé — même règle que le chemin par articles
+            // ci-dessus, qui applique déjà (payé ÷ payable) au montant de l'article.
+            //
+            // Ni tout, ni rien : les deux extrêmes ont été essayés et sont faux. Créditer
+            // le montant PLEIN à chaque avenant réconcilié comptait un unique paiement de
+            // 75 908 $ comme 166 463 $ de commission encaissée. N'exiger QUE le solde
+            // intégral faisait l'inverse : un bordereau encaissé à 31 % (75 908 $ sur
+            // 245 363 $ dus, 52 avenants réconciliés) ne créditait plus RIEN, et ces
+            // 75 908 $ réels devenaient invisibles partout — colonne « Reste commission »,
+            // barre des totaux, chiffre d'affaires, réponses de l'assistant.
+            // Le prorata ne peut pas sur-créditer : la part d'une cotation est bornée par
+            // (sa commission TTC × taux), donc la somme sur les cotations réconciliées est
+            // au plus le montant encaissé — et l'égale exactement quand les tranches
+            // couvrent 100 % de leur cotation (mesuré en production : 75 908,65 crédités
+            // pour 75 908,67 encaissés, l'écart n'étant que l'arrondi au centime).
+            $taux = $this->getTauxEncaissementBordereau($tranche);
+            if ($taux > 0) {
                 $du = $this->getCotationMontantCommissionTtc($tranche->getCotation(), -1, false)
                     * $this->getTrancheTauxFactor($tranche);
-                $montant = max($montant, $du);
+                $montant = max($montant, $du * $taux);
             }
         }
         return $montant;
@@ -1291,6 +1305,24 @@ class IndicatorCalculationHelper implements ResetInterface
     }
 
     /**
+     * Part de la commission d'une cotation réconciliée que le bordereau a RÉELLEMENT
+     * encaissée, entre 0 et 1 — la mesure continue dont isTrancheCouverteParBordereau()
+     * n'est que le cas extrême (taux = 1). Indexée par COTATION, la même clé que
+     * l'assiette du taux : c'est ce qui rend le prorata exact, la somme des parts
+     * créditées valant exactement le montant encaissé par le bordereau.
+     */
+    public function getTauxEncaissementBordereau(Tranche $tranche): float
+    {
+        $cotation = $tranche->getCotation();
+        $entreprise = $tranche->getEntreprise();
+        if (!$cotation || !$entreprise) {
+            return 0.0;
+        }
+
+        return $this->getCouvertureBordereaux($entreprise)['taux'][(int) $cotation->getId()] ?? 0.0;
+    }
+
+    /**
      * Construit (et met en cache par entreprise) la couverture des avenants par les
      * bordereaux de production : seules comptent les lignes d'analysisResults de type
      * « match » (correspondance parfaite ou réconciliée après création/mise à jour) —
@@ -1306,7 +1338,11 @@ class IndicatorCalculationHelper implements ResetInterface
      * entier sur chacun d'eux (constaté : 166 463 $ de commission encaissée inférée pour
      * un unique paiement réel de 75 908 $ sur le bordereau).
      *
-     * @return array{couverts: array<int, true>, couvertsSoldes: array<int, true>}
+     * `taux` porte la mesure CONTINUE (encaissé ÷ dû réel, plafonné à 1) dont
+     * `couvertsSoldes` n'est que le cas extrême : c'est elle qui permet de créditer au
+     * prorata un bordereau partiellement encaissé, sans retomber dans le sur-comptage.
+     *
+     * @return array{couverts: array<int, true>, couvertsSoldes: array<int, true>, taux: array<int, float>}
      */
     private function getCouvertureBordereaux(Entreprise $entreprise): array
     {
@@ -1317,6 +1353,7 @@ class IndicatorCalculationHelper implements ResetInterface
 
         $couverts = [];
         $couvertsSoldes = [];
+        $tauxParCotation = [];
         $bordereaux = $this->em->getRepository(Bordereau::class)->findBy([
             'entreprise' => $entreprise,
             'type' => Bordereau::TYPE_BOREDERAU_PRODUCTION,
@@ -1332,15 +1369,26 @@ class IndicatorCalculationHelper implements ResetInterface
                 continue;
             }
 
-            $payable = 0.0;
+            // Assiette DÉDUPLIQUÉE PAR COTATION. La commission est portée par la cotation,
+            // pas par l'avenant : deux avenants d'une même cotation (l'initial et une
+            // modification) réconciliés par le même bordereau ne doublent pas son dû. Sans
+            // cette déduplication, l'assiette du TAUX (par avenant) et celle du CRÉDIT (par
+            // cotation, cf. getTauxEncaissementBordereau) divergent, et la somme créditée
+            // ne vaut plus l'encaissement réel — mesuré : 110 400 $ crédités pour 75 909 $
+            // réellement encaissés.
+            $comParCotation = [];
             foreach ($this->em->getRepository(Avenant::class)->findBy(['id' => $avenantIds]) as $avenant) {
                 $cotation = $avenant->getCotation();
                 if ($cotation) {
-                    $payable += $this->getCotationMontantCommissionTtc($cotation, -1, false);
+                    $comParCotation[(int) $cotation->getId()] = $this->getCotationMontantCommissionTtc($cotation, -1, false);
                 }
             }
-            $payable = round($payable, 2);
-            $estSolde = $payable > 0 && round($this->getBordereauMontantEncaisse($bordereau), 2) >= $payable;
+            $payable = round(array_sum($comParCotation), 2);
+            $encaisse = round($this->getBordereauMontantEncaisse($bordereau), 2);
+            $estSolde = $payable > 0 && $encaisse >= $payable;
+            // Taux d'encaissement du bordereau, plafonné à 1 : la fraction de leur
+            // commission que les cotations réconciliées ont réellement vu rentrer.
+            $tauxBordereau = $payable > 0 ? min(1.0, $encaisse / $payable) : 0.0;
 
             foreach ($avenantIds as $avenantId) {
                 $couverts[$avenantId] = true;
@@ -1348,11 +1396,17 @@ class IndicatorCalculationHelper implements ResetInterface
                     $couvertsSoldes[$avenantId] = true;
                 }
             }
+            foreach (array_keys($comParCotation) as $cotationId) {
+                // Une même cotation peut être réconciliée par plusieurs bordereaux : leurs
+                // encaissements s'ajoutent, sans jamais dépasser le dû.
+                $tauxParCotation[$cotationId] = min(1.0, ($tauxParCotation[$cotationId] ?? 0.0) + $tauxBordereau);
+            }
         }
 
         return $this->couvertureBordereauxCache[$entrepriseId] = [
             'couverts' => $couverts,
             'couvertsSoldes' => $couvertsSoldes,
+            'taux' => $tauxParCotation,
         ];
     }
 
