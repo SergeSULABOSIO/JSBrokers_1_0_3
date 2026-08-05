@@ -31,7 +31,7 @@ use App\Services\JSBDynamicSearchService;
  * Écriture sur « Tranche » exigé (le moteur le re-contrôle via GOUVERNANCE_PARENT),
  * et la tranche est résolue STRICTEMENT dans l'entreprise du scope.
  */
-final class SignalerPaiementPrimeTool implements AiToolInterface
+final class SignalerPaiementPrimeTool implements AiToolProduisantUnPlan
 {
     public function __construct(
         private readonly WorkspaceAccessResolver $accessResolver,

@@ -182,6 +182,17 @@ final class SuiviImpayesTool implements AiToolInterface
             'total' => $resultat['totalItems'],
             'page' => $resultat['currentPage'],
             'tronque' => $resultat['totalItems'] > count($resultat['items']) ? true : null,
+            // NOTE DE CONDUITE (corollaire de conception : tout retour d'outil porte la
+            // sienne). C'est une LECTURE : elle donne toute la matière d'un plan
+            // d'écriture — id de tranche, échéance, solde — sans en être un. Sans cette
+            // note, le modèle a présenté en prose un plan recopié du tour précédent
+            // (incident du 2026-08-05, série de « le suivant ») : aucun bouton ne pouvait
+            // s'afficher. On nomme donc ici l'écriture qui prolonge la lecture.
+            'note' => 'LECTURE SEULE : ces lignes ne constituent PAS un plan d\'écriture et ne font '
+                . 'apparaître aucun bouton de validation. Pour ENREGISTRER le règlement d\'une prime par '
+                . 'l\'assuré sur l\'une de ces tranches, appelle signaler_paiement_prime (trancheId pris '
+                . 'dans « id » ci-dessus) — un appel PAR tranche, y compris quand l\'utilisateur enchaîne '
+                . '« le suivant » : ne recopie jamais le tableau d\'un plan précédent.',
         ], static fn ($v) => $v !== null));
     }
 
