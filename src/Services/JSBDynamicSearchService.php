@@ -122,17 +122,17 @@ class JSBDynamicSearchService
             return ['status' => $status, 'data' => [], 'totalItems' => 0];
         }
 
-        // Critère synthétique « Statut de paiement » (Tranche uniquement) : le statut de
-        // règlement est dérivé à la volée (jamais stocké), impossible à filtrer/trier en SQL.
-        // On retire la clé des critères, on charge l'ensemble scopé (entreprise + autres
-        // critères) SANS pagination ni tri id, puis TranchePaiementService filtre par statut,
-        // trie par urgence et pagine en mémoire. Forme de retour identique à ce chemin-ci.
-        if ($entityName === 'Tranche' && array_key_exists(TranchePaiementScope::CRITERION_KEY, $criteria)) {
-            $raw = $criteria[TranchePaiementScope::CRITERION_KEY];
-            $statutPaiement = is_array($raw) ? (string) ($raw['value'] ?? '') : (string) $raw;
-            unset($criteria[TranchePaiementScope::CRITERION_KEY]);
+        // Critères synthétiques « Paiement » (Tranche uniquement) : les soldes de prime, de
+        // commission et de rétro sont dérivés à la volée (jamais stockés), impossibles à
+        // filtrer/trier en SQL. On retire TOUTES les clés d'axe des critères, on charge
+        // l'ensemble scopé (entreprise + autres critères) SANS pagination ni tri id, puis
+        // TranchePaiementService filtre par la COMBINAISON d'axes (cumul en ET), trie par
+        // urgence et pagine en mémoire. Forme de retour identique à ce chemin-ci.
+        if ($entityName === 'Tranche' && TranchePaiementScope::porteUnAxe($criteria)) {
+            $axes = TranchePaiementScope::extraireAxes($criteria);
+            $criteria = TranchePaiementScope::retirerAxes($criteria);
 
-            if (TranchePaiementScope::estValide($statutPaiement)) {
+            if ($axes !== []) {
                 try {
                     $qb = $this->em->getRepository($entityClass)->createQueryBuilder('e');
                     $this->applyCriteriaToQueryBuilder($qb, $criteria, $entreprise, $parentContext, $status);
@@ -140,7 +140,7 @@ class JSBDynamicSearchService
                         return ['status' => $status, 'data' => [], 'totalItems' => 0];
                     }
 
-                    return $this->tranchePaiement->filtrerTrierPaginer($qb->getQuery()->getResult(), $statutPaiement, $page, $limit);
+                    return $this->tranchePaiement->filtrerTrierPaginer($qb->getQuery()->getResult(), $axes, $page, $limit);
                 } catch (\Exception $e) {
                     return [
                         'status' => [
@@ -153,7 +153,7 @@ class JSBDynamicSearchService
                     ];
                 }
             }
-            // Statut vide ou inconnu : critère déjà retiré, la recherche standard reprend.
+            // Axes vides ou inconnus : clés déjà retirées, la recherche standard reprend.
         }
 
         // Critère synthétique « Échéance » (Avenant uniquement). À la différence de Tranche,

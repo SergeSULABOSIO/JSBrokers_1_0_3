@@ -342,35 +342,107 @@ class CoherenceChipsAssistantTest extends KernelTestCase
     }
 
     /**
-     * Idem pour la rubrique Tranches (statut de paiement dérivé, filtré/trié en mémoire) :
-     * les outils génériques de Ket doivent passer par le même critère synthétique.
+     * Idem pour la rubrique Tranches (soldes dérivés, filtrés/triés en mémoire), mais la
+     * rubrique porte QUATRE groupes de chips indépendants et cumulables. On balaie donc
+     * chaque valeur de chaque axe SEULE, puis les paires qui remplacent les anciens statuts
+     * composites — c'est là que la parité chip ⇔ Ket peut le plus facilement casser.
      */
     public function testTranchesChaqueChipCoincideAvecLAssistant(): void
     {
         ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
         $scope = new AiScope($entreprise, $invite);
 
-        foreach (array_keys(TranchePaiementScope::VALEURS) as $statut) {
+        // Chaque axe seul…
+        $combinaisons = [];
+        foreach (TranchePaiementScope::AXES as $cle => $axe) {
+            foreach (array_keys($axe['valeurs']) as $valeur) {
+                $combinaisons[$axe['nom'] . '=' . $valeur] = [$cle => $valeur];
+            }
+        }
+        // …puis les compositions qui portent le sens métier.
+        $combinaisons['commission exigible'] = [
+            TranchePaiementScope::AXE_PRIME => TranchePaiementScope::PAYEE,
+            TranchePaiementScope::AXE_COMMISSION => TranchePaiementScope::IMPAYEE,
+        ];
+        $combinaisons['primes en retard'] = [
+            TranchePaiementScope::AXE_PRIME => TranchePaiementScope::IMPAYEE,
+            TranchePaiementScope::AXE_ECHEANCE => TranchePaiementScope::ECHUE,
+        ];
+        $combinaisons['tout soldé'] = [
+            TranchePaiementScope::AXE_PRIME => TranchePaiementScope::PAYEE,
+            TranchePaiementScope::AXE_COMMISSION => TranchePaiementScope::PAYEE,
+        ];
+
+        $factory = static::getContainer()->get(PortefeuilleCritereFactory::class);
+        $vusNonVides = 0;
+
+        foreach ($combinaisons as $libelle => $axes) {
+            // Ce que la rubrique affiche : les chips posés + le périmètre portefeuille.
             $chip = $this->service()->search(
                 Tranche::class,
-                $this->criteresRubrique('Tranche', $invite, TranchePaiementScope::CRITERION_KEY, $statut),
+                $axes + $factory->pour('Tranche', $invite),
                 $entreprise,
             );
             $idsChip = array_map(static fn (Tranche $t) => $t->getId(), $chip['data']);
+            $vusNonVides += $idsChip === [] ? 0 : 1;
 
-            $compte = $this->compter()->execute(['entite' => 'Tranche', 'statutPaiement' => $statut], $scope);
-            $this->assertSame(AiToolResult::STATUS_OK, $compte->status, "Chip {$statut}");
+            // Ce que Ket répond, avec les MÊMES axes exprimés en noms courts.
+            $args = ['entite' => 'Tranche', 'axes' => []];
+            foreach ($axes as $cle => $valeur) {
+                $args['axes'][TranchePaiementScope::AXES[$cle]['nom']] = $valeur;
+            }
+
+            $compte = $this->compter()->execute($args, $scope);
+            $this->assertSame(AiToolResult::STATUS_OK, $compte->status, "Chips « {$libelle} »");
             $this->assertSame(
                 (int) $chip['totalItems'],
                 $compte->data['count'],
-                "Chip « {$statut} » : le comptage de Ket doit égaler celui de la rubrique."
+                "Chips « {$libelle} » : le comptage de Ket doit égaler celui de la rubrique."
             );
 
-            $liste = $this->rechercher()->execute(['entite' => 'Tranche', 'statutPaiement' => $statut], $scope);
+            $liste = $this->rechercher()->execute($args, $scope);
             $this->assertSame(
                 $idsChip,
                 array_column($liste->data['items'], 'id'),
-                "Chip « {$statut} » : mêmes tranches, même ordre d'urgence."
+                "Chips « {$libelle} » : mêmes tranches, même ordre d'urgence."
+            );
+        }
+
+        // Un vert sur des ensembles tous vides ne prouverait rien : le semis doit
+        // réellement alimenter plusieurs combinaisons.
+        $this->assertGreaterThan(2, $vusNonVides, 'Le semis doit peupler plusieurs combinaisons d\'axes.');
+    }
+
+    /**
+     * COMPLÉMENTARITÉ À L'ÉCRAN. Les deux valeurs d'un même axe partitionnent la rubrique :
+     * disjointes, et leur réunion couvre toutes les tranches suivies (sauf le hors-champ
+     * explicite de la rétro et de l'échéance). C'est ce qui rend impossible le retour d'un
+     * filtre ambigu du type « impayées = prime OU commission ».
+     */
+    public function testLesDeuxValeursDUnAxePartitionnentLaRubrique(): void
+    {
+        ['entreprise' => $entreprise, 'invite' => $invite] = $this->seed();
+        $factory = static::getContainer()->get(PortefeuilleCritereFactory::class);
+        $perimetre = $factory->pour('Tranche', $invite);
+
+        $ids = fn (array $axes): array => array_map(
+            static fn (Tranche $t) => $t->getId(),
+            $this->service()->search(Tranche::class, $axes + $perimetre, $entreprise)['data'],
+        );
+
+        // Référence : toutes les tranches suivies (aucun axe posé, hors « N/A »).
+        $suivies = $ids([TranchePaiementScope::AXE_PRIME => TranchePaiementScope::PAYEE]);
+        $suivies = array_merge($suivies, $ids([TranchePaiementScope::AXE_PRIME => TranchePaiementScope::IMPAYEE]));
+
+        foreach ([TranchePaiementScope::AXE_PRIME, TranchePaiementScope::AXE_COMMISSION] as $axe) {
+            $payees = $ids([$axe => TranchePaiementScope::PAYEE]);
+            $impayees = $ids([$axe => TranchePaiementScope::IMPAYEE]);
+
+            $this->assertSame([], array_intersect($payees, $impayees), "Axe {$axe} : valeurs DISJOINTES.");
+            $this->assertEqualsCanonicalizing(
+                $suivies,
+                array_merge($payees, $impayees),
+                "Axe {$axe} : la réunion des deux valeurs couvre toutes les tranches suivies."
             );
         }
     }
@@ -546,7 +618,7 @@ class CoherenceChipsAssistantTest extends KernelTestCase
         $scope = new AiScope($entreprise, $invite);
         $outil = static::getContainer()->get(\App\Ai\Tool\SuiviImpayesTool::class);
 
-        $mien = $outil->execute(['statut' => TranchePaiementScope::STATUT_IMPAYEES], $scope);
+        $mien = $outil->execute(['axes' => ['prime' => TranchePaiementScope::IMPAYEE]], $scope);
         $this->assertSame(AiToolResult::STATUS_OK, $mien->status);
         $this->assertSame('Portefeuille Cohérence', $mien->data['perimetre']);
         $this->assertNotContains(
@@ -556,7 +628,7 @@ class CoherenceChipsAssistantTest extends KernelTestCase
         );
 
         $global = $outil->execute([
-            'statut' => TranchePaiementScope::STATUT_IMPAYEES,
+            'axes' => ['prime' => TranchePaiementScope::IMPAYEE],
             'perimetre' => PortefeuilleScope::PERIMETRE_ENTREPRISE,
         ], $scope);
         $this->assertSame(PortefeuilleScope::LIBELLE_ENTREPRISE, $global->data['perimetre']);
@@ -578,8 +650,6 @@ class CoherenceChipsAssistantTest extends KernelTestCase
             'combien d\'avenants sont échus ?' => ['echeance', AvenantEcheanceScope::STATUT_ECHUS],
             'combien d\'avenants entre 31 et 60 jours ?' => ['echeance', AvenantEcheanceScope::STATUT_31_60J],
             'combien d\'avenants au-delà de 60 jours ?' => ['echeance', AvenantEcheanceScope::STATUT_60_PLUS],
-            'combien de tranches impayées ?' => ['statutPaiement', TranchePaiementScope::STATUT_IMPAYEES],
-            'combien de tranches payées ?' => ['statutPaiement', TranchePaiementScope::STATUT_PAYEES],
         ];
 
         foreach ($cas as $question => [$cle, $attendu]) {
@@ -588,9 +658,34 @@ class CoherenceChipsAssistantTest extends KernelTestCase
             $this->assertSame($attendu, $args[$cle] ?? null, "Question : {$question}");
         }
 
+        // Tranches : la détection rend une COMBINAISON d'axes, pas un statut unique. La
+        // dette évoquée doit être celle que l'utilisateur a nommée — c'est précisément ce
+        // qui manquait quand « impayées » désignait deux dettes à la fois.
+        // NB : « prime … payée » est capté en amont par PaiementPrimeIntent, qui route vers
+        // l'outil dédié paiements_prime — d'où la formulation « soldée » ici, qui interroge
+        // bien la RUBRIQUE et non le signalement de règlement.
+        $casAxes = [
+            'combien de tranches dont la prime est impayée ?' => ['prime' => TranchePaiementScope::IMPAYEE],
+            'combien de tranches dont la prime est soldée ?' => ['prime' => TranchePaiementScope::PAYEE],
+            'combien de tranches dont la commission est impayée ?' => ['commission' => TranchePaiementScope::IMPAYEE],
+            'combien de tranches avec une commission exigible ?' => [
+                'prime' => TranchePaiementScope::PAYEE,
+                'commission' => TranchePaiementScope::IMPAYEE,
+            ],
+        ];
+
+        foreach ($casAxes as $question => $attendu) {
+            $args = $this->compter()->match($question, $scope);
+            $this->assertIsArray($args, "Question non reconnue : {$question}");
+            $this->assertSame($attendu, $args['axes'] ?? null, "Question : {$question}");
+        }
+
         // Une question sans fenêtre exprimée ne pose AUCUN filtre (comptage global).
         $args = $this->compter()->match('combien d\'avenants ?', $scope);
         $this->assertArrayNotHasKey('echeance', $args);
+
+        $args = $this->compter()->match('combien de tranches ?', $scope);
+        $this->assertArrayNotHasKey('axes', $args);
     }
 
     /**

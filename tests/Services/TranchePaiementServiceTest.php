@@ -10,10 +10,15 @@ use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Suivi des paiements par tranche : classification (« payée » = prime encaissée ET
- * commission collectée), découpage échues / à échoir, tri par urgence, pagination
- * en mémoire. Tests purs : le CanvasBuilder est un no-op, les indicateurs calculés
- * (statutPaiement, soldes) sont posés directement sur les entités.
+ * Suivi des paiements par tranche : filtrage par AXES (une dette par débiteur, plus
+ * l'échéance), cumul en ET, tri par urgence, pagination en mémoire. Tests purs : le
+ * CanvasBuilder est un no-op, les indicateurs calculés (soldes, statut) sont posés
+ * directement sur les entités.
+ *
+ * L'invariant central du fichier est la COMPLÉMENTARITÉ : chaque axe partitionne les
+ * tranches suivies en deux ensembles disjoints (plus, pour la rétro et l'échéance, un
+ * hors-champ explicite). C'est ce qui rend l'ancien « impayées = prime ET/OU commission »
+ * inexprimable — l'ambiguïté qui faisait annoncer 5 lignes pour 1 seule prime due.
  */
 class TranchePaiementServiceTest extends TestCase
 {
@@ -48,7 +53,18 @@ class TranchePaiementServiceTest extends TestCase
         return $tranche;
     }
 
-    public function testFiltreImpayeesExclutPayeesEtNa(): void
+    /** @return array<string, string> */
+    private function axes(string ...$paires): array
+    {
+        $axes = [];
+        foreach (array_chunk($paires, 2) as [$cle, $valeur]) {
+            $axes[$cle] = $valeur;
+        }
+
+        return $axes;
+    }
+
+    public function testAxePrimeIsoleLaDetteDeLAssure(): void
     {
         $tranches = [
             $this->makeTranche(1, 'Non payée', new \DateTimeImmutable('+10 days'), 500.0),
@@ -58,43 +74,108 @@ class TranchePaiementServiceTest extends TestCase
             $this->makeTranche(5, 'Partiellement payée', new \DateTimeImmutable('-2 days'), 200.0),
         ];
 
-        $resultat = $this->makeService()->filtrerTrierPaginer($tranches, TranchePaiementScope::STATUT_IMPAYEES);
+        $resultat = $this->makeService()->filtrerTrierPaginer(
+            $tranches,
+            $this->axes(TranchePaiementScope::AXE_PRIME, TranchePaiementScope::IMPAYEE),
+        );
 
         $ids = array_map(static fn (Tranche $t) => $t->getId(), $resultat['data']);
-        $this->assertSame([5, 4, 1], $ids, 'Échue d\'abord, puis à échoir par échéance croissante.');
-        $this->assertSame(3, $resultat['totalItems']);
+        // La tranche 4 (prime soldée, commission due) est ABSENTE : c'est tout l'objet
+        // de l'axe. L'ancien filtre « impayées » l'incluait avec un solde de prime à 0.
+        $this->assertSame([5, 1], $ids, 'Échue d\'abord, puis à échoir par échéance croissante.');
+        $this->assertSame(2, $resultat['totalItems']);
     }
 
-    public function testCommissionDueSuffitARendreImpayee(): void
+    public function testUneDetteDeCommissionNEstPasUnePrimeDue(): void
     {
-        // Prime intégralement encaissée, mais commission encore due : la tranche
-        // reste à recouvrer (règle « payée = prime ET commission »).
+        // Prime intégralement encaissée, commission encore due : deux débiteurs, deux
+        // réponses opposées selon l'axe. C'est exactement la ligne qui, lue sous un
+        // filtre unique, faisait dire tour à tour « impayée » et « prime soldée ».
         $tranche = $this->makeTranche(1, 'Prime payée, commission due', new \DateTimeImmutable('-3 days'), 0.0, 150.0);
 
         $service = $this->makeService();
-        $this->assertTrue($service->correspondAuFiltre($tranche, TranchePaiementScope::STATUT_IMPAYEES));
-        $this->assertTrue($service->correspondAuFiltre($tranche, TranchePaiementScope::STATUT_ECHUES));
-        $this->assertTrue($service->correspondAuFiltre($tranche, TranchePaiementScope::STATUT_PARTIELLEMENT));
-        $this->assertFalse($service->correspondAuFiltre($tranche, TranchePaiementScope::STATUT_PAYEES));
+        $this->assertFalse($service->correspondAuFiltre($tranche, $this->axes(TranchePaiementScope::AXE_PRIME, TranchePaiementScope::IMPAYEE)));
+        $this->assertTrue($service->correspondAuFiltre($tranche, $this->axes(TranchePaiementScope::AXE_PRIME, TranchePaiementScope::PAYEE)));
+        $this->assertTrue($service->correspondAuFiltre($tranche, $this->axes(TranchePaiementScope::AXE_COMMISSION, TranchePaiementScope::IMPAYEE)));
+        $this->assertTrue($service->correspondAuFiltre($tranche, $this->axes(TranchePaiementScope::AXE_ECHEANCE, TranchePaiementScope::ECHUE)));
     }
 
-    public function testDecoupageEchuesAEchoir(): void
+    public function testLesAxesSeCumulentEnEt(): void
+    {
+        // Commission EXIGIBLE = prime PAYÉE + commission IMPAYÉE : sa définition même,
+        // désormais exprimée par une combinaison au lieu d'un statut composite opaque.
+        $exigible = $this->makeTranche(1, 'Prime payée, commission due', new \DateTimeImmutable('-5 days'), 0.0, 150.0);
+        // Prime NON payée : la commission est due mais PAS exigible (l'assureur n'a rien encaissé).
+        $nonExigible = $this->makeTranche(2, 'Non payée', new \DateTimeImmutable('-5 days'), 500.0, 150.0);
+
+        $combinaison = $this->axes(
+            TranchePaiementScope::AXE_PRIME, TranchePaiementScope::PAYEE,
+            TranchePaiementScope::AXE_COMMISSION, TranchePaiementScope::IMPAYEE,
+        );
+
+        $service = $this->makeService();
+        $this->assertTrue($service->correspondAuFiltre($exigible, $combinaison));
+        $this->assertFalse($service->correspondAuFiltre($nonExigible, $combinaison));
+
+        $resultat = $service->filtrerTrierPaginer([$exigible, $nonExigible], $combinaison);
+        $this->assertSame([1], array_map(static fn (Tranche $t) => $t->getId(), $resultat['data']));
+    }
+
+    public function testChaqueAxeEstComplementaire(): void
+    {
+        // Un jeu couvrant les quatre combinaisons de dettes, avec et sans rétro.
+        $tranches = [
+            $this->makeTranche(1, 'Non payée', new \DateTimeImmutable('-1 day'), 500.0, 100.0),
+            $this->makeTranche(2, 'Prime payée, commission due', new \DateTimeImmutable('+1 day'), 0.0, 100.0),
+            $this->makeTranche(3, 'Payée', new \DateTimeImmutable('-2 days')),
+            $this->makeTranche(4, 'Partiellement payée', new \DateTimeImmutable('+2 days'), 300.0),
+        ];
+        // Rétro : seules 1 et 3 en portent une (1 encore due, 3 déjà reversée).
+        $tranches[0]->retroCommission = 50.0;
+        $tranches[0]->retroCommissionSolde = 50.0;
+        $tranches[2]->retroCommission = 40.0;
+        $tranches[2]->retroCommissionSolde = 0.0;
+
+        $service = $this->makeService();
+        $ids = static fn (array $r): array => array_map(static fn (Tranche $t) => $t->getId(), $r['data']);
+
+        foreach ([
+            TranchePaiementScope::AXE_PRIME => [TranchePaiementScope::PAYEE, TranchePaiementScope::IMPAYEE, 4],
+            TranchePaiementScope::AXE_COMMISSION => [TranchePaiementScope::PAYEE, TranchePaiementScope::IMPAYEE, 4],
+            // Rétro : les tranches 2 et 4 n'en portent aucune → hors des DEUX valeurs.
+            TranchePaiementScope::AXE_RETRO => [TranchePaiementScope::PAYEE, TranchePaiementScope::IMPAYEE, 2],
+            TranchePaiementScope::AXE_ECHEANCE => [TranchePaiementScope::A_ECHOIR, TranchePaiementScope::ECHUE, 4],
+        ] as $axe => [$valeurA, $valeurB, $couverture]) {
+            $a = $ids($service->filtrerTrierPaginer($tranches, $this->axes($axe, $valeurA)));
+            $b = $ids($service->filtrerTrierPaginer($tranches, $this->axes($axe, $valeurB)));
+
+            $this->assertSame([], array_intersect($a, $b), "Axe {$axe} : les deux valeurs doivent être DISJOINTES.");
+            $this->assertCount($couverture, array_merge($a, $b), "Axe {$axe} : couverture attendue.");
+        }
+    }
+
+    public function testAxeEcheanceExclutLesTranchesSansDate(): void
     {
         $echue = $this->makeTranche(1, 'Non payée', new \DateTimeImmutable('-1 day'), 100.0);
         $aEchoir = $this->makeTranche(2, 'Non payée', new \DateTimeImmutable('+1 day'), 100.0);
         $sansEcheance = $this->makeTranche(3, 'Non payée', null, 100.0);
 
         $service = $this->makeService();
+        $echues = $this->axes(TranchePaiementScope::AXE_ECHEANCE, TranchePaiementScope::ECHUE);
+        $aVenir = $this->axes(TranchePaiementScope::AXE_ECHEANCE, TranchePaiementScope::A_ECHOIR);
 
-        $this->assertTrue($service->correspondAuFiltre($echue, TranchePaiementScope::STATUT_ECHUES));
-        $this->assertFalse($service->correspondAuFiltre($echue, TranchePaiementScope::STATUT_A_ECHOIR));
+        $this->assertTrue($service->correspondAuFiltre($echue, $echues));
+        $this->assertFalse($service->correspondAuFiltre($echue, $aVenir));
 
-        $this->assertFalse($service->correspondAuFiltre($aEchoir, TranchePaiementScope::STATUT_ECHUES));
-        $this->assertTrue($service->correspondAuFiltre($aEchoir, TranchePaiementScope::STATUT_A_ECHOIR));
+        $this->assertFalse($service->correspondAuFiltre($aEchoir, $echues));
+        $this->assertTrue($service->correspondAuFiltre($aEchoir, $aVenir));
 
-        // Sans échéance : jamais « échue » (pas de retard mesurable), mais à échoir.
-        $this->assertFalse($service->correspondAuFiltre($sansEcheance, TranchePaiementScope::STATUT_ECHUES));
-        $this->assertTrue($service->correspondAuFiltre($sansEcheance, TranchePaiementScope::STATUT_A_ECHOIR));
+        // Sans date d'échéance, la tranche n'est ni en retard ni à échoir : l'information
+        // n'existe pas, on ne la range pas d'office dans « à échoir ». Elle reste visible
+        // sans cet axe, et le tri par urgence la place après les tranches datées.
+        $this->assertFalse($service->correspondAuFiltre($sansEcheance, $echues));
+        $this->assertFalse($service->correspondAuFiltre($sansEcheance, $aVenir));
+        $this->assertTrue($service->correspondAuFiltre($sansEcheance, $this->axes(TranchePaiementScope::AXE_PRIME, TranchePaiementScope::IMPAYEE)));
     }
 
     public function testTriParUrgence(): void
@@ -117,63 +198,46 @@ class TranchePaiementServiceTest extends TestCase
         );
     }
 
-    public function testTropPercuJamaisEnRetardNiImpayee(): void
+    public function testTropPercuCompteCommeSolde(): void
     {
-        // Note de crédit / trop-perçu : soldes négatifs, statut « Payée ».
+        // Note de crédit / trop-perçu : soldes négatifs. Rien à recouvrer, donc « payée »
+        // sur les deux axes de dette — un solde négatif n'est pas une dette.
         $tranche = $this->makeTranche(1, 'Payée', new \DateTimeImmutable('-15 days'), -50.0, -10.0);
 
         $service = $this->makeService();
-        $this->assertFalse($service->correspondAuFiltre($tranche, TranchePaiementScope::STATUT_IMPAYEES));
-        $this->assertFalse($service->correspondAuFiltre($tranche, TranchePaiementScope::STATUT_ECHUES));
-        $this->assertTrue($service->correspondAuFiltre($tranche, TranchePaiementScope::STATUT_PAYEES));
+        $this->assertFalse($service->correspondAuFiltre($tranche, $this->axes(TranchePaiementScope::AXE_PRIME, TranchePaiementScope::IMPAYEE)));
+        $this->assertTrue($service->correspondAuFiltre($tranche, $this->axes(TranchePaiementScope::AXE_PRIME, TranchePaiementScope::PAYEE)));
+        $this->assertTrue($service->correspondAuFiltre($tranche, $this->axes(TranchePaiementScope::AXE_COMMISSION, TranchePaiementScope::PAYEE)));
     }
 
-    public function testFiltreRetroAPayerCroiseLesStatuts(): void
+    public function testAxeRetroIgnoreLesTranchesSansRetro(): void
     {
-        // Tranche soldée à l'encaissement MAIS rétro partenaire exigible : elle doit
-        // remonter sous « Rétro à payer » (flux inverse), pas sous « Impayées ».
+        // Tranche soldée à l'encaissement MAIS rétro partenaire encore due : elle remonte
+        // sous « rétro impayée » (flux inverse : le courtier est ici le débiteur).
         $payeeAvecRetro = $this->makeTranche(1, 'Payée', new \DateTimeImmutable('-5 days'));
-        $payeeAvecRetro->retroCommissionExigible = 120.0;
+        $payeeAvecRetro->retroCommission = 120.0;
+        $payeeAvecRetro->retroCommissionSolde = 120.0;
 
-        $payeeSansRetro = $this->makeTranche(2, 'Payée', new \DateTimeImmutable('-5 days'));
-        $payeeSansRetro->retroCommissionExigible = 0.0;
-
-        // Solde de rétro dû mais commission partageable PAS encore encaissée :
-        // l'indicateur calculé vaut 0 → pas encore exigible.
-        $impayeeRetroNonNee = $this->makeTranche(3, 'Non payée', new \DateTimeImmutable('-2 days'), 100.0);
-        $impayeeRetroNonNee->retroCommissionExigible = 0.0;
-
-        $service = $this->makeService();
-
-        $this->assertTrue($service->correspondAuFiltre($payeeAvecRetro, TranchePaiementScope::STATUT_RETRO_A_PAYER));
-        $this->assertFalse($service->correspondAuFiltre($payeeAvecRetro, TranchePaiementScope::STATUT_IMPAYEES));
-        $this->assertFalse($service->correspondAuFiltre($payeeSansRetro, TranchePaiementScope::STATUT_RETRO_A_PAYER));
-        $this->assertFalse($service->correspondAuFiltre($impayeeRetroNonNee, TranchePaiementScope::STATUT_RETRO_A_PAYER));
-
-        $resultat = $service->filtrerTrierPaginer(
-            [$payeeAvecRetro, $payeeSansRetro, $impayeeRetroNonNee],
-            TranchePaiementScope::STATUT_RETRO_A_PAYER,
-        );
-        $this->assertSame([1], array_map(static fn (Tranche $t) => $t->getId(), $resultat['data']));
-    }
-
-    public function testFiltreCommissionExigible(): void
-    {
-        // Prime signalée payée (assureur) mais commission non collectée : la commission
-        // devient exigible — la tranche doit remonter sous « Commission exigible ».
-        $exigible = $this->makeTranche(1, 'Prime payée, commission due', new \DateTimeImmutable('-5 days'), 0.0, 150.0);
-        $exigible->commissionExigible = 150.0;
-
-        // Prime NON payée : commission due mais PAS exigible (l'assureur n'a rien encaissé).
-        $nonExigible = $this->makeTranche(2, 'Non payée', new \DateTimeImmutable('-5 days'), 500.0, 150.0);
-        $nonExigible->commissionExigible = 0.0;
+        // Aucune rétro sur cette affaire : la dette n'existe pas, la tranche sort des DEUX
+        // valeurs de l'axe (elle n'est pas « rétro payée » par défaut).
+        $sansRetro = $this->makeTranche(2, 'Payée', new \DateTimeImmutable('-5 days'));
+        $sansRetro->retroCommission = 0.0;
+        $sansRetro->retroCommissionSolde = 0.0;
 
         $service = $this->makeService();
+        $aPayer = $this->axes(TranchePaiementScope::AXE_RETRO, TranchePaiementScope::IMPAYEE);
+        $reversee = $this->axes(TranchePaiementScope::AXE_RETRO, TranchePaiementScope::PAYEE);
 
-        $this->assertTrue($service->correspondAuFiltre($exigible, TranchePaiementScope::STATUT_COMMISSION_EXIGIBLE));
-        $this->assertFalse($service->correspondAuFiltre($nonExigible, TranchePaiementScope::STATUT_COMMISSION_EXIGIBLE));
+        $this->assertTrue($service->correspondAuFiltre($payeeAvecRetro, $aPayer));
+        $this->assertFalse($service->correspondAuFiltre($payeeAvecRetro, $reversee));
+        $this->assertFalse($service->correspondAuFiltre($sansRetro, $aPayer));
+        $this->assertFalse($service->correspondAuFiltre($sansRetro, $reversee));
 
-        $resultat = $service->filtrerTrierPaginer([$exigible, $nonExigible], TranchePaiementScope::STATUT_COMMISSION_EXIGIBLE);
+        // « À verser MAINTENANT » = la dette existe ET la commission est encaissée.
+        $resultat = $service->filtrerTrierPaginer([$payeeAvecRetro, $sansRetro], $this->axes(
+            TranchePaiementScope::AXE_RETRO, TranchePaiementScope::IMPAYEE,
+            TranchePaiementScope::AXE_COMMISSION, TranchePaiementScope::PAYEE,
+        ));
         $this->assertSame([1], array_map(static fn (Tranche $t) => $t->getId(), $resultat['data']));
     }
 
@@ -185,27 +249,43 @@ class TranchePaiementServiceTest extends TestCase
         }
 
         $service = $this->makeService();
+        $axes = $this->axes(TranchePaiementScope::AXE_PRIME, TranchePaiementScope::IMPAYEE);
 
-        $page1 = $service->filtrerTrierPaginer($tranches, TranchePaiementScope::STATUT_IMPAYEES, 1, 20);
+        $page1 = $service->filtrerTrierPaginer($tranches, $axes, 1, 20);
         $this->assertCount(20, $page1['data']);
         $this->assertSame(45, $page1['totalItems']);
         $this->assertSame(3, $page1['totalPages']);
         // Retard décroissant : la tranche la plus ancienne (id 45) ouvre la page 1.
         $this->assertSame(45, $page1['data'][0]->getId());
 
-        $page3 = $service->filtrerTrierPaginer($tranches, TranchePaiementScope::STATUT_IMPAYEES, 3, 20);
+        $page3 = $service->filtrerTrierPaginer($tranches, $axes, 3, 20);
         $this->assertCount(5, $page3['data']);
 
-        $pageHorsBornes = $service->filtrerTrierPaginer($tranches, TranchePaiementScope::STATUT_IMPAYEES, 9, 20);
+        $pageHorsBornes = $service->filtrerTrierPaginer($tranches, $axes, 9, 20);
         $this->assertSame([], $pageHorsBornes['data']);
         $this->assertSame(45, $pageHorsBornes['totalItems']);
     }
 
-    public function testTotauxCalculesSurEnsembleFiltreNonLaPage(): void
+    public function testSansAxeToutesLesTranchesSuiviesRemontent(): void
     {
-        // Couvert indirectement via lister() dans le test Kernel ; ici on vérifie
-        // au moins que la forme du retour du chemin liste est complète et stable.
-        $resultat = $this->makeService()->filtrerTrierPaginer([], TranchePaiementScope::STATUT_IMPAYEES);
+        // Aucun axe = aucun filtre de dette. Seul « N/A » (projet non validé) reste exclu.
+        $tranches = [
+            $this->makeTranche(1, 'Non payée', new \DateTimeImmutable('-1 day'), 500.0),
+            $this->makeTranche(2, 'Payée', new \DateTimeImmutable('-2 days')),
+            $this->makeTranche(3, 'N/A', null),
+        ];
+
+        $resultat = $this->makeService()->filtrerTrierPaginer($tranches, []);
+
+        $this->assertSame([1, 2, 3], array_map(static fn (Tranche $t) => $t->getId(), $resultat['data']));
+        $this->assertSame(3, $resultat['totalItems']);
+    }
+
+    public function testFormeDuRetourStable(): void
+    {
+        $resultat = $this->makeService()->filtrerTrierPaginer([], $this->axes(
+            TranchePaiementScope::AXE_PRIME, TranchePaiementScope::IMPAYEE,
+        ));
 
         $this->assertSame(200, $resultat['status']['code']);
         $this->assertSame(0, $resultat['totalItems']);

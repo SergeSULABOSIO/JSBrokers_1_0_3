@@ -532,7 +532,7 @@ class PortefeuilleFilterTest extends WebTestCase
 
     /**
      * Rubrique Tranches : le périmètre « Mon portefeuille » (badge) se COMBINE, dès le
-     * premier chargement, avec le filtre « Impayées » propre à cette rubrique (les deux
+     * premier chargement, avec l'axe « Prime impayée » propre à cette rubrique (les deux
      * critères sont indépendants et retirables séparément). Sans ce périmètre, un invité
      * gestionnaire de portefeuille verrait les tranches de TOUS les clients de
      * l'entreprise — pas seulement les siens.
@@ -558,8 +558,13 @@ class PortefeuilleFilterTest extends WebTestCase
 
         // Les DEUX critères synthétiques coexistent (badges indépendants et retirables).
         $decoded = html_entity_decode($html, ENT_QUOTES | ENT_HTML5);
-        $this->assertStringContainsString('__statut_paiement__', $decoded, 'Le filtre « Impayées » par défaut doit rester transmis.');
-        $this->assertStringContainsString('__mon_portefeuille__', $decoded, 'Le périmètre portefeuille doit être transmis en plus du filtre statut.');
+        $this->assertStringContainsString('__paiement_prime__', $decoded, 'L\'axe « Prime impayée » par défaut doit rester transmis.');
+        $this->assertStringContainsString('__mon_portefeuille__', $decoded, 'Le périmètre portefeuille doit être transmis en plus de l\'axe de dette.');
+        // Les quatre groupes de chips sont déclarés par le canevas de liste : l'utilisateur
+        // doit pouvoir croiser les dettes à l'écran, pas seulement via l'assistant.
+        foreach (['__paiement_commission__', '__paiement_retro__', '__echeance_tranche__'] as $axe) {
+            $this->assertStringContainsString($axe, $decoded, sprintf('L\'axe « %s » doit être exposé (chips + recherche avancée).', $axe));
+        }
         $this->assertStringContainsString('Mon portefeuille', $decoded, 'Le critère synthétique « Mon portefeuille » doit être exposé dans le canevas de recherche de Tranche.');
 
         // Recherche avancée : les critères assureur / assuré / risque (chemins de

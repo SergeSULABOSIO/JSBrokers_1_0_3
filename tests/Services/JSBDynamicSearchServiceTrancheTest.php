@@ -27,16 +27,29 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
- * Moteur de recherche, critère synthétique « Statut de paiement » (Tranche) :
- * bascule sur le chemin in-memory (filtre par statut calculé + tri par urgence +
- * pagination), scoping entreprise conservé (AuditableTrait), non-régression du
- * chemin standard (ordre id DESC) quand le critère est absent.
+ * Moteur de recherche, critères synthétiques « Paiement » (Tranche) : bascule sur le
+ * chemin in-memory (filtre par AXES calculés + tri par urgence + pagination), cumul de
+ * plusieurs axes en ET, scoping entreprise conservé (AuditableTrait), non-régression du
+ * chemin standard (ordre id DESC) quand aucun axe n'est présent.
  */
 class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
 {
     private const OWNER_EMAIL = 'phpunit-tranchepaie-owner@test.local';
     private const ENTREPRISE_NOM = 'PHPUnit TranchePaie SARL';
     private const ENTREPRISE_B_NOM = 'PHPUnit TranchePaie Autre SARL';
+
+    /** Prime encore due par l'assuré. */
+    private const PRIME_DUE = [TranchePaiementScope::AXE_PRIME => TranchePaiementScope::IMPAYEE];
+    /** Prime ET commission soldées : plus rien à recouvrer. */
+    private const TOUT_SOLDE = [
+        TranchePaiementScope::AXE_PRIME => TranchePaiementScope::PAYEE,
+        TranchePaiementScope::AXE_COMMISSION => TranchePaiementScope::PAYEE,
+    ];
+    /** Commission exigible = prime payée par l'assuré, commission encore due au courtier. */
+    private const COMMISSION_EXIGIBLE = [
+        TranchePaiementScope::AXE_PRIME => TranchePaiementScope::PAYEE,
+        TranchePaiementScope::AXE_COMMISSION => TranchePaiementScope::IMPAYEE,
+    ];
 
     protected function setUp(): void
     {
@@ -230,7 +243,7 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
 
         $resultat = $this->service()->search(
             Tranche::class,
-            [TranchePaiementScope::CRITERION_KEY => 'impayees'],
+            self::PRIME_DUE,
             $entreprise,
         );
 
@@ -250,9 +263,14 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
     {
         ['entreprise' => $entreprise, 'echue' => $echue] = $this->seed();
 
+        // Cumul de deux axes en ET (prime due + échue), chacun sous sa forme enveloppée
+        // telle que la produisent les chips : c'est le format réel du Cerveau.
         $echues = $this->service()->search(
             Tranche::class,
-            [TranchePaiementScope::CRITERION_KEY => ['operator' => '=', 'value' => 'echues', 'label' => 'Échues']],
+            [
+                TranchePaiementScope::AXE_PRIME => ['operator' => '=', 'value' => TranchePaiementScope::IMPAYEE, 'label' => 'Prime impayée'],
+                TranchePaiementScope::AXE_ECHEANCE => ['operator' => '=', 'value' => TranchePaiementScope::ECHUE, 'label' => 'Échues'],
+            ],
             $entreprise,
         );
         $this->assertSame(1, $echues['totalItems']);
@@ -260,7 +278,7 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
 
         $payees = $this->service()->search(
             Tranche::class,
-            [TranchePaiementScope::CRITERION_KEY => 'payees'],
+            self::TOUT_SOLDE,
             $entreprise,
         );
         $this->assertSame(0, $payees['totalItems'], 'Aucun encaissement : rien n\'est payé.');
@@ -285,15 +303,23 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
 
         $entreprise = $em->getRepository(Entreprise::class)->find($entreprise->getId());
 
-        // La tranche du projet n'apparaît sous AUCUN filtre de suivi.
-        foreach (['impayees', 'echues', 'commission_exigible', 'retro_a_payer', 'payees'] as $statut) {
-            $resultat = $this->service()->search(Tranche::class, [TranchePaiementScope::CRITERION_KEY => $statut], $entreprise);
+        // La tranche du projet n'apparaît sous AUCUNE combinaison d'axes : la garde
+        // « N/A » (cotation sans avenant) précède tous les prédicats d'axe.
+        $combinaisons = [
+            'prime due' => self::PRIME_DUE,
+            'prime due et échue' => self::PRIME_DUE + [TranchePaiementScope::AXE_ECHEANCE => TranchePaiementScope::ECHUE],
+            'commission exigible' => self::COMMISSION_EXIGIBLE,
+            'rétro à payer' => [TranchePaiementScope::AXE_RETRO => TranchePaiementScope::IMPAYEE],
+            'tout soldé' => self::TOUT_SOLDE,
+        ];
+        foreach ($combinaisons as $libelle => $axes) {
+            $resultat = $this->service()->search(Tranche::class, $axes, $entreprise);
             $ids = array_map(static fn (Tranche $t) => $t->getId(), $resultat['data']);
-            $this->assertNotContains($projetId, $ids, "La tranche d'un projet ne doit pas être « {$statut} ».");
+            $this->assertNotContains($projetId, $ids, "La tranche d'un projet ne doit pas être « {$libelle} ».");
         }
 
         // Les impayées restent EXACTEMENT les 2 tranches de la cotation validée.
-        $impayees = $this->service()->search(Tranche::class, [TranchePaiementScope::CRITERION_KEY => 'impayees'], $entreprise);
+        $impayees = $this->service()->search(Tranche::class, self::PRIME_DUE, $entreprise);
         $this->assertEqualsCanonicalizing(
             [$echue->getId(), $aEchoir->getId()],
             array_map(static fn (Tranche $t) => $t->getId(), $impayees['data']),
@@ -337,7 +363,7 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
         // La tranche signalée sort des impayées (pas de commission configurée → « Payée »)…
         $impayees = $this->service()->search(
             Tranche::class,
-            [TranchePaiementScope::CRITERION_KEY => 'impayees'],
+            self::PRIME_DUE,
             $entreprise,
         );
         $this->assertSame(
@@ -349,7 +375,7 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
         // …et remonte sous « Payées », avec la prime déclarée visible.
         $payees = $this->service()->search(
             Tranche::class,
-            [TranchePaiementScope::CRITERION_KEY => 'payees'],
+            self::TOUT_SOLDE,
             $entreprise,
         );
         $this->assertSame(1, $payees['totalItems']);
@@ -470,7 +496,7 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
         $em->clear();
 
         $entreprise = $em->getRepository(Entreprise::class)->find($entreprise->getId());
-        $payees = $this->service()->search(Tranche::class, [TranchePaiementScope::CRITERION_KEY => 'payees'], $entreprise);
+        $payees = $this->service()->search(Tranche::class, self::TOUT_SOLDE, $entreprise);
         $this->assertSame(0, $payees['totalItems'], 'Note assureur partiellement encaissée : la prime ne doit PAS être réputée payée.');
         $this->assertFalse(
             $helper->isTrancheCommissionAssureurSoldee($em->getRepository(Tranche::class)->find($echueId)),
@@ -498,7 +524,7 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
         );
         $this->assertEqualsWithDelta(0.0, $helper->getTranchePrimeDeclareePayee($trancheFraiche), 0.001, 'Fait dérivé : aucun signalement créé.');
 
-        $payees = $this->service()->search(Tranche::class, [TranchePaiementScope::CRITERION_KEY => 'payees'], $entreprise);
+        $payees = $this->service()->search(Tranche::class, self::TOUT_SOLDE, $entreprise);
         $this->assertSame(
             [$echueId],
             array_map(static fn (Tranche $t) => $t->getId(), $payees['data']),
@@ -507,7 +533,7 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
         $this->assertSame('Payée', $payees['data'][0]->statutPaiement);
 
         // L'autre tranche (aucune note, aucun encaissement) reste impayée.
-        $impayees = $this->service()->search(Tranche::class, [TranchePaiementScope::CRITERION_KEY => 'impayees'], $entreprise);
+        $impayees = $this->service()->search(Tranche::class, self::PRIME_DUE, $entreprise);
         $this->assertSame([$aEchoirId], array_map(static fn (Tranche $t) => $t->getId(), $impayees['data']));
     }
 
@@ -575,12 +601,12 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
         $trancheFraiche = $em->getRepository(Tranche::class)->find($echueId);
         $this->assertEqualsWithDelta(500.0, $helper->getTranchePrimePayee($trancheFraiche), 0.01, 'Le bordereau atteste la prime sans article ni signalement.');
 
-        $exigibles = $this->service()->search(Tranche::class, [TranchePaiementScope::CRITERION_KEY => 'commission_exigible'], $entreprise);
+        $exigibles = $this->service()->search(Tranche::class, self::COMMISSION_EXIGIBLE, $entreprise);
         $idsExigibles = array_map(static fn (Tranche $t) => $t->getId(), $exigibles['data']);
         $this->assertContains($echueId, $idsExigibles, 'Prime détenue par l\'assureur → commission à réclamer.');
         $this->assertSame('Prime payée, commission due', $exigibles['data'][0]->statutPaiement);
 
-        $payees = $this->service()->search(Tranche::class, [TranchePaiementScope::CRITERION_KEY => 'payees'], $entreprise);
+        $payees = $this->service()->search(Tranche::class, self::TOUT_SOLDE, $entreprise);
         $this->assertSame(0, $payees['totalItems'], 'Commission pas encore reversée : rien n\'est soldé.');
 
         // 2) Note liée au bordereau SANS AUCUN ARTICLE, intégralement payée : le
@@ -604,15 +630,15 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
         $helper->reset();
 
         $entreprise = $em->getRepository(Entreprise::class)->find($entreprise->getId());
-        $payees = $this->service()->search(Tranche::class, [TranchePaiementScope::CRITERION_KEY => 'payees'], $entreprise);
+        $payees = $this->service()->search(Tranche::class, self::TOUT_SOLDE, $entreprise);
         $idsPayees = array_map(static fn (Tranche $t) => $t->getId(), $payees['data']);
         $this->assertContains($echueId, $idsPayees, 'Bordereau soldé sans articles : la tranche doit être payée.');
         $this->assertContains($aEchoirId, $idsPayees, 'Toutes les tranches de l\'avenant attesté sont couvertes.');
 
-        $impayees = $this->service()->search(Tranche::class, [TranchePaiementScope::CRITERION_KEY => 'impayees'], $entreprise);
+        $impayees = $this->service()->search(Tranche::class, self::PRIME_DUE, $entreprise);
         $this->assertSame(0, $impayees['totalItems'], 'Plus aucun reste dû : ni prime (attestée) ni commission (bordereau soldé).');
 
-        $exigibles = $this->service()->search(Tranche::class, [TranchePaiementScope::CRITERION_KEY => 'commission_exigible'], $entreprise);
+        $exigibles = $this->service()->search(Tranche::class, self::COMMISSION_EXIGIBLE, $entreprise);
         $this->assertSame(0, $exigibles['totalItems'], 'Commission encaissée : l\'exigibilité s\'éteint.');
     }
 
@@ -762,13 +788,15 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
         $this->assertEqualsWithDelta(500.0, $helper->getTrancheMontantCommissionEncaissee($trancheBFraiche), 0.01, 'Commission B réputée encaissée à hauteur de SA part (100 % de 500).');
     }
 
-    public function testStatutInvalideRetombeSurCheminStandard(): void
+    public function testValeurDAxeInvalideRetombeSurCheminStandard(): void
     {
         ['entreprise' => $entreprise] = $this->seed();
 
+        // Valeur hors énumération : la clé d'axe est retirée (elle n'est pas filtrable en
+        // SQL) et la recherche standard reprend, scopée. Surtout : aucun filtre fantôme.
         $resultat = $this->service()->search(
             Tranche::class,
-            [TranchePaiementScope::CRITERION_KEY => 'valeur-inconnue'],
+            [TranchePaiementScope::AXE_PRIME => 'valeur-inconnue'],
             $entreprise,
         );
 
@@ -899,7 +927,7 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
         $impayeesAssureurA = $this->service()->search(
             Tranche::class,
             [
-                TranchePaiementScope::CRITERION_KEY => 'impayees',
+                TranchePaiementScope::AXE_PRIME => TranchePaiementScope::IMPAYEE,
                 'cotation.assureur' => ['operator' => '=', 'value' => $assureurAId],
             ],
             $entreprise,
@@ -909,7 +937,7 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
         $impayeesAssureurB = $this->service()->search(
             Tranche::class,
             [
-                TranchePaiementScope::CRITERION_KEY => 'impayees',
+                TranchePaiementScope::AXE_PRIME => TranchePaiementScope::IMPAYEE,
                 'cotation.assureur' => ['operator' => '=', 'value' => $assureurBId],
             ],
             $entreprise,

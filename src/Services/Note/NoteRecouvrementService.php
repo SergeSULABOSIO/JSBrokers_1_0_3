@@ -14,7 +14,7 @@ use Psr\Log\NullLogger;
  *
  * Distinguer les deux stades, jamais les confondre :
  *  - commission EXIGIBLE : la prime est payée, la commission peut être facturée
- *    — c'est TranchePaiementService (STATUT_COMMISSION_EXIGIBLE) ;
+ *    — c'est TranchePaiementService, axes {prime: payee, commission: impayee} ;
  *  - commission FACTURÉE non encaissée : une note de débit adressée à l'assureur
  *    a été émise et son solde reste dû — c'est ce service.
  *

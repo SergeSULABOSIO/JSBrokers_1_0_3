@@ -225,7 +225,14 @@ class AvenantMarquageNonRenouvelableTest extends KernelTestCase
         $service = static::getContainer()->get(TranchePaiementService::class);
         $entreprise = $this->em()->getRepository(Entreprise::class)->find($this->entreprise->getId());
 
-        $resultat = $service->lister($entreprise, TranchePaiementScope::STATUT_IMPAYEES, null, null, 1, 100);
+        $resultat = $service->lister(
+            $entreprise,
+            [TranchePaiementScope::AXE_PRIME => TranchePaiementScope::IMPAYEE],
+            null,
+            null,
+            1,
+            100,
+        );
 
         $ids = [];
         foreach ($resultat['items'] ?? [] as $tranche) {

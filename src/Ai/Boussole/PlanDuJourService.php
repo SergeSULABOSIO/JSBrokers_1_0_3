@@ -331,11 +331,14 @@ final class PlanDuJourService
      */
     private function sectionsTranches(Entreprise $entreprise, Invite $invite, \DateTimeImmutable $jour): array
     {
-        // Impayées (et non « échues ») : le tri par urgence du service place déjà
-        // les retards en tête, la section montre donc bien le plus pressant.
+        // Axe PRIME SEULE, sans borner à l'échéance : le tri par urgence du service place
+        // déjà les retards en tête, la section montre donc bien le plus pressant. Le titre
+        // « dues par les clients » ne serait PAS vrai avec l'ancien filtre « impayées », qui
+        // comptait aussi les dettes de commission (débiteur = l'assureur) tout en valorisant
+        // le seul solde de prime — d'où un compte de 5 pour 1 seule prime réellement due.
         $primes = $this->tranchePaiement->lister(
             $entreprise,
-            TranchePaiementScope::STATUT_IMPAYEES,
+            [TranchePaiementScope::AXE_PRIME => TranchePaiementScope::IMPAYEE],
             null,
             null,
             1,
@@ -343,9 +346,13 @@ final class PlanDuJourService
             $invite,
         );
 
+        // Commission exigible = prime PAYÉE + commission impayée : sa définition même.
         $commissions = $this->tranchePaiement->lister(
             $entreprise,
-            TranchePaiementScope::STATUT_COMMISSION_EXIGIBLE,
+            [
+                TranchePaiementScope::AXE_PRIME => TranchePaiementScope::PAYEE,
+                TranchePaiementScope::AXE_COMMISSION => TranchePaiementScope::IMPAYEE,
+            ],
             null,
             null,
             1,

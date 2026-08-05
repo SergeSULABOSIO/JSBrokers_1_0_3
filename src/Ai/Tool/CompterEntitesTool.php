@@ -70,13 +70,9 @@ final class CompterEntitesTool implements AiToolInterface
                         . 'echus (déjà expirés), sous_30j (échéance dans les 30 prochains jours), '
                         . 'de_31_a_60j, au_dela_60j. Mêmes bornes que les filtres rapides de la rubrique.',
                 ],
-                'statutPaiement' => [
-                    'type' => 'string',
-                    'enum' => array_keys(TranchePaiementScope::VALEURS),
-                    'description' => 'TRANCHE uniquement : restreint à un statut de paiement — '
-                        . 'impayees, echues, a_echoir, partiellement, payees, retro_a_payer, '
-                        . 'commission_exigible. Mêmes règles que les filtres rapides de la rubrique.',
-                ],
+                'axes' => TranchePaiementScope::proprieteSchema(
+                    'TRANCHE uniquement, mêmes règles que les groupes de chips de la rubrique.'
+                ),
                 'validation' => [
                     'type' => 'string',
                     'enum' => array_keys(CotationSouscriptionScope::VALEURS),
@@ -123,8 +119,8 @@ final class CompterEntitesTool implements AiToolInterface
         $args = ['entite' => $shortName];
         if ($shortName === 'Avenant' && ($f = AvenantEcheanceScope::detecterDepuisTexte($normalized)) !== null) {
             $args['echeance'] = $f;
-        } elseif ($shortName === 'Tranche' && ($s = TranchePaiementScope::detecterDepuisTexte($normalized)) !== null) {
-            $args['statutPaiement'] = $s;
+        } elseif ($shortName === 'Tranche' && ($s = TranchePaiementScope::versNomsCourts(TranchePaiementScope::detecterAxesDepuisTexte($normalized))) !== []) {
+            $args['axes'] = $s;
         } elseif ($shortName === 'Cotation' && ($v = CotationSouscriptionScope::detecterDepuisTexte($normalized)) !== null) {
             $args['validation'] = $v;
         } elseif ($shortName === 'Piste' && ($t = PisteTransformationScope::detecterDepuisTexte($normalized)) !== null) {
@@ -162,8 +158,13 @@ final class CompterEntitesTool implements AiToolInterface
         // Filtres rapides des rubriques (mêmes critères synthétiques que les chips, donc
         // même moteur et même résultat) : fenêtre d'échéance pour Avenant, statut de
         // paiement pour Tranche. Ignorés si l'entité ne s'y prête pas.
+        // Scopé à Tranche : sans cette garde, des `axes` transmis par erreur sur une autre
+        // entité annonceraient un filtre que le comptage n'a pas appliqué.
+        $axesTranche = $shortName === 'Tranche'
+            ? TranchePaiementScope::normaliserAxes(is_array($args['axes'] ?? null) ? $args['axes'] : [])
+            : [];
         $criteres = AvenantEcheanceScope::critereRecherche($shortName, $args['echeance'] ?? null)
-            + TranchePaiementScope::critereRecherche($shortName, $args['statutPaiement'] ?? null)
+            + TranchePaiementScope::critereRecherche($shortName, $axesTranche)
             + CotationSouscriptionScope::critereRecherche($shortName, $args['validation'] ?? null)
             + PisteTransformationScope::critereRecherche($shortName, $args['transformation'] ?? null);
 
@@ -185,9 +186,9 @@ final class CompterEntitesTool implements AiToolInterface
             isset($criteres[AvenantEcheanceScope::CRITERION_KEY]) => AvenantEcheanceScope::libelle(
                 (string) $criteres[AvenantEcheanceScope::CRITERION_KEY]['value']
             ),
-            isset($criteres[TranchePaiementScope::CRITERION_KEY]) => TranchePaiementScope::libelle(
-                (string) $criteres[TranchePaiementScope::CRITERION_KEY]['value']
-            ),
+            // Combinaison lisible (« Prime impayée · Échues ») : le compte annoncé doit
+            // porter son filtre, axe par axe, sinon le nombre seul redevient ambigu.
+            $axesTranche !== [] => TranchePaiementScope::libelleCombinaison($axesTranche),
             isset($criteres[CotationSouscriptionScope::CRITERION_KEY]) => CotationSouscriptionScope::libelle(
                 (string) $criteres[CotationSouscriptionScope::CRITERION_KEY]['value']
             ),
