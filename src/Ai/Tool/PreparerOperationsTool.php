@@ -26,7 +26,7 @@ use App\Token\TokenAccountService;
  * (jamais les paramètres/rôles de l'espace). Toute opération hors périmètre fait
  * échouer la préparation.
  */
-final class PreparerOperationsTool implements AiToolInterface
+final class PreparerOperationsTool implements AiToolProduisantUnPlan
 {
     public function __construct(
         private readonly WorkspaceMutationService $mutationService,

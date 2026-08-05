@@ -28,7 +28,7 @@ use App\Services\JSBDynamicSearchService;
  * commissions, taxes et rétrocommissions restent à recouvrer, et le résultat les énonce
  * pour que Ket ne laisse jamais croire que le dossier est clos.
  */
-final class PreparerMarquageNonRenouvelableTool implements AiToolInterface
+final class PreparerMarquageNonRenouvelableTool implements AiToolProduisantUnPlan
 {
     /** Nombre maximal de polices proposées quand la référence est ambiguë. */
     private const MAX_CANDIDATS = 8;

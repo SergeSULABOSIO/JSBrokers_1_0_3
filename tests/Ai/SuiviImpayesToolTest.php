@@ -86,6 +86,33 @@ class SuiviImpayesToolTest extends TestCase
         $this->assertArrayNotHasKey('tronque', $result->data);
     }
 
+    /**
+     * NOTE DE CONDUITE. Cet outil de lecture livre toute la matière d'un plan
+     * d'écriture (id de tranche, échéance, solde) sans en être un : sans note, Ket a
+     * présenté en prose un plan recopié du tour précédent, qu'aucun bouton ne pouvait
+     * accompagner (incident du 2026-08-05, série de « le suivant »). La note dit que
+     * c'est une lecture et NOMME l'écriture qui la prolonge.
+     */
+    public function testPorteUneNoteDeConduiteVersLEcriture(): void
+    {
+        $tranchePaiement = $this->createMock(TranchePaiementService::class);
+        $tranchePaiement->method('lister')->willReturn([
+            'items' => [],
+            'totaux' => ['nb' => 0, 'totalPrime' => 0.0, 'totalSoldePrime' => 0.0, 'totalSoldeCommission' => 0.0],
+            'totalItems' => 0,
+            'currentPage' => 1,
+            'totalPages' => 1,
+        ]);
+
+        $note = $this->makeTool(true, $tranchePaiement)->execute([], $this->makeScope())->data['note'] ?? '';
+
+        $this->assertStringContainsString('LECTURE SEULE', $note);
+        $this->assertStringContainsString('aucun bouton de validation', $note);
+        $this->assertStringContainsString('signaler_paiement_prime', $note);
+        // Le piège des demandes en série est nommé dans la note elle-même.
+        $this->assertStringContainsString('le suivant', $note);
+    }
+
     public function testStatutInconnuIntrouvable(): void
     {
         $result = $this->makeTool(true)->execute(['statut' => 'inconnu'], $this->makeScope());

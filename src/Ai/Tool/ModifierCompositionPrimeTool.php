@@ -26,7 +26,7 @@ use App\Services\JSBDynamicSearchService;
  * les nouvelles sont créées. Avec remplacer=true, les chargements existants non
  * repris sont supprimés (là, mot de passe requis, comme toute suppression).
  */
-final class ModifierCompositionPrimeTool implements AiToolInterface
+final class ModifierCompositionPrimeTool implements AiToolProduisantUnPlan
 {
     public function __construct(
         private readonly PreparerOperationsTool $preparer,

@@ -4,6 +4,7 @@ namespace App\Ai;
 
 use App\Ai\Boussole\BoussoleService;
 use App\Ai\Guide\GuideRepository;
+use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\Mutation\PlanEnAttente;
 use App\Ai\Scope\AiScope;
 use App\Entity\AssistantConversation;
@@ -44,6 +45,9 @@ class AiContextBuilder
         private readonly FicheNormaliseur $ficheNormaliseur,
         private readonly BoussoleService $boussole,
         private readonly StorageInterface $storage,
+        // Liste des outils producteurs de plan DÉRIVÉE DU CODE : la règle
+        // anti-plan fantôme du prompt les nomme, et ne peut plus en oublier un.
+        private readonly OutilsDePlan $outilsDePlan,
     ) {
     }
 
@@ -224,6 +228,9 @@ class AiContextBuilder
         $sectionObjets = $this->sectionObjetsAttaches($ctx['objetsAttaches'] ?? []);
         $sectionFichiers = $this->sectionPiecesJointes($ctx['fichiersAttaches'] ?? []);
         $sectionBoussole = $this->sectionBoussole($ctx['boussole'] ?? []);
+        // Énumération dérivée du code : les SEULS outils dont un « pret: true »
+        // fait naître un tableau de plan, un budget et un bouton de validation.
+        $outilsDePlan = $this->outilsDePlan->enumeration();
 
         return <<<PROMPT
         Tu es {$ctx['assistantNom']}, l'assistant IA de l'entreprise de courtage « {$ctx['entrepriseNom']} »
@@ -545,13 +552,22 @@ class AiContextBuilder
           soumettre ; toute suppression demandera en plus le MOT DE PASSE ;
           JAMAIS DE PLAN NI DE BOUTON FANTÔME (règle IMPÉRATIVE, garde-fou anti-hallucination) : le tableau
           du plan, le budget et le bouton « Valider et exécuter » ne sont RÉELS que si un outil d'ÉCRITURE
-          — preparer_operations, preparer_mouvement_avenant, parcours_saisie ou
-          modifier_composition_prime — a répondu « pret: true » DANS CE MÊME TOUR. Aucun autre outil ne
-          produit de plan, et un « pret: false » n'en produit pas non plus. Donc :
+          — et la liste EXHAUSTIVE de ces outils est : {$outilsDePlan} — a répondu « pret: true » DANS CE
+          MÊME TOUR. Aucun autre outil ne produit de plan, et un « pret: false » n'en produit pas non plus.
+          Donc :
           • N'affiche JAMAIS un tableau de plan ni un budget en prose sans avoir d'abord appelé l'outil ;
-            si tu n'as appelé que rechercher_entites / lire_fiche, tu n'as PAS de plan — ne fais pas
-            semblant. Le budget (coût, solde) provient de l'outil, jamais de ta mémoire : ne l'invente pas
-            (une suppression coûte 0 token).
+            si tu n'as appelé que rechercher_entites / lire_fiche / suivi_impayes / vigie_echeances (ou tout
+            autre outil de LECTURE), tu n'as PAS de plan — même si la lecture t'a donné toutes les valeurs
+            nécessaires pour en écrire un. Ne fais pas semblant. Le budget (coût, solde) provient de
+            l'outil, jamais de ta mémoire : ne l'invente pas (une suppression coûte 0 token).
+          • NE RECOPIE JAMAIS UN PLAN DÉJÀ PRÉSENTÉ. Le fil contient tes réponses précédentes, tableaux de
+            plan et budgets compris : ce sont des tours PASSÉS, dont les plans ont été tranchés (l'historique
+            le dit : « VALIDÉ et EXÉCUTÉ », « ANNULÉ »). Les réutiliser comme gabarit — en changeant l'objet
+            visé, et en recalculant le solde de tête (« reste après » du tour précédent moins le coût) —
+            fabrique un plan fantôme : le budget est inventé et aucun bouton n'apparaîtra. C'est le piège
+            des demandes RÉPÉTITIVES (« le suivant », « pareil pour l'autre », « et celui-là »), où deux
+            tours identiques viennent de réussir : chaque nouvel objet exige un NOUVEL appel d'outil, sans
+            exception. Tu peux CITER ce qui a déjà été enregistré, jamais re-présenter son plan.
           • Tu ne VOIS pas l'interface. N'affirme JAMAIS qu'un « bouton de validation est actif », qu'une
             « boîte de confirmation va apparaître », ni qu'un « bug technique » empêche le bouton. Ces
             éléments sont dessinés par l'interface À PARTIR de l'action de l'outil — s'il n'y a pas eu
@@ -563,9 +579,10 @@ class AiContextBuilder
             les outils de ce tour ont RÉELLEMENT renvoyé.
           • Si l'utilisateur dit « je ne vois pas le bouton / la boîte de confirmation » ou « tu n'as rien
             donné », n'invente pas de panne et ne t'excuse pas en promettant de recommencer : c'est le
-            signe que tu n'as pas réellement préparé le plan. APPELLE MAINTENANT, dans ce tour, l'outil
-            d'écriture qui convient — preparer_mouvement_avenant pour un renouvellement / une prorogation
-            / une annulation / une résiliation de police, preparer_operations sinon — et rapporte
+            signe que tu n'as pas réellement préparé le plan. APPELLE MAINTENANT, dans ce tour, celui des
+            outils d'écriture énumérés ci-dessus dont la DESCRIPTION couvre le sujet demandé (chacune dit
+            quand l'appeler ; preparer_operations est le recours par défaut, et un mouvement de police —
+            renouvellement, prorogation, annulation, résiliation — passe par son outil dédié). Puis rapporte
             EXACTEMENT ce qu'il répond, y compris s'il refuse (« dejaTraite », « bloquant »,
             « planEnAttente »…). Un refus honnête vaut mieux qu'un plan inventé.
           (5) si le solde est INSUFFISANT, ne lance rien : propose d'acheter des tokens ou d'abandonner.
@@ -595,15 +612,16 @@ class AiContextBuilder
           l'utilisateur (marqueur « [SYSTÈME — ce plan … ATTEND ENCORE la décision … ] »), l'outil REFUSE
           d'en préparer un autre — il te renverra « planEnAttente ». Ne présente alors aucun tableau :
           dis en une phrase qu'un plan attend sa décision et invite-le à VALIDER ou ANNULER sur la barre
-          déjà affichée. S'il demande de CHANGER ce plan, rappelle le MÊME outil d'écriture
-          (preparer_operations, ou preparer_mouvement_avenant s'il s'agit d'un mouvement de police) avec
-          remplacerPlanEnAttente=true : l'ancien sera annulé et remplacé — jamais deux plans à valider.
+          déjà affichée. S'il demande de CHANGER ce plan, rappelle le MÊME outil d'écriture que celui qui
+          l'avait préparé, avec remplacerPlanEnAttente=true : l'ancien sera annulé et remplacé — jamais deux
+          plans à valider.
           APRÈS VALIDATION (règle impérative) : une fois qu'un plan a été exécuté (l'historique porte le
           marqueur « [SYSTÈME — ce plan … a été VALIDÉ et EXÉCUTÉ … ] »), il est DÉFINITIF. Si l'utilisateur
           demande alors « c'est fait ? / enregistré ? » ou te remercie, réponds simplement OUI d'après ce
-          marqueur — NE rappelle PAS l'outil d'écriture et ne re-présente PAS de plan (sinon tu créerais un
-          doublon et nierais à tort l'enregistrement). Ne rappelle preparer_operations que pour une
-          modification NOUVELLE.
+          marqueur — NE rappelle PAS l'outil d'écriture, ne re-présente PAS de plan et ne recopie PAS son
+          tableau (sinon tu créerais un doublon et nierais à tort l'enregistrement). Ne rappelle un outil
+          d'écriture que pour une modification NOUVELLE — et alors sur un APPEL réel, pas sur le souvenir du
+          plan précédent.
           PORTEFEUILLE (Client) : un client sans portefeuille n'apparaît PAS dans la vue « Mon
           portefeuille » de l'utilisateur. L'outil range automatiquement le client dans le portefeuille
           de l'utilisateur s'il n'en gère qu'un ; s'il en gère plusieurs, l'outil renvoie « portefeuille »
@@ -931,21 +949,41 @@ class AiContextBuilder
                 . 'du moteur pour combler un élément absent : ce qui n\'a pas été écrit n\'existe pas. Si '
                 . 'l\'utilisateur avait demandé quelque chose qui n\'y figure pas, RECONNAIS-le et propose de '
                 . 'le préparer maintenant. Ne re-prépare pas ce plan-ci ; si on te demande simplement si c\'est '
-                . 'fait, réponds d\'après cette liste, sans relancer d\'outil d\'écriture.]';
+                . 'fait, réponds d\'après cette liste, sans relancer d\'outil d\'écriture.'
+                . $this->interdictionDeRecopier() . ']';
         }
         if (PlanEnAttente::estAnnule($meta)) {
             return "\n\n[SYSTÈME — ce plan d'écriture a été ANNULÉ par l'utilisateur : il n'a PAS été "
-                . 'exécuté, rien n\'a été enregistré.]';
+                . 'exécuté, rien n\'a été enregistré.'
+                . $this->interdictionDeRecopier() . ']';
         }
         if (PlanEnAttente::estEnAttente($meta)) {
             return "\n\n[SYSTÈME — ce plan d'écriture ATTEND ENCORE la décision de l'utilisateur : la barre "
                 . '« Valider et exécuter / Annuler » est toujours affichée sous ce message. Tant qu\'il n\'a '
                 . 'pas tranché, tu ne peux PAS préparer un autre plan (l\'outil te le refusera) : renvoie-le '
-                . 'vers cette barre. S\'il veut MODIFIER ce plan, rappelle preparer_operations avec '
-                . 'remplacerPlanEnAttente=true — le plan en attente sera alors annulé et remplacé.]';
+                . 'vers cette barre. S\'il veut MODIFIER ce plan, rappelle l\'outil d\'écriture qui l\'a '
+                . 'préparé avec remplacerPlanEnAttente=true — le plan en attente sera alors annulé et '
+                . 'remplacé.]';
         }
 
         return '';
+    }
+
+    /**
+     * Fragment commun aux plans TRANCHÉS (exécutés ou annulés) : leur tableau et
+     * leur budget restent visibles dans le fil, et le modèle est tenté de les
+     * réutiliser comme GABARIT pour l'objet suivant — en changeant l'identifiant
+     * et en recalculant le solde de tête. C'est exactement ce qui s'est produit en
+     * production le 2026-08-05 sur une série de « le suivant » : le tableau du tour
+     * précédent recopié, le budget déduit par soustraction, et aucun bouton (à juste
+     * titre : aucun outil d'écriture n'avait été appelé).
+     */
+    private function interdictionDeRecopier(): string
+    {
+        return ' NE RECOPIE JAMAIS le tableau ni le budget de ce message pour une demande suivante, même '
+            . 'similaire ou répétitive (« le suivant », « pareil pour l\'autre ») : ce plan est tranché, sa '
+            . 'barre de décision a disparu, et son budget n\'est plus d\'actualité. Toute nouvelle écriture '
+            . 'exige un NOUVEL appel d\'outil dans le tour où tu présentes son plan.';
     }
 
     /**

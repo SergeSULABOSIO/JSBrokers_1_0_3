@@ -30,7 +30,7 @@ use App\Services\Search\AvenantSuccessionScope;
  * Comme preparer_operations, il n'écrit rien : il prépare un PLAN + un BUDGET
  * que l'utilisateur valide ou annule.
  */
-final class PreparerMouvementAvenantTool implements AiToolInterface
+final class PreparerMouvementAvenantTool implements AiToolProduisantUnPlan
 {
     /** Nombre maximal de polices proposées quand la référence est ambiguë. */
     private const MAX_CANDIDATS = 8;
