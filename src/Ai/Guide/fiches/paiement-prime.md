@@ -54,17 +54,23 @@ c'est même la situation normale d'une commission devenue exigible. Chaque ligne
 ## Filtrer : quatre axes complémentaires
 
 La rubrique Tranches et l'assistant partagent **quatre axes indépendants**, cumulés en ET
-(un groupe de chips par axe) : `prime`, `commission`, `retro` (`payee` / `impayee`) et
-`echeance` (`echue` / `a_echoir`). Il n'existe **aucun filtre « impayé » global** : le mot
-désignerait deux dettes à la fois.
+(un groupe de chips par axe) : `prime`, `commission`, `retro` (`payee` / `partielle` /
+`impayee`) et `echeance` (`echue` / `a_echoir`). Il n'existe **aucun filtre « impayé »
+global** : le mot désignerait deux dettes à la fois.
 
 | Besoin | Axes |
 |---|---|
 | primes encore dues par les clients | `{prime: impayee}` |
+| primes dont un acompte est rentré | `{prime: partielle}` |
 | commissions à collecter maintenant | `{prime: payee, commission: impayee}` |
+| commissions partiellement encaissées (bordereau réglé en partie) | `{commission: partielle}` |
 | rétros à verser maintenant | `{retro: impayee, commission: payee}` |
 | relances en retard | `{prime: impayee, echeance: echue}` |
 | tout est soldé | `{prime: payee, commission: payee}` |
+
+⚠️ Sur chaque dette, **`partielle` est un sous-ensemble de `impayee`** — il reste dû, et de
+l'argent est déjà rentré. Ce ne sont pas deux catégories à additionner, et `impayee` ne
+signifie pas « aucun versement reçu ».
 
 ## Recette d'assistant
 

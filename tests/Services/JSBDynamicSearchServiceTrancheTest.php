@@ -788,6 +788,30 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
             'Un paiement de 500 ne peut JAMAIS produire plus de 500 de commission encaissée inférée.'
         );
 
+        // LE CHIP DE L'UTILISATEUR. Ces tranches ne sont ni soldées (le chip « Commission
+        // payée » les exclut à juste titre) ni sans le moindre encaissement : c'est
+        // exactement ce que « partiellement encaissée » sert à voir. Sans cette valeur,
+        // 500 $ bien réels n'étaient visibles sous AUCUN chip.
+        $partielles = $this->service()->search(
+            Tranche::class,
+            [TranchePaiementScope::AXE_COMMISSION => TranchePaiementScope::PARTIELLE],
+            $entreprise,
+        );
+        $idsPartielles = array_map(static fn (Tranche $t) => $t->getId(), $partielles['data']);
+        $this->assertContains($trancheAId, $idsPartielles);
+        $this->assertContains($trancheBId, $idsPartielles);
+
+        $soldees = $this->service()->search(
+            Tranche::class,
+            [TranchePaiementScope::AXE_COMMISSION => TranchePaiementScope::PAYEE],
+            $entreprise,
+        );
+        $this->assertNotContains(
+            $trancheAId,
+            array_map(static fn (Tranche $t) => $t->getId(), $soldees['data']),
+            'Encaissée à 50 %, la commission n\'est pas soldée pour autant.'
+        );
+
         // 2) Complément à 1000 (agrégat réel des deux avenants) : les deux tranches
         //    deviennent réputées encaissées, chacune à hauteur de SA propre part —
         //    jamais la totalité de l'agrégat du bordereau sur chacune.
