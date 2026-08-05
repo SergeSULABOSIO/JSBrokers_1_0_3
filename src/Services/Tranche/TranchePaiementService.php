@@ -195,32 +195,42 @@ class TranchePaiementService
 
     /**
      * Prédicat d'un axe unique. Une dette INEXISTANTE (aucune rétro à verser) ou une
-     * information ABSENTE (tranche sans date d'échéance) sort des DEUX valeurs de son axe :
-     * la tranche n'est ni « payée » ni « impayée » de ce point de vue, exactement comme
-     * « N/A » la sort du suivi. C'est ce qui rend chaque axe réellement complémentaire.
+     * information ABSENTE (tranche sans date d'échéance) sort de TOUTES les valeurs de son
+     * axe : la tranche n'est ni « payée » ni « impayée » de ce point de vue, exactement
+     * comme « N/A » la sort du suivi. C'est ce qui rend chaque axe réellement complémentaire.
      */
     private function respecteAxe(Tranche $tranche, string $cle, string $valeur): bool
     {
-        $impayee = $valeur === TranchePaiementScope::IMPAYEE;
-
         return match ($cle) {
-            // Dette de l'ASSURÉ envers l'assureur.
-            TranchePaiementScope::AXE_PRIME => $impayee
-                ? (float) ($tranche->primeSoldeDue ?? 0) > 0
-                : (float) ($tranche->primeSoldeDue ?? 0) <= 0,
+            // Dette de l'ASSURÉ envers l'assureur. Une prime nulle vaut prime SOLDÉE :
+            // même règle que getTrancheStatutPaiement, qui la tient pour réglée.
+            TranchePaiementScope::AXE_PRIME => $this->respecteDette(
+                $valeur,
+                (float) ($tranche->primeSoldeDue ?? 0),
+                (float) ($tranche->primePayee ?? 0),
+                true,
+            ),
 
-            // Dette de l'ASSUREUR envers le courtier.
-            TranchePaiementScope::AXE_COMMISSION => $impayee
-                ? (float) ($tranche->solde_restant_du ?? 0) > 0
-                : (float) ($tranche->solde_restant_du ?? 0) <= 0,
+            // Dette de l'ASSUREUR envers le courtier. Idem : sans commission configurée,
+            // il n'y a rien à recouvrer, donc rien qui reste dû.
+            TranchePaiementScope::AXE_COMMISSION => $this->respecteDette(
+                $valeur,
+                (float) ($tranche->solde_restant_du ?? 0),
+                (float) ($tranche->montant_paye ?? 0),
+                true,
+            ),
 
             // Dette du COURTIER envers le partenaire (flux inverse). On filtre sur le SOLDE
             // (la dette existe-t-elle ?), pas sur l'exigibilité (est-elle collectable ?) :
             // « à payer maintenant » s'obtient en ajoutant l'axe « commission payée ».
-            TranchePaiementScope::AXE_RETRO => (float) ($tranche->retroCommission ?? 0) > 0
-                && ($impayee
-                    ? (float) ($tranche->retroCommissionSolde ?? 0) > 0
-                    : (float) ($tranche->retroCommissionSolde ?? 0) <= 0),
+            // Contrairement aux deux autres, une affaire SANS partenaire sort de l'axe :
+            // dire d'une rétro inexistante qu'elle est « payée » noierait le chip.
+            TranchePaiementScope::AXE_RETRO => $this->respecteDette(
+                $valeur,
+                (float) ($tranche->retroCommissionSolde ?? 0),
+                (float) ($tranche->retroCommissionReversee ?? 0),
+                (float) ($tranche->retroCommission ?? 0) > 0,
+            ),
 
             // Axe orthogonal aux trois dettes : n'importe laquelle peut être en retard.
             TranchePaiementScope::AXE_ECHEANCE => $tranche->getEcheanceAt() instanceof \DateTimeInterface
@@ -228,6 +238,30 @@ class TranchePaiementService
                     ? $this->estEchue($tranche)
                     : !$this->estEchue($tranche)),
 
+            default => true,
+        };
+    }
+
+    /**
+     * Prédicat commun aux trois dettes, à partir du solde restant et de ce qui a déjà été
+     * réglé. $detteExiste permet à la rétro d'écarter les affaires sans partenaire, là où
+     * une prime ou une commission nulle vaut « soldée » (règle de getTrancheStatutPaiement).
+     *
+     * PARTIELLE est un SOUS-ENSEMBLE d'IMPAYEE, pas une valeur disjointe (cf. le docblock
+     * de TranchePaiementScope) : « il reste dû, ET de l'argent est déjà rentré ». C'est le
+     * cas d'un bordereau de production encaissé à 31 % — la commission n'est pas soldée,
+     * mais elle n'est pas non plus restée sans le moindre versement.
+     */
+    private function respecteDette(string $valeur, float $solde, float $regle, bool $detteExiste): bool
+    {
+        if (!$detteExiste) {
+            return false;
+        }
+
+        return match ($valeur) {
+            TranchePaiementScope::PAYEE => $solde <= 0,
+            TranchePaiementScope::PARTIELLE => $solde > 0 && $regle > 0,
+            TranchePaiementScope::IMPAYEE => $solde > 0,
             default => true,
         };
     }

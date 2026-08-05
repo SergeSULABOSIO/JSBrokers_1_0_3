@@ -387,7 +387,11 @@ class AiContextBuilder
             commission: impayee}. Les filtres sont QUATRE AXES cumulés en ET (prime, commission,
             retro, echeance), identiques aux quatre groupes de chips de la rubrique Tranches :
             il n'existe aucun filtre « impayé » global, et tu ne dois pas en inventer un en
-            fusionnant deux comptes.
+            fusionnant deux comptes. Sur chaque dette, la valeur « partielle » (un règlement
+            entamé, un solde qui reste) est un SOUS-ENSEMBLE de « impayee », jamais une
+            catégorie à côté : ne les additionne pas, et ne présente pas « impayee » comme
+            « aucun versement reçu » — c'est le cas d'un bordereau encaissé à 31 %, où la
+            commission n'est ni soldée ni restée sans le moindre encaissement.
           • N'INVENTE JAMAIS UN SOLDE. Tout montant que tu inscris dans un tableau doit être
             COPIÉ d'un champ d'une ligne renvoyée par un outil DANS CE TOUR (soldePrime,
             soldeCommission, retroAPayer). Si un solde vaut 0, écris 0 — ne le remplace ni par

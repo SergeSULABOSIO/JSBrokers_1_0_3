@@ -42,8 +42,22 @@ final class TranchePaiementScope
     public const AXE_RETRO = '__paiement_retro__';
     public const AXE_ECHEANCE = '__echeance_tranche__';
 
-    /** Valeurs des trois axes de dette. */
+    /**
+     * Valeurs des trois axes de dette.
+     *
+     * PAYEE et IMPAYEE PARTITIONNENT l'axe (disjointes, exhaustives). PARTIELLE est un
+     * SOUS-ENSEMBLE d'IMPAYEE — « il reste dû, mais de l'argent est déjà rentré » —, pas
+     * une troisième valeur disjointe, et c'est délibéré : six appelants (boussole,
+     * programme du jour, vigie, suivi_impayes…) ont besoin de « toute dette restante » en
+     * UN filtre. Découper IMPAYEE en deux valeurs disjointes les obligerait à réunir deux
+     * requêtes, et cette union serait le retour d'un mot recouvrant plusieurs sens.
+     *
+     * Ce n'est pas l'ambiguïté qui a causé l'incident du 2026-08-05 : là, un seul mot
+     * désignait deux dettes de DÉBITEURS DIFFÉRENTS. Ici les trois valeurs parlent de la
+     * même dette, du même débiteur, à trois stades de son règlement.
+     */
     public const PAYEE = 'payee';
+    public const PARTIELLE = 'partielle';
     public const IMPAYEE = 'impayee';
 
     /** Valeurs de l'axe d'échéance. */
@@ -67,6 +81,7 @@ final class TranchePaiementScope
             'icone' => 'action:alert',
             'valeurs' => [
                 self::PAYEE => 'Prime payée',
+                self::PARTIELLE => 'Prime partiellement payée',
                 self::IMPAYEE => 'Prime impayée',
             ],
         ],
@@ -76,6 +91,7 @@ final class TranchePaiementScope
             'icone' => 'paiement',
             'valeurs' => [
                 self::PAYEE => 'Commission payée',
+                self::PARTIELLE => 'Commission partiellement encaissée',
                 self::IMPAYEE => 'Commission impayée',
             ],
         ],
@@ -85,6 +101,7 @@ final class TranchePaiementScope
             'icone' => 'depense',
             'valeurs' => [
                 self::PAYEE => 'Rétro payée',
+                self::PARTIELLE => 'Rétro partiellement reversée',
                 self::IMPAYEE => 'Rétro à payer',
             ],
         ],
@@ -135,7 +152,10 @@ final class TranchePaiementScope
                 . 'maintenant = {prime: payee, commission: impayee} ; rétro à verser maintenant = '
                 . '{retro: impayee, commission: payee} ; relances en retard = {prime: impayee, '
                 . 'echeance: echue} ; tout soldé = {prime: payee, commission: payee}. Aucun axe = '
-                . 'toutes les tranches suivies.',
+                . 'toutes les tranches suivies. ATTENTION : sur chaque dette, « partielle » est un '
+                . 'SOUS-ENSEMBLE de « impayee » (il reste dû, ET de l\'argent est déjà rentré), pas '
+                . 'une catégorie à part : ne les additionne JAMAIS, et n\'annonce pas « impayee » '
+                . 'comme « rien reçu ».',
             'properties' => $proprietes,
             'required' => [],
         ];
@@ -323,6 +343,25 @@ final class TranchePaiementScope
         $mentionneRetro = (bool) preg_match('/\bretro(commissions?)?\b/', $texteNormalise);
         $du = (bool) preg_match('/\b(dues?|dois|impayees?|impayes?|arrieres?|en retard|a collecter|a encaisser|a payer|a verser|a reverser|exigibles?|soldes? dus?|reste|restants?)\b/', $texteNormalise);
         $soldee = (bool) preg_match('/\b(payees?|soldees?|reglees?|encaissees?)\b/', $texteNormalise);
+        // « partiellement », « en partie », « acompte » : la dette est entamée sans être
+        // soldée. Testé AVANT « du » et « soldee », qui l'accompagnent presque toujours
+        // (« primes partiellement payées » porte les deux).
+        $partielle = (bool) preg_match('/\b(partiel\w*|en partie|acomptes?|partiellement)\b/', $texteNormalise);
+
+        // « partiellement » qualifie la dette nommée, et prime sur tout le reste : la
+        // formulation la porte presque toujours avec « payée » ou « due », qui seuls
+        // enverraient sur les valeurs extrêmes.
+        if ($partielle) {
+            if ($mentionneRetro) {
+                return [self::AXE_RETRO => self::PARTIELLE];
+            }
+            if ($mentionneCommission) {
+                return [self::AXE_COMMISSION => self::PARTIELLE];
+            }
+            if ($mentionnePrime) {
+                return [self::AXE_PRIME => self::PARTIELLE];
+            }
+        }
 
         // Ordre volontaire : la RÉTRO d'abord (elle mentionne aussi « payer »), puis la
         // commission EXIGIBLE — qui n'est pas un axe mais la COMBINAISON « prime payée +

@@ -139,10 +139,12 @@ class TranchePaiementServiceTest extends TestCase
         $service = $this->makeService();
         $ids = static fn (array $r): array => array_map(static fn (Tranche $t) => $t->getId(), $r['data']);
 
+        // Seules PAYEE et IMPAYEE partitionnent l'axe ; PARTIELLE est un sous-ensemble
+        // d'IMPAYEE, testé séparément (cf. testPartielleEstUnSousEnsembleDImpayee).
         foreach ([
             TranchePaiementScope::AXE_PRIME => [TranchePaiementScope::PAYEE, TranchePaiementScope::IMPAYEE, 4],
             TranchePaiementScope::AXE_COMMISSION => [TranchePaiementScope::PAYEE, TranchePaiementScope::IMPAYEE, 4],
-            // Rétro : les tranches 2 et 4 n'en portent aucune → hors des DEUX valeurs.
+            // Rétro : les tranches 2 et 4 n'en portent aucune → hors de TOUTES les valeurs.
             TranchePaiementScope::AXE_RETRO => [TranchePaiementScope::PAYEE, TranchePaiementScope::IMPAYEE, 2],
             TranchePaiementScope::AXE_ECHEANCE => [TranchePaiementScope::A_ECHOIR, TranchePaiementScope::ECHUE, 4],
         ] as $axe => [$valeurA, $valeurB, $couverture]) {
@@ -152,6 +154,80 @@ class TranchePaiementServiceTest extends TestCase
             $this->assertSame([], array_intersect($a, $b), "Axe {$axe} : les deux valeurs doivent être DISJOINTES.");
             $this->assertCount($couverture, array_merge($a, $b), "Axe {$axe} : couverture attendue.");
         }
+    }
+
+    /**
+     * PARTIELLE = « il reste dû, ET de l'argent est déjà rentré ». C'est un SOUS-ENSEMBLE
+     * strict d'IMPAYEE, pas une troisième catégorie : le cas d'un bordereau de production
+     * encaissé à 31 %, où la commission n'est ni soldée, ni restée sans le moindre
+     * versement. Sans cette valeur, ces tranches n'étaient visibles nulle part — le chip
+     * « Commission payée » les excluait (à juste titre) et rien ne les distinguait de
+     * celles où pas un centime n'était rentré.
+     */
+    public function testPartielleEstUnSousEnsembleDImpayee(): void
+    {
+        $rienRecu = $this->makeTranche(1, 'Non payée', new \DateTimeImmutable('-1 day'), 500.0, 200.0);
+        $rienRecu->primePayee = 0.0;
+        $rienRecu->montant_paye = 0.0;
+
+        $entame = $this->makeTranche(2, 'Partiellement payée', new \DateTimeImmutable('-1 day'), 350.0, 138.0);
+        $entame->primePayee = 150.0;
+        $entame->montant_paye = 62.0; // bordereau encaissé à 31 %
+
+        $soldee = $this->makeTranche(3, 'Payée', new \DateTimeImmutable('-1 day'), 0.0, 0.0);
+        $soldee->primePayee = 500.0;
+        $soldee->montant_paye = 200.0;
+
+        $service = $this->makeService();
+        $ids = fn (array $axes): array => array_map(
+            static fn (Tranche $t) => $t->getId(),
+            $service->filtrerTrierPaginer([$rienRecu, $entame, $soldee], $axes)['data'],
+        );
+
+        foreach ([TranchePaiementScope::AXE_PRIME, TranchePaiementScope::AXE_COMMISSION] as $axe) {
+            $impayees = $ids([$axe => TranchePaiementScope::IMPAYEE]);
+            $partielles = $ids([$axe => TranchePaiementScope::PARTIELLE]);
+
+            $this->assertEqualsCanonicalizing([1, 2], $impayees, "Axe {$axe} : « impayée » = tout ce qui reste dû.");
+            $this->assertSame([2], $partielles, "Axe {$axe} : seule la dette ENTAMÉE est partielle.");
+            $this->assertSame(
+                [],
+                array_diff($partielles, $impayees),
+                "Axe {$axe} : « partielle » est INCLUSE dans « impayée », jamais à côté."
+            );
+        }
+
+        // Se cumule avec les autres axes comme n'importe quelle valeur.
+        $this->assertSame([2], $ids([
+            TranchePaiementScope::AXE_COMMISSION => TranchePaiementScope::PARTIELLE,
+            TranchePaiementScope::AXE_ECHEANCE => TranchePaiementScope::ECHUE,
+        ]));
+    }
+
+    public function testAxeRetroPartielleExigeUnVersementDejaFait(): void
+    {
+        $entamee = $this->makeTranche(1, 'Payée', new \DateTimeImmutable('-5 days'));
+        $entamee->retroCommission = 120.0;
+        $entamee->retroCommissionReversee = 40.0;
+        $entamee->retroCommissionSolde = 80.0;
+
+        $intacte = $this->makeTranche(2, 'Payée', new \DateTimeImmutable('-5 days'));
+        $intacte->retroCommission = 90.0;
+        $intacte->retroCommissionReversee = 0.0;
+        $intacte->retroCommissionSolde = 90.0;
+
+        $service = $this->makeService();
+        $resultat = $service->filtrerTrierPaginer(
+            [$entamee, $intacte],
+            $this->axes(TranchePaiementScope::AXE_RETRO, TranchePaiementScope::PARTIELLE),
+        );
+
+        $this->assertSame([1], array_map(static fn (Tranche $t) => $t->getId(), $resultat['data']));
+        // Les deux restent dues : « partielle » n'en retire aucune de « à payer ».
+        $this->assertCount(2, $service->filtrerTrierPaginer(
+            [$entamee, $intacte],
+            $this->axes(TranchePaiementScope::AXE_RETRO, TranchePaiementScope::IMPAYEE),
+        )['data']);
     }
 
     public function testAxeEcheanceExclutLesTranchesSansDate(): void
