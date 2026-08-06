@@ -90,6 +90,45 @@ final class PlanEnAttente
     }
 
     /**
+     * Extrait d'une liste d'actions le plan à STOCKER côté serveur (meta du
+     * message qui le présente) : le plan lui-même, son budget ventilé, l'aperçu
+     * autoritaire, les omissions, l'exigence de mot de passe et les impacts.
+     * null si aucune action de revue n'est présente.
+     *
+     * SOURCE UNIQUE : deux chemins produisent aujourd'hui un message porteur de
+     * plan — la réponse ordinaire du moteur, et la préparation DÉTERMINISTE de
+     * l'étape suivante d'un programme (App\Ai\Programme\ProgrammeRunner). Ils
+     * doivent stocker exactement la même structure, sans quoi l'endpoint
+     * d'exécution ne saurait relire que l'une des deux.
+     *
+     * @param array<int, array> $actions
+     */
+    public static function planStockable(array $actions): ?array
+    {
+        foreach ($actions as $action) {
+            if (($action['type'] ?? null) === self::ACTION_REVUE && isset($action['plan'])) {
+                return [
+                    'plan'             => $action['plan'],
+                    // `budget` porte aussi la ventilation par étape (budget.parEtape) :
+                    // c'est elle qui alimente les cases à cocher de l'ÉTENDUE, live
+                    // comme après un rechargement de page.
+                    'budget'           => $action['budget'] ?? null,
+                    // Ce que le plan fait / ne fait pas, tel que l'utilisateur doit le
+                    // VOIR avant de valider (indépendant de la prose du modèle).
+                    'apercu'           => $action['apercu'] ?? [],
+                    'omissions'        => $action['omissions'] ?? [],
+                    'requiresPassword' => (bool) ($action['requiresPassword'] ?? false),
+                    // Impacts de cascade conservés pour reconstruire la barre de
+                    // décision après un rechargement de page (F5).
+                    'impacts'          => $action['impacts'] ?? [],
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Le DERNIER message de la conversation qui porte un plan encore en attente
      * de décision, ou null. (Il ne peut y en avoir qu'un : la préparation d'un
      * nouveau plan est verrouillée tant que celui-ci n'est pas tranché.)

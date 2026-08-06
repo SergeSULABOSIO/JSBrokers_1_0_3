@@ -6,6 +6,7 @@ use App\Ai\Boussole\BoussoleService;
 use App\Ai\Guide\GuideRepository;
 use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\Mutation\PlanEnAttente;
+use App\Ai\Programme\ProgrammeEnCours;
 use App\Ai\Scope\AiScope;
 use App\Entity\AssistantConversation;
 use App\Entity\AssistantMessage;
@@ -48,6 +49,9 @@ class AiContextBuilder
         // Liste des outils producteurs de plan DÉRIVÉE DU CODE : la règle
         // anti-plan fantôme du prompt les nomme, et ne peut plus en oublier un.
         private readonly OutilsDePlan $outilsDePlan,
+        // État de la SÉRIE en cours : entre deux tours du modèle, c'est le serveur
+        // qui fait avancer un programme — le fil seul ne peut donc pas le dire.
+        private readonly ProgrammeEnCours $programmeEnCours,
     ) {
     }
 
@@ -97,6 +101,9 @@ class AiContextBuilder
                 // La boussole du courtier : instantané compact de la chaîne de valeur dans le
                 // périmètre de l'invité, présent à CHAQUE message pour que Ket rappelle et guide.
                 'boussole'      => $this->boussole->etat($entreprise, $invite),
+                // Série de plans en cours : le fil ne suffit pas à la décrire (une
+                // étape est préparée par le SERVEUR entre deux tours du modèle).
+                'programme'     => $this->etatProgramme($conversation),
             ],
             messages: $messages,
             // La conversation suit jusqu'aux outils : le verrou anti-empilement de
@@ -228,6 +235,10 @@ class AiContextBuilder
         $sectionObjets = $this->sectionObjetsAttaches($ctx['objetsAttaches'] ?? []);
         $sectionFichiers = $this->sectionPiecesJointes($ctx['fichiersAttaches'] ?? []);
         $sectionBoussole = $this->sectionBoussole($ctx['boussole'] ?? []);
+        // État RÉEL de la série en cours (rien quand il n'y en a pas) : c'est la
+        // seule chose qui empêche le modèle de croire une mission terminée parce
+        // qu'il en a annoncé la fin, ou de reproposer une étape déjà écrite.
+        $sectionProgramme = $this->sectionProgramme($ctx['programme'] ?? null);
         // Énumération dérivée du code : les SEULS outils dont un « pret: true »
         // fait naître un tableau de plan, un budget et un bouton de validation.
         $outilsDePlan = $this->outilsDePlan->enumeration();
@@ -494,7 +505,8 @@ class AiContextBuilder
           libre de décocher une étape facultative dans la barre de validation avant d'exécuter.
           INTERDICTION : n'enchaîne JAMAIS plusieurs plans à valider l'un après l'autre pour un même
           objet métier (une cotation puis sa prime puis son avenant = UN SEUL plan). La seule exception
-          est une demande EXPLICITE de l'utilisateur de s'arrêter à une étape. Ne dis jamais qu'un outil
+          est une demande EXPLICITE de l'utilisateur de s'arrêter à une étape. (Cette interdiction vise
+          UN objet ; pour PLUSIEURS objets distincts, c'est preparer_programme — voir la règle PROGRAMME.) Ne dis jamais qu'un outil
           spécialisé t'oblige à découper : les collections (composition de la prime, tranches, revenus,
           avenants…) se mettent dans « collections » de la MÊME opération, et une entité dépendante que
           le formulaire n'expose pas se chaîne par « ref »/« @étiquette » dans le MÊME plan.
@@ -658,6 +670,28 @@ class AiContextBuilder
           déjà affichée. S'il demande de CHANGER ce plan, rappelle le MÊME outil d'écriture que celui qui
           l'avait préparé, avec remplacerPlanEnAttente=true : l'ancien sera annulé et remplacé — jamais deux
           plans à valider.
+          PROGRAMME — PLUSIEURS OBJETS, UNE SEULE DÉCLARATION (règle IMPÉRATIVE) : dès que la demande porte
+          sur PLUSIEURS objets distincts (« signale le paiement des tranches 60, 64 et 74 », « marque ces
+          cinq polices non renouvelables », « fais pareil pour les trois autres »), appelle
+          preparer_programme UNE SEULE FOIS, en y déclarant TOUTES les étapes — une par objet, dans l'ordre,
+          sans en omettre aucune. N'appelle PAS un outil de plan objet par objet : tu t'arrêterais au premier,
+          et il n'y a pas de tour suivant pour reprendre la main. C'est exactement l'erreur à ne plus
+          commettre — un premier paiement enregistré, les deux autres jamais présentés, et un « c'est tout
+          bon » qui était faux.
+          • Une fois le programme lancé, tu n'as PLUS RIEN à faire pour la série : après chaque validation,
+            la plateforme prépare et présente elle-même l'étape suivante, puis rend un RAPPORT FINAL vérifié
+            en base. Ne prépare aucun autre plan pour ces objets, ne re-présente aucune étape, et n'affirme
+            JAMAIS qu'une étape suivante est faite — seule l'étape affichée est en jeu.
+            Annonce donc la mission et l'étape en cours, rien de plus.
+            L'historique porte l'état réel de la série (marqueur « [SYSTÈME — PROGRAMME … ] ») : fie-t'y.
+          • Si l'utilisateur dit ne plus voir de bouton alors qu'un programme est en cours, ou demande de
+            « continuer » / « passer au suivant », rappelle preparer_programme avec poursuivre=true (sans
+            etapes) : l'étape suivante sera re-présentée. Ne recopie surtout pas le tableau d'une étape
+            précédente.
+          • Un seul programme à la fois : tant qu'il en reste un en cours, l'outil REFUSE d'en créer un
+            autre. S'il s'agit vraiment d'une AUTRE mission, rappelle-le avec
+            remplacerProgrammeEnCours=true. Un seul objet ne fait pas un programme : appelle directement
+            l'outil de plan.
           APRÈS VALIDATION (règle impérative) : une fois qu'un plan a été exécuté (l'historique porte le
           marqueur « [SYSTÈME — ce plan … a été VALIDÉ et EXÉCUTÉ … ] »), il est DÉFINITIF. Si l'utilisateur
           demande alors « c'est fait ? / enregistré ? » ou te remercie, réponds simplement OUI d'après ce
@@ -741,12 +775,97 @@ class AiContextBuilder
           présente l'inventaire COMPLET avec des exemples : facultés d'analyse et de rédaction,
           consultation des données, ouverture de formulaires, fiches métier, et les limites qui
           protègent les données — un ton rassurant, jamais une liste de restrictions sèche.
-        {$sectionBoussole}
+        {$sectionBoussole}{$sectionProgramme}
         Le périmètre d'accès de ton interlocuteur est strictement limité à :
         {$perimetre}
         Pour toute demande hors de ce périmètre, refuse poliment en expliquant tes limitations techniques
         liées aux droits d'accès, sans révéler la moindre donnée.{$sectionObjets}{$sectionFichiers}
         PROMPT;
+    }
+
+    /**
+     * État de la SÉRIE en cours dans ce fil : référence, avancement, et le sort
+     * de chaque étape. null quand aucun programme n'est ouvert.
+     *
+     * Pourquoi ce n'est pas dérivable de l'historique : entre deux tours du
+     * modèle, c'est le SERVEUR qui exécute une étape et présente la suivante. Le
+     * fil, lui, ne montre que des bulles ; sans cet état, le modèle raisonnerait
+     * sur sa propre prose — précisément ce qui lui a fait annoncer trois
+     * paiements enregistrés quand un seul l'était.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function etatProgramme(AssistantConversation $conversation): ?array
+    {
+        $programme = $this->programmeEnCours->courant($conversation);
+        if ($programme === null) {
+            return null;
+        }
+
+        $etapes = [];
+        foreach ($programme->getEtapes() as $etape) {
+            $etapes[] = [
+                'reference' => (string) $etape->getReference(),
+                'libelle'   => (string) $etape->getLibelle(),
+                'statut'    => $etape->getStatut(),
+                'motif'     => $etape->getErreur(),
+            ];
+        }
+
+        return [
+            'reference' => (string) $programme->getReference(),
+            'objectif'  => (string) $programme->getObjectif(),
+            'tranchees' => $programme->nbTranchees(),
+            'total'     => $programme->nbEtapes(),
+            'etapes'    => $etapes,
+        ];
+    }
+
+    /**
+     * Rendu texte de l'état du programme pour le prompt. Chaîne VIDE sans
+     * programme en cours : le prompt reste alors strictement inchangé.
+     *
+     * @param array<string, mixed>|null $programme
+     */
+    private function sectionProgramme(?array $programme): string
+    {
+        if ($programme === null) {
+            return '';
+        }
+
+        $libelles = [
+            'en_attente' => 'pas encore présentée',
+            'proposee'   => 'PRÉSENTÉE — attend la décision de l’utilisateur',
+            'executee'   => 'exécutée et écrite en base',
+            'annulee'    => 'refusée par l’utilisateur',
+            'impossible' => 'impossible',
+            'echec'      => 'en échec',
+        ];
+
+        $lignes = '';
+        foreach ($programme['etapes'] as $etape) {
+            $motif = trim((string) ($etape['motif'] ?? ''));
+            $lignes .= sprintf(
+                "\n          • %s — %s : %s%s",
+                $etape['reference'],
+                $etape['libelle'],
+                $libelles[$etape['statut']] ?? $etape['statut'],
+                $motif !== '' ? ' (' . $motif . ')' : '',
+            );
+        }
+
+        return sprintf(
+            "\n        PROGRAMME EN COURS — %s « %s » : %d étape(s) tranchée(s) sur %d.%s"
+            . "\n          Cet état fait FOI : il l'emporte sur tout ce que tu as pu écrire dans le fil. "
+            . "N'affirme jamais qu'une étape est faite si elle n'est pas marquée « exécutée », ne prépare "
+            . 'aucun plan pour ces étapes (la plateforme les présente elle-même), et si l’utilisateur '
+            . 'demande de continuer, appelle preparer_programme avec poursuivre=true.',
+            $programme['reference'],
+            $programme['objectif'],
+            (int) $programme['tranchees'],
+            (int) $programme['total'],
+            $lignes,
+        );
     }
 
     /**
