@@ -61,13 +61,10 @@
                          data-preset-criterion="{{ groupe.critere }}">
                         {# Le CRITÈRE est écrit une seule fois, en tête du groupe : les boutons
                            ne portent plus que la valeur. Une rubrique peut ainsi aligner
-                           quatre groupes sur une ligne là où deux la remplissaient. #}
-                        <span class="jsb-preset-filters__titre" aria-hidden="true">
-                            {%- if groupe.icon is defined and groupe.icon -%}
-                                <span class="jsb-preset-filters__titre-icone">{{ ux_icon(resolve_icon_name(groupe.icon), {width: '14px', height: '14px'}) }}</span>
-                            {%- endif -%}
-                            <span>{{ groupe.titre | default(groupe.libelle | default('Filtrer')) }}</span>
-                        </span>
+                           quatre groupes sur une ligne là où deux la remplissaient.
+                           Le titre reste PUREMENT TEXTUEL : l'icône appartient au chip, où
+                           elle dit l'état — c'est la règle de toutes les rubriques. #}
+                        <span class="jsb-preset-filters__titre" aria-hidden="true">{{ groupe.titre | default(groupe.libelle | default('Filtrer')) }}</span>
                         {% for option in groupe.options %}
                             {# `titre_complet` porte le libellé non abrégé : le titre du groupe
                                n'est pas annoncé avec le bouton par les lecteurs d'écran, et

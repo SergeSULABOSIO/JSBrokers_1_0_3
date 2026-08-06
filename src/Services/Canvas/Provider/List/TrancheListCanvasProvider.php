@@ -86,13 +86,16 @@ class TrancheListCanvasProvider implements ListCanvasProviderInterface
         foreach (TranchePaiementScope::AXES as $cle => $axe) {
             $options = [];
             foreach (array_keys($axe['valeurs']) as $valeur) {
-                // Libellé COURT et AUCUNE icône par bouton : le critère et son icône sont
-                // écrits une seule fois, dans le titre du groupe. Répéter « Prime » sur
-                // chacun des trois boutons triplait leur largeur, au point qu'on ne pouvait
-                // pas aligner plus de deux groupes sur une ligne.
+                // Libellé COURT : le critère est écrit une seule fois, dans le titre du
+                // groupe. Le répéter sur chacun des trois boutons triplait leur largeur,
+                // au point qu'on ne pouvait pas aligner plus de deux groupes sur une ligne.
+                // L'icône, elle, reste sur CHAQUE chip — comme dans toutes les autres
+                // rubriques — et porte l'ÉTAT (soldé / entamé / dû), le critère étant déjà
+                // dit par le titre.
                 $options[] = [
                     "value" => $valeur,
                     "label" => TranchePaiementScope::libelleCourt($cle, $valeur),
+                    "icon" => $axe['icones'][$valeur],
                     // Le titre du groupe ne suit pas le bouton dans les lecteurs d'écran :
                     // chaque chip garde donc le libellé complet en infobulle accessible.
                     "titre_complet" => TranchePaiementScope::libelle($cle, $valeur),
@@ -100,13 +103,17 @@ class TrancheListCanvasProvider implements ListCanvasProviderInterface
             }
             // L'option vide retire le critère de CE groupe seulement : les autres axes
             // posés restent actifs (cf. list-manager_controller#applyPresetFilter).
-            $options[] = ["value" => "", "label" => "Toutes", "titre_complet" => $axe['libelle'] . ' : toutes'];
+            $options[] = [
+                "value" => "",
+                "label" => "Toutes",
+                "icon" => "action:filter",
+                "titre_complet" => $axe['libelle'] . ' : toutes',
+            ];
 
             $groupes[] = [
                 "critere" => $cle,
                 "libelle" => $axe['libelle'],
                 "titre" => $axe['titre'],
-                "icon" => $axe['icone'],
                 "options" => $options,
             ];
         }
