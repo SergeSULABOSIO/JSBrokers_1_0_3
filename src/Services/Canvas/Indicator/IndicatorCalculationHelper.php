@@ -1322,23 +1322,26 @@ class IndicatorCalculationHelper implements ResetInterface
      * entier sur chacun d'eux (constaté : 166 463 $ de commission encaissée inférée pour
      * un unique paiement réel de 75 908 $ sur le bordereau).
      *
-     * `allocation` répartit ce qui a été RÉELLEMENT encaissé entre les tranches couvertes,
-     * par IMPUTATION SUR LES PLUS ANCIENNES : le règlement solde intégralement la tranche
-     * dont l'échéance est la plus lointaine dans le passé, puis la suivante, jusqu'à
-     * épuisement. C'est la règle d'imputation de droit commun, et celle qu'applique un
-     * courtier qui pointe un bordereau : il coche les lignes les plus vieilles une à une.
+     * `allocation` répartit ce qui a été RÉELLEMENT encaissé entre les tranches couvertes.
+     * La part de chaque POLICE est EXACTE : les lignes d'analyse persistent ce que l'assureur
+     * déclare régler sur elle (commission_ht_payable_now + taxe_commission_payable_now), et
+     * il suffit d'y appliquer le taux de règlement de la note. Seule la ventilation ENTRE LES
+     * TRANCHES d'une même police reste une règle — imputation sur les plus anciennes —, parce
+     * que le bordereau raisonne par police et ne dit rien de ses échéances internes.
      *
-     * Les lignes d'analysisResults ne portent AUCUN montant par police (seulement type,
-     * row_index, reference_police, avenant_id) : l'affectation exacte n'est pas déductible
-     * de la donnée, c'est nécessairement une règle. Deux ont été écartées :
+     * Trois répartitions ont été essayées avant celle-ci, toutes fausses faute d'utiliser la
+     * déclaration par police, qui n'était pas conservée :
      *  - créditer chaque avenant de son montant PLEIN dès que le bordereau est soldé :
      *    un paiement unique de 75 908 $ produisait 166 463 $ de commission encaissée ;
-     *  - répartir au PRORATA (chacun x %) : le total est juste, mais aucune tranche n'est
-     *    JAMAIS soldée tant que le bordereau ne l'est pas à 100 %, ce qui rend le filtre
-     *    « commission payée » structurellement vide — un filtre qui ne peut rien renvoyer.
-     * L'imputation conserve elle aussi le total exact, et rend les trois états atteignables.
+     *  - n'admettre que le solde INTÉGRAL : un bordereau réglé en partie ne créditait plus
+     *    rien, et l'argent réellement rentré disparaissait de tous les indicateurs ;
+     *  - répartir au PRORATA : le total redevenait juste, mais aucune tranche n'était JAMAIS
+     *    soldée tant que le bordereau ne l'était pas — le filtre « commission payée » ne
+     *    pouvait alors structurellement rien renvoyer.
+     * Un bordereau analysé AVANT la persistance des montants garde la troisième variante
+     * corrigée (imputation globale sur les plus anciennes), en repli.
      *
-     * @return array{couverts: array<int, true>, couvertsSoldes: array<int, true>, allocation: array<int, float>}
+     * @return array{couverts: array<int, true>, couvertsSoldes: array<int, true>, allocation: array<int, float>, parAvenant: array<int, array{reclame: float, encaisse: float}>}
      */
     private function getCouvertureBordereaux(Entreprise $entreprise): array
     {
@@ -1350,16 +1353,32 @@ class IndicatorCalculationHelper implements ResetInterface
         $couverts = [];
         $couvertsSoldes = [];
         $allocation = [];
+        $parAvenant = [];
         $bordereaux = $this->em->getRepository(Bordereau::class)->findBy([
             'entreprise' => $entreprise,
             'type' => Bordereau::TYPE_BOREDERAU_PRODUCTION,
         ]);
         foreach ($bordereaux as $bordereau) {
+            // Ce que l'assureur déclare régler POUR CHAQUE POLICE, si l'analyse l'a
+            // persisté (cf. BordereauController::ligneAnalyseAPersister). Les bordereaux
+            // analysés avant cette version n'ont que les clés de repérage : ils gardent
+            // l'ancien régime, décidé ici POUR TOUT LE BORDEREAU — jamais ligne à ligne,
+            // sous peine de mélanger deux modes de répartition sur un même règlement.
             $avenantIds = [];
+            $reclameParAvenant = [];
+            $porteLesMontants = false;
             foreach ($bordereau->getAnalysisResults() ?? [] as $ligne) {
-                if (($ligne['type'] ?? null) === 'match' && !empty($ligne['avenant_id'])) {
-                    $avenantIds[] = (int) $ligne['avenant_id'];
+                if (array_key_exists('commission_ht_payable_now', $ligne)) {
+                    $porteLesMontants = true;
                 }
+                if (($ligne['type'] ?? null) !== 'match' || empty($ligne['avenant_id'])) {
+                    continue; // « new » : pas d'avenant ; « discrepancy » : en litige, n'atteste rien.
+                }
+                $avenantId = (int) $ligne['avenant_id'];
+                $avenantIds[] = $avenantId;
+                $reclameParAvenant[$avenantId] = ($reclameParAvenant[$avenantId] ?? 0.0)
+                    + (float) ($ligne['commission_ht_payable_now'] ?? 0)
+                    + (float) ($ligne['taxe_commission_payable_now'] ?? 0);
             }
             if ($avenantIds === []) {
                 continue;
@@ -1369,19 +1388,25 @@ class IndicatorCalculationHelper implements ResetInterface
             // pas par l'avenant — deux avenants d'une même cotation (l'initial et une
             // modification) réconciliés par le même bordereau ne doublent pas son dû.
             // Sans cette déduplication, une cotation de 76 656 $ était comptée deux fois.
-            $cotationIds = [];
+            $cotationParAvenant = [];
             foreach ($this->em->getRepository(Avenant::class)->findBy(['id' => $avenantIds]) as $avenant) {
                 if ($cotation = $avenant->getCotation()) {
-                    $cotationIds[(int) $cotation->getId()] = true;
+                    $cotationParAvenant[(int) $avenant->getId()] = (int) $cotation->getId();
                 }
             }
+            $cotationIds = array_values(array_unique($cotationParAvenant));
+            if ($cotationIds === []) {
+                continue;
+            }
 
-            // Les tranches de ces cotations, triées de la PLUS ANCIENNE échéance à la plus
-            // récente : l'ordre d'imputation. `payableAt` sert de repli quand l'échéance
-            // n'est pas renseignée, l'identifiant départage à date égale (déterminisme).
+            // Les tranches de ces cotations, groupées par cotation et triées de la PLUS
+            // ANCIENNE échéance à la plus récente : l'ordre d'imputation. `payableAt` sert
+            // de repli quand l'échéance manque, l'identifiant départage à date égale
+            // (déterminisme). Le tout à plat sert au régime de repli.
+            $parCotation = [];
             $aImputer = [];
-            foreach ($this->em->getRepository(Tranche::class)->findBy(['cotation' => array_keys($cotationIds)]) as $tranche) {
-                $aImputer[] = [
+            foreach ($this->em->getRepository(Tranche::class)->findBy(['cotation' => $cotationIds]) as $tranche) {
+                $entree = [
                     'id' => (int) $tranche->getId(),
                     'du' => round(
                         $this->getCotationMontantCommissionTtc($tranche->getCotation(), -1, false)
@@ -1390,8 +1415,14 @@ class IndicatorCalculationHelper implements ResetInterface
                     ),
                     'quand' => ($tranche->getEcheanceAt() ?? $tranche->getPayableAt())?->getTimestamp() ?? PHP_INT_MAX,
                 ];
+                $parCotation[(int) $tranche->getCotation()->getId()][] = $entree;
+                $aImputer[] = $entree;
             }
-            usort($aImputer, static fn (array $a, array $b) => $a['quand'] <=> $b['quand'] ?: $a['id'] <=> $b['id']);
+            $trierParAnciennete = static function (array &$lignes): void {
+                usort($lignes, static fn (array $a, array $b) => $a['quand'] <=> $b['quand'] ?: $a['id'] <=> $b['id']);
+            };
+            $trierParAnciennete($aImputer);
+            array_walk($parCotation, $trierParAnciennete);
 
             // « Soldé » se mesure contre le dû RÉEL des tranches couvertes, jamais contre
             // Bordereau.montantComHtPayableNow — un champ auto-déclaré qui peut sous-évaluer
@@ -1407,20 +1438,68 @@ class IndicatorCalculationHelper implements ResetInterface
                 }
             }
 
-            // L'imputation elle-même : chaque tranche est soldée à son tour, la dernière
-            // servie ne recevant que le reliquat. Un même tranche couverte par plusieurs
-            // bordereaux cumule leurs imputations, plafonnées à son dû.
-            $reste = $encaisse;
-            foreach ($aImputer as $ligne) {
-                if ($reste <= 0) {
-                    break;
+            if (!$porteLesMontants) {
+                // REPLI (bordereau analysé avant la persistance des montants) : le règlement
+                // est imputé sur les plus anciennes tranches couvertes, toutes polices
+                // confondues. Approximation assumée, faute de la déclaration par police.
+                $this->imputerSurLesPlusAnciennes($allocation, $encaisse, $aImputer);
+                continue;
+            }
+
+            // RÉGIME EXACT. Le dénominateur est ce que la NOTE réclame — la même base que
+            // le paiement —, pas le dû théorique des polices : un bordereau ne facture
+            // souvent qu'une partie de la commission des affaires qu'il réconcilie.
+            $reclameTotal = round((float) ($bordereau->getMontantPayableNow() ?? 0), 2);
+            $taux = $reclameTotal > 0 ? min(1.0, $encaisse / $reclameTotal) : 0.0;
+            if ($taux <= 0) {
+                continue;
+            }
+
+            // La part de chaque POLICE est exacte (sa déclaration × le taux de règlement).
+            // Seule sa ventilation ENTRE LES TRANCHES de cette police reste une règle : le
+            // bordereau raisonne par police et ne dit rien des échéances internes.
+            $reclameParCotation = [];
+            foreach ($reclameParAvenant as $avenantId => $reclame) {
+                $cotationId = $cotationParAvenant[$avenantId] ?? null;
+                if ($cotationId !== null) {
+                    $reclameParCotation[$cotationId] = ($reclameParCotation[$cotationId] ?? 0.0) + $reclame;
                 }
-                $deja = $allocation[$ligne['id']] ?? 0.0;
-                $part = min($reste, max(0.0, $ligne['du'] - $deja));
-                if ($part > 0) {
-                    $allocation[$ligne['id']] = $deja + $part;
-                    $reste -= $part;
-                }
+            }
+            // Ce que CE bordereau doit placer au total : jamais plus qu'il n'a encaissé.
+            $aPlacer = min($encaisse, round(array_sum($reclameParCotation) * $taux, 2));
+            $avant = array_sum($allocation);
+
+            foreach ($reclameParCotation as $cotationId => $reclame) {
+                $this->imputerSurLesPlusAnciennes(
+                    $allocation,
+                    round($reclame * $taux, 2),
+                    $parCotation[$cotationId] ?? [],
+                );
+            }
+
+            // RELIQUAT NON ATTRIBUABLE À SA POLICE. L'assureur déclare parfois régler, sur
+            // une police, plus que la commission que nous lui calculons — ici 42 polices sur
+            // 51, dans un rapport de 1,16 : leur configuration de revenus ne porte pas la TVA
+            // que l'assureur, lui, facture. La part excédentaire ne rentre alors dans aucune
+            // tranche de cette police. Cet argent est pourtant RÉELLEMENT rentré : le
+            // plafonner sans le réaffecter le ferait disparaître du chiffre d'affaires. On le
+            // déverse sur les tranches encore dues du bordereau, les plus anciennes d'abord.
+            //
+            // Le reliquat est MESURÉ sur l'allocation (ce qui restait à placer moins ce qui
+            // l'a été), jamais accumulé depuis les appels : un accumulateur surestimait le
+            // reste dès qu'une tranche était partagée par deux polices, et faisait déborder
+            // le total au-dessus de l'encaissement. Mesuré, le dépassement est impossible.
+            $reliquat = round($aPlacer - (array_sum($allocation) - $avant), 2);
+            if ($reliquat > 0.005) {
+                $this->imputerSurLesPlusAnciennes($allocation, $reliquat, $aImputer);
+            }
+
+            // Vue PAR POLICE, pour la fiche de l'avenant : ce que les bordereaux lui ont
+            // réclamé, et ce qui est effectivement rentré dessus. Un avenant peut figurer
+            // dans plusieurs bordereaux successifs — d'où le cumul.
+            foreach ($reclameParAvenant as $avenantId => $reclame) {
+                $parAvenant[$avenantId]['reclame'] = ($parAvenant[$avenantId]['reclame'] ?? 0.0) + $reclame;
+                $parAvenant[$avenantId]['encaisse'] = ($parAvenant[$avenantId]['encaisse'] ?? 0.0) + $reclame * $taux;
             }
         }
 
@@ -1428,7 +1507,58 @@ class IndicatorCalculationHelper implements ResetInterface
             'couverts' => $couverts,
             'couvertsSoldes' => $couvertsSoldes,
             'allocation' => $allocation,
+            'parAvenant' => $parAvenant,
         ];
+    }
+
+    /**
+     * Ce que les bordereaux de production ont RÉCLAMÉ à l'assureur sur cette police, et ce
+     * qui est effectivement rentré dessus. Lecture directe de la déclaration par police —
+     * aucune règle d'imputation n'intervient à ce niveau.
+     *
+     * @return array{reclame: float, encaisse: float}
+     */
+    public function getAvenantMontantsBordereau(Avenant $avenant): array
+    {
+        $entreprise = $avenant->getEntreprise();
+        if (!$entreprise || $avenant->getId() === null) {
+            return ['reclame' => 0.0, 'encaisse' => 0.0];
+        }
+
+        $montants = $this->getCouvertureBordereaux($entreprise)['parAvenant'][(int) $avenant->getId()] ?? [];
+
+        return [
+            'reclame' => round((float) ($montants['reclame'] ?? 0), 2),
+            'encaisse' => round((float) ($montants['encaisse'] ?? 0), 2),
+        ];
+    }
+
+    /**
+     * Impute un montant sur des tranches déjà triées de la plus ancienne à la plus récente :
+     * chacune est soldée à son tour, la dernière servie ne recevant que le reliquat. Les
+     * imputations s'ajoutent à celles déjà faites (une tranche peut être couverte par
+     * plusieurs bordereaux) sans jamais dépasser son dû.
+     *
+     * @param array<int, float> $allocation modifié en place (id de tranche => montant)
+     * @param array<int, array{id: int, du: float, quand: int}> $lignesTriees
+     * @return float Reliquat non imputable (les tranches visées étaient déjà soldées).
+     */
+    private function imputerSurLesPlusAnciennes(array &$allocation, float $montant, array $lignesTriees): float
+    {
+        $reste = $montant;
+        foreach ($lignesTriees as $ligne) {
+            if ($reste <= 0) {
+                return 0.0;
+            }
+            $deja = $allocation[$ligne['id']] ?? 0.0;
+            $part = min($reste, max(0.0, $ligne['du'] - $deja));
+            if ($part > 0) {
+                $allocation[$ligne['id']] = $deja + $part;
+                $reste -= $part;
+            }
+        }
+
+        return max(0.0, $reste);
     }
 
     /** Somme des paiements de prime SIGNALÉS sur la tranche (trace déclarative). */

@@ -122,6 +122,16 @@ class Avenant
     public ?float $primePayee = null;
     #[Groups(['list:read'])]
     public ?float $primeSoldeDue = null;
+    /**
+     * Commission que les bordereaux de production ont RÉCLAMÉE à l'assureur sur cette
+     * police, et ce qui est effectivement rentré dessus. Dérivés des lignes d'analyse des
+     * bordereaux (jamais stockés ici : une police figure dans plusieurs bordereaux
+     * successifs, un champ persisté serait écrasé et perdrait l'historique).
+     */
+    #[Groups(['list:read'])]
+    public ?float $commissionReclameeParBordereau = null;
+    #[Groups(['list:read'])]
+    public ?float $commissionEncaisseeParBordereau = null;
     #[Groups(['list:read'])]
     public ?float $tauxCommission = null;
     #[Groups(['list:read'])]
