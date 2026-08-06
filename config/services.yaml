@@ -69,6 +69,12 @@ services:
         App\Ai\Tool\AiToolInterface:
             tags: ['app.ai_tool']
 
+        # Vérificateurs d'EFFET MÉTIER du rapport final d'un programme : au-delà de
+        # « la ligne est bien en base », ils répondent « la conséquence attendue
+        # s'est-elle produite ? » (une prime signalée est-elle réellement soldée ?).
+        App\Ai\Programme\EffetMetierVerifieur:
+            tags: ['app.ai_effet_metier']
+
     # Moteur de l'assistant IA : le résolveur choisit à l'exécution — clé
     # ANTHROPIC_API_KEY renseignée → moteur réel API Claude (AnthropicAiEngine),
     # sinon simulateur déterministe (dev/test sans réseau ni secret). Même

@@ -79,5 +79,19 @@ signifie pas « aucun versement reçu ».
    la liste transversale, filtrable par client/cotation (`lieA`) et par période (`du`/`au`).
 2. `suivi_impayes` avec les `axes` du tableau ci-dessus. Sans axe de dette, la sortie porte
    `repartition` : deux comptes nommés, qui se chevauchent et ne s'additionnent pas.
-3. `signaler_paiement_prime` pour ENREGISTRER un règlement : le formulaire s'ouvre
-   prérempli, l'utilisateur relit et enregistre lui-même — l'assistant n'écrit jamais.
+3. `signaler_paiement_prime` pour ENREGISTRER un règlement d'UNE tranche : l'outil prépare
+   un PLAN chiffré (montant par défaut = solde de prime restant, date du jour, référence
+   auto) ; après validation de l'utilisateur, c'est l'assistant qui écrit — aucun formulaire
+   à soumettre à la main.
+4. PLUSIEURS tranches d'un coup (« signale le paiement des tranches 60, 64 et 74 ») :
+   `preparer_programme`, UNE seule fois, avec une étape par tranche
+   (`outil: signaler_paiement_prime`, `cibleId` = l'id de la tranche). Les plans sont
+   présentés l'un après l'autre, et un rapport final relit la base pour dire, tranche par
+   tranche, si la prime est réellement soldée. **Ne jamais traiter une série tranche par
+   tranche avec `signaler_paiement_prime`** : le premier plan exécuté, il n'y a pas de tour
+   suivant — les autres tranches ne seraient jamais présentées.
+
+⚠️ Un signalement est une DÉCLARATION : tant que le total signalé ne couvre pas la prime due
+de la tranche, celle-ci reste dans le suivi des impayés avec son solde. Un « paiement
+enregistré » ne vaut donc pas « tranche soldée » — c'est exactement ce que le rapport final
+d'un programme vérifie.

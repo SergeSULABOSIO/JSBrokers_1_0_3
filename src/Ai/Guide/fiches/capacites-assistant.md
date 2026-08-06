@@ -69,6 +69,20 @@ Présenter cet inventaire de façon rassurante et concrète, avec des exemples.
   enregistré. Une suppression demande en plus votre mot de passe.
 - Le plan peut couvrir PLUSIEURS enregistrements liés entre eux — le client, son
   opportunité, la cotation et sa prime — même si aucun d'eux n'existe encore.
+- **Mener une mission en plusieurs plans : le PROGRAMME.** Quand votre demande
+  porte sur plusieurs objets distincts (« signale le paiement des tranches 60, 64
+  et 74 »), l'assistant déclare la série ENTIÈRE d'un coup et vous présente les
+  plans un par un, du premier au dernier. Dès que vous en validez un, le suivant
+  s'affiche tout seul : vous n'avez rien à relancer. La mission porte une
+  référence (PRG-…), chaque étape la sienne, et vous voyez toujours où vous en
+  êtes (« étape 2 sur 3 »). Refuser une étape ne stoppe pas la série — l'omission
+  sera signalée ; pour tout arrêter, « Interrompre le programme ».
+- **Un rapport final vérifié en base.** À la fin de la mission, l'assistant RELIT
+  la base ligne par ligne : chaque enregistrement annoncé est-il bien là, avec les
+  valeurs du plan validé, et l'effet attendu s'est-il produit (une prime signalée
+  est-elle réellement soldée ?). Le rapport nomme les étapes non exécutées et,
+  s'il y a des écarts, propose une CORRECTION que vous validez comme le reste.
+  Aucune affirmation de réussite n'est faite sans cette relecture.
 - Si vous préférez saisir vous-même : ouvrir un formulaire de création : « Crée un nouveau client » — et le
   PRÉ-REMPLIR avec les valeurs que vous dictez : « Crée un client Kabila Corp,
   téléphone +243… » (uniquement vos valeurs, jamais des valeurs inventées).

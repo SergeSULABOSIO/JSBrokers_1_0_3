@@ -483,6 +483,29 @@
         /* Budget en texte simple sur une ligne (coût · solde · reste). */
         .jsb-ai-chat .aic-mutation-budget { flex:1 1 100%; margin:0 0 .1rem; font-size:.8rem; color:var(--aic-text-2); font-weight:600; }
 
+        /* PROGRAMME : situe l'étape dans la série (« étape 2 sur 3 »). Sans ce
+           repère, une série de validations successives est vécue comme une suite
+           de demandes sans fin — l'utilisateur doit voir où il en est et ce qu'il
+           reste. La jauge est purement décorative (l'information est dans le texte). */
+        .jsb-ai-chat .aic-prog-bandeau { flex:1 1 100%; margin:0 0 .35rem; }
+        .jsb-ai-chat .aic-prog-ligne {
+            margin:0 0 .25rem; font-size:.78rem; font-weight:600; color:var(--aic-muted);
+        }
+        .jsb-ai-chat .aic-prog-ref { color:var(--aic-text-2); font-weight:700; }
+        .jsb-ai-chat .aic-prog-jauge {
+            height:4px; border-radius:99px; background:var(--aic-border-subtle); overflow:hidden;
+        }
+        .jsb-ai-chat .aic-prog-jauge span { display:block; height:100%; background:var(--aic-accent-solid); }
+        /* Le rapport final : encadré discret, pour qu'il se distingue d'une réponse
+           ordinaire — c'est un compte rendu, pas une conversation. */
+        .jsb-ai-chat .aic-prog-correction {
+            display:flex; flex-wrap:wrap; align-items:center; gap:.5rem .6rem;
+            align-self:flex-start; max-width:96%; margin:.1rem 0 .55rem; padding:.65rem .8rem;
+            background:var(--aic-surface); border:1px solid var(--aic-border);
+            border-left:3px solid var(--aic-warning-fg); border-radius:10px;
+        }
+        .jsb-ai-chat .aic-prog-correction p { flex:1 1 100%; margin:0 0 .1rem; font-size:.8rem; color:var(--aic-text-2); }
+
         /* Aperçu AUTORITAIRE : ce que le plan écrira réellement (données serveur),
            et ce qu'il ne couvre pas — pour qu'un écart avec la prose de Ket se voie
            AVANT la validation. */
@@ -833,7 +856,11 @@
             {# data-message-id : identité de la bulle, sans laquelle aucune action
                (répondre, exporter, envoyer) n'est possible. Volontairement un
                data-* et NON un id= : deux conversations peuvent être ouvertes en
-               même temps, un id DOM entrerait en collision. #}
+               même temps, un id DOM entrerait en collision.
+               `programme` dans data-mutation-review : sans lui, un F5 en cours de
+               série ferait perdre le repère « étape 2 sur 3 » et le bouton
+               d'interruption. (Aucun commentaire Twig DANS le littéral ci-dessous :
+               `{#` y est une erreur de parsing, pas un commentaire.) #}
             <div class="aic-msg aic-msg--{{ estAssistant ? 'assistant' : 'user' }}{{ estRefus ? ' aic-msg--refus' }}"
                 data-message-id="{{ message.id }}"
                 data-message-role="{{ message.role }}"
@@ -843,7 +870,8 @@
                     apercu: message.meta.mutationPlan.apercu ?? [],
                     omissions: message.meta.mutationPlan.omissions ?? [],
                     requiresPassword: message.meta.mutationPlan.requiresPassword ?? false,
-                    impacts: message.meta.mutationPlan.impacts ?? []
+                    impacts: message.meta.mutationPlan.impacts ?? [],
+                    programme: message.meta.programme ?? null
                 }|json_encode|e('html_attr') }}"{% endif %}>
                 {% if estAssistant %}
                     <span class="aic-msg-avatar" aria-hidden="true">{{ assistantNom|first|upper }}</span>
@@ -913,6 +941,16 @@
                réaffiché après un rechargement, en miroir du live (executeActions). #}
             {% if estAssistant and (message.meta.mutationAbsent ?? false) %}
                 <p class="aic-notice aic-notice--warning" role="status">Aucun plan n'est réellement en attente de validation : l'opération n'a pas été préparée, donc aucun bouton « Valider et exécuter » n'apparaîtra. Redemandez l'action pour que le plan et son bouton s'affichent.</p>
+            {% endif %}
+            {# RAPPORT FINAL d'un programme portant des écarts : le bouton de
+               correction doit survivre au rechargement, sinon la seule issue
+               proposée à l'utilisateur disparaîtrait avec la page. #}
+            {% set rapport = estAssistant ? (message.meta.programmeRapport ?? null) : null %}
+            {% if rapport and (rapport.corrections|default([]))|length > 0 and (message.meta.programme.idProgramme ?? null) %}
+                <div class="aic-prog-correction" data-programme-correction="{{ {
+                    idProgramme: message.meta.programme.idProgramme,
+                    corrections: rapport.corrections|length
+                }|json_encode|e('html_attr') }}"></div>
             {% endif %}
         {% endfor %}
     </div>

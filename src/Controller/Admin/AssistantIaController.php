@@ -13,6 +13,10 @@ use App\Ai\Export\MessageExporter;
 use App\Ai\Export\MessageMailNotifier;
 use App\Ai\Fichier\FichierAttachePolicy;
 use App\Ai\Fichier\FichierTexteExtracteur;
+use App\Ai\Programme\ProgrammeEnCours;
+use App\Ai\Programme\ProgrammeRunner;
+use App\Ai\Programme\ProgrammeVerificateur;
+use App\Ai\Programme\RapportProgramme;
 use App\Ai\Tool\EntiteLibelle;
 use App\Ai\Tool\PrefillWhitelist;
 use Psr\Log\LoggerInterface;
@@ -21,12 +25,14 @@ use App\Entity\AssistantConversationContexte;
 use App\Entity\AssistantConversationFichier;
 use App\Entity\AssistantMessage;
 use App\Entity\AssistantParametres;
+use App\Entity\AssistantProgramme;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use App\Entity\Utilisateur;
 use App\Repository\AssistantConversationRepository;
 use App\Repository\AssistantMessageRepository;
 use App\Repository\AssistantParametresRepository;
+use App\Repository\AssistantProgrammeRepository;
 use App\Repository\EntrepriseRepository;
 use App\Ai\Mutation\MutationPlan;
 use App\Ai\Mutation\MutationReferences;
@@ -113,6 +119,10 @@ class AssistantIaController extends AbstractController
         private ValidatorInterface $validator,
         private FichierTexteExtracteur $fichierExtracteur,
         private PlanDuJourService $planDuJour,
+        private AssistantProgrammeRepository $programmeRepository,
+        private ProgrammeEnCours $programmeEnCours,
+        private ProgrammeRunner $programmeRunner,
+        private ProgrammeVerificateur $programmeVerificateur,
     ) {
     }
 
@@ -484,6 +494,10 @@ class AssistantIaController extends AbstractController
                 // Trace du garde-fou : réaffiche l'avertissement autoritaire après
                 // un rechargement de page (F5), comme les statuts de plan.
                 'mutationAbsent' => $planFantome ?: null,
+                // Bandeau d'avancement quand ce plan est l'étape d'un PROGRAMME
+                // (« étape 1 sur 3 ») : persisté pour survivre au rechargement,
+                // au même titre que le plan lui-même.
+                'programme'      => $this->extraireBandeauProgramme($actions),
             ]));
         $conversation->addMessage($messageAssistant);
 
@@ -492,6 +506,16 @@ class AssistantIaController extends AbstractController
         }
 
         $this->em->flush();
+
+        // La PREMIÈRE étape d'un programme voyage sur ce message-ci (l'outil ne
+        // fabrique pas de bulle supplémentaire pour elle) : on rattache l'étape à
+        // son message maintenant qu'il a une identité. C'est ce lien, et lui seul,
+        // qui permettra à l'exécution de savoir qu'elle vient de trancher une
+        // étape — et donc d'enchaîner sur la suivante.
+        $programmeCourant = $this->programmeEnCours->courant($conversation);
+        if ($programmeCourant !== null) {
+            $this->programmeRunner->attacherMessage($programmeCourant, $messageAssistant);
+        }
 
         return $this->json([
             'user' => [
@@ -525,27 +549,30 @@ class AssistantIaController extends AbstractController
      * Extrait le plan de mutation (plan + budget + exige-mdp) d'une éventuelle
      * action ket-mutation.review, pour stockage serveur. null si absent.
      *
+     * Délègue à PlanEnAttente : la structure stockée est partagée avec la
+     * préparation déterministe des étapes de programme (ProgrammeRunner), et les
+     * deux chemins doivent écrire exactement la même chose.
+     *
      * @param array<int, array> $actions
      */
     private function extraireMutationPlan(array $actions): ?array
     {
+        return PlanEnAttente::planStockable($actions);
+    }
+
+    /**
+     * Bandeau d'avancement du programme porté par une action de revue, ou null
+     * quand le plan est isolé. Stocké à part du plan : le plan est ce qui sera
+     * ÉCRIT, le bandeau est ce qui situe l'étape dans la série — deux choses
+     * indépendantes, l'une n'ayant pas à polluer l'autre.
+     *
+     * @param array<int, array> $actions
+     */
+    private function extraireBandeauProgramme(array $actions): ?array
+    {
         foreach ($actions as $action) {
-            if (($action['type'] ?? null) === PlanEnAttente::ACTION_REVUE && isset($action['plan'])) {
-                return [
-                    'plan'             => $action['plan'],
-                    // `budget` porte aussi la ventilation par étape (budget.parEtape) :
-                    // c'est elle qui alimente les cases à cocher de l'ÉTENDUE, live
-                    // comme après un rechargement de page.
-                    'budget'           => $action['budget'] ?? null,
-                    // Ce que le plan fait / ne fait pas, tel que l'utilisateur doit le
-                    // VOIR avant de valider (indépendant de la prose du modèle).
-                    'apercu'           => $action['apercu'] ?? [],
-                    'omissions'        => $action['omissions'] ?? [],
-                    'requiresPassword' => (bool) ($action['requiresPassword'] ?? false),
-                    // Impacts de cascade conservés pour reconstruire la barre de
-                    // décision après un rechargement de page (F5).
-                    'impacts'          => $action['impacts'] ?? [],
-                ];
+            if (($action['type'] ?? null) === PlanEnAttente::ACTION_REVUE && is_array($action['programme'] ?? null)) {
+                return $action['programme'];
             }
         }
 
@@ -723,11 +750,83 @@ class AssistantIaController extends AbstractController
         $message->setMeta($meta);
         $this->em->flush();
 
-        return $this->json([
+        $reponse = [
             'success' => true,
             'message' => 'Mission exécutée avec succès.',
             'journal' => $journal,
-        ]);
+        ];
+
+        // ENCHAÎNEMENT DU PROGRAMME. C'est ici que se refermait le trou : jusqu'à
+        // présent la réponse s'arrêtait à la ligne au-dessus, le moteur n'était
+        // jamais rappelé, et une série de plans mourait donc après le premier.
+        // Le plan suivant est désormais préparé par du CODE — coût nul en tokens,
+        // et aucune place pour un oubli ou une recopie.
+        $etape = $this->programmeEnCours->etapeDuMessage($conversation, $idMessage);
+        if ($etape !== null && $etape->getProgramme() !== null) {
+            $this->programmeRunner->marquerExecutee($etape, $journal);
+            $reponse['programme'] = $this->suiteDuProgramme($etape->getProgramme(), $scope);
+        }
+
+        return $this->json($reponse);
+    }
+
+    /**
+     * Sert l'étape suivante du programme, ou clôt la mission par son RAPPORT
+     * FINAL vérifié en base. Point de passage UNIQUE : exécution, annulation
+     * d'étape et interruption volontaire aboutissent tous ici, si bien qu'aucun
+     * chemin ne peut laisser une série à moitié jouée sans rendre de comptes.
+     *
+     * @return array<string, mixed>
+     */
+    private function suiteDuProgramme(AssistantProgramme $programme, AiScope $scope): array
+    {
+        $entete = [
+            'idProgramme' => (int) $programme->getId(),
+            'reference'   => (string) $programme->getReference(),
+        ];
+
+        if ($programme->estEnCours()) {
+            $prochaine = $this->programmeRunner->preparerProchaine($programme, $scope);
+            if ($prochaine !== null) {
+                return $entete + ['suivant' => $prochaine];
+            }
+        }
+
+        $this->programmeEnCours->cloreSiTermine($programme);
+
+        // Un rapport a déjà été rendu pour cette mission : ne pas en fabriquer un
+        // second. Deux chemins peuvent aboutir ici pour le même programme (dernière
+        // étape tranchée, puis interruption ou correction refusée) et l'utilisateur
+        // se retrouverait avec deux comptes rendus concurrents du même travail.
+        if ($programme->getRapport() !== null) {
+            return $entete + ['rapportDejaRendu' => true];
+        }
+
+        // RAPPORT : relecture en base, ligne à ligne, de tout ce que le programme
+        // prétend avoir écrit — plus les étapes qui n'ont PAS été faites. Rédigé
+        // par le serveur, jamais par le modèle : c'est précisément au moment de
+        // rendre compte qu'un résumé de complaisance ferait le plus de dégâts.
+        $rapport = $this->programmeVerificateur->verifier($programme, $scope);
+        $contenu = RapportProgramme::enMarkdown($rapport);
+
+        $message = (new AssistantMessage())
+            ->setRole(AssistantMessage::ROLE_ASSISTANT)
+            ->setContenu($contenu)
+            ->setMeta([
+                'engine'           => 'programme',
+                'programme'        => $entete,
+                'programmeRapport' => $rapport,
+            ]);
+        $programme->getConversation()?->addMessage($message);
+        $this->em->persist($message);
+        $this->em->flush();
+
+        return $entete + ['rapport' => [
+            'idMessage'   => (int) $message->getId(),
+            'contenu'     => $contenu,
+            'conforme'    => (bool) $rapport['conforme'],
+            'corrections' => count($rapport['corrections']),
+        ]];
     }
 
     /**
@@ -776,7 +875,114 @@ class AssistantIaController extends AbstractController
         $message->setMeta($meta);
         $this->em->flush();
 
-        return $this->json(['success' => true, 'message' => 'Plan annulé.']);
+        $reponse = ['success' => true, 'message' => 'Plan annulé.'];
+
+        // Refuser UNE étape n'annule pas la mission : la série continue, et
+        // l'omission sera nommée dans le rapport final. Interrompre tout le
+        // programme est une décision distincte, qui a son propre bouton.
+        $etape = $this->programmeEnCours->etapeDuMessage($conversation, $idMessage);
+        if ($etape !== null && $etape->getProgramme() !== null) {
+            $this->programmeRunner->marquerAnnulee($etape);
+            $reponse['programme'] = $this->suiteDuProgramme(
+                $etape->getProgramme(),
+                new AiScope($entreprise, $invite, $conversation),
+            );
+        }
+
+        return $this->json($reponse);
+    }
+
+    /**
+     * INTERRUPTION volontaire d'un programme : l'utilisateur stoppe la série en
+     * cours de route. Les étapes non tranchées sont marquées annulées avec un
+     * motif, et le rapport final est établi immédiatement — s'arrêter en chemin
+     * ne doit jamais dispenser de dire ce qui a été fait et ce qui ne l'a pas été.
+     */
+    #[Route('/api/programme/{idEntreprise}/{idConversation}/{idProgramme}/interrompre', name: 'api.programme.interrompre', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS, 'idProgramme' => Requirement::DIGITS], methods: ['POST'])]
+    public function interrompreProgramme(int $idEntreprise, int $idConversation, int $idProgramme): JsonResponse
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+
+        $programme = $this->programmeRepository->findDansConversation($idProgramme, $conversation);
+        if ($programme === null) {
+            return $this->json(['message' => 'Programme introuvable.'], Response::HTTP_NOT_FOUND);
+        }
+        if (!$programme->estEnCours()) {
+            return $this->json(['message' => 'Ce programme est déjà terminé.'], Response::HTTP_CONFLICT);
+        }
+
+        $this->programmeEnCours->interrompre($programme, 'Programme interrompu par l’utilisateur.');
+
+        return $this->json([
+            'success'   => true,
+            'message'   => 'Programme interrompu.',
+            'programme' => $this->suiteDuProgramme($programme, new AiScope($entreprise, $invite, $conversation)),
+        ]);
+    }
+
+    /**
+     * Lance le PROGRAMME DE CORRECTION proposé par le rapport final d'un
+     * programme : mêmes étapes à valider une par une, même circuit. La liste des
+     * corrections est relue depuis le rapport STOCKÉ côté serveur — le client
+     * n'en transmet aucune, il ne fait que demander.
+     */
+    #[Route('/api/programme/{idEntreprise}/{idConversation}/{idProgramme}/corriger', name: 'api.programme.corriger', requirements: ['idEntreprise' => Requirement::DIGITS, 'idConversation' => Requirement::DIGITS, 'idProgramme' => Requirement::DIGITS], methods: ['POST'])]
+    public function corrigerProgramme(int $idEntreprise, int $idConversation, int $idProgramme): JsonResponse
+    {
+        [$entreprise, $invite] = $this->resolveWorkspace($idEntreprise);
+        if (!$this->moduleAutorise($invite)) {
+            return $this->json(['message' => 'Accès refusé.'], Response::HTTP_FORBIDDEN);
+        }
+        if ($blocage = $this->blocagePremium($entreprise)) {
+            return $blocage;
+        }
+        $conversation = $this->requireConversation($idConversation, $invite, $entreprise);
+
+        $programme = $this->programmeRepository->findDansConversation($idProgramme, $conversation);
+        $corrections = $programme?->getRapport()['corrections'] ?? [];
+        if ($programme === null || !is_array($corrections) || $corrections === []) {
+            return $this->json(['message' => 'Aucune correction à proposer pour ce programme.'], Response::HTTP_NOT_FOUND);
+        }
+        if ($this->programmeEnCours->aUnProgrammeEnCours($conversation)) {
+            return $this->json([
+                'message' => 'Une autre mission est déjà en cours : terminez-la avant de lancer la correction.',
+            ], Response::HTTP_CONFLICT);
+        }
+
+        $scope = new AiScope($entreprise, $invite, $conversation);
+        $correction = $this->programmeRunner->creer(
+            $scope,
+            sprintf('Corriger les écarts du programme %s', (string) $programme->getReference()),
+            $corrections,
+            $programme,
+        );
+
+        $prochaine = $this->programmeRunner->preparerProchaine($correction, $scope);
+        if ($prochaine === null) {
+            // Aucune correction n'a pu être préparée : on ne laisse pas un verrou
+            // orphelin derrière nous, et on le dit.
+            $this->programmeEnCours->interrompre($correction, 'Aucune étape de correction n’a pu être préparée.');
+
+            return $this->json([
+                'success'   => false,
+                'message'   => 'Aucune étape de correction n’a pu être préparée.',
+                'programme' => $this->suiteDuProgramme($correction, $scope),
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        return $this->json([
+            'success'   => true,
+            'message'   => 'Programme de correction lancé.',
+            'programme' => [
+                'idProgramme' => (int) $correction->getId(),
+                'reference'   => (string) $correction->getReference(),
+                'suivant'     => $prochaine,
+            ],
+        ]);
     }
 
     /**

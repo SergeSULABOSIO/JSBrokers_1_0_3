@@ -96,6 +96,9 @@ export default class extends Controller {
         // Reconstruit la barre de décision des plans EN ATTENTE après un rechargement
         // (F5) : le live la crée via executeActions, l'historique la restaure ici.
         this.restoreMutationReviews();
+        // Rapports de programme portant des écarts : le bouton de correction est
+        // la seule issue proposée, il doit survivre au rechargement.
+        this.restoreProgrammeCorrections();
         this.scrollToBottom();
         this.onInput();
         if (this.hasInputTarget) {
@@ -586,6 +589,12 @@ export default class extends Controller {
         const majBudget = (coutRetenu) => {
             budgetLine.textContent = `Budget : ${formatNombre(coutRetenu)} tokens · solde ${formatNombre(solde)} · reste ${formatNombre(Math.max(0, solde - coutRetenu))}`;
         };
+        // PROGRAMME : où en est-on dans la série ? Posé en tête de barre, avant
+        // même l'aperçu — une validation isolée et la 2e de 3 ne se décident pas
+        // dans le même état d'esprit.
+        const bandeau = this._renderProgrammeBandeau(action.programme);
+        if (bandeau) bar.appendChild(bandeau);
+
         // Ce que le plan fera VRAIMENT, et ce qu'il ne couvre pas — rendu à partir
         // des données du serveur, jamais de la prose du modèle. C'est ce que
         // l'utilisateur valide ; si le texte de Ket annonce autre chose, l'écart
@@ -658,6 +667,16 @@ export default class extends Controller {
 
             bar.appendChild(exec);
             bar.appendChild(cancel);
+        }
+
+        // « Annuler » ne refuse QUE cette étape — la série continue et l'omission
+        // sera dite dans le rapport. Arrêter toute la mission est une autre
+        // décision : elle a donc son propre bouton, jamais un effet de bord du
+        // premier.
+        if (action.programme && action.programme.idProgramme) {
+            bar.appendChild(this._mutBtn('ghost', this.constructor.ICON_X, 'Interrompre le programme', () => {
+                this.interrompreProgramme(action.programme.idProgramme, bar);
+            }));
         }
 
         // Live : la barre suit le dernier message (append). Restauration après F5 :
@@ -862,13 +881,185 @@ export default class extends Controller {
         const id = parseInt(idMessage, 10);
         if (!Number.isInteger(id) || id <= 0) return;
         try {
-            await fetch(`/admin/assistant-ia/api/mutation/${this.idEntrepriseValue}/${this.idConversationValue}/${id}/cancel`, {
+            const response = await fetch(`/admin/assistant-ia/api/mutation/${this.idEntrepriseValue}/${this.idConversationValue}/${id}/cancel`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: '{}',
             });
+            const data = await response.json().catch(() => ({}));
+            // Refuser une étape ne rompt pas la série : le serveur a déjà préparé
+            // la suivante (ou clos la mission par son rapport).
+            if (response.ok) await this.enchainerProgramme(data.programme);
         } catch (error) {
             console.error('Ket - annulation non mémorisée :', error);
+        }
+    }
+
+    /**
+     * Bandeau d'avancement d'un programme, au-dessus de la barre de décision :
+     * référence de la mission, position dans la série, jauge. Rendu à partir des
+     * données SERVEUR (le fil n'a aucun compteur à tenir), et null pour un plan
+     * isolé — la très grande majorité des cas.
+     */
+    _renderProgrammeBandeau(programme) {
+        if (!programme || !programme.reference) return null;
+        const total = parseInt(programme.total, 10) || 0;
+        const position = parseInt(programme.position, 10) || 0;
+
+        const bloc = document.createElement('div');
+        bloc.className = 'aic-prog-bandeau';
+
+        const ligne = document.createElement('p');
+        ligne.className = 'aic-prog-ligne';
+        const ref = document.createElement('span');
+        ref.className = 'aic-prog-ref';
+        ref.textContent = `Programme ${programme.reference}`;
+        ligne.appendChild(ref);
+        const suite = document.createElement('span');
+        suite.textContent = total > 0 ? ` · étape ${position} sur ${total}` : '';
+        ligne.appendChild(suite);
+        bloc.appendChild(ligne);
+
+        if (total > 0) {
+            const jauge = document.createElement('div');
+            jauge.className = 'aic-prog-jauge';
+            jauge.setAttribute('role', 'img');
+            jauge.setAttribute('aria-label', `Étape ${position} sur ${total}`);
+            const barre = document.createElement('span');
+            barre.style.width = `${Math.max(0, Math.min(100, Math.round((position / total) * 100)))}%`;
+            jauge.appendChild(barre);
+            bloc.appendChild(jauge);
+        }
+
+        return bloc;
+    }
+
+    /**
+     * Sert la suite d'un programme telle que le serveur l'a préparée : soit la
+     * bulle de l'étape suivante avec SA barre de décision, soit le rapport final.
+     *
+     * Les deux bulles sont écrites par le SERVEUR et déjà persistées : on ne fait
+     * que les afficher. C'est délibéré — la prose d'un enchaînement et celle d'un
+     * compte rendu ne doivent dépendre d'aucun modèle, sous peine de retrouver les
+     * affirmations de complaisance qu'on corrige ici.
+     */
+    async enchainerProgramme(programme) {
+        if (!programme) return;
+
+        if (programme.suivant && programme.suivant.action) {
+            const suivant = programme.suivant;
+            this._appendBulleMarkdown(suivant.contenu, suivant.idMessage);
+            this.renderMutationReview(suivant.action);
+            return;
+        }
+
+        if (programme.rapport) {
+            const rapport = programme.rapport;
+            this._appendBulleMarkdown(rapport.contenu, rapport.idMessage);
+            if ((parseInt(rapport.corrections, 10) || 0) > 0) {
+                this.messagesTarget.appendChild(
+                    this._renderProgrammeCorrection(programme.idProgramme, rapport.corrections),
+                );
+                this.scrollToBottom();
+            }
+        }
+    }
+
+    /** Bulle assistant dont le contenu est du markdown déjà rendu côté serveur. */
+    _appendBulleMarkdown(contenu, idMessage) {
+        const bubble = this.appendMessage('assistant', '');
+        const texte = bubble.querySelector('.aic-msg-text');
+        if (texte) texte.innerHTML = renderAssistantMarkdown(contenu || '');
+        if (idMessage) this.identifierBulle(bubble, idMessage);
+        this.scrollToBottom();
+
+        return bubble;
+    }
+
+    /**
+     * Proposition de CORRECTION après un rapport portant des écarts. Le contenu
+     * des étapes n'est jamais transmis par le client : il est relu du rapport
+     * stocké côté serveur — le bouton ne fait que demander.
+     */
+    _renderProgrammeCorrection(idProgramme, nombre) {
+        const bloc = document.createElement('div');
+        bloc.className = 'aic-prog-correction';
+
+        const texte = document.createElement('p');
+        const n = parseInt(nombre, 10) || 0;
+        texte.textContent = `${n} correction${n > 1 ? 's' : ''} peu${n > 1 ? 'vent' : 't'} être préparée${n > 1 ? 's' : ''} — vous les validerez une par une, comme les étapes précédentes.`;
+        bloc.appendChild(texte);
+
+        const bouton = this._mutBtn('primary', this.constructor.ICON_CHECK, 'Préparer la correction', async () => {
+            bouton.disabled = true;
+            await this.lancerCorrection(idProgramme, bloc);
+        });
+        bloc.appendChild(bouton);
+
+        return bloc;
+    }
+
+    /** Reconstruit après un F5 les propositions de correction posées par Twig. */
+    restoreProgrammeCorrections() {
+        if (!this.hasMessagesTarget) return;
+        this.messagesTarget.querySelectorAll('[data-programme-correction]').forEach((el) => {
+            let donnees;
+            try {
+                donnees = JSON.parse(el.dataset.programmeCorrection);
+            } catch (e) {
+                return;
+            }
+            el.removeAttribute('data-programme-correction');
+            if (!donnees || !donnees.idProgramme) return;
+            el.replaceWith(this._renderProgrammeCorrection(donnees.idProgramme, donnees.corrections));
+        });
+    }
+
+    /** Lance le programme de correction proposé par un rapport. */
+    async lancerCorrection(idProgramme, blocEl) {
+        const id = parseInt(idProgramme, 10);
+        if (!Number.isInteger(id) || id <= 0) return;
+        document.dispatchEvent(new CustomEvent('app:loading.start', { bubbles: true }));
+        try {
+            const response = await fetch(`/admin/assistant-ia/api/programme/${this.idEntrepriseValue}/${this.idConversationValue}/${id}/corriger`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: '{}',
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.success) {
+                this.appendNotice('warning', data.message || "La correction n'a pas pu être préparée.");
+                return;
+            }
+            if (blocEl) blocEl.remove();
+            await this.enchainerProgramme(data.programme);
+        } catch (error) {
+            console.error('Ket - correction non préparée :', error);
+            this.appendNotice('error', "La correction n'a pas pu être préparée. Vérifiez votre connexion puis réessayez.");
+        } finally {
+            document.dispatchEvent(new CustomEvent('app:loading.stop', { bubbles: true }));
+        }
+    }
+
+    /**
+     * Arrête toute la mission. Les étapes non faites sont marquées comme telles et
+     * le rapport final est rendu immédiatement : s'arrêter en chemin ne dispense
+     * pas de savoir où l'on s'est arrêté.
+     */
+    async interrompreProgramme(idProgramme, barEl) {
+        const id = parseInt(idProgramme, 10);
+        if (!Number.isInteger(id) || id <= 0) return;
+        this._replaceBar(barEl, this._planStatusNote('cancelled', 'Programme interrompu — les étapes restantes n’ont pas été exécutées.'));
+        try {
+            const response = await fetch(`/admin/assistant-ia/api/programme/${this.idEntrepriseValue}/${this.idConversationValue}/${id}/interrompre`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: '{}',
+            });
+            const data = await response.json().catch(() => ({}));
+            if (response.ok) await this.enchainerProgramme(data.programme);
+        } catch (error) {
+            console.error('Ket - interruption non mémorisée :', error);
         }
     }
 
@@ -1031,6 +1222,11 @@ export default class extends Controller {
                         timestamp: Date.now(),
                     },
                 }));
+                // ENCHAÎNEMENT : le serveur a déjà préparé l'étape suivante de la
+                // série (ou le rapport final). C'est ici que la boucle se referme —
+                // auparavant, une série de plans s'arrêtait net après le premier et
+                // il fallait relancer Ket à la main pour chacun des suivants.
+                await this.enchainerProgramme(data.programme);
                 return 'success';
             }
 
