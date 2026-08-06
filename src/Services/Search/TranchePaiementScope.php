@@ -70,47 +70,76 @@ final class TranchePaiementScope
      * celui de présentation.
      *
      * `nom` est le nom court employé par les outils IA (objet `axes: {prime, commission…}`),
-     * `libelle` titre le groupe de chips, `valeurs` mappe valeur => libellé affiché.
+     * `libelle` nomme l'axe en toutes lettres (badge de recherche, dialogue avancé, où le
+     * critère apparaît isolé), `valeurs` mappe valeur => libellé complet — celui que Ket
+     * emploie pour dire quel filtre elle a appliqué.
      *
-     * @var array<string, array{nom: string, libelle: string, icone: string, valeurs: array<string, string>}>
+     * `titre` et `courts` servent aux CHIPS, où le critère est déjà écrit une fois en tête
+     * du groupe : y répéter « Prime » sur chacun des trois boutons triplait leur largeur et
+     * empêchait d'aligner plus de deux groupes sur une ligne.
+     *
+     * @var array<string, array{nom: string, libelle: string, titre: string, icone: string, valeurs: array<string, string>, courts: array<string, string>}>
      */
     public const AXES = [
         self::AXE_PRIME => [
             'nom' => 'prime',
             'libelle' => 'Prime (due par l\'assuré)',
+            'titre' => 'Prime',
             'icone' => 'action:alert',
             'valeurs' => [
                 self::PAYEE => 'Prime payée',
                 self::PARTIELLE => 'Prime partiellement payée',
                 self::IMPAYEE => 'Prime impayée',
             ],
+            'courts' => [
+                self::PAYEE => 'Payée',
+                self::PARTIELLE => 'Partielle',
+                self::IMPAYEE => 'Impayée',
+            ],
         ],
         self::AXE_COMMISSION => [
             'nom' => 'commission',
             'libelle' => 'Commission (due par l\'assureur)',
+            'titre' => 'Commission',
             'icone' => 'paiement',
             'valeurs' => [
                 self::PAYEE => 'Commission payée',
                 self::PARTIELLE => 'Commission partiellement encaissée',
                 self::IMPAYEE => 'Commission impayée',
             ],
+            'courts' => [
+                self::PAYEE => 'Encaissée',
+                self::PARTIELLE => 'Partielle',
+                self::IMPAYEE => 'Impayée',
+            ],
         ],
         self::AXE_RETRO => [
             'nom' => 'retro',
             'libelle' => 'Rétrocommission (due au partenaire)',
+            'titre' => 'Rétro',
             'icone' => 'depense',
             'valeurs' => [
                 self::PAYEE => 'Rétro payée',
                 self::PARTIELLE => 'Rétro partiellement reversée',
                 self::IMPAYEE => 'Rétro à payer',
             ],
+            'courts' => [
+                self::PAYEE => 'Reversée',
+                self::PARTIELLE => 'Partielle',
+                self::IMPAYEE => 'À payer',
+            ],
         ],
         self::AXE_ECHEANCE => [
             'nom' => 'echeance',
             'libelle' => 'Échéance',
+            'titre' => 'Échéance',
             'icone' => 'action:calendar',
             'valeurs' => [
                 self::ECHUE => 'Échues (en retard)',
+                self::A_ECHOIR => 'À échoir',
+            ],
+            'courts' => [
+                self::ECHUE => 'En retard',
                 self::A_ECHOIR => 'À échoir',
             ],
         ],
@@ -183,6 +212,16 @@ final class TranchePaiementScope
     public static function libelle(string $cleAxe, string $valeur): string
     {
         return self::AXES[$cleAxe]['valeurs'][$valeur] ?? $valeur;
+    }
+
+    /**
+     * Libellé destiné aux CHIPS, où le critère est déjà écrit en tête du groupe : « Payée »
+     * sous le titre « Prime », et non « Prime payée ». À n'employer nulle part ailleurs —
+     * isolé, « Partielle » ne dit pas de quelle dette il s'agit.
+     */
+    public static function libelleCourt(string $cleAxe, string $valeur): string
+    {
+        return self::AXES[$cleAxe]['courts'][$valeur] ?? self::libelle($cleAxe, $valeur);
     }
 
     /**

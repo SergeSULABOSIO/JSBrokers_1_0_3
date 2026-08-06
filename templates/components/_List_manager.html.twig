@@ -59,12 +59,25 @@
                     <div class="jsb-preset-filters jsb-control-pill" role="group"
                          aria-label="{{ groupe.libelle | default('Filtres rapides') }}"
                          data-preset-criterion="{{ groupe.critere }}">
+                        {# Le CRITÈRE est écrit une seule fois, en tête du groupe : les boutons
+                           ne portent plus que la valeur. Une rubrique peut ainsi aligner
+                           quatre groupes sur une ligne là où deux la remplissaient. #}
+                        <span class="jsb-preset-filters__titre" aria-hidden="true">
+                            {%- if groupe.icon is defined and groupe.icon -%}
+                                <span class="jsb-preset-filters__titre-icone">{{ ux_icon(resolve_icon_name(groupe.icon), {width: '14px', height: '14px'}) }}</span>
+                            {%- endif -%}
+                            <span>{{ groupe.titre | default(groupe.libelle | default('Filtrer')) }}</span>
+                        </span>
                         {% for option in groupe.options %}
+                            {# `titre_complet` porte le libellé non abrégé : le titre du groupe
+                               n'est pas annoncé avec le bouton par les lecteurs d'écran, et
+                               « Partielle » seul ne dirait pas de quelle dette il s'agit. #}
                             <button type="button" class="jsb-preset-chip"
                                     data-action="click->list-manager#applyPresetFilter"
                                     data-criterion-key="{{ groupe.critere }}"
                                     data-criterion-value="{{ option.value }}"
-                                    data-criterion-label="{{ option.label }}"
+                                    data-criterion-label="{{ option.titre_complet | default(option.label) }}"
+                                    {% if option.titre_complet is defined %}aria-label="{{ option.titre_complet }}" title="{{ option.titre_complet }}"{% endif %}
                                     aria-pressed="false">
                                 {%- if option.icon is defined and option.icon -%}
                                     <span class="jsb-preset-chip__icon" aria-hidden="true">{{ ux_icon(resolve_icon_name(option.icon), {width: '15px', height: '15px'}) }}</span>

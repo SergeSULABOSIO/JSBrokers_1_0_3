@@ -85,16 +85,28 @@ class TrancheListCanvasProvider implements ListCanvasProviderInterface
         $groupes = [];
         foreach (TranchePaiementScope::AXES as $cle => $axe) {
             $options = [];
-            foreach ($axe['valeurs'] as $valeur => $label) {
-                $options[] = ["value" => $valeur, "label" => $label, "icon" => $axe['icone']];
+            foreach (array_keys($axe['valeurs']) as $valeur) {
+                // Libellé COURT et AUCUNE icône par bouton : le critère et son icône sont
+                // écrits une seule fois, dans le titre du groupe. Répéter « Prime » sur
+                // chacun des trois boutons triplait leur largeur, au point qu'on ne pouvait
+                // pas aligner plus de deux groupes sur une ligne.
+                $options[] = [
+                    "value" => $valeur,
+                    "label" => TranchePaiementScope::libelleCourt($cle, $valeur),
+                    // Le titre du groupe ne suit pas le bouton dans les lecteurs d'écran :
+                    // chaque chip garde donc le libellé complet en infobulle accessible.
+                    "titre_complet" => TranchePaiementScope::libelle($cle, $valeur),
+                ];
             }
             // L'option vide retire le critère de CE groupe seulement : les autres axes
             // posés restent actifs (cf. list-manager_controller#applyPresetFilter).
-            $options[] = ["value" => "", "label" => "Toutes", "icon" => "action:filter"];
+            $options[] = ["value" => "", "label" => "Toutes", "titre_complet" => $axe['libelle'] . ' : toutes'];
 
             $groupes[] = [
                 "critere" => $cle,
                 "libelle" => $axe['libelle'],
+                "titre" => $axe['titre'],
+                "icon" => $axe['icone'],
                 "options" => $options,
             ];
         }

@@ -1447,6 +1447,31 @@ textarea:hover,
     gap: 0;
     flex-shrink: 0;
 }
+/* Titre du groupe : le CRITÈRE écrit une seule fois, en tête de la pilule, au lieu d'être
+   répété sur chaque bouton (« Prime payée », « Prime impayée »…). Les chips ne portent plus
+   que la valeur, ce qui divise leur largeur par deux et permet d'aligner les quatre groupes
+   de la rubrique Tranches sur une seule ligne.
+   Couleurs de la charte : #343a40 (texte de titres), #0047AB (accent de marque, sur l'icône
+   seulement — il ne doit pas concurrencer la pastille cobalt du chip actif), #ced4da
+   (séparateur de toolbar). */
+.jsb-preset-filters__titre {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 9px 0 10px;
+    margin-right: 3px;
+    border-right: 1px solid #ced4da;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #343a40;
+    white-space: nowrap;
+    user-select: none;
+}
+.jsb-preset-filters__titre-icone {
+    display: inline-flex; /* aligne verticalement le SVG sur le texte */
+    color: #0047AB;
+}
 .jsb-preset-chip {
     display: inline-flex;
     align-items: center;
