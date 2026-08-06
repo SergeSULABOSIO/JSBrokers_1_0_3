@@ -4,6 +4,7 @@ namespace App\Controller\Admin;
 
 use App\Constantes\Constante;
 use App\Controller\Admin\ControllerUtilsTrait;
+use App\Entity\Avenant;
 use App\Entity\Bordereau;
 use App\Entity\Chargement;
 use App\Entity\Entreprise;
@@ -663,6 +664,48 @@ class BordereauController extends AbstractController
     }
 
     /**
+     * Ligne d'analyse telle qu'elle est PERSISTÉE dans Bordereau::analysisResults.
+     *
+     * Constructeur UNIQUE des trois types (new / discrepancy / match) : c'est ce qui garantit
+     * qu'aucune branche ne retombe dans le stockage appauvri des quatre clés de repérage.
+     *
+     * Pourquoi les montants sont conservés. L'assureur déclare, POUR CHAQUE POLICE, ce qu'il
+     * règle maintenant (colonnes mappées commission_ht_payable_now / taxe_commission_payable_now).
+     * Ne garder que le repérage obligeait tout calcul en aval à relire le fichier Excel — donc,
+     * en pratique, à ne pas le faire : la commission encaissée par tranche était alors répartie
+     * par une RÈGLE (prorata, puis imputation) alors que l'affectation exacte était connue à
+     * l'analyse. On la fige ici, une fois pour toutes.
+     *
+     * INVARIANT, dont dépend tout l'aval : la somme de (commission_ht_payable_now +
+     * taxe_commission_payable_now) sur TOUTES les lignes vaut Bordereau::montantPayableNow —
+     * c'est très exactement ainsi que ce champ est calculé en fin d'analyse, et c'est donc
+     * aussi ce que la note liée au bordereau réclame à l'assureur. Le taux de règlement
+     * (encaissé ÷ montantPayableNow) a de ce fait le bon dénominateur.
+     *
+     * @param array<string, mixed> $rawLineData Ligne Excel déjà normalisée (reconstructRawLineData).
+     * @return array<string, mixed>
+     */
+    private function ligneAnalyseAPersister(
+        string $type,
+        int $rowIndex,
+        string $referencePolice,
+        ?Avenant $avenant,
+        array $rawLineData,
+    ): array {
+        return [
+            // Repérage (inchangé) : permet de retrouver la ligne Excel et l'avenant.
+            'type' => $type,
+            'row_index' => $rowIndex,
+            'reference_police' => $referencePolice,
+            'avenant_id' => $avenant?->getId(),
+            // Montants déclarés par l'assureur pour CETTE police.
+            'commission_ht_payable_now' => (float) ($rawLineData['commission_ht_payable_now'] ?? 0),
+            'taxe_commission_payable_now' => (float) ($rawLineData['taxe_commission_payable_now'] ?? 0),
+            'prime_ttc' => (float) ($rawLineData['prime_ttc'] ?? 0),
+        ];
+    }
+
+    /**
      * Traite un lot de 10 lignes et retourne les résultats partiels.
      */
     private function _handleAnalysisProcess(Bordereau $bordereau, Request $request, ParameterBagInterface $params): JsonResponse
@@ -728,12 +771,7 @@ class BordereauController extends AbstractController
                 $financialTotals['com_payable_now'] += (float)($rawLineData['commission_ht_payable_now'] ?? 0);
                 $financialTotals['taxe']            += (float)($rawLineData['taxe_commission_payable_now'] ?? 0);
 
-                $chunkResultsToStore[] = [
-                    'type' => 'new',
-                    'row_index' => $rowIndex,
-                    'reference_police' => $refPolice,
-                    'avenant_id' => null,
-                ];
+                $chunkResultsToStore[] = $this->ligneAnalyseAPersister('new', $rowIndex, $refPolice, null, $rawLineData);
                 $chunkResultsForDisplay[] = [
                     'type' => 'new',
                     'row_index' => $rowIndex,
@@ -809,12 +847,7 @@ class BordereauController extends AbstractController
                     ];
                 }
 
-                $chunkResultsToStore[] = [
-                    'type' => 'discrepancy',
-                    'row_index' => $rowIndex,
-                    'reference_police' => $refPolice,
-                    'avenant_id' => $avenant->getId(),
-                ];
+                $chunkResultsToStore[] = $this->ligneAnalyseAPersister('discrepancy', $rowIndex, $refPolice, $avenant, $rawLineData);
                 $chunkResultsForDisplay[] = [
                     'type' => 'discrepancy',
                     'row_index' => $rowIndex,
@@ -832,12 +865,7 @@ class BordereauController extends AbstractController
                     ]],
                 ];
             } else {
-                $chunkResultsToStore[] = [
-                    'type' => 'match',
-                    'row_index' => $rowIndex,
-                    'reference_police' => $refPolice,
-                    'avenant_id' => $avenant->getId(),
-                ];
+                $chunkResultsToStore[] = $this->ligneAnalyseAPersister('match', $rowIndex, $refPolice, $avenant, $rawLineData);
                 $chunkResultsForDisplay[] = [
                     'type' => 'match',
                     'row_index' => $rowIndex,

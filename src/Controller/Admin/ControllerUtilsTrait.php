@@ -1626,70 +1626,15 @@ trait ControllerUtilsTrait
     }
 
     /**
-     * Helper to parse and convert Excel values based on expected system field type.
-     * This method is now part of the trait for reusability.
+     * Traduction d'une cellule Excel vers un champ système.
      *
-     * @param mixed $value
-     * @param string $systemField
-     * @return mixed
+     * Délègue à BordereauLigneNormaliseur, SOURCE UNIQUE partagée avec le rattrapage en
+     * ligne de commande : une seconde implémentation ferait diverger les montants persistés
+     * de ceux affichés à l'écran, pour un même fichier.
      */
     protected function parseExcelValue($value, string $systemField)
     {
-        if ($value === null || $value === '') {
-            if ($systemField === 'num_avenant') {
-                return '0';
-            }
-            return null;
-        }
-
-        // Détection des champs numériques (fixes ou dynamiques comme chargements/revenus)
-        $isNumericField = str_starts_with($systemField, 'chargement_') ||
-            str_starts_with($systemField, 'revenu_') ||
-            in_array($systemField, ['prime_ttc', 'commission_ht_payable_now', 'taxe_commission_payable_now', 'taux_commission']);
-
-        if ($isNumericField) {
-            if (is_string($value)) {
-                $cleanedValue = str_replace([' ', "\u{00A0}"], '', $value);
-                $cleanedValue = str_replace(',', '.', $cleanedValue);
-                if (substr_count($cleanedValue, '.') > 1) {
-                    $lastDotPos = strrpos($cleanedValue, '.');
-                    if ($lastDotPos !== false) {
-                        $cleanedValue = str_replace('.', '', substr($cleanedValue, 0, $lastDotPos)) . substr($cleanedValue, $lastDotPos);
-                    }
-                }
-                return (float) $cleanedValue;
-            }
-            return (float) $value;
-        }
-
-        switch ($systemField) {
-            case 'date_effet_avenant':
-            case 'date_expiration_avenant':
-            case 'date_operation':
-                if (is_numeric($value)) {
-                    try {
-                        $dateObj = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value);
-                        return $dateObj instanceof \DateTimeInterface ? $dateObj->format('Y-m-d') : null;
-                    } catch (\Exception $e) {
-                        return null;
-                    }
-                } elseif (is_string($value)) {
-                    try {
-                        $dateObj = new \DateTimeImmutable($value);
-                        return $dateObj->format('Y-m-d');
-                    } catch (\Exception $e) {
-                        return null;
-                    }
-                }
-                return null;
-            case 'num_avenant':
-                if (is_float($value) && floor($value) == $value) {
-                    return (string)(int)$value; // 3.0 → "3"
-                }
-                return (string)$value;
-            default:
-                return $value;
-        }
+        return \App\Services\Bordereau\BordereauLigneNormaliseur::normaliserValeur($value, $systemField);
     }
 
     /**
@@ -1698,30 +1643,7 @@ trait ControllerUtilsTrait
      */
     protected function reconstructRawLineData(array $row, array $mappedColumns): array
     {
-        $rawLineData = [];
-        foreach ($mappedColumns as $systemField => $excelColumns) {
-            // Si c'est un tableau, on itère et on somme les valeurs numériques
-            if (is_array($excelColumns)) {
-                $isNumericField = str_starts_with($systemField, 'chargement_') ||
-                    str_starts_with($systemField, 'revenu_') ||
-                    in_array($systemField, ['prime_ttc', 'commission_ht_payable_now', 'taxe_commission_payable_now', 'taux_commission']);
-                $sum = 0.0;
-                $textValue = null;
-                foreach ($excelColumns as $col) {
-                    $val = $this->parseExcelValue($row[$col] ?? null, $systemField);
-                    if ($isNumericField && is_numeric($val)) {
-                        $sum += (float)$val;
-                    } elseif ($val !== null && $textValue === null) {
-                        $textValue = $val;
-                    }
-                }
-                $rawLineData[$systemField] = $isNumericField ? $sum : $textValue;
-            } else {
-                // Comportement standard 1:1
-                $rawLineData[$systemField] = $this->parseExcelValue($row[$excelColumns] ?? null, $systemField);
-            }
-        }
-        return $rawLineData;
+        return \App\Services\Bordereau\BordereauLigneNormaliseur::normaliserLigne($row, $mappedColumns);
     }
 
     /**

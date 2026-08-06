@@ -667,6 +667,13 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
      * le champ auto-déclaré montantComHtPayableNow — qui peut sous-évaluer ce total si le
      * bordereau a accumulé des réconciliations sans être remis à jour (c'est le cas monté
      * ici : 500 déclaré pour 1000 réellement dus).
+     *
+     * CE TEST COUVRE LE REPLI. Ses lignes d'analyse ne portent délibérément AUCUN montant :
+     * c'est l'état des bordereaux analysés avant que la déclaration par police ne soit
+     * persistée. Il doit rester vert tel quel — c'est la garantie que le parc existant
+     * continue de produire exactement les mêmes chiffres tant qu'il n'a pas été rattrapé
+     * (cf. app:bordereau:enrichir-lignes). Le régime exact est couvert par
+     * testMontantsPersistesDonnentUneAffectationExacteParPolice.
      */
     public function testEncaissementPartielEstImputeSurLesPlusAnciennes(): void
     {
@@ -845,6 +852,304 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
         // totalité de l'agrégat du bordereau.
         $this->assertEqualsWithDelta(250.0, $helper->getTrancheMontantCommissionEncaissee($trancheAFraiche), 0.01, 'Bordereau intégralement soldé (1000 encaissé = 1000 dû) : commission A réputée encaissée à hauteur de SA part (50 % de 500).');
         $this->assertEqualsWithDelta(500.0, $helper->getTrancheMontantCommissionEncaissee($trancheBFraiche), 0.01, 'Commission B réputée encaissée à hauteur de SA part (100 % de 500).');
+    }
+
+    /**
+     * L'AFFECTATION N'EST PLUS UNE RÈGLE, C'EST UNE DONNÉE. L'analyse persiste désormais,
+     * pour CHAQUE POLICE, ce que l'assureur déclare régler (commission_ht_payable_now +
+     * taxe_commission_payable_now) : chaque avenant reçoit SON montant, et non une part
+     * servie dans l'ordre des échéances.
+     *
+     * Le semis discrimine les deux régimes : la police A ne réclame que 200 alors que sa
+     * tranche échue en doit 250. Sous l'ancienne règle globale, cette tranche — la plus
+     * ancienne — aurait absorbé 250 avant que B ne touche quoi que ce soit. Ici elle en
+     * reçoit exactement 200, et B ses 300.
+     */
+    public function testMontantsPersistesDonnentUneAffectationExacteParPolice(): void
+    {
+        $em = $this->em();
+        $helper = static::getContainer()->get(IndicatorCalculationHelper::class);
+
+        ['entreprise' => $entreprise, 'echue' => $trancheA, 'aEchoir' => $trancheAEchoir] = $this->seed();
+        $invite = $em->getRepository(Invite::class)->findOneBy(['entreprise' => $entreprise]);
+
+        // Police B : une cotation indépendante, une tranche portant 100 % de sa commission.
+        $piste2 = (new Piste())->setNom('Piste exacte B')->setTypeAvenant(0)
+            ->setDescriptionDuRisque('Risque B')->setExercice(2026)
+            ->setEntreprise($entreprise)->setInvite($invite);
+        $em->persist($piste2);
+        $cotationB = (new Cotation())->setNom('Cotation exacte B')->setDuree(365);
+        $cotationB->setPiste($piste2);
+        $cotationB->setEntreprise($entreprise);
+        $em->persist($cotationB);
+        $trancheB = (new Tranche())->setNom('Tranche exacte B')->setPourcentage(100.0)
+            ->setPayableAt(new \DateTimeImmutable('-30 days'))->setEcheanceAt(new \DateTimeImmutable('+30 days'));
+        $trancheB->setCotation($cotationB);
+        $trancheB->setEntreprise($entreprise);
+        $em->persist($trancheB);
+
+        foreach ([['cotation' => $trancheA->getCotation(), 'suffixe' => 'A'], ['cotation' => $cotationB, 'suffixe' => 'B']] as ['cotation' => $cotation, 'suffixe' => $suffixe]) {
+            $typeRevenu = (new TypeRevenu())->setNom('Commission exacte ' . $suffixe)
+                ->setMontantflat(500.0)->setShared(false)->setMultipayments(true)
+                ->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR);
+            $typeRevenu->setEntreprise($entreprise);
+            $em->persist($typeRevenu);
+            $revenu = (new RevenuPourCourtier())->setNom('Revenu exact ' . $suffixe)->setTypeRevenu($typeRevenu)->setCotation($cotation);
+            $revenu->setEntreprise($entreprise);
+            $em->persist($revenu);
+        }
+
+        $avenants = [];
+        foreach ([['A', $trancheA->getCotation()], ['B', $cotationB]] as [$suffixe, $cotation]) {
+            $avenant = (new Avenant())->setReferencePolice('POL-EXACT-' . $suffixe)->setNumero('0')
+                ->setDescription('Avenant ' . $suffixe)
+                ->setStartingAt(new \DateTimeImmutable('-60 days'))->setEndingAt(new \DateTimeImmutable('+305 days'));
+            $avenant->setCotation($cotation);
+            $avenant->setEntreprise($entreprise)->setInvite($invite);
+            $em->persist($avenant);
+            $avenants[$suffixe] = $avenant;
+        }
+        $em->flush();
+
+        // Lignes ENRICHIES : chaque police porte le montant que l'assureur règle sur elle.
+        $bordereau = (new Bordereau())
+            ->setType(Bordereau::TYPE_BOREDERAU_PRODUCTION)
+            ->setNom('Bordereau exact')->setReference('BRD-EXACT')
+            ->setReceivedAt(new \DateTimeImmutable('-15 days'))
+            ->setPeriodeDebut(new \DateTimeImmutable('-45 days'))
+            ->setPeriodeFin(new \DateTimeImmutable('-15 days'))
+            ->setMontantComHtPayableNow(500.0)
+            ->setMontantTaxePayableNow(0.0)
+            // INVARIANT : la somme des lignes vaut montantPayableNow, donc ce que la note réclame.
+            ->setMontantPayableNow(500.0)
+            ->setAnalysisResults([
+                ['type' => 'match', 'row_index' => 0, 'reference_police' => 'POL-EXACT-A', 'avenant_id' => $avenants['A']->getId(),
+                    'commission_ht_payable_now' => 200.0, 'taxe_commission_payable_now' => 0.0, 'prime_ttc' => 0.0],
+                ['type' => 'match', 'row_index' => 1, 'reference_police' => 'POL-EXACT-B', 'avenant_id' => $avenants['B']->getId(),
+                    'commission_ht_payable_now' => 300.0, 'taxe_commission_payable_now' => 0.0, 'prime_ttc' => 0.0],
+            ]);
+        $bordereau->setInvite($invite)->setEntreprise($entreprise);
+        $em->persist($bordereau);
+        $em->flush();
+
+        $ids = [
+            'A' => $trancheA->getId(),
+            'AEchoir' => $trancheAEchoir->getId(),
+            'B' => $trancheB->getId(),
+            'avenantA' => $avenants['A']->getId(),
+        ];
+        $entrepriseId = $entreprise->getId();
+        $bordereauId = $bordereau->getId();
+        $em->clear();
+        $helper->reset();
+
+        // La note réclame les 500 et est INTÉGRALEMENT réglée : taux de règlement = 1.
+        $entreprise = $em->getRepository(Entreprise::class)->find($entrepriseId);
+        $invite = $em->getRepository(Invite::class)->findOneBy(['entreprise' => $entreprise]);
+        $note = (new Note())->setNom('Note exacte')->setReference('NOTE-EXACT')
+            ->setType(Note::TYPE_NOTE_DE_DEBIT)->setAddressedTo(Note::TO_ASSUREUR)
+            ->setValidated(true)->setSignature('sig-test')
+            ->setBordereau($em->getRepository(Bordereau::class)->find($bordereauId));
+        $note->setEntreprise($entreprise);
+        $note->setInvite($invite);
+        $em->persist($note);
+        $paiement = (new Paiement())->setMontant(500.0)->setPaidAt(new \DateTimeImmutable('-1 day'))
+            ->setReference('PAY-EXACT')->setNote($note);
+        $paiement->setEntreprise($entreprise);
+        $em->persist($paiement);
+        $em->flush();
+        $em->clear();
+        $helper->reset();
+
+        $encaissee = fn (int $id): float => $helper->getTrancheMontantCommissionEncaissee(
+            $this->em()->getRepository(Tranche::class)->find($id)
+        );
+
+        // Chaque police reçoit SA déclaration, pas une part servie dans l'ordre des échéances.
+        $this->assertEqualsWithDelta(200.0, $encaissee($ids['A']), 0.01, 'La police A ne réclamait que 200, sa tranche échue n\'en reçoit pas davantage.');
+        $this->assertEqualsWithDelta(300.0, $encaissee($ids['B']), 0.01, 'La police B reçoit ses 300, sans dépendre de l\'ordre des échéances.');
+        // Les 200 de A se sont arrêtés à sa tranche la plus ancienne (250 dus) : la suivante
+        // ne touche rien. La règle d'imputation ne joue plus qu'À L'INTÉRIEUR d'une police.
+        $this->assertEqualsWithDelta(0.0, $encaissee($ids['AEchoir']), 0.01);
+
+        // Vue par POLICE, telle que la fiche de l'avenant l'affiche.
+        $montants = $helper->getAvenantMontantsBordereau(
+            $this->em()->getRepository(Avenant::class)->find($ids['avenantA'])
+        );
+        $this->assertEqualsWithDelta(200.0, $montants['reclame'], 0.01);
+        $this->assertEqualsWithDelta(200.0, $montants['encaisse'], 0.01);
+    }
+
+    /**
+     * L'INVARIANT DU DISPOSITIF, violé deux fois pendant sa mise au point : la somme de ce
+     * qui est réputé encaissé ne dépasse JAMAIS ce que l'assureur a réellement versé.
+     *
+     * Le cas qui le met à l'épreuve est fréquent : l'assureur déclare régler sur une police
+     * PLUS que la commission que nous lui calculons (sa configuration de revenus ne porte pas
+     * la TVA qu'il facture — constaté sur 42 polices d'un même bordereau). L'excédent ne
+     * rentre dans aucune tranche de cette police ; il déborde sur les autres, sans jamais
+     * faire dépasser le total.
+     */
+    public function testLaSommeAllouieNeDepasseJamaisLEncaissement(): void
+    {
+        $em = $this->em();
+        $helper = static::getContainer()->get(IndicatorCalculationHelper::class);
+
+        ['entreprise' => $entreprise, 'echue' => $trancheA] = $this->seed();
+        $invite = $em->getRepository(Invite::class)->findOneBy(['entreprise' => $entreprise]);
+
+        $typeRevenu = (new TypeRevenu())->setNom('Commission excedent')
+            ->setMontantflat(500.0)->setShared(false)->setMultipayments(true)
+            ->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR);
+        $typeRevenu->setEntreprise($entreprise);
+        $em->persist($typeRevenu);
+        $revenu = (new RevenuPourCourtier())->setNom('Revenu excedent')->setTypeRevenu($typeRevenu)
+            ->setCotation($trancheA->getCotation());
+        $revenu->setEntreprise($entreprise);
+        $em->persist($revenu);
+
+        $avenant = (new Avenant())->setReferencePolice('POL-EXCEDENT')->setNumero('0')
+            ->setDescription('Avenant excédent')
+            ->setStartingAt(new \DateTimeImmutable('-60 days'))->setEndingAt(new \DateTimeImmutable('+305 days'));
+        $avenant->setCotation($trancheA->getCotation());
+        $avenant->setEntreprise($entreprise)->setInvite($invite);
+        $em->persist($avenant);
+        $em->flush();
+
+        // La police réclame 900 alors que ses deux tranches n'en doivent que 252,50
+        // (50 % + 0,5 % d'une commission de 500) : 647,50 n'ont nulle part où aller.
+        $bordereau = (new Bordereau())
+            ->setType(Bordereau::TYPE_BOREDERAU_PRODUCTION)
+            ->setNom('Bordereau excédent')->setReference('BRD-EXCEDENT')
+            ->setReceivedAt(new \DateTimeImmutable('-15 days'))
+            ->setPeriodeDebut(new \DateTimeImmutable('-45 days'))
+            ->setPeriodeFin(new \DateTimeImmutable('-15 days'))
+            ->setMontantComHtPayableNow(900.0)
+            ->setMontantTaxePayableNow(0.0)
+            ->setMontantPayableNow(900.0)
+            ->setAnalysisResults([
+                ['type' => 'match', 'row_index' => 0, 'reference_police' => 'POL-EXCEDENT', 'avenant_id' => $avenant->getId(),
+                    'commission_ht_payable_now' => 900.0, 'taxe_commission_payable_now' => 0.0, 'prime_ttc' => 0.0],
+            ]);
+        $bordereau->setInvite($invite)->setEntreprise($entreprise);
+        $em->persist($bordereau);
+        $em->flush();
+
+        $entrepriseId = $entreprise->getId();
+        $bordereauId = $bordereau->getId();
+        $em->clear();
+        $helper->reset();
+
+        $entreprise = $em->getRepository(Entreprise::class)->find($entrepriseId);
+        $invite = $em->getRepository(Invite::class)->findOneBy(['entreprise' => $entreprise]);
+        $note = (new Note())->setNom('Note excédent')->setReference('NOTE-EXCEDENT')
+            ->setType(Note::TYPE_NOTE_DE_DEBIT)->setAddressedTo(Note::TO_ASSUREUR)
+            ->setValidated(true)->setSignature('sig-test')
+            ->setBordereau($em->getRepository(Bordereau::class)->find($bordereauId));
+        $note->setEntreprise($entreprise);
+        $note->setInvite($invite);
+        $em->persist($note);
+        $paiement = (new Paiement())->setMontant(900.0)->setPaidAt(new \DateTimeImmutable('-1 day'))
+            ->setReference('PAY-EXCEDENT')->setNote($note);
+        $paiement->setEntreprise($entreprise);
+        $em->persist($paiement);
+        $em->flush();
+        $em->clear();
+        $helper->reset();
+
+        $total = 0.0;
+        foreach ($this->em()->getRepository(Tranche::class)->findBy(['entreprise' => $entreprise]) as $t) {
+            $total += $helper->getTrancheMontantCommissionEncaissee($t);
+        }
+
+        $this->assertLessThanOrEqual(
+            900.0 + 0.01,
+            $total,
+            '900 encaissés ne peuvent JAMAIS produire plus de 900 de commission encaissée.'
+        );
+        // Et l'argent n'est pas perdu non plus : les tranches de la police absorbent tout
+        // ce qu'elles peuvent (252,50), le reste n'ayant aucune autre tranche où aller ici.
+        $this->assertEqualsWithDelta(252.5, $total, 0.01, 'Les tranches de la police sont soldées à hauteur de leur dû.');
+    }
+
+    /**
+     * Règlement PARTIEL avec des lignes enrichies : le taux de règlement de la note
+     * s'applique uniformément aux polices — chacune garde sa proportion — et l'imputation
+     * ne joue qu'entre les tranches d'une même police.
+     */
+    public function testReglementPartielRepartitLeTauxSurLesDeclarationsParPolice(): void
+    {
+        $em = $this->em();
+        $helper = static::getContainer()->get(IndicatorCalculationHelper::class);
+
+        ['entreprise' => $entreprise, 'echue' => $trancheA] = $this->seed();
+        $invite = $em->getRepository(Invite::class)->findOneBy(['entreprise' => $entreprise]);
+
+        $typeRevenu = (new TypeRevenu())->setNom('Commission partielle')
+            ->setMontantflat(500.0)->setShared(false)->setMultipayments(true)
+            ->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR);
+        $typeRevenu->setEntreprise($entreprise);
+        $em->persist($typeRevenu);
+        $revenu = (new RevenuPourCourtier())->setNom('Revenu partiel')->setTypeRevenu($typeRevenu)
+            ->setCotation($trancheA->getCotation());
+        $revenu->setEntreprise($entreprise);
+        $em->persist($revenu);
+
+        $avenant = (new Avenant())->setReferencePolice('POL-PARTIEL')->setNumero('0')
+            ->setDescription('Avenant partiel')
+            ->setStartingAt(new \DateTimeImmutable('-60 days'))->setEndingAt(new \DateTimeImmutable('+305 days'));
+        $avenant->setCotation($trancheA->getCotation());
+        $avenant->setEntreprise($entreprise)->setInvite($invite);
+        $em->persist($avenant);
+        $em->flush();
+
+        $bordereau = (new Bordereau())
+            ->setType(Bordereau::TYPE_BOREDERAU_PRODUCTION)
+            ->setNom('Bordereau partiel')->setReference('BRD-PARTIEL')
+            ->setReceivedAt(new \DateTimeImmutable('-15 days'))
+            ->setPeriodeDebut(new \DateTimeImmutable('-45 days'))
+            ->setPeriodeFin(new \DateTimeImmutable('-15 days'))
+            ->setMontantComHtPayableNow(200.0)
+            ->setMontantTaxePayableNow(0.0)
+            ->setMontantPayableNow(200.0)
+            ->setAnalysisResults([
+                ['type' => 'match', 'row_index' => 0, 'reference_police' => 'POL-PARTIEL', 'avenant_id' => $avenant->getId(),
+                    'commission_ht_payable_now' => 200.0, 'taxe_commission_payable_now' => 0.0, 'prime_ttc' => 0.0],
+            ]);
+        $bordereau->setInvite($invite)->setEntreprise($entreprise);
+        $em->persist($bordereau);
+        $em->flush();
+
+        $trancheAId = $trancheA->getId();
+        $entrepriseId = $entreprise->getId();
+        $bordereauId = $bordereau->getId();
+        $em->clear();
+        $helper->reset();
+
+        // La note réclame 200, l'assureur n'en règle que 50 : taux de règlement = 25 %.
+        $entreprise = $em->getRepository(Entreprise::class)->find($entrepriseId);
+        $invite = $em->getRepository(Invite::class)->findOneBy(['entreprise' => $entreprise]);
+        $note = (new Note())->setNom('Note partielle')->setReference('NOTE-PARTIEL')
+            ->setType(Note::TYPE_NOTE_DE_DEBIT)->setAddressedTo(Note::TO_ASSUREUR)
+            ->setValidated(true)->setSignature('sig-test')
+            ->setBordereau($em->getRepository(Bordereau::class)->find($bordereauId));
+        $note->setEntreprise($entreprise);
+        $note->setInvite($invite);
+        $em->persist($note);
+        $paiement = (new Paiement())->setMontant(50.0)->setPaidAt(new \DateTimeImmutable('-1 day'))
+            ->setReference('PAY-PARTIEL')->setNote($note);
+        $paiement->setEntreprise($entreprise);
+        $em->persist($paiement);
+        $em->flush();
+        $em->clear();
+        $helper->reset();
+
+        $this->assertEqualsWithDelta(
+            50.0,
+            $helper->getTrancheMontantCommissionEncaissee($this->em()->getRepository(Tranche::class)->find($trancheAId)),
+            0.01,
+            'La police réclamait 200 et 25 % ont été réglés : 50 lui sont crédités.'
+        );
     }
 
     public function testValeurDAxeInvalideRetombeSurCheminStandard(): void

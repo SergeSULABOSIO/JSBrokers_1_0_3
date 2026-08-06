@@ -92,6 +92,8 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
         $retro        = $partenaire ? $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtier($cotation, null, -1, []) : 0.0;
         $retroReverse = $partenaire ? $this->calculationHelper->getCotationMontantRetrocommissionsPayableParCourtierPayee($cotation, null) : 0.0;
 
+        $montantsBordereau = $this->calculationHelper->getAvenantMontantsBordereau($entity);
+
         return $this->nonRenouvelableIndicateurs($entity) + [
             // Indicateurs de base de l'avenant
             'statutRenouvellement' => $renouvellement['statut'],
@@ -124,6 +126,12 @@ class AvenantIndicatorStrategy implements IndicatorCalculationStrategyInterface
             'primeTotale' => round($primeTotale, 2),
             'primePayee' => round($primePayee, 2),
             'primeSoldeDue' => round($primeTotale - $primePayee, 2),
+            // Ce que les bordereaux de production ont réclamé à l'assureur SUR CETTE POLICE,
+            // et ce qui est effectivement rentré dessus. Valeurs DÉRIVÉES des lignes
+            // d'analyse : rien n'est stocké sur l'avenant, qui peut figurer dans plusieurs
+            // bordereaux successifs — un champ propre serait écrasé et perdrait l'historique.
+            'commissionReclameeParBordereau' => $montantsBordereau['reclame'],
+            'commissionEncaisseeParBordereau' => $montantsBordereau['encaisse'],
             'tauxCommission' => $tauxSP, // Ancienne implémentation pour éviter régression
             'montantHT' => round($commissionHt, 2),
             'montantTTC' => round($commissionTtc, 2),
