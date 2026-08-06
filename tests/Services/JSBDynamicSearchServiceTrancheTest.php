@@ -644,27 +644,31 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
 
     /**
      * Un bordereau de production réconcilie SOUVENT plusieurs avenants (parfois des
-     * dizaines), et son encaissement est SOUVENT partiel. Ni tout, ni rien : les deux
-     * extrêmes ont été constatés en production et sont faux.
+     * dizaines), et son encaissement est SOUVENT partiel. Ses lignes ne portent AUCUN
+     * montant par police : l'affectation n'est pas déductible de la donnée, c'est une
+     * RÈGLE. Trois ont été essayées, deux sont fausses :
      *
-     *  - Créditer le montant PLEIN à chaque avenant réconcilié : un paiement réel unique
-     *    de 75 908 $ produisait 166 463 $ de « commission encaissée ».
-     *  - N'admettre que le solde INTÉGRAL : un bordereau encaissé à 31 % (75 908 $ sur
-     *    245 363 $ dus, 52 avenants) ne créditait plus RIEN, et ces 75 908 $ bien réels
-     *    disparaissaient de la colonne « Reste commission », de la barre des totaux, du
-     *    chiffre d'affaires et des réponses de l'assistant — au point que le chip
-     *    « Commission payée » restait vide alors que l'argent était rentré.
+     *  - Créditer le montant PLEIN à chaque avenant réconcilié dès que le bordereau est
+     *    soldé : un paiement réel unique de 75 908 $ produisait 166 463 $ encaissés.
+     *  - N'admettre que le solde INTÉGRAL : un bordereau encaissé en partie ne créditait
+     *    plus RIEN, et l'argent bien réel disparaissait de la colonne « Reste commission »,
+     *    de la barre des totaux, du chiffre d'affaires et des réponses de l'assistant.
+     *  - Répartir au PRORATA : le total redevenait juste, mais aucune tranche n'était
+     *    JAMAIS soldée tant que le bordereau ne l'était pas — le filtre « commission
+     *    payée » ne pouvait alors structurellement rien renvoyer.
      *
-     * La règle est le PRORATA, la même que le chemin par articles applique déjà à une
-     * note (payé ÷ payable). Ce test fixe les deux bornes : chaque tranche reçoit sa part,
-     * et l'agrégat ne dépasse JAMAIS ce qui a été réellement encaissé.
+     * La règle retenue est l'IMPUTATION SUR LES PLUS ANCIENNES (droit commun, et façon
+     * dont un courtier pointe un bordereau) : le règlement solde intégralement la tranche
+     * dont l'échéance est la plus ancienne, puis la suivante, jusqu'à épuisement. Ce test
+     * fixe les deux bornes : des tranches réellement soldées, et un agrégat qui ne dépasse
+     * JAMAIS ce qui a été encaissé.
      *
-     * Le seuil se mesure en outre contre l'agrégat RÉEL des commissions des cotations
-     * réconciliées, jamais contre le champ auto-déclaré montantComHtPayableNow — qui peut
-     * sous-évaluer ce total si le bordereau a accumulé des réconciliations sans être remis
-     * à jour (c'est le cas monté ici : 500 déclaré pour 1000 réellement dus).
+     * Le seuil se mesure en outre contre le dû RÉEL des tranches couvertes, jamais contre
+     * le champ auto-déclaré montantComHtPayableNow — qui peut sous-évaluer ce total si le
+     * bordereau a accumulé des réconciliations sans être remis à jour (c'est le cas monté
+     * ici : 500 déclaré pour 1000 réellement dus).
      */
-    public function testEncaissementPartielDUnBordereauEstCrediteAuProrata(): void
+    public function testEncaissementPartielEstImputeSurLesPlusAnciennes(): void
     {
         $em = $this->em();
         $helper = static::getContainer()->get(IndicatorCalculationHelper::class);
@@ -742,8 +746,9 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
         $helper->reset();
 
         // 1) Paiement UNIQUE de 500 (= le champ sous-évalué, PAS l'agrégat réel de 1000) :
-        //    le bordereau est encaissé à 50 %, chaque tranche est créditée de la MOITIÉ de
-        //    sa part — ni son montant plein (le premier bug), ni zéro (le second).
+        //    le règlement descend de la tranche la plus ancienne vers la plus récente et
+        //    s'arrête quand il est épuisé. Ni le montant plein partout (premier bug), ni
+        //    zéro partout (deuxième), ni la moitié partout (troisième).
         $entreprise = $em->getRepository(Entreprise::class)->find($entrepriseId);
         $bordereau = $em->getRepository(Bordereau::class)->find($bordereauId);
         $invite = $em->getRepository(Invite::class)->findOneBy(['entreprise' => $entreprise]);
@@ -765,15 +770,22 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
 
         $trancheAFraiche = $em->getRepository(Tranche::class)->find($trancheAId);
         $trancheBFraiche = $em->getRepository(Tranche::class)->find($trancheBId);
-        // trancheA porte 50 % de sa cotation (commission due 250) → 50 % encaissés = 125.
+        // trancheA est la PLUS ANCIENNE (échéance -10 j) et porte 50 % de sa cotation :
+        // commission due 250, intégralement soldée par le règlement.
         $this->assertEqualsWithDelta(
-            125.0,
+            250.0,
             $helper->getTrancheMontantCommissionEncaissee($trancheAFraiche),
             0.01,
-            'Bordereau encaissé à 50 % : la tranche est créditée de la MOITIÉ de sa part, pas de rien.'
+            'La tranche la plus ancienne est SOLDÉE la première, pas créditée d\'une fraction.'
         );
-        // trancheB porte 100 % de la sienne (commission due 500) → 50 % encaissés = 250.
-        $this->assertEqualsWithDelta(250.0, $helper->getTrancheMontantCommissionEncaissee($trancheBFraiche), 0.01);
+        // trancheB, la plus récente (+30 j), ne reçoit que le reliquat : 500 encaissés
+        // − 250 (trancheA) − 2,50 (la tranche à échoir de la même cotation, 0,5 %).
+        $this->assertEqualsWithDelta(
+            247.5,
+            $helper->getTrancheMontantCommissionEncaissee($trancheBFraiche),
+            0.01,
+            'La dernière servie ne reçoit que ce qui reste.'
+        );
 
         // LA BORNE HAUTE, celle du premier bug : l'agrégat de ce qui est réputé encaissé
         // sur TOUTES les tranches des cotations réconciliées ne dépasse jamais l'argent
@@ -788,29 +800,26 @@ class JSBDynamicSearchServiceTrancheTest extends KernelTestCase
             'Un paiement de 500 ne peut JAMAIS produire plus de 500 de commission encaissée inférée.'
         );
 
-        // LE CHIP DE L'UTILISATEUR. Ces tranches ne sont ni soldées (le chip « Commission
-        // payée » les exclut à juste titre) ni sans le moindre encaissement : c'est
-        // exactement ce que « partiellement encaissée » sert à voir. Sans cette valeur,
-        // 500 $ bien réels n'étaient visibles sous AUCUN chip.
-        $partielles = $this->service()->search(
-            Tranche::class,
-            [TranchePaiementScope::AXE_COMMISSION => TranchePaiementScope::PARTIELLE],
-            $entreprise,
+        // LES TROIS CHIPS DEVIENNENT TOUS UTILES, ce qui était l'objet du correctif : un
+        // encaissement partiel produit des tranches SOLDÉES (les plus anciennes), une
+        // tranche à cheval, et des tranches encore intactes. Avec un taux uniforme,
+        // « Commission payée » ne pouvait structurellement rien renvoyer.
+        $idsDe = fn (string $valeur): array => array_map(
+            static fn (Tranche $t) => $t->getId(),
+            $this->service()->search(Tranche::class, [TranchePaiementScope::AXE_COMMISSION => $valeur], $entreprise)['data'],
         );
-        $idsPartielles = array_map(static fn (Tranche $t) => $t->getId(), $partielles['data']);
-        $this->assertContains($trancheAId, $idsPartielles);
-        $this->assertContains($trancheBId, $idsPartielles);
 
-        $soldees = $this->service()->search(
-            Tranche::class,
-            [TranchePaiementScope::AXE_COMMISSION => TranchePaiementScope::PAYEE],
-            $entreprise,
-        );
-        $this->assertNotContains(
+        $this->assertContains(
             $trancheAId,
-            array_map(static fn (Tranche $t) => $t->getId(), $soldees['data']),
-            'Encaissée à 50 %, la commission n\'est pas soldée pour autant.'
+            $idsDe(TranchePaiementScope::PAYEE),
+            'La plus ancienne est soldée : le chip « Commission payée » n\'est plus vide.'
         );
+        $this->assertContains(
+            $trancheBId,
+            $idsDe(TranchePaiementScope::PARTIELLE),
+            'Celle qui n\'a reçu que le reliquat est « partiellement encaissée ».'
+        );
+        $this->assertNotContains($trancheBId, $idsDe(TranchePaiementScope::PAYEE));
 
         // 2) Complément à 1000 (agrégat réel des deux avenants) : les deux tranches
         //    deviennent réputées encaissées, chacune à hauteur de SA propre part —
