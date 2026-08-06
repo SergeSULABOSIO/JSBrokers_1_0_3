@@ -34,12 +34,22 @@ class CompteBancaireIndicatorStrategy implements IndicatorCalculationStrategyInt
         $lastDate = null;
 
         foreach ($compte->getPaiements() as $paiement) {
+            // LE COURTIER N'INDEMNISE PAS LES SINISTRES. Un paiement rattaché à une offre
+            // d'indemnisation est un SIGNALEMENT — l'assureur règle l'assuré —, au même
+            // titre qu'un PaiementPrime : il ne sort pas de la trésorerie du cabinet.
+            // Il était compté en SORTIE, ce qui minorait le solde du compte de tout
+            // l'indemnitaire déclaré, et gonflait le nombre de transactions et la moyenne.
+            // Même règle que le tableau de bord (offreIndemnisationSinistre IS NULL) et que
+            // la comptabilité du courtier (CourtierEcritureComptableService écarte les
+            // paiements sans note).
+            if ($paiement->getOffreIndemnisationSinistre()) {
+                continue;
+            }
+
             $montant = $paiement->getMontant() ?? 0.0;
             $isEntree = false;
 
-            if ($paiement->getOffreIndemnisationSinistre()) {
-                $isEntree = false;
-            } elseif ($note = $paiement->getNote()) {
+            if ($note = $paiement->getNote()) {
                 $isEntree = ($note->getType() === Note::TYPE_NOTE_DE_DEBIT);
             }
 
