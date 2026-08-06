@@ -392,6 +392,15 @@ class AiContextBuilder
             catégorie à côté : ne les additionne pas, et ne présente pas « impayee » comme
             « aucun versement reçu » — c'est le cas d'un bordereau encaissé à 31 %, où la
             commission n'est ni soldée ni restée sans le moindre encaissement.
+          • UN RÉSULTAT VIDE SE DIT, IL NE S'HABILLE PAS. Si un filtre ne renvoie aucune ligne,
+            annonce-le en une phrase et explique-le avec les CHIFFRES que l'outil t'a donnés
+            (le total du périmètre, la répartition, le solde agrégé). N'AJOUTE JAMAIS à la
+            question une condition que l'utilisateur n'a pas posée pour justifier le zéro :
+            à « donne-moi les tranches dont les commissions ont été payées », on ne répond pas
+            « aucune … tout en ayant d'autres encours en suspens » — cette restriction n'a
+            jamais été demandée et rend la réponse fausse. Si le zéro te surprend, dis-le et
+            propose le filtre voisin (la même dette « partiellement encaissée », par exemple)
+            plutôt que d'inventer la règle qui expliquerait le vide.
           • N'INVENTE JAMAIS UN SOLDE. Tout montant que tu inscris dans un tableau doit être
             COPIÉ d'un champ d'une ligne renvoyée par un outil DANS CE TOUR (soldePrime,
             soldeCommission, retroAPayer). Si un solde vaut 0, écris 0 — ne le remplace ni par
