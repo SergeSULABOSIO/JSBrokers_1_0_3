@@ -3,7 +3,7 @@
 namespace App\Tests\Workspace;
 
 use App\Services\Search\TranchePaiementScope;
-use PHPUnit\Framework\TestCase;
+use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
  * Compacité des groupes de chips de la rubrique Tranches.
@@ -17,7 +17,7 @@ use PHPUnit\Framework\TestCase;
  * Ce test garde l'intention : rien n'empêche, sinon, de réintroduire un libellé long au
  * prochain axe ajouté.
  */
-class TrancheChipsCompactsTest extends TestCase
+class TrancheChipsCompactsTest extends KernelTestCase
 {
     public function testUnLibelleDeChipNeRepeteJamaisLeTitreDeSonGroupe(): void
     {
@@ -89,8 +89,9 @@ class TrancheChipsCompactsTest extends TestCase
     }
 
     /**
-     * Chaque valeur d'axe a son libellé court : sans cela, libelleCourt() retomberait
-     * silencieusement sur le libellé complet et le groupe redeviendrait bavard.
+     * Chaque valeur d'axe a son libellé court ET son icône : sans cela, libelleCourt()
+     * retomberait silencieusement sur le libellé complet, et un chip se retrouverait sans
+     * icône là où toutes les autres rubriques en portent une.
      */
     public function testChaqueValeurALeSienne(): void
     {
@@ -100,6 +101,50 @@ class TrancheChipsCompactsTest extends TestCase
                 array_keys($axe['courts']),
                 sprintf('L\'axe « %s » doit fournir un libellé court par valeur.', $axe['titre']),
             );
+            $this->assertSame(
+                array_keys($axe['valeurs']),
+                array_keys($axe['icones']),
+                sprintf('L\'axe « %s » doit fournir une icône par valeur.', $axe['titre']),
+            );
+        }
+    }
+
+    /**
+     * UNE SEULE RÈGLE POUR TOUTES LES RUBRIQUES : chaque chip porte une icône, le titre du
+     * groupe n'en porte pas. Tranche y avait fait exception — icône unique sur le titre,
+     * boutons nus — ce qui la désalignait d'Avenants, Propositions et Pistes. L'écart ne se
+     * voyait qu'à l'œil, d'où ce test.
+     */
+    public function testChaqueChipPorteUneIconeEtAucunGroupeNEnPorte(): void
+    {
+        // Les providers ont des dépendances (monnaies, icônes) : on les prend au conteneur
+        // plutôt que de les instancier, pour vérifier le canevas RÉELLEMENT servi.
+        self::bootKernel();
+        $conteneur = static::getContainer();
+
+        $providers = [
+            'Tranche' => \App\Services\Canvas\Provider\List\TrancheListCanvasProvider::class,
+            'Avenant' => \App\Services\Canvas\Provider\List\AvenantListCanvasProvider::class,
+            'Cotation' => \App\Services\Canvas\Provider\List\CotationListCanvasProvider::class,
+            'Piste' => \App\Services\Canvas\Provider\List\PisteListCanvasProvider::class,
+        ];
+
+        foreach ($providers as $entite => $classe) {
+            $liste = $conteneur->get($classe)->getCanvas();
+            foreach ($liste['filtres_predefinis'] ?? [] as $groupe) {
+                $this->assertArrayNotHasKey(
+                    'icon',
+                    $groupe,
+                    sprintf('%s : le titre du groupe ne porte pas d\'icône.', $entite),
+                );
+                foreach ($groupe['options'] as $option) {
+                    $this->assertArrayHasKey(
+                        'icon',
+                        $option,
+                        sprintf('%s : le chip « %s » doit porter une icône.', $entite, $option['label']),
+                    );
+                }
+            }
         }
     }
 }

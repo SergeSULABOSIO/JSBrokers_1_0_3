@@ -74,11 +74,17 @@ final class TranchePaiementScope
      * critère apparaît isolé), `valeurs` mappe valeur => libellé complet — celui que Ket
      * emploie pour dire quel filtre elle a appliqué.
      *
-     * `titre` et `courts` servent aux CHIPS, où le critère est déjà écrit une fois en tête
-     * du groupe : y répéter « Prime » sur chacun des trois boutons triplait leur largeur et
-     * empêchait d'aligner plus de deux groupes sur une ligne.
+     * `titre`, `courts` et `icones` servent aux CHIPS, où le critère est déjà écrit une fois
+     * en tête du groupe : y répéter « Prime » sur chacun des trois boutons triplait leur
+     * largeur et empêchait d'aligner plus de deux groupes sur une ligne.
      *
-     * @var array<string, array{nom: string, libelle: string, titre: string, icone: string, valeurs: array<string, string>, courts: array<string, string>}>
+     * `icone` (au singulier) reste l'icône de l'AXE, pour le badge de recherche où le
+     * critère apparaît isolé. `icones` (au pluriel) donne celle de chaque ÉTAT, sur les
+     * chips : le critère y étant déjà porté par le titre, l'icône du bouton doit dire
+     * l'état — et les trois dettes partagent volontairement les mêmes trois icônes, pour
+     * que « soldé », « entamé » et « dû » se reconnaissent d'un coup d'œil d'un axe à l'autre.
+     *
+     * @var array<string, array{nom: string, libelle: string, titre: string, icone: string, valeurs: array<string, string>, courts: array<string, string>, icones: array<string, string>}>
      */
     public const AXES = [
         self::AXE_PRIME => [
@@ -96,6 +102,11 @@ final class TranchePaiementScope
                 self::PARTIELLE => 'Partielle',
                 self::IMPAYEE => 'Impayée',
             ],
+            'icones' => [
+                self::PAYEE => 'action:completed',
+                self::PARTIELLE => 'action:ongoing',
+                self::IMPAYEE => 'action:alert',
+            ],
         ],
         self::AXE_COMMISSION => [
             'nom' => 'commission',
@@ -111,6 +122,11 @@ final class TranchePaiementScope
                 self::PAYEE => 'Encaissée',
                 self::PARTIELLE => 'Partielle',
                 self::IMPAYEE => 'Impayée',
+            ],
+            'icones' => [
+                self::PAYEE => 'action:completed',
+                self::PARTIELLE => 'action:ongoing',
+                self::IMPAYEE => 'action:alert',
             ],
         ],
         self::AXE_RETRO => [
@@ -128,6 +144,11 @@ final class TranchePaiementScope
                 self::PARTIELLE => 'Partielle',
                 self::IMPAYEE => 'À payer',
             ],
+            'icones' => [
+                self::PAYEE => 'action:completed',
+                self::PARTIELLE => 'action:ongoing',
+                self::IMPAYEE => 'action:alert',
+            ],
         ],
         self::AXE_ECHEANCE => [
             'nom' => 'echeance',
@@ -141,6 +162,10 @@ final class TranchePaiementScope
             'courts' => [
                 self::ECHUE => 'En retard',
                 self::A_ECHOIR => 'À échoir',
+            ],
+            'icones' => [
+                self::ECHUE => 'action:alert',
+                self::A_ECHOIR => 'action:calendar',
             ],
         ],
     ];

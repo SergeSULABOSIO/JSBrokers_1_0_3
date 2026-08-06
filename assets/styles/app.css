@@ -1451,13 +1451,12 @@ textarea:hover,
    répété sur chaque bouton (« Prime payée », « Prime impayée »…). Les chips ne portent plus
    que la valeur, ce qui divise leur largeur par deux et permet d'aligner les quatre groupes
    de la rubrique Tranches sur une seule ligne.
-   Couleurs de la charte : #343a40 (texte de titres), #0047AB (accent de marque, sur l'icône
-   seulement — il ne doit pas concurrencer la pastille cobalt du chip actif), #ced4da
-   (séparateur de toolbar). */
+   Purement TEXTUEL : l'icône appartient au chip, où elle dit l'état — même règle dans toutes
+   les rubriques. Couleurs de la charte : #343a40 (texte de titres), #ced4da (séparateur de
+   toolbar). */
 .jsb-preset-filters__titre {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
     padding: 0 9px 0 10px;
     margin-right: 3px;
     border-right: 1px solid #ced4da;
@@ -1467,10 +1466,6 @@ textarea:hover,
     color: #343a40;
     white-space: nowrap;
     user-select: none;
-}
-.jsb-preset-filters__titre-icone {
-    display: inline-flex; /* aligne verticalement le SVG sur le texte */
-    color: #0047AB;
 }
 .jsb-preset-chip {
     display: inline-flex;
