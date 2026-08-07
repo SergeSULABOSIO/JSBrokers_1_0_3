@@ -187,9 +187,10 @@ class ServiceInitialisationEntreprise
             ->setTypeChargement($primeNette);
         $this->attacher($commOrdinaire, $entreprise, $proprietaire);
 
+        // Taux en POINTS (30 = 30 %), cf. TypeRevenu::getFraction.
         $commFronting = (new TypeRevenu())
             ->setNom('Commission sur Fronting')
-            ->setPourcentage(0.30)
+            ->setPourcentage(30)
             ->setRedevable(TypeRevenu::REDEVABLE_ASSUREUR)
             ->setShared(false)
             ->setMultipayments(true)
@@ -198,7 +199,7 @@ class ServiceInitialisationEntreprise
 
         $consultance = (new TypeRevenu())
             ->setNom('Frais de consultance')
-            ->setPourcentage(0.05)
+            ->setPourcentage(5)
             ->setRedevable(TypeRevenu::REDEVABLE_CLIENT)
             ->setShared(false)
             ->setMultipayments(false)
@@ -207,7 +208,7 @@ class ServiceInitialisationEntreprise
 
         $gestion = (new TypeRevenu())
             ->setNom('Honoraire de gestion')
-            ->setPourcentage(0.02)
+            ->setPourcentage(2)
             ->setRedevable(TypeRevenu::REDEVABLE_CLIENT)
             ->setShared(false)
             ->setMultipayments(true)

@@ -103,18 +103,19 @@ class AppFixtures extends Fixture implements DependentFixtureInterface
             $assureurs[] = $assureur;
         }
 
-        // 6. Création des Partenaires
+        // 6. Création des Partenaires — parts en POINTS (35 = 35 %),
+        // cf. Partenaire::getFraction et ConditionPartage::getFraction.
         $partenairesData = [
-            ['nom' => 'OLEA', 'part' => 0.35],
-            ['nom' => 'MARSH SA', 'part' => 0.30, 'condition' => true],
-            ['nom' => 'MARSH Portugal', 'part' => 0.30],
-            ['nom' => 'AFINBRO', 'part' => 0.50],
-            ['nom' => 'WPIB', 'part' => 0.30],
-            ['nom' => 'NIRAJ', 'part' => 0.30],
-            ['nom' => 'AGL', 'part' => 0.45],
-            ['nom' => 'O\'NEILS', 'part' => 0.50],
-            ['nom' => 'MONT BLANC', 'part' => 0.50],
-            ['nom' => 'LOCKTON', 'part' => 0.30],
+            ['nom' => 'OLEA', 'part' => 35],
+            ['nom' => 'MARSH SA', 'part' => 30, 'condition' => true],
+            ['nom' => 'MARSH Portugal', 'part' => 30],
+            ['nom' => 'AFINBRO', 'part' => 50],
+            ['nom' => 'WPIB', 'part' => 30],
+            ['nom' => 'NIRAJ', 'part' => 30],
+            ['nom' => 'AGL', 'part' => 45],
+            ['nom' => 'O\'NEILS', 'part' => 50],
+            ['nom' => 'MONT BLANC', 'part' => 50],
+            ['nom' => 'LOCKTON', 'part' => 30],
         ];
         $partenaires = [];
         foreach ($partenairesData as $data) {

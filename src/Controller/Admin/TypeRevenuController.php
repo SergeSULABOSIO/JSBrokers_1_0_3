@@ -74,7 +74,8 @@ class TypeRevenuController extends AbstractController
             function (TypeRevenu $typeRevenu, Invite $invite) {
                 $typeRevenu->setNom("REVENUE" . (rand(2000, 3000)));
                 $typeRevenu->setEntreprise($invite->getEntreprise());
-                $typeRevenu->setPourcentage(0.1);
+                // POINTS : 10 = 10 % (cf. TypeRevenu::getFraction).
+                $typeRevenu->setPourcentage(10);
                 $typeRevenu->setAppliquerPourcentageDuRisque(true);
                 $typeRevenu->setMontantflat(0);
                 $typeRevenu->setMultipayments(true);
