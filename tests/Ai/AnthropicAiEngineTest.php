@@ -102,6 +102,80 @@ class AnthropicAiEngineTest extends TestCase
         $this->assertSame(1, $http->getRequestsCount());
     }
 
+    /**
+     * Une image ou un PDF scanné doit partir NATIVEMENT (vision), joint au dernier
+     * tour utilisateur. Sans cela le prompt promettait au modèle une lecture
+     * visuelle que ce moteur ne fournissait pas — et un modèle sommé de lire une
+     * pièce qu'il ne reçoit pas n'a d'autre issue que d'inventer.
+     */
+    public function testPiecesNativesJointesAuDernierTourUtilisateur(): void
+    {
+        $bodies = [];
+        $http = new MockHttpClient(function ($method, $url, $options) use (&$bodies) {
+            $bodies[] = json_decode($options['body'], true);
+
+            return new MockResponse(json_encode([
+                'stop_reason' => 'end_turn',
+                'content'     => [['type' => 'text', 'text' => 'La police court du 1er janvier au 31 décembre.']],
+            ]));
+        });
+
+        $request = new AiRequest(
+            systemContext: ['assistantNom' => 'Ket', 'entrepriseNom' => 'Courtage Test', 'perimetre' => [], 'date' => '2026-08-07'],
+            messages: [
+                ['role' => 'user', 'content' => 'Bonjour'],
+                ['role' => 'assistant', 'content' => 'Bonjour !'],
+                ['role' => 'user', 'content' => 'Que dit ce document ?'],
+            ],
+            scope: new AiScope(new Entreprise(), new Invite()),
+            piecesNatives: [
+                ['mimeType' => 'application/pdf', 'donneesBase64' => 'UERGREFUQQ==', 'nom' => 'police-scannee.pdf'],
+                ['mimeType' => 'image/png', 'donneesBase64' => 'aW1hZ2U=', 'nom' => 'cachet.png'],
+            ],
+        );
+
+        $this->makeEngine($http)->reply($request);
+
+        $messages = $bodies[0]['messages'];
+        // Les tours précédents restent de simples chaînes.
+        $this->assertSame('Bonjour', $messages[0]['content']);
+        $this->assertSame('Bonjour !', $messages[1]['content']);
+
+        // Le DERNIER tour user devient une liste de blocs : texte, puis les pièces.
+        $blocs = $messages[2]['content'];
+        $this->assertIsArray($blocs);
+        $this->assertSame('text', $blocs[0]['type']);
+        $this->assertSame('Que dit ce document ?', $blocs[0]['text']);
+
+        // Un PDF est un bloc « document », une image un bloc « image ».
+        $this->assertSame('document', $blocs[1]['type']);
+        $this->assertSame('application/pdf', $blocs[1]['source']['media_type']);
+        $this->assertSame('base64', $blocs[1]['source']['type']);
+        $this->assertSame('UERGREFUQQ==', $blocs[1]['source']['data']);
+
+        $this->assertSame('image', $blocs[2]['type']);
+        $this->assertSame('image/png', $blocs[2]['source']['media_type']);
+        $this->assertSame('aW1hZ2U=', $blocs[2]['source']['data']);
+    }
+
+    /** Sans pièce native, les messages restent des chaînes nues (non-régression). */
+    public function testSansPieceNativeLesMessagesRestentDesChaines(): void
+    {
+        $bodies = [];
+        $http = new MockHttpClient(function ($method, $url, $options) use (&$bodies) {
+            $bodies[] = json_decode($options['body'], true);
+
+            return new MockResponse(json_encode([
+                'stop_reason' => 'end_turn',
+                'content'     => [['type' => 'text', 'text' => 'Ok.']],
+            ]));
+        });
+
+        $this->makeEngine($http)->reply($this->makeRequest('Combien de clients ?'));
+
+        $this->assertSame('Combien de clients ?', $bodies[0]['messages'][0]['content']);
+    }
+
     public function testBoucleToolCalling(): void
     {
         $bodies = [];

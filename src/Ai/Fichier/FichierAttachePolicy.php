@@ -30,6 +30,24 @@ final class FichierAttachePolicy
         'pdf', 'png', 'jpg', 'jpeg', 'webp', 'txt', 'csv', 'md', 'json', 'docx', 'xlsx',
     ];
 
+    /**
+     * Types MIME qu'un moteur multimodal sait lire NATIVEMENT (vision) : images
+     * et PDF. C'est ce qui permet d'exploiter un PDF SCANNÉ (sans couche texte)
+     * ou une image, là où l'extraction texte ne donne rien.
+     *
+     * Vit ici, avec le reste de la politique de fichiers, parce que deux endroits
+     * en dépendent : la construction du contexte (quelles pièces envoyer au
+     * moteur) et la saisie depuis fichier (un fichier ni extrait ni lisible en
+     * vision doit être refusé franchement, pas analysé dans le vide).
+     */
+    public const MIMES_NATIFS = ['image/png', 'image/jpeg', 'image/webp', 'application/pdf'];
+
+    /** Le moteur peut-il lire ce fichier par vision, à défaut d'extrait texte ? */
+    public static function lisibleNativement(?string $mimeType): bool
+    {
+        return in_array((string) $mimeType, self::MIMES_NATIFS, true);
+    }
+
     /** Contrainte de validation serveur appliquée à chaque fichier uploadé. */
     public static function contrainte(): FileConstraint
     {
