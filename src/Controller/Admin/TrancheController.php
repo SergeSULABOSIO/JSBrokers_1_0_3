@@ -75,7 +75,11 @@ class TrancheController extends AbstractController
             function (Tranche $tranche, Invite $invite) {
                 $tranche
                     ->setNom("Tranche n°" . random_int(1986, 2070))
-                    ->setPourcentage(1)
+                    // POINTS : le formulaire s'ouvre sur 100 % (une tranche couvrant
+                    // toute la prime), à réduire par l'utilisateur s'il en crée d'autres.
+                    // En fraction, « 1 » valait déjà 100 % — la valeur n'a pas suivi la
+                    // conversion en points et le formulaire proposait 1 %.
+                    ->setPourcentage(100)
                     ->setPayableAt(new DateTimeImmutable("now"))
                     ->setEcheanceAt(new DateTimeImmutable("+364 days"));
             }
