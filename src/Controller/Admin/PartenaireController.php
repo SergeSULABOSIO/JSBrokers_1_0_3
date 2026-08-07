@@ -70,7 +70,8 @@ class PartenaireController extends AbstractController
             PartenaireType::class,
             $partenaire,
             function (Partenaire $partenaire, Invite $invite) {
-                $partenaire->setPart(0.10);
+                // POINTS : 10 = 10 % (cf. Partenaire::getFraction).
+                $partenaire->setPart(10);
                 $partenaire->setEntreprise($invite->getEntreprise());
             }
         );

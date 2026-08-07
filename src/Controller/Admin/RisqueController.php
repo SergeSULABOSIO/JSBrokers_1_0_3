@@ -73,7 +73,8 @@ class RisqueController extends AbstractController
             function (Risque $risque, Invite $invite) {
                 $risque->setCode("RSK" . (rand(0, 100)));
                 $risque->setNomComplet("RISQUE" . (rand(2000, 3000)));
-                $risque->setPourcentageCommissionSpecifiqueHT(0.1);
+                // POINTS : 10 = 10 % (cf. Risque::getFraction).
+                $risque->setPourcentageCommissionSpecifiqueHT(10);
                 $risque->setBranche(Risque::BRANCHE_IARD_OU_NON_VIE);
                 $risque->setImposable(true);
                 $risque->setEntreprise($invite->getEntreprise());
