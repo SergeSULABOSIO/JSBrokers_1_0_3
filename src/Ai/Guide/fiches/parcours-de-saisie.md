@@ -55,6 +55,20 @@ C'est la seule source de vérité : rien n'est jamais « généré automatiqueme
 plus du plan. Si l'assistant affirme le contraire, faites-lui vérifier — il a
 l'obligation de s'appuyer sur ce journal, pas sur un raisonnement.
 
+## Quand le parcours part d'un document
+
+Si vous attachez la pièce au chat — une proposition, une facture — vous n'avez rien à
+dicter : l'assistant lit le document et remplit le parcours lui-même. Il s'arrête alors
+une fois de plus qu'à l'ordinaire, et c'est voulu. Avant tout plan, il vous montre un
+**état des lieux** : chaque valeur qu'il a retenue, avec la phrase du document dont elle
+vient ; ce qui est ambigu, à trancher par vous ; ce qui manque ; ce qui sera créé au
+passage ; ce que le document ne couvre pas. Vous autorisez, puis le parcours reprend son
+cours normal — plan, budget, étendue, validation.
+
+La pièce elle-même suit la donnée : elle est classée dans les « Documents » de
+l'enregistrement créé. Sur une rubrique qui n'a pas de collection Documents, l'assistant
+vous prévient avant la validation que le fichier ne sera pas conservé en base.
+
 ## Deux façons de rattacher les étapes
 
 - **Les collections du formulaire** : ce que l'écran permet déjà d'ajouter dans la
@@ -73,10 +87,9 @@ l'obligation de s'appuyer sur ce journal, pas sur un raisonnement.
   le taux et la base de calcul. L'assistant dispose, pour chaque type, de son taux,
   de son mode de calcul, de son chargement de base et de son redevable en clair :
   il peut donc choisir « selon le taux relatif au risque » sans vous le redemander.
-- **Taux en pourcentage** : un taux se saisit en pourcentage (15 pour 15 %) mais se
-  stocke en fraction (0,15). L'assistant fournit la valeur telle que vous la dites ;
-  il ne recopie jamais la fraction qu'il lit dans une fiche — cela diviserait le
-  taux par cent.
+- **Taux en points** : un taux s'écrit et se stocke en POINTS — 15 pour 15 %, jamais
+  0,15. C'est la même valeur à l'écran, dans la fiche et dans le plan : l'assistant
+  reprend celle que vous dites, sans conversion.
 - **Portefeuille** : un client sans portefeuille n'apparaît pas dans la vue « Mon
   portefeuille ». L'assistant l'y range automatiquement si vous n'en gérez qu'un,
   sinon il vous demande lequel.

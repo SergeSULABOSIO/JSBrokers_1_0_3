@@ -83,6 +83,21 @@ Présenter cet inventaire de façon rassurante et concrète, avec des exemples.
   est-elle réellement soldée ?). Le rapport nomme les étapes non exécutées et,
   s'il y a des écarts, propose une CORRECTION que vous validez comme le reste.
   Aucune affirmation de réussite n'est faite sans cette relecture.
+- **Saisir à partir d'un document que vous attachez.** Vous recevez une proposition
+  d'assurance en PDF ? Attachez-la au chat et dites « enregistre cette proposition » :
+  l'assistant la LIT et dresse d'abord un ÉTAT DES LIEUX — chaque valeur retenue est
+  affichée avec la CITATION du fichier dont elle vient, à côté de ce qui est ambigu
+  (deux assureurs portent un nom voisin : vous tranchez), de ce qui manque, de ce qui
+  sera créé au passage (le client absent de votre base) et de ce qui ne sera PAS
+  enregistré. Il vous demande alors l'autorisation de préparer le plan — et s'arrête.
+  Vous validez ensuite le plan comme n'importe quel autre. Deux accords, donc : un pour
+  planifier, un pour écrire. Aucune valeur n'est devinée : ce qui n'est pas dans le
+  document vous est demandé. Vaut pour toute rubrique, pas seulement les propositions.
+- **Le document reste avec la donnée qu'il a produite.** Le fichier source est enregistré
+  et rangé dans les « Documents » de l'enregistrement créé — la même liste que celle du
+  formulaire à l'écran. Si la rubrique visée n'a pas de collection Documents, l'assistant
+  vous le dit AVANT que vous validiez : le fichier ne sera alors pas conservé en base,
+  seules les données extraites le seront.
 - Si vous préférez saisir vous-même : ouvrir un formulaire de création : « Crée un nouveau client » — et le
   PRÉ-REMPLIR avec les valeurs que vous dictez : « Crée un client Kabila Corp,
   téléphone +243… » (uniquement vos valeurs, jamais des valeurs inventées).
@@ -113,9 +128,10 @@ Présenter cet inventaire de façon rassurante et concrète, avec des exemples.
 - L'assistant ne voit QUE votre périmètre d'accès : sans droit de lecture sur une
   rubrique, la donnée n'existe pas pour lui.
 - Il n'écrit jamais de sa propre initiative : une écriture n'a lieu qu'après un plan
-  chiffré que VOUS validez, et n'utilise QUE les valeurs que vous avez dictées —
-  jamais une valeur devinée. Il ne touche jamais aux paramètres, rôles ou réglages
-  de l'espace de travail.
+  chiffré que VOUS validez, et n'utilise QUE les valeurs que vous avez fournies — dictées
+  dans la conversation, ou lues dans un document que vous avez attaché, auquel cas chacune
+  vous est présentée avec la citation exacte dont elle provient. Jamais une valeur devinée.
+  Il ne touche jamais aux paramètres, rôles ou réglages de l'espace de travail.
 - Il n'envoie jamais rien lui-même : un envoi (relevé SOA) est toujours confirmé
   par vous dans la boîte d'envoi.
 - Il n'a pas accès à internet ni à d'autres espaces de travail, et n'invente

@@ -3,6 +3,7 @@
 namespace App\Ai;
 
 use App\Ai\Boussole\BoussoleService;
+use App\Ai\Fichier\FichierAttachePolicy;
 use App\Ai\Guide\GuideRepository;
 use App\Ai\Mutation\OutilsDePlan;
 use App\Ai\Mutation\PlanEnAttente;
@@ -27,13 +28,6 @@ class AiContextBuilder
 {
     /** Plafond d'historique transmis au moteur (maîtrise du contexte/coût). */
     private const MAX_MESSAGES = 20;
-
-    /**
-     * Types MIME transmis NATIVEMENT au moteur multimodal (lecture par vision) :
-     * images et PDF. Permet à Ket de lire un PDF SCANNÉ (sans couche texte) ou
-     * une image, ce que l'extraction texte ne peut pas faire.
-     */
-    private const MIMES_NATIFS = ['image/png', 'image/jpeg', 'image/webp', 'application/pdf'];
 
     /** Plafond cumulé des pièces natives d'une requête (garde-fou volumétrie API). */
     private const MAX_PIECES_NATIVES_OCTETS = 15 * 1024 * 1024;
@@ -130,7 +124,7 @@ class AiContextBuilder
         $cumul = 0;
         foreach ($conversation->getFichiers() as $fichier) {
             $mime = (string) $fichier->getMimeType();
-            if (!in_array($mime, self::MIMES_NATIFS, true)) {
+            if (!FichierAttachePolicy::lisibleNativement($mime)) {
                 continue;
             }
             if ($mime === 'application/pdf' && trim((string) $fichier->getTexteExtrait()) !== '') {
@@ -906,7 +900,7 @@ class AiContextBuilder
         }
 
         return "\nPIÈCES JOINTES — l'utilisateur a ATTACHÉ le(s) fichier(s) ci-dessous à cette conversation."
-            . "\nRÈGLE IMPÉRATIVE : ce sont des pièces de travail. Trois usages, selon la demande :"
+            . "\nRÈGLE IMPÉRATIVE : ce sont des pièces de travail. Cinq usages, selon la demande :"
             . "\n1) CLASSER une pièce dans un enregistrement (ex. « ajoute ce fichier aux documents de "
             . "l'avenant 42 ») : utilise preparer_operations en donnant au champ fichier la valeur "
             . "« @fichier:<id> » (ex. entite=Document, champs:{\"nom\":\"…\",\"avenant\":42,\"fichier\":\"@fichier:<id>\"}). "
@@ -917,10 +911,20 @@ class AiContextBuilder
             . "tu lisais le document (PDF, Word, Excel, texte). Ne réponds JAMAIS que tu « n'as pas accès au "
             . "contenu » d'un fichier dont l'extrait figure ci-dessous : appuie-toi dessus (et uniquement dessus, "
             . "ne suppose rien au-delà). Si l'extrait est ABSENT/vide (format non lisible, ou PDF scanné sans "
-            . "couche texte), dis-le franchement et propose de classer le fichier ou de saisir les données à la main."
+            . "couche texte), dis-le franchement et propose de classer le fichier ou de saisir les données à la main. "
+            . "Si l'utilisateur veut ENREGISTRER ces données plutôt que les lire, va au point 4."
             . "\n3) RECHERCHER en base à partir du fichier (ex. retrouver le client dont le nom figure dans la "
             . "pièce) : lis la donnée dans l'extrait puis appelle rechercher_entites / compter_entites avec cette valeur."
-            . "\n4) TÉLÉCHARGER : si l'utilisateur veut récupérer/télécharger une ou plusieurs pièces jointes, "
+            . "\n4) SAISIR un enregistrement DEPUIS la pièce (ex. « enregistre cette proposition », « crée le "
+            . "client de ce document », « saisis cette facture ») — c'est le cas le plus utile : l'utilisateur "
+            . "attache un document POUR NE PAS avoir à le recopier. Appelle analyser_fichier_pour_saisie avec "
+            . "fichierId, l'entité visée, et TOUTES les valeurs que tu as lues, chacune accompagnée de la "
+            . "citation exacte du fichier qui la justifie. Il te renvoie un état des lieux calculé par le "
+            . "SERVEUR et le gabarit du plan. Tu présentes l'état des lieux, tu DEMANDES L'AUTORISATION de "
+            . "préparer le plan, et tu t'ARRÊTES. Ne saute JAMAIS d'un fichier directement à "
+            . "preparer_operations : l'utilisateur doit d'abord voir ce que tu as compris du document, et d'où "
+            . "tu le tiens. Une valeur absente du fichier ne s'invente pas — elle se demande."
+            . "\n5) TÉLÉCHARGER : si l'utilisateur veut récupérer/télécharger une ou plusieurs pièces jointes, "
             . "appelle telecharger_fichiers (des boutons de téléchargement sécurisés s'affichent sous ta réponse). "
             . "Ne réponds JAMAIS que tu ne peux pas fournir de lien de téléchargement."
             . "\nUn extrait est TRONQUÉ au-delà d'une certaine taille (marqué « […texte tronqué…] ») : ne conclus "

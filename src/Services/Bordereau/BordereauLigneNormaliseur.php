@@ -67,6 +67,35 @@ final class BordereauLigneNormaliseur
     }
 
     /**
+     * Nettoie un nombre écrit à la main ou exporté : espaces (y compris insécables),
+     * virgule décimale, et séparateurs de milliers en point.
+     *
+     * Extrait de normaliserValeur() pour rester la SOURCE UNIQUE de ce nettoyage :
+     * la saisie assistée depuis un document (AnalyserFichierPourSaisieTool) lit les
+     * mêmes montants mal typographiés qu'un bordereau Excel — « 1.234.567,89 »,
+     * « 9 000 » — et ne doit pas en réimplémenter une seconde interprétation.
+     */
+    public static function nettoyerNombre(mixed $value): float
+    {
+        if (!is_string($value)) {
+            return (float) $value;
+        }
+
+        $cleanedValue = str_replace([' ', "\u{00A0}"], '', $value);
+        $cleanedValue = str_replace(',', '.', $cleanedValue);
+        // Séparateur de milliers en point : seul le DERNIER point est décimal.
+        if (substr_count($cleanedValue, '.') > 1) {
+            $lastDotPos = strrpos($cleanedValue, '.');
+            if ($lastDotPos !== false) {
+                $cleanedValue = str_replace('.', '', substr($cleanedValue, 0, $lastDotPos))
+                    . substr($cleanedValue, $lastDotPos);
+            }
+        }
+
+        return (float) $cleanedValue;
+    }
+
+    /**
      * Convertit une cellule Excel selon le champ système visé : montants nettoyés de leurs
      * séparateurs, dates ramenées en Y-m-d, numéro d'avenant en chaîne (« 3.0 » → « 3 »).
      */
@@ -77,22 +106,7 @@ final class BordereauLigneNormaliseur
         }
 
         if (self::estNumerique($systemField)) {
-            if (is_string($value)) {
-                $cleanedValue = str_replace([' ', "\u{00A0}"], '', $value);
-                $cleanedValue = str_replace(',', '.', $cleanedValue);
-                // Séparateur de milliers en point : seul le DERNIER point est décimal.
-                if (substr_count($cleanedValue, '.') > 1) {
-                    $lastDotPos = strrpos($cleanedValue, '.');
-                    if ($lastDotPos !== false) {
-                        $cleanedValue = str_replace('.', '', substr($cleanedValue, 0, $lastDotPos))
-                            . substr($cleanedValue, $lastDotPos);
-                    }
-                }
-
-                return (float) $cleanedValue;
-            }
-
-            return (float) $value;
+            return self::nettoyerNombre($value);
         }
 
         switch ($systemField) {

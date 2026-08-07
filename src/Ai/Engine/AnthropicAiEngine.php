@@ -52,12 +52,63 @@ final class AnthropicAiEngine implements AiEngineInterface
         return 'anthropic';
     }
 
+    /**
+     * Joint les pièces lisibles nativement (images, PDF scannés) au DERNIER tour
+     * utilisateur, en blocs de contenu Messages API — miroir exact de l'inlineData
+     * de GeminiAiEngine.
+     *
+     * Sans cela, le prompt affirmait au modèle que ces pièces lui « sont transmises
+     * DIRECTEMENT pour lecture visuelle » alors que ce moteur ne les envoyait pas :
+     * une image ou un PDF sans couche texte était invisible, et le modèle, sommé de
+     * le lire, n'avait d'autre issue que d'inventer. L'écart était sans effet tant
+     * que Gemini restait le moteur actif — mais ANTHROPIC_API_KEY est PRIORITAIRE
+     * dans AiEngineResolver, donc une simple clé posée suffisait à l'ouvrir.
+     *
+     * @param list<array{role:string, content:mixed}>                               $messages
+     * @param list<array{mimeType:string, donneesBase64:string, nom:string}>        $pieces
+     *
+     * @return list<array{role:string, content:mixed}>
+     */
+    private function joindrePiecesNatives(array $messages, array $pieces): array
+    {
+        if ($pieces === []) {
+            return $messages;
+        }
+
+        for ($i = count($messages) - 1; $i >= 0; $i--) {
+            if (($messages[$i]['role'] ?? null) !== 'user') {
+                continue;
+            }
+            // Le tour devient une liste de blocs : le texte d'abord, les pièces ensuite.
+            $contenu = $messages[$i]['content'];
+            $blocs = is_array($contenu) ? $contenu : [['type' => 'text', 'text' => (string) $contenu]];
+
+            foreach ($pieces as $piece) {
+                $mime = (string) $piece['mimeType'];
+                // Une image et un PDF ne portent pas le même type de bloc chez Anthropic.
+                $blocs[] = [
+                    'type'   => $mime === 'application/pdf' ? 'document' : 'image',
+                    'source' => [
+                        'type'       => 'base64',
+                        'media_type' => $mime,
+                        'data'       => (string) $piece['donneesBase64'],
+                    ],
+                ];
+            }
+            $messages[$i]['content'] = $blocs;
+            break;
+        }
+
+        return $messages;
+    }
+
     public function reply(AiRequest $request): AiReply
     {
         $messages = array_map(
             static fn (array $m) => ['role' => $m['role'], 'content' => $m['content']],
             $request->messages,
         );
+        $messages = $this->joindrePiecesNatives($messages, $request->piecesNatives);
 
         $refused = false;
         $toolUsed = null;
