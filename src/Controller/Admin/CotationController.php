@@ -89,7 +89,9 @@ class CotationController extends AbstractController
                     $cotation->addTranche(
                         (new Tranche())
                             ->setNom('Tranche unique')
-                            ->setPourcentage(1.0)
+                            // POINTS, pas fraction : une tranche UNIQUE porte 100 % de la
+                            // prime (cf. Tranche::getFraction et l'import bordereau).
+                            ->setPourcentage(100.0)
                             ->setPayableAt($dateBase)
                             ->setEcheanceAt($echeanceAt)
                             ->setEntreprise($cotation->getEntreprise())
@@ -133,7 +135,8 @@ class CotationController extends AbstractController
 
                 $tranche = (new Tranche())
                     ->setNom('Tranche unique')
-                    ->setPourcentage(1.0)
+                    // POINTS : 100 = 100 % de la prime (cf. Tranche::getFraction).
+                    ->setPourcentage(100.0)
                     ->setPayableAt($dateEffet)
                     ->setEcheanceAt($echeanceAt)
                     ->setEntreprise($cotation->getEntreprise())

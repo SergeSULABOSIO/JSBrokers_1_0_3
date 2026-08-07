@@ -46,6 +46,8 @@ class TranchePourcentageConventionTest extends WebTestCase
     {
         $conn = $this->em->getConnection();
         $conn->executeStatement('UPDATE utilisateur SET connected_to_id = NULL WHERE email = :e', ['e' => self::OWNER]);
+        $conn->executeStatement('DELETE t FROM tranche t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
+        $conn->executeStatement('DELETE c FROM cotation c JOIN entreprise e ON c.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE t FROM invite t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE FROM entreprise WHERE nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE FROM utilisateur WHERE email = :e', ['e' => self::OWNER]);
@@ -53,10 +55,11 @@ class TranchePourcentageConventionTest extends WebTestCase
     }
 
     /** Un utilisateur connecté à une entreprise : requis par les champs autocomplete de TrancheType. */
-    private function login(): void
+    private function login(): array
     {
         $owner = (new Utilisateur())->setEmail(self::OWNER)->setNom('P')->setVerified(true);
         $owner->setPassword('x');
+        $owner->setPaidTokens(1_000_000);
         $this->em->persist($owner);
         $ent = (new Entreprise())->setNom(self::ENT)->setLicence('L')->setAdresse('a')->setTelephone('t')
             ->setRccm('r')->setIdnat('i')->setNumimpot('n')->setUtilisateur($owner);
@@ -66,6 +69,62 @@ class TranchePourcentageConventionTest extends WebTestCase
         $owner->setConnectedTo($ent);
         $this->em->flush();
         $this->client->loginUser($owner);
+
+        return [$ent, $inv];
+    }
+
+    /**
+     * La tranche « unique » créée AUTOMATIQUEMENT à l'enregistrement d'une cotation
+     * couvre 100 % de la prime — donc 100 POINTS.
+     *
+     * Elle était restée à 1.0 : sous l'ancienne convention fractionnaire, 1,0 valait
+     * 100 % ; depuis le passage en points, la même valeur vaut 1 %. Toute cotation
+     * créée à l'écran depuis lors n'échelonnait qu'un centième de sa prime, en
+     * silence. L'import bordereau, lui, posait bien 100.0.
+     */
+    public function testTrancheAutoCreeeCouvreCentPourCent(): void
+    {
+        [$ent, $inv] = $this->login();
+
+        $this->client->request('POST', '/admin/cotation/api/submit', [
+            'idEntreprise' => $ent->getId(),
+            'idInvite'     => $inv->getId(),
+            'nom'          => 'Cotation convention points',
+            'duree'        => 12,
+        ]);
+        $this->assertResponseIsSuccessful();
+
+        $this->em->clear();
+        $cotation = $this->em->getRepository(Cotation::class)->findOneBy(['nom' => 'Cotation convention points']);
+        $this->assertNotNull($cotation);
+        $this->assertCount(1, $cotation->getTranches(), 'Une tranche unique est créée d’office.');
+
+        $tranche = $cotation->getTranches()->first();
+        $this->assertSame(100.0, $tranche->getPourcentage(), 'Tranche unique = 100 POINTS, pas 1.');
+        $this->assertSame(1.0, $tranche->getFraction(), 'Soit la totalité de la prime.');
+    }
+
+    /**
+     * Même exigence sur l'autre porte d'entrée : l'ouverture de la collection
+     * « tranches » d'une cotation qui n'en a aucune en crée une, et la PERSISTE.
+     */
+    public function testTrancheAutoCreeeParLOuvertureDeLaCollection(): void
+    {
+        [$ent, $inv] = $this->login();
+
+        $cotation = (new Cotation())->setNom('Cotation sans tranche')->setDuree(12)
+            ->setEntreprise($ent)->setInvite($inv);
+        $this->em->persist($cotation);
+        $this->em->flush();
+        $idCotation = $cotation->getId();
+
+        $this->client->request('GET', sprintf('/admin/cotation/api/%d/tranches/generic', $idCotation));
+        $this->assertResponseIsSuccessful();
+
+        $this->em->clear();
+        $cotation = $this->em->getRepository(Cotation::class)->find($idCotation);
+        $this->assertCount(1, $cotation->getTranches());
+        $this->assertSame(100.0, $cotation->getTranches()->first()->getPourcentage());
     }
 
     public function testGetFractionDeriveLaFractionDepuisLesPoints(): void
