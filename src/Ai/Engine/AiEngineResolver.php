@@ -38,6 +38,11 @@ final class AiEngineResolver implements AiEngineInterface
         return $this->engine()->name();
     }
 
+    public function modelName(): string
+    {
+        return $this->engine()->modelName();
+    }
+
     public function reply(AiRequest $request): AiReply
     {
         return $this->engine()->reply($request);

@@ -24,6 +24,16 @@ interface AiEngineInterface
     /** Identifiant technique du moteur (ex. « simulated », « anthropic ») — traçable. */
     public function name(): string;
 
+    /**
+     * Modèle réellement interrogé (ex. « gemini-flash-lite-latest »).
+     *
+     * Les quotas des fournisseurs se comptent PAR MODÈLE : sans cette
+     * information, une mesure de consommation ne peut pas être rapportée au
+     * plafond qu'elle approche. Le moteur simulé n'interrogeant personne,
+     * il rend une valeur conventionnelle.
+     */
+    public function modelName(): string;
+
     /** Produit la réponse de l'assistant à partir du contexte et de l'historique. */
     public function reply(AiRequest $request): AiReply;
 }

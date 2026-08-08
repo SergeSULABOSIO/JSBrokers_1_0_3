@@ -17,6 +17,7 @@ use App\Ai\Programme\ProgrammeEnCours;
 use App\Ai\Programme\ProgrammeRunner;
 use App\Ai\Programme\ProgrammeVerificateur;
 use App\Ai\Programme\RapportProgramme;
+use App\Ai\Telemetrie\JournalTokens;
 use App\Ai\Tool\EntiteLibelle;
 use App\Ai\Tool\PrefillWhitelist;
 use Psr\Log\LoggerInterface;
@@ -107,6 +108,7 @@ class AssistantIaController extends AbstractController
         private TokenAccountService $tokenAccountService,
         private AiContextBuilder $contextBuilder,
         private AiEngineInterface $aiEngine,
+        private JournalTokens $journalTokens,
         private EntityManagerInterface $em,
         private LoggerInterface $logger,
         private CanvasBuilder $canvasBuilder,
@@ -443,10 +445,37 @@ class AssistantIaController extends AbstractController
         // la conversation reste utilisable — réponse d'excuse persistée (honnête
         // sur la cause quand elle est identifiable, cf. AiEngineFailure), pas de 500.
         $erreurMoteur = false;
+        // Construite DANS le try (une construction qui échoue doit produire
+        // l'excuse, pas un 500) mais déclarée avant, pour rester disponible au
+        // moment de journaliser l'échec.
+        $aiRequest = null;
         try {
-            $reply = $this->aiEngine->reply($this->contextBuilder->build($entreprise, $invite, $conversation));
+            $aiRequest = $this->contextBuilder->build($entreprise, $invite, $conversation);
+            $reply = $this->aiEngine->reply($aiRequest);
         } catch (\Throwable $e) {
-            $this->logger->error('Assistant IA : le moteur a échoué.', ['exception' => $e]);
+            $quotaEpuise = AiEngineFailure::estLimiteDeDebit($e);
+            // Sur un 429, le corps de la réponse nomme le quota violé et le délai
+            // d'attente : sans ces champs le journal ne dit que « HTTP 429 » et la
+            // saturation reste indiagnosticable.
+            $detailsQuota = $quotaEpuise ? AiEngineFailure::detailsPourJournal($e) : [];
+            $this->logger->error('Assistant IA : le moteur a échoué.', [
+                'exception' => $e,
+                'engine'    => $this->aiEngine->name(),
+            ] + ($quotaEpuise ? ['quota' => $detailsQuota] : []));
+
+            // Les tours déjà effectués ont été payés : ils doivent figurer dans la
+            // campagne de mesure, sans quoi les messages les plus coûteux — ceux
+            // qui butent sur le quota — seraient précisément ceux qui manquent.
+            if ($aiRequest !== null) {
+                $this->journalTokens->messageInterrompu(
+                    $aiRequest,
+                    $this->aiEngine->name(),
+                    $this->aiEngine->modelName(),
+                    $quotaEpuise ? JournalTokens::ISSUE_QUOTA_FOURNISSEUR : JournalTokens::ISSUE_ECHEC_TECHNIQUE,
+                    $detailsQuota,
+                );
+            }
+
             $erreurMoteur = true;
             $reply = new AiReply(AiEngineFailure::messagePour($e));
         }

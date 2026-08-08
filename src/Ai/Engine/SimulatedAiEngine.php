@@ -39,6 +39,11 @@ final class SimulatedAiEngine implements AiEngineInterface
         return 'simulated';
     }
 
+    public function modelName(): string
+    {
+        return 'aucun'; // aucun fournisseur interrogé : rien à rapporter à un quota
+    }
+
     public function reply(AiRequest $request): AiReply
     {
         $question = $request->lastUserMessage();
