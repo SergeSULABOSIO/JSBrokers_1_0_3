@@ -4,6 +4,7 @@ namespace App\Tests\Ai;
 
 use App\Ai\AiContextBuilder;
 use App\Ai\AiRequest;
+use App\Ai\Debit\BudgetDebit;
 use App\Ai\Engine\GeminiAiEngine;
 use App\Ai\Scope\AiScope;
 use App\Ai\Telemetrie\JournalTokens;
@@ -14,6 +15,7 @@ use App\Entity\Invite;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\AbstractLogger;
 use Psr\Log\NullLogger;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -81,8 +83,30 @@ class GeminiAiEngineTest extends TestCase
     /** @var list<array{message: string, context: array}> lignes de télémétrie captées */
     private array $telemetrie = [];
 
-    private function makeEngine(MockHttpClient $http, array $tools = []): GeminiAiEngine
+    /** @var list<int> secondes que le moteur a DEMANDÉ d'attendre (jamais dormies) */
+    private array $attentes = [];
+
+    /**
+     * Compteur de débit vierge, horloge figée. Une suite de tests ne doit ni
+     * dormir ni dépendre du pool de cache réel : on vérifie la DÉCISION du
+     * moteur, pas la capacité de PHP à attendre.
+     */
+    private function makeBudget(int $plafond = 250000, int $instant = 1_000_000): BudgetDebit
     {
+        return new BudgetDebit(
+            new ArrayAdapter(),
+            $plafond,
+            0.0, // marge neutralisée : les seuils du test doivent rester lisibles
+            static fn (): int => $instant,
+        );
+    }
+
+    private function makeEngine(
+        MockHttpClient $http,
+        array $tools = [],
+        ?BudgetDebit $budget = null,
+        ?\Closure $dormir = null,
+    ): GeminiAiEngine {
         $contextBuilder = $this->createMock(AiContextBuilder::class);
         $contextBuilder->method('toSystemPrompt')->willReturn('SYSTEM');
 
@@ -105,6 +129,13 @@ class GeminiAiEngineTest extends TestCase
             'gemini-2.5-flash',
             new NullLogger(),
             new JournalTokens($espion),
+            $budget ?? $this->makeBudget(),
+            function (int $secondes) use ($dormir): void {
+                $this->attentes[] = $secondes;
+                if ($dormir !== null) {
+                    $dormir($secondes);
+                }
+            },
         );
     }
 
@@ -328,39 +359,100 @@ class GeminiAiEngineTest extends TestCase
         $this->assertStringContainsString('Reformulez', $reply->content);
     }
 
-    /**
-     * L'API étant sans mémoire, chaque tour de function calling renvoie tout le
-     * contexte : un enchaînement d'outils finit par franchir le plafond de tokens
-     * d'ENTRÉE par minute du fournisseur (429, tour perdu ET déjà débité). Le
-     * moteur doit s'arrêter de lui-même avant le mur, en le disant.
-     */
-    public function testBudgetDeTokensDEntreeArreteLaBoucleAvantLe429(): void
+    /** Un tour de function calling qui redemande toujours le même outil. */
+    private function tourAvecOutil(int $tokensEntree): array
     {
-        // Chaque tour déclare 60 000 tokens d'entrée. Après le 3e, le cumul est de
-        // 180 000 et un 4e tour (estimé au même prix) porterait le total à 240 000,
-        // au-delà du budget de 200 000 : la boucle doit s'arrêter là.
-        $appelOutil = [
+        return [
             'candidates' => [[
                 'content' => ['role' => 'model', 'parts' => [
                     ['functionCall' => ['name' => 'compter_entites', 'args' => ['entite' => 'Client']]],
                 ]],
             ]],
-            'usageMetadata' => ['promptTokenCount' => 60000],
+            'usageMetadata' => ['promptTokenCount' => $tokensEntree],
         ];
+    }
 
+    /**
+     * L'API étant sans mémoire, chaque tour réexpédie tout le contexte : un
+     * enchaînement d'outils finit par épuiser le débit autorisé sur la minute
+     * (429, tour perdu ET déjà débité au compte de l'utilisateur). Le moteur doit
+     * s'arrêter avant le mur — mais d'après le débit RÉELLEMENT consommé sur la
+     * fenêtre glissante, jamais d'après un cap par message : c'est ce cap-là qui,
+     * le 2026-08-08, a refusé 10 messages sur 23 alors que le fournisseur aurait
+     * laissé passer.
+     */
+    public function testLaBoucleSArreteQuandLeDebitDeLaMinuteEstEpuise(): void
+    {
+        // Plafond 250 000, 60 000 tokens par tour, horloge figée : rien ne sort
+        // jamais de la fenêtre. Au 4e tour le compteur est à 240 000 et un 5e
+        // (estimé au même prix) dépasserait — il faudrait attendre que la minute
+        // s'écoule, bien au-delà de l'attente tolérée.
         $appels = 0;
-        $http = new MockHttpClient(function () use (&$appels, $appelOutil) {
+        $http = new MockHttpClient(function () use (&$appels) {
             ++$appels;
 
-            return new MockResponse(json_encode($appelOutil));
+            return new MockResponse(json_encode($this->tourAvecOutil(60000)));
         });
 
         $tool = $this->makeTool(AiToolResult::ok(['count' => 3]));
         $reply = $this->makeEngine($http, [$tool])->reply($this->makeRequest('Analyse tout mon portefeuille'));
 
-        $this->assertSame(3, $appels, 'La boucle doit cesser d\'appeler l\'API dès le budget atteint.');
-        $this->assertStringContainsString('trop de recherches', $reply->content);
-        $this->assertStringContainsString('plusieurs questions', $reply->content);
+        $this->assertSame(4, $appels, 'La boucle doit cesser d\'appeler l\'API dès le débit épuisé.');
+        $this->assertStringContainsString('limite de débit', $reply->content);
+        // Le refus ne doit plus accuser l'utilisateur d'avoir mal posé sa question.
+        $this->assertStringNotContainsString('Découpez', $reply->content);
+        $this->assertSame([], $this->attentes, 'Une attente d\'une minute entière ne doit jamais être tentée.');
+    }
+
+    /**
+     * Le cas qui justifie tout le chantier : la fenêtre est saturée mais se
+     * libère dans quelques secondes. Jeter là quatre tours DÉJÀ facturés pour
+     * rendre une non-réponse est le pire des choix — Ket patiente et termine.
+     */
+    public function testLeMoteurPatienteBrievementPuisTermineLaChaine(): void
+    {
+        // Horloge pilotée : chaque aller-retour HTTP consomme 50 s, et l'attente
+        // fait avancer le temps d'autant. Aucun sleep réel n'a lieu.
+        $instant = 1_000_000;
+        $budget = new BudgetDebit(
+            new ArrayAdapter(),
+            100000,
+            0.0,
+            static function () use (&$instant): int { return $instant; },
+        );
+
+        $appels = 0;
+        $http = new MockHttpClient(function () use (&$appels, &$instant) {
+            $instant += 50;
+            ++$appels;
+
+            // Les deux premiers tours appellent l'outil, le troisième conclut.
+            return new MockResponse(json_encode($appels < 3
+                ? $this->tourAvecOutil(40000)
+                : [
+                    'candidates'    => [['content' => ['role' => 'model', 'parts' => [['text' => 'Voici le bilan.']]]]],
+                    'usageMetadata' => ['promptTokenCount' => 40000],
+                ]));
+        });
+
+        $tool = $this->makeTool(AiToolResult::ok(['count' => 3]));
+        $reply = $this->makeEngine(
+            $http,
+            [$tool],
+            $budget,
+            static function (int $secondes) use (&$instant): void { $instant += $secondes; },
+        )->reply($this->makeRequest('Analyse tout mon portefeuille'));
+
+        $this->assertSame(3, $appels, 'La chaîne doit reprendre après l\'attente, pas s\'interrompre.');
+        $this->assertSame('Voici le bilan.', $reply->content);
+        $this->assertCount(1, $this->attentes, 'Une seule attente était nécessaire.');
+        $this->assertLessThanOrEqual(15, $this->attentes[0], 'L\'attente doit rester brève (un seul worker en dev).');
+
+        $attentes = array_filter(
+            $this->telemetrie,
+            static fn (array $l) => ($l['context']['evenement'] ?? null) === 'attente',
+        );
+        $this->assertCount(1, $attentes, 'Toute attente doit être mesurable dans la campagne.');
     }
 
     /**
@@ -415,11 +507,12 @@ class GeminiAiEngineTest extends TestCase
             1,
         ];
 
-        // 60 000 tokens par tour : au 4e, la projection dépasse le budget.
-        yield 'budget de tokens atteint' => [
+        // 60 000 tokens par tour, horloge figée (rien ne sort de la fenêtre) :
+        // au 4e tour le compteur atteint 240 000 et un 5e dépasserait 250 000.
+        yield 'débit de la minute épuisé' => [
             static fn () => new MockResponse(json_encode($appelOutil(60000))),
             JournalTokens::ISSUE_BUDGET_ATTEINT,
-            3,
+            4,
         ];
 
         // Le modèle rappelle un outil indéfiniment : MAX_TOOL_ROUNDS borne la boucle.

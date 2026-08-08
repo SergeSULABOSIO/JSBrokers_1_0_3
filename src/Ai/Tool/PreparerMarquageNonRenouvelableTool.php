@@ -28,7 +28,7 @@ use App\Services\JSBDynamicSearchService;
  * commissions, taxes et rétrocommissions restent à recouvrer, et le résultat les énonce
  * pour que Ket ne laisse jamais croire que le dossier est clos.
  */
-final class PreparerMarquageNonRenouvelableTool implements AiToolProduisantUnPlan
+final class PreparerMarquageNonRenouvelableTool implements AiToolProduisantUnPlan, AiToolConditionnel
 {
     /** Nombre maximal de polices proposées quand la référence est ambiguë. */
     private const MAX_CANDIDATS = 8;
@@ -111,6 +111,12 @@ final class PreparerMarquageNonRenouvelableTool implements AiToolProduisantUnPla
     public function match(string $question, AiScope $scope): ?array
     {
         return null;
+    }
+
+    /** Miroir exact de la garde d'execute() : ne pas décrire un outil qui refusera. */
+    public function estDisponible(AiScope $scope): bool
+    {
+        return $this->accessResolver->can($scope->invite, 'Avenant', Invite::ACCESS_MODIFICATION);
     }
 
     public function execute(array $args, AiScope $scope): AiToolResult

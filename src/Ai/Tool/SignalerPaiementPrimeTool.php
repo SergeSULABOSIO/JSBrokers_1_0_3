@@ -31,7 +31,7 @@ use App\Services\JSBDynamicSearchService;
  * Écriture sur « Tranche » exigé (le moteur le re-contrôle via GOUVERNANCE_PARENT),
  * et la tranche est résolue STRICTEMENT dans l'entreprise du scope.
  */
-final class SignalerPaiementPrimeTool implements AiToolProduisantUnPlan
+final class SignalerPaiementPrimeTool implements AiToolProduisantUnPlan, AiToolConditionnel
 {
     public function __construct(
         private readonly WorkspaceAccessResolver $accessResolver,
@@ -129,6 +129,12 @@ final class SignalerPaiementPrimeTool implements AiToolProduisantUnPlan
         }
 
         return ['trancheId' => (int) $m[1]];
+    }
+
+    /** Miroir exact de la garde d'execute() : ne pas décrire un outil qui refusera. */
+    public function estDisponible(AiScope $scope): bool
+    {
+        return $this->accessResolver->can($scope->invite, 'Tranche', Invite::ACCESS_ECRITURE);
     }
 
     public function execute(array $args, AiScope $scope): AiToolResult

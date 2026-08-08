@@ -34,7 +34,12 @@ final class JournalTokens
 {
     /** Le modèle a rendu sa réponse (avec ou sans outil). */
     public const ISSUE_REPONSE = 'reponse';
-    /** Boucle arrêtée par le budget d'entrée, avant le 429 (cf. GeminiAiEngine). */
+    /**
+     * Boucle arrêtée faute de débit disponible sur la minute, avant le 429
+     * (cf. GeminiAiEngine + BudgetDebit). Nom conservé depuis l'époque du cap
+     * par message : les journaux d'avant et d'après doivent rester comparables,
+     * c'est tout l'intérêt de la campagne.
+     */
     public const ISSUE_BUDGET_ATTEINT = 'budget_atteint';
     /** 429 du fournisseur : quota d'entrée par minute épuisé. Levé hors du moteur. */
     public const ISSUE_QUOTA_FOURNISSEUR = 'quota_fournisseur';
@@ -111,6 +116,33 @@ final class JournalTokens
             'octetsOutils'     => $octets['outils'] ?? 0,
             'octetsHistorique' => $octets['historique'] ?? 0,
             'outils'           => $outils,
+        ]);
+    }
+
+    /**
+     * Le moteur a PATIENTÉ avant de relancer un tour, le temps que la fenêtre
+     * d'une minute se libère, plutôt que d'abandonner une chaîne déjà payée.
+     *
+     * À surveiller de près : quelques attentes brèves valent bien mieux qu'un
+     * refus, mais une attente fréquente ou longue signale que le plafond est
+     * réellement trop bas pour l'usage — c'est le signal qui doit déclencher la
+     * bascule vers le palier payant, pas une impression.
+     */
+    public function attente(
+        AiRequest $request,
+        string $moteur,
+        string $modele,
+        int $tour,
+        int $secondes,
+        int $tokensEstimes,
+    ): void {
+        $this->assistantTokensLogger->info('attente', $this->identite($request) + [
+            'evenement'     => 'attente',
+            'moteur'        => $moteur,
+            'modele'        => $modele,
+            'tour'          => $tour,
+            'secondes'      => $secondes,
+            'tokensEstimes' => $tokensEstimes,
         ]);
     }
 

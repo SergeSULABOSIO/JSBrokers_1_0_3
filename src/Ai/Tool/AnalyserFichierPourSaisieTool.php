@@ -43,7 +43,7 @@ use Doctrine\ORM\EntityManagerInterface;
  * FAIL-CLOSED : mêmes gardes que l'écriture (allowlist + droit Écriture), et le
  * fichier doit appartenir à la conversation du scope.
  */
-final class AnalyserFichierPourSaisieTool implements AiToolInterface
+final class AnalyserFichierPourSaisieTool implements AiToolInterface, AiToolConditionnel
 {
     /** Étiquette de l'opération de tête dans le gabarit (renvoi « @socle »). */
     private const REF_SOCLE = 'socle';
@@ -152,6 +152,21 @@ final class AnalyserFichierPourSaisieTool implements AiToolInterface
     public function match(string $question, AiScope $scope): ?array
     {
         return null;
+    }
+
+    /**
+     * Le plus lourd des outils conditionnels (3,8 Ko de déclaration) et le seul
+     * dont l'utilité dépend du FIL plutôt que des droits : sans pièce jointe, il
+     * ne peut rien faire d'autre que répondre « fichier_introuvable ». Le décrire
+     * dans une conversation sans document, c'est payer ces 3,8 Ko à chaque tour
+     * pour une impasse — et tenter le modèle de le proposer à vide.
+     *
+     * La garde d'execute() (droit d'ÉCRITURE sur l'entité visée) reste entière :
+     * elle dépend de l'entité passée en argument, qu'on ne connaît pas encore ici.
+     */
+    public function estDisponible(AiScope $scope): bool
+    {
+        return $scope->conversation !== null && \count($scope->conversation->getFichiers()) > 0;
     }
 
     public function execute(array $args, AiScope $scope): AiToolResult

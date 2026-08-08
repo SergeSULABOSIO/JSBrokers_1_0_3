@@ -26,7 +26,7 @@ use App\Service\Workspace\WorkspaceAccessResolver;
  * de dette n'est posé : sans ces deux garde-fous, le modèle lit « 5 lignes » puis « 4
  * soldes de prime à 0 » et croit se contredire (incident du 2026-08-05).
  */
-final class SuiviImpayesTool implements AiToolInterface
+final class SuiviImpayesTool implements AiToolInterface, AiToolConditionnel
 {
     /** Lignes restituées par page (sortie compacte, économie de tokens). */
     private const MAX_LIGNES = 10;
@@ -142,6 +142,12 @@ final class SuiviImpayesTool implements AiToolInterface
         }
 
         return $args;
+    }
+
+    /** Miroir exact de la garde d'execute() : ne pas décrire un outil qui refusera. */
+    public function estDisponible(AiScope $scope): bool
+    {
+        return $this->accessResolver->canRead($scope->invite, 'Tranche');
     }
 
     public function execute(array $args, AiScope $scope): AiToolResult

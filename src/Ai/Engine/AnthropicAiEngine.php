@@ -5,6 +5,8 @@ namespace App\Ai\Engine;
 use App\Ai\AiContextBuilder;
 use App\Ai\AiReply;
 use App\Ai\AiRequest;
+use App\Ai\Scope\AiScope;
+use App\Ai\Tool\AiToolConditionnel;
 use App\Ai\Tool\AiToolInterface;
 use App\Ai\Tool\AiToolResult;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -185,7 +187,7 @@ final class AnthropicAiEngine implements AiEngineInterface
                 'model'      => $this->model,
                 'max_tokens' => self::MAX_OUTPUT_TOKENS,
                 'system'     => $this->contextBuilder->toSystemPrompt($request),
-                'tools'      => $this->toolDefinitions(),
+                'tools'      => $this->toolDefinitions($request->scope),
                 'messages'   => $messages,
             ],
             'timeout' => 90,
@@ -194,11 +196,19 @@ final class AnthropicAiEngine implements AiEngineInterface
         return $response->toArray(); // lève une exception explicite sur 4xx/5xx
     }
 
-    /** Définitions de tools au format Messages API (name/description/input_schema). */
-    private function toolDefinitions(): array
+    /**
+     * Définitions de tools au format Messages API (name/description/input_schema),
+     * filtrées comme chez Gemini : les deux moteurs doivent présenter au modèle
+     * exactement le même jeu d'outils, sinon comparer leurs mesures n'aurait plus
+     * de sens et un bug ne se reproduirait que sur l'un des deux.
+     */
+    private function toolDefinitions(AiScope $scope): array
     {
         $definitions = [];
         foreach ($this->tools as $tool) {
+            if ($tool instanceof AiToolConditionnel && !$tool->estDisponible($scope)) {
+                continue;
+            }
             $definitions[] = [
                 'name'         => $tool->name(),
                 'description'  => $tool->description(),

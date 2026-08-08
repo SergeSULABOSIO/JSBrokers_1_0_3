@@ -34,6 +34,10 @@ class AssistantTokensRapportCommand extends Command
 
     public function __construct(
         #[Autowire('%kernel.logs_dir%')] private readonly string $logsDir,
+        // Le plafond réellement opposé au moteur (BudgetDebit) : sans lui, le
+        // rapport continuerait de compter les dépassements contre le palier
+        // gratuit longtemps après une bascule en payant.
+        #[Autowire(env: 'int:GEMINI_TPM_PLAFOND')] private readonly int $plafond = RapportTokens::PLAFOND_ENTREE_PAR_MINUTE,
     ) {
         parent::__construct();
     }
@@ -77,7 +81,7 @@ class AssistantTokensRapportCommand extends Command
             return Command::SUCCESS;
         }
 
-        $rapport = new RapportTokens($lignes);
+        $rapport = new RapportTokens($lignes, $this->plafond);
         $tours = $rapport->tours();
         $messages = $rapport->messages();
 
@@ -123,7 +127,7 @@ class AssistantTokensRapportCommand extends Command
         $io->writeln(sprintf(
             ' Pic observé : <comment>%s tokens</comment> sur 60 s (plafond %s)%s',
             number_format($observe['pic'], 0, ',', ' '),
-            number_format(RapportTokens::PLAFOND_ENTREE_PAR_MINUTE, 0, ',', ' '),
+            number_format($rapport->plafond(), 0, ',', ' '),
             $observe['instant'] !== null ? ' — le ' . $observe['instant'] : '',
         ));
         $io->writeln(sprintf(

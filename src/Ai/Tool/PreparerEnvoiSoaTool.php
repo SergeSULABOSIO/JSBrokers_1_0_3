@@ -18,7 +18,7 @@ use App\Services\JSBDynamicSearchService;
  * FAIL-CLOSED : même garde que le picker lui-même (lecture Clients), client
  * résolu STRICTEMENT dans l'entreprise du scope (patron VisualiserFicheTool).
  */
-final class PreparerEnvoiSoaTool implements AiToolInterface
+final class PreparerEnvoiSoaTool implements AiToolInterface, AiToolConditionnel
 {
     /** Nombre maximal de candidats restitués sur un nom ambigu. */
     private const MAX_CANDIDATS = 6;
@@ -80,6 +80,12 @@ final class PreparerEnvoiSoaTool implements AiToolInterface
         }
 
         return null;
+    }
+
+    /** Miroir exact de la garde d'execute() : ne pas décrire un outil qui refusera. */
+    public function estDisponible(AiScope $scope): bool
+    {
+        return $this->accessResolver->canRead($scope->invite, 'Client');
     }
 
     public function execute(array $args, AiScope $scope): AiToolResult

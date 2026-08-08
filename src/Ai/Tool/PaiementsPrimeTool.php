@@ -37,7 +37,7 @@ use App\Services\Tranche\TranchePaiementService;
  * portefeuille, comme lire_fiche et signaler_paiement_prime. Le mode transversal est une
  * LISTE : le portefeuille de l'invité s'y applique par défaut, comme à l'écran.
  */
-final class PaiementsPrimeTool implements AiToolInterface
+final class PaiementsPrimeTool implements AiToolInterface, AiToolConditionnel
 {
     /** Lignes restituées par page (sortie compacte, économie de tokens). */
     private const MAX_LIGNES = 20;
@@ -148,6 +148,12 @@ final class PaiementsPrimeTool implements AiToolInterface
         }
 
         return $args;
+    }
+
+    /** Miroir exact de la garde d'execute() : ne pas décrire un outil qui refusera. */
+    public function estDisponible(AiScope $scope): bool
+    {
+        return $this->accessResolver->canRead($scope->invite, 'Tranche');
     }
 
     public function execute(array $args, AiScope $scope): AiToolResult

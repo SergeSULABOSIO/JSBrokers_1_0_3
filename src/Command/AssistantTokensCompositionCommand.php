@@ -3,6 +3,8 @@
 namespace App\Command;
 
 use App\Ai\AiContextBuilder;
+use App\Ai\Debit\BudgetDebit;
+use App\Ai\Tool\AiToolConditionnel;
 use App\Ai\Tool\AiToolInterface;
 use App\Entity\AssistantMessage;
 use App\Repository\AssistantConversationRepository;
@@ -16,6 +18,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
@@ -57,6 +60,10 @@ class AssistantTokensCompositionCommand extends Command
         private readonly AiContextBuilder $contextBuilder,
         private readonly VersionService $versionService,
         #[AutowireIterator('app.ai_tool')] iterable $tools,
+        // Le plafond réellement opposé au moteur (BudgetDebit) : le « tours par
+        // minute » ci-dessous doit décrire l'installation courante, pas le palier
+        // gratuit une fois la facturation activée.
+        #[Autowire(env: 'int:GEMINI_TPM_PLAFOND')] private readonly int $plafond = BudgetDebit::PLAFOND_DEFAUT_PAR_MINUTE,
     ) {
         $this->tools = $tools;
         parent::__construct();
@@ -120,17 +127,34 @@ class AssistantTokensCompositionCommand extends Command
 
         $declarations = [];
         $parOutil = [];
+        $octetsEcartes = 0;
+        $nbEcartes = 0;
         foreach ($this->tools as $tool) {
             $declaration = [
                 'name'        => $tool->name(),
                 'description' => $tool->description(),
                 'parameters'  => $tool->schema(),
             ];
-            $declarations[] = $declaration;
+            // Même filtrage que les moteurs : un outil que l'invité ne peut pas
+            // exécuter, ou sans objet dans ce fil, n'est pas déclaré — donc pas
+            // payé à chaque tour (cf. AiToolConditionnel). Sans conversation, on
+            // n'a pas de périmètre : tout est compté, comme avant.
+            $ecarte = $request !== null
+                && $tool instanceof AiToolConditionnel
+                && !$tool->estDisponible($request->scope);
+
+            if ($ecarte) {
+                $octetsEcartes += $this->taille($declaration);
+                ++$nbEcartes;
+            } else {
+                $declarations[] = $declaration;
+            }
+
             $parOutil[$tool->name()] = [
                 'total'  => $this->taille($declaration),
                 'desc'   => \strlen($tool->description()),
                 'schema' => $this->taille($tool->schema()),
+                'ecarte' => $ecarte,
             ];
         }
 
@@ -140,10 +164,21 @@ class AssistantTokensCompositionCommand extends Command
         $total = $octetsOutils + $octetsPrompt + $octetsHistorique;
 
         $io->title(sprintf(
-            'Composition du payload — version applicative %s, %d outils',
+            'Composition du payload — version applicative %s, %d outils déclarés',
             $this->versionService->getVersion(),
             \count($declarations),
         ));
+
+        if ($nbEcartes > 0) {
+            $io->writeln(sprintf(
+                ' <info>%d outil(s) écarté(s)</info> pour ce périmètre et ce fil : %s économisés à CHAQUE tour'
+                . ' (≈ %s tokens).',
+                $nbEcartes,
+                $this->lisible($octetsEcartes),
+                number_format((int) round($octetsEcartes / self::OCTETS_PAR_TOKEN), 0, ',', ' '),
+            ));
+            $io->newLine();
+        }
 
         $io->table(
             ['Bloc', 'Octets', 'Part', '≈ tokens', 'Renvoyé à chaque tour ?'],
@@ -163,9 +198,10 @@ class AssistantTokensCompositionCommand extends Command
         ));
         if ($tokensParTour > 0) {
             $io->writeln(sprintf(
-                ' Sur un plafond de 250 000 tokens d\'entrée/minute (palier gratuit) : <comment>%.1f tours par minute</comment>,'
+                ' Sur un plafond de %s tokens d\'entrée/minute : <comment>%.1f tours par minute</comment>,'
                 . ' partagés entre TOUS les invités et toutes les conversations.',
-                250000 / $tokensParTour,
+                number_format($this->plafond, 0, ',', ' '),
+                $this->plafond / $tokensParTour,
             ));
         }
         $io->newLine();
@@ -187,9 +223,15 @@ class AssistantTokensCompositionCommand extends Command
             arsort($parOutil);
             $io->section('Déclarations d\'outils, de la plus lourde à la plus légère');
             $io->table(
-                ['Outil', 'Total (o)', 'Description (o)', 'Schéma (o)'],
+                ['Outil', 'Total (o)', 'Description (o)', 'Schéma (o)', 'Déclaré ?'],
                 array_map(
-                    static fn (string $nom, array $t) => [$nom, $t['total'], $t['desc'], $t['schema']],
+                    static fn (string $nom, array $t) => [
+                        $nom,
+                        $t['total'],
+                        $t['desc'],
+                        $t['schema'],
+                        $t['ecarte'] ? 'écarté' : 'oui',
+                    ],
                     array_keys($parOutil),
                     $parOutil,
                 ),
