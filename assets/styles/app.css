@@ -1791,7 +1791,16 @@ thead.sticky-header {
 /* ================================================================== */
 
 .description-panel {
-    --description-panel-top-gap: 300px; /* Espace supérieur sans transparence */
+    /* Hauteur de l'image de bannière. Fixée à 300px, elle donnait une TRANCHE très
+       zoomée des visuels — ceux-ci sont pour la plupart en portrait (816×1456), or
+       `cover` cale l'image sur la LARGEUR du panneau : à 450px de large, la photo
+       est agrandie à ~800px de haut et l'on n'en voyait qu'un bandeau du milieu.
+       Une hauteur proportionnée rend la bannière lisible comme bandeau, et
+       l'agrandit quand la colonne passe en plein écran.
+       (Un visuel en PAYSAGE, ~1600×600, resterait le cadrage idéal : à format
+       portrait, aucun réglage CSS ne peut montrer la photo entière dans un
+       bandeau sans la réduire à une vignette.) */
+    --description-panel-top-gap: clamp(130px, 17vh, 210px); /* Espace supérieur sans transparence */
     --description-panel-side-gap: 10px;   /* NOUVEAU : Espace latéral sans transparence */
     --description-panel-bottom-gap: 10px; /* NOUVEAU : Espace inférieur sans transparence */
     position: relative; /* Requis pour positionner l'overlay */
@@ -1808,7 +1817,11 @@ thead.sticky-header {
 
     /* --- Définition de l'image de fond --- */
     background-size: cover; /* L'image couvre tout le panneau */
-    background-position: center; /* L'image est centrée */
+    /* Centrée sur les DEUX axes, et jamais répétée : sur les deux axes explicitement,
+       car `center` seul laisse l'axe vertical à l'interprétation du navigateur pour
+       la valeur initiale, et c'est justement l'axe qui cadre ces visuels portrait. */
+    background-position: center center;
+    background-repeat: no-repeat;
 }
 
 /* --- NOUVEAU : Overlay sombre pour la lisibilité --- */

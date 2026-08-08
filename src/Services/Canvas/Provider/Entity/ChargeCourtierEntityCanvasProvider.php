@@ -30,9 +30,9 @@ class ChargeCourtierEntityCanvasProvider implements EntityCanvasProviderInterfac
                 ["code" => "code", "intitule" => "Code", "type" => "Texte"],
                 ["code" => "libelle", "intitule" => "Libellé", "type" => "Texte"],
                 ["code" => "compteOhada", "intitule" => "Compte OHADA", "type" => "Texte"],
-                ["code" => "comportement", "intitule" => "Comportement", "type" => "Texte"],
-                ["code" => "periodicite", "intitule" => "Périodicité", "type" => "Texte"],
-                ["code" => "montantBudgeteMensuel", "intitule" => "Budget mensuel", "type" => "Nombre", "format" => "Monetaire"],
+                ["masqueDansFiche" => true, "code" => "comportement", "intitule" => "Comportement", "type" => "Texte"],
+                ["masqueDansFiche" => true, "code" => "periodicite", "intitule" => "Périodicité", "type" => "Texte"],
+                ["masqueDansFiche" => true, "code" => "montantBudgeteMensuel", "intitule" => "Budget mensuel", "type" => "Nombre", "format" => "Monetaire"],
                 ["code" => "actif", "intitule" => "Active", "type" => "Booleen"],
                 ["code" => "entreprise", "intitule" => "Entreprise", "type" => "Relation", "targetEntity" => Entreprise::class, "displayField" => "nom"],
             ], $this->getSpecificIndicators())

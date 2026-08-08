@@ -57,10 +57,10 @@ class TrancheEntityCanvasProvider implements EntityCanvasProviderInterface
             
             ["group" => "Détails Police", "code" => "referencePolice", "intitule" => "Réf. Police", "type" => "Calcul", "format" => "Texte", "description" => "Référence de la police associée (si la cotation est souscrite)."],
             ["group" => "Détails Police", "code" => "periodeCouverture", "intitule" => "Période de Couverture", "type" => "Calcul", "format" => "Texte", "description" => "Période de couverture de la police (Date d'effet - Date d'échéance)."],
-            ["group" => "Détails Police", "code" => "assureurNom", "intitule" => "Assureur", "type" => "Calcul", "format" => "Texte", "description" => "Nom de la compagnie d'assurance."],
+            ["group" => "Détails Police", "masqueDansFiche" => true, "code" => "assureurNom", "intitule" => "Assureur", "type" => "Calcul", "format" => "Texte", "description" => "Nom de la compagnie d'assurance."],
 
-            ["group" => "Contexte Affaire", "code" => "clientDescription", "intitule" => "Client", "type" => "Calcul", "format" => "Texte", "description" => "Détails descriptifs du client."],
-            ["group" => "Contexte Affaire", "code" => "risqueDescription", "intitule" => "Risque", "type" => "Calcul", "format" => "Texte", "description" => "Description de la couverture d'assurance."],
+            ["group" => "Contexte Affaire", "code" => "clientDescription", "intitule" => "Description du client", "type" => "Calcul", "format" => "Texte", "description" => "Détails descriptifs du client."],
+            ["group" => "Contexte Affaire", "code" => "risqueDescription", "intitule" => "Description du risque", "type" => "Calcul", "format" => "Texte", "description" => "Description de la couverture d'assurance."],
             
             // NOUVEAU : Indicateurs financiers basés sur le taux de la tranche
             ["group" => "Prime Brute", "code" => "primeTranche", "intitule" => "Prime Tranche", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Part de la prime totale payable pour cette tranche."],

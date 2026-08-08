@@ -1380,6 +1380,12 @@ export default class extends Controller {
 
     async openVisualizationAction(action) {
         if (!this.hasVisualContextUrlValue) return;
+        // Barre de progression du workspace pendant la récupération de la fiche :
+        // sans elle, un clic sur une ligne du programme du jour ne produit RIEN à
+        // l'écran tant que le serveur répond — l'utilisateur reclique. Le workspace
+        // l'arrête de lui-même quand l'onglet s'ouvre (app:tab.opened) ; on ne la
+        // coupe donc ici que sur les chemins qui n'ouvrent aucun onglet (erreur).
+        document.dispatchEvent(new CustomEvent('app:loading.start', { bubbles: true }));
         try {
             const url = new URL(this.visualContextUrlValue, window.location.origin);
             url.searchParams.set('entite', action.entite || '');
@@ -1397,8 +1403,19 @@ export default class extends Controller {
                 },
             }));
         } catch (error) {
+            document.dispatchEvent(new CustomEvent('app:loading.stop', { bubbles: true }));
             console.error('AssistantChat - visualisation échouée :', error);
-            this.appendNotice('error', error.message || "L'ouverture de la fiche a échoué.");
+            // `fetch` lève un TypeError « Failed to fetch » quand la requête n'a
+            // même pas atteint le serveur (arrêté, réseau coupé, page laissée
+            // ouverte après un redémarrage). Le message brut, en anglais, laisse
+            // croire à un bug de la fiche : on nomme la vraie cause et l'action.
+            const injoignable = error instanceof TypeError;
+            this.appendNotice(
+                'error',
+                injoignable
+                    ? "Le serveur est injoignable : la fiche n'a pas pu être ouverte. Vérifiez votre connexion, puis rechargez la page."
+                    : (error.message || "L'ouverture de la fiche a échoué."),
+            );
         }
     }
 

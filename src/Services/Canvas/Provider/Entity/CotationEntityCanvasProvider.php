@@ -83,8 +83,8 @@ class CotationEntityCanvasProvider implements EntityCanvasProviderInterface
             ["group" => "SINISTRALITE", "code" => "vitesseReglement", "intitule" => "Vitesse de règlement", "type" => "Calcul", "format" => "Texte", "description" => "Temps écoulé entre la notification et le règlement final."],
 
             ["group" => "Contexte", "code" => "contextePiste", "intitule" => "Contexte Piste", "type" => "Calcul", "format" => "Texte", "description" => "Rappelle la piste commerciale à laquelle cette cotation est rattachée."],
-            ["group" => "Contexte Affaire", "code" => "clientDescription", "intitule" => "Client", "type" => "Calcul", "format" => "Texte", "description" => "Détails descriptifs du client."],
-            ["group" => "Contexte Affaire", "code" => "risqueDescription", "intitule" => "Risque", "type" => "Calcul", "format" => "Texte", "description" => "Description de la couverture d'assurance."],
+            ["group" => "Contexte Affaire", "code" => "clientDescription", "intitule" => "Description du client", "type" => "Calcul", "format" => "Texte", "description" => "Détails descriptifs du client."],
+            ["group" => "Contexte Affaire", "code" => "risqueDescription", "intitule" => "Description du risque", "type" => "Calcul", "format" => "Texte", "description" => "Description de la couverture d'assurance."],
             ["group" => "Plan de Paiement", "code" => "nombreTranches", "intitule" => "Nb. Tranches", "type" => "Calcul", "format" => "Nombre", "description" => "Nombre de tranches de paiement définies pour cette cotation."],
             ["group" => "Plan de Paiement", "code" => "montantMoyenTranche", "intitule" => "Moy. par Tranche", "type" => "Calcul", "format" => "Monetaire", "unite" => $this->serviceMonnaies->getCodeMonnaieAffichage(), "description" => "Montant moyen d'une tranche de paiement."],
 
@@ -103,7 +103,7 @@ class CotationEntityCanvasProvider implements EntityCanvasProviderInterface
             ["group" => "Taxes sur Commission", "code" => "taxeCourtierMontant", "intitule" => "Taxe Courtier (ARCA)", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant de la taxe due par le courtier SUR LA COMMISSION (assiette = commission HT)."],
             ["group" => "Taxes sur Commission", "code" => "tauxTaxeCourtierPercent", "intitule" => "Taux Taxe Courtier (ARCA)", "type" => "Calcul", "format" => "Pourcentage", "description" => "Taux de la taxe courtier appliqué sur la commission HT (ex. 2 %)."],
 
-            ["group" => "Facturation & Paiements", "code" => "montant_du", "intitule" => "Commission TTC", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant total TTC à facturer."],
+            ["group" => "Facturation & Paiements", "code" => "montant_du", "intitule" => "Commission à facturer", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant total TTC à facturer."],
             ["group" => "Facturation & Paiements", "code" => "montant_paye", "intitule" => "Commission Encaissée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Montant effectivement encaissé."],
             ["group" => "Facturation & Paiements", "code" => "solde_restant_du", "intitule" => "Solde Commission", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Reste à encaisser."],
             ["group" => "Facturation & Paiements", "code" => "taxeCourtierPayee", "intitule" => "Taxe Courtier Payée", "type" => "Calcul", "format" => "Monetaire", "unite" => $monnaie, "description" => "Taxe courtier reversée."],

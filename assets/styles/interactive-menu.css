@@ -659,13 +659,58 @@ a.company-version:hover {
   font-size: 0.9em; /* Texte légèrement plus petit [cite: 30] */
 }
 
-/* Chat en plein écran : la colonne de visualisation s'étend sur la zone des
-   colonnes 3 + 4 (les colonnes 1 et 2 restent visibles). La classe est posée sur
-   la racine du workspace par workspace-manager#toggleChatFullscreen. La colonne 3
-   est masquée sans perdre son contenu (display:none), la colonne 4 remplit l'espace
-   libéré (flex). État persisté et restauré au rechargement (cf. contrôleur). */
+/* Colonne de visualisation en plein écran : elle s'étend sur la zone des colonnes
+   3 + 4 (les colonnes 1 et 2 restent visibles). La classe est posée sur la racine
+   du workspace par workspace-manager#toggleChatFullscreen. La colonne 3 est masquée
+   sans perdre son contenu (display:none), la colonne 4 remplit l'espace libéré
+   (flex). État persisté et restauré au rechargement (cf. contrôleur).
+   Le nom de classe dit « chat » pour des raisons d'histoire : le mode vaut pour
+   TOUT ce que la colonne affiche — une fiche ouverte depuis un chat agrandi garde
+   la largeur choisie, et sa barre d'outils porte le même bouton de bascule. */
 .chat-fullscreen .menu-col-3 { display: none; }
 .chat-fullscreen .menu-col-4 { min-width: 0; max-width: none; flex: 1 1 auto; }
+
+/* ── Restauration en plein écran (avant que Stimulus ne prenne la main) ──────
+   La classe est posée par le script inline du gabarit, pendant l'analyse du
+   document : la colonne 4 s'ouvre donc en pleine largeur DÈS le premier rendu,
+   avec son squelette, au lieu de laisser voir la colonne 3 le temps du
+   chargement. Le contrôleur retire la classe quand le panneau est prêt. */
+.workspace-restoring-fullscreen .menu-col-4 { display: flex; }
+/* Sélecteur aussi précis que `.menu-col-4 .tab-panel-container` (défini plus bas,
+   il l'emporterait sinon) : le panneau réel, encore vide, ne doit pas se montrer
+   à côté du squelette. */
+.workspace-restoring-fullscreen .menu-col-4 .tab-panel-container { display: none; }
+
+.visualization-skeleton { display: none; }
+
+.workspace-restoring-fullscreen .visualization-skeleton {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  padding: 10px 12px;
+  gap: 10px;
+}
+
+.visualization-skeleton__tabs {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.visualization-skeleton__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Deux colonnes, comme les accordéons une fois la fiche chargée : le squelette
+   annonce la disposition qui arrive, il ne la contredit pas. */
+.visualization-skeleton__cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 14px;
+}
 
 /* --- Styles pour le panneau à onglets --- */
 .menu-col-4 .tab-panel-container {
@@ -809,6 +854,26 @@ a.company-version:hover {
   box-shadow: var(--shadow-sm); /* Ombre légère pour un effet de profondeur */
 }
 
+/* PLEIN ÉCRAN : la colonne de visualisation occupe la place des colonnes 3 + 4.
+   Les accordéons y passent sur DEUX colonnes — c'est tout l'intérêt d'agrandir :
+   voir davantage de données d'un coup d'œil, au lieu d'une colonne étirée sur
+   toute la largeur avec du vide à droite. `columns` (et non une grille) parce
+   qu'il ÉQUILIBRE les hauteurs : les attributs, très inégaux, se répartissent
+   sans laisser de trous. `break-inside: avoid` garde chaque attribut d'un seul
+   tenant — un panneau coupé en deux colonnes serait illisible. */
+.chat-fullscreen .menu-col-4 .accordion {
+  columns: 2;
+  column-gap: 14px;
+}
+
+.chat-fullscreen .menu-col-4 .accordion .accordion-item {
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  /* Sans cette marge nulle en tête, la première ligne de chaque colonne
+     « flotte » à une hauteur différente de sa voisine. */
+  margin-top: 0;
+}
+
 /* Le titre cliquable de l'accordéon */
 .accordion-title {
   display: flex; /* Permet d'aligner le titre et l'icône '+' */
@@ -851,10 +916,16 @@ a.company-version:hover {
   transition: max-height 0.2s ease-in-out, padding 0.2s ease-in-out;
 }
 
-/* Classe ajoutée par JavaScript pour ouvrir le panneau */
+/* Classe ajoutée par JavaScript pour ouvrir le panneau.
+   `max-height: none` et non une valeur « assez grande » : les panneaux étant
+   désormais OUVERTS DÈS L'OUVERTURE DE LA FICHE, un plafond chiffré (1000px)
+   amputerait silencieusement les longues collections — un attribut tronqué sans
+   barre de défilement ni indice est pire qu'un dépliage sans animation. Le
+   défilement appartient à l'onglet, qui porte déjà le sien. */
 .accordion-content.open {
   padding: 15px;
-  max-height: 1000px; /* Une hauteur max suffisante pour contenir n'importe quel contenu */
+  max-height: none;
+  overflow: visible;
 }
 
 /* S'applique à la barre de défilement de l'en-tête des onglets */
@@ -1019,6 +1090,20 @@ a.company-version:hover {
   height: 23px;
   stroke-width: 10;
 }
+
+/* Bascule plein écran de la colonne de visualisation. Ses deux icônes sont
+   LINÉAIRES (tracés au trait) : le `stroke-width: 10` ci-dessus, taillé pour les
+   icônes pleines de la barre, les transformerait en pâtés. L'icône visible suit
+   `aria-pressed`, synchronisé par le contrôleur — on propose toujours l'action à
+   venir : agrandir quand la colonne est réduite, réduire quand elle est étendue. */
+.accordion-search-bar .vis-fullscreen svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 2;
+}
+.accordion-search-bar .vis-fullscreen .vis-ic-collapse { display: none; }
+.accordion-search-bar .vis-fullscreen[aria-pressed="true"] .vis-ic-expand { display: none; }
+.accordion-search-bar .vis-fullscreen[aria-pressed="true"] .vis-ic-collapse { display: block; }
 
 .accordion-search-bar .icon-button:focus-visible {
   outline: none;

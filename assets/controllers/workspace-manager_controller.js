@@ -260,6 +260,18 @@ export default class extends Controller {
     }
 
     /**
+     * Libère le champ de filtre à son premier focus. Il est rendu `readonly` par le
+     * gabarit : c'est le seul état qu'aucun remplissage automatique ne franchit, et
+     * la page du workspace en déclenche un (elle porte un champ mot de passe, ce qui
+     * la fait passer pour un formulaire d'identification aux yeux du navigateur —
+     * qui y ignore alors `autocomplete="off"`). L'utilisateur, lui, ne voit rien :
+     * cliquer ou tabuler dans le champ le rend éditable avant la première frappe.
+     */
+    activerFiltre(event) {
+        event.currentTarget.removeAttribute('readonly');
+    }
+
+    /**
      * Donne le focus au champ de recherche de l'accordéon quand on clique sur la barre.
      */
     focusSearch(event) {
@@ -373,7 +385,12 @@ export default class extends Controller {
             contentElement.prepend(descriptionPanel);
         }
 
-        const accordionList = entityCanvas.liste; // 
+        // `masqueDansFiche` : l'attribut reste un CRITÈRE DE RECHERCHE (le canevas
+        // d'entité alimente aussi la barre de recherche) mais n'a pas d'accordéon.
+        // Sert aux doublons — valeur brute d'une énumération face à son libellé
+        // lisible, montant recopié en calcul — où deux panneaux affichaient la même
+        // information. Les retirer du canevas aurait supprimé le filtre avec.
+        const accordionList = (entityCanvas.liste || []).filter(attribute => !attribute.masqueDansFiche);
         if (accordionList.length > 0) {
             accordionList.forEach(attribute => {
                 const accordionItem = this.createAccordionItem(attribute, entity);
@@ -400,6 +417,21 @@ export default class extends Controller {
         // Ajouter les nouveaux éléments au DOM
         this.tabContainerTarget.appendChild(tabElement);
         this.tabContentContainerTarget.appendChild(contentElement);
+
+        // Filet de sécurité contre le remplissage automatique : le champ de filtre
+        // porte déjà tout ce qu'il faut pour être ignoré (type search, name,
+        // autocomplete off), mais navigateurs et gestionnaires de mots de passe
+        // écrivent APRÈS insertion dans le DOM et n'obéissent pas tous. Une fiche
+        // qui s'ouvre ne peut contenir que du texte que l'utilisateur n'a pas
+        // tapé : on repart d'un filtre vide, et on rejoue `input` pour que les
+        // attributs éventuellement masqués entre-temps reviennent.
+        requestAnimationFrame(() => {
+            const filtre = contentElement.querySelector('.accordion-search-input');
+            if (filtre && filtre.value !== '') {
+                filtre.value = '';
+                filtre.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        });
 
         // Activer le nouvel onglet créé
         this.activateTab({ currentTarget: tabElement });
@@ -512,6 +544,45 @@ export default class extends Controller {
      * @param {object} entity - L'objet de données
      * @returns {HTMLElement} L'élément DOM de l'item d'accordéon.
      */
+    /**
+     * Valeur d'un attribut de canvas dans le payload de l'entité.
+     *
+     * Les canvas déclarent aussi des CHEMINS de relations (« cotation.piste.client »,
+     * « cotation.assureur ») : ils décrivent le trajet dans le graphe sérialisé, pas
+     * une clé plate. Les lire comme `entity['cotation.piste.client']` renvoyait
+     * toujours `undefined`, donc « N/A » sur des attributs pourtant présents en base
+     * — Assureur, Client, Portefeuille d'un avenant, par exemple.
+     *
+     * Un maillon manquant (relation nulle, ou absente des groupes de sérialisation)
+     * ramène `undefined` : l'appelant affiche alors « N/A », comme avant.
+     */
+    _valeurCanvas(entity, code) {
+        if (!code) return undefined;
+        // Clé LITTÉRALE d'abord : le serveur dépose sous ce nom exact les relations
+        // qu'il a résolues lui-même (CanvasRelationHydrator), pour les chemins que
+        // la sérialisation ne publie pas. Sinon, on parcourt le graphe sérialisé.
+        if (entity && Object.prototype.hasOwnProperty.call(entity, code)) return entity[code];
+        if (!code.includes('.')) return undefined;
+
+        return code.split('.').reduce(
+            (valeur, segment) => (valeur === null || valeur === undefined ? undefined : valeur[segment]),
+            entity,
+        );
+    }
+
+    /**
+     * Nom COURT de l'entité visée par une relation (« Client »), tel que l'attend
+     * l'endpoint get-entity-details. Le canevas fournit le FQCN
+     * (« App\Entity\Client ») ; `targetEntityRouteName`, jusque-là utilisé ici,
+     * n'est produit par aucun canevas côté serveur — le lien partait donc avec
+     * `entityType=undefined` et l'ouverture de l'entité liée échouait.
+     */
+    _nomCourtEntiteCible(attribute) {
+        const brut = attribute.targetEntityRouteName || attribute.targetEntity || '';
+
+        return String(brut).split('\\').pop();
+    }
+
     createAccordionItem(attribute, entity) {
         console.log(this.nomControleur + " - Données de l'attribut:", attribute);
 
@@ -521,26 +592,31 @@ export default class extends Controller {
         const title = document.createElement('div');
         title.className = 'accordion-title';
         title.dataset.action = 'click->workspace-manager#toggle';
-        title.innerHTML = `<span class="accordion-toggle">+</span> ${attribute.intitule}`;
+        // OUVERT PAR DÉFAUT : ouvrir un objet, c'est vouloir le lire en entier. Le
+        // repli reste disponible attribut par attribut, mais il n'a plus à être
+        // déplié une fois par ligne avant de voir quoi que ce soit. Les trois
+        // marqueurs (classe `open`, signe, aria-expanded) partent donc ensemble —
+        // toggle() les inverse en bloc, ils ne peuvent pas diverger.
+        title.innerHTML = `<span class="accordion-toggle">-</span> ${attribute.intitule}`;
 
         // ARIA : pattern button/region pour l'accordéon (WCAG 4.1.2)
         const accordionId = `accordion-${entity.id}-${attribute.code}`;
         const contentId = `accordion-content-${entity.id}-${attribute.code}`;
         title.setAttribute('role', 'button');
         title.setAttribute('tabindex', '0');
-        title.setAttribute('aria-expanded', 'false');
+        title.setAttribute('aria-expanded', 'true');
         title.setAttribute('id', accordionId);
         title.setAttribute('aria-controls', contentId);
 
         const content = document.createElement('div');
-        content.className = 'accordion-content';
+        content.className = 'accordion-content open';
         content.setAttribute('id', contentId);
 
         let contentValueElement; // NOUVEAU : Element qui va contenir la valeur et sur lequel on attachera le tooltip
 
         switch (attribute.type) {
             case 'Relation':
-                const relatedEntity = entity[attribute.code];
+                const relatedEntity = this._valeurCanvas(entity, attribute.code);
                 if (relatedEntity && relatedEntity.id) {
                     const link = document.createElement('a');
                     link.href = "#";
@@ -550,8 +626,7 @@ export default class extends Controller {
 
                     link.dataset.action = "click->workspace-manager#openRelatedEntity";
                     link.dataset.entityId = relatedEntity.id;
-                    // CORRECTION : Utiliser le nom de route fourni par le canvas
-                    link.dataset.entityType = attribute.targetEntityRouteName;
+                    link.dataset.entityType = this._nomCourtEntiteCible(attribute);
                     content.appendChild(link);
                     contentValueElement = link; // NOUVEAU : Attacher le tooltip au lien
                 } else {
@@ -560,7 +635,7 @@ export default class extends Controller {
                 break;
 
             case 'Collection':
-                const collection = entity[attribute.code];
+                const collection = this._valeurCanvas(entity, attribute.code);
                 if (collection && collection.length > 0) {
                     const ol = document.createElement('ol');
                     ol.className = 'accordion-collection-list';
@@ -576,8 +651,7 @@ export default class extends Controller {
 
                             link.dataset.action = "click->workspace-manager#openRelatedEntity";
                             link.dataset.entityId = item.id;
-                            // CORRECTION : Utiliser le nom de route fourni par le canvas
-                            link.dataset.entityType = attribute.targetEntityRouteName;
+                            link.dataset.entityType = this._nomCourtEntiteCible(attribute);
 
                             li.appendChild(link);
                             ol.appendChild(li);
@@ -590,7 +664,7 @@ export default class extends Controller {
                 break;
 
             case 'Calcul':
-                const calculatedValue = entity[attribute.code];
+                const calculatedValue = this._valeurCanvas(entity, attribute.code);
                 const formatAs = attribute.format || 'Texte'; // Lit le format désiré
                 if (formatAs === 'ArrayAssoc' && typeof calculatedValue === 'object' && calculatedValue !== null) {
                     const list = document.createElement('ul');
@@ -616,7 +690,7 @@ export default class extends Controller {
                 break;
 
             default: // Gère 'Nombre', 'Date', 'Texte'
-                const rawValue = entity[attribute.code];
+                const rawValue = this._valeurCanvas(entity, attribute.code);
                 content.innerHTML = this.formatValue(rawValue, attribute.type, attribute.unite);
                 contentValueElement = content; // NOUVEAU : Attacher le tooltip au conteneur de valeur
                 break;
@@ -843,18 +917,17 @@ export default class extends Controller {
         // NOUVEAU : Fait défiler l'onglet actif pour qu'il soit centré et visible, améliorant l'UX avec de nombreux onglets.
         clickedTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
 
-        // Plein écran du chat : mode réservé aux conversations IA. On l'applique
-        // seulement si la préférence est active ET que l'onglet activé est un chat
-        // (clé « ia-conv-… »). C'est ce point unique qui restaure le plein écran au
-        // rechargement (le chat restauré repasse par ici via openHtmlTabInVisualization)
-        // et qui empêche tout état bloqué sur un onglet non-chat (colonne 3 masquée
-        // sans bouton pour la rétablir).
-        const estOngletChat = (clickedTab.dataset.entityId || '').startsWith('ia-conv-');
-        const pleinEcran = this._readFullscreenPref() && estOngletChat;
+        // Plein écran : propriété de la COLONNE DE VISUALISATION, pas de l'onglet.
+        // Ouvrir une fiche depuis le chat agrandi ne doit pas rétrécir la colonne
+        // sous les pieds de l'utilisateur — la largeur qu'il a choisie vaut pour
+        // tout ce qu'il y ouvre ensuite. Le mode était autrefois réservé aux
+        // onglets de chat (seuls porteurs d'un bouton de sortie) : la barre d'outils
+        // des fiches porte désormais le même bouton, il n'y a donc plus d'état
+        // bloqué possible (colonne 3 masquée sans moyen de la rétablir).
+        // C'est aussi ce point unique qui restaure le plein écran au rechargement.
+        const pleinEcran = this._readFullscreenPref();
         this.element.classList.toggle('chat-fullscreen', pleinEcran);
-        if (estOngletChat) {
-            this._syncFullscreenButtons(pleinEcran);
-        }
+        this._syncFullscreenButtons(pleinEcran);
     }
 
 
@@ -905,10 +978,13 @@ export default class extends Controller {
     }
 
     /**
-     * Bascule le mode plein écran du chat IA : la colonne de visualisation s'étend
-     * sur la zone des colonnes 3 + 4 (la colonne 3 est masquée, contenu préservé).
-     * La préférence est persistée par entreprise et restaurée au rechargement.
-     * Déclenché depuis l'entête du chat : l'onglet actif est donc bien un chat.
+     * Bascule le mode plein écran de la COLONNE DE VISUALISATION : elle s'étend sur
+     * la zone des colonnes 3 + 4 (la colonne 3 est masquée, contenu préservé). La
+     * préférence est persistée par entreprise et restaurée au rechargement.
+     *
+     * Déclenchée depuis l'entête du chat ET depuis la barre d'outils d'une fiche :
+     * la largeur choisie vaut pour tout ce que la colonne affiche, chat comme
+     * fiche. (Nom conservé : il est câblé dans le template du chat.)
      */
     toggleChatFullscreen() {
         const actif = !this._readFullscreenPref();
@@ -919,14 +995,20 @@ export default class extends Controller {
 
     /**
      * Synchronise l'état visuel des boutons plein écran (aria-pressed + libellés)
-     * avec le mode courant. Cible tous les boutons de la colonne de visualisation
-     * pour couvrir le cas rare de plusieurs conversations ouvertes.
+     * avec le mode courant. Cible TOUS les boutons de la colonne de visualisation —
+     * entêtes de chat (`.aic-fullscreen`) comme barres d'outils de fiche
+     * (`.vis-fullscreen`) : plusieurs onglets peuvent être ouverts en même temps, et
+     * aucun ne doit afficher une icône contredisant l'état réel de la colonne.
      * @param {boolean} actif
      */
     _syncFullscreenButtons(actif) {
-        this.visualizationColumnTarget.querySelectorAll('.aic-fullscreen').forEach((btn) => {
+        this.visualizationColumnTarget.querySelectorAll('.aic-fullscreen, .vis-fullscreen').forEach((btn) => {
+            // Le libellé nomme ce que le bouton agrandit là où il se trouve : « le
+            // chat » dans son entête, la fiche ailleurs — un lecteur d'écran ne doit
+            // pas s'entendre proposer d'agrandir un chat depuis une fiche.
+            const quoi = btn.classList.contains('aic-fullscreen') ? ' le chat' : '';
             btn.setAttribute('aria-pressed', actif ? 'true' : 'false');
-            btn.setAttribute('aria-label', actif ? 'Réduire le chat' : 'Afficher le chat en plein écran');
+            btn.setAttribute('aria-label', actif ? `Réduire${quoi}` : `Afficher${quoi} en plein écran`);
             btn.setAttribute('title', actif ? 'Réduire' : 'Plein écran');
         });
     }
@@ -1795,7 +1877,12 @@ export default class extends Controller {
         const storageKey = `visualizationHtmlTab_${this.idEntrepriseValue}`;
         let saved;
         try { saved = JSON.parse(localStorage.getItem(storageKey) || 'null'); } catch { saved = null; }
-        if (!saved?.sourceUrl || !saved?.tabKey) return;
+        if (!saved?.sourceUrl || !saved?.tabKey) {
+            // Rien à restaurer : si le script inline avait tout de même ouvert la
+            // phase plein écran, on revient à la disposition normale.
+            this._finirRestaurationPleinEcran(false);
+            return;
+        }
 
         // Feedback visuel : barre de progression globale pendant le re-fetch.
         // Le yield (microtask) laisse connect() finir d'abonner les listeners
@@ -1808,6 +1895,7 @@ export default class extends Controller {
             const response = await fetch(saved.sourceUrl);
             if (!response.ok) {
                 localStorage.removeItem(storageKey);
+                this._finirRestaurationPleinEcran(false);
                 return;
             }
             const html = await response.text();
@@ -1820,11 +1908,33 @@ export default class extends Controller {
                     sourceUrl: saved.sourceUrl,
                 },
             });
+            this._finirRestaurationPleinEcran(true);
         } catch (e) {
             console.warn('WorkspaceManager - restauration du panneau HTML impossible :', e);
+            this._finirRestaurationPleinEcran(false);
         } finally {
             document.dispatchEvent(new CustomEvent('app:loading.stop'));
         }
+    }
+
+    /**
+     * Clôt la phase de restauration en plein écran ouverte par le script inline du
+     * gabarit (classe `workspace-restoring-fullscreen`, posée avant le premier rendu).
+     *
+     * ÉCHEC = on rend la disposition normale. La colonne 3 est masquée par le plein
+     * écran et la colonne 4 n'aura rien à montrer : sans ce retour en arrière,
+     * l'espace de travail resterait vide, sans même un bouton pour s'en sortir.
+     *
+     * @param {boolean} restaure le panneau de la colonne 4 est-il bien en place ?
+     */
+    _finirRestaurationPleinEcran(restaure) {
+        if (!this.element.classList.contains('workspace-restoring-fullscreen')) return;
+
+        this.element.classList.remove('workspace-restoring-fullscreen');
+        if (restaure) return;
+
+        this.element.classList.remove('chat-fullscreen', 'visualization-visible');
+        this.visualizationColumnTarget.style.display = 'none';
     }
 
     /**

@@ -97,10 +97,22 @@ final class PlanDuJourTool implements AiToolInterface
             ));
         }
 
+        // `colonnes` est un entête de TABLEAU, utile à la bulle d'ouverture et à elle
+        // seule : le réexpédier au modèle à chaque tour ne serait que des tokens
+        // perdus (le quota se mesure en tokens d'ENTRÉE par minute).
+        $sections = array_map(
+            static function (array $section): array {
+                unset($section['colonnes']);
+
+                return $section;
+            },
+            $sections
+        );
+
         return AiToolResult::ok([
             'date' => $plan['date'],
             'sections' => $sections,
-            'priorite' => $demandee === 'tout' ? $plan['priorite'] : ($sections[0] ?? null),
+            'priorite' => $sections[0] ?? null,
             // Aucune section : soit tout est traité, soit rien n'est visible dans le
             // périmètre. Ket doit féliciter, pas inventer une tâche.
             'toutAuVert' => $sections === [],

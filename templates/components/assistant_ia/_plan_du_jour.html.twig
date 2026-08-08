@@ -8,6 +8,14 @@
    citation, ni export), ni data-md-source (le pipeline markdown du connect()
    ne doit pas le revisiter). Il disparaît dès le premier message envoyé.
 
+   FORME : un TABLEAU numéroté par section, et non une liste. C'est la même
+   grammaire que les tableaux markdown des réponses de Ket (mêmes entêtes en
+   majuscules, même survol de ligne, même débordement horizontal maîtrisé) :
+   le courtier compare des colonnes alignées — objet, rattachement, échéance,
+   montant — au lieu de déchiffrer des lignes de texte empilées. La bulle
+   s'élargit (aic-msg--plan) pour laisser la place à ces colonnes ; au-delà,
+   c'est le tableau lui-même qui défile, jamais la bulle qui s'écrase.
+
    Attendu : `plan` = {date, sections[], priorite, toutAuVert}, non nul et
    toutAuVert = false (l'appelant retombe sinon sur l'accueil ordinaire).
 ═══════════════════════════════════════════════════════════════════════════════ #}
@@ -17,7 +25,7 @@
     'a_venir':    { variante: 'info',    libelle: 'À venir' }
 } %}
 
-<div class="aic-msg aic-msg--assistant">
+<div class="aic-msg aic-msg--assistant aic-msg--plan">
     <span class="aic-msg-avatar" aria-hidden="true">{{ assistantNom|first|upper }}</span>
     <div class="aic-msg-body">
         <div class="aic-msg-text aic-plan">
@@ -36,9 +44,17 @@
             {% endif %}
 
             {% for section in plan.sections %}
-                <section class="aic-plan-section">
+                {# Une colonne n'existe que si au moins une ligne la remplit : un
+                   tableau de tâches n'affiche pas de colonne « Montant » vide, et
+                   la largeur reste au service de l'information réellement présente. #}
+                {% set aMontant = section.lignes|filter(l => l.montant is defined and l.montant > 0)|length > 0 %}
+                {% set aContexte = section.lignes|filter(l => l.contexte)|length > 0 %}
+                {% set aDate = section.lignes|filter(l => l.date)|length > 0 %}
+                {% set titreId = 'aic-plan-t-' ~ section.cle %}
+
+                <section class="aic-plan-section" aria-labelledby="{{ titreId }}">
                     <div class="aic-plan-head">
-                        <h3 class="aic-plan-titre">{{ section.titre }}</h3>
+                        <h3 class="aic-plan-titre" id="{{ titreId }}">{{ section.titre }}</h3>
                         <span class="aic-plan-compte">
                             {{ section.compte }}{% if section.montant is defined %}
                                 · {{ section.montant|format_montant }} {{ display_currency_code() }}
@@ -50,38 +66,74 @@
                         {% endif %}
                     </div>
 
-                    <ul class="aic-plan-liste">
-                        {% for ligne in section.lignes %}
-                            {% set statut = statuts[ligne.statutTemporel|default('')]|default(null) %}
-                            <li>
-                                {# Bouton et non lien : la ligne ouvre une fiche dans la
-                                   colonne de visualisation, elle ne navigue nulle part. #}
-                                <button type="button" class="aic-plan-ligne"
+                    <div class="aic-plan-tablewrap">
+                        <table class="aic-plan-table">
+                            <caption class="visually-hidden">
+                                {{ section.titre }} — {{ section.perimetre }}.
+                                Chaque ligne ouvre la fiche correspondante.
+                            </caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col" class="aic-plan-c-num" title="Numéro de ligne">N°</th>
+                                    <th scope="col" class="aic-plan-c-objet">{{ section.colonnes.objet }}</th>
+                                    {% if aContexte %}<th scope="col" class="aic-plan-c-ctx">{{ section.colonnes.contexte }}</th>{% endif %}
+                                    {% if aDate %}<th scope="col" class="aic-plan-c-date">{{ section.colonnes.date }}</th>{% endif %}
+                                    {# Pas de code monnaie dans l'entête : format_montant
+                                       rend déjà le symbole sur chaque ligne. #}
+                                    {% if aMontant %}<th scope="col" class="aic-plan-c-montant">{{ section.colonnes.montant }}</th>{% endif %}
+                                    <th scope="col" class="aic-plan-c-statut">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ligne in section.lignes %}
+                                    {% set statut = statuts[ligne.statutTemporel|default('')]|default(null) %}
+                                    {# L'action est portée par la LIGNE (toute la surface est
+                                       cliquable) et le bouton de la 2ᵉ colonne n'en porte
+                                       aucune : son clic — souris ou clavier — remonte jusqu'au
+                                       <tr>, qui est bien le currentTarget attendu par
+                                       ouvrirFichePlan. Deux data-action feraient double appel. #}
+                                    <tr class="aic-plan-row"
                                         data-action="click->assistant-chat#ouvrirFichePlan"
                                         data-plan-entite="{{ ligne.entite }}"
                                         data-plan-id="{{ ligne.id }}">
-                                    <span class="aic-plan-libelle">
-                                        {{ ligne.libelle }}
-                                        {% if ligne.contexte %}
-                                            <span class="aic-plan-contexte">{{ ligne.contexte }}</span>
+                                        <td class="aic-plan-c-num">{{ loop.index }}</td>
+                                        <td class="aic-plan-c-objet">
+                                            {# Bouton et non lien : la ligne ouvre une fiche dans la
+                                               colonne de visualisation, elle ne navigue nulle part. #}
+                                            <button type="button" class="aic-plan-objet">{{ ligne.libelle }}</button>
+                                            {% if ligne.detail is defined and ligne.detail %}
+                                                <span class="aic-plan-detail">{{ ligne.detail }}</span>
+                                            {% endif %}
+                                        </td>
+                                        {% if aContexte %}
+                                            <td class="aic-plan-c-ctx">{{ ligne.contexte ?: '—' }}</td>
                                         {% endif %}
-                                    </span>
-                                    {% if ligne.montant is defined and ligne.montant > 0 %}
-                                        <span class="aic-plan-montant">{{ ligne.montant|format_montant }}</span>
-                                    {% endif %}
-                                    {% if statut %}
-                                        <span class="aic-md-badge aic-md-badge--{{ statut.variante }}">
-                                            {%- if ligne.joursAnciennete is defined and ligne.joursAnciennete -%}
-                                                {{ ligne.joursAnciennete }} j
-                                            {%- else -%}
-                                                {{ statut.libelle }}
-                                            {%- endif -%}
-                                        </span>
-                                    {% endif %}
-                                </button>
-                            </li>
-                        {% endfor %}
-                    </ul>
+                                        {% if aDate %}
+                                            <td class="aic-plan-c-date">{{ ligne.date ? ligne.date|date('d/m/Y') : '—' }}</td>
+                                        {% endif %}
+                                        {% if aMontant %}
+                                            <td class="aic-plan-c-montant">
+                                                {{ ligne.montant is defined and ligne.montant > 0 ? ligne.montant|format_montant : '—' }}
+                                            </td>
+                                        {% endif %}
+                                        <td class="aic-plan-c-statut">
+                                            {% if statut %}
+                                                <span class="aic-md-badge aic-md-badge--{{ statut.variante }}">
+                                                    {%- if ligne.joursAnciennete is defined and ligne.joursAnciennete -%}
+                                                        {{ ligne.joursAnciennete }} j
+                                                    {%- else -%}
+                                                        {{ statut.libelle }}
+                                                    {%- endif -%}
+                                                </span>
+                                            {% else %}
+                                                <span class="aic-plan-vide">—</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
 
                     {% if section.tronque %}
                         <p class="aic-plan-reste">

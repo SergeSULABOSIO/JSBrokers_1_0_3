@@ -36,8 +36,8 @@ class DepenseCourtierEntityCanvasProvider implements EntityCanvasProviderInterfa
                 ["code" => "fournisseur", "intitule" => "Fournisseur", "type" => "Relation", "targetEntity" => Fournisseur::class, "displayField" => "nom"],
                 ["code" => "beneficiaire", "intitule" => "Bénéficiaire occasionnel", "type" => "Texte"],
                 ["code" => "reference", "intitule" => "Référence", "type" => "Texte"],
-                ["code" => "moyenPaiement", "intitule" => "Moyen de paiement", "type" => "Texte"],
-                ["code" => "statut", "intitule" => "Statut", "type" => "Texte"],
+                ["masqueDansFiche" => true, "code" => "moyenPaiement", "intitule" => "Moyen de paiement", "type" => "Texte"],
+                ["masqueDansFiche" => true, "code" => "statut", "intitule" => "Statut", "type" => "Texte"],
                 ["code" => "description", "intitule" => "Description", "type" => "Texte"],
                 ["code" => "entreprise", "intitule" => "Entreprise", "type" => "Relation", "targetEntity" => Entreprise::class, "displayField" => "nom"],
             ], $this->getSpecificIndicators())
@@ -52,7 +52,7 @@ class DepenseCourtierEntityCanvasProvider implements EntityCanvasProviderInterfa
             ["group" => "Détails", "code" => "tiersLibelle", "intitule" => "Tiers", "type" => "Calcul", "format" => "Texte", "description" => "Fournisseur enregistré (prioritaire) ou bénéficiaire occasionnel."],
             ["group" => "Détails", "code" => "statutLabel", "intitule" => "Statut", "type" => "Calcul", "format" => "Texte", "description" => "Engagée (pèse sur le résultat), payée (décaisse la trésorerie) ou annulée (exclue)."],
             ["group" => "Détails", "code" => "moyenPaiementLabel", "intitule" => "Moyen de paiement", "type" => "Calcul", "format" => "Texte", "description" => "Canal de décaissement (banque, caisse, mobile money…)."],
-            ["group" => "Montants", "code" => "montantTtc", "intitule" => "Montant TTC", "type" => "Calcul", "format" => "Monetaire", "description" => "Montant toutes taxes comprises de la dépense."],
+            ["group" => "Montants", "masqueDansFiche" => true, "code" => "montantTtc", "intitule" => "Montant TTC", "type" => "Calcul", "format" => "Monetaire", "description" => "Montant toutes taxes comprises de la dépense."],
             ["group" => "Montants", "code" => "montantHt", "intitule" => "Montant HT", "type" => "Calcul", "format" => "Monetaire", "description" => "Base hors taxe : la charge portée au compte de résultat."],
             ["group" => "Montants", "code" => "tvaDeductible", "intitule" => "TVA déductible", "type" => "Calcul", "format" => "Monetaire", "description" => "Part de TVA récupérable auprès de l'État, incluse dans le TTC."],
         ];
