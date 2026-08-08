@@ -9,11 +9,13 @@ use App\Ai\Engine\AnthropicAiEngine;
 use App\Ai\Engine\GeminiAiEngine;
 use App\Ai\Engine\SimulatedAiEngine;
 use App\Ai\Scope\AiScope;
+use App\Ai\Telemetrie\JournalTokens;
 use App\Ai\Tool\AiToolInterface;
 use App\Ai\Tool\AiToolResult;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -284,7 +286,15 @@ class AnthropicAiEngineTest extends TestCase
         $contextBuilder = $this->createMock(AiContextBuilder::class);
         $simulated = new SimulatedAiEngine([]);
         $anthropic = $this->makeEngine(new MockHttpClient([]));
-        $gemini = new GeminiAiEngine(new MockHttpClient([]), $contextBuilder, [], 'gm-x', 'gemini-2.5-flash');
+        $gemini = new GeminiAiEngine(
+            new MockHttpClient([]),
+            $contextBuilder,
+            [],
+            'gm-x',
+            'gemini-2.5-flash',
+            new NullLogger(),
+            new JournalTokens(new NullLogger()),
+        );
 
         // Aucune clé → simulateur.
         $aucune = new AiEngineResolver($simulated, $anthropic, $gemini, '', '');

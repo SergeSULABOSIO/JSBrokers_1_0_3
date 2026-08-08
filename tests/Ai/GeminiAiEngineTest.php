@@ -6,11 +6,14 @@ use App\Ai\AiContextBuilder;
 use App\Ai\AiRequest;
 use App\Ai\Engine\GeminiAiEngine;
 use App\Ai\Scope\AiScope;
+use App\Ai\Telemetrie\JournalTokens;
 use App\Ai\Tool\AiToolInterface;
 use App\Ai\Tool\AiToolResult;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\AbstractLogger;
+use Psr\Log\NullLogger;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -75,12 +78,55 @@ class GeminiAiEngineTest extends TestCase
         };
     }
 
+    /** @var list<array{message: string, context: array}> lignes de télémétrie captées */
+    private array $telemetrie = [];
+
     private function makeEngine(MockHttpClient $http, array $tools = []): GeminiAiEngine
     {
         $contextBuilder = $this->createMock(AiContextBuilder::class);
         $contextBuilder->method('toSystemPrompt')->willReturn('SYSTEM');
 
-        return new GeminiAiEngine($http, $contextBuilder, $tools, 'gm-test', 'gemini-2.5-flash');
+        $espion = new class($this->telemetrie) extends AbstractLogger {
+            public function __construct(private array &$lignes)
+            {
+            }
+
+            public function log($level, $message, array $context = []): void
+            {
+                $this->lignes[] = ['message' => (string) $message, 'context' => $context];
+            }
+        };
+
+        return new GeminiAiEngine(
+            $http,
+            $contextBuilder,
+            $tools,
+            'gm-test',
+            'gemini-2.5-flash',
+            new NullLogger(),
+            new JournalTokens($espion),
+        );
+    }
+
+    /** Le bilan du message : il doit exister quel que soit le chemin de sortie. */
+    private function bilanDuMessage(): ?array
+    {
+        foreach ($this->telemetrie as $ligne) {
+            if (($ligne['context']['evenement'] ?? null) === 'message') {
+                return $ligne['context'];
+            }
+        }
+
+        return null;
+    }
+
+    /** @return list<array> lignes « tour » captées */
+    private function lignesDeTour(): array
+    {
+        return array_values(array_filter(
+            array_column($this->telemetrie, 'context'),
+            static fn (array $c) => ($c['evenement'] ?? null) === 'tour',
+        ));
     }
 
     private static function texte(string $text): array
@@ -280,5 +326,154 @@ class GeminiAiEngineTest extends TestCase
 
         $this->assertTrue($reply->refused);
         $this->assertStringContainsString('Reformulez', $reply->content);
+    }
+
+    /**
+     * L'API étant sans mémoire, chaque tour de function calling renvoie tout le
+     * contexte : un enchaînement d'outils finit par franchir le plafond de tokens
+     * d'ENTRÉE par minute du fournisseur (429, tour perdu ET déjà débité). Le
+     * moteur doit s'arrêter de lui-même avant le mur, en le disant.
+     */
+    public function testBudgetDeTokensDEntreeArreteLaBoucleAvantLe429(): void
+    {
+        // Chaque tour déclare 60 000 tokens d'entrée. Après le 3e, le cumul est de
+        // 180 000 et un 4e tour (estimé au même prix) porterait le total à 240 000,
+        // au-delà du budget de 200 000 : la boucle doit s'arrêter là.
+        $appelOutil = [
+            'candidates' => [[
+                'content' => ['role' => 'model', 'parts' => [
+                    ['functionCall' => ['name' => 'compter_entites', 'args' => ['entite' => 'Client']]],
+                ]],
+            ]],
+            'usageMetadata' => ['promptTokenCount' => 60000],
+        ];
+
+        $appels = 0;
+        $http = new MockHttpClient(function () use (&$appels, $appelOutil) {
+            ++$appels;
+
+            return new MockResponse(json_encode($appelOutil));
+        });
+
+        $tool = $this->makeTool(AiToolResult::ok(['count' => 3]));
+        $reply = $this->makeEngine($http, [$tool])->reply($this->makeRequest('Analyse tout mon portefeuille'));
+
+        $this->assertSame(3, $appels, 'La boucle doit cesser d\'appeler l\'API dès le budget atteint.');
+        $this->assertStringContainsString('trop de recherches', $reply->content);
+        $this->assertStringContainsString('plusieurs questions', $reply->content);
+    }
+
+    /**
+     * La campagne de mesure ne vaut que si AUCUN chemin de sortie ne lui
+     * échappe — or ce sont justement les sorties anormales (budget, blocage,
+     * tours épuisés) qui l'intéressent le plus : ce sont les messages les plus
+     * coûteux, et donc ceux qui expliquent la saturation.
+     *
+     * @dataProvider cheminsDeSortie
+     */
+    public function testChaqueCheminDeSortieProduitUnBilanDeMessage(
+        callable $reponses,
+        string $issueAttendue,
+        int $toursAttendus,
+    ): void {
+        $http = new MockHttpClient($reponses);
+        $tool = $this->makeTool(AiToolResult::ok(['count' => 3]));
+
+        $this->makeEngine($http, [$tool])->reply($this->makeRequest('Question'));
+
+        $bilan = $this->bilanDuMessage();
+
+        $this->assertNotNull($bilan, 'Aucun bilan de message émis pour cette sortie.');
+        $this->assertSame($issueAttendue, $bilan['issue']);
+        $this->assertSame($toursAttendus, $bilan['tours']);
+        $this->assertSame('gemini', $bilan['moteur']);
+        $this->assertSame('gemini-2.5-flash', $bilan['modele']);
+    }
+
+    public static function cheminsDeSortie(): iterable
+    {
+        $appelOutil = static fn (int $tokens = 0) => array_filter([
+            'candidates' => [[
+                'content' => ['role' => 'model', 'parts' => [
+                    ['functionCall' => ['name' => 'compter_entites', 'args' => ['entite' => 'Client']]],
+                ]],
+            ]],
+            'usageMetadata' => $tokens > 0 ? ['promptTokenCount' => $tokens] : null,
+        ]);
+
+        yield 'réponse directe' => [
+            static fn () => new MockResponse(json_encode([
+                'candidates' => [['finishReason' => 'STOP', 'content' => ['role' => 'model', 'parts' => [['text' => 'Bonjour.']]]]],
+            ])),
+            JournalTokens::ISSUE_REPONSE,
+            1,
+        ];
+
+        yield 'blocage de sécurité' => [
+            static fn () => new MockResponse(json_encode(['promptFeedback' => ['blockReason' => 'SAFETY'], 'candidates' => []])),
+            JournalTokens::ISSUE_BLOCAGE_SECURITE,
+            1,
+        ];
+
+        // 60 000 tokens par tour : au 4e, la projection dépasse le budget.
+        yield 'budget de tokens atteint' => [
+            static fn () => new MockResponse(json_encode($appelOutil(60000))),
+            JournalTokens::ISSUE_BUDGET_ATTEINT,
+            3,
+        ];
+
+        // Le modèle rappelle un outil indéfiniment : MAX_TOOL_ROUNDS borne la boucle.
+        yield 'tours épuisés' => [
+            static fn () => new MockResponse(json_encode($appelOutil())),
+            JournalTokens::ISSUE_TOURS_EPUISES,
+            9,
+        ];
+    }
+
+    /**
+     * La répartition des octets est ce qui permet de dire OÙ partent les tokens
+     * — sans elle, on saurait qu'un tour coûte cher, pas quel bloc allégér.
+     */
+    public function testLaLigneDeTourPorteLaRepartitionDesOctets(): void
+    {
+        $http = new MockHttpClient([new MockResponse(json_encode(
+            self::texte('OK') + ['usageMetadata' => ['promptTokenCount' => 1234, 'candidatesTokenCount' => 7]],
+        ))]);
+
+        $this->makeEngine($http)->reply($this->makeRequest('Qui es-tu ?'));
+
+        $tour = $this->lignesDeTour()[0];
+
+        $this->assertSame(1234, $tour['tokensEntree']);
+        $this->assertSame(7, $tour['tokensSortie']);
+        $this->assertSame(\strlen('SYSTEM'), $tour['octetsSysteme']);
+        $this->assertGreaterThan(0, $tour['octetsHistorique']);
+        // Aucun outil déclaré dans ce test : le bloc reste un tableau JSON vide.
+        $this->assertSame(2, $tour['octetsOutils']);
+    }
+
+    /** Sans usageMetadata, le garde-fou ne doit pas brider la boucle. */
+    public function testAbsenceDeUsageMetadataNeBridePasLaBoucle(): void
+    {
+        $appelOutil = [
+            'candidates' => [[
+                'content' => ['role' => 'model', 'parts' => [
+                    ['functionCall' => ['name' => 'compter_entites', 'args' => ['entite' => 'Client']]],
+                ]],
+            ]],
+        ];
+
+        $appels = 0;
+        $http = new MockHttpClient(function () use (&$appels, $appelOutil) {
+            return ++$appels <= 3
+                ? new MockResponse(json_encode($appelOutil))
+                : new MockResponse(json_encode(self::texte('Vous avez 3 clients.')));
+        });
+
+        $tool = $this->makeTool(AiToolResult::ok(['count' => 3]));
+        $reply = $this->makeEngine($http, [$tool])->reply($this->makeRequest('Combien de clients ?'));
+
+        $this->assertSame('Vous avez 3 clients.', $reply->content);
+        $this->assertSame(4, $appels);
     }
 }

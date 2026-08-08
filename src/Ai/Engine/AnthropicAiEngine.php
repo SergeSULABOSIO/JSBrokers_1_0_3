@@ -52,6 +52,11 @@ final class AnthropicAiEngine implements AiEngineInterface
         return 'anthropic';
     }
 
+    public function modelName(): string
+    {
+        return $this->model;
+    }
+
     /**
      * Joint les pièces lisibles nativement (images, PDF scannés) au DERNIER tour
      * utilisateur, en blocs de contenu Messages API — miroir exact de l'inlineData
