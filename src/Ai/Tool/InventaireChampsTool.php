@@ -115,7 +115,11 @@ final class InventaireChampsTool implements AiToolInterface
         return AiToolResult::ok($inventaire + [
             'note' => 'Présente ces trois groupes clairement (tableau : champ · nature · valeur). Demande les '
                 . 'OBLIGATOIRES, propose les FACULTATIFS, et indique que tu renseignes toi-même les champs AUTO '
-                . '(ne les demande pas). Puis appelle preparer_operations.',
+                . '(ne les demande pas). Un champ qui porte « valeurs » n\'accepte QUE ces codes : propose-les '
+                . 'en clair à l\'utilisateur et écris le CODE, jamais le libellé. Un champ qui porte « defaut » '
+                . 'sera écrit ainsi si tu ne dis rien : applique-le et annonce-le. Une « relation » s\'écrit par '
+                . 'son identifiant — pris dans « valeurs » si la liste est fournie, sinon cherché avec '
+                . 'rechercher_entites sur « entiteCible ». Puis appelle preparer_operations.',
         ]);
     }
 }

@@ -60,6 +60,7 @@ class WorkspaceMutationServiceTest extends WebTestCase
         // 2) Ordre des FK : client → portefeuille → invite → entreprise → utilisateur.
         foreach ([self::ENT_A, self::ENT_B] as $nom) {
             $conn->executeStatement('DELETE c FROM client c JOIN entreprise e ON c.entreprise_id = e.id WHERE e.nom = :n', ['n' => $nom]);
+            $conn->executeStatement('DELETE t FROM taxe t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :n', ['n' => $nom]);
             $conn->executeStatement('DELETE pf FROM portefeuille pf JOIN entreprise e ON pf.entreprise_id = e.id WHERE e.nom = :n', ['n' => $nom]);
             $conn->executeStatement('DELETE i FROM invite i JOIN entreprise e ON i.entreprise_id = e.id WHERE e.nom = :n', ['n' => $nom]);
             $conn->executeStatement('DELETE FROM entreprise WHERE nom = :n', ['n' => $nom]);
@@ -167,9 +168,11 @@ class WorkspaceMutationServiceTest extends WebTestCase
         $auto = array_column($inventaire['auto'], 'champ');
         $facultatifs = array_column($inventaire['facultatifs'], 'champ');
 
-        // Cohérence avec l'exécution : nom + exonere sont bien obligatoires.
+        // Cohérence avec l'exécution : le nom est obligatoire. « exonere » ne l'est plus —
+        // « non exonéré » est le cas légal par défaut, désormais porté par la propriété de
+        // Client, donc Ket n'a plus à poser la question.
         $this->assertContains('nom', $obligatoires);
-        $this->assertContains('exonere', $obligatoires);
+        $this->assertContains('exonere', $facultatifs);
         // Ket complète seule l'entreprise et l'invité.
         $this->assertContains('entreprise', $auto);
         $this->assertContains('invite', $auto);
@@ -204,6 +207,8 @@ class WorkspaceMutationServiceTest extends WebTestCase
     {
         // Au DRY-RUN déjà, un champ obligatoire non fourni doit sortir en
         // « manquants » (statut invalide) pour que Ket le DEMANDE avant tout plan.
+        // Exemple : le redevable d'une taxe — sans #[Assert], sans défaut, et
+        // discriminant métier (taxe due par le courtier ou par l'assureur).
         $owner = $this->seedUser(self::OWNER_A);
         $ent = $this->seedEntreprise(self::ENT_A, $owner);
         $inv = $this->seedOwnerInvite($ent, $owner);
@@ -212,13 +217,16 @@ class WorkspaceMutationServiceTest extends WebTestCase
         $this->client->loginUser($owner);
 
         $res = $this->service->analyserOperation(
-            new MutationOperation('create', 'Client', null, ['nom' => 'Orange RDC']),
+            new MutationOperation('create', 'Taxe', null, [
+                'code' => 'TVA-DRY', 'description' => 'Taxe dry-run',
+                'tauxIARD' => '16', 'tauxVIE' => '16',
+            ]),
             new AiScope($ent, $inv),
         );
 
         $this->assertFalse($res['ok']);
         $this->assertSame('invalide', $res['statut']);
-        $this->assertArrayHasKey('exonere', $res['manquants']);
+        $this->assertArrayHasKey('redevable', $res['manquants']);
     }
 
     public function testCreationRangeDansLePortefeuilleUniqueDeLInvite(): void
@@ -256,7 +264,7 @@ class WorkspaceMutationServiceTest extends WebTestCase
 
     public function testCreationRefuseUnChampObligatoireManquant(): void
     {
-        // « exonere » (non-nullable, sans défaut) non fourni : refus PROPRE (422)
+        // « redevable » (sans défaut, discriminant métier) non fourni : refus PROPRE
         // au lieu d'une erreur SQL 500 — Ket doit demander l'information.
         $owner = $this->seedUser(self::OWNER_A);
         $ent = $this->seedEntreprise(self::ENT_A, $owner);
@@ -267,14 +275,17 @@ class WorkspaceMutationServiceTest extends WebTestCase
 
         try {
             $this->service->executer(
-                new MutationOperation('create', 'Client', null, ['nom' => 'Sans Exonere']),
+                new MutationOperation('create', 'Taxe', null, [
+                    'code' => 'TVA-REFUS', 'description' => 'Taxe sans redevable',
+                    'tauxIARD' => '16', 'tauxVIE' => '16',
+                ]),
                 new AiScope($ent, $inv),
                 $owner,
             );
             $this->fail('Une MutationException était attendue (champ obligatoire manquant).');
         } catch (MutationException $e) {
             $this->assertSame(MutationException::INVALIDE, $e->statut);
-            $this->assertArrayHasKey('exonere', $e->erreursChamps);
+            $this->assertArrayHasKey('redevable', $e->erreursChamps);
         }
     }
 

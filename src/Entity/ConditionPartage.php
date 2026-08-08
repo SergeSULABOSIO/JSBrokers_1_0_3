@@ -27,9 +27,11 @@ class ConditionPartage
     #[Groups(['list:read'])]
     private ?string $nom = null;
 
+    // Sans seuil = la condition s'applique inconditionnellement, la formule la plus
+    // simple et la plus sûre à supposer. Colonne NOT NULL.
     #[ORM\Column]
     #[Groups(['list:read'])]
-    private ?int $formule = null;
+    private ?int $formule = self::FORMULE_NE_SAPPLIQUE_PAS_SEUIL;
     public const FORMULE_ASSIETTE_AU_MOINS_EGALE_AU_SEUIL = 0;
     public const FORMULE_ASSIETTE_INFERIEURE_AU_SEUIL = 1;
     public const FORMULE_NE_SAPPLIQUE_PAS_SEUIL = 2;
@@ -52,9 +54,12 @@ class ConditionPartage
     #[ORM\OneToMany(targetEntity: Risque::class, mappedBy: 'conditionPartage')]
     private Collection $produits;
 
+    // « Pas de risques ciblés » = la condition ne discrimine aucun risque : le neutre.
+    // Ce défaut ferme une violation d'intégrité atteignable depuis l'écran — la colonne
+    // est NOT NULL alors que le champ du formulaire est `required: false`.
     #[ORM\Column]
     #[Groups(['list:read'])]
-    private ?int $critereRisque = null;
+    private ?int $critereRisque = self::CRITERE_PAS_RISQUES_CIBLES;
     public const CRITERE_EXCLURE_TOUS_CES_RISQUES = 0;
     public const CRITERE_INCLURE_TOUS_CES_RISQUES = 1;
     public const CRITERE_PAS_RISQUES_CIBLES = 2;
@@ -67,9 +72,10 @@ class ConditionPartage
     public const UNITE_SOMME_COMMISSION_PURE_RISQUE = 0;
     public const UNITE_SOMME_COMMISSION_PURE_CLIENT = 1;
     public const UNITE_SOMME_COMMISSION_PURE_PARTENAIRE = 2;
+    // Unité de référence du partage : la commission pure du RISQUE.
     #[ORM\Column(nullable: true)]
     #[Groups(['list:read'])]
-    private ?int $uniteMesure = null;
+    private ?int $uniteMesure = self::UNITE_SOMME_COMMISSION_PURE_RISQUE;
 
     #[Groups(['list:read'])]
     public ?string $formule_string;

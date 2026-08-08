@@ -156,10 +156,29 @@ class ParcoursSaisieToolTest extends WebTestCase
 
         $etapes = $this->etapes($this->tool->execute(['sujet' => 'client'], new AiScope($ent, $inv))->data);
         $obligatoires = array_column($etapes['client']['obligatoires'], 'champ');
+        $facultatifs = array_column($etapes['client']['facultatifs'], 'champ');
 
-        $this->assertContains('nom', $obligatoires);
-        $this->assertContains('exonere', $obligatoires, 'Le champ non-nullable sans défaut est bien réclamé.');
+        $this->assertContains('nom', $obligatoires, 'Le champ non-nullable sans défaut est bien réclamé.');
+        // « exonere » est non-nullable mais porte désormais son défaut (« non exonéré »,
+        // le cas légal) sur la propriété de Client : il descend donc en facultatif — on
+        // ne pose plus une question dont la réponse va de soi.
+        $this->assertContains('exonere', $facultatifs);
         $this->assertContains('entreprise', array_column($etapes['client']['auto'], 'champ'), 'L’entreprise est remplie par Ket.');
+    }
+
+    /** Un champ à liste fermée annonce ses valeurs ET leur sens : sinon il reste vide. */
+    public function testEtapeRestitueLesValeursDUnChampACode(): void
+    {
+        [$ent, $inv] = $this->seedWorkspace();
+
+        $etapes = $this->etapes($this->tool->execute(['sujet' => 'client'], new AiScope($ent, $inv))->data);
+        $champs = array_merge($etapes['opportunite']['obligatoires'], $etapes['opportunite']['facultatifs']);
+        $typeAvenant = array_values(array_filter($champs, static fn ($c) => $c['champ'] === 'typeAvenant'));
+
+        $this->assertNotSame([], $typeAvenant, 'Le type d’avenant doit figurer dans l’étape « opportunité ».');
+        $this->assertSame('choix', $typeAvenant[0]['nature']);
+        $parCode = array_column($typeAvenant[0]['valeurs'], 'libelle', 'code');
+        $this->assertSame('Renouvellement', $parCode[\App\Entity\Piste::AVENANT_RENOUVELLEMENT]);
     }
 
     /** Le référentiel d'une étape est chargé, scopé à l'entreprise (évite le chargement sans type). */

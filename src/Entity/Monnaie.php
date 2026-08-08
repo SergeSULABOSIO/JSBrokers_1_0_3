@@ -40,9 +40,12 @@ class Monnaie
     public const FONCTION_SAISIE_UNIQUEMENT = 1;
     public const FONCTION_AFFICHAGE_UNIQUEMENT = 2;
 
+    // FONCTION_AUCUNE (-1) est la valeur neutre prévue : une monnaie enregistrée n'est
+    // ni de saisie ni d'affichage tant que le courtier ne l'a pas décidé. Colonne
+    // NOT NULL : le vide y était une erreur au flush.
     #[ORM\Column]
     #[Groups(['list:read'])]
-    private ?int $fonction = null;
+    private ?int $fonction = self::FONCTION_AUCUNE;
 
     #[ORM\Column]
     #[Groups(['list:read'])]

@@ -19,9 +19,11 @@ class Bordereau implements OwnerAwareInterface // Implémente OwnerAwareInterfac
     #[Groups(['list:read'])]
     private ?int $id = null;
 
+    // Un seul type de bordereau existe à ce jour : le vide n'était donc pas un choix,
+    // seulement une colonne NOT NULL laissée à zéro par accident.
     #[ORM\Column]
     #[Groups(['list:read'])]
-    private ?int $type = null;
+    private ?int $type = self::TYPE_BOREDERAU_PRODUCTION;
 
     // NOUVEAU : Statuts adaptés au flux "entrant"
     public const STATUT_A_VERIFIER = 0;       // Reçu, en attente de vérification par le courtier

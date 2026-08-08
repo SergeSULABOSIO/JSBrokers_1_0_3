@@ -2,14 +2,13 @@
 
 namespace App\Ai\Parcours;
 
-use App\Ai\FicheNormaliseur;
 use App\Ai\Mutation\MutationAllowlist;
 use App\Ai\Scope\AiScope;
 use App\Entity\Invite;
 use App\Service\Workspace\FormTreeInspector;
+use App\Service\Workspace\ReferentielEnumerateur;
 use App\Service\Workspace\WorkspaceAccessResolver;
 use App\Service\Workspace\WorkspaceMutationService;
-use App\Services\JSBDynamicSearchService;
 
 /**
  * Construit le PARCOURS DE SAISIE d'un objet métier : la liste ORDONNÉE des
@@ -22,7 +21,7 @@ use App\Services\JSBDynamicSearchService;
  *  - inventaireChamps()          : champs obligatoires / facultatifs / auto réels,
  *  - WorkspaceAccessResolver     : droits de l'invité (fail-closed),
  *  - MutationAllowlist           : périmètre mutable de Ket,
- *  - JSBDynamicSearchService     : valeurs des référentiels, scopées entreprise.
+ *  - ReferentielEnumerateur      : valeurs des référentiels, scopées entreprise.
  *
  * Une entité sans trame rédigée reçoit un parcours GÉNÉRIQUE : l'entité elle-même,
  * puis une étape optionnelle par collection éditable de son formulaire.
@@ -32,15 +31,11 @@ use App\Services\JSBDynamicSearchService;
  */
 class ParcoursBuilder
 {
-    /** Nombre maximal de valeurs de référentiel restituées par étape. */
-    private const MAX_VALEURS_REFERENTIEL = 30;
-
     public function __construct(
         private readonly WorkspaceMutationService $mutationService,
         private readonly WorkspaceAccessResolver $accessResolver,
         private readonly FormTreeInspector $formTreeInspector,
-        private readonly JSBDynamicSearchService $searchService,
-        private readonly FicheNormaliseur $ficheNormaliseur,
+        private readonly ReferentielEnumerateur $referentiels,
     ) {
     }
 
@@ -182,8 +177,11 @@ class ParcoursBuilder
         if (isset($etape['note'])) {
             $construite['note'] = (string) $etape['note'];
         }
+        // La trame FORCE l'énumération enrichie d'un référentiel dont l'étape ne peut pas
+        // se décider sans ses attributs. L'inventaire des champs énumère de son côté les
+        // référentiels courts de façon systématique, en `id => libellé`.
         if (isset($etape['referentiel'])) {
-            $valeurs = $this->valeursReferentiel((string) $etape['referentiel'], $scope);
+            $valeurs = $this->referentiels->enrichi((string) $etape['referentiel'], $scope);
             if ($valeurs !== []) {
                 $construite['valeursReferentiel'] = ['entite' => (string) $etape['referentiel'], 'valeurs' => $valeurs];
             }
@@ -248,51 +246,4 @@ class ParcoursBuilder
         ];
     }
 
-    /**
-     * Valeurs d'un référentiel, scopées à l'entreprise : évite à Ket un
-     * aller-retour de recherche pour résoudre un « type » par son nom — et évite
-     * surtout de l'omettre (chargement sans type => commission à 0).
-     *
-     * Chaque valeur est restituée AVEC SES ATTRIBUTS (stockés ET calculés), pas
-     * seulement son nom : c'est ce qui permet de CHOISIR. « Le revenu selon le
-     * taux relatif au risque » ne se résout pas sur une liste de libellés — il
-     * faut voir le taux, le mode de calcul, le chargement de base et le
-     * redevable de chaque type. Avec un nom seul, l'étape est indécidable, et
-     * une étape indécidable finit abandonnée en silence.
-     *
-     * @return array<int, array{id: int, nom: string, attributs: array}>
-     */
-    private function valeursReferentiel(string $entite, AiScope $scope): array
-    {
-        $fqcn = 'App\\Entity\\' . $entite;
-        if (!class_exists($fqcn) || !$this->accessResolver->can($scope->invite, $entite, Invite::ACCESS_LECTURE)) {
-            return [];
-        }
-
-        $result = $this->searchService->search($fqcn, [], $scope->entreprise, null, 1, self::MAX_VALEURS_REFERENTIEL);
-        if (($result['status']['code'] ?? 500) !== 200) {
-            return [];
-        }
-
-        $valeurs = [];
-        foreach ($result['data'] ?? [] as $item) {
-            if (!is_object($item) || !method_exists($item, 'getId')) {
-                continue;
-            }
-            $nom = method_exists($item, 'getNom') ? (string) $item->getNom() : '';
-            if (trim($nom) === '') {
-                continue;
-            }
-            $attributs = $this->ficheNormaliseur->ficheEnrichie($item);
-            unset($attributs['id'], $attributs['nom']); // déjà portés par l'entrée.
-
-            $valeurs[] = [
-                'id'        => (int) $item->getId(),
-                'nom'       => trim(strip_tags($nom)),
-                'attributs' => $attributs,
-            ];
-        }
-
-        return $valeurs;
-    }
 }

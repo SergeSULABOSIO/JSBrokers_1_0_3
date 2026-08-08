@@ -76,8 +76,9 @@ class ClientController extends AbstractController
             Client::class,
             ClientType::class,
             $client,
+            // « Non exonéré » vit désormais sur la propriété de Client : l'écran,
+            // l'assistant et l'import de fichier partent du même `new Client()`.
             function (Client $client, \App\Entity\Invite $invite) {
-                $client->setExonere(false);
                 $client->setEntreprise($invite->getEntreprise());
             }
         );

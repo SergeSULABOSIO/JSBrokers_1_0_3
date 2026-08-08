@@ -100,9 +100,13 @@ class Piste implements OwnerAwareInterface
     #[ORM\OneToOne(cascade: ['persist', 'remove'])]
     private ?Avenant $avenantDeBase = null;
 
+    // Le renouvelable est le cas NORMAL d'une police : sans défaut, ce champ restait
+    // vide à toute création et la condition de renouvellement d'une affaire était
+    // indéterminée. `typeAvenant`, lui, n'a volontairement pas de défaut — c'est un
+    // discriminant (cf. ChampsObligatoiresInspector::CHOIX_METIER_REQUIS).
     #[ORM\Column(nullable: true)]
     #[Groups(['list:read'])]
-    private ?int $renewalCondition = null;
+    private ?int $renewalCondition = self::RENEWAL_CONDITION_RENEWABLE;
 
     #[ORM\Column(options: ['default' => false])]
     private bool $closed = false;

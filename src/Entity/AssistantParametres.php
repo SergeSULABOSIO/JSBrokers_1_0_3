@@ -25,8 +25,11 @@ class AssistantParametres
     #[ORM\JoinColumn(nullable: false, unique: true, onDelete: 'CASCADE')]
     private ?Entreprise $entreprise = null;
 
+    // La constante existait sans jamais être appliquée à la propriété : une ligne créée
+    // sans nom explicite (AssistantIaController) partait au flush avec une colonne
+    // NOT NULL vide.
     #[ORM\Column(length: 60)]
-    private ?string $nom = null;
+    private ?string $nom = self::NOM_PAR_DEFAUT;
 
     #[ORM\Column(type: 'datetime_immutable')]
     private ?\DateTimeImmutable $createdAt = null;

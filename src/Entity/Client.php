@@ -39,9 +39,12 @@ class Client
     #[Groups(['list:read'])]
     private ?string $email = null;
 
+    // Non exonéré = le cas courant. Le défaut vit ici, et non plus dans l'initializer
+    // de ClientController : l'écran, l'assistant et l'import de fichier partent tous
+    // du même `new Client()`.
     #[ORM\Column]
     #[Groups(['list:read'])]
-    private ?bool $exonere = null;
+    private ?bool $exonere = false;
 
     /**
      * @var Collection<int, Contact>

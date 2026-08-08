@@ -5,6 +5,7 @@ namespace App\Tests\Workspace;
 use App\Entity\Client;
 use App\Entity\Entreprise;
 use App\Entity\Invite;
+use App\Entity\Taxe;
 use App\Entity\Utilisateur;
 use App\Service\Workspace\ChampsObligatoiresInspector;
 use Doctrine\ORM\EntityManagerInterface;
@@ -17,8 +18,10 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * 1) ChampsObligatoiresInspector : source unique de la notion « champ obligatoire »
  *    dérivée des métadonnées Doctrine (partagée avec l'assistant IA).
- * 2) CRUD HTTP : un champ obligatoire vide SANS contrainte #[Assert] (ex. `exonere`)
- *    produit désormais une 422 propre nommant le champ, au lieu d'un 500 au flush.
+ * 2) CRUD HTTP : un champ obligatoire vide SANS contrainte #[Assert] (ex. le `redevable`
+ *    d'une taxe) produit désormais une 422 propre nommant le champ, au lieu d'un 500 au
+ *    flush. Ce cas couvre aussi les DISCRIMINANTS métier, exigés même sur colonne
+ *    nullable parce qu'un défaut y serait un mensonge silencieux.
  *
  * Le FormType des champs autocomplete scope sa requête sur l'utilisateur connecté
  * (getConnectedTo) : on se connecte donc comme le ferait l'endpoint réel.
@@ -51,6 +54,7 @@ class ValidationObligatoireTest extends WebTestCase
         $conn = $this->em->getConnection();
         $conn->executeStatement('UPDATE utilisateur SET connected_to_id = NULL WHERE email = :e', ['e' => self::OWNER]);
         $conn->executeStatement('DELETE c FROM client c JOIN entreprise e ON c.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
+        $conn->executeStatement('DELETE t FROM taxe t JOIN entreprise e ON t.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE i FROM invite i JOIN entreprise e ON i.entreprise_id = e.id WHERE e.nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE FROM entreprise WHERE nom = :n', ['n' => self::ENT]);
         $conn->executeStatement('DELETE FROM utilisateur WHERE email = :e', ['e' => self::OWNER]);
@@ -82,11 +86,15 @@ class ValidationObligatoireTest extends WebTestCase
 
     public function testChampsManquantsSignaleLesObligatoiresVides(): void
     {
-        $manquants = $this->inspector->champsManquants(new Client());
+        // Champ non-nullable AVEC NotBlank : doublement couvert.
+        $this->assertArrayHasKey('nom', $this->inspector->champsManquants(new Client()));
 
-        // nom (non-nullable, NotBlank) ET exonere (booléen non-nullable, SANS Assert).
-        $this->assertArrayHasKey('nom', $manquants);
-        $this->assertArrayHasKey('exonere', $manquants);
+        // Cas qui motive l'inspecteur : un champ obligatoire SANS #[Assert]. Symfony ne
+        // le voit pas, la colonne le refuse — sans l'inspecteur, c'est un 500 au flush.
+        // « redevable » d'une taxe l'illustre : tous les autres champs de Taxe portent
+        // un NotBlank, lui n'en a aucun. C'est aussi un discriminant métier (taxe due
+        // par le courtier ou par l'assureur), donc exigé même sur colonne nullable.
+        $this->assertArrayHasKey('redevable', $this->inspector->champsManquants(new Taxe()));
     }
 
     public function testChampsManquantsRestreintAuxChampsDuFormulaire(): void
@@ -125,12 +133,16 @@ class ValidationObligatoireTest extends WebTestCase
         [$owner, $ent, $inv] = $this->seedContexte();
         $this->client->loginUser($owner);
 
-        // nom fourni, mais `exonere` (obligatoire, non-nullable, SANS #[Assert]) OMIS :
-        // avant, cela passait la validation puis échouait au flush (500).
-        $this->client->request('POST', '/admin/client/api/submit', [
+        // Tous les champs à #[Assert] fournis, mais « redevable » — obligatoire métier et
+        // SANS aucune contrainte — OMIS : avant, cela passait la validation Symfony puis
+        // échouait au flush (500).
+        $this->client->request('POST', '/admin/taxe/api/submit', [
             'idEntreprise' => $ent->getId(),
             'idInvite' => $inv->getId(),
-            'nom' => 'Client Test Obligation',
+            'code' => 'TVA-OBLIG',
+            'description' => 'Taxe Test Obligation',
+            'tauxIARD' => '16',
+            'tauxVIE' => '16',
         ]);
 
         $this->assertResponseStatusCodeSame(
@@ -138,13 +150,13 @@ class ValidationObligatoireTest extends WebTestCase
             'Un champ obligatoire vide doit donner une 422 propre, pas un 500.'
         );
         $payload = json_decode((string) $this->client->getResponse()->getContent(), true);
-        $this->assertArrayHasKey('exonere', $payload['errors'] ?? [], 'Le champ fautif est nommé.');
-        $this->assertArrayHasKey('exonere', $payload['labels'] ?? [], 'Un libellé lisible accompagne le champ.');
+        $this->assertArrayHasKey('redevable', $payload['errors'] ?? [], 'Le champ fautif est nommé.');
+        $this->assertArrayHasKey('redevable', $payload['labels'] ?? [], 'Un libellé lisible accompagne le champ.');
 
         // Aucune fiche ne doit avoir été créée.
         $this->em->clear();
         $this->assertNull(
-            $this->em->getRepository(Client::class)->findOneBy(['nom' => 'Client Test Obligation']),
+            $this->em->getRepository(Taxe::class)->findOneBy(['code' => 'TVA-OBLIG']),
             'Rien ne doit être persisté quand un champ obligatoire manque.'
         );
     }

@@ -272,6 +272,9 @@ class KetMutationTest extends TestCase
             new ChampsObligatoiresInspector($emResolved, $formsResolved),
             new FormTreeInspector($formsResolved, $emResolved),
             new \App\Ai\Fichier\ConversationFichierResolver($this->createMock(\Vich\UploaderBundle\Storage\StorageInterface::class)),
+            // Énumération des référentiels : ces tests portent sur le fail-closed et le
+            // scope, jamais sur l'inventaire des champs — un double suffit.
+            $this->createMock(\App\Service\Workspace\ReferentielEnumerateur::class),
         );
     }
 
