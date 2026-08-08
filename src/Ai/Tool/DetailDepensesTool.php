@@ -20,7 +20,7 @@ use App\Service\Workspace\WorkspaceAccessResolver;
  * ligne = TTC − HT (dérivée du taux de TVA saisi), même règle que la liste
  * Dépenses de l'espace et que le moteur d'écritures (compte 445).
  */
-final class DetailDepensesTool implements AiToolInterface
+final class DetailDepensesTool implements AiToolInterface, AiToolConditionnel
 {
     /** Lignes de détail restituées par page (sortie compacte). */
     private const MAX_LIGNES = 15;
@@ -102,6 +102,12 @@ final class DetailDepensesTool implements AiToolInterface
         }
 
         return $args;
+    }
+
+    /** Miroir exact de la garde d'execute() : ne pas décrire un outil qui refusera. */
+    public function estDisponible(AiScope $scope): bool
+    {
+        return $this->accessResolver->canRead($scope->invite, 'DepenseCourtier');
     }
 
     public function execute(array $args, AiScope $scope): AiToolResult

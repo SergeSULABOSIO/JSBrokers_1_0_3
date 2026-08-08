@@ -4,6 +4,7 @@ namespace App\Tests\Ai;
 
 use App\Ai\AiContextBuilder;
 use App\Ai\AiRequest;
+use App\Ai\Debit\BudgetDebit;
 use App\Ai\Engine\AiEngineResolver;
 use App\Ai\Engine\AnthropicAiEngine;
 use App\Ai\Engine\GeminiAiEngine;
@@ -16,6 +17,7 @@ use App\Entity\Entreprise;
 use App\Entity\Invite;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -294,6 +296,7 @@ class AnthropicAiEngineTest extends TestCase
             'gemini-2.5-flash',
             new NullLogger(),
             new JournalTokens(new NullLogger()),
+            new BudgetDebit(new ArrayAdapter()),
         );
 
         // Aucune clé → simulateur.

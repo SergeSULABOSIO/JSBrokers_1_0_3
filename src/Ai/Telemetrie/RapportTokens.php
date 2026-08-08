@@ -2,6 +2,8 @@
 
 namespace App\Ai\Telemetrie;
 
+use App\Ai\Debit\BudgetDebit;
+
 /**
  * Dépouillement de la campagne de mesure : agrège les lignes JSON du canal
  * « assistant_tokens » et répond aux questions qui décident de la suite.
@@ -22,17 +24,32 @@ namespace App\Ai\Telemetrie;
  */
 final class RapportTokens
 {
-    /** Plafond de tokens d'entrée par minute et par modèle — palier gratuit Gemini. */
-    public const PLAFOND_ENTREE_PAR_MINUTE = 250000;
+    /**
+     * Plafond de tokens d'entrée par minute et par modèle. Source unique :
+     * BudgetDebit, qui l'oppose en temps réel au moteur — le rapport et le
+     * garde-fou doivent parler du MÊME plafond, sinon la projection ci-dessous
+     * décrirait un monde qui n'existe pas.
+     */
+    public const PLAFOND_ENTREE_PAR_MINUTE = BudgetDebit::PLAFOND_DEFAUT_PAR_MINUTE;
 
     /** Fenêtre du quota, en secondes. */
-    private const FENETRE_SECONDES = 60;
+    private const FENETRE_SECONDES = BudgetDebit::FENETRE_SECONDES;
+
+    private readonly int $plafond;
 
     /**
-     * @param list<array<string, mixed>> $lignes contextes des enregistrements, dans l'ordre du journal
+     * @param list<array<string, mixed>> $lignes  contextes des enregistrements, dans l'ordre du journal
+     * @param int|null                   $plafond plafond effectif (GEMINI_TPM_PLAFOND) ; null = palier gratuit
      */
-    public function __construct(private readonly array $lignes)
+    public function __construct(private readonly array $lignes, ?int $plafond = null)
     {
+        $this->plafond = $plafond !== null && $plafond > 0 ? $plafond : self::PLAFOND_ENTREE_PAR_MINUTE;
+    }
+
+    /** Plafond retenu pour ce dépouillement. */
+    public function plafond(): int
+    {
+        return $this->plafond;
     }
 
     /** @return list<array<string, mixed>> */
@@ -155,7 +172,7 @@ final class RapportTokens
                 $pic = $fenetre;
                 $instantDuPic = $evenement['instant'];
             }
-            if ($fenetre > self::PLAFOND_ENTREE_PAR_MINUTE) {
+            if ($fenetre > $this->plafond) {
                 ++$depassements;
                 if ($evenement['message'] !== null) {
                     $messagesEnDepassement[$evenement['message']] = true;

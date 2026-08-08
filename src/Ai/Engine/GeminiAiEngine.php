@@ -3,9 +3,13 @@
 namespace App\Ai\Engine;
 
 use App\Ai\AiContextBuilder;
+use App\Ai\AiEngineFailure;
 use App\Ai\AiReply;
 use App\Ai\AiRequest;
+use App\Ai\Debit\BudgetDebit;
+use App\Ai\Scope\AiScope;
 use App\Ai\Telemetrie\JournalTokens;
+use App\Ai\Tool\AiToolConditionnel;
 use App\Ai\Tool\AiToolInterface;
 use App\Ai\Tool\AiToolResult;
 use Psr\Log\LoggerInterface;
@@ -36,27 +40,32 @@ final class GeminiAiEngine implements AiEngineInterface
     /** Garde-fou : nombre maximal d'allers-retours de function calling par message. */
     private const MAX_TOOL_ROUNDS = 8;
     /**
-     * Budget de tokens d'ENTRÉE pour UN message de l'utilisateur, tous tours de
-     * function calling confondus.
+     * Attente maximale AVANT DE RELANCER UN TOUR, quand la fenêtre d'une minute
+     * est saturée mais sur le point de se libérer.
      *
-     * L'API est sans mémoire : chaque tour renvoie l'INTÉGRALITÉ du contexte
-     * (prompt système + déclarations des 33 outils + historique + résultats des
-     * outils déjà exécutés ≈ 130 Ko, soit ~35 000 tokens), si bien que 8 tours
-     * coûtent 8 fois ce prix. Or le palier gratuit Gemini plafonne les tokens
-     * d'entrée à 250 000 PAR MINUTE (quota
-     * GenerateContentInputTokensPerModelPerMinute-FreeTier) : une seule question
-     * un peu fouillée suffisait donc à faire tomber le tour en 429, APRÈS que
-     * plusieurs outils aient déjà tourné — travail perdu et message « moteur
-     * saturé » incompréhensible pour l'utilisateur.
+     * L'API est sans mémoire : chaque tour réexpédie l'INTÉGRALITÉ du contexte
+     * (prompt système + déclarations d'outils + historique + résultats déjà
+     * obtenus ≈ 130 Ko, soit ~35 000 tokens). Abandonner au 4e tour, c'est donc
+     * jeter quatre tours DÉJÀ facturés à l'utilisateur (meterWrite débite avant
+     * l'appel) et lui rendre une non-réponse. Patienter quelques secondes coûte
+     * infiniment moins cher que recommencer.
      *
-     * On s'arrête donc AVANT le mur. Le budget est calé un peu sous le plafond,
-     * pas beaucoup : trop bas, on couperait des enchaînements qui auraient abouti ;
-     * trop haut, on retombe dans le 429 — et celui-là coûte cher, puisque les
-     * tokens du message sont DÉJÀ débités au compte de l'utilisateur (meterWrite)
-     * avant l'appel au moteur. Un arrêt net qui explique quoi faire vaut mieux
-     * qu'un tour perdu et facturé.
+     * PLAFOND BAS, ET CE N'EST PAS NÉGOCIABLE : en développement, « symfony
+     * serve » ne dispose que d'UN worker php-cgi — une requête qui dort fige
+     * toute l'application, y compris le rechargement de la page. On ne patiente
+     * jamais non plus avant le PREMIER tour : là, rendre la main tout de suite
+     * vaut mieux que geler le navigateur sur une question pas encore commencée.
      */
-    private const MAX_INPUT_TOKENS_PAR_MESSAGE = 200000;
+    private const MAX_ATTENTE_SECONDES = 15;
+
+    /** Attente cumulée tolérée sur un message entier (garde-fou de temps de réponse). */
+    private const MAX_ATTENTE_CUMULEE_SECONDES = 25;
+
+    /**
+     * Ratio octets → tokens MESURÉ sur la campagne (3,52 le 2026-08-08), et non
+     * supposé. Sert à estimer ce que coûtera le tour suivant avant de le lancer.
+     */
+    private const OCTETS_PAR_TOKEN = 3.5;
 
     /** @var iterable<AiToolInterface> */
     private iterable $tools;
@@ -69,6 +78,10 @@ final class GeminiAiEngine implements AiEngineInterface
         #[Autowire(env: 'GEMINI_MODEL')] private readonly string $model,
         private readonly LoggerInterface $logger,
         private readonly JournalTokens $journal,
+        private readonly BudgetDebit $budget,
+        // Injectable pour les tests : ils vérifient la DÉCISION d'attendre, pas
+        // la capacité de PHP à dormir. Une suite qui dort n'est plus une suite.
+        private readonly ?\Closure $dormir = null,
     ) {
         $this->tools = $tools;
     }
@@ -124,19 +137,24 @@ final class GeminiAiEngine implements AiEngineInterface
         $cumulInput = 0;
         $cumulSortie = 0;
         $sequenceOutils = [];
+        $attenteCumulee = 0;
 
         for ($round = 0; $round <= self::MAX_TOOL_ROUNDS; $round++) {
-            ['reponse' => $response, 'octets' => $octets] = $this->call($request, $contents);
+            ['reponse' => $response, 'octets' => $octets] = $this->appelerAvecReessai($request, $contents);
 
-            // Comptabilité des tokens d'ENTRÉE : le tour suivant renverra tout le
-            // contexte, augmenté des résultats d'outils qu'on vient d'ajouter — il
-            // coûtera donc au moins autant que celui-ci. Si ce prochain tour ferait
-            // franchir le budget, on conclut MAINTENANT avec ce qu'on a plutôt que
-            // de le perdre dans un 429.
             $usage = $response['usageMetadata'] ?? [];
             $tokensDuTour = (int) ($usage['promptTokenCount'] ?? 0);
             $cumulInput += $tokensDuTour;
             $cumulSortie += (int) ($usage['candidatesTokenCount'] ?? 0);
+
+            // Le débit consommé se déclare AUSSITÔT, et sur le compte TOTAL
+            // (tokens cachés inclus) : le cache implicite du fournisseur allège
+            // la facture, jamais la limite par minute — le 429 du 2026-08-08 est
+            // survenu alors que 77 % de la minute était en cache. Déclarer ici
+            // plutôt qu'en fin de message est indispensable : le quota est
+            // partagé, une autre requête en cours doit voir ce que celle-ci vient
+            // de consommer, sans attendre qu'elle se termine.
+            $this->budget->enregistrer($this->model, $tokensDuTour);
 
             $parts = $response['candidates'][0]['content']['parts'] ?? [];
             $functionCalls = array_values(array_filter($parts, static fn (array $p) => isset($p['functionCall'])));
@@ -188,37 +206,14 @@ final class GeminiAiEngine implements AiEngineInterface
                 );
             }
 
-            // Budget d'entrée épuisé : on ne relance pas un tour condamné au 429.
-            if ($cumulInput + $tokensDuTour > self::MAX_INPUT_TOKENS_PAR_MESSAGE) {
-                $this->logger->warning('Assistant IA (gemini) : budget de tokens d\'entrée atteint, boucle arrêtée.', [
-                    'tours'        => $round + 1,
-                    'cumulEntree'  => $cumulInput,
-                    'dernierOutil' => $outilsDuTour[0] ?? null,
-                ]);
-
-                return $this->conclure(
-                    $request,
-                    JournalTokens::ISSUE_BUDGET_ATTEINT,
-                    $round + 1,
-                    $cumulInput,
-                    $cumulSortie,
-                    // Les outils que le modèle VOULAIT encore appeler comptent : ce
-                    // sont eux qui auraient fait franchir le mur.
-                    [...$sequenceOutils, ...$outilsDuTour],
-                    new AiReply(
-                        "Votre demande m'a obligé à enchaîner trop de recherches d'un seul coup : je "
-                        . "dois m'arrêter avant d'épuiser le quota de mon moteur. Découpez-la en "
-                        . 'plusieurs questions plus ciblées (une entité, une période) et je la '
-                        . 'traiterai entièrement.',
-                        refused: $refused,
-                        toolUsed: $toolUsed,
-                        actions: $actions,
-                    ),
-                );
-            }
-
             // Function calling : exécuter TOUS les appels demandés (fail-closed
             // dans chaque outil), réponses regroupées dans UN message user.
+            //
+            // On exécute AVANT de regarder le débit disponible, à l'inverse de
+            // l'ancien garde-fou : nos outils ne coûtent aucun token, et s'il
+            // faut malgré tout s'arrêter là, autant que l'utilisateur reparte
+            // avec ce qu'ils ont produit — un plan préparé et son bouton de
+            // validation (uiAction) valent bien mieux qu'une page blanche.
             $contents[] = ['role' => 'model', 'parts' => $this->preserverArgsObjets($parts)];
             $responseParts = [];
             foreach ($functionCalls as $part) {
@@ -241,6 +236,59 @@ final class GeminiAiEngine implements AiEngineInterface
                 ];
             }
             $contents[] = ['role' => 'user', 'parts' => $responseParts];
+
+            // Dernier tour autorisé : inutile de jauger un tour qui n'aura pas lieu.
+            if ($round >= self::MAX_TOOL_ROUNDS) {
+                continue;
+            }
+
+            // Le tour suivant réexpédiera tout le contexte, augmenté des résultats
+            // qu'on vient d'ajouter : il coûtera au moins autant que celui-ci.
+            $estime = $tokensDuTour + (int) ceil(
+                \strlen((string) json_encode($responseParts, JSON_UNESCAPED_UNICODE)) / self::OCTETS_PAR_TOKEN,
+            );
+            $attente = $this->budget->secondesAvantLiberation($this->model, $estime);
+
+            // Assez de débit tout de suite : on enchaîne, c'est le cas courant.
+            if ($attente === 0) {
+                continue;
+            }
+
+            $tropLong = $attente === null
+                || $attente > self::MAX_ATTENTE_SECONDES
+                || $attenteCumulee + $attente > self::MAX_ATTENTE_CUMULEE_SECONDES;
+
+            if ($tropLong) {
+                $this->logger->warning('Assistant IA (gemini) : débit par minute saturé, boucle arrêtée.', [
+                    'tours'          => $round + 1,
+                    'cumulEntree'    => $cumulInput,
+                    'estimeProchain' => $estime,
+                    'restant'        => $this->budget->restant($this->model),
+                    'attente'        => $attente,
+                    'dernierOutil'   => $outilsDuTour[0] ?? null,
+                ]);
+
+                return $this->conclure(
+                    $request,
+                    JournalTokens::ISSUE_BUDGET_ATTEINT,
+                    $round + 1,
+                    $cumulInput,
+                    $cumulSortie,
+                    $sequenceOutils,
+                    new AiReply(
+                        $this->messageDebitSature($attente),
+                        refused: $refused,
+                        toolUsed: $toolUsed,
+                        actions: $actions,
+                    ),
+                );
+            }
+
+            // La fenêtre se libère dans quelques secondes : patienter et finir le
+            // travail vaut infiniment mieux que jeter les tours déjà payés.
+            $this->journal->attente($request, $this->name(), $this->model, $round + 1, $attente, $estime);
+            ($this->dormir ?? static fn (int $s) => sleep($s))($attente);
+            $attenteCumulee += $attente;
         }
 
         return $this->conclure(
@@ -292,6 +340,71 @@ final class GeminiAiEngine implements AiEngineInterface
     }
 
     /**
+     * Ce que Ket dit quand elle doit s'arrêter faute de débit.
+     *
+     * L'ancien message (« votre demande m'a obligé à enchaîner trop de
+     * recherches… découpez-la ») rejetait sur l'utilisateur une limite qui
+     * n'était pas la sienne — et, pire, se déclenchait le plus souvent alors que
+     * le fournisseur aurait laissé passer (cap par message, cf. BudgetDebit).
+     * Le débit étant partagé par tout le cabinet, la seule chose honnête est de
+     * le dire et d'annoncer un délai réel.
+     */
+    private function messageDebitSature(?int $attente): string
+    {
+        // Attente impossible : même une fenêtre entièrement vide ne suffirait
+        // pas. Ce n'est plus une question de patience mais de poids du fil —
+        // c'est la seule situation où découper sert vraiment à quelque chose.
+        if ($attente === null) {
+            return 'Le fil de cette conversation est devenu trop lourd : je dois le renvoyer en '
+                . "entier à mon moteur à chaque recherche, et il dépasse désormais ce qu'il accepte "
+                . "en une minute. Ouvrez une nouvelle conversation (ou détachez quelques pièces "
+                . 'jointes) et reposez-moi la question : je repartirai sur un contexte léger.';
+        }
+
+        return 'Mon moteur a atteint sa limite de débit pour la minute en cours — une limite '
+            . 'partagée par tout le cabinet, pas un défaut de votre demande. '
+            . sprintf('Relancez-la dans %d secondes ', max(1, $attente))
+            . 'et je la termine : ce que j\'ai déjà rassemblé reste dans le fil.';
+    }
+
+    /**
+     * Appel HTTP, avec UN réessai si le fournisseur répond 429 en annonçant un
+     * délai court.
+     *
+     * Notre compteur local (BudgetDebit) peut sous-estimer : le quota est
+     * partagé entre processus, et la séquence lire-modifier-écrire n'est pas
+     * atomique. Quand le mur est touché malgré tout, abandonner ferait perdre
+     * TOUS les tours déjà payés du message. Le fournisseur, lui, dit exactement
+     * combien de temps attendre (google.rpc.RetryInfo) : autant s'en servir.
+     *
+     * Un seul réessai, et seulement si le délai tient dans MAX_ATTENTE_SECONDES —
+     * au-delà, l'exception remonte au contrôleur, qui sait déjà l'expliquer
+     * (AiEngineFailure) et journaliser le quota violé.
+     */
+    private function appelerAvecReessai(AiRequest $request, array $contents): array
+    {
+        try {
+            return $this->call($request, $contents);
+        } catch (\Throwable $e) {
+            $delai = AiEngineFailure::estLimiteDeDebit($e)
+                ? AiEngineFailure::secondesAvantNouvelEssai($e)
+                : null;
+
+            if ($delai === null || $delai > self::MAX_ATTENTE_SECONDES) {
+                throw $e;
+            }
+
+            $this->logger->warning('Assistant IA (gemini) : 429 du fournisseur, un réessai après le délai annoncé.', [
+                'delai'   => $delai,
+                'details' => AiEngineFailure::detailsPourJournal($e),
+            ]);
+            ($this->dormir ?? static fn (int $s) => sleep($s))($delai);
+
+            return $this->call($request, $contents);
+        }
+    }
+
+    /**
      * Appel HTTP generateContent (synchrone, sans streaming).
      *
      * Rend aussi la taille des trois blocs du payload. C'est la seule façon de
@@ -304,7 +417,7 @@ final class GeminiAiEngine implements AiEngineInterface
     private function call(AiRequest $request, array $contents): array
     {
         $promptSysteme = $this->contextBuilder->toSystemPrompt($request);
-        $declarations = $this->toolDeclarations();
+        $declarations = $this->toolDeclarations($request->scope);
 
         $response = $this->httpClient->request('POST', sprintf('%s/%s:generateContent', self::API_BASE, $this->model), [
             'headers' => [
@@ -330,11 +443,23 @@ final class GeminiAiEngine implements AiEngineInterface
         ];
     }
 
-    /** Déclarations de fonctions au format Gemini (name/description/parameters). */
-    private function toolDeclarations(): array
+    /**
+     * Déclarations de fonctions au format Gemini (name/description/parameters),
+     * restreintes à ce qui a un sens dans ce périmètre et ce fil.
+     *
+     * Ces déclarations pèsent 72 Ko (≈ 19 600 tokens) et repartent à CHAQUE tour,
+     * l'API étant sans mémoire. Décrire un outil que l'invité n'a pas le droit
+     * d'exécuter, c'est payer plusieurs fois par message pour un refus certain.
+     * Le filtrage n'est PAS une sécurité (elle reste dans execute(), fail-closed)
+     * mais une économie de débit — cf. AiToolConditionnel.
+     */
+    private function toolDeclarations(AiScope $scope): array
     {
         $declarations = [];
         foreach ($this->tools as $tool) {
+            if ($tool instanceof AiToolConditionnel && !$tool->estDisponible($scope)) {
+                continue;
+            }
             $declarations[] = [
                 'name'        => $tool->name(),
                 'description' => $tool->description(),

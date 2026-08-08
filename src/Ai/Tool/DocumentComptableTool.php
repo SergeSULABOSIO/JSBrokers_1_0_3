@@ -22,7 +22,7 @@ use App\Service\Workspace\WorkspaceAccessResolver;
  * Restitution compacte (totaux et postes, jamais l'intégralité du journal)
  * pour maîtriser les tokens.
  */
-final class DocumentComptableTool implements AiToolInterface
+final class DocumentComptableTool implements AiToolInterface, AiToolConditionnel
 {
     /** Nom court de la pseudo-entité gouvernant l'accès (même clé que la rubrique). */
     private const ENTITY_SHORT_NAME = 'DocumentComptable';
@@ -125,6 +125,12 @@ final class DocumentComptableTool implements AiToolInterface
         }
 
         return null;
+    }
+
+    /** Miroir exact de la garde d'execute() : ne pas décrire un outil qui refusera. */
+    public function estDisponible(AiScope $scope): bool
+    {
+        return $this->accessResolver->canRead($scope->invite, self::ENTITY_SHORT_NAME);
     }
 
     public function execute(array $args, AiScope $scope): AiToolResult
